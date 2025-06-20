@@ -13,6 +13,7 @@ import {
   processChildrenAsStatement,
 } from '../ssrCodegenTransform'
 import { SSR_RENDER_LIST } from '../runtimeHelpers'
+import { FOR_ANCHOR_LABEL } from '@vue/shared'
 
 // Plugin for the first transform pass, which simply constructs the AST node
 export const ssrTransformFor: NodeTransform =
@@ -49,4 +50,6 @@ export function ssrProcessFor(
   if (!disableNestedFragments) {
     context.pushStringPart(`<!--]-->`)
   }
+  // v-for anchor for vapor hydration
+  context.pushStringPart(`<!--${FOR_ANCHOR_LABEL}-->`)
 }

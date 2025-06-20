@@ -11,7 +11,13 @@ import {
   toReactive,
   toReadonly,
 } from '@vue/reactivity'
-import { getSequence, isArray, isObject, isString } from '@vue/shared'
+import {
+  FOR_ANCHOR_LABEL,
+  getSequence,
+  isArray,
+  isObject,
+  isString,
+} from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
@@ -24,7 +30,12 @@ import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import {
+  currentHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+  locateVaporFragmentAnchor,
+} from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
@@ -78,7 +89,7 @@ export const createFor = (
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
-    locateHydrationNode()
+    locateHydrationNode(true)
   } else {
     resetInsertionState()
   }
@@ -87,8 +98,20 @@ export const createFor = (
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
-  // TODO handle this in hydration
-  const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+  let parentAnchor: Node
+  if (isHydrating) {
+    parentAnchor = locateVaporFragmentAnchor(
+      currentHydrationNode!,
+      FOR_ANCHOR_LABEL,
+    )!
+    if (__DEV__ && !parentAnchor) {
+      // this should not happen
+      throw new Error(`v-for fragment anchor node was not found.`)
+    }
+  } else {
+    parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+  }
+
   const frag = new VaporFragment(oldBlocks)
   const instance = currentInstance!
   const canUseFastRemove = flags & VaporVForFlags.FAST_REMOVE

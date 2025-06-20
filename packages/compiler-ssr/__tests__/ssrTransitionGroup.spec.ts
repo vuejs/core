@@ -15,7 +15,7 @@ describe('transition-group', () => {
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
-        _push(\`<!--]-->\`)
+        _push(\`<!--for--><!--]-->\`)
       }"
     `)
   })
@@ -33,7 +33,7 @@ describe('transition-group', () => {
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
-        _push(\`</ul>\`)
+        _push(\`<!--for--></ul>\`)
       }"
     `)
   })
@@ -52,8 +52,10 @@ describe('transition-group', () => {
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
+        _push(\`<!--for-->\`)
         if (false) {
           _push(\`<div></div>\`)
+          _push(\`<!--if-->\`)
         }
         _push(\`</ul>\`)
       }"
@@ -74,7 +76,7 @@ describe('transition-group', () => {
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
-        _push(\`</ul>\`)
+        _push(\`<!--for--></ul>\`)
       }"
     `)
   })
@@ -96,7 +98,7 @@ describe('transition-group', () => {
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
-        _push(\`</\${_ctx.someTag}>\`)
+        _push(\`<!--for--></\${_ctx.someTag}>\`)
       }"
     `)
   })
@@ -118,11 +120,14 @@ describe('transition-group', () => {
         _ssrRenderList(10, (i) => {
           _push(\`<div></div>\`)
         })
+        _push(\`<!--for-->\`)
         _ssrRenderList(10, (i) => {
           _push(\`<div></div>\`)
         })
+        _push(\`<!--for-->\`)
         if (_ctx.ok) {
           _push(\`<div>ok</div>\`)
+          _push(\`<!--if-->\`)
         }
         _push(\`<!--]-->\`)
       }"

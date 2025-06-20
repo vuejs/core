@@ -157,7 +157,9 @@ export function createComponent(
       rawProps,
       rawSlots,
     )
-    if (!isHydrating && _insertionParent) {
+
+    // `frag.insert` handles both hydration and mounting
+    if (_insertionParent) {
       insert(frag, _insertionParent, _insertionAnchor)
     }
     return frag

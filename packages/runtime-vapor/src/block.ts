@@ -7,7 +7,13 @@ import {
 } from './component'
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
-import { isHydrating } from './dom/hydration'
+import {
+  currentHydrationNode,
+  isComment,
+  isHydrating,
+  locateHydrationNode,
+  locateVaporFragmentAnchor,
+} from './dom/hydration'
 
 export type Block =
   | Node
@@ -30,15 +36,20 @@ export class VaporFragment {
 }
 
 export class DynamicFragment extends VaporFragment {
-  anchor: Node
+  anchor!: Node
   scope: EffectScope | undefined
   current?: BlockFn
   fallback?: BlockFn
 
   constructor(anchorLabel?: string) {
     super([])
-    this.anchor =
-      __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    if (isHydrating) {
+      locateHydrationNode(true)
+      this.hydrate(anchorLabel!)
+    } else {
+      this.anchor =
+        __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    }
   }
 
   update(render?: BlockFn, key: any = render): void {
@@ -74,6 +85,22 @@ export class DynamicFragment extends VaporFragment {
     }
 
     resetTracking()
+  }
+
+  hydrate(label: string): void {
+    // for `v-if="false"` the node will be an empty comment, use it as the anchor.
+    // otherwise, find next sibling vapor fragment anchor
+    if (isComment(currentHydrationNode!, '')) {
+      this.anchor = currentHydrationNode
+    } else {
+      const anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
+      if (anchor) {
+        this.anchor = anchor
+      } else if (__DEV__) {
+        // this should not happen
+        throw new Error(`${label} fragment anchor node was not found.`)
+      }
+    }
   }
 }
 
@@ -126,7 +153,6 @@ export function insert(
   } else {
     // fragment
     if (block.insert) {
-      // TODO handle hydration for vdom interop
       block.insert(parent, anchor)
     } else {
       insert(block.nodes, parent, anchor)

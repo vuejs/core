@@ -70,10 +70,23 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
     if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
       if (prevDynamics.length) {
         if (hasStaticTemplate) {
-          context.childrenTemplate[index - prevDynamics.length] = `<!>`
-          prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
-          const anchor = (prevDynamics[0].anchor = context.increaseId())
-          registerInsertion(prevDynamics, context, anchor)
+          // each dynamic child gets its own placeholder node.
+          // this makes it easier to locate the corresponding node during hydration.
+          for (let i = 0; i < prevDynamics.length; i++) {
+            const idx = index - prevDynamics.length + i
+            context.childrenTemplate[idx] = `<!>`
+            const dynamicChild = prevDynamics[i]
+            dynamicChild.flags -= DynamicFlag.NON_TEMPLATE
+            const anchor = (dynamicChild.anchor = context.increaseId())
+            if (
+              dynamicChild.operation &&
+              isBlockOperation(dynamicChild.operation)
+            ) {
+              // block types
+              dynamicChild.operation.parent = context.reference()
+              dynamicChild.operation.anchor = anchor
+            }
+          }
         } else {
           registerInsertion(prevDynamics, context, -1 /* prepend */)
         }

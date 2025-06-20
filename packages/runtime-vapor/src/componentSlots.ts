@@ -1,4 +1,11 @@
-import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  NO,
+  SLOT_ANCHOR_LABEL,
+  hasOwn,
+  isArray,
+  isFunction,
+} from '@vue/shared'
 import { type Block, type BlockFn, DynamicFragment, insert } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef } from '@vue/runtime-dom'
@@ -99,7 +106,7 @@ export function createSlot(
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
-    locateHydrationNode()
+    locateHydrationNode(true)
   } else {
     resetInsertionState()
   }
@@ -111,7 +118,6 @@ export function createSlot(
     : EMPTY_OBJ
 
   let fragment: DynamicFragment
-
   if (isRef(rawSlots._)) {
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
@@ -121,7 +127,10 @@ export function createSlot(
       fallback,
     )
   } else {
-    fragment = __DEV__ ? new DynamicFragment('slot') : new DynamicFragment()
+    fragment =
+      isHydrating || __DEV__
+        ? new DynamicFragment(SLOT_ANCHOR_LABEL)
+        : new DynamicFragment()
     const isDynamicName = isFunction(name)
     const renderSlot = () => {
       const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
@@ -151,7 +160,12 @@ export function createSlot(
     }
   }
 
-  if (!isHydrating && _insertionParent) {
+  if (
+    _insertionParent &&
+    (!isHydrating ||
+      // for vdom interop fragment, `fragment.insert` handles both hydration and mounting
+      fragment.insert)
+  ) {
     insert(fragment, _insertionParent, _insertionAnchor)
   }
 
