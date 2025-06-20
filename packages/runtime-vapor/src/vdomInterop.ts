@@ -90,7 +90,7 @@ const vaporInteropImpl: Omit<
     const instance = (vnode.component = createComponent(
       vnode.type as any as VaporComponent,
       {
-        $: [() => propsRef.value],
+        $: extend([() => propsRef.value], { __interop: true }),
       } as RawProps,
       {
         _: slotsRef, // pass the slots ref
