@@ -1,4 +1,11 @@
-import { type Ref, nextTick, ref } from '@vue/runtime-dom'
+import {
+  type Ref,
+  createApp,
+  defineComponent,
+  h,
+  nextTick,
+  ref,
+} from '@vue/runtime-dom'
 import {
   createComponent,
   defineVaporComponent,
@@ -8,6 +15,7 @@ import {
   setProp,
   setStyle,
   template,
+  vaporInteropPlugin,
 } from '../src'
 import { makeRender } from './_utils'
 import { stringifyStyle } from '@vue/shared'
@@ -321,5 +329,82 @@ describe('attribute fallthrough', () => {
     expect(el.id).toBe(parentVal.value)
     expect(el.getAttribute('aria-x')).toBe(parentVal.value)
     expect(el.getAttribute('aria-y')).toBe(parentVal.value)
+  })
+
+  it('empty string should not be passed to classList.add', async () => {
+    const t0 = template('<div>', true /* root */)
+    const Child = defineVaporComponent({
+      setup() {
+        const n = t0() as Element
+        renderEffect(() => {
+          setClass(n, {
+            foo: false,
+          })
+        })
+        return n
+      },
+    })
+
+    const Parent = defineVaporComponent({
+      setup() {
+        return createComponent(
+          Child,
+          {
+            class: () => ({
+              bar: false,
+            }),
+          },
+          null,
+          true,
+        )
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    const el = host.children[0]
+    expect(el.classList.length).toBe(0)
+  })
+
+  it('should not fallthrough emit handlers to vdom child', () => {
+    const VDomChild = defineComponent({
+      emits: ['click'],
+      setup(_, { emit }) {
+        return () => h('button', { onClick: () => emit('click') }, 'click me')
+      },
+    })
+
+    const fn = vi.fn()
+    const VaporChild = defineVaporComponent({
+      emits: ['click'],
+      setup() {
+        return createComponent(
+          VDomChild as any,
+          { onClick: () => fn },
+          null,
+          true,
+        )
+      },
+    })
+
+    const App = {
+      setup() {
+        return () => h(VaporChild as any)
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+
+    expect(root.innerHTML).toBe('<button>click me</button>')
+    const button = root.querySelector('button')!
+    button.dispatchEvent(new Event('click'))
+
+    // fn should be called once
+    expect(fn).toHaveBeenCalledTimes(1)
   })
 })

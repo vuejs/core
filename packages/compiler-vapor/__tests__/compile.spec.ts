@@ -220,4 +220,21 @@ describe('compile', () => {
       expect(code).matchSnapshot()
     })
   })
+
+  describe('setInsertionState', () => {
+    test('next, child and nthChild should be above the setInsertionState', () => {
+      const code = compile(`
+      <div>
+        <div />
+        <Comp />
+        <div />
+        <div v-if="true" />
+        <div>
+          <button :disabled="foo" />
+        </div>
+      </div>
+      `)
+      expect(code).toMatchSnapshot()
+    })
+  })
 })

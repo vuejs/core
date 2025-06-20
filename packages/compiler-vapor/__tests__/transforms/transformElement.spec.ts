@@ -45,11 +45,12 @@ describe('compiler: element transform', () => {
       })
     })
 
-    test.todo('resolve implicitly self-referencing component', () => {
+    test('resolve implicitly self-referencing component', () => {
       const { code, helpers } = compileWithElementTransform(`<Example/>`, {
         filename: `/foo/bar/Example.vue?vue&type=template`,
       })
       expect(code).toMatchSnapshot()
+      expect(code).toContain('_resolveComponent("Example", true)')
       expect(helpers).toContain('resolveComponent')
     })
 
