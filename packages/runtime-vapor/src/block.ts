@@ -7,22 +7,61 @@ import {
 } from './component'
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
-import { isHydrating } from './dom/hydration'
+import {
+  currentHydrationNode,
+  isComment,
+  locateHydrationNode,
+  locateVaporFragmentAnchor,
+} from './dom/hydration'
+import {
+  type TransitionHooks,
+  type TransitionProps,
+  type TransitionState,
+  performTransitionEnter,
+  performTransitionLeave,
+} from '@vue/runtime-dom'
+import {
+  applyTransitionHooks,
+  applyTransitionLeaveHooks,
+} from './components/Transition'
 
-export type Block =
-  | Node
-  | VaporFragment
-  | DynamicFragment
-  | VaporComponentInstance
-  | Block[]
+export interface TransitionOptions {
+  $key?: any
+  $transition?: VaporTransitionHooks
+}
+import { isHydrating } from './dom/hydration'
+import { getInheritedScopeIds } from '@vue/runtime-dom'
+
+export interface VaporTransitionHooks extends TransitionHooks {
+  state: TransitionState
+  props: TransitionProps
+  instance: VaporComponentInstance
+  // mark transition hooks as disabled so that it skips during
+  // inserting
+  disabled?: boolean
+}
+
+export type TransitionBlock =
+  | (Node & TransitionOptions)
+  | (VaporFragment & TransitionOptions)
+  | (DynamicFragment & TransitionOptions)
+
+export type Block = TransitionBlock | VaporComponentInstance | Block[]
 
 export type BlockFn = (...args: any[]) => Block
 
-export class VaporFragment {
+export class VaporFragment implements TransitionOptions {
+  $key?: any
+  $transition?: VaporTransitionHooks | undefined
   nodes: Block
   anchor?: Node
-  insert?: (parent: ParentNode, anchor: Node | null) => void
-  remove?: (parent?: ParentNode) => void
+  insert?: (
+    parent: ParentNode,
+    anchor: Node | null,
+    transitionHooks?: TransitionHooks,
+  ) => void
+  remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
+  fallback?: BlockFn
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -30,15 +69,25 @@ export class VaporFragment {
 }
 
 export class DynamicFragment extends VaporFragment {
-  anchor: Node
+  anchor!: Node
   scope: EffectScope | undefined
   current?: BlockFn
   fallback?: BlockFn
+  /**
+   * slot only
+   * indicates forwarded slot
+   */
+  forwarded?: boolean
 
   constructor(anchorLabel?: string) {
     super([])
-    this.anchor =
-      __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    if (isHydrating) {
+      locateHydrationNode(true)
+      this.hydrate(anchorLabel!)
+    } else {
+      this.anchor =
+        __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    }
   }
 
   update(render?: BlockFn, key: any = render): void {
@@ -49,21 +98,38 @@ export class DynamicFragment extends VaporFragment {
 
     pauseTracking()
     const parent = this.anchor.parentNode
+    const transition = this.$transition
+    const renderBranch = () => {
+      if (render) {
+        this.scope = new EffectScope()
+        this.nodes = this.scope.run(render) || []
+        if (transition) {
+          this.$transition = applyTransitionHooks(this.nodes, transition)
+        }
+        if (parent) insert(this.nodes, parent, this.anchor)
+      } else {
+        this.scope = undefined
+        this.nodes = []
+      }
+    }
 
     // teardown previous branch
     if (this.scope) {
       this.scope.stop()
-      parent && remove(this.nodes, parent)
+      const mode = transition && transition.mode
+      if (mode) {
+        applyTransitionLeaveHooks(this.nodes, transition, renderBranch)
+        parent && remove(this.nodes, parent)
+        if (mode === 'out-in') {
+          resetTracking()
+          return
+        }
+      } else {
+        parent && remove(this.nodes, parent)
+      }
     }
 
-    if (render) {
-      this.scope = new EffectScope()
-      this.nodes = this.scope.run(render) || []
-      if (parent) insert(this.nodes, parent, this.anchor)
-    } else {
-      this.scope = undefined
-      this.nodes = []
-    }
+    renderBranch()
 
     if (this.fallback && !isValidBlock(this.nodes)) {
       parent && remove(this.nodes, parent)
@@ -74,6 +140,22 @@ export class DynamicFragment extends VaporFragment {
     }
 
     resetTracking()
+  }
+
+  hydrate(label: string): void {
+    // for `v-if="false"` the node will be an empty comment, use it as the anchor.
+    // otherwise, find next sibling vapor fragment anchor
+    if (isComment(currentHydrationNode!, '')) {
+      this.anchor = currentHydrationNode
+    } else {
+      const anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
+      if (anchor) {
+        this.anchor = anchor
+      } else if (__DEV__) {
+        // this should not happen
+        throw new Error(`${label} fragment anchor node was not found.`)
+      }
+    }
   }
 }
 
@@ -107,11 +189,26 @@ export function insert(
   block: Block,
   parent: ParentNode,
   anchor: Node | null | 0 = null, // 0 means prepend
+  parentSuspense?: any, // TODO Suspense
 ): void {
   anchor = anchor === 0 ? parent.firstChild : anchor
   if (block instanceof Node) {
     if (!isHydrating) {
-      parent.insertBefore(block, anchor)
+      // only apply transition on Element nodes
+      if (
+        block instanceof Element &&
+        (block as TransitionBlock).$transition &&
+        !(block as TransitionBlock).$transition!.disabled
+      ) {
+        performTransitionEnter(
+          block,
+          (block as TransitionBlock).$transition as TransitionHooks,
+          () => parent.insertBefore(block, anchor as Node),
+          parentSuspense,
+        )
+      } else {
+        parent.insertBefore(block, anchor)
+      }
     }
   } else if (isVaporComponent(block)) {
     if (block.isMounted) {
@@ -124,14 +221,16 @@ export function insert(
       insert(b, parent, anchor)
     }
   } else {
+    if (block.anchor) {
+      insert(block.anchor, parent, anchor)
+      anchor = block.anchor
+    }
     // fragment
     if (block.insert) {
-      // TODO handle hydration for vdom interop
-      block.insert(parent, anchor)
+      block.insert(parent, anchor, (block as TransitionBlock).$transition)
     } else {
-      insert(block.nodes, parent, anchor)
+      insert(block.nodes, parent, anchor, parentSuspense)
     }
-    if (block.anchor) insert(block.anchor, parent, anchor)
   }
 }
 
@@ -144,7 +243,15 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
 
 export function remove(block: Block, parent?: ParentNode): void {
   if (block instanceof Node) {
-    parent && parent.removeChild(block)
+    if ((block as TransitionBlock).$transition && block instanceof Element) {
+      performTransitionLeave(
+        block,
+        (block as TransitionBlock).$transition as TransitionHooks,
+        () => parent && parent.removeChild(block),
+      )
+    } else {
+      parent && parent.removeChild(block)
+    }
   } else if (isVaporComponent(block)) {
     unmountComponent(block, parent)
   } else if (isArray(block)) {
@@ -154,7 +261,7 @@ export function remove(block: Block, parent?: ParentNode): void {
   } else {
     // fragment
     if (block.remove) {
-      block.remove(parent)
+      block.remove(parent, (block as TransitionBlock).$transition)
     } else {
       remove(block.nodes, parent)
     }
@@ -186,4 +293,42 @@ export function normalizeBlock(block: Block): Node[] {
     block.anchor && nodes.push(block.anchor)
   }
   return nodes
+}
+
+export function setScopeId(block: Block, scopeId: string): void {
+  if (block instanceof Element) {
+    block.setAttribute(scopeId, '')
+  } else if (isVaporComponent(block)) {
+    setScopeId(block.block, scopeId)
+  } else if (isArray(block)) {
+    for (const b of block) {
+      setScopeId(b, scopeId)
+    }
+  } else if (isFragment(block)) {
+    setScopeId(block.nodes, scopeId)
+  }
+}
+
+export function setComponentScopeId(instance: VaporComponentInstance): void {
+  const parent = instance.parent
+  if (!parent) return
+  if (isArray(instance.block) && instance.block.length > 1) return
+
+  const scopeId = parent.type.__scopeId
+  if (scopeId) {
+    setScopeId(instance.block, scopeId)
+  }
+
+  // inherit scopeId from vdom parent
+  if (
+    parent.subTree &&
+    (parent.subTree.component as any) === instance &&
+    parent.vnode!.scopeId
+  ) {
+    setScopeId(instance.block, parent.vnode!.scopeId)
+    const scopeIds = getInheritedScopeIds(parent.vnode!, parent.parent)
+    for (const id of scopeIds) {
+      setScopeId(instance.block, id)
+    }
+  }
 }

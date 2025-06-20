@@ -7,6 +7,7 @@ import {
   type IfStatement,
   type JSChildNode,
   NodeTypes,
+  type PlainElementNode,
   type RootNode,
   type TemplateChildNode,
   type TemplateLiteral,
@@ -20,7 +21,12 @@ import {
   isText,
   processExpression,
 } from '@vue/compiler-dom'
-import { escapeHtml, isString } from '@vue/shared'
+import {
+  DYNAMIC_END_ANCHOR_LABEL,
+  DYNAMIC_START_ANCHOR_LABEL,
+  escapeHtml,
+  isString,
+} from '@vue/shared'
 import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
 import { ssrProcessIf } from './transforms/ssrVIf'
 import { ssrProcessFor } from './transforms/ssrVFor'
@@ -157,13 +163,33 @@ export function processChildren(
   asFragment = false,
   disableNestedFragments = false,
   disableComment = false,
+  asDynamic = false,
 ): void {
+  if (asDynamic) {
+    context.pushStringPart(`<!--${DYNAMIC_START_ANCHOR_LABEL}-->`)
+  }
   if (asFragment) {
     context.pushStringPart(`<!--[-->`)
   }
-  const { children } = parent
+
+  const { children, type, tagType } = parent as PlainElementNode
+  const inElement =
+    type === NodeTypes.ELEMENT && tagType === ElementTypes.ELEMENT
+  if (inElement) processChildrenDynamicInfo(children)
+
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
+    if (inElement && shouldProcessChildAsDynamic(parent, child)) {
+      processChildren(
+        { children: [child] },
+        context,
+        asFragment,
+        disableNestedFragments,
+        disableComment,
+        true,
+      )
+      continue
+    }
     switch (child.type) {
       case NodeTypes.ELEMENT:
         switch (child.tagType) {
@@ -237,6 +263,9 @@ export function processChildren(
   if (asFragment) {
     context.pushStringPart(`<!--]-->`)
   }
+  if (asDynamic) {
+    context.pushStringPart(`<!--${DYNAMIC_END_ANCHOR_LABEL}-->`)
+  }
 }
 
 export function processChildrenAsStatement(
@@ -248,4 +277,148 @@ export function processChildrenAsStatement(
   const childContext = createChildContext(parentContext, withSlotScopeId)
   processChildren(parent, childContext, asFragment)
   return createBlockStatement(childContext.body)
+}
+
+const isStaticChildNode = (c: TemplateChildNode): boolean =>
+  (c.type === NodeTypes.ELEMENT && c.tagType !== ElementTypes.COMPONENT) ||
+  c.type === NodeTypes.TEXT ||
+  c.type === NodeTypes.COMMENT
+
+interface DynamicInfo {
+  hasStaticPrevious: boolean
+  hasStaticNext: boolean
+  prevDynamicCount: number
+  nextDynamicCount: number
+}
+
+function processChildrenDynamicInfo(
+  children: (TemplateChildNode & { _ssrDynamicInfo?: DynamicInfo })[],
+): void {
+  const filteredChildren = children.filter(
+    child => !(child.type === NodeTypes.TEXT && !child.content.trim()),
+  )
+
+  for (let i = 0; i < filteredChildren.length; i++) {
+    const child = filteredChildren[i]
+    if (
+      isStaticChildNode(child) ||
+      // fragment has it's own anchor, which can be used to distinguish the boundary
+      isFragmentChild(child)
+    ) {
+      continue
+    }
+    child._ssrDynamicInfo = {
+      hasStaticPrevious: false,
+      hasStaticNext: false,
+      prevDynamicCount: 0,
+      nextDynamicCount: 0,
+    }
+
+    const info = child._ssrDynamicInfo
+
+    // Calculate the previous static and dynamic node counts
+    let foundStaticPrev = false
+    let dynamicCountPrev = 0
+    for (let j = i - 1; j >= 0; j--) {
+      const prevChild = filteredChildren[j]
+      if (isStaticChildNode(prevChild)) {
+        foundStaticPrev = true
+        break
+      }
+      // if the previous child has dynamic info, use it
+      else if (prevChild._ssrDynamicInfo) {
+        foundStaticPrev = prevChild._ssrDynamicInfo.hasStaticPrevious
+        dynamicCountPrev = prevChild._ssrDynamicInfo.prevDynamicCount + 1
+        break
+      }
+      dynamicCountPrev++
+    }
+    info.hasStaticPrevious = foundStaticPrev
+    info.prevDynamicCount = dynamicCountPrev
+
+    // Calculate the number of static and dynamic nodes afterwards
+    let foundStaticNext = false
+    let dynamicCountNext = 0
+    for (let j = i + 1; j < filteredChildren.length; j++) {
+      const nextChild = filteredChildren[j]
+      if (isStaticChildNode(nextChild)) {
+        foundStaticNext = true
+        break
+      }
+      // if the next child has dynamic info, use it
+      else if (nextChild._ssrDynamicInfo) {
+        foundStaticNext = nextChild._ssrDynamicInfo.hasStaticNext
+        dynamicCountNext = nextChild._ssrDynamicInfo.nextDynamicCount + 1
+        break
+      }
+      dynamicCountNext++
+    }
+    info.hasStaticNext = foundStaticNext
+    info.nextDynamicCount = dynamicCountNext
+  }
+}
+
+/**
+ * Check if a node should be processed as dynamic child.
+ * This is primarily used in Vapor mode hydration to wrap dynamic parts
+ * with markers (`<!--[[-->` and `<!--]]-->`).
+ * The purpose is to distinguish the boundaries of nodes during vapor hydration
+ *
+ * 1. two consecutive dynamic nodes should only wrap the second one
+ * <element>
+ *   <element/>  // Static node
+ *   <Comp/>     // Dynamic node -> should NOT be wrapped
+ *   <Comp/>     // Dynamic node -> should be wrapped
+ *   <element/>  // Static node
+ * </element>
+ *
+ * 2. three or more consecutive dynamic nodes should only wrap the
+ *    middle nodes, leaving the first and last static.
+ * <element>
+ *  <element/>  // Static node
+ *  <Comp/>     // Dynamic node -> should NOT be wrapped
+ *  <Comp/>     // Dynamic node -> should be wrapped
+ *  <Comp/>     // Dynamic node -> should be wrapped
+ *  <Comp/>     // Dynamic node -> should NOT be wrapped
+ *  <element/>  // Static node
+ * </element>
+ */
+function shouldProcessChildAsDynamic(
+  parent: { tag?: string; children: TemplateChildNode[] },
+  node: TemplateChildNode & { _ssrDynamicInfo?: DynamicInfo },
+): boolean {
+  // must be inside a parent element
+  if (!parent.tag) return false
+
+  // must has dynamic info
+  const { _ssrDynamicInfo: info } = node
+  if (!info) return false
+
+  const {
+    hasStaticPrevious,
+    hasStaticNext,
+    prevDynamicCount,
+    nextDynamicCount,
+  } = info
+
+  // must have static nodes on both sides
+  if (!hasStaticPrevious || !hasStaticNext) return false
+
+  const dynamicNodeCount = 1 + prevDynamicCount + nextDynamicCount
+
+  // For two consecutive dynamic nodes, mark the second one as dynamic
+  if (dynamicNodeCount === 2) {
+    return prevDynamicCount > 0
+  }
+  // For three or more dynamic nodes, mark the middle nodes as dynamic
+  else if (dynamicNodeCount >= 3) {
+    return prevDynamicCount > 0 && nextDynamicCount > 0
+  }
+
+  return false
+}
+
+function isFragmentChild(child: TemplateChildNode): boolean {
+  const { type } = child
+  return type === NodeTypes.IF || type === NodeTypes.FOR
 }

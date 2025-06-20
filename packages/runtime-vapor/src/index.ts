@@ -9,7 +9,7 @@ export { insert, prepend, remove, isFragment, VaporFragment } from './block'
 export { setInsertionState } from './insertionState'
 export { createComponent, createComponentWithFallback } from './component'
 export { renderEffect } from './renderEffect'
-export { createSlot } from './componentSlots'
+export { createSlot, forwardedSlotCreator } from './componentSlots'
 export { template } from './dom/template'
 export { createTextNode, child, nthChild, next } from './dom/node'
 export {
@@ -22,9 +22,11 @@ export {
   setProp,
   setDOMProp,
   setDynamicProps,
+  setElementText,
 } from './dom/prop'
 export { on, delegate, delegateEvents, setDynamicEvents } from './dom/event'
 export { createIf } from './apiCreateIf'
+export { createKeyedFragment } from './apiCreateFragment'
 export {
   createFor,
   createForSlots,
@@ -42,3 +44,5 @@ export {
   applyDynamicModel,
 } from './directives/vModel'
 export { withVaporDirectives } from './directives/custom'
+export { VaporTransition } from './components/Transition'
+export { VaporTransitionGroup } from './components/TransitionGroup'

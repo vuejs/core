@@ -58,6 +58,16 @@ describe('v-text', () => {
     expect(code).matchSnapshot()
   })
 
+  test('work with dynamic component', () => {
+    const { code } = compileWithVText(
+      `<component :is="'button'" v-text="foo"/>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      'setElementText(n0.nodes, _toDisplayString(_ctx.foo), true)',
+    )
+  })
+
   test('should raise error and ignore children when v-text is present', () => {
     const onError = vi.fn()
     const { code, ir } = compileWithVText(`<div v-text="test">hello</div>`, {

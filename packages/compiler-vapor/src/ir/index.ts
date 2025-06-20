@@ -39,6 +39,7 @@ export enum IRNodeTypes {
 
 export interface BaseIRNode {
   type: IRNodeTypes
+  key?: SimpleExpressionNode | undefined
 }
 
 export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
@@ -49,10 +50,12 @@ export interface BlockIRNode extends BaseIRNode {
   type: IRNodeTypes.BLOCK
   node: RootNode | TemplateChildNode
   dynamic: IRDynamicInfo
+  dynamicComponents: number[]
   tempId: number
   effect: IREffect[]
   operation: OperationNode[]
   returns: number[]
+  hasDeferredVShow: boolean
 }
 
 export interface RootIRNode {
@@ -65,6 +68,7 @@ export interface RootIRNode {
   directive: Set<string>
   block: BlockIRNode
   hasTemplateRef: boolean
+  hasForwardedSlot: boolean
 }
 
 export interface IfIRNode extends BaseIRNode {
@@ -181,6 +185,7 @@ export interface DirectiveIRNode extends BaseIRNode {
   builtin?: boolean
   asset?: boolean
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
+  deferred?: boolean
 }
 
 export interface CreateComponentIRNode extends BaseIRNode {
@@ -195,6 +200,7 @@ export interface CreateComponentIRNode extends BaseIRNode {
   dynamic?: SimpleExpressionNode
   parent?: number
   anchor?: number
+  scopeId?: string | null
 }
 
 export interface DeclareOldRefIRNode extends BaseIRNode {
@@ -208,6 +214,7 @@ export interface SlotOutletIRNode extends BaseIRNode {
   name: SimpleExpressionNode
   props: IRProps[]
   fallback?: BlockIRNode
+  forwarded?: boolean
   parent?: number
   anchor?: number
 }
@@ -260,6 +267,7 @@ export interface IRDynamicInfo {
   template?: number
   hasDynamicChild?: boolean
   operation?: OperationNode
+  needsKey?: boolean
 }
 
 export interface IREffect {

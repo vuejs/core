@@ -68,7 +68,9 @@ describe('ssr: scopedId runtime behavior', () => {
     }
 
     const result = await renderToString(createApp(Comp))
-    expect(result).toBe(`<!--[--><div parent wrapper-s child></div><!--]-->`)
+    expect(result).toBe(
+      `<!--[--><div parent wrapper-s child></div><!--]--><!--slot-->`,
+    )
   })
 
   // #2892
@@ -150,8 +152,8 @@ describe('ssr: scopedId runtime behavior', () => {
     const result = await renderToString(createApp(Root))
     expect(result).toBe(
       `<div class="wrapper" root slotted wrapper>` +
-        `<!--[--><!--[--><div root slotted-s wrapper-s></div><!--]--><!--]-->` +
-        `</div>`,
+        `<!--[--><!--[--><div root slotted-s wrapper-s></div><!--]--><!--slot--><!--]-->` +
+        `<!--slot--></div>`,
     )
   })
 
@@ -265,8 +267,8 @@ describe('ssr: scopedId runtime behavior', () => {
     const result = await renderToString(createApp(Root))
     expect(result).toBe(
       `<div class="wrapper" root slotted wrapper>` +
-        `<!--[--><!--[--><div root slotted-s wrapper-s></div><!--]--><!--]-->` +
-        `</div>`,
+        `<!--[--><!--[--><div root slotted-s wrapper-s></div><!--]--><!--slot--><!--]-->` +
+        `<!--slot--></div>`,
     )
   })
 })
