@@ -1543,4 +1543,19 @@ describe('compileScript', () => {
     )
     assertCode(content)
   })
+
+  test('should not compile unrecognized language', () => {
+    const { content, lang, scriptAst } = compile(
+      `<script lang="coffee">
+      export default
+        data: ->
+          myVal: 0
+      </script>`,
+    )
+    expect(content).toMatch(`export default
+        data: ->
+          myVal: 0`)
+    expect(lang).toBe('coffee')
+    expect(scriptAst).not.toBeDefined()
+  })
 })

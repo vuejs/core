@@ -55,7 +55,13 @@ import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { DEFINE_SLOTS, processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
+import {
+  getImportedName,
+  isCallOf,
+  isJS,
+  isLiteralNode,
+  isTS,
+} from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
@@ -167,18 +173,26 @@ export function compileScript(
     )
   }
 
-  const ctx = new ScriptCompileContext(sfc, options)
   const { script, scriptSetup, source, filename } = sfc
   const hoistStatic = options.hoistStatic !== false && !script
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
+  const isJSOrTS =
+    isJS(scriptLang, scriptSetupLang) || isTS(scriptLang, scriptSetupLang)
 
   if (!scriptSetup) {
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
     }
+
     // normal <script> only
+    if (script.lang && !isJSOrTS) {
+      // do not process non js/ts script blocks
+      return script
+    }
+
+    const ctx = new ScriptCompileContext(sfc, options)
     return processNormalScript(ctx, scopeId)
   }
 
@@ -189,10 +203,12 @@ export function compileScript(
     )
   }
 
-  if (scriptSetupLang && !ctx.isJS && !ctx.isTS) {
+  if (scriptSetupLang && !isJSOrTS) {
     // do not process non js/ts script blocks
     return scriptSetup
   }
+
+  const ctx = new ScriptCompileContext(sfc, options)
 
   // metadata that needs to be returned
   // const ctx.bindingMetadata: BindingMetadata = {}
