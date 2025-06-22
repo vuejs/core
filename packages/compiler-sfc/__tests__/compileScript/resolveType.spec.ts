@@ -278,6 +278,23 @@ describe('resolveType', () => {
     })
   })
 
+  test('utility type: mapped type with Omit and Pick', () => {
+    expect(
+      resolve(`
+      type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
+      interface Test {
+        foo: string;
+        bar?: string;
+      }
+      type OptionalTest = Optional<Test, 'foo'>
+      defineProps<OptionalTest>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['String'],
+    })
+  })
+
   test('utility type: ReadonlyArray', () => {
     expect(
       resolve(`
@@ -711,6 +728,38 @@ describe('resolveType', () => {
     defineProps<UploadProps>()`)
     expect(props).toStrictEqual({
       fileList: ['Array'],
+    })
+  })
+
+  describe('type alias declaration', () => {
+    // #13240
+    test('function type', () => {
+      expect(
+        resolve(`
+      type FunFoo<O> = (item: O) => boolean;
+      type FunBar = FunFoo<number>;
+      defineProps<{
+        foo?: FunFoo<number>;
+        bar?: FunBar;
+      }>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Function'],
+        bar: ['Function'],
+      })
+    })
+
+    test('fallback to Unknown', () => {
+      expect(
+        resolve(`
+      type Brand<T> = T & {};
+      defineProps<{
+        foo: Brand<string>;
+      }>()
+      `).props,
+      ).toStrictEqual({
+        foo: [UNKNOWN_TYPE],
+      })
     })
   })
 

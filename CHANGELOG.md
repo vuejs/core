@@ -1,3 +1,24 @@
+## [3.5.17](https://github.com/vuejs/core/compare/v3.5.16...v3.5.17) (2025-06-18)
+
+
+### Bug Fixes
+
+* **compat:** allow v-model built in modifiers on component ([#12654](https://github.com/vuejs/core/issues/12654)) ([cb14b86](https://github.com/vuejs/core/commit/cb14b860f150c4a83bcd52cd26096b7a5aa3a2bf)), closes [#12652](https://github.com/vuejs/core/issues/12652)
+* **compile-sfc:** handle mapped types work with omit and pick ([#12648](https://github.com/vuejs/core/issues/12648)) ([4eb46e4](https://github.com/vuejs/core/commit/4eb46e443f1878199755cb73d481d318a9714392)), closes [#12647](https://github.com/vuejs/core/issues/12647)
+* **compiler-core:** do not increase newlines in `InEntity` state ([#13362](https://github.com/vuejs/core/issues/13362)) ([f05a8d6](https://github.com/vuejs/core/commit/f05a8d613bd873b811cfdb9979ccac8382dba322))
+* **compiler-core:** ignore whitespace when matching adjacent v-if ([#12321](https://github.com/vuejs/core/issues/12321)) ([10ebcef](https://github.com/vuejs/core/commit/10ebcef8c870dbc042b0ea49b1424b2e8f692145)), closes [#9173](https://github.com/vuejs/core/issues/9173)
+* **compiler-core:** prevent comments from blocking static node hoisting  ([#13345](https://github.com/vuejs/core/issues/13345)) ([55dad62](https://github.com/vuejs/core/commit/55dad625acd9e9ddd5a933d5e323ecfdec1a612f)), closes [#13344](https://github.com/vuejs/core/issues/13344)
+* **compiler-sfc:** improved type resolution for function type aliases ([#13452](https://github.com/vuejs/core/issues/13452)) ([f3479aa](https://github.com/vuejs/core/commit/f3479aac9625f4459e650d1c0a70e73863147903)), closes [#13444](https://github.com/vuejs/core/issues/13444)
+* **custom-element:** ensure configureApp is applied to async component ([#12607](https://github.com/vuejs/core/issues/12607)) ([5ba1afb](https://github.com/vuejs/core/commit/5ba1afba09c3ea56c1c17484f5d8aeae210ce52a)), closes [#12448](https://github.com/vuejs/core/issues/12448)
+* **custom-element:** prevent injecting child styles if shadowRoot is false ([#12769](https://github.com/vuejs/core/issues/12769)) ([73055d8](https://github.com/vuejs/core/commit/73055d8d9578d485e3fe846726b50666e1aa56f5)), closes [#12630](https://github.com/vuejs/core/issues/12630)
+* **reactivity:** add `__v_skip` flag to `Dep` to prevent reactive conversion ([#12804](https://github.com/vuejs/core/issues/12804)) ([e8d8f5f](https://github.com/vuejs/core/commit/e8d8f5f604e821acc46b4200d5b06979c05af1c2)), closes [#12803](https://github.com/vuejs/core/issues/12803)
+* **runtime-core:** unset old ref during patching when new ref is absent ([#12900](https://github.com/vuejs/core/issues/12900)) ([47ddf98](https://github.com/vuejs/core/commit/47ddf986021dff8de68b0da72787e53a6c19de4c)), closes [#12898](https://github.com/vuejs/core/issues/12898)
+* **slots:** make cache indexes marker non-enumerable ([#13469](https://github.com/vuejs/core/issues/13469)) ([919c447](https://github.com/vuejs/core/commit/919c44744bba1f0c661c87d2059c3b429611aa7e)), closes [#13468](https://github.com/vuejs/core/issues/13468)
+* **ssr:** handle initial selected state for select with v-model + v-for/v-if option ([#13487](https://github.com/vuejs/core/issues/13487)) ([1552095](https://github.com/vuejs/core/commit/15520954f9f1c7f834175938a50dba5d4be0e6c4)), closes [#13486](https://github.com/vuejs/core/issues/13486)
+* **types:** typo of `vOnce` and `vSlot` ([#13343](https://github.com/vuejs/core/issues/13343)) ([762fae4](https://github.com/vuejs/core/commit/762fae4b57ad60602e5c84465a3bff562785b314))
+
+
+
 ## [3.5.16](https://github.com/vuejs/core/compare/v3.5.15...v3.5.16) (2025-05-29)
 
 
