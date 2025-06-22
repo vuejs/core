@@ -84,9 +84,6 @@ export function ssrRenderAttr(key: string, value: unknown): string {
   if (!isRenderableAttrValue(value)) {
     return ``
   }
-  if (isOverloadedBooleanAttr(key) && isBooleanAttrValue(value)) {
-    return includeBooleanAttr(value) ? ` ${key}` : ``
-  }
   return ` ${key}="${escapeHtml(value)}"`
 }
 
