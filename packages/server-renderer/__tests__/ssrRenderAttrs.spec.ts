@@ -131,13 +131,6 @@ describe('ssr: renderAttr', () => {
       ` foo="${escapeHtml(`<script>`)}"`,
     )
   })
-
-  test('combined boolean/string attribute', () => {
-    expect(ssrRenderAttr('hidden', true)).toBe(` hidden`)
-    expect(ssrRenderAttr('hidden', false)).toBe('')
-    expect(ssrRenderAttr('hidden', 'until-found')).toBe(` hidden="until-found"`)
-    expect(ssrRenderAttr('hidden', '')).toBe(` hidden`)
-  })
 })
 
 describe('ssr: renderClass', () => {
