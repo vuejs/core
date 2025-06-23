@@ -66,9 +66,7 @@ describe('ssr: renderList', () => {
   })
 
   it('should not render items when source is 0', () => {
-    ssrRenderList(0, (item, index) =>
-      stack.push(`node ${index}: ${item}`),
-    )
+    ssrRenderList(0, (item, index) => stack.push(`node ${index}: ${item}`))
     expect(stack).toEqual([])
   })
 

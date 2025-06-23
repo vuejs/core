@@ -75,9 +75,7 @@ describe('renderList', () => {
   })
 
   it('should return empty array when source is 0', () => {
-    expect(
-      renderList(0, (item, index) => `node ${index}: ${item}`),
-    ).toEqual([])
+    expect(renderList(0, (item, index) => `node ${index}: ${item}`)).toEqual([])
   })
 
   it('should return empty array when source is undefined', () => {
