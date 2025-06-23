@@ -1160,6 +1160,69 @@ describe('SSR hydration', () => {
     )
   })
 
+  // #13510
+  test('update async component after parent mount before async component resolve', async () => {
+    const Comp = {
+      props: ['toggle'],
+      render(this: any) {
+        return h('h1', [
+          this.toggle ? 'Async component' : 'Updated async component',
+        ])
+      },
+    }
+    let serverResolve: any
+    let AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          serverResolve = r
+        }),
+    )
+
+    const toggle = ref(true)
+    const App = {
+      setup() {
+        onMounted(() => {
+          // change state, after mount and before async component resolve
+          nextTick(() => (toggle.value = false))
+        })
+
+        return () => {
+          return h(AsyncComp, { toggle: toggle.value })
+        }
+      },
+    }
+
+    // server render
+    const htmlPromise = renderToString(h(App))
+    serverResolve(Comp)
+    const html = await htmlPromise
+    expect(html).toMatchInlineSnapshot(`"<h1>Async component</h1>"`)
+
+    // hydration
+    let clientResolve: any
+    AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          clientResolve = r
+        }),
+    )
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    createSSRApp(App).mount(container)
+
+    // resolve
+    clientResolve(Comp)
+    await new Promise(r => setTimeout(r))
+
+    // prevent lazy hydration since the component has been patched
+    expect('Skipping lazy hydration for component').toHaveBeenWarned()
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<h1>Updated async component</h1>"`,
+    )
+  })
+
   test('hydrate safely when property used by async setup changed before render', async () => {
     const toggle = ref(true)
 
