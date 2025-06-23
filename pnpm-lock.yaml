@@ -175,7 +175,7 @@ importers:
         version: 8.32.1(eslint@9.27.0)(typescript@5.6.3)
       vite:
         specifier: 'catalog:'
-        version: 5.4.15(@types/node@22.15.32)(sass@1.89.2)
+        version: 5.4.19(@types/node@22.15.32)(sass@1.89.2)
       vitest:
         specifier: ^3.1.4
         version: 3.1.4(@types/node@22.15.32)(jsdom@26.1.0)(sass@1.89.2)
