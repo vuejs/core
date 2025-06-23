@@ -35,7 +35,7 @@ import type { ComponentPublicInstance } from './componentPublicInstance'
 
 export type ObjectEmitsOptions = Record<
   string,
-  ((...args: any[]) => any) | null
+  ((...args: any[]) => any) | null | any[]
 >
 
 export type EmitsOptions = ObjectEmitsOptions | string[]
