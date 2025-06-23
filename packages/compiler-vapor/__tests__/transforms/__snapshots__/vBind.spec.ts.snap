@@ -113,6 +113,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`cache multiple access > optional chaining 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _obj = _ctx.obj
+    _setProp(n0, "id", _obj?.foo + _obj?.bar)
+  })
+  return n0
+}"
+`;
+
 exports[`cache multiple access > repeated expression in expressions 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
