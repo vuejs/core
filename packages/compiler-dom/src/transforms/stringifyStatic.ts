@@ -26,6 +26,7 @@ import {
   isKnownHtmlAttr,
   isKnownMathMLAttr,
   isKnownSvgAttr,
+  isOverloadedBooleanAttr,
   isString,
   isSymbol,
   isVoidTag,
@@ -341,7 +342,8 @@ function stringifyElement(
         }
         // #6568
         if (
-          isBooleanAttr((p.arg as SimpleExpressionNode).content) &&
+          (isBooleanAttr((p.arg as SimpleExpressionNode).content) ||
+            isOverloadedBooleanAttr((p.arg as SimpleExpressionNode).content)) &&
           exp.content === 'false'
         ) {
           continue
