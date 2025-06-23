@@ -647,7 +647,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
 
   // whitespace management
   if (!tokenizer.inRCDATA) {
-    el.children = condenseWhitespace(children)
+    el.children = condenseWhitespace(children, false)
   }
 
   if (ns === Namespaces.HTML && currentOptions.isIgnoreNewlineTag(tag)) {
@@ -832,7 +832,10 @@ function isUpperCase(c: number) {
 }
 
 const windowsNewlineRE = /\r\n/g
-function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
+function condenseWhitespace(
+  nodes: TemplateChildNode[],
+  isRoot: boolean,
+): TemplateChildNode[] {
   const shouldCondense = currentOptions.whitespace !== 'preserve'
   let removedWhitespace = false
   for (let i = 0; i < nodes.length; i++) {
@@ -843,13 +846,12 @@ function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
           const prev = nodes[i - 1] && nodes[i - 1].type
           const next = nodes[i + 1] && nodes[i + 1].type
           // Remove if:
-          // - the whitespace is the first or last node, or:
+          // - the whitespace is the first or last node on a root template, or:
           // - (condense mode) the whitespace is between two comments, or:
           // - (condense mode) the whitespace is between comment and element, or:
           // - (condense mode) the whitespace is between two elements AND contains newline
           if (
-            !prev ||
-            !next ||
+            ((isRoot || shouldCondense) && (!prev || !next)) ||
             (shouldCondense &&
               ((prev === NodeTypes.COMMENT &&
                 (next === NodeTypes.COMMENT || next === NodeTypes.ELEMENT)) ||
@@ -1080,7 +1082,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
   const root = (currentRoot = createRoot([], input))
   tokenizer.parse(currentInput)
   root.loc = getLoc(0, input.length)
-  root.children = condenseWhitespace(root.children)
+  root.children = condenseWhitespace(root.children, true)
   currentRoot = null
   return root
 }
