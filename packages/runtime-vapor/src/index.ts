@@ -3,9 +3,10 @@ export { createVaporApp, createVaporSSRApp } from './apiCreateApp'
 export { defineVaporComponent } from './apiDefineComponent'
 export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
+export { VaporTeleportImpl as VaporTeleport } from './components/Teleport'
 
 // compiler-use only
-export { insert, prepend, remove, isFragment, VaporFragment } from './block'
+export { insert, prepend, remove } from './block'
 export { setInsertionState } from './insertionState'
 export { createComponent, createComponentWithFallback } from './component'
 export { renderEffect } from './renderEffect'
@@ -46,3 +47,4 @@ export {
 export { withVaporDirectives } from './directives/custom'
 export { VaporTransition } from './components/Transition'
 export { VaporTransitionGroup } from './components/TransitionGroup'
+export { isFragment, VaporFragment } from './fragment'

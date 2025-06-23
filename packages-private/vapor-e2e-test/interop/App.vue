@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, shallowRef } from 'vue'
-import VaporComp from './VaporComp.vue'
+import VaporComp from './components/VaporComp.vue'
 import VaporCompA from '../transition/components/VaporCompA.vue'
 import VdomComp from '../transition/components/VdomComp.vue'
 import VaporSlot from '../transition/components/VaporSlot.vue'
@@ -17,6 +17,9 @@ function toggleInteropComponent() {
 
 const items = ref(['a', 'b', 'c'])
 const enterClick = () => items.value.push('d', 'e')
+import SimpleVaporComp from './components/SimpleVaporComp.vue'
+
+const disabled = ref(true)
 </script>
 
 <template>
@@ -69,4 +72,15 @@ const enterClick = () => items.value.push('d', 'e')
       </div>
     </div>
   </div>
+  <!-- teleport -->
+  <div class="teleport">
+    <div class="teleport-target"></div>
+    <div class="render-vapor-comp">
+      <button @click="disabled = !disabled">toggle</button>
+      <Teleport to=".teleport-target" defer :disabled="disabled">
+        <SimpleVaporComp />
+      </Teleport>
+    </div>
+  </div>
+  <!-- teleport end-->
 </template>

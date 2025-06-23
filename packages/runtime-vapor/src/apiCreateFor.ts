@@ -19,12 +19,7 @@ import {
   isString,
 } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
-import {
-  type Block,
-  VaporFragment,
-  insert,
-  remove as removeBlock,
-} from './block'
+import { type Block, insert, remove as removeBlock } from './block'
 import { warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
@@ -37,6 +32,7 @@ import {
   locateHydrationNode,
   locateVaporFragmentAnchor,
 } from './dom/hydration'
+import { VaporFragment } from './fragment'
 import {
   insertionAnchor,
   insertionParent,

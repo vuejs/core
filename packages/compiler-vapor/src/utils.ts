@@ -115,10 +115,17 @@ export function isTransitionGroupTag(tag: string): boolean {
   return tag === 'transitiongroup' || tag === 'vaportransitiongroup'
 }
 
+export function isTeleportTag(tag: string): boolean {
+  tag = tag.toLowerCase()
+  return tag === 'teleport' || tag === 'vaporteleport'
+}
+
 export function isBuiltInComponent(tag: string): string | undefined {
   if (isTransitionTag(tag)) {
     return 'VaporTransition'
   } else if (isTransitionGroupTag(tag)) {
     return 'VaporTransitionGroup'
+  } else if (isTeleportTag(tag)) {
+    return 'VaporTeleport'
   }
 }

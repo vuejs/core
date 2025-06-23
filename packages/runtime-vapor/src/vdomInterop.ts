@@ -37,15 +37,7 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import {
-  type Block,
-  DynamicFragment,
-  VaporFragment,
-  type VaporTransitionHooks,
-  insert,
-  isFragment,
-  remove,
-} from './block'
+import { type Block, type VaporTransitionHooks, insert, remove } from './block'
 import {
   EMPTY_OBJ,
   extend,
@@ -65,6 +57,7 @@ import {
   locateHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
+import { DynamicFragment, VaporFragment, isFragment } from './fragment'
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<

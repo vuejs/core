@@ -21,14 +21,23 @@ const duration = process.env.CI ? 200 : 50
 const buffer = process.env.CI ? 50 : 20
 const transitionFinish = (time = duration) => timeout(time + buffer)
 
+import { ports } from '../utils'
+import { nextTick } from 'vue'
+
 describe('vdom / vapor interop', () => {
   let server: any
-  const port = '8193'
+  const port = ports.vdomInterop
   beforeAll(() => {
     server = connect()
       .use(sirv(path.resolve(import.meta.dirname, '../dist')))
       .listen(port)
     process.on('SIGTERM', () => server && server.close())
+  })
+
+  beforeEach(async () => {
+    const baseUrl = `http://localhost:${port}/interop/`
+    await page().goto(baseUrl)
+    await page().waitForSelector('#app')
   })
 
   afterAll(() => {
@@ -255,5 +264,33 @@ describe('vdom / vapor interop', () => {
       },
       E2E_TIMEOUT,
     )
+    describe('teleport', () => {
+      const testSelector = '.teleport'
+      test('render vapor component', async () => {
+        const targetSelector = `${testSelector} .teleport-target`
+        const containerSelector = `${testSelector} .render-vapor-comp`
+        const buttonSelector = `${containerSelector} button`
+
+        // teleport is disabled by default
+        expect(await html(containerSelector)).toBe(
+          `<button>toggle</button><div>vapor comp</div>`,
+        )
+        expect(await html(targetSelector)).toBe('')
+
+        // disabled -> enabled
+        await click(buttonSelector)
+        await nextTick()
+        expect(await html(containerSelector)).toBe(`<button>toggle</button>`)
+        expect(await html(targetSelector)).toBe('<div>vapor comp</div>')
+
+        // enabled -> disabled
+        await click(buttonSelector)
+        await nextTick()
+        expect(await html(containerSelector)).toBe(
+          `<button>toggle</button><div>vapor comp</div>`,
+        )
+        expect(await html(targetSelector)).toBe('')
+      })
+    })
   })
 })

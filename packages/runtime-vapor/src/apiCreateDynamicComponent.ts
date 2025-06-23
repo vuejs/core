@@ -1,5 +1,5 @@
 import { currentInstance, resolveDynamicComponent } from '@vue/runtime-dom'
-import { DynamicFragment, type VaporFragment, insert } from './block'
+import { insert } from './block'
 import { createComponentWithFallback, emptyContext } from './component'
 import { renderEffect } from './renderEffect'
 import type { RawProps } from './componentProps'
@@ -11,6 +11,7 @@ import {
 } from './insertionState'
 import { DYNAMIC_COMPONENT_ANCHOR_LABEL } from '@vue/shared'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { DynamicFragment, type VaporFragment } from './fragment'
 
 export function createDynamicComponent(
   getter: () => any,

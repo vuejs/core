@@ -7,6 +7,7 @@ import connect from 'connect'
 import sirv from 'sirv'
 import { expect } from 'vitest'
 const { page, nextFrame, timeout, html, transitionStart } = setupPuppeteer()
+import { ports } from '../utils'
 
 const duration = process.env.CI ? 200 : 50
 const buffer = process.env.CI ? 50 : 20
@@ -14,7 +15,7 @@ const transitionFinish = (time = duration) => timeout(time + buffer)
 
 describe('vapor transition-group', () => {
   let server: any
-  const port = '8196'
+  const port = ports.transitionGroup
   beforeAll(() => {
     server = connect()
       .use(sirv(path.resolve(import.meta.dirname, '../dist')))

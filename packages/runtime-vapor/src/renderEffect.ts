@@ -11,7 +11,10 @@ import {
 import { type VaporComponentInstance, isVaporComponent } from './component'
 import { invokeArrayFns } from '@vue/shared'
 
-export function renderEffect(fn: () => void, noLifecycle = false): void {
+export function renderEffect(
+  fn: () => void,
+  noLifecycle = false,
+): ReactiveEffect<void> {
   const instance = currentInstance as VaporComponentInstance | null
   const scope = getCurrentScope()
   if (__DEV__ && !__TEST__ && !scope && !isVaporComponent(instance)) {
@@ -66,5 +69,6 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
   effect.scheduler = () => queueJob(job)
   effect.run()
 
+  return effect
   // TODO recurse handling
 }

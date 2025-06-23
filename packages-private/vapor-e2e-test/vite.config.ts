@@ -14,6 +14,7 @@ export default defineConfig({
       input: {
         interop: resolve(import.meta.dirname, 'interop/index.html'),
         todomvc: resolve(import.meta.dirname, 'todomvc/index.html'),
+        teleport: resolve(import.meta.dirname, 'teleport/index.html'),
         transition: resolve(import.meta.dirname, 'transition/index.html'),
         transitionGroup: resolve(
           import.meta.dirname,

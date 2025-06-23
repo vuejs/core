@@ -19,6 +19,7 @@ const {
   waitForElement,
   click,
 } = setupPuppeteer()
+import { ports } from '../utils'
 
 const duration = process.env.CI ? 200 : 50
 const buffer = process.env.CI ? 50 : 20
@@ -26,7 +27,7 @@ const transitionFinish = (time = duration) => timeout(time + buffer)
 
 describe('vapor transition', () => {
   let server: any
-  const port = '8195'
+  const port = ports.transition
   beforeAll(() => {
     server = connect()
       .use(sirv(path.resolve(import.meta.dirname, '../dist')))

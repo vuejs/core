@@ -6,15 +6,7 @@ import {
   isArray,
   isFunction,
 } from '@vue/shared'
-import {
-  type Block,
-  type BlockFn,
-  DynamicFragment,
-  type VaporFragment,
-  insert,
-  isFragment,
-  setScopeId,
-} from './block'
+import { type Block, type BlockFn, insert, setScopeId } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
@@ -25,6 +17,7 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { DynamicFragment, type VaporFragment, isFragment } from './fragment'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]

@@ -577,4 +577,12 @@ export { ensureVaporSlotFallback } from './helpers/renderSlot'
 /**
  * @internal
  */
+export {
+  resolveTarget as resolveTeleportTarget,
+  isTeleportDisabled,
+  isTeleportDeferred,
+} from './components/Teleport'
+/**
+ * @internal
+ */
 export { createInternalObject } from './internalObject'
