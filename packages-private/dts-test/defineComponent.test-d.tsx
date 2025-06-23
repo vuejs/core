@@ -2,6 +2,7 @@ import {
   type Component,
   type ComponentOptions,
   type ComponentPublicInstance,
+  type DefineSetupFnComponent,
   type PropType,
   type SetupContext,
   type Slots,
@@ -1402,7 +1403,7 @@ describe('function syntax w/ emits', () => {
 describe('function syntax w/ runtime props', () => {
   // with runtime props, the runtime props must match
   // manual type declaration
-  defineComponent(
+  const Comp1 = defineComponent(
     (_props: { msg: string }) => {
       return () => {}
     },
@@ -1411,23 +1412,30 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
+  expectType<JSX.Element>(<Comp1 msg="1" />)
+  // @ts-expect-error msg type is incorrect
+  expectType<JSX.Element>(<Comp1 msg={1} />)
+  // @ts-expect-error msg is missing
+  expectType<JSX.Element>(<Comp1 />)
+  // @ts-expect-error bar doesn't exist
+  expectType<JSX.Element>(<Comp1 msg="1" bar="2" />)
+
+  // @ts-expect-error bar isn't specified in props definition
   defineComponent(
-    <T extends string>(_props: { msg: T }) => {
+    (_props: { msg: string }) => {
       return () => {}
     },
     {
-      props: ['msg'],
+      props: ['msg', 'bar'],
     },
   )
 
   defineComponent(
-    <T extends string>(_props: { msg: T }) => {
+    (_props: { msg: string; bar: string }) => {
       return () => {}
     },
     {
-      props: {
-        msg: String,
-      },
+      props: ['msg'],
     },
   )
 
@@ -1438,6 +1446,84 @@ describe('function syntax w/ runtime props', () => {
     },
     {
       props: ['bar'],
+    },
+  )
+
+  const Comp2 = defineComponent(
+    <T extends string>(_props: { msg: T }) => {
+      return () => {}
+    },
+    {
+      props: ['msg'],
+    },
+  )
+
+  expectType<JSX.Element>(<Comp2 msg="1" />)
+  expectType<JSX.Element>(<Comp2<string> msg="1" />)
+  // @ts-expect-error msg type is incorrect
+  expectType<JSX.Element>(<Comp2 msg={1} />)
+  // @ts-expect-error msg is missing
+  expectType<JSX.Element>(<Comp2 />)
+  // @ts-expect-error bar doesn't exist
+  expectType<JSX.Element>(<Comp2 msg="1" bar="2" />)
+
+  const Comp3 = defineComponent(
+    <T extends string>(_props: { msg: T }) => {
+      return () => {}
+    },
+    {
+      props: ['msg', 'bar'],
+    },
+  )
+
+  // This is not the preferred behavior because it's better to see a typescript error,
+  // but this is a compromise to resolve a relatively worse problem -
+  // not inferring props types from runtime props when the types are not explicitly set.
+  // See #13119#discussion_r2137831991
+  expectType<DefineSetupFnComponent<{ msg: any; bar: any }>>(Comp3)
+
+  defineComponent(
+    <T extends string>(_props: { msg: T; bar: T }) => {
+      return () => {}
+    },
+    {
+      props: ['msg'],
+    },
+  )
+
+  // Note: generics aren't supported with object runtime props
+  // so the props will infer the runtime props' types
+  const Comp4 = defineComponent(
+    <T extends string>(_props: { msg: T }) => {
+      return () => {}
+    },
+    {
+      props: {
+        msg: String,
+      },
+    },
+  )
+
+  expectType<DefineSetupFnComponent<{ msg: string }>>(Comp4)
+  expectType<JSX.Element>(<Comp4 msg="1" />)
+  // @ts-expect-error generics aren't supported with object runtime props
+  expectType<JSX.Element>(<Comp4<string> msg="1" />)
+  // @ts-expect-error msg type is incorrect
+  expectType<JSX.Element>(<Comp4 msg={1} />)
+  // @ts-expect-error msg is missing
+  expectType<JSX.Element>(<Comp4 />)
+  // @ts-expect-error bar doesn't exist
+  expectType<JSX.Element>(<Comp4 msg="1" bar="2" />)
+
+  defineComponent(
+    // @ts-expect-error bar isn't specified in props definition
+    <T extends string>(_props: { msg: T }) => {
+      return () => {}
+    },
+    {
+      props: {
+        bar: String,
+      },
     },
   )
 
@@ -1453,16 +1539,24 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
-  // @ts-expect-error prop keys don't match
-  defineComponent(
-    (_props: { msg: string }, ctx) => {
+  const Comp5 = defineComponent(
+    _props => {
       return () => {}
     },
     {
-      props: {
-        msg: String,
-        bar: String,
-      },
+      props: ['foo'],
+    },
+  )
+
+  expectType<DefineSetupFnComponent<{ foo: any }>>(Comp5)
+
+  defineComponent(
+    // @ts-expect-error the props type is required when a generic type is present
+    <T,>(_props) => {
+      return () => {}
+    },
+    {
+      props: [],
     },
   )
 })
