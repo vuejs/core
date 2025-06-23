@@ -292,5 +292,19 @@ describe('vdom / vapor interop', () => {
         expect(await html(targetSelector)).toBe('')
       })
     })
+    describe('async component', () => {
+      const container = '.async-component-interop'
+      test(
+        'with-vdom-inner-component',
+        async () => {
+          const testContainer = `${container} .with-vdom-component`
+          expect(await html(testContainer)).toBe('<span>loading...</span>')
+
+          await timeout(duration)
+          expect(await html(testContainer)).toBe('<div>foo</div>')
+        },
+        E2E_TIMEOUT,
+      )
+    })
   })
 })

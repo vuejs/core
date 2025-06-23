@@ -4,6 +4,8 @@ import VaporComp from './components/VaporComp.vue'
 import VaporCompA from '../transition/components/VaporCompA.vue'
 import VdomComp from '../transition/components/VdomComp.vue'
 import VaporSlot from '../transition/components/VaporSlot.vue'
+import { defineVaporAsyncComponent, h } from 'vue'
+import VdomFoo from './components/VdomFoo.vue'
 
 const msg = ref('hello')
 const passSlot = ref(true)
@@ -20,6 +22,18 @@ const enterClick = () => items.value.push('d', 'e')
 import SimpleVaporComp from './components/SimpleVaporComp.vue'
 
 const disabled = ref(true)
+const duration = typeof process !== 'undefined' && process.env.CI ? 200 : 50
+
+const AsyncVDomFoo = defineVaporAsyncComponent({
+  loader: () => {
+    return new Promise(r => {
+      setTimeout(() => {
+        r(VdomFoo as any)
+      }, duration)
+    })
+  },
+  loadingComponent: () => h('span', 'loading...'),
+})
 </script>
 
 <template>
@@ -83,4 +97,11 @@ const disabled = ref(true)
     </div>
   </div>
   <!-- teleport end-->
+  <!-- async component  -->
+  <div class="async-component-interop">
+    <div class="with-vdom-component">
+      <AsyncVDomFoo />
+    </div>
+  </div>
+  <!-- async component end -->
 </template>

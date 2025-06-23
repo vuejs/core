@@ -21,6 +21,7 @@ import {
   applyTransitionHooks,
   applyTransitionLeaveHooks,
 } from './components/Transition'
+import type { VaporComponentInstance } from './component'
 
 export class VaporFragment implements TransitionOptions {
   $key?: any
@@ -38,6 +39,7 @@ export class VaporFragment implements TransitionOptions {
   target?: ParentNode | null
   targetAnchor?: Node | null
   getNodes?: () => Block
+  setRef?: (comp: VaporComponentInstance) => void
 
   constructor(nodes: Block) {
     this.nodes = nodes

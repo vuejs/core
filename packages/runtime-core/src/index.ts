@@ -582,6 +582,15 @@ export {
   isTeleportDisabled,
   isTeleportDeferred,
 } from './components/Teleport'
+export {
+  createAsyncComponentContext,
+  useAsyncComponentState,
+  isAsyncWrapper,
+} from './apiAsyncComponent'
+/**
+ * @internal
+ */
+export { markAsyncBoundary } from './helpers/useId'
 /**
  * @internal
  */

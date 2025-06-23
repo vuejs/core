@@ -1,6 +1,7 @@
 // public APIs
 export { createVaporApp, createVaporSSRApp } from './apiCreateApp'
 export { defineVaporComponent } from './apiDefineComponent'
+export { defineVaporAsyncComponent } from './apiDefineAsyncComponent'
 export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
 export { VaporTeleportImpl as VaporTeleport } from './components/Teleport'
