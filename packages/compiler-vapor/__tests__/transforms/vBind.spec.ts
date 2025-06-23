@@ -794,6 +794,13 @@ describe('cache multiple access', () => {
     expect(code).contains('_setStyle(n0, {color: _color})')
   })
 
+  test('optional chaining', () => {
+    const { code } = compileWithVBind(`<div :id="obj?.foo + obj?.bar"></div>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _obj = _ctx.obj')
+    expect(code).contains('_setProp(n0, "id", _obj?.foo + _obj?.bar)')
+  })
+
   test('not cache variable only used in property shorthand', () => {
     const { code } = compileWithVBind(`
         <div :style="{color}" />
