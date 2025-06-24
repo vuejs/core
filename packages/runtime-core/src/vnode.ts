@@ -491,6 +491,8 @@ function createBaseVNode(
     ctx: currentRenderingInstance,
   } as VNode
 
+  updateUt(vnode)
+
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)
     // normalize suspense children
@@ -535,6 +537,19 @@ function createBaseVNode(
   }
 
   return vnode
+}
+
+function updateUt(vnode: VNode) {
+  if (vnode.ctx && vnode.ctx.parent && vnode.ctx.parent.ut) {
+    const parentUt = vnode.ctx.parent.ut.slice(0)
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+      if (vnode.ctx.ut) {
+        vnode.ctx.ut.unshift(...parentUt)
+      } else vnode.ctx.ut = parentUt
+    } else if (vnode.shapeFlag & ShapeFlags.TELEPORT) {
+      if (!vnode.ctx.ut) vnode.ctx.ut = parentUt
+    }
+  }
 }
 
 export { createBaseVNode as createElementVNode }

@@ -29,11 +29,18 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
   }
   /* v8 ignore stop */
 
-  const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
-    Array.from(
-      document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
-    ).forEach(node => setVarsOnNode(node, vars))
-  })
+  const ut = {
+    uid: instance.uid,
+    update: (vars = getter(instance.proxy)) => {
+      Array.from(
+        document.querySelectorAll(`[data-v-owner-${instance.uid}]`),
+      ).forEach(node => setVarsOnNode(node, vars))
+    },
+  }
+  instance.ut = [ut]
+  const updateTeleports = () => {
+    instance.ut!.forEach(i => i.update())
+  }
 
   if (__DEV__) {
     instance.getCssVars = () => getter(instance.proxy)
@@ -46,7 +53,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
     } else {
       setVarsOnVNode(instance.subTree, vars)
     }
-    updateTeleports(vars)
+    updateTeleports()
   }
 
   // handle cases where child component root is affected
