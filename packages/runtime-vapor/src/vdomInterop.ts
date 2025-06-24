@@ -74,7 +74,6 @@ const vaporInteropImpl: Omit<
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
     mountComponent(instance, container, selfAnchor)
-    vnode.el = instance.block
     simpleSetCurrentInstance(prev)
     return instance
   },
