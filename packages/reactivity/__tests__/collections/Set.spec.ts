@@ -1,4 +1,4 @@
-import { effect, isReactive, reactive, toRaw } from '../../src'
+import { computed, effect, isReactive, reactive, ref, toRaw } from '../../src'
 
 describe('reactivity/collections', () => {
   function coverCollectionFn(collection: Set<any>, fnName: string) {
@@ -458,6 +458,22 @@ describe('reactivity/collections', () => {
       const set = reactive(new Set())
       const result = set.add('a')
       expect(result).toBe(set)
+    })
+
+    it('set with union in computed', () => {
+      const set1 = ref(new Set([1, 2, 3]))
+      const set2 = ref(new Set([2, 3, 4]))
+      // @ts-expect-error
+      const setSpy = vi.fn(() => set1.value.union(set2.value))
+      const c = computed(setSpy)
+      effect(() => c.value)
+      expect(setSpy).toHaveBeenCalledTimes(1)
+      set1.value.add(6)
+      expect(setSpy).toHaveBeenCalledTimes(2)
+      expect(c.value).toEqual(new Set([1, 2, 3, 4, 6]))
+      set2.value.add(7)
+      expect(setSpy).toHaveBeenCalledTimes(3)
+      expect(c.value).toEqual(new Set([1, 2, 3, 4, 6, 7]))
     })
   })
 })
