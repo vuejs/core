@@ -757,4 +757,74 @@ describe('compiler: v-if', () => {
       TO_HANDLERS,
     )
   })
+
+  test('template v-if + dynamic key', () => {
+    const {
+      node: { codegenNode: codegenNode },
+    } = parseWithIfTransform(
+      `<template v-if="flag" :key="100">aaaaaaaaaaaaa</template>
+      <template v-else :key="2000">bbbbbbbbbbb</template>`,
+    )
+    expect(codegenNode.alternate).toMatchObject({
+      props: {
+        properties: [
+          {
+            key: { content: 'key' },
+            value: {
+              content: '2000',
+              isStatic: false,
+            },
+          },
+        ],
+      },
+    })
+    expect(codegenNode.consequent).toMatchObject({
+      props: {
+        properties: [
+          {
+            key: { content: 'key' },
+            value: {
+              content: '100',
+              isStatic: false,
+            },
+          },
+        ],
+      },
+    })
+  })
+
+  test('template is static key with v-if', () => {
+    const {
+      node: { codegenNode: codegenNode },
+    } = parseWithIfTransform(
+      `<template v-if="flag" key="aa">aaaaaaaaaaaaa</template>
+      <template v-else key="bb">bbbbbbbbbbb</template>`,
+    )
+    expect(codegenNode.alternate).toMatchObject({
+      props: {
+        properties: [
+          {
+            key: { content: 'key' },
+            value: {
+              content: 'bb',
+              isStatic: true,
+            },
+          },
+        ],
+      },
+    })
+    expect(codegenNode.consequent).toMatchObject({
+      props: {
+        properties: [
+          {
+            key: { content: 'key' },
+            value: {
+              content: 'aa',
+              isStatic: true,
+            },
+          },
+        ],
+      },
+    })
+  })
 })
