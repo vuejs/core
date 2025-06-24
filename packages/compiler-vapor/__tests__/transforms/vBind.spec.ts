@@ -785,6 +785,25 @@ describe('cache multiple access', () => {
     expect(code).contains('_setProp(n0, "id", _obj[1][_ctx.baz] + _obj.bar)')
   })
 
+  test('variable name substring edge cases', () => {
+    const { code } = compileWithVBind(
+      `<div :id="title + titles + title"></div>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).contains('const _title = _ctx.title')
+    expect(code).contains('_setProp(n0, "id", _title + _ctx.titles + _title)')
+  })
+
+  test('object property name substring cases', () => {
+    const { code } = compileWithVBind(
+      `<div :id="p.title + p.titles + p.title"></div>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).contains('const _p = _ctx.p')
+    expect(code).contains('const _p_title = _p.title')
+    expect(code).contains('_setProp(n0, "id", _p_title + _p.titles + _p_title)')
+  })
+
   test('cache variable used in both property shorthand and normal binding', () => {
     const { code } = compileWithVBind(`
         <div :style="{color}" :id="color"/>

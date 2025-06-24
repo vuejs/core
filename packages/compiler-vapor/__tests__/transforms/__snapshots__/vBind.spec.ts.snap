@@ -113,6 +113,21 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`cache multiple access > object property name substring cases 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _p = _ctx.p
+    const _p_title = _p.title
+    _setProp(n0, "id", _p_title + _p.titles + _p_title)
+  })
+  return n0
+}"
+`;
+
 exports[`cache multiple access > repeated expression in expressions 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
@@ -177,6 +192,20 @@ export function render(_ctx) {
     _setClass(n1, _foo)
   })
   return [n0, n1]
+}"
+`;
+
+exports[`cache multiple access > variable name substring edge cases 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _title = _ctx.title
+    _setProp(n0, "id", _title + _ctx.titles + _title)
+  })
+  return n0
 }"
 `;
 
