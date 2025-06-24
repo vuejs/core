@@ -1229,5 +1229,16 @@ function testRender(type: string, render: typeof renderToString) {
       // during the render phase
       expect(getterSpy).toHaveBeenCalledTimes(2)
     })
+
+    test('manually using the h function (return a HTMLElement)', async () => {
+      const MyNode = h('div', { id: 'aaaa' })
+      const app = createSSRApp({
+        ssrRender(_ctx, push, parent) {
+          push(ssrRenderComponent(MyNode, null, null, parent))
+        },
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div id="aaaa"></div>`)
+    })
   })
 }
