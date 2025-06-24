@@ -100,7 +100,6 @@ const vaporInteropImpl: Omit<
       )
     }
     mountComponent(instance, container, selfAnchor)
-    vnode.el = instance.block
     simpleSetCurrentInstance(prev)
     return instance
   },
