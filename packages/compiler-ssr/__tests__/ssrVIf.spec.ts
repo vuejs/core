@@ -43,6 +43,7 @@ describe('ssr: v-if', () => {
             _push(\`<!--if-->\`)
           } else {
             _push(\`<span\${_ssrRenderAttrs(_attrs)}></span>\`)
+            _push(\`<!--if-->\`)
           }
         }"
       `)
@@ -81,6 +82,7 @@ describe('ssr: v-if', () => {
             _push(\`<!--if-->\`)
           } else {
             _push(\`<p\${_ssrRenderAttrs(_attrs)}></p>\`)
+            _push(\`<!--if-->\`)
           }
         }"
       `)
@@ -170,6 +172,7 @@ describe('ssr: v-if', () => {
           _push(\`<!--if-->\`)
         } else {
           _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
+          _push(\`<!--if-->\`)
         }
       }"
     `)

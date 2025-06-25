@@ -191,6 +191,7 @@ export interface VaporInteropInterface {
     transition: TransitionHooks,
   ): void
   hydrate(node: Node, fn: () => void): void
+  hydrateSlot(vnode: VNode, container: any): void
 
   vdomMount: (
     component: ConcreteComponent,

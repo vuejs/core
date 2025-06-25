@@ -60,7 +60,7 @@ export class DynamicFragment extends VaporFragment {
   constructor(anchorLabel?: string) {
     super([])
     if (isHydrating) {
-      locateHydrationNode(true)
+      locateHydrationNode()
       this.hydrate(anchorLabel!)
     } else {
       this.anchor =
@@ -123,10 +123,14 @@ export class DynamicFragment extends VaporFragment {
   hydrate(label: string): void {
     // for `v-if="false"` the node will be an empty comment, use it as the anchor.
     // otherwise, find next sibling vapor fragment anchor
-    if (isComment(currentHydrationNode!, '')) {
+    if (label === 'if' && isComment(currentHydrationNode!, '')) {
       this.anchor = currentHydrationNode
     } else {
-      const anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
+      let anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
+      if (!anchor && (label === 'slot' || label === 'if')) {
+        // fallback to fragment end anchor for ssr vdom slot
+        anchor = locateVaporFragmentAnchor(currentHydrationNode!, ']')!
+      }
       if (anchor) {
         this.anchor = anchor
       } else if (__DEV__) {
