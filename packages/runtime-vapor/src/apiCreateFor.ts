@@ -25,7 +25,6 @@ import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
-import { applyTransitionHooks } from './components/Transition'
 import {
   currentHydrationNode,
   isHydrating,
@@ -38,6 +37,7 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
+import { applyTransitionHooks } from './components/Transition'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
