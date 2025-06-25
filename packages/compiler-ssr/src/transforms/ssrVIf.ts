@@ -80,11 +80,11 @@ function processIfBranch(
     context,
     needFragmentWrapper,
   )
-  if (branch.condition) {
-    // v-if/v-else-if anchor for vapor hydration
-    statement.body.push(
-      createCallExpression(`_push`, [`\`<!--${IF_ANCHOR_LABEL}-->\``]),
-    )
-  }
+
+  // v-if/v-else-if/v-else anchor for vapor hydration
+  statement.body.push(
+    createCallExpression(`_push`, [`\`<!--${IF_ANCHOR_LABEL}-->\``]),
+  )
+
   return statement
 }

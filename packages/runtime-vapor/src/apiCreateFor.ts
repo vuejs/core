@@ -30,6 +30,7 @@ import {
   isHydrating,
   locateHydrationNode,
   locateVaporFragmentAnchor,
+  updateNextChildToHydrate,
 } from './dom/hydration'
 import { VaporFragment } from './fragment'
 import {
@@ -86,7 +87,7 @@ export const createFor = (
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
-    locateHydrationNode(true)
+    locateHydrationNode()
   } else {
     resetInsertionState()
   }
@@ -129,6 +130,10 @@ export const createFor = (
     if (!isMounted) {
       isMounted = true
       for (let i = 0; i < newLength; i++) {
+        // TODO add tests
+        if (isHydrating && i > 0 && _insertionParent) {
+          updateNextChildToHydrate(_insertionParent)
+        }
         mount(source, i)
       }
     } else {

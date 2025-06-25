@@ -77,6 +77,7 @@ describe('ssr: inject <style vars>', () => {
           }></div><div\${
             _ssrRenderAttrs(_cssVars)
           }></div><!--]-->\`)
+          _push(\`<!--if-->\`)
         }
       }"
     `)

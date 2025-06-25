@@ -6,11 +6,12 @@ import {
   setInsertionState,
 } from '../insertionState'
 import {
+  __next,
+  _nthChild,
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
-  next,
 } from './node'
-import { isVaporAnchors, isVaporFragmentAnchor } from '@vue/shared'
+import { isVaporAnchors } from '@vue/shared'
 
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
@@ -29,9 +30,9 @@ function performHydration<T>(
   if (!isOptimized) {
     adoptTemplate = adoptTemplateImpl
     locateHydrationNode = locateHydrationNodeImpl
-
     // optimize anchor cache lookup
-    ;(Comment.prototype as any).$fs = undefined
+    ;(Comment.prototype as any).$fe = undefined
+    ;(Node.prototype as any).$dp = undefined
     isOptimized = true
   }
   enableHydrationNodeLookup()
@@ -58,12 +59,12 @@ export function hydrateNode(node: Node, fn: () => void): void {
 }
 
 export let adoptTemplate: (node: Node, template: string) => Node | null
-export let locateHydrationNode: (hasFragmentAnchor?: boolean) => void
+export let locateHydrationNode: (isFragment?: boolean) => void
 
 type Anchor = Comment & {
-  // cached matching fragment start to avoid repeated traversal
+  // cached matching fragment end to avoid repeated traversal
   // on nested fragments
-  $fs?: Anchor
+  $fe?: Anchor
 }
 
 export const isComment = (node: Node, data: string): node is Anchor =>
@@ -95,13 +96,23 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
     }
   }
 
-  currentHydrationNode = next(node)
+  currentHydrationNode = __next(node)
   return node
 }
 
-const hydrationPositionMap = new WeakMap<ParentNode, Node>()
+const childToHydrateMap = new WeakMap<ParentNode, Node>()
 
-function locateHydrationNodeImpl(hasFragmentAnchor?: boolean) {
+export function updateNextChildToHydrate(parent: ParentNode): void {
+  let nextNode = childToHydrateMap.get(parent)
+  if (nextNode) {
+    nextNode = __next(nextNode)
+    if (nextNode) {
+      childToHydrateMap.set(parent, (currentHydrationNode = nextNode))
+    }
+  }
+}
+
+function locateHydrationNodeImpl(isFragment?: boolean): void {
   let node: Node | null
   // prepend / firstChild
   if (insertionAnchor === 0) {
@@ -112,52 +123,25 @@ function locateHydrationNodeImpl(hasFragmentAnchor?: boolean) {
     // SSR Output: `...<span/>Content<span/>...`// `insertionAnchor` is the actual node
     node = insertionAnchor
   } else {
-    node = insertionParent
-      ? hydrationPositionMap.get(insertionParent) || insertionParent.lastChild
-      : currentHydrationNode
-
-    // if node is a vapor fragment anchor, find the previous one
-    if (hasFragmentAnchor && node && isVaporFragmentAnchor(node)) {
-      node = node.previousSibling
-      if (__DEV__ && !node) {
-        // this should not happen
-        throw new Error(`vapor fragment anchor previous node was not found.`)
-      }
+    node = currentHydrationNode
+    if (insertionParent && (!node || node.parentNode !== insertionParent)) {
+      node =
+        childToHydrateMap.get(insertionParent) ||
+        _nthChild(insertionParent, insertionParent.$dp || 0)
     }
 
-    if (node && isComment(node, ']')) {
-      // fragment backward search
-      if (node.$fs) {
-        // already cached matching fragment start
-        node = node.$fs
-      } else {
-        let cur: Node | null = node
-        let curFragEnd = node
-        let fragDepth = 0
-        node = null
-        while (cur) {
-          cur = cur.previousSibling
-          if (cur) {
-            if (isComment(cur, '[')) {
-              curFragEnd.$fs = cur
-              if (!fragDepth) {
-                node = cur
-                break
-              } else {
-                fragDepth--
-              }
-            } else if (isComment(cur, ']')) {
-              curFragEnd = cur
-              fragDepth++
-            }
-          }
-        }
+    // locate slot fragment start anchor
+    if (isFragment && node && !isComment(node, '[')) {
+      node = locateVaporFragmentAnchor(node, '[')!
+    } else {
+      while (node && isNonHydrationNode(node)) {
+        node = node.nextSibling!
       }
     }
 
     if (insertionParent && node) {
-      const prev = node.previousSibling
-      if (prev) hydrationPositionMap.set(insertionParent, prev)
+      const nextNode = node.nextSibling
+      if (nextNode) childToHydrateMap.set(insertionParent, nextNode)
     }
   }
 
@@ -171,24 +155,28 @@ function locateHydrationNodeImpl(hasFragmentAnchor?: boolean) {
 }
 
 export function locateEndAnchor(
-  node: Node | null,
+  node: Anchor,
   open = '[',
   close = ']',
 ): Node | null {
-  let match = 0
-  while (node) {
-    node = node.nextSibling
-    if (node && node.nodeType === 8) {
-      if ((node as Comment).data === open) match++
-      if ((node as Comment).data === close) {
-        if (match === 0) {
-          return node
-        } else {
-          match--
-        }
+  // already cached matching end
+  if (node.$fe) {
+    return node.$fe
+  }
+
+  const stack: Anchor[] = [node]
+  while ((node = node.nextSibling as Anchor) && stack.length > 0) {
+    if (node.nodeType === 8) {
+      if (node.data === open) {
+        stack.push(node)
+      } else if (node.data === close) {
+        const matchingOpen = stack.pop()!
+        matchingOpen.$fe = node
+        if (stack.length === 0) return node
       }
     }
   }
+
   return null
 }
 

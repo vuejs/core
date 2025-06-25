@@ -28,7 +28,7 @@ describe('ssr: attr fallthrough', () => {
       `<div class="foo bar"></div><!--if-->`,
     )
     expect(await renderToString(createApp(Parent, { ok: false }))).toBe(
-      `<span class="bar"></span>`,
+      `<span class="bar"></span><!--if-->`,
     )
   })
 
