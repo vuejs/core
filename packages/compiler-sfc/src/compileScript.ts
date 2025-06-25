@@ -984,7 +984,7 @@ export function compileScript(
     ctx.s.prependLeft(
       startOffset,
       `\n${genDefaultAs} /*@__PURE__*/${ctx.helper(
-        vapor ? `defineVaporComponent` : `defineComponent`,
+        vapor && !ssr ? `defineVaporComponent` : `defineComponent`,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
       }setup(${args}) {\n${exposeCall}`,
