@@ -16,7 +16,7 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { isHydrating } from './dom/hydration'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -105,11 +105,7 @@ export function createSlot(
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  if (isHydrating) {
-    locateHydrationNode(true)
-  } else {
-    resetInsertionState()
-  }
+  if (!isHydrating) resetInsertionState()
 
   const instance = currentInstance as VaporComponentInstance
   const rawSlots = instance.rawSlots
