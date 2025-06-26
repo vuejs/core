@@ -588,6 +588,7 @@ function extractMemberExpression(
     case 'CallExpression': // foo[bar(baz)]
       return `${extractMemberExpression(exp.callee, onIdentifier)}(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
     case 'MemberExpression': // foo[bar.baz]
+    case 'OptionalMemberExpression': // foo?.bar
       const object = extractMemberExpression(exp.object, onIdentifier)
       const prop = exp.computed
         ? `[${extractMemberExpression(exp.property, onIdentifier)}]`
