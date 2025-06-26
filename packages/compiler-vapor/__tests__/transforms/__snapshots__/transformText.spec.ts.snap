@@ -1,0 +1,23 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: text transform > consecutive text 1`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setText(n0, _toDisplayString(_ctx.msg)))
+  return n0
+}"
+`;
+
+exports[`compiler: text transform > no consecutive text 1`] = `
+"import { setText as _setText, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setText(n0, "hello world")
+  return n0
+}"
+`;
