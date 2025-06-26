@@ -107,6 +107,7 @@ export interface Renderer<HostElement = RendererElement> {
 
 export interface HydrationRenderer extends Renderer<Element | ShadowRoot> {
   hydrate: RootHydrateFunction
+  hydrateNode: ReturnType<typeof createHydrationFunctions>[1]
 }
 
 export type ElementNamespace = 'svg' | 'mathml' | undefined
@@ -731,19 +732,20 @@ function baseCreateRenderer(
     }
     // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
     // #1689 For inside suspense + suspense resolved case, just call it
-    const needCallTransitionHooks = needTransition(parentSuspense, transition)
-    if (needCallTransitionHooks) {
-      transition!.beforeEnter(el)
+    if (transition) {
+      performTransitionEnter(
+        el,
+        transition,
+        () => hostInsert(el, container, anchor),
+        parentSuspense,
+      )
+    } else {
+      hostInsert(el, container, anchor)
     }
-    hostInsert(el, container, anchor)
-    if (
-      (vnodeHook = props && props.onVnodeMounted) ||
-      needCallTransitionHooks ||
-      dirs
-    ) {
+
+    if ((vnodeHook = props && props.onVnodeMounted) || dirs) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-        needCallTransitionHooks && transition!.enter(el)
         dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
       }, parentSuspense)
     }
@@ -764,30 +766,9 @@ function baseCreateRenderer(
         hostSetScopeId(el, slotScopeIds[i])
       }
     }
-    let subTree = parentComponent && parentComponent.subTree
-    if (subTree) {
-      if (
-        __DEV__ &&
-        subTree.patchFlag > 0 &&
-        subTree.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
-      ) {
-        subTree =
-          filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
-      }
-      if (
-        vnode === subTree ||
-        (isSuspense(subTree.type) &&
-          (subTree.ssContent === vnode || subTree.ssFallback === vnode))
-      ) {
-        const parentVNode = parentComponent!.vnode!
-        setScopeId(
-          el,
-          parentVNode,
-          parentVNode.scopeId,
-          parentVNode.slotScopeIds,
-          parentComponent!.parent,
-        )
-      }
+    const inheritedScopeIds = getInheritedScopeIds(vnode, parentComponent)
+    for (let i = 0; i < inheritedScopeIds.length; i++) {
+      hostSetScopeId(el, inheritedScopeIds[i])
     }
   }
 
@@ -2115,9 +2096,12 @@ function baseCreateRenderer(
       transition
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
-        transition!.beforeEnter(el!)
-        hostInsert(el!, container, anchor)
-        queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+        performTransitionEnter(
+          el!,
+          transition,
+          () => hostInsert(el!, container, anchor),
+          parentSuspense,
+        )
       } else {
         const { leave, delayLeave, afterLeave } = transition!
         const remove = () => {
@@ -2300,27 +2284,15 @@ function baseCreateRenderer(
       return
     }
 
-    const performRemove = () => {
-      hostRemove(el!)
-      if (transition && !transition.persisted && transition.afterLeave) {
-        transition.afterLeave()
-      }
-    }
-
-    if (
-      vnode.shapeFlag & ShapeFlags.ELEMENT &&
-      transition &&
-      !transition.persisted
-    ) {
-      const { leave, delayLeave } = transition
-      const performLeave = () => leave(el!, performRemove)
-      if (delayLeave) {
-        delayLeave(vnode.el!, performRemove, performLeave)
-      } else {
-        performLeave()
-      }
+    if (transition) {
+      performTransitionLeave(
+        el!,
+        transition,
+        () => hostRemove(el!),
+        !!(vnode.shapeFlag & ShapeFlags.ELEMENT),
+      )
     } else {
-      performRemove()
+      hostRemove(el!)
     }
   }
 
@@ -2444,7 +2416,7 @@ function baseCreateRenderer(
   const getNextHostNode: NextFn = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
       if ((vnode.type as ConcreteComponent).__vapor) {
-        return hostNextSibling((vnode.component! as any).block)
+        return hostNextSibling(vnode.anchor!)
       }
       return getNextHostNode(vnode.component!.subTree)
     }
@@ -2546,6 +2518,7 @@ function baseCreateRenderer(
   return {
     render,
     hydrate,
+    hydrateNode,
     internals,
     createApp: createAppAPI(
       mountApp,
@@ -2648,7 +2621,7 @@ export function traverseStaticChildren(
 function locateNonHydratedAsyncRoot(
   instance: ComponentInternalInstance,
 ): ComponentInternalInstance | undefined {
-  const subComponent = instance.subTree.component
+  const subComponent = instance.vapor ? null : instance.subTree.component
   if (subComponent) {
     if (subComponent.asyncDep && !subComponent.asyncResolved) {
       return subComponent
@@ -2665,7 +2638,50 @@ export function invalidateMount(hooks: LifecycleHook | undefined): void {
   }
 }
 
-function getVaporInterface(
+// shared between vdom and vapor
+export function performTransitionEnter(
+  el: RendererElement,
+  transition: TransitionHooks,
+  insert: () => void,
+  parentSuspense: SuspenseBoundary | null,
+): void {
+  if (needTransition(parentSuspense, transition)) {
+    transition.beforeEnter(el)
+    insert()
+    queuePostRenderEffect(() => transition.enter(el), parentSuspense)
+  } else {
+    insert()
+  }
+}
+
+// shared between vdom and vapor
+export function performTransitionLeave(
+  el: RendererElement,
+  transition: TransitionHooks,
+  remove: () => void,
+  isElement: boolean = true,
+): void {
+  const performRemove = () => {
+    remove()
+    if (transition && !transition.persisted && transition.afterLeave) {
+      transition.afterLeave()
+    }
+  }
+
+  if (isElement && transition && !transition.persisted) {
+    const { leave, delayLeave } = transition
+    const performLeave = () => leave(el, performRemove)
+    if (delayLeave) {
+      delayLeave(el, performRemove, performLeave)
+    } else {
+      performLeave()
+    }
+  } else {
+    performRemove()
+  }
+}
+
+export function getVaporInterface(
   instance: ComponentInternalInstance | null,
   vnode: VNode,
 ): VaporInteropInterface {
@@ -2681,4 +2697,55 @@ function getVaporInterface(
     )
   }
   return res!
+}
+
+/**
+ * shared between vdom and vapor
+ */
+export function getInheritedScopeIds(
+  vnode: VNode,
+  parentComponent: GenericComponentInstance | null,
+): string[] {
+  const inheritedScopeIds: string[] = []
+
+  let currentParent = parentComponent
+  let currentVNode = vnode
+
+  while (currentParent) {
+    let subTree = currentParent.subTree
+    if (!subTree) break
+
+    if (
+      __DEV__ &&
+      subTree.patchFlag > 0 &&
+      subTree.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+    ) {
+      subTree =
+        filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
+    }
+
+    if (
+      currentVNode === subTree ||
+      (isSuspense(subTree.type) &&
+        (subTree.ssContent === currentVNode ||
+          subTree.ssFallback === currentVNode))
+    ) {
+      const parentVNode = currentParent.vnode!
+
+      if (parentVNode.scopeId) {
+        inheritedScopeIds.push(parentVNode.scopeId)
+      }
+
+      if (parentVNode.slotScopeIds) {
+        inheritedScopeIds.push(...parentVNode.slotScopeIds)
+      }
+
+      currentVNode = parentVNode
+      currentParent = currentParent.parent
+    } else {
+      break
+    }
+  }
+
+  return inheritedScopeIds
 }

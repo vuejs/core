@@ -1,3 +1,4 @@
+import { BindingTypes } from '@vue/compiler-dom'
 import {
   DynamicFlag,
   type ForIRNode,
@@ -46,6 +47,16 @@ describe('compiler: template ref transform', () => {
     expect(code).matchSnapshot()
     expect(code).contains('const _setTemplateRef = _createTemplateRefSetter()')
     expect(code).contains('_setTemplateRef(n0, "foo")')
+  })
+
+  test('static ref (inline mode)', () => {
+    const { code } = compileWithTransformRef(`<div ref="foo" />`, {
+      inline: true,
+      bindingMetadata: { foo: BindingTypes.SETUP_REF },
+    })
+    expect(code).matchSnapshot()
+    // pass the actual ref
+    expect(code).contains('_setTemplateRef(n0, foo)')
   })
 
   test('dynamic ref', () => {

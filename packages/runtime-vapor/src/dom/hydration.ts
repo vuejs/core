@@ -5,7 +5,13 @@ import {
   resetInsertionState,
   setInsertionState,
 } from '../insertionState'
-import { child, next } from './node'
+import {
+  _nthChild,
+  disableHydrationNodeLookup,
+  enableHydrationNodeLookup,
+  next,
+} from './node'
+import { isVaporAnchors } from '@vue/shared'
 
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
@@ -16,33 +22,60 @@ export function setCurrentHydrationNode(node: Node | null): void {
 
 let isOptimized = false
 
-export function withHydration(container: ParentNode, fn: () => void): void {
-  adoptTemplate = adoptTemplateImpl
-  locateHydrationNode = locateHydrationNodeImpl
+function performHydration<T>(
+  fn: () => T,
+  setup: () => void,
+  cleanup: () => void,
+): T {
   if (!isOptimized) {
+    adoptTemplate = adoptTemplateImpl
+    locateHydrationNode = locateHydrationNodeImpl
     // optimize anchor cache lookup
-    ;(Comment.prototype as any).$fs = undefined
+    ;(Comment.prototype as any).$fe = undefined
+    ;(Node.prototype as any).$dp = undefined
     isOptimized = true
   }
+  enableHydrationNodeLookup()
   isHydrating = true
-  setInsertionState(container, 0)
+  setup()
   const res = fn()
-  resetInsertionState()
+  cleanup()
   currentHydrationNode = null
   isHydrating = false
+  disableHydrationNodeLookup()
   return res
+}
+
+export function withHydration(container: ParentNode, fn: () => void): void {
+  const setup = () => setInsertionState(container, 0)
+  const cleanup = () => resetInsertionState()
+  return performHydration(fn, setup, cleanup)
+}
+
+export function hydrateNode(node: Node, fn: () => void): void {
+  const setup = () => (currentHydrationNode = node)
+  const cleanup = () => {}
+  return performHydration(fn, setup, cleanup)
 }
 
 export let adoptTemplate: (node: Node, template: string) => Node | null
 export let locateHydrationNode: () => void
 
-type Anchor = Comment & {
-  // cached matching fragment start to avoid repeated traversal
-  // on nested fragments
-  $fs?: Anchor
+let inVNodeHydration = 0
+export function setInVNodeHydration(): void {
+  inVNodeHydration++
+}
+export function unsetInVNodeHydration(): void {
+  inVNodeHydration--
 }
 
-const isComment = (node: Node, data: string): node is Anchor =>
+type Anchor = Comment & {
+  // cached matching fragment end to avoid repeated traversal
+  // on nested fragments
+  $fe?: Anchor
+}
+
+export const isComment = (node: Node, data: string): node is Anchor =>
   node.nodeType === 8 && (node as Comment).data === data
 
 /**
@@ -51,7 +84,7 @@ const isComment = (node: Node, data: string): node is Anchor =>
  */
 function adoptTemplateImpl(node: Node, template: string): Node | null {
   if (!(template[0] === '<' && template[1] === '!')) {
-    while (node.nodeType === 8) node = next(node)
+    while (node.nodeType === 8) node = node.nextSibling!
   }
 
   if (__DEV__) {
@@ -75,47 +108,45 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
   return node
 }
 
+const nextHydrationNodeMap = new WeakMap<ParentNode, Node>()
+
 function locateHydrationNodeImpl() {
   let node: Node | null
-
   // prepend / firstChild
   if (insertionAnchor === 0) {
-    node = child(insertionParent!)
-  } else {
+    node = insertionParent!.firstChild
+  } else if (insertionAnchor) {
+    // `insertionAnchor` is a Node, it is the DOM node to hydrate
+    // Template:   `...<span/><!----><span/>...`// `insertionAnchor` is the placeholder
+    // SSR Output: `...<span/>Content<span/>...`// `insertionAnchor` is the actual node
     node = insertionAnchor
-      ? insertionAnchor.previousSibling
-      : insertionParent
-        ? insertionParent.lastChild
-        : currentHydrationNode
+  } else {
+    node = insertionParent
+      ? nextHydrationNodeMap.get(insertionParent) ||
+        (insertionParent.$dp !== undefined
+          ? _nthChild(insertionParent, insertionParent.$dp)
+          : currentHydrationNode)
+      : currentHydrationNode
 
-    if (node && isComment(node, ']')) {
-      // fragment backward search
-      if (node.$fs) {
-        // already cached matching fragment start
-        node = node.$fs
+    let nextNode: Node | null = null
+    while (node) {
+      const isFragStart = isComment(node, '[')
+      if (isFragStart)
+        nextNode = locateEndAnchor(node as Anchor, '[', ']')!.nextSibling
+      if (
+        isNonHydrationNode(node) ||
+        // don't skip fragment start for vnode hydration
+        (!inVNodeHydration && isFragStart)
+      ) {
+        node = node.nextSibling!
       } else {
-        let cur: Node | null = node
-        let curFragEnd = node
-        let fragDepth = 0
-        node = null
-        while (cur) {
-          cur = cur.previousSibling
-          if (cur) {
-            if (isComment(cur, '[')) {
-              curFragEnd.$fs = cur
-              if (!fragDepth) {
-                node = cur
-                break
-              } else {
-                fragDepth--
-              }
-            } else if (isComment(cur, ']')) {
-              curFragEnd = cur
-              fragDepth++
-            }
-          }
-        }
+        break
       }
+    }
+
+    if (insertionParent && node) {
+      const next = nextNode || node.nextSibling
+      if (next) nextHydrationNodeMap.set(insertionParent, next)
     }
   }
 
@@ -126,4 +157,56 @@ function locateHydrationNodeImpl() {
 
   resetInsertionState()
   currentHydrationNode = node
+}
+
+export function locateEndAnchor(
+  node: Anchor,
+  open = '[',
+  close = ']',
+): Node | null {
+  // already cached matching end
+  if (node.$fe) {
+    return node.$fe
+  }
+
+  const stack: Anchor[] = [node]
+  while ((node = node.nextSibling as Anchor) && stack.length > 0) {
+    if (node.nodeType === 8) {
+      if (node.data === open) {
+        stack.push(node)
+      } else if (node.data === close) {
+        const matchingOpen = stack.pop()!
+        matchingOpen.$fe = node
+        if (stack.length === 0) return node
+      }
+    }
+  }
+
+  return null
+}
+
+export function isNonHydrationNode(node: Node): boolean {
+  return (
+    // empty text node
+    isEmptyTextNode(node) ||
+    // vdom fragment end anchor (`<!--]-->`)
+    isComment(node, ']') ||
+    // vapor mode specific anchors
+    isVaporAnchors(node)
+  )
+}
+
+export function locateVaporFragmentAnchor(
+  node: Node,
+  anchorLabel: string,
+): Comment | undefined {
+  let n = node.nextSibling
+  while (n) {
+    if (isComment(n, anchorLabel)) return n
+    n = n.nextSibling
+  }
+}
+
+export function isEmptyTextNode(node: Node): node is Text {
+  return node.nodeType === 3 && !(node as Text).data.trim()
 }

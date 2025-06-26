@@ -24,10 +24,10 @@ export function genSelf(
   context: CodegenContext,
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
-  const { id, template, operation } = dynamic
+  const { id, template, operation, dynamicChildOffset } = dynamic
 
   if (id !== undefined && template !== undefined) {
-    push(NEWLINE, `const n${id} = t${template}()`)
+    push(NEWLINE, `const n${id} = t${template}(${dynamicChildOffset || ''})`)
     push(...genDirectivesForElement(id, context))
   }
 

@@ -46,7 +46,11 @@ function propGetter(rawProps: Record<string, any>, key: string) {
     let i = dynamicSources.length
     while (i--) {
       const source = resolveSource(dynamicSources[i])
-      if (hasOwn(source, key)) return resolveSource(source[key])
+      if (hasOwn(source, key))
+        // for props passed from VDOM component, no need to resolve
+        return dynamicSources.__interop
+          ? source[key]
+          : resolveSource(source[key])
     }
   }
   return rawProps[key] && resolveSource(rawProps[key])

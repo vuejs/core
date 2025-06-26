@@ -25,7 +25,14 @@ import {
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, DynamicFragment, insert, isBlock, remove } from './block'
+import {
+  type Block,
+  insert,
+  isBlock,
+  remove,
+  setComponentScopeId,
+  setScopeId,
+} from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -58,12 +65,15 @@ import {
   getSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
+import { createElement } from './dom/node'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { isVaporTeleport } from './components/Teleport'
 import {
   insertionAnchor,
   insertionParent,
   resetInsertionState,
 } from './insertionState'
+import { DynamicFragment } from './fragment'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -96,6 +106,8 @@ export interface ObjectVaporComponent
 
   name?: string
   vapor?: boolean
+  __asyncLoader?: () => Promise<VaporComponent>
+  __asyncResolved?: VaporComponent
 }
 
 interface SharedInternalOptions {
@@ -138,6 +150,8 @@ export function createComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean, // TODO once support
+  scopeId?: string,
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
     emptyContext,
@@ -156,11 +170,26 @@ export function createComponent(
       component as any,
       rawProps,
       rawSlots,
+      scopeId,
     )
-    if (!isHydrating && _insertionParent) {
+
+    // `frag.insert` handles both hydration and mounting
+    if (_insertionParent) {
       insert(frag, _insertionParent, _insertionAnchor)
     }
     return frag
+  }
+
+  // teleport
+  if (isVaporTeleport(component)) {
+    const frag = component.process(rawProps!, rawSlots!)
+    if (!isHydrating && _insertionParent) {
+      insert(frag, _insertionParent, _insertionAnchor)
+    } else {
+      frag.hydrate()
+    }
+
+    return frag as any
   }
 
   if (
@@ -259,11 +288,7 @@ export function createComponent(
   ) {
     const el = getRootElement(instance)
     if (el) {
-      renderEffect(() => {
-        isApplyingFallthroughProps = true
-        setDynamicProps(el, [instance.attrs])
-        isApplyingFallthroughProps = false
-      })
+      renderEffect(() => applyFallthroughProps(el, instance.attrs))
     }
   }
 
@@ -277,14 +302,24 @@ export function createComponent(
 
   onScopeDispose(() => unmountComponent(instance), true)
 
+  if (scopeId) setScopeId(instance.block, scopeId)
+
   if (!isHydrating && _insertionParent) {
     mountComponent(instance, _insertionParent, _insertionAnchor)
   }
-
   return instance
 }
 
 export let isApplyingFallthroughProps = false
+
+export function applyFallthroughProps(
+  block: Block,
+  attrs: Record<string, any>,
+): void {
+  isApplyingFallthroughProps = true
+  setDynamicProps(block as Element, [attrs])
+  isApplyingFallthroughProps = false
+}
 
 /**
  * dev only
@@ -305,7 +340,7 @@ export function devRender(instance: VaporComponentInstance): void {
     ) || []
 }
 
-const emptyContext: GenericAppContext = {
+export const emptyContext: GenericAppContext = {
   app: null as any,
   config: {},
   provides: /*@__PURE__*/ Object.create(null),
@@ -378,6 +413,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   setupState?: Record<string, any>
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
+  hmrRerenderEffects?: (() => void)[]
   hmrReload?: (newComp: VaporComponent) => void
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
@@ -473,9 +509,20 @@ export function createComponentWithFallback(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean,
+  scopeId?: string,
+  appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {
-    return createComponent(comp, rawProps, rawSlots, isSingleRoot)
+    return createComponent(
+      comp,
+      rawProps,
+      rawSlots,
+      isSingleRoot,
+      once,
+      scopeId,
+      appContext,
+    )
   }
 
   const _insertionParent = insertionParent
@@ -486,9 +533,12 @@ export function createComponentWithFallback(
     resetInsertionState()
   }
 
-  const el = document.createElement(comp)
+  const el = createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
+
+  scopeId = scopeId || currentInstance!.type.__scopeId
+  if (scopeId) setScopeId(el, scopeId)
 
   if (rawProps) {
     renderEffect(() => {
@@ -521,6 +571,7 @@ export function mountComponent(
   }
   if (instance.bm) invokeArrayFns(instance.bm)
   insert(instance.block, parent, anchor)
+  setComponentScopeId(instance)
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
   instance.isMounted = true
   if (__DEV__) {
