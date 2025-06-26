@@ -88,3 +88,14 @@ export function getLiteralExpressionValue(
   }
   return exp.isStatic ? exp.content : null
 }
+
+export function isKeepAliveTag(tag: string): boolean {
+  tag = tag.toLowerCase()
+  return tag === 'keepalive' || tag === 'vaporkeepalive'
+}
+
+export function isBuiltInComponent(tag: string): string | undefined {
+  if (isKeepAliveTag(tag)) {
+    return 'VaporKeepAlive'
+  }
+}
