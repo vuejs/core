@@ -16,10 +16,25 @@ export let currentInstance: GenericComponentInstance | null = null
 export const getCurrentGenericInstance: () => GenericComponentInstance | null =
   () => currentInstance || currentRenderingInstance
 
-export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
-  currentInstance && !currentInstance.vapor
-    ? (currentInstance as ComponentInternalInstance)
+/**
+ * Retrieves the current component instance.
+ *
+ * @param generic - A boolean flag indicating whether to return a generic component instance.
+ *                  If `true`, returns a `GenericComponentInstance` including vapor instance.
+ *                  If `false` or unset, returns a `ComponentInternalInstance` if available.
+ * @returns The current component instance, or `null` if no instance is active.
+ */
+export function getCurrentInstance(
+  generic: true,
+): GenericComponentInstance | null
+export function getCurrentInstance(
+  generic?: boolean,
+): ComponentInternalInstance | null
+export function getCurrentInstance(generic?: boolean) {
+  return currentInstance && (generic || !currentInstance.vapor)
+    ? currentInstance
     : currentRenderingInstance
+}
 
 export let isInSSRComponentSetup = false
 

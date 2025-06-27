@@ -265,7 +265,7 @@ describe('component: emit', () => {
     const fn2 = vi.fn()
     render({
       modelValue: () => null,
-      modelModifiers: () => ({ number: true }),
+      modelValueModifiers: () => ({ number: true }),
       ['onUpdate:modelValue']: () => fn1,
       foo: () => null,
       fooModifiers: () => ({ number: true }),
@@ -291,7 +291,7 @@ describe('component: emit', () => {
       modelValue() {
         return null
       },
-      modelModifiers() {
+      modelValueModifiers() {
         return { trim: true }
       },
       ['onUpdate:modelValue']() {
@@ -327,7 +327,7 @@ describe('component: emit', () => {
       modelValue() {
         return null
       },
-      modelModifiers() {
+      modelValueModifiers() {
         return { trim: true, number: true }
       },
       ['onUpdate:modelValue']() {
@@ -361,7 +361,7 @@ describe('component: emit', () => {
       modelValue() {
         return null
       },
-      modelModifiers() {
+      modelValueModifiers() {
         return { trim: true }
       },
       ['onUpdate:modelValue']() {
