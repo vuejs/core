@@ -147,6 +147,12 @@ export class EffectScope {
 
       // nested scope, dereference from parent to avoid memory leaks
       if (!this.detached && this.parent && !fromParent) {
+        if(this.prevEffectScope) {
+          this.prevEffectScope.nextEffectScope = this.nextEffectScope;
+        }
+        if(this.nextEffectScope) {
+          this.nextEffectScope.prevEffectScope = this.prevEffectScope;
+        }
         if(this.parent.scopes == this) {
           this.parent.scopes = this.nextEffectScope;
         }
