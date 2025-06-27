@@ -44,11 +44,11 @@ export class EffectScope {
   constructor(public detached = false) {
     this.parent = activeEffectScope
     if (!detached && activeEffectScope) {
-      if(activeEffectScope.scopesTail) {
+      if (activeEffectScope.scopesTail) {
         this.prevEffectScope = activeEffectScope.scopesTail;
         activeEffectScope.scopesTail.nextEffectScope = this;
         activeEffectScope.scopesTail = this;
-      }else {
+      } else {
         activeEffectScope.scopes = activeEffectScope.scopesTail = this;
       }
     }
@@ -61,11 +61,10 @@ export class EffectScope {
   pause(): void {
     if (this._active) {
       this._isPaused = true
-      let i, l
-      for(let child = this.scopes; child != undefined; child = child.nextEffectScope) {
+      for (let child = this.scopes; child != undefined; child = child.nextEffectScope) {
         child.pause();
       }
-      for (i = 0, l = this.effects.length; i < l; i++) {
+      for (let i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].pause()
       }
     }
@@ -78,11 +77,10 @@ export class EffectScope {
     if (this._active) {
       if (this._isPaused) {
         this._isPaused = false
-        let i, l
-        for(let child = this.scopes; child != undefined; child = child.nextEffectScope) {
+        for (let child = this.scopes; child != undefined; child = child.nextEffectScope) {
           child.resume();
         }
-        for (i = 0, l = this.effects.length; i < l; i++) {
+        for (let i = 0, l = this.effects.length; i < l; i++) {
           this.effects[i].resume()
         }
       }
@@ -140,23 +138,23 @@ export class EffectScope {
       }
       this.cleanups.length = 0
 
-      for(let child = this.scopes; child != undefined; child = child.nextEffectScope) {
-        child.stop();
+      for (let child = this.scopes; child != undefined; child = child.nextEffectScope) {
+        child.stop(true);
       }
       this.scopes = this.scopesTail = undefined;
 
       // nested scope, dereference from parent to avoid memory leaks
       if (!this.detached && this.parent && !fromParent) {
-        if(this.prevEffectScope) {
+        if (this.prevEffectScope) {
           this.prevEffectScope.nextEffectScope = this.nextEffectScope;
         }
-        if(this.nextEffectScope) {
+        if (this.nextEffectScope) {
           this.nextEffectScope.prevEffectScope = this.prevEffectScope;
         }
-        if(this.parent.scopes == this) {
+        if (this.parent.scopes == this) {
           this.parent.scopes = this.nextEffectScope;
         }
-        if(this.parent.scopesTail == this) {
+        if (this.parent.scopesTail == this) {
           this.parent.scopesTail = this.prevEffectScope;
         }
       }
