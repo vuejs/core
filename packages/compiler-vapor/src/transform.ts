@@ -141,8 +141,10 @@ export class TransformContext<T extends AllNode = AllNode> {
 
   registerEffect(
     expressions: SimpleExpressionNode[],
-    ...operations: OperationNode[]
+    operation: OperationNode | OperationNode[],
+    getIndex = (): number => this.block.effect.length,
   ): void {
+    const operations = [operation].flat()
     expressions = expressions.filter(exp => !isConstantExpression(exp))
     if (
       this.inVOnce ||
@@ -154,26 +156,10 @@ export class TransformContext<T extends AllNode = AllNode> {
       return this.registerOperation(...operations)
     }
 
-    this.block.expressions.push(...expressions)
-    const existing = this.block.effect.find(e =>
-      isSameExpression(e.expressions, expressions),
-    )
-    if (existing) {
-      existing.operations.push(...operations)
-    } else {
-      this.block.effect.push({
-        expressions,
-        operations,
-      })
-    }
-
-    function isSameExpression(
-      a: SimpleExpressionNode[],
-      b: SimpleExpressionNode[],
-    ) {
-      if (a.length !== b.length) return false
-      return a.every((exp, i) => exp.content === b[i].content)
-    }
+    this.block.effect.splice(getIndex(), 0, {
+      expressions,
+      operations,
+    })
   }
 
   registerOperation(...node: OperationNode[]): void {
