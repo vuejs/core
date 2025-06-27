@@ -32,21 +32,25 @@ export class EffectScope {
    * record undetached scopes
    * @internal
    */
-  scopes: EffectScope[] | undefined
+  scopes: EffectScope | undefined
+  scopesTail: EffectScope | undefined
   /**
-   * track a child scope's index in its parent's scopes array for optimized
-   * removal
-   * @internal
+   *  sibling scope
    */
-  private index: number | undefined
+  prevEffectScope: EffectScope | undefined
+  nextEffectScope: EffectScope | undefined
+
 
   constructor(public detached = false) {
     this.parent = activeEffectScope
     if (!detached && activeEffectScope) {
-      this.index =
-        (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
-          this,
-        ) - 1
+      if(activeEffectScope.scopesTail) {
+        this.prevEffectScope = activeEffectScope.scopesTail;
+        activeEffectScope.scopesTail.nextEffectScope = this;
+        activeEffectScope.scopesTail = this;
+      }else {
+        activeEffectScope.scopes = activeEffectScope.scopesTail = this;
+      }
     }
   }
 
@@ -58,10 +62,8 @@ export class EffectScope {
     if (this._active) {
       this._isPaused = true
       let i, l
-      if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].pause()
-        }
+      for(let child = this.scopes; child != undefined; child = child.nextEffectScope) {
+        child.pause();
       }
       for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].pause()
@@ -77,10 +79,8 @@ export class EffectScope {
       if (this._isPaused) {
         this._isPaused = false
         let i, l
-        if (this.scopes) {
-          for (i = 0, l = this.scopes.length; i < l; i++) {
-            this.scopes[i].resume()
-          }
+        for(let child = this.scopes; child != undefined; child = child.nextEffectScope) {
+          child.resume();
         }
         for (i = 0, l = this.effects.length; i < l; i++) {
           this.effects[i].resume()
@@ -140,20 +140,18 @@ export class EffectScope {
       }
       this.cleanups.length = 0
 
-      if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].stop(true)
-        }
-        this.scopes.length = 0
+      for(let child = this.scopes; child != undefined; child = child.nextEffectScope) {
+        child.stop();
       }
+      this.scopes = this.scopesTail = undefined;
 
       // nested scope, dereference from parent to avoid memory leaks
       if (!this.detached && this.parent && !fromParent) {
-        // optimized O(1) removal
-        const last = this.parent.scopes!.pop()
-        if (last && last !== this) {
-          this.parent.scopes![this.index!] = last
-          last.index = this.index!
+        if(this.parent.scopes == this) {
+          this.parent.scopes = this.nextEffectScope;
+        }
+        if(this.parent.scopesTail == this) {
+          this.parent.scopesTail = this.prevEffectScope;
         }
       }
       this.parent = undefined
