@@ -82,6 +82,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     const needTagForRuntime =
       node.tag === 'textarea' || node.tag.indexOf('-') > 0
 
+    const hasVModel = node.props.some(
+      p => p.type === NodeTypes.DIRECTIVE && p.name === 'model',
+    )
+
     // v-bind="obj", v-bind:[key] and custom directives can potentially
     // overwrite other static attrs and can affect final rendering result,
     // so when they are present we need to bail out to full `renderAttrs`
@@ -141,21 +145,24 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             )
           }
         } else if (node.tag === 'select') {
-          // <select> with dynamic v-bind. We don't know if the final props
-          // will contain .value, so we will have to do something special:
-          // assign the merged props to a temp variable, and check whether
-          // it contains value (if yes, mark options selected).
-          const tempId = `_temp${context.temps++}`
-          propsExp.arguments = [
-            createAssignmentExpression(
-              createSimpleExpression(tempId, false),
-              mergedProps,
-            ),
-          ]
-          processSelectChildren(context, node.children, {
-            type: 'dynamicVBind',
-            tempId,
-          })
+          // v-model takes priority over value
+          if (!hasVModel) {
+            // <select> with dynamic v-bind. We don't know if the final props
+            // will contain .value, so we will have to do something special:
+            // assign the merged props to a temp variable, and check whether
+            // it contains value (if yes, mark options selected).
+            const tempId = `_temp${context.temps++}`
+            propsExp.arguments = [
+              createAssignmentExpression(
+                createSimpleExpression(tempId, false),
+                mergedProps,
+              ),
+            ]
+            processSelectChildren(context, node.children, {
+              type: 'dynamicVBind',
+              tempId,
+            })
+          }
         } else if (node.tag === 'input') {
           // <input v-bind="obj" v-model>
           // we need to determine the props to render for the dynamic v-model
@@ -245,7 +252,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             node.children = [createInterpolation(prop.exp, prop.loc)]
           }
         } else if (isTagWithValueBind(node, 'select', prop) && prop.exp) {
-          if (!needMergeProps) {
+          if (!needMergeProps && !hasVModel) {
             processSelectChildren(context, node.children, {
               type: 'dynamicValue',
               value: prop.exp,
@@ -351,7 +358,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         if (node.tag === 'textarea' && name === 'value' && prop.value) {
           rawChildrenMap.set(node, escapeHtml(prop.value.content))
         } else if (node.tag === 'select' && name === 'value' && prop.value) {
-          if (!needMergeProps) {
+          if (!needMergeProps && !hasVModel) {
             processSelectChildren(context, node.children, {
               type: 'staticValue',
               value: prop.value.content,
