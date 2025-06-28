@@ -58,7 +58,13 @@ import {
   getSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import {
+  adoptTemplate,
+  currentHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+  setCurrentHydrationNode,
+} from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
@@ -488,7 +494,9 @@ export function createComponentWithFallback(
     resetInsertionState()
   }
 
-  const el = document.createElement(comp)
+  const el = isHydrating
+    ? (adoptTemplate(currentHydrationNode!, `<${comp}/>`) as HTMLElement)
+    : document.createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
 
@@ -499,6 +507,7 @@ export function createComponentWithFallback(
   }
 
   if (rawSlots) {
+    isHydrating && setCurrentHydrationNode(el.firstChild)
     if (rawSlots.$) {
       // TODO dynamic slot fragment
     } else {

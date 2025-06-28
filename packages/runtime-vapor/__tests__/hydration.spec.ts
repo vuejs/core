@@ -476,6 +476,34 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('consecutive components with insertion parent', async () => {
+      const data = reactive({ foo: 'foo', bar: 'bar' })
+      const { container } = await testHydration(
+        `<template>
+        <div>
+          <components.Child1/>
+          <components.Child2/>
+        </div>
+      </template>
+      `,
+        {
+          Child1: `<template><span>{{ data.foo }}</span></template>`,
+          Child2: `<template><span>{{ data.bar }}</span></template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div><span>foo</span><span>bar</span></div>`,
+      )
+
+      data.foo = 'foo1'
+      data.bar = 'bar1'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><span>foo1</span><span>bar1</span></div>`,
+      )
+    })
+
     test('nested consecutive components with anchor insertion', async () => {
       const { container, data } = await testHydration(
         `
@@ -1046,6 +1074,27 @@ describe('Vapor Mode hydration', () => {
           `</div>`,
       )
     })
+
+    test('dynamic component fallback', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+            <component :is="'button'">
+              <span>{{ data }}</span>
+            </component>
+          </template>`,
+        {},
+        ref('foo'),
+      )
+
+      expect(container.innerHTML).toBe(
+        `<button><span>foo</span></button><!--${anchorLabel}-->`,
+      )
+      data.value = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<button><span>bar</span></button><!--${anchorLabel}-->`,
+      )
+    })
   })
 
   describe('if', () => {
@@ -1312,6 +1361,38 @@ describe('Vapor Mode hydration', () => {
           `<span></span>` +
           `</div>`,
       )
+    })
+
+    test('consecutive component with insertion parent', async () => {
+      const data = reactive({
+        show: true,
+        foo: 'foo',
+        bar: 'bar',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data.show">
+            <components.Child/>
+            <components.Child2/>
+          </div>
+        </template>`,
+        {
+          Child: `<template><span>{{data.foo}}</span></template>`,
+          Child2: `<template><span>{{data.bar}}</span></template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<span>foo</span>` +
+          `<span>bar</span>` +
+          `</div>` +
+          `<!--${anchorLabel}-->`,
+      )
+
+      data.show = false
+      await nextTick()
+      expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
     })
 
     test('consecutive v-if on component with anchor insertion', async () => {
@@ -2352,6 +2433,31 @@ describe('Vapor Mode hydration', () => {
           `<!--[--><span>vapor</span><!--]--><!--${slotAnchorLabel}-->` +
           `<span></span>` +
           `</div>`,
+      )
+    })
+
+    test('slot fallback', async () => {
+      const data = reactive({
+        foo: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot><span>{{data.foo}}</span></slot></template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->`,
+      )
+
+      data.foo = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->`,
       )
     })
   })
@@ -3910,6 +4016,76 @@ describe('VDOM hydration interop', () => {
     data.value = false
     await nextTick()
     expect(container.innerHTML).toMatchInlineSnapshot(`"false"`)
+  })
+
+  test('nested components (VDOM -> Vapor -> VDOM (with slot fallback))', async () => {
+    const data = ref(true)
+    const { container } = await testHydrationInterop(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild/>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><components.VdomChild/></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template><slot><span>{{data}}</span></slot></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><span>true</span><!--]--><!--slot-->"`,
+    )
+
+    data.value = false
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><span>false</span><!--]--><!--slot-->"`,
+    )
+  })
+
+  test('nested components (VDOM -> Vapor(with slot fallback) -> VDOM)', async () => {
+    const data = ref(true)
+    const { container } = await testHydrationInterop(
+      `<script setup>const data = _data; const components = _components;</script>
+          <template>
+            <components.VaporChild/>
+          </template>`,
+      {
+        VaporChild: {
+          code: `<template>
+            <components.VdomChild>
+              <template #default>
+                <span>{{data}} vapor fallback</span>
+              </template>
+            </components.VdomChild>
+          </template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template><slot><span>vdom fallback</span></slot></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><span>true vapor fallback</span><!--]--><!--slot-->"`,
+    )
+
+    data.value = false
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><span>false vapor fallback</span><!--]--><!--slot-->"`,
+    )
   })
 
   test('vapor slot render vdom component', async () => {

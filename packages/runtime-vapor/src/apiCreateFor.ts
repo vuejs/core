@@ -89,7 +89,7 @@ export const createFor = (
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
-    locateHydrationNode(true)
+    locateHydrationNode()
   } else {
     resetInsertionState()
   }

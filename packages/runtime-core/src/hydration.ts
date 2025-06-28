@@ -5,6 +5,7 @@ import {
   Comment as VComment,
   type VNode,
   type VNodeHook,
+  VaporSlot,
   createTextVNode,
   createVNode,
   invokeVNodeHook,
@@ -275,6 +276,12 @@ export function createHydrationFunctions(
             optimized,
           )
         }
+        break
+      case VaporSlot:
+        getVaporInterface(parentComponent, vnode).hydrateSlot(
+          vnode,
+          parentNode(node)!,
+        )
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {

@@ -41,6 +41,8 @@ import {
   currentHydrationNode,
   isHydrating,
   locateHydrationNode,
+  locateVaporFragmentAnchor,
+  setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
 
@@ -125,6 +127,16 @@ const vaporInteropImpl: Omit<
   },
 
   hydrate: vaporHydrateNode,
+  hydrateSlot(vnode, container) {
+    const { slot } = vnode.vs!
+    const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
+    const slotBlock = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
+    vaporHydrateNode(slotBlock, () => {
+      const anchor = locateVaporFragmentAnchor(currentHydrationNode!, 'slot')!
+      vnode.el = vnode.anchor = anchor
+      insert((vnode.vb = slotBlock), container, anchor)
+    })
+  },
 }
 
 const vaporSlotPropsProxyHandler: ProxyHandler<
@@ -199,17 +211,7 @@ function createVDOMComponent(
   frag.insert = (parentNode, anchor) => {
     if (!isMounted || isHydrating) {
       if (isHydrating) {
-        ;(
-          vdomHydrateNode ||
-          (vdomHydrateNode = ensureHydrationRenderer().hydrateNode!)
-        )(
-          currentHydrationNode!,
-          vnode,
-          parentInstance as any,
-          null,
-          null,
-          false,
-        )
+        hydrateVNode(vnode, parentInstance as any)
       } else {
         internals.mt(
           vnode,
@@ -266,18 +268,7 @@ function renderVDOMSlot(
           props,
         )
         if (isHydrating) {
-          locateHydrationNode(true)
-          ;(
-            vdomHydrateNode ||
-            (vdomHydrateNode = ensureHydrationRenderer().hydrateNode!)
-          )(
-            currentHydrationNode!,
-            vnode,
-            parentComponent as any,
-            null,
-            null,
-            false,
-          )
+          hydrateVNode(vnode!, parentComponent as any)
         } else {
           if ((vnode.children as any[]).length) {
             if (fallbackNodes) {
@@ -326,6 +317,25 @@ function renderVDOMSlot(
   }
 
   return frag
+}
+
+function hydrateVNode(
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null,
+) {
+  // keep fragment start anchor, hydrateNode uses it to
+  // determine if node is a fragmentStart
+  locateHydrationNode()
+  if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
+  const nextNode = vdomHydrateNode(
+    currentHydrationNode!,
+    vnode,
+    parentComponent,
+    null,
+    null,
+    false,
+  )
+  setCurrentHydrationNode(nextNode)
 }
 
 export const vaporInteropPlugin: Plugin = app => {
