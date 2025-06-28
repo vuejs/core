@@ -18,6 +18,7 @@ import {
   isEmitListener,
   onScopeDispose,
   renderSlot,
+  shallowReactive,
   shallowRef,
   simpleSetCurrentInstance,
 } from '@vue/runtime-dom'
@@ -187,7 +188,8 @@ function createVDOMComponent(
 
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
-    instance.props = wrapper.props
+    // ensure props are shallow reactive to align with VDOM behavior.
+    instance.props = shallowReactive(wrapper.props)
 
     const attrs = (instance.attrs = createInternalObject())
     for (const key in wrapper.attrs) {
