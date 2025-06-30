@@ -325,8 +325,6 @@ function hydrateVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
 ) {
-  // keep fragment start anchor, hydrateNode uses it to
-  // determine if node is a fragmentStart
   locateHydrationNode()
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
   const nextNode = vdomHydrateNode(
