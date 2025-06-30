@@ -6,13 +6,16 @@ let t: HTMLTemplateElement
 /*! #__NO_SIDE_EFFECTS__ */
 export function template(html: string, root?: boolean) {
   let node: Node
-  return (): Node & { $root?: true } => {
+  return (n?: number): Node & { $root?: true } => {
     if (isHydrating) {
       if (__DEV__ && !currentHydrationNode) {
         // TODO this should not happen
         throw new Error('No current hydration node')
       }
-      return adoptTemplate(currentHydrationNode!, html)!
+      node = adoptTemplate(currentHydrationNode!, html)!
+      // dynamic node position, default is 0
+      ;(node as any).$dp = n || 0
+      return node
     }
     // fast path for text nodes
     if (html[0] !== '<') {

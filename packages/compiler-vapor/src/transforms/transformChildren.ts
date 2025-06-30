@@ -59,7 +59,7 @@ export const transformChildren: NodeTransform = (node, context) => {
 
 function processDynamicChildren(context: TransformContext<ElementNode>) {
   let prevDynamics: IRDynamicInfo[] = []
-  let hasStaticTemplate = false
+  let staticCount = 0
   const children = context.dynamic.children
 
   for (const [index, child] of children.entries()) {
@@ -69,22 +69,36 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
 
     if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
       if (prevDynamics.length) {
-        if (hasStaticTemplate) {
-          context.childrenTemplate[index - prevDynamics.length] = `<!>`
-          prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
-          const anchor = (prevDynamics[0].anchor = context.increaseId())
-          registerInsertion(prevDynamics, context, anchor)
+        if (staticCount) {
+          // each dynamic child gets its own placeholder node.
+          // this makes it easier to locate the corresponding node during hydration.
+          for (let i = 0; i < prevDynamics.length; i++) {
+            const idx = index - prevDynamics.length + i
+            context.childrenTemplate[idx] = `<!>`
+            const dynamicChild = prevDynamics[i]
+            dynamicChild.flags -= DynamicFlag.NON_TEMPLATE
+            const anchor = (dynamicChild.anchor = context.increaseId())
+            if (
+              dynamicChild.operation &&
+              isBlockOperation(dynamicChild.operation)
+            ) {
+              // block types
+              dynamicChild.operation.parent = context.reference()
+              dynamicChild.operation.anchor = anchor
+            }
+          }
         } else {
           registerInsertion(prevDynamics, context, -1 /* prepend */)
         }
         prevDynamics = []
       }
-      hasStaticTemplate = true
+      staticCount++
     }
   }
 
   if (prevDynamics.length) {
     registerInsertion(prevDynamics, context)
+    context.dynamic.dynamicChildOffset = staticCount
   }
 }
 
