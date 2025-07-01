@@ -40,6 +40,7 @@ import {
 } from './errors'
 import {
   forAliasRE,
+  isAllWhitespace,
   isCoreComponent,
   isSimpleIdentifier,
   isStaticArgOf,
@@ -878,15 +879,6 @@ function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
     }
   }
   return removedWhitespace ? nodes.filter(Boolean) : nodes
-}
-
-function isAllWhitespace(str: string) {
-  for (let i = 0; i < str.length; i++) {
-    if (!isWhitespace(str.charCodeAt(i))) {
-      return false
-    }
-  }
-  return true
 }
 
 function hasNewlineChar(str: string) {
