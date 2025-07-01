@@ -6,7 +6,7 @@ exports[`stringify static html > eligible content (elements > 20) + non-eligible
 return function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
     _createStaticVNode("<span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>", 20),
-    _createElementVNode("div", { key: "1" }, "1", -1 /* HOISTED */),
+    _createElementVNode("div", { key: "1" }, "1", -1 /* CACHED */),
     _createStaticVNode("<span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>", 20)
   ])))
 }"
@@ -32,6 +32,16 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`stringify static html > serializing template string style 1`] = `
+"const { toDisplayString: _toDisplayString, normalizeClass: _normalizeClass, createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
+    _createStaticVNode("<div style=\\"color:red;\\"><span class=\\"foo bar\\">1 + false</span><span class=\\"foo bar\\">1 + false</span><span class=\\"foo bar\\">1 + false</span><span class=\\"foo bar\\">1 + false</span><span class=\\"foo bar\\">1 + false</span></div>", 1)
+  ])))
+}"
+`;
+
 exports[`stringify static html > should bail for <option> elements with null values 1`] = `
 "const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 
@@ -44,7 +54,7 @@ return function render(_ctx, _cache) {
       _createElementVNode("option", { value: "1" }),
       _createElementVNode("option", { value: "1" }),
       _createElementVNode("option", { value: "1" })
-    ], -1 /* HOISTED */)
+    ], -1 /* CACHED */)
   ])))
 }"
 `;
@@ -60,8 +70,24 @@ return function render(_ctx, _cache) {
       _createElementVNode("option", { value: 1 }),
       _createElementVNode("option", { value: 1 }),
       _createElementVNode("option", { value: 1 })
-    ], -1 /* HOISTED */)
+    ], -1 /* CACHED */)
   ])))
+}"
+`;
+
+exports[`stringify static html > should bail for comments 1`] = `
+"const { createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+const _hoisted_1 = { class: "a" }
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createCommentVNode(" Comment 1 "),
+    _createElementVNode("div", _hoisted_1, [
+      _createCommentVNode(" Comment 2 "),
+      _cache[0] || (_cache[0] = _createStaticVNode("<span class=\\"b\\"></span><span class=\\"b\\"></span><span class=\\"b\\"></span><span class=\\"b\\"></span><span class=\\"b\\"></span>", 5))
+    ])
+  ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
 }"
 `;
 
@@ -77,7 +103,7 @@ return function render(_ctx, _cache) {
       _createElementVNode("span", { class: "foo" }, "foo"),
       _createElementVNode("span", { class: "foo" }, "foo"),
       _createElementVNode("img", { src: _imports_0_ })
-    ], -1 /* HOISTED */)
+    ], -1 /* CACHED */)
   ])))
 }"
 `;

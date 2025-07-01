@@ -388,7 +388,7 @@ const tokenizer = new Tokenizer(stack, {
               CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
               currentOptions,
               currentProp.loc,
-              currentProp.rawName,
+              currentProp.arg!.loc.source,
             )
           ) {
             currentProp.name = 'model'
@@ -647,7 +647,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
 
   // whitespace management
   if (!tokenizer.inRCDATA) {
-    el.children = condenseWhitespace(children, tag)
+    el.children = condenseWhitespace(children)
   }
 
   if (ns === Namespaces.HTML && currentOptions.isIgnoreNewlineTag(tag)) {
@@ -832,10 +832,7 @@ function isUpperCase(c: number) {
 }
 
 const windowsNewlineRE = /\r\n/g
-function condenseWhitespace(
-  nodes: TemplateChildNode[],
-  tag?: string,
-): TemplateChildNode[] {
+function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
   const shouldCondense = currentOptions.whitespace !== 'preserve'
   let removedWhitespace = false
   for (let i = 0; i < nodes.length; i++) {

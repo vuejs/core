@@ -11,7 +11,7 @@ import {
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type { ComponentInternalInstance } from './component'
+import type { ComponentInternalInstance, ComponentOptions } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
@@ -41,6 +41,7 @@ import {
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isReactive } from '@vue/reactivity'
+import { updateHOCHostEl } from './componentRenderUtils'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -307,7 +308,10 @@ export function createHydrationFunctions(
           // if component is async, it may get moved / unmounted before its
           // inner component is loaded, so we need to give it a placeholder
           // vnode that matches its adopted DOM.
-          if (isAsyncWrapper(vnode)) {
+          if (
+            isAsyncWrapper(vnode) &&
+            !(vnode.type as ComponentOptions).__asyncResolved
+          ) {
             let subTree
             if (isFragmentStart) {
               subTree = createVNode(Fragment)
@@ -394,9 +398,11 @@ export function createHydrationFunctions(
           parentComponent.vnode.props.appear
 
         const content = (el as HTMLTemplateElement).content
-          .firstChild as Element
+          .firstChild as Element & { $cls?: string }
 
         if (needCallTransitionHooks) {
+          const cls = content.getAttribute('class')
+          if (cls) content.$cls = cls
           transition!.beforeEnter(content)
         }
 
@@ -716,6 +722,11 @@ export function createHydrationFunctions(
       getContainerType(container),
       slotScopeIds,
     )
+    // the component vnode's el should be updated when a mismatch occurs.
+    if (parentComponent) {
+      parentComponent.vnode.el = vnode.el
+      updateHOCHostEl(parentComponent, vnode.el)
+    }
     return next
   }
 
@@ -777,7 +788,7 @@ export function createHydrationFunctions(
  * Dev only
  */
 function propHasMismatch(
-  el: Element,
+  el: Element & { $cls?: string },
   key: string,
   clientValue: any,
   vnode: VNode,
@@ -790,7 +801,12 @@ function propHasMismatch(
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
-    actual = el.getAttribute('class')
+    if (el.$cls) {
+      actual = el.$cls
+      delete el.$cls
+    } else {
+      actual = el.getAttribute('class')
+    }
     expected = normalizeClass(clientValue)
     if (!isSetEqual(toClassSet(actual || ''), toClassSet(expected))) {
       mismatchType = MismatchTypes.CLASS
@@ -981,6 +997,6 @@ function isMismatchAllowed(
     if (allowedType === MismatchTypes.TEXT && list.includes('children')) {
       return true
     }
-    return allowedAttr.split(',').includes(MismatchTypeString[allowedType])
+    return list.includes(MismatchTypeString[allowedType])
   }
 }

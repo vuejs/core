@@ -3,10 +3,25 @@ packages:
   - 'packages-private/*'
 
 catalog:
-  '@babel/parser': ^7.25.3
-  '@babel/types': ^7.25.2
+  '@babel/parser': ^7.27.5
+  '@babel/types': ^7.27.6
   'estree-walker': ^2.0.2
-  'magic-string': ^0.30.11
-  'source-map-js': ^1.2.0
-  'vite': ^5.4.0
-  '@vitejs/plugin-vue': ^5.1.2
+  'magic-string': ^0.30.17
+  'source-map-js': ^1.2.1
+  'vite': ^5.4.15
+  '@vitejs/plugin-vue': ^5.2.4
+
+onlyBuiltDependencies:
+  - '@swc/core'
+  - 'esbuild'
+  - 'puppeteer'
+  - 'simple-git-hooks'
+  - 'unrs-resolver'
+
+peerDependencyRules:
+  allowedVersions:
+    'typescript-eslint>eslint': '^9.0.0'
+    '@typescript-eslint/eslint-plugin>eslint': '^9.0.0'
+    '@typescript-eslint/parser>eslint': '^9.0.0'
+    '@typescript-eslint/type-utils>eslint': '^9.0.0'
+    '@typescript-eslint/utils>eslint': '^9.0.0'

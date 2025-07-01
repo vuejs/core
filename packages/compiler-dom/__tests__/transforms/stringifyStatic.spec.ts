@@ -162,6 +162,27 @@ describe('stringify static html', () => {
     expect(code).toMatchSnapshot()
   })
 
+  // #12391
+  test('serializing template string style', () => {
+    const { ast, code } = compileWithStringify(
+      `<div><div :style="\`color:red;\`">${repeat(
+        `<span :class="[{ foo: true }, { bar: true }]">{{ 1 }} + {{ false }}</span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</div></div>`,
+    )
+    // should be optimized now
+    expect(ast.cached).toMatchObject([
+      cachedArrayStaticNodeMatcher(
+        `<div style="color:red;">${repeat(
+          `<span class="foo bar">1 + false</span>`,
+          StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+        )}</div>`,
+        1,
+      ),
+    ])
+    expect(code).toMatchSnapshot()
+  })
+
   test('escape', () => {
     const { ast, code } = compileWithStringify(
       `<div><div>${repeat(
@@ -467,6 +488,16 @@ describe('stringify static html', () => {
       )}</select></div>`,
     )
     expect(ast.cached).toMatchObject([cachedArrayBailedMatcher()])
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should bail for comments', () => {
+    const { code } = compileWithStringify(
+      `<!-- Comment 1 --><div class="a"><!-- Comment 2 -->${repeat(
+        `<span class="b"/>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</div>`,
+    )
     expect(code).toMatchSnapshot()
   })
 
