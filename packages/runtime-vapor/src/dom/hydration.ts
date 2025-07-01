@@ -118,10 +118,6 @@ function locateHydrationNodeImpl() {
     if (insertionParent && (!node || node.parentNode !== insertionParent)) {
       node = _nthChild(insertionParent, insertionParent.$dp || 0)
     }
-
-    while (node && isNonHydrationNode(node)) {
-      node = node.nextSibling!
-    }
   }
 
   if (__DEV__ && !node) {
