@@ -122,7 +122,7 @@ test('toValidAssetId', () => {
 })
 
 describe('isReferencedIdentifier', () => {
-  test('Identifiers in function parameters should not be inferred as references', () => {
+  test('identifiers in function parameters should not be inferred as references', () => {
     const ast = babelParse(`(({ title }) => [])`)
     walkIdentifiers(
       ast.program.body[0],
