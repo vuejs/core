@@ -445,4 +445,33 @@ describe('attribute fallthrough', () => {
     // fn should be called once
     expect(fn).toHaveBeenCalledTimes(1)
   })
+
+  it('should fallthrough attrs to vdom child', () => {
+    const VDomChild = defineComponent({
+      setup() {
+        return () => h('div')
+      },
+    })
+
+    const VaporChild = defineVaporComponent({
+      setup() {
+        return createComponent(
+          VDomChild as any,
+          { foo: () => 'vapor foo' },
+          null,
+          true,
+        )
+      },
+    })
+
+    const App = {
+      setup() {
+        return () => h(VaporChild as any, { foo: 'foo', bar: 'bar' })
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+    expect(root.innerHTML).toBe('<div foo="vapor foo" bar="bar"></div>')
+  })
 })

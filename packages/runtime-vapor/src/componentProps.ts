@@ -178,6 +178,16 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
   if (key === '$') return
   // need special merging behavior for class & style
   const merged = key === 'class' || key === 'style' ? ([] as any[]) : undefined
+
+  // rawProps has high priority
+  if (hasOwn(rawProps, key)) {
+    if (merged) {
+      merged.push(rawProps[key]())
+    } else {
+      return rawProps[key]()
+    }
+  }
+
   const dynamicSources = rawProps.$
   if (dynamicSources) {
     let i = dynamicSources.length
@@ -196,13 +206,7 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
       }
     }
   }
-  if (hasOwn(rawProps, key)) {
-    if (merged) {
-      merged.push(rawProps[key]())
-    } else {
-      return rawProps[key]()
-    }
-  }
+
   if (merged && merged.length) {
     return merged
   }
