@@ -1,4 +1,4 @@
-import { type UrlWithStringQuery, parse as uriParse } from 'url'
+import { type UrlWithStringQuery, parse as urlParse } from 'url'
 import { isString } from '@vue/shared'
 
 export function isRelativeUrl(url: string): boolean {
@@ -25,15 +25,15 @@ export function parseUrl(url: string): UrlWithStringQuery {
     const secondChar = url.charAt(1)
     url = url.slice(secondChar === '/' ? 2 : 1)
   }
-  return parseUriParts(url)
+  return parseUrlParts(url)
 }
 
 /**
  * vuejs/component-compiler-utils#22 Support uri fragment in transformed require
  * @param urlString - an url as a string
  */
-function parseUriParts(urlString: string): UrlWithStringQuery {
+function parseUrlParts(urlString: string): UrlWithStringQuery {
   // A TypeError is thrown if urlString is not a string
   // @see https://nodejs.org/api/url.html#url_url_parse_urlstring_parsequerystring_slashesdenotehost
-  return uriParse(isString(urlString) ? urlString : '', false, true)
+  return urlParse(isString(urlString) ? urlString : '', false, true)
 }
