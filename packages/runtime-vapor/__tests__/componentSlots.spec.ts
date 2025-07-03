@@ -241,10 +241,13 @@ describe('component: slots', () => {
         }),
       ).render()
 
-      // foo has higher priority than bindObj.foo
-      expect(props).toEqual({ foo: 0, baz: 'qux' })
+      expect(props).toEqual({ foo: 100, baz: 'qux' })
 
       foo.value = 2
+      await nextTick()
+      expect(props).toEqual({ foo: 100, baz: 'qux' })
+
+      delete bindObj.value.foo
       await nextTick()
       expect(props).toEqual({ foo: 2, baz: 'qux' })
     })

@@ -472,6 +472,6 @@ describe('attribute fallthrough', () => {
 
     const root = document.createElement('div')
     createApp(App).use(vaporInteropPlugin).mount(root)
-    expect(root.innerHTML).toBe('<div foo="vapor foo" bar="bar"></div>')
+    expect(root.innerHTML).toBe('<div foo="foo" bar="bar"></div>')
   })
 })
