@@ -1979,20 +1979,10 @@ function baseCreateRenderer(
       for (i = toBePatched - 1; i >= 0; i--) {
         const nextIndex = s2 + i
         const nextChild = c2[nextIndex] as VNode
-        let anchor = parentAnchor
-        if (nextIndex + 1 < l2) {
-          const anchorVnode = c2[nextIndex + 1] as VNode
-          if (
-            __FEATURE_SUSPENSE__ &&
-            anchorVnode.component &&
-            anchorVnode.component.asyncDep &&
-            !anchorVnode.component.asyncResolved
-          ) {
-            anchor = anchorVnode.component.subTree.el
-          } else {
-            anchor = anchorVnode.el
-          }
-        }
+        const anchor =
+          nextIndex + 1 < l2
+            ? resolveInsertionAnchor(c2[nextIndex + 1] as VNode)
+            : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
           patch(
@@ -2576,6 +2566,21 @@ function getSequence(arr: number[]): number[] {
     v = p[v]
   }
   return result
+}
+
+function resolveInsertionAnchor(anchorVnode: VNode) {
+  let anchor = null
+  if (
+    __FEATURE_SUSPENSE__ &&
+    anchorVnode.component &&
+    anchorVnode.component.asyncDep &&
+    !anchorVnode.component.asyncResolved
+  ) {
+    anchor = anchorVnode.component.subTree.el
+  } else {
+    anchor = anchorVnode.el
+  }
+  return anchor
 }
 
 function locateNonHydratedAsyncRoot(
