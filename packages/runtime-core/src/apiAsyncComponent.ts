@@ -126,11 +126,13 @@ export function defineAsyncComponent<
       ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
       const performHydrate = () => {
         // skip hydration if the component has been patched
-        if (__DEV__ && patched) {
-          warn(
-            `Skipping lazy hydration for component '${getComponentName(resolvedComp!) || resolvedComp!.__file}': ` +
-              `it was updated before lazy hydration performed.`,
-          )
+        if (patched) {
+          if (__DEV__) {
+            warn(
+              `Skipping lazy hydration for component '${getComponentName(resolvedComp!) || resolvedComp!.__file}': ` +
+                `it was updated before lazy hydration performed.`,
+            )
+          }
           return
         }
         hydrate()
