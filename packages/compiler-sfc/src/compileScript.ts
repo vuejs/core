@@ -23,7 +23,11 @@ import type {
   Statement,
 } from '@babel/types'
 import { walk } from 'estree-walker'
-import type { RawSourceMap } from 'source-map-js'
+import {
+  type RawSourceMap,
+  SourceMapConsumer,
+  SourceMapGenerator,
+} from 'source-map-js'
 import {
   normalScriptDefaultVar,
   processNormalScript,
@@ -809,6 +813,7 @@ export function compileScript(
     args += `, { ${destructureElements.join(', ')} }`
   }
 
+  let templateMap
   // 9. generate return statement
   let returned
   if (
@@ -858,7 +863,7 @@ export function compileScript(
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, ast, preamble, tips, errors } = compileTemplate({
+      const { code, ast, preamble, tips, errors, map } = compileTemplate({
         filename,
         ast: sfc.template.ast,
         source: sfc.template.content,
@@ -876,6 +881,7 @@ export function compileScript(
           bindingMetadata: ctx.bindingMetadata,
         },
       })
+      templateMap = map
       if (tips.length) {
         tips.forEach(warnOnce)
       }
@@ -1014,19 +1020,28 @@ export function compileScript(
     )
   }
 
+  const content = ctx.s.toString()
+  let map =
+    options.sourceMap !== false
+      ? (ctx.s.generateMap({
+          source: filename,
+          hires: true,
+          includeContent: true,
+        }) as unknown as RawSourceMap)
+      : undefined
+  // merge source maps of the script setup and template in inline mode
+  if (templateMap && map) {
+    const offset = content.indexOf(returned)
+    const templateLineOffset =
+      content.slice(0, offset).split(/\r?\n/).length - 1
+    map = mergeSourceMaps(map, templateMap, templateLineOffset)
+  }
   return {
     ...scriptSetup,
     bindings: ctx.bindingMetadata,
     imports: ctx.userImports,
-    content: ctx.s.toString(),
-    map:
-      options.sourceMap !== false
-        ? (ctx.s.generateMap({
-            source: filename,
-            hires: true,
-            includeContent: true,
-          }) as unknown as RawSourceMap)
-        : undefined,
+    content,
+    map,
     scriptAst: scriptAst?.body,
     scriptSetupAst: scriptSetupAst?.body,
     deps: ctx.deps ? [...ctx.deps] : undefined,
@@ -1283,4 +1298,43 @@ function isStaticNode(node: Node): boolean {
       return true
   }
   return false
+}
+
+export function mergeSourceMaps(
+  scriptMap: RawSourceMap,
+  templateMap: RawSourceMap,
+  templateLineOffset: number,
+): RawSourceMap {
+  const generator = new SourceMapGenerator()
+  const addMapping = (map: RawSourceMap, lineOffset = 0) => {
+    const consumer = new SourceMapConsumer(map)
+    ;(consumer as any).sources.forEach((sourceFile: string) => {
+      ;(generator as any)._sources.add(sourceFile)
+      const sourceContent = consumer.sourceContentFor(sourceFile)
+      if (sourceContent != null) {
+        generator.setSourceContent(sourceFile, sourceContent)
+      }
+    })
+    consumer.eachMapping(m => {
+      if (m.originalLine == null) return
+      generator.addMapping({
+        generated: {
+          line: m.generatedLine + lineOffset,
+          column: m.generatedColumn,
+        },
+        original: {
+          line: m.originalLine,
+          column: m.originalColumn!,
+        },
+        source: m.source,
+        name: m.name,
+      })
+    })
+  }
+
+  addMapping(scriptMap)
+  addMapping(templateMap, templateLineOffset)
+  ;(generator as any)._sourceRoot = scriptMap.sourceRoot
+  ;(generator as any)._file = scriptMap.file
+  return (generator as any).toJSON()
 }
