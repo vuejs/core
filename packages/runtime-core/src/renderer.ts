@@ -1982,7 +1982,12 @@ function baseCreateRenderer(
         let anchor = parentAnchor
         if (nextIndex + 1 < l2) {
           const anchorVnode = c2[nextIndex + 1] as VNode
-          if (anchorVnode.component && !anchorVnode.component.asyncResolved) {
+          if (
+            __FEATURE_SUSPENSE__ &&
+            anchorVnode.component &&
+            anchorVnode.component.asyncDep &&
+            !anchorVnode.component.asyncResolved
+          ) {
             anchor = anchorVnode.component.subTree.el
           } else {
             anchor = anchorVnode.el
