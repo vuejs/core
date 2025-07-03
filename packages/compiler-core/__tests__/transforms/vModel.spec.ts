@@ -507,7 +507,7 @@ describe('compiler: transform v-model', () => {
     )
   })
 
-  test('should generate model$Modifiers for component v-model:model with arguments', () => {
+  test('should generate modelModifiers$ for component v-model:model with arguments', () => {
     const root = parseWithVModel('<Comp v-model:model.trim="foo" />', {
       prefixIdentifiers: true,
     })
@@ -518,7 +518,7 @@ describe('compiler: transform v-model', () => {
         { key: { content: `model` } },
         { key: { content: `onUpdate:model` } },
         {
-          key: { content: 'model$Modifiers' },
+          key: { content: 'modelModifiers$' },
           value: { content: `{ trim: true }`, isStatic: false },
         },
       ],

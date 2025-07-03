@@ -136,7 +136,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       .join(`, `)
     const modifiersKey = arg
       ? isStaticExp(arg)
-        ? `${arg.content}${arg.content === 'model' ? '$' : ''}Modifiers`
+        ? `${arg.content}Modifiers${arg.content === 'model' ? '$' : ''}`
         : createCompoundExpression([arg, ' + "Modifiers"'])
       : `modelModifiers`
     props.push(

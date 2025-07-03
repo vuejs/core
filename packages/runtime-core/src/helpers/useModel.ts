@@ -149,7 +149,7 @@ export const getModelModifiers = (
     ? getter(props, 'modelModifiers')
     : getter(
         props,
-        `${modelName}${modelName === 'model' ? '$' : ''}Modifiers`,
+        `${modelName}Modifiers${modelName === 'model' ? '$' : ''}`,
       ) ||
         getter(props, `${camelize(modelName)}Modifiers`) ||
         getter(props, `${hyphenate(modelName)}Modifiers`)

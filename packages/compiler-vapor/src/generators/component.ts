@@ -243,7 +243,7 @@ function genModelModifiers(
     ? [
         key.content === 'modelValue'
           ? `modelModifiers`
-          : `${key.content}${key.content === 'model' ? '$' : ''}Modifiers`,
+          : `${key.content}Modifiers${key.content === 'model' ? '$' : ''}`,
       ]
     : ['[', ...genExpression(key, context), ' + "Modifiers"]']
 

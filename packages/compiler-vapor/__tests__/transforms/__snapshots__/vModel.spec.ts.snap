@@ -81,14 +81,14 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: vModel transform > component > v-model:model with arguments for component should generate model$Modifiers 1`] = `
+exports[`compiler: vModel transform > component > v-model:model with arguments for component should generate modelModifiers$ 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, { model: () => (_ctx.foo),
   "onUpdate:model": () => _value => (_ctx.foo = _value),
-  model$Modifiers: () => ({ trim: true }) }, null, true)
+  modelModifiers$: () => ({ trim: true }) }, null, true)
   return n0
 }"
 `;

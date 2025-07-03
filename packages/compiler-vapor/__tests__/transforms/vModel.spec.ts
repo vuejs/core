@@ -319,12 +319,12 @@ describe('compiler: vModel transform', () => {
       })
     })
 
-    test('v-model:model with arguments for component should generate model$Modifiers', () => {
+    test('v-model:model with arguments for component should generate modelModifiers$', () => {
       const { code, ir } = compileWithVModel(
         '<Comp v-model:model.trim="foo" />',
       )
       expect(code).toMatchSnapshot()
-      expect(code).contain(`model$Modifiers: () => ({ trim: true })`)
+      expect(code).contain(`modelModifiers$: () => ({ trim: true })`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         tag: 'Comp',
