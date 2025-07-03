@@ -1979,8 +1979,15 @@ function baseCreateRenderer(
       for (i = toBePatched - 1; i >= 0; i--) {
         const nextIndex = s2 + i
         const nextChild = c2[nextIndex] as VNode
-        const anchor =
-          nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
+        let anchor = parentAnchor
+        if (nextIndex + 1 < l2) {
+          const anchorVnode = c2[nextIndex + 1] as VNode
+          if (anchorVnode.component && !anchorVnode.component.asyncResolved) {
+            anchor = anchorVnode.component.subTree.el
+          } else {
+            anchor = anchorVnode.el
+          }
+        }
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
           patch(
