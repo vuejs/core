@@ -1,13 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: vModel transform > component > v-model for component should generate modelValueModifiers 1`] = `
+exports[`compiler: vModel transform > component > v-model for component should generate modelModifiers 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, { modelValue: () => (_ctx.foo),
   "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
-  modelValueModifiers: () => ({ trim: true, "bar-baz": true }) }, null, true)
+  modelModifiers: () => ({ trim: true, "bar-baz": true }) }, null, true)
   return n0
 }"
 `;
@@ -77,6 +77,18 @@ export function render(_ctx) {
     () => ({ [_ctx.arg]: _ctx.foo,
     ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value) })
   ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model:model with arguments for component should generate model$Modifiers 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponentWithFallback(_component_Comp, { model: () => (_ctx.foo),
+  "onUpdate:model": () => _value => (_ctx.foo = _value),
+  model$Modifiers: () => ({ trim: true }) }, null, true)
   return n0
 }"
 `;

@@ -266,13 +266,13 @@ describe('compiler: vModel transform', () => {
       })
     })
 
-    test('v-model for component should generate modelValueModifiers', () => {
+    test('v-model for component should generate modelModifiers', () => {
       const { code, ir } = compileWithVModel(
         '<Comp v-model.trim.bar-baz="foo" />',
       )
       expect(code).toMatchSnapshot()
       expect(code).contain(
-        `modelValueModifiers: () => ({ trim: true, "bar-baz": true })`,
+        `modelModifiers: () => ({ trim: true, "bar-baz": true })`,
       )
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -313,6 +313,28 @@ describe('compiler: vModel transform', () => {
               values: [{ content: 'bar', isStatic: false }],
               model: true,
               modelModifiers: ['number'],
+            },
+          ],
+        ],
+      })
+    })
+
+    test('v-model:model with arguments for component should generate model$Modifiers', () => {
+      const { code, ir } = compileWithVModel(
+        '<Comp v-model:model.trim="foo" />',
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contain(`model$Modifiers: () => ({ trim: true })`)
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Comp',
+        props: [
+          [
+            {
+              key: { content: 'model', isStatic: true },
+              values: [{ content: 'foo', isStatic: false }],
+              model: true,
+              modelModifiers: ['trim'],
             },
           ],
         ],

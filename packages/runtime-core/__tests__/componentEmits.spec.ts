@@ -325,7 +325,7 @@ describe('component: emit', () => {
     const Comp = () =>
       h(Foo, {
         modelValue: null,
-        modelValueModifiers: { number: true },
+        modelModifiers: { number: true },
         'onUpdate:modelValue': fn1,
 
         foo: null,
@@ -356,7 +356,7 @@ describe('component: emit', () => {
     const Comp = () =>
       h(Foo, {
         modelValue: null,
-        modelValueModifiers: { trim: true },
+        modelModifiers: { trim: true },
         'onUpdate:modelValue': fn1,
 
         foo: null,
@@ -410,7 +410,7 @@ describe('component: emit', () => {
     const Comp = () =>
       h(Foo, {
         modelValue: null,
-        modelValueModifiers: { trim: true },
+        modelModifiers: { trim: true },
         'onUpdate:modelValue': fn1,
 
         firstName: null,
@@ -464,7 +464,7 @@ describe('component: emit', () => {
     const Comp = () =>
       h(Foo, {
         modelValue: null,
-        modelValueModifiers: { trim: true, number: true },
+        modelModifiers: { trim: true, number: true },
         'onUpdate:modelValue': fn1,
 
         foo: null,
@@ -492,7 +492,7 @@ describe('component: emit', () => {
     const Comp = () =>
       h(Foo, {
         modelValue: null,
-        modelValueModifiers: { trim: true },
+        modelModifiers: { trim: true },
         'onUpdate:modelValue': fn,
       })
 

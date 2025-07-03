@@ -167,7 +167,11 @@ export function genModelProps(ctx: ScriptCompileContext) {
     modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
 
     // also generate modifiers prop
-    const modifierPropName = JSON.stringify(`${name}Modifiers`)
+    const modifierPropName = JSON.stringify(
+      name === 'modelValue'
+        ? `modelModifiers`
+        : `${name}${name === 'model' ? '$' : ''}Modifiers`,
+    )
     modelPropsDecl += `\n    ${modifierPropName}: {},`
   }
   return `{${modelPropsDecl}\n  }`

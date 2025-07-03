@@ -145,9 +145,12 @@ export const getModelModifiers = (
   modelName: string,
   getter: (props: Record<string, any>, key: string) => any,
 ): Record<string, boolean> | undefined => {
-  return (
-    getter(props, `${modelName}Modifiers`) ||
-    getter(props, `${camelize(modelName)}Modifiers`) ||
-    getter(props, `${hyphenate(modelName)}Modifiers`)
-  )
+  return modelName === 'modelValue' || modelName === 'model-value'
+    ? getter(props, 'modelModifiers')
+    : getter(
+        props,
+        `${modelName}${modelName === 'model' ? '$' : ''}Modifiers`,
+      ) ||
+        getter(props, `${camelize(modelName)}Modifiers`) ||
+        getter(props, `${hyphenate(modelName)}Modifiers`)
 }
