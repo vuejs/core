@@ -3,6 +3,7 @@ import type { ScriptCompileContext } from './context'
 import { inferRuntimeType } from './resolveType'
 import { UNKNOWN_TYPE, isCallOf, toRuntimeTypeString } from './utils'
 import { BindingTypes, unwrapTSNode } from '@vue/compiler-dom'
+import { getModifierPropName } from '@vue/shared'
 
 export const DEFINE_MODEL = 'defineModel'
 
@@ -167,11 +168,7 @@ export function genModelProps(ctx: ScriptCompileContext) {
     modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
 
     // also generate modifiers prop
-    const modifierPropName = JSON.stringify(
-      name === 'modelValue'
-        ? `modelModifiers`
-        : `${name}Modifiers${name === 'model' ? '$' : ''}`,
-    )
+    const modifierPropName = JSON.stringify(getModifierPropName(name))
     modelPropsDecl += `\n    ${modifierPropName}: {},`
   }
   return `{${modelPropsDecl}\n  }`
