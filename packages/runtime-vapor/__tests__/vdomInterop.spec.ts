@@ -5,6 +5,20 @@ import { createComponent, defineVaporComponent } from '../src'
 const define = makeInteropRender()
 
 describe('vdomInterop', () => {
+  describe.todo('props', () => {})
+
+  describe.todo('emit', () => {})
+
+  describe.todo('slots', () => {})
+
+  describe.todo('provide', () => {})
+
+  describe.todo('inject', () => {})
+
+  describe.todo('template ref', () => {})
+
+  describe.todo('dynamic component', () => {})
+
   describe('attribute fallthrough', () => {
     it('should not fallthrough emit handlers to vdom child', () => {
       const VDomChild = defineComponent({
