@@ -15,6 +15,7 @@ import {
   onErrorCaptured,
   onMounted,
   onUnmounted,
+  onUpdated,
   ref,
   render,
   resolveDynamicComponent,
@@ -2159,6 +2160,81 @@ describe('Suspense', () => {
     // should not throw error due to Suspense vnode.el being null
     data.value = 'data2'
     await Promise.all(deps)
+  })
+
+  //#11617
+  test('update async component before resolve then update again', async () => {
+    const arr: boolean[] = []
+    const Child = {
+      props: ['loading'],
+      async setup(props: any) {
+        onUpdated(() => {
+          arr.push(props.loading)
+        })
+        await 1
+        return () => {
+          const loading = props.loading
+          return h('div', null, loading ? '1' : '2')
+        }
+      },
+    }
+
+    const Parent = defineComponent({
+      setup() {
+        const loading = ref(false)
+        const delay = (delayInms: any) => {
+          return new Promise(resolve => setTimeout(resolve, delayInms))
+        }
+        onMounted(async () => {
+          loading.value = true
+          await delay(1000)
+          loading.value = false
+          await nextTick()
+          expect(arr).toEqual([true, false])
+        })
+        return () => {
+          return h(Child, { loading: loading.value })
+        }
+      },
+    })
+
+    const RouterView = {
+      props: {
+        name: { type: Object },
+      },
+      setup(props: any) {
+        return () => {
+          const name = props.name
+          return h(name)
+        }
+      },
+    }
+    const App = {
+      setup() {
+        const Dummy = {
+          setup() {
+            return () => {
+              return h('div', null, 'dummy')
+            }
+          },
+        }
+
+        const flag: any = shallowRef(Dummy)
+
+        onMounted(() => {
+          flag.value = Parent
+        })
+        return () => {
+          return h(Suspense, null, {
+            default: () => h(RouterView, { name: flag.value }),
+          })
+        }
+      },
+    }
+
+    const root: any = nodeOps.createElement('div')
+
+    render(h(App), root)
   })
 
   describe('warnings', () => {
