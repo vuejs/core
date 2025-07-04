@@ -217,6 +217,11 @@ export interface VNode<
    */
   ssFallback: VNode | null
 
+  /**
+   * @internal
+   */
+  placeholderEl: HostNode | null
+
   // optimization only
   shapeFlag: number
   patchFlag: number
@@ -711,6 +716,8 @@ export function cloneVNode<T, U>(
     suspense: vnode.suspense,
     ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
     ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
+    placeholderEl: vnode.placeholderEl,
+
     el: vnode.el,
     anchor: vnode.anchor,
     ctx: vnode.ctx,
