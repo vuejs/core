@@ -5,7 +5,26 @@ import { createComponent, defineVaporComponent } from '../src'
 const define = makeInteropRender()
 
 describe('vdomInterop', () => {
-  describe.todo('props', () => {})
+  describe('props', () => {
+    test('prevent hasOwnProperty error when props is null', () => {
+      const VaporChild = defineVaporComponent({
+        props: {
+          msg: String,
+        },
+        setup(_, { attrs }) {
+          return [document.createTextNode(attrs.class || 'foo')]
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('foo')
+    })
+  })
 
   describe.todo('emit', () => {})
 
