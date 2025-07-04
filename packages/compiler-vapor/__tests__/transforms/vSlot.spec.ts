@@ -420,6 +420,35 @@ describe('compiler: transform slot', () => {
     })
   })
 
+  describe('forwarded slots', () => {
+    test('<slot> tag only', () => {
+      const { code } = compileWithSlots(`<Comp><slot/></Comp>`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('<slot> tag w/ v-if', () => {
+      const { code } = compileWithSlots(`<Comp><slot v-if="ok"/></Comp>`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('<slot> tag w/ v-for', () => {
+      const { code } = compileWithSlots(`<Comp><slot v-for="a in b"/></Comp>`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('<slot> tag w/ template', () => {
+      const { code } = compileWithSlots(
+        `<Comp><template #default><slot/></template></Comp>`,
+      )
+      expect(code).toMatchSnapshot()
+    })
+
+    test('<slot w/ nested component>', () => {
+      const { code } = compileWithSlots(`<Comp><Comp><slot/></Comp></Comp>`)
+      expect(code).toMatchSnapshot()
+    })
+  })
+
   describe('errors', () => {
     test('error on extraneous children w/ named default slot', () => {
       const onError = vi.fn()
