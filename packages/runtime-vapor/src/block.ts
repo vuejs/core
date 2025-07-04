@@ -8,6 +8,7 @@ import {
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import { isHydrating } from './dom/hydration'
+import { getInheritedScopeIds } from '@vue/runtime-dom'
 
 export type Block =
   | Node
@@ -23,6 +24,7 @@ export class VaporFragment {
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
+  fallback?: BlockFn
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -34,6 +36,11 @@ export class DynamicFragment extends VaporFragment {
   scope: EffectScope | undefined
   current?: BlockFn
   fallback?: BlockFn
+  /**
+   * slot only
+   * indicates forwarded slot
+   */
+  forwarded?: boolean
 
   constructor(anchorLabel?: string) {
     super([])
@@ -124,6 +131,10 @@ export function insert(
       insert(b, parent, anchor)
     }
   } else {
+    if (block.anchor) {
+      insert(block.anchor, parent, anchor)
+      anchor = block.anchor
+    }
     // fragment
     if (block.insert) {
       // TODO handle hydration for vdom interop
@@ -131,7 +142,6 @@ export function insert(
     } else {
       insert(block.nodes, parent, anchor)
     }
-    if (block.anchor) insert(block.anchor, parent, anchor)
   }
 }
 
@@ -186,4 +196,42 @@ export function normalizeBlock(block: Block): Node[] {
     block.anchor && nodes.push(block.anchor)
   }
   return nodes
+}
+
+export function setScopeId(block: Block, scopeId: string): void {
+  if (block instanceof Element) {
+    block.setAttribute(scopeId, '')
+  } else if (isVaporComponent(block)) {
+    setScopeId(block.block, scopeId)
+  } else if (isArray(block)) {
+    for (const b of block) {
+      setScopeId(b, scopeId)
+    }
+  } else if (isFragment(block)) {
+    setScopeId(block.nodes, scopeId)
+  }
+}
+
+export function setComponentScopeId(instance: VaporComponentInstance): void {
+  const parent = instance.parent
+  if (!parent) return
+  if (isArray(instance.block) && instance.block.length > 1) return
+
+  const scopeId = parent.type.__scopeId
+  if (scopeId) {
+    setScopeId(instance.block, scopeId)
+  }
+
+  // inherit scopeId from vdom parent
+  if (
+    parent.subTree &&
+    (parent.subTree.component as any) === instance &&
+    parent.vnode!.scopeId
+  ) {
+    setScopeId(instance.block, parent.vnode!.scopeId)
+    const scopeIds = getInheritedScopeIds(parent.vnode!, parent.parent)
+    for (const id of scopeIds) {
+      setScopeId(instance.block, id)
+    }
+  }
 }
