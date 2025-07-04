@@ -259,7 +259,7 @@
 
 * **sfc:** support imported types in SFC macros ([#8083](https://github.com/vuejs/core/pull/8083))
 * **types/slots:** support slot presence / props type checks via `defineSlots` macro and `slots` option ([#7982](https://github.com/vuejs/core/issues/7982)) ([5a2f5d5](https://github.com/vuejs/core/commit/5a2f5d59cffa36a99e6f2feab6b3ba7958b7362f))
-* **sfc:** support more ergnomic defineEmits type syntax ([#7992](https://github.com/vuejs/core/issues/7992)) ([8876dcc](https://github.com/vuejs/core/commit/8876dccf42a7f05375d97cb18c1afdfd0fc51c94))
+* **sfc:** support more ergonomic defineEmits type syntax ([#7992](https://github.com/vuejs/core/issues/7992)) ([8876dcc](https://github.com/vuejs/core/commit/8876dccf42a7f05375d97cb18c1afdfd0fc51c94))
 * **sfc:** introduce `defineModel` macro and `useModel` helper ([#8018](https://github.com/vuejs/core/issues/8018)) ([14f3d74](https://github.com/vuejs/core/commit/14f3d747a34d45415b0036b274517d70a27ec0d3))
 * **reactivity:** improve support of getter usage in reactivity APIs ([#7997](https://github.com/vuejs/core/issues/7997)) ([59e8284](https://github.com/vuejs/core/commit/59e828448e7f37643cd0eaea924a764e9d314448))
 * **compiler-sfc:** add defineOptions macro ([#5738](https://github.com/vuejs/core/issues/5738)) ([bcf5841](https://github.com/vuejs/core/commit/bcf5841ddecc64d0bdbd56ce1463eb8ebf01bb9d))
@@ -483,7 +483,7 @@
 * **compiler-sfc:** support arbitrary expression as withDefaults argument ([fe61944](https://github.com/vuejs/core/commit/fe619443d2e99301975de120685dbae8d66c03a6)), closes [#6459](https://github.com/vuejs/core/issues/6459)
 * **reactivity:** improve support of getter usage in reactivity APIs ([#7997](https://github.com/vuejs/core/issues/7997)) ([59e8284](https://github.com/vuejs/core/commit/59e828448e7f37643cd0eaea924a764e9d314448))
 * **sfc:** revert withDefaults() deprecation ([4af5d1b](https://github.com/vuejs/core/commit/4af5d1b0754035058436f9e4e5c12aedef199177))
-* **sfc:** support more ergnomic defineEmits type syntax ([#7992](https://github.com/vuejs/core/issues/7992)) ([8876dcc](https://github.com/vuejs/core/commit/8876dccf42a7f05375d97cb18c1afdfd0fc51c94))
+* **sfc:** support more ergonomic defineEmits type syntax ([#7992](https://github.com/vuejs/core/issues/7992)) ([8876dcc](https://github.com/vuejs/core/commit/8876dccf42a7f05375d97cb18c1afdfd0fc51c94))
 * **types/slots:** support slot presence / props type checks via `defineSlots` macro and `slots` option ([#7982](https://github.com/vuejs/core/issues/7982)) ([5a2f5d5](https://github.com/vuejs/core/commit/5a2f5d59cffa36a99e6f2feab6b3ba7958b7362f))
 
 
@@ -544,7 +544,7 @@
 
 ### Bug Fixes
 
-* **runtime-core:** support `getCurrentInstance` across mutiple builds of Vue ([8d2d5bf](https://github.com/vuejs/core/commit/8d2d5bf48a24dab44e5b03cb8fa0c5faa4b696e3))
+* **runtime-core:** support `getCurrentInstance` across multiple builds of Vue ([8d2d5bf](https://github.com/vuejs/core/commit/8d2d5bf48a24dab44e5b03cb8fa0c5faa4b696e3))
 * **types:** ensure defineProps with generics return correct types ([c288c7b](https://github.com/vuejs/core/commit/c288c7b0bd6077d690f42153c3fc49a45454a66a))
 
 
