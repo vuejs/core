@@ -22,7 +22,7 @@ import { warn } from './warning'
 import { type VNode, cloneVNode, createVNode } from './vnode'
 import type { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { NO, extend, isFunction, isObject } from '@vue/shared'
+import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
@@ -442,10 +442,18 @@ export function createAppAPI<HostElement>(
 
       provide(key, value) {
         if (__DEV__ && (key as string | symbol) in context.provides) {
-          warn(
-            `App already provides property with key "${String(key)}". ` +
-              `It will be overwritten with the new value.`,
-          )
+          if (hasOwn(context.provides, key as string | symbol)) {
+            warn(
+              `App already provides property with key "${String(key)}". ` +
+                `It will be overwritten with the new value.`,
+            )
+          } else {
+            // #13212, context.provides can inherit the provides object from parent on custom elements
+            warn(
+              `App already provides property with key "${String(key)}" inherited from its parent element. ` +
+                `It will be overwritten with the new value.`,
+            )
+          }
         }
 
         context.provides[key as string | symbol] = value

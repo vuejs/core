@@ -15,6 +15,12 @@ class Dep implements Dependency {
   _subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
 
+  /**
+   * @internal
+   */
+  readonly __v_skip = true
+  // TODO isolatedDeclarations ReactiveFlags.SKIP
+
   constructor(
     private map: KeyToDepMap,
     private key: unknown,
