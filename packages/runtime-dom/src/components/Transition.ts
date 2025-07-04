@@ -229,19 +229,19 @@ export function resolveTransitionProps(
   return extend(baseProps, {
     onBeforeEnter(el) {
       callHook(onBeforeEnter, [el])
+      addTransitionClass(el, enterActiveClass)
       addTransitionClass(el, enterFromClass)
       if (__COMPAT__ && legacyClassEnabled && legacyEnterFromClass) {
         addTransitionClass(el, legacyEnterFromClass)
       }
-      addTransitionClass(el, enterActiveClass)
     },
     onBeforeAppear(el) {
       callHook(onBeforeAppear, [el])
+      addTransitionClass(el, appearActiveClass)
       addTransitionClass(el, appearFromClass)
       if (__COMPAT__ && legacyClassEnabled && legacyAppearFromClass) {
         addTransitionClass(el, legacyAppearFromClass)
       }
-      addTransitionClass(el, appearActiveClass)
     },
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
