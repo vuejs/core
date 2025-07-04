@@ -7,7 +7,27 @@ const define = makeInteropRender()
 describe('vdomInterop', () => {
   describe.todo('props', () => {})
 
-  describe.todo('emit', () => {})
+  describe('emit', () => {
+    test('emit from vapor child to vdom parent', () => {
+      const VaporChild = defineVaporComponent({
+        emits: ['click'],
+        setup(_, { emit }) {
+          emit('click')
+          return []
+        },
+      })
+
+      const fn = vi.fn()
+      define({
+        setup() {
+          return () => h(VaporChild as any, { onClick: fn })
+        },
+      }).render()
+
+      // fn should be called once
+      expect(fn).toHaveBeenCalledTimes(1)
+    })
+  })
 
   describe.todo('slots', () => {})
 
