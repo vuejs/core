@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": ["es2022", "dom"],
+    "allowJs": true,
+    "moduleDetection": "force",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "types": ["node", "vite/client"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "vue": ["../packages/vue/src/runtime-with-vapor.ts"],
+      "@vue/*": ["../packages/*/src"]
+    }
+  },
+  "include": ["**/*"]
+}

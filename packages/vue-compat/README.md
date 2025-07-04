@@ -41,7 +41,6 @@ The following workflow walks through the steps of migrating an actual Vue 2 app 
 ### Installation
 
 1. Upgrade tooling if applicable.
-
    - If using custom webpack setup: Upgrade `vue-loader` to `^16.0.0`.
    - If using `vue-cli`: upgrade to the latest `@vue/cli-service` with `vue upgrade`
    - (Alternative) migrate to [Vite](https://vitejs.dev/) + [vite-plugin-vue2](https://github.com/underfin/vite-plugin-vue2). [[Example commit](https://github.com/vuejs/vue-hackernews-2.0/commit/565b948919eb58f22a32afca7e321b490cb3b074)]
@@ -160,7 +159,6 @@ The following workflow walks through the steps of migrating an actual Vue 2 app 
 5. After fixing the errors, the app should be able to run if it is not subject to the [limitations](#known-limitations) mentioned above.
 
    You will likely see a LOT of warnings from both the command line and the browser console. Here are some general tips:
-
    - You can filter for specific warnings in the browser console. It's a good idea to use the filter and focus on fixing one item at a time. You can also use negated filters like `-GLOBAL_MOUNT`.
 
    - You can suppress specific deprecations via [compat configuration](#compat-configuration).

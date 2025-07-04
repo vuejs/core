@@ -9,6 +9,7 @@ on:
     branches:
       - main
       - minor
+      - vapor
 
 jobs:
   test:
@@ -16,7 +17,7 @@ jobs:
     uses: ./.github/workflows/test.yml
 
   continuous-release:
-    if: github.repository == 'vuejs/core'
+    if: github.repository == 'vuejs/core' && github.ref_name != 'vapor'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

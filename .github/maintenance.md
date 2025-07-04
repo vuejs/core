@@ -48,7 +48,6 @@ Depending on the type of the PR, different considerations need to be taken into 
 - Performance: if a refactor PR claims to improve performance, there should be benchmarks showcasing said performance unless the improvement is self-explanatory.
 
 - Code quality / stylistic PRs: we should be conservative on merging this type PRs because (1) they can be subjective in many cases, and (2) they often come with large git diffs, causing merge conflicts with other pending PRs, and leading to unwanted noise when tracing changes through git history. Use your best judgement on this type of PRs on whether they are worth it.
-
   - For PRs in this category that are approved, do not merge immediately. Group them before releasing a new minor, after all feature-oriented PRs are merged.
 
 ### Reviewing a Feature
@@ -56,7 +55,6 @@ Depending on the type of the PR, different considerations need to be taken into 
 - Feature PRs should always have clear context and explanation on why the feature should be added, ideally in the form of an RFC. If the PR doesn't explain what real-world problem it is solving, ask the contributor to clarify.
 
 - Decide if the feature should require an RFC process. The line isn't always clear, but a rough criteria is whether it is augmenting an existing API vs. adding a new API. Some examples:
-
   - Adding a new built-in component or directive is "significant" and definitely requires an RFC.
   - Template syntax additions like adding a new `v-on` modifier or a new `v-bind` syntax sugar are "substantial". It would be nice to have an RFC for it, but a detailed explanation on the use case and reasoning behind the design directly in the PR itself can be acceptable.
   - Small, low-impact additions like exposing a new utility type or adding a new app config option can be self-explanatory, but should still provide enough context in the PR.
@@ -70,7 +68,6 @@ Depending on the type of the PR, different considerations need to be taken into 
 - Implementation: code style should be consistent with the rest of the codebase, follow common best practices. Prefer code that is boring but easy to understand over "clever" code.
 
 - Size: bundle size matters. We have a GitHub action that compares the size change for every PR. We should always aim to realize the desired changes with the smallest amount of code size increase.
-
   - Sometimes we need to compare the size increase vs. perceived benefits to decide whether a change is justifiable. Also take extra care to make sure added code can be tree-shaken if not needed.
 
   - Make sure to put dev-only code in `__DEV__` branches so they are tree-shakable.
@@ -80,7 +77,6 @@ Depending on the type of the PR, different considerations need to be taken into 
   - Make sure it doesn't accidentally cause dev-only or compiler-only code branches to be included in the runtime build. Notable case is that some functions in @vue/shared are compiler-only and should not be used in runtime code, e.g. `isHTMLTag` and `isSVGTag`.
 
 - Performance
-
   - Be careful about code changes in "hot paths", in particular the Virtual DOM renderer (`runtime-core/src/renderer.ts`) and component instantiation code.
 
 - Potential Breakage

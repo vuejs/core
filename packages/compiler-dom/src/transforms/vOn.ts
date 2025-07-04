@@ -15,7 +15,7 @@ import {
   isStaticExp,
 } from '@vue/compiler-core'
 import { V_ON_WITH_KEYS, V_ON_WITH_MODIFIERS } from '../runtimeHelpers'
-import { capitalize, makeMap } from '@vue/shared'
+import { capitalize, isString, makeMap } from '@vue/shared'
 
 const isEventOptionModifier = /*@__PURE__*/ makeMap(`passive,once,capture`)
 const isNonKeyModifier = /*@__PURE__*/ makeMap(
@@ -30,12 +30,16 @@ const isNonKeyModifier = /*@__PURE__*/ makeMap(
 const maybeKeyModifier = /*@__PURE__*/ makeMap('left,right')
 const isKeyboardEvent = /*@__PURE__*/ makeMap(`onkeyup,onkeydown,onkeypress`)
 
-const resolveModifiers = (
-  key: ExpressionNode,
+export const resolveModifiers = (
+  key: ExpressionNode | string,
   modifiers: SimpleExpressionNode[],
-  context: TransformContext,
+  context: TransformContext | null,
   loc: SourceLocation,
-) => {
+): {
+  keyModifiers: string[]
+  nonKeyModifiers: string[]
+  eventOptionModifiers: string[]
+} => {
   const keyModifiers = []
   const nonKeyModifiers = []
   const eventOptionModifiers = []
@@ -46,6 +50,7 @@ const resolveModifiers = (
     if (
       __COMPAT__ &&
       modifier === 'native' &&
+      context &&
       checkCompatEnabled(
         CompilerDeprecationTypes.COMPILER_V_ON_NATIVE,
         context,
@@ -58,12 +63,16 @@ const resolveModifiers = (
       // e.g. .passive & .capture
       eventOptionModifiers.push(modifier)
     } else {
+      const keyString = isString(key)
+        ? key
+        : isStaticExp(key)
+          ? key.content
+          : null
+
       // runtimeModifiers: modifiers that needs runtime guards
       if (maybeKeyModifier(modifier)) {
-        if (isStaticExp(key)) {
-          if (
-            isKeyboardEvent((key as SimpleExpressionNode).content.toLowerCase())
-          ) {
+        if (keyString) {
+          if (isKeyboardEvent(keyString.toLowerCase())) {
             keyModifiers.push(modifier)
           } else {
             nonKeyModifiers.push(modifier)

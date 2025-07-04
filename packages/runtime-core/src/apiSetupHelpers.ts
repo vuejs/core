@@ -9,9 +9,10 @@ import {
   isPromise,
 } from '@vue/shared'
 import {
+  type ComponentInternalInstance,
   type SetupContext,
   createSetupContext,
-  getCurrentInstance,
+  getCurrentGenericInstance,
   setCurrentInstance,
   unsetCurrentInstance,
 } from './component'
@@ -381,6 +382,7 @@ export function withDefaults<
   return null as any
 }
 
+// TODO return type for Vapor components
 export function useSlots(): SetupContext['slots'] {
   return getContext().slots
 }
@@ -390,11 +392,16 @@ export function useAttrs(): SetupContext['attrs'] {
 }
 
 function getContext(): SetupContext {
-  const i = getCurrentInstance()!
+  const i = getCurrentGenericInstance()!
   if (__DEV__ && !i) {
     warn(`useContext() called without active instance.`)
   }
-  return i.setupContext || (i.setupContext = createSetupContext(i))
+  if (i.vapor) {
+    return i as any // vapor instance act as its own setup context
+  } else {
+    const ii = i as ComponentInternalInstance
+    return ii.setupContext || (ii.setupContext = createSetupContext(ii))
+  }
 }
 
 /**
@@ -496,7 +503,7 @@ export function createPropsRestProxy(
  * @internal
  */
 export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
-  const ctx = getCurrentInstance()!
+  const ctx = getCurrentGenericInstance()!
   if (__DEV__ && !ctx) {
     warn(
       `withAsyncContext called without active current instance. ` +
