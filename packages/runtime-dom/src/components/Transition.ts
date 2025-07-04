@@ -198,7 +198,6 @@ export function resolveTransitionProps(
     done?: () => void,
   ) => {
     el._isLeaving = false
-    removeTransitionClass(el, leaveFromClass)
     removeTransitionClass(el, leaveToClass)
     removeTransitionClass(el, leaveActiveClass)
     done && done()
