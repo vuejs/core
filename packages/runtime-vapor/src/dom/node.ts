@@ -41,7 +41,7 @@ export function _child(node: ParentNode): Node {
  *
  *   Client Compiled Code (Simplified):
  *     const n2 = t0() // n2 = `<div> </div>`
- *     const n1 = _child(n2) // n1 = text node
+ *     const n1 = _child(n2, 1) // n1 = text node
  *     // ... slot creation ...
  *     _renderEffect(() => _setText(n1, _ctx.msg))
  *
@@ -49,18 +49,18 @@ export function _child(node: ParentNode): Node {
  *
  *   Hydration Mismatch:
  *   - During hydration, `n2` refers to the SSR `<div>`.
- *   - `_child(n2)` would return `<!--[-->`.
+ *   - `_child(n2, 1)` would return `<!--[-->`.
  *   - The client code expects `n1` to be the text node, but gets the comment.
  *     The subsequent `_setText(n1, ...)` would fail or target the wrong node.
  *
  *   Solution (`__child`):
- *   - `__child(n2)` is used during hydration. It skips the SSR fragment anchors
- *     (`<!--[-->...<!--]-->`) and any other non-content nodes to find the
- *     "Actual Text Node", correctly matching the client's expectation for `n1`.
+ *   - `__child(n2, offset)` is used during hydration. It skips the dynamic children
+ *     to find the "Actual Text Node", correctly matching the client's expectation
+ *     for `n1`.
  */
 /*! #__NO_SIDE_EFFECTS__ */
-export function __child(node: ParentNode): Node {
-  let n = node.firstChild!
+export function __child(node: ParentNode, offset?: number): Node {
+  let n = offset ? __nthChild(node, offset) : node.firstChild!
 
   if (isComment(n, '[')) {
     n = locateEndAnchor(n)!.nextSibling!
@@ -162,8 +162,8 @@ type DelegatedFunction<T extends (...args: any[]) => any> = T & {
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
-export const child: DelegatedFunction<typeof _child> = node => {
-  return child.impl(node)
+export const child: DelegatedFunction<typeof __child> = (node, offset) => {
+  return child.impl(node, offset)
 }
 child.impl = _child
 

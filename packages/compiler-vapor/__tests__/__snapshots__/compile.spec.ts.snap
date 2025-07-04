@@ -157,7 +157,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = t0()
   const n3 = t1()
-  const n2 = _child(n3)
+  const n2 = _child(n3, 1)
   _setInsertionState(n3, 0)
   const n1 = _createComponentWithFallback(_component_Comp)
   _renderEffect(() => {
