@@ -39,8 +39,7 @@ export type NodeChild = NodeChildAtom | NodeArrayChildren
 
 export function normalizeNode(node: NodeChild): Block {
   if (node == null || typeof node === 'boolean') {
-    // empty placeholder
-    return createComment('')
+    return []
   } else if (isArray(node) && node.length) {
     // fragment
     return new VaporFragment(node.map(normalizeNode))

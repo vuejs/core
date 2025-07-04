@@ -67,7 +67,6 @@ export function render(_ctx) {
   const x2 = _child(n2)
   _renderEffect(() => {
     const _msg = _ctx.msg
-    
     _setText(x0, _toDisplayString(_msg))
     _setText(x1, _toDisplayString(_msg))
     _setText(x2, _toDisplayString(_msg))
