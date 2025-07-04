@@ -10,6 +10,7 @@ import { addEventListener } from '../modules/events'
 import {
   invokeArrayFns,
   isArray,
+  isDate,
   isSet,
   looseEqual,
   looseIndexOf,
@@ -37,6 +38,19 @@ function onCompositionEnd(e: Event) {
   }
 }
 
+const pad = (num: number, cover: number) => {
+  return String('0'.repeat(cover) + num).slice(-cover)
+}
+
+const toFormattedDateString = (value: Date) => {
+  if (!isDate(value)) return value
+
+  const year = pad(value.getUTCFullYear(), 4)
+  const month = pad(value.getUTCMonth() + 1, 2)
+  const date = pad(value.getUTCDate(), 2)
+
+  return `${year}-${month}-${date}`
+}
 const assignKey: unique symbol = Symbol('_assign')
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
@@ -49,20 +63,23 @@ type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
 // be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
   HTMLInputElement | HTMLTextAreaElement,
-  'trim' | 'number' | 'lazy'
+  'trim' | 'number' | 'lazy' | 'date'
 > = {
-  created(el, { modifiers: { lazy, trim, number } }, vnode) {
+  created(el, { modifiers: { lazy, trim, number, date } }, vnode) {
     el[assignKey] = getModelAssigner(vnode)
     const castToNumber =
       number || (vnode.props && vnode.props.type === 'number')
     addEventListener(el, lazy ? 'change' : 'input', e => {
       if ((e.target as any).composing) return
-      let domValue: string | number = el.value
+      let domValue: string | number | Date | null = el.value
       if (trim) {
         domValue = domValue.trim()
       }
       if (castToNumber) {
         domValue = looseToNumber(domValue)
+      }
+      if (date && vnode.props && vnode.props.type === 'date') {
+        domValue = (el as HTMLInputElement).valueAsDate
       }
       el[assignKey](domValue)
     })
@@ -82,12 +99,16 @@ export const vModelText: ModelDirective<
     }
   },
   // set value on mounted so it's after min/max for type="range"
-  mounted(el, { value }) {
+  mounted(el, { value, modifiers: { date } }) {
+    if (date && el.type === 'date') {
+      el.value = toFormattedDateString(value)
+      return
+    }
     el.value = value == null ? '' : value
   },
   beforeUpdate(
     el,
-    { value, oldValue, modifiers: { lazy, trim, number } },
+    { value, oldValue, modifiers: { lazy, trim, number, date } },
     vnode,
   ) {
     el[assignKey] = getModelAssigner(vnode)
@@ -97,8 +118,11 @@ export const vModelText: ModelDirective<
       (number || el.type === 'number') && !/^0\d/.test(el.value)
         ? looseToNumber(el.value)
         : el.value
-    const newValue = value == null ? '' : value
+    let newValue = value == null ? '' : value
 
+    if (date || el.type === 'date') {
+      newValue = toFormattedDateString(newValue)
+    }
     if (elValue === newValue) {
       return
     }
@@ -109,6 +133,13 @@ export const vModelText: ModelDirective<
         return
       }
       if (trim && el.value.trim() === newValue) {
+        return
+      }
+      if (
+        date &&
+        el.type === 'date' &&
+        el.value === toFormattedDateString(value)
+      ) {
         return
       }
     }
