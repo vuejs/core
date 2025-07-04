@@ -1226,6 +1226,7 @@ function baseCreateRenderer(
       if (!initialVNode.el) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
+        initialVNode.el = placeholder.el
       }
     } else {
       setupRenderEffect(
@@ -1980,9 +1981,7 @@ function baseCreateRenderer(
         const nextIndex = s2 + i
         const nextChild = c2[nextIndex] as VNode
         const anchor =
-          nextIndex + 1 < l2
-            ? resolveInsertionAnchor(c2[nextIndex + 1] as VNode)
-            : parentAnchor
+          nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
           patch(
@@ -2566,21 +2565,6 @@ function getSequence(arr: number[]): number[] {
     v = p[v]
   }
   return result
-}
-
-function resolveInsertionAnchor(anchorVnode: VNode) {
-  let anchor = null
-  if (
-    __FEATURE_SUSPENSE__ &&
-    anchorVnode.component &&
-    anchorVnode.component.asyncDep &&
-    !anchorVnode.component.asyncResolved
-  ) {
-    anchor = anchorVnode.component.subTree.el
-  } else {
-    anchor = anchorVnode.el
-  }
-  return anchor
 }
 
 function locateNonHydratedAsyncRoot(
