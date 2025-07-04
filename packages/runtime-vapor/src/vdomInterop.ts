@@ -236,12 +236,10 @@ function renderVDOMSlot(
   frag.insert = (parentNode, anchor) => {
     if (!isMounted) {
       renderEffect(() => {
-        const vnode = renderSlot(
-          slotsRef.value,
-          isFunction(name) ? name() : name,
-          props,
-        )
-        if ((vnode.children as any[]).length) {
+        const vnode = slotsRef.value
+          ? renderSlot(slotsRef.value, isFunction(name) ? name() : name, props)
+          : null
+        if (vnode && (vnode.children as any[]).length) {
           if (fallbackNodes) {
             remove(fallbackNodes, parentNode)
             fallbackNodes = undefined
