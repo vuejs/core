@@ -6,16 +6,22 @@ import {
   transformElement,
   transformText,
   transformVBind,
+  transformVFor,
   transformVOn,
 } from '../../src'
 import {
   type BindingMetadata,
   BindingTypes,
   NodeTypes,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 
 const compileWithElementTransform = makeCompile({
-  nodeTransforms: [transformElement, transformChildren, transformText],
+  nodeTransforms: [
+    transformVFor,
+    transformElement,
+    transformChildren,
+    transformText,
+  ],
   directiveTransforms: {
     bind: transformVBind,
     on: transformVOn,
@@ -39,11 +45,12 @@ describe('compiler: element transform', () => {
       })
     })
 
-    test.todo('resolve implicitly self-referencing component', () => {
+    test('resolve implicitly self-referencing component', () => {
       const { code, helpers } = compileWithElementTransform(`<Example/>`, {
         filename: `/foo/bar/Example.vue?vue&type=template`,
       })
       expect(code).toMatchSnapshot()
+      expect(code).toContain('_resolveComponent("Example", true)')
       expect(helpers).toContain('resolveComponent')
     })
 
@@ -165,6 +172,17 @@ describe('compiler: element transform', () => {
       const { code } = compileWithElementTransform(`<Comp/>123`, {
         bindingMetadata: { Comp: BindingTypes.SETUP_CONST },
       })
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_createComponent(_ctx.Comp)')
+    })
+
+    test('v-for on component should not mark as single root', () => {
+      const { code } = compileWithElementTransform(
+        `<Comp v-for="item in items" :key="item"/>`,
+        {
+          bindingMetadata: { Comp: BindingTypes.SETUP_CONST },
+        },
+      )
       expect(code).toMatchSnapshot()
       expect(code).contains('_createComponent(_ctx.Comp)')
     })

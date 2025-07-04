@@ -25,7 +25,7 @@ import {
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, insert, isBlock, remove } from './block'
+import { type Block, DynamicFragment, insert, isBlock, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -59,7 +59,11 @@ import {
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
-import { insertionAnchor, insertionParent } from './insertionState'
+import {
+  insertionAnchor,
+  insertionParent,
+  resetInsertionState,
+} from './insertionState'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -142,6 +146,8 @@ export function createComponent(
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
+  } else {
+    resetInsertionState()
   }
 
   // vdom interop enabled and component is not an explicit vapor component
@@ -249,14 +255,16 @@ export function createComponent(
   if (
     instance.hasFallthrough &&
     component.inheritAttrs !== false &&
-    instance.block instanceof Element &&
     Object.keys(instance.attrs).length
   ) {
-    renderEffect(() => {
-      isApplyingFallthroughProps = true
-      setDynamicProps(instance.block as Element, [instance.attrs])
-      isApplyingFallthroughProps = false
-    })
+    const el = getRootElement(instance)
+    if (el) {
+      renderEffect(() => {
+        isApplyingFallthroughProps = true
+        setDynamicProps(el, [instance.attrs])
+        isApplyingFallthroughProps = false
+      })
+    }
   }
 
   resetTracking()
@@ -270,7 +278,7 @@ export function createComponent(
   onScopeDispose(() => unmountComponent(instance), true)
 
   if (!isHydrating && _insertionParent) {
-    insert(instance.block, _insertionParent, _insertionAnchor)
+    mountComponent(instance, _insertionParent, _insertionAnchor)
   }
 
   return instance
@@ -485,6 +493,14 @@ export function createComponentWithFallback(
     return createComponent(comp, rawProps, rawSlots, isSingleRoot)
   }
 
+  const _insertionParent = insertionParent
+  const _insertionAnchor = insertionAnchor
+  if (isHydrating) {
+    locateHydrationNode()
+  } else {
+    resetInsertionState()
+  }
+
   const el = document.createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
@@ -501,6 +517,10 @@ export function createComponentWithFallback(
     } else {
       insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
     }
+  }
+
+  if (!isHydrating && _insertionParent) {
+    insert(el, _insertionParent, _insertionAnchor)
   }
 
   return el
@@ -558,5 +578,20 @@ export function getExposed(
         get: (target, key) => unref(target[key as any]),
       }))
     )
+  }
+}
+
+function getRootElement({
+  block,
+}: VaporComponentInstance): Element | undefined {
+  if (block instanceof Element) {
+    return block
+  }
+
+  if (block instanceof DynamicFragment) {
+    const { nodes } = block
+    if (nodes instanceof Element && (nodes as any).$root) {
+      return nodes
+    }
   }
 }
