@@ -26,9 +26,11 @@ import {
   assert,
   findDir,
   hasScopeRef,
+  isCommentOrWhitespace,
   isStaticExp,
   isTemplateNode,
   isVSlot,
+  isWhitespaceText,
 } from '../utils'
 import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
 import { createForLoopParams, finalizeForParseResult } from './vFor'
@@ -222,7 +224,7 @@ export function buildSlots(
       let prev
       while (j--) {
         prev = children[j]
-        if (prev.type !== NodeTypes.COMMENT && isNonWhitespaceContent(prev)) {
+        if (!isCommentOrWhitespace(prev)) {
           break
         }
       }
@@ -319,7 +321,7 @@ export function buildSlots(
       // #3766
       // with whitespace: 'preserve', whitespaces between slots will end up in
       // implicitDefaultChildren. Ignore if all implicit children are whitespaces.
-      implicitDefaultChildren.some(node => isNonWhitespaceContent(node))
+      !implicitDefaultChildren.every(isWhitespaceText)
     ) {
       // implicit default slot (mixed with named slots)
       if (hasNamedDefaultSlot) {
@@ -410,12 +412,4 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
     }
   }
   return false
-}
-
-function isNonWhitespaceContent(node: TemplateChildNode): boolean {
-  if (node.type !== NodeTypes.TEXT && node.type !== NodeTypes.TEXT_CALL)
-    return true
-  return node.type === NodeTypes.TEXT
-    ? !!node.content.trim()
-    : isNonWhitespaceContent(node.content)
 }
