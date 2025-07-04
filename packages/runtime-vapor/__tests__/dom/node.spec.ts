@@ -3,13 +3,13 @@ import { VaporFragment } from '../../src'
 
 describe('dom node', () => {
   test('normalizeNode', () => {
-    // null / undefined -> Comment
-    expect(normalizeNode(null)).toBeInstanceOf(Comment)
-    expect(normalizeNode(undefined)).toBeInstanceOf(Comment)
+    // null / undefined -> []
+    expect(normalizeNode(null)).toBeInstanceOf(Array)
+    expect(normalizeNode(undefined)).toBeInstanceOf(Array)
 
-    // boolean -> Comment
-    expect(normalizeNode(true)).toBeInstanceOf(Comment)
-    expect(normalizeNode(false)).toBeInstanceOf(Comment)
+    // boolean -> []
+    expect(normalizeNode(true)).toBeInstanceOf(Array)
+    expect(normalizeNode(false)).toBeInstanceOf(Array)
 
     // array -> Fragment
     expect(normalizeNode(['foo'])).toBeInstanceOf(VaporFragment)
