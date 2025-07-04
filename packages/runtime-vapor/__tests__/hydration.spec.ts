@@ -2138,6 +2138,43 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('mixed consecutive slot and element', async () => {
+      const data = reactive({
+        text: 'foo',
+        msg: 'hi',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #foo><span>{{data.text}}</span></template>
+            <template #bar><span>bar</span></template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><div><slot name="foo"/><slot name="bar"/><div>{{data.msg}}</div></div></template>`,
+        },
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<div>hi</div>` +
+          `</div>`,
+      )
+
+      data.msg = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<div>bar</div>` +
+          `</div>`,
+      )
+    })
+
     test('mixed slot and element', async () => {
       const data = reactive({
         text: 'foo',
