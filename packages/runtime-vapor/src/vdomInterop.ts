@@ -236,24 +236,26 @@ function renderVDOMSlot(
   frag.insert = (parentNode, anchor) => {
     if (!isMounted) {
       renderEffect(() => {
-        const vnode = renderSlot(
-          slotsRef.value,
-          isFunction(name) ? name() : name,
-          props,
-        )
-        if ((vnode.children as any[]).length) {
-          if (fallbackNodes) {
-            remove(fallbackNodes, parentNode)
-            fallbackNodes = undefined
-          }
-          internals.p(
-            oldVNode,
-            vnode,
-            parentNode,
-            anchor,
-            parentComponent as any,
+        if (slotsRef.value) {
+          const vnode = renderSlot(
+            slotsRef.value,
+            isFunction(name) ? name() : name,
+            props,
           )
-          oldVNode = vnode
+          if ((vnode.children as any[]).length) {
+            if (fallbackNodes) {
+              remove(fallbackNodes, parentNode)
+              fallbackNodes = undefined
+            }
+            internals.p(
+              oldVNode,
+              vnode,
+              parentNode,
+              anchor,
+              parentComponent as any,
+            )
+            oldVNode = vnode
+          }
         } else {
           if (fallback && !fallbackNodes) {
             // mount fallback

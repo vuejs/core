@@ -1,7 +1,8 @@
-import { createVaporApp } from '../src'
+import { createVaporApp, vaporInteropPlugin } from '../src'
 import type { App } from '@vue/runtime-dom'
 import type { VaporComponent, VaporComponentInstance } from '../src/component'
 import type { RawProps } from '../src/componentProps'
+import { type Component, createApp } from 'vue'
 
 export interface RenderContext {
   component: VaporComponent
@@ -74,6 +75,57 @@ export function makeRender<C = VaporComponent>(
       mount,
       render,
       resetHost,
+      html,
+    })
+
+    return res()
+  }
+
+  return define
+}
+
+export interface InteropRenderContext {
+  mount: (container?: string | ParentNode) => InteropRenderContext
+  render: (
+    props?: RawProps,
+    container?: string | ParentNode,
+  ) => InteropRenderContext
+  html: () => string
+}
+
+export function makeInteropRender(): (comp: Component) => InteropRenderContext {
+  let host: HTMLElement
+  beforeEach(() => {
+    host = document.createElement('div')
+  })
+  afterEach(() => {
+    host.remove()
+  })
+
+  function define(comp: Component) {
+    let app: App
+    function render(
+      props: RawProps | undefined = undefined,
+      container: string | ParentNode = host,
+    ) {
+      app?.unmount()
+      app = createApp(comp, props)
+      app.use(vaporInteropPlugin)
+      return mount(container)
+    }
+
+    function mount(container: string | ParentNode = host) {
+      app.mount(container)
+      return res()
+    }
+
+    function html() {
+      return host.innerHTML
+    }
+
+    const res = () => ({
+      mount,
+      render,
       html,
     })
 
