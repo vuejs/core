@@ -23,9 +23,8 @@ import {
   simpleSetCurrentInstance,
   startMeasure,
   unregisterHMR,
-  warn,
 } from '@vue/runtime-dom'
-import { type Block, DynamicFragment, insert, isBlock, remove } from './block'
+import { type Block, DynamicFragment, insert, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -64,6 +63,7 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
+import { normalizeNode } from './dom/node'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -206,26 +206,21 @@ export function createComponent(
   }
 
   const setupFn = isFunction(component) ? component : component.setup
-  const setupResult = setupFn
-    ? callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
-        instance.props,
-        instance,
-      ]) || EMPTY_OBJ
-    : EMPTY_OBJ
+  const setupResult =
+    setupFn &&
+    callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
+      instance.props,
+      instance,
+    ])
 
-  if (__DEV__ && !isBlock(setupResult)) {
-    if (isFunction(component)) {
-      warn(`Functional vapor component must return a block directly.`)
-      instance.block = []
-    } else if (!component.render) {
-      warn(
-        `Vapor component setup() returned non-block value, and has no render function.`,
-      )
-      instance.block = []
+  if (__DEV__) {
+    if (isFunction(component) || !component.render) {
+      instance.block = normalizeNode(setupResult)
     } else {
-      instance.devtoolsRawSetupState = setupResult
       // TODO make the proxy warn non-existent property access during dev
-      instance.setupState = proxyRefs(setupResult)
+      instance.setupState = proxyRefs(
+        (instance.devtoolsRawSetupState = setupResult || EMPTY_OBJ),
+      )
       devRender(instance)
 
       // HMR
@@ -247,7 +242,7 @@ export function createComponent(
       )
     } else {
       // in prod result can only be block
-      instance.block = setupResult as Block
+      instance.block = normalizeNode(setupResult)
     }
   }
 
