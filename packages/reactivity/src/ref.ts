@@ -187,8 +187,8 @@ class RefImpl<T = any> implements Dependency {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
 export function triggerRef(ref: Ref): void {
-  // ref may be an instance of ObjectRefImpl
-  const dep = (ref as unknown as RefImpl).dep
+  const rawRef = isProxy(ref) ? toRaw(ref) : ref
+  const dep = (rawRef as unknown as RefImpl).dep
   if (dep !== undefined && dep.subs !== undefined) {
     propagate(dep.subs)
   }
