@@ -55,6 +55,7 @@ export interface KeepAliveProps {
   include?: MatchPattern
   exclude?: MatchPattern
   max?: number | string
+  freeze?: boolean | string
 }
 
 type CacheKey = PropertyKey | ConcreteComponent
@@ -88,6 +89,7 @@ const KeepAliveImpl: ComponentOptions = {
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],
     max: [String, Number],
+    freeze: [String, Boolean],
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
@@ -160,6 +162,10 @@ const KeepAliveImpl: ComponentOptions = {
         }
       }, parentSuspense)
 
+      if (props.freeze) {
+        instance.scope.resume()
+      }
+
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
         // Update components tree
         devtoolsComponentAdded(instance)
@@ -182,6 +188,10 @@ const KeepAliveImpl: ComponentOptions = {
         }
         instance.isDeactivated = true
       }, parentSuspense)
+
+      if (props.freeze) {
+        instance.scope.resume()
+      }
 
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
         // Update components tree
