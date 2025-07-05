@@ -252,3 +252,90 @@ export function render(_ctx) {
   return n1
 }"
 `;
+
+exports[`compiler: transform slot > slot + v-if / v-else[-if] should not cause error 1`] = `
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createSlot as _createSlot, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const _component_Bar = _resolveComponent("Bar")
+  const n6 = t0()
+  _setInsertionState(n6)
+  const n0 = _createSlot("foo", null)
+  _setInsertionState(n6)
+  const n1 = _createIf(() => (true), () => {
+    const n3 = _createComponentWithFallback(_component_Foo)
+    return n3
+  }, () => {
+    const n5 = _createComponentWithFallback(_component_Bar)
+    return n5
+  })
+  return n6
+}"
+`;
+
+exports[`compiler: transform slot > with whitespace: 'preserve' > implicit default slot 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" Header ")
+const t1 = _template(" ")
+const t2 = _template("<p></p>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n4 = _createComponentWithFallback(_component_Comp, null, {
+    "header": () => {
+      const n0 = t0()
+      return n0
+    }, 
+    "default": () => {
+      const n2 = t1()
+      const n3 = t2()
+      return [n2, n3]
+    }
+  }, true)
+  return n4
+}"
+`;
+
+exports[`compiler: transform slot > with whitespace: 'preserve' > named default slot + implicit whitespace content 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" Header ")
+const t1 = _template(" Default ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n5 = _createComponentWithFallback(_component_Comp, null, {
+    "header": () => {
+      const n0 = t0()
+      return n0
+    }, 
+    "default": () => {
+      const n3 = t1()
+      return n3
+    }
+  }, true)
+  return n5
+}"
+`;
+
+exports[`compiler: transform slot > with whitespace: 'preserve' > should not generate whitespace only default slot 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" Header ")
+const t1 = _template(" Footer ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n5 = _createComponentWithFallback(_component_Comp, null, {
+    "header": () => {
+      const n0 = t0()
+      return n0
+    }, 
+    "footer": () => {
+      const n3 = t1()
+      return n3
+    }
+  }, true)
+  return n5
+}"
+`;

@@ -3,6 +3,7 @@ import {
   type Ref,
   inject,
   nextTick,
+  onMounted,
   onUpdated,
   provide,
   ref,
@@ -14,6 +15,7 @@ import {
   createIf,
   createTextNode,
   renderEffect,
+  setInsertionState,
   template,
 } from '../src'
 import { makeRender } from './_utils'
@@ -265,6 +267,29 @@ describe('component', () => {
     await nextTick()
     expect(host.innerHTML).toBe('<h1>1</h1>')
     expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  it('properly mount child component when using setInsertionState', async () => {
+    const spy = vi.fn()
+
+    const { component: Comp } = define({
+      setup() {
+        onMounted(spy)
+        return template('<h1>hi</h1>')()
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        const n2 = template('<div></div>', true)()
+        setInsertionState(n2 as any)
+        createComponent(Comp)
+        return n2
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div><h1>hi</h1></div>')
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 
   it('unmount component', async () => {

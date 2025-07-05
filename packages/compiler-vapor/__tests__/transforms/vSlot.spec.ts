@@ -1,4 +1,4 @@
-import { ErrorCodes, NodeTypes } from '@vue/compiler-core'
+import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
 import {
   IRNodeTypes,
   IRSlotType,
@@ -371,6 +371,17 @@ describe('compiler: transform slot', () => {
     })
   })
 
+  test('slot + v-if / v-else[-if] should not cause error', () => {
+    const { code } = compileWithSlots(
+      `<div>
+        <slot name="foo"></slot>
+        <Foo v-if="true"></Foo>
+        <Bar v-else />
+      </div>`,
+    )
+    expect(code).toMatchSnapshot()
+  })
+
   test('quote slot name', () => {
     const { code } = compileWithSlots(
       `<Comp><template #nav-bar-title-before></template></Comp>`,
@@ -496,6 +507,62 @@ describe('compiler: transform slot', () => {
           },
         },
       })
+    })
+  })
+
+  describe(`with whitespace: 'preserve'`, () => {
+    test('named default slot + implicit whitespace content', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <template #default> Default </template>
+      </Comp>
+      `
+      const { code } = compileWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      expect(
+        `Extraneous children found when component already has explicitly named default slot.`,
+      ).not.toHaveBeenWarned()
+      expect(code).toMatchSnapshot()
+    })
+
+    test('implicit default slot', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <p/>
+      </Comp>
+      `
+      const { code } = compileWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      expect(
+        `Extraneous children found when component already has explicitly named default slot.`,
+      ).not.toHaveBeenWarned()
+      expect(code).toMatchSnapshot()
+    })
+
+    test('should not generate whitespace only default slot', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <template #footer> Footer </template>
+      </Comp>
+      `
+      const { code, ir } = compileWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      const slots = (ir.block.dynamic.children[0].operation as any).slots[0]
+        .slots
+      // should be: header, footer (no default)
+      expect(Object.keys(slots).length).toBe(2)
+      expect(!!slots['default']).toBe(false)
+
+      expect(code).toMatchSnapshot()
     })
   })
 })

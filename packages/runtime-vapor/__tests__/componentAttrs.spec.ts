@@ -1,6 +1,8 @@
 import { type Ref, nextTick, ref } from '@vue/runtime-dom'
 import {
   createComponent,
+  createDynamicComponent,
+  createSlot,
   defineVaporComponent,
   renderEffect,
   setClass,
@@ -277,7 +279,43 @@ describe('attribute fallthrough', () => {
     expect(getCSS()).not.toContain('font-size:bold')
   })
 
-  test('parent value should take priority', async () => {
+  it('should fallthrough attrs to dynamic component', async () => {
+    const Comp = defineVaporComponent({
+      setup() {
+        const n1 = createDynamicComponent(
+          () => 'button',
+          null,
+          {
+            default: () => {
+              const n0 = createSlot('default', null)
+              return n0
+            },
+          },
+          true,
+        )
+        return n1
+      },
+    })
+
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Comp,
+          {
+            class: () => 'foo',
+          },
+          null,
+          true,
+        )
+      },
+    }).render()
+
+    expect(html()).toBe(
+      '<button class="foo"><!--slot--></button><!--dynamic-component-->',
+    )
+  })
+
+  it('parent value should take priority', async () => {
     const parentVal = ref('parent')
     const childVal = ref('child')
 
@@ -321,5 +359,44 @@ describe('attribute fallthrough', () => {
     expect(el.id).toBe(parentVal.value)
     expect(el.getAttribute('aria-x')).toBe(parentVal.value)
     expect(el.getAttribute('aria-y')).toBe(parentVal.value)
+  })
+
+  it('empty string should not be passed to classList.add', async () => {
+    const t0 = template('<div>', true /* root */)
+    const Child = defineVaporComponent({
+      setup() {
+        const n = t0() as Element
+        renderEffect(() => {
+          setClass(n, {
+            foo: false,
+          })
+        })
+        return n
+      },
+    })
+
+    const Parent = defineVaporComponent({
+      setup() {
+        return createComponent(
+          Child,
+          {
+            class: () => ({
+              bar: false,
+            }),
+          },
+          null,
+          true,
+        )
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    const el = host.children[0]
+    expect(el.classList.length).toBe(0)
   })
 })

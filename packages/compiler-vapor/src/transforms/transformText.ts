@@ -23,6 +23,13 @@ const seen = new WeakMap<
   WeakSet<TemplateChildNode | RootNode>
 >()
 
+export function markNonTemplate(
+  node: TemplateChildNode,
+  context: TransformContext,
+): void {
+  seen.get(context.root)!.add(node)
+}
+
 export const transformText: NodeTransform = (node, context) => {
   if (!seen.has(context.root)) seen.set(context.root, new WeakSet())
   if (seen.get(context.root)!.has(node)) {
@@ -68,7 +75,7 @@ export const transformText: NodeTransform = (node, context) => {
           prev.type === NodeTypes.TEXT
         ) {
           // mark leading text node for skipping
-          seen.get(context.root)!.add(prev)
+          markNonTemplate(prev, context)
         }
       }
     }
@@ -143,7 +150,7 @@ function processTextContainer(
 }
 
 function createTextLikeExpression(node: TextLike, context: TransformContext) {
-  seen.get(context.root)!.add(node)
+  markNonTemplate(node, context)
   if (node.type === NodeTypes.TEXT) {
     return createSimpleExpression(node.content, true, node.loc)
   } else {
