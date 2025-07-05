@@ -214,8 +214,8 @@ export function createComponent(
       ]) || EMPTY_OBJ
     : EMPTY_OBJ
 
-  if (component === Fragment && rawSlots) {
-    const defaultSlot = getSlot(rawSlots as RawSlots, 'default')
+  if (component === Fragment) {
+    const defaultSlot = rawSlots && getSlot(rawSlots as RawSlots, 'default')
     if (defaultSlot) {
       instance.block = callWithErrorHandling(
         defaultSlot,
