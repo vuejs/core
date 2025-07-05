@@ -1,4 +1,4 @@
-import { defineComponent, h, renderSlot } from '@vue/runtime-dom'
+import { createVNode, defineComponent, h, renderSlot } from '@vue/runtime-dom'
 import { makeInteropRender } from './_utils'
 import { createComponent, defineVaporComponent } from '../src'
 
@@ -10,10 +10,40 @@ describe('vdomInterop', () => {
   describe.todo('emit', () => {})
 
   describe('slots', () => {
-    test('functional slot', () => {
+    test('basic', () => {
       const VDomChild = defineComponent({
         setup(_, { slots }) {
           return () => renderSlot(slots, 'default')
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: () => document.createTextNode('default slot'),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('default slot')
+    })
+
+    test('functional slot', () => {
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          console.log(slots.default)
+          return () => createVNode(slots.default!)
         },
       })
 
