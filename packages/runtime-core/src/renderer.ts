@@ -1226,7 +1226,7 @@ function baseCreateRenderer(
       if (!initialVNode.el) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
-        initialVNode.placeholderEl = placeholder.el
+        initialVNode.placeholder = placeholder.el
       }
     } else {
       setupRenderEffect(
@@ -1983,7 +1983,8 @@ function baseCreateRenderer(
         const anchorVNode = c2[nextIndex + 1] as VNode
         const anchor =
           nextIndex + 1 < l2
-            ? anchorVNode.el || anchorVNode.placeholderEl
+            ? // #13559, fallback to el placeholder for unresolved async component
+              anchorVNode.el || anchorVNode.placeholder
             : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
