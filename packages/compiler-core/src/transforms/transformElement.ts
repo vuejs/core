@@ -282,7 +282,20 @@ export function resolveComponentType(
     return builtIn
   }
 
-  // 3. user component (from setup bindings)
+  // 3. component from slot props
+  if (context.identifiers[tag]) {
+    return tag
+  }
+
+  const dotIndex = tag.indexOf('.')
+  if (dotIndex > 0) {
+    const ns = tag.slice(0, dotIndex)
+    if (context.identifiers[ns]) {
+      return ns + tag.slice(dotIndex)
+    }
+  }
+
+  // 4. user component (from setup bindings)
   // this is skipped in browser build since browser builds do not perform
   // binding analysis.
   if (!__BROWSER__) {
