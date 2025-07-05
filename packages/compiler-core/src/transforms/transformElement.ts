@@ -298,36 +298,21 @@ export function resolveComponentType(
       }
     }
   }
-  if (!__BROWSER__) {
-    const getName = (name: string) => {
-      const camelName = camelize(name)
-      const PascalName = capitalize(camelName)
 
-      if (context.identifiers[name]) {
-        return name
-      }
-      if (context.identifiers[camelName]) {
-        return camelName
-      }
-      if (context.identifiers[PascalName]) {
-        return PascalName
-      }
-    }
+  // 4. component from slot props / other identifiers
+  if (context.identifiers[tag]) {
+    return tag
+  }
 
-    const fromSetup = getName(tag)
-    if (fromSetup) {
-      return fromSetup
-    }
-    const dotIndex = tag.indexOf('.')
-    if (dotIndex > 0) {
-      const ns = getName(tag.slice(0, dotIndex))
-      if (ns) {
-        return ns + tag.slice(dotIndex)
-      }
+  const dotIndex = tag.indexOf('.')
+  if (dotIndex > 0) {
+    const ns = tag.slice(0, dotIndex)
+    if (context.identifiers[ns]) {
+      return ns + tag.slice(dotIndex)
     }
   }
 
-  // 4. Self referencing component (inferred from filename)
+  // 5. Self referencing component (inferred from filename)
   if (
     !__BROWSER__ &&
     context.selfName &&
@@ -341,7 +326,7 @@ export function resolveComponentType(
     return toValidAssetId(tag, `component`)
   }
 
-  // 5. user component (resolve)
+  // 6. user component (resolve)
   context.helper(RESOLVE_COMPONENT)
   context.components.add(tag)
   return toValidAssetId(tag, `component`)
