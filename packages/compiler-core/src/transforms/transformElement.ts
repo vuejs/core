@@ -298,6 +298,34 @@ export function resolveComponentType(
       }
     }
   }
+  if (!__BROWSER__) {
+    const getName = (name: string) => {
+      const camelName = camelize(name)
+      const PascalName = capitalize(camelName)
+
+      if (context.identifiers[name]) {
+        return name
+      }
+      if (context.identifiers[camelName]) {
+        return camelName
+      }
+      if (context.identifiers[PascalName]) {
+        return PascalName
+      }
+    }
+
+    const fromSetup = getName(tag)
+    if (fromSetup) {
+      return fromSetup
+    }
+    const dotIndex = tag.indexOf('.')
+    if (dotIndex > 0) {
+      const ns = getName(tag.slice(0, dotIndex))
+      if (ns) {
+        return ns + tag.slice(dotIndex)
+      }
+    }
+  }
 
   // 4. Self referencing component (inferred from filename)
   if (
