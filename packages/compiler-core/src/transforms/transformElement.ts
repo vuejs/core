@@ -283,15 +283,19 @@ export function resolveComponentType(
   }
 
   // 3. component from slot props
-  if (context.identifiers[tag]) {
-    return tag
-  }
+  // this is skipped in browser build since browser builds do not perform
+  // identifier tracking.
+  if (!__BROWSER__) {
+    if (context.identifiers[tag]) {
+      return tag
+    }
 
-  const dotIndex = tag.indexOf('.')
-  if (dotIndex > 0) {
-    const ns = tag.slice(0, dotIndex)
-    if (context.identifiers[ns]) {
-      return ns + tag.slice(dotIndex)
+    const dotIndex = tag.indexOf('.')
+    if (dotIndex > 0) {
+      const ns = tag.slice(0, dotIndex)
+      if (context.identifiers[ns]) {
+        return ns + tag.slice(dotIndex)
+      }
     }
   }
 
