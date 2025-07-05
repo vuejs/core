@@ -5,6 +5,7 @@ import {
   type EmitFn,
   type EmitsOptions,
   ErrorCodes,
+  Fragment,
   type GenericAppContext,
   type GenericComponentInstance,
   type LifecycleHook,
@@ -213,7 +214,17 @@ export function createComponent(
       ]) || EMPTY_OBJ
     : EMPTY_OBJ
 
-  if (__DEV__ && !isBlock(setupResult)) {
+  if (component === Fragment) {
+    if (instance.slots.default) {
+      instance.block = callWithErrorHandling(
+        instance.slots.default,
+        instance,
+        ErrorCodes.RENDER_SLOTS,
+      )
+    } else {
+      instance.block = []
+    }
+  } else if (__DEV__ && !isBlock(setupResult)) {
     if (isFunction(component)) {
       warn(`Functional vapor component must return a block directly.`)
       instance.block = []
