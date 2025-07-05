@@ -134,11 +134,17 @@ const vaporSlotPropsProxyHandler: ProxyHandler<
 
 const vaporSlotsProxyHandler: ProxyHandler<any> = {
   get(target, key) {
-    if (key === '_vapor') {
-      return target
-    } else {
-      return target[key]
-    }
+    const fn = target[key]
+    return isFunction(fn)
+      ? new Proxy(fn, {
+          get(fnTarget, fnKey) {
+            if (fnKey === '__vapor') {
+              return true
+            }
+            return fnTarget[fnKey]
+          },
+        })
+      : fn
   },
 }
 
@@ -154,7 +160,7 @@ function createVDOMComponent(
   const frag = new VaporFragment([])
   const vnode = createVNode(
     component,
-    rawProps && new Proxy(rawProps, rawPropsProxyHandlers),
+    rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
   )
   const wrapper = new VaporComponentInstance(
     { props: component.props },

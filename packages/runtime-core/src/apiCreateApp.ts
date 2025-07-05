@@ -35,6 +35,7 @@ import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { DefineComponent } from './apiDefineComponent'
 
 export interface App<HostElement = any> {
+  vapor?: boolean
   version: string
   config: AppConfig
 

@@ -211,7 +211,7 @@ function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
       ? genEventHandler(
           context,
           prop.values[0],
-          undefined,
+          prop.handlerModifiers,
           true /* wrap handlers passed to components */,
         )
       : isStatic
@@ -240,9 +240,7 @@ function genModelModifiers(
   if (!modelModifiers || !modelModifiers.length) return []
 
   const modifiersKey = key.isStatic
-    ? key.content === 'modelValue'
-      ? [`modelModifiers`]
-      : [`${key.content}Modifiers`]
+    ? [`${key.content}Modifiers`]
     : ['[', ...genExpression(key, context), ' + "Modifiers"]']
 
   const modifiersVal = genDirectiveModifiers(modelModifiers)

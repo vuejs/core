@@ -1,15 +1,93 @@
-import { defineComponent, h } from '@vue/runtime-dom'
+import { createVNode, defineComponent, h, renderSlot } from '@vue/runtime-dom'
 import { makeInteropRender } from './_utils'
 import { createComponent, defineVaporComponent } from '../src'
 
 const define = makeInteropRender()
 
 describe('vdomInterop', () => {
-  describe.todo('props', () => {})
+  describe('props', () => {
+    test('prevent hasOwnProperty error when props is null', () => {
+      const VaporChild = defineVaporComponent({
+        props: {
+          msg: String,
+        },
+        setup(_, { attrs }) {
+          return [document.createTextNode(attrs.class || 'foo')]
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('foo')
+    })
+  })
 
   describe.todo('emit', () => {})
 
-  describe.todo('slots', () => {})
+  describe('slots', () => {
+    test('basic', () => {
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => renderSlot(slots, 'default')
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: () => document.createTextNode('default slot'),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('default slot')
+    })
+
+    test('functional slot', () => {
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          console.log(slots.default)
+          return () => createVNode(slots.default!)
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: () => document.createTextNode('default slot'),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('default slot')
+    })
+  })
 
   describe.todo('provide', () => {})
 
