@@ -208,8 +208,6 @@ describe('compiler: element transform', () => {
       },
     )
 
-    console.log(root)
-
     expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
     expect(root.components).not.toContain('SlotProps')
     expect(node.tag).toBe(`Example`)
