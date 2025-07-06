@@ -106,7 +106,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       wasRef ? target : receiver,
     )
 
-    if (wasRef) {
+    if (wasRef && key !== 'value') {
       return res
     }
 

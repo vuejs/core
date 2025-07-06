@@ -59,9 +59,9 @@ describe('reactivity/ref', () => {
     expect(fn).toHaveBeenCalledTimes(2)
     expect(dummy).toBe(3)
 
-    // mutating b.value should only trigger effect once
+    // mutating b.value should trigger the effect twice. (once for a.value change and once for b.value change)
     b.value = 5
-    expect(fn).toHaveBeenCalledTimes(3)
+    expect(fn).toHaveBeenCalledTimes(4)
     expect(dummy).toBe(5)
   })
 
