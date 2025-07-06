@@ -149,6 +149,7 @@ export function createTransformContext(
     inSSR = false,
     ssrCssVars = ``,
     bindingMetadata = EMPTY_OBJ,
+    identifiers = Object.create(null),
     inline = false,
     isTS = false,
     onError = defaultOnError,
@@ -192,7 +193,7 @@ export function createTransformContext(
     cached: [],
     constantCache: new WeakMap(),
     temps: 0,
-    identifiers: Object.create(null),
+    identifiers,
     scopes: {
       vFor: 0,
       vSlot: 0,

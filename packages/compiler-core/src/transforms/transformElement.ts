@@ -316,19 +316,6 @@ export function resolveComponentType(
     }
   }
 
-  // 4. component from slot props / other identifiers
-  if (context.identifiers[tag]) {
-    return tag
-  }
-
-  const dotIndex = tag.indexOf('.')
-  if (dotIndex > 0) {
-    const ns = tag.slice(0, dotIndex)
-    if (context.identifiers[ns]) {
-      return ns + tag.slice(dotIndex)
-    }
-  }
-
   // 5. Self referencing component (inferred from filename)
   if (
     !__BROWSER__ &&
@@ -397,6 +384,11 @@ function resolveSetupReference(name: string, context: TransformContext) {
       context.inline ? '__props' : '$props'
     }[${JSON.stringify(fromProps)}])`
   }
+
+  // const fromSlotScope = checkType(BindingTypes.SLOT_SCOPE)
+  // if (fromSlotScope) {
+  //   return fromSlotScope
+  // }
 }
 
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
