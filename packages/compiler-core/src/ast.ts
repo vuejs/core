@@ -876,7 +876,7 @@ export function getVNodeBlockHelper(
   return ssr || isComponent ? CREATE_BLOCK : CREATE_ELEMENT_BLOCK
 }
 
-export function getSetupReturnedHelper() {
+export function getSetupReturnedHelper(): typeof RESOLVE_SETUP_RETURNED {
   return RESOLVE_SETUP_RETURNED
 }
 
