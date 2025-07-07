@@ -11,7 +11,7 @@ import {
   withDirectives,
 } from '@vue/runtime-test'
 import {
-  type GenericComponentInstance,
+  type ComponentInternalInstance,
   currentInstance,
 } from '../src/component'
 
@@ -111,7 +111,7 @@ describe('directives', () => {
       unmounted,
     }
 
-    let _instance: GenericComponentInstance | null = null
+    let _instance: ComponentInternalInstance | null = null
     let _vnode: VNode | null = null
     let _prevVnode: VNode | null = null
     const Comp = {
@@ -171,7 +171,7 @@ describe('directives', () => {
       expect(prevVNode).toBe(_prevVnode)
     }) as DirectiveHook)
 
-    let _instance: GenericComponentInstance | null = null
+    let _instance: ComponentInternalInstance | null = null
     let _vnode: VNode | null = null
     let _prevVnode: VNode | null = null
     const Comp = {
@@ -300,7 +300,7 @@ describe('directives', () => {
       unmounted,
     }
 
-    let _instance: GenericComponentInstance | null = null
+    let _instance: ComponentInternalInstance | null = null
     let _vnode: VNode | null = null
     let _prevVnode: VNode | null = null
 

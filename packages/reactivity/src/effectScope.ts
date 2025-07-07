@@ -45,13 +45,13 @@ export class EffectScope implements Subscriber {
    */
   private index: number | undefined
 
-  constructor(
-    public detached = false,
-    parent: EffectScope | undefined = activeEffectScope,
-  ) {
-    this.parent = parent
-    if (!detached && parent) {
-      this.index = (parent.scopes || (parent.scopes = [])).push(this) - 1
+  constructor(public detached = false) {
+    this.parent = activeEffectScope
+    if (!detached && activeEffectScope) {
+      this.index =
+        (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
+          this,
+        ) - 1
     }
   }
 

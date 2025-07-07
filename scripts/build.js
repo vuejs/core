@@ -5,17 +5,14 @@ Produces production builds and stitches together d.ts files.
 
 To specify the package to build, simply pass its name and the desired build
 formats to output (defaults to `buildOptions.formats` specified in that package,
-or ["esm-bundler", "cjs"]):
+or "esm,cjs"):
 
 ```
 # name supports fuzzy match. will build all packages with name containing "dom":
 nr build dom
 
 # specify the format to output
-nr build vue -f cjs
-
-# to specify multiple formats, separate with "+":
-nr build vue -f esm-bundler+esm-browser
+nr build core --formats cjs
 ```
 */
 
@@ -172,23 +169,6 @@ async function build(target) {
     return
   }
 
-  let resolvedFormats
-  if (formats) {
-    const isNegation = formats.startsWith('~')
-    resolvedFormats = (isNegation ? formats.slice(1) : formats).split('+')
-    const pkgFormats = pkg.buildOptions?.formats
-    if (pkgFormats) {
-      if (isNegation) {
-        resolvedFormats = pkgFormats.filter(f => !resolvedFormats.includes(f))
-      } else {
-        resolvedFormats = resolvedFormats.filter(f => pkgFormats.includes(f))
-      }
-    }
-    if (!resolvedFormats.length) {
-      return
-    }
-  }
-
   // if building a specific format, do not remove dist.
   if (!formats && fs.existsSync(`${pkgDir}/dist`)) {
     fs.rmSync(`${pkgDir}/dist`, { recursive: true })
@@ -207,7 +187,7 @@ async function build(target) {
         `COMMIT:${commit}`,
         `NODE_ENV:${env}`,
         `TARGET:${target}`,
-        resolvedFormats ? `FORMATS:${resolvedFormats.join('+')}` : ``,
+        formats ? `FORMATS:${formats}` : ``,
         prodOnly ? `PROD_ONLY:true` : ``,
         sourceMap ? `SOURCE_MAP:true` : ``,
       ]
@@ -224,10 +204,7 @@ async function build(target) {
  * @returns {Promise<void>}
  */
 async function checkAllSizes(targets) {
-  if (
-    devOnly ||
-    (formats && (formats.startsWith('~') || !formats.includes('global')))
-  ) {
+  if (devOnly || (formats && !formats.includes('global'))) {
     return
   }
   console.log()

@@ -1,15 +1,11 @@
 import { getGlobalThis } from '@vue/shared'
 
-let initialized = false
-
 /**
  * This is only called in esm-bundler builds.
  * It is called when a renderer is created, in `baseCreateRenderer` so that
  * importing runtime-core is side-effects free.
  */
 export function initFeatureFlags(): void {
-  if (initialized) return
-
   const needWarn = []
 
   if (typeof __FEATURE_OPTIONS_API__ !== 'boolean') {
@@ -39,6 +35,4 @@ export function initFeatureFlags(): void {
         `For more details, see https://link.vuejs.org/feature-flags.`,
     )
   }
-
-  initialized = true
 }

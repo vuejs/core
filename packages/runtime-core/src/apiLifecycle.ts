@@ -1,5 +1,5 @@
 import {
-  type GenericComponentInstance,
+  type ComponentInternalInstance,
   currentInstance,
   isInSSRComponentSetup,
   setCurrentInstance,
@@ -20,7 +20,7 @@ export { onActivated, onDeactivated } from './components/KeepAlive'
 export function injectHook(
   type: LifecycleHooks,
   hook: Function & { __weh?: Function },
-  target: GenericComponentInstance | null = currentInstance,
+  target: ComponentInternalInstance | null = currentInstance,
   prepend: boolean = false,
 ): Function | undefined {
   if (target) {
@@ -38,12 +38,10 @@ export function injectHook(
         // This assumes the hook does not synchronously trigger other hooks, which
         // can only be false when the user does something really funky.
         const reset = setCurrentInstance(target)
-        try {
-          return callWithAsyncErrorHandling(hook, target, type, args)
-        } finally {
-          reset()
-          resetTracking()
-        }
+        const res = callWithAsyncErrorHandling(hook, target, type, args)
+        reset()
+        resetTracking()
+        return res
       })
     if (prepend) {
       hooks.unshift(wrappedHook)
@@ -69,7 +67,7 @@ const createHook =
   <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
   (
     hook: T,
-    target: GenericComponentInstance | null = currentInstance,
+    target: ComponentInternalInstance | null = currentInstance,
   ): void => {
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
     if (
@@ -81,7 +79,7 @@ const createHook =
   }
 type CreateHook<T = any> = (
   hook: T,
-  target?: GenericComponentInstance | null,
+  target?: ComponentInternalInstance | null,
 ) => void
 
 export const onBeforeMount: CreateHook = createHook(LifecycleHooks.BEFORE_MOUNT)
@@ -112,7 +110,7 @@ export type ErrorCapturedHook<TError = unknown> = (
 
 export function onErrorCaptured<TError = Error>(
   hook: ErrorCapturedHook<TError>,
-  target: GenericComponentInstance | null = currentInstance,
+  target: ComponentInternalInstance | null = currentInstance,
 ): void {
   injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
 }

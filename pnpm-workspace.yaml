@@ -6,10 +6,10 @@ catalog:
   '@babel/parser': ^7.27.5
   '@babel/types': ^7.27.6
   'estree-walker': ^2.0.2
-  'vite': ^6.1.0
-  '@vitejs/plugin-vue': ^5.2.4
   'magic-string': ^0.30.17
   'source-map-js': ^1.2.1
+  'vite': ^5.4.15
+  '@vitejs/plugin-vue': ^5.2.4
 
 onlyBuiltDependencies:
   - '@swc/core'

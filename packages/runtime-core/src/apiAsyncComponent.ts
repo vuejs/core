@@ -3,7 +3,6 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
-  type GenericComponentInstance,
   currentInstance,
   getComponentName,
   isInSSRComponentSetup,
@@ -41,7 +40,7 @@ export interface AsyncComponentOptions<T = any> {
   ) => any
 }
 
-export const isAsyncWrapper = (i: GenericComponentInstance | VNode): boolean =>
+export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
   !!(i.type as ComponentOptions).__asyncLoader
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -158,7 +157,7 @@ export function defineAsyncComponent<
     },
 
     setup() {
-      const instance = currentInstance as ComponentInternalInstance
+      const instance = currentInstance!
       markAsyncBoundary(instance)
 
       // already resolved
@@ -221,14 +220,10 @@ export function defineAsyncComponent<
       load()
         .then(() => {
           loaded.value = true
-          if (
-            instance.parent &&
-            instance.parent.vnode &&
-            isKeepAlive(instance.parent.vnode)
-          ) {
+          if (instance.parent && isKeepAlive(instance.parent.vnode)) {
             // parent is keep-alive, force update so the loaded component's
             // name is taken into account
-            ;(instance.parent as ComponentInternalInstance).update()
+            instance.parent.update()
           }
         })
         .catch(err => {

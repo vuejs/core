@@ -1,2 +1,2 @@
 // serve vue to the iframe sandbox during dev.
-export * from 'vue/dist/vue.runtime-with-vapor.esm-browser.prod.js'
+export * from 'vue/dist/vue.runtime.esm-browser.prod.js'

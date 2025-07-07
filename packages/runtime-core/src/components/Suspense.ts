@@ -549,7 +549,6 @@ function createSuspenseBoundary(
                 container,
                 anchor === initialAnchor ? next(activeBranch!) : anchor,
                 MoveType.ENTER,
-                parentComponent,
               )
               queuePostFlushCb(effects)
             }
@@ -574,13 +573,7 @@ function createSuspenseBoundary(
         }
         if (!delayEnter) {
           // move content from off-dom container to actual container
-          move(
-            pendingBranch!,
-            container,
-            anchor,
-            MoveType.ENTER,
-            parentComponent,
-          )
+          move(pendingBranch!, container, anchor, MoveType.ENTER)
         }
       }
 
@@ -679,7 +672,7 @@ function createSuspenseBoundary(
 
     move(container, anchor, type) {
       suspense.activeBranch &&
-        move(suspense.activeBranch, container, anchor, type, parentComponent)
+        move(suspense.activeBranch, container, anchor, type)
       suspense.container = container
     },
 

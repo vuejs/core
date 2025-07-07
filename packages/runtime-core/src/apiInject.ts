@@ -1,5 +1,6 @@
 import { isFunction } from '@vue/shared'
-import { getCurrentGenericInstance } from './component'
+import { currentInstance } from './component'
+import { currentRenderingInstance } from './componentRenderContext'
 import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
 
@@ -11,7 +12,6 @@ export function provide<T, K = InjectionKey<T> | string | number>(
   key: K,
   value: K extends InjectionKey<infer V> ? V : T,
 ): void {
-  const currentInstance = getCurrentGenericInstance()
   if (!currentInstance) {
     if (__DEV__) {
       warn(`provide() can only be used inside setup().`)
@@ -51,7 +51,7 @@ export function inject(
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component
-  const instance = getCurrentGenericInstance()
+  const instance = currentInstance || currentRenderingInstance
 
   // also support looking up from app-level provides w/ `app.runWithContext()`
   if (instance || currentApp) {
@@ -65,7 +65,7 @@ export function inject(
       ? currentApp._context.provides
       : instance
         ? instance.parent == null || instance.ce
-          ? instance.appContext && instance.appContext.provides
+          ? instance.vnode.appContext && instance.vnode.appContext.provides
           : instance.parent.provides
         : undefined
 
@@ -90,5 +90,5 @@ export function inject(
  * user. One example is `useRoute()` in `vue-router`.
  */
 export function hasInjectionContext(): boolean {
-  return !!(getCurrentGenericInstance() || currentApp)
+  return !!(currentInstance || currentRenderingInstance || currentApp)
 }

@@ -1,24 +1,15 @@
 /* eslint-disable no-restricted-globals */
-import { type GenericComponentInstance, formatComponentName } from './component'
+import {
+  type ComponentInternalInstance,
+  formatComponentName,
+} from './component'
 import { devtoolsPerfEnd, devtoolsPerfStart } from './devtools'
 
 let supported: boolean
 let perf: Performance
 
-// To avoid the overhead of repeatedly calling Date.now(), we cache
-// and use the same timestamp for all event listeners attached in the same tick.
-let cachedNow: number = 0
-const p = /*@__PURE__*/ Promise.resolve()
-const getNow = () =>
-  cachedNow ||
-  (p.then(() => (cachedNow = 0)),
-  (cachedNow = isSupported() ? perf.now() : Date.now()))
-
-/**
- * @internal
- */
 export function startMeasure(
-  instance: GenericComponentInstance,
+  instance: ComponentInternalInstance,
   type: string,
 ): void {
   if (instance.appContext.config.performance && isSupported()) {
@@ -26,15 +17,12 @@ export function startMeasure(
   }
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-    devtoolsPerfStart(instance, type, getNow())
+    devtoolsPerfStart(instance, type, isSupported() ? perf.now() : Date.now())
   }
 }
 
-/**
- * @internal
- */
 export function endMeasure(
-  instance: GenericComponentInstance,
+  instance: ComponentInternalInstance,
   type: string,
 ): void {
   if (instance.appContext.config.performance && isSupported()) {
@@ -51,7 +39,7 @@ export function endMeasure(
   }
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-    devtoolsPerfEnd(instance, type, getNow())
+    devtoolsPerfEnd(instance, type, isSupported() ? perf.now() : Date.now())
   }
 }
 

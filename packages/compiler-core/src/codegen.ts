@@ -105,38 +105,22 @@ const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
 
 type CodegenNode = TemplateChildNode | JSChildNode | SSRCodegenNode
 
-export interface BaseCodegenResult {
+export interface CodegenResult {
   code: string
   preamble: string
-  ast: unknown
-  map?: RawSourceMap
-  helpers?: Set<string> | Set<symbol>
-}
-
-export interface CodegenResult extends BaseCodegenResult {
   ast: RootNode
-  helpers: Set<symbol>
+  map?: RawSourceMap
 }
 
-export enum NewlineType {
-  /** Start with `\n` */
+enum NewlineType {
   Start = 0,
-  /** Ends with `\n` */
   End = -1,
-  /** No `\n` included */
   None = -2,
-  /** Don't know, calc it */
   Unknown = -3,
 }
 
 export interface CodegenContext
-  extends Omit<
-    Required<CodegenOptions>,
-    | 'bindingMetadata'
-    | 'inline'
-    | 'vaporRuntimeModuleName'
-    | 'expressionPlugins'
-  > {
+  extends Omit<Required<CodegenOptions>, 'bindingMetadata' | 'inline'> {
   source: string
   code: string
   line: number
@@ -416,7 +400,6 @@ export function generate(
     code: context.code,
     preamble: isSetupInlined ? preambleContext.code : ``,
     map: context.map ? context.map.toJSON() : undefined,
-    helpers: ast.helpers,
   }
 }
 

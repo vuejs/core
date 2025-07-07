@@ -826,7 +826,7 @@ describe('component props', () => {
     )
   })
 
-  // #6915
+  // #691ef
   test('should not mutate original props long-form definition object', () => {
     const props = {
       msg: {

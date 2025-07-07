@@ -7,6 +7,7 @@ import {
   isObject,
   isPlainObject,
   isSet,
+  isString,
   isSymbol,
   objectToString,
 } from './general'
@@ -21,24 +22,17 @@ const isRef = (val: any): val is { value: unknown } => {
  * @private
  */
 export const toDisplayString = (val: unknown): string => {
-  switch (typeof val) {
-    case 'string':
-      return val
-    case 'object':
-      if (val) {
-        if (isRef(val)) {
-          return toDisplayString(val.value)
-        } else if (
-          isArray(val) ||
-          val.toString === objectToString ||
-          !isFunction(val.toString)
-        ) {
-          return JSON.stringify(val, replacer, 2)
-        }
-      }
-    default:
-      return val == null ? '' : String(val)
-  }
+  return isString(val)
+    ? val
+    : val == null
+      ? ''
+      : isArray(val) ||
+          (isObject(val) &&
+            (val.toString === objectToString || !isFunction(val.toString)))
+        ? isRef(val)
+          ? toDisplayString(val.value)
+          : JSON.stringify(val, replacer, 2)
+        : String(val)
 }
 
 const replacer = (_key: string, val: unknown): any => {

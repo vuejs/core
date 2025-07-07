@@ -1,5 +1,5 @@
 import {
-  type BaseCodegenResult,
+  type CodegenResult,
   type CompilerError,
   type CompilerOptions,
   type ElementNode,
@@ -24,29 +24,24 @@ import {
 } from './template/transformSrcset'
 import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
-import * as CompilerVapor from '@vue/compiler-vapor'
 import * as CompilerSSR from '@vue/compiler-ssr'
 import consolidate from '@vue/consolidate'
 import { warnOnce } from './warn'
 import { genCssVarsFromList } from './style/cssVars'
 
 export interface TemplateCompiler {
-  compile(
-    source: string | RootNode,
-    options: CompilerOptions,
-  ): BaseCodegenResult
+  compile(source: string | RootNode, options: CompilerOptions): CodegenResult
   parse(template: string, options: ParserOptions): RootNode
 }
 
 export interface SFCTemplateCompileResults {
   code: string
-  ast?: unknown
+  ast?: RootNode
   preamble?: string
   source: string
   tips: string[]
   errors: (string | CompilerError)[]
   map?: RawSourceMap
-  helpers?: Set<string | symbol>
 }
 
 export interface SFCTemplateCompileOptions {
@@ -57,7 +52,6 @@ export interface SFCTemplateCompileOptions {
   scoped?: boolean
   slotted?: boolean
   isProd?: boolean
-  vapor?: boolean
   ssr?: boolean
   ssrCssVars?: string[]
   inMap?: RawSourceMap
@@ -174,7 +168,6 @@ function doCompileTemplate({
   source,
   ast: inAST,
   ssr = false,
-  vapor = false,
   ssrCssVars,
   isProd = false,
   compiler,
@@ -209,11 +202,7 @@ function doCompileTemplate({
   const shortId = id.replace(/^data-v-/, '')
   const longId = `data-v-${shortId}`
 
-  const defaultCompiler = ssr
-    ? (CompilerSSR as TemplateCompiler)
-    : vapor
-      ? (CompilerVapor as TemplateCompiler)
-      : CompilerDOM
+  const defaultCompiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM
   compiler = compiler || defaultCompiler
 
   if (compiler !== defaultCompiler) {
@@ -238,30 +227,25 @@ function doCompileTemplate({
     inAST = createRoot(template.children, inAST.source)
   }
 
-  let { code, ast, preamble, map, helpers } = compiler.compile(
-    inAST || source,
-    {
-      mode: 'module',
-      prefixIdentifiers: true,
-      hoistStatic: true,
-      cacheHandlers: true,
-      ssrCssVars:
-        ssr && ssrCssVars && ssrCssVars.length
-          ? genCssVarsFromList(ssrCssVars, shortId, isProd, true)
-          : '',
-      scopeId: scoped ? longId : undefined,
-      slotted,
-      sourceMap: true,
-      ...compilerOptions,
-      hmr: !isProd,
-      nodeTransforms: nodeTransforms.concat(
-        compilerOptions.nodeTransforms || [],
-      ),
-      filename,
-      onError: e => errors.push(e),
-      onWarn: w => warnings.push(w),
-    },
-  )
+  let { code, ast, preamble, map } = compiler.compile(inAST || source, {
+    mode: 'module',
+    prefixIdentifiers: true,
+    hoistStatic: true,
+    cacheHandlers: true,
+    ssrCssVars:
+      ssr && ssrCssVars && ssrCssVars.length
+        ? genCssVarsFromList(ssrCssVars, shortId, isProd, true)
+        : '',
+    scopeId: scoped ? longId : undefined,
+    slotted,
+    sourceMap: true,
+    ...compilerOptions,
+    hmr: !isProd,
+    nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
+    filename,
+    onError: e => errors.push(e),
+    onWarn: w => warnings.push(w),
+  })
 
   // inMap should be the map produced by ./parse.ts which is a simple line-only
   // mapping. If it is present, we need to adjust the final map and errors to
@@ -287,16 +271,7 @@ function doCompileTemplate({
     return msg
   })
 
-  return {
-    code,
-    ast,
-    preamble,
-    source,
-    errors,
-    tips,
-    map,
-    helpers,
-  }
+  return { code, ast, preamble, source, errors, tips, map }
 }
 
 function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {

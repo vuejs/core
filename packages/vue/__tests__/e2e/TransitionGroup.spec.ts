@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'node:path'
 import { createApp, ref } from 'vue'

@@ -1,9 +1,8 @@
 import { createApp, h, reactive, ref } from 'vue'
-import type { CompilerOptions } from '@vue/compiler-vapor'
+import type { CompilerOptions } from '@vue/compiler-dom'
 import { BindingTypes } from '@vue/compiler-core'
 
 export const ssrMode = ref(false)
-export const vaporMode = ref(true)
 
 export const defaultOptions: CompilerOptions = {
   mode: 'module',
@@ -40,11 +39,11 @@ const App = {
         compilerOptions.prefixIdentifiers || compilerOptions.mode === 'module'
 
       return [
-        h('h1', `Vue Template Explorer`),
+        h('h1', `Vue 3 Template Explorer`),
         h(
           'a',
           {
-            href: `https://github.com/vuejs/vue/tree/${__COMMIT__}`,
+            href: `https://github.com/vuejs/core/tree/${__COMMIT__}`,
             target: `_blank`,
           },
           `@${__COMMIT__}`,
@@ -222,18 +221,6 @@ const App = {
                 },
               }),
               h('label', { for: 'compat' }, 'v2 compat mode'),
-            ]),
-
-            h('li', [
-              h('input', {
-                type: 'checkbox',
-                id: 'vapor',
-                checked: vaporMode.value,
-                onChange(e: Event) {
-                  vaporMode.value = (e.target as HTMLInputElement).checked
-                },
-              }),
-              h('label', { for: 'vapor' }, 'vapor'),
             ]),
           ]),
         ]),
