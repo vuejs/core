@@ -1,15 +1,18 @@
 import type * as m from 'monaco-editor'
+import type { CompilerError } from '@vue/compiler-dom'
+import { compile } from '@vue/compiler-dom'
 import {
-  type CompilerError,
   type CompilerOptions,
-  compile,
-} from '@vue/compiler-dom'
-import { compile as ssrCompile } from '@vue/compiler-ssr'
+  compile as vaporCompile,
+} from '@vue/compiler-vapor'
+// import { compile as ssrCompile } from '@vue/compiler-ssr'
+
 import {
   compilerOptions,
   defaultOptions,
   initOptions,
   ssrMode,
+  vaporMode,
 } from './options'
 import { toRaw, watchEffect } from '@vue/runtime-dom'
 import { SourceMapConsumer } from 'source-map-js'
@@ -77,10 +80,16 @@ window.init = () => {
     console.clear()
     try {
       const errors: CompilerError[] = []
-      const compileFn = ssrMode.value ? ssrCompile : compile
+      const compileFn = /* ssrMode.value ? ssrCompile : */ (
+        vaporMode.value ? vaporCompile : compile
+      ) as typeof vaporCompile
       const start = performance.now()
       const { code, ast, map } = compileFn(source, {
         ...compilerOptions,
+        prefixIdentifiers:
+          compilerOptions.prefixIdentifiers ||
+          compilerOptions.mode === 'module' ||
+          compilerOptions.ssr,
         filename: 'ExampleTemplate.vue',
         sourceMap: true,
         onError: err => {

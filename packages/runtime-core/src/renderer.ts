@@ -7,7 +7,9 @@ import {
   type VNodeArrayChildren,
   type VNodeHook,
   type VNodeProps,
+  VaporSlot,
   cloneIfMounted,
+  cloneVNode,
   createVNode,
   invokeVNodeHook,
   isSameVNodeType,
@@ -16,9 +18,12 @@ import {
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
+  type ConcreteComponent,
   type Data,
+  type GenericComponentInstance,
   type LifecycleHook,
   createComponentInstance,
+  getComponentPublicInstance,
   setupComponent,
 } from './component'
 import {
@@ -35,6 +40,7 @@ import {
   ShapeFlags,
   def,
   getGlobalThis,
+  getSequence,
   invokeArrayFns,
   isArray,
   isReservedProp,
@@ -43,7 +49,7 @@ import {
   type SchedulerJob,
   SchedulerJobFlags,
   type SchedulerJobs,
-  flushPostFlushCbs,
+  flushOnAppMount,
   flushPreFlushCbs,
   queueJob,
   queuePostFlushCb,
@@ -57,7 +63,12 @@ import {
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { popWarningContext, pushWarningContext, warn } from './warning'
-import { type CreateAppFunction, createAppAPI } from './apiCreateApp'
+import {
+  type AppMountFn,
+  type AppUnmountFn,
+  type CreateAppFunction,
+  createAppAPI,
+} from './apiCreateApp'
 import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
@@ -86,11 +97,13 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import type { TransitionHooks } from './components/BaseTransition'
+import type { VaporInteropInterface } from './apiCreateApp'
 import type { VueElement } from '@vue/runtime-dom'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
   createApp: CreateAppFunction<HostElement>
+  internals: RendererInternals
 }
 
 export interface HydrationRenderer extends Renderer<Element | ShadowRoot> {
@@ -166,6 +179,7 @@ export interface RendererInternals<
   r: RemoveFn
   m: MoveFn
   mt: MountComponentFn
+  umt: UnmountComponentFn
   mc: MountChildrenFn
   pc: PatchChildrenFn
   pbc: PatchBlockChildrenFn
@@ -227,6 +241,7 @@ type MoveFn = (
   container: RendererElement,
   anchor: RendererNode | null,
   type: MoveType,
+  parentComponent: ComponentInternalInstance | null,
   parentSuspense?: SuspenseBoundary | null,
 ) => void
 
@@ -259,6 +274,12 @@ export type MountComponentFn = (
   parentSuspense: SuspenseBoundary | null,
   namespace: ElementNamespace,
   optimized: boolean,
+) => void
+
+export type UnmountComponentFn = (
+  instance: ComponentInternalInstance,
+  parentSuspense: SuspenseBoundary | null,
+  doRemove?: boolean,
 ) => void
 
 type ProcessTextOrCommentFn = (
@@ -425,6 +446,9 @@ function baseCreateRenderer(
           slotScopeIds,
           optimized,
         )
+        break
+      case VaporSlot:
+        getVaporInterface(parentComponent, n2).slot(n1, n2, container, anchor)
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
@@ -733,7 +757,7 @@ function baseCreateRenderer(
     vnode: VNode,
     scopeId: string | null,
     slotScopeIds: string[] | null,
-    parentComponent: ComponentInternalInstance | null,
+    parentComponent: GenericComponentInstance | null,
   ) => {
     if (scopeId) {
       hostSetScopeId(el, scopeId)
@@ -743,8 +767,8 @@ function baseCreateRenderer(
         hostSetScopeId(el, slotScopeIds[i])
       }
     }
-    if (parentComponent) {
-      let subTree = parentComponent.subTree
+    let subTree = parentComponent && parentComponent.subTree
+    if (subTree) {
       if (
         __DEV__ &&
         subTree.patchFlag > 0 &&
@@ -758,13 +782,13 @@ function baseCreateRenderer(
         (isSuspense(subTree.type) &&
           (subTree.ssContent === vnode || subTree.ssFallback === vnode))
       ) {
-        const parentVNode = parentComponent.vnode
+        const parentVNode = parentComponent!.vnode!
         setScopeId(
           el,
           parentVNode,
           parentVNode.scopeId,
           parentVNode.slotScopeIds,
-          parentComponent.parent,
+          parentComponent!.parent,
         )
       }
     }
@@ -1141,7 +1165,23 @@ function baseCreateRenderer(
     optimized: boolean,
   ) => {
     n2.slotScopeIds = slotScopeIds
-    if (n1 == null) {
+
+    if ((n2.type as ConcreteComponent).__vapor) {
+      if (n1 == null) {
+        getVaporInterface(parentComponent, n2).mount(
+          n2,
+          container,
+          anchor,
+          parentComponent,
+        )
+      } else {
+        getVaporInterface(parentComponent, n2).update(
+          n1,
+          n2,
+          shouldUpdateComponent(n1, n2, optimized),
+        )
+      }
+    } else if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
@@ -1352,11 +1392,12 @@ function baseCreateRenderer(
         } else {
           // custom element style injection
           if (
-            root.ce &&
+            (root as ComponentInternalInstance).ce &&
             // @ts-expect-error _def is private
-            (root.ce as VueElement)._def.shadowRoot !== false
+            ((root as ComponentInternalInstance).ce as VueElement)._def
+              .shadowRoot !== false
           ) {
-            root.ce._injectChildStyle(type)
+            ;(root as ComponentInternalInstance).ce!._injectChildStyle(type)
           }
 
           if (__DEV__) {
@@ -1414,6 +1455,7 @@ function baseCreateRenderer(
         if (
           initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE ||
           (parent &&
+            parent.vnode &&
             isAsyncWrapper(parent.vnode) &&
             parent.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE)
         ) {
@@ -2000,7 +2042,13 @@ function baseCreateRenderer(
           // There is no stable subsequence (e.g. a reverse)
           // OR current node is not among the stable sequence
           if (j < 0 || i !== increasingNewIndexSequence[j]) {
-            move(nextChild, container, anchor, MoveType.REORDER)
+            move(
+              nextChild,
+              container,
+              anchor,
+              MoveType.REORDER,
+              parentComponent,
+            )
           } else {
             j--
           }
@@ -2014,11 +2062,22 @@ function baseCreateRenderer(
     container,
     anchor,
     moveType,
+    parentComponent,
     parentSuspense = null,
   ) => {
     const { el, type, transition, children, shapeFlag } = vnode
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      move(vnode.component!.subTree, container, anchor, moveType)
+      if ((type as ConcreteComponent).__vapor) {
+        getVaporInterface(parentComponent, vnode).move(vnode, container, anchor)
+      } else {
+        move(
+          vnode.component!.subTree,
+          container,
+          anchor,
+          moveType,
+          parentComponent,
+        )
+      }
       return
     }
 
@@ -2028,14 +2087,26 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.TELEPORT) {
-      ;(type as typeof TeleportImpl).move(vnode, container, anchor, internals)
+      ;(type as typeof TeleportImpl).move(
+        vnode,
+        container,
+        anchor,
+        internals,
+        parentComponent,
+      )
       return
     }
 
     if (type === Fragment) {
       hostInsert(el!, container, anchor)
       for (let i = 0; i < (children as VNode[]).length; i++) {
-        move((children as VNode[])[i], container, anchor, moveType)
+        move(
+          (children as VNode[])[i],
+          container,
+          anchor,
+          moveType,
+          parentComponent,
+        )
       }
       hostInsert(vnode.anchor!, container, anchor)
       return
@@ -2134,7 +2205,12 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      unmountComponent(vnode.component!, parentSuspense, doRemove)
+      if ((type as ConcreteComponent).__vapor) {
+        getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
+        return
+      } else {
+        unmountComponent(vnode.component!, parentSuspense, doRemove)
+      }
     } else {
       if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
         vnode.suspense!.unmount(parentSuspense, doRemove)
@@ -2180,6 +2256,11 @@ function baseCreateRenderer(
         (!optimized && shapeFlag & ShapeFlags.ARRAY_CHILDREN)
       ) {
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
+      }
+
+      if (type === VaporSlot) {
+        getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
+        return
       }
 
       if (doRemove) {
@@ -2264,10 +2345,10 @@ function baseCreateRenderer(
     hostRemove(end)
   }
 
-  const unmountComponent = (
-    instance: ComponentInternalInstance,
-    parentSuspense: SuspenseBoundary | null,
-    doRemove?: boolean,
+  const unmountComponent: UnmountComponentFn = (
+    instance,
+    parentSuspense,
+    doRemove,
   ) => {
     if (__DEV__ && instance.type.__hmrId) {
       unregisterHMR(instance)
@@ -2295,7 +2376,7 @@ function baseCreateRenderer(
     // remove slots content from parent renderCache
     if (parent && isArray(slotCacheKeys)) {
       slotCacheKeys.forEach(v => {
-        parent.renderCache[v] = undefined
+        ;(parent as ComponentInternalInstance).renderCache[v] = undefined
       })
     }
 
@@ -2371,6 +2452,9 @@ function baseCreateRenderer(
 
   const getNextHostNode: NextFn = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+      if ((vnode.type as ConcreteComponent).__vapor) {
+        return hostNextSibling((vnode.component! as any).block)
+      }
       return getNextHostNode(vnode.component!.subTree)
     }
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
@@ -2384,7 +2468,6 @@ function baseCreateRenderer(
     return teleportEnd ? hostNextSibling(teleportEnd) : el
   }
 
-  let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
     if (vnode == null) {
       if (container._vnode) {
@@ -2402,12 +2485,7 @@ function baseCreateRenderer(
       )
     }
     container._vnode = vnode
-    if (!isFlushing) {
-      isFlushing = true
-      flushPreFlushCbs()
-      flushPostFlushCbs()
-      isFlushing = false
-    }
+    flushOnAppMount()
   }
 
   const internals: RendererInternals = {
@@ -2416,6 +2494,7 @@ function baseCreateRenderer(
     m: move,
     r: remove,
     mt: mountComponent,
+    umt: unmountComponent,
     mc: mountChildren,
     pc: patchChildren,
     pbc: patchBlockChildren,
@@ -2431,10 +2510,58 @@ function baseCreateRenderer(
     )
   }
 
+  const mountApp: AppMountFn<Element> = (
+    app,
+    container,
+    isHydrate,
+    namespace,
+  ) => {
+    const vnode = app._ceVNode || createVNode(app._component, app._props)
+    // store app context on the root VNode.
+    // this will be set on the root instance on initial mount.
+    vnode.appContext = app._context
+
+    if (namespace === true) {
+      namespace = 'svg'
+    } else if (namespace === false) {
+      namespace = undefined
+    }
+
+    // HMR root reload
+    if (__DEV__) {
+      app._context.reload = () => {
+        const cloned = cloneVNode(vnode)
+        // avoid hydration for hmr updating
+        cloned.el = null
+        // casting to ElementNamespace because TS doesn't guarantee type narrowing
+        // over function boundaries
+        render(cloned, container, namespace as ElementNamespace)
+      }
+    }
+
+    if (isHydrate && hydrate) {
+      hydrate(vnode as VNode<Node, Element>, container as any)
+    } else {
+      render(vnode, container, namespace)
+    }
+
+    return vnode.component!
+  }
+
+  const unmountApp: AppUnmountFn = app => {
+    render(null, app._container)
+  }
+
   return {
     render,
     hydrate,
-    createApp: createAppAPI(render, hydrate),
+    internals,
+    createApp: createAppAPI(
+      mountApp,
+      unmountApp,
+      getComponentPublicInstance as any,
+      render,
+    ),
   }
 }
 
@@ -2453,15 +2580,17 @@ function resolveChildrenNamespace(
 }
 
 function toggleRecurse(
-  { effect, job }: ComponentInternalInstance,
+  { effect, job, vapor }: ComponentInternalInstance,
   allowed: boolean,
 ) {
-  if (allowed) {
-    effect.flags |= EffectFlags.ALLOW_RECURSE
-    job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
-  } else {
-    effect.flags &= ~EffectFlags.ALLOW_RECURSE
-    job.flags! &= ~SchedulerJobFlags.ALLOW_RECURSE
+  if (!vapor) {
+    if (allowed) {
+      effect.flags |= EffectFlags.ALLOW_RECURSE
+      job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+    } else {
+      effect.flags &= ~EffectFlags.ALLOW_RECURSE
+      job.flags! &= ~SchedulerJobFlags.ALLOW_RECURSE
+    }
   }
 }
 
@@ -2525,48 +2654,6 @@ export function traverseStaticChildren(
   }
 }
 
-// https://en.wikipedia.org/wiki/Longest_increasing_subsequence
-function getSequence(arr: number[]): number[] {
-  const p = arr.slice()
-  const result = [0]
-  let i, j, u, v, c
-  const len = arr.length
-  for (i = 0; i < len; i++) {
-    const arrI = arr[i]
-    if (arrI !== 0) {
-      j = result[result.length - 1]
-      if (arr[j] < arrI) {
-        p[i] = j
-        result.push(i)
-        continue
-      }
-      u = 0
-      v = result.length - 1
-      while (u < v) {
-        c = (u + v) >> 1
-        if (arr[result[c]] < arrI) {
-          u = c + 1
-        } else {
-          v = c
-        }
-      }
-      if (arrI < arr[result[u]]) {
-        if (u > 0) {
-          p[i] = result[u - 1]
-        }
-        result[u] = i
-      }
-    }
-  }
-  u = result.length
-  v = result[u - 1]
-  while (u-- > 0) {
-    result[u] = v
-    v = p[v]
-  }
-  return result
-}
-
 function locateNonHydratedAsyncRoot(
   instance: ComponentInternalInstance,
 ): ComponentInternalInstance | undefined {
@@ -2580,9 +2667,27 @@ function locateNonHydratedAsyncRoot(
   }
 }
 
-export function invalidateMount(hooks: LifecycleHook): void {
+export function invalidateMount(hooks: LifecycleHook | undefined): void {
   if (hooks) {
     for (let i = 0; i < hooks.length; i++)
       hooks[i].flags! |= SchedulerJobFlags.DISPOSED
   }
+}
+
+function getVaporInterface(
+  instance: ComponentInternalInstance | null,
+  vnode: VNode,
+): VaporInteropInterface {
+  const ctx = instance ? instance.appContext : vnode.appContext
+  const res = ctx && ctx.vapor
+  if (__DEV__ && !res) {
+    warn(
+      `Vapor component found in vdom tree but vapor-in-vdom interop was not installed. ` +
+        `Make sure to install it:\n` +
+        `\`\`\`\nimport { vaporInteropPlugin } from 'vue'\n` +
+        `app.use(vaporInteropPlugin)\n` +
+        `\`\`\``,
+    )
+  }
+  return res!
 }

@@ -844,4 +844,12 @@ describe('scheduler', () => {
     await nextTick()
     expect(calls).toEqual(['cb2', 'cb1'])
   })
+
+  test('error in postFlush cb should not cause nextTick to stuck in rejected state forever', async () => {
+    queuePostFlushCb(() => {
+      throw 'err'
+    })
+    await expect(nextTick).rejects.toThrow('err')
+    await expect(nextTick()).resolves.toBeUndefined()
+  })
 })

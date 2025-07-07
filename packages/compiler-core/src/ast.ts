@@ -86,6 +86,13 @@ export interface Position {
   column: number
 }
 
+export type AllNode =
+  | ParentNode
+  | ExpressionNode
+  | TemplateChildNode
+  | AttributeNode
+  | DirectiveNode
+
 export type ParentNode = RootNode | ElementNode | IfBranchNode | ForNode
 
 export type ExpressionNode = SimpleExpressionNode | CompoundExpressionNode
