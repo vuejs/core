@@ -1,6 +1,6 @@
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import { NOOP, isArray } from '@vue/shared'
-import { type GenericComponentInstance, getComponentName } from './component'
+import { type ComponentInternalInstance, getComponentName } from './component'
 
 export enum SchedulerJobFlags {
   QUEUED = 1 << 0,
@@ -35,7 +35,7 @@ export interface SchedulerJob extends Function {
    * Attached by renderer.ts when setting up a component's render effect
    * Used to obtain component information when reporting max recursive updates.
    */
-  i?: GenericComponentInstance
+  i?: ComponentInternalInstance
 }
 
 export type SchedulerJobs = SchedulerJob | SchedulerJob[]
@@ -91,9 +91,6 @@ function findInsertionIndex(id: number) {
   return start
 }
 
-/**
- * @internal for runtime-vapor only
- */
 export function queueJob(job: SchedulerJob): void {
   if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
     const jobId = getId(job)
@@ -116,10 +113,7 @@ export function queueJob(job: SchedulerJob): void {
 
 function queueFlush() {
   if (!currentFlushPromise) {
-    currentFlushPromise = resolvedPromise.then(flushJobs).catch(e => {
-      currentFlushPromise = null
-      throw e
-    })
+    currentFlushPromise = resolvedPromise.then(flushJobs)
   }
 }
 
@@ -141,7 +135,7 @@ export function queuePostFlushCb(cb: SchedulerJobs): void {
 }
 
 export function flushPreFlushCbs(
-  instance?: GenericComponentInstance,
+  instance?: ComponentInternalInstance,
   seen?: CountMap,
   // skip the current job
   i: number = flushIndex + 1,
@@ -201,29 +195,11 @@ export function flushPostFlushCbs(seen?: CountMap): void {
       if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
         cb.flags! &= ~SchedulerJobFlags.QUEUED
       }
-      if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) {
-        try {
-          cb()
-        } finally {
-          cb.flags! &= ~SchedulerJobFlags.QUEUED
-        }
-      }
+      if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) cb()
+      cb.flags! &= ~SchedulerJobFlags.QUEUED
     }
     activePostFlushCbs = null
     postFlushIndex = 0
-  }
-}
-
-let isFlushing = false
-/**
- * @internal
- */
-export function flushOnAppMount(): void {
-  if (!isFlushing) {
-    isFlushing = true
-    flushPreFlushCbs()
-    flushPostFlushCbs()
-    isFlushing = false
   }
 }
 

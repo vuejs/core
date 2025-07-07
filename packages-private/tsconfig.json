@@ -3,5 +3,5 @@
   "compilerOptions": {
     "isolatedDeclarations": false
   },
-  "include": [".", "../packages/vue/__tests__/e2e/e2eUtils.ts"]
+  "include": ["."]
 }

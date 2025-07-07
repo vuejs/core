@@ -84,8 +84,6 @@ export interface SFCDescriptor {
    */
   slotted: boolean
 
-  vapor: boolean
-
   /**
    * compare with an existing descriptor to determine whether HMR should perform
    * a reload vs. re-render.
@@ -139,7 +137,6 @@ export function parse(
     customBlocks: [],
     cssVars: [],
     slotted: false,
-    vapor: false,
     shouldForceReload: prevImports => hmrShouldReload(prevImports, descriptor),
   }
 
@@ -162,9 +159,8 @@ export function parse(
       ignoreEmpty &&
       node.tag !== 'template' &&
       isEmpty(node) &&
-      !hasAttr(node, 'src')
+      !hasSrc(node)
     ) {
-      descriptor.vapor ||= hasAttr(node, 'vapor')
       return
     }
     switch (node.tag) {
@@ -175,7 +171,6 @@ export function parse(
             source,
             false,
           ) as SFCTemplateBlock)
-          descriptor.vapor ||= !!templateBlock.attrs.vapor
 
           if (!templateBlock.attrs.src) {
             templateBlock.ast = createRoot(node.children, source)
@@ -200,8 +195,7 @@ export function parse(
         break
       case 'script':
         const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
-        descriptor.vapor ||= !!scriptBlock.attrs.vapor
-        const isSetup = !!(scriptBlock.attrs.setup || scriptBlock.attrs.vapor)
+        const isSetup = !!scriptBlock.attrs.setup
         if (isSetup && !descriptor.scriptSetup) {
           descriptor.scriptSetup = scriptBlock
           break
@@ -410,8 +404,13 @@ function padContent(
   }
 }
 
-function hasAttr(node: ElementNode, name: string) {
-  return node.props.some(p => p.type === NodeTypes.ATTRIBUTE && p.name === name)
+function hasSrc(node: ElementNode) {
+  return node.props.some(p => {
+    if (p.type !== NodeTypes.ATTRIBUTE) {
+      return false
+    }
+    return p.name === 'src'
+  })
 }
 
 /**

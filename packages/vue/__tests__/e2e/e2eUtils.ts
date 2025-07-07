@@ -76,7 +76,8 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
 
     page.on('console', e => {
       if (e.type() === 'error') {
-        console.error(`Error from Puppeteer-loaded page:\n`, e.text())
+        const err = e.args()[0]
+        console.error(`Error from Puppeteer-loaded page:\n`, err.remoteObject())
       }
     })
   })

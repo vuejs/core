@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-globals */
 import type { App } from './apiCreateApp'
 import { Comment, Fragment, Static, Text } from './vnode'
-import type { GenericComponentInstance } from './component'
+import type { ComponentInternalInstance } from './component'
 
 interface AppRecord {
   id: number
@@ -49,11 +49,7 @@ function emit(event: string, ...args: any[]) {
   }
 }
 
-let queued = false
 export function setDevtoolsHook(hook: DevtoolsHook, target: any): void {
-  if (devtoolsNotInstalled || queued) {
-    return
-  }
   devtools = hook
   if (devtools) {
     devtools.enabled = true
@@ -70,7 +66,6 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any): void {
     // eslint-disable-next-line no-restricted-syntax
     !window.navigator?.userAgent?.includes('jsdom')
   ) {
-    queued = true
     const replay = (target.__VUE_DEVTOOLS_HOOK_REPLAY__ =
       target.__VUE_DEVTOOLS_HOOK_REPLAY__ || [])
     replay.push((newHook: DevtoolsHook) => {
@@ -116,7 +111,7 @@ const _devtoolsComponentRemoved = /*@__PURE__*/ createDevtoolsComponentHook(
 )
 
 export const devtoolsComponentRemoved = (
-  component: GenericComponentInstance,
+  component: ComponentInternalInstance,
 ): void => {
   if (
     devtools &&
@@ -128,13 +123,13 @@ export const devtoolsComponentRemoved = (
   }
 }
 
-type DevtoolsComponentHook = (component: GenericComponentInstance) => void
+type DevtoolsComponentHook = (component: ComponentInternalInstance) => void
 
 /*! #__NO_SIDE_EFFECTS__ */
 function createDevtoolsComponentHook(
   hook: DevtoolsHooks,
 ): DevtoolsComponentHook {
-  return (component: GenericComponentInstance) => {
+  return (component: ComponentInternalInstance) => {
     emit(
       hook,
       component.appContext.app,
@@ -152,20 +147,20 @@ export const devtoolsPerfEnd: DevtoolsPerformanceHook =
   /*@__PURE__*/ createDevtoolsPerformanceHook(DevtoolsHooks.PERFORMANCE_END)
 
 type DevtoolsPerformanceHook = (
-  component: GenericComponentInstance,
+  component: ComponentInternalInstance,
   type: string,
   time: number,
 ) => void
 function createDevtoolsPerformanceHook(
   hook: DevtoolsHooks,
 ): DevtoolsPerformanceHook {
-  return (component: GenericComponentInstance, type: string, time: number) => {
+  return (component: ComponentInternalInstance, type: string, time: number) => {
     emit(hook, component.appContext.app, component.uid, component, type, time)
   }
 }
 
 export function devtoolsComponentEmit(
-  component: GenericComponentInstance,
+  component: ComponentInternalInstance,
   event: string,
   params: any[],
 ): void {

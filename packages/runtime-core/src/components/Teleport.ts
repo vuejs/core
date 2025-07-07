@@ -245,7 +245,6 @@ export const TeleportImpl = {
             container,
             mainAnchor,
             internals,
-            parentComponent,
             TeleportMoveTypes.TOGGLE,
           )
         } else {
@@ -269,7 +268,6 @@ export const TeleportImpl = {
               nextTarget,
               null,
               internals,
-              parentComponent,
               TeleportMoveTypes.TARGET_CHANGE,
             )
           } else if (__DEV__) {
@@ -287,7 +285,6 @@ export const TeleportImpl = {
             target,
             targetAnchor,
             internals,
-            parentComponent,
             TeleportMoveTypes.TOGGLE,
           )
         }
@@ -350,7 +347,6 @@ function moveTeleport(
   container: RendererElement,
   parentAnchor: RendererNode | null,
   { o: { insert }, m: move }: RendererInternals,
-  parentComponent: ComponentInternalInstance | null,
   moveType: TeleportMoveTypes = TeleportMoveTypes.REORDER,
 ): void {
   // move target anchor if this is a target change.
@@ -375,7 +371,6 @@ function moveTeleport(
           container,
           parentAnchor,
           MoveType.REORDER,
-          parentComponent,
         )
       }
     }

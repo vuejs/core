@@ -2,7 +2,6 @@ import {
   BindingTypes,
   UNREF,
   isFunctionType,
-  isStaticNode,
   unwrapTSNode,
   walkIdentifiers,
 } from '@vue/compiler-dom'
@@ -19,7 +18,6 @@ import type {
   Declaration,
   ExportSpecifier,
   Identifier,
-  LVal,
   Node,
   ObjectPattern,
   Statement,
@@ -131,10 +129,6 @@ export interface SFCScriptCompileOptions {
    * Transform Vue SFCs into custom elements.
    */
   customElement?: boolean | ((filename: string) => boolean)
-  /**
-   * Force to use of Vapor mode.
-   */
-  vapor?: boolean
 }
 
 export interface ImportBinding {
@@ -179,8 +173,6 @@ export function compileScript(
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
-  const vapor = sfc.vapor || options.vapor
-  const ssr = options.templateOptions?.ssr
 
   if (!scriptSetup) {
     if (!script) {
@@ -548,7 +540,7 @@ export function compileScript(
           }
 
           // defineProps
-          const isDefineProps = processDefineProps(ctx, init, decl.id as LVal)
+          const isDefineProps = processDefineProps(ctx, init, decl.id)
           if (ctx.propsDestructureRestId) {
             setupBindings[ctx.propsDestructureRestId] =
               BindingTypes.SETUP_REACTIVE_CONST
@@ -556,10 +548,10 @@ export function compileScript(
 
           // defineEmits
           const isDefineEmits =
-            !isDefineProps && processDefineEmits(ctx, init, decl.id as LVal)
+            !isDefineProps && processDefineEmits(ctx, init, decl.id)
           !isDefineEmits &&
-            (processDefineSlots(ctx, init, decl.id as LVal) ||
-              processDefineModel(ctx, init, decl.id as LVal))
+            (processDefineSlots(ctx, init, decl.id) ||
+              processDefineModel(ctx, init, decl.id))
 
           if (
             isDefineProps &&
@@ -755,7 +747,7 @@ export function compileScript(
   if (
     sfc.cssVars.length &&
     // no need to do this when targeting SSR
-    !ssr
+    !options.templateOptions?.ssr
   ) {
     ctx.helperImports.add(CSS_VARS_HELPER)
     ctx.helperImports.add('unref')
@@ -866,12 +858,12 @@ export function compileScript(
   } else {
     // inline mode
     if (sfc.template && !sfc.template.src) {
-      if (ssr) {
+      if (options.templateOptions && options.templateOptions.ssr) {
         hasInlinedSsrRenderFn = true
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, preamble, tips, errors, helpers, map } = compileTemplate({
+      const { code, ast, preamble, tips, errors, map } = compileTemplate({
         filename,
         ast: sfc.template.ast,
         source: sfc.template.content,
@@ -881,7 +873,6 @@ export function compileScript(
         scoped: sfc.styles.some(s => s.scoped),
         isProd: options.isProd,
         ssrCssVars: sfc.cssVars,
-        vapor,
         compilerOptions: {
           ...(options.templateOptions &&
             options.templateOptions.compilerOptions),
@@ -918,7 +909,7 @@ export function compileScript(
       // avoid duplicated unref import
       // as this may get injected by the render function preamble OR the
       // css vars codegen
-      if (helpers && helpers.has(UNREF)) {
+      if (ast && ast.helpers.has(UNREF)) {
         ctx.helperImports.delete('unref')
       }
       returned = code
@@ -938,11 +929,7 @@ export function compileScript(
         `\n}\n\n`,
     )
   } else {
-    ctx.s.appendRight(
-      endOffset,
-      // vapor mode generates its own return when inlined
-      `\n${vapor && !ssr ? `` : `return `}${returned}\n}\n\n`,
-    )
+    ctx.s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
   }
 
   // 10. finalize default export
@@ -991,17 +978,13 @@ export function compileScript(
     ctx.s.prependLeft(
       startOffset,
       `\n${genDefaultAs} /*@__PURE__*/${ctx.helper(
-        vapor && !ssr ? `defineVaporComponent` : `defineComponent`,
+        `defineComponent`,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
       }setup(${args}) {\n${exposeCall}`,
     )
     ctx.s.appendRight(endOffset, `})`)
   } else {
-    // in TS, defineVaporComponent adds the option already
-    if (vapor) {
-      runtimeOptions += `\n  __vapor: true,`
-    }
     if (defaultExport || definedOptions) {
       // without TS, can't rely on rest spread, so we use Object.assign
       // export default Object.assign(__default__, { ... })
@@ -1278,6 +1261,43 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
       }
       return false
   }
+}
+
+function isStaticNode(node: Node): boolean {
+  node = unwrapTSNode(node)
+
+  switch (node.type) {
+    case 'UnaryExpression': // void 0, !true
+      return isStaticNode(node.argument)
+
+    case 'LogicalExpression': // 1 > 2
+    case 'BinaryExpression': // 1 + 2
+      return isStaticNode(node.left) && isStaticNode(node.right)
+
+    case 'ConditionalExpression': {
+      // 1 ? 2 : 3
+      return (
+        isStaticNode(node.test) &&
+        isStaticNode(node.consequent) &&
+        isStaticNode(node.alternate)
+      )
+    }
+
+    case 'SequenceExpression': // (1, 2)
+    case 'TemplateLiteral': // `foo${1}`
+      return node.expressions.every(expr => isStaticNode(expr))
+
+    case 'ParenthesizedExpression': // (1)
+      return isStaticNode(node.expression)
+
+    case 'StringLiteral':
+    case 'NumericLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'BigIntLiteral':
+      return true
+  }
+  return false
 }
 
 export function mergeSourceMaps(

@@ -1,8 +1,7 @@
 // This entry exports the runtime only, and is built as
 // `dist/vue.esm-bundler.js` which is used by default for bundlers.
-import { NOOP } from '@vue/shared'
 import { initDev } from './dev'
-import { type RenderFunction, warn } from '@vue/runtime-dom'
+import { warn } from '@vue/runtime-dom'
 
 if (__DEV__) {
   initDev()
@@ -10,7 +9,7 @@ if (__DEV__) {
 
 export * from '@vue/runtime-dom'
 
-export const compile = (_template: string): RenderFunction => {
+export const compile = (): void => {
   if (__DEV__) {
     warn(
       `Runtime compilation is not supported in this build of Vue.` +
@@ -23,5 +22,4 @@ export const compile = (_template: string): RenderFunction => {
               : ``) /* should not happen */,
     )
   }
-  return NOOP
 }

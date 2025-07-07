@@ -1,5 +1,4 @@
 import {
-  type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
   currentInstance,
@@ -104,13 +103,8 @@ function resolveAsset(
     const res =
       // local registration
       // check instance[type] first which is resolved for options API
-      resolve(
-        (instance as ComponentInternalInstance)[type] ||
-          (Component as ComponentOptions)[type],
-        name,
-      ) ||
+      resolve(instance[type] || (Component as ComponentOptions)[type], name) ||
       // global registration
-      // @ts-expect-error filters only exist in compat mode
       resolve(instance.appContext[type], name)
 
     if (!res && maybeSelfReference) {

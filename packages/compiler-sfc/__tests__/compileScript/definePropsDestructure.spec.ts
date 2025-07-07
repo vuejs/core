@@ -155,7 +155,6 @@ describe('sfc reactive props destructure', () => {
         "onUpdate:modelValue": (val: number) => void  // double-quoted string containing symbols
       }>()
       </script>
-      <template>{{ foo }}</template>
     `)
     expect(bindings).toStrictEqual({
       __propsAliases: {
@@ -174,7 +173,6 @@ describe('sfc reactive props destructure', () => {
     "foo:bar": { type: String, required: true, default: 'foo-bar' },
     "onUpdate:modelValue": { type: Function, required: true }
   },`)
-    expect(content).toMatch(`__props.foo`)
     assertCode(content)
   })
 

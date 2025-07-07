@@ -1,7 +1,5 @@
 import {
   type App,
-  type Component,
-  type ConcreteComponent,
   type CreateAppFunction,
   type DefineComponent,
   DeprecationTypes,
@@ -73,7 +71,7 @@ let renderer: Renderer<Element | ShadowRoot> | HydrationRenderer
 
 let enabledHydration = false
 
-function ensureRenderer(): Renderer<Element | ShadowRoot> {
+function ensureRenderer() {
   return (
     renderer ||
     (renderer = createRenderer<Node, Element | ShadowRoot>(rendererOptions))
@@ -110,7 +108,7 @@ export const createApp = ((...args) => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
 
-    const component = app._component as ConcreteComponent
+    const component = app._component
     if (!isFunction(component) && !component.render && !component.template) {
       // __UNSAFE__
       // Reason: potential execution of JS expressions in in-DOM template.
@@ -145,7 +143,7 @@ export const createApp = ((...args) => {
   }
 
   return app
-}) as CreateAppFunction<Element, Component>
+}) as CreateAppFunction<Element>
 
 export const createSSRApp = ((...args) => {
   const app = ensureHydrationRenderer().createApp(...args)
@@ -227,12 +225,9 @@ function injectCompilerOptionsCheck(app: App) {
   }
 }
 
-/**
- * @internal
- */
-function normalizeContainer<T extends ParentNode>(
-  container: T | string,
-): T | null {
+function normalizeContainer(
+  container: Element | ShadowRoot | string,
+): Element | ShadowRoot | null {
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
@@ -240,7 +235,7 @@ function normalizeContainer<T extends ParentNode>(
         `Failed to mount app: mount target selector "${container}" returned null.`,
       )
     }
-    return res as any
+    return res
   }
   if (
     __DEV__ &&
@@ -311,40 +306,3 @@ export const initDirectivesForSSR: () => void = __SSR__
 export * from '@vue/runtime-core'
 
 export * from './jsx'
-
-// VAPOR -----------------------------------------------------------------------
-// Everything below are exposed for vapor only and can change any time.
-// They are also trimmed from non-bundler builds.
-
-/**
- * @internal
- */
-export { ensureRenderer, normalizeContainer }
-/**
- * @internal
- */
-export { patchStyle } from './modules/style'
-/**
- * @internal
- */
-export { shouldSetAsProp } from './patchProp'
-/**
- * @internal
- */
-export {
-  vShowOriginalDisplay,
-  vShowHidden,
-  type VShowElement,
-} from './directives/vShow'
-/**
- * @internal
- */
-export {
-  vModelTextInit,
-  vModelTextUpdate,
-  vModelCheckboxInit,
-  vModelCheckboxUpdate,
-  getValue as vModelGetValue,
-  vModelSelectInit,
-  vModelSetSelected,
-} from './directives/vModel'

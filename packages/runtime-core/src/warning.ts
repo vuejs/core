@@ -1,34 +1,31 @@
+import type { VNode } from './vnode'
 import {
+  type ComponentInternalInstance,
+  type ConcreteComponent,
   type Data,
-  type GenericComponentInstance,
   formatComponentName,
 } from './component'
 import { isFunction, isString } from '@vue/shared'
 import { isRef, pauseTracking, resetTracking, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
-import { type VNode, isVNode } from './vnode'
 
-const stack: (GenericComponentInstance | VNode)[] = []
+type ComponentVNode = VNode & {
+  type: ConcreteComponent
+}
+
+const stack: VNode[] = []
 
 type TraceEntry = {
-  ctx: GenericComponentInstance | VNode
+  vnode: ComponentVNode
   recurseCount: number
 }
 
 type ComponentTraceStack = TraceEntry[]
 
-/**
- * @internal
- */
-export function pushWarningContext(
-  ctx: GenericComponentInstance | VNode,
-): void {
-  stack.push(ctx)
+export function pushWarningContext(vnode: VNode): void {
+  stack.push(vnode)
 }
 
-/**
- * @internal
- */
 export function popWarningContext(): void {
   stack.pop()
 }
@@ -43,8 +40,7 @@ export function warn(msg: string, ...args: any[]): void {
   // during patch, leading to infinite recursion.
   pauseTracking()
 
-  const entry = stack.length ? stack[stack.length - 1] : null
-  const instance = isVNode(entry) ? entry.component : entry
+  const instance = stack.length ? stack[stack.length - 1].component : null
   const appWarnHandler = instance && instance.appContext.config.warnHandler
   const trace = getComponentTrace()
 
@@ -56,11 +52,10 @@ export function warn(msg: string, ...args: any[]): void {
       [
         // eslint-disable-next-line no-restricted-syntax
         msg + args.map(a => a.toString?.() ?? JSON.stringify(a)).join(''),
-        (instance && instance.proxy) || instance,
+        instance && instance.proxy,
         trace
           .map(
-            ({ ctx }) =>
-              `at <${formatComponentName(instance, (ctx as any).type)}>`,
+            ({ vnode }) => `at <${formatComponentName(instance, vnode.type)}>`,
           )
           .join('\n'),
         trace,
@@ -84,8 +79,8 @@ export function warn(msg: string, ...args: any[]): void {
 }
 
 export function getComponentTrace(): ComponentTraceStack {
-  let currentCtx: TraceEntry['ctx'] | null = stack[stack.length - 1]
-  if (!currentCtx) {
+  let currentVNode: VNode | null = stack[stack.length - 1]
+  if (!currentVNode) {
     return []
   }
 
@@ -94,23 +89,19 @@ export function getComponentTrace(): ComponentTraceStack {
   // instance parent pointers.
   const normalizedStack: ComponentTraceStack = []
 
-  while (currentCtx) {
+  while (currentVNode) {
     const last = normalizedStack[0]
-    if (last && last.ctx === currentCtx) {
+    if (last && last.vnode === currentVNode) {
       last.recurseCount++
     } else {
       normalizedStack.push({
-        ctx: currentCtx,
+        vnode: currentVNode as ComponentVNode,
         recurseCount: 0,
       })
     }
-    if (isVNode(currentCtx)) {
-      const parent: GenericComponentInstance | null =
-        currentCtx.component && currentCtx.component.parent
-      currentCtx = (parent && parent.vnode) || parent
-    } else {
-      currentCtx = currentCtx.parent
-    }
+    const parentInstance: ComponentInternalInstance | null =
+      currentVNode.component && currentVNode.component.parent
+    currentVNode = parentInstance && parentInstance.vnode
   }
 
   return normalizedStack
@@ -125,14 +116,19 @@ function formatTrace(trace: ComponentTraceStack): any[] {
   return logs
 }
 
-function formatTraceEntry({ ctx, recurseCount }: TraceEntry): any[] {
+function formatTraceEntry({ vnode, recurseCount }: TraceEntry): any[] {
   const postfix =
     recurseCount > 0 ? `... (${recurseCount} recursive calls)` : ``
-  const instance = isVNode(ctx) ? ctx.component : ctx
-  const isRoot = instance ? instance.parent == null : false
-  const open = ` at <${formatComponentName(instance, (ctx as any).type, isRoot)}`
+  const isRoot = vnode.component ? vnode.component.parent == null : false
+  const open = ` at <${formatComponentName(
+    vnode.component,
+    vnode.type,
+    isRoot,
+  )}`
   const close = `>` + postfix
-  return ctx.props ? [open, ...formatProps(ctx.props), close] : [open + close]
+  return vnode.props
+    ? [open, ...formatProps(vnode.props), close]
+    : [open + close]
 }
 
 function formatProps(props: Data): any[] {

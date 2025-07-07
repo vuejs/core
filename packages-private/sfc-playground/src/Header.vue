@@ -21,7 +21,6 @@ const emit = defineEmits([
   'toggle-theme',
   'toggle-ssr',
   'toggle-prod',
-  'toggle-vapor',
   'toggle-autosave',
   'reload-page',
 ])
@@ -216,7 +215,6 @@ h1 img {
 }
 
 .toggle-prod span,
-.toggle-vapor span,
 .toggle-ssr span,
 .toggle-autosave span {
   font-size: 12px;
@@ -240,15 +238,6 @@ h1 img {
 
 .toggle-ssr.enabled span,
 .toggle-autosave.enabled span {
-  color: #fff;
-  background-color: var(--green);
-}
-
-.toggle-vapor span {
-  background-color: var(--btn-bg);
-}
-
-.toggle-vapor.enabled span {
   color: #fff;
   background-color: var(--green);
 }

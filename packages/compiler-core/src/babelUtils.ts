@@ -12,7 +12,6 @@ import type {
   Program,
 } from '@babel/types'
 import { walk } from 'estree-walker'
-import { type BindingMetadata, BindingTypes } from './options'
 
 /**
  * Return value indicates whether the AST walked can be a constant
@@ -309,8 +308,8 @@ export const isFunctionType = (node: Node): node is Function => {
   return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
-export const isStaticProperty = (node?: Node): node is ObjectProperty =>
-  !!node &&
+export const isStaticProperty = (node: Node): node is ObjectProperty =>
+  node &&
   (node.type === 'ObjectProperty' || node.type === 'ObjectMethod') &&
   !node.computed
 
@@ -510,78 +509,4 @@ export function unwrapTSNode(node: Node): Node {
   } else {
     return node
   }
-}
-
-export function isStaticNode(node: Node): boolean {
-  node = unwrapTSNode(node)
-
-  switch (node.type) {
-    case 'UnaryExpression': // void 0, !true
-      return isStaticNode(node.argument)
-
-    case 'LogicalExpression': // 1 > 2
-    case 'BinaryExpression': // 1 + 2
-      return isStaticNode(node.left) && isStaticNode(node.right)
-
-    case 'ConditionalExpression': {
-      // 1 ? 2 : 3
-      return (
-        isStaticNode(node.test) &&
-        isStaticNode(node.consequent) &&
-        isStaticNode(node.alternate)
-      )
-    }
-
-    case 'SequenceExpression': // (1, 2)
-    case 'TemplateLiteral': // `foo${1}`
-      return node.expressions.every(expr => isStaticNode(expr))
-
-    case 'ParenthesizedExpression': // (1)
-      return isStaticNode(node.expression)
-
-    case 'StringLiteral':
-    case 'NumericLiteral':
-    case 'BooleanLiteral':
-    case 'NullLiteral':
-    case 'BigIntLiteral':
-      return true
-  }
-  return false
-}
-
-export function isConstantNode(node: Node, bindings: BindingMetadata): boolean {
-  if (isStaticNode(node)) return true
-
-  node = unwrapTSNode(node)
-  switch (node.type) {
-    case 'Identifier':
-      const type = bindings[node.name]
-      return type === BindingTypes.LITERAL_CONST
-    case 'RegExpLiteral':
-      return true
-    case 'ObjectExpression':
-      return node.properties.every(prop => {
-        // { bar() {} } object methods are not considered static nodes
-        if (prop.type === 'ObjectMethod') return false
-        // { ...{ foo: 1 } }
-        if (prop.type === 'SpreadElement')
-          return isConstantNode(prop.argument, bindings)
-        // { foo: 1 }
-        return (
-          (!prop.computed || isConstantNode(prop.key, bindings)) &&
-          isConstantNode(prop.value, bindings)
-        )
-      })
-    case 'ArrayExpression':
-      return node.elements.every(element => {
-        // [1, , 3]
-        if (element === null) return true
-        // [1, ...[2, 3]]
-        if (element.type === 'SpreadElement')
-          return isConstantNode(element.argument, bindings)
-        // [1, 2]
-        return isConstantNode(element, bindings)
-      })
-  }
-  return false
 }

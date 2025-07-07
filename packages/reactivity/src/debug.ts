@@ -55,7 +55,7 @@ export function setupOnTrigger(target: { new (...args: any[]): any }): void {
       return this._onTrigger
     },
     set(val) {
-      if (val && !this._onTrigger) setupFlagsHandler(this)
+      if (!this._onTrigger) setupFlagsHandler(this)
       this._onTrigger = val
     },
   })

@@ -74,6 +74,4 @@ export {
   DOMErrorCodes,
   DOMErrorMessages,
 } from './errors'
-export { resolveModifiers } from './transforms/vOn'
-export { isValidHTMLNesting } from './htmlNesting'
 export * from '@vue/compiler-core'

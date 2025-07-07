@@ -1,5 +1,6 @@
 import { pauseTracking, resetTracking } from '@vue/reactivity'
-import type { GenericComponentInstance } from './component'
+import type { VNode } from './vnode'
+import type { ComponentInternalInstance } from './component'
 import { popWarningContext, pushWarningContext, warn } from './warning'
 import { EMPTY_OBJ, isArray, isFunction, isPromise } from '@vue/shared'
 import { LifecycleHooks } from './enums'
@@ -68,7 +69,7 @@ export type ErrorTypes = LifecycleHooks | ErrorCodes | WatchErrorCodes
 
 export function callWithErrorHandling(
   fn: Function,
-  instance: GenericComponentInstance | null | undefined,
+  instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   args?: unknown[],
 ): any {
@@ -81,7 +82,7 @@ export function callWithErrorHandling(
 
 export function callWithAsyncErrorHandling(
   fn: Function | Function[],
-  instance: GenericComponentInstance | null,
+  instance: ComponentInternalInstance | null,
   type: ErrorTypes,
   args?: unknown[],
 ): any {
@@ -110,16 +111,17 @@ export function callWithAsyncErrorHandling(
 
 export function handleError(
   err: unknown,
-  instance: GenericComponentInstance | null | undefined,
+  instance: ComponentInternalInstance | null | undefined,
   type: ErrorTypes,
   throwInDev = true,
 ): void {
+  const contextVNode = instance ? instance.vnode : null
   const { errorHandler, throwUnhandledErrorInProduction } =
     (instance && instance.appContext.config) || EMPTY_OBJ
   if (instance) {
     let cur = instance.parent
     // the exposed instance is the render proxy to keep it consistent with 2.x
-    const exposedInstance = instance.proxy || instance
+    const exposedInstance = instance.proxy
     // in production the hook receives only the error code
     const errorInfo = __DEV__
       ? ErrorTypeStrings[type]
@@ -149,23 +151,23 @@ export function handleError(
       return
     }
   }
-  logError(err, type, instance, throwInDev, throwUnhandledErrorInProduction)
+  logError(err, type, contextVNode, throwInDev, throwUnhandledErrorInProduction)
 }
 
 function logError(
   err: unknown,
   type: ErrorTypes,
-  instance: GenericComponentInstance | null | undefined,
+  contextVNode: VNode | null,
   throwInDev = true,
   throwInProd = false,
 ) {
   if (__DEV__) {
     const info = ErrorTypeStrings[type]
-    if (instance) {
-      pushWarningContext(instance)
+    if (contextVNode) {
+      pushWarningContext(contextVNode)
     }
     warn(`Unhandled error${info ? ` during execution of ${info}` : ``}`)
-    if (instance) {
+    if (contextVNode) {
       popWarningContext()
     }
     // crash in dev by default so it's more noticeable

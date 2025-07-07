@@ -13,6 +13,7 @@ import { activeSub } from './effect'
 import {
   type Builtin,
   type ShallowReactiveMarker,
+  isProxy,
   isReactive,
   isReadonly,
   isShallow,
@@ -20,6 +21,7 @@ import {
   toReactive,
 } from './reactive'
 import { type Dependency, type Link, link, propagate } from './system'
+import { warn } from './warning'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -58,7 +60,7 @@ export function ref<T>(
 ): [T] extends [Ref] ? IfAny<T, Ref<T>, T> : Ref<UnwrapRef<T>, UnwrapRef<T> | T>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
-  return createRef(value, toReactive)
+  return createRef(value, false)
 }
 
 declare const ShallowRefMarker: unique symbol
@@ -93,14 +95,14 @@ export function shallowRef<T>(
   : ShallowRef<T>
 export function shallowRef<T = any>(): ShallowRef<T | undefined>
 export function shallowRef(value?: unknown) {
-  return createRef(value)
+  return createRef(value, true)
 }
 
-function createRef(rawValue: unknown, wrap?: <T>(v: T) => T) {
+function createRef(rawValue: unknown, shallow: boolean) {
   if (isRef(rawValue)) {
     return rawValue
   }
-  return new RefImpl(rawValue, wrap)
+  return new RefImpl(rawValue, shallow)
 }
 
 /**
@@ -112,17 +114,15 @@ class RefImpl<T = any> implements Dependency {
   subsTail: Link | undefined = undefined
 
   _value: T
-  _wrap?: <T>(v: T) => T
   private _rawValue: T
 
   public readonly [ReactiveFlags.IS_REF] = true
   public readonly [ReactiveFlags.IS_SHALLOW]: boolean = false
 
-  constructor(value: T, wrap: (<T>(v: T) => T) | undefined) {
-    this._rawValue = wrap ? toRaw(value) : value
-    this._value = wrap ? wrap(value) : value
-    this._wrap = wrap
-    this[ReactiveFlags.IS_SHALLOW] = !wrap
+  constructor(value: T, isShallow: boolean) {
+    this._rawValue = isShallow ? value : toRaw(value)
+    this._value = isShallow ? value : toReactive(value)
+    this[ReactiveFlags.IS_SHALLOW] = isShallow
   }
 
   get dep() {
@@ -143,8 +143,7 @@ class RefImpl<T = any> implements Dependency {
     newValue = useDirectValue ? newValue : toRaw(newValue)
     if (hasChanged(newValue, oldValue)) {
       this._rawValue = newValue
-      this._value =
-        this._wrap && !useDirectValue ? this._wrap(newValue) : newValue
+      this._value = useDirectValue ? newValue : toReactive(newValue)
       if (__DEV__) {
         triggerEventInfos.push({
           target: this,
@@ -354,6 +353,9 @@ export type ToRefs<T = any> = {
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#torefs}
  */
 export function toRefs<T extends object>(object: T): ToRefs<T> {
+  if (__DEV__ && !isProxy(object)) {
+    warn(`toRefs() expects a reactive object but received a plain one.`)
+  }
   const ret: any = isArray(object) ? new Array(object.length) : {}
   for (const key in object) {
     ret[key] = propertyToRef(object, key)

@@ -10,7 +10,6 @@ import {
   vtcKey,
 } from './Transition'
 import {
-  type ComponentInternalInstance,
   type ComponentOptions,
   DeprecationTypes,
   Fragment,
@@ -125,7 +124,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
         !rawProps.tag &&
         compatUtils.checkCompatEnabled(
           DeprecationTypes.TRANSITION_GROUP_ROOT,
-          instance.parent as ComponentInternalInstance,
+          instance.parent,
         )
       ) {
         tag = 'span'

@@ -18,7 +18,6 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
-  type GenericComponentInstance,
   formatComponentName,
 } from './component'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
@@ -114,28 +113,14 @@ export function emit(
   event: string,
   ...rawArgs: any[]
 ): ComponentPublicInstance | null | undefined {
-  return baseEmit(
-    instance,
-    instance.vnode.props || EMPTY_OBJ,
-    defaultPropGetter,
-    event,
-    ...rawArgs,
-  )
-}
-
-/**
- * @internal for vapor only
- */
-export function baseEmit(
-  instance: GenericComponentInstance,
-  props: Record<string, any>,
-  getter: (props: Record<string, any>, key: string) => unknown,
-  event: string,
-  ...rawArgs: any[]
-): ComponentPublicInstance | null | undefined {
   if (instance.isUnmounted) return
+  const props = instance.vnode.props || EMPTY_OBJ
+
   if (__DEV__) {
-    const { emitsOptions, propsOptions } = instance
+    const {
+      emitsOptions,
+      propsOptions: [propsOptions],
+    } = instance
     if (emitsOptions) {
       if (
         !(event in emitsOptions) &&
@@ -145,11 +130,7 @@ export function baseEmit(
             event.startsWith(compatModelEventPrefix))
         )
       ) {
-        if (
-          !propsOptions ||
-          !propsOptions[0] ||
-          !(toHandlerKey(camelize(event)) in propsOptions[0])
-        ) {
+        if (!propsOptions || !(toHandlerKey(camelize(event)) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
               `the emits option nor as an "${toHandlerKey(camelize(event))}" prop.`,
@@ -173,12 +154,11 @@ export function baseEmit(
   const isCompatModelListener =
     __COMPAT__ && compatModelEventPrefix + event in props
   const isModelListener = isCompatModelListener || event.startsWith('update:')
-  // for v-model update:xxx events, apply modifiers on args
-  // it's ok to use static get because modelModifiers can only be in the static
-  // part of the props
   const modifiers = isCompatModelListener
     ? props.modelModifiers
-    : isModelListener && getModelModifiers(props, event.slice(7), getter)
+    : isModelListener && getModelModifiers(props, event.slice(7))
+
+  // for v-model update:xxx events, apply modifiers on args
   if (modifiers) {
     if (modifiers.trim) {
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
@@ -194,10 +174,7 @@ export function baseEmit(
 
   if (__DEV__) {
     const lowerCaseEvent = event.toLowerCase()
-    if (
-      lowerCaseEvent !== event &&
-      getter(props, toHandlerKey(lowerCaseEvent))
-    ) {
+    if (lowerCaseEvent !== event && props[toHandlerKey(lowerCaseEvent)]) {
       warn(
         `Event "${lowerCaseEvent}" is emitted in component ` +
           `${formatComponentName(
@@ -215,25 +192,25 @@ export function baseEmit(
 
   let handlerName
   let handler =
-    getter(props, (handlerName = toHandlerKey(event))) ||
+    props[(handlerName = toHandlerKey(event))] ||
     // also try camelCase event handler (#2249)
-    getter(props, (handlerName = toHandlerKey(camelize(event))))
+    props[(handlerName = toHandlerKey(camelize(event)))]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
   if (!handler && isModelListener) {
-    handler = getter(props, (handlerName = toHandlerKey(hyphenate(event))))
+    handler = props[(handlerName = toHandlerKey(hyphenate(event)))]
   }
 
   if (handler) {
     callWithAsyncErrorHandling(
-      handler as Function | Function[],
+      handler,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args,
     )
   }
 
-  const onceHandler = getter(props, handlerName + `Once`)
+  const onceHandler = props[handlerName + `Once`]
   if (onceHandler) {
     if (!instance.emitted) {
       instance.emitted = {}
@@ -242,28 +219,17 @@ export function baseEmit(
     }
     instance.emitted[handlerName] = true
     callWithAsyncErrorHandling(
-      onceHandler as Function | Function[],
+      onceHandler,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args,
     )
   }
 
-  if (__COMPAT__ && args) {
-    compatModelEmit(instance as ComponentInternalInstance, event, args)
-    return compatInstanceEmit(
-      instance as ComponentInternalInstance,
-      event,
-      args,
-    )
+  if (__COMPAT__) {
+    compatModelEmit(instance, event, args)
+    return compatInstanceEmit(instance, event, args)
   }
-}
-
-export function defaultPropGetter(
-  props: Record<string, any>,
-  key: string,
-): unknown {
-  return props[key]
 }
 
 export function normalizeEmitsOptions(
@@ -320,13 +286,9 @@ export function normalizeEmitsOptions(
   return normalized
 }
 
-/**
- * Check if an incoming prop key is a declared emit event listener.
- * e.g. With `emits: { click: null }`, props named `onClick` and `onclick` are
- * both considered matched listeners.
- *
- * @internal for vapor only
- */
+// Check if an incoming prop key is a declared emit event listener.
+// e.g. With `emits: { click: null }`, props named `onClick` and `onclick` are
+// both considered matched listeners.
 export function isEmitListener(
   options: ObjectEmitsOptions | null,
   key: string,
