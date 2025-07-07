@@ -28,7 +28,7 @@
 
 - **build:** avoid using async/await syntax ([438754a](https://github.com/vuejs/core/commit/438754a0d1428d10e27d1a290beb4b81da5fdaeb))
 - **build:** fix generated code containing unprocessed class field syntax ([2788154](https://github.com/vuejs/core/commit/2788154f7707928f1dd3e4d9bd144f758a8c0478)), closes [#4052](https://github.com/vuejs/core/issues/4052) [vuejs/vue-cli#6562](https://github.com/vuejs/vue-cli/issues/6562)
-- **codegen:** ensure valid types in genreated code when using global directives ([a44d528](https://github.com/vuejs/core/commit/a44d528af1227c05dedf610b6ec45504d8e58276)), closes [#4054](https://github.com/vuejs/core/issues/4054)
+- **codegen:** ensure valid types in generated code when using global directives ([a44d528](https://github.com/vuejs/core/commit/a44d528af1227c05dedf610b6ec45504d8e58276)), closes [#4054](https://github.com/vuejs/core/issues/4054)
 - **compiler-sfc:** fix parse-only mode when there is no script setup block ([253ca27](https://github.com/vuejs/core/commit/253ca2729d808fc051215876aa4af986e4caa43c))
 - **runtime-core:** add useAttrs and useSlots export ([#4053](https://github.com/vuejs/core/issues/4053)) ([735ada1](https://github.com/vuejs/core/commit/735ada1507623b8d36e80b30a4f67a8af4a45c99))
 - **runtime-core:** fix instance accessed via $parent chain when using expose() ([#4048](https://github.com/vuejs/core/issues/4048)) ([12cf9f4](https://github.com/vuejs/core/commit/12cf9f4ea148a59fd9002ecf9ea9d365829ce37c))
@@ -114,7 +114,7 @@
 ### Performance Improvements
 
 - only trigger `$attrs` update when it has actually changed ([5566d39](https://github.com/vuejs/core/commit/5566d39d467ebdd4e4234bc97d62600ff01ea28e))
-- **compiler:** skip unncessary checks when parsing end tag ([048ac29](https://github.com/vuejs/core/commit/048ac299f35709b25ae1bc1efa67d2abc53dbc3b))
+- **compiler:** skip unnecessary checks when parsing end tag ([048ac29](https://github.com/vuejs/core/commit/048ac299f35709b25ae1bc1efa67d2abc53dbc3b))
 - avoid deopt for props/emits normalization when global mixins are used ([51d2be2](https://github.com/vuejs/core/commit/51d2be20386d4dc59006d31a1cc96676871027ce))
 
 ### Deprecations
@@ -181,7 +181,7 @@
 * **compat:** avoid accidentally delete the modelValue prop ([#3772](https://github.com/vuejs/core/issues/3772)) ([4f17be7](https://github.com/vuejs/core/commit/4f17be7b1ce4872ded085a36b95c1897d8c1f299))
 * **compat:** enum coercion warning ([#3755](https://github.com/vuejs/core/issues/3755)) ([f01aadf](https://github.com/vuejs/core/commit/f01aadf2a16a7bef422eb039d7b157bef9ad32fc))
 * **compiler-core:** fix whitespace management for slots with whitespace: 'preserve' ([#3767](https://github.com/vuejs/core/issues/3767)) ([47da921](https://github.com/vuejs/core/commit/47da92146c9fb3fa6b1e250e064ca49b74d815e4)), closes [#3766](https://github.com/vuejs/core/issues/3766)
-* **compiler-dom:** comments in the v-if branchs should be ignored when used in Transition ([#3622](https://github.com/vuejs/core/issues/3622)) ([7c74feb](https://github.com/vuejs/core/commit/7c74feb3dc6beae7ff3ad22193be3b5a0f4d8aac)), closes [#3619](https://github.com/vuejs/core/issues/3619)
+* **compiler-dom:** comments in the v-if branches should be ignored when used in Transition ([#3622](https://github.com/vuejs/core/issues/3622)) ([7c74feb](https://github.com/vuejs/core/commit/7c74feb3dc6beae7ff3ad22193be3b5a0f4d8aac)), closes [#3619](https://github.com/vuejs/core/issues/3619)
 * **compiler-sfc:** support tsx in setup script ([#3825](https://github.com/vuejs/core/issues/3825)) ([01e8ba8](https://github.com/vuejs/core/commit/01e8ba8f873afe3857a23fb68b44fdc057e31781)), closes [#3808](https://github.com/vuejs/core/issues/3808)
 * **compiler-ssr:** disable hoisting in compiler-ssr ([3ef1fcc](https://github.com/vuejs/core/commit/3ef1fcc8590da186664197a0a82e7856011c1693)), closes [#3536](https://github.com/vuejs/core/issues/3536)
 * **devtools:** send update to component owning the slot ([1355ee2](https://github.com/vuejs/core/commit/1355ee27a65d466bfe8f3a7ba99aa2213e25bc50))
@@ -265,7 +265,7 @@
 - **compat:** avoid accidentally delete the modelValue prop ([#3772](https://github.com/vuejs/core/issues/3772)) ([4f17be7](https://github.com/vuejs/core/commit/4f17be7b1ce4872ded085a36b95c1897d8c1f299))
 - **compat:** enum coercion warning ([#3755](https://github.com/vuejs/core/issues/3755)) ([f01aadf](https://github.com/vuejs/core/commit/f01aadf2a16a7bef422eb039d7b157bef9ad32fc))
 - **compiler-core:** fix whitespace management for slots with whitespace: 'preserve' ([#3767](https://github.com/vuejs/core/issues/3767)) ([47da921](https://github.com/vuejs/core/commit/47da92146c9fb3fa6b1e250e064ca49b74d815e4)), closes [#3766](https://github.com/vuejs/core/issues/3766)
-- **compiler-dom:** comments in the v-if branchs should be ignored when used in Transition ([#3622](https://github.com/vuejs/core/issues/3622)) ([7c74feb](https://github.com/vuejs/core/commit/7c74feb3dc6beae7ff3ad22193be3b5a0f4d8aac)), closes [#3619](https://github.com/vuejs/core/issues/3619)
+- **compiler-dom:** comments in the v-if branches should be ignored when used in Transition ([#3622](https://github.com/vuejs/core/issues/3622)) ([7c74feb](https://github.com/vuejs/core/commit/7c74feb3dc6beae7ff3ad22193be3b5a0f4d8aac)), closes [#3619](https://github.com/vuejs/core/issues/3619)
 - **compiler-sfc:** support tsx in setup script ([#3825](https://github.com/vuejs/core/issues/3825)) ([01e8ba8](https://github.com/vuejs/core/commit/01e8ba8f873afe3857a23fb68b44fdc057e31781)), closes [#3808](https://github.com/vuejs/core/issues/3808)
 - **compiler-ssr:** disable hoisting in compiler-ssr ([3ef1fcc](https://github.com/vuejs/core/commit/3ef1fcc8590da186664197a0a82e7856011c1693)), closes [#3536](https://github.com/vuejs/core/issues/3536)
 - **devtools:** send update to component owning the slot ([1355ee2](https://github.com/vuejs/core/commit/1355ee27a65d466bfe8f3a7ba99aa2213e25bc50))
@@ -317,4 +317,4 @@
 ### Performance Improvements
 
 - only trigger $attrs update when it has actually changed ([5566d39](https://github.com/vuejs/core/commit/5566d39d467ebdd4e4234bc97d62600ff01ea28e))
-- **compiler:** skip unncessary checks when parsing end tag ([048ac29](https://github.com/vuejs/core/commit/048ac299f35709b25ae1bc1efa67d2abc53dbc3b))
+- **compiler:** skip unnecessary checks when parsing end tag ([048ac29](https://github.com/vuejs/core/commit/048ac299f35709b25ae1bc1efa67d2abc53dbc3b))
