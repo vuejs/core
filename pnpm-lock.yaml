@@ -421,6 +421,9 @@ importers:
 
   packages/compiler-vapor:
     dependencies:
+      '@babel/parser':
+        specifier: 'catalog:'
+        version: 7.28.0
       '@vue/compiler-dom':
         specifier: workspace:*
         version: link:../compiler-dom
