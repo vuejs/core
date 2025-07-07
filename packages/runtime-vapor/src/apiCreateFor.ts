@@ -9,8 +9,8 @@ import {
   shallowReadArray,
   shallowRef,
   toReactive,
-  watch,
   toReadonly,
+  watch,
 } from '@vue/reactivity'
 import { getSequence, isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
