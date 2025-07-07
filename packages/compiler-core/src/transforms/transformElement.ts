@@ -384,11 +384,6 @@ function resolveSetupReference(name: string, context: TransformContext) {
       context.inline ? '__props' : '$props'
     }[${JSON.stringify(fromProps)}])`
   }
-
-  // const fromSlotScope = checkType(BindingTypes.SLOT_SCOPE)
-  // if (fromSlotScope) {
-  //   return fromSlotScope
-  // }
 }
 
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
