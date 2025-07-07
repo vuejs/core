@@ -98,6 +98,7 @@ import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import type { TransitionHooks } from './components/BaseTransition'
 import type { VaporInteropInterface } from './apiCreateApp'
+import type { VueElement } from '@vue/runtime-dom'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -512,6 +513,8 @@ function baseCreateRenderer(
     // set ref
     if (ref != null && parentComponent) {
       setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
+    } else if (ref == null && n1 && n1.ref != null) {
+      setRef(n1.ref, null, parentSuspense, n1, true)
     }
   }
 
@@ -997,7 +1000,8 @@ function baseCreateRenderer(
           // which also requires the correct parent container
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
+          oldVNode.shapeFlag &
+            (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE))
           ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
@@ -1260,12 +1264,12 @@ function baseCreateRenderer(
       }
     }
 
+    // avoid hydration for hmr updating
+    if (__DEV__ && isHmrUpdating) initialVNode.el = null
+
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      // avoid hydration for hmr updating
-      if (__DEV__ && isHmrUpdating) initialVNode.el = null
-
       parentSuspense &&
         parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
@@ -1439,7 +1443,12 @@ function baseCreateRenderer(
           }
         } else {
           // custom element style injection
-          if ((root as ComponentInternalInstance).ce) {
+          if (
+            (root as ComponentInternalInstance).ce &&
+            // @ts-expect-error _def is private
+            ((root as ComponentInternalInstance).ce as VueElement)._def
+              .shadowRoot !== false
+          ) {
             ;(root as ComponentInternalInstance).ce!._injectChildStyle(type)
           }
 
@@ -2232,7 +2241,9 @@ function baseCreateRenderer(
 
     // unset ref
     if (ref != null) {
+      const prevSub = setActiveSub()
       setRef(ref, null, parentSuspense, vnode, true)
+      setActiveSub(prevSub)
     }
 
     // #6593 should clean memo cache when unmount
@@ -2410,13 +2421,30 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, effect, subTree, um, m, a } = instance
+    const {
+      bum,
+      scope,
+      effect,
+      subTree,
+      um,
+      m,
+      a,
+      parent,
+      slots: { __: slotCacheKeys },
+    } = instance
     invalidateMount(m)
     invalidateMount(a)
 
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
+    }
+
+    // remove slots content from parent renderCache
+    if (parent && isArray(slotCacheKeys)) {
+      slotCacheKeys.forEach(v => {
+        ;(parent as ComponentInternalInstance).renderCache[v] = undefined
+      })
     }
 
     if (
@@ -2572,9 +2600,12 @@ function baseCreateRenderer(
     // HMR root reload
     if (__DEV__) {
       app._context.reload = () => {
+        const cloned = cloneVNode(vnode)
+        // avoid hydration for hmr updating
+        cloned.el = null
         // casting to ElementNamespace because TS doesn't guarantee type narrowing
         // over function boundaries
-        render(cloneVNode(vnode), container, namespace as ElementNamespace)
+        render(cloned, container, namespace as ElementNamespace)
       }
     }
 
@@ -2680,10 +2711,14 @@ export function traverseStaticChildren(
       if (c2.type === Text) {
         c2.el = c1.el
       }
-      // also inherit for comment nodes, but not placeholders (e.g. v-if which
+      // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
       // would have received .el during block patch)
-      if (__DEV__ && c2.type === Comment && !c2.el) {
+      if (c2.type === Comment && !c2.el) {
         c2.el = c1.el
+      }
+
+      if (__DEV__) {
+        c2.el && (c2.el.__vnode = c2)
       }
     }
   }

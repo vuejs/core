@@ -1642,7 +1642,7 @@ describe('api: watch', () => {
 
     num.value++
     await nextTick()
-    // would not be calld when value>1
+    // would not be called when value>1
     expect(spy1).toHaveBeenCalledTimes(1)
     expect(spy2).toHaveBeenCalledTimes(1)
   })
@@ -1921,7 +1921,7 @@ describe('api: watch', () => {
     expect(foo.value.a).toBe(2)
   })
 
-  test('watch immediate error in effect scope should be catched by onErrorCaptured', async () => {
+  test('watch immediate error in effect scope should be caught by onErrorCaptured', async () => {
     const warn = vi.spyOn(console, 'warn')
     warn.mockImplementation(() => {})
     const ERROR_IN_SCOPE = 'ERROR_IN_SCOPE'

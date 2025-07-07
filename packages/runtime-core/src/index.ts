@@ -558,3 +558,7 @@ export { startMeasure, endMeasure } from './profiling'
  * @internal
  */
 export { initFeatureFlags } from './featureFlags'
+/**
+ * @internal
+ */
+export { createInternalObject } from './internalObject'
