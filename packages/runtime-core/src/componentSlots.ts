@@ -106,6 +106,7 @@ const normalizeSlot = (
     if (
       __DEV__ &&
       currentInstance &&
+      !currentInstance.vapor &&
       !(ctx === null && currentRenderingInstance) &&
       !(ctx && ctx.root !== currentInstance.root)
     ) {

@@ -123,6 +123,11 @@ export interface TransformContext
   filters?: Set<string>
 }
 
+export function getSelfName(filename: string): string | null {
+  const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
+  return nameMatch ? capitalize(camelize(nameMatch[1])) : null
+}
+
 export function createTransformContext(
   root: RootNode,
   {
@@ -150,11 +155,10 @@ export function createTransformContext(
     compatConfig,
   }: TransformOptions,
 ): TransformContext {
-  const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
   const context: TransformContext = {
     // options
     filename,
-    selfName: nameMatch && capitalize(camelize(nameMatch[1])),
+    selfName: getSelfName(filename),
     prefixIdentifiers,
     hoistStatic,
     hmr,

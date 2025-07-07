@@ -1,4 +1,3 @@
-import type { Data } from '../component'
 import type { RawSlots, Slots } from '../componentSlots'
 import {
   type ContextualRenderFn,
@@ -9,6 +8,7 @@ import {
   Fragment,
   type VNode,
   type VNodeArrayChildren,
+  VaporSlot,
   createBlock,
   createVNode,
   isVNode,
@@ -17,6 +17,7 @@ import {
 import { PatchFlags, SlotFlags, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
+import type { Data } from '../component'
 
 /**
  * Compiler runtime helper for rendering `<slot/>`
@@ -31,11 +32,21 @@ export function renderSlot(
   fallback?: () => VNodeArrayChildren,
   noSlotted?: boolean,
 ): VNode {
+  let slot = slots[name]
+
+  // vapor slots rendered in vdom
+  if (slot && slots._vapor) {
+    const ret = (openBlock(), createBlock(VaporSlot, props))
+    ret.vs = { slot, fallback }
+    return ret
+  }
+
   if (
-    currentRenderingInstance!.ce ||
-    (currentRenderingInstance!.parent &&
-      isAsyncWrapper(currentRenderingInstance!.parent) &&
-      currentRenderingInstance!.parent.ce)
+    currentRenderingInstance &&
+    (currentRenderingInstance.ce ||
+      (currentRenderingInstance.parent &&
+        isAsyncWrapper(currentRenderingInstance.parent) &&
+        currentRenderingInstance.parent.ce))
   ) {
     // in custom element mode, render <slot/> as actual slot outlets
     // wrap it with a fragment because in shadowRoot: false mode the slot
@@ -51,8 +62,6 @@ export function renderSlot(
       )
     )
   }
-
-  let slot = slots[name]
 
   if (__DEV__ && slot && slot.length > 1) {
     warn(

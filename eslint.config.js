@@ -106,7 +106,7 @@ export default tseslint.config(
 
   // Packages targeting DOM
   {
-    files: ['packages/{vue,vue-compat,runtime-dom}/**'],
+    files: ['packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**'],
     rules: {
       'no-restricted-globals': ['error', ...NodeGlobals],
     },
@@ -126,6 +126,7 @@ export default tseslint.config(
     files: [
       'packages-private/template-explorer/**',
       'packages-private/sfc-playground/**',
+      'packages-private/local-playground/**',
     ],
     rules: {
       'no-restricted-globals': ['error', ...NodeGlobals],
@@ -152,6 +153,8 @@ export default tseslint.config(
       './*.{js,ts}',
       'packages/*/*.js',
       'packages/vue/*/*.js',
+      'packages-private/benchmark/*',
+      'packages-private/e2e-utils/*',
     ],
     rules: {
       'no-restricted-globals': 'off',

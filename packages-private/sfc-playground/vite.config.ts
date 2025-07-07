@@ -53,6 +53,8 @@ function copyVuePlugin(): Plugin {
       copyFile(`vue/dist/vue.esm-browser.prod.js`)
       copyFile(`vue/dist/vue.runtime.esm-browser.js`)
       copyFile(`vue/dist/vue.runtime.esm-browser.prod.js`)
+      copyFile(`vue/dist/vue.runtime-with-vapor.esm-browser.js`)
+      copyFile(`vue/dist/vue.runtime-with-vapor.esm-browser.prod.js`)
       copyFile(`server-renderer/dist/server-renderer.esm-browser.js`)
     },
   }
