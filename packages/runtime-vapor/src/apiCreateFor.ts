@@ -2,12 +2,14 @@ import {
   EffectScope,
   type ShallowRef,
   isReactive,
+  isReadonly,
   isShallow,
   pauseTracking,
   resetTracking,
   shallowReadArray,
   shallowRef,
   toReactive,
+  toReadonly,
 } from '@vue/reactivity'
 import {
   extend,
@@ -31,6 +33,12 @@ import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
+import { isHydrating, locateHydrationNode } from './dom/hydration'
+import {
+  insertionAnchor,
+  insertionParent,
+  resetInsertionState,
+} from './insertionState'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
@@ -62,10 +70,10 @@ type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 type ResolvedSource = {
   values: any[]
   needsWrap: boolean
+  isReadonlySource: boolean
   keys?: string[]
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
 export const createFor = (
   src: () => Source,
   renderItem: (
@@ -75,13 +83,21 @@ export const createFor = (
   ) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
   flags = 0,
-  // hydrationNode?: Node,
 ): VaporFragment => {
+  const _insertionParent = insertionParent
+  const _insertionAnchor = insertionAnchor
+  if (isHydrating) {
+    locateHydrationNode()
+  } else {
+    resetInsertionState()
+  }
+
   let isMounted = false
   let prevNeedsWrap: boolean
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
+  // TODO handle this in hydration
   const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
   const frag = new VaporFragment(oldBlocks)
   const instance = currentInstance!
@@ -373,6 +389,11 @@ export const createFor = (
   } else {
     renderEffect(renderList)
   }
+
+  if (!isHydrating && _insertionParent) {
+    insert(frag, _insertionParent, _insertionAnchor)
+  }
+
   return frag
 }
 
@@ -391,11 +412,13 @@ export function createForSlots(
 
 function normalizeSource(source: any, needsWrap = false): ResolvedSource {
   let values = source
+  let isReadonlySource = false
   let keys
   if (isArray(source)) {
     if (isReactive(source)) {
       needsWrap = !isShallow(source)
       values = shallowReadArray(source)
+      isReadonlySource = isReadonly(source)
     }
   } else if (isString(source)) {
     values = source.split('')
@@ -416,7 +439,12 @@ function normalizeSource(source: any, needsWrap = false): ResolvedSource {
       }
     }
   }
-  return { values, needsWrap, keys }
+  return {
+    values,
+    needsWrap,
+    isReadonlySource,
+    keys,
+  }
 }
 
 function shallowClone(val: any) {
@@ -432,10 +460,14 @@ function shallowClone(val: any) {
 }
 
 function getItem(
-  { keys, values, needsWrap }: ResolvedSource,
+  { keys, values, needsWrap, isReadonlySource }: ResolvedSource,
   idx: number,
 ): [item: any, key: any, index?: number] {
-  const value = needsWrap ? toReactive(values[idx]) : shallowClone(values[idx])
+  const value = needsWrap
+    ? isReadonlySource
+      ? toReadonly(toReactive(values[idx]))
+      : toReactive(values[idx])
+    : shallowClone(values[idx])
   if (keys) {
     return [value, keys[idx], idx]
   } else {

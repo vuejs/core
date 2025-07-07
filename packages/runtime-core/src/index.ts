@@ -64,7 +64,7 @@ export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
-export { useTemplateRef } from './helpers/useTemplateRef'
+export { useTemplateRef, type TemplateRef } from './helpers/useTemplateRef'
 export { useId } from './helpers/useId'
 export {
   hydrateOnIdle,
@@ -557,3 +557,7 @@ export { startMeasure, endMeasure } from './profiling'
  * @internal
  */
 export { initFeatureFlags } from './featureFlags'
+/**
+ * @internal
+ */
+export { createInternalObject } from './internalObject'

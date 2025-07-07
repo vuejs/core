@@ -29,8 +29,8 @@ exports[`compiler: element transform > component > generate multi root component
 const t0 = _template("123")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const n1 = t0()
   const n0 = _createComponent(_ctx.Comp)
+  const n1 = t0()
   return [n0, n1]
 }"
 `;
@@ -73,6 +73,16 @@ exports[`compiler: element transform > component > resolve component from setup 
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = _createComponent(_ctx.Example, null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > resolve implicitly self-referencing component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Example__self = _resolveComponent("Example", true)
+  const n0 = _createComponentWithFallback(_component_Example__self, null, null, true)
   return n0
 }"
 `;
@@ -174,6 +184,18 @@ export function render(_ctx) {
       { class: () => ("bar") }
     ]
   }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-for on component should not mark as single root 1`] = `
+"import { createComponent as _createComponent, createFor as _createFor } from 'vue';
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = _createComponent(_ctx.Comp)
+    return n2
+  }, (item) => (item), 2)
   return n0
 }"
 `;
@@ -321,8 +343,8 @@ const t2 = _template("<form></form>")
 
 export function render(_ctx) {
   const n1 = t1()
-  const n0 = t0()
   const n3 = t2()
+  const n0 = t0()
   const n2 = t2()
   _insert(n0, n1)
   _insert(n2, n3)

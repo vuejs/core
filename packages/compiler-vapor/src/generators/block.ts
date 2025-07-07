@@ -11,7 +11,7 @@ import {
 } from './utils'
 import type { CodegenContext } from '../generate'
 import { genEffects, genOperations } from './operation'
-import { genChildren } from './template'
+import { genChildren, genSelf } from './template'
 import { toValidAssetId } from '@vue/compiler-dom'
 
 export function genBlock(
@@ -44,12 +44,29 @@ export function genBlockContent(
   const resetBlock = context.enterBlock(block)
 
   if (root) {
-    genResolveAssets('component', 'resolveComponent')
+    for (let name of context.ir.component) {
+      const id = toValidAssetId(name, 'component')
+      const maybeSelfReference = name.endsWith('__self')
+      if (maybeSelfReference) name = name.slice(0, -6)
+      push(
+        NEWLINE,
+        `const ${id} = `,
+        ...genCall(
+          context.helper('resolveComponent'),
+          JSON.stringify(name),
+          // pass additional `maybeSelfReference` flag
+          maybeSelfReference ? 'true' : undefined,
+        ),
+      )
+    }
     genResolveAssets('directive', 'resolveDirective')
   }
 
   for (const child of dynamic.children) {
-    push(...genChildren(child, context, `n${child.id!}`))
+    push(...genSelf(child, context))
+  }
+  for (const child of dynamic.children) {
+    push(...genChildren(child, context, push, `n${child.id!}`))
   }
 
   push(...genOperations(operation, context))

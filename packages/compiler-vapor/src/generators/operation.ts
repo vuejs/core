@@ -1,4 +1,10 @@
-import { type IREffect, IRNodeTypes, type OperationNode } from '../ir'
+import {
+  type IREffect,
+  IRNodeTypes,
+  type InsertionStateTypes,
+  type OperationNode,
+  isBlockOperation,
+} from '../ir'
 import type { CodegenContext } from '../generate'
 import { genInsertNode, genPrependNode } from './dom'
 import { genSetDynamicEvents, genSetEvent } from './event'
@@ -7,13 +13,14 @@ import { genSetHtml } from './html'
 import { genIf } from './if'
 import { genDynamicProps, genSetProp } from './prop'
 import { genDeclareOldRef, genSetTemplateRef } from './templateRef'
-import { genCreateTextNode, genGetTextChild, genSetText } from './text'
+import { genGetTextChild, genSetText } from './text'
 import {
   type CodeFragment,
   INDENT_END,
   INDENT_START,
   NEWLINE,
   buildCodeFragment,
+  genCall,
 } from './utils'
 import { genCreateComponent } from './component'
 import { genSlotOutlet } from './slotOutlet'
@@ -26,8 +33,20 @@ export function genOperations(
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   for (const operation of opers) {
-    push(...genOperation(operation, context))
+    push(...genOperationWithInsertionState(operation, context))
   }
+  return frag
+}
+
+export function genOperationWithInsertionState(
+  oper: OperationNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const [frag, push] = buildCodeFragment()
+  if (isBlockOperation(oper) && oper.parent) {
+    push(...genInsertionState(oper, context))
+  }
+  push(...genOperation(oper, context))
   return frag
 }
 
@@ -50,8 +69,6 @@ export function genOperation(
       return genSetHtml(oper, context)
     case IRNodeTypes.SET_TEMPLATE_REF:
       return genSetTemplateRef(oper, context)
-    case IRNodeTypes.CREATE_TEXT_NODE:
-      return genCreateTextNode(oper, context)
     case IRNodeTypes.INSERT_NODE:
       return genInsertNode(oper, context)
     case IRNodeTypes.PREPEND_NODE:
@@ -82,10 +99,8 @@ export function genEffects(
   effects: IREffect[],
   context: CodegenContext,
 ): CodeFragment[] {
-  const {
-    helper,
-    block: { expressions },
-  } = context
+  const { helper } = context
+  const expressions = effects.flatMap(effect => effect.expressions)
   const [frag, push, unshift] = buildCodeFragment()
   let operationsCount = 0
   const { ids, frag: declarationFrags } = processExpressions(
@@ -133,4 +148,22 @@ export function genEffect(
   }
 
   return frag
+}
+
+function genInsertionState(
+  operation: InsertionStateTypes,
+  context: CodegenContext,
+): CodeFragment[] {
+  return [
+    NEWLINE,
+    ...genCall(
+      context.helper('setInsertionState'),
+      `n${operation.parent}`,
+      operation.anchor == null
+        ? undefined
+        : operation.anchor === -1 // -1 indicates prepend
+          ? `0` // runtime anchor value for prepend
+          : `n${operation.anchor}`,
+    ),
+  ]
 }

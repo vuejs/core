@@ -9,7 +9,7 @@ import {
   createSimpleExpression,
   isStaticArgOf,
   isStaticExp,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import {
   type BlockIRNode,
@@ -100,13 +100,13 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
 
   return () => {
     exitBlock && exitBlock()
-    context.registerOperation({
+    context.dynamic.operation = {
       type: IRNodeTypes.SLOT_OUTLET_NODE,
       id,
       name: slotName,
       props: irProps,
       fallback,
-    })
+    }
   }
 }
 

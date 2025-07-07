@@ -23,6 +23,13 @@ const seen = new WeakMap<
   WeakSet<TemplateChildNode | RootNode>
 >()
 
+export function markNonTemplate(
+  node: TemplateChildNode,
+  context: TransformContext,
+): void {
+  seen.get(context.root)!.add(node)
+}
+
 export const transformText: NodeTransform = (node, context) => {
   if (!seen.has(context.root)) seen.set(context.root, new WeakSet())
   if (seen.get(context.root)!.has(node)) {
@@ -30,31 +37,70 @@ export const transformText: NodeTransform = (node, context) => {
     return
   }
 
+  const isFragment =
+    node.type === NodeTypes.ROOT ||
+    (node.type === NodeTypes.ELEMENT &&
+      (node.tagType === ElementTypes.TEMPLATE ||
+        node.tagType === ElementTypes.COMPONENT))
+
   if (
-    node.type === NodeTypes.ELEMENT &&
-    node.tagType === ElementTypes.ELEMENT &&
-    isAllTextLike(node.children)
+    (isFragment ||
+      (node.type === NodeTypes.ELEMENT &&
+        node.tagType === ElementTypes.ELEMENT)) &&
+    node.children.length
   ) {
-    processTextLikeContainer(
-      node.children,
-      context as TransformContext<ElementNode>,
-    )
+    let hasInterp = false
+    let isAllTextLike = true
+    for (const c of node.children) {
+      if (c.type === NodeTypes.INTERPOLATION) {
+        hasInterp = true
+      } else if (c.type !== NodeTypes.TEXT) {
+        isAllTextLike = false
+      }
+    }
+    // all text like with interpolation
+    if (!isFragment && isAllTextLike && hasInterp) {
+      processTextContainer(
+        node.children as TextLike[],
+        context as TransformContext<ElementNode>,
+      )
+    } else if (hasInterp) {
+      // check if there's any text before interpolation, it needs to be merged
+      for (let i = 0; i < node.children.length; i++) {
+        const c = node.children[i]
+        const prev = node.children[i - 1]
+        if (
+          c.type === NodeTypes.INTERPOLATION &&
+          prev &&
+          prev.type === NodeTypes.TEXT
+        ) {
+          // mark leading text node for skipping
+          markNonTemplate(prev, context)
+        }
+      }
+    }
   } else if (node.type === NodeTypes.INTERPOLATION) {
-    processTextLike(context as TransformContext<InterpolationNode>)
+    processInterpolation(context as TransformContext<InterpolationNode>)
   } else if (node.type === NodeTypes.TEXT) {
     context.template += node.content
   }
 }
 
-function processTextLike(context: TransformContext<InterpolationNode>) {
-  const nexts = context.parent!.node.children.slice(context.index)
+function processInterpolation(context: TransformContext<InterpolationNode>) {
+  const children = context.parent!.node.children
+  const nexts = children.slice(context.index)
   const idx = nexts.findIndex(n => !isTextLike(n))
   const nodes = (idx > -1 ? nexts.slice(0, idx) : nexts) as Array<TextLike>
 
+  // merge leading text
+  const prev = children[context.index - 1]
+  if (prev && prev.type === NodeTypes.TEXT) {
+    nodes.unshift(prev)
+  }
+
+  context.template += ' '
   const id = context.reference()
   const values = nodes.map(node => createTextLikeExpression(node, context))
-
-  context.dynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
 
   const nonConstantExps = values.filter(v => !isConstantExpression(v))
   const isStatic =
@@ -64,12 +110,13 @@ function processTextLike(context: TransformContext<InterpolationNode>) {
     ) ||
     context.inVOnce
 
-  context.registerOperation({
-    type: IRNodeTypes.CREATE_TEXT_NODE,
-    id,
-    values: isStatic ? values : undefined,
-  })
-  if (!isStatic) {
+  if (isStatic) {
+    context.registerOperation({
+      type: IRNodeTypes.SET_TEXT,
+      element: id,
+      values,
+    })
+  } else {
     context.registerEffect(values, {
       type: IRNodeTypes.SET_TEXT,
       element: id,
@@ -78,7 +125,7 @@ function processTextLike(context: TransformContext<InterpolationNode>) {
   }
 }
 
-function processTextLikeContainer(
+function processTextContainer(
   children: TextLike[],
   context: TransformContext<ElementNode>,
 ) {
@@ -103,21 +150,12 @@ function processTextLikeContainer(
 }
 
 function createTextLikeExpression(node: TextLike, context: TransformContext) {
-  seen.get(context.root)!.add(node)
+  markNonTemplate(node, context)
   if (node.type === NodeTypes.TEXT) {
     return createSimpleExpression(node.content, true, node.loc)
   } else {
     return node.content as SimpleExpressionNode
   }
-}
-
-function isAllTextLike(children: TemplateChildNode[]): children is TextLike[] {
-  return (
-    !!children.length &&
-    children.every(isTextLike) &&
-    // at least one an interpolation
-    children.some(n => n.type === NodeTypes.INTERPOLATION)
-  )
 }
 
 function isTextLike(node: TemplateChildNode): node is TextLike {

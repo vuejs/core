@@ -1,4 +1,5 @@
 // TODO: add tests for this transform
+import { NodeTypes } from '@vue/compiler-dom'
 import {
   IRNodeTypes,
   transformChildren,
@@ -24,14 +25,14 @@ describe('compiler: text transform', () => {
       '{{ "hello world" }}',
     )
     expect(code).toMatchSnapshot()
-    expect(helpers).contains.all.keys('createTextNode')
+    expect(helpers).contains.all.keys('setText', 'template')
     expect(ir.block.operation).toMatchObject([
       {
-        type: IRNodeTypes.CREATE_TEXT_NODE,
-        id: 0,
+        type: IRNodeTypes.SET_TEXT,
+        element: 0,
         values: [
           {
-            type: IRNodeTypes.SET_TEXT,
+            type: NodeTypes.SIMPLE_EXPRESSION,
             content: '"hello world"',
             isStatic: false,
           },
@@ -43,14 +44,8 @@ describe('compiler: text transform', () => {
   it('consecutive text', () => {
     const { code, ir, helpers } = compileWithTextTransform('{{ msg }}')
     expect(code).toMatchSnapshot()
-    expect(helpers).contains.all.keys('createTextNode')
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.CREATE_TEXT_NODE,
-        id: 0,
-        values: undefined,
-      },
-    ])
+    expect(helpers).contains.all.keys('setText', 'template')
+    expect(ir.block.operation).toMatchObject([])
     expect(ir.block.effect.length).toBe(1)
   })
 })
