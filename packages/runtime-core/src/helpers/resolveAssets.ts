@@ -160,7 +160,7 @@ function resolve(registry: Record<string, any> | undefined, name: string) {
  */
 export function resolveSetupReturned(
   name: string,
-  setupReturn: ComponentInternalInstance['setupState'],
+  setupReturn: Record<string, unknown>,
 ): unknown {
   if (!setupReturn) return name
   const returnValue = setupReturn[name]
