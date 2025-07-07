@@ -77,6 +77,16 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
+exports[`compiler: element transform > component > resolve implicitly self-referencing component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Example__self = _resolveComponent("Example", true)
+  const n0 = _createComponentWithFallback(_component_Example__self, null, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > resolve namespaced component from props bindings (inline) 1`] = `
 "
   const n0 = _createComponent(Foo.Example, null, null, true)
@@ -174,6 +184,18 @@ export function render(_ctx) {
       { class: () => ("bar") }
     ]
   }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-for on component should not mark as single root 1`] = `
+"import { createComponent as _createComponent, createFor as _createFor } from 'vue';
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = _createComponent(_ctx.Comp)
+    return n2
+  }, (item) => (item), 2)
   return n0
 }"
 `;

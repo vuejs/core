@@ -929,7 +929,7 @@ export default class Tokenizer {
     this.buffer = input
     while (this.index < this.buffer.length) {
       const c = this.buffer.charCodeAt(this.index)
-      if (c === CharCodes.NewLine) {
+      if (c === CharCodes.NewLine && this.state !== State.InEntity) {
         this.newlines.push(this.index)
       }
       switch (this.state) {

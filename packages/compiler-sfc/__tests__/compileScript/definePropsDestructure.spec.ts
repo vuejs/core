@@ -360,6 +360,22 @@ describe('sfc reactive props destructure', () => {
     expect(content).toMatch(`props: ['item'],`)
   })
 
+  test('handle function parameters with same name as destructured props', () => {
+    const { content } = compile(`
+    <script setup>
+    const { value } = defineProps()
+    function test(value) {
+      try {
+      } catch {
+      }
+    }
+    console.log(value)
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`console.log(__props.value)`)
+  })
+
   test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
     const { content } = compile(`
     <script setup>

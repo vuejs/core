@@ -37,7 +37,7 @@ import {
   helperNameMap,
 } from './runtimeHelpers'
 import { isVSlot } from './utils'
-import { cacheStatic, isSingleElementRoot } from './transforms/cacheStatic'
+import { cacheStatic, getSingleElementRoot } from './transforms/cacheStatic'
 import type { CompilerCompatOptions } from './compat/compatConfig'
 
 // There are two types of transforms:
@@ -123,6 +123,11 @@ export interface TransformContext
   filters?: Set<string>
 }
 
+export function getSelfName(filename: string): string | null {
+  const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
+  return nameMatch ? capitalize(camelize(nameMatch[1])) : null
+}
+
 export function createTransformContext(
   root: RootNode,
   {
@@ -150,11 +155,10 @@ export function createTransformContext(
     compatConfig,
   }: TransformOptions,
 ): TransformContext {
-  const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
   const context: TransformContext = {
     // options
     filename,
-    selfName: nameMatch && capitalize(camelize(nameMatch[1])),
+    selfName: getSelfName(filename),
     prefixIdentifiers,
     hoistStatic,
     hmr,
@@ -356,12 +360,12 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
   const { helper } = context
   const { children } = root
   if (children.length === 1) {
-    const child = children[0]
+    const singleElementRootChild = getSingleElementRoot(root)
     // if the single child is an element, turn it into a block.
-    if (isSingleElementRoot(root, child) && child.codegenNode) {
+    if (singleElementRootChild && singleElementRootChild.codegenNode) {
       // single element root is never hoisted so codegenNode will never be
       // SimpleExpressionNode
-      const codegenNode = child.codegenNode
+      const codegenNode = singleElementRootChild.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
         convertToBlock(codegenNode, context)
       }
@@ -370,7 +374,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       // - single <slot/>, IfNode, ForNode: already blocks.
       // - single text node: always patched.
       // root codegen falls through via genNode()
-      root.codegenNode = child
+      root.codegenNode = children[0]
     }
   } else if (children.length > 1) {
     // root has multiple nodes - return a fragment block.

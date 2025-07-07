@@ -44,7 +44,7 @@ export function genOperationWithInsertionState(
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   if (isBlockOperation(oper) && oper.parent) {
-    push(...genInsertionstate(oper, context))
+    push(...genInsertionState(oper, context))
   }
   push(...genOperation(oper, context))
   return frag
@@ -100,10 +100,8 @@ export function genEffects(
   context: CodegenContext,
   genExtraFrag?: () => CodeFragment[],
 ): CodeFragment[] {
-  const {
-    helper,
-    block: { expressions },
-  } = context
+  const { helper } = context
+  const expressions = effects.flatMap(effect => effect.expressions)
   const [frag, push, unshift] = buildCodeFragment()
   const shouldDeclare = genExtraFrag === undefined
   let operationsCount = 0
@@ -166,7 +164,7 @@ export function genEffect(
   return frag
 }
 
-function genInsertionstate(
+function genInsertionState(
   operation: InsertionStateTypes,
   context: CodegenContext,
 ): CodeFragment[] {

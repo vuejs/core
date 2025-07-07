@@ -186,6 +186,32 @@ describe('compiler: v-for', () => {
     })
   })
 
+  test('object value, key and index', () => {
+    const { code, ir } = compileWithVFor(
+      `<div v-for="(value, key, index) in list" :key="key">{{ value + key + index }}</div>`,
+    )
+    expect(code).matchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.FOR,
+      source: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'list',
+      },
+      value: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'value',
+      },
+      key: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'key',
+      },
+      index: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'index',
+      },
+    })
+  })
+
   test('object de-structured value', () => {
     const { code, ir } = compileWithVFor(
       '<span v-for="({ id, value }) in items" :key="id">{{ id }}{{ value }}</span>',

@@ -2,6 +2,7 @@ import {
   EffectScope,
   type ShallowRef,
   isReactive,
+  isReadonly,
   isShallow,
   pauseTracking,
   resetTracking,
@@ -9,6 +10,7 @@ import {
   shallowRef,
   toReactive,
   watch,
+  toReadonly,
 } from '@vue/reactivity'
 import { getSequence, isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
@@ -24,7 +26,11 @@ import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
-import { insertionAnchor, insertionParent } from './insertionState'
+import {
+  insertionAnchor,
+  insertionParent,
+  resetInsertionState,
+} from './insertionState'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
@@ -56,6 +62,7 @@ type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 type ResolvedSource = {
   values: any[]
   needsWrap: boolean
+  isReadonlySource: boolean
   keys?: string[]
 }
 
@@ -73,6 +80,8 @@ export const createFor = (
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
+  } else {
+    resetInsertionState()
   }
 
   let isMounted = false
@@ -458,11 +467,13 @@ export function createForSlots(
 function normalizeSource(source: any): ResolvedSource {
   let values = source
   let needsWrap = false
+  let isReadonlySource = false
   let keys
   if (isArray(source)) {
     if (isReactive(source)) {
       needsWrap = !isShallow(source)
       values = shallowReadArray(source)
+      isReadonlySource = isReadonly(source)
     }
   } else if (isString(source)) {
     values = source.split('')
@@ -483,14 +494,23 @@ function normalizeSource(source: any): ResolvedSource {
       }
     }
   }
-  return { values, needsWrap, keys }
+  return {
+    values,
+    needsWrap,
+    isReadonlySource,
+    keys,
+  }
 }
 
 function getItem(
-  { keys, values, needsWrap }: ResolvedSource,
+  { keys, values, needsWrap, isReadonlySource }: ResolvedSource,
   idx: number,
 ): [item: any, key: any, index?: number] {
-  const value = needsWrap ? toReactive(values[idx]) : values[idx]
+  const value = needsWrap
+    ? isReadonlySource
+      ? toReadonly(toReactive(values[idx]))
+      : toReactive(values[idx])
+    : values[idx]
   if (keys) {
     return [value, keys[idx], idx]
   } else {
