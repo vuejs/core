@@ -42,7 +42,6 @@ describe('vdomInterop', () => {
     test('functional slot', () => {
       const VDomChild = defineComponent({
         setup(_, { slots }) {
-          console.log(slots.default)
           return () => createVNode(slots.default!)
         },
       })
