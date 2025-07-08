@@ -84,7 +84,7 @@ export interface SFCDescriptor {
    */
   slotted: boolean
 
-  vapor: boolean
+  vapor?: boolean
 
   /**
    * compare with an existing descriptor to determine whether HMR should perform
