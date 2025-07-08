@@ -87,7 +87,8 @@ export const transformText: NodeTransform = (node, context) => {
 }
 
 function processInterpolation(context: TransformContext<InterpolationNode>) {
-  const children = context.parent!.node.children
+  const parentNode = context.parent!.node
+  const children = parentNode.children
   const nexts = children.slice(context.index)
   const idx = nexts.findIndex(n => !isTextLike(n))
   const nodes = (idx > -1 ? nexts.slice(0, idx) : nexts) as Array<TextLike>
@@ -98,9 +99,22 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
     nodes.unshift(prev)
   }
 
+  const values = nodes
+    .map(node => createTextLikeExpression(node, context))
+    .filter(v =>
+      v.type === NodeTypes.SIMPLE_EXPRESSION ? v.content.length !== 0 : true,
+    )
+
+  if (values.length === 0 && parentNode.type !== NodeTypes.ROOT) {
+    return
+  }
+
   context.template += ' '
   const id = context.reference()
-  const values = nodes.map(node => createTextLikeExpression(node, context))
+
+  if (values.length === 0) {
+    return
+  }
 
   const nonConstantExps = values.filter(v => !isConstantExpression(v))
   const isStatic =
@@ -129,8 +143,14 @@ function processTextContainer(
   children: TextLike[],
   context: TransformContext<ElementNode>,
 ) {
-  const values = children.map(child => createTextLikeExpression(child, context))
+  const values = children
+    .map(child => createTextLikeExpression(child, context))
+    .filter(v =>
+      v.type === NodeTypes.SIMPLE_EXPRESSION ? v.content.length !== 0 : true,
+    )
+
   const literals = values.map(getLiteralExpressionValue)
+
   if (literals.every(l => l != null)) {
     context.childrenTemplate = literals.map(l => String(l))
   } else {
