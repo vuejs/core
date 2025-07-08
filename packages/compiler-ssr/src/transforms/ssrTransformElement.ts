@@ -39,6 +39,7 @@ import {
   isBooleanAttr,
   isBuiltInDirective,
   isSSRSafeAttrName,
+  isString,
   propsToAttrMap,
 } from '@vue/shared'
 import { SSRErrorCodes, createSSRCompilerError } from '../errors'
@@ -423,9 +424,16 @@ function removeStaticBinding(
   tag: TemplateLiteral['elements'],
   binding: string,
 ) {
-  const regExp = new RegExp(`^ ${binding}=".+"$`)
-
-  const i = tag.findIndex(e => typeof e === 'string' && regExp.test(e))
+  const bindingStart = ` ${binding}="`
+  // tag must end with at least one character and "
+  const minLen = bindingStart.length + 2
+  const i = tag.findIndex(
+    e =>
+      isString(e) &&
+      e.length >= minLen &&
+      e.startsWith(bindingStart) &&
+      e[e.length - 1] === '"',
+  )
 
   if (i > -1) {
     tag.splice(i, 1)
