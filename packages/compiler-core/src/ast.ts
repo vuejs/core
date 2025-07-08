@@ -876,7 +876,7 @@ export function getVNodeBlockHelper(
   return ssr || isComponent ? CREATE_BLOCK : CREATE_ELEMENT_BLOCK
 }
 
-export function getSetupReturnedHelper(): typeof RESOLVE_LATE_ADDED_TAG {
+export function getResolveLateAddedTagHelper(): typeof RESOLVE_LATE_ADDED_TAG {
   return RESOLVE_LATE_ADDED_TAG
 }
 

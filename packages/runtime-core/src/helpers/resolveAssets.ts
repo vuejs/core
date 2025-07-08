@@ -1,6 +1,5 @@
 import {
   type ComponentInternalInstance,
-  type ComponentInternalOptions,
   type ComponentOptions,
   type ConcreteComponent,
   currentInstance,
@@ -158,19 +157,23 @@ function resolve(registry: Record<string, any> | undefined, name: string) {
 /**
  * @private
  */
-export function resolveLateAddedTag(name: string): unknown {
-  if (!currentRenderingInstance || !currentRenderingInstance.setupState)
-    return name
-  const setupState = currentRenderingInstance.setupState
-  const returnValue = setupState[name]
+export function resolveLateAddedTag(
+  name: string,
+  key: 'setupState' | 'props',
+): unknown {
+  if (!currentRenderingInstance || !currentRenderingInstance[key]) return name
+  const data = currentRenderingInstance[key]
+  const value = data[name]
+  // Only the render function for the value is parsed as a component
+  // and a warning is reported
   if (
     __DEV__ &&
-    returnValue &&
-    (returnValue as ComponentInternalOptions).__file &&
+    value &&
+    (value as ComponentInternalInstance).render &&
     isLateTag(name as string)
   ) {
     const extra = `\nplease do not use built-in tag names as component names.`
     warn(`Failed to resolve component: ${name},${extra}`)
   }
-  return returnValue
+  return value
 }

@@ -21,7 +21,7 @@ import {
   createObjectProperty,
   createSimpleExpression,
   createVNodeCall,
-  getSetupReturnedHelper,
+  getResolveLateAddedTagHelper,
 } from '../ast'
 import {
   PatchFlags,
@@ -87,7 +87,6 @@ export const transformElement: NodeTransform = (node, context) => {
     ) {
       return
     }
-
     const { tag, props } = node
     const isComponent = node.tagType === ElementTypes.COMPONENT
 
@@ -351,7 +350,7 @@ function resolveSetupReference(name: string, context: TransformContext) {
       ? // in inline mode, const setup bindings (e.g. imports) can be used as-is
         fromConst
       : isLateTag(fromConst)
-        ? `${helper(getSetupReturnedHelper())}(${JSON.stringify(fromConst)})`
+        ? `${helper(getResolveLateAddedTagHelper())}(${JSON.stringify(fromConst)}, 'setupState')`
         : `$setup[${JSON.stringify(fromConst)}]`
   }
 
@@ -360,17 +359,25 @@ function resolveSetupReference(name: string, context: TransformContext) {
     checkType(BindingTypes.SETUP_REF) ||
     checkType(BindingTypes.SETUP_MAYBE_REF)
   if (fromMaybeRef) {
+    const helper = context.helperString
     return context.inline
       ? // setup scope bindings that may be refs need to be unrefed
         `${context.helperString(UNREF)}(${fromMaybeRef})`
-      : `$setup[${JSON.stringify(fromMaybeRef)}]`
+      : isLateTag(fromMaybeRef)
+        ? `${helper(getResolveLateAddedTagHelper())}(${JSON.stringify(fromMaybeRef)}, 'setupState')`
+        : `$setup[${JSON.stringify(fromMaybeRef)}]`
   }
 
   const fromProps = checkType(BindingTypes.PROPS)
   if (fromProps) {
-    return `${context.helperString(UNREF)}(${
-      context.inline ? '__props' : '$props'
-    }[${JSON.stringify(fromProps)}])`
+    const helper = context.helperString
+    const fromPropsStr = JSON.stringify(fromProps)
+    let propsCode = context.inline
+      ? `__props[${fromPropsStr}]`
+      : isLateTag(fromProps)
+        ? `${helper(getResolveLateAddedTagHelper())}(${fromPropsStr}, 'props')`
+        : `$props[${fromPropsStr}]`
+    return `${helper(UNREF)}(${propsCode})`
   }
 }
 

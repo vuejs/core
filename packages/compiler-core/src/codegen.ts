@@ -24,7 +24,7 @@ import {
   type TemplateLiteral,
   type TextNode,
   type VNodeCall,
-  getSetupReturnedHelper,
+  getResolveLateAddedTagHelper,
   getVNodeBlockHelper,
   getVNodeHelper,
   locStub,
@@ -337,8 +337,8 @@ export function generate(
   if (!__BROWSER__ && options.bindingMetadata && !options.inline) {
     // binding optimization args
     args.push('$props', '$setup', '$data', '$options')
-    // Add helper 'getSetupReturnedHelper' for $setup
-    context.helper(getSetupReturnedHelper())
+    // Add helper 'getResolveLateAddedTagHelper' for $setup
+    context.helper(getResolveLateAddedTagHelper())
   }
   const signature =
     !__BROWSER__ && options.isTS
