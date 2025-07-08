@@ -28,6 +28,7 @@ import {
   camelize,
   capitalize,
   isBuiltInDirective,
+  isLateTag,
   isObject,
   isOn,
   isReservedProp,
@@ -349,9 +350,9 @@ function resolveSetupReference(name: string, context: TransformContext) {
     return context.inline
       ? // in inline mode, const setup bindings (e.g. imports) can be used as-is
         fromConst
-      : `${helper(getSetupReturnedHelper())}(${JSON.stringify(
-          fromConst,
-        )}, $setup)`
+      : isLateTag(fromConst)
+        ? `${helper(getSetupReturnedHelper())}(${JSON.stringify(fromConst)})`
+        : `$setup[${JSON.stringify(fromConst)}]`
   }
 
   const fromMaybeRef =

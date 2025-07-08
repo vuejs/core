@@ -158,12 +158,11 @@ function resolve(registry: Record<string, any> | undefined, name: string) {
 /**
  * @private
  */
-export function resolveSetupReturned(
-  name: string,
-  setupReturn: Record<string, unknown>,
-): unknown {
-  if (!setupReturn) return name
-  const returnValue = setupReturn[name]
+export function resolveLateAddedTag(name: string): unknown {
+  if (!currentRenderingInstance || !currentRenderingInstance.setupState)
+    return name
+  const setupState = currentRenderingInstance.setupState
+  const returnValue = setupState[name]
   if (
     __DEV__ &&
     returnValue &&

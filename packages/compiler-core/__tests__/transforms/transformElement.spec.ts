@@ -106,7 +106,7 @@ describe('compiler: element transform', () => {
       },
     })
     expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
-    expect(node.tag).toBe(`_resolveSetupReturned("Example", $setup)`)
+    expect(node.tag).toBe(`_resolveLateAddedTag("Example", $setup)`)
   })
 
   test('resolve component from setup bindings (inline)', () => {
