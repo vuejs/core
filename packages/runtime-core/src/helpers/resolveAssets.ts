@@ -165,6 +165,7 @@ export function resolveSetupReturned(
   if (!setupReturn) return name
   const returnValue = setupReturn[name]
   if (
+    __DEV__ &&
     returnValue &&
     (returnValue as ComponentInternalOptions).__file &&
     isLateTag(name as string)
