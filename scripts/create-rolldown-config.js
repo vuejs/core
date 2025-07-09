@@ -59,32 +59,32 @@ export function createConfigsForPackage({
   /** @type {Record<PackageFormat, import('rolldown').OutputOptions>} */
   const outputConfigs = {
     'esm-bundler': {
-      file: `${name}.esm-bundler.js`,
+      file: resolve(`dist/${name}.esm-bundler.js`),
       format: 'es',
     },
     'esm-browser': {
-      file: `${name}.esm-browser.js`,
+      file: resolve(`dist/${name}.esm-browser.js`),
       format: 'es',
     },
     cjs: {
-      file: `${name}.cjs.js`,
+      file: resolve(`dist/${name}.cjs.js`),
       format: 'cjs',
     },
     global: {
-      file: `${name}.global.js`,
+      file: resolve(`dist/${name}.global.js`),
       format: 'iife',
     },
     // runtime-only builds, for main "vue" package only
     'esm-bundler-runtime': {
-      file: `${name}.runtime.esm-bundler.js`,
+      file: resolve(`dist/${name}.runtime.esm-bundler.js`),
       format: 'es',
     },
     'esm-browser-runtime': {
-      file: `${name}.runtime.esm-browser.js`,
+      file: resolve(`dist/${name}.runtime.esm-browser.js`),
       format: 'es',
     },
     'global-runtime': {
-      file: `${name}.runtime.global.js`,
+      file: resolve(`dist/${name}.runtime.global.js`),
       format: 'iife',
     },
   }
@@ -336,7 +336,7 @@ export function createConfigsForPackage({
 
   function createProductionConfig(/** @type {PackageFormat} */ format) {
     return createConfig(format, {
-      file: `${name}.${format}.prod.js`,
+      file: resolve(`dist/${name}.${format}.prod.js`),
       format: outputConfigs[format].format,
     })
   }

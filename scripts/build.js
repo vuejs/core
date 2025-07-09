@@ -120,8 +120,6 @@ async function buildAll(targets) {
       all.push(
         Promise.all(
           configs.map(c => {
-            // @ts-expect-error
-            c.output.file = path.join('packages', t, 'dist', c.output.file)
             return rolldown(c).then(bundle => {
               // @ts-expect-error
               return bundle.write(c.output).then(() => {
