@@ -8,7 +8,7 @@
     "build": "node scripts/build.js",
     "build-rollup": "node scripts/build-with-rollup.js",
     "build-dts": "node scripts/build-types.js",
-    "build-dts-tsc": "tsc -p tsconfig.build.json --noCheck && rollup -c rollup.dts.config.js",
+    "build-dts-tsc": "tsc -p tsconfig.build.json --noCheck && rolldown -c rolldown.dts.config.js",
     "clean": "rimraf --glob packages/*/dist temp .eslintcache",
     "size": "run-s \"size-*\" && node scripts/usage-size.js",
     "size-global": "node scripts/build.js vue runtime-dom -f global -p --size",

@@ -4,6 +4,9 @@ import { parseSync } from 'oxc-parser'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import MagicString from 'magic-string'
 import { dts } from 'rolldown-plugin-dts'
+import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
 
 if (!existsSync('temp/packages')) {
   console.warn(
@@ -12,11 +15,23 @@ if (!existsSync('temp/packages')) {
   process.exit(1)
 }
 
+const require = createRequire(import.meta.url)
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
+const packagesDir = path.resolve(__dirname, 'packages')
+
 const packages = readdirSync('temp/packages')
 const targets = process.env.TARGETS ? process.env.TARGETS.split(',') : null
 const targetPackages = targets
   ? packages.filter(pkg => targets.includes(pkg))
   : packages
+
+function resolveExternal(packageName) {
+  const pkg = require(`${packagesDir}/${packageName}/package.json`)
+  return [
+    ...Object.keys(pkg.dependencies || {}),
+    ...Object.keys(pkg.peerDependencies || {}),
+  ]
+}
 
 export default targetPackages.map(
   /** @returns {import('rolldown').BuildOptions} */
@@ -27,6 +42,7 @@ export default targetPackages.map(
         file: `packages/${pkg}/dist/${pkg}.d.ts`,
         format: 'es',
       },
+      external: resolveExternal(pkg),
       plugins: [dts(), patchTypes(pkg), ...(pkg === 'vue' ? [copyMts()] : [])],
       onwarn(warning, warn) {
         // during dts rolldown, everything is externalized by default
