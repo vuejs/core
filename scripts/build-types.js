@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import glob from 'fast-glob'
 import { isolatedDeclaration } from 'oxc-transform'
-import { rollup } from 'rollup'
+import { rolldown } from 'rolldown'
 import picocolors from 'picocolors'
 
 if (fs.existsSync('temp/packages')) {
@@ -43,16 +43,16 @@ if (errs) {
   write(path.join('temp', 'oxc-iso-decl-errors.txt'), errs)
 }
 
-console.log('bundling dts with rollup-plugin-dts...')
+console.log('bundling dts with rolldown-plugin-dts...')
 
-// bundle with rollup-plugin-dts
-const rollupConfigs = (await import('../rollup.dts.config.js')).default
+// bundle with rolldown-plugin-dts
+const rolldownConfigs = (await import('../rolldown.dts.config.js')).default
 
 start = performance.now()
 
 await Promise.all(
-  rollupConfigs.map(c =>
-    rollup(c).then(bundle => {
+  rolldownConfigs.map(c =>
+    rolldown(c).then(bundle => {
       return bundle.write(c.output).then(() => {
         console.log(picocolors.gray('built: ') + picocolors.blue(c.output.file))
       })
