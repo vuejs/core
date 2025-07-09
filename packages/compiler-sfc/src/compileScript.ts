@@ -18,6 +18,7 @@ import type {
   Declaration,
   ExportSpecifier,
   Identifier,
+  LVal,
   Node,
   ObjectPattern,
   Statement,
@@ -540,7 +541,7 @@ export function compileScript(
           }
 
           // defineProps
-          const isDefineProps = processDefineProps(ctx, init, decl.id)
+          const isDefineProps = processDefineProps(ctx, init, decl.id as LVal)
           if (ctx.propsDestructureRestId) {
             setupBindings[ctx.propsDestructureRestId] =
               BindingTypes.SETUP_REACTIVE_CONST
@@ -548,10 +549,10 @@ export function compileScript(
 
           // defineEmits
           const isDefineEmits =
-            !isDefineProps && processDefineEmits(ctx, init, decl.id)
+            !isDefineProps && processDefineEmits(ctx, init, decl.id as LVal)
           !isDefineEmits &&
-            (processDefineSlots(ctx, init, decl.id) ||
-              processDefineModel(ctx, init, decl.id))
+            (processDefineSlots(ctx, init, decl.id as LVal) ||
+              processDefineModel(ctx, init, decl.id as LVal))
 
           if (
             isDefineProps &&
