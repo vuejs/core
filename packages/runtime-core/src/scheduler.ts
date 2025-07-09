@@ -114,12 +114,18 @@ export function queueJob(job: SchedulerJob): void {
   }
 }
 
+const doFlushJobs = () => {
+  try {
+    flushJobs()
+  } catch (e) {
+    currentFlushPromise = null
+    throw e
+  }
+}
+
 function queueFlush() {
   if (!currentFlushPromise) {
-    currentFlushPromise = resolvedPromise.then(flushJobs).catch(e => {
-      currentFlushPromise = null
-      throw e
-    })
+    currentFlushPromise = resolvedPromise.then(doFlushJobs)
   }
 }
 
