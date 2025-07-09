@@ -58,8 +58,7 @@ function patchTypes(pkg) {
     name: 'patch-types',
     renderChunk(code, chunk) {
       const s = new MagicString(code)
-      const { program: ast, errors } = parseSync(code, {
-        sourceFilename: 'x.d.ts',
+      const { program: ast, errors } = parseSync('x.d.ts', code, {
         sourceType: 'module',
       })
 

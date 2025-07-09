@@ -119,14 +119,17 @@ async function buildAll(targets) {
     if (configs) {
       all.push(
         Promise.all(
-          configs.map(c =>
-            rolldown(c).then(bundle => {
+          configs.map(c => {
+            // @ts-expect-error
+            c.output.file = path.join('packages', t, 'dist', c.output.file)
+            return rolldown(c).then(bundle => {
+              // @ts-expect-error
               return bundle.write(c.output).then(() => {
                 // @ts-expect-error
-                return path.join('packages', t, 'dist', c.output.file)
+                return c.output.file
               })
-            }),
-          ),
+            })
+          }),
         ).then(files => {
           files.forEach(f => {
             count++

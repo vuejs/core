@@ -125,8 +125,6 @@ export function createConfigsForPackage({
       process.exit(1)
     }
 
-    output.dir = resolve('dist')
-
     const isProductionBuild = /\.prod\.js$/.test(String(output.file) || '')
     const isBundlerESMBuild = /esm-bundler/.test(format)
     const isBrowserESMBuild = /esm-browser/.test(format)
@@ -317,7 +315,6 @@ export function createConfigsForPackage({
       resolve: {
         alias: entries,
       },
-      // @ts-expect-error rollup's Plugin type incompatible w/ rolldown's vendored Plugin type
       plugins: [
         ...(localDev ? [] : [enumPlugin]),
         ...resolveReplace(),
