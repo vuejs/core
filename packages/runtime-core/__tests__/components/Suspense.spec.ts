@@ -2230,5 +2230,57 @@ describe('Suspense', () => {
         fallback: [h('div'), h('div')],
       })
     })
+
+    // #13559
+    test('renders multiple async components in Suspense with v-for and updates on items change', async () => {
+      const CompAsyncSetup = defineAsyncComponent({
+        props: ['item'],
+        render(ctx: any) {
+          return h('div', ctx.item.name)
+        },
+      })
+
+      const items = ref([
+        { id: 1, name: '111' },
+        { id: 2, name: '222' },
+        { id: 3, name: '333' },
+      ])
+
+      const Comp = {
+        setup() {
+          return () =>
+            h(Suspense, null, {
+              default: () =>
+                h(
+                  Fragment,
+                  null,
+                  items.value.map(item =>
+                    h(CompAsyncSetup, { item, key: item.id }),
+                  ),
+                ),
+            })
+        },
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      await nextTick()
+      await Promise.all(deps)
+
+      expect(serializeInner(root)).toBe(
+        `<div>111</div><div>222</div><div>333</div>`,
+      )
+
+      items.value = [
+        { id: 4, name: '444' },
+        { id: 5, name: '555' },
+        { id: 6, name: '666' },
+      ]
+      await nextTick()
+      await Promise.all(deps)
+      expect(serializeInner(root)).toBe(
+        `<div>444</div><div>555</div><div>666</div>`,
+      )
+    })
   })
 })
