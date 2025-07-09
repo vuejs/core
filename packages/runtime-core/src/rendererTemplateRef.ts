@@ -16,7 +16,10 @@ import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
 import { type ComponentOptions, getComponentPublicInstance } from './component'
-import { knownTemplateRefs } from './helpers/useTemplateRef'
+import {
+  isUseTemplateRefKey,
+  knownTemplateRefs,
+} from './helpers/useTemplateRef'
 
 /**
  * Function for handling a template ref
@@ -91,6 +94,12 @@ export function setRef(
               return false
             }
           }
+
+          // skip setting up ref if the key is from useTemplateRef
+          if (isUseTemplateRefKey(refs, key)) {
+            return false
+          }
+
           return hasOwn(rawSetupState, key)
         }
 
