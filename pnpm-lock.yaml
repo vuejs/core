@@ -24,9 +24,6 @@ catalogs:
     source-map-js:
       specifier: ^1.2.1
       version: 1.2.1
-    vite:
-      specifier: ^5.4.15
-      version: 5.4.15
 
 importers:
 
@@ -175,7 +172,7 @@ importers:
         version: 8.32.1(eslint@9.27.0)(typescript@5.6.3)
       vite:
         specifier: 'catalog:'
-        version: 5.4.15(@types/node@22.16.0)(sass@1.89.2)
+        version: 5.4.19(@types/node@22.16.0)(sass@1.89.2)
       vitest:
         specifier: ^3.1.4
         version: 3.1.4(@types/node@22.16.0)(jsdom@26.1.0)(sass@1.89.2)
@@ -218,10 +215,10 @@ importers:
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
-        version: 5.2.4(vite@5.4.15(@types/node@22.16.0)(sass@1.89.2))(vue@packages+vue)
+        version: 5.2.4(vite@5.4.19(@types/node@22.16.0)(sass@1.89.2))(vue@packages+vue)
       vite:
         specifier: 'catalog:'
-        version: 5.4.15(@types/node@22.16.0)(sass@1.89.2)
+        version: 5.4.19(@types/node@22.16.0)(sass@1.89.2)
 
   packages-private/template-explorer:
     dependencies:
@@ -236,10 +233,10 @@ importers:
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
-        version: 5.2.4(vite@5.4.15(@types/node@22.16.0)(sass@1.89.2))(vue@packages+vue)
+        version: 5.2.4(vite@5.4.19(@types/node@22.16.0)(sass@1.89.2))(vue@packages+vue)
       vite:
         specifier: 'catalog:'
-        version: 5.4.15(@types/node@22.16.0)(sass@1.89.2)
+        version: 5.4.19(@types/node@22.16.0)(sass@1.89.2)
       vue:
         specifier: workspace:*
         version: link:../../packages/vue
@@ -3374,37 +3371,6 @@ packages:
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
 
-  vite@5.4.15:
-    resolution: {integrity: sha512-6ANcZRivqL/4WtwPGTKNaosuNJr5tWiftOC7liM7G9+rMb8+oeJeyzymDu4rTN93seySBmbjSfsS3Vzr19KNtA==}
-    engines: {node: ^18.0.0 || >=20.0.0}
-    hasBin: true
-    peerDependencies:
-      '@types/node': ^18.0.0 || >=20.0.0
-      less: '*'
-      lightningcss: ^1.21.0
-      sass: '*'
-      sass-embedded: '*'
-      stylus: '*'
-      sugarss: '*'
-      terser: ^5.4.0
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      less:
-        optional: true
-      lightningcss:
-        optional: true
-      sass:
-        optional: true
-      sass-embedded:
-        optional: true
-      stylus:
-        optional: true
-      sugarss:
-        optional: true
-      terser:
-        optional: true
-
   vite@5.4.19:
     resolution: {integrity: sha512-qO3aKv3HoQC8QKiNSTuUM1l9o/XX3+c+VTgLHbJWHZGeTPVAg2XwazI9UWzoxjIJCGCV2zU60uqMzjeLZuULqA==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -4342,9 +4308,9 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.7.2':
     optional: true
 
-  '@vitejs/plugin-vue@5.2.4(vite@5.4.15(@types/node@22.16.0)(sass@1.89.2))(vue@packages+vue)':
+  '@vitejs/plugin-vue@5.2.4(vite@5.4.19(@types/node@22.16.0)(sass@1.89.2))(vue@packages+vue)':
     dependencies:
-      vite: 5.4.15(@types/node@22.16.0)(sass@1.89.2)
+      vite: 5.4.19(@types/node@22.16.0)(sass@1.89.2)
       vue: link:packages/vue
 
   '@vitest/coverage-v8@3.1.4(vitest@3.1.4(@types/node@22.16.0)(jsdom@26.1.0)(sass@1.89.2))':
@@ -6455,16 +6421,6 @@ snapshots:
       - sugarss
       - supports-color
       - terser
-
-  vite@5.4.15(@types/node@22.16.0)(sass@1.89.2):
-    dependencies:
-      esbuild: 0.21.5
-      postcss: 8.5.6
-      rollup: 4.44.2
-    optionalDependencies:
-      '@types/node': 22.16.0
-      fsevents: 2.3.3
-      sass: 1.89.2
 
   vite@5.4.19(@types/node@22.16.0)(sass@1.89.2):
     dependencies:
