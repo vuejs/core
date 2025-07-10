@@ -271,12 +271,12 @@ export function resetTracking(): void {
 export function cleanup(
   sub: ReactiveNode & { cleanups: (() => void)[]; cleanupsLength: number },
 ): void {
-  const l = sub.cleanupsLength
+  const l = sub.cleanups.length
   if (l) {
     for (let i = 0; i < l; i++) {
       sub.cleanups[i]()
     }
-    sub.cleanupsLength = 0
+    sub.cleanups.length = sub.cleanupsLength = 0
   }
 }
 
