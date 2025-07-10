@@ -368,9 +368,6 @@ export interface GenericComponentInstance {
   // state
   props: Data
   attrs: Data
-  /**
-   * @internal
-   */
   refs: Data
   emit: EmitFn
   /**
