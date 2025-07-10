@@ -93,7 +93,7 @@ export type VNodeRef =
   | ((
       ref: Element | ComponentPublicInstance | null,
       refs: Record<string, any>,
-    ) => void)
+    ) => unknown)
 
 export type VNodeNormalizedRefAtom = {
   /**
