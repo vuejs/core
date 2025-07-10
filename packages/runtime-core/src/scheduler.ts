@@ -141,10 +141,6 @@ const doFlushJobs = () => {
 
 function queueFlush() {
   if (!currentFlushPromise) {
-    currentFlushPromise = resolvedPromise.then(flushJobs).catch(e => {
-      currentFlushPromise = null
-      throw e
-    })
     currentFlushPromise = resolvedPromise.then(doFlushJobs)
   }
 }
