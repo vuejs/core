@@ -78,6 +78,7 @@ export const defaultParserOptions: MergedParserOptions = {
   onWarn: defaultOnWarn,
   comments: __DEV__,
   prefixIdentifiers: false,
+  tagLocations: false,
 }
 
 let currentOptions: MergedParserOptions = defaultParserOptions
@@ -146,6 +147,9 @@ const tokenizer = new Tokenizer(stack, {
       loc: getLoc(start - 1, end),
       codegenNode: undefined,
     }
+    if (currentOptions.tagLocations) {
+      currentOpenTag.openTagLoc = getLoc(start, end)
+    }
   },
 
   onopentagend(end) {
@@ -165,6 +169,9 @@ const tokenizer = new Tokenizer(stack, {
           }
           for (let j = 0; j <= i; j++) {
             const el = stack.shift()!
+            if (j === i && currentOptions.tagLocations) {
+              el.closeTagLoc = getLoc(start, end)
+            }
             onCloseTag(el, end, j < i)
           }
           break
