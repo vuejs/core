@@ -8,7 +8,7 @@ import pico from 'picocolors'
 import polyfillNode from '@rolldown/plugin-node-polyfills'
 import { entries } from './aliases.js'
 import { inlineEnums } from './inline-enums.js'
-import { minify as minifySwc } from '@swc/core'
+import { minify as minifyOxc } from 'oxc-minify'
 
 const require = createRequire(import.meta.url)
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -351,21 +351,15 @@ export function createConfigsForPackage({
       },
       [
         {
-          name: 'swc-minify',
-          async renderChunk(contents, _, { format }) {
-            const { code } = await minifySwc(contents, {
-              module: format === 'es',
-              format: {
-                comments: false,
-              },
-              compress: {
-                ecma: 2016,
-                pure_getters: true,
-              },
-              safari10: true,
+          name: 'oxc-minify',
+          async renderChunk(contents, _, { file }) {
+            // @ts-expect-error
+            const { code } = await minifyOxc(file, contents, {
               mangle: true,
+              compress: {
+                target: 'es2016',
+              },
             })
-            // swc removes banner
             return { code: banner + code, map: null }
           },
         },

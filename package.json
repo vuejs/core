@@ -96,6 +96,7 @@
     "npm-run-all2": "^7.0.1",
     "oxc-parser": "^0.76.0",
     "oxc-transform": "^0.76.0",
+    "oxc-minify": "^0.76.0",
     "picocolors": "^1.1.1",
     "prettier": "^3.3.3",
     "pretty-bytes": "^6.1.1",

@@ -1,9 +1,9 @@
 // @ts-check
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { rollup } from 'rollup'
+import { rolldown } from 'rolldown'
 import nodeResolve from '@rollup/plugin-node-resolve'
-import { minify } from '@swc/core'
+import { minify } from 'oxc-minify'
 import replace from '@rollup/plugin-replace'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { parseArgs } from 'node:util'
@@ -95,7 +95,7 @@ async function generateBundle(preset) {
   const id = 'virtual:entry'
   const content = `export { ${preset.imports.join(', ')} } from '${entry}'`
 
-  const result = await rollup({
+  const result = await rolldown({
     input: id,
     plugins: [
       {
@@ -122,10 +122,12 @@ async function generateBundle(preset) {
 
   const generated = await result.generate({})
   const bundled = generated.output[0].code
+  const file = preset.name + '.js'
   const minified = (
-    await minify(bundled, {
-      module: true,
-      toplevel: true,
+    await minify(file, bundled, {
+      mangle: {
+        toplevel: true,
+      },
     })
   ).code
 
@@ -134,7 +136,7 @@ async function generateBundle(preset) {
   const brotli = brotliCompressSync(minified).length
 
   if (write) {
-    await writeFile(path.resolve(sizeDir, preset.name + '.js'), bundled)
+    await writeFile(path.resolve(sizeDir, file), bundled)
   }
 
   return {
