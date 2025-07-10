@@ -130,12 +130,22 @@ function queueJobWorker(
   return false
 }
 
+const doFlushJobs = () => {
+  try {
+    flushJobs()
+  } catch (e) {
+    currentFlushPromise = null
+    throw e
+  }
+}
+
 function queueFlush() {
   if (!currentFlushPromise) {
     currentFlushPromise = resolvedPromise.then(flushJobs).catch(e => {
       currentFlushPromise = null
       throw e
     })
+    currentFlushPromise = resolvedPromise.then(doFlushJobs)
   }
 }
 
