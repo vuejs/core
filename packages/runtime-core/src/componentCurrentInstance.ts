@@ -4,6 +4,7 @@ import type {
   GenericComponentInstance,
 } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
+import { type EffectScope, setCurrentScope } from '@vue/reactivity'
 
 /**
  * @internal
@@ -25,7 +26,10 @@ export let isInSSRComponentSetup = false
 
 export let setInSSRSetupState: (state: boolean) => void
 
-let internalSetCurrentInstance: (
+/**
+ * @internal
+ */
+export let simpleSetCurrentInstance: (
   instance: GenericComponentInstance | null,
 ) => void
 
@@ -53,7 +57,7 @@ if (__SSR__) {
       else setters[0](v)
     }
   }
-  internalSetCurrentInstance = registerGlobalSetter(
+  simpleSetCurrentInstance = registerGlobalSetter(
     `__VUE_INSTANCE_SETTERS__`,
     v => (currentInstance = v),
   )
@@ -66,7 +70,7 @@ if (__SSR__) {
     v => (isInSSRComponentSetup = v),
   )
 } else {
-  internalSetCurrentInstance = i => {
+  simpleSetCurrentInstance = i => {
     currentInstance = i
   }
   setInSSRSetupState = v => {
@@ -74,34 +78,15 @@ if (__SSR__) {
   }
 }
 
-export const setCurrentInstance = (instance: GenericComponentInstance) => {
-  const prev = currentInstance
-  internalSetCurrentInstance(instance)
-  instance.scope.on()
-  return (): void => {
-    instance.scope.off()
-    internalSetCurrentInstance(prev)
-  }
-}
-
-export const unsetCurrentInstance = (): void => {
-  currentInstance && currentInstance.scope.off()
-  internalSetCurrentInstance(null)
-}
-
-/**
- * Exposed for vapor only. Vapor never runs during SSR so we don't want to pay
- * for the extra overhead
- * @internal
- */
-export const simpleSetCurrentInstance = (
-  i: GenericComponentInstance | null,
-  unset?: GenericComponentInstance | null,
-): void => {
-  currentInstance = i
-  if (unset) {
-    unset.scope.off()
-  } else if (i) {
-    i.scope.on()
+export const setCurrentInstance = (
+  instance: GenericComponentInstance | null,
+  scope: EffectScope | undefined = instance !== null
+    ? instance.scope
+    : undefined,
+): [GenericComponentInstance | null, EffectScope | undefined] => {
+  try {
+    return [currentInstance, setCurrentScope(scope)]
+  } finally {
+    simpleSetCurrentInstance(instance)
   }
 }

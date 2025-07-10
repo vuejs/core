@@ -233,6 +233,7 @@ function canPrefix(name: string) {
 type DeclarationResult = {
   ids: Record<string, string>
   frag: CodeFragment[]
+  varNames: string[]
 }
 type DeclarationValue = {
   name: string
@@ -246,6 +247,7 @@ type DeclarationValue = {
 export function processExpressions(
   context: CodegenContext,
   expressions: SimpleExpressionNode[],
+  shouldDeclare: boolean,
 ): DeclarationResult {
   // analyze variables
   const {
@@ -277,7 +279,11 @@ export function processExpressions(
     expToVariableMap,
   )
 
-  return genDeclarations([...varDeclarations, ...expDeclarations], context)
+  return genDeclarations(
+    [...varDeclarations, ...expDeclarations],
+    context,
+    shouldDeclare,
+  )
 }
 
 function analyzeExpressions(expressions: SimpleExpressionNode[]) {
@@ -592,15 +598,21 @@ function processRepeatedExpressions(
 function genDeclarations(
   declarations: DeclarationValue[],
   context: CodegenContext,
+  shouldDeclare: boolean,
 ): DeclarationResult {
   const [frag, push] = buildCodeFragment()
   const ids: Record<string, string> = Object.create(null)
+  const varNames = new Set<string>()
 
   // process identifiers first as expressions may rely on them
   declarations.forEach(({ name, isIdentifier, value }) => {
     if (isIdentifier) {
       const varName = (ids[name] = `_${name}`)
-      push(`const ${varName} = `, ...genExpression(value, context), NEWLINE)
+      varNames.add(varName)
+      if (shouldDeclare) {
+        push(`const `)
+      }
+      push(`${varName} = `, ...genExpression(value, context), NEWLINE)
     }
   })
 
@@ -608,15 +620,19 @@ function genDeclarations(
   declarations.forEach(({ name, isIdentifier, value }) => {
     if (!isIdentifier) {
       const varName = (ids[name] = `_${name}`)
+      varNames.add(varName)
+      if (shouldDeclare) {
+        push(`const `)
+      }
       push(
-        `const ${varName} = `,
+        `${varName} = `,
         ...context.withId(() => genExpression(value, context), ids),
         NEWLINE,
       )
     }
   })
 
-  return { ids, frag }
+  return { ids, frag, varNames: [...varNames] }
 }
 
 function escapeRegExp(string: string) {
