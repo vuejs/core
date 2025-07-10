@@ -64,7 +64,7 @@ export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
-export { useTemplateRef } from './helpers/useTemplateRef'
+export { useTemplateRef, type TemplateRef } from './helpers/useTemplateRef'
 export { useId } from './helpers/useId'
 export {
   hydrateOnIdle,
@@ -240,6 +240,7 @@ export type {
   App,
   AppConfig,
   AppContext,
+  GenericAppContext,
   Plugin,
   ObjectPlugin,
   FunctionPlugin,
@@ -328,6 +329,7 @@ export type {
   ObjectDirective,
   FunctionDirective,
   DirectiveArguments,
+  DirectiveModifiers,
 } from './directives'
 export type { SuspenseBoundary } from './components/Suspense'
 export type {
@@ -479,3 +481,84 @@ export const compatUtils = (
 export const DeprecationTypes = (
   __COMPAT__ ? _DeprecationTypes : null
 ) as typeof _DeprecationTypes
+
+// VAPOR -----------------------------------------------------------------------
+
+// **IMPORTANT** These APIs are exposed solely for @vue/runtime-vapor and may
+// change without notice between versions. User code should never rely on them.
+
+/**
+ * these types cannot be marked internal because runtime-vapor's type relies on
+ * them, but they should be considered internal
+ * @private
+ */
+export {
+  type ComponentInternalOptions,
+  type GenericComponentInstance,
+  type LifecycleHook,
+} from './component'
+export { type NormalizedPropsOptions } from './componentProps'
+/**
+ * @internal
+ */
+export { type VaporInteropInterface } from './apiCreateApp'
+/**
+ * @internal
+ */
+export { type RendererInternals, MoveType } from './renderer'
+/**
+ * @internal
+ */
+export {
+  baseNormalizePropsOptions,
+  resolvePropValue,
+  validateProps,
+} from './componentProps'
+/**
+ * @internal
+ */
+export { baseEmit, isEmitListener } from './componentEmits'
+/**
+ * @internal
+ */
+export { type SchedulerJob, queueJob, flushOnAppMount } from './scheduler'
+/**
+ * @internal
+ */
+export { expose, nextUid, validateComponentName } from './component'
+/**
+ * @internal
+ */
+export { pushWarningContext, popWarningContext } from './warning'
+/**
+ * @internal
+ */
+export {
+  createAppAPI,
+  type AppMountFn,
+  type AppUnmountFn,
+} from './apiCreateApp'
+/**
+ * @internal
+ */
+export {
+  currentInstance,
+  setCurrentInstance,
+  simpleSetCurrentInstance,
+} from './componentCurrentInstance'
+/**
+ * @internal
+ */
+export { registerHMR, unregisterHMR } from './hmr'
+/**
+ * @internal
+ */
+export { startMeasure, endMeasure } from './profiling'
+/**
+ * @internal
+ */
+export { initFeatureFlags } from './featureFlags'
+/**
+ * @internal
+ */
+export { createInternalObject } from './internalObject'

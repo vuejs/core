@@ -454,13 +454,13 @@ export function updateHOCHostEl(
   { vnode, parent }: ComponentInternalInstance,
   el: typeof vnode.el, // HostNode
 ): void {
-  while (parent) {
-    const root = parent.subTree
+  while (parent && !parent.vapor) {
+    const root = parent.subTree!
     if (root.suspense && root.suspense.activeBranch === vnode) {
       root.el = vnode.el
     }
     if (root === vnode) {
-      ;(vnode = parent.vnode).el = el
+      ;(vnode = parent.vnode!).el = el
       parent = parent.parent
     } else {
       break

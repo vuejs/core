@@ -152,3 +152,52 @@ export function isRenderableAttrValue(value: unknown): boolean {
   const type = typeof value
   return type === 'string' || type === 'number' || type === 'boolean'
 }
+
+/*
+ * The following attributes must be set as attribute
+ */
+export function shouldSetAsAttr(tagName: string, key: string): boolean {
+  // these are enumerated attrs, however their corresponding DOM properties
+  // are actually booleans - this leads to setting it with a string "false"
+  // value leading it to be coerced to `true`, so we need to always treat
+  // them as attributes.
+  // Note that `contentEditable` doesn't have this problem: its DOM
+  // property is also enumerated string values.
+  if (
+    key === 'spellcheck' ||
+    key === 'draggable' ||
+    key === 'translate' ||
+    key === 'autocorrect'
+  ) {
+    return true
+  }
+
+  // #1787, #2840 form property on form elements is readonly and must be set as
+  // attribute.
+  if (key === 'form') {
+    return true
+  }
+
+  // #1526 <input list> must be set as attribute
+  if (key === 'list' && tagName === 'INPUT') {
+    return true
+  }
+
+  // #2766 <textarea type> must be set as attribute
+  if (key === 'type' && tagName === 'TEXTAREA') {
+    return true
+  }
+
+  // #8780 the width or height of embedded tags must be set as attribute
+  if (
+    (key === 'width' || key === 'height') &&
+    (tagName === 'IMG' ||
+      tagName === 'VIDEO' ||
+      tagName === 'CANVAS' ||
+      tagName === 'SOURCE')
+  ) {
+    return true
+  }
+
+  return false
+}

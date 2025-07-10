@@ -81,7 +81,7 @@ font-weight: bold;
 
       const consumer = new SourceMapConsumer(script!.map!)
       consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+        expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
     })
 
@@ -100,8 +100,8 @@ font-weight: bold;
 
       const consumer = new SourceMapConsumer(template.map!)
       consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
-        expect(mapping.originalColumn - mapping.generatedColumn).toBe(2)
+        expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
+        expect(mapping.originalColumn! - mapping.generatedColumn).toBe(2)
       })
     })
 
@@ -115,7 +115,7 @@ font-weight: bold;
 
       const consumer = new SourceMapConsumer(custom!.map!)
       consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+        expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
     })
   })
@@ -378,6 +378,17 @@ h1 { color: red }
       type: NodeTypes.ELEMENT,
       tag: 'hello',
       tagType: ElementTypes.COMPONENT,
+    })
+  })
+
+  describe('vapor mode', () => {
+    test('on empty script', () => {
+      const { descriptor } = parse(`<script vapor></script>`)
+      expect(descriptor.vapor).toBe(true)
+    })
+    test('on template', () => {
+      const { descriptor } = parse(`<template vapor><div/></template>`)
+      expect(descriptor.vapor).toBe(true)
     })
   })
 

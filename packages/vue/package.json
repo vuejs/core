@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "3.5.13",
+  "version": "3.5.17",
   "description": "The progressive JavaScript framework for building modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -78,12 +78,13 @@
       "global",
       "global-runtime",
       "esm-browser",
-      "esm-browser-runtime"
+      "esm-browser-runtime",
+      "esm-browser-vapor"
     ]
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/core.git"
+    "url": "git+https://github.com/vuejs/vue.git"
   },
   "keywords": [
     "vue"
@@ -91,13 +92,14 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/core/issues"
+    "url": "https://github.com/vuejs/vue/issues"
   },
-  "homepage": "https://github.com/vuejs/core/tree/main/packages/vue#readme",
+  "homepage": "https://github.com/vuejs/vue/tree/main/packages/vue#readme",
   "dependencies": {
     "@vue/shared": "workspace:*",
     "@vue/compiler-dom": "workspace:*",
     "@vue/runtime-dom": "workspace:*",
+    "@vue/runtime-vapor": "workspace:*",
     "@vue/compiler-sfc": "workspace:*",
     "@vue/server-renderer": "workspace:*"
   },

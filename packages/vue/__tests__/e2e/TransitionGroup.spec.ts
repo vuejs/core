@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'node:path'
 import { createApp, ref } from 'vue'
@@ -642,6 +644,57 @@ describe('e2e: TransitionGroup', () => {
       expect(await html('#container')).toBe(
         `<div class="test">foo</div>` + ` ` + `<div class="test">bar</div>`,
       )
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
+    'not leaking after children unmounted',
+    async () => {
+      const client = await page().createCDPSession()
+      await page().evaluate(async () => {
+        const { createApp, ref, nextTick } = (window as any).Vue
+        const show = ref(true)
+
+        createApp({
+          components: {
+            Child: {
+              setup: () => {
+                // Big arrays kick GC earlier
+                const test = ref([...Array(3000)].map((_, i) => ({ i })))
+                // @ts-expect-error - Custom property and same lib as runtime is used
+                window.__REF__ = new WeakRef(test)
+
+                return { test }
+              },
+              template: `
+              <p>{{ test.length }}</p>
+            `,
+            },
+          },
+          template: `
+          <transition-group>
+            <Child v-if="show" />
+          </transition-group>
+        `,
+          setup() {
+            return { show }
+          },
+        }).mount('#app')
+
+        show.value = false
+        await nextTick()
+      })
+
+      const isCollected = async () =>
+        // @ts-expect-error - Custom property
+        await page().evaluate(() => window.__REF__.deref() === undefined)
+
+      while ((await isCollected()) === false) {
+        await client.send('HeapProfiler.collectGarbage')
+      }
+
+      expect(await isCollected()).toBe(true)
     },
     E2E_TIMEOUT,
   )

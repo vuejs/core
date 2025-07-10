@@ -1,6 +1,6 @@
 import { extend } from '@vue/shared'
 import type { DebuggerEventExtraInfo, ReactiveEffectOptions } from './effect'
-import { type Link, type Subscriber, SubscriberFlags } from './system'
+import { type Link, ReactiveFlags, type ReactiveNode } from './system'
 
 export const triggerEventInfos: DebuggerEventExtraInfo[] = []
 
@@ -55,13 +55,13 @@ export function setupOnTrigger(target: { new (...args: any[]): any }): void {
       return this._onTrigger
     },
     set(val) {
-      if (!this._onTrigger) setupFlagsHandler(this)
+      if (val && !this._onTrigger) setupFlagsHandler(this)
       this._onTrigger = val
     },
   })
 }
 
-function setupFlagsHandler(target: Subscriber): void {
+function setupFlagsHandler(target: ReactiveNode): void {
   ;(target as any)._flags = target.flags
   Object.defineProperty(target, 'flags', {
     get() {
@@ -71,9 +71,9 @@ function setupFlagsHandler(target: Subscriber): void {
       if (
         !(
           (target as any)._flags &
-          (SubscriberFlags.PendingComputed | SubscriberFlags.Dirty)
+          (ReactiveFlags.Dirty | ReactiveFlags.Pending)
         ) &&
-        !!(value & (SubscriberFlags.PendingComputed | SubscriberFlags.Dirty))
+        !!(value & (ReactiveFlags.Dirty | ReactiveFlags.Pending))
       ) {
         onTrigger(this)
       }

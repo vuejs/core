@@ -23,7 +23,7 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 import { mapCompatDirectiveHook } from './compat/customDirective'
-import { pauseTracking, resetTracking, traverse } from '@vue/reactivity'
+import { setActiveSub, traverse } from '@vue/reactivity'
 
 export interface DirectiveBinding<
   Value = any,
@@ -111,7 +111,9 @@ export type Directive<
   | ObjectDirective<HostElement, Value, Modifiers, Arg>
   | FunctionDirective<HostElement, Value, Modifiers, Arg>
 
-export type DirectiveModifiers<K extends string = string> = Record<K, boolean>
+export type DirectiveModifiers<K extends string = string> = Partial<
+  Record<K, boolean>
+>
 
 export function validateDirectiveName(name: string): void {
   if (isBuiltInDirective(name)) {
@@ -185,14 +187,14 @@ export function invokeDirectiveHook(
     if (hook) {
       // disable tracking inside all lifecycle hooks
       // since they can potentially be called inside effects.
-      pauseTracking()
+      const prevSub = setActiveSub()
       callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
         vnode.el,
         binding,
         vnode,
         prevVNode,
       ])
-      resetTracking()
+      setActiveSub(prevSub)
     }
   }
 }

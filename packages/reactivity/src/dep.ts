@@ -1,19 +1,22 @@
 import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
 import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import { onTrack, triggerEventInfos } from './debug'
-import { activeSub } from './effect'
 import {
-  type Dependency,
   type Link,
+  ReactiveFlags,
+  type ReactiveNode,
+  activeSub,
   endBatch,
   link,
   propagate,
+  shallowPropagate,
   startBatch,
 } from './system'
 
-class Dep implements Dependency {
+class Dep implements ReactiveNode {
   _subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
+  flags: ReactiveFlags = ReactiveFlags.None
 
   constructor(
     private map: KeyToDepMap,
@@ -103,7 +106,7 @@ export function trigger(
     return
   }
 
-  const run = (dep: Dependency | undefined) => {
+  const run = (dep: ReactiveNode | undefined) => {
     if (dep !== undefined && dep.subs !== undefined) {
       if (__DEV__) {
         triggerEventInfos.push({
@@ -116,6 +119,7 @@ export function trigger(
         })
       }
       propagate(dep.subs)
+      shallowPropagate(dep.subs)
       if (__DEV__) {
         triggerEventInfos.pop()
       }
@@ -190,7 +194,7 @@ export function trigger(
 export function getDepFromReactive(
   object: any,
   key: string | number | symbol,
-): Dependency | undefined {
+): ReactiveNode | undefined {
   const depMap = targetMap.get(object)
   return depMap && depMap.get(key)
 }

@@ -2,8 +2,8 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
+  type GenericComponentInstance,
   type SetupContext,
-  currentInstance,
   getComponentName,
   getCurrentInstance,
 } from '../component'
@@ -91,13 +91,13 @@ const KeepAliveImpl: ComponentOptions = {
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
-    const instance = getCurrentInstance()!
+    const keepAliveInstance = getCurrentInstance()!
     // KeepAlive communicates with the instantiated renderer via the
     // ctx where the renderer passes in its internals,
     // and the KeepAlive instance exposes activate/deactivate implementations.
     // The whole point of this is to avoid importing KeepAlive directly in the
     // renderer to facilitate tree-shaking.
-    const sharedContext = instance.ctx as KeepAliveContext
+    const sharedContext = keepAliveInstance.ctx as KeepAliveContext
 
     // if the internal renderer is not registered, it indicates that this is server-side rendering,
     // for KeepAlive, we just need to render its children
@@ -113,10 +113,10 @@ const KeepAliveImpl: ComponentOptions = {
     let current: VNode | null = null
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-      ;(instance as any).__v_cache = cache
+      ;(keepAliveInstance as any).__v_cache = cache
     }
 
-    const parentSuspense = instance.suspense
+    const parentSuspense = keepAliveInstance.suspense
 
     const {
       renderer: {
@@ -136,7 +136,14 @@ const KeepAliveImpl: ComponentOptions = {
       optimized,
     ) => {
       const instance = vnode.component!
-      move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
+      move(
+        vnode,
+        container,
+        anchor,
+        MoveType.ENTER,
+        keepAliveInstance,
+        parentSuspense,
+      )
       // in case props have changed
       patch(
         instance.vnode,
@@ -149,16 +156,20 @@ const KeepAliveImpl: ComponentOptions = {
         vnode.slotScopeIds,
         optimized,
       )
-      queuePostRenderEffect(() => {
-        instance.isDeactivated = false
-        if (instance.a) {
-          invokeArrayFns(instance.a)
-        }
-        const vnodeHook = vnode.props && vnode.props.onVnodeMounted
-        if (vnodeHook) {
-          invokeVNodeHook(vnodeHook, instance.parent, vnode)
-        }
-      }, parentSuspense)
+      queuePostRenderEffect(
+        () => {
+          instance.isDeactivated = false
+          if (instance.a) {
+            invokeArrayFns(instance.a)
+          }
+          const vnodeHook = vnode.props && vnode.props.onVnodeMounted
+          if (vnodeHook) {
+            invokeVNodeHook(vnodeHook, instance.parent, vnode)
+          }
+        },
+        undefined,
+        parentSuspense,
+      )
 
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
         // Update components tree
@@ -171,28 +182,44 @@ const KeepAliveImpl: ComponentOptions = {
       invalidateMount(instance.m)
       invalidateMount(instance.a)
 
-      move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
-      queuePostRenderEffect(() => {
-        if (instance.da) {
-          invokeArrayFns(instance.da)
-        }
-        const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
-        if (vnodeHook) {
-          invokeVNodeHook(vnodeHook, instance.parent, vnode)
-        }
-        instance.isDeactivated = true
-      }, parentSuspense)
+      move(
+        vnode,
+        storageContainer,
+        null,
+        MoveType.LEAVE,
+        keepAliveInstance,
+        parentSuspense,
+      )
+      queuePostRenderEffect(
+        () => {
+          if (instance.da) {
+            invokeArrayFns(instance.da)
+          }
+          const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
+          if (vnodeHook) {
+            invokeVNodeHook(vnodeHook, instance.parent, vnode)
+          }
+          instance.isDeactivated = true
+        },
+        undefined,
+        parentSuspense,
+      )
 
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
         // Update components tree
         devtoolsComponentAdded(instance)
+      }
+
+      // for e2e test
+      if (__DEV__ && __BROWSER__) {
+        ;(instance as any).__keepAliveStorageContainer = storageContainer
       }
     }
 
     function unmount(vnode: VNode) {
       // reset the shapeFlag so it can be properly unmounted
       resetShapeFlag(vnode)
-      _unmount(vnode, instance, parentSuspense, true)
+      _unmount(vnode, keepAliveInstance, parentSuspense, true)
     }
 
     function pruneCache(filter: (name: string) => boolean) {
@@ -235,12 +262,19 @@ const KeepAliveImpl: ComponentOptions = {
       if (pendingCacheKey != null) {
         // if KeepAlive child is a Suspense, it needs to be cached after Suspense resolves
         // avoid caching vnode that not been mounted
-        if (isSuspense(instance.subTree.type)) {
-          queuePostRenderEffect(() => {
-            cache.set(pendingCacheKey!, getInnerChild(instance.subTree))
-          }, instance.subTree.suspense)
+        if (isSuspense(keepAliveInstance.subTree.type)) {
+          queuePostRenderEffect(
+            () => {
+              cache.set(
+                pendingCacheKey!,
+                getInnerChild(keepAliveInstance.subTree),
+              )
+            },
+            undefined,
+            keepAliveInstance.subTree.suspense,
+          )
         } else {
-          cache.set(pendingCacheKey, getInnerChild(instance.subTree))
+          cache.set(pendingCacheKey, getInnerChild(keepAliveInstance.subTree))
         }
       }
     }
@@ -249,14 +283,14 @@ const KeepAliveImpl: ComponentOptions = {
 
     onBeforeUnmount(() => {
       cache.forEach(cached => {
-        const { subTree, suspense } = instance
+        const { subTree, suspense } = keepAliveInstance
         const vnode = getInnerChild(subTree)
         if (cached.type === vnode.type && cached.key === vnode.key) {
           // current instance will be unmounted as part of keep-alive's unmount
           resetShapeFlag(vnode)
           // but invoke its deactivated hook here
           const da = vnode.component!.da
-          da && queuePostRenderEffect(da, suspense)
+          da && queuePostRenderEffect(da, undefined, suspense)
           return
         }
         unmount(cached)
@@ -411,7 +445,7 @@ export function onDeactivated(
 function registerKeepAliveHook(
   hook: Function & { __wdc?: Function },
   type: LifecycleHooks,
-  target: ComponentInternalInstance | null = currentInstance,
+  target: ComponentInternalInstance | null = getCurrentInstance(),
 ) {
   // cache the deactivate branch check wrapper for injected hooks so the same
   // hook can be properly deduped by the scheduler. "__wdc" stands for "with
@@ -420,7 +454,7 @@ function registerKeepAliveHook(
     hook.__wdc ||
     (hook.__wdc = () => {
       // only fire the hook if the target instance is NOT in a deactivated branch.
-      let current: ComponentInternalInstance | null = target
+      let current: GenericComponentInstance | null = target
       while (current) {
         if (current.isDeactivated) {
           return
@@ -437,7 +471,7 @@ function registerKeepAliveHook(
   // arrays.
   if (target) {
     let current = target.parent
-    while (current && current.parent) {
+    while (current && current.parent && current.parent.vnode) {
       if (isKeepAlive(current.parent.vnode)) {
         injectToKeepAliveRoot(wrappedHook, type, target, current)
       }
@@ -450,7 +484,7 @@ function injectToKeepAliveRoot(
   hook: Function & { __weh?: Function },
   type: LifecycleHooks,
   target: ComponentInternalInstance,
-  keepAliveRoot: ComponentInternalInstance,
+  keepAliveRoot: GenericComponentInstance,
 ) {
   // injectHook wraps the original for error handling, so make sure to remove
   // the wrapped version.
