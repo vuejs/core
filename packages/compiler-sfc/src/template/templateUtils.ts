@@ -19,9 +19,12 @@ export function isDataUrl(url: string): boolean {
 /**
  * Parses string url into URL object.
  */
-export function parseUrl(url: string): UrlWithStringQuery {
+export function parseUrl(
+  url: string,
+  preserveTilde?: boolean,
+): UrlWithStringQuery {
   const firstChar = url.charAt(0)
-  if (firstChar === '~') {
+  if (firstChar === '~' && !preserveTilde) {
     const secondChar = url.charAt(1)
     url = url.slice(secondChar === '/' ? 2 : 1)
   }
