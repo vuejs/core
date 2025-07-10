@@ -168,6 +168,7 @@ class RefImpl<T = any> implements ReactiveNode {
     if (hasChanged(newValue, oldValue)) {
       this.flags |= _ReactiveFlags.Dirty
       this._rawValue = newValue
+      this._oldValue = oldValue
       this._value =
         !useDirectValue && this._wrap ? this._wrap(newValue) : newValue
       const subs = this.subs
