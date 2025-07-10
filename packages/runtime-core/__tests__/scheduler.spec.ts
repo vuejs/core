@@ -3,7 +3,6 @@ import {
   SchedulerJobFlags,
   flushPostFlushCbs,
   flushPreFlushCbs,
-  invalidateJob,
   nextTick,
   queueJob,
   queuePostFlushCb,
@@ -239,6 +238,37 @@ describe('scheduler', () => {
       expect(calls).toEqual(['cb1', 'cb2', 'job1'])
     })
 
+    it('should insert pre jobs without ids first during flushing', async () => {
+      const calls: string[] = []
+      const job1: SchedulerJob = () => {
+        calls.push('job1')
+        queueJob(job3)
+        queueJob(job4)
+      }
+      // job1 has no id
+      job1.flags! |= SchedulerJobFlags.PRE
+      const job2: SchedulerJob = () => {
+        calls.push('job2')
+      }
+      job2.id = 1
+      job2.flags! |= SchedulerJobFlags.PRE
+      const job3: SchedulerJob = () => {
+        calls.push('job3')
+      }
+      // job3 has no id
+      job3.flags! |= SchedulerJobFlags.PRE
+      const job4: SchedulerJob = () => {
+        calls.push('job4')
+      }
+      // job4 has no id
+      job4.flags! |= SchedulerJobFlags.PRE
+
+      queueJob(job1)
+      queueJob(job2)
+      await nextTick()
+      expect(calls).toEqual(['job1', 'job3', 'job4', 'job2'])
+    })
+
     // #3806
     it('queue preFlushCb inside postFlushCb', async () => {
       const spy = vi.fn()
@@ -411,33 +441,29 @@ describe('scheduler', () => {
       await nextTick()
       expect(calls).toEqual(['job1', 'job2', 'cb1', 'cb2'])
     })
-  })
 
-  test('invalidateJob', async () => {
-    const calls: string[] = []
-    const job1 = () => {
-      calls.push('job1')
-      invalidateJob(job2)
-      job2()
-    }
-    const job2 = () => {
-      calls.push('job2')
-    }
-    const job3 = () => {
-      calls.push('job3')
-    }
-    const job4 = () => {
-      calls.push('job4')
-    }
-    // queue all jobs
-    queueJob(job1)
-    queueJob(job2)
-    queueJob(job3)
-    queuePostFlushCb(job4)
-    expect(calls).toEqual([])
-    await nextTick()
-    // job2 should be called only once
-    expect(calls).toEqual(['job1', 'job2', 'job3', 'job4'])
+    test('jobs added during post flush are ordered correctly', async () => {
+      const calls: string[] = []
+
+      const job1: SchedulerJob = () => {
+        calls.push('job1')
+      }
+      job1.id = 1
+
+      const job2: SchedulerJob = () => {
+        calls.push('job2')
+      }
+      job2.id = 2
+
+      queuePostFlushCb(() => {
+        queueJob(job2)
+        queueJob(job1)
+      })
+
+      await nextTick()
+
+      expect(calls).toEqual(['job1', 'job2'])
+    })
   })
 
   test('sort job based on id', async () => {
@@ -448,12 +474,20 @@ describe('scheduler', () => {
     job2.id = 2
     const job3 = () => calls.push('job3')
     job3.id = 1
+    const job4: SchedulerJob = () => calls.push('job4')
+    job4.id = 2
+    job4.flags! |= SchedulerJobFlags.PRE
+    const job5: SchedulerJob = () => calls.push('job5')
+    // job5 has no id
+    job5.flags! |= SchedulerJobFlags.PRE
 
     queueJob(job1)
     queueJob(job2)
     queueJob(job3)
+    queueJob(job4)
+    queueJob(job5)
     await nextTick()
-    expect(calls).toEqual(['job3', 'job2', 'job1'])
+    expect(calls).toEqual(['job5', 'job3', 'job4', 'job2', 'job1'])
   })
 
   test('sort SchedulerCbs based on id', async () => {
@@ -506,6 +540,45 @@ describe('scheduler', () => {
     await nextTick()
   })
 
+  test('jobs can be re-queued after an error', async () => {
+    const err = new Error('test')
+    let shouldThrow = true
+
+    const job1: SchedulerJob = vi.fn(() => {
+      if (shouldThrow) {
+        shouldThrow = false
+        throw err
+      }
+    })
+    job1.id = 1
+
+    const job2: SchedulerJob = vi.fn()
+    job2.id = 2
+
+    queueJob(job1)
+    queueJob(job2)
+
+    try {
+      await nextTick()
+    } catch (e: any) {
+      expect(e).toBe(err)
+    }
+    expect(
+      `Unhandled error during execution of scheduler flush`,
+    ).toHaveBeenWarned()
+
+    expect(job1).toHaveBeenCalledTimes(1)
+    expect(job2).toHaveBeenCalledTimes(0)
+
+    queueJob(job1)
+    queueJob(job2)
+
+    await nextTick()
+
+    expect(job1).toHaveBeenCalledTimes(2)
+    expect(job2).toHaveBeenCalledTimes(1)
+  })
+
   test('should prevent self-triggering jobs by default', async () => {
     let count = 0
     const job = () => {
@@ -545,6 +618,113 @@ describe('scheduler', () => {
     queuePostFlushCb(cb)
     await nextTick()
     expect(count).toBe(5)
+  })
+
+  test('recursive jobs can only be queued once non-recursively', async () => {
+    const job: SchedulerJob = vi.fn()
+    job.id = 1
+    job.flags = SchedulerJobFlags.ALLOW_RECURSE
+
+    queueJob(job)
+    queueJob(job)
+
+    await nextTick()
+
+    expect(job).toHaveBeenCalledTimes(1)
+  })
+
+  test('recursive jobs can only be queued once recursively', async () => {
+    let recurse = true
+
+    const job: SchedulerJob = vi.fn(() => {
+      if (recurse) {
+        queueJob(job)
+        queueJob(job)
+        recurse = false
+      }
+    })
+    job.id = 1
+    job.flags = SchedulerJobFlags.ALLOW_RECURSE
+
+    queueJob(job)
+
+    await nextTick()
+
+    expect(job).toHaveBeenCalledTimes(2)
+  })
+
+  test(`recursive jobs can't be re-queued by other jobs`, async () => {
+    let recurse = true
+
+    const job1: SchedulerJob = () => {
+      if (recurse) {
+        // job2 is already queued, so this shouldn't do anything
+        queueJob(job2)
+        recurse = false
+      }
+    }
+    job1.id = 1
+
+    const job2: SchedulerJob = vi.fn(() => {
+      if (recurse) {
+        queueJob(job1)
+        queueJob(job2)
+      }
+    })
+    job2.id = 2
+    job2.flags = SchedulerJobFlags.ALLOW_RECURSE
+
+    queueJob(job2)
+
+    await nextTick()
+
+    expect(job2).toHaveBeenCalledTimes(2)
+  })
+
+  test('jobs are de-duplicated correctly when calling flushPreFlushCbs', async () => {
+    let recurse = true
+
+    const job1: SchedulerJob = vi.fn(() => {
+      queueJob(job3)
+      queueJob(job3)
+      flushPreFlushCbs()
+    })
+    job1.id = 1
+    job1.flags = SchedulerJobFlags.PRE
+
+    const job2: SchedulerJob = vi.fn(() => {
+      if (recurse) {
+        // job2 does not allow recurse, so this shouldn't do anything
+        queueJob(job2)
+
+        // job3 is already queued, so this shouldn't do anything
+        queueJob(job3)
+        recurse = false
+      }
+    })
+    job2.id = 2
+    job2.flags = SchedulerJobFlags.PRE
+
+    const job3: SchedulerJob = vi.fn(() => {
+      if (recurse) {
+        queueJob(job2)
+        queueJob(job3)
+
+        // The jobs are already queued, so these should have no effect
+        queueJob(job2)
+        queueJob(job3)
+      }
+    })
+    job3.id = 3
+    job3.flags = SchedulerJobFlags.ALLOW_RECURSE | SchedulerJobFlags.PRE
+
+    queueJob(job1)
+
+    await nextTick()
+
+    expect(job1).toHaveBeenCalledTimes(1)
+    expect(job2).toHaveBeenCalledTimes(1)
+    expect(job3).toHaveBeenCalledTimes(2)
   })
 
   // #1947 flushPostFlushCbs should handle nested calls
@@ -599,6 +779,37 @@ describe('scheduler', () => {
     queueJob(job)
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  test('flushPreFlushCbs inside a post job', async () => {
+    const calls: string[] = []
+    const callsAfterFlush: string[] = []
+
+    const job1: SchedulerJob = () => {
+      calls.push('job1')
+    }
+    job1.id = 1
+    job1.flags! |= SchedulerJobFlags.PRE
+
+    const job2: SchedulerJob = () => {
+      calls.push('job2')
+    }
+    job2.id = 2
+    job2.flags! |= SchedulerJobFlags.PRE
+
+    queuePostFlushCb(() => {
+      queueJob(job2)
+      queueJob(job1)
+
+      // e.g. nested app.mount() call
+      flushPreFlushCbs()
+      callsAfterFlush.push(...calls)
+    })
+
+    await nextTick()
+
+    expect(callsAfterFlush).toEqual(['job1', 'job2'])
+    expect(calls).toEqual(['job1', 'job2'])
   })
 
   it('nextTick should return promise', async () => {

@@ -35,6 +35,8 @@ const {
   setupComponent,
   renderComponentRoot,
   normalizeVNode,
+  pushWarningContext,
+  popWarningContext,
 } = ssrUtils
 
 export type SSRBuffer = SSRBufferItem[] & { hasAsync?: boolean }
@@ -91,24 +93,29 @@ export function renderComponentVNode(
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
-  const instance = createComponentInstance(vnode, parentComponent, null)
+  const instance = (vnode.component = createComponentInstance(
+    vnode,
+    parentComponent,
+    null,
+  ))
+  if (__DEV__) pushWarningContext(vnode)
   const res = setupComponent(instance, true /* isSSR */)
+  if (__DEV__) popWarningContext()
   const hasAsyncSetup = isPromise(res)
-  const prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
+  let prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
   if (hasAsyncSetup || prefetches) {
-    let p: Promise<unknown> = hasAsyncSetup
-      ? (res as Promise<void>)
-      : Promise.resolve()
-    if (prefetches) {
-      p = p
-        .then(() =>
-          Promise.all(
+    const p: Promise<unknown> = Promise.resolve(res as Promise<void>)
+      .then(() => {
+        // instance.sp may be null until an async setup resolves, so evaluate it here
+        if (hasAsyncSetup) prefetches = instance.sp
+        if (prefetches) {
+          return Promise.all(
             prefetches.map(prefetch => prefetch.call(instance.proxy)),
-          ),
-        )
-        // Note: error display is already done by the wrapped lifecycle hook function.
-        .catch(NOOP)
-    }
+          )
+        }
+      })
+      // Note: error display is already done by the wrapped lifecycle hook function.
+      .catch(NOOP)
     return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
     return renderComponentSubTree(instance, slotScopeId)
@@ -119,6 +126,7 @@ function renderComponentSubTree(
   instance: ComponentInternalInstance,
   slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
+  if (__DEV__) pushWarningContext(instance.vnode)
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
   if (isFunction(comp)) {
@@ -208,6 +216,7 @@ function renderComponentSubTree(
       push(`<!---->`)
     }
   }
+  if (__DEV__) popWarningContext()
   return getBuffer()
 }
 
@@ -217,7 +226,11 @@ export function renderVNode(
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
 ): void {
-  const { type, shapeFlag, children } = vnode
+  const { type, shapeFlag, children, dirs, props } = vnode
+  if (dirs) {
+    vnode.props = applySSRDirectives(vnode, props, dirs)
+  }
+
   switch (type) {
     case Text:
       push(escapeHtml(children as string))
@@ -283,12 +296,8 @@ function renderElementVNode(
   slotScopeId?: string,
 ) {
   const tag = vnode.type as string
-  let { props, children, shapeFlag, scopeId, dirs } = vnode
+  let { props, children, shapeFlag, scopeId } = vnode
   let openTag = `<${tag}`
-
-  if (dirs) {
-    props = applySSRDirectives(vnode, props, dirs)
-  }
 
   if (props) {
     openTag += ssrRenderAttrs(props, tag)

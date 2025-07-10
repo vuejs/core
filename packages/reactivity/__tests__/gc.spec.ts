@@ -2,6 +2,7 @@ import {
   type ComputedRef,
   computed,
   effect,
+  effectScope,
   reactive,
   shallowRef as ref,
   toRaw,
@@ -19,7 +20,7 @@ describe.skipIf(!global.gc)('reactivity/gc', () => {
   }
 
   // #9233
-  it('should release computed cache', async () => {
+  it.todo('should release computed cache', async () => {
     const src = ref<{} | undefined>({})
     // @ts-expect-error ES2021 API
     const srcRef = new WeakRef(src.value!)
@@ -34,7 +35,7 @@ describe.skipIf(!global.gc)('reactivity/gc', () => {
     expect(srcRef.deref()).toBeUndefined()
   })
 
-  it('should release reactive property dep', async () => {
+  it.todo('should release reactive property dep', async () => {
     const src = reactive({ foo: 1 })
 
     let c: ComputedRef | undefined = computed(() => src.foo)
@@ -78,5 +79,37 @@ describe.skipIf(!global.gc)('reactivity/gc', () => {
     await gc()
     src.foo++
     expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  it('should release computed that untrack by effect', async () => {
+    const src = ref(0)
+    // @ts-expect-error ES2021 API
+    const c = new WeakRef(computed(() => src.value))
+    const scope = effectScope()
+
+    scope.run(() => {
+      effect(() => c.deref().value)
+    })
+
+    expect(c.deref()).toBeDefined()
+    scope.stop()
+    await gc()
+    expect(c.deref()).toBeUndefined()
+  })
+
+  it('should release computed that untrack by effectScope', async () => {
+    const src = ref(0)
+    // @ts-expect-error ES2021 API
+    const c = new WeakRef(computed(() => src.value))
+    const scope = effectScope()
+
+    scope.run(() => {
+      c.deref().value
+    })
+
+    expect(c.deref()).toBeDefined()
+    scope.stop()
+    await gc()
+    expect(c.deref()).toBeUndefined()
   })
 })

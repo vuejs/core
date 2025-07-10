@@ -6,6 +6,7 @@ import {
   getCurrentInstance,
   nextTick,
   onErrorCaptured,
+  onWatcherCleanup,
   reactive,
   ref,
   watch,
@@ -24,18 +25,19 @@ import {
 } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
-  EffectFlags,
   ITERATE_KEY,
   type Ref,
   type ShallowRef,
   TrackOpTypes,
   TriggerOpTypes,
   effectScope,
+  onScopeDispose,
   shallowReactive,
   shallowRef,
   toRef,
   triggerRef,
 } from '@vue/reactivity'
+import { renderToString } from '@vue/server-renderer'
 
 describe('api: watch', () => {
   it('effect', async () => {
@@ -372,6 +374,43 @@ describe('api: watch', () => {
     expect(dummy).toBe(0)
   })
 
+  it('stopping the watcher (SSR)', async () => {
+    let dummy = 0
+    const count = ref<number>(1)
+    const captureValue = (value: number) => {
+      dummy = value
+    }
+    const watchCallback = vi.fn(newValue => {
+      captureValue(newValue)
+    })
+    const Comp = defineComponent({
+      created() {
+        const getter = () => this.count
+        captureValue(getter()) // sets dummy to 1
+        const stop = this.$watch(getter, watchCallback)
+        stop()
+        this.count = 2 // shouldn't trigger side effect
+      },
+      render() {
+        return h('div', this.count)
+      },
+      setup() {
+        return { count }
+      },
+    })
+    let html
+    html = await renderToString(h(Comp))
+    // should not throw here
+    expect(html).toBe(`<div>2</div>`)
+    expect(watchCallback).not.toHaveBeenCalled()
+    expect(dummy).toBe(1)
+    await nextTick()
+    count.value = 3 // shouldn't trigger side effect
+    await nextTick()
+    expect(watchCallback).not.toHaveBeenCalled()
+    expect(dummy).toBe(1)
+  })
+
   it('stopping the watcher (with source)', async () => {
     const state = reactive({ count: 0 })
     let dummy
@@ -433,6 +472,35 @@ describe('api: watch', () => {
 
     stop()
     expect(cleanup).toHaveBeenCalledTimes(2)
+  })
+
+  it('onWatcherCleanup', async () => {
+    const count = ref(0)
+    const cleanupEffect = vi.fn()
+    const cleanupWatch = vi.fn()
+
+    const stopEffect = watchEffect(() => {
+      onWatcherCleanup(cleanupEffect)
+      count.value
+    })
+    const stopWatch = watch(count, () => {
+      onWatcherCleanup(cleanupWatch)
+    })
+
+    count.value++
+    await nextTick()
+    expect(cleanupEffect).toHaveBeenCalledTimes(1)
+    expect(cleanupWatch).toHaveBeenCalledTimes(0)
+
+    count.value++
+    await nextTick()
+    expect(cleanupEffect).toHaveBeenCalledTimes(2)
+    expect(cleanupWatch).toHaveBeenCalledTimes(1)
+
+    stopEffect()
+    expect(cleanupEffect).toHaveBeenCalledTimes(3)
+    stopWatch()
+    expect(cleanupWatch).toHaveBeenCalledTimes(2)
   })
 
   it('flush timing: pre (default)', async () => {
@@ -1273,7 +1341,7 @@ describe('api: watch', () => {
     await nextTick()
     await nextTick()
 
-    expect(instance!.scope.effects[0].flags & EffectFlags.ACTIVE).toBeFalsy()
+    expect(instance!.scope.effects.length).toBe(0)
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
@@ -1741,6 +1809,11 @@ describe('api: watch', () => {
     expect(scope.effects.length).toBe(1)
     unwatch!()
     expect(scope.effects.length).toBe(0)
+
+    scope.run(() => {
+      watch(num, () => {}, { once: true, immediate: true })
+    })
+    expect(scope.effects.length).toBe(0)
   })
 
   // simplified case of VueUse syncRef
@@ -1857,7 +1930,7 @@ describe('api: watch', () => {
     warn.mockRestore()
   })
 
-  it('should be executed correctly', () => {
+  test('should be executed correctly', () => {
     const v = ref(1)
     let foo = ''
 
@@ -1883,5 +1956,58 @@ describe('api: watch', () => {
     expect(foo).toBe('')
     v.value++
     expect(foo).toBe('12')
+  })
+
+  // 12045
+  test('sync watcher should not break pre watchers', async () => {
+    const count1 = ref(0)
+    const count2 = ref(0)
+
+    watch(
+      count1,
+      () => {
+        count2.value++
+      },
+      { flush: 'sync' },
+    )
+
+    const spy1 = vi.fn()
+    watch([count1, count2], spy1)
+
+    const spy2 = vi.fn()
+    watch(count1, spy2)
+
+    count1.value++
+
+    await nextTick()
+    expect(spy1).toHaveBeenCalled()
+    expect(spy2).toHaveBeenCalled()
+  })
+
+  // #12631
+  test('this.$watch w/ onScopeDispose', () => {
+    const onCleanup = vi.fn()
+    const toggle = ref(true)
+
+    const Comp = defineComponent({
+      render() {},
+      created(this: any) {
+        this.$watch(
+          () => 1,
+          function () {},
+        )
+        onScopeDispose(onCleanup)
+      },
+    })
+
+    const App = defineComponent({
+      render() {
+        return toggle.value ? h(Comp) : null
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(App).mount(root)
+    expect(onCleanup).toBeCalledTimes(0)
   })
 })

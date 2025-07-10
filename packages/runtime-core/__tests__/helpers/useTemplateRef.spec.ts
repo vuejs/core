@@ -1,4 +1,5 @@
 import {
+  type ShallowRef,
   h,
   nextTick,
   nodeOps,
@@ -81,5 +82,47 @@ describe('useTemplateRef', () => {
     )
 
     expect(`useTemplateRef('foo') already exists.`).toHaveBeenWarned()
+  })
+
+  // #11795
+  test('should not attempt to set when variable name is same as key', () => {
+    let tRef: ShallowRef
+    const key = 'refKey'
+    const Comp = {
+      setup() {
+        tRef = useTemplateRef('_')
+        return {
+          [key]: tRef,
+        }
+      },
+      render() {
+        return h('div', { ref: key })
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    expect('target is readonly').not.toHaveBeenWarned()
+    expect(tRef!.value).toBe(null)
+  })
+
+  test('should work when used as direct ref value (compiled in prod mode)', () => {
+    __DEV__ = false
+    try {
+      let foo: ShallowRef
+      const Comp = {
+        setup() {
+          foo = useTemplateRef('foo')
+          return () => h('div', { ref: foo })
+        },
+      }
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+
+      expect('target is readonly').not.toHaveBeenWarned()
+      expect(foo!.value).toBe(root.children[0])
+    } finally {
+      __DEV__ = true
+    }
   })
 })

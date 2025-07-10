@@ -176,7 +176,7 @@ describe('reactivity/effect/scope', () => {
 
     expect('[Vue warn] cannot run an inactive effect scope.').toHaveBeenWarned()
 
-    expect(scope.effects.length).toBe(1)
+    expect(scope.effects.length).toBe(0)
 
     counter.num = 7
     expect(dummy).toBe(0)
@@ -332,5 +332,45 @@ describe('reactivity/effect/scope', () => {
     expect(spy).toHaveBeenCalledTimes(0)
     scope.stop()
     expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  test('removing a watcher while stopping its effectScope', async () => {
+    const count = ref(0)
+    const scope = effectScope()
+    let watcherCalls = 0
+    let cleanupCalls = 0
+
+    scope.run(() => {
+      const stop1 = watch(count, () => {
+        watcherCalls++
+      })
+      watch(count, (val, old, onCleanup) => {
+        watcherCalls++
+        onCleanup(() => {
+          cleanupCalls++
+          stop1()
+        })
+      })
+      watch(count, () => {
+        watcherCalls++
+      })
+    })
+
+    expect(watcherCalls).toBe(0)
+    expect(cleanupCalls).toBe(0)
+
+    count.value++
+    await nextTick()
+    expect(watcherCalls).toBe(3)
+    expect(cleanupCalls).toBe(0)
+
+    scope.stop()
+    count.value++
+    await nextTick()
+    expect(watcherCalls).toBe(3)
+    expect(cleanupCalls).toBe(1)
+
+    expect(scope.effects.length).toBe(0)
+    expect(scope.cleanups.length).toBe(0)
   })
 })

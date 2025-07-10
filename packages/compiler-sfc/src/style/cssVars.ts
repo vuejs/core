@@ -8,9 +8,9 @@ import {
   processExpression,
 } from '@vue/compiler-dom'
 import type { SFCDescriptor } from '../parse'
-import { getEscapedCssVarName } from '../script/utils'
 import type { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
+import { getEscapedCssVarName } from '@vue/shared'
 
 export const CSS_VARS_HELPER = `useCssVars`
 

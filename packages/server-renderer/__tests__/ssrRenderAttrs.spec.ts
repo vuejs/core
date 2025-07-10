@@ -143,6 +143,19 @@ describe('ssr: renderClass', () => {
   test('escape class values', () => {
     expect(ssrRenderClass(`"><script`)).toBe(`&quot;&gt;&lt;script`)
   })
+
+  test('className', () => {
+    expect(
+      ssrRenderAttrs({
+        className: 'foo',
+      }),
+    ).toBe(` class="foo"`)
+    expect(
+      ssrRenderAttrs({
+        className: ['foo', 'bar'],
+      }),
+    ).toBe(` class="foo,bar"`)
+  })
 })
 
 describe('ssr: renderStyle', () => {

@@ -170,8 +170,6 @@ export function compileScript(
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
 
-  let refBindings: string[] | undefined
-
   if (!scriptSetup) {
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
@@ -740,12 +738,6 @@ export function compileScript(
   for (const key in setupBindings) {
     ctx.bindingMetadata[key] = setupBindings[key]
   }
-  // known ref bindings
-  if (refBindings) {
-    for (const key of refBindings) {
-      ctx.bindingMetadata[key] = BindingTypes.SETUP_REF
-    }
-  }
 
   // 7. inject `useCssVars` calls
   if (
@@ -979,7 +971,7 @@ export function compileScript(
       (definedOptions ? `\n  ...${definedOptions},` : '')
     ctx.s.prependLeft(
       startOffset,
-      `\n${genDefaultAs} /*#__PURE__*/${ctx.helper(
+      `\n${genDefaultAs} /*@__PURE__*/${ctx.helper(
         `defineComponent`,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
@@ -992,7 +984,7 @@ export function compileScript(
       // export default Object.assign(__default__, { ... })
       ctx.s.prependLeft(
         startOffset,
-        `\n${genDefaultAs} /*#__PURE__*/Object.assign(${
+        `\n${genDefaultAs} /*@__PURE__*/Object.assign(${
           defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`,

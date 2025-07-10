@@ -8,7 +8,7 @@ interface EventRegistry {
   [event: string]: Function[] | undefined
 }
 
-const eventRegistryMap = /*#__PURE__*/ new WeakMap<
+const eventRegistryMap = /*@__PURE__*/ new WeakMap<
   ComponentInternalInstance,
   EventRegistry
 >()
@@ -53,7 +53,7 @@ export function once(
 ): ComponentPublicInstance | null {
   const wrapped = (...args: any[]) => {
     off(instance, event, wrapped)
-    fn.call(instance.proxy, ...args)
+    fn.apply(instance.proxy, args)
   }
   wrapped.fn = fn
   on(instance, event, wrapped)

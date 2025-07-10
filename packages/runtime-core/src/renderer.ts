@@ -45,7 +45,6 @@ import {
   type SchedulerJobs,
   flushPostFlushCbs,
   flushPreFlushCbs,
-  invalidateJob,
   queueJob,
   queuePostFlushCb,
 } from './scheduler'
@@ -63,6 +62,7 @@ import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
   type SuspenseImpl,
+  isSuspense,
   queueEffectWithSuspense,
 } from './components/Suspense'
 import {
@@ -750,7 +750,11 @@ function baseCreateRenderer(
         subTree =
           filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
       }
-      if (vnode === subTree) {
+      if (
+        vnode === subTree ||
+        (isSuspense(subTree.type) &&
+          (subTree.ssContent === vnode || subTree.ssFallback === vnode))
+      ) {
         const parentVNode = parentComponent.vnode
         setScopeId(
           el,
@@ -1207,6 +1211,9 @@ function baseCreateRenderer(
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
+      // avoid hydration for hmr updating
+      if (__DEV__ && isHmrUpdating) initialVNode.el = null
+
       parentSuspense &&
         parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
@@ -1255,9 +1262,6 @@ function baseCreateRenderer(
       } else {
         // normal update
         instance.next = n2
-        // in case the child component is also queued, remove it to avoid
-        // double updating the same child component in the same flush.
-        invalidateJob(instance.update)
         // instance.update is the reactive effect.
         instance.update()
       }
@@ -1329,7 +1333,10 @@ function baseCreateRenderer(
             }
           }
 
-          if (isAsyncWrapperVNode) {
+          if (
+            isAsyncWrapperVNode &&
+            (type as ComponentOptions).__asyncHydrate
+          ) {
             ;(type as ComponentOptions).__asyncHydrate!(
               el as Element,
               instance,
@@ -1551,7 +1558,8 @@ function baseCreateRenderer(
     instance.scope.off()
 
     const update = (instance.update = effect.run.bind(effect))
-    const job: SchedulerJob = (instance.job = effect.runIfDirty.bind(effect))
+    const job: SchedulerJob = (instance.job = () =>
+      effect.dirty && effect.run())
     job.i = instance
     job.id = instance.uid
     effect.scheduler = () => queueJob(job)
