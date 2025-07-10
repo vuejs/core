@@ -6,7 +6,7 @@ const define = makeInteropRender()
 
 describe('vdomInterop', () => {
   describe('props', () => {
-    test('prevent hasOwnProperty error when props is null', () => {
+    test('should work if props are not provided', () => {
       const VaporChild = defineVaporComponent({
         props: {
           msg: String,
