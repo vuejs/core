@@ -12,12 +12,11 @@ import type { VaporComponent, VaporComponentInstance } from './component'
 import {
   type NormalizedPropsOptions,
   baseNormalizePropsOptions,
-  currentInstance,
   isEmitListener,
   popWarningContext,
   pushWarningContext,
   resolvePropValue,
-  simpleSetCurrentInstance,
+  setCurrentInstance,
   validateProps,
   warn,
 } from '@vue/runtime-dom'
@@ -262,10 +261,9 @@ function resolveDefault(
   factory: (props: Record<string, any>) => unknown,
   instance: VaporComponentInstance,
 ) {
-  const prev = currentInstance
-  simpleSetCurrentInstance(instance)
+  const prev = setCurrentInstance(instance)
   const res = factory.call(null, instance.props)
-  simpleSetCurrentInstance(prev, instance)
+  setCurrentInstance(...prev)
   return res
 }
 
