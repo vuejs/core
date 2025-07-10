@@ -52,6 +52,7 @@ export enum EffectFlags {
    */
   ALLOW_RECURSE = 1 << 7,
   PAUSED = 1 << 8,
+  STOP = 1 << 10,
 }
 
 export class ReactiveEffect<T = any>
@@ -90,7 +91,7 @@ export class ReactiveEffect<T = any>
   }
 
   get active(): boolean {
-    return !!this.flags || this.deps !== undefined
+    return !(this.flags & EffectFlags.STOP)
   }
 
   pause(): void {
@@ -132,6 +133,10 @@ export class ReactiveEffect<T = any>
   }
 
   stop(): void {
+    if (!this.active) {
+      return
+    }
+    this.flags = EffectFlags.STOP
     let dep = this.deps
     while (dep !== undefined) {
       dep = unlink(dep, this)
@@ -140,7 +145,6 @@ export class ReactiveEffect<T = any>
     if (sub !== undefined) {
       unlink(sub)
     }
-    this.flags = 0
     cleanup(this)
   }
 
