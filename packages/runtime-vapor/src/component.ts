@@ -20,7 +20,7 @@ import {
   pushWarningContext,
   queuePostFlushCb,
   registerHMR,
-  simpleSetCurrentInstance,
+  setCurrentInstance,
   startMeasure,
   unregisterHMR,
 } from '@vue/runtime-dom'
@@ -29,9 +29,8 @@ import {
   type ShallowRef,
   markRaw,
   onScopeDispose,
-  pauseTracking,
   proxyRefs,
-  resetTracking,
+  setActiveSub,
   unref,
 } from '@vue/reactivity'
 import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
@@ -205,9 +204,8 @@ export function createComponent(
     instance.emitsOptions = normalizeEmitsOptions(component)
   }
 
-  const prev = currentInstance
-  simpleSetCurrentInstance(instance)
-  pauseTracking()
+  const prevInstance = setCurrentInstance(instance)
+  const prevSub = setActiveSub()
 
   if (__DEV__) {
     setupPropsValidation(instance)
@@ -261,8 +259,8 @@ export function createComponent(
     }
   }
 
-  resetTracking()
-  simpleSetCurrentInstance(prev, instance)
+  setActiveSub(prevSub)
+  setCurrentInstance(...prevInstance)
 
   if (__DEV__) {
     popWarningContext()

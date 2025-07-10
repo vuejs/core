@@ -120,8 +120,7 @@ export function setRef(
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
         }
       }
-      doSet.id = -1
-      queuePostFlushCb(doSet)
+      queuePostFlushCb(doSet, -1)
 
       // TODO this gets called repeatedly in renderEffect when it's dynamic ref?
       onScopeDispose(() => {

@@ -12,20 +12,13 @@ import {
 } from '../../src/dom/prop'
 import { setStyle } from '../../src/dom/prop'
 import { VaporComponentInstance } from '../../src/component'
-import {
-  currentInstance,
-  ref,
-  simpleSetCurrentInstance,
-} from '@vue/runtime-dom'
+import { ref, setCurrentInstance } from '@vue/runtime-dom'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
   const instance = new VaporComponentInstance({}, {}, null)
-  const prev = currentInstance
-  simpleSetCurrentInstance(instance)
-  removeComponentInstance = () => {
-    simpleSetCurrentInstance(prev)
-  }
+  const prev = setCurrentInstance(instance)
+  removeComponentInstance = () => setCurrentInstance(...prev)
 })
 afterEach(() => {
   removeComponentInstance()

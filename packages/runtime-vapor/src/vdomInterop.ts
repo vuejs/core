@@ -134,17 +134,11 @@ const vaporSlotPropsProxyHandler: ProxyHandler<
 
 const vaporSlotsProxyHandler: ProxyHandler<any> = {
   get(target, key) {
-    const fn = target[key]
-    return isFunction(fn)
-      ? new Proxy(fn, {
-          get(fnTarget, fnKey) {
-            if (fnKey === '__vapor') {
-              return true
-            }
-            return fnTarget[fnKey]
-          },
-        })
-      : fn
+    const slot = target[key]
+    if (isFunction(slot)) {
+      slot.__vapor = true
+    }
+    return slot
   },
 }
 

@@ -421,12 +421,18 @@ importers:
 
   packages/compiler-vapor:
     dependencies:
+      '@babel/parser':
+        specifier: 'catalog:'
+        version: 7.28.0
       '@vue/compiler-dom':
         specifier: workspace:*
         version: link:../compiler-dom
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
+      estree-walker:
+        specifier: 'catalog:'
+        version: 2.0.2
       source-map-js:
         specifier: 'catalog:'
         version: 1.2.1
