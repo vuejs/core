@@ -98,12 +98,7 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
   if (prev && prev.type === NodeTypes.TEXT) {
     nodes.unshift(prev)
   }
-
-  const values = nodes
-    .map(node => createTextLikeExpression(node, context))
-    .filter(v =>
-      v.type === NodeTypes.SIMPLE_EXPRESSION ? v.content.length !== 0 : true,
-    )
+  const values = processTextLikeChildren(nodes, context)
 
   if (values.length === 0 && parentNode.type !== NodeTypes.ROOT) {
     return
@@ -143,11 +138,7 @@ function processTextContainer(
   children: TextLike[],
   context: TransformContext<ElementNode>,
 ) {
-  const values = children
-    .map(child => createTextLikeExpression(child, context))
-    .filter(v =>
-      v.type === NodeTypes.SIMPLE_EXPRESSION ? v.content.length !== 0 : true,
-    )
+  const values = processTextLikeChildren(children, context)
 
   const literals = values.map(getLiteralExpressionValue)
 
@@ -169,13 +160,22 @@ function processTextContainer(
   }
 }
 
-function createTextLikeExpression(node: TextLike, context: TransformContext) {
-  markNonTemplate(node, context)
-  if (node.type === NodeTypes.TEXT) {
-    return createSimpleExpression(node.content, true, node.loc)
-  } else {
-    return node.content as SimpleExpressionNode
+function processTextLikeChildren(nodes: TextLike[], context: TransformContext) {
+  const exps: SimpleExpressionNode[] = []
+  for (const node of nodes) {
+    let exp: SimpleExpressionNode
+    markNonTemplate(node, context)
+
+    if (node.type === NodeTypes.TEXT) {
+      exp = createSimpleExpression(node.content, true, node.loc)
+    } else {
+      exp = node.content as SimpleExpressionNode
+    }
+
+    if (exp.content) exps.push(exp)
   }
+
+  return exps
 }
 
 function isTextLike(node: TemplateChildNode): node is TextLike {
