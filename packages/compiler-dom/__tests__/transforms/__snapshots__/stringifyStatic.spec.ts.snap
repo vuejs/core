@@ -158,6 +158,14 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`stringify static html > static interpolation 1`] = `
+"const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode } = Vue
+
+return function render(_ctx, _cache) {
+  return _cache[0] || (_cache[0] = _createStaticVNode("<div>1</div><div>1</div><div>1</div><div>false</div><div></div><div></div><div></div><div>1</div><div>1</div><div>1</div><div>false</div><div></div><div></div><div></div><div>1</div><div>1</div><div>1</div><div>false</div><div></div><div></div><div></div>", 21))
+}"
+`;
+
 exports[`stringify static html > stringify v-html 1`] = `
 "const { createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode } = Vue
 

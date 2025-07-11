@@ -44,7 +44,9 @@ import { parseExpression } from '@babel/parser'
 import { IS_REF, UNREF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 
-const isLiteralWhitelisted = /*@__PURE__*/ makeMap('true,false,null,this')
+const isLiteralWhitelisted = /*@__PURE__*/ makeMap(
+  'true,false,null,undefined,this',
+)
 
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
@@ -119,7 +121,14 @@ export function processExpression(
     return node
   }
 
-  if (!context.prefixIdentifiers || !node.content.trim()) {
+  if (!node.content.trim()) {
+    // This allows stringification to continue in the presence of empty
+    // interpolations.
+    node.constType = ConstantTypes.CAN_STRINGIFY
+    return node
+  }
+
+  if (!context.prefixIdentifiers) {
     return node
   }
 

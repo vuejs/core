@@ -3,6 +3,7 @@ import {
   type DirectiveArguments,
   type ForCodegenNode,
   type IfConditionalExpression,
+  type InterpolationNode,
   NodeTypes,
   type RootNode,
   type VNodeCall,
@@ -189,6 +190,40 @@ describe('compiler: codegen', () => {
       }),
     )
     expect(code).toMatch(`return _${helperNameMap[TO_DISPLAY_STRING]}(hello)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('static interpolation', () => {
+    const codegenNode: InterpolationNode = {
+      type: NodeTypes.INTERPOLATION,
+      loc: locStub,
+      content: createSimpleExpression(
+        `"hello" + 1 + false + undefined + null + ${'`hi`'}`,
+        true,
+        locStub,
+      ),
+    }
+    const { code } = generate(
+      createRoot({
+        codegenNode,
+      }),
+    )
+    expect(code).toMatch(`return "hello1falseundefinednullhi"`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('empty interpolation', () => {
+    const codegenNode: InterpolationNode = {
+      type: NodeTypes.INTERPOLATION,
+      loc: locStub,
+      content: createSimpleExpression(``, true, locStub),
+    }
+    const { code } = generate(
+      createRoot({
+        codegenNode,
+      }),
+    )
+    expect(code).toMatch(`return ""`)
     expect(code).toMatchSnapshot()
   })
 
