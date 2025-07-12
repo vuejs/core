@@ -23,6 +23,7 @@ export class VaporFragment {
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
+  setRef?: (comp: VaporComponentInstance) => void
 
   constructor(nodes: Block) {
     this.nodes = nodes
