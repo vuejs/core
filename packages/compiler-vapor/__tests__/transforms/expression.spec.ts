@@ -47,4 +47,25 @@ describe('compiler: expression', () => {
     expect(code).toMatchSnapshot()
     expect(code).contains(`_String(_foo.id++)`)
   })
+
+  test('empty interpolation', () => {
+    const { code } = compileWithExpression(`{{}}`)
+    const { code: code2 } = compileWithExpression(`{{ }}`)
+    const { code: code3 } = compileWithExpression(`<div>{{ }}</div>`)
+    const { code: code4 } = compileWithExpression(`<div>{{ foo }}{{ }}</div>`)
+
+    expect(code).toMatchSnapshot()
+    expect(code).not.toContain(`_toDisplayString`)
+    expect(code).not.toContain(`_setText`)
+
+    expect(code2).toMatchSnapshot()
+    expect(code2).not.toContain(`_toDisplayString`)
+    expect(code2).not.toContain(`_setText`)
+
+    expect(code3).toMatchSnapshot()
+    expect(code3).not.toContain(`_toDisplayString`)
+    expect(code3).not.toContain(`_setText`)
+
+    expect(code4).toMatchSnapshot()
+  })
 })
