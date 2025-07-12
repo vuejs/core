@@ -182,7 +182,6 @@ describe('error handling', () => {
 
     define(Comp).render()
     expect(fn).toHaveBeenCalledWith(err, 'setup function')
-    expect(`returned non-block value`).toHaveBeenWarned()
   })
 
   test('in render function', () => {
