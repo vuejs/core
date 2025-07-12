@@ -23,9 +23,8 @@ import {
   setCurrentInstance,
   startMeasure,
   unregisterHMR,
-  warn,
 } from '@vue/runtime-dom'
-import { type Block, DynamicFragment, insert, isBlock, remove } from './block'
+import { type Block, DynamicFragment, insert, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -58,6 +57,7 @@ import {
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { normalizeNode } from './dom/node'
 import {
   insertionAnchor,
   insertionParent,
@@ -216,18 +216,12 @@ export function createComponent(
     ? callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
         instance.props,
         instance,
-      ]) || EMPTY_OBJ
-    : EMPTY_OBJ
+      ]) || []
+    : []
 
-  if (__DEV__ && !isBlock(setupResult)) {
-    if (isFunction(component)) {
-      warn(`Functional vapor component must return a block directly.`)
-      instance.block = []
-    } else if (!component.render) {
-      warn(
-        `Vapor component setup() returned non-block value, and has no render function.`,
-      )
-      instance.block = []
+  if (__DEV__) {
+    if (isFunction(component) || !component.render) {
+      instance.block = normalizeNode(setupResult)
     } else {
       instance.devtoolsRawSetupState = setupResult
       // TODO make the proxy warn non-existent property access during dev
@@ -245,7 +239,7 @@ export function createComponent(
       )
     } else {
       // in prod result can only be block
-      instance.block = setupResult as Block
+      instance.block = normalizeNode(setupResult)
     }
   }
 
