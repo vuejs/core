@@ -848,6 +848,33 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`SFC compile <script setup> > inlineTemplate mode > referencing scope components casing 1`] = `
+"import { createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+import First from './First.vue'
+        import SecondComp from './Second.vue'
+        import thirdComp from './Fifth.vue'
+
+        
+export default {
+  setup(__props) {
+
+        const first = () => 1
+        const secondComp = () => 2
+        const ThirdComp = () => 3
+        
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createVNode(First),
+    _createVNode(SecondComp),
+    _createVNode(thirdComp)
+  ], 64 /* STABLE_FRAGMENT */))
+}
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > inlineTemplate mode > should work 1`] = `
 "import { toDisplayString as _toDisplayString, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 

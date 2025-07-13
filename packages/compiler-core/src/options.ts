@@ -200,6 +200,12 @@ interface SharedTransformCodegenOptions {
    */
   bindingMetadata?: BindingMetadata
   /**
+   * Optional metadata analyzed from script - used to help disambiguate
+   * template component references when other bindings in the script use
+   * different name casing
+   */
+  knownComponents?: Set<string>
+  /**
    * Compile the function for inlining inside setup().
    * This allows the function to directly access setup() local bindings.
    */

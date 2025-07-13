@@ -286,13 +286,13 @@ export function resolveComponentType(
   // this is skipped in browser build since browser builds do not perform
   // binding analysis.
   if (!__BROWSER__) {
-    const fromSetup = resolveSetupReference(tag, context)
+    const fromSetup = resolveSetupReference(tag, context, true)
     if (fromSetup) {
       return fromSetup
     }
     const dotIndex = tag.indexOf('.')
     if (dotIndex > 0) {
-      const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
+      const ns = resolveSetupReference(tag.slice(0, dotIndex), context, true)
       if (ns) {
         return ns + tag.slice(dotIndex)
       }
@@ -319,7 +319,11 @@ export function resolveComponentType(
   return toValidAssetId(tag, `component`)
 }
 
-function resolveSetupReference(name: string, context: TransformContext) {
+function resolveSetupReference(
+  name: string,
+  context: TransformContext,
+  isComponent: boolean,
+) {
   const bindings = context.bindingMetadata
   if (!bindings || bindings.__isScriptSetup === false) {
     return
@@ -327,16 +331,23 @@ function resolveSetupReference(name: string, context: TransformContext) {
 
   const camelName = camelize(name)
   const PascalName = capitalize(camelName)
+  const names = [name, camelName, PascalName]
+  const isKnownComponentPerName = names.map(name => ({
+    name,
+    isKnownComponent:
+      context.knownComponents && context.knownComponents.has(name),
+  }))
   const checkType = (type: BindingTypes) => {
-    if (bindings[name] === type) {
-      return name
+    if (isComponent) {
+      // If there is a known component with this name then prioritize it
+      const foundWithKnownComponent = isKnownComponentPerName.find(
+        x => bindings[x.name] === type && x.isKnownComponent,
+      )
+      if (foundWithKnownComponent) {
+        return foundWithKnownComponent.name
+      }
     }
-    if (bindings[camelName] === type) {
-      return camelName
-    }
-    if (bindings[PascalName] === type) {
-      return PascalName
-    }
+    return names.find(x => bindings[x] === type)
   }
 
   const fromConst =
@@ -885,7 +896,7 @@ export function buildDirectiveArgs(
     // user directive.
     // see if we have directives exposed via <script setup>
     const fromSetup =
-      !__BROWSER__ && resolveSetupReference('v-' + dir.name, context)
+      !__BROWSER__ && resolveSetupReference('v-' + dir.name, context, false)
     if (fromSetup) {
       dirArgs.push(fromSetup)
     } else {
