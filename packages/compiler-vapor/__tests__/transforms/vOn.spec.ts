@@ -695,4 +695,12 @@ describe('v-on', () => {
     expect(code).matchSnapshot()
     expect(code).include('n0.$evtclick = e => _ctx.handleClick(e)')
   })
+
+  test('component event with argument', () => {
+    const { code } = compileWithVOn(`<Foo @update:model="() => {}"/>`)
+
+    expect(code).matchSnapshot()
+    expect(code).contains('const _on_update_model = () => {}')
+    expect(code).contains('{ "onUpdate:model": () => _on_update_model }')
+  })
 })

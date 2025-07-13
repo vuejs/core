@@ -102,6 +102,7 @@ export function genCreateComponent(
 
 function getUniqueHandlerName(context: CodegenContext, name: string): string {
   const { seenInlineHandlerNames } = context
+  name = name.replace(':', '_')
   const count = seenInlineHandlerNames[name] || 0
   seenInlineHandlerNames[name] = count + 1
   return count === 0 ? name : `${name}${count}`
