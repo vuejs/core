@@ -29,6 +29,9 @@ export function genExpression(
   assignment?: string,
 ): CodeFragment[] {
   const { content, ast, isStatic, loc } = node
+  const imports = context.ir.node.imports.map(
+    i => (i.exp as SimpleExpressionNode).content || i.exp,
+  )
 
   if (isStatic) {
     return [[JSON.stringify(content), NewlineType.None, loc]]
@@ -44,7 +47,7 @@ export function genExpression(
   }
 
   // the expression is a simple identifier
-  if (ast === null) {
+  if (ast === null || imports.includes(content)) {
     return genIdentifier(content, context, loc, assignment)
   }
 
@@ -129,6 +132,13 @@ function genIdentifier(
   const { options, helper, identifiers } = context
   const { inline, bindingMetadata } = options
   let name: string | undefined = raw
+  const imports = context.ir.node.imports.map(
+    i => (i.exp as SimpleExpressionNode).content || i.exp,
+  )
+
+  if (imports.includes(raw)) {
+    return [[raw, NewlineType.None, loc]]
+  }
 
   const idMap = identifiers[raw]
   if (idMap && idMap.length) {
@@ -249,6 +259,15 @@ export function processExpressions(
   expressions: SimpleExpressionNode[],
   shouldDeclare: boolean,
 ): DeclarationResult {
+  // filter out asset import expressions
+  const imports = context.ir.node.imports
+  const importVariables = imports.map(
+    i => (i.exp as SimpleExpressionNode).content,
+  )
+  expressions = expressions.filter(
+    exp => !importVariables.includes(exp.content),
+  )
+
   // analyze variables
   const {
     seenVariable,

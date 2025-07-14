@@ -5,6 +5,7 @@ import {
   type CompilerCompatOptions,
   type ElementNode,
   ElementTypes,
+  type ExpressionNode,
   NodeTypes,
   type RootNode,
   type SimpleExpressionNode,
@@ -60,6 +61,10 @@ export type StructuralDirectiveTransform = (
 ) => void | (() => void)
 
 export type TransformOptions = HackOptions<BaseTransformOptions>
+export interface ImportItem {
+  exp: string | ExpressionNode
+  path: string
+}
 
 export class TransformContext<T extends AllNode = AllNode> {
   selfName: string | null = null
@@ -75,6 +80,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   template: string = ''
   childrenTemplate: (string | null)[] = []
   dynamic: IRDynamicInfo = this.ir.block.dynamic
+  imports: ImportItem[] = []
 
   inVOnce: boolean = false
   inVFor: number = 0
@@ -224,6 +230,8 @@ export function transform(
   const context = new TransformContext(ir, node, options)
 
   transformNode(context)
+
+  ir.node.imports = context.imports
 
   return ir
 }
