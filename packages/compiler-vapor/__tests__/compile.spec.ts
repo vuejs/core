@@ -1,5 +1,6 @@
 import { BindingTypes, type RootNode } from '@vue/compiler-dom'
 import { type CompilerOptions, compile as _compile } from '../src'
+import { compileTemplate } from '@vue/compiler-sfc'
 
 // TODO This is a temporary test case for initial implementation.
 // Remove it once we have more comprehensive tests.
@@ -260,6 +261,30 @@ describe('compile', () => {
         `_setText(n1, " " + _toDisplayString(_ctx.bar))
     _setText(n2, " " + _toDisplayString(_ctx.baz))`,
       )
+    })
+  })
+
+  describe('asset imports', () => {
+    const compileWithAssets = (template: string) => {
+      const { code } = compileTemplate({
+        vapor: true,
+        id: 'test',
+        filename: 'test.vue',
+        source: template,
+        transformAssetUrls: {
+          base: 'foo/',
+          includeAbsolute: true,
+        },
+      })
+      return code
+    }
+
+    test('from public directory', () => {
+      const code = compileWithAssets(
+        `<img src="/vite.svg" class="logo" alt="Vite logo" />`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains(`import _imports_0 from '/vite.svg';`)
     })
   })
 })
