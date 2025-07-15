@@ -24,6 +24,7 @@ const emit = defineEmits([
   'toggle-vapor',
   'toggle-autosave',
   'reload-page',
+  'change-vue-version',
 ])
 
 const { store } = props
@@ -38,10 +39,12 @@ const vueVersion = computed(() => {
 })
 
 async function setVueVersion(v: string) {
+  emit('change-vue-version', v)
   store.vueVersion = v
 }
 
 function resetVueVersion() {
+  emit('change-vue-version', null)
   store.vueVersion = null
 }
 

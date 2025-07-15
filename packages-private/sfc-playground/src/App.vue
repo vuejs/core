@@ -130,6 +130,36 @@ onMounted(() => {
   // @ts-expect-error process shim for old versions of @vue/compiler-sfc dependency
   window.process = { env: {} }
 })
+
+const isVaporSupported = ref(false)
+function handleVueVersionChange(
+  version: string | null,
+  reload: boolean = true,
+) {
+  if (!version) {
+    isVaporSupported.value = true
+  } else {
+    const [major, minor] = version.split('.').map(Number)
+    isVaporSupported.value = major > 3 || (major === 3 && minor >= 6)
+  }
+  if (reload) reloadPage()
+}
+handleVueVersionChange(vueVersion.value, false)
+
+const previewOptions = computed(() => ({
+  customCode: {
+    importCode: `import { initCustomFormatter${isVaporSupported.value ? ', vaporInteropPlugin' : ''} } from 'vue'`,
+    useCode: `
+      ${isVaporSupported.value ? 'app.use(vaporInteropPlugin)' : ''}
+      if (window.devtoolsFormatters) {
+        const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
+        window.devtoolsFormatters.splice(index, 1)
+        initCustomFormatter()
+      } else {
+        initCustomFormatter()
+      }`,
+  },
+}))
 </script>
 
 <template>
@@ -144,6 +174,7 @@ onMounted(() => {
     @toggle-ssr="toggleSSR"
     @toggle-autosave="toggleAutoSave"
     @reload-page="reloadPage"
+    @change-vue-version="handleVueVersionChange"
   />
   <Repl
     ref="replRef"
@@ -160,20 +191,7 @@ onMounted(() => {
     :showOpenSourceMap="true"
     :autoResize="true"
     :clearConsole="false"
-    :preview-options="{
-      customCode: {
-        importCode: `import { initCustomFormatter, vaporInteropPlugin } from 'vue'`,
-        useCode: `
-  app.use(vaporInteropPlugin)
-  if (window.devtoolsFormatters) {
-    const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
-    window.devtoolsFormatters.splice(index, 1)
-    initCustomFormatter()
-  } else {
-    initCustomFormatter()
-  }`,
-      },
-    }"
+    :preview-options="previewOptions"
   />
 </template>
 
