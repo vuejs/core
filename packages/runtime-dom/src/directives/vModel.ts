@@ -163,6 +163,10 @@ function setChecked(
   { value, oldValue }: DirectiveBinding,
   vnode: VNode,
 ) {
+  if (value === oldValue) {
+    return
+  }
+
   // store the v-model value on the element so it can be accessed by the
   // change listener.
   ;(el as any)._modelValue = value
@@ -173,7 +177,6 @@ function setChecked(
   } else if (isSet(value)) {
     checked = value.has(vnode.props!.value)
   } else {
-    if (value === oldValue) return
     checked = looseEqual(value, getCheckboxValue(el, true))
   }
 
