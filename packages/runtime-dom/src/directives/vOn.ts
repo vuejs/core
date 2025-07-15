@@ -167,7 +167,7 @@ export function withDynamicEventModifiers(
   eventName: string,
   modifierPostfix: string,
 ): string {
-  if (eventName != null && eventName !== '') return eventName + modifierPostfix
+  if (eventName !== '') return eventName + modifierPostfix
   return ''
 }
 
