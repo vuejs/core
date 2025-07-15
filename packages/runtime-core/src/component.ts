@@ -220,6 +220,7 @@ export interface FunctionalComponent<
   E extends EmitsOptions | Record<string, any[]> = {},
   S extends Record<string, any> = any,
   EE extends EmitsOptions = ShortEmitsToObject<E>,
+  Exposed extends Record<string, any> = Record<string, any>,
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (
@@ -229,6 +230,7 @@ export interface FunctionalComponent<
   props?: ComponentPropsOptions<P>
   emits?: EE | (keyof EE)[]
   slots?: IfAny<S, Slots, SlotsType<S>>
+  expose?: (keyof Exposed)[]
   inheritAttrs?: boolean
   displayName?: string
   compatConfig?: CompatConfig
@@ -281,14 +283,13 @@ export type LifecycleHook<TFn = Function> = (TFn & SchedulerJob)[] | null
 export type SetupContext<
   E = EmitsOptions,
   S extends SlotsType = {},
+  EX extends Record<string, any> = Record<string, any>,
 > = E extends any
   ? {
       attrs: Data
       slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
-      expose: <Exposed extends Record<string, any> = Record<string, any>>(
-        exposed?: Exposed,
-      ) => void
+      expose: <Exposed extends EX = EX>(exposed?: Exposed) => void
     }
   : never
 
