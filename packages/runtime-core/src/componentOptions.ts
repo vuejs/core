@@ -6,7 +6,7 @@ import {
   type Data,
   type InternalRenderFunction,
   type SetupContext,
-  currentInstance,
+  getCurrentInstance,
 } from './component'
 import {
   type LooseRequired,
@@ -756,6 +756,7 @@ export function applyOptions(instance: ComponentInternalInstance): void {
         Object.defineProperty(exposed, key, {
           get: () => publicThis[key],
           set: val => (publicThis[key] = val),
+          enumerable: true,
         })
       })
     } else if (!instance.exposed) {
@@ -855,10 +856,8 @@ export function createWatcher(
 
   const options: WatchOptions = {}
   if (__COMPAT__) {
-    const instance =
-      currentInstance && getCurrentScope() === currentInstance.scope
-        ? currentInstance
-        : null
+    const cur = getCurrentInstance()
+    const instance = cur && getCurrentScope() === cur.scope ? cur : null
 
     const newValue = getter()
     if (
