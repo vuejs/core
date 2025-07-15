@@ -115,49 +115,46 @@ onMounted(() => {
   // @ts-expect-error process shim for old versions of @vue/compiler-sfc dependency
   window.process = { env: {} }
 })
+
+const isVaporSupported = ref(false)
+function handleVueVersionChange(
+  version: string | null,
+  reload: boolean = true,
+) {
+  if (!version) {
+    isVaporSupported.value = true
+  } else {
+    const [major, minor] = version.split('.').map(Number)
+    isVaporSupported.value = major > 3 || (major === 3 && minor >= 6)
+  }
+  if (reload) reloadPage()
+}
+handleVueVersionChange(vueVersion.value, false)
+
+const previewOptions = computed(() => ({
+  customCode: {
+    importCode: `import { initCustomFormatter${isVaporSupported.value ? ', vaporInteropPlugin' : ''} } from 'vue'`,
+    useCode: `
+      ${isVaporSupported.value ? 'app.use(vaporInteropPlugin)' : ''}
+      if (window.devtoolsFormatters) {
+        const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
+        window.devtoolsFormatters.splice(index, 1)
+        initCustomFormatter()
+      } else {
+        initCustomFormatter()
+      }`,
+  },
+}))
 </script>
 
 <template>
-  <Header
-    :store="store"
-    :prod="productionMode"
-    :ssr="useSSRMode"
-    :autoSave="autoSave"
-    :theme="theme"
-    @toggle-theme="toggleTheme"
-    @toggle-prod="toggleProdMode"
-    @toggle-ssr="toggleSSR"
-    @toggle-autosave="toggleAutoSave"
-    @reload-page="reloadPage"
-  />
-  <Repl
-    ref="replRef"
-    :theme="theme"
-    :editor="Monaco"
-    @keydown.ctrl.s.prevent
-    @keydown.meta.s.prevent
-    :ssr="useSSRMode"
-    :model-value="autoSave"
-    :editorOptions="{ autoSaveText: false }"
-    :store="store"
-    :showCompileOutput="true"
-    :showSsrOutput="useSSRMode"
-    :showOpenSourceMap="true"
-    :autoResize="true"
-    :clearConsole="false"
-    :preview-options="{
-      customCode: {
-        importCode: `import { initCustomFormatter } from 'vue'`,
-        useCode: `if (window.devtoolsFormatters) {
-    const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
-    window.devtoolsFormatters.splice(index, 1)
-    initCustomFormatter()
-  } else {
-    initCustomFormatter()
-  }`,
-      },
-    }"
-  />
+  <Header :store="store" :prod="productionMode" :ssr="useSSRMode" :autoSave="autoSave" :theme="theme"
+    @toggle-theme="toggleTheme" @toggle-prod="toggleProdMode" @toggle-ssr="toggleSSR" @toggle-autosave="toggleAutoSave"
+    @reload-page="reloadPage" @change-vue-version="handleVueVersionChange" />
+  <Repl ref="replRef" :theme="theme" :editor="Monaco" @keydown.ctrl.s.prevent @keydown.meta.s.prevent :ssr="useSSRMode"
+    :model-value="autoSave" :editorOptions="{ autoSaveText: false }" :store="store" :showCompileOutput="true"
+    :showSsrOutput="useSSRMode" :showOpenSourceMap="true" :autoResize="true" :clearConsole="false"
+    :preview-options="previewOptions" />
 </template>
 
 <style>
