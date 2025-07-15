@@ -1419,9 +1419,9 @@ describe('defineCustomElement', () => {
           return h('div', null, _ctx.value)
         },
       })
-      customElements.define('my-el-expose', E)
+      customElements.define('my-el-expose-options-api', E)
 
-      container.innerHTML = `<my-el-expose></my-el-expose>`
+      container.innerHTML = `<my-el-expose-options-api></my-el-expose-options-api>`
       const e = container.childNodes[0] as VueElement & {
         foo: () => void
       }
