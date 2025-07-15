@@ -26,6 +26,21 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: transform v-model > no expression 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+    return (_openBlock(), _createElementBlock("input", {
+      "foo-value": fooValue,
+      "onUpdate:fooValue": $event => ((fooValue) = $event)
+    }, null, 40 /* PROPS, NEED_HYDRATION */, ["foo-value", "onUpdate:fooValue"]))
+  }
+}"
+`;
+
 exports[`compiler: transform v-model > simple expression (with multilines) 1`] = `
 "const _Vue = Vue
 
