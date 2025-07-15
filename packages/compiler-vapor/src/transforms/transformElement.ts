@@ -36,7 +36,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
-import { findProp } from '../utils'
+import { findProp, getAssetImports } from '../utils'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -223,7 +223,10 @@ function transformNativeElement(
   } else {
     for (const prop of propsResult[1]) {
       const { key, values } = prop
-      if (key.isStatic && values.length === 1 && values[0].isStatic) {
+      const imports = getAssetImports(context)
+      if (imports.includes(values[0].content)) {
+        template += ` ${key.content}=""+${values[0].content}+""`
+      } else if (key.isStatic && values.length === 1 && values[0].isStatic) {
         template += ` ${key.content}`
         if (values[0].content) template += `="${values[0].content}"`
       } else {

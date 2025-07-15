@@ -19,7 +19,7 @@ import {
 } from '@vue/compiler-dom'
 import type { Identifier, Node } from '@babel/types'
 import type { CodegenContext } from '../generate'
-import { isConstantExpression } from '../utils'
+import { getAssetImports, isConstantExpression } from '../utils'
 import { type CodeFragment, NEWLINE, buildCodeFragment } from './utils'
 import { type ParserOptions, parseExpression } from '@babel/parser'
 
@@ -29,9 +29,7 @@ export function genExpression(
   assignment?: string,
 ): CodeFragment[] {
   const { content, ast, isStatic, loc } = node
-  const imports = context.ir.node.imports.map(
-    i => (i.exp as SimpleExpressionNode).content || i.exp,
-  )
+  const imports = getAssetImports(context.ir)
 
   if (isStatic) {
     return [[JSON.stringify(content), NewlineType.None, loc]]
@@ -132,13 +130,6 @@ function genIdentifier(
   const { options, helper, identifiers } = context
   const { inline, bindingMetadata } = options
   let name: string | undefined = raw
-  const imports = context.ir.node.imports.map(
-    i => (i.exp as SimpleExpressionNode).content || i.exp,
-  )
-
-  if (imports.includes(raw)) {
-    return [[raw, NewlineType.None, loc]]
-  }
 
   const idMap = identifiers[raw]
   if (idMap && idMap.length) {
@@ -260,13 +251,8 @@ export function processExpressions(
   shouldDeclare: boolean,
 ): DeclarationResult {
   // filter out asset import expressions
-  const imports = context.ir.node.imports
-  const importVariables = imports.map(
-    i => (i.exp as SimpleExpressionNode).content,
-  )
-  expressions = expressions.filter(
-    exp => !importVariables.includes(exp.content),
-  )
+  const imports = getAssetImports(context.ir)
+  expressions = expressions.filter(exp => !imports.includes(exp.content))
 
   // analyze variables
   const {

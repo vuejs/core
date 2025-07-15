@@ -5,7 +5,6 @@ import {
   type CompilerCompatOptions,
   type ElementNode,
   ElementTypes,
-  type ExpressionNode,
   NodeTypes,
   type RootNode,
   type SimpleExpressionNode,
@@ -29,6 +28,7 @@ import {
 } from './ir'
 import { isConstantExpression, isStaticExpression } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
+import type { ImportItem } from '@vue/compiler-core'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -61,11 +61,6 @@ export type StructuralDirectiveTransform = (
 ) => void | (() => void)
 
 export type TransformOptions = HackOptions<BaseTransformOptions>
-export interface ImportItem {
-  exp: string | ExpressionNode
-  path: string
-}
-
 export class TransformContext<T extends AllNode = AllNode> {
   selfName: string | null = null
   parent: TransformContext<RootNode | ElementNode> | null = null

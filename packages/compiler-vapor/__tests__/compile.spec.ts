@@ -272,7 +272,7 @@ describe('compile', () => {
         filename: 'test.vue',
         source: template,
         transformAssetUrls: {
-          base: 'foo/',
+          base: 'base/',
           includeAbsolute: true,
         },
       })
@@ -280,11 +280,29 @@ describe('compile', () => {
     }
 
     test('from public directory', () => {
+      const code = compileWithAssets(`<img src="/foo.svg" />`)
+      expect(code).matchSnapshot()
+      expect(code).contains(`import _imports_0 from '/foo.svg';`)
+    })
+
+    test(`multiple public assets`, () => {
       const code = compileWithAssets(
-        `<img src="/vite.svg" class="logo" alt="Vite logo" />`,
+        `<img src="/foo.svg" />
+         <img src="/bar.svg" />`,
       )
       expect(code).matchSnapshot()
-      expect(code).contains(`import _imports_0 from '/vite.svg';`)
+      expect(code).contains(`import _imports_0 from '/foo.svg';`)
+      expect(code).contains(`import _imports_1 from '/bar.svg';`)
+    })
+
+    test(`hybrid assets`, () => {
+      const code = compileWithAssets(
+        `<img src="/foo.svg" />
+         <img src="./bar.svg" />`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains(`import _imports_0 from '/foo.svg';`)
+      expect(code).contains(`src=\\"base/bar.svg\\"`)
     })
   })
 })

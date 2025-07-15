@@ -21,6 +21,7 @@ export {
   type NodeTransform,
   type StructuralDirectiveTransform,
   type DirectiveTransform,
+  type ImportItem,
 } from './transform'
 export {
   generate,
