@@ -6,7 +6,7 @@ import {
   unmountComponent,
 } from './component'
 import { createComment, createTextNode } from './dom/node'
-import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
+import { EffectScope, setActiveSub } from '@vue/reactivity'
 import { isHydrating } from './dom/hydration'
 import {
   type TransitionHooks,
@@ -78,7 +78,7 @@ export class DynamicFragment extends VaporFragment {
     }
     this.current = key
 
-    pauseTracking()
+    const prevSub = setActiveSub()
     const parent = this.anchor.parentNode
     const transition = this.$transition
     const renderBranch = () => {
@@ -103,7 +103,7 @@ export class DynamicFragment extends VaporFragment {
         applyTransitionLeaveHooks(this.nodes, transition, renderBranch)
         parent && remove(this.nodes, parent)
         if (mode === 'out-in') {
-          resetTracking()
+          setActiveSub(prevSub)
           return
         }
       } else {
@@ -121,7 +121,7 @@ export class DynamicFragment extends VaporFragment {
       parent && insert(this.nodes, parent, this.anchor)
     }
 
-    resetTracking()
+    setActiveSub(prevSub)
   }
 }
 

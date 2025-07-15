@@ -7,7 +7,11 @@ export type { VaporDirective } from './directives/custom'
 // compiler-use only
 export { insert, prepend, remove, isFragment, VaporFragment } from './block'
 export { setInsertionState } from './insertionState'
-export { createComponent, createComponentWithFallback } from './component'
+export {
+  createComponent,
+  createComponentWithFallback,
+  isVaporComponent,
+} from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot } from './componentSlots'
 export { template } from './dom/template'

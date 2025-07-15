@@ -18,6 +18,7 @@ import {
   onScopeDispose,
   renderSlot,
   setTransitionHooks as setVNodeTransitionHooks,
+  shallowReactive,
   shallowRef,
   simpleSetCurrentInstance,
 } from '@vue/runtime-dom'
@@ -160,11 +161,11 @@ const vaporSlotPropsProxyHandler: ProxyHandler<
 
 const vaporSlotsProxyHandler: ProxyHandler<any> = {
   get(target, key) {
-    if (key === '_vapor') {
-      return target
-    } else {
-      return target[key]
+    const slot = target[key]
+    if (isFunction(slot)) {
+      slot.__vapor = true
     }
+    return slot
   },
 }
 
@@ -190,7 +191,8 @@ function createVDOMComponent(
 
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
-    instance.props = wrapper.props
+    // ensure props are shallow reactive to align with VDOM behavior.
+    instance.props = shallowReactive(wrapper.props)
 
     const attrs = (instance.attrs = createInternalObject())
     for (const key in wrapper.attrs) {
