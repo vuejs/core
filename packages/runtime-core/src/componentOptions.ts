@@ -6,7 +6,7 @@ import {
   type Data,
   type InternalRenderFunction,
   type SetupContext,
-  getCurrentInstance,
+  currentInstance,
 } from './component'
 import {
   type LooseRequired,
@@ -856,8 +856,10 @@ export function createWatcher(
 
   const options: WatchOptions = {}
   if (__COMPAT__) {
-    const cur = getCurrentInstance()
-    const instance = cur && getCurrentScope() === cur.scope ? cur : null
+    const instance =
+      currentInstance && getCurrentScope() === currentInstance.scope
+        ? currentInstance
+        : null
 
     const newValue = getter()
     if (
