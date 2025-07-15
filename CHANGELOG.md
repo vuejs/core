@@ -32,7 +32,7 @@ Vapor Mode is available starting in Vue 3.6 alpha. Please note it is still incom
 - Partial usage in existing apps, e.g. implementing a perf-sensitive sub page in Vapor Mode.
 - Build small new apps entirely in Vapor Mode.
 
-We do not recommend migrating eixsting components to Vapor Mode yet.
+We do not recommend migrating existing components to Vapor Mode yet.
 
 #### Pending Features
 
