@@ -1,0 +1,5 @@
+*
+!.gitignore
+!App.vue
+!main.ts
+!style.css

@@ -22,7 +22,7 @@ export default targetPackages.map(
   /** @returns {import('rollup').RollupOptions} */
   pkg => {
     return {
-      input: `./temp/packages/${pkg}/src/index.d.ts`,
+      input: `./temp/packages/${pkg}/src/index${pkg === 'vue' ? '-with-vapor' : ''}.d.ts`,
       output: {
         file: `packages/${pkg}/dist/${pkg}.d.ts`,
         format: 'es',

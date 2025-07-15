@@ -3,7 +3,8 @@ import {
   type ComponentInternalInstance,
   type ConcreteComponent,
   type Data,
-  getComponentPublicInstance,
+  type GenericComponent,
+  type GenericComponentInstance,
   validateComponentName,
 } from './component'
 import type {
@@ -16,13 +17,16 @@ import type {
   ComponentPublicInstance,
 } from './componentPublicInstance'
 import { type Directive, validateDirectiveName } from './directives'
-import type { ElementNamespace, RootRenderFunction } from './renderer'
+import type {
+  ElementNamespace,
+  RootRenderFunction,
+  UnmountComponentFn,
+} from './renderer'
 import type { InjectionKey } from './apiInject'
 import { warn } from './warning'
-import { type VNode, cloneVNode, createVNode } from './vnode'
-import type { RootHydrateFunction } from './hydration'
+import type { VNode } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { NO, extend, isFunction, isObject } from '@vue/shared'
+import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
@@ -31,6 +35,7 @@ import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { DefineComponent } from './apiDefineComponent'
 
 export interface App<HostElement = any> {
+  vapor?: boolean
   version: string
   config: AppConfig
 
@@ -95,11 +100,11 @@ export interface App<HostElement = any> {
 
   // internal, but we need to expose these for the server-renderer and devtools
   _uid: number
-  _component: ConcreteComponent
+  _component: GenericComponent
   _props: Data | null
   _container: HostElement | null
   _context: AppContext
-  _instance: ComponentInternalInstance | null
+  _instance: GenericComponentInstance | null
 
   /**
    * @internal custom element vnode
@@ -120,13 +125,11 @@ export interface App<HostElement = any> {
 
 export type OptionMergeFunction = (to: unknown, from: unknown) => any
 
-export interface AppConfig {
-  // @private
-  readonly isNativeTag: (tag: string) => boolean
-
-  performance: boolean
-  optionMergeStrategies: Record<string, OptionMergeFunction>
-  globalProperties: ComponentCustomProperties & Record<string, any>
+/**
+ * Shared app config between vdom and vapor
+ */
+export interface GenericAppConfig {
+  performance?: boolean
   errorHandler?: (
     err: unknown,
     instance: ComponentPublicInstance | null,
@@ -137,23 +140,6 @@ export interface AppConfig {
     instance: ComponentPublicInstance | null,
     trace: string,
   ) => void
-
-  /**
-   * Options to pass to `@vue/compiler-dom`.
-   * Only supported in runtime compiler build.
-   */
-  compilerOptions: RuntimeCompilerOptions
-
-  /**
-   * @deprecated use config.compilerOptions.isCustomElement
-   */
-  isCustomElement?: (tag: string) => boolean
-
-  /**
-   * TODO document for 3.5
-   * Enable warnings for computed getters that recursively trigger itself.
-   */
-  warnRecursiveComputed?: boolean
 
   /**
    * Whether to throw unhandled errors in production.
@@ -168,13 +154,78 @@ export interface AppConfig {
   idPrefix?: string
 }
 
-export interface AppContext {
+export interface AppConfig extends GenericAppConfig {
+  // @private
+  readonly isNativeTag: (tag: string) => boolean
+
+  optionMergeStrategies: Record<string, OptionMergeFunction>
+  globalProperties: ComponentCustomProperties & Record<string, any>
+
+  /**
+   * Options to pass to `@vue/compiler-dom`.
+   * Only supported in runtime compiler build.
+   */
+  compilerOptions: RuntimeCompilerOptions
+
+  /**
+   * @deprecated use config.compilerOptions.isCustomElement
+   */
+  isCustomElement?: (tag: string) => boolean
+}
+
+/**
+ * The vapor in vdom implementation is in runtime-vapor/src/vdomInterop.ts
+ * @internal
+ */
+export interface VaporInteropInterface {
+  mount(
+    vnode: VNode,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance | null,
+  ): GenericComponentInstance // VaporComponentInstance
+  update(n1: VNode, n2: VNode, shouldUpdate: boolean): void
+  unmount(vnode: VNode, doRemove?: boolean): void
+  move(vnode: VNode, container: any, anchor: any): void
+  slot(n1: VNode | null, n2: VNode, container: any, anchor: any): void
+
+  vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
+  vdomUnmount: UnmountComponentFn
+  vdomSlot: (
+    slots: any,
+    name: string | (() => string),
+    props: Record<string, any>,
+    parentComponent: any, // VaporComponentInstance
+    fallback?: any, // VaporSlot
+  ) => any
+}
+
+/**
+ * Minimal app context shared between vdom and vapor
+ */
+export interface GenericAppContext {
   app: App // for devtools
+  config: GenericAppConfig
+  provides: Record<string | symbol, any>
+  components?: Record<string, Component>
+  directives?: Record<string, Directive>
+  /**
+   * HMR only
+   * @internal
+   */
+  reload?: () => void
+
+  /**
+   * @internal vapor interop only
+   */
+  vapor?: VaporInteropInterface
+}
+
+export interface AppContext extends GenericAppContext {
   config: AppConfig
-  mixins: ComponentOptions[]
   components: Record<string, Component>
   directives: Record<string, Directive>
-  provides: Record<string | symbol, any>
+  mixins: ComponentOptions[]
 
   /**
    * Cache for merged/normalized component options
@@ -193,11 +244,6 @@ export interface AppContext {
    * @internal
    */
   emitsCache: WeakMap<ConcreteComponent, ObjectEmitsOptions | null>
-  /**
-   * HMR only
-   * @internal
-   */
-  reload?: () => void
   /**
    * v2 compat only
    * @internal
@@ -243,17 +289,33 @@ export function createAppContext(): AppContext {
   }
 }
 
-export type CreateAppFunction<HostElement> = (
-  rootComponent: Component,
+export type CreateAppFunction<HostElement, Comp = Component> = (
+  rootComponent: Comp,
   rootProps?: Data | null,
 ) => App<HostElement>
 
 let uid = 0
 
-export function createAppAPI<HostElement>(
-  render: RootRenderFunction<HostElement>,
-  hydrate?: RootHydrateFunction,
-): CreateAppFunction<HostElement> {
+export type AppMountFn<HostElement> = (
+  app: App,
+  rootContainer: HostElement,
+  isHydrate?: boolean,
+  namespace?: boolean | ElementNamespace,
+) => GenericComponentInstance
+
+export type AppUnmountFn = (app: App) => void
+
+/**
+ * @internal
+ */
+export function createAppAPI<HostElement, Comp = Component>(
+  // render: RootRenderFunction<HostElement>,
+  // hydrate?: RootHydrateFunction,
+  mount: AppMountFn<HostElement>,
+  unmount: AppUnmountFn,
+  getPublicInstance: (instance: GenericComponentInstance) => any,
+  render?: RootRenderFunction,
+): CreateAppFunction<HostElement, Comp> {
   return function createApp(rootComponent, rootProps = null) {
     if (!isFunction(rootComponent)) {
       rootComponent = extend({}, rootComponent)
@@ -356,59 +418,32 @@ export function createAppAPI<HostElement>(
       },
 
       mount(
-        rootContainer: HostElement,
+        rootContainer: HostElement & { __vue_app__?: App },
         isHydrate?: boolean,
         namespace?: boolean | ElementNamespace,
       ): any {
         if (!isMounted) {
           // #5571
-          if (__DEV__ && (rootContainer as any).__vue_app__) {
+          if (__DEV__ && rootContainer.__vue_app__) {
             warn(
               `There is already an app instance mounted on the host container.\n` +
                 ` If you want to mount another app on the same host container,` +
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`,
             )
           }
-          const vnode = app._ceVNode || createVNode(rootComponent, rootProps)
-          // store app context on the root VNode.
-          // this will be set on the root instance on initial mount.
-          vnode.appContext = context
-
-          if (namespace === true) {
-            namespace = 'svg'
-          } else if (namespace === false) {
-            namespace = undefined
-          }
-
-          // HMR root reload
-          if (__DEV__) {
-            context.reload = () => {
-              // casting to ElementNamespace because TS doesn't guarantee type narrowing
-              // over function boundaries
-              render(
-                cloneVNode(vnode),
-                rootContainer,
-                namespace as ElementNamespace,
-              )
-            }
-          }
-
-          if (isHydrate && hydrate) {
-            hydrate(vnode as VNode<Node, Element>, rootContainer as any)
-          } else {
-            render(vnode, rootContainer, namespace)
-          }
-          isMounted = true
-          app._container = rootContainer
-          // for devtools and telemetry
-          ;(rootContainer as any).__vue_app__ = app
+          const instance = mount(app, rootContainer, isHydrate, namespace)
 
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-            app._instance = vnode.component
+            app._instance = instance
             devtoolsInitApp(app, version)
           }
 
-          return getComponentPublicInstance(vnode.component!)
+          isMounted = true
+          app._container = rootContainer
+          // for devtools and telemetry
+          rootContainer.__vue_app__ = app
+
+          return getPublicInstance(instance)
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +
@@ -436,7 +471,7 @@ export function createAppAPI<HostElement>(
             app._instance,
             ErrorCodes.APP_UNMOUNT_CLEANUP,
           )
-          render(null, app._container)
+          unmount(app)
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
             devtoolsUnmountApp(app)
@@ -449,10 +484,18 @@ export function createAppAPI<HostElement>(
 
       provide(key, value) {
         if (__DEV__ && (key as string | symbol) in context.provides) {
-          warn(
-            `App already provides property with key "${String(key)}". ` +
-              `It will be overwritten with the new value.`,
-          )
+          if (hasOwn(context.provides, key as string | symbol)) {
+            warn(
+              `App already provides property with key "${String(key)}". ` +
+                `It will be overwritten with the new value.`,
+            )
+          } else {
+            // #13212, context.provides can inherit the provides object from parent on custom elements
+            warn(
+              `App already provides property with key "${String(key)}" inherited from its parent element. ` +
+                `It will be overwritten with the new value.`,
+            )
+          }
         }
 
         context.provides[key as string | symbol] = value
@@ -472,7 +515,12 @@ export function createAppAPI<HostElement>(
     })
 
     if (__COMPAT__) {
-      installAppCompatProperties(app, context, render)
+      installAppCompatProperties(
+        app,
+        context,
+        // vapor doesn't have compat mode so this is always passed
+        render!,
+      )
     }
 
     return app

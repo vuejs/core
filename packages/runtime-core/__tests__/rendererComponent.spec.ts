@@ -46,7 +46,7 @@ describe('renderer: component', () => {
     expect(parentVnode!.el).toBe(childVnode2!.el)
   })
 
-  it('should create an Component with props', () => {
+  it('should create a component with props', () => {
     const Comp = {
       render: () => {
         return h('div')
@@ -57,7 +57,7 @@ describe('renderer: component', () => {
     expect(serializeInner(root)).toBe(`<div id="foo" class="bar"></div>`)
   })
 
-  it('should create an Component with direct text children', () => {
+  it('should create a component with direct text children', () => {
     const Comp = {
       render: () => {
         return h('div', 'test')

@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import type { ElementHandle } from 'puppeteer'
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'node:path'
@@ -3254,7 +3256,7 @@ describe('e2e: Transition', () => {
               setup: () => {
                 // Big arrays kick GC earlier
                 const test = ref([...Array(30_000_000)].map((_, i) => ({ i })))
-                // TODO: Use a diferent TypeScript env for testing
+                // TODO: Use a different TypeScript env for testing
                 // @ts-expect-error - Custom property and same lib as runtime is used
                 window.__REF__ = new WeakRef(test)
 
@@ -3309,7 +3311,7 @@ describe('e2e: Transition', () => {
               setup: () => {
                 // Big arrays kick GC earlier
                 const test = ref([...Array(30_000_000)].map((_, i) => ({ i })))
-                // TODO: Use a diferent TypeScript env for testing
+                // TODO: Use a different TypeScript env for testing
                 // @ts-expect-error - Custom property and same lib as runtime is used
                 window.__REF__ = new WeakRef(test)
 

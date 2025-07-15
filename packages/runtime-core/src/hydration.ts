@@ -11,7 +11,11 @@ import {
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type { ComponentInternalInstance, ComponentOptions } from './component'
+import type {
+  ComponentInternalInstance,
+  ComponentOptions,
+  ConcreteComponent,
+} from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
@@ -28,6 +32,7 @@ import {
   isReservedProp,
   isString,
   normalizeClass,
+  normalizeCssVarValue,
   normalizeStyle,
   stringifyStyle,
 } from '@vue/shared'
@@ -274,6 +279,10 @@ export function createHydrationFunctions(
             )
           }
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          if ((vnode.type as ConcreteComponent).__vapor) {
+            throw new Error('Vapor component hydration is not supported yet.')
+          }
+
           // when setting up the render effect, if the initial vnode already
           // has .el set, the component will perform hydration instead of mount
           // on its sub-tree.
@@ -398,9 +407,11 @@ export function createHydrationFunctions(
           parentComponent.vnode.props.appear
 
         const content = (el as HTMLTemplateElement).content
-          .firstChild as Element
+          .firstChild as Element & { $cls?: string }
 
         if (needCallTransitionHooks) {
+          const cls = content.getAttribute('class')
+          if (cls) content.$cls = cls
           transition!.beforeEnter(content)
         }
 
@@ -537,11 +548,15 @@ export function createHydrationFunctions(
         dirs ||
         needCallTransitionHooks
       ) {
-        queueEffectWithSuspense(() => {
-          vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
-          needCallTransitionHooks && transition!.enter(el)
-          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
-        }, parentSuspense)
+        queueEffectWithSuspense(
+          () => {
+            vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
+            needCallTransitionHooks && transition!.enter(el)
+            dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+          },
+          undefined,
+          parentSuspense,
+        )
       }
     }
 
@@ -768,7 +783,7 @@ export function createHydrationFunctions(
       if (parent.vnode.el === oldNode) {
         parent.vnode.el = parent.subTree.el = newNode
       }
-      parent = parent.parent
+      parent = parent.parent as ComponentInternalInstance
     }
   }
 
@@ -786,7 +801,7 @@ export function createHydrationFunctions(
  * Dev only
  */
 function propHasMismatch(
-  el: Element,
+  el: Element & { $cls?: string },
   key: string,
   clientValue: any,
   vnode: VNode,
@@ -799,7 +814,12 @@ function propHasMismatch(
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
-    actual = el.getAttribute('class')
+    if (el.$cls) {
+      actual = el.$cls
+      delete el.$cls
+    } else {
+      actual = el.getAttribute('class')
+    }
     expected = normalizeClass(clientValue)
     if (!isSetEqual(toClassSet(actual || ''), toClassSet(expected))) {
       mismatchType = MismatchTypes.CLASS
@@ -938,14 +958,16 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      expectedMap.set(
-        `--${getEscapedCssVarName(key, false)}`,
-        String(cssVars[key]),
-      )
+      const value = normalizeCssVarValue(cssVars[key])
+      expectedMap.set(`--${getEscapedCssVarName(key, false)}`, value)
     }
   }
   if (vnode === root && instance.parent) {
-    resolveCssVars(instance.parent, instance.vnode, expectedMap)
+    resolveCssVars(
+      instance.parent as ComponentInternalInstance,
+      instance.vnode,
+      expectedMap,
+    )
   }
 }
 
@@ -990,6 +1012,6 @@ function isMismatchAllowed(
     if (allowedType === MismatchTypes.TEXT && list.includes('children')) {
       return true
     }
-    return allowedAttr.split(',').includes(MismatchTypeString[allowedType])
+    return list.includes(MismatchTypeString[allowedType])
   }
 }

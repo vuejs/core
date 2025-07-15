@@ -2,6 +2,7 @@ import {
   type Component,
   type ComponentInternalInstance,
   type Data,
+  type GenericComponentInstance,
   getComponentPublicInstance,
   isStatefulComponent,
 } from './component'
@@ -344,10 +345,11 @@ export type PublicPropertiesMap = Record<
  * public $parent chains, skip functional ones and go to the parent instead.
  */
 const getPublicInstance = (
-  i: ComponentInternalInstance | null,
+  i: GenericComponentInstance | null,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null => {
-  if (!i) return null
-  if (isStatefulComponent(i)) return getComponentPublicInstance(i)
+  if (!i || i.vapor) return null
+  if (isStatefulComponent(i as ComponentInternalInstance))
+    return getComponentPublicInstance(i)
   return getPublicInstance(i.parent)
 }
 

@@ -20,6 +20,9 @@ import { type IsAny, type IsUnion, describe, expectType } from './utils'
 describe('with object props', () => {
   interface ExpectedProps {
     a?: number | undefined
+    aa: number
+    aaa: number | null
+    aaaa: number | undefined
     b: string
     e?: Function
     h: boolean
@@ -53,6 +56,19 @@ describe('with object props', () => {
 
   const props = {
     a: Number,
+    aa: {
+      type: Number as PropType<number | undefined>,
+      default: 1,
+    },
+    aaa: {
+      type: Number as PropType<number | null>,
+      default: 1,
+    },
+    aaaa: {
+      type: Number as PropType<number | undefined>,
+      // `as const` prevents widening to `boolean` (keeps literal `true` type)
+      required: true as const,
+    },
     // required should make property non-void
     b: {
       type: String,
@@ -146,6 +162,13 @@ describe('with object props', () => {
     setup(props) {
       // type assertion. See https://github.com/SamVerschueren/tsd
       expectType<ExpectedProps['a']>(props.a)
+      expectType<ExpectedProps['aa']>(props.aa)
+      expectType<ExpectedProps['aaa']>(props.aaa)
+
+      // @ts-expect-error should included `undefined`
+      expectType<number>(props.aaaa)
+      expectType<ExpectedProps['aaaa']>(props.aaaa)
+
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
       expectType<ExpectedProps['h']>(props.h)
@@ -198,6 +221,8 @@ describe('with object props', () => {
     render() {
       const props = this.$props
       expectType<ExpectedProps['a']>(props.a)
+      expectType<ExpectedProps['aa']>(props.aa)
+      expectType<ExpectedProps['aaa']>(props.aaa)
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
       expectType<ExpectedProps['h']>(props.h)
@@ -225,6 +250,8 @@ describe('with object props', () => {
 
       // should also expose declared props on `this`
       expectType<ExpectedProps['a']>(this.a)
+      expectType<ExpectedProps['aa']>(this.aa)
+      expectType<ExpectedProps['aaa']>(this.aaa)
       expectType<ExpectedProps['b']>(this.b)
       expectType<ExpectedProps['e']>(this.e)
       expectType<ExpectedProps['h']>(this.h)
@@ -269,6 +296,7 @@ describe('with object props', () => {
   expectType<JSX.Element>(
     <MyComponent
       a={1}
+      aaaa={1}
       b="b"
       bb="bb"
       e={() => {}}
@@ -295,6 +323,7 @@ describe('with object props', () => {
 
   expectType<Component>(
     <MyComponent
+      aaaa={1}
       b="b"
       dd={{ n: 1 }}
       ddd={['ddd']}
