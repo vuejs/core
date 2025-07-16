@@ -269,18 +269,14 @@ export class VueElement
         this._root = this
       }
     }
-
-    if (!(this._def as ComponentOptions).__asyncLoader) {
-      // for sync component defs we can immediately resolve props
-      this._resolveProps(this._def)
-    }
   }
 
   connectedCallback(): void {
     // avoid resolving component if it's not connected
     if (!this.isConnected) return
 
-    if (!this.shadowRoot) {
+    // avoid re-parsing slots if already resolved
+    if (!this.shadowRoot && !this._resolved) {
       this._parseSlots()
     }
     this._connected = true
@@ -298,8 +294,7 @@ export class VueElement
 
     if (!this._instance) {
       if (this._resolved) {
-        this._setParent()
-        this._update()
+        this._mount(this._def)
       } else {
         if (parent && parent._pendingResolve) {
           this._pendingResolve = parent._pendingResolve.then(() => {
@@ -316,7 +311,18 @@ export class VueElement
   private _setParent(parent = this._parent) {
     if (parent) {
       this._instance!.parent = parent._instance
-      this._instance!.provides = parent._instance!.provides
+      this._inheritParentContext(parent)
+    }
+  }
+
+  private _inheritParentContext(parent = this._parent) {
+    // #13212, the provides object of the app context must inherit the provides
+    // object from the parent element so we can inject values from both places
+    if (parent && this._app) {
+      Object.setPrototypeOf(
+        this._app._context.provides,
+        parent._instance!.provides,
+      )
     }
   }
 
@@ -380,12 +386,7 @@ export class VueElement
         }
       }
       this._numberProps = numberProps
-
-      if (isAsync) {
-        // defining getter/setters on prototype
-        // for sync defs, this already happened in the constructor
-        this._resolveProps(def)
-      }
+      this._resolveProps(def)
 
       // apply CSS
       if (this.shadowRoot) {
@@ -403,9 +404,10 @@ export class VueElement
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
     if (asyncDef) {
-      this._pendingResolve = asyncDef().then(def =>
-        resolve((this._def = def), true),
-      )
+      this._pendingResolve = asyncDef().then((def: InnerComponentDef) => {
+        def.configureApp = this._def.configureApp
+        resolve((this._def = def), true)
+      })
     } else {
       resolve(this._def)
     }
@@ -417,6 +419,8 @@ export class VueElement
       def.name = 'VueElement'
     }
     this._app = this._createApp(def)
+    // inherit before configureApp to detect context overwrites
+    this._inheritParentContext()
     if (def.configureApp) {
       def.configureApp(this._app)
     }
@@ -520,7 +524,9 @@ export class VueElement
   }
 
   private _update() {
-    render(this._createVNode(), this._root)
+    const vnode = this._createVNode()
+    if (this._app) vnode.appContext = this._app._context
+    render(vnode, this._root)
   }
 
   private _createVNode(): VNode<any, any> {

@@ -1,7 +1,10 @@
 import {
+  type EffectScope,
+  ReactiveEffect,
   type Ref,
   inject,
   nextTick,
+  onMounted,
   onUpdated,
   provide,
   ref,
@@ -13,6 +16,7 @@ import {
   createIf,
   createTextNode,
   renderEffect,
+  setInsertionState,
   template,
 } from '../src'
 import { makeRender } from './_utils'
@@ -266,6 +270,29 @@ describe('component', () => {
     expect(spy).toHaveBeenCalledTimes(2)
   })
 
+  it('properly mount child component when using setInsertionState', async () => {
+    const spy = vi.fn()
+
+    const { component: Comp } = define({
+      setup() {
+        onMounted(spy)
+        return template('<h1>hi</h1>')()
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        const n2 = template('<div></div>', true)()
+        setInsertionState(n2 as any)
+        createComponent(Comp)
+        return n2
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div><h1>hi</h1></div>')
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   it('unmount component', async () => {
     const { host, app, instance } = define(() => {
       const count = ref(0)
@@ -280,12 +307,12 @@ describe('component', () => {
 
     const i = instance as VaporComponentInstance
     // watchEffect + renderEffect + props validation effect
-    expect(i.scope.effects.length).toBe(3)
+    expect(getEffectsCount(i.scope)).toBe(3)
     expect(host.innerHTML).toBe('<div>0</div>')
 
     app.unmount()
     expect(host.innerHTML).toBe('')
-    expect(i.scope.effects.length).toBe(0)
+    expect(getEffectsCount(i.scope)).toBe(0)
   })
 
   test('should mount component only with template in production mode', () => {
@@ -328,3 +355,13 @@ describe('component', () => {
     ).toHaveBeenWarned()
   })
 })
+
+function getEffectsCount(scope: EffectScope): number {
+  let n = 0
+  for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
+    if (dep.dep instanceof ReactiveEffect) {
+      n++
+    }
+  }
+  return n
+}

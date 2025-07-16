@@ -491,6 +491,16 @@ describe('stringify static html', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('should bail for comments', () => {
+    const { code } = compileWithStringify(
+      `<!-- Comment 1 --><div class="a"><!-- Comment 2 -->${repeat(
+        `<span class="b"/>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</div>`,
+    )
+    expect(code).toMatchSnapshot()
+  })
+
   test('should bail for <option> elements with null values', () => {
     const { ast, code } = compileWithStringify(
       `<div><select><option :value="null" />${repeat(

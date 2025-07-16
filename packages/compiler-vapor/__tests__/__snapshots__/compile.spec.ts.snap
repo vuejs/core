@@ -149,7 +149,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, toDisplayString as _toDisplayString, setText as _setText, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 const t1 = _template("<div> </div>")
 
@@ -161,8 +161,8 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   _setInsertionState(n3, 0)
   const n1 = _createComponentWithFallback(_component_Comp)
   _renderEffect(() => {
-    _setText(n2, _toDisplayString(_ctx.bar))
     _setProp(n3, "id", _ctx.foo)
+    _setText(n2, _toDisplayString(_ctx.bar))
   })
   return [n0, n3]
 }"
@@ -180,7 +180,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, setProp as _setProp, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { child as _child, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<button> </button>", true)
 _delegateEvents("click")
 
@@ -190,10 +190,44 @@ export function render(_ctx) {
   n0.$evtclick = e => _ctx.handleClick(e)
   _renderEffect(() => {
     const _count = _ctx.count
-    _setText(x0, _toDisplayString(_count) + "foo" + _toDisplayString(_count) + "foo" + _toDisplayString(_count))
     _setProp(n0, "id", _count)
+    _setText(x0, _toDisplayString(_count) + "foo" + _toDisplayString(_count) + "foo" + _toDisplayString(_count))
   })
   return n0
+}"
+`;
+
+exports[`compile > execution order > basic 1`] = `
+"import { child as _child, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> </div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  const x0 = _child(n0)
+  _renderEffect(() => {
+    _setProp(n0, "id", _ctx.foo)
+    _setText(x0, _toDisplayString(_ctx.bar))
+  })
+  return n0
+}"
+`;
+
+exports[`compile > execution order > with v-once 1`] = `
+"import { child as _child, next as _next, nthChild as _nthChild, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><span> </span> <br> </div>", true)
+
+export function render(_ctx) {
+  const n3 = t0()
+  const n0 = _child(n3)
+  const n1 = _next(n0)
+  const n2 = _nthChild(n3, 3)
+  const x0 = _child(n0)
+  _setText(x0, _toDisplayString(_ctx.foo))
+  _renderEffect(() => {
+    _setText(n1, " " + _toDisplayString(_ctx.bar))
+    _setText(n2, " " + _toDisplayString(_ctx.baz))
+  })
+  return n3
 }"
 `;
 

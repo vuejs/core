@@ -30,7 +30,6 @@ export const newBlock = (node: BlockIRNode['node']): BlockIRNode => ({
   effect: [],
   operation: [],
   returns: [],
-  expressions: [],
   tempId: 0,
 })
 
