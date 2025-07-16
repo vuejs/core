@@ -11,6 +11,7 @@ import {
   type TemplateChildNode,
   defaultOnError,
   defaultOnWarn,
+  getSelfName,
   isVSlot,
 } from '@vue/compiler-dom'
 import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
@@ -61,6 +62,7 @@ export type StructuralDirectiveTransform = (
 export type TransformOptions = HackOptions<BaseTransformOptions>
 
 export class TransformContext<T extends AllNode = AllNode> {
+  selfName: string | null = null
   parent: TransformContext<RootNode | ElementNode> | null = null
   root: TransformContext<RootNode>
   index: number = 0
@@ -92,6 +94,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   ) {
     this.options = extend({}, defaultOptions, options)
     this.root = this as TransformContext<RootNode>
+    if (options.filename) this.selfName = getSelfName(options.filename)
   }
 
   enterBlock(ir: BlockIRNode, isVFor: boolean = false): () => void {
@@ -137,8 +140,10 @@ export class TransformContext<T extends AllNode = AllNode> {
 
   registerEffect(
     expressions: SimpleExpressionNode[],
-    ...operations: OperationNode[]
+    operation: OperationNode | OperationNode[],
+    getIndex = (): number => this.block.effect.length,
   ): void {
+    const operations = [operation].flat()
     expressions = expressions.filter(exp => !isConstantExpression(exp))
     if (
       this.inVOnce ||
@@ -150,26 +155,10 @@ export class TransformContext<T extends AllNode = AllNode> {
       return this.registerOperation(...operations)
     }
 
-    this.block.expressions.push(...expressions)
-    const existing = this.block.effect.find(e =>
-      isSameExpression(e.expressions, expressions),
-    )
-    if (existing) {
-      existing.operations.push(...operations)
-    } else {
-      this.block.effect.push({
-        expressions,
-        operations,
-      })
-    }
-
-    function isSameExpression(
-      a: SimpleExpressionNode[],
-      b: SimpleExpressionNode[],
-    ) {
-      if (a.length !== b.length) return false
-      return a.every((exp, i) => exp.content === b[i].content)
-    }
+    this.block.effect.splice(getIndex(), 0, {
+      expressions,
+      operations,
+    })
   }
 
   registerOperation(...node: OperationNode[]): void {

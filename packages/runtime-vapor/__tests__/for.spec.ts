@@ -4,7 +4,14 @@ import {
   getRestElement,
   renderEffect,
 } from '../src'
-import { nextTick, ref, shallowRef, triggerRef } from '@vue/runtime-dom'
+import {
+  nextTick,
+  reactive,
+  readonly,
+  ref,
+  shallowRef,
+  triggerRef,
+} from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 
 const define = makeRender()
@@ -94,7 +101,7 @@ describe('createFor', () => {
           })
           return span
         },
-        item => item.name,
+        item => item,
       )
       return n1
     }).render()
@@ -673,5 +680,58 @@ describe('createFor', () => {
     list.value = []
     await nextTick()
     expectCalledTimesToBe('Clear rows', 1, 0, 0, 0)
+  })
+
+  describe('readonly source', () => {
+    test('should not allow mutation', () => {
+      const arr = readonly(reactive([{ foo: 1 }]))
+
+      const { host } = define(() => {
+        const n1 = createFor(
+          () => arr,
+          (item, key, index) => {
+            const span = document.createElement('li')
+            renderEffect(() => {
+              item.value.foo = 0
+              span.innerHTML = `${item.value.foo}`
+            })
+            return span
+          },
+          idx => idx,
+        )
+        return n1
+      }).render()
+
+      expect(host.innerHTML).toBe('<li>1</li><!--for-->')
+      expect(
+        `Set operation on key "foo" failed: target is readonly.`,
+      ).toHaveBeenWarned()
+    })
+
+    test('should trigger effect for deep mutations', async () => {
+      const arr = reactive([{ foo: 1 }])
+      const readonlyArr = readonly(arr)
+
+      const { host } = define(() => {
+        const n1 = createFor(
+          () => readonlyArr,
+          (item, key, index) => {
+            const span = document.createElement('li')
+            renderEffect(() => {
+              span.innerHTML = `${item.value.foo}`
+            })
+            return span
+          },
+          idx => idx,
+        )
+        return n1
+      }).render()
+
+      expect(host.innerHTML).toBe('<li>1</li><!--for-->')
+
+      arr[0].foo = 2
+      await nextTick()
+      expect(host.innerHTML).toBe('<li>2</li><!--for-->')
+    })
   })
 })

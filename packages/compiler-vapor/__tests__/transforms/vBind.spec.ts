@@ -785,6 +785,25 @@ describe('cache multiple access', () => {
     expect(code).contains('_setProp(n0, "id", _obj[1][_ctx.baz] + _obj.bar)')
   })
 
+  test('variable name substring edge cases', () => {
+    const { code } = compileWithVBind(
+      `<div :id="title + titles + title"></div>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).contains('const _title = _ctx.title')
+    expect(code).contains('_setProp(n0, "id", _title + _ctx.titles + _title)')
+  })
+
+  test('object property name substring cases', () => {
+    const { code } = compileWithVBind(
+      `<div :id="p.title + p.titles + p.title"></div>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).contains('const _p = _ctx.p')
+    expect(code).contains('const _p_title = _p.title')
+    expect(code).contains('_setProp(n0, "id", _p_title + _p.titles + _p_title)')
+  })
+
   test('cache variable used in both property shorthand and normal binding', () => {
     const { code } = compileWithVBind(`
         <div :style="{color}" :id="color"/>
@@ -792,6 +811,13 @@ describe('cache multiple access', () => {
     expect(code).matchSnapshot()
     expect(code).contains('const _color = _ctx.color')
     expect(code).contains('_setStyle(n0, {color: _color})')
+  })
+
+  test('optional chaining', () => {
+    const { code } = compileWithVBind(`<div :id="obj?.foo + obj?.bar"></div>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _obj = _ctx.obj')
+    expect(code).contains('_setProp(n0, "id", _obj?.foo + _obj?.bar)')
   })
 
   test('not cache variable only used in property shorthand', () => {
@@ -805,6 +831,14 @@ describe('cache multiple access', () => {
   test('not cache variable and member expression with the same name', () => {
     const { code } = compileWithVBind(`
         <div :id="bar + obj.bar"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).not.contains('const _bar = _ctx.bar')
+  })
+
+  test('not cache variable in function expression', () => {
+    const { code } = compileWithVBind(`
+        <div v-bind="{ foo: bar => foo = bar }"></div>
       `)
     expect(code).matchSnapshot()
     expect(code).not.contains('const _bar = _ctx.bar')

@@ -21,19 +21,18 @@ import {
   pushWarningContext,
   queuePostFlushCb,
   registerHMR,
-  simpleSetCurrentInstance,
+  setCurrentInstance,
   startMeasure,
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, insert, isBlock, remove } from './block'
+import { type Block, DynamicFragment, insert, isBlock, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
   onScopeDispose,
-  pauseTracking,
   proxyRefs,
-  resetTracking,
+  setActiveSub,
   unref,
 } from '@vue/reactivity'
 import {
@@ -66,7 +65,11 @@ import {
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
-import { insertionAnchor, insertionParent } from './insertionState'
+import {
+  insertionAnchor,
+  insertionParent,
+  resetInsertionState,
+} from './insertionState'
 import { parentSuspense } from './components/Suspense'
 
 export { currentInstance } from '@vue/runtime-dom'
@@ -150,6 +153,8 @@ export function createComponent(
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
     locateHydrationNode()
+  } else {
+    resetInsertionState()
   }
 
   // vdom interop enabled and component is not an explicit vapor component
@@ -191,6 +196,14 @@ export function createComponent(
     parentSuspense,
   )
 
+  // HMR
+  if (__DEV__ && component.__hmrId) {
+    registerHMR(instance)
+    instance.isSingleRoot = isSingleRoot
+    instance.hmrRerender = hmrRerender.bind(null, instance)
+    instance.hmrReload = hmrReload.bind(null, instance)
+  }
+
   if (__DEV__) {
     pushWarningContext(instance)
     startMeasure(instance, `init`)
@@ -200,9 +213,8 @@ export function createComponent(
     instance.emitsOptions = normalizeEmitsOptions(component)
   }
 
-  const prev = currentInstance
-  simpleSetCurrentInstance(instance)
-  pauseTracking()
+  const prevInstance = setCurrentInstance(instance)
+  const prevSub = setActiveSub()
 
   if (__DEV__) {
     setupPropsValidation(instance)
@@ -241,8 +253,8 @@ export function createComponent(
     handleSetupResult(setupResult, component, instance, isSingleRoot, setupFn)
   }
 
-  resetTracking()
-  simpleSetCurrentInstance(prev, instance)
+  setActiveSub(prevSub)
+  setCurrentInstance(...prevInstance)
 
   if (__DEV__) {
     popWarningContext()
@@ -252,7 +264,7 @@ export function createComponent(
   onScopeDispose(() => unmountComponent(instance), true)
 
   if (!isHydrating && _insertionParent && !isAsyncSetup) {
-    insert(instance.block, _insertionParent, _insertionAnchor)
+    mountComponent(instance, _insertionParent, _insertionAnchor)
   }
 
   return instance
@@ -265,18 +277,33 @@ export let isApplyingFallthroughProps = false
  */
 export function devRender(instance: VaporComponentInstance): void {
   instance.block =
-    callWithErrorHandling(
-      instance.type.render!,
-      instance,
-      ErrorCodes.RENDER_FUNCTION,
-      [
-        instance.setupState,
-        instance.props,
-        instance.emit,
-        instance.attrs,
-        instance.slots,
-      ],
-    ) || []
+    (instance.type.render
+      ? callWithErrorHandling(
+          instance.type.render,
+          instance,
+          ErrorCodes.RENDER_FUNCTION,
+          [
+            instance.setupState,
+            instance.props,
+            instance.emit,
+            instance.attrs,
+            instance.slots,
+          ],
+        )
+      : callWithErrorHandling(
+          isFunction(instance.type) ? instance.type : instance.type.setup!,
+          instance,
+          ErrorCodes.SETUP_FUNCTION,
+          [
+            instance.props,
+            {
+              slots: instance.slots,
+              attrs: instance.attrs,
+              emit: instance.emit,
+              expose: instance.expose,
+            },
+          ],
+        )) || []
 }
 
 const emptyContext: GenericAppContext = {
@@ -457,6 +484,14 @@ export function createComponentWithFallback(
     return createComponent(comp, rawProps, rawSlots, isSingleRoot)
   }
 
+  const _insertionParent = insertionParent
+  const _insertionAnchor = insertionAnchor
+  if (isHydrating) {
+    locateHydrationNode()
+  } else {
+    resetInsertionState()
+  }
+
   const el = document.createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
@@ -473,6 +508,10 @@ export function createComponentWithFallback(
     } else {
       insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
     }
+  }
+
+  if (!isHydrating && _insertionParent) {
+    insert(el, _insertionParent, _insertionAnchor)
   }
 
   return el
@@ -609,17 +648,34 @@ export function handleSetupResult(
   if (
     instance.hasFallthrough &&
     component.inheritAttrs !== false &&
-    instance.block instanceof Element &&
     Object.keys(instance.attrs).length
   ) {
-    renderEffect(() => {
-      isApplyingFallthroughProps = true
-      setDynamicProps(instance.block as Element, [instance.attrs])
-      isApplyingFallthroughProps = false
-    })
+    const el = getRootElement(instance)
+    if (el) {
+      renderEffect(() => {
+        isApplyingFallthroughProps = true
+        setDynamicProps(el, [instance.attrs])
+        isApplyingFallthroughProps = false
+      })
+    }
   }
 
   if (__DEV__) {
     popWarningContext()
+  }
+}
+
+function getRootElement({
+  block,
+}: VaporComponentInstance): Element | undefined {
+  if (block instanceof Element) {
+    return block
+  }
+
+  if (block instanceof DynamicFragment) {
+    const { nodes } = block
+    if (nodes instanceof Element && (nodes as any).$root) {
+      return nodes
+    }
   }
 }

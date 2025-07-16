@@ -9,11 +9,14 @@ import {
   type Slots,
   type VNode,
   type VaporInteropInterface,
+  createInternalObject,
   createVNode,
   currentInstance,
   ensureRenderer,
+  isEmitListener,
   onScopeDispose,
   renderSlot,
+  shallowReactive,
   shallowRef,
   simpleSetCurrentInstance,
 } from '@vue/runtime-dom'
@@ -35,6 +38,8 @@ import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import { setParentSuspense } from './components/Suspense'
 
+export const interopKey: unique symbol = Symbol(`interop`)
+
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
   VaporInteropInterface,
@@ -54,11 +59,16 @@ const vaporInteropImpl: Omit<
     }
 
     const component = vnode.type as any as VaporComponent
+    const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
+      () => propsRef.value,
+    ]
+    // mark as interop props
+    dynamicPropSource[interopKey] = true
     // @ts-expect-error
     const instance = (vnode.component = createComponent(
       component,
       {
-        $: [() => propsRef.value],
+        $: dynamicPropSource,
       } as RawProps,
       {
         _: slotsRef, // pass the slots ref
@@ -143,11 +153,11 @@ const vaporSlotPropsProxyHandler: ProxyHandler<
 
 const vaporSlotsProxyHandler: ProxyHandler<any> = {
   get(target, key) {
-    if (key === '_vapor') {
-      return target
-    } else {
-      return target[key]
+    const slot = target[key]
+    if (isFunction(slot)) {
+      slot.__vapor = true
     }
+    return slot
   },
 }
 
@@ -173,8 +183,16 @@ function createVDOMComponent(
 
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
-    instance.props = wrapper.props
-    instance.attrs = wrapper.attrs
+    // ensure props are shallow reactive to align with VDOM behavior.
+    instance.props = shallowReactive(wrapper.props)
+
+    const attrs = (instance.attrs = createInternalObject())
+    for (const key in wrapper.attrs) {
+      if (!isEmitListener(instance.emitsOptions, key)) {
+        attrs[key] = wrapper.attrs[key]
+      }
+    }
+
     instance.slots =
       wrapper.slots === EMPTY_OBJ
         ? EMPTY_OBJ

@@ -543,6 +543,7 @@ export {
  */
 export {
   currentInstance,
+  setCurrentInstance,
   simpleSetCurrentInstance,
 } from './componentCurrentInstance'
 /**
@@ -561,3 +562,7 @@ export { initFeatureFlags } from './featureFlags'
  * @internal
  */
 export { getComponentName } from './component'
+/**
+ * @internal
+ */
+export { createInternalObject } from './internalObject'

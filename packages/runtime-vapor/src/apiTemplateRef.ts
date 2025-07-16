@@ -20,6 +20,7 @@ import {
   isString,
   remove,
 } from '@vue/shared'
+import { DynamicFragment } from './block'
 
 export type NodeRef = string | Ref | ((ref: Element) => void)
 export type RefEl = Element | VaporComponentInstance
@@ -49,7 +50,7 @@ export function setRef(
   if (!instance || instance.isUnmounted) return
 
   const setupState: any = __DEV__ ? instance.setupState || {} : null
-  const refValue = isVaporComponent(el) ? getExposed(el) || el : el
+  const refValue = getRefValue(el)
 
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
@@ -119,8 +120,7 @@ export function setRef(
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
         }
       }
-      doSet.id = -1
-      queuePostFlushCb(doSet)
+      queuePostFlushCb(doSet, -1)
 
       // TODO this gets called repeatedly in renderEffect when it's dynamic ref?
       onScopeDispose(() => {
@@ -142,4 +142,13 @@ export function setRef(
     }
   }
   return ref
+}
+
+const getRefValue = (el: RefEl) => {
+  if (isVaporComponent(el)) {
+    return getExposed(el) || el
+  } else if (el instanceof DynamicFragment) {
+    return getRefValue(el.nodes as RefEl)
+  }
+  return el
 }
