@@ -13,7 +13,6 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { warn } from './warning'
 import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
-import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
 import { type ComponentOptions, getComponentPublicInstance } from './component'
 import { knownTemplateRefs } from './helpers/useTemplateRef'
@@ -153,8 +152,7 @@ export function setRef(
         // #1789: for non-null values, set them after render
         // null values means this is unmount and it should not overwrite another
         // ref with the same key
-        ;(doSet as SchedulerJob).id = -1
-        queuePostRenderEffect(doSet, parentSuspense)
+        queuePostRenderEffect(doSet, -1, parentSuspense)
       } else {
         doSet()
       }

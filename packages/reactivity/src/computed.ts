@@ -1,24 +1,19 @@
 import { hasChanged, isFunction } from '@vue/shared'
 import { ReactiveFlags, TrackOpTypes } from './constants'
 import { onTrack, setupOnTrigger } from './debug'
-import {
-  type DebuggerEvent,
-  type DebuggerOptions,
-  activeSub,
-  setActiveSub,
-} from './effect'
+import type { DebuggerEvent, DebuggerOptions } from './effect'
 import { activeEffectScope } from './effectScope'
 import type { Ref } from './ref'
 import {
-  type Dependency,
   type Link,
-  type Subscriber,
-  SubscriberFlags,
+  type ReactiveNode,
+  ReactiveFlags as SystemReactiveFlags,
+  activeSub,
+  checkDirty,
   endTracking,
   link,
-  processComputedUpdate,
+  shallowPropagate,
   startTracking,
-  updateDirtyFlag,
 } from './system'
 import { warn } from './warning'
 
@@ -53,20 +48,18 @@ export interface WritableComputedOptions<T, S = T> {
  * @private exported by @vue/reactivity for Vue core use, but not exported from
  * the main vue package
  */
-export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
+export class ComputedRefImpl<T = any> implements ReactiveNode {
   /**
    * @internal
    */
   _value: T | undefined = undefined
 
-  // Dependency
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
-
-  // Subscriber
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  flags: SubscriberFlags = SubscriberFlags.Computed | SubscriberFlags.Dirty
+  flags: SystemReactiveFlags =
+    SystemReactiveFlags.Mutable | SystemReactiveFlags.Dirty
 
   /**
    * @internal
@@ -84,7 +77,7 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
     return this
   }
   // for backwards compat
-  get dep(): Dependency {
+  get dep(): ReactiveNode {
     return this
   }
   /**
@@ -93,12 +86,16 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
    */
   get _dirty(): boolean {
     const flags = this.flags
-    if (
-      flags & SubscriberFlags.Dirty ||
-      (flags & SubscriberFlags.PendingComputed &&
-        updateDirtyFlag(this, this.flags))
-    ) {
+    if (flags & SystemReactiveFlags.Dirty) {
       return true
+    }
+    if (flags & SystemReactiveFlags.Pending) {
+      if (checkDirty(this.deps!, this)) {
+        this.flags = flags | SystemReactiveFlags.Dirty
+        return true
+      } else {
+        this.flags = flags & ~SystemReactiveFlags.Pending
+      }
     }
     return false
   }
@@ -108,9 +105,9 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
    */
   set _dirty(v: boolean) {
     if (v) {
-      this.flags |= SubscriberFlags.Dirty
+      this.flags |= SystemReactiveFlags.Dirty
     } else {
-      this.flags &= ~(SubscriberFlags.Dirty | SubscriberFlags.PendingComputed)
+      this.flags &= ~(SystemReactiveFlags.Dirty | SystemReactiveFlags.Pending)
     }
   }
 
@@ -128,8 +125,18 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
 
   get value(): T {
     const flags = this.flags
-    if (flags & (SubscriberFlags.Dirty | SubscriberFlags.PendingComputed)) {
-      processComputedUpdate(this, flags)
+    if (
+      flags & SystemReactiveFlags.Dirty ||
+      (flags & SystemReactiveFlags.Pending && checkDirty(this.deps!, this))
+    ) {
+      if (this.update()) {
+        const subs = this.subs
+        if (subs !== undefined) {
+          shallowPropagate(subs)
+        }
+      }
+    } else if (flags & SystemReactiveFlags.Pending) {
+      this.flags = flags & ~SystemReactiveFlags.Pending
     }
     if (activeSub !== undefined) {
       if (__DEV__) {
@@ -155,9 +162,7 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
   }
 
   update(): boolean {
-    const prevSub = activeSub
-    setActiveSub(this)
-    startTracking(this)
+    const prevSub = startTracking(this)
     try {
       const oldValue = this._value
       const newValue = this.fn(oldValue)
@@ -167,8 +172,7 @@ export class ComputedRefImpl<T = any> implements Dependency, Subscriber {
       }
       return false
     } finally {
-      setActiveSub(prevSub)
-      endTracking(this)
+      endTracking(this, prevSub)
     }
   }
 }

@@ -6,7 +6,7 @@ import {
   unmountComponent,
 } from './component'
 import { createComment, createTextNode } from './dom/node'
-import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
+import { EffectScope, setActiveSub } from '@vue/reactivity'
 import { isHydrating } from './dom/hydration'
 import type { NodeRef } from './apiTemplateRef'
 
@@ -54,7 +54,7 @@ export class DynamicFragment extends VaporFragment {
     }
     this.current = key
 
-    pauseTracking()
+    const prevSub = setActiveSub()
     const parent = this.anchor.parentNode
 
     // teardown previous branch
@@ -80,7 +80,7 @@ export class DynamicFragment extends VaporFragment {
       parent && insert(this.nodes, parent, this.anchor)
     }
 
-    resetTracking()
+    setActiveSub(prevSub)
   }
 }
 

@@ -18,6 +18,7 @@ import {
   normalizeRef,
   onScopeDispose,
   renderSlot,
+  shallowReactive,
   shallowRef,
   simpleSetCurrentInstance,
   setRef as vdomSetRef,
@@ -39,6 +40,8 @@ import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import type { NodeRef } from './apiTemplateRef'
+
+export const interopKey: unique symbol = Symbol(`interop`)
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
@@ -62,11 +65,16 @@ const vaporInteropImpl: Omit<
     const propsRef = shallowRef(props)
     const slotsRef = shallowRef(vnode.children)
 
+    const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
+      () => propsRef.value,
+    ]
+    // mark as interop props
+    dynamicPropSource[interopKey] = true
     // @ts-expect-error
     const instance = (vnode.component = createComponent(
       vnode.type as any as VaporComponent,
       {
-        $: [() => propsRef.value],
+        $: dynamicPropSource,
       } as RawProps,
       {
         _: slotsRef, // pass the slots ref
@@ -145,11 +153,11 @@ const vaporSlotPropsProxyHandler: ProxyHandler<
 
 const vaporSlotsProxyHandler: ProxyHandler<any> = {
   get(target, key) {
-    if (key === '_vapor') {
-      return target
-    } else {
-      return target[key]
+    const slot = target[key]
+    if (isFunction(slot)) {
+      slot.__vapor = true
     }
+    return slot
   },
 }
 
@@ -175,7 +183,8 @@ function createVDOMComponent(
 
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
-    instance.props = wrapper.props
+    // ensure props are shallow reactive to align with VDOM behavior.
+    instance.props = shallowReactive(wrapper.props)
 
     const attrs = (instance.attrs = createInternalObject())
     for (const key in wrapper.attrs) {
