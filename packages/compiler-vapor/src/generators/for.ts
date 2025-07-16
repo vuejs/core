@@ -107,12 +107,12 @@ export function genFor(
     const selectorName = `_selector${id}_${i}`
     selectorDeclarations.push(`let ${selectorName}`, NEWLINE)
     if (i === 0) {
-      selectorSetup.push(`() => {`, INDENT_START)
+      selectorSetup.push(`({ createSelector }) => {`, INDENT_START)
     }
     selectorSetup.push(
       NEWLINE,
       `${selectorName} = `,
-      ...genCall(`n${id}.createSelector`, [
+      ...genCall(`createSelector`, [
         `() => `,
         ...genExpression(selector, context),
       ]),

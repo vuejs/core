@@ -158,8 +158,8 @@ export function render(_ctx) {
       _setText(x2, _toDisplayString(_ctx.selected === _for_item0.value.id ? 'danger' : ''))
     })
     return n2
-  }, (row) => (row.id), undefined, () => {
-    _selector0_0 = n0.createSelector(() => _ctx.selected)
+  }, (row) => (row.id), undefined, ({ createSelector }) => {
+    _selector0_0 = createSelector(() => _ctx.selected)
   })
   return n0
 }"
@@ -177,8 +177,8 @@ export function render(_ctx) {
       _setClass(n2, _ctx.selected === _for_item0.value.id ? 'danger' : '')
     })
     return n2
-  }, (row) => (row.id), undefined, () => {
-    _selector0_0 = n0.createSelector(() => _ctx.selected)
+  }, (row) => (row.id), undefined, ({ createSelector }) => {
+    _selector0_0 = createSelector(() => _ctx.selected)
   })
   return n0
 }"
@@ -213,8 +213,8 @@ export function render(_ctx) {
       _setClass(n2, { danger: _for_item0.value.id === _ctx.selected })
     })
     return n2
-  }, (row) => (row.id), undefined, () => {
-    _selector0_0 = n0.createSelector(() => _ctx.selected)
+  }, (row) => (row.id), undefined, ({ createSelector }) => {
+    _selector0_0 = createSelector(() => _ctx.selected)
   })
   return n0
 }"
