@@ -1,8 +1,7 @@
 import {
-  currentInstance,
   popWarningContext,
   pushWarningContext,
-  simpleSetCurrentInstance,
+  setCurrentInstance,
 } from '@vue/runtime-dom'
 import { insert, normalizeBlock, remove } from './block'
 import {
@@ -24,12 +23,11 @@ export function hmrRerender(instance: VaporComponentInstance): void {
     instance.hmrRerenderEffects.forEach(e => e())
     instance.hmrRerenderEffects.length = 0
   }
-  const prev = currentInstance
-  simpleSetCurrentInstance(instance)
+  const prev = setCurrentInstance(instance)
   pushWarningContext(instance)
   devRender(instance)
   popWarningContext()
-  simpleSetCurrentInstance(prev, instance)
+  setCurrentInstance(...prev)
   insert(instance.block, parent, anchor)
 }
 
@@ -41,15 +39,14 @@ export function hmrReload(
   const parent = normalized[0].parentNode!
   const anchor = normalized[normalized.length - 1].nextSibling
   unmountComponent(instance, parent)
-  const prev = currentInstance
-  simpleSetCurrentInstance(instance.parent)
+  const prev = setCurrentInstance(instance.parent)
   const newInstance = createComponent(
     newComp,
     instance.rawProps,
     instance.rawSlots,
     instance.isSingleRoot,
   )
-  simpleSetCurrentInstance(prev, instance.parent)
+  setCurrentInstance(...prev)
   mountComponent(newInstance, parent, anchor)
   handleTeleportRootComponentHmrReload(instance, newInstance)
 }

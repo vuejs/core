@@ -20,7 +20,7 @@ import {
   pushWarningContext,
   queuePostFlushCb,
   registerHMR,
-  simpleSetCurrentInstance,
+  setCurrentInstance,
   startMeasure,
   unregisterHMR,
   warn,
@@ -30,9 +30,8 @@ import {
   type ShallowRef,
   markRaw,
   onScopeDispose,
-  pauseTracking,
   proxyRefs,
-  resetTracking,
+  setActiveSub,
   unref,
 } from '@vue/reactivity'
 import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
@@ -202,6 +201,14 @@ export function createComponent(
     appContext,
   )
 
+  // HMR
+  if (__DEV__ && component.__hmrId) {
+    registerHMR(instance)
+    instance.isSingleRoot = isSingleRoot
+    instance.hmrRerender = hmrRerender.bind(null, instance)
+    instance.hmrReload = hmrReload.bind(null, instance)
+  }
+
   if (__DEV__) {
     pushWarningContext(instance)
     startMeasure(instance, `init`)
@@ -211,9 +218,8 @@ export function createComponent(
     instance.emitsOptions = normalizeEmitsOptions(component)
   }
 
-  const prev = currentInstance
-  simpleSetCurrentInstance(instance)
-  pauseTracking()
+  const prevInstance = setCurrentInstance(instance)
+  const prevSub = setActiveSub()
 
   if (__DEV__) {
     setupPropsValidation(instance)
@@ -241,14 +247,6 @@ export function createComponent(
       // TODO make the proxy warn non-existent property access during dev
       instance.setupState = proxyRefs(setupResult)
       devRender(instance)
-
-      // HMR
-      if (component.__hmrId) {
-        registerHMR(instance)
-        instance.isSingleRoot = isSingleRoot
-        instance.hmrRerender = hmrRerender.bind(null, instance)
-        instance.hmrReload = hmrReload.bind(null, instance)
-      }
     }
   } else {
     // component has a render function but no setup function
@@ -281,8 +279,8 @@ export function createComponent(
     }
   }
 
-  resetTracking()
-  simpleSetCurrentInstance(prev, instance)
+  setActiveSub(prevSub)
+  setCurrentInstance(...prevInstance)
 
   if (__DEV__) {
     popWarningContext()
@@ -305,18 +303,33 @@ export let isApplyingFallthroughProps = false
  */
 export function devRender(instance: VaporComponentInstance): void {
   instance.block =
-    callWithErrorHandling(
-      instance.type.render!,
-      instance,
-      ErrorCodes.RENDER_FUNCTION,
-      [
-        instance.setupState,
-        instance.props,
-        instance.emit,
-        instance.attrs,
-        instance.slots,
-      ],
-    ) || []
+    (instance.type.render
+      ? callWithErrorHandling(
+          instance.type.render,
+          instance,
+          ErrorCodes.RENDER_FUNCTION,
+          [
+            instance.setupState,
+            instance.props,
+            instance.emit,
+            instance.attrs,
+            instance.slots,
+          ],
+        )
+      : callWithErrorHandling(
+          isFunction(instance.type) ? instance.type : instance.type.setup!,
+          instance,
+          ErrorCodes.SETUP_FUNCTION,
+          [
+            instance.props,
+            {
+              slots: instance.slots,
+              attrs: instance.attrs,
+              emit: instance.emit,
+              expose: instance.expose,
+            },
+          ],
+        )) || []
 }
 
 const emptyContext: GenericAppContext = {

@@ -1,4 +1,4 @@
-import { EffectScope, pauseTracking, resetTracking } from '@vue/reactivity'
+import { EffectScope, setActiveSub } from '@vue/reactivity'
 import { createComment, createTextNode } from './dom/node'
 import { type Block, type BlockFn, insert, isValidBlock, remove } from './block'
 
@@ -34,7 +34,7 @@ export class DynamicFragment extends VaporFragment {
     }
     this.current = key
 
-    pauseTracking()
+    const prevSub = setActiveSub()
     const parent = this.anchor.parentNode
 
     // teardown previous branch
@@ -60,7 +60,7 @@ export class DynamicFragment extends VaporFragment {
       parent && insert(this.nodes, parent, this.anchor)
     }
 
-    resetTracking()
+    setActiveSub(prevSub)
   }
 }
 
