@@ -74,9 +74,9 @@ export const createFor = (
   ) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
   flags = 0,
-  setup: (_: {
+  setup?: (_: {
     createSelector: (source: () => any) => (cb: () => void) => void
-  }) => void = () => {},
+  }) => void,
 ): VaporFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -405,7 +405,9 @@ export const createFor = (
     }
   }
 
-  setup({ createSelector })
+  if (setup !== undefined) {
+    setup({ createSelector })
+  }
 
   if (flags & VaporVForFlags.ONCE) {
     renderList()
