@@ -4,8 +4,7 @@ import {
   isReadonly,
   isRef,
   isShallow,
-  pauseTracking,
-  resetTracking,
+  setActiveSub,
   toRaw,
 } from '@vue/reactivity'
 import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
@@ -37,9 +36,9 @@ export function initCustomFormatter(): void {
         return ['div', vueStyle, `VueInstance`]
       } else if (isRef(obj)) {
         // avoid tracking during debugger accessing
-        pauseTracking()
+        const prevSub = setActiveSub()
         const value = obj.value
-        resetTracking()
+        setActiveSub(prevSub)
         return [
           'div',
           {},

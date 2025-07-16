@@ -179,6 +179,37 @@ describe('api: template refs', () => {
     expect(el.value).toBe(null)
   })
 
+  it('unset old ref when new ref is absent', async () => {
+    const root1 = nodeOps.createElement('div')
+    const root2 = nodeOps.createElement('div')
+    const el1 = ref(null)
+    const el2 = ref(null)
+    const toggle = ref(true)
+
+    const Comp1 = {
+      setup() {
+        return () => (toggle.value ? h('div', { ref: el1 }) : h('div'))
+      },
+    }
+
+    const Comp2 = {
+      setup() {
+        return () => h('div', { ref: toggle.value ? el2 : undefined })
+      },
+    }
+
+    render(h(Comp1), root1)
+    render(h(Comp2), root2)
+
+    expect(el1.value).toBe(root1.children[0])
+    expect(el2.value).toBe(root2.children[0])
+
+    toggle.value = false
+    await nextTick()
+    expect(el1.value).toBe(null)
+    expect(el2.value).toBe(null)
+  })
+
   test('string ref inside slots', async () => {
     const root = nodeOps.createElement('div')
     const spy = vi.fn()

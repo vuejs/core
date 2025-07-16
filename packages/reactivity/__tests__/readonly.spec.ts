@@ -8,7 +8,9 @@ import {
   reactive,
   readonly,
   ref,
+  shallowRef,
   toRaw,
+  triggerRef,
 } from '../src'
 
 /**
@@ -519,4 +521,17 @@ describe('reactivity/readonly', () => {
     expect(obj.r).toBe(ro)
     expect(r.value).toBe(ro)
   })
+})
+
+test('should be able to trigger with triggerRef', () => {
+  const r = shallowRef({ a: 1 })
+  const ror = readonly(r)
+  let dummy
+  effect(() => {
+    dummy = ror.value.a
+  })
+  r.value.a = 2
+  expect(dummy).toBe(1)
+  triggerRef(ror)
+  expect(dummy).toBe(2)
 })

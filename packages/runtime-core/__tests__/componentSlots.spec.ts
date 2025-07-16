@@ -6,6 +6,7 @@ import {
   nodeOps,
   ref,
   render,
+  useSlots,
 } from '@vue/runtime-test'
 import { createBlock, normalizeVNode } from '../src/vnode'
 import { createSlots } from '../src/helpers/createSlots'
@@ -40,6 +41,29 @@ describe('component: slots', () => {
   test('initSlots: instance.slots should remove compiler marker if parent is using manual render function', () => {
     const { slots } = renderWithSlots({ _: 1 })
     expect(slots).toMatchObject({})
+  })
+
+  test('initSlots: ensure compiler marker non-enumerable', () => {
+    const Comp = {
+      render() {
+        const slots = useSlots()
+        // Only user-defined slots should be enumerable
+        expect(Object.keys(slots)).toEqual(['foo'])
+
+        // Internal compiler markers must still exist but be non-enumerable
+        expect(slots).toHaveProperty('_')
+        expect(Object.getOwnPropertyDescriptor(slots, '_')!.enumerable).toBe(
+          false,
+        )
+        expect(slots).toHaveProperty('__')
+        expect(Object.getOwnPropertyDescriptor(slots, '__')!.enumerable).toBe(
+          false,
+        )
+        return h('div')
+      },
+    }
+    const slots = { foo: () => {}, _: 1, __: [1] }
+    render(createBlock(Comp, null, slots), nodeOps.createElement('div'))
   })
 
   test('initSlots: should normalize object slots (when value is null, string, array)', () => {
