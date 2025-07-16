@@ -75,7 +75,7 @@ export function defineAsyncComponent<
               // skip hydration if the component has been patched
               if (__DEV__ && patched) {
                 warn(
-                  `Skipping lazy hydration for component '${getComponentName(resolvedComp!)}': ` +
+                  `Skipping lazy hydration for component '${getComponentName(getResolvedComp()!)}': ` +
                     `it was updated before lazy hydration performed.`,
                 )
                 return
