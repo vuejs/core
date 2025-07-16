@@ -8,7 +8,7 @@ return function render(_ctx, _cache) {
     const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
-      _createElementVNode("div", { key: "foo" }, null, -1 /* HOISTED */)
+      _createElementVNode("div", { key: "foo" }, null, -1 /* CACHED */)
     ])))
   }
 }"
@@ -25,11 +25,11 @@ return function render(_ctx, _cache) {
       _createElementVNode("p", null, [
         _createElementVNode("span"),
         _createElementVNode("span")
-      ], -1 /* HOISTED */),
+      ], -1 /* CACHED */),
       _createElementVNode("p", null, [
         _createElementVNode("span"),
         _createElementVNode("span")
-      ], -1 /* HOISTED */)
+      ], -1 /* CACHED */)
     ])))
   }
 }"
@@ -45,7 +45,7 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
       _createElementVNode("div", null, [
         _createCommentVNode("comment")
-      ], -1 /* HOISTED */)
+      ], -1 /* CACHED */)
     ])))
   }
 }"
@@ -59,9 +59,9 @@ return function render(_ctx, _cache) {
     const { createElementVNode: _createElementVNode, createTextVNode: _createTextVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
-      _createElementVNode("span", null, null, -1 /* HOISTED */),
+      _createElementVNode("span", null, null, -1 /* CACHED */),
       _createTextVNode("foo"),
-      _createElementVNode("div", null, null, -1 /* HOISTED */)
+      _createElementVNode("div", null, null, -1 /* CACHED */)
     ])))
   }
 }"
@@ -75,7 +75,7 @@ return function render(_ctx, _cache) {
     const { createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
-      _createElementVNode("span", { class: "inline" }, "hello", -1 /* HOISTED */)
+      _createElementVNode("span", { class: "inline" }, "hello", -1 /* CACHED */)
     ])))
   }
 }"
@@ -148,7 +148,7 @@ return function render(_ctx, _cache) {
     const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
-      _createElementVNode("span", null, "foo " + _toDisplayString(1) + " " + _toDisplayString(true), -1 /* HOISTED */)
+      _createElementVNode("span", null, "foo " + _toDisplayString(1) + " " + _toDisplayString(true), -1 /* CACHED */)
     ])))
   }
 }"
@@ -162,7 +162,7 @@ return function render(_ctx, _cache) {
     const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
-      _createElementVNode("span", { foo: 0 }, _toDisplayString(1), -1 /* HOISTED */)
+      _createElementVNode("span", { foo: 0 }, _toDisplayString(1), -1 /* CACHED */)
     ])))
   }
 }"
@@ -178,7 +178,7 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createElementBlock("div", null, [
       (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(1, (i) => {
         return (_openBlock(), _createElementBlock("div", null, [...(_cache[0] || (_cache[0] = [
-          _createElementVNode("span", { class: "hi" }, null, -1 /* HOISTED */)
+          _createElementVNode("span", { class: "hi" }, null, -1 /* CACHED */)
         ]))]))
       }), 256 /* UNKEYED_FRAGMENT */))
     ]))
@@ -216,7 +216,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock("div", null, [
       _withDirectives((_openBlock(), _createElementBlock("svg", null, _cache[0] || (_cache[0] = [
-        _createElementVNode("path", { d: "M2,3H5.5L12" }, null, -1 /* HOISTED */)
+        _createElementVNode("path", { d: "M2,3H5.5L12" }, null, -1 /* CACHED */)
       ]))), [
         [_directive_foo]
       ])
@@ -402,10 +402,36 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createElementBlock("div", null, [
       ok
         ? (_openBlock(), _createElementBlock("div", _hoisted_1, _cache[0] || (_cache[0] = [
-            _createElementVNode("span", null, null, -1 /* HOISTED */)
+            _createElementVNode("span", null, null, -1 /* CACHED */)
           ])))
         : _createCommentVNode("v-if", true)
     ]))
+  }
+}"
+`;
+
+exports[`compiler: cacheStatic transform > should hoist props for root with single element excluding comments 1`] = `
+"const _Vue = Vue
+const { createElementVNode: _createElementVNode, createCommentVNode: _createCommentVNode } = _Vue
+
+const _hoisted_1 = { id: "a" }
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+    return (_openBlock(), _createElementBlock(_Fragment, null, [
+      _createCommentVNode("comment"),
+      _createElementVNode("div", _hoisted_1, _cache[0] || (_cache[0] = [
+        _createElementVNode("div", { id: "b" }, [
+          _createElementVNode("div", { id: "c" }, [
+            _createElementVNode("div", { id: "d" }, [
+              _createElementVNode("div", { id: "e" }, "hello")
+            ])
+          ])
+        ], -1 /* CACHED */)
+      ]))
+    ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
   }
 }"
 `;
@@ -423,7 +449,7 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createElementBlock("div", null, [
       (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(list, (i) => {
         return (_openBlock(), _createElementBlock("div", _hoisted_1, _cache[0] || (_cache[0] = [
-          _createElementVNode("span", null, null, -1 /* HOISTED */)
+          _createElementVNode("span", null, null, -1 /* CACHED */)
         ])))
       }), 256 /* UNKEYED_FRAGMENT */))
     ]))

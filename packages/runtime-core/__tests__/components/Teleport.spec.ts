@@ -16,6 +16,7 @@ import {
   render,
   serialize,
   serializeInner,
+  useModel,
   withDirectives,
 } from '@vue/runtime-test'
 import {
@@ -142,6 +143,62 @@ describe('renderer: teleport', () => {
       await nextTick()
       expect(root.innerHTML).toMatchInlineSnapshot(
         `"<!--teleport start--><!--teleport end--><div>Footer</div><div id="targetId"><div>bar</div></div>"`,
+      )
+    })
+
+    // #13349
+    test('handle deferred teleport updates before and after mount', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const show = ref(false)
+      const data2 = ref('2')
+      const data3 = ref('3')
+
+      const Comp = {
+        props: {
+          modelValue: {},
+          modelModifiers: {},
+        },
+        emits: ['update:modelValue'],
+        setup(props: any) {
+          const data2 = useModel(props, 'modelValue')
+          data2.value = '2+'
+          return () => h('span')
+        },
+      }
+
+      createDOMApp({
+        setup() {
+          setTimeout(() => (show.value = true), 5)
+          setTimeout(() => (data3.value = '3+'), 10)
+        },
+        render() {
+          return h(Fragment, null, [
+            h('span', { id: 'targetId001' }),
+            show.value
+              ? h(Fragment, null, [
+                  h(Teleport, { to: '#targetId001', defer: true }, [
+                    createTextVNode(String(data3.value)),
+                  ]),
+                  h(Comp, {
+                    modelValue: data2.value,
+                    'onUpdate:modelValue': (event: any) =>
+                      (data2.value = event),
+                  }),
+                ])
+              : createCommentVNode('v-if'),
+          ])
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<span id="targetId001"></span><!--v-if-->"`,
+      )
+
+      await new Promise(r => setTimeout(r, 10))
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<span id="targetId001">3+</span><!--teleport start--><!--teleport end--><span></span>"`,
       )
     })
   })
