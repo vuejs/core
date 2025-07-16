@@ -59,10 +59,12 @@ export function inject(
     // to support `app.use` plugins,
     // fallback to appContext's `provides` if the instance is at root
     // #11488, in a nested createApp, prioritize using the provides from currentApp
-    const provides = currentApp
+    // #13212, for custom elements we must get injected values from its appContext
+    // as it already inherits the provides object from the parent element
+    let provides = currentApp
       ? currentApp._context.provides
       : instance
-        ? instance.parent == null
+        ? instance.parent == null || instance.ce
           ? instance.appContext && instance.appContext.provides
           : instance.parent.provides
         : undefined
