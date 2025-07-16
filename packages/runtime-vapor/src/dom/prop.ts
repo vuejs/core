@@ -269,6 +269,8 @@ export function optimizePropertyLookup(): void {
   if (isOptimized) return
   isOptimized = true
   const proto = Element.prototype as any
+  proto.$transition = undefined
+  proto.$key = undefined
   proto.$evtclick = undefined
   proto.$root = false
   proto.$html =
