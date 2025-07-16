@@ -137,7 +137,7 @@ watch(
   (version, oldVersion) => {
     const [major, minor] = (version || store.compiler.version)
       .split('.')
-      .map(Number)
+      .map((v: string) => parseInt(v, 10))
     isVaporSupported.value = major > 3 || (major === 3 && minor >= 6)
     if (oldVersion) reloadPage()
   },
