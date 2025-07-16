@@ -74,6 +74,9 @@ export const createFor = (
   ) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
   flags = 0,
+  setup: (_: {
+    createSelector: (source: () => any) => (cb: () => void) => void
+  }) => void = () => {},
 ): VaporFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -402,6 +405,8 @@ export const createFor = (
     }
   }
 
+  setup({ createSelector })
+
   if (flags & VaporVForFlags.ONCE) {
     renderList()
   } else {
@@ -412,12 +417,9 @@ export const createFor = (
     insert(frag, _insertionParent, _insertionAnchor)
   }
 
-  // @ts-expect-error
-  frag.useSelector = useSelector
-
   return frag
 
-  function useSelector(source: () => any): (key: any, cb: () => void) => void {
+  function createSelector(source: () => any): (cb: () => void) => void {
     let operMap = new Map<any, (() => void)[]>()
     let activeKey = source()
     let activeOpers: (() => void)[] | undefined
