@@ -204,8 +204,8 @@ importers:
   packages-private/sfc-playground:
     dependencies:
       '@vue/repl':
-        specifier: https://pkg.pr.new/@vue/repl@0c1d0f7
-        version: https://pkg.pr.new/@vue/repl@0c1d0f7
+        specifier: ^4.6.2
+        version: 4.6.2
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
@@ -1521,9 +1521,8 @@ packages:
   '@vue/reactivity@3.6.0-alpha.1':
     resolution: {integrity: sha512-h/Rscsd7OhcBM3YWKwEg4FG5iLSjASMZVl5ahPfma19xig/MhwKrUc9dE4tLNMtd3ZbocIPzZsV+O4fgoAZFdw==}
 
-  '@vue/repl@https://pkg.pr.new/@vue/repl@0c1d0f7':
-    resolution: {tarball: https://pkg.pr.new/@vue/repl@0c1d0f7}
-    version: 4.6.1
+  '@vue/repl@4.6.2':
+    resolution: {integrity: sha512-Rjl/X++MbfWNncry+qiIadY5BdrB3hp0Iu9W7R9eLJAce3hXnjUiykMK5rLAkQJpB6N83SR0LGNJbKg7gpzplg==}
 
   '@zeit/schemas@2.36.0':
     resolution: {integrity: sha512-7kjMwcChYEzMKjeex9ZFXkt1AyNov9R5HZtjBKVsmVpw7pa7ZtlCGvCBC2vnnXctaYN+aRI61HjIqeetZW5ROg==}
@@ -4453,7 +4452,7 @@ snapshots:
     dependencies:
       '@vue/shared': 3.6.0-alpha.1
 
-  '@vue/repl@https://pkg.pr.new/@vue/repl@0c1d0f7': {}
+  '@vue/repl@4.6.2': {}
 
   '@zeit/schemas@2.36.0': {}
 
