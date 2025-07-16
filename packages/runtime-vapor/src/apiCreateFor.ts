@@ -405,7 +405,7 @@ export const createFor = (
     }
   }
 
-  if (setup !== undefined) {
+  if (setup) {
     setup({ createSelector })
   }
 
