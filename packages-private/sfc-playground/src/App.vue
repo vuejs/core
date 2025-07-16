@@ -8,7 +8,7 @@ import {
   StoreState,
 } from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
-import { ref, watchEffect, onMounted, computed } from 'vue'
+import { ref, watchEffect, onMounted, computed, watch } from 'vue'
 
 const replRef = ref<InstanceType<typeof Repl>>()
 
@@ -132,19 +132,17 @@ onMounted(() => {
 })
 
 const isVaporSupported = ref(false)
-function handleVueVersionChange(
-  version: string | null,
-  reload: boolean = true,
-) {
-  if (!version) {
-    isVaporSupported.value = true
-  } else {
-    const [major, minor] = version.split('.').map(Number)
+watch(
+  () => store.vueVersion,
+  (version, oldVersion) => {
+    const [major, minor] = (version || store.compiler.version)
+      .split('.')
+      .map(Number)
     isVaporSupported.value = major > 3 || (major === 3 && minor >= 6)
-  }
-  if (reload) reloadPage()
-}
-handleVueVersionChange(vueVersion.value, false)
+    if (oldVersion) reloadPage()
+  },
+  { immediate: true, flush: 'pre' },
+)
 
 const previewOptions = computed(() => ({
   customCode: {
@@ -174,7 +172,6 @@ const previewOptions = computed(() => ({
     @toggle-ssr="toggleSSR"
     @toggle-autosave="toggleAutoSave"
     @reload-page="reloadPage"
-    @change-vue-version="handleVueVersionChange"
   />
   <Repl
     ref="replRef"
