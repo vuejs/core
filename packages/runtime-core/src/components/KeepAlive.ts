@@ -212,12 +212,16 @@ const KeepAliveImpl: ComponentOptions = {
         // if KeepAlive child is a Suspense, it needs to be cached after Suspense resolves
         // avoid caching vnode that not been mounted
         if (isSuspense(keepAliveInstance.subTree.type)) {
-          queuePostRenderEffect(() => {
-            cache.set(
-              pendingCacheKey!,
-              getInnerChild(keepAliveInstance.subTree),
-            )
-          }, keepAliveInstance.subTree.suspense)
+          queuePostRenderEffect(
+            () => {
+              cache.set(
+                pendingCacheKey!,
+                getInnerChild(keepAliveInstance.subTree),
+              )
+            },
+            undefined,
+            keepAliveInstance.subTree.suspense,
+          )
         } else {
           cache.set(pendingCacheKey, getInnerChild(keepAliveInstance.subTree))
         }
@@ -235,7 +239,7 @@ const KeepAliveImpl: ComponentOptions = {
           resetShapeFlag(vnode)
           // but invoke its deactivated hook here
           const da = vnode.component!.da
-          da && queuePostRenderEffect(da, suspense)
+          da && queuePostRenderEffect(da, undefined, suspense)
           return
         }
         unmount(cached)
@@ -484,16 +488,20 @@ export function activate(
     vnode.slotScopeIds,
     optimized,
   )
-  queuePostRenderEffect(() => {
-    instance.isDeactivated = false
-    if (instance.a) {
-      invokeArrayFns(instance.a)
-    }
-    const vnodeHook = vnode.props && vnode.props.onVnodeMounted
-    if (vnodeHook) {
-      invokeVNodeHook(vnodeHook, instance.parent, vnode)
-    }
-  }, parentSuspense)
+  queuePostRenderEffect(
+    () => {
+      instance.isDeactivated = false
+      if (instance.a) {
+        invokeArrayFns(instance.a)
+      }
+      const vnodeHook = vnode.props && vnode.props.onVnodeMounted
+      if (vnodeHook) {
+        invokeVNodeHook(vnodeHook, instance.parent, vnode)
+      }
+    },
+    undefined,
+    parentSuspense,
+  )
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     // Update components tree
@@ -516,16 +524,20 @@ export function deactivate(
   invalidateMount(instance.a)
 
   move(vnode, container, null, MoveType.LEAVE, parentComponent, parentSuspense)
-  queuePostRenderEffect(() => {
-    if (instance.da) {
-      invokeArrayFns(instance.da)
-    }
-    const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
-    if (vnodeHook) {
-      invokeVNodeHook(vnodeHook, instance.parent, vnode)
-    }
-    instance.isDeactivated = true
-  }, parentSuspense)
+  queuePostRenderEffect(
+    () => {
+      if (instance.da) {
+        invokeArrayFns(instance.da)
+      }
+      const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
+      if (vnodeHook) {
+        invokeVNodeHook(vnodeHook, instance.parent, vnode)
+      }
+      instance.isDeactivated = true
+    },
+    undefined,
+    parentSuspense,
+  )
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     // Update components tree

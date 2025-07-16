@@ -195,8 +195,8 @@ describe('reactivity/reactive', () => {
   test('toRaw on object using reactive as prototype', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
-    const inherted = Object.create(observed)
-    expect(toRaw(inherted)).toBe(inherted)
+    const inherited = Object.create(observed)
+    expect(toRaw(inherited)).toBe(inherited)
   })
 
   test('toRaw on user Proxy wrapping reactive', () => {

@@ -57,8 +57,8 @@ import {
 import {
   EffectFlags,
   ReactiveEffect,
-  pauseTracking,
-  resetTracking,
+  setActiveSub,
+  setCurrentScope,
 } from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
@@ -98,6 +98,7 @@ import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import type { TransitionHooks } from './components/BaseTransition'
 import type { VaporInteropInterface } from './apiCreateApp'
+import type { VueElement } from '@vue/runtime-dom'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -306,12 +307,16 @@ export enum MoveType {
 
 export const queuePostRenderEffect: (
   fn: SchedulerJobs,
+  id: number | undefined,
   suspense: SuspenseBoundary | null,
 ) => void = __FEATURE_SUSPENSE__
   ? __TEST__
     ? // vitest can't seem to handle eager circular dependency
-      (fn: Function | Function[], suspense: SuspenseBoundary | null) =>
-        queueEffectWithSuspense(fn, suspense)
+      (
+        fn: Function | Function[],
+        id: number | undefined,
+        suspense: SuspenseBoundary | null,
+      ) => queueEffectWithSuspense(fn, id, suspense)
     : queueEffectWithSuspense
   : queuePostFlushCb
 
@@ -508,6 +513,8 @@ function baseCreateRenderer(
     // set ref
     if (ref != null && parentComponent) {
       setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
+    } else if (ref == null && n1 && n1.ref != null) {
+      setRef(n1.ref, null, parentSuspense, n1, true)
     }
   }
 
@@ -741,11 +748,15 @@ function baseCreateRenderer(
       needCallTransitionHooks ||
       dirs
     ) {
-      queuePostRenderEffect(() => {
-        vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-        needCallTransitionHooks && transition!.enter(el)
-        dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
-      }, parentSuspense)
+      queuePostRenderEffect(
+        () => {
+          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+          needCallTransitionHooks && transition!.enter(el)
+          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+        },
+        undefined,
+        parentSuspense,
+      )
     }
   }
 
@@ -953,10 +964,14 @@ function baseCreateRenderer(
     }
 
     if ((vnodeHook = newProps.onVnodeUpdated) || dirs) {
-      queuePostRenderEffect(() => {
-        vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
-        dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
-      }, parentSuspense)
+      queuePostRenderEffect(
+        () => {
+          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
+          dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
+        },
+        undefined,
+        parentSuspense,
+      )
     }
   }
 
@@ -985,7 +1000,8 @@ function baseCreateRenderer(
           // which also requires the correct parent container
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
+          oldVNode.shapeFlag &
+            (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE))
           ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
@@ -1312,7 +1328,7 @@ function baseCreateRenderer(
         // normal update
         instance.next = n2
         // instance.update is the reactive effect.
-        instance.update()
+        instance.effect.run()
       }
     } else {
       // no update needed. just copy over properties
@@ -1321,16 +1337,56 @@ function baseCreateRenderer(
     }
   }
 
-  const setupRenderEffect: SetupRenderEffectFn = (
-    instance,
-    initialVNode,
-    container,
-    anchor,
-    parentSuspense,
-    namespace: ElementNamespace,
-    optimized,
-  ) => {
-    const componentUpdateFn = () => {
+  class SetupRenderEffect extends ReactiveEffect {
+    job: SchedulerJob
+
+    constructor(
+      private instance: ComponentInternalInstance,
+      private initialVNode: VNode,
+      private container: RendererElement,
+      private anchor: RendererNode | null,
+      private parentSuspense: SuspenseBoundary | null,
+      private namespace: ElementNamespace,
+      private optimized: boolean,
+    ) {
+      const prevScope = setCurrentScope(instance.scope)
+      super()
+      setCurrentScope(prevScope)
+
+      this.job = instance.job = () => {
+        if (this.dirty) {
+          this.run()
+        }
+      }
+      this.job.i = instance
+
+      if (__DEV__) {
+        this.onTrack = instance.rtc
+          ? e => invokeArrayFns(instance.rtc!, e)
+          : void 0
+        this.onTrigger = instance.rtg
+          ? e => invokeArrayFns(instance.rtg!, e)
+          : void 0
+      }
+    }
+
+    notify(): void {
+      if (!(this.flags & EffectFlags.PAUSED)) {
+        const job = this.job
+        queueJob(job, job.i!.uid)
+      }
+    }
+
+    fn() {
+      const {
+        instance,
+        initialVNode,
+        container,
+        anchor,
+        parentSuspense,
+        namespace,
+        optimized,
+      } = this
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
@@ -1396,7 +1452,12 @@ function baseCreateRenderer(
           }
         } else {
           // custom element style injection
-          if ((root as ComponentInternalInstance).ce) {
+          if (
+            (root as ComponentInternalInstance).ce &&
+            // @ts-expect-error _def is private
+            ((root as ComponentInternalInstance).ce as VueElement)._def
+              .shadowRoot !== false
+          ) {
             ;(root as ComponentInternalInstance).ce!._injectChildStyle(type)
           }
 
@@ -1426,7 +1487,7 @@ function baseCreateRenderer(
         }
         // mounted hook
         if (m) {
-          queuePostRenderEffect(m, parentSuspense)
+          queuePostRenderEffect(m, undefined, parentSuspense)
         }
         // onVnodeMounted
         if (
@@ -1436,6 +1497,7 @@ function baseCreateRenderer(
           const scopedInitialVNode = initialVNode
           queuePostRenderEffect(
             () => invokeVNodeHook(vnodeHook!, parent, scopedInitialVNode),
+            undefined,
             parentSuspense,
           )
         }
@@ -1445,6 +1507,7 @@ function baseCreateRenderer(
         ) {
           queuePostRenderEffect(
             () => instance.emit('hook:mounted'),
+            undefined,
             parentSuspense,
           )
         }
@@ -1459,13 +1522,15 @@ function baseCreateRenderer(
             isAsyncWrapper(parent.vnode) &&
             parent.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE)
         ) {
-          instance.a && queuePostRenderEffect(instance.a, parentSuspense)
+          instance.a &&
+            queuePostRenderEffect(instance.a, undefined, parentSuspense)
           if (
             __COMPAT__ &&
             isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
           ) {
             queuePostRenderEffect(
               () => instance.emit('hook:activated'),
+              undefined,
               parentSuspense,
             )
           }
@@ -1477,7 +1542,7 @@ function baseCreateRenderer(
         }
 
         // #2458: deference mount-only object parameters to prevent memleaks
-        initialVNode = container = anchor = null as any
+        this.initialVNode = this.container = this.anchor = null as any
       } else {
         let { next, bu, u, parent, vnode } = instance
 
@@ -1495,7 +1560,7 @@ function baseCreateRenderer(
             nonHydratedAsyncRoot.asyncDep!.then(() => {
               // the instance may be destroyed during the time period
               if (!instance.isUnmounted) {
-                componentUpdateFn()
+                this.fn()
               }
             })
             return
@@ -1573,12 +1638,13 @@ function baseCreateRenderer(
         }
         // updated hook
         if (u) {
-          queuePostRenderEffect(u, parentSuspense)
+          queuePostRenderEffect(u, undefined, parentSuspense)
         }
         // onVnodeUpdated
         if ((vnodeHook = next.props && next.props.onVnodeUpdated)) {
           queuePostRenderEffect(
             () => invokeVNodeHook(vnodeHook!, parent, next!, vnode),
+            undefined,
             parentSuspense,
           )
         }
@@ -1588,6 +1654,7 @@ function baseCreateRenderer(
         ) {
           queuePostRenderEffect(
             () => instance.emit('hook:updated'),
+            undefined,
             parentSuspense,
           )
         }
@@ -1601,33 +1668,34 @@ function baseCreateRenderer(
         }
       }
     }
+  }
 
+  const setupRenderEffect: SetupRenderEffectFn = (
+    instance,
+    initialVNode,
+    container,
+    anchor,
+    parentSuspense,
+    namespace: ElementNamespace,
+    optimized,
+  ) => {
     // create reactive effect for rendering
-    instance.scope.on()
-    const effect = (instance.effect = new ReactiveEffect(componentUpdateFn))
-    instance.scope.off()
-
-    const update = (instance.update = effect.run.bind(effect))
-    const job: SchedulerJob = (instance.job = () =>
-      effect.dirty && effect.run())
-    job.i = instance
-    job.id = instance.uid
-    effect.scheduler = () => queueJob(job)
+    const effect = (instance.effect = new SetupRenderEffect(
+      instance,
+      initialVNode,
+      container,
+      anchor,
+      parentSuspense,
+      namespace,
+      optimized,
+    ))
+    instance.update = effect.run.bind(effect)
 
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
     toggleRecurse(instance, true)
 
-    if (__DEV__) {
-      effect.onTrack = instance.rtc
-        ? e => invokeArrayFns(instance.rtc!, e)
-        : void 0
-      effect.onTrigger = instance.rtg
-        ? e => invokeArrayFns(instance.rtg!, e)
-        : void 0
-    }
-
-    update()
+    effect.run()
   }
 
   const updateComponentPreRender = (
@@ -1642,11 +1710,11 @@ function baseCreateRenderer(
     updateProps(instance, nextVNode.props, prevProps, optimized)
     updateSlots(instance, nextVNode.children, optimized)
 
-    pauseTracking()
+    const prevSub = setActiveSub()
     // props update may have triggered pre-flush watchers.
     // flush them before the render update.
     flushPreFlushCbs(instance)
-    resetTracking()
+    setActiveSub(prevSub)
   }
 
   const patchChildren: PatchChildrenFn = (
@@ -2126,7 +2194,11 @@ function baseCreateRenderer(
       if (moveType === MoveType.ENTER) {
         transition!.beforeEnter(el!)
         hostInsert(el!, container, anchor)
-        queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+        queuePostRenderEffect(
+          () => transition!.enter(el!),
+          undefined,
+          parentSuspense,
+        )
       } else {
         const { leave, delayLeave, afterLeave } = transition!
         const remove = () => {
@@ -2178,9 +2250,9 @@ function baseCreateRenderer(
 
     // unset ref
     if (ref != null) {
-      pauseTracking()
+      const prevSub = setActiveSub()
       setRef(ref, null, parentSuspense, vnode, true)
-      resetTracking()
+      setActiveSub(prevSub)
     }
 
     // #6593 should clean memo cache when unmount
@@ -2280,11 +2352,15 @@ function baseCreateRenderer(
         (vnodeHook = props && props.onVnodeUnmounted)) ||
       shouldInvokeDirs
     ) {
-      queuePostRenderEffect(() => {
-        vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-        shouldInvokeDirs &&
-          invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
-      }, parentSuspense)
+      queuePostRenderEffect(
+        () => {
+          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+          shouldInvokeDirs &&
+            invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
+        },
+        undefined,
+        parentSuspense,
+      )
     }
   }
 
@@ -2364,7 +2440,7 @@ function baseCreateRenderer(
     const {
       bum,
       scope,
-      job,
+      effect,
       subTree,
       um,
       m,
@@ -2399,14 +2475,14 @@ function baseCreateRenderer(
 
     // job may be null if a component is unmounted before its async
     // setup has resolved.
-    if (job) {
+    if (effect) {
       // so that scheduler will no longer invoke it
-      job.flags! |= SchedulerJobFlags.DISPOSED
+      effect.stop()
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook
     if (um) {
-      queuePostRenderEffect(um, parentSuspense)
+      queuePostRenderEffect(um, undefined, parentSuspense)
     }
     if (
       __COMPAT__ &&
@@ -2414,12 +2490,15 @@ function baseCreateRenderer(
     ) {
       queuePostRenderEffect(
         () => instance.emit('hook:destroyed'),
+        undefined,
         parentSuspense,
       )
     }
-    queuePostRenderEffect(() => {
-      instance.isUnmounted = true
-    }, parentSuspense)
+    queuePostRenderEffect(
+      () => (instance.isUnmounted = true),
+      undefined,
+      parentSuspense,
+    )
 
     // A component with async dep inside a pending suspense is unmounted before
     // its async dep resolves. This should remove the dep from the suspense, and

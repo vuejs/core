@@ -5,9 +5,8 @@ import {
   TrackOpTypes,
   isRef,
   markRaw,
-  pauseTracking,
   proxyRefs,
-  resetTracking,
+  setActiveSub,
   shallowReadonly,
   track,
 } from '@vue/reactivity'
@@ -97,7 +96,6 @@ import type { RendererElement } from './renderer'
 import {
   setCurrentInstance,
   setInSSRSetupState,
-  unsetCurrentInstance,
 } from './componentCurrentInstance'
 
 export * from './componentCurrentInstance'
@@ -121,20 +119,23 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
   : T extends FunctionalComponent<infer Props, infer Emits>
     ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>
     : T extends Component<
-          infer Props,
+          infer PropsOrInstance,
           infer RawBindings,
           infer D,
           infer C,
           infer M
         >
-      ? // NOTE we override Props/RawBindings/D to make sure is not `unknown`
-        ComponentPublicInstance<
-          unknown extends Props ? {} : Props,
-          unknown extends RawBindings ? {} : RawBindings,
-          unknown extends D ? {} : D,
-          C,
-          M
-        >
+      ? PropsOrInstance extends { $props: unknown }
+        ? // T is returned by `defineComponent()`
+          PropsOrInstance
+        : // NOTE we override Props/RawBindings/D to make sure is not `unknown`
+          ComponentPublicInstance<
+            unknown extends PropsOrInstance ? {} : PropsOrInstance,
+            unknown extends RawBindings ? {} : RawBindings,
+            unknown extends D ? {} : D,
+            C,
+            M
+          >
       : never // not a vue Component
 
 /**
@@ -284,7 +285,7 @@ export type ConcreteComponent<
  * The constructor type is an artificial type returned by defineComponent().
  */
 export type Component<
-  Props = any,
+  PropsOrInstance = any,
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
@@ -292,8 +293,8 @@ export type Component<
   E extends EmitsOptions | Record<string, any[]> = {},
   S extends Record<string, any> = any,
 > =
-  | ConcreteComponent<Props, RawBindings, D, C, M, E, S>
-  | ComponentPublicInstanceConstructor<Props>
+  | ConcreteComponent<PropsOrInstance, RawBindings, D, C, M, E, S>
+  | ComponentPublicInstanceConstructor<PropsOrInstance>
 
 export type { ComponentOptions }
 
@@ -371,9 +372,6 @@ export interface GenericComponentInstance {
   // state
   props: Data
   attrs: Data
-  /**
-   * @internal
-   */
   refs: Data
   emit: EmitFn
   /**
@@ -676,13 +674,13 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    * For updating css vars on contained teleports
    * @internal
    */
-  ut?: (vars?: Record<string, string>) => void
+  ut?: (vars?: Record<string, unknown>) => void
 
   /**
    * dev only. For style v-bind hydration mismatch checks
    * @internal
    */
-  getCssVars?: () => Record<string, string>
+  getCssVars?: () => Record<string, unknown>
 
   /**
    * v2 compat only, for caching mutated $options
@@ -892,10 +890,10 @@ function setupStatefulComponent(
   // 2. call setup()
   const { setup } = Component
   if (setup) {
-    pauseTracking()
+    const prevSub = setActiveSub()
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
-    const reset = setCurrentInstance(instance)
+    const prev = setCurrentInstance(instance)
     const setupResult = callWithErrorHandling(
       setup,
       instance,
@@ -906,8 +904,8 @@ function setupStatefulComponent(
       ],
     )
     const isAsyncSetup = isPromise(setupResult)
-    resetTracking()
-    reset()
+    setActiveSub(prevSub)
+    setCurrentInstance(...prev)
 
     if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
       // async setup / serverPrefetch, mark as async boundary for useId()
@@ -915,6 +913,9 @@ function setupStatefulComponent(
     }
 
     if (isAsyncSetup) {
+      const unsetCurrentInstance = (): void => {
+        setCurrentInstance(null, undefined)
+      }
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
@@ -1087,13 +1088,13 @@ export function finishComponentSetup(
 
   // support for 2.x options
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
-    const reset = setCurrentInstance(instance)
-    pauseTracking()
+    const prevInstance = setCurrentInstance(instance)
+    const prevSub = setActiveSub()
     try {
       applyOptions(instance)
     } finally {
-      resetTracking()
-      reset()
+      setActiveSub(prevSub)
+      setCurrentInstance(...prevInstance)
     }
   }
 

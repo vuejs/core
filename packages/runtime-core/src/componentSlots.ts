@@ -194,6 +194,10 @@ export const initSlots = (
 ): void => {
   const slots = (instance.slots = createInternalObject())
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+    const cacheIndexes = (children as RawSlots).__
+    // make cache indexes marker non-enumerable
+    if (cacheIndexes) def(slots, '__', cacheIndexes, true)
+
     const type = (children as RawSlots)._
     if (type) {
       assignSlots(slots, children as Slots, optimized)

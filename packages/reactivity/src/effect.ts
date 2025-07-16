@@ -4,18 +4,22 @@ import { setupOnTrigger } from './debug'
 import { activeEffectScope } from './effectScope'
 import {
   type Link,
-  type Subscriber,
-  SubscriberFlags,
+  ReactiveFlags,
+  type ReactiveNode,
+  activeSub,
+  checkDirty,
   endTracking,
+  link,
+  setActiveSub,
   startTracking,
-  updateDirtyFlag,
+  unlink,
 } from './system'
 import { warn } from './warning'
 
 export type EffectScheduler = (...args: any[]) => any
 
 export type DebuggerEvent = {
-  effect: Subscriber
+  effect: ReactiveNode
 } & DebuggerEventExtraInfo
 
 export type DebuggerEventExtraInfo = {
@@ -48,28 +52,41 @@ export enum EffectFlags {
    */
   ALLOW_RECURSE = 1 << 7,
   PAUSED = 1 << 8,
-  NOTIFIED = 1 << 9,
   STOP = 1 << 10,
 }
 
-export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
-  // Subscriber
+export class ReactiveEffect<T = any>
+  implements ReactiveEffectOptions, ReactiveNode
+{
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
-  flags: number = SubscriberFlags.Effect
+  subs: Link | undefined = undefined
+  subsTail: Link | undefined = undefined
+  flags: number = ReactiveFlags.Watching | ReactiveFlags.Dirty
 
   /**
    * @internal
    */
-  cleanup?: () => void = undefined
+  cleanups: (() => void)[] = []
+  /**
+   * @internal
+   */
+  cleanupsLength = 0
 
-  onStop?: () => void
+  // dev only
   onTrack?: (event: DebuggerEvent) => void
+  // dev only
   onTrigger?: (event: DebuggerEvent) => void
 
-  constructor(public fn: () => T) {
-    if (activeEffectScope && activeEffectScope.active) {
-      activeEffectScope.effects.push(this)
+  // @ts-expect-error
+  fn(): T {}
+
+  constructor(fn?: () => T) {
+    if (fn !== undefined) {
+      this.fn = fn
+    }
+    if (activeEffectScope) {
+      link(this, activeEffectScope)
     }
   }
 
@@ -78,87 +95,71 @@ export class ReactiveEffect<T = any> implements ReactiveEffectOptions {
   }
 
   pause(): void {
-    if (!(this.flags & EffectFlags.PAUSED)) {
-      this.flags |= EffectFlags.PAUSED
-    }
+    this.flags |= EffectFlags.PAUSED
   }
 
   resume(): void {
-    const flags = this.flags
-    if (flags & EffectFlags.PAUSED) {
-      this.flags &= ~EffectFlags.PAUSED
-    }
-    if (flags & EffectFlags.NOTIFIED) {
-      this.flags &= ~EffectFlags.NOTIFIED
+    const flags = (this.flags &= ~EffectFlags.PAUSED)
+    if (flags & (ReactiveFlags.Dirty | ReactiveFlags.Pending)) {
       this.notify()
     }
   }
 
   notify(): void {
-    const flags = this.flags
-    if (!(flags & EffectFlags.PAUSED)) {
-      this.scheduler()
-    } else {
-      this.flags |= EffectFlags.NOTIFIED
-    }
-  }
-
-  scheduler(): void {
-    if (this.dirty) {
+    if (!(this.flags & EffectFlags.PAUSED) && this.dirty) {
       this.run()
     }
   }
 
   run(): T {
-    // TODO cleanupEffect
-
     if (!this.active) {
-      // stopped during cleanup
       return this.fn()
     }
-    cleanupEffect(this)
-    const prevSub = activeSub
-    setActiveSub(this)
-    startTracking(this)
-
+    cleanup(this)
+    const prevSub = startTracking(this)
     try {
       return this.fn()
     } finally {
-      if (__DEV__ && activeSub !== this) {
-        warn(
-          'Active effect was not restored correctly - ' +
-            'this is likely a Vue internal bug.',
-        )
-      }
-      setActiveSub(prevSub)
-      endTracking(this)
+      endTracking(this, prevSub)
+      const flags = this.flags
       if (
-        this.flags & SubscriberFlags.Recursed &&
-        this.flags & EffectFlags.ALLOW_RECURSE
+        (flags & (ReactiveFlags.Recursed | EffectFlags.ALLOW_RECURSE)) ===
+        (ReactiveFlags.Recursed | EffectFlags.ALLOW_RECURSE)
       ) {
-        this.flags &= ~SubscriberFlags.Recursed
+        this.flags = flags & ~ReactiveFlags.Recursed
         this.notify()
       }
     }
   }
 
   stop(): void {
-    if (this.active) {
-      startTracking(this)
-      endTracking(this)
-      cleanupEffect(this)
-      this.onStop && this.onStop()
-      this.flags |= EffectFlags.STOP
+    if (!this.active) {
+      return
     }
+    this.flags = EffectFlags.STOP
+    let dep = this.deps
+    while (dep !== undefined) {
+      dep = unlink(dep, this)
+    }
+    const sub = this.subs
+    if (sub !== undefined) {
+      unlink(sub)
+    }
+    cleanup(this)
   }
 
   get dirty(): boolean {
     const flags = this.flags
-    if (
-      flags & SubscriberFlags.Dirty ||
-      (flags & SubscriberFlags.PendingComputed && updateDirtyFlag(this, flags))
-    ) {
+    if (flags & ReactiveFlags.Dirty) {
       return true
+    }
+    if (flags & ReactiveFlags.Pending) {
+      if (checkDirty(this.deps!, this)) {
+        this.flags = flags | ReactiveFlags.Dirty
+        return true
+      } else {
+        this.flags = flags & ~ReactiveFlags.Pending
+      }
     }
     return false
   }
@@ -183,6 +184,23 @@ export function effect<T = any>(
 
   const e = new ReactiveEffect(fn)
   if (options) {
+    const { onStop, scheduler } = options
+    if (onStop) {
+      options.onStop = undefined
+      const stop = e.stop.bind(e)
+      e.stop = () => {
+        stop()
+        onStop()
+      }
+    }
+    if (scheduler) {
+      options.scheduler = undefined
+      e.notify = () => {
+        if (!(e.flags & EffectFlags.PAUSED)) {
+          scheduler()
+        }
+      }
+    }
     extend(e, options)
   }
   try {
@@ -205,14 +223,14 @@ export function stop(runner: ReactiveEffectRunner): void {
   runner.effect.stop()
 }
 
-const resetTrackingStack: (Subscriber | undefined)[] = []
+const resetTrackingStack: (ReactiveNode | undefined)[] = []
 
 /**
  * Temporarily pauses tracking.
  */
 export function pauseTracking(): void {
   resetTrackingStack.push(activeSub)
-  activeSub = undefined
+  setActiveSub()
 }
 
 /**
@@ -230,7 +248,7 @@ export function enableTracking(): void {
     resetTrackingStack.push(undefined)
     for (let i = resetTrackingStack.length - 1; i >= 0; i--) {
       if (resetTrackingStack[i] !== undefined) {
-        activeSub = resetTrackingStack[i]
+        setActiveSub(resetTrackingStack[i])
         break
       }
     }
@@ -248,9 +266,21 @@ export function resetTracking(): void {
     )
   }
   if (resetTrackingStack.length) {
-    activeSub = resetTrackingStack.pop()!
+    setActiveSub(resetTrackingStack.pop()!)
   } else {
-    activeSub = undefined
+    setActiveSub()
+  }
+}
+
+export function cleanup(
+  sub: ReactiveNode & { cleanups: (() => void)[]; cleanupsLength: number },
+): void {
+  const l = sub.cleanupsLength
+  if (l) {
+    for (let i = 0; i < l; i++) {
+      sub.cleanups[i]()
+    }
+    sub.cleanupsLength = 0
   }
 }
 
@@ -268,7 +298,7 @@ export function resetTracking(): void {
  */
 export function onEffectCleanup(fn: () => void, failSilently = false): void {
   if (activeSub instanceof ReactiveEffect) {
-    activeSub.cleanup = fn
+    activeSub.cleanups[activeSub.cleanupsLength++] = () => cleanupEffect(fn)
   } else if (__DEV__ && !failSilently) {
     warn(
       `onEffectCleanup() was called when there was no active effect` +
@@ -277,23 +307,12 @@ export function onEffectCleanup(fn: () => void, failSilently = false): void {
   }
 }
 
-function cleanupEffect(e: ReactiveEffect) {
-  const { cleanup } = e
-  e.cleanup = undefined
-  if (cleanup !== undefined) {
-    // run cleanup without active effect
-    const prevSub = activeSub
-    activeSub = undefined
-    try {
-      cleanup()
-    } finally {
-      activeSub = prevSub
-    }
+function cleanupEffect(fn: () => void) {
+  // run cleanup without active effect
+  const prevSub = setActiveSub()
+  try {
+    fn()
+  } finally {
+    setActiveSub(prevSub)
   }
-}
-
-export let activeSub: Subscriber | undefined = undefined
-
-export function setActiveSub(sub: Subscriber | undefined): void {
-  activeSub = sub
 }
