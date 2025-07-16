@@ -2,7 +2,7 @@
 import Header from './Header.vue'
 import { Repl, useStore, SFCOptions, useVueImportMap } from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
-import { ref, watchEffect, onMounted, computed } from 'vue'
+import { ref, watchEffect, onMounted, computed, watch } from 'vue'
 
 const replRef = ref<InstanceType<typeof Repl>>()
 
@@ -117,19 +117,17 @@ onMounted(() => {
 })
 
 const isVaporSupported = ref(false)
-function handleVueVersionChange(
-  version: string | null,
-  reload: boolean = true,
-) {
-  if (!version) {
-    isVaporSupported.value = true
-  } else {
-    const [major, minor] = version.split('.').map(Number)
+watch(
+  () => store.vueVersion,
+  (version, oldVersion) => {
+    const [major, minor] = (version || store.compiler.version)
+      .split('.')
+      .map(Number)
     isVaporSupported.value = major > 3 || (major === 3 && minor >= 6)
-  }
-  if (reload) reloadPage()
-}
-handleVueVersionChange(vueVersion.value, false)
+    if (oldVersion) reloadPage()
+  },
+  { immediate: true, flush: 'pre' },
+)
 
 const previewOptions = computed(() => ({
   customCode: {
@@ -150,7 +148,7 @@ const previewOptions = computed(() => ({
 <template>
   <Header :store="store" :prod="productionMode" :ssr="useSSRMode" :autoSave="autoSave" :theme="theme"
     @toggle-theme="toggleTheme" @toggle-prod="toggleProdMode" @toggle-ssr="toggleSSR" @toggle-autosave="toggleAutoSave"
-    @reload-page="reloadPage" @change-vue-version="handleVueVersionChange" />
+    @reload-page="reloadPage" />
   <Repl ref="replRef" :theme="theme" :editor="Monaco" @keydown.ctrl.s.prevent @keydown.meta.s.prevent :ssr="useSSRMode"
     :model-value="autoSave" :editorOptions="{ autoSaveText: false }" :store="store" :showCompileOutput="true"
     :showSsrOutput="useSSRMode" :showOpenSourceMap="true" :autoResize="true" :clearConsole="false"
