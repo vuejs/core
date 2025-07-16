@@ -96,14 +96,19 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       }
     }
 
+    const wasRef = isRef(target)
     const res = Reflect.get(
       target,
       key,
       // if this is a proxy wrapping a ref, return methods using the raw ref
       // as receiver so that we don't have to call `toRaw` on the ref in all
       // its class methods
-      isRef(target) ? target : receiver,
+      wasRef ? target : receiver,
     )
+
+    if (wasRef && key !== 'value') {
+      return res
+    }
 
     if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
       return res

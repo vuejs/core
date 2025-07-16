@@ -166,6 +166,132 @@ describe('ssr: v-model', () => {
         _push(\`</optgroup></select></div>\`)
       }"
     `)
+
+    expect(
+      compileWithWrapper(`
+        <select multiple v-model="model">
+          <optgroup>
+            <option v-for="item in items" :value="item">{{item}}</option>
+          </optgroup>
+        </select>`).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}><select multiple><optgroup><!--[-->\`)
+        _ssrRenderList(_ctx.items, (item) => {
+          _push(\`<option\${
+            _ssrRenderAttr("value", item)
+          }\${
+            (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
+              ? _ssrLooseContain(_ctx.model, item)
+              : _ssrLooseEqual(_ctx.model, item))) ? " selected" : ""
+          }>\${
+            _ssrInterpolate(item)
+          }</option>\`)
+        })
+        _push(\`<!--]--></optgroup></select></div>\`)
+      }"
+    `)
+
+    expect(
+      compileWithWrapper(`
+        <select multiple v-model="model">
+          <optgroup>
+            <option v-if="true" :value="item">{{item}}</option>
+          </optgroup>
+        </select>`).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}><select multiple><optgroup>\`)
+        if (true) {
+          _push(\`<option\${
+            _ssrRenderAttr("value", _ctx.item)
+          }\${
+            (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
+              ? _ssrLooseContain(_ctx.model, _ctx.item)
+              : _ssrLooseEqual(_ctx.model, _ctx.item))) ? " selected" : ""
+          }>\${
+            _ssrInterpolate(_ctx.item)
+          }</option>\`)
+        } else {
+          _push(\`<!---->\`)
+        }
+        _push(\`</optgroup></select></div>\`)
+      }"
+    `)
+
+    expect(
+      compileWithWrapper(`
+        <select multiple v-model="model">
+          <optgroup>
+            <template v-if="ok">
+              <option v-for="item in items" :value="item">{{item}}</option>
+            </template>
+          </optgroup>
+        </select>`).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}><select multiple><optgroup>\`)
+        if (_ctx.ok) {
+          _push(\`<!--[-->\`)
+          _ssrRenderList(_ctx.items, (item) => {
+            _push(\`<option\${
+              _ssrRenderAttr("value", item)
+            }\${
+              (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
+                ? _ssrLooseContain(_ctx.model, item)
+                : _ssrLooseEqual(_ctx.model, item))) ? " selected" : ""
+            }>\${
+              _ssrInterpolate(item)
+            }</option>\`)
+          })
+          _push(\`<!--]-->\`)
+        } else {
+          _push(\`<!---->\`)
+        }
+        _push(\`</optgroup></select></div>\`)
+      }"
+    `)
+
+    expect(
+      compileWithWrapper(`
+        <select multiple v-model="model">
+          <optgroup>
+            <template v-for="item in items" :value="item">
+              <option v-if="item===1" :value="item">{{item}}</option>
+            </template>
+          </optgroup>
+        </select>`).code,
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}><select multiple><optgroup><!--[-->\`)
+        _ssrRenderList(_ctx.items, (item) => {
+          _push(\`<!--[-->\`)
+          if (item===1) {
+            _push(\`<option\${
+              _ssrRenderAttr("value", item)
+            }\${
+              (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
+                ? _ssrLooseContain(_ctx.model, item)
+                : _ssrLooseEqual(_ctx.model, item))) ? " selected" : ""
+            }>\${
+              _ssrInterpolate(item)
+            }</option>\`)
+          } else {
+            _push(\`<!---->\`)
+          }
+          _push(\`<!--]-->\`)
+        })
+        _push(\`<!--]--></optgroup></select></div>\`)
+      }"
+    `)
   })
 
   test('<input type="radio">', () => {
