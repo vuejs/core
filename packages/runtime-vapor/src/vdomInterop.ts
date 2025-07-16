@@ -58,7 +58,6 @@ const vaporInteropImpl: Omit<
       setParentSuspense(parentSuspense)
     }
 
-    const component = vnode.type as any as VaporComponent
     const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
       () => propsRef.value,
     ]
@@ -66,7 +65,7 @@ const vaporInteropImpl: Omit<
     dynamicPropSource[interopKey] = true
     // @ts-expect-error
     const instance = (vnode.component = createComponent(
-      component,
+      vnode.type as any as VaporComponent,
       {
         $: dynamicPropSource,
       } as RawProps,
