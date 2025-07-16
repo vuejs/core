@@ -1,4 +1,6 @@
 import {
+  type EffectScope,
+  ReactiveEffect,
   type Ref,
   inject,
   nextTick,
@@ -305,12 +307,12 @@ describe('component', () => {
 
     const i = instance as VaporComponentInstance
     // watchEffect + renderEffect + props validation effect
-    expect(i.scope.effects.length).toBe(3)
+    expect(getEffectsCount(i.scope)).toBe(3)
     expect(host.innerHTML).toBe('<div>0</div>')
 
     app.unmount()
     expect(host.innerHTML).toBe('')
-    expect(i.scope.effects.length).toBe(0)
+    expect(getEffectsCount(i.scope)).toBe(0)
   })
 
   test('should mount component only with template in production mode', () => {
@@ -353,3 +355,13 @@ describe('component', () => {
     ).toHaveBeenWarned()
   })
 })
+
+function getEffectsCount(scope: EffectScope): number {
+  let n = 0
+  for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
+    if (dep.dep instanceof ReactiveEffect) {
+      n++
+    }
+  }
+  return n
+}

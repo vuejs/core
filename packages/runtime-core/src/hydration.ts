@@ -548,11 +548,15 @@ export function createHydrationFunctions(
         dirs ||
         needCallTransitionHooks
       ) {
-        queueEffectWithSuspense(() => {
-          vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
-          needCallTransitionHooks && transition!.enter(el)
-          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
-        }, parentSuspense)
+        queueEffectWithSuspense(
+          () => {
+            vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
+            needCallTransitionHooks && transition!.enter(el)
+            dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+          },
+          undefined,
+          parentSuspense,
+        )
       }
     }
 
