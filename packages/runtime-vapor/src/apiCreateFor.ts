@@ -150,6 +150,24 @@ export const createFor = (
           unmount(oldBlocks[i])
         }
       } else {
+        if (__DEV__) {
+          const keyToIndexMap: Map<any, number> = new Map()
+          for (let i = 0; i < newLength; i++) {
+            const item = getItem(source, i)
+            const key = getKey(...item)
+            if (key != null) {
+              if (keyToIndexMap.has(key)) {
+                warn(
+                  `Duplicate keys found during update:`,
+                  JSON.stringify(key),
+                  `Make sure keys are unique.`,
+                )
+              }
+              keyToIndexMap.set(key, i)
+            }
+          }
+        }
+
         const sharedBlockCount = Math.min(oldLength, newLength)
         const previousKeyIndexPairs: [any, number][] = new Array(oldLength)
         const queuedBlocks: [

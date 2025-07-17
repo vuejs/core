@@ -1287,7 +1287,22 @@ describe('createFor', () => {
       expect(updatedChild).toBe(firstChild)
     })
 
-    test.todo('should warn with duplicate keys', async () => {})
+    test('should warn with duplicate keys', async () => {
+      const arr = ref<number[]>([1, 2, 3])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        `<span>1</span><span>2</span><span>3</span><!--for-->`,
+      )
+
+      arr.value = [1, 2, 2]
+      await nextTick()
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        `<span>1</span><span>2</span><span>2</span><!--for-->`,
+      )
+      expect(`Duplicate keys`).toHaveBeenWarned()
+    })
   })
 
   describe.todo('renderer: unkeyed children', () => {})
