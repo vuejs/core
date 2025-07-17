@@ -1,9 +1,11 @@
 import {
   child,
   createFor,
+  createIf,
   getDefaultValue,
   getRestElement,
   renderEffect,
+  setClass,
   setInsertionState,
   setStyle,
   setText,
@@ -1170,15 +1172,120 @@ describe('createFor', () => {
       }
     })
 
-    test.todo(
-      'children with the same key but with different tag',
-      async () => {},
-    )
+    test('children with the same key but with different tag', async () => {
+      const items = ref([
+        { key: 1, tag: 'div', text: 'one' },
+        { key: 2, tag: 'div', text: 'two' },
+        { key: 3, tag: 'div', text: 'three' },
+        { key: 4, tag: 'div', text: 'four' },
+      ])
 
-    test.todo(
-      'children with the same tag, same key, but one with data and one without data',
-      async () => {},
-    )
+      const { host } = define(() => {
+        return createFor(
+          () => items.value,
+          _for_item0 => {
+            const n2 = createIf(
+              () => _for_item0.value.tag === 'div',
+              () => {
+                const n4 = template('<div> </div>')() as any
+                const x4 = child(n4) as any
+                renderEffect(() =>
+                  setText(x4, toDisplayString(_for_item0.value.text)),
+                )
+                return n4
+              },
+              () => {
+                const n6 = template('<span> </span>', true)() as any
+                const x6 = child(n6) as any
+                renderEffect(() =>
+                  setText(x6, toDisplayString(_for_item0.value.text)),
+                )
+                return n6
+              },
+            )
+            return n2
+          },
+          item => item.key,
+        )
+      }).render()
+
+      expect(host.children.length).toBe(4)
+      expect(
+        Array.from(host.children).map(c =>
+          (c as HTMLElement).tagName.toLowerCase(),
+        ),
+      ).toEqual(['div', 'div', 'div', 'div'])
+      expect(Array.from(host.children).map(c => c.textContent)).toEqual([
+        'one',
+        'two',
+        'three',
+        'four',
+      ])
+
+      items.value = [
+        { key: 4, tag: 'div', text: 'four' },
+        { key: 3, tag: 'span', text: 'three' },
+        { key: 2, tag: 'span', text: 'two' },
+        { key: 1, tag: 'div', text: 'one' },
+      ]
+      await nextTick()
+
+      expect(host.children.length).toBe(4)
+      expect(
+        Array.from(host.children).map(c =>
+          (c as HTMLElement).tagName.toLowerCase(),
+        ),
+      ).toEqual(['div', 'span', 'span', 'div'])
+      expect(Array.from(host.children).map(c => c.textContent)).toEqual([
+        'four',
+        'three',
+        'two',
+        'one',
+      ])
+    })
+
+    test('children with the same tag, same key, but one with data and one without data', async () => {
+      const items = ref([{ key: 1, text: 'one', className: 'hi' }])
+      const { host } = define(() => {
+        const n1 = createFor(
+          () => items.value,
+          _for_item0 => {
+            const n2 = template('<div> </div>')() as any
+            const x2 = child(n2) as any
+
+            renderEffect(() => {
+              const _item = _for_item0.value
+              setText(x2, _item.text)
+
+              if (_item.className) {
+                setClass(n2, _item.className)
+              } else {
+                setClass(n2, null)
+              }
+            })
+
+            return n2
+          },
+          item => item.key,
+        )
+        return n1
+      }).render()
+
+      expect(host.children.length).toBe(1)
+      const firstChild = host.children[0] as HTMLDivElement
+      expect(firstChild.textContent?.trim()).toBe('one')
+      expect(firstChild.className).toBe('hi')
+
+      items.value = [{ key: 1, text: 'four', className: null as any }]
+      await nextTick()
+
+      expect(host.children.length).toBe(1)
+      const updatedChild = host.children[0] as HTMLDivElement
+      expect(updatedChild.textContent?.trim()).toBe('four')
+      expect(updatedChild.className).toBe('')
+
+      expect(updatedChild).toBe(firstChild)
+    })
 
     test.todo('should warn with duplicate keys', async () => {})
   })
