@@ -4,23 +4,21 @@ import { genDirectivesForElement } from './directive'
 import { genOperationWithInsertionState } from './operation'
 import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
 
-function escapeTemplate(str: string): string {
-  return str
-    .replace(/\\/g, '\\\\') // 转义反斜杠
-    .replace(/`/g, '\\`') // 转义反引号
-  // 不转义 `${`，保留插值
-}
-
 export function genTemplates(
   templates: string[],
   rootIndex: number | undefined,
   { helper }: CodegenContext,
 ): string {
   return templates
-    .map((template, i) => {
-      const escaped = escapeTemplate(template)
-      return `const t${i} = ${helper('template')}(\`${escaped}\`${i === rootIndex ? ', true' : ''})\n`
-    })
+    .map(
+      (template, i) =>
+        `const t${i} = ${helper('template')}(${
+          JSON.stringify(template).replace(
+            /\${_imports_(\d+)}\$/g,
+            '"+_imports_$1+"',
+          ) // replace asset imports with string concatenation
+        }${i === rootIndex ? ', true' : ''})\n`,
+    )
     .join('')
 }
 

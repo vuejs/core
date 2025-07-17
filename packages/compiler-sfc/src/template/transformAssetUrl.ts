@@ -211,6 +211,6 @@ function getImportsExpressionExp(
     }
     return context.hoist(finalExp)
   } else {
-    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_STRINGIFY)
+    return createSimpleExpression(`''`, true, loc, ConstantTypes.CAN_STRINGIFY)
   }
 }
