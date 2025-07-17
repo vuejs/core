@@ -1,18 +1,25 @@
 import {
+  child,
   createFor,
   getDefaultValue,
   getRestElement,
   renderEffect,
+  setInsertionState,
+  setStyle,
+  setText,
+  template,
 } from '../src'
 import {
+  type Ref,
   nextTick,
   reactive,
   readonly,
   ref,
   shallowRef,
+  toDisplayString,
   triggerRef,
 } from '@vue/runtime-dom'
-import { makeRender } from './_utils'
+import { makeRender, shuffle } from './_utils'
 
 const define = makeRender()
 
@@ -734,4 +741,441 @@ describe('createFor', () => {
       expect(host.innerHTML).toBe('<li>2</li><!--for-->')
     })
   })
+
+  // ported from packages/runtime-core/__tests__/rendererChildren.spec.ts
+  describe('renderer: keyed children', () => {
+    const render = (arr: Ref<number[]>) => {
+      return define({
+        setup() {
+          const n0 = createFor(
+            () => arr.value,
+            _for_item0 => {
+              const n2 = template('<span> </span>', true)() as any
+              const x2 = child(n2) as any
+              renderEffect(() => setText(x2, toDisplayString(_for_item0.value)))
+              return n2
+            },
+            item => item,
+          )
+          return n0
+        },
+      }).render()
+    }
+
+    test('append', async () => {
+      const arr = ref<number[]>([1])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(1)
+      expect(html()).toBe('<span>1</span><!--for-->')
+
+      arr.value = [1, 2, 3]
+      await nextTick()
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        '<span>1</span><span>2</span><span>3</span><!--for-->',
+      )
+    })
+
+    test.todo('prepend', async () => {
+      const arr = ref<number[]>([4, 5])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(2)
+      expect(html()).toBe('<span>4</span><span>5</span><!--for-->')
+
+      arr.value = [1, 2, 3, 4, 5]
+      await nextTick()
+      expect(host.children.length).toBe(5)
+      expect(html()).toBe(
+        `<span>1</span>` +
+          `<span>2</span>` +
+          `<span>3</span>` +
+          `<span>4</span>` +
+          `<span>5</span>` +
+          `<!--for-->`,
+      )
+    })
+
+    test('insert in middle', async () => {
+      const arr = ref<number[]>([1, 2, 4, 5])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(4)
+      expect(html()).toBe(
+        '<span>1</span><span>2</span><span>4</span><span>5</span><!--for-->',
+      )
+
+      arr.value = [1, 2, 3, 4, 5]
+      await nextTick()
+      expect(host.children.length).toBe(5)
+      expect(html()).toBe(
+        `<span>1</span>` +
+          `<span>2</span>` +
+          `<span>3</span>` +
+          `<span>4</span>` +
+          `<span>5</span>` +
+          `<!--for-->`,
+      )
+    })
+
+    test('insert at beginning and end', async () => {
+      const arr = ref<number[]>([2, 3, 4])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        `<span>2</span><span>3</span><span>4</span><!--for-->`,
+      )
+
+      arr.value = [1, 2, 3, 4, 5]
+      await nextTick()
+      expect(host.children.length).toBe(5)
+      expect(html()).toBe(
+        `<span>1</span>` +
+          `<span>2</span>` +
+          `<span>3</span>` +
+          `<span>4</span>` +
+          `<span>5</span>` +
+          `<!--for-->`,
+      )
+    })
+
+    test('insert to empty parent', async () => {
+      const arr = ref<number[]>([])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(0)
+      expect(html()).toBe('<!--for-->')
+
+      arr.value = [1, 2, 3, 4, 5]
+      await nextTick()
+      expect(host.children.length).toBe(5)
+      expect(html()).toBe(
+        `<span>1</span>` +
+          `<span>2</span>` +
+          `<span>3</span>` +
+          `<span>4</span>` +
+          `<span>5</span>` +
+          `<!--for-->`,
+      )
+    })
+
+    test('remove all children from parent', async () => {
+      const arr = ref<number[]>([1, 2, 3, 4, 5])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(5)
+      expect(html()).toBe(
+        `<span>1</span>` +
+          `<span>2</span>` +
+          `<span>3</span>` +
+          `<span>4</span>` +
+          `<span>5</span>` +
+          `<!--for-->`,
+      )
+
+      arr.value = []
+      await nextTick()
+      expect(host.children.length).toBe(0)
+      expect(html()).toBe('<!--for-->')
+    })
+
+    test('remove from beginning', async () => {
+      const arr = ref<number[]>([1, 2, 3, 4, 5])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(5)
+      expect(html()).toBe(
+        `<span>1</span>` +
+          `<span>2</span>` +
+          `<span>3</span>` +
+          `<span>4</span>` +
+          `<span>5</span>` +
+          `<!--for-->`,
+      )
+
+      arr.value = [3, 4, 5]
+      await nextTick()
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        `<span>3</span><span>4</span><span>5</span><!--for-->`,
+      )
+    })
+
+    test('remove from end', async () => {
+      const arr = ref<number[]>([1, 2, 3, 4, 5])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(5)
+      expect(html()).toBe(
+        `<span>1</span>` +
+          `<span>2</span>` +
+          `<span>3</span>` +
+          `<span>4</span>` +
+          `<span>5</span>` +
+          `<!--for-->`,
+      )
+
+      arr.value = [1, 2, 3]
+      await nextTick()
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        `<span>1</span><span>2</span><span>3</span><!--for-->`,
+      )
+    })
+
+    test('remove from middle', async () => {
+      const arr = ref<number[]>([1, 2, 3, 4, 5])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(5)
+      expect(html()).toBe(
+        `<span>1</span>` +
+          `<span>2</span>` +
+          `<span>3</span>` +
+          `<span>4</span>` +
+          `<span>5</span>` +
+          `<!--for-->`,
+      )
+
+      arr.value = [1, 2, 4, 5]
+      await nextTick()
+      expect(host.children.length).toBe(4)
+      expect(html()).toBe(
+        `<span>1</span><span>2</span><span>4</span><span>5</span><!--for-->`,
+      )
+    })
+
+    test.todo('remove from beginning and insert at end', async () => {
+      const arr = ref<number[]>([1, 2, 3])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        `<span>1</span><span>2</span><span>3</span><!--for-->`,
+      )
+
+      arr.value = [2, 3, 4]
+      await nextTick()
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        `<span>2</span><span>3</span><span>4</span><!--for-->`,
+      )
+    })
+
+    test('moving single child forward', async () => {
+      const arr = ref<number[]>([1, 2, 3, 4])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(4)
+      expect(html()).toBe(
+        `<span>1</span>` +
+          `<span>2</span>` +
+          `<span>3</span>` +
+          `<span>4</span>` +
+          `<!--for-->`,
+      )
+
+      arr.value = [2, 3, 1, 4]
+      await nextTick()
+      expect(host.children.length).toBe(4)
+      expect(html()).toBe(
+        `<span>2</span><span>3</span><span>1</span><span>4</span><!--for-->`,
+      )
+    })
+
+    test('moving single child backwards', async () => {
+      const arr = ref<number[]>([1, 2, 3, 4])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(4)
+      expect(html()).toBe(
+        `<span>1</span>` +
+          `<span>2</span>` +
+          `<span>3</span>` +
+          `<span>4</span>` +
+          `<!--for-->`,
+      )
+
+      arr.value = [1, 4, 2, 3]
+      await nextTick()
+      expect(host.children.length).toBe(4)
+      expect(html()).toBe(
+        `<span>1</span><span>4</span><span>2</span><span>3</span><!--for-->`,
+      )
+    })
+
+    test('moving single child to end', async () => {
+      const arr = ref<number[]>([1, 2, 3])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        `<span>1</span><span>2</span><span>3</span><!--for-->`,
+      )
+
+      arr.value = [2, 3, 1]
+      await nextTick()
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        `<span>2</span><span>3</span><span>1</span><!--for-->`,
+      )
+    })
+
+    test('swap first and last', async () => {
+      const arr = ref<number[]>([1, 2, 3, 4])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(4)
+      expect(html()).toBe(
+        `<span>1</span><span>2</span><span>3</span><span>4</span><!--for-->`,
+      )
+
+      arr.value = [4, 2, 3, 1]
+      await nextTick()
+      expect(host.children.length).toBe(4)
+      expect(html()).toBe(
+        `<span>4</span><span>2</span><span>3</span><span>1</span><!--for-->`,
+      )
+    })
+
+    test.todo('move to left & replace', async () => {
+      const arr = ref<number[]>([1, 2, 3, 4, 5])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(5)
+      expect(html()).toBe(
+        `<span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><!--for-->`,
+      )
+
+      arr.value = [4, 1, 2, 3, 6]
+      await nextTick()
+      expect(host.children.length).toBe(5)
+      expect(html()).toBe(
+        `<span>4</span><span>1</span><span>2</span><span>3</span><span>6</span><!--for-->`,
+      )
+    })
+
+    test.todo('move to left and leaves hold', async () => {
+      const arr = ref<number[]>([1, 4, 5])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        `<span>1</span><span>4</span><span>5</span><!--for-->`,
+      )
+
+      arr.value = [4, 6]
+      await nextTick()
+      expect(host.children.length).toBe(2)
+      expect(html()).toBe(`<span>4</span><span>6</span><!--for-->`)
+    })
+
+    test.todo(
+      'moved and set to undefined element ending at the end',
+      async () => {
+        const arr = ref<number[]>([2, 4, 5])
+        const { host, html } = render(arr)
+        expect(host.children.length).toBe(3)
+        expect(html()).toBe(
+          `<span>2</span><span>4</span><span>5</span><!--for-->`,
+        )
+
+        arr.value = [4, 5, 3]
+        await nextTick()
+        expect(host.children.length).toBe(3)
+        expect(html()).toBe(
+          `<span>4</span><span>5</span><span>3</span><!--for-->`,
+        )
+      },
+    )
+
+    test('reverse element', async () => {
+      const arr = ref<number[]>([1, 2, 3, 4, 5, 6, 7, 8])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(8)
+      expect(html()).toBe(
+        `<span>1</span><span>2</span><span>3</span><span>4</span>` +
+          `<span>5</span><span>6</span><span>7</span><span>8</span><!--for-->`,
+      )
+
+      arr.value = [8, 7, 6, 5, 4, 3, 2, 1]
+      await nextTick()
+      expect(host.children.length).toBe(8)
+      expect(html()).toBe(
+        `<span>8</span><span>7</span><span>6</span><span>5</span>` +
+          `<span>4</span><span>3</span><span>2</span><span>1</span><!--for-->`,
+      )
+    })
+
+    test('something', async () => {
+      const arr = ref<number[]>([0, 1, 2, 3, 4, 5])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(6)
+      expect(html()).toBe(
+        `<span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>` +
+          `<span>5</span><!--for-->`,
+      )
+
+      arr.value = [4, 3, 2, 1, 5, 0]
+      await nextTick()
+      expect(host.children.length).toBe(6)
+      expect(html()).toBe(
+        `<span>4</span><span>3</span><span>2</span><span>1</span>` +
+          `<span>5</span><span>0</span><!--for-->`,
+      )
+    })
+
+    test('random shuffle', async () => {
+      const elms = 14
+      const samples = 5
+
+      for (let n = 0; n < samples; ++n) {
+        const arr = ref([...Array(elms).keys()])
+        const opacities = ref<string[]>([])
+
+        const host = document.createElement('div')
+        define({
+          setup() {
+            const n3 = template('<span></span>')() as any
+            setInsertionState(n3)
+            createFor(
+              () => arr.value,
+              _for_item0 => {
+                const n2 = template('<span> </span>')() as any
+                const x2 = child(n2) as any
+                renderEffect(() => {
+                  const _opacities = opacities.value
+                  const _item = _for_item0.value
+                  const _opacities_item = _opacities[_item] || '1'
+                  setStyle(n2, { opacity: _opacities_item })
+                  setText(x2, toDisplayString(_item))
+                })
+                return n2
+              },
+              item => item,
+              1,
+            )
+            return n3
+          },
+        }).render(undefined, host)
+
+        let rootChild = host.children[0]
+        for (let i = 0; i < elms; ++i) {
+          const child = rootChild.children[i] as HTMLSpanElement
+          expect(child.innerHTML).toBe(i.toString())
+          expect(child.style.opacity).toBe('1')
+          opacities.value[i] = Math.random().toFixed(5).toString()
+        }
+
+        arr.value = shuffle(arr.value.slice(0))
+        await nextTick()
+
+        for (let i = 0; i < elms; ++i) {
+          const child = rootChild.children[i] as HTMLSpanElement
+          expect(child.innerHTML).toBe(arr.value[i].toString())
+          // expect(child.style.opacity).toBe(opacities.value[i])
+        }
+      }
+    })
+
+    test.todo(
+      'children with the same key but with different tag',
+      async () => {},
+    )
+
+    test.todo(
+      'children with the same tag, same key, but one with data and one without data',
+      async () => {},
+    )
+
+    test.todo('should warn with duplicate keys', async () => {})
+  })
+
+  describe.todo('renderer: unkeyed children', () => {})
 })
