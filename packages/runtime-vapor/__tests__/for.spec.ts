@@ -1153,13 +1153,19 @@ describe('createFor', () => {
           opacities.value[i] = Math.random().toFixed(5).toString()
         }
 
+        await nextTick()
+        for (let i = 0; i < elms; ++i) {
+          const child = rootChild.children[i] as any
+          expect(child.$sty.opacity).toBe(opacities.value[i])
+        }
+
         arr.value = shuffle(arr.value.slice(0))
         await nextTick()
 
         for (let i = 0; i < elms; ++i) {
-          const child = rootChild.children[i] as HTMLSpanElement
+          const child = rootChild.children[i] as any
           expect(child.innerHTML).toBe(arr.value[i].toString())
-          // expect(child.style.opacity).toBe(opacities.value[i])
+          expect(child.$sty.opacity).toBe(opacities.value[arr.value[i]])
         }
       }
     })
