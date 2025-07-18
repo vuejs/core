@@ -525,4 +525,38 @@ describe('stringify static html', () => {
 
     expect(code).toMatchSnapshot()
   })
+
+  test('static interpolation', () => {
+    const interpolateElements = [
+      `"1"`,
+      '`1`',
+      '1',
+      'false',
+      'undefined',
+      'null',
+      '',
+    ]
+
+    const copiesNeededToTriggerStringify = Math.ceil(
+      StringifyThresholds.NODE_COUNT / interpolateElements.length,
+    )
+
+    const { code: interpolateCode } = compileWithStringify(
+      interpolateElements
+        .map(e => `<div>{{${e}}}</div>`)
+        .join('\n')
+        .repeat(copiesNeededToTriggerStringify),
+    )
+
+    const staticElements = [`1`, '1', '1', 'false', '', '', '']
+    const { code: staticCode } = compileWithStringify(
+      staticElements
+        .map(e => `<div>${e}</div>`)
+        .join('\n')
+        .repeat(copiesNeededToTriggerStringify),
+    )
+
+    expect(interpolateCode).toBe(staticCode)
+    expect(interpolateCode).toMatchSnapshot()
+  })
 })
