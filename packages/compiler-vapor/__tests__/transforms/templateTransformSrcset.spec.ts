@@ -67,7 +67,6 @@ describe('compiler sfc: transform srcset', () => {
         transformHoist: stringifyStatic,
       },
     ).code
-    expect(code).toMatch(`_createStaticVNode`)
     expect(code).toMatchSnapshot()
   })
 

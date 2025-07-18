@@ -225,11 +225,14 @@ function transformNativeElement(
       const { key, values } = prop
       const imports = getAssetImports(context)
       if (imports.some(imported => values[0].content.includes(imported))) {
-        template += ` ${key.content}=$\{${values[0].content}}$`
+        template += ` ${key.content}="$\{${values[0].content}}$"`
       } else if (key.isStatic && values.length === 1 && values[0].isStatic) {
         template += ` ${key.content}`
-        const valueContent = values[0].content === "''" ? '' : values[0].content
-        template += `="${valueContent}"`
+        if (values[0].content) {
+          const valueContent =
+            values[0].content === "''" ? '' : values[0].content
+          template += `="${valueContent}"`
+        }
       } else {
         dynamicProps.push(key.content)
         context.registerEffect(

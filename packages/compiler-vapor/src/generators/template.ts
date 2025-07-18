@@ -14,8 +14,8 @@ export function genTemplates(
       (template, i) =>
         `const t${i} = ${helper('template')}(${
           JSON.stringify(template).replace(
-            /\${_imports_(\d+)}\$/g,
-            '"+_imports_$1+"',
+            /\$\{(.*?)\}\$/g,
+            (_, expr) => `" + ${expr} + "`,
           ) // replace asset imports with string concatenation
         }${i === rootIndex ? ', true' : ''})\n`,
     )

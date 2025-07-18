@@ -98,7 +98,7 @@ describe('compiler sfc: transform asset url', () => {
       </svg>`,
     )
     // should not remove it
-    expect(code).toMatch(`"xlink:href": "#myCircle"`)
+    expect(code).toMatch(`xlink:href=\\"#myCircle\\"`) // compiled to template string, not object, so remove quotes
   })
 
   test('should allow for full base URLs, with paths', () => {

@@ -32,6 +32,7 @@ export interface AssetURLOptions {
    */
   includeAbsolute?: boolean
   tags?: AssetURLTagConfig
+  vapor?: boolean
 }
 
 export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
@@ -44,6 +45,7 @@ export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
     image: ['xlink:href', 'href'],
     use: ['xlink:href', 'href'],
   },
+  vapor: false,
 }
 
 export const normalizeOptions = (
@@ -134,7 +136,13 @@ export const transformAssetUrl: NodeTransform = (
       // otherwise, transform the url into an import.
       // this assumes a bundler will resolve the import into the correct
       // absolute url (e.g. webpack file-loader)
-      const exp = getImportsExpressionExp(url.path, url.hash, attr.loc, context)
+      const exp = getImportsExpressionExp(
+        url.path,
+        url.hash,
+        attr.loc,
+        context,
+        options.vapor,
+      )
       node.props[index] = {
         type: NodeTypes.DIRECTIVE,
         name: 'bind',
@@ -152,6 +160,7 @@ function getImportsExpressionExp(
   hash: string | null,
   loc: SourceLocation,
   context: TransformContext,
+  vapor = false,
 ): ExpressionNode {
   if (path) {
     let name: string
@@ -211,6 +220,8 @@ function getImportsExpressionExp(
     }
     return context.hoist(finalExp)
   } else {
-    return createSimpleExpression(`''`, true, loc, ConstantTypes.CAN_STRINGIFY)
+    return vapor
+      ? createSimpleExpression(`''`, true, loc, ConstantTypes.CAN_STRINGIFY)
+      : createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_STRINGIFY)
   }
 }
