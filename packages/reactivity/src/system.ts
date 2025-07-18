@@ -77,6 +77,7 @@ export function link(dep: ReactiveNode, sub: ReactiveNode): void {
       return
     }
   }
+  // TODO: maybe can find a good way to check duplicate link
   const prevSub = dep.subsTail
   const newLink =
     (sub.depsTail =
