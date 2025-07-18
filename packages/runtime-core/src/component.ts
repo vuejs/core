@@ -436,6 +436,19 @@ export interface GenericComponentInstance {
    * @internal
    */
   suspense: SuspenseBoundary | null
+  /**
+   * suspense pending batch id
+   * @internal
+   */
+  suspenseId: number
+  /**
+   * @internal
+   */
+  asyncDep: Promise<any> | null
+  /**
+   * @internal
+   */
+  asyncResolved: boolean
 
   // lifecycle
   /**
@@ -927,7 +940,7 @@ function setupStatefulComponent(
         // bail here and wait for re-entry.
         instance.asyncDep = setupResult
         if (__DEV__ && !instance.suspense) {
-          const name = Component.name ?? 'Anonymous'
+          const name = getComponentName(Component) ?? 'Anonymous'
           warn(
             `Component <${name}>: setup function returned a promise, but no ` +
               `<Suspense> boundary was found in the parent component tree. ` +
