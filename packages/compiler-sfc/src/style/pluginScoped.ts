@@ -100,6 +100,8 @@ function rewriteSelector(
   slotted = false,
 ) {
   let node: selectorParser.Node | null = null
+  const nodes: (selectorParser.Node | null)[] = []
+  const nextNodes = [] as typeof selector.nodes
   let shouldInject = !deep
   // find the last child node to insert attribute selector
   selector.each(n => {
@@ -127,9 +129,55 @@ function rewriteSelector(
           // .foo ::v-deep(.bar) -> .foo[xxxxxxx] .bar
           // replace the current node with ::v-deep's inner selector
           let last: selectorParser.Selector['nodes'][0] = n
-          n.nodes[0].each(ss => {
-            selector.insertAfter(last, ss)
-            last = ss
+          if (node) {
+            nodes.push(node)
+          }
+          n.nodes.forEach((_node, i) => {
+            const index = selector.index(n)
+            if (i > 0) {
+              const prevList = selector.nodes
+                .slice(0, index)
+                .concat(_node.nodes)
+              if (nextNodes.length) {
+                prevList.push(...nextNodes)
+                nextNodes.forEach(s => {
+                  selector.removeChild(s)
+                  selector.insertAfter(last, s)
+                  last = s
+                })
+              }
+              const newList = prevList.map(s => {
+                const _newNode = s.clone(
+                  {},
+                ) as selectorParser.Selector['nodes'][0]
+                if (nodes.includes(s)) {
+                  nodes.push(_newNode)
+                }
+                return _newNode
+              })
+              newList.unshift(selectorParser.combinator({ value: ',' }))
+              if (!nodes.length) {
+                nodes.push(null, newList[0])
+              } else {
+                // :deep(.a,.b,.c) -> [xxx] .a,[xxx] .b,[xxx] .c
+                if (nodes[0] === null) {
+                  nodes.push(newList[0])
+                }
+              }
+              if (!node) {
+                newList.splice(1, 0, selectorParser.combinator({ value: ' ' }))
+              }
+              newList.forEach(s => {
+                selector.insertAfter(last, s)
+                last = s
+              })
+            } else {
+              nextNodes.push(...selector.nodes.slice(index + 1))
+              _node.each(ss => {
+                selector.insertAfter(last, ss)
+                last = ss
+              })
+            }
           })
           // insert a space combinator before if it doesn't already have one
           const prev = selector.at(selector.index(n) - 1)
@@ -163,18 +211,37 @@ function rewriteSelector(
       // instead.
       // ::v-slotted(.foo) -> .foo[xxxxxxx-s]
       if (value === ':slotted' || value === '::v-slotted') {
-        rewriteSelector(
-          id,
-          rule,
-          n.nodes[0],
-          selectorRoot,
-          deep,
-          true /* slotted */,
-        )
         let last: selectorParser.Selector['nodes'][0] = n
-        n.nodes[0].each(ss => {
-          selector.insertAfter(last, ss)
-          last = ss
+        const nextNodes = [] as typeof selector.nodes
+        n.nodes.forEach((ss, i) => {
+          rewriteSelector(id, rule, ss, selectorRoot, deep, true /* slotted */)
+          const index = selector.index(n)
+          if (i > 0) {
+            const prevList = selector.nodes.slice(0, index).concat(ss.nodes)
+            if (nextNodes.length) {
+              prevList.push(...nextNodes)
+              nextNodes.forEach(s => {
+                selector.removeChild(s)
+                selector.insertAfter(last, s)
+                last = s
+              })
+            }
+            const newList = prevList.map(
+              s => s.clone({}) as selectorParser.Selector['nodes'][0],
+            )
+
+            newList.unshift(selectorParser.combinator({ value: ',' }))
+            newList.forEach(s => {
+              selector.insertAfter(last, s)
+              last = s
+            })
+          } else {
+            nextNodes.push(...selector.nodes.slice(index + 1))
+            ss.each(s => {
+              selector.insertAfter(last, s)
+              last = s
+            })
+          }
         })
         // selector.insertAfter(n, n.nodes[0])
         selector.removeChild(n)
@@ -187,7 +254,7 @@ function rewriteSelector(
       // global: replace with inner selector and do not inject [id].
       // ::v-global(.foo) -> .foo
       if (value === ':global' || value === '::v-global') {
-        selector.replaceWith(n.nodes[0])
+        selector.replaceWith(...n.nodes)
         return false
       }
     }
@@ -227,6 +294,9 @@ function rewriteSelector(
       node = n
     }
   })
+  if (!nodes.length) {
+    nodes.push(node)
+  }
 
   if (rule.nodes.some(node => node.type === 'rule')) {
     const deep = (rule as any).__deep
@@ -261,17 +331,19 @@ function rewriteSelector(
 
   if (shouldInject) {
     const idToAdd = slotted ? id + '-s' : id
-    selector.insertAfter(
+    nodes.forEach(n => {
       // If node is null it means we need to inject [id] at the start
       // insertAfter can handle `null` here
-      node as any,
-      selectorParser.attribute({
-        attribute: idToAdd,
-        value: idToAdd,
-        raws: {},
-        quoteMark: `"`,
-      }),
-    )
+      selector.insertAfter(
+        n as any,
+        selectorParser.attribute({
+          attribute: idToAdd,
+          value: idToAdd,
+          raws: {},
+          quoteMark: `"`,
+        }),
+      )
+    })
   }
 }
 
