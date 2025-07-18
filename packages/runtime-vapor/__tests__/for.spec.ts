@@ -1305,5 +1305,170 @@ describe('createFor', () => {
     })
   })
 
-  describe.todo('renderer: unkeyed children', () => {})
+  describe('renderer: unkeyed children', () => {
+    const render = (arr: Ref<number[]>) => {
+      return define({
+        setup() {
+          const n0 = createFor(
+            () => arr.value,
+            _for_item0 => {
+              const n2 = template('<span> </span>', true)() as any
+              const x2 = child(n2) as any
+              renderEffect(() => setText(x2, toDisplayString(_for_item0.value)))
+              return n2
+            },
+          )
+          return n0
+        },
+      }).render()
+    }
+
+    test.todo('move a key in non-keyed nodes with a size up', async () => {
+      const arr = ref<any[]>([1, 'a', 'b', 'c'])
+      const { host, html } = define({
+        setup() {
+          const n0 = createFor(
+            () => arr.value,
+            _for_item0 => {
+              const n2 = template('<span> </span>', true)() as any
+              const x2 = child(n2) as any
+              renderEffect(() => setText(x2, toDisplayString(_for_item0.value)))
+              return n2
+            },
+            item => (typeof item === 'number' ? item : undefined),
+          )
+          return n0
+        },
+      }).render()
+
+      expect(host.children.length).toBe(4)
+      expect(html()).toBe(
+        `<span>1</span><span>a</span><span>b</span><span>c</span><!--for-->`,
+      )
+
+      arr.value = ['d', 'a', 'b', 'c', 1, 'e']
+      await nextTick()
+      expect(host.children.length).toBe(6)
+      expect(html()).toBe(
+        `<span>d</span><span>a</span><span>b</span><span>c</span>` +
+          `<span>1</span><span>e</span><!--for-->`,
+      )
+    })
+
+    test('append elements with updating children without keys', async () => {
+      const arr = ref<string[]>(['hello'])
+      const { html } = render(arr as any)
+      expect(html()).toBe('<span>hello</span><!--for-->')
+
+      arr.value = ['hello', 'world']
+      await nextTick()
+      expect(html()).toBe('<span>hello</span><span>world</span><!--for-->')
+    })
+
+    test('updating children without keys', async () => {
+      const arr = ref<string[]>(['hello', 'foo'])
+      const { html } = render(arr as any)
+      expect(html()).toBe('<span>hello</span><span>foo</span><!--for-->')
+
+      arr.value = ['hello', 'bar']
+      await nextTick()
+      expect(html()).toBe('<span>hello</span><span>bar</span><!--for-->')
+
+      arr.value = ['world', 'bar']
+      await nextTick()
+      expect(html()).toBe('<span>world</span><span>bar</span><!--for-->')
+    })
+
+    test('prepend element with updating children without keys', async () => {
+      const arr = ref<string[]>(['foo', 'bar'])
+      const { html } = render(arr as any)
+      expect(html()).toBe('<span>foo</span><span>bar</span><!--for-->')
+
+      arr.value = ['hello', 'foo', 'bar']
+      await nextTick()
+      expect(html()).toBe(
+        '<span>hello</span><span>foo</span><span>bar</span><!--for-->',
+      )
+    })
+
+    test('prepend element of different tag type with updating children without keys', async () => {
+      const items = ref([{ tag: 'span', text: 'world' }])
+      const { host, html } = define(() => {
+        return createFor(
+          () => items.value,
+          _for_item0 => {
+            const n2 = createIf(
+              () => _for_item0.value.tag === 'div',
+              () => {
+                const n4 = template('<div> </div>')() as any
+                const x4 = child(n4) as any
+                renderEffect(() =>
+                  setText(x4, toDisplayString(_for_item0.value.text)),
+                )
+                return n4
+              },
+              () => {
+                const n6 = template('<span> </span>', true)() as any
+                const x6 = child(n6) as any
+                renderEffect(() =>
+                  setText(x6, toDisplayString(_for_item0.value.text)),
+                )
+                return n6
+              },
+            )
+            return n2
+          },
+        )
+      }).render()
+
+      expect(host.children.length).toBe(1)
+      expect(html()).toBe('<span>world</span><!--if--><!--for-->')
+
+      items.value = [
+        { tag: 'div', text: 'hello' },
+        { tag: 'span', text: 'world' },
+      ]
+      await nextTick()
+      expect(host.children.length).toBe(2)
+      expect(html()).toBe(
+        '<div>hello</div><!--if--><span>world</span><!--if--><!--for-->',
+      )
+    })
+
+    test('remove elements with updating children without keys', async () => {
+      const arr = ref<string[]>(['one', 'two', 'three'])
+      const { html } = render(arr as any)
+      expect(html()).toBe(
+        '<span>one</span><span>two</span><span>three</span><!--for-->',
+      )
+
+      arr.value = ['two']
+      await nextTick()
+      expect(html()).toBe('<span>two</span><!--for-->')
+    })
+
+    test('remove a single node when children are updated', async () => {
+      const arr = ref<string[]>(['one'])
+      const { html } = render(arr as any)
+      expect(html()).toBe('<span>one</span><!--for-->')
+
+      arr.value = ['two', 'three']
+      await nextTick()
+      expect(html()).toBe('<span>two</span><span>three</span><!--for-->')
+    })
+
+    test('reorder elements', async () => {
+      const arr = ref<string[]>(['one', 'two', 'three'])
+      const { html } = render(arr as any)
+      expect(html()).toBe(
+        '<span>one</span><span>two</span><span>three</span><!--for-->',
+      )
+
+      arr.value = ['three', 'two', 'one']
+      await nextTick()
+      expect(html()).toBe(
+        '<span>three</span><span>two</span><span>one</span><!--for-->',
+      )
+    })
+  })
 })
