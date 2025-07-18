@@ -78,11 +78,7 @@ export function link(dep: ReactiveNode, sub: ReactiveNode): void {
     }
   }
   const prevSub = dep.subsTail
-  if (
-    prevSub !== undefined &&
-    prevSub.sub === sub &&
-    (!recursedCheck || isValidLink(prevSub, sub))
-  ) {
+  if (prevSub !== undefined && prevSub.sub === sub) {
     return
   }
   const newLink =
