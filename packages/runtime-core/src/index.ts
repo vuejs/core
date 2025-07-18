@@ -144,6 +144,7 @@ export {
   resolveComponent,
   resolveDirective,
   resolveDynamicComponent,
+  resolveLateAddedTag,
 } from './helpers/resolveAssets'
 // For integration with runtime compiler
 export { registerRuntimeCompiler, isRuntimeOnly } from './component'
