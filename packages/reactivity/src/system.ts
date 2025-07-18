@@ -78,9 +78,6 @@ export function link(dep: ReactiveNode, sub: ReactiveNode): void {
     }
   }
   const prevSub = dep.subsTail
-  if (prevSub !== undefined && prevSub.sub === sub) {
-    return
-  }
   const newLink =
     (sub.depsTail =
     dep.subsTail =
