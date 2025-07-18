@@ -17,7 +17,7 @@ export function render(_ctx) {
 exports[`compiler: element transform > component > do not resolve component from non-script-setup bindings 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const _component_Example = _resolveComponent("Example")
   const n0 = _createComponentWithFallback(_component_Example, null, null, true)
   return n0
@@ -28,7 +28,7 @@ exports[`compiler: element transform > component > generate multi root component
 "import { createComponent as _createComponent, template as _template } from 'vue';
 const t0 = _template("123")
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = _createComponent(_ctx.Comp)
   const n1 = t0()
   return [n0, n1]
@@ -38,7 +38,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 exports[`compiler: element transform > component > generate single root component 1`] = `
 "import { createComponent as _createComponent } from 'vue';
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = _createComponent(_ctx.Comp, null, null, true)
   return n0
 }"
@@ -71,7 +71,7 @@ exports[`compiler: element transform > component > resolve component from setup 
 exports[`compiler: element transform > component > resolve component from setup bindings 1`] = `
 "import { createComponent as _createComponent } from 'vue';
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = _createComponent(_ctx.Example, null, null, true)
   return n0
 }"
@@ -97,7 +97,7 @@ exports[`compiler: element transform > component > resolve namespaced component 
 exports[`compiler: element transform > component > resolve namespaced component from props bindings (non-inline) 1`] = `
 "import { createComponent as _createComponent } from 'vue';
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = _createComponent(_ctx.Foo.Example, null, null, true)
   return n0
 }"
@@ -113,7 +113,7 @@ exports[`compiler: element transform > component > resolve namespaced component 
 exports[`compiler: element transform > component > resolve namespaced component from setup bindings 1`] = `
 "import { createComponent as _createComponent } from 'vue';
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = _createComponent(_ctx.Foo.Example, null, null, true)
   return n0
 }"
@@ -191,7 +191,7 @@ export function render(_ctx) {
 exports[`compiler: element transform > component > v-for on component should not mark as single root 1`] = `
 "import { createComponent as _createComponent, createFor as _createFor } from 'vue';
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = _createComponent(_ctx.Comp)
     return n2

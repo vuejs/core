@@ -15,7 +15,7 @@ exports[`compiler: v-once > basic 1`] = `
 "import { child as _child, next as _next, toDisplayString as _toDisplayString, setText as _setText, setClass as _setClass, template as _template } from 'vue';
 const t0 = _template("<div> <span></span></div>", true)
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n2 = t0()
   const n0 = _child(n2)
   const n1 = _next(n0)

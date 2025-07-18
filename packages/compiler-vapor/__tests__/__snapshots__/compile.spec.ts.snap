@@ -4,7 +4,7 @@ exports[`compile > bindings 1`] = `
 "import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div> </div>", true)
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   const x0 = _child(n0)
   _renderEffect(() => _setText(x0, "count is " + _toDisplayString(_ctx.count) + "."))
@@ -55,7 +55,7 @@ exports[`compile > directives > custom directive > basic 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   _withVaporDirectives(n0, [[_ctx.vExample]])
   return n0
@@ -66,7 +66,7 @@ exports[`compile > directives > custom directive > binding value 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg]])
   return n0
@@ -77,7 +77,7 @@ exports[`compile > directives > custom directive > dynamic parameters 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg, _ctx.foo]])
   return n0
@@ -88,7 +88,7 @@ exports[`compile > directives > custom directive > modifiers 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg, void 0, { bar: true }]])
   return n0
@@ -99,7 +99,7 @@ exports[`compile > directives > custom directive > modifiers w/o binding 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   _withVaporDirectives(n0, [[_ctx.vExample, void 0, void 0, { "foo-bar": true }]])
   return n0
@@ -110,7 +110,7 @@ exports[`compile > directives > custom directive > static parameters 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg, "foo"]])
   return n0
@@ -121,7 +121,7 @@ exports[`compile > directives > custom directive > static parameters and modifie
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg, "foo", { bar: true }]])
   return n0
@@ -142,7 +142,7 @@ exports[`compile > directives > v-pre > basic 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>", true)
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   return n0
 }"
@@ -153,7 +153,7 @@ exports[`compile > directives > v-pre > should not affect siblings after it 1`] 
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 const t1 = _template("<div> </div>")
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = t0()
   const n3 = t1()

@@ -4,7 +4,7 @@ exports[`v-html > should convert v-html to innerHTML 1`] = `
 "import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   _renderEffect(() => _setHtml(n0, _ctx.code))
   return n0

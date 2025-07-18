@@ -112,7 +112,7 @@ export function generate(
   const args = ['_ctx']
   if (bindingMetadata && !inline) {
     // binding optimization args
-    args.push('$props', '$emit', '$attrs', '$slots')
+    args.push('$props')
   }
   const signature = (options.isTS ? args.map(arg => `${arg}: any`) : args).join(
     ', ',

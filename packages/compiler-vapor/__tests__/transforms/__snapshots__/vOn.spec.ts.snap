@@ -83,7 +83,7 @@ const t2 = _template("<div></div>")
 const t3 = _template("<input>")
 _delegateEvents("click", "contextmenu", "mouseup", "keyup")
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   const n1 = t1()
   const n2 = t0()
@@ -143,7 +143,7 @@ exports[`v-on > expression with type 1`] = `
 const t0 = _template("<div></div>", true)
 _delegateEvents("click")
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   n0.$evtclick = e => _ctx.handleClick(e)
   return n0
@@ -479,7 +479,7 @@ exports[`v-on > simple expression 1`] = `
 const t0 = _template("<div></div>", true)
 _delegateEvents("click")
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   n0.$evtclick = _ctx.handleClick
   return n0
