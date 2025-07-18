@@ -41,20 +41,19 @@ export function cacheStatic(root: RootNode, context: TransformContext): void {
     context,
     // Root node is unfortunately non-hoistable due to potential parent
     // fallthrough attributes.
-    isSingleElementRoot(root, root.children[0]),
+    !!getSingleElementRoot(root),
   )
 }
 
-export function isSingleElementRoot(
+export function getSingleElementRoot(
   root: RootNode,
-  child: TemplateChildNode,
-): child is PlainElementNode | ComponentNode | TemplateNode {
-  const { children } = root
-  return (
-    children.length === 1 &&
-    child.type === NodeTypes.ELEMENT &&
-    !isSlotOutlet(child)
-  )
+): PlainElementNode | ComponentNode | TemplateNode | null {
+  const children = root.children.filter(x => x.type !== NodeTypes.COMMENT)
+  return children.length === 1 &&
+    children[0].type === NodeTypes.ELEMENT &&
+    !isSlotOutlet(children[0])
+    ? children[0]
+    : null
 }
 
 function walk(

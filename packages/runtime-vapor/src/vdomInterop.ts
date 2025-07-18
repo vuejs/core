@@ -47,6 +47,8 @@ import {
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
 
+export const interopKey: unique symbol = Symbol(`interop`)
+
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
   VaporInteropInterface,
@@ -61,11 +63,16 @@ const vaporInteropImpl: Omit<
     const propsRef = shallowRef(vnode.props)
     const slotsRef = shallowRef(vnode.children)
 
+    const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
+      () => propsRef.value,
+    ]
+    // mark as interop props
+    dynamicPropSource[interopKey] = true
     // @ts-expect-error
     const instance = (vnode.component = createComponent(
       vnode.type as any as VaporComponent,
       {
-        $: [() => propsRef.value],
+        $: dynamicPropSource,
       } as RawProps,
       {
         _: slotsRef, // pass the slots ref
@@ -156,11 +163,11 @@ const vaporSlotPropsProxyHandler: ProxyHandler<
 
 const vaporSlotsProxyHandler: ProxyHandler<any> = {
   get(target, key) {
-    if (key === '_vapor') {
-      return target
-    } else {
-      return target[key]
+    const slot = target[key]
+    if (isFunction(slot)) {
+      slot.__vapor = true
     }
+    return slot
   },
 }
 

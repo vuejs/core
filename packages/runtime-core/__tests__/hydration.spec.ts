@@ -1654,6 +1654,29 @@ describe('SSR hydration', () => {
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 
+  test('transition appear work with pre-existing class', () => {
+    const { vnode, container } = mountWithHydration(
+      `<template><div class="foo">foo</div></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () => h('div', { class: 'foo' }, 'foo'),
+          },
+        ),
+    )
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="foo v-enter-from v-enter-active"
+      >
+        foo
+      </div>
+    `)
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
   test('transition appear with v-if', () => {
     const show = false
     const { vnode, container } = mountWithHydration(

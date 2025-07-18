@@ -100,6 +100,7 @@ function postPrepareApp(app: App) {
     )
   }
 
+  app.vapor = true
   const mount = app.mount
   app.mount = (container, ...args: any[]) => {
     container = normalizeContainer(container) as ParentNode
