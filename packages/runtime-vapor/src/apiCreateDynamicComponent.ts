@@ -16,6 +16,7 @@ export function createDynamicComponent(
   rawProps?: RawProps | null,
   rawSlots?: RawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean,
 ): VaporFragment {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -29,7 +30,7 @@ export function createDynamicComponent(
     ? new DynamicFragment('dynamic-component')
     : new DynamicFragment()
 
-  renderEffect(() => {
+  const renderFn = () => {
     const value = getter()
     frag.update(
       () =>
@@ -38,10 +39,14 @@ export function createDynamicComponent(
           rawProps,
           rawSlots,
           isSingleRoot,
+          once,
         ),
       value,
     )
-  })
+  }
+
+  if (once) renderFn()
+  else renderEffect(renderFn)
 
   if (!isHydrating && _insertionParent) {
     insert(frag, _insertionParent, _insertionAnchor)
