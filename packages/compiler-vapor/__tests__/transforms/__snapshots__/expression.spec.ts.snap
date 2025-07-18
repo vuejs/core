@@ -15,7 +15,7 @@ exports[`compiler: expression > props 1`] = `
 "import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template(" ")
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   _renderEffect(() => _setText(n0, _toDisplayString($props.foo)))
   return n0
@@ -26,7 +26,7 @@ exports[`compiler: expression > props aliased 1`] = `
 "import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template(" ")
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   _renderEffect(() => _setText(n0, _toDisplayString($props['bar'])))
   return n0

@@ -162,7 +162,7 @@ exports[`compiler: vModel transform > should support member expression 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
 const t0 = _template("<input>")
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   const n1 = t0()
   const n2 = t0()

@@ -635,7 +635,7 @@ exports[`compiler v-bind > with constant value 1`] = `
 "import { setProp as _setProp, template as _template } from 'vue';
 const t0 = _template("<div f=\\"foo1\\" h=\\"1\\"></div>", true)
 
-export function render(_ctx, $props, $emit, $attrs, $slots) {
+export function render(_ctx, $props) {
   const n0 = t0()
   _setProp(n0, "a", void 0)
   _setProp(n0, "b", 1 > 2)
