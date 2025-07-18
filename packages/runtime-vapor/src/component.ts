@@ -25,7 +25,7 @@ import {
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, DynamicFragment, insert, isBlock, remove } from './block'
+import { type Block, insert, isBlock, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -58,11 +58,13 @@ import {
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { isVaporTeleport } from './components/Teleport'
 import {
   insertionAnchor,
   insertionParent,
   resetInsertionState,
 } from './insertionState'
+import { DynamicFragment } from './fragment'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -160,6 +162,18 @@ export function createComponent(
       insert(frag, _insertionParent, _insertionAnchor)
     }
     return frag
+  }
+
+  // teleport
+  if (isVaporTeleport(component)) {
+    const frag = component.process(rawProps!, rawSlots!)
+    if (!isHydrating && _insertionParent) {
+      insert(frag, _insertionParent, _insertionAnchor)
+    } else {
+      frag.hydrate()
+    }
+
+    return frag as any
   }
 
   if (
@@ -391,6 +405,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   setupState?: Record<string, any>
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
+  hmrRerenderEffects?: (() => void)[]
   hmrReload?: (newComp: VaporComponent) => void
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
