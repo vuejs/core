@@ -44,18 +44,20 @@ import {
   type InjectToObject,
   type MergedComponentOptionsOverride,
   type MethodOptions,
-  type OptionTypesKeys,
-  type OptionTypesType,
   resolveMergedOptions,
   shouldCacheAccess,
 } from './componentOptions'
-import type { EmitFn, EmitsOptions } from './componentEmits'
+import type { EmitFn, EmitsOptions, EmitsToProps } from './componentEmits'
 import type { SlotsType, UnwrapSlotsType } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { installCompatInstanceProperties } from './compat/instance'
 import type { Directive } from './directives'
+import type {
+  ExtractDefaultPropTypes,
+  ExtractPropTypes,
+} from './componentProps'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -84,68 +86,45 @@ import type { Directive } from './directives'
  */
 export interface ComponentCustomProperties {}
 
-type IsDefaultMixinComponent<T> = T extends ComponentOptionsMixin
-  ? ComponentOptionsMixin extends T
-    ? true
-    : false
-  : false
+export type ExtractMixinProps<T> = UnionToIntersection<
+  T extends { props?: infer P }
+    ? P extends (infer K extends string)[]
+      ? { [key in K]: null }
+      : P
+    : {}
+>
 
-type MixinToOptionTypes<T> =
-  T extends ComponentOptionsBase<
-    infer P,
-    infer B,
-    infer D,
-    infer C,
-    infer M,
-    infer Mixin,
-    infer Extends,
-    any,
-    any,
-    infer Defaults,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any
-  >
-    ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
-        IntersectionMixin<Mixin> &
-        IntersectionMixin<Extends>
-    : never
+export type ExtractMixinTypeProps<T> = UnionToIntersection<
+  T extends { __typeProps?: infer P } ? P : {}
+>
 
-// ExtractMixin(map type) is used to resolve circularly references
-type ExtractMixin<T> = {
-  Mixin: MixinToOptionTypes<T>
-}[T extends ComponentOptionsMixin ? 'Mixin' : never]
+export type ExtractMixinEmits<T> = UnionToIntersection<
+  T extends { emits?: infer E }
+    ? E extends (infer K extends string)[]
+      ? { [key in K]: (...args: any) => any }
+      : E
+    : {}
+>
 
-export type IntersectionMixin<T> =
-  IsDefaultMixinComponent<T> extends true
-    ? OptionTypesType
-    : UnionToIntersection<ExtractMixin<T>>
+export type ExtractMixinMethods<T> = UnionToIntersection<
+  T extends { methods?: infer M } ? M : {}
+>
 
-export type UnwrapMixinsType<
-  T,
-  Type extends OptionTypesKeys,
-> = T extends OptionTypesType ? T[Type] : never
+export type ExtractMixinComputed<T> = UnionToIntersection<
+  T extends { computed?: infer C } ? C : {}
+>
 
-type EnsureNonVoid<T> = T extends void ? {} : T
+export type ExtractMixinData<T> = UnionToIntersection<
+  T extends { data?(...args: any): infer P } ? P : {}
+>
 
-export type ComponentPublicInstanceConstructor<
-  T extends ComponentPublicInstance<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M
-  > = ComponentPublicInstance<any>,
-  Props = any,
-  RawBindings = any,
-  D = any,
-  C extends ComputedOptions = ComputedOptions,
-  M extends MethodOptions = MethodOptions,
-> = {
+export type ExtractMixinSetupBindings<T> = UnionToIntersection<
+  T extends { setup?(...args: any): infer B } ? B : {}
+>
+
+export type EnsureNonVoid<T> = T extends void ? {} : T
+
+export interface ComponentPublicInstanceConstructor<T> {
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
@@ -162,24 +141,31 @@ export type CreateComponentPublicInstance<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
+  Mixin extends ComponentOptionsMixin = {},
+  Extends extends ComponentOptionsMixin = {},
+  E extends EmitsOptions = string[],
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
-  PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
-  PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
-  PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
-  PublicD = UnwrapMixinsType<PublicMixin, 'D'> & EnsureNonVoid<D>,
-  PublicC extends ComputedOptions = UnwrapMixinsType<PublicMixin, 'C'> &
-    EnsureNonVoid<C>,
-  PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
-    EnsureNonVoid<M>,
-  PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
-    EnsureNonVoid<Defaults>,
+  PublicP = ExtractPropTypes<
+    ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>
+  > &
+    P,
+  PublicB = ExtractMixinSetupBindings<Mixin> &
+    ExtractMixinSetupBindings<Extends> &
+    EnsureNonVoid<B>,
+  PublicD = ExtractMixinData<Mixin> &
+    ExtractMixinData<Extends> &
+    EnsureNonVoid<D>,
+  PublicC extends ComputedOptions = ExtractMixinComputed<Mixin> &
+    ExtractMixinComputed<Extends> &
+    C,
+  PublicM extends MethodOptions = ExtractMixinMethods<Mixin> &
+    ExtractMixinMethods<Extends> &
+    M,
+  PublicDefaults = {} & Defaults,
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
@@ -222,9 +208,9 @@ export type CreateComponentPublicInstanceWithMixins<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
+  Mixin extends ComponentOptionsMixin = {},
+  Extends extends ComponentOptionsMixin = {},
+  E extends EmitsOptions = string[],
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
@@ -236,17 +222,33 @@ export type CreateComponentPublicInstanceWithMixins<
   TypeRefs extends Data = {},
   TypeEl extends Element = any,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  TypeEmits = unknown,
+  StrictEmits extends boolean = false,
+  Options = any,
   // mixin inference
-  PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
-  PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
-  PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
-  PublicD = UnwrapMixinsType<PublicMixin, 'D'> & EnsureNonVoid<D>,
-  PublicC extends ComputedOptions = UnwrapMixinsType<PublicMixin, 'C'> &
-    EnsureNonVoid<C>,
-  PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
-    EnsureNonVoid<M>,
-  PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
-    EnsureNonVoid<Defaults>,
+  PublicP = Readonly<
+    ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>> &
+      ExtractMixinTypeProps<Mixin> &
+      ExtractMixinTypeProps<Extends> &
+      EmitsToProps<ExtractMixinEmits<Mixin> & ExtractMixinEmits<Extends> & {}>
+  > &
+    P,
+  PublicB = ExtractMixinSetupBindings<Mixin> &
+    ExtractMixinSetupBindings<Extends> &
+    EnsureNonVoid<B>,
+  PublicD = ExtractMixinData<Mixin> &
+    ExtractMixinData<Extends> &
+    EnsureNonVoid<D>,
+  PublicC extends ComputedOptions = ExtractMixinComputed<Mixin> &
+    ExtractMixinComputed<Extends> &
+    C,
+  PublicM extends MethodOptions = ExtractMixinMethods<Mixin> &
+    ExtractMixinMethods<Extends> &
+    M,
+  PublicDefaults = ExtractDefaultPropTypes<
+    ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>
+  > &
+    Defaults,
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
@@ -257,30 +259,14 @@ export type CreateComponentPublicInstanceWithMixins<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  ComponentOptionsBase<
-    P,
-    B,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    string,
-    Defaults,
-    {},
-    string,
-    S,
-    LC,
-    Directives,
-    Exposed,
-    Provide
-  >,
+  Options,
   I,
   S,
   Exposed,
   TypeRefs,
-  TypeEl
+  TypeEl,
+  TypeEmits,
+  StrictEmits
 >
 
 export type ExposedKeys<
@@ -296,16 +282,18 @@ export type ComponentPublicInstance<
   D = {}, // return from data()
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  E extends EmitsOptions = {},
+  E extends EmitsOptions = string[],
   PublicProps = {},
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
-  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
+  Options = any,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
   Exposed extends string = '',
   TypeRefs extends Data = {},
   TypeEl extends Element = any,
+  TypeEmits = {},
+  StrictEmits extends boolean = false,
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -318,7 +306,8 @@ export type ComponentPublicInstance<
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
   $host: Element | null
-  $emit: EmitFn<E>
+  $emit: EmitFn<StrictEmits extends true ? E : {} extends E ? string[] : E> &
+    TypeEmits
   $el: TypeEl
   $options: Options & MergedComponentOptionsOverride
   $forceUpdate: () => void
