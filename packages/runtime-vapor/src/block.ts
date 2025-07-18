@@ -23,6 +23,7 @@ export class VaporFragment {
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
+  fallback?: BlockFn
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -33,7 +34,6 @@ export class DynamicFragment extends VaporFragment {
   anchor: Node
   scope: EffectScope | undefined
   current?: BlockFn
-  fallback?: BlockFn
 
   constructor(anchorLabel?: string) {
     super([])
@@ -124,6 +124,10 @@ export function insert(
       insert(b, parent, anchor)
     }
   } else {
+    if (block.anchor) {
+      insert(block.anchor, parent, anchor)
+      anchor = block.anchor
+    }
     // fragment
     if (block.insert) {
       // TODO handle hydration for vdom interop
@@ -131,7 +135,6 @@ export function insert(
     } else {
       insert(block.nodes, parent, anchor)
     }
-    if (block.anchor) insert(block.anchor, parent, anchor)
   }
 }
 
