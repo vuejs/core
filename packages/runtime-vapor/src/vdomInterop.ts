@@ -8,17 +8,20 @@ import {
   type ShallowRef,
   type Slots,
   type VNode,
+  type VNodeNormalizedRef,
   type VaporInteropInterface,
   createInternalObject,
   createVNode,
   currentInstance,
   ensureRenderer,
   isEmitListener,
+  normalizeRef,
   onScopeDispose,
   renderSlot,
   shallowReactive,
   shallowRef,
   simpleSetCurrentInstance,
+  setRef as vdomSetRef,
 } from '@vue/runtime-dom'
 import {
   type LooseRawProps,
@@ -30,12 +33,13 @@ import {
   unmountComponent,
 } from './component'
 import { type Block, VaporFragment, insert, remove } from './block'
-import { EMPTY_OBJ, extend, isFunction } from '@vue/shared'
+import { EMPTY_OBJ, extend, isFunction, isReservedProp } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import type { NodeRef } from './apiTemplateRef'
 
 export const interopKey: unique symbol = Symbol(`interop`)
 
@@ -50,7 +54,15 @@ const vaporInteropImpl: Omit<
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
-    const propsRef = shallowRef(vnode.props)
+    // filter out reserved props
+    const props: VNode['props'] = {}
+    for (const key in vnode.props) {
+      if (!isReservedProp(key)) {
+        props[key] = vnode.props[key]
+      }
+    }
+
+    const propsRef = shallowRef(props)
     const slotsRef = shallowRef(vnode.children)
 
     const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
@@ -187,9 +199,12 @@ function createVDOMComponent(
         : new Proxy(wrapper.slots, vaporSlotsProxyHandler)
   }
 
+  let rawRef: VNodeNormalizedRef | null = null
   let isMounted = false
   const parentInstance = currentInstance as VaporComponentInstance
   const unmount = (parentNode?: ParentNode) => {
+    // unset ref
+    if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
     internals.umt(vnode.component!, null, !!parentNode)
   }
 
@@ -204,6 +219,8 @@ function createVDOMComponent(
         undefined,
         false,
       )
+      // set ref
+      if (rawRef) vdomSetRef(rawRef, null, null, vnode)
       onScopeDispose(unmount, true)
       isMounted = true
     } else {
@@ -219,6 +236,22 @@ function createVDOMComponent(
   }
 
   frag.remove = unmount
+
+  frag.setRef = (
+    instance: VaporComponentInstance,
+    ref: NodeRef,
+    refFor: boolean,
+    refKey: string | undefined,
+  ): void => {
+    rawRef = normalizeRef(
+      {
+        ref: ref as any,
+        ref_for: refFor,
+        ref_key: refKey,
+      },
+      instance as any,
+    )
+  }
 
   return frag
 }

@@ -561,4 +561,12 @@ export { initFeatureFlags } from './featureFlags'
 /**
  * @internal
  */
+export { setRef } from './rendererTemplateRef'
+/**
+ * @internal
+ */
+export { type VNodeNormalizedRef, normalizeRef } from './vnode'
+/**
+ * @internal
+ */
 export { createInternalObject } from './internalObject'
