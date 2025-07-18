@@ -108,6 +108,7 @@ export interface Renderer<HostElement = RendererElement> {
 
 export interface HydrationRenderer extends Renderer<Element | ShadowRoot> {
   hydrate: RootHydrateFunction
+  hydrateNode: ReturnType<typeof createHydrationFunctions>[1]
 }
 
 export type ElementNamespace = 'svg' | 'mathml' | undefined
@@ -2625,6 +2626,7 @@ function baseCreateRenderer(
   return {
     render,
     hydrate,
+    hydrateNode,
     internals,
     createApp: createAppAPI(
       mountApp,
@@ -2744,7 +2746,10 @@ export function invalidateMount(hooks: LifecycleHook | undefined): void {
   }
 }
 
-function getVaporInterface(
+/**
+ * @internal
+ */
+export function getVaporInterface(
   instance: ComponentInternalInstance | null,
   vnode: VNode,
 ): VaporInteropInterface {

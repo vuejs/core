@@ -1,4 +1,16 @@
-export let insertionParent: ParentNode | undefined
+export let insertionParent:
+  | (ParentNode & {
+      // dynamic node position - hydration only
+      // indicates the position where dynamic nodes begin within the parent
+      // during hydration, static nodes before this index are skipped
+      //
+      // Example:
+      // const t0 = _template("<div><span></span><span></span></div>", true)
+      // const n4 = t0(2) // n4.$dp = 2
+      // The first 2 nodes are static, dynamic nodes start from index 2
+      $dp?: number
+    })
+  | undefined
 export let insertionAnchor: Node | 0 | undefined
 
 /**
