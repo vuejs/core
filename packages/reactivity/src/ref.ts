@@ -25,6 +25,7 @@ import {
   activeSub,
   batchDepth,
   flush,
+  getCurrentTrackId,
   link,
   propagate,
   shallowPropagate,
@@ -119,6 +120,7 @@ class RefImpl<T = any> implements ReactiveNode {
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
   flags: _ReactiveFlags = _ReactiveFlags.Mutable
+  lastTrackedId = 0
 
   _value: T
   _wrap?: <T>(v: T) => T
@@ -237,14 +239,18 @@ export function triggerRef(ref: Ref): void {
 
 function trackRef(dep: ReactiveNode) {
   if (activeSub !== undefined) {
-    if (__DEV__) {
-      onTrack(activeSub!, {
-        target: dep,
-        type: TrackOpTypes.GET,
-        key: 'value',
-      })
+    const trackId = getCurrentTrackId()
+    if (dep.lastTrackedId !== trackId) {
+      if (__DEV__) {
+        onTrack(activeSub, {
+          target: dep,
+          type: TrackOpTypes.GET,
+          key: 'value',
+        })
+      }
+      dep.lastTrackedId = trackId
+      link(dep, activeSub)
     }
-    link(dep, activeSub!)
   }
 }
 
@@ -340,6 +346,7 @@ class CustomRefImpl<T> implements ReactiveNode {
   subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
   flags: _ReactiveFlags = _ReactiveFlags.None
+  lastTrackedId = 0
 
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']

@@ -11,6 +11,7 @@ export interface ReactiveNode {
   subs?: Link
   subsTail?: Link
   flags: ReactiveFlags
+  lastTrackedId?: number
 }
 
 export interface Link {
@@ -44,6 +45,15 @@ export let activeSub: ReactiveNode | undefined = undefined
 
 let notifyIndex = 0
 let notifyBufferLength = 0
+let currentTrackId = 0
+
+export function startEffectTracking(): number {
+  return ++currentTrackId
+}
+
+export function getCurrentTrackId(): number {
+  return currentTrackId
+}
 
 export function setActiveSub(sub?: ReactiveNode): ReactiveNode | undefined {
   try {
@@ -226,6 +236,7 @@ export function startTracking(sub: ReactiveNode): ReactiveNode | undefined {
     (sub.flags &
       ~(ReactiveFlags.Recursed | ReactiveFlags.Dirty | ReactiveFlags.Pending)) |
     ReactiveFlags.RecursedCheck
+  startEffectTracking()
   return setActiveSub(sub)
 }
 

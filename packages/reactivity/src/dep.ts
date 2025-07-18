@@ -7,6 +7,7 @@ import {
   type ReactiveNode,
   activeSub,
   endBatch,
+  getCurrentTrackId,
   link,
   propagate,
   shallowPropagate,
@@ -17,6 +18,7 @@ class Dep implements ReactiveNode {
   _subs: Link | undefined = undefined
   subsTail: Link | undefined = undefined
   flags: ReactiveFlags = ReactiveFlags.None
+  lastTrackedId = 0
 
   constructor(
     private map: KeyToDepMap,
@@ -73,14 +75,19 @@ export function track(target: object, type: TrackOpTypes, key: unknown): void {
     if (!dep) {
       depsMap.set(key, (dep = new Dep(depsMap, key)))
     }
-    if (__DEV__) {
-      onTrack(activeSub!, {
-        target,
-        type,
-        key,
-      })
+
+    const trackId = getCurrentTrackId()
+    if (dep.lastTrackedId !== trackId) {
+      if (__DEV__) {
+        onTrack(activeSub, {
+          target,
+          type,
+          key,
+        })
+      }
+      dep.lastTrackedId = trackId
+      link(dep, activeSub)
     }
-    link(dep, activeSub!)
   }
 }
 
