@@ -1,11 +1,5 @@
 import { EffectFlags, cleanup } from './effect'
-import {
-  type Link,
-  type ReactiveNode,
-  link,
-  setActiveSub,
-  unlink,
-} from './system'
+import { type Link, type ReactiveNode, link, unlink } from './system'
 import { warn } from './warning'
 
 export let activeEffectScope: EffectScope | undefined
@@ -65,14 +59,12 @@ export class EffectScope implements ReactiveNode {
   }
 
   run<T>(fn: () => T): T | undefined {
-    const prevSub = setActiveSub()
     const prevScope = activeEffectScope
     try {
       activeEffectScope = this
       return fn()
     } finally {
       activeEffectScope = prevScope
-      setActiveSub(prevSub)
     }
   }
 

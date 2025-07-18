@@ -119,7 +119,7 @@ function reload(id: string, newComp: HMRComponent): void {
   // create a snapshot which avoids the set being mutated during updates
   const instances = [...record.instances]
 
-  if (newComp.vapor) {
+  if (newComp.__vapor) {
     for (const instance of instances) {
       instance.hmrReload!(newComp)
     }
