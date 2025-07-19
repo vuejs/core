@@ -22,7 +22,7 @@ import {
   stop,
   toRaw,
 } from '../src/index'
-import { type Dependency, endBatch, startBatch } from '../src/system'
+import { type ReactiveNode, endBatch, startBatch } from '../src/system'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -1178,7 +1178,7 @@ describe('reactivity/effect', () => {
   })
 
   describe('dep unsubscribe', () => {
-    function getSubCount(dep: Dependency | undefined) {
+    function getSubCount(dep: ReactiveNode | undefined) {
       let count = 0
       let sub = dep!.subs
       while (sub) {

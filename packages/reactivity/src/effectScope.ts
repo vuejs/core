@@ -1,57 +1,28 @@
-import { EffectFlags, type ReactiveEffect } from './effect'
-import {
-  type Link,
-  type Subscriber,
-  endTracking,
-  startTracking,
-} from './system'
+import { EffectFlags, cleanup } from './effect'
+import { type Link, type ReactiveNode, link, unlink } from './system'
 import { warn } from './warning'
 
 export let activeEffectScope: EffectScope | undefined
 
-export class EffectScope implements Subscriber {
-  // Subscriber: In order to collect orphans computeds
+export class EffectScope implements ReactiveNode {
   deps: Link | undefined = undefined
   depsTail: Link | undefined = undefined
+  subs: Link | undefined = undefined
+  subsTail: Link | undefined = undefined
   flags: number = 0
 
-  /**
-   * @internal track `on` calls, allow `on` call multiple times
-   */
-  private _on = 0
-  /**
-   * @internal
-   */
-  effects: ReactiveEffect[] = []
   /**
    * @internal
    */
   cleanups: (() => void)[] = []
+  /**
+   * @internal
+   */
+  cleanupsLength = 0
 
-  /**
-   * only assigned by undetached scope
-   * @internal
-   */
-  parent: EffectScope | undefined
-  /**
-   * record undetached scopes
-   * @internal
-   */
-  scopes: EffectScope[] | undefined
-  /**
-   * track a child scope's index in its parent's scopes array for optimized
-   * removal
-   * @internal
-   */
-  private index: number | undefined
-
-  constructor(
-    public detached = false,
-    parent: EffectScope | undefined = activeEffectScope,
-  ) {
-    this.parent = parent
-    if (!detached && parent) {
-      this.index = (parent.scopes || (parent.scopes = [])).push(this) - 1
+  constructor(detached = false) {
+    if (!detached && activeEffectScope) {
+      link(this, activeEffectScope)
     }
   }
 
@@ -62,14 +33,11 @@ export class EffectScope implements Subscriber {
   pause(): void {
     if (!(this.flags & EffectFlags.PAUSED)) {
       this.flags |= EffectFlags.PAUSED
-      let i, l
-      if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].pause()
+      for (let link = this.deps; link !== undefined; link = link.nextDep) {
+        const dep = link.dep
+        if ('pause' in dep) {
+          dep.pause()
         }
-      }
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].pause()
       }
     }
   }
@@ -78,91 +46,48 @@ export class EffectScope implements Subscriber {
    * Resumes the effect scope, including all child scopes and effects.
    */
   resume(): void {
-    if (this.flags & EffectFlags.PAUSED) {
-      this.flags &= ~EffectFlags.PAUSED
-      let i, l
-      if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].resume()
+    const flags = this.flags
+    if (flags & EffectFlags.PAUSED) {
+      this.flags = flags & ~EffectFlags.PAUSED
+      for (let link = this.deps; link !== undefined; link = link.nextDep) {
+        const dep = link.dep
+        if ('resume' in dep) {
+          dep.resume()
         }
-      }
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].resume()
       }
     }
   }
 
   run<T>(fn: () => T): T | undefined {
-    if (this.active) {
-      const prevEffectScope = activeEffectScope
-      try {
-        activeEffectScope = this
-        return fn()
-      } finally {
-        activeEffectScope = prevEffectScope
-      }
-    } else if (__DEV__) {
-      warn(`cannot run an inactive effect scope.`)
-    }
-  }
-
-  prevScope: EffectScope | undefined
-  /**
-   * This should only be called on non-detached scopes
-   * @internal
-   */
-  on(): void {
-    if (++this._on === 1) {
-      this.prevScope = activeEffectScope
+    const prevScope = activeEffectScope
+    try {
       activeEffectScope = this
+      return fn()
+    } finally {
+      activeEffectScope = prevScope
     }
   }
 
-  /**
-   * This should only be called on non-detached scopes
-   * @internal
-   */
-  off(): void {
-    if (this._on > 0 && --this._on === 0) {
-      activeEffectScope = this.prevScope
-      this.prevScope = undefined
+  stop(): void {
+    if (!this.active) {
+      return
     }
-  }
-
-  stop(fromParent?: boolean): void {
-    if (this.active) {
-      this.flags |= EffectFlags.STOP
-      startTracking(this)
-      endTracking(this)
-      let i, l
-      for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].stop()
+    this.flags = EffectFlags.STOP
+    let dep = this.deps
+    while (dep !== undefined) {
+      const node = dep.dep
+      if ('stop' in node) {
+        dep = dep.nextDep
+        node.stop()
+      } else {
+        dep = unlink(dep, this)
       }
-      this.effects.length = 0
-
-      for (i = 0, l = this.cleanups.length; i < l; i++) {
-        this.cleanups[i]()
-      }
-      this.cleanups.length = 0
-
-      if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].stop(true)
-        }
-        this.scopes.length = 0
-      }
-
-      // nested scope, dereference from parent to avoid memory leaks
-      if (!this.detached && this.parent && !fromParent) {
-        // optimized O(1) removal
-        const last = this.parent.scopes!.pop()
-        if (last && last !== this) {
-          this.parent.scopes![this.index!] = last
-          last.index = this.index!
-        }
-      }
-      this.parent = undefined
     }
+    const sub = this.subs
+    if (sub !== undefined) {
+      unlink(sub)
+    }
+    cleanup(this)
   }
 }
 
@@ -188,6 +113,14 @@ export function getCurrentScope(): EffectScope | undefined {
   return activeEffectScope
 }
 
+export function setCurrentScope(scope?: EffectScope): EffectScope | undefined {
+  try {
+    return activeEffectScope
+  } finally {
+    activeEffectScope = scope
+  }
+}
+
 /**
  * Registers a dispose callback on the current active effect scope. The
  * callback will be invoked when the associated effect scope is stopped.
@@ -196,8 +129,8 @@ export function getCurrentScope(): EffectScope | undefined {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#onscopedispose}
  */
 export function onScopeDispose(fn: () => void, failSilently = false): void {
-  if (activeEffectScope) {
-    activeEffectScope.cleanups.push(fn)
+  if (activeEffectScope !== undefined) {
+    activeEffectScope.cleanups[activeEffectScope.cleanupsLength++] = fn
   } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
