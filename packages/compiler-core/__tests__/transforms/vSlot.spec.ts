@@ -28,8 +28,12 @@ import { createObjectMatcher } from '../testUtils'
 import { PatchFlags } from '@vue/shared'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
+import { transformText } from '../../src/transforms/transformText'
 
-function parseWithSlots(template: string, options: CompilerOptions = {}) {
+function parseWithSlots(
+  template: string,
+  options: CompilerOptions & { transformText?: boolean } = {},
+) {
   const ast = parse(template, {
     whitespace: options.whitespace,
   })
@@ -43,6 +47,7 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
       transformSlotOutlet,
       transformElement,
       trackSlotScopes,
+      ...(options.transformText ? [transformText] : []),
     ],
     directiveTransforms: {
       on: transformOn,
@@ -299,6 +304,40 @@ describe('compiler: transform component slots', () => {
             {
               type: NodeTypes.ELEMENT,
               tag: `span`,
+            },
+          ],
+        },
+      }),
+    )
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('named slots w/ implicit default slot containing non-breaking space', () => {
+    const { root, slots } = parseWithSlots(
+      `<Comp>
+        \u00a0
+        <template #one>foo</template>
+      </Comp>`,
+    )
+    expect(slots).toMatchObject(
+      createSlotMatcher({
+        one: {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: undefined,
+          returns: [
+            {
+              type: NodeTypes.TEXT,
+              content: `foo`,
+            },
+          ],
+        },
+        default: {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: undefined,
+          returns: [
+            {
+              type: NodeTypes.TEXT,
+              content: ` \u00a0 `,
             },
           ],
         },
@@ -989,6 +1028,27 @@ describe('compiler: transform component slots', () => {
       expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })
 
+    test('implicit default slot with non-breaking space', () => {
+      const source = `
+      <Comp>
+        &nbsp;
+        <template #header> Header </template>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      const slots = (root as any).children[0].codegenNode.children
+        .properties as ObjectExpression['properties']
+
+      expect(
+        slots.some(p => (p.key as SimpleExpressionNode).content === 'default'),
+      ).toBe(true)
+
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
     test('named slot with v-if + v-else', () => {
       const source = `
         <Comp>
@@ -997,6 +1057,24 @@ describe('compiler: transform component slots', () => {
         </Comp>
       `
       const { root } = parseWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('named slot with v-if + v-else and comments', () => {
+      const source = `
+        <Comp>
+          <template #one v-if="ok">foo</template>
+          <!-- start -->
+
+          <!-- end -->
+          <template #two v-else>baz</template>
+        </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        transformText: true,
         whitespace: 'preserve',
       })
 
