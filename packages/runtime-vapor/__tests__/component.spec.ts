@@ -333,26 +333,30 @@ describe('component', () => {
     __DEV__ = true
   })
 
-  it('warn if functional vapor component not return a block', () => {
-    define(() => {
-      return () => {}
+  it('functional vapor component return a object', () => {
+    const { host } = define(() => {
+      return {}
     }).render()
 
-    expect(
-      'Functional vapor component must return a block directly',
-    ).toHaveBeenWarned()
+    expect(host.textContent).toBe(`[object Object]`)
   })
 
-  it('warn if setup return a function and no render function', () => {
-    define({
+  it('functional vapor component return a function', () => {
+    const { host } = define(() => {
+      return () => ({})
+    }).render()
+
+    expect(host.textContent).toBe(`() => ({})`)
+  })
+
+  it('setup return a function and no render function', () => {
+    const { host } = define({
       setup() {
         return () => []
       },
     }).render()
 
-    expect(
-      'Vapor component setup() returned non-block value, and has no render function',
-    ).toHaveBeenWarned()
+    expect(host.textContent).toBe(`() => []`)
   })
 })
 
