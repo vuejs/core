@@ -60,7 +60,7 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
       _createElementVNode("span", null, null, -1 /* CACHED */),
-      _createTextVNode("foo"),
+      _createTextVNode("foo", -1 /* CACHED */),
       _createElementVNode("div", null, null, -1 /* CACHED */)
     ])))
   }
