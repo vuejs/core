@@ -93,7 +93,10 @@ export interface InteropRenderContext {
   html: () => string
 }
 
-export function makeInteropRender(): (comp: Component) => InteropRenderContext {
+export function makeInteropRender(): {
+  define: (comp: Component) => InteropRenderContext
+  defineVapor: (comp: VaporComponent) => InteropRenderContext
+} {
   let host: HTMLElement
   beforeEach(() => {
     host = document.createElement('div')
@@ -102,36 +105,41 @@ export function makeInteropRender(): (comp: Component) => InteropRenderContext {
     host.remove()
   })
 
-  function define(comp: Component) {
-    let app: App
-    function render(
-      props: RawProps | undefined = undefined,
-      container: string | ParentNode = host,
-    ) {
-      app?.unmount()
-      app = createApp(comp, props)
-      app.use(vaporInteropPlugin)
-      return mount(container)
-    }
+  const defineFactory =
+    (createAppFactory: typeof createApp | typeof createVaporApp) =>
+    (comp: Component | VaporComponent) => {
+      let app: App
+      function render(
+        props: RawProps | undefined = undefined,
+        container: string | ParentNode = host,
+      ) {
+        app?.unmount()
+        app = createAppFactory(comp as any, props)
+        app.use(vaporInteropPlugin)
+        return mount(container)
+      }
 
-    function mount(container: string | ParentNode = host) {
-      app.mount(container)
+      function mount(container: string | ParentNode = host) {
+        app.mount(container)
+        return res()
+      }
+
+      function html() {
+        return host.innerHTML
+      }
+
+      const res = () => ({
+        host,
+        mount,
+        render,
+        html,
+      })
+
       return res()
     }
 
-    function html() {
-      return host.innerHTML
-    }
-
-    const res = () => ({
-      host,
-      mount,
-      render,
-      html,
-    })
-
-    return res()
+  return {
+    define: defineFactory(createApp),
+    defineVapor: defineFactory(createVaporApp),
   }
-
-  return define
 }
