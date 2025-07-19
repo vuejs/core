@@ -31,7 +31,7 @@ export function next(node: Node): Node {
   return node.nextSibling!
 }
 
-type NodeChildAtom = Node | string | number | boolean | null | undefined | void
+type NodeChildAtom = Block | string | number | boolean | null | undefined | void
 
 export type NodeArrayChildren = Array<NodeArrayChildren | NodeChildAtom>
 
