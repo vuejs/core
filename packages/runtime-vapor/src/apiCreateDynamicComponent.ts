@@ -1,4 +1,4 @@
-import { resolveDynamicComponent } from '@vue/runtime-dom'
+import { currentInstance, resolveDynamicComponent } from '@vue/runtime-dom'
 import { DynamicFragment, type VaporFragment, insert } from './block'
 import { createComponentWithFallback } from './component'
 import { renderEffect } from './renderEffect'
@@ -31,6 +31,9 @@ export function createDynamicComponent(
 
   renderEffect(() => {
     const value = getter()
+    if (currentInstance && currentInstance.appContext.vapor) {
+      value.__vapor = true
+    }
     frag.update(
       () =>
         createComponentWithFallback(
