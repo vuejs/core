@@ -23,7 +23,7 @@ describe('compiler v-bind', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect(ir.template).toEqual(['<div></div>'])
+    expect(ir.template).toEqual(['<div>'])
     expect(ir.block.effect).lengthOf(1)
     expect(ir.block.effect[0].expressions).lengthOf(1)
     expect(ir.block.effect[0].operations).lengthOf(1)
@@ -241,10 +241,10 @@ describe('compiler v-bind', () => {
         end: { line: 1, column: 19 },
       },
     })
-    expect(ir.template).toEqual(['<div arg></div>'])
+    expect(ir.template).toEqual(['<div arg>'])
 
     expect(code).matchSnapshot()
-    expect(code).contains(JSON.stringify('<div arg></div>'))
+    expect(code).contains(JSON.stringify('<div arg>'))
   })
 
   test('error on invalid argument for same-name shorthand', () => {
