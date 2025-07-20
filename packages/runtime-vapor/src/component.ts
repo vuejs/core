@@ -5,6 +5,7 @@ import {
   type EmitFn,
   type EmitsOptions,
   ErrorCodes,
+  Fragment,
   type GenericAppContext,
   type GenericComponentInstance,
   type LifecycleHook,
@@ -219,7 +220,17 @@ export function createComponent(
       ]) || []
     : []
 
-  if (__DEV__) {
+  if (component === Fragment) {
+    if (instance.slots.default) {
+      instance.block = callWithErrorHandling(
+        instance.slots.default,
+        instance,
+        ErrorCodes.RENDER_SLOTS,
+      )
+    } else {
+      instance.block = []
+    }
+  } else if (__DEV__) {
     if (isFunction(component) || !component.render) {
       instance.block = normalizeNode(setupResult)
     } else {

@@ -1,5 +1,6 @@
 import {
   type EffectScope,
+  Fragment,
   ReactiveEffect,
   type Ref,
   inject,
@@ -357,6 +358,18 @@ describe('component', () => {
     }).render()
 
     expect(host.textContent).toBe(`() => []`)
+  })
+
+  it('Fragment slots should be rendered', () => {
+    const { host } = define({
+      setup() {
+        return createComponent(Fragment as any, null, {
+          default: () => template('HI', true)(),
+        })
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('HI')
   })
 })
 
