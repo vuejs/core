@@ -1,4 +1,4 @@
-import { type Block, VaporFragment, isBlock } from '../block'
+import { type Block, isBlock } from '../block'
 import { isArray } from '@vue/shared'
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -41,8 +41,7 @@ export function normalizeNode(node: NodeChild): Block {
   if (node == null || typeof node === 'boolean') {
     return []
   } else if (isArray(node) && node.length) {
-    // fragment
-    return new VaporFragment(node.map(normalizeNode))
+    return node.map(normalizeNode)
   } else if (isBlock(node)) {
     return node
   } else {

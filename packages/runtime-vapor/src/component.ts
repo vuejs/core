@@ -62,7 +62,7 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
-import { normalizeNode } from './dom/node'
+import { type NodeChild, normalizeNode } from './dom/node'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -71,7 +71,7 @@ export type VaporComponent = FunctionalVaporComponent | ObjectVaporComponent
 export type VaporSetupFn = (
   props: any,
   ctx: Pick<VaporComponentInstance, 'slots' | 'attrs' | 'emit' | 'expose'>,
-) => Block | Record<string, any> | undefined
+) => NodeChild | Record<string, any> | undefined
 
 export type FunctionalVaporComponent = VaporSetupFn &
   Omit<ObjectVaporComponent, 'setup'> & {
