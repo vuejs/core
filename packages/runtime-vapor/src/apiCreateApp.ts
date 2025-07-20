@@ -88,18 +88,7 @@ function prepareApp() {
 }
 
 function postPrepareApp(app: App) {
-  if (__DEV__) {
-    app.config.globalProperties = new Proxy(
-      {},
-      {
-        set() {
-          warn(`app.config.globalProperties is not supported in vapor mode.`)
-          return false
-        },
-      },
-    )
-  }
-
+  app.vapor = true
   const mount = app.mount
   app.mount = (container, ...args: any[]) => {
     container = normalizeContainer(container) as ParentNode
