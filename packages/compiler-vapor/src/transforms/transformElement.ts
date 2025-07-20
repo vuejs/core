@@ -67,7 +67,12 @@ export const transformElement: NodeTransform = (node, context) => {
       getEffectIndex,
     )
 
-    let { parent } = context
+    let { index, parent } = context
+    const isLastChild =
+      parent &&
+      parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
+        .length ===
+        index + 1
     while (
       parent &&
       parent.parent &&
@@ -94,6 +99,8 @@ export const transformElement: NodeTransform = (node, context) => {
         node as PlainElementNode,
         propsResult,
         singleRoot,
+        // Multi-root always generates dedicated templates for each root
+        isLastChild || context.root === parent,
         context,
         getEffectIndex,
       )
@@ -196,6 +203,7 @@ function transformNativeElement(
   node: PlainElementNode,
   propsResult: PropsResult,
   singleRoot: boolean,
+  isLastChild: boolean,
   context: TransformContext,
   getEffectIndex: () => number,
 ) {
@@ -244,8 +252,7 @@ function transformNativeElement(
   }
 
   template += `>` + context.childrenTemplate.join('')
-  // TODO remove unnecessary close tag, e.g. if it's the last element of the template
-  if (!isVoidTag(tag)) {
+  if (!isVoidTag(tag) && !isLastChild) {
     template += `</${tag}>`
   }
 
