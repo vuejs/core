@@ -1,5 +1,4 @@
 import { createTextNode, normalizeNode } from '../../src/dom/node'
-import { VaporFragment } from '../../src'
 
 describe('dom node', () => {
   test('normalizeNode', () => {
@@ -11,12 +10,8 @@ describe('dom node', () => {
     expect(normalizeNode(true)).toBeInstanceOf(Array)
     expect(normalizeNode(false)).toBeInstanceOf(Array)
 
-    // array -> Fragment
-    expect(normalizeNode(['foo'])).toBeInstanceOf(VaporFragment)
-
-    // VNode -> VNode
-    const vnode = createTextNode('div')
-    expect(normalizeNode(vnode)).toBe(vnode)
+    // ['foo'] -> [TextNode]
+    expect(normalizeNode(['foo'])).toMatchObject(createTextNode('foo'))
 
     // primitive types
     expect(normalizeNode('foo')).toMatchObject(createTextNode('foo'))
