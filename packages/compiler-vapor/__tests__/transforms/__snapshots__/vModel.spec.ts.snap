@@ -199,7 +199,7 @@ exports[`compiler: vModel transform > should support member expression w/ inline
 
 exports[`compiler: vModel transform > should support select 1`] = `
 "import { applySelectModel as _applySelectModel, template as _template } from 'vue';
-const t0 = _template("<select></select>", true)
+const t0 = _template("<select>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -221,7 +221,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support textarea 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
-const t0 = _template("<textarea></textarea>", true)
+const t0 = _template("<textarea>", true)
 
 export function render(_ctx) {
   const n0 = t0()

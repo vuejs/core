@@ -35,7 +35,7 @@ describe('compiler: transform slot', () => {
     const { ir, code } = compileWithSlots(`<Comp><div/></Comp>`)
     expect(code).toMatchSnapshot()
 
-    expect([...ir.template.keys()]).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div>'])
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
       id: 1,
@@ -163,7 +163,7 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect([...ir.template.keys()]).toEqual(['foo', 'bar', '<span></span>'])
+    expect([...ir.template.keys()]).toEqual(['foo', 'bar', '<span>'])
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
       id: 4,

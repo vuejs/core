@@ -2,8 +2,8 @@
 
 exports[`compiler: children transform > anchor insertion in middle 1`] = `
 "import { child as _child, next as _next, setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-const t1 = _template("<div><div></div><!><div></div></div>", true)
+const t0 = _template("<div>")
+const t1 = _template("<div><div></div><!><div>", true)
 
 export function render(_ctx) {
   const n4 = t1()
@@ -19,7 +19,7 @@ export function render(_ctx) {
 
 exports[`compiler: children transform > children & sibling references 1`] = `
 "import { child as _child, next as _next, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div><p> </p> <p> </p></div>", true)
+const t0 = _template("<div><p> </p> <p> ", true)
 
 export function render(_ctx) {
   const n3 = t0()
@@ -39,7 +39,7 @@ export function render(_ctx) {
 
 exports[`compiler: children transform > efficient find 1`] = `
 "import { child as _child, nthChild as _nthChild, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div><div>x</div><div>x</div><div> </div></div>", true)
+const t0 = _template("<div><div>x</div><div>x</div><div> ", true)
 
 export function render(_ctx) {
   const n1 = t0()
@@ -52,7 +52,7 @@ export function render(_ctx) {
 
 exports[`compiler: children transform > efficient traversal 1`] = `
 "import { child as _child, next as _next, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div><div>x</div><div><span> </span></div><div><span> </span></div><div><span> </span></div></div>", true)
+const t0 = _template("<div><div>x</div><div><span> </div><div><span> </div><div><span> ", true)
 
 export function render(_ctx) {
   const n3 = t0()
