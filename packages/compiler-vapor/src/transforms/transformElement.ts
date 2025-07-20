@@ -21,6 +21,7 @@ import {
   capitalize,
   extend,
   isBuiltInDirective,
+  isFormattingTag,
   isVoidTag,
   makeMap,
 } from '@vue/shared'
@@ -77,14 +78,43 @@ export const transformElement: NodeTransform = (node, context) => {
       getEffectIndex,
     )
 
-    let { index, parent } = context
-    const isLastChild =
-      parent &&
-      parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
-        .length ===
-        index + 1
+    let { index, parent, block } = context
+    let isLastChild = true
+    const checkIsLastChild = () => {
+      isLastChild &&=
+        !!parent &&
+        (block !== parent.block ||
+          parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
+            .length ===
+            index + 1)
+    }
 
+    checkIsLastChild()
     const singleRoot = isSingleRoot(context)
+
+    // If it is a formatting tag, close tag is absolutely required if it's not on the right-most path of the tree
+    // => https://html.spec.whatwg.org/multipage/parsing.html#reconstruct-the-active-formatting-elements
+    // If the parent has the same tag, then close tag is required if it's not on the right-most path of the tree
+    // => The parent's close tag will close the child otherwise; disambiguation is needed
+    if (
+      isFormattingTag(node.tag) ||
+      (parent &&
+        parent.node.type === NodeTypes.ELEMENT &&
+        node.tag === parent.node.tag)
+    ) {
+      while (
+        isLastChild &&
+        parent &&
+        parent.parent &&
+        block === parent.parent.block &&
+        parent.node.type === NodeTypes.ELEMENT
+      ) {
+        index = parent.index
+        parent = parent.parent
+        checkIsLastChild()
+      }
+    }
+
     if (isComponent) {
       transformComponentElement(
         node as ComponentNode,

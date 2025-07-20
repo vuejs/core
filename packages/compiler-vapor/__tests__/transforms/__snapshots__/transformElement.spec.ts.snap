@@ -1,5 +1,15 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > b in nested divs 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div><div><b></b></div><div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > MathML 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<math><mrow><mi>x</mi></mrow></math>", true, 2)
@@ -477,7 +487,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > props + children 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=\\"foo\\"><span></span><main><b></b><div><div><span></span><span>", true)
+const t0 = _template("<div id=\\"foo\\"><span><b></b></span><main><b></b><div><div><span></span><span>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -516,6 +526,26 @@ const t0 = _template("<div>", true)
 export function render(_ctx) {
   const n0 = t0()
   _setStyle(n0, ["color: green", { color: 'red' }])
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > pure nested divs 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div><div><div></div></div><div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > span in nested divs 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div><div><span></div><div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
   return n0
 }"
 `;
