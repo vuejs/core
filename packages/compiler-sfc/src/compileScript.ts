@@ -817,7 +817,14 @@ export function compileScript(
   if (ctx.emitDecl) {
     destructureElements.push(`emit: __emit`)
   }
-  if (destructureElements.length) {
+
+  let destructureElementsDeclaration = ''
+  if (ctx.needToGetCtx) {
+    args += `, __ctx`
+    if (destructureElements.length) {
+      destructureElementsDeclaration = `  const { ${destructureElements.join(', ')} } = __ctx;\n`
+    }
+  } else if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
   }
 
@@ -994,7 +1001,7 @@ export function compileScript(
         vapor && !ssr ? `defineVaporComponent` : `defineComponent`,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
-      }setup(${args}) {\n${exposeCall}`,
+      }setup(${args}) {\n${destructureElementsDeclaration}${exposeCall}`,
     )
     ctx.s.appendRight(endOffset, `})`)
   } else {
@@ -1010,14 +1017,14 @@ export function compileScript(
         `\n${genDefaultAs} /*@__PURE__*/Object.assign(${
           defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`,
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${destructureElementsDeclaration}${exposeCall}`,
       )
       ctx.s.appendRight(endOffset, `})`)
     } else {
       ctx.s.prependLeft(
         startOffset,
         `\n${genDefaultAs} {${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`,
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${destructureElementsDeclaration}${exposeCall}`,
       )
       ctx.s.appendRight(endOffset, `}`)
     }
