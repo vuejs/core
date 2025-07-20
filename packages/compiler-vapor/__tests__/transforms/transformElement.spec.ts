@@ -572,7 +572,7 @@ describe('compiler: element transform', () => {
       `<div id="foo" class="bar" />`,
     )
 
-    const template = '<div id="foo" class="bar"></div>'
+    const template = '<div id="foo" class="bar">'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
     expect([...ir.template.keys()]).toMatchObject([template])
@@ -588,12 +588,37 @@ describe('compiler: element transform', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('props + children', () => {
+  test('props + child', () => {
     const { code, ir } = compileWithElementTransform(
       `<div id="foo"><span/></div>`,
     )
 
-    const template = '<div id="foo"><span></span></div>'
+    const template = '<div id="foo"><span>'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect([...ir.template.keys()]).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('props + children', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div id="foo"><span/><main><b/><div><div><span/><span/></div></div></main></div>`,
+    )
+
+    const template =
+      '<div id="foo"><span></span><main><b></b><div><div><span></span><span>'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect([...ir.template.keys()]).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('multiple roots', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div><span/></div><div><span /></div>`,
+    )
+
+    const template = '<div><span>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
     expect([...ir.template.keys()]).toMatchObject([template])
@@ -1011,9 +1036,9 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
     expect([...ir.template.keys()]).toEqual([
-      '<div>123</div>',
-      '<p></p>',
-      '<form></form>',
+      '<div>123',
+      '<p>',
+      '<form>',
     ])
     expect(ir.block.dynamic).toMatchObject({
       children: [

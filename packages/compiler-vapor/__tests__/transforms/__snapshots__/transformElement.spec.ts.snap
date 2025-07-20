@@ -439,9 +439,9 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > invalid html nesting 1`] = `
 "import { insert as _insert, template as _template } from 'vue';
-const t0 = _template("<div>123</div>")
-const t1 = _template("<p></p>")
-const t2 = _template("<form></form>")
+const t0 = _template("<div>123")
+const t1 = _template("<p>")
+const t2 = _template("<form>")
 
 export function render(_ctx) {
   const n1 = t1()
@@ -454,9 +454,30 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > multiple roots 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div><span>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  return [n0, n1]
+}"
+`;
+
+exports[`compiler: element transform > props + child 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div id=\\"foo\\"><span>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > props + children 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=\\"foo\\"><span></span></div>", true)
+const t0 = _template("<div id=\\"foo\\"><span></span><main><b></b><div><div><span></span><span>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -466,7 +487,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > props merging: class 1`] = `
 "import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -477,7 +498,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > props merging: event handlers 1`] = `
 "import { createInvoker as _createInvoker, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -490,7 +511,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > props merging: style 1`] = `
 "import { setStyle as _setStyle, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -501,7 +522,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>", true)
+const t0 = _template("<div id=\\"foo\\" class=\\"bar\\">", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -521,7 +542,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-bind="obj" 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -532,7 +553,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-bind="obj" after static prop 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -543,7 +564,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-bind="obj" before static prop 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -554,7 +575,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-bind="obj" between static props 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -565,7 +586,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-on="obj" 1`] = `
 "import { setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
