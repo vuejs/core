@@ -573,11 +573,48 @@ describe('compiler: element transform', () => {
 
   test('static props', () => {
     const { code, ir } = compileWithElementTransform(
-      `<div id="foo" class="bar" title="has whitespace" inert data-targets="foo>bar" />`,
+      `<div id="foo" class="bar" />`,
+    )
+
+    const template = '<div id=foo class=bar></div>'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect(ir.template).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('static props unquoted', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div id="foo" class="bar" title='foo"=bar' />`,
+    )
+
+    const template = '<div id=foo class=bar title=foo"=bar></div>'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect(ir.template).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('static props quoted', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div title="has whitespace" alt='"contains quotes"' data-targets="foo>bar" />`,
     )
 
     const template =
-      '<div id=foo class=bar title="has whitespace"inert data-targets="foo>bar"></div>'
+      '<div title="has whitespace"alt="&#34;contains quotes&#34;"data-targets="foo>bar"></div>'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect(ir.template).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('static props mixed quoting', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div title="has whitespace" inert data-targets="foo>bar" />`,
+    )
+
+    const template =
+      '<div title="has whitespace"inert data-targets="foo>bar"></div>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
     expect(ir.template).toMatchObject([template])

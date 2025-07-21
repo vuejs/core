@@ -236,7 +236,9 @@ function transformNativeElement(
           needsQuoting = /[\s>]|^["'=]/.test(value)
 
           if (needsQuoting) {
-            template += `="${value}"`
+            const encoded = value.replace(/"/g, '&#34;')
+
+            template += `="${encoded}"`
           } else {
             template += `=${value}`
           }
