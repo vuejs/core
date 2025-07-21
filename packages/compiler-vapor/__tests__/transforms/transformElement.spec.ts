@@ -573,10 +573,11 @@ describe('compiler: element transform', () => {
 
   test('static props', () => {
     const { code, ir } = compileWithElementTransform(
-      `<div id="foo" class="bar" />`,
+      `<div id="foo" class="bar" title="has whitespace" data-targets="foo>bar" />`,
     )
 
-    const template = '<div id="foo" class="bar"></div>'
+    const template =
+      '<div id=foo class=bar title="has whitespace" data-targets="foo>bar"></div>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
     expect(ir.template).toMatchObject([template])
@@ -588,7 +589,7 @@ describe('compiler: element transform', () => {
       `<div id="foo"><span/></div>`,
     )
 
-    const template = '<div id="foo"><span></span></div>'
+    const template = '<div id=foo><span></span></div>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
     expect(ir.template).toMatchObject([template])

@@ -354,7 +354,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > props + children 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=\\"foo\\"><span></span></div>", true)
+const t0 = _template("<div id=foo><span></span></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -399,7 +399,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>", true)
+const t0 = _template("<div id=foo class=bar title=\\"has whitespace\\" data-targets=\\"foo>bar\\"></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()

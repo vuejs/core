@@ -224,8 +224,20 @@ function transformNativeElement(
     for (const prop of propsResult[1]) {
       const { key, values } = prop
       if (key.isStatic && values.length === 1 && values[0].isStatic) {
+        const value = values[0].content
+
         template += ` ${key.content}`
-        if (values[0].content) template += `="${values[0].content}"`
+
+        if (value) {
+          // https://html.spec.whatwg.org/multipage/introduction.html#intro-early-example
+          const needsQuoting = /[\s>]|^["'=]/.test(value)
+
+          if (needsQuoting) {
+            template += `="${value}"`
+          } else {
+            template += `=${value}`
+          }
+        }
       } else {
         dynamicProps.push(key.content)
         context.registerEffect(
