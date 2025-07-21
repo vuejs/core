@@ -754,7 +754,6 @@ describe('SFC compile <script setup>', () => {
         assertCode(content)
       })
 
-      // 当用户使用 defineEmits 的时候， $emit 需要改成 const $emit = __emit
       test('should include emit when defineEmits is used', () => {
         let { content } = compile(
           `
