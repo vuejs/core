@@ -1017,7 +1017,7 @@ export function compileScript(
     setupPreambleLines.push(`__expose();`)
 
   const setupPreamble = setupPreambleLines.length
-    ? '  ' + setupPreambleLines.join('\n  ')
+    ? `  ${setupPreambleLines.join('\n  ')}\n`
     : ''
   // wrap setup code with function.
   if (ctx.isTS) {

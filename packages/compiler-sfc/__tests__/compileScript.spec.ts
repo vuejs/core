@@ -717,6 +717,151 @@ describe('SFC compile <script setup>', () => {
         consumer.originalPositionFor(getPositionInCode(content, 'Error')),
       ).toMatchObject(getPositionInCode(source, `Error`))
     })
+
+    describe('template globals destructuring based on usage', () => {
+      const theCompile = (template: string, setup = '/* ... */') =>
+        compile(
+          `<script setup>${setup}</script>\n<template>${template}</template>`,
+          { inlineTemplate: true },
+        )
+
+      test('should include attrs when $attrs is used', () => {
+        let { content } = theCompile('<div v-bind="$attrs"></div>')
+        expect(content).toMatch('setup(__props, { attrs: $attrs })')
+        expect(content).not.toMatch('slots: $slots')
+        expect(content).not.toMatch('emit: $emit')
+        expect(content).not.toMatch('const $props = __props')
+        assertCode(content)
+      })
+
+      test('should include attrs when $slots is used', () => {
+        let { content } = theCompile('<Comp :foo="$slots.foo"></Comp>')
+        expect(content).toMatch('setup(__props, { slots: $slots })')
+        assertCode(content)
+      })
+
+      test('should include props when $props is used', () => {
+        let { content } = theCompile('<div>{{ $props }}</div>')
+        expect(content).toMatch('setup(__props)')
+        expect(content).toMatch('const $props = __props')
+        assertCode(content)
+      })
+
+      test('should include emit when $emit is used', () => {
+        let { content } = theCompile(`<div @click="$emit('click')"></div>`)
+        expect(content).toMatch('setup(__props, { emit: $emit })')
+        expect(content).not.toMatch('const $emit = __emit')
+        assertCode(content)
+      })
+
+      // 当用户使用 defineEmits 的时候， $emit 需要改成 const $emit = __emit
+      test('should include emit when defineEmits is used', () => {
+        let { content } = compile(
+          `
+          <script setup>
+            const emit = defineEmits(['click'])
+          </script>
+          <template>
+            <div @click="$emit('click')"></div>
+          </template>
+        `,
+          { inlineTemplate: true },
+        )
+        expect(content).toMatch('setup(__props, { emit: __emit })')
+        expect(content).toMatch('const $emit = __emit')
+        expect(content).toMatch('const emit = __emit')
+        assertCode(content)
+      })
+
+      test('should include all globals when they are used', () => {
+        let { content } = theCompile(
+          '<div>{{ $props }}{{ $slots }}{{ $emit }}{{ $attrs }}</div>',
+        )
+        expect(content).toMatch(
+          'setup(__props, { emit: $emit, attrs: $attrs, slots: $slots })',
+        )
+        expect(content).toMatch('const $props = __props')
+        assertCode(content)
+      })
+
+      test('should not include globals when neither is used', () => {
+        let { content } = theCompile('<div>{{ msg }}</div>')
+        expect(content).toMatch('setup(__props)')
+        expect(content).not.toMatch('attrs: $attrs')
+        expect(content).not.toMatch('slots: $slots')
+        expect(content).not.toMatch('emit: $emit')
+        expect(content).not.toMatch('props: $props')
+        assertCode(content)
+      })
+
+      describe('user-defined globals override', () => {
+        test('should not destructure $attrs when user defines it', () => {
+          let { content } = theCompile(
+            '<div v-bind="$attrs"></div>',
+            'let $attrs',
+          )
+          expect(content).toMatch('setup(__props)')
+          expect(content).not.toMatch('attrs: $attrs')
+          assertCode(content)
+        })
+
+        test('should not destructure $slots when user defines it', () => {
+          let { content } = theCompile(
+            '<Comp :foo="$slots.foo"></Comp>',
+            'let $slots',
+          )
+          expect(content).toMatch('setup(__props)')
+          expect(content).not.toMatch('slots: $slots')
+          assertCode(content)
+        })
+
+        test('should not destructure $emit when user defines it', () => {
+          let { content } = theCompile(
+            `<div @click="$emit('click')">click</div>`,
+            'let $emit',
+          )
+          expect(content).toMatch('setup(__props)')
+          expect(content).not.toMatch('emit: $emit')
+          assertCode(content)
+        })
+
+        test('should not generate $props assignment when user defines it', () => {
+          let { content } = theCompile(
+            '<div>{{ $props.msg }}</div>',
+            'let $props',
+          )
+          expect(content).toMatch('setup(__props)')
+          expect(content).not.toMatch('const $props = __props')
+          assertCode(content)
+        })
+
+        test('should only destructure non-user-defined globals', () => {
+          let { content } = theCompile(
+            '<div>{{ $attrs }}{{ $slots }}{{ $emit }}{{ $props }}</div>',
+            'let $attrs',
+          )
+          expect(content).toMatch(
+            'setup(__props, { emit: $emit, slots: $slots })',
+          )
+          expect(content).not.toMatch('attrs: $attrs')
+          expect(content).toMatch('const $props = __props')
+          assertCode(content)
+        })
+
+        test('should handle mixed defineEmits and user-defined $emit', () => {
+          let { content } = theCompile(
+            `<div @click="$emit('click')">click</div>`,
+            `
+              const emit = defineEmits(['click'])
+              let $emit
+            `,
+          )
+          expect(content).toMatch('setup(__props, { emit: __emit })')
+          expect(content).toMatch('const emit = __emit')
+          assertCode(content)
+        })
+      })
+    })
   })
 
   describe('with TypeScript', () => {
