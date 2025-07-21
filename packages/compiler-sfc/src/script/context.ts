@@ -30,9 +30,6 @@ export class ScriptCompileContext {
   globalScopes?: TypeScope[]
   userImports: Record<string, ImportBinding> = Object.create(null)
 
-  // get the full ctx, currently used for Vapor's prod setup function
-  needToGetCtx = true
-
   // macros presence check
   hasDefinePropsCall = false
   hasDefineEmitCall = false

@@ -123,10 +123,6 @@ export function generate(
   }
 
   push(INDENT_START)
-  if (bindingMetadata && inline) {
-    push(NEWLINE, `const $props = __props`)
-    push(NEWLINE, `const { emit: $emit, attrs: $attrs, slots: $slots } = __ctx`)
-  }
   if (ir.hasTemplateRef) {
     push(
       NEWLINE,

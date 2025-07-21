@@ -59,7 +59,10 @@ import { DEFINE_SLOTS, processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
 import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
-import { isImportUsed } from './script/importUsageCheck'
+import {
+  checkTemplateGlobalsUsage,
+  isImportUsed,
+} from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
 
 export interface SFCScriptCompileOptions {
@@ -181,6 +184,7 @@ export function compileScript(
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const vapor = sfc.vapor || options.vapor
   const ssr = options.templateOptions?.ssr
+  const setupPreambleLines = [] as string[]
 
   if (!scriptSetup) {
     if (!script) {
@@ -818,13 +822,39 @@ export function compileScript(
     destructureElements.push(`emit: __emit`)
   }
 
-  let destructureElementsDeclaration = ''
-  if (ctx.needToGetCtx) {
-    args += `, __ctx`
-    if (destructureElements.length) {
-      destructureElementsDeclaration = `  const { ${destructureElements.join(', ')} } = __ctx;\n`
+  // generate $props, $emit, $attrs, $slots
+  if (options.inlineTemplate) {
+    if (sfc.template && sfc.template.ast) {
+      const { usesProps, usesEmit, usesAttrs, usesSlots } =
+        checkTemplateGlobalsUsage(sfc)
+      // $props
+      if (usesProps && !('$props' in ctx.bindingMetadata)) {
+        setupPreambleLines.push(`const $props = __props`)
+        ctx.bindingMetadata['$props'] = BindingTypes.SETUP_REACTIVE_CONST
+      }
+      // $emit
+      if (usesEmit && !('$emit' in ctx.bindingMetadata)) {
+        if (ctx.emitDecl) {
+          setupPreambleLines.push(`const $emit = __emit`)
+        } else {
+          destructureElements.push('emit: $emit')
+        }
+        ctx.bindingMetadata['$emit'] = BindingTypes.SETUP_CONST
+      }
+      // $attrs
+      if (usesAttrs && !('$attrs' in ctx.bindingMetadata)) {
+        destructureElements.push('attrs: $attrs')
+        ctx.bindingMetadata['$attrs'] = BindingTypes.SETUP_REACTIVE_CONST
+      }
+      // $slots
+      if (usesSlots && !('$slots' in ctx.bindingMetadata)) {
+        destructureElements.push('slots: $slots')
+        ctx.bindingMetadata['$slots'] = BindingTypes.SETUP_REACTIVE_CONST
+      }
     }
-  } else if (destructureElements.length) {
+  }
+
+  if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
   }
 
@@ -983,8 +1013,12 @@ export function compileScript(
 
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
-  const exposeCall =
-    ctx.hasDefineExposeCall || options.inlineTemplate ? `` : `  __expose();\n`
+  if (!ctx.hasDefineExposeCall && !options.inlineTemplate)
+    setupPreambleLines.push(`__expose();`)
+
+  const setupPreamble = setupPreambleLines.length
+    ? '  ' + setupPreambleLines.join('\n  ')
+    : ''
   // wrap setup code with function.
   if (ctx.isTS) {
     // for TS, make sure the exported type is still valid type with
@@ -1001,7 +1035,7 @@ export function compileScript(
         vapor && !ssr ? `defineVaporComponent` : `defineComponent`,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
-      }setup(${args}) {\n${destructureElementsDeclaration}${exposeCall}`,
+      }setup(${args}) {\n${setupPreamble}`,
     )
     ctx.s.appendRight(endOffset, `})`)
   } else {
@@ -1017,14 +1051,14 @@ export function compileScript(
         `\n${genDefaultAs} /*@__PURE__*/Object.assign(${
           defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${destructureElementsDeclaration}${exposeCall}`,
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
       )
       ctx.s.appendRight(endOffset, `})`)
     } else {
       ctx.s.prependLeft(
         startOffset,
         `\n${genDefaultAs} {${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${destructureElementsDeclaration}${exposeCall}`,
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
       )
       ctx.s.appendRight(endOffset, `}`)
     }
