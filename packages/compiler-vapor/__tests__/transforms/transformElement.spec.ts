@@ -577,7 +577,7 @@ describe('compiler: element transform', () => {
     )
 
     const template =
-      '<div id=foo class=bar title="has whitespace" data-targets="foo>bar"></div>'
+      '<div id=foo class=bar title="has whitespace"data-targets="foo>bar"></div>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
     expect(ir.template).toMatchObject([template])

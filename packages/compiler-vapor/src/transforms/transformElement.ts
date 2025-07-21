@@ -221,16 +221,19 @@ function transformNativeElement(
       getEffectIndex,
     )
   } else {
+    let needsQuoting = false
+
     for (const prop of propsResult[1]) {
       const { key, values } = prop
       if (key.isStatic && values.length === 1 && values[0].isStatic) {
         const value = values[0].content
 
-        template += ` ${key.content}`
+        if (!needsQuoting) template += ` `
+        template += key.content
 
         if (value) {
           // https://html.spec.whatwg.org/multipage/introduction.html#intro-early-example
-          const needsQuoting = /[\s>]|^["'=]/.test(value)
+          needsQuoting = /[\s>]|^["'=]/.test(value)
 
           if (needsQuoting) {
             template += `="${value}"`
