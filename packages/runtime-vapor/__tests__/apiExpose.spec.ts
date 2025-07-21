@@ -23,7 +23,7 @@ describe('api: expose', () => {
     define({
       setup: () => {
         const n0 = (i = createComponent(Child))
-        setRef(currentInstance as VaporComponentInstance, n0, childRef)
+        setRef(n0, childRef)
         return n0
       },
     }).render()
@@ -46,7 +46,7 @@ describe('api: expose', () => {
     define({
       setup: () => {
         const n0 = createComponent(Child)
-        setRef(currentInstance as VaporComponentInstance, n0, childRef)
+        setRef(n0, childRef)
         return n0
       },
     }).render()
