@@ -240,6 +240,8 @@ function transformNativeElement(
           } else {
             template += `=${value}`
           }
+        } else {
+          needsQuoting = false
         }
       } else {
         dynamicProps.push(key.content)
