@@ -59,7 +59,7 @@ import { DEFINE_SLOTS, processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
 import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
-import { isImportUsed } from './script/importUsageCheck'
+import { isUsedInTemplate } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
 
 export interface SFCScriptCompileOptions {
@@ -247,7 +247,15 @@ export function compileScript(
   ) {
     // template usage check is only needed in non-inline mode, so we can skip
     // the work if inlineTemplate is true.
-    let isUsedInTemplate = needTemplateUsageCheck
+    const theImport = {
+      isType,
+      imported,
+      local,
+      source,
+      isFromSetup,
+      isUsedInTemplate: needTemplateUsageCheck,
+    }
+
     if (
       needTemplateUsageCheck &&
       ctx.isTS &&
@@ -255,17 +263,10 @@ export function compileScript(
       !sfc.template.src &&
       !sfc.template.lang
     ) {
-      isUsedInTemplate = isImportUsed(local, sfc)
+      theImport.isUsedInTemplate = isUsedInTemplate(local, sfc)
     }
 
-    ctx.userImports[local] = {
-      isType,
-      imported,
-      local,
-      source,
-      isFromSetup,
-      isUsedInTemplate,
-    }
+    ctx.userImports[local] = theImport
   }
 
   function checkInvalidScopeReference(node: Node | undefined, method: string) {
@@ -823,12 +824,15 @@ export function compileScript(
   if (options.inlineTemplate) {
     if (sfc.template && sfc.template.ast) {
       // $props
-      if (isImportUsed('$props', sfc) && !('$props' in ctx.bindingMetadata)) {
+      if (
+        isUsedInTemplate('$props', sfc) &&
+        !('$props' in ctx.bindingMetadata)
+      ) {
         setupPreambleLines.push(`const $props = __props`)
         ctx.bindingMetadata['$props'] = BindingTypes.SETUP_REACTIVE_CONST
       }
       // $emit
-      if (isImportUsed('$emit', sfc) && !('$emit' in ctx.bindingMetadata)) {
+      if (isUsedInTemplate('$emit', sfc) && !('$emit' in ctx.bindingMetadata)) {
         if (ctx.emitDecl) {
           setupPreambleLines.push(`const $emit = __emit`)
         } else {
@@ -837,12 +841,18 @@ export function compileScript(
         ctx.bindingMetadata['$emit'] = BindingTypes.SETUP_CONST
       }
       // $attrs
-      if (isImportUsed('$attrs', sfc) && !('$attrs' in ctx.bindingMetadata)) {
+      if (
+        isUsedInTemplate('$attrs', sfc) &&
+        !('$attrs' in ctx.bindingMetadata)
+      ) {
         destructureElements.push('attrs: $attrs')
         ctx.bindingMetadata['$attrs'] = BindingTypes.SETUP_REACTIVE_CONST
       }
       // $slots
-      if (isImportUsed('$slots', sfc) && !('$slots' in ctx.bindingMetadata)) {
+      if (
+        isUsedInTemplate('$slots', sfc) &&
+        !('$slots' in ctx.bindingMetadata)
+      ) {
         destructureElements.push('slots: $slots')
         ctx.bindingMetadata['$slots'] = BindingTypes.SETUP_REACTIVE_CONST
       }

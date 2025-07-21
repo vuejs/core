@@ -15,8 +15,11 @@ import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
  * the properties that should be included in the object returned from setup()
  * when not using inline mode.
  */
-export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
-  return resolveTemplateUsedIdentifiers(sfc).has(local)
+export function isUsedInTemplate(
+  identifier: string,
+  sfc: SFCDescriptor,
+): boolean {
+  return resolveTemplateUsedIdentifiers(sfc).has(identifier)
 }
 
 const templateUsageCheckCache = createCache<Set<string>>()
