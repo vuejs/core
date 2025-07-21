@@ -77,7 +77,7 @@ export function setRef(
   const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
-  const canSetSetupRef = validateTemplateRef(setupState)
+  const canSetSetupRef = createCanSetSetupRefChecker(setupState)
 
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
@@ -148,7 +148,7 @@ export function setRef(
   }
 }
 
-export function validateTemplateRef(
+export function createCanSetSetupRefChecker(
   setupState: Data,
 ): (key: string) => boolean {
   const rawSetupState = toRaw(setupState)

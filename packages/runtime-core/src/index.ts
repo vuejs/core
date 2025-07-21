@@ -565,4 +565,4 @@ export { createInternalObject } from './internalObject'
 /**
  * @internal
  */
-export { validateTemplateRef } from './rendererTemplateRef'
+export { createCanSetSetupRefChecker } from './rendererTemplateRef'
