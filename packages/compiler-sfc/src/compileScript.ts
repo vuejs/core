@@ -59,10 +59,7 @@ import { DEFINE_SLOTS, processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
 import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
-import {
-  checkTemplateGlobalsUsage,
-  isImportUsed,
-} from './script/importUsageCheck'
+import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
 
 export interface SFCScriptCompileOptions {
@@ -825,15 +822,13 @@ export function compileScript(
   // generate $props, $emit, $attrs, $slots
   if (options.inlineTemplate) {
     if (sfc.template && sfc.template.ast) {
-      const { usesProps, usesEmit, usesAttrs, usesSlots } =
-        checkTemplateGlobalsUsage(sfc)
       // $props
-      if (usesProps && !('$props' in ctx.bindingMetadata)) {
+      if (isImportUsed('$props', sfc) && !('$props' in ctx.bindingMetadata)) {
         setupPreambleLines.push(`const $props = __props`)
         ctx.bindingMetadata['$props'] = BindingTypes.SETUP_REACTIVE_CONST
       }
       // $emit
-      if (usesEmit && !('$emit' in ctx.bindingMetadata)) {
+      if (isImportUsed('$emit', sfc) && !('$emit' in ctx.bindingMetadata)) {
         if (ctx.emitDecl) {
           setupPreambleLines.push(`const $emit = __emit`)
         } else {
@@ -842,12 +837,12 @@ export function compileScript(
         ctx.bindingMetadata['$emit'] = BindingTypes.SETUP_CONST
       }
       // $attrs
-      if (usesAttrs && !('$attrs' in ctx.bindingMetadata)) {
+      if (isImportUsed('$attrs', sfc) && !('$attrs' in ctx.bindingMetadata)) {
         destructureElements.push('attrs: $attrs')
         ctx.bindingMetadata['$attrs'] = BindingTypes.SETUP_REACTIVE_CONST
       }
       // $slots
-      if (usesSlots && !('$slots' in ctx.bindingMetadata)) {
+      if (isImportUsed('$slots', sfc) && !('$slots' in ctx.bindingMetadata)) {
         destructureElements.push('slots: $slots')
         ctx.bindingMetadata['$slots'] = BindingTypes.SETUP_REACTIVE_CONST
       }
