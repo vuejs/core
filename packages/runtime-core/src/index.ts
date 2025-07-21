@@ -562,3 +562,7 @@ export { initFeatureFlags } from './featureFlags'
  * @internal
  */
 export { createInternalObject } from './internalObject'
+/**
+ * @internal
+ */
+export { validateTemplateRef } from './rendererTemplateRef'

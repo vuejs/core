@@ -14,7 +14,11 @@ import { warn } from './warning'
 import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { queuePostRenderEffect } from './renderer'
-import { type ComponentOptions, getComponentPublicInstance } from './component'
+import {
+  type ComponentOptions,
+  type Data,
+  getComponentPublicInstance,
+} from './component'
 import { knownTemplateRefs } from './helpers/useTemplateRef'
 
 /**
@@ -73,25 +77,7 @@ export function setRef(
   const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
-  const rawSetupState = toRaw(setupState)
-  const canSetSetupRef =
-    setupState === EMPTY_OBJ
-      ? () => false
-      : (key: string) => {
-          if (__DEV__) {
-            if (hasOwn(rawSetupState, key) && !isRef(rawSetupState[key])) {
-              warn(
-                `Template ref "${key}" used on a non-ref value. ` +
-                  `It will not work in the production build.`,
-              )
-            }
-
-            if (knownTemplateRefs.has(rawSetupState[key] as any)) {
-              return false
-            }
-          }
-          return hasOwn(rawSetupState, key)
-        }
+  const canSetSetupRef = validateTemplateRef(setupState)
 
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
@@ -160,4 +146,27 @@ export function setRef(
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
     }
   }
+}
+
+export function validateTemplateRef(
+  setupState: Data,
+): (key: string) => boolean {
+  const rawSetupState = toRaw(setupState)
+  return setupState === EMPTY_OBJ
+    ? () => false
+    : (key: string) => {
+        if (__DEV__) {
+          if (hasOwn(rawSetupState, key) && !isRef(rawSetupState[key])) {
+            warn(
+              `Template ref "${key}" used on a non-ref value. ` +
+                `It will not work in the production build.`,
+            )
+          }
+
+          if (knownTemplateRefs.has(rawSetupState[key] as any)) {
+            return false
+          }
+        }
+        return hasOwn(rawSetupState, key)
+      }
 }
