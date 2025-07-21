@@ -11,9 +11,7 @@ import { createCache } from '../cache'
 import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
 
 /**
- * Check if an import is used in the SFC's template. This is used to determine
- * the properties that should be included in the object returned from setup()
- * when not using inline mode.
+ * Check if an identifier is used in the SFC's template.
  */
 export function isUsedInTemplate(
   identifier: string,
