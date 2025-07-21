@@ -12,7 +12,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > checkbox with static indeterminate 1`] = `
 "import { setProp as _setProp, template as _template } from 'vue';
-const t0 = _template("<input type=\\"checkbox\\">", true)
+const t0 = _template("<input type=checkbox>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -462,7 +462,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > props + children 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=\\"foo\\"><span></span></div>", true)
+const t0 = _template("<div id=foo><span></span></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -507,7 +507,37 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>", true)
+const t0 = _template("<div id=foo class=bar></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props mixed quoting 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div title=\\"has whitespace\\"inert data-targets=\\"foo>bar\\"></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props quoted 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div title=\\"has whitespace\\"alt=\\"&#34;contains quotes&#34;\\"data-targets=\\"foo>bar\\"></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props unquoted 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div id=foo class=bar title=foo\\"=bar></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -517,7 +547,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > svg 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<svg><circle r=\\"40\\"></circle></svg>", true, 1)
+const t0 = _template("<svg><circle r=40></circle></svg>", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()

@@ -278,6 +278,8 @@ function transformNativeElement(
       getEffectIndex,
     )
   } else {
+    let needsQuoting = false
+
     for (const prop of propsResult[1]) {
       const { key, values } = prop
       // handling asset imports
@@ -286,18 +288,37 @@ function transformNativeElement(
           values[0].content.includes(imported.exp.content),
         )
       ) {
+        if (!needsQuoting) template += ` `
+
         // add start and end markers to the import expression, so it can be replaced
         // with string concatenation in the generator, see genTemplates
-        template += ` ${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
+        template += `${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
+        needsQuoting = true
       } else if (
         key.isStatic &&
         values.length === 1 &&
         (values[0].isStatic || values[0].content === "''") &&
         !dynamicKeys.includes(key.content)
       ) {
-        template += ` ${key.content}`
-        if (values[0].content)
-          template += `="${values[0].content === "''" ? '' : values[0].content}"`
+        const value = values[0].content === "''" ? '' : values[0].content
+
+        if (!needsQuoting) template += ` `
+        template += key.content
+
+        if (value) {
+          // https://html.spec.whatwg.org/multipage/introduction.html#intro-early-example
+          needsQuoting = /[\s>]|^["'=]/.test(value)
+
+          if (needsQuoting) {
+            const encoded = value.replace(/"/g, '&#34;')
+
+            template += `="${encoded}"`
+          } else {
+            template += `=${value}`
+          }
+        } else {
+          needsQuoting = false
+        }
       } else {
         dynamicProps.push(key.content)
         context.registerEffect(

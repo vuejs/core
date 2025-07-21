@@ -156,7 +156,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (checkbox) 1`] = `
 "import { applyCheckboxModel as _applyCheckboxModel, template as _template } from 'vue';
-const t0 = _template("<input type=\\"checkbox\\">", true)
+const t0 = _template("<input type=checkbox>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -178,7 +178,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (radio) 1`] = `
 "import { applyRadioModel as _applyRadioModel, template as _template } from 'vue';
-const t0 = _template("<input type=\\"radio\\">", true)
+const t0 = _template("<input type=radio>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -189,7 +189,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (text) 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
-const t0 = _template("<input type=\\"text\\">", true)
+const t0 = _template("<input type=text>", true)
 
 export function render(_ctx) {
   const n0 = t0()

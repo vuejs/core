@@ -140,7 +140,7 @@ export function render(_ctx) {
 
 exports[`compile > directives > v-pre > basic 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>", true)
+const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}</div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -150,7 +150,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
+const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}</div>")
 const t1 = _template("<div> </div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {

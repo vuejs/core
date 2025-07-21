@@ -578,7 +578,45 @@ describe('compiler: element transform', () => {
       `<div id="foo" class="bar" />`,
     )
 
-    const template = '<div id="foo" class="bar"></div>'
+    const template = '<div id=foo class=bar></div>'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect([...ir.template.keys()]).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('static props unquoted', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div id="foo" class="bar" title='foo"=bar' />`,
+    )
+
+    const template = '<div id=foo class=bar title=foo"=bar></div>'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect([...ir.template.keys()]).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('static props quoted', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div title="has whitespace" alt='"contains quotes"' data-targets="foo>bar" />`,
+    )
+
+    const template =
+      '<div title="has whitespace"alt="&#34;contains quotes&#34;"data-targets="foo>bar"></div>'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect([...ir.template.keys()]).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('static props mixed quoting', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div title="has whitespace" inert data-targets="foo>bar" />`,
+    )
+
+    const template =
+      '<div title="has whitespace"inert data-targets="foo>bar"></div>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
     expect([...ir.template.keys()]).toMatchObject([template])
@@ -599,7 +637,7 @@ describe('compiler: element transform', () => {
       `<div id="foo"><span/></div>`,
     )
 
-    const template = '<div id="foo"><span></span></div>'
+    const template = '<div id=foo><span></span></div>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
     expect([...ir.template.keys()]).toMatchObject([template])
@@ -1055,11 +1093,10 @@ describe('compiler: element transform', () => {
     const t = `<svg><circle r="40"></circle></svg>`
     const { code, ir } = compileWithElementTransform(t)
     expect(code).toMatchSnapshot()
-    expect(code).contains(
-      '_template("<svg><circle r=\\"40\\"></circle></svg>", true, 1)',
-    )
-    expect([...ir.template.keys()]).toMatchObject([t])
-    expect(ir.template.get(t)).toBe(1)
+    const expectedTemplate = '<svg><circle r=40></circle></svg>'
+    expect(code).contains(`_template("${expectedTemplate}", true, 1)`)
+    expect([...ir.template.keys()]).toMatchObject([expectedTemplate])
+    expect(ir.template.get(expectedTemplate)).toBe(1)
   })
 
   test('MathML', () => {
