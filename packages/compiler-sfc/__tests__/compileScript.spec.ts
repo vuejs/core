@@ -718,14 +718,14 @@ describe('SFC compile <script setup>', () => {
       ).toMatchObject(getPositionInCode(source, `Error`))
     })
 
-    describe('destructuring component instance for built-in properties', () => {
+    describe('destructure setup context for built-in properties', () => {
       const theCompile = (template: string, setup = '/* ... */') =>
         compile(
           `<script setup>${setup}</script>\n<template>${template}</template>`,
           { inlineTemplate: true },
         )
 
-      test('should destructure attrs when $attrs is used', () => {
+      test('should extract attrs when $attrs is used', () => {
         let { content } = theCompile('<div v-bind="$attrs"></div>')
         expect(content).toMatch('setup(__props, { attrs: $attrs })')
         expect(content).not.toMatch('slots: $slots')
@@ -734,20 +734,20 @@ describe('SFC compile <script setup>', () => {
         assertCode(content)
       })
 
-      test('should destructure slots when $slots is used', () => {
+      test('should extract slots when $slots is used', () => {
         let { content } = theCompile('<Comp :foo="$slots.foo"></Comp>')
         expect(content).toMatch('setup(__props, { slots: $slots })')
         assertCode(content)
       })
 
-      test('should alias $props to __props when $props is used', () => {
+      test('should alias __props to $props when $props is used', () => {
         let { content } = theCompile('<div>{{ $props }}</div>')
         expect(content).toMatch('setup(__props)')
         expect(content).toMatch('const $props = __props')
         assertCode(content)
       })
 
-      test('should destructure emit when $emit is used', () => {
+      test('should extract emit when $emit is used', () => {
         let { content } = theCompile(`<div @click="$emit('click')"></div>`)
         expect(content).toMatch('setup(__props, { emit: $emit })')
         expect(content).not.toMatch('const $emit = __emit')
@@ -772,7 +772,7 @@ describe('SFC compile <script setup>', () => {
         assertCode(content)
       })
 
-      test('should destructure all built-in properties when they are used', () => {
+      test('should extract all built-in properties when they are used', () => {
         let { content } = theCompile(
           '<div>{{ $props }}{{ $slots }}{{ $emit }}{{ $attrs }}</div>',
         )
@@ -783,7 +783,7 @@ describe('SFC compile <script setup>', () => {
         assertCode(content)
       })
 
-      test('should not destructure built-in properties when neither is used', () => {
+      test('should not extract built-in properties when neither is used', () => {
         let { content } = theCompile('<div>{{ msg }}</div>')
         expect(content).toMatch('setup(__props)')
         expect(content).not.toMatch('attrs: $attrs')
@@ -794,7 +794,7 @@ describe('SFC compile <script setup>', () => {
       })
 
       describe('user-defined properties override', () => {
-        test('should not destructure $attrs when user defines it', () => {
+        test('should not extract $attrs when user defines it', () => {
           let { content } = theCompile(
             '<div v-bind="$attrs"></div>',
             'let $attrs',
@@ -804,7 +804,7 @@ describe('SFC compile <script setup>', () => {
           assertCode(content)
         })
 
-        test('should not destructure $slots when user defines it', () => {
+        test('should not extract $slots when user defines it', () => {
           let { content } = theCompile(
             '<Comp :foo="$slots.foo"></Comp>',
             'let $slots',
@@ -814,7 +814,7 @@ describe('SFC compile <script setup>', () => {
           assertCode(content)
         })
 
-        test('should not destructure $emit when user defines it', () => {
+        test('should not extract $emit when user defines it', () => {
           let { content } = theCompile(
             `<div @click="$emit('click')">click</div>`,
             'let $emit',
@@ -834,7 +834,7 @@ describe('SFC compile <script setup>', () => {
           assertCode(content)
         })
 
-        test('should only destructure non-user-defined properties', () => {
+        test('should only extract non-user-defined properties', () => {
           let { content } = theCompile(
             '<div>{{ $attrs }}{{ $slots }}{{ $emit }}{{ $props }}</div>',
             'let $attrs',
