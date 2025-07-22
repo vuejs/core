@@ -67,10 +67,9 @@ export class DynamicFragment extends VaporFragment {
 
     if (this.fallback && !isValidBlock(this.nodes)) {
       parent && remove(this.nodes, parent)
-      // if current nodes is a DynamicFragment, call its update with the fallback
-      // to handle nested dynamic fragment
-      if (this.nodes instanceof DynamicFragment) {
-        this.nodes.update(this.fallback)
+      // handle nested dynamic fragment
+      if (isFragment(this.nodes)) {
+        renderFallback(this.nodes, this.fallback, key)
       } else {
         this.nodes =
           (this.scope || (this.scope = new EffectScope())).run(this.fallback) ||
@@ -80,6 +79,22 @@ export class DynamicFragment extends VaporFragment {
     }
 
     setActiveSub(prevSub)
+  }
+}
+
+function renderFallback(
+  fragment: VaporFragment,
+  fallback: BlockFn,
+  key: any,
+): void {
+  if (fragment instanceof DynamicFragment) {
+    const nodes = fragment.nodes
+    if (isFragment(nodes)) {
+      renderFallback(nodes, fallback, key)
+    } else {
+      if (!fragment.fallback) fragment.fallback = fallback
+      fragment.update(fragment.fallback, key)
+    }
   }
 }
 

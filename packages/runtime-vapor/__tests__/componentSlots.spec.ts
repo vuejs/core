@@ -561,5 +561,64 @@ describe('component: slots', () => {
       await nextTick()
       expect(html()).toBe('fallback<!--if--><!--slot-->')
     })
+
+    test('render fallback with nested v-if ', async () => {
+      const Child = {
+        setup() {
+          return createSlot('default', null, () =>
+            document.createTextNode('fallback'),
+          )
+        },
+      }
+
+      const outerShow = ref(false)
+      const innerShow = ref(false)
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              return createIf(
+                () => outerShow.value,
+                () => {
+                  return createIf(
+                    () => innerShow.value,
+                    () => {
+                      return document.createTextNode('content')
+                    },
+                  )
+                },
+              )
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('fallback<!--if--><!--slot-->')
+
+      outerShow.value = true
+      await nextTick()
+      expect(html()).toBe('fallback<!--if--><!--if--><!--slot-->')
+
+      innerShow.value = true
+      await nextTick()
+      expect(html()).toBe('content<!--if--><!--if--><!--slot-->')
+
+      innerShow.value = false
+      await nextTick()
+      expect(html()).toBe('fallback<!--if--><!--if--><!--slot-->')
+
+      outerShow.value = false
+      await nextTick()
+      expect(html()).toBe('fallback<!--if--><!--slot-->')
+
+      outerShow.value = true
+      await nextTick()
+      expect(html()).toBe('fallback<!--if--><!--if--><!--slot-->')
+
+      innerShow.value = true
+      await nextTick()
+      expect(html()).toBe('content<!--if--><!--if--><!--slot-->')
+    })
   })
 })
