@@ -5,6 +5,7 @@ import {
   Comment as VComment,
   type VNode,
   type VNodeHook,
+  VaporSlot,
   createTextVNode,
   createVNode,
   invokeVNodeHook,
@@ -31,12 +32,17 @@ import {
   isRenderableAttrValue,
   isReservedProp,
   isString,
+  isVaporAnchors,
   normalizeClass,
   normalizeCssVarValue,
   normalizeStyle,
   stringifyStyle,
 } from '@vue/shared'
-import { type RendererInternals, needTransition } from './renderer'
+import {
+  type RendererInternals,
+  getVaporInterface,
+  needTransition,
+} from './renderer'
 import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
@@ -112,13 +118,22 @@ export function createHydrationFunctions(
     o: {
       patchProp,
       createText,
-      nextSibling,
+      nextSibling: next,
       parentNode,
       remove,
       insert,
       createComment,
     },
   } = rendererInternals
+
+  function nextSibling(node: Node) {
+    let n = next(node)
+    // skip vapor mode specific anchors
+    if (n && isVaporAnchors(n)) {
+      n = next(n)
+    }
+    return n
+  }
 
   const hydrate: RootHydrateFunction = (vnode, container) => {
     if (!container.hasChildNodes()) {
@@ -146,6 +161,10 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     optimized = false,
   ): Node | null => {
+    // skip vapor mode specific anchors
+    if (isVaporAnchors(node)) {
+      node = nextSibling(node)!
+    }
     optimized = optimized || !!vnode.dynamicChildren
     const isFragmentStart = isComment(node) && node.data === '['
     const onMismatch = () =>
@@ -259,6 +278,12 @@ export function createHydrationFunctions(
           )
         }
         break
+      case VaporSlot:
+        getVaporInterface(parentComponent, vnode).hydrateSlot(
+          vnode,
+          parentNode(node)!,
+        )
+        break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           if (
@@ -279,10 +304,6 @@ export function createHydrationFunctions(
             )
           }
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
-          if ((vnode.type as ConcreteComponent).__vapor) {
-            throw new Error('Vapor component hydration is not supported yet.')
-          }
-
           // when setting up the render effect, if the initial vnode already
           // has .el set, the component will perform hydration instead of mount
           // on its sub-tree.
@@ -303,15 +324,23 @@ export function createHydrationFunctions(
             nextNode = nextSibling(node)
           }
 
-          mountComponent(
-            vnode,
-            container,
-            null,
-            parentComponent,
-            parentSuspense,
-            getContainerType(container),
-            optimized,
-          )
+          // hydrate vapor component
+          if ((vnode.type as ConcreteComponent).__vapor) {
+            const vaporInterface = getVaporInterface(parentComponent, vnode)
+            vaporInterface.hydrate(node, () => {
+              vaporInterface.mount(vnode, container, null, parentComponent)
+            })
+          } else {
+            mountComponent(
+              vnode,
+              container,
+              null,
+              parentComponent,
+              parentSuspense,
+              getContainerType(container),
+              optimized,
+            )
+          }
 
           // #3787
           // if component is async, it may get moved / unmounted before its
@@ -454,7 +483,7 @@ export function createHydrationFunctions(
 
           // The SSRed DOM contains more nodes than it should. Remove them.
           const cur = next
-          next = next.nextSibling
+          next = nextSibling(next)
           remove(cur)
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
@@ -560,7 +589,7 @@ export function createHydrationFunctions(
       }
     }
 
-    return el.nextSibling
+    return nextSibling(el)
   }
 
   const hydrateChildren = (
