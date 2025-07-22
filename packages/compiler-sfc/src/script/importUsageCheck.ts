@@ -12,6 +12,9 @@ import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
 
 /**
  * Check if an identifier is used in the SFC's template.
+ * - 1.used to determine the properties that should be included in the object returned from setup()
+ *   when not using inline mode.
+ * - 2.check whether the built-in properties such as $attrs, $slots, $emit are used in the template
  */
 export function isUsedInTemplate(
   identifier: string,

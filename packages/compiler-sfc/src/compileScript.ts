@@ -247,15 +247,7 @@ export function compileScript(
   ) {
     // template usage check is only needed in non-inline mode, so we can skip
     // the work if inlineTemplate is true.
-    const theImport = {
-      isType,
-      imported,
-      local,
-      source,
-      isFromSetup,
-      isUsedInTemplate: needTemplateUsageCheck,
-    }
-
+    let isImportUsed = needTemplateUsageCheck
     if (
       needTemplateUsageCheck &&
       ctx.isTS &&
@@ -263,10 +255,17 @@ export function compileScript(
       !sfc.template.src &&
       !sfc.template.lang
     ) {
-      theImport.isUsedInTemplate = isUsedInTemplate(local, sfc)
+      isImportUsed = isUsedInTemplate(local, sfc)
     }
 
-    ctx.userImports[local] = theImport
+    ctx.userImports[local] = {
+      isType,
+      imported,
+      local,
+      source,
+      isFromSetup,
+      isUsedInTemplate: isImportUsed,
+    }
   }
 
   function checkInvalidScopeReference(node: Node | undefined, method: string) {
@@ -286,8 +285,42 @@ export function compileScript(
     })
   }
 
+  function buildDestructureElements() {
+    if (!sfc.template || !sfc.template.ast) return
+
+    const builtins = {
+      $props: {
+        bindingType: BindingTypes.SETUP_REACTIVE_CONST,
+        setup: () => setupPreambleLines.push(`const $props = __props`),
+      },
+      $emit: {
+        bindingType: BindingTypes.SETUP_CONST,
+        setup: () =>
+          ctx.emitDecl
+            ? setupPreambleLines.push(`const $emit = __emit`)
+            : destructureElements.push('emit: $emit'),
+      },
+      $attrs: {
+        bindingType: BindingTypes.SETUP_REACTIVE_CONST,
+        setup: () => destructureElements.push('attrs: $attrs'),
+      },
+      $slots: {
+        bindingType: BindingTypes.SETUP_REACTIVE_CONST,
+        setup: () => destructureElements.push('slots: $slots'),
+      },
+    }
+
+    for (const [name, config] of Object.entries(builtins)) {
+      if (isUsedInTemplate(name, sfc) && !ctx.bindingMetadata[name]) {
+        config.setup()
+        ctx.bindingMetadata[name] = config.bindingType
+      }
+    }
+  }
+
   const scriptAst = ctx.scriptAst
   const scriptSetupAst = ctx.scriptSetupAst!
+  const inlineMode = options.inlineTemplate
 
   // 1.1 walk import declarations of <script>
   if (scriptAst) {
@@ -304,7 +337,7 @@ export function compileScript(
               (specifier.type === 'ImportSpecifier' &&
                 specifier.importKind === 'type'),
             false,
-            !options.inlineTemplate,
+            !inlineMode,
           )
         }
       }
@@ -372,7 +405,7 @@ export function compileScript(
               (specifier.type === 'ImportSpecifier' &&
                 specifier.importKind === 'type'),
             true,
-            !options.inlineTemplate,
+            !inlineMode,
           )
         }
       }
@@ -813,50 +846,14 @@ export function compileScript(
   }
 
   const destructureElements =
-    ctx.hasDefineExposeCall || !options.inlineTemplate
-      ? [`expose: __expose`]
-      : []
+    ctx.hasDefineExposeCall || !inlineMode ? [`expose: __expose`] : []
   if (ctx.emitDecl) {
     destructureElements.push(`emit: __emit`)
   }
 
-  // generate $props, $emit, $attrs, $slots
-  if (options.inlineTemplate) {
-    if (sfc.template && sfc.template.ast) {
-      // $props
-      if (
-        isUsedInTemplate('$props', sfc) &&
-        !('$props' in ctx.bindingMetadata)
-      ) {
-        setupPreambleLines.push(`const $props = __props`)
-        ctx.bindingMetadata['$props'] = BindingTypes.SETUP_REACTIVE_CONST
-      }
-      // $emit
-      if (isUsedInTemplate('$emit', sfc) && !('$emit' in ctx.bindingMetadata)) {
-        if (ctx.emitDecl) {
-          setupPreambleLines.push(`const $emit = __emit`)
-        } else {
-          destructureElements.push('emit: $emit')
-        }
-        ctx.bindingMetadata['$emit'] = BindingTypes.SETUP_CONST
-      }
-      // $attrs
-      if (
-        isUsedInTemplate('$attrs', sfc) &&
-        !('$attrs' in ctx.bindingMetadata)
-      ) {
-        destructureElements.push('attrs: $attrs')
-        ctx.bindingMetadata['$attrs'] = BindingTypes.SETUP_REACTIVE_CONST
-      }
-      // $slots
-      if (
-        isUsedInTemplate('$slots', sfc) &&
-        !('$slots' in ctx.bindingMetadata)
-      ) {
-        destructureElements.push('slots: $slots')
-        ctx.bindingMetadata['$slots'] = BindingTypes.SETUP_REACTIVE_CONST
-      }
-    }
+  // destructure built-in properties (e.g. $emit, $attrs, $slots)
+  if (inlineMode) {
+    buildDestructureElements()
   }
 
   if (destructureElements.length) {
@@ -866,10 +863,7 @@ export function compileScript(
   let templateMap
   // 9. generate return statement
   let returned
-  if (
-    !options.inlineTemplate ||
-    (!sfc.template && ctx.hasDefaultExportRender)
-  ) {
+  if (!inlineMode || (!sfc.template && ctx.hasDefaultExportRender)) {
     // non-inline mode, or has manual render in normal <script>
     // return bindings from script and script setup
     const allBindings: Record<string, any> = {
@@ -969,7 +963,7 @@ export function compileScript(
     }
   }
 
-  if (!options.inlineTemplate && !__TEST__) {
+  if (!inlineMode && !__TEST__) {
     // in non-inline mode, the `__isScriptSetup: true` flag is used by
     // componentPublicInstance proxy to allow properties that start with $ or _
     ctx.s.appendRight(
@@ -1018,7 +1012,7 @@ export function compileScript(
 
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
-  if (!ctx.hasDefineExposeCall && !options.inlineTemplate)
+  if (!ctx.hasDefineExposeCall && !inlineMode)
     setupPreambleLines.push(`__expose();`)
 
   const setupPreamble = setupPreambleLines.length
