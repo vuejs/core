@@ -185,13 +185,16 @@ export function setText(el: Text & { $txt?: string }, value: string): void {
 }
 
 /**
- * Used by setDynamicProps only, so need to guard with `toDisplayString`
+ * Used by
+ * - setDynamicProps, need to guard with `toDisplayString`
+ * - v-text on dynamic component, value passed here is already converted
  */
 export function setElementText(
   el: Node & { $txt?: string },
   value: unknown,
+  isConverted: boolean = false,
 ): void {
-  if (el.$txt !== (value = toDisplayString(value))) {
+  if (el.$txt !== (value = isConverted ? value : toDisplayString(value))) {
     el.textContent = el.$txt = value as string
   }
 }
