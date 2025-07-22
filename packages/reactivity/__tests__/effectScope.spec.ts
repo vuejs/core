@@ -324,6 +324,17 @@ describe('reactivity/effect/scope', () => {
     expect(fnSpy).toHaveBeenCalledTimes(3)
   })
 
+  it('should register a cleanup function to be called when the effect scope is stopped', () => {
+    const spy = vi.fn()
+
+    const scope = effectScope()
+    scope.onDispose(spy)
+
+    expect(spy).toHaveBeenCalledTimes(0)
+    scope.stop()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   test('removing a watcher while stopping its effectScope', async () => {
     const count = ref(0)
     const scope = effectScope()
