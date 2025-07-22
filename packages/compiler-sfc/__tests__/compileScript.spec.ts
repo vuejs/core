@@ -652,10 +652,10 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`return (_ctx, _push`)
       expect(content).toMatch(`ssrInterpolate`)
       expect(content).not.toMatch(`useCssVars`)
-      expect(content).toMatch(`"--${mockId}-count": (count.value)`)
-      expect(content).toMatch(`"--${mockId}-style\\\\.color": (style.color)`)
+      expect(content).toMatch(`":--${mockId}-count": (count.value)`)
+      expect(content).toMatch(`":--${mockId}-style\\\\.color": (style.color)`)
       expect(content).toMatch(
-        `"--${mockId}-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")`,
+        `":--${mockId}-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")`,
       )
       assertCode(content)
     })
