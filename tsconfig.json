@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    "vueCompilerOptions": {
+      "globalTypesPath": "./packages-private/global.d.ts"
+    },
     "baseUrl": ".",
     "outDir": "temp",
     "sourceMap": false,
@@ -30,6 +33,7 @@
     "composite": true
   },
   "include": [
+    "packages-private/global.d.ts",
     "packages/global.d.ts",
     "packages/*/src",
     "packages/*/__tests__",
