@@ -1,5 +1,13 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, DynamicFragment, insert } from './block'
+import {
+  type Block,
+  type BlockFn,
+  DynamicFragment,
+  type VaporFragment,
+  insert,
+  isFragment,
+  setScopeId,
+} from './block'
 import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
@@ -91,10 +99,21 @@ export function getSlot(
   }
 }
 
+export function forwardedSlotCreator(): (
+  name: string | (() => string),
+  rawProps?: LooseRawProps | null,
+  fallback?: VaporSlot,
+) => Block {
+  const instance = currentInstance as VaporComponentInstance
+  return (name, rawProps, fallback) =>
+    createSlot(name, rawProps, fallback, instance)
+}
+
 export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
+  i?: VaporComponentInstance,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -104,7 +123,7 @@ export function createSlot(
     resetInsertionState()
   }
 
-  const instance = currentInstance as VaporComponentInstance
+  const instance = i || (currentInstance as VaporComponentInstance)
   const rawSlots = instance.rawSlots
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)
@@ -133,8 +152,27 @@ export function createSlot(
             (slot._bound = () => {
               const slotContent = slot(slotProps)
               if (slotContent instanceof DynamicFragment) {
-                slotContent.fallback = fallback
+                let nodes = slotContent.nodes
+                if (
+                  (slotContent.fallback = fallback) &&
+                  isArray(nodes) &&
+                  nodes.length === 0
+                ) {
+                  // use fallback if the slot content is invalid
+                  slotContent.update(fallback)
+                } else {
+                  while (isFragment(nodes)) {
+                    ensureVaporSlotFallback(nodes, fallback)
+                    nodes = nodes.nodes
+                  }
+                }
               }
+              // forwarded vdom slot, if there is no fallback provide, try use the fallback
+              // provided by the slot outlet.
+              else if (isFragment(slotContent)) {
+                ensureVaporSlotFallback(slotContent, fallback)
+              }
+
               return slotContent
             }),
         )
@@ -151,9 +189,36 @@ export function createSlot(
     }
   }
 
+  if (i) fragment.forwarded = true
+  if (i || !hasForwardedSlot(fragment.nodes)) {
+    const scopeId = instance!.type.__scopeId
+    if (scopeId) setScopeId(fragment, `${scopeId}-s`)
+  }
+
   if (!isHydrating && _insertionParent) {
     insert(fragment, _insertionParent, _insertionAnchor)
   }
 
   return fragment
+}
+
+function isForwardedSlot(block: Block): block is DynamicFragment {
+  return block instanceof DynamicFragment && !!block.forwarded
+}
+
+function hasForwardedSlot(block: Block): block is DynamicFragment {
+  if (isArray(block)) {
+    return block.some(isForwardedSlot)
+  } else {
+    return isForwardedSlot(block)
+  }
+}
+
+function ensureVaporSlotFallback(
+  block: VaporFragment,
+  fallback?: VaporSlot,
+): void {
+  if (block.insert && !block.fallback && fallback) {
+    block.fallback = fallback
+  }
 }
