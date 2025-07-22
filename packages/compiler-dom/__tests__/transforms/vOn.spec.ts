@@ -267,7 +267,7 @@ describe('compiler-dom: transform v-on', () => {
       prefixIdentifiers: true,
       cacheHandlers: true,
     })
-    expect(root.cached).toBe(1)
+    expect(root.cached.length).toBe(1)
     // should not treat cached handler as dynamicProp, so it should have no
     // dynamicProps flags and only the hydration flag
     expect((root as any).children[0].codegenNode.patchFlag).toBe(

@@ -8,9 +8,9 @@ import {
   processExpression,
 } from '@vue/compiler-dom'
 import type { SFCDescriptor } from '../parse'
-import { getEscapedCssVarName } from '../script/utils'
 import type { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
+import { getEscapedCssVarName } from '@vue/shared'
 
 export const CSS_VARS_HELPER = `useCssVars`
 
@@ -23,7 +23,12 @@ export function genCssVarsFromList(
   return `{\n  ${vars
     .map(
       key =>
-        `"${isSSR ? `--` : ``}${genVarName(id, key, isProd, isSSR)}": (${key})`,
+        // The `:` prefix here is used in `ssrRenderStyle` to distinguish whether
+        // a custom property comes from `ssrCssVars`. If it does, we need to reset
+        // its value to `initial` on the component instance to avoid unintentionally
+        // inheriting the same property value from a different instance of the same
+        // component in the outer scope.
+        `"${isSSR ? `:--` : ``}${genVarName(id, key, isProd, isSSR)}": (${key})`,
     )
     .join(',\n  ')}\n}`
 }

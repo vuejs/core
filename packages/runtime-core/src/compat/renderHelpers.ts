@@ -7,7 +7,7 @@ import {
   isReservedProp,
   normalizeClass,
 } from '@vue/shared'
-import type { ComponentInternalInstance } from '../component'
+import type { ComponentInternalInstance, Data } from '../component'
 import type { Slot } from '../componentSlots'
 import { createSlots } from '../helpers/createSlots'
 import { renderSlot } from '../helpers/renderSlot'
@@ -30,7 +30,7 @@ export function legacyBindObjectProps(
   value: any,
   _asProp: boolean,
   isSync?: boolean,
-) {
+): any {
   if (value && isObject(value)) {
     if (isArray(value)) {
       value = toObject(value)
@@ -62,7 +62,7 @@ export function legacyBindObjectProps(
   return data
 }
 
-export function legacyBindObjectListeners(props: any, listeners: any) {
+export function legacyBindObjectListeners(props: any, listeners: any): Data {
   return mergeProps(props, toHandlers(listeners))
 }
 
@@ -72,7 +72,7 @@ export function legacyRenderSlot(
   fallback?: VNode[],
   props?: any,
   bindObject?: any,
-) {
+): VNode {
   if (bindObject) {
     props = mergeProps(props, bindObject)
   }
@@ -92,7 +92,7 @@ export function legacyresolveScopedSlots(
   raw?: Record<string, Slot>,
   // the following are added in 2.6
   hasDynamicKeys?: boolean,
-) {
+): ReturnType<typeof createSlots> {
   // v2 default slot doesn't have name
   return createSlots(
     raw || ({ $stable: !hasDynamicKeys } as any),
@@ -114,7 +114,7 @@ function mapKeyToName(slots: LegacyScopedSlotsData) {
   return slots as any
 }
 
-const staticCacheMap = /*#__PURE__*/ new WeakMap<
+const staticCacheMap = /*@__PURE__*/ new WeakMap<
   ComponentInternalInstance,
   any[]
 >()
@@ -122,7 +122,7 @@ const staticCacheMap = /*#__PURE__*/ new WeakMap<
 export function legacyRenderStatic(
   instance: ComponentInternalInstance,
   index: number,
-) {
+): any {
   let cache = staticCacheMap.get(instance)
   if (!cache) {
     staticCacheMap.set(instance, (cache = []))
@@ -142,7 +142,7 @@ export function legacyCheckKeyCodes(
   builtInKeyCode?: number | number[],
   eventKeyName?: string,
   builtInKeyName?: string | string[],
-) {
+): boolean | undefined {
   const config = instance.appContext.config as any
   const configKeyCodes = config.keyCodes || {}
   const mappedKeyCode = configKeyCodes[key] || builtInKeyCode
@@ -163,11 +163,11 @@ function isKeyNotMatch<T>(expect: T | T[], actual: T): boolean {
   }
 }
 
-export function legacyMarkOnce(tree: VNode) {
+export function legacyMarkOnce(tree: VNode): VNode {
   return tree
 }
 
-export function legacyBindDynamicKeys(props: any, values: any[]) {
+export function legacyBindDynamicKeys(props: any, values: any[]): any {
   for (let i = 0; i < values.length; i += 2) {
     const key = values[i]
     if (typeof key === 'string' && key) {
@@ -177,6 +177,6 @@ export function legacyBindDynamicKeys(props: any, values: any[]) {
   return props
 }
 
-export function legacyPrependModifier(value: any, symbol: string) {
+export function legacyPrependModifier(value: any, symbol: string): any {
   return typeof value === 'string' ? symbol + value : value
 }

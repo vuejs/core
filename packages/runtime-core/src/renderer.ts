@@ -41,13 +41,19 @@ import {
 } from '@vue/shared'
 import {
   type SchedulerJob,
+  SchedulerJobFlags,
+  type SchedulerJobs,
   flushPostFlushCbs,
   flushPreFlushCbs,
-  invalidateJob,
   queueJob,
   queuePostFlushCb,
 } from './scheduler'
-import { ReactiveEffect, pauseTracking, resetTracking } from '@vue/reactivity'
+import {
+  EffectFlags,
+  ReactiveEffect,
+  pauseTracking,
+  resetTracking,
+} from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { popWarningContext, pushWarningContext, warn } from './warning'
@@ -56,6 +62,7 @@ import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
   type SuspenseImpl,
+  isSuspense,
   queueEffectWithSuspense,
 } from './components/Suspense'
 import {
@@ -79,6 +86,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import type { TransitionHooks } from './components/BaseTransition'
+import type { VueElement } from '@vue/runtime-dom'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -276,7 +284,10 @@ export enum MoveType {
   REORDER,
 }
 
-export const queuePostRenderEffect = __FEATURE_SUSPENSE__
+export const queuePostRenderEffect: (
+  fn: SchedulerJobs,
+  suspense: SuspenseBoundary | null,
+) => void = __FEATURE_SUSPENSE__
   ? __TEST__
     ? // vitest can't seem to handle eager circular dependency
       (fn: Function | Function[], suspense: SuspenseBoundary | null) =>
@@ -302,7 +313,7 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
 export function createRenderer<
   HostNode = RendererNode,
   HostElement = RendererElement,
->(options: RendererOptions<HostNode, HostElement>) {
+>(options: RendererOptions<HostNode, HostElement>): Renderer<HostElement> {
   return baseCreateRenderer<HostNode, HostElement>(options)
 }
 
@@ -311,7 +322,7 @@ export function createRenderer<
 // tree-shakable.
 export function createHydrationRenderer(
   options: RendererOptions<Node, Element>,
-) {
+): HydrationRenderer {
   return baseCreateRenderer(options, createHydrationFunctions)
 }
 
@@ -474,6 +485,8 @@ function baseCreateRenderer(
     // set ref
     if (ref != null && parentComponent) {
       setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
+    } else if (ref == null && n1 && n1.ref != null) {
+      setRef(n1.ref, null, parentSuspense, n1, true)
     }
   }
 
@@ -740,7 +753,11 @@ function baseCreateRenderer(
         subTree =
           filterSingleRoot(subTree.children as VNodeArrayChildren) || subTree
       }
-      if (vnode === subTree) {
+      if (
+        vnode === subTree ||
+        (isSuspense(subTree.type) &&
+          (subTree.ssContent === vnode || subTree.ssFallback === vnode))
+      ) {
         const parentVNode = parentComponent.vnode
         setScopeId(
           el,
@@ -947,7 +964,8 @@ function baseCreateRenderer(
           // which also requires the correct parent container
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
+          oldVNode.shapeFlag &
+            (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE))
           ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
@@ -1194,6 +1212,9 @@ function baseCreateRenderer(
       }
     }
 
+    // avoid hydration for hmr updating
+    if (__DEV__ && isHmrUpdating) initialVNode.el = null
+
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
@@ -1245,11 +1266,7 @@ function baseCreateRenderer(
       } else {
         // normal update
         instance.next = n2
-        // in case the child component is also queued, remove it to avoid
-        // double updating the same child component in the same flush.
-        invalidateJob(instance.update)
         // instance.update is the reactive effect.
-        instance.effect.dirty = true
         instance.update()
       }
     } else {
@@ -1272,7 +1289,7 @@ function baseCreateRenderer(
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
-        const { bm, m, parent } = instance
+        const { bm, m, parent, root, type } = instance
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
         toggleRecurse(instance, false)
@@ -1320,18 +1337,28 @@ function baseCreateRenderer(
             }
           }
 
-          if (isAsyncWrapperVNode) {
-            ;(initialVNode.type as ComponentOptions).__asyncLoader!().then(
-              // note: we are moving the render call into an async callback,
-              // which means it won't track dependencies - but it's ok because
-              // a server-rendered async wrapper is already in resolved state
-              // and it will never need to change.
-              () => !instance.isUnmounted && hydrateSubTree(),
+          if (
+            isAsyncWrapperVNode &&
+            (type as ComponentOptions).__asyncHydrate
+          ) {
+            ;(type as ComponentOptions).__asyncHydrate!(
+              el as Element,
+              instance,
+              hydrateSubTree,
             )
           } else {
             hydrateSubTree()
           }
         } else {
+          // custom element style injection
+          if (
+            root.ce &&
+            // @ts-expect-error _def is private
+            (root.ce as VueElement)._def.shadowRoot !== false
+          ) {
+            root.ce._injectChildStyle(type)
+          }
+
           if (__DEV__) {
             startMeasure(instance, `render`)
           }
@@ -1534,20 +1561,16 @@ function baseCreateRenderer(
     }
 
     // create reactive effect for rendering
-    const effect = (instance.effect = new ReactiveEffect(
-      componentUpdateFn,
-      NOOP,
-      () => queueJob(update),
-      instance.scope, // track it in component's effect scope
-    ))
+    instance.scope.on()
+    const effect = (instance.effect = new ReactiveEffect(componentUpdateFn))
+    instance.scope.off()
 
-    const update: SchedulerJob = (instance.update = () => {
-      if (effect.dirty) {
-        effect.run()
-      }
-    })
-    update.i = instance
-    update.id = instance.uid
+    const update = (instance.update = effect.run.bind(effect))
+    const job: SchedulerJob = (instance.job = effect.runIfDirty.bind(effect))
+    job.i = instance
+    job.id = instance.uid
+    effect.scheduler = () => queueJob(job)
+
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
     toggleRecurse(instance, true)
@@ -2034,7 +2057,13 @@ function baseCreateRenderer(
         queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
       } else {
         const { leave, delayLeave, afterLeave } = transition!
-        const remove = () => hostInsert(el!, container, anchor)
+        const remove = () => {
+          if (vnode.ctx!.isUnmounted) {
+            hostRemove(el!)
+          } else {
+            hostInsert(el!, container, anchor)
+          }
+        }
         const performLeave = () => {
           leave(el!, () => {
             remove()
@@ -2077,7 +2106,9 @@ function baseCreateRenderer(
 
     // unset ref
     if (ref != null) {
+      pauseTracking()
       setRef(ref, null, parentSuspense, vnode, true)
+      resetTracking()
     }
 
     // #6593 should clean memo cache when unmount
@@ -2241,13 +2272,30 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, update, subTree, um, m, a } = instance
+    const {
+      bum,
+      scope,
+      job,
+      subTree,
+      um,
+      m,
+      a,
+      parent,
+      slots: { __: slotCacheKeys },
+    } = instance
     invalidateMount(m)
     invalidateMount(a)
 
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
+    }
+
+    // remove slots content from parent renderCache
+    if (parent && isArray(slotCacheKeys)) {
+      slotCacheKeys.forEach(v => {
+        parent.renderCache[v] = undefined
+      })
     }
 
     if (
@@ -2260,11 +2308,11 @@ function baseCreateRenderer(
     // stop effects in component scope
     scope.stop()
 
-    // update may be null if a component is unmounted before its async
+    // job may be null if a component is unmounted before its async
     // setup has resolved.
-    if (update) {
+    if (job) {
       // so that scheduler will no longer invoke it
-      update.active = false
+      job.flags! |= SchedulerJobFlags.DISPOSED
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook
@@ -2352,13 +2400,13 @@ function baseCreateRenderer(
         namespace,
       )
     }
+    container._vnode = vnode
     if (!isFlushing) {
       isFlushing = true
       flushPreFlushCbs()
       flushPostFlushCbs()
       isFlushing = false
     }
-    container._vnode = vnode
   }
 
   const internals: RendererInternals = {
@@ -2404,16 +2452,22 @@ function resolveChildrenNamespace(
 }
 
 function toggleRecurse(
-  { effect, update }: ComponentInternalInstance,
+  { effect, job }: ComponentInternalInstance,
   allowed: boolean,
 ) {
-  effect.allowRecurse = update.allowRecurse = allowed
+  if (allowed) {
+    effect.flags |= EffectFlags.ALLOW_RECURSE
+    job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+  } else {
+    effect.flags &= ~EffectFlags.ALLOW_RECURSE
+    job.flags! &= ~SchedulerJobFlags.ALLOW_RECURSE
+  }
 }
 
 export function needTransition(
   parentSuspense: SuspenseBoundary | null,
   transition: TransitionHooks | null,
-) {
+): boolean | null {
   return (
     (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
     transition &&
@@ -2432,7 +2486,11 @@ export function needTransition(
  * the children will always be moved. Therefore, in order to ensure correct move
  * position, el should be inherited from previous nodes.
  */
-export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
+export function traverseStaticChildren(
+  n1: VNode,
+  n2: VNode,
+  shallow = false,
+): void {
   const ch1 = n1.children
   const ch2 = n2.children
   if (isArray(ch1) && isArray(ch2)) {
@@ -2453,10 +2511,14 @@ export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
       if (c2.type === Text) {
         c2.el = c1.el
       }
-      // also inherit for comment nodes, but not placeholders (e.g. v-if which
+      // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
       // would have received .el during block patch)
-      if (__DEV__ && c2.type === Comment && !c2.el) {
+      if (c2.type === Comment && !c2.el) {
         c2.el = c1.el
+      }
+
+      if (__DEV__) {
+        c2.el && (c2.el.__vnode = c2)
       }
     }
   }
@@ -2517,8 +2579,9 @@ function locateNonHydratedAsyncRoot(
   }
 }
 
-export function invalidateMount(hooks: LifecycleHook) {
+export function invalidateMount(hooks: LifecycleHook): void {
   if (hooks) {
-    for (let i = 0; i < hooks.length; i++) hooks[i].active = false
+    for (let i = 0; i < hooks.length; i++)
+      hooks[i].flags! |= SchedulerJobFlags.DISPOSED
   }
 }

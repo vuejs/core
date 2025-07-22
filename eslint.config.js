@@ -1,6 +1,6 @@
 import importX from 'eslint-plugin-import-x'
 import tseslint from 'typescript-eslint'
-import vitest from 'eslint-plugin-vitest'
+import vitest from '@vitest/eslint-plugin'
 import { builtinModules } from 'node:module'
 
 const DOMGlobals = ['window', 'document']
@@ -76,7 +76,11 @@ export default tseslint.config(
 
   // tests, no restrictions (runs in Node / Vitest with jsdom)
   {
-    files: ['**/__tests__/**', 'packages/dts-test/**'],
+    files: [
+      '**/__tests__/**',
+      'packages-private/dts-test/**',
+      'packages-private/dts-build-test/**',
+    ],
     plugins: { vitest },
     languageOptions: {
       globals: {
@@ -119,7 +123,10 @@ export default tseslint.config(
 
   // Private package, browser only + no syntax restrictions
   {
-    files: ['packages/template-explorer/**', 'packages/sfc-playground/**'],
+    files: [
+      'packages-private/template-explorer/**',
+      'packages-private/sfc-playground/**',
+    ],
     rules: {
       'no-restricted-globals': ['error', ...NodeGlobals],
       'no-restricted-syntax': ['error', banConstEnum],

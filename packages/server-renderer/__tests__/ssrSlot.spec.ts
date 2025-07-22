@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, defineAsyncComponent, h } from 'vue'
 import { renderToString } from '../src/renderToString'
 
 const components = {
@@ -152,5 +152,87 @@ describe('ssr: slot', () => {
         }),
       ),
     ).toBe(`<div><p>1</p><p>2</p></div>`)
+  })
+
+  // #12438
+  test('async component slot with v-if true', async () => {
+    const Layout = defineAsyncComponent(() =>
+      Promise.resolve({
+        template: `<div><slot name="header">default header</slot></div>`,
+      }),
+    )
+    const LayoutLoader = {
+      setup(_: any, context: any) {
+        return () => h(Layout, {}, context.slots)
+      },
+    }
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            LayoutLoader,
+          },
+          template: `
+            <Suspense>
+              <LayoutLoader>
+                <template v-if="true" #header>
+                  new header
+                </template>
+              </LayoutLoader>
+            </Suspense>
+          `,
+        }),
+      ),
+    ).toBe(`<div><!--[--> new header <!--]--></div>`)
+  })
+
+  // #11326
+  test('dynamic component slot', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            ButtonComp: {
+              template: `<component is="button"><slot/></component>`,
+            },
+            Wrap: {
+              template: `<div><slot/></div>`,
+            },
+          },
+          template: `<ButtonComp><Wrap><div v-if="false">hello</div></Wrap></ButtonComp>`,
+        }),
+      ),
+    ).toBe(`<button><!--[--><div><!--[--><!--]--></div><!--]--></button>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            ButtonComp: {
+              template: `<component is="button"><slot/></component>`,
+            },
+            Wrap: {
+              template: `<div><slot/></div>`,
+            },
+          },
+          template: `<ButtonComp><Wrap><div v-if="true">hello</div></Wrap></ButtonComp>`,
+        }),
+      ),
+    ).toBe(
+      `<button><!--[--><div><!--[--><div>hello</div><!--]--></div><!--]--></button>`,
+    )
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            ButtonComp: {
+              template: `<component is="button"><slot/></component>`,
+            },
+          },
+          template: `<ButtonComp><template v-if="false">hello</template></ButtonComp>`,
+        }),
+      ),
+    ).toBe(`<button><!--[--><!--]--></button>`)
   })
 })

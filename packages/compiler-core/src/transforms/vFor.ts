@@ -1,4 +1,5 @@
 import {
+  type NodeTransform,
   type TransformContext,
   createStructuralDirectiveTransform,
 } from '../transform'
@@ -49,7 +50,7 @@ import { validateBrowserExpression } from '../validateExpression'
 import { PatchFlags } from '@vue/shared'
 import { transformBindShorthand } from './vBind'
 
-export const transformFor = createStructuralDirectiveTransform(
+export const transformFor: NodeTransform = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
     const { helper, removeHelper } = context
@@ -62,17 +63,27 @@ export const transformFor = createStructuralDirectiveTransform(
       const isTemplate = isTemplateNode(node)
       const memo = findDir(node, 'memo')
       const keyProp = findProp(node, `key`, false, true)
-      if (keyProp && keyProp.type === NodeTypes.DIRECTIVE && !keyProp.exp) {
+      const isDirKey = keyProp && keyProp.type === NodeTypes.DIRECTIVE
+      if (isDirKey && !keyProp.exp) {
         // resolve :key shorthand #10882
         transformBindShorthand(keyProp, context)
       }
-      const keyExp =
+      let keyExp =
         keyProp &&
         (keyProp.type === NodeTypes.ATTRIBUTE
           ? keyProp.value
             ? createSimpleExpression(keyProp.value.content, true)
             : undefined
           : keyProp.exp)
+
+      if (memo && keyExp && isDirKey) {
+        if (!__BROWSER__) {
+          keyProp.exp = keyExp = processExpression(
+            keyExp as SimpleExpressionNode,
+            context,
+          )
+        }
+      }
       const keyProperty =
         keyProp && keyExp ? createObjectProperty(`key`, keyExp) : null
 
@@ -228,8 +239,10 @@ export const transformFor = createStructuralDirectiveTransform(
           renderExp.arguments.push(
             loop as ForIteratorExpression,
             createSimpleExpression(`_cache`),
-            createSimpleExpression(String(context.cached++)),
+            createSimpleExpression(String(context.cached.length)),
           )
+          // increment cache count
+          context.cached.push(null)
         } else {
           renderExp.arguments.push(
             createFunctionExpression(
@@ -250,7 +263,7 @@ export function processFor(
   dir: DirectiveNode,
   context: TransformContext,
   processCodegen?: (forNode: ForNode) => (() => void) | undefined,
-) {
+): (() => void) | undefined {
   if (!dir.exp) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_FOR_NO_EXPRESSION, dir.loc),
@@ -297,7 +310,7 @@ export function processFor(
 
   const onExit = processCodegen && processCodegen(forNode)
 
-  return () => {
+  return (): void => {
     scopes.vFor--
     if (!__BROWSER__ && context.prefixIdentifiers) {
       value && removeIdentifiers(value)
@@ -311,7 +324,7 @@ export function processFor(
 export function finalizeForParseResult(
   result: ForParseResult,
   context: TransformContext,
-) {
+): void {
   if (result.finalized) return
 
   if (!__BROWSER__ && context.prefixIdentifiers) {

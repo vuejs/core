@@ -21,6 +21,7 @@ import {
   h,
   nextTick,
   onMounted,
+  onServerPrefetch,
   openBlock,
   reactive,
   ref,
@@ -31,10 +32,13 @@ import {
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
+import type { HMRRuntime } from '../src/hmr'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags, normalizeStyle } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
-import { expect } from 'vitest'
+
+declare var __VUE_HMR_RUNTIME__: HMRRuntime
+const { createRecord, reload } = __VUE_HMR_RUNTIME__
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -152,10 +156,10 @@ describe('SSR hydration', () => {
   // #7285
   test('element with multiple continuous text vnodes', async () => {
     // should no mismatch warning
-    const { container } = mountWithHydration('<div>fooo</div>', () =>
-      h('div', ['fo', createTextVNode('o'), 'o']),
+    const { container } = mountWithHydration('<div>foo0o</div>', () =>
+      h('div', ['fo', createTextVNode('o'), 0, 'o']),
     )
-    expect(container.textContent).toBe('fooo')
+    expect(container.textContent).toBe('foo0o')
   })
 
   test('element with elements children', async () => {
@@ -518,6 +522,45 @@ describe('SSR hydration', () => {
     )
   })
 
+  test('with data-allow-mismatch component when using onServerPrefetch', async () => {
+    const Comp = {
+      template: `
+        <div>Comp2</div>
+      `,
+    }
+    let foo: any
+    const App = {
+      setup() {
+        const flag = ref(true)
+        foo = () => {
+          flag.value = false
+        }
+        onServerPrefetch(() => (flag.value = false))
+        return { flag }
+      },
+      components: {
+        Comp,
+      },
+      template: `
+        <span data-allow-mismatch>
+          <Comp v-if="flag"></Comp>
+        </span>
+      `,
+    }
+    // hydrate
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(container)
+    expect(container.innerHTML).toBe(
+      '<span data-allow-mismatch=""><div>Comp2</div></span>',
+    )
+    foo()
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<span data-allow-mismatch=""><!--v-if--></span>',
+    )
+  })
+
   test('Teleport unmount (full integration)', async () => {
     const Comp1 = {
       template: `
@@ -861,6 +904,54 @@ describe('SSR hydration', () => {
     expect(vnode.el).toBe(container.firstChild)
     // wait for hydration to finish
     await new Promise(r => setTimeout(r))
+    triggerEvent('click', container.querySelector('span')!)
+    await nextTick()
+    expect(container.innerHTML).toBe(`<span>1</span>`)
+  })
+
+  // #6638
+  test('Suspense + async component', async () => {
+    let isSuspenseResolved = false
+    let isSuspenseResolvedInChild: any
+    const AsyncChild = defineAsyncComponent(() =>
+      Promise.resolve(
+        defineComponent({
+          setup() {
+            isSuspenseResolvedInChild = isSuspenseResolved
+            const count = ref(0)
+            return () =>
+              h(
+                'span',
+                {
+                  onClick: () => {
+                    count.value++
+                  },
+                },
+                count.value,
+              )
+          },
+        }),
+      ),
+    )
+    const { vnode, container } = mountWithHydration('<span>0</span>', () =>
+      h(
+        Suspense,
+        {
+          onResolve() {
+            isSuspenseResolved = true
+          },
+        },
+        () => h(AsyncChild),
+      ),
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    // wait for hydration to finish
+    await new Promise(r => setTimeout(r))
+
+    expect(isSuspenseResolvedInChild).toBe(false)
+    expect(isSuspenseResolved).toBe(true)
+
+    // assert interaction
     triggerEvent('click', container.querySelector('span')!)
     await nextTick()
     expect(container.innerHTML).toBe(`<span>1</span>`)
@@ -1236,6 +1327,84 @@ describe('SSR hydration', () => {
     resolve({})
   })
 
+  //#12362
+  test('nested async wrapper', async () => {
+    const Toggle = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          r(
+            defineComponent({
+              setup(_, { slots }) {
+                const show = ref(false)
+                onMounted(() => {
+                  nextTick(() => {
+                    show.value = true
+                  })
+                })
+                return () =>
+                  withDirectives(
+                    h('div', null, [renderSlot(slots, 'default')]),
+                    [[vShow, show.value]],
+                  )
+              },
+            }) as any,
+          )
+        }),
+    )
+
+    const Wrapper = defineAsyncComponent(() => {
+      return new Promise(r => {
+        r(
+          defineComponent({
+            render(this: any) {
+              return renderSlot(this.$slots, 'default')
+            },
+          }) as any,
+        )
+      })
+    })
+
+    const count = ref(0)
+    const fn = vi.fn()
+    const Child = {
+      setup() {
+        onMounted(() => {
+          fn()
+          count.value++
+        })
+        return () => h('div', count.value)
+      },
+    }
+
+    const App = {
+      render() {
+        return h(Toggle, null, {
+          default: () =>
+            h(Wrapper, null, {
+              default: () =>
+                h(Wrapper, null, {
+                  default: () => h(Child),
+                }),
+            }),
+        })
+      },
+    }
+
+    const root = document.createElement('div')
+    root.innerHTML = await renderToString(h(App))
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      `"<div style="display:none;"><!--[--><!--[--><!--[--><div>0</div><!--]--><!--]--><!--]--></div>"`,
+    )
+
+    createSSRApp(App).mount(root)
+    await nextTick()
+    await nextTick()
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      `"<div style=""><!--[--><!--[--><!--[--><div>1</div><!--]--><!--]--><!--]--></div>"`,
+    )
+    expect(fn).toBeCalledTimes(1)
+  })
+
   test('unmount async wrapper before load (fragment)', async () => {
     let resolve: any
     const AsyncComp = defineAsyncComponent(
@@ -1322,7 +1491,7 @@ describe('SSR hydration', () => {
           'input',
           { type: 'checkbox', indeterminate: '' },
           null,
-          PatchFlags.HOISTED,
+          PatchFlags.CACHED,
         ),
     )
     expect((container.firstChild as any).indeterminate).toBe(true)
@@ -1338,6 +1507,26 @@ describe('SSR hydration', () => {
         ]),
     )
     expect((container.firstChild!.firstChild as any)._value).toBe(true)
+  })
+
+  // #7203
+  test('force hydrate custom element with dynamic props', () => {
+    class MyElement extends HTMLElement {
+      foo = ''
+      constructor() {
+        super()
+      }
+    }
+    customElements.define('my-element-7203', MyElement)
+
+    const msg = ref('bar')
+    const container = document.createElement('div')
+    container.innerHTML = '<my-element-7203></my-element-7203>'
+    const app = createSSRApp({
+      render: () => h('my-element-7203', { foo: msg.value }),
+    })
+    app.mount(container)
+    expect((container.firstChild as any).foo).toBe(msg.value)
   })
 
   // #5728
@@ -1465,6 +1654,29 @@ describe('SSR hydration', () => {
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 
+  test('transition appear work with pre-existing class', () => {
+    const { vnode, container } = mountWithHydration(
+      `<template><div class="foo">foo</div></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () => h('div', { class: 'foo' }, 'foo'),
+          },
+        ),
+    )
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="foo v-enter-from v-enter-active"
+      >
+        foo
+      </div>
+    `)
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
   test('transition appear with v-if', () => {
     const show = false
     const { vnode, container } = mountWithHydration(
@@ -1543,6 +1755,36 @@ describe('SSR hydration', () => {
         1
       </button>
     `)
+  })
+
+  test('Suspense + transition appear', async () => {
+    const { vnode, container } = mountWithHydration(
+      `<template><div>foo</div></template>`,
+      () =>
+        h(Suspense, {}, () =>
+          h(
+            Transition,
+            { appear: true },
+            {
+              default: () => h('div', 'foo'),
+            },
+          ),
+        ),
+    )
+
+    expect(vnode.el).toBe(container.firstChild)
+    // wait for hydration to finish
+    await new Promise(r => setTimeout(r))
+
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="v-enter-from v-enter-active"
+      >
+        foo
+      </div>
+    `)
+    await nextTick()
+    expect(vnode.el).toBe(container.firstChild)
   })
 
   // #10607
@@ -1625,6 +1867,60 @@ describe('SSR hydration', () => {
     } finally {
       __DEV__ = true
     }
+  })
+
+  test('hmr reload child wrapped in KeepAlive', async () => {
+    const id = 'child-reload'
+    const Child = {
+      __hmrId: id,
+      template: `<div>foo</div>`,
+    }
+    createRecord(id, Child)
+
+    const appId = 'test-app-id'
+    const App = {
+      __hmrId: appId,
+      components: { Child },
+      template: `
+      <div>
+        <KeepAlive>
+          <Child />
+        </KeepAlive>
+      </div>
+      `,
+    }
+
+    const root = document.createElement('div')
+    root.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(root)
+    expect(root.innerHTML).toBe('<div><div>foo</div></div>')
+
+    reload(id, {
+      __hmrId: id,
+      template: `<div>bar</div>`,
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe('<div><div>bar</div></div>')
+  })
+
+  test('hmr root reload', async () => {
+    const appId = 'test-app-id'
+    const App = {
+      __hmrId: appId,
+      template: `<div>foo</div>`,
+    }
+
+    const root = document.createElement('div')
+    root.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(root)
+    expect(root.innerHTML).toBe('<div>foo</div>')
+
+    reload(appId, {
+      __hmrId: appId,
+      template: `<div>bar</div>`,
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe('<div>bar</div>')
   })
 
   describe('mismatch handling', () => {
@@ -1840,6 +2136,21 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).toHaveBeenWarned()
     })
 
+    // #11873
+    test('<textarea> with newlines at the beginning', async () => {
+      const render = () => h('textarea', null, '\nhello')
+      const html = await renderToString(createSSRApp({ render }))
+      mountWithHydration(html, render)
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('<pre> with newlines at the beginning', async () => {
+      const render = () => h('pre', null, '\n')
+      const html = await renderToString(createSSRApp({ render }))
+      mountWithHydration(html, render)
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
+
     test('boolean attr handling', () => {
       mountWithHydration(`<input />`, () => h('input', { readonly: false }))
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
@@ -1952,6 +2263,158 @@ describe('SSR hydration', () => {
       })
       app.mount(container)
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('escape css var name', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="padding: 4px;--foo\\.bar:red;"></div>`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            'foo.bar': 'red',
+          }))
+          return () => h(Child)
+        },
+      })
+      const Child = {
+        setup() {
+          return () => h('div', { style: 'padding: 4px' })
+        },
+      }
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+  })
+
+  describe('data-allow-mismatch', () => {
+    test('element text content', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="text">foo</div>`,
+        () => h('div', 'bar'),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="text">bar</div>',
+      )
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('not enough children', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"></div>`,
+        () => h('div', [h('span', 'foo'), h('span', 'bar')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><span>foo</span><span>bar</span></div>',
+      )
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('too many children', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><span>foo</span><span>bar</span></div>`,
+        () => h('div', [h('span', 'foo')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><span>foo</span></div>',
+      )
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('complete mismatch', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><span>foo</span><span>bar</span></div>`,
+        () => h('div', [h('div', 'foo'), h('p', 'bar')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><div>foo</div><p>bar</p></div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('fragment mismatch removal', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--></div>`,
+        () => h('div', [h('span', 'replaced')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><span>replaced</span></div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('fragment not enough children', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
+        () => h('div', [[h('div', 'foo'), h('div', 'bar')], h('div', 'baz')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('fragment too many children', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
+        () => h('div', [[h('div', 'foo')], h('div', 'baz')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>',
+      )
+      // fragment ends early and attempts to hydrate the extra <div>bar</div>
+      // as 2nd fragment child.
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+      // excessive children removal
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('comment mismatch (element)', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children"><span></span></div>`,
+        () => h('div', [createCommentVNode('hi')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><!--hi--></div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('comment mismatch (text)', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="children">foobar</div>`,
+        () => h('div', [createCommentVNode('hi')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><!--hi--></div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('class mismatch', () => {
+      mountWithHydration(
+        `<div class="foo bar" data-allow-mismatch="class"></div>`,
+        () => h('div', { class: 'foo' }),
+      )
+      expect(`Hydration class mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('style mismatch', () => {
+      mountWithHydration(
+        `<div style="color:red;" data-allow-mismatch="style"></div>`,
+        () => h('div', { style: { color: 'green' } }),
+      )
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('attr mismatch', () => {
+      mountWithHydration(`<div data-allow-mismatch="attribute"></div>`, () =>
+        h('div', { id: 'foo' }),
+      )
+      mountWithHydration(
+        `<div id="bar" data-allow-mismatch="attribute"></div>`,
+        () => h('div', { id: 'foo' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
   })
 })

@@ -5,6 +5,7 @@ import {
   type ExpressionNode,
   NodeTypes,
   type PlainElementNode,
+  type TemplateChildNode,
   createCallExpression,
   createConditionalExpression,
   createDOMCompilerError,
@@ -38,6 +39,18 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
     }
   }
 
+  const processSelectChildren = (children: TemplateChildNode[]) => {
+    children.forEach(child => {
+      if (child.type === NodeTypes.ELEMENT) {
+        processOption(child as PlainElementNode)
+      } else if (child.type === NodeTypes.FOR) {
+        processSelectChildren(child.children)
+      } else if (child.type === NodeTypes.IF) {
+        child.branches.forEach(b => processSelectChildren(b.children))
+      }
+    })
+  }
+
   function processOption(plainNode: PlainElementNode) {
     if (plainNode.tag === 'option') {
       if (plainNode.props.findIndex(p => p.name === 'selected') === -1) {
@@ -64,9 +77,7 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
         )
       }
     } else if (plainNode.tag === 'optgroup') {
-      plainNode.children.forEach(option =>
-        processOption(option as PlainElementNode),
-      )
+      processSelectChildren(plainNode.children)
     }
   }
 
@@ -162,11 +173,7 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       checkDuplicatedValue()
       node.children = [createInterpolation(model, model.loc)]
     } else if (node.tag === 'select') {
-      node.children.forEach(child => {
-        if (child.type === NodeTypes.ELEMENT) {
-          processOption(child as PlainElementNode)
-        }
-      })
+      processSelectChildren(node.children)
     } else {
       context.onError(
         createDOMCompilerError(

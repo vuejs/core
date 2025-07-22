@@ -28,7 +28,7 @@ export function walkIdentifiers(
   includeAll = false,
   parentStack: Node[] = [],
   knownIds: Record<string, number> = Object.create(null),
-) {
+): void {
   if (__BROWSER__) {
     return
   }
@@ -108,7 +108,7 @@ export function isReferencedIdentifier(
   id: Identifier,
   parent: Node | null,
   parentStack: Node[],
-) {
+): boolean {
   if (__BROWSER__) {
     return false
   }
@@ -177,7 +177,7 @@ export function isInNewExpression(parentStack: Node[]): boolean {
 export function walkFunctionParams(
   node: Function,
   onIdent: (id: Identifier) => void,
-) {
+): void {
   for (const p of node.params) {
     for (const id of extractIdentifiers(p)) {
       onIdent(id)
@@ -188,7 +188,7 @@ export function walkFunctionParams(
 export function walkBlockDeclarations(
   block: BlockStatement | Program,
   onIdent: (node: Identifier) => void,
-) {
+): void {
   for (const stmt of block.body) {
     if (stmt.type === 'VariableDeclaration') {
       if (stmt.declare) continue
@@ -313,7 +313,7 @@ export const isStaticProperty = (node: Node): node is ObjectProperty =>
   (node.type === 'ObjectProperty' || node.type === 'ObjectMethod') &&
   !node.computed
 
-export const isStaticPropertyKey = (node: Node, parent: Node) =>
+export const isStaticPropertyKey = (node: Node, parent: Node): boolean =>
   isStaticProperty(parent) && parent.key === node
 
 /**
@@ -495,7 +495,7 @@ function isReferenced(node: Node, parent: Node, grandparent?: Node): boolean {
   return true
 }
 
-export const TS_NODE_TYPES = [
+export const TS_NODE_TYPES: string[] = [
   'TSAsExpression', // foo as number
   'TSTypeAssertion', // (<number>foo)
   'TSNonNullExpression', // foo!

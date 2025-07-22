@@ -1,105 +1,156 @@
-import { type DebuggerOptions, ReactiveEffect } from './effect'
-import { type Ref, trackRefValue, triggerRefValue } from './ref'
-import { NOOP, hasChanged, isFunction } from '@vue/shared'
-import { toRaw } from './reactive'
-import type { Dep } from './dep'
-import { DirtyLevels, ReactiveFlags } from './constants'
+import { isFunction } from '@vue/shared'
+import {
+  type DebuggerEvent,
+  type DebuggerOptions,
+  EffectFlags,
+  type Subscriber,
+  activeSub,
+  batch,
+  refreshComputed,
+} from './effect'
+import type { Ref } from './ref'
 import { warn } from './warning'
+import { Dep, type Link, globalVersion } from './dep'
+import { ReactiveFlags, TrackOpTypes } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
+declare const WritableComputedRefSymbol: unique symbol
 
-export interface ComputedRef<T = any> extends WritableComputedRef<T> {
-  readonly value: T
+interface BaseComputedRef<T, S = T> extends Ref<T, S> {
   [ComputedRefSymbol]: true
+  /**
+   * @deprecated computed no longer uses effect
+   */
+  effect: ComputedRefImpl
 }
 
-export interface WritableComputedRef<T> extends Ref<T> {
-  readonly effect: ReactiveEffect<T>
+export interface ComputedRef<T = any> extends BaseComputedRef<T> {
+  readonly value: T
+}
+
+export interface WritableComputedRef<T, S = T> extends BaseComputedRef<T, S> {
+  [WritableComputedRefSymbol]: true
 }
 
 export type ComputedGetter<T> = (oldValue?: T) => T
 export type ComputedSetter<T> = (newValue: T) => void
 
-export interface WritableComputedOptions<T> {
+export interface WritableComputedOptions<T, S = T> {
   get: ComputedGetter<T>
-  set: ComputedSetter<T>
+  set: ComputedSetter<S>
 }
 
-export const COMPUTED_SIDE_EFFECT_WARN =
-  `Computed is still dirty after getter evaluation,` +
-  ` likely because a computed is mutating its own dependency in its getter.` +
-  ` State mutations in computed getters should be avoided. ` +
-  ` Check the docs for more details: https://vuejs.org/guide/essentials/computed.html#getters-should-be-side-effect-free`
+/**
+ * @private exported by @vue/reactivity for Vue core use, but not exported from
+ * the main vue package
+ */
+export class ComputedRefImpl<T = any> implements Subscriber {
+  /**
+   * @internal
+   */
+  _value: any = undefined
+  /**
+   * @internal
+   */
+  readonly dep: Dep = new Dep(this)
+  /**
+   * @internal
+   */
+  readonly __v_isRef = true
+  // TODO isolatedDeclarations ReactiveFlags.IS_REF
+  /**
+   * @internal
+   */
+  readonly __v_isReadonly: boolean
+  // TODO isolatedDeclarations ReactiveFlags.IS_READONLY
+  // A computed is also a subscriber that tracks other deps
+  /**
+   * @internal
+   */
+  deps?: Link = undefined
+  /**
+   * @internal
+   */
+  depsTail?: Link = undefined
+  /**
+   * @internal
+   */
+  flags: EffectFlags = EffectFlags.DIRTY
+  /**
+   * @internal
+   */
+  globalVersion: number = globalVersion - 1
+  /**
+   * @internal
+   */
+  isSSR: boolean
+  /**
+   * @internal
+   */
+  next?: Subscriber = undefined
 
-export class ComputedRefImpl<T> {
-  public dep?: Dep = undefined
-
-  private _value!: T
-  public readonly effect: ReactiveEffect<T>
-
-  public readonly __v_isRef = true
-  public readonly [ReactiveFlags.IS_READONLY]: boolean = false
-
-  public _cacheable: boolean
+  // for backwards compat
+  effect: this = this
+  // dev only
+  onTrack?: (event: DebuggerEvent) => void
+  // dev only
+  onTrigger?: (event: DebuggerEvent) => void
 
   /**
    * Dev only
+   * @internal
    */
   _warnRecursive?: boolean
 
   constructor(
-    private getter: ComputedGetter<T>,
-    private readonly _setter: ComputedSetter<T>,
-    isReadonly: boolean,
+    public fn: ComputedGetter<T>,
+    private readonly setter: ComputedSetter<T> | undefined,
     isSSR: boolean,
   ) {
-    this.effect = new ReactiveEffect(
-      () => getter(this._value),
-      () =>
-        triggerRefValue(
-          this,
-          this.effect._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect
-            ? DirtyLevels.MaybeDirty_ComputedSideEffect
-            : DirtyLevels.MaybeDirty,
-        ),
-    )
-    this.effect.computed = this
-    this.effect.active = this._cacheable = !isSSR
-    this[ReactiveFlags.IS_READONLY] = isReadonly
+    this[ReactiveFlags.IS_READONLY] = !setter
+    this.isSSR = isSSR
   }
 
-  get value() {
-    // the computed ref may get wrapped by other proxies e.g. readonly() #3376
-    const self = toRaw(this)
+  /**
+   * @internal
+   */
+  notify(): true | void {
+    this.flags |= EffectFlags.DIRTY
     if (
-      (!self._cacheable || self.effect.dirty) &&
-      hasChanged(self._value, (self._value = self.effect.run()!))
+      !(this.flags & EffectFlags.NOTIFIED) &&
+      // avoid infinite self recursion
+      activeSub !== this
     ) {
-      triggerRefValue(self, DirtyLevels.Dirty)
+      batch(this, true)
+      return true
+    } else if (__DEV__) {
+      // TODO warn
     }
-    trackRefValue(self)
-    if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_ComputedSideEffect) {
-      if (__DEV__ && (__TEST__ || this._warnRecursive)) {
-        warn(COMPUTED_SIDE_EFFECT_WARN, `\n\ngetter: `, this.getter)
-      }
-      triggerRefValue(self, DirtyLevels.MaybeDirty_ComputedSideEffect)
+  }
+
+  get value(): T {
+    const link = __DEV__
+      ? this.dep.track({
+          target: this,
+          type: TrackOpTypes.GET,
+          key: 'value',
+        })
+      : this.dep.track()
+    refreshComputed(this)
+    // sync version after evaluation
+    if (link) {
+      link.version = this.dep.version
     }
-    return self._value
+    return this._value
   }
 
-  set value(newValue: T) {
-    this._setter(newValue)
+  set value(newValue) {
+    if (this.setter) {
+      this.setter(newValue)
+    } else if (__DEV__) {
+      warn('Write operation failed: computed value is readonly')
+    }
   }
-
-  // #region polyfill _dirty for backward compatibility third party code for Vue <= 3.3.x
-  get _dirty() {
-    return this.effect.dirty
-  }
-
-  set _dirty(v) {
-    this.effect.dirty = v
-  }
-  // #endregion
 }
 
 /**
@@ -139,36 +190,30 @@ export function computed<T>(
   getter: ComputedGetter<T>,
   debugOptions?: DebuggerOptions,
 ): ComputedRef<T>
-export function computed<T>(
-  options: WritableComputedOptions<T>,
+export function computed<T, S = T>(
+  options: WritableComputedOptions<T, S>,
   debugOptions?: DebuggerOptions,
-): WritableComputedRef<T>
+): WritableComputedRef<T, S>
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
   isSSR = false,
 ) {
   let getter: ComputedGetter<T>
-  let setter: ComputedSetter<T>
+  let setter: ComputedSetter<T> | undefined
 
-  const onlyGetter = isFunction(getterOrOptions)
-  if (onlyGetter) {
+  if (isFunction(getterOrOptions)) {
     getter = getterOrOptions
-    setter = __DEV__
-      ? () => {
-          warn('Write operation failed: computed value is readonly')
-        }
-      : NOOP
   } else {
     getter = getterOrOptions.get
     setter = getterOrOptions.set
   }
 
-  const cRef = new ComputedRefImpl(getter, setter, onlyGetter || !setter, isSSR)
+  const cRef = new ComputedRefImpl(getter, setter, isSSR)
 
   if (__DEV__ && debugOptions && !isSSR) {
-    cRef.effect.onTrack = debugOptions.onTrack
-    cRef.effect.onTrigger = debugOptions.onTrigger
+    cRef.onTrack = debugOptions.onTrack
+    cRef.onTrigger = debugOptions.onTrigger
   }
 
   return cRef as any

@@ -67,7 +67,7 @@ export interface PropOptions<T = any, D = T> {
   skipFactory?: boolean
 }
 
-export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
+export type PropType<T> = PropConstructor<T> | (PropConstructor<T> | null)[]
 
 type PropConstructor<T = any> =
   | { new (...args: any[]): T & {} }
@@ -107,8 +107,10 @@ type DefaultKeys<T> = {
     : never
 }[keyof T]
 
-type InferPropType<T> = [T] extends [null]
-  ? any // null & true would fail to infer
+type InferPropType<T, NullAsAny = true> = [T] extends [null]
+  ? NullAsAny extends true
+    ? any
+    : null
   : [T] extends [{ type: null | true }]
     ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
     : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
@@ -119,11 +121,13 @@ type InferPropType<T> = [T] extends [null]
           ? Date
           : [T] extends [(infer U)[] | { type: (infer U)[] }]
             ? U extends DateConstructor
-              ? Date | InferPropType<U>
-              : InferPropType<U>
+              ? Date | InferPropType<U, false>
+              : InferPropType<U, false>
             : [T] extends [Prop<infer V, infer D>]
               ? unknown extends V
-                ? IfAny<V, V, D>
+                ? keyof V extends never
+                  ? IfAny<V, V, D>
+                  : V
                 : V
               : T
 
@@ -139,7 +143,9 @@ type InferPropType<T> = [T] extends [null]
 export type ExtractPropTypes<O> = {
   // use `keyof Pick<O, RequiredKeys<O>>` instead of `RequiredKeys<O>` to
   // support IDE features
-  [K in keyof Pick<O, RequiredKeys<O>>]: InferPropType<O[K]>
+  [K in keyof Pick<O, RequiredKeys<O>>]: O[K] extends { default: any }
+    ? Exclude<InferPropType<O[K]>, undefined>
+    : InferPropType<O[K]>
 } & {
   // use `keyof Pick<O, OptionalKeys<O>>` instead of `OptionalKeys<O>` to
   // support IDE features
@@ -189,7 +195,7 @@ export function initProps(
   rawProps: Data | null,
   isStateful: number, // result of bitwise flag comparison
   isSSR = false,
-) {
+): void {
   const props: Data = {}
   const attrs: Data = createInternalObject()
 
@@ -236,7 +242,7 @@ export function updateProps(
   rawProps: Data | null,
   rawPrevProps: Data | null,
   optimized: boolean,
-) {
+): void {
   const {
     props,
     attrs,
@@ -478,6 +484,10 @@ function resolvePropValue(
       } else {
         value = defaultValue
       }
+      // #9006 reflect default value on custom element
+      if (instance.ce) {
+        instance.ce._setProp(key, value)
+      }
     }
     // boolean casting
     if (opt[BooleanFlags.shouldCast]) {
@@ -616,7 +626,7 @@ function validatePropName(key: string) {
 // dev only
 // use function string name to check type constructors
 // so that it works across vms / iframes.
-function getType(ctor: Prop<any>): string {
+function getType(ctor: Prop<any> | null): string {
   // Early return for null to avoid unnecessary computations
   if (ctor === null) {
     return 'null'
@@ -646,6 +656,7 @@ function validateProps(
 ) {
   const resolvedValues = toRaw(props)
   const options = instance.propsOptions[0]
+  const camelizePropsKey = Object.keys(rawProps).map(key => camelize(key))
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue
@@ -654,7 +665,7 @@ function validateProps(
       resolvedValues[key],
       opt,
       __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
-      !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key)),
+      !camelizePropsKey.includes(key),
     )
   }
 }
@@ -701,7 +712,7 @@ function validateProp(
   }
 }
 
-const isSimpleType = /*#__PURE__*/ makeMap(
+const isSimpleType = /*@__PURE__*/ makeMap(
   'String,Number,Boolean,Function,Symbol,BigInt',
 )
 
@@ -713,24 +724,27 @@ type AssertionResult = {
 /**
  * dev only
  */
-function assertType(value: unknown, type: PropConstructor): AssertionResult {
+function assertType(
+  value: unknown,
+  type: PropConstructor | null,
+): AssertionResult {
   let valid
   const expectedType = getType(type)
-  if (isSimpleType(expectedType)) {
+  if (expectedType === 'null') {
+    valid = value === null
+  } else if (isSimpleType(expectedType)) {
     const t = typeof value
     valid = t === expectedType.toLowerCase()
     // for primitive wrapper objects
     if (!valid && t === 'object') {
-      valid = value instanceof type
+      valid = value instanceof (type as PropConstructor)
     }
   } else if (expectedType === 'Object') {
     valid = isObject(value)
   } else if (expectedType === 'Array') {
     valid = isArray(value)
-  } else if (expectedType === 'null') {
-    valid = value === null
   } else {
-    valid = value instanceof type
+    valid = value instanceof (type as PropConstructor)
   }
   return {
     valid,

@@ -47,7 +47,7 @@ describe('defineModel()', () => {
     `,
     )
     assertCode(content)
-    expect(content).toMatch(`props: /*#__PURE__*/_mergeModels({ foo: String }`)
+    expect(content).toMatch(`props: /*@__PURE__*/_mergeModels({ foo: String }`)
     expect(content).toMatch(`"modelValue": { default: 0 }`)
     expect(content).toMatch(`const count = _useModel(__props, "modelValue")`)
     expect(content).not.toMatch('defineModel')
@@ -68,7 +68,7 @@ describe('defineModel()', () => {
     `,
     )
     assertCode(content)
-    expect(content).toMatch(`props: /*#__PURE__*/_mergeModels(['foo', 'bar'], {
+    expect(content).toMatch(`props: /*@__PURE__*/_mergeModels(['foo', 'bar'], {
     "count": {},
     "countModifiers": {},
   })`)

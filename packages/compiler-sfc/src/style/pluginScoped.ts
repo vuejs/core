@@ -1,9 +1,16 @@
-import type { AtRule, PluginCreator, Rule } from 'postcss'
+import {
+  type AtRule,
+  type Container,
+  type Document,
+  type PluginCreator,
+  Rule,
+} from 'postcss'
 import selectorParser from 'postcss-selector-parser'
 import { warn } from '../warn'
 
 const animationNameRE = /^(-\w+-)?animation-name$/
 const animationRE = /^(-\w+-)?animation$/
+const keyframesRE = /^(?:-\w+-)?keyframes$/
 
 const scopedPlugin: PluginCreator<string> = (id = '') => {
   const keyframes = Object.create(null)
@@ -15,10 +22,7 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
       processRule(id, rule)
     },
     AtRule(node) {
-      if (
-        /-?keyframes$/.test(node.name) &&
-        !node.params.endsWith(`-${shortId}`)
-      ) {
+      if (keyframesRE.test(node.name) && !node.params.endsWith(`-${shortId}`)) {
         // register keyframes
         keyframes[node.params] = node.params = node.params + '-' + shortId
       }
@@ -66,26 +70,37 @@ function processRule(id: string, rule: Rule) {
     processedRules.has(rule) ||
     (rule.parent &&
       rule.parent.type === 'atrule' &&
-      /-?keyframes$/.test((rule.parent as AtRule).name))
+      keyframesRE.test((rule.parent as AtRule).name))
   ) {
     return
   }
   processedRules.add(rule)
+  let deep = false
+  let parent: Document | Container | undefined = rule.parent
+  while (parent && parent.type !== 'root') {
+    if ((parent as any).__deep) {
+      deep = true
+      break
+    }
+    parent = parent.parent
+  }
   rule.selector = selectorParser(selectorRoot => {
     selectorRoot.each(selector => {
-      rewriteSelector(id, selector, selectorRoot)
+      rewriteSelector(id, rule, selector, selectorRoot, deep)
     })
   }).processSync(rule.selector)
 }
 
 function rewriteSelector(
   id: string,
+  rule: Rule,
   selector: selectorParser.Selector,
   selectorRoot: selectorParser.Root,
+  deep: boolean,
   slotted = false,
 ) {
   let node: selectorParser.Node | null = null
-  let shouldInject = true
+  let shouldInject = !deep
   // find the last child node to insert attribute selector
   selector.each(n => {
     // DEPRECATED ">>>" and "/deep/" combinator
@@ -107,6 +122,7 @@ function rewriteSelector(
       // deep: inject [id] attribute at the node before the ::v-deep
       // combinator.
       if (value === ':deep' || value === '::v-deep') {
+        ;(rule as any).__deep = true
         if (n.nodes.length) {
           // .foo ::v-deep(.bar) -> .foo[xxxxxxx] .bar
           // replace the current node with ::v-deep's inner selector
@@ -147,7 +163,14 @@ function rewriteSelector(
       // instead.
       // ::v-slotted(.foo) -> .foo[xxxxxxx-s]
       if (value === ':slotted' || value === '::v-slotted') {
-        rewriteSelector(id, n.nodes[0], selectorRoot, true /* slotted */)
+        rewriteSelector(
+          id,
+          rule,
+          n.nodes[0],
+          selectorRoot,
+          deep,
+          true /* slotted */,
+        )
         let last: selectorParser.Selector['nodes'][0] = n
         n.nodes[0].each(ss => {
           selector.insertAfter(last, ss)
@@ -164,8 +187,7 @@ function rewriteSelector(
       // global: replace with inner selector and do not inject [id].
       // ::v-global(.foo) -> .foo
       if (value === ':global' || value === '::v-global') {
-        selectorRoot.insertAfter(selector, n.nodes[0])
-        selectorRoot.removeChild(selector)
+        selector.replaceWith(n.nodes[0])
         return false
       }
     }
@@ -206,11 +228,23 @@ function rewriteSelector(
     }
   })
 
+  if (rule.nodes.some(node => node.type === 'rule')) {
+    const deep = (rule as any).__deep
+    if (!deep) {
+      extractAndWrapNodes(rule)
+      const atruleNodes = rule.nodes.filter(node => node.type === 'atrule')
+      for (const atnode of atruleNodes) {
+        extractAndWrapNodes(atnode)
+      }
+    }
+    shouldInject = deep
+  }
+
   if (node) {
     const { type, value } = node as selectorParser.Node
     if (type === 'pseudo' && (value === ':is' || value === ':where')) {
       ;(node as selectorParser.Pseudo).nodes.forEach(value =>
-        rewriteSelector(id, value, selectorRoot, slotted),
+        rewriteSelector(id, rule, value, selectorRoot, deep, slotted),
       )
       shouldInject = false
     }
@@ -243,6 +277,23 @@ function rewriteSelector(
 
 function isSpaceCombinator(node: selectorParser.Node) {
   return node.type === 'combinator' && /^\s+$/.test(node.value)
+}
+
+function extractAndWrapNodes(parentNode: Rule | AtRule) {
+  if (!parentNode.nodes) return
+  const nodes = parentNode.nodes.filter(
+    node => node.type === 'decl' || node.type === 'comment',
+  )
+  if (nodes.length) {
+    for (const node of nodes) {
+      parentNode.removeChild(node)
+    }
+    const wrappedRule = new Rule({
+      nodes: nodes,
+      selector: '&',
+    })
+    parentNode.prepend(wrappedRule)
+  }
 }
 
 scopedPlugin.postcss = true

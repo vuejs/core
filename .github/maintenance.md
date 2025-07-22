@@ -80,6 +80,7 @@ Depending on the type of the PR, different considerations need to be taken into 
   - Make sure it doesn't accidentally cause dev-only or compiler-only code branches to be included in the runtime build. Notable case is that some functions in @vue/shared are compiler-only and should not be used in runtime code, e.g. `isHTMLTag` and `isSVGTag`.
 
 - Performance
+
   - Be careful about code changes in "hot paths", in particular the Virtual DOM renderer (`runtime-core/src/renderer.ts`) and component instantiation code.
 
 - Potential Breakage

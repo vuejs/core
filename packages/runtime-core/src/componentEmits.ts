@@ -1,5 +1,6 @@
 import {
   EMPTY_OBJ,
+  type OverloadParameters,
   type UnionToIntersection,
   camelize,
   extend,
@@ -28,7 +29,9 @@ import {
   compatModelEmit,
   compatModelEventPrefix,
 } from './compat/componentVModel'
+import type { ComponentTypeEmits } from './apiSetupHelpers'
 import { getModelModifiers } from './helpers/useModel'
+import type { ComponentPublicInstance } from './componentPublicInstance'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -37,23 +40,48 @@ export type ObjectEmitsOptions = Record<
 
 export type EmitsOptions = ObjectEmitsOptions | string[]
 
-export type EmitsToProps<T extends EmitsOptions> = T extends string[]
-  ? {
-      [K in `on${Capitalize<T[number]>}`]?: (...args: any[]) => any
-    }
-  : T extends ObjectEmitsOptions
+export type EmitsToProps<T extends EmitsOptions | ComponentTypeEmits> =
+  T extends string[]
     ? {
-        [K in `on${Capitalize<string & keyof T>}`]?: K extends `on${infer C}`
-          ? (
-              ...args: T[Uncapitalize<C>] extends (...args: infer P) => any
-                ? P
-                : T[Uncapitalize<C>] extends null
-                  ? any[]
-                  : never
-            ) => any
-          : never
+        [K in `on${Capitalize<T[number]>}`]?: (...args: any[]) => any
       }
-    : {}
+    : T extends ObjectEmitsOptions
+      ? {
+          [K in string & keyof T as `on${Capitalize<K>}`]?: (
+            ...args: T[K] extends (...args: infer P) => any
+              ? P
+              : T[K] extends null
+                ? any[]
+                : never
+          ) => any
+        }
+      : {}
+
+export type TypeEmitsToOptions<T extends ComponentTypeEmits> = {
+  [K in keyof T & string]: T[K] extends [...args: infer Args]
+    ? (...args: Args) => any
+    : () => any
+} & (T extends (...args: any[]) => any
+  ? ParametersToFns<OverloadParameters<T>>
+  : {})
+
+type ParametersToFns<T extends any[]> = {
+  [K in T[0]]: IsStringLiteral<K> extends true
+    ? (
+        ...args: T extends [e: infer E, ...args: infer P]
+          ? K extends E
+            ? P
+            : never
+          : never
+      ) => any
+    : never
+}
+
+type IsStringLiteral<T> = T extends string
+  ? string extends T
+    ? false
+    : true
+  : false
 
 export type ShortEmitsToObject<E> =
   E extends Record<string, any[]>
@@ -84,7 +112,7 @@ export function emit(
   instance: ComponentInternalInstance,
   event: string,
   ...rawArgs: any[]
-) {
+): ComponentPublicInstance | null | undefined {
   if (instance.isUnmounted) return
   const props = instance.vnode.props || EMPTY_OBJ
 
@@ -102,10 +130,10 @@ export function emit(
             event.startsWith(compatModelEventPrefix))
         )
       ) {
-        if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
+        if (!propsOptions || !(toHandlerKey(camelize(event)) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
-              `the emits option nor as an "${toHandlerKey(event)}" prop.`,
+              `the emits option nor as an "${toHandlerKey(camelize(event))}" prop.`,
           )
         }
       } else {
@@ -123,10 +151,14 @@ export function emit(
   }
 
   let args = rawArgs
-  const isModelListener = event.startsWith('update:')
+  const isCompatModelListener =
+    __COMPAT__ && compatModelEventPrefix + event in props
+  const isModelListener = isCompatModelListener || event.startsWith('update:')
+  const modifiers = isCompatModelListener
+    ? props.modelModifiers
+    : isModelListener && getModelModifiers(props, event.slice(7))
 
   // for v-model update:xxx events, apply modifiers on args
-  const modifiers = isModelListener && getModelModifiers(props, event.slice(7))
   if (modifiers) {
     if (modifiers.trim) {
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
