@@ -561,4 +561,8 @@ export { initFeatureFlags } from './featureFlags'
 /**
  * @internal
  */
+export { getComponentName } from './component'
+/**
+ * @internal
+ */
 export { createInternalObject } from './internalObject'

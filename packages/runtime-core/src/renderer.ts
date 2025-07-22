@@ -1185,6 +1185,7 @@ function baseCreateRenderer(
           container,
           anchor,
           parentComponent,
+          parentSuspense,
         )
       } else {
         getVaporInterface(parentComponent, n2).update(
@@ -2523,7 +2524,7 @@ function baseCreateRenderer(
   const getNextHostNode: NextFn = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
       if ((vnode.type as ConcreteComponent).__vapor) {
-        return hostNextSibling((vnode.component! as any).block)
+        return hostNextSibling(vnode.anchor!)
       }
       return getNextHostNode(vnode.component!.subTree)
     }
