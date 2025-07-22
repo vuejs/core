@@ -46,7 +46,7 @@ describe('renderList', () => {
     ).toHaveBeenWarned()
   })
 
-  it('should NOT warn when given 0', () => {
+  it('should not warn when given 0', () => {
     renderList(0, () => {})
     expect(
       `The v-for range expects a positive integer value but got 0.`,
