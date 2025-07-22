@@ -561,4 +561,16 @@ export { initFeatureFlags } from './featureFlags'
 /**
  * @internal
  */
+export {
+  createAsyncComponentContext,
+  useAsyncComponentState,
+  isAsyncWrapper,
+} from './apiAsyncComponent'
+/**
+ * @internal
+ */
+export { markAsyncBoundary } from './helpers/useId'
+/**
+ * @internal
+ */
 export { createInternalObject } from './internalObject'
