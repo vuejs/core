@@ -1,5 +1,6 @@
 import path from 'path'
 import {
+  type CompoundExpressionNode,
   ConstantTypes,
   type ExpressionNode,
   type NodeTransform,
@@ -36,6 +37,24 @@ export const createSrcsetTransformWithOptions = (
     (transformSrcset as Function)(node, context, options)
 }
 
+export function flattenCompoundExpression(
+  compoundExpression: CompoundExpressionNode,
+): string {
+  return compoundExpression.children
+    .map(child => {
+      if (typeof child === 'string') {
+        return child
+      } else if (typeof child === 'symbol') {
+        return child.description
+      } else if (child.type === NodeTypes.COMPOUND_EXPRESSION) {
+        return flattenCompoundExpression(child)
+      } else {
+        return child.content
+      }
+    })
+    .join('')
+}
+
 export const transformSrcset: NodeTransform = (
   node,
   context,
@@ -47,7 +66,25 @@ export const transformSrcset: NodeTransform = (
         if (attr.name === 'srcset' && attr.type === NodeTypes.ATTRIBUTE) {
           if (!attr.value) return
           const value = attr.value.content
-          if (!value) return
+          if (!value) {
+            // Handle empty srcset
+            if (options.vapor) {
+              node.props[index] = {
+                type: NodeTypes.DIRECTIVE,
+                name: 'bind',
+                arg: createSimpleExpression('srcset', true, attr.loc),
+                exp: createSimpleExpression(
+                  `''`,
+                  true,
+                  attr.loc,
+                  ConstantTypes.CAN_STRINGIFY,
+                ),
+                modifiers: [],
+                loc: attr.loc,
+              }
+            }
+            return
+          }
           const imageCandidates: ImageCandidate[] = value.split(',').map(s => {
             // The attribute value arrives here with all whitespace, except
             // normal spaces, represented by escape sequences
@@ -151,10 +188,20 @@ export const transformSrcset: NodeTransform = (
             }
           })
 
-          let exp: ExpressionNode = compoundExpression
-          if (context.hoistStatic) {
-            exp = context.hoist(compoundExpression)
-            exp.constType = ConstantTypes.CAN_STRINGIFY
+          let exp: ExpressionNode
+          if (options.vapor) {
+            exp = createSimpleExpression(
+              flattenCompoundExpression(compoundExpression),
+              false,
+              attr.loc,
+              ConstantTypes.CAN_STRINGIFY,
+            )
+          } else {
+            exp = compoundExpression
+            if (context.hoistStatic) {
+              exp = context.hoist(compoundExpression)
+              exp.constType = ConstantTypes.CAN_STRINGIFY
+            }
           }
 
           node.props[index] = {
