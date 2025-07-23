@@ -1740,6 +1740,35 @@ describe('SSR hydration', () => {
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 
+  // #13394
+  test('transition appear work with empty content', async () => {
+    const show = ref(true)
+    const { vnode, container } = mountWithHydration(
+      `<template><!----></template>`,
+      function (this: any) {
+        return h(
+          Transition,
+          { appear: true },
+          {
+            default: () =>
+              show.value
+                ? renderSlot(this.$slots, 'default')
+                : createTextVNode('foo'),
+          },
+        )
+      },
+    )
+
+    // empty slot render as a comment node
+    expect(container.firstChild!.nodeType).toBe(Node.COMMENT_NODE)
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+
+    show.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe('foo')
+  })
+
   test('transition appear with v-if', () => {
     const show = false
     const { vnode, container } = mountWithHydration(
