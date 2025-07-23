@@ -2277,30 +2277,13 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const {
-      bum,
-      scope,
-      job,
-      subTree,
-      um,
-      m,
-      a,
-      parent,
-      slots: { __: slotCacheKeys },
-    } = instance
+    const { bum, scope, job, subTree, um, m, a } = instance
     invalidateMount(m)
     invalidateMount(a)
 
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
-    }
-
-    // remove slots content from parent renderCache
-    if (parent && isArray(slotCacheKeys)) {
-      slotCacheKeys.forEach(v => {
-        parent.renderCache[v] = undefined
-      })
     }
 
     if (

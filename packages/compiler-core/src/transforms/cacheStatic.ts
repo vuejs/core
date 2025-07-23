@@ -12,14 +12,11 @@ import {
   type RootNode,
   type SimpleExpressionNode,
   type SlotFunctionExpression,
-  type SlotsObjectProperty,
   type TemplateChildNode,
   type TemplateNode,
   type TextCallNode,
   type VNodeCall,
   createArrayExpression,
-  createObjectProperty,
-  createSimpleExpression,
   getVNodeBlockHelper,
   getVNodeHelper,
 } from '../ast'
@@ -70,7 +67,10 @@ function walk(
   inFor = false,
 ) {
   const { children } = node
-  const toCache: (PlainElementNode | TextCallNode)[] = []
+  const toCacheMap = new Map<
+    PlainElementNode | TextCallNode,
+    undefined | (() => void)
+  >()
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     // only plain elements & text calls are eligible for caching.
@@ -83,8 +83,11 @@ function walk(
         : getConstantType(child, context)
       if (constantType > ConstantTypes.NOT_CONSTANT) {
         if (constantType >= ConstantTypes.CAN_CACHE) {
-          ;(child.codegenNode as VNodeCall).patchFlag = PatchFlags.CACHED
-          toCache.push(child)
+          toCacheMap.set(
+            child,
+            () =>
+              ((child.codegenNode as VNodeCall).patchFlag = PatchFlags.CACHED),
+          )
           continue
         }
       } else {
@@ -115,16 +118,17 @@ function walk(
         ? ConstantTypes.NOT_CONSTANT
         : getConstantType(child, context)
       if (constantType >= ConstantTypes.CAN_CACHE) {
-        if (
-          child.codegenNode.type === NodeTypes.JS_CALL_EXPRESSION &&
-          child.codegenNode.arguments.length > 0
-        ) {
-          child.codegenNode.arguments.push(
-            PatchFlags.CACHED +
-              (__DEV__ ? ` /* ${PatchFlagNames[PatchFlags.CACHED]} */` : ``),
-          )
-        }
-        toCache.push(child)
+        toCacheMap.set(child, () => {
+          if (
+            child.codegenNode.type === NodeTypes.JS_CALL_EXPRESSION &&
+            child.codegenNode.arguments.length > 0
+          ) {
+            child.codegenNode.arguments.push(
+              PatchFlags.CACHED +
+                (__DEV__ ? ` /* ${PatchFlagNames[PatchFlags.CACHED]} */` : ``),
+            )
+          }
+        })
         continue
       }
     }
@@ -157,8 +161,7 @@ function walk(
   }
 
   let cachedAsArray = false
-  const slotCacheKeys = []
-  if (toCache.length === children.length && node.type === NodeTypes.ELEMENT) {
+  if (toCacheMap.size === children.length && node.type === NodeTypes.ELEMENT) {
     if (
       node.tagType === ElementTypes.ELEMENT &&
       node.codegenNode &&
@@ -181,7 +184,6 @@ function walk(
       // default slot
       const slot = getSlotNode(node.codegenNode, 'default')
       if (slot) {
-        slotCacheKeys.push(context.cached.length)
         slot.returns = getCacheExpression(
           createArrayExpression(slot.returns as TemplateChildNode[]),
         )
@@ -205,7 +207,6 @@ function walk(
         slotName.arg &&
         getSlotNode(parent.codegenNode, slotName.arg)
       if (slot) {
-        slotCacheKeys.push(context.cached.length)
         slot.returns = getCacheExpression(
           createArrayExpression(slot.returns as TemplateChildNode[]),
         )
@@ -215,33 +216,16 @@ function walk(
   }
 
   if (!cachedAsArray) {
-    for (const child of toCache) {
-      slotCacheKeys.push(context.cached.length)
+    for (const [child, setupCache] of toCacheMap) {
+      if (setupCache) setupCache()
       child.codegenNode = context.cache(child.codegenNode!)
     }
   }
 
-  // put the slot cached keys on the slot object, so that the cache
-  // can be removed when component unmounting to prevent memory leaks
-  if (
-    slotCacheKeys.length &&
-    node.type === NodeTypes.ELEMENT &&
-    node.tagType === ElementTypes.COMPONENT &&
-    node.codegenNode &&
-    node.codegenNode.type === NodeTypes.VNODE_CALL &&
-    node.codegenNode.children &&
-    !isArray(node.codegenNode.children) &&
-    node.codegenNode.children.type === NodeTypes.JS_OBJECT_EXPRESSION
-  ) {
-    node.codegenNode.children.properties.push(
-      createObjectProperty(
-        `__`,
-        createSimpleExpression(JSON.stringify(slotCacheKeys), false),
-      ) as SlotsObjectProperty,
-    )
-  }
-
-  function getCacheExpression(value: JSChildNode): CacheExpression {
+  function getCacheExpression(
+    value: JSChildNode,
+    cachedAsArray: boolean = true,
+  ): CacheExpression {
     const exp = context.cache(value)
     // #6978, #7138, #7114
     // a cached children array inside v-for can caused HMR errors since
@@ -249,6 +233,7 @@ function walk(
     if (inFor && context.hmr) {
       exp.needArraySpread = true
     }
+    exp.cachedAsArray = cachedAsArray
     return exp
   }
 
@@ -268,7 +253,7 @@ function walk(
     }
   }
 
-  if (toCache.length && context.transformHoist) {
+  if (toCacheMap.size && context.transformHoist) {
     context.transformHoist(children, context, node)
   }
 }

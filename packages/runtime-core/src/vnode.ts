@@ -471,7 +471,11 @@ function createBaseVNode(
     ref: props && normalizeRef(props),
     scopeId: currentScopeId,
     slotScopeIds: null,
-    children,
+    children:
+      // children is a cached array
+      isArray(children) && (children as any).patchFlag === PatchFlags.CACHED
+        ? (children as VNode[]).map(child => cloneVNode(child))
+        : children,
     component: null,
     suspense: null,
     ssContent: null,
@@ -680,7 +684,9 @@ export function cloneVNode<T, U>(
     scopeId: vnode.scopeId,
     slotScopeIds: vnode.slotScopeIds,
     children:
-      __DEV__ && patchFlag === PatchFlags.CACHED && isArray(children)
+      // if vnode is cached, deep clone it's children to prevent cached children
+      // from retaining detached DOM nodes
+      patchFlag === PatchFlags.CACHED && isArray(children)
         ? (children as VNode[]).map(deepCloneVNode)
         : children,
     target: vnode.target,
@@ -738,7 +744,7 @@ export function cloneVNode<T, U>(
 }
 
 /**
- * Dev only, for HMR of hoisted vnodes reused in v-for
+ * for HMR of hoisted vnodes reused in v-for
  * https://github.com/vitejs/vite/issues/2022
  */
 function deepCloneVNode(vnode: VNode): VNode {
