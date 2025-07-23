@@ -7,7 +7,9 @@ import {
   type VNodeArrayChildren,
   type VNodeHook,
   type VNodeProps,
+  VaporSlot,
   cloneIfMounted,
+  cloneVNode,
   createVNode,
   invokeVNodeHook,
   isSameVNodeType,
@@ -16,9 +18,12 @@ import {
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
+  type ConcreteComponent,
   type Data,
+  type GenericComponentInstance,
   type LifecycleHook,
   createComponentInstance,
+  getComponentPublicInstance,
   setupComponent,
 } from './component'
 import {
@@ -35,6 +40,7 @@ import {
   ShapeFlags,
   def,
   getGlobalThis,
+  getSequence,
   invokeArrayFns,
   isArray,
   isReservedProp,
@@ -43,7 +49,7 @@ import {
   type SchedulerJob,
   SchedulerJobFlags,
   type SchedulerJobs,
-  flushPostFlushCbs,
+  flushOnAppMount,
   flushPreFlushCbs,
   queueJob,
   queuePostFlushCb,
@@ -51,13 +57,18 @@ import {
 import {
   EffectFlags,
   ReactiveEffect,
-  pauseTracking,
-  resetTracking,
+  setActiveSub,
+  setCurrentScope,
 } from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { popWarningContext, pushWarningContext, warn } from './warning'
-import { type CreateAppFunction, createAppAPI } from './apiCreateApp'
+import {
+  type AppMountFn,
+  type AppUnmountFn,
+  type CreateAppFunction,
+  createAppAPI,
+} from './apiCreateApp'
 import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
@@ -86,10 +97,13 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import type { TransitionHooks } from './components/BaseTransition'
+import type { VaporInteropInterface } from './apiCreateApp'
+import type { VueElement } from '@vue/runtime-dom'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
   createApp: CreateAppFunction<HostElement>
+  internals: RendererInternals
 }
 
 export interface HydrationRenderer extends Renderer<Element | ShadowRoot> {
@@ -165,6 +179,7 @@ export interface RendererInternals<
   r: RemoveFn
   m: MoveFn
   mt: MountComponentFn
+  umt: UnmountComponentFn
   mc: MountChildrenFn
   pc: PatchChildrenFn
   pbc: PatchBlockChildrenFn
@@ -226,6 +241,7 @@ type MoveFn = (
   container: RendererElement,
   anchor: RendererNode | null,
   type: MoveType,
+  parentComponent: ComponentInternalInstance | null,
   parentSuspense?: SuspenseBoundary | null,
 ) => void
 
@@ -260,6 +276,12 @@ export type MountComponentFn = (
   optimized: boolean,
 ) => void
 
+export type UnmountComponentFn = (
+  instance: ComponentInternalInstance,
+  parentSuspense: SuspenseBoundary | null,
+  doRemove?: boolean,
+) => void
+
 type ProcessTextOrCommentFn = (
   n1: VNode | null,
   n2: VNode,
@@ -285,12 +307,16 @@ export enum MoveType {
 
 export const queuePostRenderEffect: (
   fn: SchedulerJobs,
+  id: number | undefined,
   suspense: SuspenseBoundary | null,
 ) => void = __FEATURE_SUSPENSE__
   ? __TEST__
     ? // vitest can't seem to handle eager circular dependency
-      (fn: Function | Function[], suspense: SuspenseBoundary | null) =>
-        queueEffectWithSuspense(fn, suspense)
+      (
+        fn: Function | Function[],
+        id: number | undefined,
+        suspense: SuspenseBoundary | null,
+      ) => queueEffectWithSuspense(fn, id, suspense)
     : queueEffectWithSuspense
   : queuePostFlushCb
 
@@ -425,6 +451,9 @@ function baseCreateRenderer(
           optimized,
         )
         break
+      case VaporSlot:
+        getVaporInterface(parentComponent, n2).slot(n1, n2, container, anchor)
+        break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(
@@ -484,6 +513,8 @@ function baseCreateRenderer(
     // set ref
     if (ref != null && parentComponent) {
       setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
+    } else if (ref == null && n1 && n1.ref != null) {
+      setRef(n1.ref, null, parentSuspense, n1, true)
     }
   }
 
@@ -717,11 +748,15 @@ function baseCreateRenderer(
       needCallTransitionHooks ||
       dirs
     ) {
-      queuePostRenderEffect(() => {
-        vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-        needCallTransitionHooks && transition!.enter(el)
-        dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
-      }, parentSuspense)
+      queuePostRenderEffect(
+        () => {
+          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+          needCallTransitionHooks && transition!.enter(el)
+          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+        },
+        undefined,
+        parentSuspense,
+      )
     }
   }
 
@@ -730,7 +765,7 @@ function baseCreateRenderer(
     vnode: VNode,
     scopeId: string | null,
     slotScopeIds: string[] | null,
-    parentComponent: ComponentInternalInstance | null,
+    parentComponent: GenericComponentInstance | null,
   ) => {
     if (scopeId) {
       hostSetScopeId(el, scopeId)
@@ -740,8 +775,8 @@ function baseCreateRenderer(
         hostSetScopeId(el, slotScopeIds[i])
       }
     }
-    if (parentComponent) {
-      let subTree = parentComponent.subTree
+    let subTree = parentComponent && parentComponent.subTree
+    if (subTree) {
       if (
         __DEV__ &&
         subTree.patchFlag > 0 &&
@@ -755,13 +790,13 @@ function baseCreateRenderer(
         (isSuspense(subTree.type) &&
           (subTree.ssContent === vnode || subTree.ssFallback === vnode))
       ) {
-        const parentVNode = parentComponent.vnode
+        const parentVNode = parentComponent!.vnode!
         setScopeId(
           el,
           parentVNode,
           parentVNode.scopeId,
           parentVNode.slotScopeIds,
-          parentComponent.parent,
+          parentComponent!.parent,
         )
       }
     }
@@ -929,10 +964,14 @@ function baseCreateRenderer(
     }
 
     if ((vnodeHook = newProps.onVnodeUpdated) || dirs) {
-      queuePostRenderEffect(() => {
-        vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
-        dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
-      }, parentSuspense)
+      queuePostRenderEffect(
+        () => {
+          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
+          dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
+        },
+        undefined,
+        parentSuspense,
+      )
     }
   }
 
@@ -961,7 +1000,8 @@ function baseCreateRenderer(
           // which also requires the correct parent container
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
+          oldVNode.shapeFlag &
+            (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE))
           ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
@@ -1137,7 +1177,23 @@ function baseCreateRenderer(
     optimized: boolean,
   ) => {
     n2.slotScopeIds = slotScopeIds
-    if (n1 == null) {
+
+    if ((n2.type as ConcreteComponent).__vapor) {
+      if (n1 == null) {
+        getVaporInterface(parentComponent, n2).mount(
+          n2,
+          container,
+          anchor,
+          parentComponent,
+        )
+      } else {
+        getVaporInterface(parentComponent, n2).update(
+          n1,
+          n2,
+          shouldUpdateComponent(n1, n2, optimized),
+        )
+      }
+    } else if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
@@ -1208,12 +1264,12 @@ function baseCreateRenderer(
       }
     }
 
+    // avoid hydration for hmr updating
+    if (__DEV__ && isHmrUpdating) initialVNode.el = null
+
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      // avoid hydration for hmr updating
-      if (__DEV__ && isHmrUpdating) initialVNode.el = null
-
       parentSuspense &&
         parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
@@ -1263,7 +1319,7 @@ function baseCreateRenderer(
         // normal update
         instance.next = n2
         // instance.update is the reactive effect.
-        instance.update()
+        instance.effect.run()
       }
     } else {
       // no update needed. just copy over properties
@@ -1272,16 +1328,56 @@ function baseCreateRenderer(
     }
   }
 
-  const setupRenderEffect: SetupRenderEffectFn = (
-    instance,
-    initialVNode,
-    container,
-    anchor,
-    parentSuspense,
-    namespace: ElementNamespace,
-    optimized,
-  ) => {
-    const componentUpdateFn = () => {
+  class SetupRenderEffect extends ReactiveEffect {
+    job: SchedulerJob
+
+    constructor(
+      private instance: ComponentInternalInstance,
+      private initialVNode: VNode,
+      private container: RendererElement,
+      private anchor: RendererNode | null,
+      private parentSuspense: SuspenseBoundary | null,
+      private namespace: ElementNamespace,
+      private optimized: boolean,
+    ) {
+      const prevScope = setCurrentScope(instance.scope)
+      super()
+      setCurrentScope(prevScope)
+
+      this.job = instance.job = () => {
+        if (this.dirty) {
+          this.run()
+        }
+      }
+      this.job.i = instance
+
+      if (__DEV__) {
+        this.onTrack = instance.rtc
+          ? e => invokeArrayFns(instance.rtc!, e)
+          : void 0
+        this.onTrigger = instance.rtg
+          ? e => invokeArrayFns(instance.rtg!, e)
+          : void 0
+      }
+    }
+
+    notify(): void {
+      if (!(this.flags & EffectFlags.PAUSED)) {
+        const job = this.job
+        queueJob(job, job.i!.uid)
+      }
+    }
+
+    fn() {
+      const {
+        instance,
+        initialVNode,
+        container,
+        anchor,
+        parentSuspense,
+        namespace,
+        optimized,
+      } = this
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
@@ -1347,8 +1443,13 @@ function baseCreateRenderer(
           }
         } else {
           // custom element style injection
-          if (root.ce) {
-            root.ce._injectChildStyle(type)
+          if (
+            (root as ComponentInternalInstance).ce &&
+            // @ts-expect-error _def is private
+            ((root as ComponentInternalInstance).ce as VueElement)._def
+              .shadowRoot !== false
+          ) {
+            ;(root as ComponentInternalInstance).ce!._injectChildStyle(type)
           }
 
           if (__DEV__) {
@@ -1377,7 +1478,7 @@ function baseCreateRenderer(
         }
         // mounted hook
         if (m) {
-          queuePostRenderEffect(m, parentSuspense)
+          queuePostRenderEffect(m, undefined, parentSuspense)
         }
         // onVnodeMounted
         if (
@@ -1387,6 +1488,7 @@ function baseCreateRenderer(
           const scopedInitialVNode = initialVNode
           queuePostRenderEffect(
             () => invokeVNodeHook(vnodeHook!, parent, scopedInitialVNode),
+            undefined,
             parentSuspense,
           )
         }
@@ -1396,6 +1498,7 @@ function baseCreateRenderer(
         ) {
           queuePostRenderEffect(
             () => instance.emit('hook:mounted'),
+            undefined,
             parentSuspense,
           )
         }
@@ -1406,16 +1509,19 @@ function baseCreateRenderer(
         if (
           initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE ||
           (parent &&
+            parent.vnode &&
             isAsyncWrapper(parent.vnode) &&
             parent.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE)
         ) {
-          instance.a && queuePostRenderEffect(instance.a, parentSuspense)
+          instance.a &&
+            queuePostRenderEffect(instance.a, undefined, parentSuspense)
           if (
             __COMPAT__ &&
             isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
           ) {
             queuePostRenderEffect(
               () => instance.emit('hook:activated'),
+              undefined,
               parentSuspense,
             )
           }
@@ -1427,7 +1533,7 @@ function baseCreateRenderer(
         }
 
         // #2458: deference mount-only object parameters to prevent memleaks
-        initialVNode = container = anchor = null as any
+        this.initialVNode = this.container = this.anchor = null as any
       } else {
         let { next, bu, u, parent, vnode } = instance
 
@@ -1445,7 +1551,7 @@ function baseCreateRenderer(
             nonHydratedAsyncRoot.asyncDep!.then(() => {
               // the instance may be destroyed during the time period
               if (!instance.isUnmounted) {
-                componentUpdateFn()
+                this.fn()
               }
             })
             return
@@ -1523,12 +1629,13 @@ function baseCreateRenderer(
         }
         // updated hook
         if (u) {
-          queuePostRenderEffect(u, parentSuspense)
+          queuePostRenderEffect(u, undefined, parentSuspense)
         }
         // onVnodeUpdated
         if ((vnodeHook = next.props && next.props.onVnodeUpdated)) {
           queuePostRenderEffect(
             () => invokeVNodeHook(vnodeHook!, parent, next!, vnode),
+            undefined,
             parentSuspense,
           )
         }
@@ -1538,6 +1645,7 @@ function baseCreateRenderer(
         ) {
           queuePostRenderEffect(
             () => instance.emit('hook:updated'),
+            undefined,
             parentSuspense,
           )
         }
@@ -1551,32 +1659,34 @@ function baseCreateRenderer(
         }
       }
     }
+  }
 
+  const setupRenderEffect: SetupRenderEffectFn = (
+    instance,
+    initialVNode,
+    container,
+    anchor,
+    parentSuspense,
+    namespace: ElementNamespace,
+    optimized,
+  ) => {
     // create reactive effect for rendering
-    instance.scope.on()
-    const effect = (instance.effect = new ReactiveEffect(componentUpdateFn))
-    instance.scope.off()
-
-    const update = (instance.update = effect.run.bind(effect))
-    const job: SchedulerJob = (instance.job = effect.runIfDirty.bind(effect))
-    job.i = instance
-    job.id = instance.uid
-    effect.scheduler = () => queueJob(job)
+    const effect = (instance.effect = new SetupRenderEffect(
+      instance,
+      initialVNode,
+      container,
+      anchor,
+      parentSuspense,
+      namespace,
+      optimized,
+    ))
+    instance.update = effect.run.bind(effect)
 
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
     toggleRecurse(instance, true)
 
-    if (__DEV__) {
-      effect.onTrack = instance.rtc
-        ? e => invokeArrayFns(instance.rtc!, e)
-        : void 0
-      effect.onTrigger = instance.rtg
-        ? e => invokeArrayFns(instance.rtg!, e)
-        : void 0
-    }
-
-    update()
+    effect.run()
   }
 
   const updateComponentPreRender = (
@@ -1591,11 +1701,11 @@ function baseCreateRenderer(
     updateProps(instance, nextVNode.props, prevProps, optimized)
     updateSlots(instance, nextVNode.children, optimized)
 
-    pauseTracking()
+    const prevSub = setActiveSub()
     // props update may have triggered pre-flush watchers.
     // flush them before the render update.
     flushPreFlushCbs(instance)
-    resetTracking()
+    setActiveSub(prevSub)
   }
 
   const patchChildren: PatchChildrenFn = (
@@ -1991,7 +2101,13 @@ function baseCreateRenderer(
           // There is no stable subsequence (e.g. a reverse)
           // OR current node is not among the stable sequence
           if (j < 0 || i !== increasingNewIndexSequence[j]) {
-            move(nextChild, container, anchor, MoveType.REORDER)
+            move(
+              nextChild,
+              container,
+              anchor,
+              MoveType.REORDER,
+              parentComponent,
+            )
           } else {
             j--
           }
@@ -2005,11 +2121,22 @@ function baseCreateRenderer(
     container,
     anchor,
     moveType,
+    parentComponent,
     parentSuspense = null,
   ) => {
     const { el, type, transition, children, shapeFlag } = vnode
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      move(vnode.component!.subTree, container, anchor, moveType)
+      if ((type as ConcreteComponent).__vapor) {
+        getVaporInterface(parentComponent, vnode).move(vnode, container, anchor)
+      } else {
+        move(
+          vnode.component!.subTree,
+          container,
+          anchor,
+          moveType,
+          parentComponent,
+        )
+      }
       return
     }
 
@@ -2019,14 +2146,26 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.TELEPORT) {
-      ;(type as typeof TeleportImpl).move(vnode, container, anchor, internals)
+      ;(type as typeof TeleportImpl).move(
+        vnode,
+        container,
+        anchor,
+        internals,
+        parentComponent,
+      )
       return
     }
 
     if (type === Fragment) {
       hostInsert(el!, container, anchor)
       for (let i = 0; i < (children as VNode[]).length; i++) {
-        move((children as VNode[])[i], container, anchor, moveType)
+        move(
+          (children as VNode[])[i],
+          container,
+          anchor,
+          moveType,
+          parentComponent,
+        )
       }
       hostInsert(vnode.anchor!, container, anchor)
       return
@@ -2046,7 +2185,11 @@ function baseCreateRenderer(
       if (moveType === MoveType.ENTER) {
         transition!.beforeEnter(el!)
         hostInsert(el!, container, anchor)
-        queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+        queuePostRenderEffect(
+          () => transition!.enter(el!),
+          undefined,
+          parentSuspense,
+        )
       } else {
         const { leave, delayLeave, afterLeave } = transition!
         const remove = () => {
@@ -2098,9 +2241,9 @@ function baseCreateRenderer(
 
     // unset ref
     if (ref != null) {
-      pauseTracking()
+      const prevSub = setActiveSub()
       setRef(ref, null, parentSuspense, vnode, true)
-      resetTracking()
+      setActiveSub(prevSub)
     }
 
     // #6593 should clean memo cache when unmount
@@ -2125,7 +2268,12 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      unmountComponent(vnode.component!, parentSuspense, doRemove)
+      if ((type as ConcreteComponent).__vapor) {
+        getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
+        return
+      } else {
+        unmountComponent(vnode.component!, parentSuspense, doRemove)
+      }
     } else {
       if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
         vnode.suspense!.unmount(parentSuspense, doRemove)
@@ -2173,6 +2321,11 @@ function baseCreateRenderer(
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
       }
 
+      if (type === VaporSlot) {
+        getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
+        return
+      }
+
       if (doRemove) {
         remove(vnode)
       }
@@ -2183,11 +2336,15 @@ function baseCreateRenderer(
         (vnodeHook = props && props.onVnodeUnmounted)) ||
       shouldInvokeDirs
     ) {
-      queuePostRenderEffect(() => {
-        vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-        shouldInvokeDirs &&
-          invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
-      }, parentSuspense)
+      queuePostRenderEffect(
+        () => {
+          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+          shouldInvokeDirs &&
+            invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
+        },
+        undefined,
+        parentSuspense,
+      )
     }
   }
 
@@ -2255,10 +2412,10 @@ function baseCreateRenderer(
     hostRemove(end)
   }
 
-  const unmountComponent = (
-    instance: ComponentInternalInstance,
-    parentSuspense: SuspenseBoundary | null,
-    doRemove?: boolean,
+  const unmountComponent: UnmountComponentFn = (
+    instance,
+    parentSuspense,
+    doRemove,
   ) => {
     if (__DEV__ && instance.type.__hmrId) {
       unregisterHMR(instance)
@@ -2267,7 +2424,7 @@ function baseCreateRenderer(
     const {
       bum,
       scope,
-      job,
+      effect,
       subTree,
       um,
       m,
@@ -2286,7 +2443,7 @@ function baseCreateRenderer(
     // remove slots content from parent renderCache
     if (parent && isArray(slotCacheKeys)) {
       slotCacheKeys.forEach(v => {
-        parent.renderCache[v] = undefined
+        ;(parent as ComponentInternalInstance).renderCache[v] = undefined
       })
     }
 
@@ -2302,14 +2459,14 @@ function baseCreateRenderer(
 
     // job may be null if a component is unmounted before its async
     // setup has resolved.
-    if (job) {
+    if (effect) {
       // so that scheduler will no longer invoke it
-      job.flags! |= SchedulerJobFlags.DISPOSED
+      effect.stop()
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook
     if (um) {
-      queuePostRenderEffect(um, parentSuspense)
+      queuePostRenderEffect(um, undefined, parentSuspense)
     }
     if (
       __COMPAT__ &&
@@ -2317,12 +2474,15 @@ function baseCreateRenderer(
     ) {
       queuePostRenderEffect(
         () => instance.emit('hook:destroyed'),
+        undefined,
         parentSuspense,
       )
     }
-    queuePostRenderEffect(() => {
-      instance.isUnmounted = true
-    }, parentSuspense)
+    queuePostRenderEffect(
+      () => (instance.isUnmounted = true),
+      undefined,
+      parentSuspense,
+    )
 
     // A component with async dep inside a pending suspense is unmounted before
     // its async dep resolves. This should remove the dep from the suspense, and
@@ -2362,6 +2522,9 @@ function baseCreateRenderer(
 
   const getNextHostNode: NextFn = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+      if ((vnode.type as ConcreteComponent).__vapor) {
+        return hostNextSibling((vnode.component! as any).block)
+      }
       return getNextHostNode(vnode.component!.subTree)
     }
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
@@ -2375,7 +2538,6 @@ function baseCreateRenderer(
     return teleportEnd ? hostNextSibling(teleportEnd) : el
   }
 
-  let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
     if (vnode == null) {
       if (container._vnode) {
@@ -2393,12 +2555,7 @@ function baseCreateRenderer(
       )
     }
     container._vnode = vnode
-    if (!isFlushing) {
-      isFlushing = true
-      flushPreFlushCbs()
-      flushPostFlushCbs()
-      isFlushing = false
-    }
+    flushOnAppMount()
   }
 
   const internals: RendererInternals = {
@@ -2407,6 +2564,7 @@ function baseCreateRenderer(
     m: move,
     r: remove,
     mt: mountComponent,
+    umt: unmountComponent,
     mc: mountChildren,
     pc: patchChildren,
     pbc: patchBlockChildren,
@@ -2422,10 +2580,58 @@ function baseCreateRenderer(
     )
   }
 
+  const mountApp: AppMountFn<Element> = (
+    app,
+    container,
+    isHydrate,
+    namespace,
+  ) => {
+    const vnode = app._ceVNode || createVNode(app._component, app._props)
+    // store app context on the root VNode.
+    // this will be set on the root instance on initial mount.
+    vnode.appContext = app._context
+
+    if (namespace === true) {
+      namespace = 'svg'
+    } else if (namespace === false) {
+      namespace = undefined
+    }
+
+    // HMR root reload
+    if (__DEV__) {
+      app._context.reload = () => {
+        const cloned = cloneVNode(vnode)
+        // avoid hydration for hmr updating
+        cloned.el = null
+        // casting to ElementNamespace because TS doesn't guarantee type narrowing
+        // over function boundaries
+        render(cloned, container, namespace as ElementNamespace)
+      }
+    }
+
+    if (isHydrate && hydrate) {
+      hydrate(vnode as VNode<Node, Element>, container as any)
+    } else {
+      render(vnode, container, namespace)
+    }
+
+    return vnode.component!
+  }
+
+  const unmountApp: AppUnmountFn = app => {
+    render(null, app._container)
+  }
+
   return {
     render,
     hydrate,
-    createApp: createAppAPI(render, hydrate),
+    internals,
+    createApp: createAppAPI(
+      mountApp,
+      unmountApp,
+      getComponentPublicInstance as any,
+      render,
+    ),
   }
 }
 
@@ -2444,15 +2650,17 @@ function resolveChildrenNamespace(
 }
 
 function toggleRecurse(
-  { effect, job }: ComponentInternalInstance,
+  { effect, job, vapor }: ComponentInternalInstance,
   allowed: boolean,
 ) {
-  if (allowed) {
-    effect.flags |= EffectFlags.ALLOW_RECURSE
-    job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
-  } else {
-    effect.flags &= ~EffectFlags.ALLOW_RECURSE
-    job.flags! &= ~SchedulerJobFlags.ALLOW_RECURSE
+  if (!vapor) {
+    if (allowed) {
+      effect.flags |= EffectFlags.ALLOW_RECURSE
+      job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+    } else {
+      effect.flags &= ~EffectFlags.ALLOW_RECURSE
+      job.flags! &= ~SchedulerJobFlags.ALLOW_RECURSE
+    }
   }
 }
 
@@ -2503,65 +2711,23 @@ export function traverseStaticChildren(
       if (c2.type === Text) {
         c2.el = c1.el
       }
-      if (__DEV__) {
-        // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
-        // would have received .el during block patch)
-        if (c2.type === Comment && !c2.el) {
-          c2.el = c1.el
-        }
+      // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
+      // would have received .el during block patch)
+      if (c2.type === Comment && !c2.el) {
+        c2.el = c1.el
+      }
 
+      if (__DEV__) {
         c2.el && (c2.el.__vnode = c2)
       }
     }
   }
 }
 
-// https://en.wikipedia.org/wiki/Longest_increasing_subsequence
-function getSequence(arr: number[]): number[] {
-  const p = arr.slice()
-  const result = [0]
-  let i, j, u, v, c
-  const len = arr.length
-  for (i = 0; i < len; i++) {
-    const arrI = arr[i]
-    if (arrI !== 0) {
-      j = result[result.length - 1]
-      if (arr[j] < arrI) {
-        p[i] = j
-        result.push(i)
-        continue
-      }
-      u = 0
-      v = result.length - 1
-      while (u < v) {
-        c = (u + v) >> 1
-        if (arr[result[c]] < arrI) {
-          u = c + 1
-        } else {
-          v = c
-        }
-      }
-      if (arrI < arr[result[u]]) {
-        if (u > 0) {
-          p[i] = result[u - 1]
-        }
-        result[u] = i
-      }
-    }
-  }
-  u = result.length
-  v = result[u - 1]
-  while (u-- > 0) {
-    result[u] = v
-    v = p[v]
-  }
-  return result
-}
-
 function locateNonHydratedAsyncRoot(
   instance: ComponentInternalInstance,
 ): ComponentInternalInstance | undefined {
-  const subComponent = instance.subTree.component
+  const subComponent = instance.vapor ? null : instance.subTree.component
   if (subComponent) {
     if (subComponent.asyncDep && !subComponent.asyncResolved) {
       return subComponent
@@ -2571,9 +2737,27 @@ function locateNonHydratedAsyncRoot(
   }
 }
 
-export function invalidateMount(hooks: LifecycleHook): void {
+export function invalidateMount(hooks: LifecycleHook | undefined): void {
   if (hooks) {
     for (let i = 0; i < hooks.length; i++)
       hooks[i].flags! |= SchedulerJobFlags.DISPOSED
   }
+}
+
+function getVaporInterface(
+  instance: ComponentInternalInstance | null,
+  vnode: VNode,
+): VaporInteropInterface {
+  const ctx = instance ? instance.appContext : vnode.appContext
+  const res = ctx && ctx.vapor
+  if (__DEV__ && !res) {
+    warn(
+      `Vapor component found in vdom tree but vapor-in-vdom interop was not installed. ` +
+        `Make sure to install it:\n` +
+        `\`\`\`\nimport { vaporInteropPlugin } from 'vue'\n` +
+        `app.use(vaporInteropPlugin)\n` +
+        `\`\`\``,
+    )
+  }
+  return res!
 }

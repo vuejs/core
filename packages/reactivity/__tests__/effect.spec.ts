@@ -1,4 +1,20 @@
 import {
+  computed,
+  h,
+  nextTick,
+  nodeOps,
+  ref,
+  render,
+  serializeInner,
+} from '@vue/runtime-test'
+import { ITERATE_KEY, getDepFromReactive } from '../src/dep'
+import {
+  onEffectCleanup,
+  pauseTracking,
+  resetTracking,
+  untrack,
+} from '../src/effect'
+import {
   type DebuggerEvent,
   type ReactiveEffectRunner,
   TrackOpTypes,
@@ -11,24 +27,7 @@ import {
   stop,
   toRaw,
 } from '../src/index'
-import { type Dep, ITERATE_KEY, getDepFromReactive } from '../src/dep'
-import {
-  computed,
-  h,
-  nextTick,
-  nodeOps,
-  ref,
-  render,
-  serializeInner,
-} from '@vue/runtime-test'
-import {
-  endBatch,
-  onEffectCleanup,
-  pauseTracking,
-  resetTracking,
-  startBatch,
-  untrack,
-} from '../src/effect'
+import { type ReactiveNode, endBatch, startBatch } from '../src/system'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -1195,12 +1194,12 @@ describe('reactivity/effect', () => {
   })
 
   describe('dep unsubscribe', () => {
-    function getSubCount(dep: Dep | undefined) {
+    function getSubCount(dep: ReactiveNode | undefined) {
       let count = 0
       let sub = dep!.subs
       while (sub) {
         count++
-        sub = sub.prevSub
+        sub = sub.nextSub
       }
       return count
     }

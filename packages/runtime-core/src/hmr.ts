@@ -4,10 +4,10 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
-  type InternalRenderFunction,
+  type GenericComponentInstance,
   isClassComponent,
 } from './component'
-import { queueJob, queuePostFlushCb } from './scheduler'
+import { nextTick, queueJob, queuePostFlushCb } from './scheduler'
 import { extend, getGlobalThis } from '@vue/shared'
 
 type HMRComponent = ComponentOptions | ClassComponent
@@ -16,8 +16,8 @@ export let isHmrUpdating = false
 
 export const hmrDirtyComponents: Map<
   ConcreteComponent,
-  Set<ComponentInternalInstance>
-> = new Map<ConcreteComponent, Set<ComponentInternalInstance>>()
+  Set<GenericComponentInstance>
+> = new Map<ConcreteComponent, Set<GenericComponentInstance>>()
 
 export interface HMRRuntime {
   createRecord: typeof createRecord
@@ -45,11 +45,11 @@ const map: Map<
     // to apply hot updates to the component even when there are no actively
     // rendered instance.
     initialDef: ComponentOptions
-    instances: Set<ComponentInternalInstance>
+    instances: Set<GenericComponentInstance>
   }
 > = new Map()
 
-export function registerHMR(instance: ComponentInternalInstance): void {
+export function registerHMR(instance: GenericComponentInstance): void {
   const id = instance.type.__hmrId!
   let record = map.get(id)
   if (!record) {
@@ -59,7 +59,7 @@ export function registerHMR(instance: ComponentInternalInstance): void {
   record.instances.add(instance)
 }
 
-export function unregisterHMR(instance: ComponentInternalInstance): void {
+export function unregisterHMR(instance: GenericComponentInstance): void {
   map.get(instance.type.__hmrId!)!.instances.delete(instance)
 }
 
@@ -90,14 +90,21 @@ function rerender(id: string, newRender?: Function): void {
   // Create a snapshot which avoids the set being mutated during updates
   ;[...record.instances].forEach(instance => {
     if (newRender) {
-      instance.render = newRender as InternalRenderFunction
+      instance.render = newRender
       normalizeClassComponent(instance.type as HMRComponent).render = newRender
     }
-    instance.renderCache = []
     // this flag forces child components with slot content to update
     isHmrUpdating = true
-    instance.update()
-    isHmrUpdating = false
+    if (instance.vapor) {
+      instance.hmrRerender!()
+    } else {
+      const i = instance as ComponentInternalInstance
+      i.renderCache = []
+      i.effect.run()
+    }
+    nextTick(() => {
+      isHmrUpdating = false
+    })
   })
 }
 
@@ -112,62 +119,73 @@ function reload(id: string, newComp: HMRComponent): void {
   // create a snapshot which avoids the set being mutated during updates
   const instances = [...record.instances]
 
-  for (let i = 0; i < instances.length; i++) {
-    const instance = instances[i]
-    const oldComp = normalizeClassComponent(instance.type as HMRComponent)
+  if (newComp.__vapor) {
+    for (const instance of instances) {
+      instance.hmrReload!(newComp)
+    }
+  } else {
+    for (const instance of instances as ComponentInternalInstance[]) {
+      const oldComp = normalizeClassComponent(instance.type as HMRComponent)
 
-    let dirtyInstances = hmrDirtyComponents.get(oldComp)
-    if (!dirtyInstances) {
-      // 1. Update existing comp definition to match new one
-      if (oldComp !== record.initialDef) {
-        updateComponentDef(oldComp, newComp)
+      let dirtyInstances = hmrDirtyComponents.get(oldComp)
+      if (!dirtyInstances) {
+        // 1. Update existing comp definition to match new one
+        if (oldComp !== record.initialDef) {
+          updateComponentDef(oldComp, newComp)
+        }
+        // 2. mark definition dirty. This forces the renderer to replace the
+        // component on patch.
+        hmrDirtyComponents.set(oldComp, (dirtyInstances = new Set()))
       }
-      // 2. mark definition dirty. This forces the renderer to replace the
-      // component on patch.
-      hmrDirtyComponents.set(oldComp, (dirtyInstances = new Set()))
-    }
-    dirtyInstances.add(instance)
-
-    // 3. invalidate options resolution cache
-    instance.appContext.propsCache.delete(instance.type as any)
-    instance.appContext.emitsCache.delete(instance.type as any)
-    instance.appContext.optionsCache.delete(instance.type as any)
-
-    // 4. actually update
-    if (instance.ceReload) {
-      // custom element
       dirtyInstances.add(instance)
-      instance.ceReload((newComp as any).styles)
-      dirtyInstances.delete(instance)
-    } else if (instance.parent) {
-      // 4. Force the parent instance to re-render. This will cause all updated
-      // components to be unmounted and re-mounted. Queue the update so that we
-      // don't end up forcing the same parent to re-render multiple times.
-      queueJob(() => {
-        isHmrUpdating = true
-        instance.parent!.update()
-        isHmrUpdating = false
-        // #6930, #11248 avoid infinite recursion
-        dirtyInstances.delete(instance)
-      })
-    } else if (instance.appContext.reload) {
-      // root instance mounted via createApp() has a reload method
-      instance.appContext.reload()
-    } else if (typeof window !== 'undefined') {
-      // root instance inside tree created via raw render(). Force reload.
-      window.location.reload()
-    } else {
-      console.warn(
-        '[HMR] Root or manually mounted instance modified. Full reload required.',
-      )
-    }
 
-    // update custom element child style
-    if (instance.root.ce && instance !== instance.root) {
-      instance.root.ce._removeChildStyle(oldComp)
+      // 3. invalidate options resolution cache
+      instance.appContext.propsCache.delete(instance.type as any)
+      instance.appContext.emitsCache.delete(instance.type as any)
+      instance.appContext.optionsCache.delete(instance.type as any)
+
+      // 4. actually update
+      if (instance.ceReload) {
+        // custom element
+        dirtyInstances.add(instance)
+        instance.ceReload((newComp as any).styles)
+        dirtyInstances.delete(instance)
+      } else if (instance.parent) {
+        // 4. Force the parent instance to re-render. This will cause all updated
+        // components to be unmounted and re-mounted. Queue the update so that we
+        // don't end up forcing the same parent to re-render multiple times.
+        queueJob(() => {
+          isHmrUpdating = true
+          const parent = instance.parent!
+          if (parent.vapor) {
+            parent.hmrRerender!()
+          } else {
+            ;(parent as ComponentInternalInstance).effect.run()
+          }
+          nextTick(() => {
+            isHmrUpdating = false
+          })
+          // #6930, #11248 avoid infinite recursion
+          dirtyInstances.delete(instance)
+        })
+      } else if (instance.appContext.reload) {
+        // root instance mounted via createApp() has a reload method
+        instance.appContext.reload()
+      } else if (typeof window !== 'undefined') {
+        // root instance inside tree created via raw render(). Force reload.
+        window.location.reload()
+      } else {
+        console.warn(
+          '[HMR] Root or manually mounted instance modified. Full reload required.',
+        )
+      }
+
+      // update custom element child style
+      if (instance.root.ce && instance !== instance.root) {
+        instance.root.ce._removeChildStyle(oldComp)
+      }
     }
   }
-
   // 5. make sure to cleanup dirty hmr components after update
   queuePostFlushCb(() => {
     hmrDirtyComponents.clear()

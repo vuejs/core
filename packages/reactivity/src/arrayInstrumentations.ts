@@ -1,8 +1,8 @@
-import { TrackOpTypes } from './constants'
-import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
-import { isProxy, isShallow, toRaw, toReactive } from './reactive'
-import { ARRAY_ITERATE_KEY, track } from './dep'
 import { isArray } from '@vue/shared'
+import { TrackOpTypes } from './constants'
+import { ARRAY_ITERATE_KEY, track } from './dep'
+import { isProxy, isShallow, toRaw, toReactive } from './reactive'
+import { endBatch, setActiveSub, startBatch } from './system'
 
 /**
  * Track array iteration and return:
@@ -319,10 +319,10 @@ function noTracking(
   method: keyof Array<any>,
   args: unknown[] = [],
 ) {
-  pauseTracking()
   startBatch()
+  const prevSub = setActiveSub()
   const res = (toRaw(self) as any)[method].apply(self, args)
+  setActiveSub(prevSub)
   endBatch()
-  resetTracking()
   return res
 }

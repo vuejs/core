@@ -164,30 +164,38 @@ export const TeleportImpl = {
       }
 
       if (isTeleportDeferred(n2.props)) {
-        queuePostRenderEffect(() => {
-          mountToTarget()
-          n2.el!.__isMounted = true
-        }, parentSuspense)
+        n2.el!.__isMounted = false
+        queuePostRenderEffect(
+          () => {
+            mountToTarget()
+            delete n2.el!.__isMounted
+          },
+          undefined,
+          parentSuspense,
+        )
       } else {
         mountToTarget()
       }
     } else {
-      if (isTeleportDeferred(n2.props) && !n1.el!.__isMounted) {
-        queuePostRenderEffect(() => {
-          TeleportImpl.process(
-            n1,
-            n2,
-            container,
-            anchor,
-            parentComponent,
-            parentSuspense,
-            namespace,
-            slotScopeIds,
-            optimized,
-            internals,
-          )
-          delete n1.el!.__isMounted
-        }, parentSuspense)
+      if (isTeleportDeferred(n2.props) && n1.el!.__isMounted === false) {
+        queuePostRenderEffect(
+          () => {
+            TeleportImpl.process(
+              n1,
+              n2,
+              container,
+              anchor,
+              parentComponent,
+              parentSuspense,
+              namespace,
+              slotScopeIds,
+              optimized,
+              internals,
+            )
+          },
+          undefined,
+          parentSuspense,
+        )
         return
       }
       // update content
@@ -245,6 +253,7 @@ export const TeleportImpl = {
             container,
             mainAnchor,
             internals,
+            parentComponent,
             TeleportMoveTypes.TOGGLE,
           )
         } else {
@@ -268,6 +277,7 @@ export const TeleportImpl = {
               nextTarget,
               null,
               internals,
+              parentComponent,
               TeleportMoveTypes.TARGET_CHANGE,
             )
           } else if (__DEV__) {
@@ -285,6 +295,7 @@ export const TeleportImpl = {
             target,
             targetAnchor,
             internals,
+            parentComponent,
             TeleportMoveTypes.TOGGLE,
           )
         }
@@ -347,6 +358,7 @@ function moveTeleport(
   container: RendererElement,
   parentAnchor: RendererNode | null,
   { o: { insert }, m: move }: RendererInternals,
+  parentComponent: ComponentInternalInstance | null,
   moveType: TeleportMoveTypes = TeleportMoveTypes.REORDER,
 ): void {
   // move target anchor if this is a target change.
@@ -371,6 +383,7 @@ function moveTeleport(
           container,
           parentAnchor,
           MoveType.REORDER,
+          parentComponent,
         )
       }
     }

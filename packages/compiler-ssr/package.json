@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-ssr",
-  "version": "3.5.13",
+  "version": "3.6.0-alpha.2",
   "description": "@vue/compiler-ssr",
   "main": "dist/compiler-ssr.cjs.js",
   "types": "dist/compiler-ssr.d.ts",

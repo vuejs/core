@@ -155,6 +155,7 @@ describe('sfc reactive props destructure', () => {
         "onUpdate:modelValue": (val: number) => void  // double-quoted string containing symbols
       }>()
       </script>
+      <template>{{ foo }}</template>
     `)
     expect(bindings).toStrictEqual({
       __propsAliases: {
@@ -173,6 +174,7 @@ describe('sfc reactive props destructure', () => {
     "foo:bar": { type: String, required: true, default: 'foo-bar' },
     "onUpdate:modelValue": { type: Function, required: true }
   },`)
+    expect(content).toMatch(`__props.foo`)
     assertCode(content)
   })
 
@@ -356,6 +358,22 @@ describe('sfc reactive props destructure', () => {
     expect(content).toMatch(`const a = 0,`)
     expect(content).toMatch(`b = 0;`)
     expect(content).toMatch(`props: ['item'],`)
+  })
+
+  test('handle function parameters with same name as destructured props', () => {
+    const { content } = compile(`
+    <script setup>
+    const { value } = defineProps()
+    function test(value) {
+      try {
+      } catch {
+      }
+    }
+    console.log(value)
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`console.log(__props.value)`)
   })
 
   test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {

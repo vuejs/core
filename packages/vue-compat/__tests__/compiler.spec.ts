@@ -93,6 +93,16 @@ test('COMPILER_V_BIND_OBJECT_ORDER', () => {
   ).toHaveBeenWarned()
 })
 
+test('should not warn COMPILER_V_BIND_OBJECT_ORDER work with vFor', () => {
+  const vm = new Vue({
+    template: `<div><div v-bind="{ id: 'bar', class: 'baz' }" v-for="item in 5" /></div>`,
+  }).$mount()
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
+  expect(
+    CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER,
+  ).not.toHaveBeenWarned()
+})
+
 test('COMPILER_V_ON_NATIVE', () => {
   const spy = vi.fn()
   const vm = new Vue({
