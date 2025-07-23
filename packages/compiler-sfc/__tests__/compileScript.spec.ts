@@ -913,6 +913,13 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script>foo()</script><script setup lang="ts">bar()</script>`),
       ).toThrow(`<script> and <script setup> must have the same language type`)
+
+      // #13193 must check lang before parsing with babel
+      expect(() =>
+        compile(
+          `<script lang="ts">const a = 1</script><script setup lang="tsx">const Comp = () => <p>test</p></script>`,
+        ),
+      ).toThrow(`<script> and <script setup> must have the same language type`)
     })
 
     const moduleErrorMsg = `cannot contain ES module exports`
