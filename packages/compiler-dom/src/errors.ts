@@ -42,7 +42,7 @@ if (__TEST__) {
   if (DOMErrorCodes.X_V_HTML_NO_EXPRESSION < ErrorCodes.__EXTEND_POINT__) {
     throw new Error(
       `DOMErrorCodes need to be updated to ${
-        ErrorCodes.__EXTEND_POINT__ + 1
+        ErrorCodes.__EXTEND_POINT__
       } to match extension point from core ErrorCodes.`,
     )
   }
