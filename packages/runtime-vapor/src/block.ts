@@ -18,14 +18,21 @@ export type Block =
 
 export type BlockFn = (...args: any[]) => Block
 
-export class VaporFragment {
-  nodes: Block
+export class VaporFragment<T extends Block = Block> {
+  nodes: T
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
+  fallback?: BlockFn
 
-  constructor(nodes: Block) {
+  constructor(nodes: T) {
     this.nodes = nodes
+  }
+}
+
+export class ForFragment extends VaporFragment<Block[]> {
+  constructor(nodes: Block[]) {
+    super(nodes)
   }
 }
 
@@ -65,16 +72,18 @@ export class DynamicFragment extends VaporFragment {
       this.nodes = []
     }
 
-    if (this.fallback && !isValidBlock(this.nodes)) {
+    if (this.fallback) {
       parent && remove(this.nodes, parent)
-      // handle nested dynamic fragment
-      if (isFragment(this.nodes)) {
-        renderFallback(this.nodes, this.fallback, key)
-      } else {
-        this.nodes =
-          (this.scope || (this.scope = new EffectScope())).run(this.fallback) ||
-          []
-      }
+      const scope = this.scope || (this.scope = new EffectScope())
+      scope.run(() => {
+        // handle nested fragment
+        if (isFragment(this.nodes)) {
+          ensureFallback(this.nodes, this.fallback!)
+        } else if (!isValidBlock(this.nodes)) {
+          this.nodes = this.fallback!() || []
+        }
+      })
+
       parent && insert(this.nodes, parent, this.anchor)
     }
 
@@ -82,19 +91,22 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
-function renderFallback(
-  fragment: VaporFragment,
-  fallback: BlockFn,
-  key: any,
-): void {
+function ensureFallback(fragment: VaporFragment, fallback: BlockFn): void {
+  if (!fragment.fallback) fragment.fallback = fallback
+
   if (fragment instanceof DynamicFragment) {
     const nodes = fragment.nodes
     if (isFragment(nodes)) {
-      renderFallback(nodes, fallback, key)
-    } else {
-      if (!fragment.fallback) fragment.fallback = fallback
-      fragment.update(fragment.fallback, key)
+      ensureFallback(nodes, fallback)
+    } else if (!isValidBlock(nodes)) {
+      fragment.update(fragment.fallback)
     }
+  } else if (fragment instanceof ForFragment) {
+    if (!isValidBlock(fragment.nodes[0])) {
+      fragment.nodes[0] = [fallback() || []] as Block[]
+    }
+  } else {
+    // vdom slots
   }
 }
 
@@ -117,7 +129,7 @@ export function isValidBlock(block: Block): boolean {
   } else if (isVaporComponent(block)) {
     return isValidBlock(block.block)
   } else if (isArray(block)) {
-    return block.length > 0 && block.every(isValidBlock)
+    return block.length > 0 && block.some(isValidBlock)
   } else {
     // fragment
     return isValidBlock(block.nodes)

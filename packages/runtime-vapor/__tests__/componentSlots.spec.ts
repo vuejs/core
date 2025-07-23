@@ -1,7 +1,9 @@
 // NOTE: This test is implemented based on the case of `runtime-core/__test__/componentSlots.spec.ts`.
 
 import {
+  child,
   createComponent,
+  createFor,
   createForSlots,
   createIf,
   createSlot,
@@ -12,10 +14,15 @@ import {
   renderEffect,
   template,
 } from '../src'
-import { currentInstance, nextTick, ref } from '@vue/runtime-dom'
+import {
+  currentInstance,
+  nextTick,
+  ref,
+  toDisplayString,
+} from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
-import { setElementText } from '../src/dom/prop'
+import { setElementText, setText } from '../src/dom/prop'
 
 const define = makeRender<any>()
 
@@ -562,7 +569,7 @@ describe('component: slots', () => {
       expect(html()).toBe('fallback<!--if--><!--slot-->')
     })
 
-    test('render fallback with nested v-if ', async () => {
+    test('render fallback with nested v-if', async () => {
       const Child = {
         setup() {
           return createSlot('default', null, () =>
@@ -619,6 +626,102 @@ describe('component: slots', () => {
       innerShow.value = true
       await nextTick()
       expect(html()).toBe('content<!--if--><!--if--><!--slot-->')
+    })
+
+    test('render fallback with v-for', async () => {
+      const Child = {
+        setup() {
+          return createSlot('default', null, () =>
+            document.createTextNode('fallback'),
+          )
+        },
+      }
+
+      const items = ref<number[]>([1])
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              const n2 = createFor(
+                () => items.value,
+                for_item0 => {
+                  const n4 = template('<span> </span>')() as any
+                  const x4 = child(n4) as any
+                  renderEffect(() =>
+                    setText(x4, toDisplayString(for_item0.value)),
+                  )
+                  return n4
+                },
+              )
+              return n2
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>1</span><!--for--><!--slot-->')
+
+      items.value.pop()
+      await nextTick()
+      expect(html()).toBe('fallback<!--for--><!--slot-->')
+
+      items.value.pop()
+      await nextTick()
+      expect(html()).toBe('fallback<!--for--><!--slot-->')
+
+      items.value.push(2)
+      await nextTick()
+      expect(html()).toBe('<span>2</span><!--for--><!--slot-->')
+    })
+
+    test('render fallback with v-for (empty source)', async () => {
+      const Child = {
+        setup() {
+          return createSlot('default', null, () =>
+            document.createTextNode('fallback'),
+          )
+        },
+      }
+
+      const items = ref<number[]>([])
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              const n2 = createFor(
+                () => items.value,
+                for_item0 => {
+                  const n4 = template('<span> </span>')() as any
+                  const x4 = child(n4) as any
+                  renderEffect(() =>
+                    setText(x4, toDisplayString(for_item0.value)),
+                  )
+                  return n4
+                },
+              )
+              return n2
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('fallback<!--for--><!--slot-->')
+
+      items.value.push(1)
+      await nextTick()
+      expect(html()).toBe('<span>1</span><!--for--><!--slot-->')
+
+      items.value.pop()
+      await nextTick()
+      expect(html()).toBe('fallback<!--for--><!--slot-->')
+
+      items.value.pop()
+      await nextTick()
+      expect(html()).toBe('fallback<!--for--><!--slot-->')
+
+      items.value.push(2)
+      await nextTick()
+      expect(html()).toBe('<span>2</span><!--for--><!--slot-->')
     })
   })
 })
