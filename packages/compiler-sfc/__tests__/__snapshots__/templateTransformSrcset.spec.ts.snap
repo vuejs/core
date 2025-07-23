@@ -16,6 +16,16 @@ export function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler sfc: transform srcset > transform empty srcset w/ includeAbsolute: true 1`] = `
+"import { openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+const _hoisted_1 = { srcset: " " }
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("img", _hoisted_1))
+}"
+`;
+
 exports[`compiler sfc: transform srcset > transform srcset 1`] = `
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 import _imports_0 from './logo.png'
