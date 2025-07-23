@@ -16,7 +16,7 @@ import {
   isSimpleIdentifier,
   isStaticExp,
 } from '../utils'
-import { IS_REF } from '../runtimeHelpers'
+import { IS_REF, WARN } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 import { camelize } from '@vue/shared'
 
@@ -55,7 +55,12 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       bindingType === BindingTypes.SETUP_REF ||
       bindingType === BindingTypes.SETUP_MAYBE_REF)
 
-  if (!expString.trim() || (!isMemberExpression(exp, context) && !maybeRef)) {
+  if (
+    !expString.trim() ||
+    (!isMemberExpression(exp, context) &&
+      !maybeRef &&
+      bindingType !== BindingTypes.SETUP_REACTIVE_CONST)
+  ) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc),
     )
@@ -102,6 +107,18 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
         `).value = $event : ${altAssignment})`,
       ])
     }
+  } else if (
+    bindingType === BindingTypes.SETUP_REACTIVE_CONST &&
+    isSimpleIdentifier(rawExp)
+  ) {
+    // v-model used on reactive object directly - generate warning instead of assignment
+    context.helper(WARN)
+    assignmentExp = createCompoundExpression([
+      `${eventArg} => (${context.helperString(WARN)}("v-model cannot be used on reactive objects directly. ",`,
+      `"Detected v-model on reactive variable '${rawExp}'. Consider using a reactive property or ref instead."), `,
+      exp,
+      ')',
+    ])
   } else {
     assignmentExp = createCompoundExpression([
       `${eventArg} => ((`,

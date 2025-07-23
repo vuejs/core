@@ -26,6 +26,36 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: transform v-model > errors > used on reactive const generates warning 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { warn: _warn, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+    return (_openBlock(), _createElementBlock("input", {
+      modelValue: reactiveVar,
+      "onUpdate:modelValue": $event => (_warn("v-model cannot be used on reactive objects directly. ","Detected v-model on reactive variable 'reactiveVar'. Consider using a reactive property or ref instead."), reactiveVar)
+    }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]))
+  }
+}"
+`;
+
+exports[`compiler: transform v-model > errors > used on reactive const member expression should not generate warning 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+    return (_openBlock(), _createElementBlock("input", {
+      modelValue: reactiveVar.foo,
+      "onUpdate:modelValue": $event => ((reactiveVar.foo) = $event)
+    }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]))
+  }
+}"
+`;
+
 exports[`compiler: transform v-model > simple expression (with multilines) 1`] = `
 "const _Vue = Vue
 

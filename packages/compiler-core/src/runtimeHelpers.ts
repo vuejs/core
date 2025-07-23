@@ -80,6 +80,7 @@ export const UNREF: unique symbol = Symbol(__DEV__ ? `unref` : ``)
 export const IS_REF: unique symbol = Symbol(__DEV__ ? `isRef` : ``)
 export const WITH_MEMO: unique symbol = Symbol(__DEV__ ? `withMemo` : ``)
 export const IS_MEMO_SAME: unique symbol = Symbol(__DEV__ ? `isMemoSame` : ``)
+export const WARN: unique symbol = Symbol(__DEV__ ? `warn` : ``)
 
 // Name mapping for runtime helpers that need to be imported from 'vue' in
 // generated code. Make sure these are correctly exported in the runtime!
@@ -123,6 +124,7 @@ export const helperNameMap: Record<symbol, string> = {
   [IS_REF]: `isRef`,
   [WITH_MEMO]: `withMemo`,
   [IS_MEMO_SAME]: `isMemoSame`,
+  [WARN]: `warn`,
 }
 
 export function registerRuntimeHelpers(helpers: Record<symbol, string>): void {

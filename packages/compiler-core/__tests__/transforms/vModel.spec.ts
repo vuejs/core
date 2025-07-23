@@ -582,5 +582,66 @@ describe('compiler: transform v-model', () => {
         }),
       )
     })
+
+    test('used on reactive const generates warning', () => {
+      const root = parseWithVModel('<input v-model="reactiveVar" />', {
+        bindingMetadata: {
+          reactiveVar: BindingTypes.SETUP_REACTIVE_CONST,
+        },
+      })
+      const node = root.children[0] as ElementNode
+      const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
+        .properties
+
+      expect(props[1]).toMatchObject({
+        key: {
+          content: 'onUpdate:modelValue',
+          isStatic: true,
+        },
+        value: {
+          children: [
+            '$event => (_warn("v-model cannot be used on reactive objects directly. ",',
+            '"Detected v-model on reactive variable \'reactiveVar\'. Consider using a reactive property or ref instead."), ',
+            {
+              content: 'reactiveVar',
+              isStatic: false,
+            },
+            ')',
+          ],
+        },
+      })
+
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('used on reactive const member expression should not generate warning', () => {
+      const root = parseWithVModel('<input v-model="reactiveVar.foo" />', {
+        bindingMetadata: {
+          reactiveVar: BindingTypes.SETUP_REACTIVE_CONST,
+        },
+      })
+      const node = root.children[0] as ElementNode
+      const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
+        .properties
+
+      expect(props[1]).toMatchObject({
+        key: {
+          content: 'onUpdate:modelValue',
+          isStatic: true,
+        },
+        value: {
+          children: [
+            '$event => ((',
+            {
+              content: 'reactiveVar.foo',
+              isStatic: false,
+            },
+            ') = $event)',
+          ],
+        },
+      })
+
+      expect(generate(root).code).toMatchSnapshot()
+    })
   })
 })
