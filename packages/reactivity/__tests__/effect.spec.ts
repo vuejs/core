@@ -1183,14 +1183,19 @@ describe('reactivity/effect', () => {
   })
 
   it('should not track dependencies when using untrack', () => {
-    const value = ref(1)
-    let dummy
+    const a = ref(1)
+    const b = computed(() => a.value)
+    let dummyA
+    let dummyB
     effect(() => {
-      dummy = untrack(() => value.value)
+      dummyA = untrack(() => a.value)
+      dummyB = untrack(() => b.value)
     })
-    expect(dummy).toBe(1)
-    value.value = 2
-    expect(dummy).toBe(1)
+    expect(dummyA).toBe(1)
+    expect(dummyB).toBe(1)
+    a.value = 2
+    expect(dummyA).toBe(1)
+    expect(dummyB).toBe(1)
   })
 
   describe('dep unsubscribe', () => {
