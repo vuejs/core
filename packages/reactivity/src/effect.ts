@@ -285,11 +285,12 @@ export function cleanup(
 }
 
 export function untrack<T>(fn: () => T): T {
+  if (!activeSub) return fn()
+  const prevSub = setActiveSub()
   try {
-    pauseTracking()
     return fn()
   } finally {
-    resetTracking()
+    setActiveSub(prevSub)
   }
 }
 
