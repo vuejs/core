@@ -680,9 +680,7 @@ export function cloneVNode<T, U>(
     scopeId: vnode.scopeId,
     slotScopeIds: vnode.slotScopeIds,
     children:
-      // if vnode is cached, deep clone it's children to prevent cached children
-      // from retaining detached DOM nodes
-      patchFlag === PatchFlags.CACHED && isArray(children)
+      __DEV__ && patchFlag === PatchFlags.CACHED && isArray(children)
         ? (children as VNode[]).map(deepCloneVNode)
         : children,
     target: vnode.target,
@@ -740,7 +738,7 @@ export function cloneVNode<T, U>(
 }
 
 /**
- * for HMR of hoisted vnodes reused in v-for
+ * Dev only, for HMR of hoisted vnodes reused in v-for
  * https://github.com/vitejs/vite/issues/2022
  */
 function deepCloneVNode(vnode: VNode): VNode {

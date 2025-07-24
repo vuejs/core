@@ -219,6 +219,12 @@ function walk(
     // #6978, #7138, #7114
     // a cached children array inside v-for can caused HMR errors since
     // it might be mutated when mounting the first item
+    // #13221
+    // fix memory leak in cached array:
+    // cached vnodes get replaced by cloned ones during mountChildren,
+    // which bind DOM elements. These DOM references persist after unmount,
+    // preventing garbage collection. Array spread avoids mutating cached
+    // array, preventing memory leaks.
     exp.needArraySpread = true
     return exp
   }
