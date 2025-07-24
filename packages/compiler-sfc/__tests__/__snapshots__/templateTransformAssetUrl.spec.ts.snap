@@ -81,9 +81,9 @@ import _imports_1 from '/bar.png'
 
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock("div", null, (_cache[0] || (_cache[0] = [
+  return (_openBlock(), _createElementBlock("div", null, [...(_cache[0] || (_cache[0] = [
     _createStaticVNode("<img src=\\"" + _imports_0 + "\\"><img src=\\"" + _imports_1 + "\\"><img src=\\"https://foo.bar/baz.png\\"><img src=\\"//foo.bar/baz.png\\"><img src=\\"" + _imports_0 + "\\">", 5)
-  ]).slice())))
+  ]))]))
 }"
 `;
 

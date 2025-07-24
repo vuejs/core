@@ -1012,11 +1012,10 @@ function genConditionalExpression(
 
 function genCacheExpression(node: CacheExpression, context: CodegenContext) {
   const { push, helper, indent, deindent, newline } = context
-  const { needPauseTracking, needArraySpread, cachedAsArray } = node
+  const { needPauseTracking, needArraySpread } = node
   if (needArraySpread) {
     push(`[...(`)
   }
-  if (cachedAsArray) push(`(`)
   push(`_cache[${node.index}] || (`)
   if (needPauseTracking) {
     indent()
@@ -1028,7 +1027,6 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
   }
   push(`_cache[${node.index}] = `)
   genNode(node.value, context)
-  if (cachedAsArray) push(`).slice()`)
   if (needPauseTracking) {
     push(`).cacheIndex = ${node.index},`)
     newline()

@@ -27,7 +27,7 @@ import { PatchFlags } from '@vue/shared'
 
 const cachedChildrenArrayMatcher = (
   tags: string[],
-  needArraySpread = false,
+  needArraySpread = true,
 ) => ({
   type: NodeTypes.JS_CACHE_EXPRESSION,
   needArraySpread,

@@ -214,18 +214,12 @@ function walk(
     }
   }
 
-  function getCacheExpression(
-    value: JSChildNode,
-    cachedAsArray: boolean = true,
-  ): CacheExpression {
+  function getCacheExpression(value: JSChildNode): CacheExpression {
     const exp = context.cache(value)
     // #6978, #7138, #7114
     // a cached children array inside v-for can caused HMR errors since
     // it might be mutated when mounting the first item
-    if (inFor && context.hmr) {
-      exp.needArraySpread = true
-    }
-    exp.cachedAsArray = cachedAsArray
+    exp.needArraySpread = true
     return exp
   }
 

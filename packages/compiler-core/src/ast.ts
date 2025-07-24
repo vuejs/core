@@ -420,7 +420,6 @@ export interface CacheExpression extends Node {
   needPauseTracking: boolean
   inVOnce: boolean
   needArraySpread: boolean
-  cachedAsArray: boolean
 }
 
 export interface MemoExpression extends CallExpression {
@@ -785,7 +784,6 @@ export function createCacheExpression(
     needPauseTracking: needPauseTracking,
     inVOnce,
     needArraySpread: false,
-    cachedAsArray: false,
     loc: locStub,
   }
 }

@@ -238,8 +238,8 @@ const _hoisted_8 = _imports_1 + ', ' + _imports_1 + ' 2x'
 const _hoisted_9 = _imports_1 + ', ' + _imports_0 + ' 2x'
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock("div", null, (_cache[0] || (_cache[0] = [
+  return (_openBlock(), _createElementBlock("div", null, [...(_cache[0] || (_cache[0] = [
     _createStaticVNode("<img src=\\"./logo.png\\" srcset=\\"\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_1 + "\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_2 + "\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_3 + "\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_4 + "\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_5 + "\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_6 + "\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_7 + "\\"><img src=\\"/logo.png\\" srcset=\\"" + _hoisted_8 + "\\"><img src=\\"https://example.com/logo.png\\" srcset=\\"https://example.com/logo.png, https://example.com/logo.png 2x\\"><img src=\\"/logo.png\\" srcset=\\"" + _hoisted_9 + "\\"><img src=\\"data:image/png;base64,i\\" srcset=\\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\">", 12)
-  ]).slice())))
+  ]))]))
 }"
 `;
