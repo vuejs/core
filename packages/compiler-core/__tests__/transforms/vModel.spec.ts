@@ -507,6 +507,42 @@ describe('compiler: transform v-model', () => {
     )
   })
 
+  test('should generate modelModifiers for component v-model with dynamic modifiers', () => {
+    const root = parseWithVModel('<Comp v-model.trim.[bar]="foo" />', {
+      prefixIdentifiers: true,
+    })
+    const vnodeCall = (root.children[0] as ComponentNode)
+      .codegenNode as VNodeCall
+    // props
+    expect(vnodeCall.props).toMatchObject({
+      properties: [
+        { key: { content: `modelValue` } },
+        { key: { content: `onUpdate:modelValue` } },
+        {
+          key: { content: 'modelModifiers' },
+          value: {
+            arguments: [
+              {
+                properties: [
+                  {
+                    key: { content: 'trim' },
+                    value: { content: 'true', isStatic: false },
+                  },
+                ],
+              },
+              { content: '_ctx.bar', isStatic: false },
+            ],
+          },
+        },
+      ],
+    })
+    // should now include modelModifiers in dynamicPropNames because it's
+    // gonna change
+    expect(vnodeCall.dynamicProps).toBe(
+      `["modelValue", "onUpdate:modelValue", "modelModifiers"]`,
+    )
+  })
+
   describe('errors', () => {
     test('missing expression', () => {
       const onError = vi.fn()
