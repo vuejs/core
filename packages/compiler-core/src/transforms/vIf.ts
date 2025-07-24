@@ -150,6 +150,15 @@ export function processIf(
             createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc),
           )
         }
+        // Check that there should not be two adjacent v-else
+        if (
+          dir.name === 'else' &&
+          sibling.branches[sibling.branches.length - 1].condition === undefined
+        ) {
+          context.onError(
+            createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc),
+          )
+        }
 
         // move the node to the if node's branches
         context.removeNode()
