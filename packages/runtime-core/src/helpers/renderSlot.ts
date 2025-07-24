@@ -9,7 +9,6 @@ import {
   Fragment,
   type VNode,
   type VNodeArrayChildren,
-  cloneVNode,
   createBlock,
   createVNode,
   isVNode,
@@ -72,24 +71,12 @@ export function renderSlot(
     ;(slot as ContextualRenderFn)._d = false
   }
   openBlock()
-  let validSlotContent = slot && ensureValidVNode(slot(props))
+  const validSlotContent = slot && ensureValidVNode(slot(props))
   const slotKey =
     props.key ||
     // slot content array of a dynamic conditional slot may have a branch
     // key attached in the `createSlots` helper, respect that
     (validSlotContent && (validSlotContent as any).key)
-
-  // if slot content is an cached array, deep clone it to prevent
-  // cached vnodes from retaining detached DOM nodes
-  if (
-    validSlotContent &&
-    (validSlotContent as any).patchFlag === PatchFlags.CACHED
-  ) {
-    validSlotContent = (validSlotContent as VNode[]).map(child =>
-      cloneVNode(child),
-    )
-  }
-
   const rendered = createBlock(
     Fragment,
     {

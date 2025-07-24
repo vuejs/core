@@ -1016,6 +1016,7 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
   if (needArraySpread) {
     push(`[...(`)
   }
+  if (cachedAsArray) push(`(`)
   push(`_cache[${node.index}] || (`)
   if (needPauseTracking) {
     indent()
@@ -1027,9 +1028,7 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
   }
   push(`_cache[${node.index}] = `)
   genNode(node.value, context)
-  if (cachedAsArray) {
-    push(`, _cache[${node.index}].patchFlag = -1, _cache[${node.index}]`)
-  }
+  if (cachedAsArray) push(`).slice()`)
   if (needPauseTracking) {
     push(`).cacheIndex = ${node.index},`)
     newline()

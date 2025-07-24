@@ -67,10 +67,7 @@ function walk(
   inFor = false,
 ) {
   const { children } = node
-  const toCacheMap = new Map<
-    PlainElementNode | TextCallNode,
-    undefined | (() => void)
-  >()
+  const toCache: (PlainElementNode | TextCallNode)[] = []
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     // only plain elements & text calls are eligible for caching.
@@ -83,11 +80,8 @@ function walk(
         : getConstantType(child, context)
       if (constantType > ConstantTypes.NOT_CONSTANT) {
         if (constantType >= ConstantTypes.CAN_CACHE) {
-          toCacheMap.set(
-            child,
-            () =>
-              ((child.codegenNode as VNodeCall).patchFlag = PatchFlags.CACHED),
-          )
+          ;(child.codegenNode as VNodeCall).patchFlag = PatchFlags.CACHED
+          toCache.push(child)
           continue
         }
       } else {
@@ -118,17 +112,16 @@ function walk(
         ? ConstantTypes.NOT_CONSTANT
         : getConstantType(child, context)
       if (constantType >= ConstantTypes.CAN_CACHE) {
-        toCacheMap.set(child, () => {
-          if (
-            child.codegenNode.type === NodeTypes.JS_CALL_EXPRESSION &&
-            child.codegenNode.arguments.length > 0
-          ) {
-            child.codegenNode.arguments.push(
-              PatchFlags.CACHED +
-                (__DEV__ ? ` /* ${PatchFlagNames[PatchFlags.CACHED]} */` : ``),
-            )
-          }
-        })
+        if (
+          child.codegenNode.type === NodeTypes.JS_CALL_EXPRESSION &&
+          child.codegenNode.arguments.length > 0
+        ) {
+          child.codegenNode.arguments.push(
+            PatchFlags.CACHED +
+              (__DEV__ ? ` /* ${PatchFlagNames[PatchFlags.CACHED]} */` : ``),
+          )
+        }
+        toCache.push(child)
         continue
       }
     }
@@ -161,7 +154,7 @@ function walk(
   }
 
   let cachedAsArray = false
-  if (toCacheMap.size === children.length && node.type === NodeTypes.ELEMENT) {
+  if (toCache.length === children.length && node.type === NodeTypes.ELEMENT) {
     if (
       node.tagType === ElementTypes.ELEMENT &&
       node.codegenNode &&
@@ -216,8 +209,7 @@ function walk(
   }
 
   if (!cachedAsArray) {
-    for (const [child, setupCache] of toCacheMap) {
-      if (setupCache) setupCache()
+    for (const child of toCache) {
       child.codegenNode = context.cache(child.codegenNode!)
     }
   }
@@ -253,7 +245,7 @@ function walk(
     }
   }
 
-  if (toCacheMap.size && context.transformHoist) {
+  if (toCache.length && context.transformHoist) {
     context.transformHoist(children, context, node)
   }
 }

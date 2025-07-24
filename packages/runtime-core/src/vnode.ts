@@ -471,11 +471,7 @@ function createBaseVNode(
     ref: props && normalizeRef(props),
     scopeId: currentScopeId,
     slotScopeIds: null,
-    children:
-      // children is a cached array
-      isArray(children) && (children as any).patchFlag === PatchFlags.CACHED
-        ? (children as VNode[]).map(child => cloneVNode(child))
-        : children,
+    children,
     component: null,
     suspense: null,
     ssContent: null,
