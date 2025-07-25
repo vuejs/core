@@ -2,13 +2,13 @@ import { createTextNode, normalizeNode } from '../../src/dom/node'
 
 describe('dom node', () => {
   test('normalizeNode', () => {
-    // null / undefined -> []
-    expect(normalizeNode(null)).toBeInstanceOf(Array)
-    expect(normalizeNode(undefined)).toBeInstanceOf(Array)
+    // null / undefined -> Comment
+    expect(normalizeNode(null)).toBeInstanceOf(Comment)
+    expect(normalizeNode(undefined)).toBeInstanceOf(Comment)
 
-    // boolean -> []
-    expect(normalizeNode(true)).toBeInstanceOf(Array)
-    expect(normalizeNode(false)).toBeInstanceOf(Array)
+    // boolean -> Comment
+    expect(normalizeNode(true)).toBeInstanceOf(Comment)
+    expect(normalizeNode(false)).toBeInstanceOf(Comment)
 
     // ['foo'] -> [TextNode]
     expect(normalizeNode(['foo'])).toMatchObject(createTextNode('foo'))
