@@ -34,22 +34,22 @@ describe('MathML support', () => {
     expect(e0.querySelector('#e5')!.namespaceURI).toMatch('svg')
   })
 
-  test.todo('should patch elements with correct namespaces', async () => {
+  test('should patch elements with correct namespaces', async () => {
     const cls = ref('foo')
     define({
       setup() {
         const t0 = template(
-          '<div><math id="f1"><annotation encoding="text/html"><div id="f2"></div></annotation></math></div>',
+          '<div><math id="f1"><annotation encoding="text/html"><a id="f2"></a></annotation></math></div>',
           true,
         )
+
         const n2 = t0() as HTMLElement
         const n1 = child(n2) as HTMLElement
         const p0 = child(n1) as HTMLElement
         const n0 = child(p0) as HTMLElement
         renderEffect(() => {
-          const _cls = cls
+          const _cls = cls.value
           setClass(n1, _cls)
-          // problem is n0 is undefined here
           setClass(n0, _cls)
         })
         return n2
