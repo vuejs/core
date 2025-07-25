@@ -73,38 +73,38 @@ export class DynamicFragment extends VaporFragment {
     }
 
     if (this.fallback) {
-      parent && remove(this.nodes, parent)
-      const scope = this.scope || (this.scope = new EffectScope())
-      scope.run(() => {
-        // handle nested fragment
-        if (isFragment(this.nodes)) {
-          ensureFallback(this.nodes, this.fallback!)
-        } else if (!isValidBlock(this.nodes)) {
-          this.nodes = this.fallback!() || []
+      // set fallback for nested fragments
+      const isFrag = isFragment(this.nodes)
+      if (isFrag) {
+        if (!(this.nodes as VaporFragment).fallback) {
+          ;(this.nodes as VaporFragment).fallback = this.fallback
         }
-      })
+      }
 
-      parent && insert(this.nodes, parent, this.anchor)
+      if (!isValidBlock(this.nodes)) {
+        parent && remove(this.nodes, parent)
+        const scope = this.scope || (this.scope = new EffectScope())
+        scope.run(() => {
+          if (isFrag) {
+            // render fragment's fallback
+            renderFragmentFallback(this.nodes as VaporFragment)
+          } else {
+            this.nodes = this.fallback!() || []
+          }
+        })
+        parent && insert(this.nodes, parent, this.anchor)
+      }
     }
 
     setActiveSub(prevSub)
   }
 }
 
-function ensureFallback(fragment: VaporFragment, fallback: BlockFn): void {
-  if (!fragment.fallback) fragment.fallback = fallback
-
-  if (fragment instanceof DynamicFragment) {
-    const nodes = fragment.nodes
-    if (isFragment(nodes)) {
-      ensureFallback(nodes, fallback)
-    } else if (!isValidBlock(nodes)) {
-      fragment.update(fragment.fallback)
-    }
-  } else if (fragment instanceof ForFragment) {
-    if (!isValidBlock(fragment.nodes[0])) {
-      fragment.nodes[0] = [fallback() || []] as Block[]
-    }
+function renderFragmentFallback(fragment: VaporFragment): void {
+  if (fragment instanceof ForFragment) {
+    fragment.nodes[0] = [fragment.fallback!() || []] as Block[]
+  } else if (fragment instanceof DynamicFragment) {
+    fragment.update(fragment.fallback)
   } else {
     // vdom slots
   }
