@@ -199,6 +199,8 @@ interface SharedTransformCodegenOptions {
    * binding access when `prefixIdentifiers` is enabled.
    */
   bindingMetadata?: BindingMetadata
+
+  identifiers?: { [name: string]: number | undefined }
   /**
    * Compile the function for inlining inside setup().
    * This allows the function to directly access setup() local bindings.
