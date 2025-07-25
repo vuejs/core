@@ -75,9 +75,7 @@ export class DynamicFragment extends VaporFragment {
       // set fallback for nested fragments
       const isFrag = isFragment(this.nodes)
       if (isFrag) {
-        if (!(this.nodes as VaporFragment).fallback) {
-          ;(this.nodes as VaporFragment).fallback = this.fallback
-        }
+        setFragmentFallback(this.nodes as VaporFragment, this.fallback)
       }
 
       if (!isValidBlock(this.nodes)) {
@@ -99,11 +97,28 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
+function setFragmentFallback(
+  fragment: VaporFragment,
+  fallback: BlockFn | undefined,
+): void {
+  if (!fragment.fallback) {
+    fragment.fallback = fallback
+  }
+  if (isFragment(fragment.nodes)) {
+    setFragmentFallback(fragment.nodes, fallback)
+  }
+}
+
 function renderFragmentFallback(fragment: VaporFragment): void {
   if (fragment instanceof ForFragment) {
     fragment.nodes[0] = [fragment.fallback!() || []] as Block[]
   } else if (fragment instanceof DynamicFragment) {
-    fragment.update(fragment.fallback)
+    const nodes = fragment.nodes
+    if (isFragment(nodes)) {
+      renderFragmentFallback(nodes)
+    } else {
+      fragment.update(fragment.fallback)
+    }
   } else {
     // vdom slots
   }
