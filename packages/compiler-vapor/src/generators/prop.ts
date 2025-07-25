@@ -169,16 +169,17 @@ function getRuntimeHelper(
   modifier: '.' | '^' | undefined,
 ): HelperConfig {
   const tagName = tag.toUpperCase()
+  const isSVG = isSVGTag(tag)
   if (modifier) {
     if (modifier === '.') {
-      return getSpecialHelper(key, tagName) || helpers.setDOMProp
+      return getSpecialHelper(key, tagName, isSVG) || helpers.setDOMProp
     } else {
       return helpers.setAttr
     }
   }
 
   // 1. special handling for value / style / class / textContent /  innerHTML
-  const helper = getSpecialHelper(key, tagName)
+  const helper = getSpecialHelper(key, tagName, isSVG)
   if (helper) {
     return helper
   }
@@ -190,7 +191,7 @@ function getRuntimeHelper(
   }
 
   // 3. SVG: always attribute
-  if (isSVGTag(tag)) {
+  if (isSVG) {
     // TODO pass svg flag
     return helpers.setAttr
   }
@@ -209,12 +210,13 @@ function getRuntimeHelper(
 function getSpecialHelper(
   keyName: string,
   tagName: string,
+  isSVG: boolean,
 ): HelperConfig | undefined {
   // special case for 'value' property
   if (keyName === 'value' && canSetValueDirectly(tagName)) {
     return helpers.setValue
   } else if (keyName === 'class') {
-    return helpers.setClass
+    return isSVG ? helpers.setAttr : helpers.setClass
   } else if (keyName === 'style') {
     return helpers.setStyle
   } else if (keyName === 'innerHTML') {

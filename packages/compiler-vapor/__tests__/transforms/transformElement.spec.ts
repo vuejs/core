@@ -956,4 +956,26 @@ describe('compiler: element transform', () => {
     expect(code).toMatchSnapshot()
     expect(code).contain('return null')
   })
+
+  test('svg', () => {
+    const t = `<svg><circle r="40"></circle></svg>`
+    const { code, ir } = compileWithElementTransform(t)
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '_template("<svg><circle r=\\"40\\"></circle></svg>", true, 1)',
+    )
+    expect(ir.template).toMatchObject([t])
+    expect(ir.templateNS.get(t)).toBe(1)
+  })
+
+  test('MathML', () => {
+    const t = `<math><mrow><mi>x</mi></mrow></math>`
+    const { code, ir } = compileWithElementTransform(t)
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '_template("<math><mrow><mi>x</mi></mrow></math>", true, 2)',
+    )
+    expect(ir.template).toMatchObject([t])
+    expect(ir.templateNS.get(t)).toBe(2)
+  })
 })

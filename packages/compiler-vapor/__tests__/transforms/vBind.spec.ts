@@ -656,6 +656,14 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setProp(n0, "value", _ctx.foo)')
   })
 
+  test(':class w/ svg elements', () => {
+    const { code } = compileWithVBind(`
+      <svg :class="cls"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setAttr(n0, "class", _ctx.cls))')
+  })
+
   test('number value', () => {
     const { code } = compileWithVBind(`<Comp :depth="0" />`)
     expect(code).matchSnapshot()
