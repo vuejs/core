@@ -184,7 +184,7 @@ const getCachedNode = (
   }
 }
 
-const dataAriaRE = /^(data|aria)-/
+const dataAriaRE = /^(?:data|aria)-/
 const isStringifiableAttr = (name: string, ns: Namespaces) => {
   return (
     (ns === Namespaces.HTML
