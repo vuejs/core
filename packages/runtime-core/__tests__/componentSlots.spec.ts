@@ -56,14 +56,10 @@ describe('component: slots', () => {
         expect(Object.getOwnPropertyDescriptor(slots, '_')!.enumerable).toBe(
           false,
         )
-        expect(slots).toHaveProperty('__')
-        expect(Object.getOwnPropertyDescriptor(slots, '__')!.enumerable).toBe(
-          false,
-        )
         return h('div')
       },
     }
-    const slots = { foo: () => {}, _: 1, __: [1] }
+    const slots = { foo: () => {}, _: 1 }
     render(createBlock(Comp, null, slots), nodeOps.createElement('div'))
   })
 
