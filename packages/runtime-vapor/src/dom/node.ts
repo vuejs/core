@@ -39,7 +39,8 @@ export type NodeChild = NodeChildAtom | NodeArrayChildren
 
 export function normalizeNode(node: NodeChild): Block {
   if (node == null || typeof node === 'boolean') {
-    return []
+    // empty placeholder
+    return createComment('')
   } else if (isArray(node) && node.length) {
     return node.map(normalizeNode)
   } else if (isBlock(node)) {
