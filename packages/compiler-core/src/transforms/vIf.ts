@@ -32,7 +32,13 @@ import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { cloneLoc } from '../parser'
 import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
-import { findDir, findProp, getMemoedVNodeCall, injectProp } from '../utils'
+import {
+  findDir,
+  findProp,
+  getMemoedVNodeCall,
+  injectProp,
+  isCommentOrWhitespace,
+} from '../utils'
 import { PatchFlags } from '@vue/shared'
 
 export const transformIf: NodeTransform = createStructuralDirectiveTransform(
@@ -125,18 +131,11 @@ export function processIf(
     let i = siblings.indexOf(node)
     while (i-- >= -1) {
       const sibling = siblings[i]
-      if (sibling && sibling.type === NodeTypes.COMMENT) {
+      if (sibling && isCommentOrWhitespace(sibling)) {
         context.removeNode(sibling)
-        __DEV__ && comments.unshift(sibling)
-        continue
-      }
-
-      if (
-        sibling &&
-        sibling.type === NodeTypes.TEXT &&
-        !sibling.content.trim().length
-      ) {
-        context.removeNode(sibling)
+        if (__DEV__ && sibling.type === NodeTypes.COMMENT) {
+          comments.unshift(sibling)
+        }
         continue
       }
 
