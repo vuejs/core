@@ -141,18 +141,9 @@ export function processIf(
       }
 
       if (sibling && sibling.type === NodeTypes.IF) {
-        // Check if v-else was followed by v-else-if
+        // Check if v-else was followed by v-else-if or there are two adjacent v-else
         if (
-          dir.name === 'else-if' &&
-          sibling.branches[sibling.branches.length - 1].condition === undefined
-        ) {
-          context.onError(
-            createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc),
-          )
-        }
-        // Check that there should not be two adjacent v-else
-        if (
-          dir.name === 'else' &&
+          (dir.name === 'else-if' || dir.name === 'else') &&
           sibling.branches[sibling.branches.length - 1].condition === undefined
         ) {
           context.onError(
