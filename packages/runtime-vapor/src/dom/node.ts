@@ -1,4 +1,4 @@
-import { type Block, VaporFragment, isBlock } from '../block'
+import { type Block, isBlock } from '../block'
 import { isArray } from '@vue/shared'
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -31,7 +31,7 @@ export function next(node: Node): Node {
   return node.nextSibling!
 }
 
-type NodeChildAtom = Node | string | number | boolean | null | undefined | void
+type NodeChildAtom = Block | string | number | boolean | null | undefined | void
 
 export type NodeArrayChildren = Array<NodeArrayChildren | NodeChildAtom>
 
@@ -42,8 +42,7 @@ export function normalizeNode(node: NodeChild): Block {
     // empty placeholder
     return createComment('')
   } else if (isArray(node) && node.length) {
-    // fragment
-    return new VaporFragment(node.map(normalizeNode))
+    return node.map(normalizeNode)
   } else if (isBlock(node)) {
     return node
   } else {

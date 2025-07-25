@@ -1,22 +1,17 @@
 import { createTextNode, normalizeNode } from '../../src/dom/node'
-import { VaporFragment } from '../../src'
 
 describe('dom node', () => {
   test('normalizeNode', () => {
-    // null / undefined -> Comment
-    expect(normalizeNode(null)).toBeInstanceOf(Comment)
-    expect(normalizeNode(undefined)).toBeInstanceOf(Comment)
+    // null / undefined -> []
+    expect(normalizeNode(null)).toBeInstanceOf(Array)
+    expect(normalizeNode(undefined)).toBeInstanceOf(Array)
 
-    // boolean -> Comment
-    expect(normalizeNode(true)).toBeInstanceOf(Comment)
-    expect(normalizeNode(false)).toBeInstanceOf(Comment)
+    // boolean -> []
+    expect(normalizeNode(true)).toBeInstanceOf(Array)
+    expect(normalizeNode(false)).toBeInstanceOf(Array)
 
-    // array -> Fragment
-    expect(normalizeNode(['foo'])).toBeInstanceOf(VaporFragment)
-
-    // VNode -> VNode
-    const vnode = createTextNode('div')
-    expect(normalizeNode(vnode)).toBe(vnode)
+    // ['foo'] -> [TextNode]
+    expect(normalizeNode(['foo'])).toMatchObject(createTextNode('foo'))
 
     // primitive types
     expect(normalizeNode('foo')).toMatchObject(createTextNode('foo'))

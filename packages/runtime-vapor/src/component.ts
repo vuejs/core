@@ -58,12 +58,12 @@ import {
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
-import { normalizeNode } from './dom/node'
 import {
   insertionAnchor,
   insertionParent,
   resetInsertionState,
 } from './insertionState'
+import { type NodeChild, normalizeNode } from './dom/node'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -72,7 +72,7 @@ export type VaporComponent = FunctionalVaporComponent | ObjectVaporComponent
 export type VaporSetupFn = (
   props: any,
   ctx: Pick<VaporComponentInstance, 'slots' | 'attrs' | 'emit' | 'expose'>,
-) => Block | Record<string, any> | undefined
+) => NodeChild | Record<string, any> | undefined
 
 export type FunctionalVaporComponent = VaporSetupFn &
   Omit<ObjectVaporComponent, 'setup'> & {
@@ -213,12 +213,12 @@ export function createComponent(
   }
 
   const setupFn = isFunction(component) ? component : component.setup
-  const setupResult = setupFn
-    ? callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
-        instance.props,
-        instance,
-      ]) || []
-    : []
+  const setupResult =
+    setupFn &&
+    callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
+      instance.props,
+      instance,
+    ])
 
   if (component === Fragment) {
     if (instance.slots.default) {
@@ -234,9 +234,10 @@ export function createComponent(
     if (isFunction(component) || !component.render) {
       instance.block = normalizeNode(setupResult)
     } else {
-      instance.devtoolsRawSetupState = setupResult
       // TODO make the proxy warn non-existent property access during dev
-      instance.setupState = proxyRefs(setupResult)
+      instance.setupState = proxyRefs(
+        (instance.devtoolsRawSetupState = setupResult || EMPTY_OBJ),
+      )
       devRender(instance)
     }
   } else {
@@ -518,7 +519,8 @@ export function createComponentWithFallback(
     if (rawSlots.$) {
       // TODO dynamic slot fragment
     } else {
-      insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
+      const defaultSlot = getSlot(rawSlots as RawSlots, 'default')
+      defaultSlot && insert(normalizeNode(defaultSlot()), el)
     }
   }
 
