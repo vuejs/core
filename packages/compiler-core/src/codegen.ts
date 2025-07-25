@@ -7,6 +7,7 @@ import {
   type CommentNode,
   type CompoundExpressionNode,
   type ConditionalExpression,
+  ConstantTypes,
   type ExpressionNode,
   type FunctionExpression,
   type IfStatement,
@@ -32,6 +33,7 @@ import { SourceMapGenerator } from 'source-map-js'
 import {
   advancePositionWithMutation,
   assert,
+  evaluateConstant,
   isSimpleIdentifier,
   toValidAssetId,
 } from './utils'
@@ -41,6 +43,7 @@ import {
   isArray,
   isString,
   isSymbol,
+  toDisplayString,
 } from '@vue/shared'
 import {
   CREATE_COMMENT,
@@ -760,6 +763,20 @@ function genExpression(node: SimpleExpressionNode, context: CodegenContext) {
 
 function genInterpolation(node: InterpolationNode, context: CodegenContext) {
   const { push, helper, pure } = context
+
+  if (
+    node.content.type === NodeTypes.SIMPLE_EXPRESSION &&
+    node.content.constType === ConstantTypes.CAN_STRINGIFY
+  ) {
+    if (node.content.content) {
+      push(JSON.stringify(toDisplayString(evaluateConstant(node.content))))
+    } else {
+      push(`""`)
+    }
+
+    return
+  }
+
   if (pure) push(PURE_ANNOTATION)
   push(`${helper(TO_DISPLAY_STRING)}(`)
   genNode(node.content, context)

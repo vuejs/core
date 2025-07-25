@@ -37,7 +37,13 @@ import {
   TO_HANDLERS,
   WITH_MEMO,
 } from './runtimeHelpers'
-import { NOOP, isObject, isString } from '@vue/shared'
+import {
+  NOOP,
+  isObject,
+  isString,
+  isSymbol,
+  toDisplayString,
+} from '@vue/shared'
 import type { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import type { Expression, Node } from '@babel/types'
@@ -568,3 +574,32 @@ export function getMemoedVNodeCall(
 }
 
 export const forAliasRE: RegExp = /([\s\S]*?)\s+(?:in|of)\s+(\S[\s\S]*)/
+
+// __UNSAFE__
+// Reason: eval.
+// It's technically safe to eval because only constant expressions are possible
+// here, e.g. `{{ 1 }}` or `{{ 'foo' }}`
+// in addition, constant exps bail on presence of parens so you can't even
+// run JSFuck in here. But we mark it unsafe for security review purposes.
+// (see compiler-core/src/transforms/transformExpression)
+export function evaluateConstant(exp: ExpressionNode): string {
+  if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
+    return new Function(`return (${exp.content})`)()
+  } else {
+    // compound
+    let res = ``
+    exp.children.forEach(c => {
+      if (isString(c) || isSymbol(c)) {
+        return
+      }
+      if (c.type === NodeTypes.TEXT) {
+        res += c.content
+      } else if (c.type === NodeTypes.INTERPOLATION) {
+        res += toDisplayString(evaluateConstant(c.content))
+      } else {
+        res += evaluateConstant(c as ExpressionNode)
+      }
+    })
+    return res
+  }
+}

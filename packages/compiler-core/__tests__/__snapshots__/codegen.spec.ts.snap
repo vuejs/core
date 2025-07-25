@@ -94,6 +94,15 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: codegen > empty interpolation 1`] = `
+"
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    return ""
+  }
+}"
+`;
+
 exports[`compiler: codegen > forNode 1`] = `
 "
 return function render(_ctx, _cache) {
@@ -180,6 +189,15 @@ const _createVNode = createVNode, _resolveDirective = resolveDirective
 
 export function render(_ctx, _cache) {
   return null
+}"
+`;
+
+exports[`compiler: codegen > static interpolation 1`] = `
+"
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    return "hello1falseundefinednullhi"
+  }
 }"
 `;
 

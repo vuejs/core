@@ -148,7 +148,7 @@ return function render(_ctx, _cache) {
     const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
-      _createElementVNode("span", null, "foo " + _toDisplayString(1) + " " + _toDisplayString(true), -1 /* CACHED */)
+      _createElementVNode("span", null, "foo " + "1" + " " + "true", -1 /* CACHED */)
     ])))
   }
 }"
@@ -162,7 +162,7 @@ return function render(_ctx, _cache) {
     const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
-      _createElementVNode("span", { foo: 0 }, _toDisplayString(1), -1 /* CACHED */)
+      _createElementVNode("span", { foo: 0 }, "1", -1 /* CACHED */)
     ])))
   }
 }"

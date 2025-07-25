@@ -7,16 +7,17 @@ import {
   ConstantTypes,
   type ElementNode,
   ElementTypes,
-  type ExpressionNode,
   type HoistTransform,
   Namespaces,
   NodeTypes,
   type PlainElementNode,
   type SimpleExpressionNode,
+  TO_DISPLAY_STRING,
   type TemplateChildNode,
   type TextCallNode,
   type TransformContext,
   createCallExpression,
+  evaluateConstant,
   isStaticArgOf,
 } from '@vue/compiler-core'
 import {
@@ -304,6 +305,17 @@ function stringifyNode(
     case NodeTypes.COMMENT:
       return `<!--${escapeHtml(node.content)}-->`
     case NodeTypes.INTERPOLATION:
+      // We add TO_DISPLAY_STRING for every interpolation, so we need to
+      // decrease its usage count whenever we remove an interpolation.
+      context.removeHelper(TO_DISPLAY_STRING)
+
+      if (
+        node.content.type === NodeTypes.SIMPLE_EXPRESSION &&
+        !node.content.content
+      ) {
+        return ''
+      }
+
       return escapeHtml(toDisplayString(evaluateConstant(node.content)))
     case NodeTypes.COMPOUND_EXPRESSION:
       return escapeHtml(evaluateConstant(node))
@@ -385,33 +397,4 @@ function stringifyElement(
     res += `</${node.tag}>`
   }
   return res
-}
-
-// __UNSAFE__
-// Reason: eval.
-// It's technically safe to eval because only constant expressions are possible
-// here, e.g. `{{ 1 }}` or `{{ 'foo' }}`
-// in addition, constant exps bail on presence of parens so you can't even
-// run JSFuck in here. But we mark it unsafe for security review purposes.
-// (see compiler-core/src/transforms/transformExpression)
-function evaluateConstant(exp: ExpressionNode): string {
-  if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-    return new Function(`return (${exp.content})`)()
-  } else {
-    // compound
-    let res = ``
-    exp.children.forEach(c => {
-      if (isString(c) || isSymbol(c)) {
-        return
-      }
-      if (c.type === NodeTypes.TEXT) {
-        res += c.content
-      } else if (c.type === NodeTypes.INTERPOLATION) {
-        res += toDisplayString(evaluateConstant(c.content))
-      } else {
-        res += evaluateConstant(c as ExpressionNode)
-      }
-    })
-    return res
-  }
 }
