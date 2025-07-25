@@ -152,7 +152,6 @@ export const createFor = (
         // render fallback nodes
         if (frag.fallback) {
           insert((frag.nodes[0] = frag.fallback()), parent!, parentAnchor)
-          oldBlocks = []
           isFallback = true
         }
       } else if (!getKey) {
@@ -341,9 +340,9 @@ export const createFor = (
 
     if (!isFallback) {
       frag.nodes = [(oldBlocks = newBlocks)]
-      if (parentAnchor) {
-        frag.nodes.push(parentAnchor)
-      }
+      if (parentAnchor) frag.nodes.push(parentAnchor)
+    } else {
+      oldBlocks = []
     }
     setActiveSub(prevSub)
   }
