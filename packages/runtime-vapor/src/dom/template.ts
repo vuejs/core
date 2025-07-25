@@ -1,10 +1,13 @@
+import { mathmlNS, svgNS } from '@vue/runtime-dom'
 import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
 import { child, createTextNode } from './node'
 
 let t: HTMLTemplateElement
+let st: HTMLTemplateElement
+let mt: HTMLTemplateElement
 
 /*! #__NO_SIDE_EFFECTS__ */
-export function template(html: string, root?: boolean) {
+export function template(html: string, root?: boolean, ns?: number) {
   let node: Node
   return (): Node & { $root?: true } => {
     if (isHydrating) {
@@ -19,9 +22,19 @@ export function template(html: string, root?: boolean) {
       return createTextNode(html)
     }
     if (!node) {
-      t = t || document.createElement('template')
-      t.innerHTML = html
-      node = child(t.content)
+      if (!ns) {
+        t = t || document.createElement('template')
+        t.innerHTML = html
+        node = child(t.content)
+      } else if (ns === 1) {
+        st = st || document.createElementNS(svgNS, 'template')
+        st.innerHTML = html
+        node = child(st)
+      } else {
+        mt = mt || document.createElementNS(mathmlNS, 'template')
+        mt.innerHTML = html
+        node = child(mt)
+      }
     }
     const ret = node.cloneNode(true)
     if (root) (ret as any).$root = true

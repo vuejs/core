@@ -7,15 +7,15 @@ import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
 export function genTemplates(
   templates: string[],
   rootIndex: number | undefined,
-  { helper }: CodegenContext,
+  { helper, ir: { templateNS } }: CodegenContext,
 ): string {
   return templates
-    .map(
-      (template, i) =>
-        `const t${i} = ${helper('template')}(${JSON.stringify(
-          template,
-        )}${i === rootIndex ? ', true' : ''})\n`,
-    )
+    .map((template, i) => {
+      const ns = templateNS.get(template)
+      return `const t${i} = ${helper('template')}(${JSON.stringify(
+        template,
+      )}${i === rootIndex ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`
+    })
     .join('')
 }
 

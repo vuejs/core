@@ -6,6 +6,7 @@ import {
   type ElementNode,
   ElementTypes,
   NodeTypes,
+  type PlainElementNode,
   type RootNode,
   type SimpleExpressionNode,
   type TemplateChildNode,
@@ -73,6 +74,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   >
 
   template: string = ''
+  templateNS: Map<string, number> = new Map<string, number>()
   childrenTemplate: (string | null)[] = []
   dynamic: IRDynamicInfo = this.ir.block.dynamic
 
@@ -98,10 +100,12 @@ export class TransformContext<T extends AllNode = AllNode> {
   }
 
   enterBlock(ir: BlockIRNode, isVFor: boolean = false): () => void {
-    const { block, template, dynamic, childrenTemplate, slots } = this
+    const { block, template, templateNS, dynamic, childrenTemplate, slots } =
+      this
     this.block = ir
     this.dynamic = ir.dynamic
     this.template = ''
+    this.templateNS = new Map<string, number>()
     this.childrenTemplate = []
     this.slots = []
     isVFor && this.inVFor++
@@ -110,6 +114,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.registerTemplate()
       this.block = block
       this.template = template
+      this.templateNS = templateNS
       this.dynamic = dynamic
       this.childrenTemplate = childrenTemplate
       this.slots = slots
@@ -130,6 +135,7 @@ export class TransformContext<T extends AllNode = AllNode> {
     )
     if (existing !== -1) return existing
     this.ir.template.push(content)
+    this.ir.templateNS.set(content, (this.node as PlainElementNode).ns)
     return this.ir.template.length - 1
   }
   registerTemplate(): number {
@@ -215,6 +221,7 @@ export function transform(
     node,
     source: node.source,
     template: [],
+    templateNS: new Map<string, number>(),
     component: new Set(),
     directive: new Set(),
     block: newBlock(node),
