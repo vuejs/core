@@ -561,4 +561,8 @@ export { initFeatureFlags } from './featureFlags'
 /**
  * @internal
  */
+export { ensureVaporSlotFallback } from './helpers/renderSlot'
+/**
+ * @internal
+ */
 export { createInternalObject } from './internalObject'
