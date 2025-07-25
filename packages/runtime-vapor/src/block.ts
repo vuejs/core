@@ -74,18 +74,19 @@ export class DynamicFragment extends VaporFragment {
 
     if (this.fallback) {
       // set fallback for nested fragments
-      const isFrag = isFragment(this.nodes)
-      if (isFrag) {
+      const hasNestedFragment = isFragment(this.nodes)
+      if (hasNestedFragment) {
         setFragmentFallback(this.nodes as VaporFragment, this.fallback)
       }
 
-      if (!isValidBlock(this.nodes)) {
+      const invalidFragment = findInvalidFragment(this)
+      if (invalidFragment) {
         parent && remove(this.nodes, parent)
         const scope = this.scope || (this.scope = new EffectScope())
         scope.run(() => {
-          if (isFrag) {
-            // render fragment's fallback
-            renderFragmentFallback(this.nodes as VaporFragment)
+          // for nested fragments, render invalid fragment's fallback
+          if (hasNestedFragment) {
+            renderFragmentFallback(invalidFragment)
           } else {
             this.nodes = this.fallback!() || []
           }
@@ -98,13 +99,11 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
-function setFragmentFallback(
-  fragment: VaporFragment,
-  fallback: BlockFn | undefined,
-): void {
-  if (!fragment.fallback) {
-    fragment.fallback = fallback
-  }
+function setFragmentFallback(fragment: VaporFragment, fallback: BlockFn): void {
+  // stop recursion if fragment has its own fallback
+  if (fragment.fallback) return
+
+  fragment.fallback = fallback
   if (isFragment(fragment.nodes)) {
     setFragmentFallback(fragment.nodes, fallback)
   }
@@ -114,15 +113,18 @@ function renderFragmentFallback(fragment: VaporFragment): void {
   if (fragment instanceof ForFragment) {
     fragment.nodes[0] = [fragment.fallback!() || []] as Block[]
   } else if (fragment instanceof DynamicFragment) {
-    const nodes = fragment.nodes
-    if (isFragment(nodes)) {
-      renderFragmentFallback(nodes)
-    } else {
-      fragment.update(fragment.fallback)
-    }
+    fragment.update(fragment.fallback)
   } else {
     // vdom slots
   }
+}
+
+function findInvalidFragment(fragment: VaporFragment): VaporFragment | null {
+  if (isValidBlock(fragment.nodes)) return null
+
+  return isFragment(fragment.nodes)
+    ? findInvalidFragment(fragment.nodes) || fragment
+    : fragment
 }
 
 export function isFragment(val: NonNullable<unknown>): val is VaporFragment {
