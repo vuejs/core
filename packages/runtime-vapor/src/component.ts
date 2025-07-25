@@ -508,7 +508,7 @@ export function createComponentWithFallback(
     if (rawSlots.$) {
       // TODO dynamic slot fragment
     } else {
-      insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
+      insert(normalizeNode(getSlot(rawSlots as RawSlots, 'default')!()), el)
     }
   }
 
