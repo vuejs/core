@@ -1,3 +1,23 @@
+## [3.5.18](https://github.com/vuejs/core/compare/v3.5.17...v3.5.18) (2025-07-23)
+
+
+### Bug Fixes
+
+* **compiler-core:** avoid cached text vnodes retaining detached DOM nodes ([#13662](https://github.com/vuejs/core/issues/13662)) ([00695a5](https://github.com/vuejs/core/commit/00695a5b41b2d032deaeada83831ff83aa6bfd4e)), closes [#13661](https://github.com/vuejs/core/issues/13661)
+* **compiler-core:** avoid self updates of `v-pre` ([#12556](https://github.com/vuejs/core/issues/12556)) ([21b685a](https://github.com/vuejs/core/commit/21b685ad9d9d0e6060fc7d07b719bf35f2d9ae1f))
+* **compiler-core:** identifiers in function parameters should not be inferred as references ([#13548](https://github.com/vuejs/core/issues/13548)) ([9b02923](https://github.com/vuejs/core/commit/9b029239edf88558465b941e1e4c085f92b1ebff))
+* **compiler-core:** recognize empty string as non-identifier ([#12553](https://github.com/vuejs/core/issues/12553)) ([ce93339](https://github.com/vuejs/core/commit/ce933390ad1c72bed258f7ad959a78f0e8acdf57))
+* **compiler-core:** transform empty `v-bind` dynamic argument content correctly ([#12554](https://github.com/vuejs/core/issues/12554)) ([d3af67e](https://github.com/vuejs/core/commit/d3af67e878790892f9d34cfea15d13625aabe733))
+* **compiler-sfc:** transform empty srcset w/ includeAbsolute: true ([#13639](https://github.com/vuejs/core/issues/13639)) ([d8e40ef](https://github.com/vuejs/core/commit/d8e40ef7e1c20ee86b294e7cf78e2de60d12830e)), closes [vitejs/vite-plugin-vue#631](https://github.com/vitejs/vite-plugin-vue/issues/631)
+* **css-vars:** nullish v-bind in style should not lead to unexpected inheritance ([#12461](https://github.com/vuejs/core/issues/12461)) ([c85f1b5](https://github.com/vuejs/core/commit/c85f1b5a132eb8ec25f71b250e25e65a5c20964f)), closes [#12434](https://github.com/vuejs/core/issues/12434) [#12439](https://github.com/vuejs/core/issues/12439) [#7474](https://github.com/vuejs/core/issues/7474) [#7475](https://github.com/vuejs/core/issues/7475)
+* **custom-element:** ensure exposed methods are accessible from custom elements by making them enumerable ([#13634](https://github.com/vuejs/core/issues/13634)) ([90573b0](https://github.com/vuejs/core/commit/90573b06bf6fb6c14c6bbff6c4e34e0ab108953a)), closes [#13632](https://github.com/vuejs/core/issues/13632)
+* **hydration:** prevent lazy hydration for updated components ([#13511](https://github.com/vuejs/core/issues/13511)) ([a9269c6](https://github.com/vuejs/core/commit/a9269c642bf944560bc29adb5dae471c11cd9ee8)), closes [#13510](https://github.com/vuejs/core/issues/13510)
+* **runtime-core:** ensure correct anchor el for unresolved async components ([#13560](https://github.com/vuejs/core/issues/13560)) ([7f29943](https://github.com/vuejs/core/commit/7f2994393dcdb82cacbf62e02b5ba5565f32588b)), closes [#13559](https://github.com/vuejs/core/issues/13559)
+* **slots:** refine internal key checking to support slot names starting with an underscore ([#13612](https://github.com/vuejs/core/issues/13612)) ([c5f7db1](https://github.com/vuejs/core/commit/c5f7db11542bb2246363aef78c88a8e6cef0ee93)), closes [#13611](https://github.com/vuejs/core/issues/13611)
+* **ssr:** ensure empty slots render as a comment node in Transition ([#13396](https://github.com/vuejs/core/issues/13396)) ([8cfc10a](https://github.com/vuejs/core/commit/8cfc10a80b9cbf5d801ab149e49b8506d192e7e1)), closes [#13394](https://github.com/vuejs/core/issues/13394)
+
+
+
 ## [3.5.17](https://github.com/vuejs/core/compare/v3.5.16...v3.5.17) (2025-06-18)
 
 

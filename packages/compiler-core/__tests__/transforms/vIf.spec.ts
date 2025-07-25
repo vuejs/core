@@ -301,6 +301,25 @@ describe('compiler: v-if', () => {
       ])
     })
 
+    test('error on adjacent v-else', () => {
+      const onError = vi.fn()
+
+      const {
+        node: { branches },
+      } = parseWithIfTransform(
+        `<div v-if="false"/><div v-else/><div v-else/>`,
+        { onError },
+        0,
+      )
+
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: branches[branches.length - 1].loc,
+        },
+      ])
+    })
+
     test('error on user key', () => {
       const onError = vi.fn()
       // dynamic
