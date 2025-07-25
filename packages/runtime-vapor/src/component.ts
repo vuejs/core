@@ -5,6 +5,7 @@ import {
   type EmitFn,
   type EmitsOptions,
   ErrorCodes,
+  Fragment,
   type GenericAppContext,
   type GenericComponentInstance,
   type LifecycleHook,
@@ -23,9 +24,8 @@ import {
   setCurrentInstance,
   startMeasure,
   unregisterHMR,
-  warn,
 } from '@vue/runtime-dom'
-import { type Block, DynamicFragment, insert, isBlock, remove } from './block'
+import { type Block, DynamicFragment, insert, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -63,6 +63,7 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
+import { type NodeChild, normalizeNode } from './dom/node'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -71,7 +72,7 @@ export type VaporComponent = FunctionalVaporComponent | ObjectVaporComponent
 export type VaporSetupFn = (
   props: any,
   ctx: Pick<VaporComponentInstance, 'slots' | 'attrs' | 'emit' | 'expose'>,
-) => Block | Record<string, any> | undefined
+) => NodeChild | Record<string, any> | undefined
 
 export type FunctionalVaporComponent = VaporSetupFn &
   Omit<ObjectVaporComponent, 'setup'> & {
@@ -212,26 +213,31 @@ export function createComponent(
   }
 
   const setupFn = isFunction(component) ? component : component.setup
-  const setupResult = setupFn
-    ? callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
-        instance.props,
-        instance,
-      ]) || EMPTY_OBJ
-    : EMPTY_OBJ
+  const setupResult =
+    setupFn &&
+    callWithErrorHandling(setupFn, instance, ErrorCodes.SETUP_FUNCTION, [
+      instance.props,
+      instance,
+    ])
 
-  if (__DEV__ && !isBlock(setupResult)) {
-    if (isFunction(component)) {
-      warn(`Functional vapor component must return a block directly.`)
-      instance.block = []
-    } else if (!component.render) {
-      warn(
-        `Vapor component setup() returned non-block value, and has no render function.`,
+  if (component === Fragment) {
+    if (instance.slots.default) {
+      instance.block = callWithErrorHandling(
+        instance.slots.default,
+        instance,
+        ErrorCodes.RENDER_SLOTS,
       )
-      instance.block = []
     } else {
-      instance.devtoolsRawSetupState = setupResult
+      instance.block = []
+    }
+  } else if (__DEV__) {
+    if (isFunction(component) || !component.render) {
+      instance.block = normalizeNode(setupResult)
+    } else {
       // TODO make the proxy warn non-existent property access during dev
-      instance.setupState = proxyRefs(setupResult)
+      instance.setupState = proxyRefs(
+        (instance.devtoolsRawSetupState = setupResult || EMPTY_OBJ),
+      )
       devRender(instance)
     }
   } else {
@@ -245,7 +251,7 @@ export function createComponent(
       )
     } else {
       // in prod result can only be block
-      instance.block = setupResult as Block
+      instance.block = normalizeNode(setupResult)
     }
   }
 
@@ -513,7 +519,8 @@ export function createComponentWithFallback(
     if (rawSlots.$) {
       // TODO dynamic slot fragment
     } else {
-      insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
+      const defaultSlot = getSlot(rawSlots as RawSlots, 'default')
+      defaultSlot && insert(normalizeNode(defaultSlot()), el)
     }
   }
 
