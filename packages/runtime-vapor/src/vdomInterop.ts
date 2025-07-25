@@ -35,11 +35,11 @@ import {
 } from './component'
 import {
   type Block,
-  DynamicFragment,
   VaporFragment,
   insert,
   isFragment,
   remove,
+  setFragmentFallback,
 } from './block'
 import { EMPTY_OBJ, extend, isArray, isFunction } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
@@ -116,22 +116,12 @@ const vaporInteropImpl: Omit<
       const { slot, fallback } = n2.vs!
       const propsRef = (n2.vs!.ref = shallowRef(n2.props))
       const slotBlock = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
-      // forwarded vdom slot without its own fallback, use the fallback provided by
-      // the slot outlet
-      if (slotBlock instanceof DynamicFragment) {
-        // vapor slot's nodes is a forwarded vdom slot
-        let nodes = slotBlock.nodes
-        while (isFragment(nodes)) {
-          ensureVDOMSlotFallback(nodes, fallback)
-          nodes = nodes.nodes
-        }
+      // handle nested fragments
+      if (fallback && isFragment(slotBlock)) {
+        setFragmentFallback(slotBlock, createFallback(fallback))
         // use fragment's anchor when possible
         selfAnchor = slotBlock.anchor
-      } else if (isFragment(slotBlock)) {
-        ensureVDOMSlotFallback(slotBlock, fallback)
-        selfAnchor = slotBlock.anchor!
       }
-
       if (!selfAnchor) selfAnchor = createTextNode()
       insert((n2.el = n2.anchor = selfAnchor), container, anchor)
       insert((n2.vb = slotBlock), container, selfAnchor)
@@ -354,12 +344,6 @@ export const vaporInteropPlugin: Plugin = app => {
     optimizePropertyLookup()
     return mount(...args)
   }) satisfies App['mount']
-}
-
-function ensureVDOMSlotFallback(block: VaporFragment, fallback?: () => any) {
-  if (block.insert && !block.fallback && fallback) {
-    block.fallback = createFallback(fallback)
-  }
 }
 
 const createFallback =

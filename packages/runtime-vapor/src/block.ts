@@ -98,9 +98,9 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
-function setFragmentFallback(
+export function setFragmentFallback(
   fragment: VaporFragment,
-  fallback: BlockFn | undefined,
+  fallback: BlockFn,
 ): void {
   // stop recursion if fragment has its own fallback
   if (fragment.fallback) return
