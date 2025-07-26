@@ -155,7 +155,7 @@ describe('compiler: transform <slot> outlets', () => {
   test('default slot outlet with fallback', () => {
     const { ir, code } = compileWithSlotsOutlet(`<slot><div/></slot>`)
     expect(code).toMatchSnapshot()
-    expect(ir.template[0]).toBe('<div></div>')
+    expect([...ir.template.keys()][0]).toBe('<div></div>')
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.SLOT_OUTLET_NODE,
       id: 0,
@@ -175,7 +175,7 @@ describe('compiler: transform <slot> outlets', () => {
       `<slot name="foo"><div/></slot>`,
     )
     expect(code).toMatchSnapshot()
-    expect(ir.template[0]).toBe('<div></div>')
+    expect([...ir.template.keys()][0]).toBe('<div></div>')
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.SLOT_OUTLET_NODE,
       id: 0,
@@ -195,7 +195,7 @@ describe('compiler: transform <slot> outlets', () => {
       `<slot :foo="bar"><div/></slot>`,
     )
     expect(code).toMatchSnapshot()
-    expect(ir.template[0]).toBe('<div></div>')
+    expect([...ir.template.keys()][0]).toBe('<div></div>')
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.SLOT_OUTLET_NODE,
       id: 0,
@@ -216,7 +216,7 @@ describe('compiler: transform <slot> outlets', () => {
       `<slot name="foo" :foo="bar"><div/></slot>`,
     )
     expect(code).toMatchSnapshot()
-    expect(ir.template[0]).toBe('<div></div>')
+    expect([...ir.template.keys()][0]).toBe('<div></div>')
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.SLOT_OUTLET_NODE,
       id: 0,

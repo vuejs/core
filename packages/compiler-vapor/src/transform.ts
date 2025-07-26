@@ -74,7 +74,6 @@ export class TransformContext<T extends AllNode = AllNode> {
   >
 
   template: string = ''
-  templateNS: Map<string, number> = new Map<string, number>()
   childrenTemplate: (string | null)[] = []
   dynamic: IRDynamicInfo = this.ir.block.dynamic
 
@@ -100,12 +99,10 @@ export class TransformContext<T extends AllNode = AllNode> {
   }
 
   enterBlock(ir: BlockIRNode, isVFor: boolean = false): () => void {
-    const { block, template, templateNS, dynamic, childrenTemplate, slots } =
-      this
+    const { block, template, dynamic, childrenTemplate, slots } = this
     this.block = ir
     this.dynamic = ir.dynamic
     this.template = ''
-    this.templateNS = new Map<string, number>()
     this.childrenTemplate = []
     this.slots = []
     isVFor && this.inVFor++
@@ -114,7 +111,6 @@ export class TransformContext<T extends AllNode = AllNode> {
       this.registerTemplate()
       this.block = block
       this.template = template
-      this.templateNS = templateNS
       this.dynamic = dynamic
       this.childrenTemplate = childrenTemplate
       this.slots = slots
@@ -130,13 +126,15 @@ export class TransformContext<T extends AllNode = AllNode> {
   }
 
   pushTemplate(content: string): number {
-    const existing = this.ir.template.findIndex(
-      template => template === content,
-    )
-    if (existing !== -1) return existing
-    this.ir.template.push(content)
-    this.ir.templateNS.set(content, (this.node as PlainElementNode).ns)
-    return this.ir.template.length - 1
+    const existingIndex = this.ir.templateIndexMap.get(content)
+    if (existingIndex !== undefined) {
+      return existingIndex
+    }
+
+    const newIndex = this.ir.template.size
+    this.ir.template.set(content, (this.node as PlainElementNode).ns)
+    this.ir.templateIndexMap.set(content, newIndex)
+    return newIndex
   }
   registerTemplate(): number {
     if (!this.template) return -1
@@ -220,8 +218,8 @@ export function transform(
     type: IRNodeTypes.ROOT,
     node,
     source: node.source,
-    template: [],
-    templateNS: new Map<string, number>(),
+    template: new Map<string, number>(),
+    templateIndexMap: new Map<string, number>(),
     component: new Set(),
     directive: new Set(),
     block: newBlock(node),

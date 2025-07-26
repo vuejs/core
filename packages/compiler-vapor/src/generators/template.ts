@@ -5,18 +5,21 @@ import { genOperationWithInsertionState } from './operation'
 import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
 
 export function genTemplates(
-  templates: string[],
+  templates: Map<string, number>,
   rootIndex: number | undefined,
-  { helper, ir: { templateNS } }: CodegenContext,
+  { helper }: CodegenContext,
 ): string {
-  return templates
-    .map((template, i) => {
-      const ns = templateNS.get(template)
-      return `const t${i} = ${helper('template')}(${JSON.stringify(
+  const result: string[] = []
+  let i = 0
+  templates.forEach((ns, template) => {
+    result.push(
+      `const t${i} = ${helper('template')}(${JSON.stringify(
         template,
-      )}${i === rootIndex ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`
-    })
-    .join('')
+      )}${i === rootIndex ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`,
+    )
+    i++
+  })
+  return result.join('')
 }
 
 export function genSelf(

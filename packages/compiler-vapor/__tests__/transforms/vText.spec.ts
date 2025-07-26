@@ -68,7 +68,7 @@ describe('v-text', () => {
     ])
 
     // children should have been removed
-    expect(ir.template).toEqual(['<div> </div>'])
+    expect([...ir.template.keys()]).toEqual(['<div> </div>'])
 
     expect(ir.block.effect).toMatchObject([
       {
