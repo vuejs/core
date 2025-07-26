@@ -1,9 +1,9 @@
-import { getCurrentInstance, warn } from '@vue/runtime-core'
+import { getCurrentGenericInstance, warn } from '@vue/runtime-core'
 import { EMPTY_OBJ } from '@vue/shared'
 
 export function useCssModule(name = '$style'): Record<string, string> {
   if (!__GLOBAL__) {
-    const instance = getCurrentInstance()!
+    const instance = getCurrentGenericInstance()
     if (!instance) {
       __DEV__ && warn(`useCssModule must be called inside setup()`)
       return EMPTY_OBJ
