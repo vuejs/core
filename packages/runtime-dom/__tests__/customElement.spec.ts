@@ -1401,6 +1401,47 @@ describe('defineCustomElement', () => {
     })
   })
 
+  test('subclasses can override property setters', async () => {
+    const E = defineCustomElement({
+      props: {
+        value: String,
+      },
+      render() {
+        return h('div', this.value)
+      },
+    })
+
+    class SubclassedElement extends E {
+      set value(val: string) {
+        if (val && val !== 'valid-date' && val.includes('invalid')) {
+          return
+        }
+        super.value = val
+      }
+
+      get value(): string {
+        return super.value || ''
+      }
+    }
+
+    customElements.define('my-subclassed-element', SubclassedElement)
+
+    const e = new SubclassedElement()
+    container.appendChild(e)
+
+    e.value = 'valid-date'
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe('<div>valid-date</div>')
+
+    e.value = 'invalid-date'
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe('<div>valid-date</div>') // Should remain unchanged
+
+    e.value = 'another-valid'
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe('<div>another-valid</div>')
+  })
+
   describe('expose', () => {
     test('expose w/ options api', async () => {
       const E = defineCustomElement({
