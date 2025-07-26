@@ -170,30 +170,31 @@ function getRuntimeHelper(
 ): HelperConfig {
   const tagName = tag.toUpperCase()
   const isSVG = isSVGTag(tag)
+
+  // 1. SVG: always attribute
+  if (isSVG) {
+    // TODO pass svg flag
+    return helpers.setAttr
+  }
+
   if (modifier) {
     if (modifier === '.') {
-      return getSpecialHelper(key, tagName, isSVG) || helpers.setDOMProp
+      return getSpecialHelper(key, tagName) || helpers.setDOMProp
     } else {
       return helpers.setAttr
     }
   }
 
-  // 1. special handling for value / style / class / textContent /  innerHTML
-  const helper = getSpecialHelper(key, tagName, isSVG)
+  // 2. special handling for value / style / class / textContent /  innerHTML
+  const helper = getSpecialHelper(key, tagName)
   if (helper) {
     return helper
   }
 
-  // 2. Aria DOM properties shared between all Elements in
+  // 3. Aria DOM properties shared between all Elements in
   //    https://developer.mozilla.org/en-US/docs/Web/API/Element
   if (/aria[A-Z]/.test(key)) {
     return helpers.setDOMProp
-  }
-
-  // 3. SVG: always attribute
-  if (isSVG) {
-    // TODO pass svg flag
-    return helpers.setAttr
   }
 
   // 4. respect shouldSetAsAttr used in vdom and setDynamicProp for consistency
@@ -210,13 +211,12 @@ function getRuntimeHelper(
 function getSpecialHelper(
   keyName: string,
   tagName: string,
-  isSVG: boolean,
 ): HelperConfig | undefined {
   // special case for 'value' property
   if (keyName === 'value' && canSetValueDirectly(tagName)) {
     return helpers.setValue
   } else if (keyName === 'class') {
-    return isSVG ? helpers.setAttr : helpers.setClass
+    return helpers.setClass
   } else if (keyName === 'style') {
     return helpers.setStyle
   } else if (keyName === 'innerHTML') {
