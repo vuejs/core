@@ -456,14 +456,16 @@ export class VueElement
 
     // defining getter/setters on prototype
     for (const key of declaredPropKeys.map(camelize)) {
-      Object.defineProperty(this, key, {
-        get() {
-          return this._getProp(key)
-        },
-        set(val) {
-          this._setProp(key, val, true, true)
-        },
-      })
+      if (!Object.prototype.hasOwnProperty.call(this.constructor.prototype, key)) {
+        Object.defineProperty(this.constructor.prototype, key, {
+          get() {
+            return this._getProp(key)
+          },
+          set(val) {
+            this._setProp(key, val, true, true)
+          },
+        })
+      }
     }
   }
 
