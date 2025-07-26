@@ -169,6 +169,14 @@ function getRuntimeHelper(
   modifier: '.' | '^' | undefined,
 ): HelperConfig {
   const tagName = tag.toUpperCase()
+  const isSVG = isSVGTag(tag)
+
+  // 1. SVG: always attribute
+  if (isSVG) {
+    // TODO pass svg flag
+    return helpers.setAttr
+  }
+
   if (modifier) {
     if (modifier === '.') {
       return getSpecialHelper(key, tagName) || helpers.setDOMProp
@@ -177,22 +185,16 @@ function getRuntimeHelper(
     }
   }
 
-  // 1. special handling for value / style / class / textContent /  innerHTML
+  // 2. special handling for value / style / class / textContent /  innerHTML
   const helper = getSpecialHelper(key, tagName)
   if (helper) {
     return helper
   }
 
-  // 2. Aria DOM properties shared between all Elements in
+  // 3. Aria DOM properties shared between all Elements in
   //    https://developer.mozilla.org/en-US/docs/Web/API/Element
   if (/aria[A-Z]/.test(key)) {
     return helpers.setDOMProp
-  }
-
-  // 3. SVG: always attribute
-  if (isSVGTag(tag)) {
-    // TODO pass svg flag
-    return helpers.setAttr
   }
 
   // 4. respect shouldSetAsAttr used in vdom and setDynamicProp for consistency
