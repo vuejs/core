@@ -93,5 +93,6 @@ export {
   type WatchEffect,
   type WatchSource,
   type WatchCallback,
+  type WatchSkip,
   type OnCleanup,
 } from './watch'

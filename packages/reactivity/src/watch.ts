@@ -49,6 +49,7 @@ export type OnCleanup = (cleanupFn: () => void) => void
 export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
   immediate?: Immediate
   deep?: boolean | number
+  skip?: WatchSkip
   once?: boolean
   scheduler?: WatchScheduler
   onWarn?: (msg: string, ...args: any[]) => void
@@ -78,6 +79,8 @@ export interface WatchHandle extends WatchStopHandle {
 const INITIAL_WATCHER_VALUE = {}
 
 export type WatchScheduler = (job: () => void, isFirstRun: boolean) => void
+
+export type WatchSkip = (val: any) => boolean | undefined
 
 const cleanupMap: WeakMap<ReactiveEffect, (() => void)[]> = new WeakMap()
 let activeWatcher: ReactiveEffect | undefined = undefined
@@ -122,7 +125,7 @@ export function watch(
   cb?: WatchCallback | null,
   options: WatchOptions = EMPTY_OBJ,
 ): WatchHandle {
-  const { immediate, deep, once, scheduler, augmentJob, call } = options
+  const { immediate, deep, skip, once, scheduler, augmentJob, call } = options
 
   const warnInvalidSource = (s: unknown) => {
     ;(options.onWarn || warn)(
@@ -138,9 +141,9 @@ export function watch(
     if (deep) return source
     // for `deep: false | 0` or shallow reactive, only traverse root-level properties
     if (isShallow(source) || deep === false || deep === 0)
-      return traverse(source, 1)
+      return traverse(source, 1, skip)
     // for `deep: undefined` on a reactive object, deeply traverse all properties
-    return traverse(source)
+    return traverse(source, Infinity, skip)
   }
 
   let effect: ReactiveEffect
@@ -207,7 +210,7 @@ export function watch(
   if (cb && deep) {
     const baseGetter = getter
     const depth = deep === true ? Infinity : deep
-    getter = () => traverse(baseGetter(), depth)
+    getter = () => traverse(baseGetter(), depth, skip)
   }
 
   const scope = getCurrentScope()
@@ -331,12 +334,18 @@ export function watch(
 export function traverse(
   value: unknown,
   depth: number = Infinity,
+  skip?: WatchSkip,
   seen?: Set<unknown>,
 ): unknown {
   if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }
-
+  if (skip) {
+    pauseTracking()
+    const res = skip(value)
+    resetTracking()
+    if (res) return value
+  }
   seen = seen || new Set()
   if (seen.has(value)) {
     return value
@@ -344,22 +353,22 @@ export function traverse(
   seen.add(value)
   depth--
   if (isRef(value)) {
-    traverse(value.value, depth, seen)
+    traverse(value.value, depth, skip, seen)
   } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
-      traverse(value[i], depth, seen)
+      traverse(value[i], depth, skip, seen)
     }
   } else if (isSet(value) || isMap(value)) {
     value.forEach((v: any) => {
-      traverse(v, depth, seen)
+      traverse(v, depth, skip, seen)
     })
   } else if (isPlainObject(value)) {
     for (const key in value) {
-      traverse(value[key], depth, seen)
+      traverse(value[key], depth, skip, seen)
     }
     for (const key of Object.getOwnPropertySymbols(value)) {
       if (Object.prototype.propertyIsEnumerable.call(value, key)) {
-        traverse(value[key as any], depth, seen)
+        traverse(value[key as any], depth, skip, seen)
       }
     }
   }
