@@ -38,6 +38,7 @@ import {
   locStub,
   resolveComponentType,
   stringifyExpression,
+  transformBindShorthand,
   traverseNode,
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
@@ -102,6 +103,15 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   componentTypeMap.set(node, component)
 
   if (isSymbol(component)) {
+    for (const prop of node.props) {
+      if (
+        prop.type === NodeTypes.DIRECTIVE &&
+        prop.name === 'bind' &&
+        !prop.exp
+      ) {
+        transformBindShorthand(prop, context)
+      }
+    }
     if (component === SUSPENSE) {
       return ssrTransformSuspense(node, context)
     } else if (component === TRANSITION_GROUP) {
