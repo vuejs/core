@@ -443,6 +443,12 @@ export class VueElement
     }
   }
 
+  /**
+   * Resolves component props by setting up property getters/setters on the prototype.
+   * This allows subclasses to override property setters for validation and custom behavior.
+   * @param def - The inner component definition containing props configuration
+   * @internal
+   */
   private _resolveProps(def: InnerComponentDef) {
     const { props } = def
     const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
@@ -454,9 +460,14 @@ export class VueElement
       }
     }
 
-    // defining getter/setters on prototype
+    // defining getter/setters on prototype to allow subclass overrides
     for (const key of declaredPropKeys.map(camelize)) {
-      if (!Object.prototype.hasOwnProperty.call(this.constructor.prototype, key)) {
+      // Always define the Vue property on the current prototype, but check if a parent
+      // class in the prototype chain already has the property defined by a subclass.
+      // This ensures super.property calls work while allowing subclass overrides.
+      const hasSubclassOverride = this.constructor.prototype.hasOwnProperty(key)
+
+      if (!hasSubclassOverride) {
         Object.defineProperty(this.constructor.prototype, key, {
           get() {
             return this._getProp(key)
@@ -465,6 +476,24 @@ export class VueElement
             this._setProp(key, val, true, true)
           },
         })
+      } else {
+        const parentPrototype = Object.getPrototypeOf(
+          this.constructor.prototype,
+        )
+        if (
+          parentPrototype &&
+          parentPrototype !== Object.prototype &&
+          !Object.prototype.hasOwnProperty.call(parentPrototype, key)
+        ) {
+          Object.defineProperty(parentPrototype, key, {
+            get() {
+              return this._getProp(key)
+            },
+            set(val) {
+              this._setProp(key, val, true, true)
+            },
+          })
+        }
       }
     }
   }
