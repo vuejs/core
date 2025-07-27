@@ -23,7 +23,14 @@ import {
   watch,
   watchEffect,
 } from '@vue/runtime-test'
-import { computed, createApp, defineComponent, inject, provide } from 'vue'
+import {
+  Transition,
+  computed,
+  createApp,
+  defineComponent,
+  inject,
+  provide,
+} from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
 import { resetSuspenseId } from '../../src/components/Suspense'
 
@@ -1440,6 +1447,58 @@ describe('Suspense', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>two</div>`)
     expect(calls).toEqual([`one mounted`, `one unmounted`, `two mounted`])
+  })
+
+  test('branch switch during suspense patching', async () => {
+    const toggle = ref(true)
+
+    const Async1 = defineAsyncComponent({
+      async setup() {
+        // switch to Async2
+        toggle.value = false
+        return () => h('div', 'async1')
+      },
+    })
+
+    const Async2 = defineAsyncComponent({
+      async setup() {
+        return () => h('div', 'async2')
+      },
+    })
+
+    const route = computed(() => {
+      return toggle.value ? [Async1] : [Async2]
+    })
+
+    const Comp = {
+      setup() {
+        provide('route', route)
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, {
+                default: () =>
+                  h(Transition, null, {
+                    default: () => h('div', null, [h(Component)]),
+                  }),
+                fallback: h('div', 'fallback'),
+              }),
+            ],
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div><!----><!----></div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div><!----><div>async2</div></div>`)
   })
 
   test('mount the fallback content is in the correct position', async () => {
