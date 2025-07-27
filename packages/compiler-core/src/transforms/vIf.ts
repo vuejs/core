@@ -244,13 +244,29 @@ function createChildrenCodegenNode(
   context: TransformContext,
 ): BlockCodegenNode | MemoExpression {
   const { helper } = context
+
+  let userKey = ''
+  let isStatic = false
+  if (branch.userKey && branch.userKey.name === 'bind') {
+    userKey = ((branch.userKey as DirectiveNode).exp as SimpleExpressionNode)
+      .content
+  }
+  if (
+    branch.userKey &&
+    branch.userKey.name === 'key' &&
+    (branch.userKey as AttributeNode).value
+  ) {
+    isStatic = true
+    userKey = `${(branch.userKey as AttributeNode).value!.content}`
+  }
+
   const keyProperty = createObjectProperty(
     `key`,
     createSimpleExpression(
-      `${keyIndex}`,
-      false,
+      `${userKey || keyIndex}`,
+      isStatic,
       locStub,
-      ConstantTypes.CAN_CACHE,
+      userKey ? ConstantTypes.NOT_CONSTANT : ConstantTypes.CAN_CACHE,
     ),
   )
   const { children } = branch
