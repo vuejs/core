@@ -4,6 +4,7 @@
 
 import {
   type ComponentOptions,
+  type ComponentPublicInstance,
   Fragment,
   KeepAlive,
   Suspense,
@@ -17,6 +18,7 @@ import {
   onUnmounted,
   ref,
   render,
+  renderSlot,
   resolveDynamicComponent,
   serializeInner,
   shallowRef,
@@ -2159,6 +2161,55 @@ describe('Suspense', () => {
     // should not throw error due to Suspense vnode.el being null
     data.value = 'data2'
     await Promise.all(deps)
+  })
+
+  // #5247
+  test('In nested slots suspense should return to pending state', async () => {
+    const id = ref('1')
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', `async`)
+      },
+    })
+    const onPending = vi.fn()
+    const wrapper = {
+      setup() {
+        return (ctx: ComponentPublicInstance) =>
+          h(
+            Suspense,
+            { onPending },
+            {
+              default: () => [renderSlot(ctx.$slots!, 'default')],
+              fallback: () => h('div', 'fallback'),
+            },
+          )
+      },
+    }
+
+    const Parent = {
+      setup() {
+        return () =>
+          h(wrapper, null, {
+            default: () => h(Async, { id: id.value }),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div id="1">async</div>`)
+    expect(onPending).toHaveBeenCalledTimes(1)
+
+    id.value = '2'
+    await nextTick()
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div id="2">async</div>`)
+    expect(onPending).toHaveBeenCalledTimes(2)
   })
 
   describe('warnings', () => {
