@@ -245,7 +245,8 @@ export function watch(
         forceTrigger ||
         (isMultiSource
           ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
-          : hasChanged(newValue, oldValue))
+          : hasChanged(newValue, oldValue)) ||
+        (__COMPAT__ && (options as any).compatWatchArray && isArray(newValue))
       ) {
         // cleanup before running cb again
         if (cleanup) {
