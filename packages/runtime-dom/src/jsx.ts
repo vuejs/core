@@ -304,6 +304,8 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   security?: string
   unselectable?: 'on' | 'off'
 
+  popover?: '' | 'auto' | 'manual'
+
   // Living Standard
   /**
    * Hints at the type of data that might be entered by the user while editing the element or its contents
@@ -382,6 +384,8 @@ export interface ButtonHTMLAttributes extends HTMLAttributes {
   formnovalidate?: Booleanish
   formtarget?: string
   name?: string
+  popovertarget?: string
+  popovertargetaction?: 'hide' | 'show' | 'toggle'
   type?: 'submit' | 'reset' | 'button'
   value?: string | ReadonlyArray<string> | number
 }
@@ -407,7 +411,6 @@ export interface DataHTMLAttributes extends HTMLAttributes {
 export interface DetailsHTMLAttributes extends HTMLAttributes {
   name?: string
   open?: Booleanish
-  onToggle?: (payload: ToggleEvent) => void
 }
 
 export interface DelHTMLAttributes extends HTMLAttributes {
@@ -417,6 +420,7 @@ export interface DelHTMLAttributes extends HTMLAttributes {
 
 export interface DialogHTMLAttributes extends HTMLAttributes {
   open?: Booleanish
+  onCancel?: (payload: Event) => void
   onClose?: (payload: Event) => void
 }
 
@@ -549,6 +553,8 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   name?: string
   pattern?: string
   placeholder?: string
+  popovertarget?: string
+  popovertargetaction?: 'toggle' | 'show' | 'hide'
   readonly?: Booleanish
   required?: Booleanish
   size?: Numberish
@@ -1382,6 +1388,10 @@ export interface Events {
   // transition events
   onTransitionend: TransitionEvent
   onTransitionstart: TransitionEvent
+
+  // Toggle Events
+  onToggle?: ToggleEvent
+  onBeforetoggle?: ToggleEvent
 }
 
 type EventHandlers<E> = {
