@@ -431,7 +431,10 @@ export class VueElement
     const exposed = this._instance && this._instance.exposed
     if (!exposed) return
     for (const key in exposed) {
-      if (!hasOwn(this, key)) {
+      const hasInstanceProperty = hasOwn(this, key)
+      const hasOwnPrototypeProperty = hasOwn(this.constructor.prototype, key)
+
+      if (!hasInstanceProperty && !hasOwnPrototypeProperty) {
         // exposed properties are readonly
         Object.defineProperty(this, key, {
           // unwrap ref to be consistent with public instance behavior
@@ -460,23 +463,12 @@ export class VueElement
       }
     }
 
-    // defining getter/setters on prototype to allow subclass overrides
+    // defining getter/setters to support property access
     for (const key of declaredPropKeys.map(camelize)) {
-      // Always define the Vue property on the current prototype, but check if a parent
-      // class in the prototype chain already has the property defined by a subclass.
-      // This ensures super.property calls work while allowing subclass overrides.
+      // Check if a subclass has already defined this property
       const hasSubclassOverride = this.constructor.prototype.hasOwnProperty(key)
 
-      if (!hasSubclassOverride) {
-        Object.defineProperty(this.constructor.prototype, key, {
-          get() {
-            return this._getProp(key)
-          },
-          set(val) {
-            this._setProp(key, val, true, true)
-          },
-        })
-      } else {
+      if (hasSubclassOverride) {
         const parentPrototype = Object.getPrototypeOf(
           this.constructor.prototype,
         )
@@ -494,6 +486,15 @@ export class VueElement
             },
           })
         }
+      } else {
+        Object.defineProperty(this, key, {
+          get() {
+            return this._getProp(key)
+          },
+          set(val) {
+            this._setProp(key, val, true, true)
+          },
+        })
       }
     }
   }
@@ -506,6 +507,7 @@ export class VueElement
     if (has && this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
+
     this._setProp(camelKey, value, false, true)
   }
 

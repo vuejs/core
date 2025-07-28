@@ -1442,7 +1442,7 @@ describe('defineCustomElement', () => {
     expect(e.shadowRoot!.innerHTML).toBe('<div>another-valid</div>')
   })
 
-  test('properties are defined on prototype not instance', () => {
+  test('properties are defined on instance for backward compatibility', () => {
     const E = defineCustomElement({
       props: {
         testProp: String,
@@ -1460,14 +1460,12 @@ describe('defineCustomElement', () => {
     container.appendChild(e1)
     container.appendChild(e2)
 
-    // Properties should be defined on the prototype, not instances
-    expect(e1.hasOwnProperty('testProp')).toBe(false)
-    expect(e1.hasOwnProperty('anotherProp')).toBe(false)
-    expect(Object.hasOwnProperty.call(E.prototype, 'testProp')).toBe(true)
-    expect(Object.hasOwnProperty.call(E.prototype, 'anotherProp')).toBe(true)
+    // Properties should be defined on instances for backward compatibility
+    expect(e1.hasOwnProperty('testProp')).toBe(true)
+    expect(e1.hasOwnProperty('anotherProp')).toBe(true)
 
     // Properties should have getter and setter functions
-    const descriptor = Object.getOwnPropertyDescriptor(E.prototype, 'testProp')
+    const descriptor = Object.getOwnPropertyDescriptor(e1, 'testProp')
     expect(descriptor).toBeDefined()
     expect(typeof descriptor!.get).toBe('function')
     expect(typeof descriptor!.set).toBe('function')
