@@ -940,7 +940,7 @@ describe('createFor', () => {
       )
     })
 
-    test.todo('remove from beginning and insert at end', async () => {
+    test('remove from beginning and insert at end', async () => {
       const arr = ref<number[]>([1, 2, 3])
       const { host, html } = render(arr)
       expect(host.children.length).toBe(3)
@@ -1028,7 +1028,7 @@ describe('createFor', () => {
       )
     })
 
-    test.todo('move to left & replace', async () => {
+    test('move to left & replace', async () => {
       const arr = ref<number[]>([1, 2, 3, 4, 5])
       const { host, html } = render(arr)
       expect(host.children.length).toBe(5)
@@ -1044,7 +1044,7 @@ describe('createFor', () => {
       )
     })
 
-    test.todo('move to left and leaves hold', async () => {
+    test('move to left and leaves hold', async () => {
       const arr = ref<number[]>([1, 4, 5])
       const { host, html } = render(arr)
       expect(host.children.length).toBe(3)
@@ -1058,24 +1058,21 @@ describe('createFor', () => {
       expect(html()).toBe(`<span>4</span><span>6</span><!--for-->`)
     })
 
-    test.todo(
-      'moved and set to undefined element ending at the end',
-      async () => {
-        const arr = ref<number[]>([2, 4, 5])
-        const { host, html } = render(arr)
-        expect(host.children.length).toBe(3)
-        expect(html()).toBe(
-          `<span>2</span><span>4</span><span>5</span><!--for-->`,
-        )
+    test('moved and set to undefined element ending at the end', async () => {
+      const arr = ref<number[]>([2, 4, 5])
+      const { host, html } = render(arr)
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        `<span>2</span><span>4</span><span>5</span><!--for-->`,
+      )
 
-        arr.value = [4, 5, 3]
-        await nextTick()
-        expect(host.children.length).toBe(3)
-        expect(html()).toBe(
-          `<span>4</span><span>5</span><span>3</span><!--for-->`,
-        )
-      },
-    )
+      arr.value = [4, 5, 3]
+      await nextTick()
+      expect(host.children.length).toBe(3)
+      expect(html()).toBe(
+        `<span>4</span><span>5</span><span>3</span><!--for-->`,
+      )
+    })
 
     test('reverse element', async () => {
       const arr = ref<number[]>([1, 2, 3, 4, 5, 6, 7, 8])
@@ -1323,7 +1320,7 @@ describe('createFor', () => {
       }).render()
     }
 
-    test.todo('move a key in non-keyed nodes with a size up', async () => {
+    test('move a key in non-keyed nodes with a size up', async () => {
       const arr = ref<any[]>([1, 'a', 'b', 'c'])
       const { host, html } = define({
         setup() {
