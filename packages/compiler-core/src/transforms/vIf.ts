@@ -34,6 +34,7 @@ import { cloneLoc } from '../parser'
 import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
 import { findDir, findProp, getMemoedVNodeCall, injectProp } from '../utils'
 import { PatchFlags } from '@vue/shared'
+import { transformBindShorthand } from './vBind'
 
 export const transformIf: NodeTransform = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
@@ -108,7 +109,7 @@ export function processIf(
   }
 
   if (dir.name === 'if') {
-    const branch = createIfBranch(node, dir)
+    const branch = createIfBranch(node, dir, context)
     const ifNode: IfNode = {
       type: NodeTypes.IF,
       loc: cloneLoc(node.loc),
@@ -153,7 +154,7 @@ export function processIf(
 
         // move the node to the if node's branches
         context.removeNode()
-        const branch = createIfBranch(node, dir)
+        const branch = createIfBranch(node, dir, context)
         if (
           __DEV__ &&
           comments.length &&
@@ -205,8 +206,17 @@ export function processIf(
   }
 }
 
-function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
+function createIfBranch(
+  node: ElementNode,
+  dir: DirectiveNode,
+  context: TransformContext,
+): IfBranchNode {
   const isTemplateIf = node.tagType === ElementTypes.TEMPLATE
+  const keyProp = findProp(node, `key`, false, true)
+  // resolve :key shorthand #11321
+  if (keyProp && keyProp.type === NodeTypes.DIRECTIVE && !keyProp.exp) {
+    transformBindShorthand(keyProp, context)
+  }
   return {
     type: NodeTypes.IF_BRANCH,
     loc: node.loc,
