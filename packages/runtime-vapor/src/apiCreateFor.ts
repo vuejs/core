@@ -196,10 +196,13 @@ export const createFor = (
             endOffset++
             continue
           }
-          if (endOffset !== 0) {
-            anchorFallback = normalizeAnchor(newBlocks[currentIndex + 1].nodes)
-          }
           break
+        }
+
+        if (endOffset !== 0) {
+          anchorFallback = normalizeAnchor(
+            newBlocks[newLength - endOffset].nodes,
+          )
         }
 
         while (startOffset < sharedBlockCount - endOffset) {

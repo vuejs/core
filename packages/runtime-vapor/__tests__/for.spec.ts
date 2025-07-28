@@ -778,7 +778,7 @@ describe('createFor', () => {
       )
     })
 
-    test.todo('prepend', async () => {
+    test('prepend', async () => {
       const arr = ref<number[]>([4, 5])
       const { host, html } = render(arr)
       expect(host.children.length).toBe(2)
