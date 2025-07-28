@@ -16,7 +16,15 @@ describe('SVG support', () => {
     define({
       setup() {
         const t0 = template(
-          '<div id="e0"><svg id="e1"><foreignObject id="e2"><div id="e3"></div><svg id="e4"></svg><math id="e5"></math></foreignObject></svg></div>',
+          `<div id="e0">
+            <svg id="e1">
+              <foreignObject id="e2">
+                <div id="e3"></div>
+                <svg id="e4"></svg>
+                <math id="e5"></math>
+              </foreignObject>
+            </svg>
+          </div>`,
           true,
         )
         return t0()

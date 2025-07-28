@@ -16,7 +16,22 @@ describe('MathML support', () => {
     define({
       setup() {
         const t0 = template(
-          '<math display="block" id="e0"><semantics id="e1"><mrow id="e2"><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>y</mi></mrow><annotation-xml encoding="text/html" id="e3"><div id="e4"></div><svg id="e5"></svg></annotation-xml></semantics></math>',
+          `<math display="block" id="e0">
+            <semantics id="e1">
+              <mrow id="e2">
+                <msup>
+                  <mi>x</mi>
+                  <mn>2</mn>
+                </msup>
+                <mo>+</mo>
+                <mi>y</mi>
+              </mrow>
+              <annotation-xml encoding="text/html" id="e3">
+                <div id="e4"></div>
+                <svg id="e5"></svg>
+              </annotation-xml>
+            </semantics>
+          </math>`,
           true,
           2,
         )
