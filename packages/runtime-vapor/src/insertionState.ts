@@ -1,3 +1,6 @@
+import { collectInsertionParents } from './apiCreateIf'
+import { isHydrating } from './dom/hydration'
+
 export let insertionParent:
   | (ParentNode & {
       // dynamic node position - hydration only
@@ -21,6 +24,10 @@ export let insertionAnchor: Node | 0 | undefined
 export function setInsertionState(parent: ParentNode, anchor?: Node | 0): void {
   insertionParent = parent
   insertionAnchor = anchor
+
+  if (isHydrating) {
+    collectInsertionParents(parent)
+  }
 }
 
 export function resetInsertionState(): void {
