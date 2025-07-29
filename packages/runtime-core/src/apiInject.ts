@@ -1,6 +1,5 @@
 import { isFunction } from '@vue/shared'
-import { currentInstance } from './component'
-import { currentRenderingInstance } from './componentRenderContext'
+import { currentInstance, getCurrentInstance } from './component'
 import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
 
@@ -69,7 +68,7 @@ export function inject(
   // 在函数组件内调用时，回退到currentRenderingInstance
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component
-  const instance = currentInstance || currentRenderingInstance
+  const instance = getCurrentInstance()
 
   // 支持从应用级别的provides中查找，通过app.runWithContext()
   // also support looking up from app-level provides w/ `app.runWithContext()`
@@ -79,10 +78,12 @@ export function inject(
     // to support `app.use` plugins,
     // fallback to appContext's `provides` if the instance is at root
     // #11488, in a nested createApp, prioritize using the provides from currentApp
-    const provides = currentApp
+    // #13212, for custom elements we must get injected values from its appContext
+    // as it already inherits the provides object from the parent element
+    let provides = currentApp
       ? currentApp._context.provides
       : instance
-        ? instance.parent == null
+        ? instance.parent == null || instance.ce
           ? instance.vnode.appContext && instance.vnode.appContext.provides
           : instance.parent.provides
         : undefined
@@ -115,5 +116,5 @@ export function inject(
  */
 export function hasInjectionContext(): boolean {
   // 判断当前实例、当前渲染实例或当前应用是否存在，存在则返回true
-  return !!(currentInstance || currentRenderingInstance || currentApp)
+  return !!(getCurrentInstance() || currentApp)
 }

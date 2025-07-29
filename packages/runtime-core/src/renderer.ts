@@ -86,6 +86,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import type { TransitionHooks } from './components/BaseTransition'
+import type { VueElement } from '@vue/runtime-dom'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -504,6 +505,8 @@ function baseCreateRenderer(
     // set ref
     if (ref != null && parentComponent) {
       setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
+    } else if (ref == null && n1 && n1.ref != null) {
+      setRef(n1.ref, null, parentSuspense, n1, true)
     }
   }
 
@@ -981,7 +984,8 @@ function baseCreateRenderer(
           // which also requires the correct parent container
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
+          oldVNode.shapeFlag &
+            (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE))
           ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
@@ -1229,12 +1233,12 @@ function baseCreateRenderer(
       }
     }
 
+    // avoid hydration for hmr updating
+    if (__DEV__ && isHmrUpdating) initialVNode.el = null
+
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      // avoid hydration for hmr updating
-      if (__DEV__ && isHmrUpdating) initialVNode.el = null
-
       parentSuspense &&
         parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
@@ -1243,6 +1247,7 @@ function baseCreateRenderer(
       if (!initialVNode.el) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
+        initialVNode.placeholder = placeholder.el
       }
     } else {
       // 设置并运行带副作用的渲染函数
@@ -1369,7 +1374,11 @@ function baseCreateRenderer(
           }
         } else {
           // custom element style injection
-          if (root.ce) {
+          if (
+            root.ce &&
+            // @ts-expect-error _def is private
+            (root.ce as VueElement)._def.shadowRoot !== false
+          ) {
             root.ce._injectChildStyle(type)
           }
 
@@ -1993,8 +2002,12 @@ function baseCreateRenderer(
       for (i = toBePatched - 1; i >= 0; i--) {
         const nextIndex = s2 + i
         const nextChild = c2[nextIndex] as VNode
+        const anchorVNode = c2[nextIndex + 1] as VNode
         const anchor =
-          nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
+          nextIndex + 1 < l2
+            ? // #13559, fallback to el placeholder for unresolved async component
+              anchorVNode.el || anchorVNode.placeholder
+            : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
           patch(
@@ -2071,7 +2084,13 @@ function baseCreateRenderer(
         queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
       } else {
         const { leave, delayLeave, afterLeave } = transition!
-        const remove = () => hostInsert(el!, container, anchor)
+        const remove = () => {
+          if (vnode.ctx!.isUnmounted) {
+            hostRemove(el!)
+          } else {
+            hostInsert(el!, container, anchor)
+          }
+        }
         const performLeave = () => {
           leave(el!, () => {
             remove()
@@ -2114,7 +2133,9 @@ function baseCreateRenderer(
 
     // unset ref
     if (ref != null) {
+      pauseTracking()
       setRef(ref, null, parentSuspense, vnode, true)
+      resetTracking()
     }
 
     // #6593 should clean memo cache when unmount
@@ -2278,13 +2299,30 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, job, subTree, um, m, a } = instance
+    const {
+      bum,
+      scope,
+      job,
+      subTree,
+      um,
+      m,
+      a,
+      parent,
+      slots: { __: slotCacheKeys },
+    } = instance
     invalidateMount(m)
     invalidateMount(a)
 
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
+    }
+
+    // remove slots content from parent renderCache
+    if (parent && isArray(slotCacheKeys)) {
+      slotCacheKeys.forEach(v => {
+        parent.renderCache[v] = undefined
+      })
     }
 
     if (
@@ -2502,10 +2540,14 @@ export function traverseStaticChildren(
       if (c2.type === Text) {
         c2.el = c1.el
       }
-      // also inherit for comment nodes, but not placeholders (e.g. v-if which
+      // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
       // would have received .el during block patch)
-      if (__DEV__ && c2.type === Comment && !c2.el) {
+      if (c2.type === Comment && !c2.el) {
         c2.el = c1.el
+      }
+
+      if (__DEV__) {
+        c2.el && (c2.el.__vnode = c2)
       }
     }
   }

@@ -12,7 +12,7 @@ import { camelize } from '@vue/shared'
 import { CAMELIZE } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 
-// v-bind without arg is handled directly in ./transformElements.ts due to it affecting
+// v-bind without arg is handled directly in ./transformElement.ts due to its affecting
 // codegen for the entire props object. This transform here is only for v-bind
 // *with* args.
 export const transformBind: DirectiveTransform = (dir, _node, context) => {
@@ -65,7 +65,7 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
     arg.children.unshift(`(`)
     arg.children.push(`) || ""`)
   } else if (!arg.isStatic) {
-    arg.content = `${arg.content} || ""`
+    arg.content = arg.content ? `${arg.content} || ""` : `""`
   }
 
   // .sync is replaced by v-model:arg

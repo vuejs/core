@@ -756,6 +756,7 @@ export function applyOptions(instance: ComponentInternalInstance): void {
         Object.defineProperty(exposed, key, {
           get: () => publicThis[key],
           set: val => (publicThis[key] = val),
+          enumerable: true,
         })
       })
     } else if (!instance.exposed) {
