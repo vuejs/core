@@ -49,11 +49,7 @@ function emit(event: string, ...args: any[]) {
   }
 }
 
-let queued = false
 export function setDevtoolsHook(hook: DevtoolsHook, target: any): void {
-  if (devtoolsNotInstalled || queued) {
-    return
-  }
   devtools = hook
   if (devtools) {
     devtools.enabled = true
@@ -70,7 +66,6 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any): void {
     // eslint-disable-next-line no-restricted-syntax
     !window.navigator?.userAgent?.includes('jsdom')
   ) {
-    queued = true
     const replay = (target.__VUE_DEVTOOLS_HOOK_REPLAY__ =
       target.__VUE_DEVTOOLS_HOOK_REPLAY__ || [])
     replay.push((newHook: DevtoolsHook) => {

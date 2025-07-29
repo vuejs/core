@@ -61,6 +61,8 @@ import {
 } from './dom/hydration'
 import { DynamicFragment, VaporFragment, isFragment } from './fragment'
 
+export const interopKey: unique symbol = Symbol(`interop`)
+
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
   VaporInteropInterface,
@@ -83,11 +85,16 @@ const vaporInteropImpl: Omit<
     const propsRef = shallowRef(props)
     const slotsRef = shallowRef(vnode.children)
 
+    const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
+      () => propsRef.value,
+    ]
+    // mark as interop props
+    dynamicPropSource[interopKey] = true
     // @ts-expect-error
     const instance = (vnode.component = createComponent(
       vnode.type as any as VaporComponent,
       {
-        $: extend([() => propsRef.value], { __interop: true }),
+        $: dynamicPropSource,
       } as RawProps,
       {
         _: slotsRef, // pass the slots ref
@@ -201,11 +208,11 @@ const vaporSlotPropsProxyHandler: ProxyHandler<
 
 const vaporSlotsProxyHandler: ProxyHandler<any> = {
   get(target, key) {
-    if (key === '_vapor') {
-      return target
-    } else {
-      return target[key]
+    const slot = target[key]
+    if (isFunction(slot)) {
+      slot.__vapor = true
     }
+    return slot
   },
 }
 
@@ -234,14 +241,7 @@ function createVDOMComponent(
 
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
-    // Ensure props are shallow reactive to align with VDOM behavior.
-    // This enables direct watching of props and prevents DEV warnings.
-    //
-    // Example:
-    // const props = defineProps(...)
-    // watch(props, () => { ... }) // props must be reactive for this to work
-    //
-    // Without reactivity, Vue will warn in DEV about non-reactive watch sources
+    // ensure props are shallow reactive to align with VDOM behavior.
     instance.props = shallowReactive(wrapper.props)
 
     const attrs = (instance.attrs = createInternalObject())

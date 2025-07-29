@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.5.14",
+  "version": "3.6.0-alpha.2",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
   "module": "dist/compiler-sfc.esm-browser.js",
@@ -50,7 +50,7 @@
     "@vue/shared": "workspace:*",
     "estree-walker": "catalog:",
     "magic-string": "catalog:",
-    "postcss": "^8.5.3",
+    "postcss": "^8.5.6",
     "source-map-js": "catalog:"
   },
   "devDependencies": {
@@ -59,10 +59,10 @@
     "hash-sum": "^2.0.0",
     "lru-cache": "10.1.0",
     "merge-source-map": "^1.1.0",
-    "minimatch": "~10.0.1",
+    "minimatch": "~10.0.3",
     "postcss-modules": "^6.0.1",
     "postcss-selector-parser": "^7.1.0",
     "pug": "^3.0.3",
-    "sass": "^1.86.3"
+    "sass": "^1.89.2"
   }
 }

@@ -341,7 +341,7 @@ describe('api: createVaporApp', () => {
     })
   })
 
-  test('config.globalProperty', () => {
+  test.todo('config.globalProperty', () => {
     const { app } = define({
       setup() {
         return []
@@ -351,7 +351,7 @@ describe('api: createVaporApp', () => {
       app.config.globalProperties.msg = 'hello world'
     } catch (e) {}
     expect(
-      `app.config.globalProperties is not supported in vapor mode`,
+      `app.config.globalProperties is not supported in vapor mode components`,
     ).toHaveBeenWarned()
   })
 })

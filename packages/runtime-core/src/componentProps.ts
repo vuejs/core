@@ -144,7 +144,9 @@ type InferPropType<T, NullAsAny = true> = [T] extends [null]
 export type ExtractPropTypes<O> = {
   // use `keyof Pick<O, RequiredKeys<O>>` instead of `RequiredKeys<O>` to
   // support IDE features
-  [K in keyof Pick<O, RequiredKeys<O>>]: InferPropType<O[K]>
+  [K in keyof Pick<O, RequiredKeys<O>>]: O[K] extends { default: any }
+    ? Exclude<InferPropType<O[K]>, undefined>
+    : InferPropType<O[K]>
 } & {
   // use `keyof Pick<O, OptionalKeys<O>>` instead of `OptionalKeys<O>` to
   // support IDE features
@@ -522,7 +524,7 @@ function baseResolveDefault(
   key: string,
 ) {
   let value
-  const reset = setCurrentInstance(instance)
+  const prev = setCurrentInstance(instance)
   const props = toRaw(instance.props)
   value = factory.call(
     __COMPAT__ && isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
@@ -530,7 +532,7 @@ function baseResolveDefault(
       : null,
     props,
   )
-  reset()
+  setCurrentInstance(...prev)
   return value
 }
 

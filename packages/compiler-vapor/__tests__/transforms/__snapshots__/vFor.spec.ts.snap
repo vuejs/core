@@ -47,6 +47,21 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-for > key only binding pattern 1`] = `
+"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr> </tr>", true)
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = t0()
+    const x2 = _child(n2)
+    _setText(x2, _toDisplayString(_for_item0.value.id + _for_item0.value.id))
+    return n2
+  }, (row) => (row.id))
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > multi effect 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
@@ -78,7 +93,7 @@ export function render(_ctx) {
       const x4 = _child(n4)
       _renderEffect(() => _setText(x4, _toDisplayString(_for_item1.value+_for_item0.value)))
       return n4
-    }, null, 1)
+    }, undefined, 1)
     return n5
   })
   return n0
@@ -126,6 +141,81 @@ export function render(_ctx) {
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value + _for_key0.value + _for_index0.value)))
     return n2
   }, (value, key, index) => (key))
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > selector pattern 1`] = `
+"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr> </tr>", true)
+
+export function render(_ctx) {
+  let _selector0_0
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = t0()
+    const x2 = _child(n2)
+    _selector0_0(() => {
+      _setText(x2, _toDisplayString(_ctx.selected === _for_item0.value.id ? 'danger' : ''))
+    })
+    return n2
+  }, (row) => (row.id), undefined, ({ createSelector }) => {
+    _selector0_0 = createSelector(() => _ctx.selected)
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > selector pattern 2`] = `
+"import { setClass as _setClass, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr></tr>", true)
+
+export function render(_ctx) {
+  let _selector0_0
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = t0()
+    _selector0_0(() => {
+      _setClass(n2, _ctx.selected === _for_item0.value.id ? 'danger' : '')
+    })
+    return n2
+  }, (row) => (row.id), undefined, ({ createSelector }) => {
+    _selector0_0 = createSelector(() => _ctx.selected)
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > selector pattern 3`] = `
+"import { setClass as _setClass, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr></tr>", true)
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = t0()
+    _renderEffect(() => {
+      const _row = _for_item0.value
+      _setClass(n2, _row.label === _row.id ? 'danger' : '')
+    })
+    return n2
+  }, (row) => (row.id))
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > selector pattern 4`] = `
+"import { setClass as _setClass, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr></tr>", true)
+
+export function render(_ctx) {
+  let _selector0_0
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = t0()
+    _selector0_0(() => {
+      _setClass(n2, { danger: _for_item0.value.id === _ctx.selected })
+    })
+    return n2
+  }, (row) => (row.id), undefined, ({ createSelector }) => {
+    _selector0_0 = createSelector(() => _ctx.selected)
+  })
   return n0
 }"
 `;

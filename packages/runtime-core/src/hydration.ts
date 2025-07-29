@@ -34,6 +34,7 @@ import {
   isString,
   isVaporAnchors,
   normalizeClass,
+  normalizeCssVarValue,
   normalizeStyle,
   stringifyStyle,
 } from '@vue/shared'
@@ -435,9 +436,11 @@ export function createHydrationFunctions(
           parentComponent.vnode.props.appear
 
         const content = (el as HTMLTemplateElement).content
-          .firstChild as Element
+          .firstChild as Element & { $cls?: string }
 
         if (needCallTransitionHooks) {
+          const cls = content.getAttribute('class')
+          if (cls) content.$cls = cls
           transition!.beforeEnter(content)
         }
 
@@ -574,11 +577,15 @@ export function createHydrationFunctions(
         dirs ||
         needCallTransitionHooks
       ) {
-        queueEffectWithSuspense(() => {
-          vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
-          needCallTransitionHooks && transition!.enter(el)
-          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
-        }, parentSuspense)
+        queueEffectWithSuspense(
+          () => {
+            vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
+            needCallTransitionHooks && transition!.enter(el)
+            dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+          },
+          undefined,
+          parentSuspense,
+        )
       }
     }
 
@@ -823,7 +830,7 @@ export function createHydrationFunctions(
  * Dev only
  */
 function propHasMismatch(
-  el: Element,
+  el: Element & { $cls?: string },
   key: string,
   clientValue: any,
   vnode: VNode,
@@ -836,7 +843,12 @@ function propHasMismatch(
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
-    actual = el.getAttribute('class')
+    if (el.$cls) {
+      actual = el.$cls
+      delete el.$cls
+    } else {
+      actual = el.getAttribute('class')
+    }
     expected = normalizeClass(clientValue)
     if (!isSetEqual(toClassSet(actual || ''), toClassSet(expected))) {
       mismatchType = MismatchTypes.CLASS
@@ -975,10 +987,8 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      expectedMap.set(
-        `--${getEscapedCssVarName(key, false)}`,
-        String(cssVars[key]),
-      )
+      const value = normalizeCssVarValue(cssVars[key])
+      expectedMap.set(`--${getEscapedCssVarName(key, false)}`, value)
     }
   }
   if (vnode === root && instance.parent) {
@@ -1031,6 +1041,6 @@ function isMismatchAllowed(
     if (allowedType === MismatchTypes.TEXT && list.includes('children')) {
       return true
     }
-    return allowedAttr.split(',').includes(MismatchTypeString[allowedType])
+    return list.includes(MismatchTypeString[allowedType])
   }
 }

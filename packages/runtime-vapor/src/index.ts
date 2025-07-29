@@ -9,7 +9,11 @@ export { VaporTeleportImpl as VaporTeleport } from './components/Teleport'
 // compiler-use only
 export { insert, prepend, remove } from './block'
 export { setInsertionState } from './insertionState'
-export { createComponent, createComponentWithFallback } from './component'
+export {
+  createComponent,
+  createComponentWithFallback,
+  isVaporComponent,
+} from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot, forwardedSlotCreator } from './componentSlots'
 export { template } from './dom/template'

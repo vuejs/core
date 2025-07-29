@@ -26,7 +26,7 @@ import {
   genCall,
   genMulti,
 } from './utils'
-import { genExpression } from './expression'
+import { genExpression, genVarName } from './expression'
 import { genPropKey, genPropValue } from './prop'
 import {
   type SimpleExpressionNode,
@@ -114,6 +114,7 @@ export function genCreateComponent(
 
 function getUniqueHandlerName(context: CodegenContext, name: string): string {
   const { seenInlineHandlerNames } = context
+  name = genVarName(name)
   const count = seenInlineHandlerNames[name] || 0
   seenInlineHandlerNames[name] = count + 1
   return count === 0 ? name : `${name}${count}`

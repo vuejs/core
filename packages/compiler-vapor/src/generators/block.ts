@@ -20,14 +20,13 @@ export function genBlock(
   context: CodegenContext,
   args: CodeFragment[] = [],
   root?: boolean,
-  customReturns?: (returns: CodeFragment[]) => CodeFragment[],
 ): CodeFragment[] {
   return [
     '(',
     ...args,
     ') => {',
     INDENT_START,
-    ...genBlockContent(oper, context, root, customReturns),
+    ...genBlockContent(oper, context, root),
     INDENT_END,
     NEWLINE,
     '}',
@@ -38,7 +37,7 @@ export function genBlockContent(
   block: BlockIRNode,
   context: CodegenContext,
   root?: boolean,
-  customReturns?: (returns: CodeFragment[]) => CodeFragment[],
+  genEffectsExtraFrag?: () => CodeFragment[],
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   const { dynamic, effect, operation, returns, key } = block
@@ -75,7 +74,7 @@ export function genBlockContent(
   }
 
   push(...genOperations(operation, context))
-  push(...genEffects(effect, context))
+  push(...genEffects(effect, context, genEffectsExtraFrag))
 
   if (block.hasDeferredVShow) {
     push(NEWLINE, `deferredApplyVShows.forEach(fn => fn())`)
@@ -97,7 +96,7 @@ export function genBlockContent(
     returnNodes.length > 1
       ? genMulti(DELIMITERS_ARRAY, ...returnNodes)
       : [returnNodes[0] || 'null']
-  push(...(customReturns ? customReturns(returnsCode) : returnsCode))
+  push(...returnsCode)
 
   resetBlock()
   return frag
