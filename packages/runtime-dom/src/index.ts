@@ -260,6 +260,7 @@ export {
   defineCustomElement,
   defineSSRCustomElement,
   useShadowRoot,
+  useNativeSlots,
   useHost,
   VueElement,
   type VueElementConstructor,
