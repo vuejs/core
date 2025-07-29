@@ -40,6 +40,7 @@ export class DynamicFragment extends VaporFragment {
   scope: EffectScope | undefined
   current?: BlockFn
   fallback?: BlockFn
+  teardown?: () => void
 
   constructor(anchorLabel?: string) {
     super([])
@@ -64,7 +65,10 @@ export class DynamicFragment extends VaporFragment {
     // teardown previous branch
     if (this.scope) {
       this.scope.stop()
-      parent && remove(this.nodes, parent)
+      if (parent) {
+        remove(this.nodes, parent)
+        this.teardown && this.teardown()
+      }
     }
 
     if (render) {

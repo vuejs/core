@@ -1134,6 +1134,28 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toBe(`<div>foo</div><!---->`)
     })
 
+    test('v-if on insertion parent', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div v-if="data">
+            <components.Child/>
+          </div>
+        </template>`,
+        { Child: `<template>foo</template>` },
+        data,
+      )
+      expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
+
+      data.value = true
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
+    })
+
     test('v-if/else-if/else chain - switch branches', async () => {
       const data = ref('a')
       const { container } = await testHydration(
