@@ -59,7 +59,7 @@ import {
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
-import { DynamicFragment, VaporFragment, isFragment } from './fragment'
+import { VaporFragment, isFragment, setFragmentFallback } from './fragment'
 
 export const interopKey: unique symbol = Symbol(`interop`)
 
@@ -143,22 +143,12 @@ const vaporInteropImpl: Omit<
       const { slot, fallback } = n2.vs!
       const propsRef = (n2.vs!.ref = shallowRef(n2.props))
       const slotBlock = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
-      // forwarded vdom slot without its own fallback, use the fallback provided by
-      // the slot outlet
-      if (slotBlock instanceof DynamicFragment) {
-        // vapor slot's nodes is a forwarded vdom slot
-        let nodes = slotBlock.nodes
-        while (isFragment(nodes)) {
-          ensureVDOMSlotFallback(nodes, fallback)
-          nodes = nodes.nodes
-        }
+      // handle nested fragments
+      if (fallback && isFragment(slotBlock)) {
+        setFragmentFallback(slotBlock, createFallback(fallback))
         // use fragment's anchor when possible
         selfAnchor = slotBlock.anchor
-      } else if (isFragment(slotBlock)) {
-        ensureVDOMSlotFallback(slotBlock, fallback)
-        selfAnchor = slotBlock.anchor!
       }
-
       if (!selfAnchor) selfAnchor = createTextNode()
       insert((n2.el = n2.anchor = selfAnchor), container, anchor)
       insert((n2.vb = slotBlock), container, selfAnchor)
@@ -228,7 +218,7 @@ function createVDOMComponent(
   rawSlots?: LooseRawSlots | null,
   scopeId?: string,
 ): VaporFragment {
-  const frag = new VaporFragment([])
+  const frag = new VaporFragment([] as Block[])
   const vnode = createVNode(
     component,
     rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
@@ -432,12 +422,6 @@ export const vaporInteropPlugin: Plugin = app => {
     optimizePropertyLookup()
     return mount(...args)
   }) satisfies App['mount']
-}
-
-function ensureVDOMSlotFallback(block: VaporFragment, fallback?: () => any) {
-  if (block.insert && !block.fallback && fallback) {
-    block.fallback = createFallback(fallback)
-  }
 }
 
 const createFallback =

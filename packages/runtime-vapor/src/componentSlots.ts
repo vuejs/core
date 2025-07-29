@@ -17,7 +17,7 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { isHydrating } from './dom/hydration'
-import { DynamicFragment, type VaporFragment, isFragment } from './fragment'
+import { DynamicFragment } from './fragment'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -143,37 +143,10 @@ export function createSlot(
     const renderSlot = () => {
       const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
       if (slot) {
+        fragment.fallback = fallback
         // create and cache bound version of the slot to make it stable
         // so that we avoid unnecessary updates if it resolves to the same slot
-        fragment.update(
-          slot._bound ||
-            (slot._bound = () => {
-              const slotContent = slot(slotProps)
-              if (slotContent instanceof DynamicFragment) {
-                let nodes = slotContent.nodes
-                if (
-                  (slotContent.fallback = fallback) &&
-                  isArray(nodes) &&
-                  nodes.length === 0
-                ) {
-                  // use fallback if the slot content is invalid
-                  slotContent.update(fallback)
-                } else {
-                  while (isFragment(nodes)) {
-                    ensureVaporSlotFallback(nodes, fallback)
-                    nodes = nodes.nodes
-                  }
-                }
-              }
-              // forwarded vdom slot, if there is no fallback provide, try use the fallback
-              // provided by the slot outlet.
-              else if (isFragment(slotContent)) {
-                ensureVaporSlotFallback(slotContent, fallback)
-              }
-
-              return slotContent
-            }),
-        )
+        fragment.update(slot._bound || (slot._bound = () => slot(slotProps)))
       } else {
         fragment.update(fallback)
       }
@@ -206,7 +179,9 @@ export function createSlot(
 }
 
 function isForwardedSlot(block: Block): block is DynamicFragment {
-  return block instanceof DynamicFragment && !!block.forwarded
+  return (
+    block instanceof DynamicFragment && !!(block as DynamicFragment).forwarded
+  )
 }
 
 function hasForwardedSlot(block: Block): block is DynamicFragment {
@@ -214,14 +189,5 @@ function hasForwardedSlot(block: Block): block is DynamicFragment {
     return block.some(isForwardedSlot)
   } else {
     return isForwardedSlot(block)
-  }
-}
-
-function ensureVaporSlotFallback(
-  block: VaporFragment,
-  fallback?: VaporSlot,
-): void {
-  if (block.insert && !block.fallback && fallback) {
-    block.fallback = fallback
   }
 }

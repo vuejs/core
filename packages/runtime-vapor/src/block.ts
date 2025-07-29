@@ -58,7 +58,7 @@ export function isValidBlock(block: Block): boolean {
   } else if (isVaporComponent(block)) {
     return isValidBlock(block.block)
   } else if (isArray(block)) {
-    return block.length > 0 && block.every(isValidBlock)
+    return block.length > 0 && block.some(isValidBlock)
   } else {
     // fragment
     return isValidBlock(block.nodes)
