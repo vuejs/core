@@ -140,7 +140,9 @@ export class DynamicFragment extends VaporFragment {
     }
 
     setActiveSub(prevSub)
-    if (isHydrating) this.hydrate(this.anchorLabel!)
+    if (isHydrating && this.anchorLabel) {
+      this.hydrate(this.anchorLabel)
+    }
   }
 
   hydrate(label: string): void {
