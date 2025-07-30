@@ -233,7 +233,7 @@ export const createFor = (
         if (endOffset !== 0) {
           anchorFallback = normalizeAnchor(
             newBlocks[newLength - endOffset].nodes,
-          )
+          )!
         }
 
         while (startOffset < sharedBlockCount - endOffset) {
