@@ -88,3 +88,14 @@ export function getLiteralExpressionValue(
   }
   return exp.isStatic ? exp.content : null
 }
+
+export function isTeleportTag(tag: string): boolean {
+  tag = tag.toLowerCase()
+  return tag === 'teleport' || tag === 'vaporteleport'
+}
+
+export function isBuiltInComponent(tag: string): string | undefined {
+  if (isTeleportTag(tag)) {
+    return 'VaporTeleport'
+  }
+}
