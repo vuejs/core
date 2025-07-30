@@ -196,10 +196,13 @@ export const createFor = (
             endOffset++
             continue
           }
-          if (endOffset !== 0) {
-            anchorFallback = normalizeAnchor(newBlocks[currentIndex + 1].nodes)
-          }
           break
+        }
+
+        if (endOffset !== 0) {
+          anchorFallback = normalizeAnchor(
+            newBlocks[newLength - endOffset].nodes,
+          )
         }
 
         while (startOffset < sharedBlockCount - endOffset) {
@@ -251,12 +254,7 @@ export const createFor = (
           previousKeyIndexPairs.length = previousKeyIndexInsertIndex
 
           const previousKeyIndexMap = new Map(previousKeyIndexPairs)
-          const blocksToMount: [
-            blockIndex: number,
-            blockItem: ReturnType<typeof getItem>,
-            blockKey: any,
-            anchorOffset: number,
-          ][] = []
+          const operations: (() => void)[] = []
 
           const relocateOrMountBlock = (
             blockIndex: number,
@@ -269,21 +267,30 @@ export const createFor = (
               const reusedBlock = (newBlocks[blockIndex] =
                 oldBlocks[previousIndex])
               update(reusedBlock, ...blockItem)
-              insert(
-                reusedBlock,
-                parent!,
-                anchorOffset === -1
-                  ? anchorFallback
-                  : normalizeAnchor(newBlocks[anchorOffset].nodes),
-              )
               previousKeyIndexMap.delete(blockKey)
+              if (previousIndex !== blockIndex) {
+                operations.push(() =>
+                  insert(
+                    reusedBlock,
+                    parent!,
+                    anchorOffset === -1
+                      ? anchorFallback
+                      : normalizeAnchor(newBlocks[anchorOffset].nodes),
+                  ),
+                )
+              }
             } else {
-              blocksToMount.push([
-                blockIndex,
-                blockItem,
-                blockKey,
-                anchorOffset,
-              ])
+              operations.push(() =>
+                mount(
+                  source,
+                  blockIndex,
+                  anchorOffset === -1
+                    ? anchorFallback
+                    : normalizeAnchor(newBlocks[anchorOffset].nodes),
+                  blockItem,
+                  blockKey,
+                ),
+              )
             }
           }
 
@@ -303,7 +310,7 @@ export const createFor = (
             relocateOrMountBlock(i, blockItem, blockKey, -1)
           }
 
-          const useFastRemove = blocksToMount.length === newLength
+          const useFastRemove = operations.length === newLength
 
           for (const leftoverIndex of previousKeyIndexMap.values()) {
             unmount(
@@ -322,21 +329,9 @@ export const createFor = (
             }
           }
 
-          for (const [
-            blockIndex,
-            blockItem,
-            blockKey,
-            anchorOffset,
-          ] of blocksToMount) {
-            mount(
-              source,
-              blockIndex,
-              anchorOffset === -1
-                ? anchorFallback
-                : normalizeAnchor(newBlocks[anchorOffset].nodes),
-              blockItem,
-              blockKey,
-            )
+          // perform mount and move operations
+          for (const action of operations) {
+            action()
           }
         }
       }
