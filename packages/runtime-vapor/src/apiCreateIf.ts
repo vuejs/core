@@ -45,6 +45,7 @@ export function createIf(
   b1: BlockFn,
   b2?: BlockFn,
   once?: boolean,
+  elseIf?: boolean,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -55,7 +56,7 @@ export function createIf(
     frag = condition() ? b1() : b2 ? b2() : []
   } else {
     frag =
-      isHydrating || __DEV__
+      (isHydrating || __DEV__) && !elseIf
         ? new DynamicFragment(IF_ANCHOR_LABEL)
         : new DynamicFragment()
     if (isHydrating) {
