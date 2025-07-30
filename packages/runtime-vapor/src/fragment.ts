@@ -13,7 +13,6 @@ import type { TransitionHooks } from '@vue/runtime-dom'
 import {
   advanceHydrationNode,
   currentHydrationNode,
-  isComment,
   isHydrating,
   locateHydrationNode,
   locateVaporFragmentAnchor,
@@ -75,7 +74,7 @@ export class DynamicFragment extends VaporFragment {
 
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
-      if (isHydrating) this.hydrate(this.anchorLabel!)
+      if (isHydrating) this.hydrate(this.anchorLabel!, true)
       return
     }
     this.current = key
@@ -145,11 +144,11 @@ export class DynamicFragment extends VaporFragment {
     }
   }
 
-  hydrate(label: string): void {
+  hydrate(label: string, isEmpty: boolean = false): void {
     // for `v-if="false"` the node will be an empty comment, use it as the anchor.
     // otherwise, find next sibling vapor fragment anchor
-    if (label === 'if' && isComment(currentHydrationNode!, '')) {
-      this.anchor = currentHydrationNode
+    if (label === 'if' && isEmpty) {
+      this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, '')!
     } else {
       let anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
       if (!anchor && (label === 'slot' || label === 'if')) {
