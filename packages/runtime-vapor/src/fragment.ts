@@ -11,12 +11,12 @@ import {
 } from './block'
 import type { TransitionHooks } from '@vue/runtime-dom'
 import {
+  advanceHydrationNode,
   currentHydrationNode,
   isComment,
   isHydrating,
   locateHydrationNode,
   locateVaporFragmentAnchor,
-  setCurrentHydrationNode,
 } from './dom/hydration'
 import {
   applyTransitionHooks,
@@ -60,12 +60,13 @@ export class DynamicFragment extends VaporFragment {
    */
   forwarded?: boolean
   teardown?: () => void
+  anchorLabel?: string
 
   constructor(anchorLabel?: string) {
     super([])
     if (isHydrating) {
       locateHydrationNode(anchorLabel === 'slot')
-      this.hydrate(anchorLabel!)
+      this.anchorLabel = anchorLabel
     } else {
       this.anchor =
         __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
@@ -74,12 +75,13 @@ export class DynamicFragment extends VaporFragment {
 
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
+      if (isHydrating) this.hydrate(this.anchorLabel!)
       return
     }
     this.current = key
 
     const prevSub = setActiveSub()
-    const parent = this.anchor.parentNode
+    const parent = isHydrating ? null : this.anchor.parentNode
     const transition = this.$transition
     const renderBranch = () => {
       if (render) {
@@ -137,10 +139,8 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    if (isHydrating) {
-      setCurrentHydrationNode(this.anchor.nextSibling)
-    }
     setActiveSub(prevSub)
+    if (isHydrating) this.hydrate(this.anchorLabel!)
   }
 
   hydrate(label: string): void {
@@ -161,6 +161,7 @@ export class DynamicFragment extends VaporFragment {
         throw new Error(`${label} fragment anchor node was not found.`)
       }
     }
+    advanceHydrationNode(this.anchor)
   }
 }
 

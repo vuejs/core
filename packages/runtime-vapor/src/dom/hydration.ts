@@ -20,6 +20,10 @@ export function setCurrentHydrationNode(node: Node | null): void {
   currentHydrationNode = node
 }
 
+export function advanceHydrationNode(node: Node): void {
+  setCurrentHydrationNode(node.nextSibling || node.parentNode)
+}
+
 let isOptimized = false
 
 function performHydration<T>(
@@ -96,7 +100,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
     }
   }
 
-  currentHydrationNode = __next(node)
+  advanceHydrationNode(node)
   return node
 }
 
@@ -194,12 +198,12 @@ export function isNonHydrationNode(node: Node): boolean {
 export function locateVaporFragmentAnchor(
   node: Node,
   anchorLabel: string,
-): Comment | undefined {
-  let n = node.nextSibling
-  while (n) {
-    if (isComment(n, anchorLabel)) return n
-    n = n.nextSibling
+): Comment | null {
+  while (node) {
+    if (isComment(node, anchorLabel)) return node
+    node = node.nextSibling!
   }
+  return null
 }
 
 export function isEmptyTextNode(node: Node): node is Text {
