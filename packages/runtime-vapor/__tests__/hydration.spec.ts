@@ -1269,6 +1269,26 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
     })
 
+    test('consecutive if node', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <components.Child v-if="data"/>
+        </template>`,
+        { Child: `<template><div v-if="data">foo</div></template>` },
+        data,
+      )
+      expect(container.innerHTML).toBe(`<div>foo</div><!--if--><!--if-->`)
+
+      data.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(`<!--if-->`)
+
+      data.value = true
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div>foo</div><!--if--><!--if-->`)
+    })
+
     test('v-if/else-if/else chain on component - switch branches', async () => {
       const data = ref('a')
       const { container } = await testHydration(

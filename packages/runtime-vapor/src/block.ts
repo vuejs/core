@@ -8,6 +8,7 @@ import {
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, setActiveSub } from '@vue/reactivity'
 import {
+  advanceHydrationNode,
   currentHydrationNode,
   isComment,
   isHydrating,
@@ -41,12 +42,13 @@ export class DynamicFragment extends VaporFragment {
   current?: BlockFn
   fallback?: BlockFn
   teardown?: () => void
+  anchorLabel?: string
 
   constructor(anchorLabel?: string) {
     super([])
     if (isHydrating) {
+      this.anchorLabel = anchorLabel
       locateHydrationNode()
-      this.hydrate(anchorLabel!)
     } else {
       this.anchor =
         __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
@@ -55,12 +57,13 @@ export class DynamicFragment extends VaporFragment {
 
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
+      if (isHydrating) this.hydrate(this.anchorLabel!)
       return
     }
     this.current = key
 
     const prevSub = setActiveSub()
-    const parent = this.anchor.parentNode
+    const parent = isHydrating ? null : this.anchor.parentNode
 
     // teardown previous branch
     if (this.scope) {
@@ -89,6 +92,8 @@ export class DynamicFragment extends VaporFragment {
     }
 
     setActiveSub(prevSub)
+
+    if (isHydrating) this.hydrate(this.anchorLabel!)
   }
 
   hydrate(label: string): void {
@@ -105,6 +110,7 @@ export class DynamicFragment extends VaporFragment {
         throw new Error(`${label} fragment anchor node was not found.`)
       }
     }
+    advanceHydrationNode(this.anchor)
   }
 }
 
