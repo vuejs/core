@@ -21,7 +21,9 @@ export function setCurrentHydrationNode(node: Node | null): void {
 }
 
 export function advanceHydrationNode(node: Node): void {
-  setCurrentHydrationNode(node.nextSibling || node.parentNode)
+  setCurrentHydrationNode(
+    node.nextSibling || (node.parentNode ? node.parentNode.nextSibling : null),
+  )
 }
 
 let isOptimized = false
