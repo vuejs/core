@@ -568,11 +568,18 @@ export function createComponentWithFallback(
   }
 
   if (rawSlots) {
-    isHydrating && setCurrentHydrationNode(el.firstChild)
+    let prev: Node
+    if (isHydrating) {
+      prev = currentHydrationNode!
+      setCurrentHydrationNode(el.firstChild)
+    }
     if (rawSlots.$) {
       // TODO dynamic slot fragment
     } else {
       insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
+    }
+    if (isHydrating) {
+      setCurrentHydrationNode(prev!)
     }
   }
 
