@@ -201,7 +201,11 @@ export const createFor = (
           break
         }
 
-        while (startOffset < sharedBlockCount - endOffset) {
+        const e1 = sharedBlockCount - endOffset
+        const e2 = oldLength - endOffset
+        const e3 = newLength - endOffset
+
+        while (startOffset < e1) {
           const currentItem = getItem(source, startOffset)
           const currentKey = getKey(...currentItem)
           const previousBlock = oldBlocks[startOffset]
@@ -222,14 +226,14 @@ export const createFor = (
           startOffset++
         }
 
-        for (let i = startOffset; i < oldLength - endOffset; i++) {
+        for (let i = startOffset; i < e2; i++) {
           previousKeyIndexPairs[previousKeyIndexInsertIndex++] = [
             oldBlocks[i].key,
             i,
           ]
         }
 
-        for (let i = startOffset; i < newLength - endOffset; i++) {
+        for (let i = startOffset; i < e3; i++) {
           const blockItem = getItem(source, i)
           const blockKey = getKey(...blockItem)
           queuedBlocks[queuedBlocksInsertIndex++] = [i, blockItem, blockKey]
