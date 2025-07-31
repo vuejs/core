@@ -15,6 +15,7 @@ export function template(html: string, root?: boolean) {
       node = adoptTemplate(currentHydrationNode!, html)!
       // dynamic node position, default is 0
       ;(node as any).$dp = n || 0
+      if (root) (node as any).$root = true
       return node
     }
     // fast path for text nodes

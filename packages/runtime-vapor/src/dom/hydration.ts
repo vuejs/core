@@ -137,13 +137,13 @@ function locateHydrationNodeImpl(isFragment?: boolean): void {
     }
 
     // locate slot fragment start anchor
-    if (isFragment && node && !isComment(node, '[')) {
-      node = locateVaporFragmentAnchor(node, '[')!
-    } else {
-      while (node && isNonHydrationNode(node)) {
-        node = node.nextSibling!
-      }
-    }
+    // if (isFragment && node && !isComment(node, '[')) {
+    //   node = locateVaporFragmentAnchor(node, '[')!
+    // } else {
+    //   while (node && isNonHydrationNode(node)) {
+    //     node = node.nextSibling!
+    //   }
+    // }
 
     if (insertionParent && node) {
       const nextNode = node.nextSibling
