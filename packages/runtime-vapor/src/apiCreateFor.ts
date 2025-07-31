@@ -493,25 +493,16 @@ export const createFor = (
 
 function moveLink(
   block: ForBlock,
-  prev: ForBlock | undefined,
-  next: ForBlock | undefined,
+  newPrev: ForBlock | undefined,
+  newNext: ForBlock | undefined,
 ) {
-  const oldPrev = block.prev
-  const oldNext = block.next
-  if (oldPrev !== undefined) {
-    oldPrev.next = oldNext
-  }
-  if (oldNext !== undefined) {
-    oldNext.prev = oldPrev
-  }
-  if (prev !== undefined) {
-    prev.next = block
-  }
-  if (next !== undefined) {
-    next.prev = block
-  }
-  block.prev = prev
-  block.next = next
+  const { prev: oldPrev, next: oldNext } = block
+  if (oldPrev !== undefined) oldPrev.next = oldNext
+  if (oldNext !== undefined) oldNext.prev = oldPrev
+  if (newPrev !== undefined) newPrev.next = block
+  if (newNext !== undefined) newNext.prev = block
+  block.prev = newPrev
+  block.next = newNext
 }
 
 export function createForSlots(
