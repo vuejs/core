@@ -183,7 +183,6 @@ export const createFor = (
 
         let anchorFallback: Node = parentAnchor
         let endOffset = 0
-        let startOffset = 0
         let queuedBlocksInsertIndex = 0
         let previousKeyIndexInsertIndex = 0
 
@@ -205,35 +204,34 @@ export const createFor = (
         const e2 = oldLength - endOffset
         const e3 = newLength - endOffset
 
-        while (startOffset < e1) {
-          const currentItem = getItem(source, startOffset)
+        for (let i = 0; i < e1; i++) {
+          const currentItem = getItem(source, i)
           const currentKey = getKey(...currentItem)
-          const previousBlock = oldBlocks[startOffset]
+          const previousBlock = oldBlocks[i]
           const previousKey = previousBlock.key
           if (previousKey === currentKey) {
-            update((newBlocks[startOffset] = previousBlock), currentItem[0])
+            update((newBlocks[i] = previousBlock), currentItem[0])
           } else {
             queuedBlocks[queuedBlocksInsertIndex++] = [
-              startOffset,
+              i,
               currentItem,
               currentKey,
             ]
             previousKeyIndexPairs[previousKeyIndexInsertIndex++] = [
               previousKey,
-              startOffset,
+              i,
             ]
           }
-          startOffset++
         }
 
-        for (let i = startOffset; i < e2; i++) {
+        for (let i = e1; i < e2; i++) {
           previousKeyIndexPairs[previousKeyIndexInsertIndex++] = [
             oldBlocks[i].key,
             i,
           ]
         }
 
-        for (let i = startOffset; i < e3; i++) {
+        for (let i = e1; i < e3; i++) {
           const blockItem = getItem(source, i)
           const blockKey = getKey(...blockItem)
           queuedBlocks[queuedBlocksInsertIndex++] = [i, blockItem, blockKey]
