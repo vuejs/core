@@ -297,15 +297,12 @@ export const createFor = (
             )
           }
         } else if (opers.length) {
-          let blocksTail: ForBlock | undefined
-          for (const block of oldBlocks) {
-            if (block === undefined) {
-              continue
-            }
-            if (blocksTail !== undefined) {
-              blocksTail.next = block
-              block.prev = blocksTail
-            }
+          oldBlocks = oldBlocks.filter(block => block !== undefined)
+          let blocksTail = oldBlocks[0]
+          for (let i = 1; i < oldBlocks.length; i++) {
+            const block = oldBlocks[i]
+            blocksTail.next = block
+            block.prev = blocksTail
             blocksTail = block
           }
           for (const action of opers) {
