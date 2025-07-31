@@ -201,12 +201,6 @@ export const createFor = (
           break
         }
 
-        if (endOffset !== 0) {
-          anchorFallback = normalizeAnchor(
-            newBlocks[newLength - endOffset].nodes,
-          )
-        }
-
         while (startOffset < sharedBlockCount - endOffset) {
           const currentItem = getItem(source, startOffset)
           const currentKey = getKey(...currentItem)
