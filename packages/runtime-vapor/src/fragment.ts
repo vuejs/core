@@ -145,6 +145,8 @@ export class DynamicFragment extends VaporFragment {
   }
 
   hydrate(label: string, isEmpty: boolean = false): void {
+    if (!label && isEmpty) return
+
     // for `v-if="false"` the node will be an empty comment, use it as the anchor.
     // otherwise, find next sibling vapor fragment anchor
     if (label === 'if' && isEmpty) {

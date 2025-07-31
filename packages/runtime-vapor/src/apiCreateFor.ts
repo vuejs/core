@@ -469,8 +469,10 @@ export const createFor = (
   if (!isHydrating && _insertionParent) {
     insert(frag, _insertionParent, _insertionAnchor)
   }
-  if (isHydrating && _insertionAnchor !== undefined) {
-    advanceHydrationNode(_insertionParent!)
+  if (isHydrating) {
+    advanceHydrationNode(
+      _insertionAnchor !== undefined ? _insertionParent! : parentAnchor,
+    )
   }
 
   return frag
