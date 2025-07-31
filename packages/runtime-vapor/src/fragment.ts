@@ -139,7 +139,17 @@ export class DynamicFragment extends VaporFragment {
     }
 
     setActiveSub(prevSub)
+
     if (isHydrating && this.anchorLabel) {
+      // skip hydration for empty forwarded slots because
+      // the server output does not include their anchors
+      if (
+        this.nodes instanceof DynamicFragment &&
+        this.nodes.forwarded &&
+        !isValidBlock(this.nodes)
+      ) {
+        return
+      }
       this.hydrate(this.anchorLabel)
     }
   }

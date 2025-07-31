@@ -136,7 +136,7 @@ export function createSlot(
     )
   } else {
     fragment =
-      (isHydrating || __DEV__) && !i
+      isHydrating || __DEV__
         ? new DynamicFragment(SLOT_ANCHOR_LABEL)
         : new DynamicFragment()
     const isDynamicName = isFunction(name)
