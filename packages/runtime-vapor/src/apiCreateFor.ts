@@ -276,14 +276,13 @@ export const createFor = (
         }
 
         if (opers.length === mountCounter) {
-          for (const oper of opers) {
-            const [_type, source, index, item, key] = oper as [
-              type: 'mount',
-              source: ResolvedSource,
-              index: number,
-              item: ReturnType<typeof getItem>,
-              key: any,
-            ]
+          for (const [_type, source, index, item, key] of opers as [
+            type: 'mount',
+            source: ResolvedSource,
+            index: number,
+            item: ReturnType<typeof getItem>,
+            key: any,
+          ]) {
             mount(
               source,
               index,
