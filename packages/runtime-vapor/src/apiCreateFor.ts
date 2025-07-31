@@ -181,7 +181,6 @@ export const createFor = (
           blockKey: any,
         ][] = new Array(newLength)
 
-        let anchorFallback: Node = parentAnchor
         let endOffset = 0
         let queuedBlocksInsertIndex = 0
         let previousKeyIndexInsertIndex = 0
@@ -317,7 +316,7 @@ export const createFor = (
               index,
               index < newLength - 1
                 ? normalizeAnchor(newBlocks[index + 1].nodes)
-                : anchorFallback,
+                : parentAnchor,
               item,
               key,
             )
@@ -348,7 +347,7 @@ export const createFor = (
                 )
                 moveLink(block, anchorBlock.prev, anchorBlock)
               } else {
-                const block = mount(source, index, anchorFallback, item, key)
+                const block = mount(source, index, parentAnchor, item, key)
                 moveLink(block, blocksTail, undefined)
                 blocksTail = block
               }
@@ -365,7 +364,7 @@ export const createFor = (
                   moveLink(block, anchorBlock.prev, anchorBlock)
                 }
               } else if (block.next !== undefined) {
-                insert(block, parent!, anchorFallback)
+                insert(block, parent!, parentAnchor)
                 moveLink(block, blocksTail, undefined)
                 blocksTail = block
               }
