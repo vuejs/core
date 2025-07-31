@@ -12,6 +12,10 @@ export let insertionParent:
       // const n4 = t0(2) // n4.$dp = 2
       // The first 2 nodes are static, dynamic nodes start from index 2
       $dp?: number
+      // number of prepends - hydration only
+      // consecutive prepends need to skip nodes that were prepended earlier
+      // each prepend increases the value of $prepend
+      $np?: number
     })
   | undefined
 export let insertionAnchor: Node | 0 | undefined

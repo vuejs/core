@@ -2511,6 +2511,56 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('consecutive slots prepend', async () => {
+      const data = reactive({
+        msg1: 'foo',
+        msg2: 'bar',
+        msg3: 'baz',
+      })
+
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #foo>
+              <span>{{data.msg1}}</span>
+            </template>
+            <template #bar>
+              <span>{{data.msg2}}</span>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <div>
+              <slot name="foo"/>
+              <slot name="bar"/>
+              <div>{{data.msg3}}</div>
+            </div>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<div>baz</div>` +
+          `</div>`,
+      )
+
+      data.msg1 = 'hello'
+      data.msg2 = 'vapor'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<!--[--><span>hello</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<!--[--><span>vapor</span><!--]--><!--${slotAnchorLabel}-->` +
+          `<div>baz</div>` +
+          `</div>`,
+      )
+    })
+
     test('slot fallback', async () => {
       const data = reactive({
         foo: 'foo',

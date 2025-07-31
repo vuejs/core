@@ -7,6 +7,7 @@ import {
 } from '../insertionState'
 import {
   __next,
+  __nthChild,
   _nthChild,
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
@@ -39,6 +40,7 @@ function performHydration<T>(
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
     ;(Node.prototype as any).$dp = undefined
+    ;(Node.prototype as any).$np = undefined
     isOptimized = true
   }
   enableHydrationNodeLookup()
@@ -122,7 +124,9 @@ function locateHydrationNodeImpl(isFragment?: boolean): void {
   let node: Node | null
   // prepend / firstChild
   if (insertionAnchor === 0) {
-    node = insertionParent!.firstChild
+    const n = insertionParent!.$np || 0
+    node = __nthChild(insertionParent!, n)
+    insertionParent!.$np = n + 1
   } else if (insertionAnchor) {
     // `insertionAnchor` is a Node, it is the DOM node to hydrate
     // Template:   `...<span/><!----><span/>...`// `insertionAnchor` is the placeholder
