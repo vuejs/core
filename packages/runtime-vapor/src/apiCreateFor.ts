@@ -327,16 +327,16 @@ export const createFor = (
             )
           }
         } else if (actions.length) {
-          let blockTail: ForBlock | undefined
+          let blocksTail: ForBlock | undefined
           for (const block of oldBlocks) {
             if (block === undefined) {
               continue
             }
-            if (blockTail !== undefined) {
-              blockTail.next = block
-              block.prev = blockTail
+            if (blocksTail !== undefined) {
+              blocksTail.next = block
+              block.prev = blocksTail
             }
-            blockTail = block
+            blocksTail = block
           }
           for (const action of actions) {
             if (action[0] === 'mount') {
@@ -353,8 +353,8 @@ export const createFor = (
                 moveLink(block, anchorBlock.prev, anchorBlock)
               } else {
                 const block = mount(source, index, anchorFallback, item, key)
-                moveLink(block, blockTail, undefined)
-                blockTail = block
+                moveLink(block, blocksTail, undefined)
+                blocksTail = block
               }
             } else {
               const [_type, index, block] = action
@@ -370,8 +370,8 @@ export const createFor = (
                 }
               } else if (block.next !== undefined) {
                 insert(block, parent!, anchorFallback)
-                moveLink(block, blockTail, undefined)
-                blockTail = block
+                moveLink(block, blocksTail, undefined)
+                blocksTail = block
               }
             }
           }
