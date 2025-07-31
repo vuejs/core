@@ -34,6 +34,8 @@ import {
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
   key: any
+  prev: ForBlock | undefined
+  next: ForBlock | undefined
 
   itemRef: ShallowRef<any>
   keyRef: ShallowRef<any> | undefined
@@ -90,7 +92,7 @@ export const createFor = (
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
-  // useSelector only
+  // createSelector only
   let currentKey: any
   // TODO handle this in hydration
   const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
@@ -233,107 +235,145 @@ export const createFor = (
           ]
         }
 
-        const preparationBlockCount = Math.min(
-          newLength - endOffset,
-          sharedBlockCount,
-        )
-        for (let i = startOffset; i < preparationBlockCount; i++) {
+        for (let i = startOffset; i < newLength - endOffset; i++) {
           const blockItem = getItem(source, i)
           const blockKey = getKey(...blockItem)
           queuedBlocks[queuedBlocksInsertIndex++] = [i, blockItem, blockKey]
         }
 
-        if (!queuedBlocksInsertIndex && !previousKeyIndexInsertIndex) {
-          for (let i = preparationBlockCount; i < newLength - endOffset; i++) {
-            const blockItem = getItem(source, i)
-            const blockKey = getKey(...blockItem)
-            mount(source, i, anchorFallback, blockItem, blockKey)
+        queuedBlocks.length = queuedBlocksInsertIndex
+        previousKeyIndexPairs.length = previousKeyIndexInsertIndex
+
+        const previousKeyIndexMap = new Map(previousKeyIndexPairs)
+        const actions: (
+          | [
+              type: 'mount',
+              source: ResolvedSource,
+              index: number,
+              item: ReturnType<typeof getItem>,
+              key: any,
+            ]
+          | [type: 'insert', index: number, block: ForBlock]
+        )[] = []
+
+        let mountCounter = 0
+        const relocateOrMountBlock: (
+          index: number,
+          item: ReturnType<typeof getItem>,
+          key: any,
+        ) => void = previousKeyIndexMap.size
+          ? (blockIndex, blockItem, blockKey) => {
+              const previousIndex = previousKeyIndexMap.get(blockKey)
+              if (previousIndex !== undefined) {
+                const reusedBlock = (newBlocks[blockIndex] =
+                  oldBlocks[previousIndex])
+                update(reusedBlock, ...blockItem)
+                actions.push(['insert', blockIndex, reusedBlock])
+                previousKeyIndexMap.delete(blockKey)
+              } else {
+                mountCounter++
+                actions.push(['mount', source, blockIndex, blockItem, blockKey])
+              }
+            }
+          : (blockIndex, blockItem, blockKey) => {
+              mountCounter++
+              actions.push(['mount', source, blockIndex, blockItem, blockKey])
+            }
+
+        for (let i = queuedBlocks.length - 1; i >= 0; i--) {
+          const [blockIndex, blockItem, blockKey] = queuedBlocks[i]
+          relocateOrMountBlock(blockIndex, blockItem, blockKey)
+        }
+
+        const useFastRemove = mountCounter === newLength
+
+        for (const leftoverIndex of previousKeyIndexMap.values()) {
+          const oldBlock = oldBlocks[leftoverIndex]
+          unmount(
+            oldBlock,
+            !(useFastRemove && canUseFastRemove),
+            !useFastRemove,
+          )
+          moveLink(oldBlock, undefined, undefined)
+          oldBlocks[leftoverIndex] = undefined as any
+        }
+        if (useFastRemove) {
+          for (const selector of selectors) {
+            selector.cleanup()
           }
-        } else {
-          queuedBlocks.length = queuedBlocksInsertIndex
-          previousKeyIndexPairs.length = previousKeyIndexInsertIndex
+          if (canUseFastRemove) {
+            parent!.textContent = ''
+            parent!.appendChild(parentAnchor)
+          }
+        }
 
-          const previousKeyIndexMap = new Map(previousKeyIndexPairs)
-          const operations: (() => void)[] = []
-
-          let mountCounter = 0
-          const relocateOrMountBlock = (
-            blockIndex: number,
-            blockItem: ReturnType<typeof getItem>,
-            blockKey: any,
-            anchorOffset: number,
-          ) => {
-            const previousIndex = previousKeyIndexMap.get(blockKey)
-            if (previousIndex !== undefined) {
-              const reusedBlock = (newBlocks[blockIndex] =
-                oldBlocks[previousIndex])
-              update(reusedBlock, ...blockItem)
-              previousKeyIndexMap.delete(blockKey)
-              if (previousIndex !== blockIndex) {
-                operations.push(() =>
-                  insert(
-                    reusedBlock,
-                    parent!,
-                    anchorOffset === -1
-                      ? anchorFallback
-                      : normalizeAnchor(newBlocks[anchorOffset].nodes),
-                  ),
+        if (actions.length === mountCounter) {
+          for (const action of actions) {
+            const [_type, source, index, item, key] = action as [
+              type: 'mount',
+              source: ResolvedSource,
+              index: number,
+              item: ReturnType<typeof getItem>,
+              key: any,
+            ]
+            mount(
+              source,
+              index,
+              index < newLength - 1
+                ? normalizeAnchor(newBlocks[index + 1].nodes)
+                : anchorFallback,
+              item,
+              key,
+            )
+          }
+        } else if (actions.length) {
+          let blockTail: ForBlock | undefined
+          for (const block of oldBlocks) {
+            if (block === undefined) {
+              continue
+            }
+            if (blockTail !== undefined) {
+              blockTail.next = block
+              block.prev = blockTail
+            }
+            blockTail = block
+          }
+          for (const action of actions) {
+            if (action[0] === 'mount') {
+              const [_type, source, index, item, key] = action
+              if (index < newLength - 1) {
+                const anchorBlock = newBlocks[index + 1]
+                const block = mount(
+                  source,
+                  index,
+                  normalizeAnchor(anchorBlock.nodes),
+                  item,
+                  key,
                 )
+                moveLink(block, anchorBlock.prev, anchorBlock)
+              } else {
+                const block = mount(source, index, anchorFallback, item, key)
+                moveLink(block, blockTail, undefined)
+                blockTail = block
               }
             } else {
-              mountCounter++
-              operations.push(() =>
-                mount(
-                  source,
-                  blockIndex,
-                  anchorOffset === -1
-                    ? anchorFallback
-                    : normalizeAnchor(newBlocks[anchorOffset].nodes),
-                  blockItem,
-                  blockKey,
-                ),
-              )
+              const [_type, index, block] = action
+              if (index < newLength - 1) {
+                const anchorBlock = newBlocks[index + 1]
+                if (anchorBlock !== block.next) {
+                  insert(
+                    block,
+                    parent!,
+                    normalizeAnchor(newBlocks[index + 1].nodes),
+                  )
+                  moveLink(block, anchorBlock.prev, anchorBlock)
+                }
+              } else if (block.next !== undefined) {
+                insert(block, parent!, anchorFallback)
+                moveLink(block, blockTail, undefined)
+                blockTail = block
+              }
             }
-          }
-
-          for (let i = queuedBlocks.length - 1; i >= 0; i--) {
-            const [blockIndex, blockItem, blockKey] = queuedBlocks[i]
-            relocateOrMountBlock(
-              blockIndex,
-              blockItem,
-              blockKey,
-              blockIndex < preparationBlockCount - 1 ? blockIndex + 1 : -1,
-            )
-          }
-
-          for (let i = preparationBlockCount; i < newLength - endOffset; i++) {
-            const blockItem = getItem(source, i)
-            const blockKey = getKey(...blockItem)
-            relocateOrMountBlock(i, blockItem, blockKey, -1)
-          }
-
-          const useFastRemove = mountCounter === newLength
-
-          for (const leftoverIndex of previousKeyIndexMap.values()) {
-            unmount(
-              oldBlocks[leftoverIndex],
-              !(useFastRemove && canUseFastRemove),
-              !useFastRemove,
-            )
-          }
-          if (useFastRemove) {
-            for (const selector of selectors) {
-              selector.cleanup()
-            }
-            if (canUseFastRemove) {
-              parent!.textContent = ''
-              parent!.appendChild(parentAnchor)
-            }
-          }
-
-          // perform mount and move operations
-          for (const action of operations) {
-            action()
           }
         }
       }
@@ -484,6 +524,29 @@ export const createFor = (
       }
     }
   }
+}
+
+function moveLink(
+  block: ForBlock,
+  prev: ForBlock | undefined,
+  next: ForBlock | undefined,
+) {
+  const oldPrev = block.prev
+  const oldNext = block.next
+  if (oldPrev !== undefined) {
+    oldPrev.next = oldNext
+  }
+  if (oldNext !== undefined) {
+    oldNext.prev = oldPrev
+  }
+  if (prev !== undefined) {
+    prev.next = block
+  }
+  if (next !== undefined) {
+    next.prev = block
+  }
+  block.prev = prev
+  block.next = next
 }
 
 export function createForSlots(
