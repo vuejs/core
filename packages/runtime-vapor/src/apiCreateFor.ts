@@ -262,11 +262,13 @@ export const createFor = (
         const useFastRemove = mountCounter === newLength
 
         for (const leftoverIndex of oldKeyIndexMap.values()) {
+          const oldBlock = oldBlocks[leftoverIndex]
           unmount(
-            oldBlocks[leftoverIndex],
+            oldBlock,
             !(useFastRemove && canUseFastRemove),
             !useFastRemove,
           )
+          moveLink(oldBlock, undefined, undefined)
           oldBlocks[leftoverIndex] = undefined as any
         }
         if (useFastRemove) {
