@@ -89,6 +89,7 @@ export const createFor = (
   }
 
   let isMounted = false
+  let hasLinkedBlocks = false
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
@@ -262,14 +263,12 @@ export const createFor = (
         const useFastRemove = mountCounter === newLength
 
         for (const leftoverIndex of oldKeyIndexMap.values()) {
-          const oldBlock = oldBlocks[leftoverIndex]
           unmount(
-            oldBlock,
+            oldBlocks[leftoverIndex],
             !(useFastRemove && canUseFastRemove),
             !useFastRemove,
           )
-          moveLink(oldBlock, undefined, undefined)
-          oldBlocks[leftoverIndex] = undefined as any
+          if (hasLinkedBlocks) moveLink(oldBlocks[leftoverIndex])
         }
         if (useFastRemove) {
           for (const selector of selectors) {
@@ -294,7 +293,8 @@ export const createFor = (
             )
           }
         } else if (opers.length) {
-          oldBlocks = oldBlocks.filter(block => block !== undefined)
+          hasLinkedBlocks = true
+          oldBlocks = oldBlocks.filter(block => !oldKeyIndexMap.has(block.key))
           let blocksTail = oldBlocks[0]
           for (let i = 1; i < oldBlocks.length; i++) {
             oldBlocks[i].prev = blocksTail
@@ -315,7 +315,7 @@ export const createFor = (
                 moveLink(block, anchorBlock.prev, anchorBlock)
               } else {
                 const block = mount(source, index, parentAnchor, item, key)
-                moveLink(block, blocksTail, undefined)
+                moveLink(block, blocksTail)
                 blocksTail = block
               }
             } else {
@@ -332,7 +332,7 @@ export const createFor = (
                 }
               } else if (block.next !== undefined) {
                 insert(block, parent!, parentAnchor)
-                moveLink(block, blocksTail, undefined)
+                moveLink(block, blocksTail)
                 blocksTail = block
               }
             }
@@ -488,11 +488,7 @@ export const createFor = (
   }
 }
 
-function moveLink(
-  block: ForBlock,
-  newPrev: ForBlock | undefined,
-  newNext: ForBlock | undefined,
-) {
+function moveLink(block: ForBlock, newPrev?: ForBlock, newNext?: ForBlock) {
   const { prev: oldPrev, next: oldNext } = block
   if (oldPrev !== undefined) oldPrev.next = oldNext
   if (oldNext !== undefined) oldNext.prev = oldPrev
