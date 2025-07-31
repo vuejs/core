@@ -174,16 +174,16 @@ export const createFor = (
         }
 
         const commonLength = Math.min(oldLength, newLength)
-        const previousKeyIndexPairs: [any, number][] = new Array(oldLength)
+        const oldKeyIndexPairs: [any, number][] = new Array(oldLength)
         const queuedBlocks: [
-          blockIndex: number,
-          blockItem: ReturnType<typeof getItem>,
-          blockKey: any,
+          index: number,
+          item: ReturnType<typeof getItem>,
+          key: any,
         ][] = new Array(newLength)
 
         let endOffset = 0
         let queuedBlocksLength = 0
-        let previousKeyIndexPairsLength = 0
+        let oldKeyIndexPairsLength = 0
 
         while (endOffset < commonLength) {
           const currentIndex = newLength - endOffset - 1
@@ -206,24 +206,18 @@ export const createFor = (
         for (let i = 0; i < e1; i++) {
           const currentItem = getItem(source, i)
           const currentKey = getKey(...currentItem)
-          const previousBlock = oldBlocks[i]
-          const previousKey = previousBlock.key
-          if (previousKey === currentKey) {
-            update((newBlocks[i] = previousBlock), currentItem[0])
+          const oldBlock = oldBlocks[i]
+          const oldKey = oldBlock.key
+          if (oldKey === currentKey) {
+            update((newBlocks[i] = oldBlock), currentItem[0])
           } else {
             queuedBlocks[queuedBlocksLength++] = [i, currentItem, currentKey]
-            previousKeyIndexPairs[previousKeyIndexPairsLength++] = [
-              previousKey,
-              i,
-            ]
+            oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldKey, i]
           }
         }
 
         for (let i = e1; i < e2; i++) {
-          previousKeyIndexPairs[previousKeyIndexPairsLength++] = [
-            oldBlocks[i].key,
-            i,
-          ]
+          oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldBlocks[i].key, i]
         }
 
         for (let i = e1; i < e3; i++) {
@@ -233,9 +227,9 @@ export const createFor = (
         }
 
         queuedBlocks.length = queuedBlocksLength
-        previousKeyIndexPairs.length = previousKeyIndexPairsLength
+        oldKeyIndexPairs.length = oldKeyIndexPairsLength
 
-        const previousKeyIndexMap = new Map(previousKeyIndexPairs)
+        const oldKeyIndexMap = new Map(oldKeyIndexPairs)
         const actions: (
           | [
               type: 'mount',
@@ -248,37 +242,24 @@ export const createFor = (
         )[] = []
 
         let mountCounter = 0
-        const relocateOrMountBlock: (
-          index: number,
-          item: ReturnType<typeof getItem>,
-          key: any,
-        ) => void = previousKeyIndexMap.size
-          ? (blockIndex, blockItem, blockKey) => {
-              const previousIndex = previousKeyIndexMap.get(blockKey)
-              if (previousIndex !== undefined) {
-                const reusedBlock = (newBlocks[blockIndex] =
-                  oldBlocks[previousIndex])
-                update(reusedBlock, ...blockItem)
-                actions.push(['insert', blockIndex, reusedBlock])
-                previousKeyIndexMap.delete(blockKey)
-              } else {
-                mountCounter++
-                actions.push(['mount', source, blockIndex, blockItem, blockKey])
-              }
-            }
-          : (blockIndex, blockItem, blockKey) => {
-              mountCounter++
-              actions.push(['mount', source, blockIndex, blockItem, blockKey])
-            }
 
         for (let i = queuedBlocks.length - 1; i >= 0; i--) {
-          const [blockIndex, blockItem, blockKey] = queuedBlocks[i]
-          relocateOrMountBlock(blockIndex, blockItem, blockKey)
+          const [index, item, key] = queuedBlocks[i]
+          const oldIndex = oldKeyIndexMap.get(key)
+          if (oldIndex !== undefined) {
+            const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
+            update(reusedBlock, ...item)
+            actions.push(['insert', index, reusedBlock])
+            oldKeyIndexMap.delete(key)
+          } else {
+            mountCounter++
+            actions.push(['mount', source, index, item, key])
+          }
         }
 
         const useFastRemove = mountCounter === newLength
 
-        for (const leftoverIndex of previousKeyIndexMap.values()) {
+        for (const leftoverIndex of oldKeyIndexMap.values()) {
           const oldBlock = oldBlocks[leftoverIndex]
           unmount(
             oldBlock,
