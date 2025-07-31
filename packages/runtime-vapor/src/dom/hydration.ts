@@ -20,10 +20,16 @@ export function setCurrentHydrationNode(node: Node | null): void {
   currentHydrationNode = node
 }
 
+function findParentSibling(n: Node): Node | null {
+  if (!n.parentNode) return null
+  const next = n.parentNode.nextSibling
+  return next ? next : findParentSibling(n.parentNode)
+}
+
 export function advanceHydrationNode(node: Node): void {
-  setCurrentHydrationNode(
-    node.nextSibling || (node.parentNode ? node.parentNode.nextSibling : null),
-  )
+  // if no next sibling, find the next node in the parent chain
+  const next = node.nextSibling || findParentSibling(node)
+  if (next) setCurrentHydrationNode(next)
 }
 
 let isOptimized = false
