@@ -249,10 +249,10 @@ export const createFor = (
           const [index, item, key] = queuedBlocks[i]
           const oldIndex = oldKeyIndexMap.get(key)
           if (oldIndex !== undefined) {
+            oldKeyIndexMap.delete(key)
             const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
             update(reusedBlock, ...item)
             opers[opersLength++] = { type: 'insert', index, block: reusedBlock }
-            oldKeyIndexMap.delete(key)
           } else {
             mountCounter++
             opers[opersLength++] = { type: 'mount', source, index, item, key }
