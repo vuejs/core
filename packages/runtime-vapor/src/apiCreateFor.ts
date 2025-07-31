@@ -300,10 +300,8 @@ export const createFor = (
           oldBlocks = oldBlocks.filter(block => block !== undefined)
           let blocksTail = oldBlocks[0]
           for (let i = 1; i < oldBlocks.length; i++) {
-            const block = oldBlocks[i]
-            blocksTail.next = block
-            block.prev = blocksTail
-            blocksTail = block
+            oldBlocks[i].prev = blocksTail
+            blocksTail = blocksTail.next = oldBlocks[i]
           }
           for (const action of opers) {
             if (action[0] === 'mount') {
