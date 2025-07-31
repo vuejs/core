@@ -186,17 +186,14 @@ export const createFor = (
         let oldKeyIndexPairsLength = 0
 
         while (endOffset < commonLength) {
-          const currentIndex = newLength - endOffset - 1
-          const currentItem = getItem(source, currentIndex)
-          const currentKey = getKey(...currentItem)
+          const index = newLength - endOffset - 1
+          const item = getItem(source, index)
+          const key = getKey(...item)
           const existingBlock = oldBlocks[oldLength - endOffset - 1]
-          if (existingBlock.key === currentKey) {
-            update(existingBlock, ...currentItem)
-            newBlocks[currentIndex] = existingBlock
-            endOffset++
-            continue
-          }
-          break
+          if (existingBlock.key !== key) break
+          update(existingBlock, ...item)
+          newBlocks[index] = existingBlock
+          endOffset++
         }
 
         const e1 = commonLength - endOffset
@@ -230,7 +227,7 @@ export const createFor = (
         oldKeyIndexPairs.length = oldKeyIndexPairsLength
 
         const oldKeyIndexMap = new Map(oldKeyIndexPairs)
-        const actions: (
+        const opers: (
           | [
               type: 'mount',
               source: ResolvedSource,
@@ -239,9 +236,10 @@ export const createFor = (
               key: any,
             ]
           | [type: 'insert', index: number, block: ForBlock]
-        )[] = []
+        )[] = new Array(queuedBlocks.length)
 
         let mountCounter = 0
+        let opersLength = 0
 
         for (let i = queuedBlocks.length - 1; i >= 0; i--) {
           const [index, item, key] = queuedBlocks[i]
@@ -249,11 +247,11 @@ export const createFor = (
           if (oldIndex !== undefined) {
             const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
             update(reusedBlock, ...item)
-            actions.push(['insert', index, reusedBlock])
+            opers[opersLength++] = ['insert', index, reusedBlock]
             oldKeyIndexMap.delete(key)
           } else {
             mountCounter++
-            actions.push(['mount', source, index, item, key])
+            opers[opersLength++] = ['mount', source, index, item, key]
           }
         }
 
@@ -279,9 +277,9 @@ export const createFor = (
           }
         }
 
-        if (actions.length === mountCounter) {
-          for (const action of actions) {
-            const [_type, source, index, item, key] = action as [
+        if (opers.length === mountCounter) {
+          for (const oper of opers) {
+            const [_type, source, index, item, key] = oper as [
               type: 'mount',
               source: ResolvedSource,
               index: number,
@@ -298,7 +296,7 @@ export const createFor = (
               key,
             )
           }
-        } else if (actions.length) {
+        } else if (opers.length) {
           let blocksTail: ForBlock | undefined
           for (const block of oldBlocks) {
             if (block === undefined) {
@@ -310,7 +308,7 @@ export const createFor = (
             }
             blocksTail = block
           }
-          for (const action of actions) {
+          for (const action of opers) {
             if (action[0] === 'mount') {
               const [_type, source, index, item, key] = action
               if (index < newLength - 1) {
