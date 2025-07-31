@@ -1,6 +1,6 @@
 import { IF_ANCHOR_LABEL } from '@vue/shared'
 import { type Block, type BlockFn, insert } from './block'
-import { isHydrating } from './dom/hydration'
+import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
@@ -76,6 +76,13 @@ export function createIf(
 
   if (!isHydrating && _insertionParent) {
     insert(frag, _insertionParent, _insertionAnchor)
+  }
+
+  // if _insertionAnchor is defined, insertionParent contains a static node
+  // that should be skipped during hydration.
+  // Advance to the next sibling node to bypass this static node.
+  if (isHydrating && _insertionAnchor !== undefined) {
+    advanceHydrationNode(_insertionParent!)
   }
 
   return frag

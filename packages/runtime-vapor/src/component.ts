@@ -67,6 +67,7 @@ import { hmrReload, hmrRerender } from './hmr'
 import { createElement } from './dom/node'
 import {
   adoptTemplate,
+  advanceHydrationNode,
   currentHydrationNode,
   isHydrating,
   locateHydrationNode,
@@ -182,6 +183,9 @@ export function createComponent(
     if (_insertionParent) {
       insert(frag, _insertionParent, _insertionAnchor)
     }
+    if (isHydrating && _insertionAnchor !== undefined) {
+      advanceHydrationNode(_insertionParent!)
+    }
     return frag
   }
 
@@ -192,6 +196,10 @@ export function createComponent(
       insert(frag, _insertionParent, _insertionAnchor)
     } else {
       frag.hydrate()
+    }
+
+    if (isHydrating && _insertionAnchor !== undefined) {
+      advanceHydrationNode(_insertionParent!)
     }
 
     return frag as any
@@ -585,6 +593,10 @@ export function createComponentWithFallback(
 
   if (!isHydrating && _insertionParent) {
     insert(el, _insertionParent, _insertionAnchor)
+  }
+
+  if (isHydrating && _insertionAnchor !== undefined) {
+    advanceHydrationNode(_insertionParent!)
   }
 
   return el

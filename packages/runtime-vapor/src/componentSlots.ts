@@ -16,7 +16,7 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
-import { isHydrating } from './dom/hydration'
+import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import { DynamicFragment } from './fragment'
 
 export type RawSlots = Record<string, VaporSlot> & {
@@ -173,6 +173,10 @@ export function createSlot(
       fragment.insert)
   ) {
     insert(fragment, _insertionParent, _insertionAnchor)
+  }
+
+  if (isHydrating && _insertionAnchor !== undefined) {
+    advanceHydrationNode(_insertionParent!)
   }
 
   return fragment

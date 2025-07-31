@@ -1285,6 +1285,65 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toBe(`<div>foo</div><!--if--><!--if-->`)
     })
 
+    test('mixed prepend and insertion anchor', async () => {
+      const data = reactive({
+        show: true,
+        foo: 'foo',
+        bar: 'bar',
+        qux: 'qux',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child/>
+        </template>`,
+        {
+          Child: `<template>
+            <span v-if="data.show">
+              <span v-if="data.show">{{data.foo}}</span>
+              <span v-if="data.show">{{data.bar}}</span>
+              <span>baz</span>
+              <span v-if="data.show">{{data.qux}}</span>
+              <span>quux</span>
+            </span>
+          </template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<span>` +
+          `<span>foo</span><!--if-->` +
+          `<span>bar</span><!--if-->` +
+          `<span>baz</span>` +
+          `<span>qux</span><!--if-->` +
+          `<span>quux</span>` +
+          `</span><!--if-->`,
+      )
+
+      data.qux = 'qux1'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<span>` +
+          `<span>foo</span><!--if-->` +
+          `<span>bar</span><!--if-->` +
+          `<span>baz</span>` +
+          `<span>qux1</span><!--if-->` +
+          `<span>quux</span>` +
+          `</span><!--if-->`,
+      )
+
+      data.foo = 'foo1'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<span>` +
+          `<span>foo1</span><!--if-->` +
+          `<span>bar</span><!--if-->` +
+          `<span>baz</span>` +
+          `<span>qux1</span><!--if-->` +
+          `<span>quux</span>` +
+          `</span><!--if-->`,
+      )
+    })
+
     test('v-if/else-if/else chain on component - switch branches', async () => {
       const data = ref('a')
       const { container } = await testHydration(

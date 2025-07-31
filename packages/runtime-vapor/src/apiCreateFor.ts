@@ -20,6 +20,7 @@ import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import {
+  advanceHydrationNode,
   currentHydrationNode,
   isHydrating,
   locateHydrationNode,
@@ -467,6 +468,9 @@ export const createFor = (
 
   if (!isHydrating && _insertionParent) {
     insert(frag, _insertionParent, _insertionAnchor)
+  }
+  if (isHydrating && _insertionAnchor !== undefined) {
+    advanceHydrationNode(_insertionParent!)
   }
 
   return frag

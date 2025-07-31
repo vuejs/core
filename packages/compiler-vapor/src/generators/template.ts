@@ -69,7 +69,7 @@ export function genChildren(
       continue
     }
 
-    const elementIndex = Number(index) + offset
+    const elementIndex = index + offset
     // p for "placeholder" variables that are meant for possible reuse by
     // other access paths
     const variable = id === undefined ? `p${context.block.tempId++}` : `n${id}`
@@ -82,15 +82,24 @@ export function genChildren(
         pushBlock(...genCall(helper('nthChild'), from, String(elementIndex)))
       }
     } else {
-      // offset is used to determine the child during hydration.
+      // child index is used to find the child during hydration.
       // if offset is not 0, we need to specify the offset to skip the dynamic
       // children and get the correct child.
-      let childOffset = offset === 0 ? undefined : `${Math.abs(offset)}`
+      const asAnchor = children.some(child => child.anchor === id)
+      let childIndex =
+        offset === 0
+          ? undefined
+          : // if the current node is used as insertionAnchor, subtract 1 here
+            // this ensures that insertionAnchor points to the current node itself
+            // rather than its next sibling, since insertionAnchor is used as the
+            // hydration node
+            `${asAnchor ? index - 1 : index}`
+
       if (elementIndex === 0) {
-        pushBlock(...genCall(helper('child'), from, childOffset))
+        pushBlock(...genCall(helper('child'), from, childIndex))
       } else {
         // check if there's a node that we can reuse from
-        let init = genCall(helper('child'), from, childOffset)
+        let init = genCall(helper('child'), from, childIndex)
         if (elementIndex === 1) {
           init = genCall(helper('next'), init)
         } else if (elementIndex > 1) {

@@ -8,7 +8,6 @@ import {
 import {
   __next,
   __nthChild,
-  _nthChild,
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
 } from './node'
@@ -137,7 +136,7 @@ function locateHydrationNodeImpl(isFragment?: boolean): void {
     if (insertionParent && (!node || node.parentNode !== insertionParent)) {
       node =
         childToHydrateMap.get(insertionParent) ||
-        _nthChild(insertionParent, insertionParent.$dp || 0)
+        __nthChild(insertionParent, insertionParent.$dp || 0)
     }
 
     // locate slot fragment start anchor
