@@ -226,17 +226,21 @@ export const createFor = (
         queuedBlocks.length = queuedBlocksLength
         oldKeyIndexPairs.length = oldKeyIndexPairsLength
 
+        interface MountOper {
+          type: 'mount'
+          source: ResolvedSource
+          index: number
+          item: ReturnType<typeof getItem>
+          key: any
+        }
+        interface InsertOper {
+          type: 'insert'
+          index: number
+          block: ForBlock
+        }
+
         const oldKeyIndexMap = new Map(oldKeyIndexPairs)
-        const opers: (
-          | [
-              type: 'mount',
-              source: ResolvedSource,
-              index: number,
-              item: ReturnType<typeof getItem>,
-              key: any,
-            ]
-          | [type: 'insert', index: number, block: ForBlock]
-        )[] = new Array(queuedBlocks.length)
+        const opers: (MountOper | InsertOper)[] = new Array(queuedBlocks.length)
 
         let mountCounter = 0
         let opersLength = 0
@@ -247,11 +251,11 @@ export const createFor = (
           if (oldIndex !== undefined) {
             const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
             update(reusedBlock, ...item)
-            opers[opersLength++] = ['insert', index, reusedBlock]
+            opers[opersLength++] = { type: 'insert', index, block: reusedBlock }
             oldKeyIndexMap.delete(key)
           } else {
             mountCounter++
-            opers[opersLength++] = ['mount', source, index, item, key]
+            opers[opersLength++] = { type: 'mount', source, index, item, key }
           }
         }
 
@@ -276,13 +280,7 @@ export const createFor = (
         }
 
         if (opers.length === mountCounter) {
-          for (const [_type, source, index, item, key] of opers as [
-            type: 'mount',
-            source: ResolvedSource,
-            index: number,
-            item: ReturnType<typeof getItem>,
-            key: any,
-          ]) {
+          for (const { source, index, item, key } of opers as MountOper[]) {
             mount(
               source,
               index,
@@ -301,8 +299,8 @@ export const createFor = (
             blocksTail = blocksTail.next = oldBlocks[i]
           }
           for (const action of opers) {
-            if (action[0] === 'mount') {
-              const [_type, source, index, item, key] = action
+            if (action.type === 'mount') {
+              const { source, index, item, key } = action
               if (index < newLength - 1) {
                 const anchorBlock = newBlocks[index + 1]
                 const block = mount(
@@ -319,7 +317,7 @@ export const createFor = (
                 blocksTail = block
               }
             } else {
-              const [_type, index, block] = action
+              const { index, block } = action
               if (index < newLength - 1) {
                 const anchorBlock = newBlocks[index + 1]
                 if (anchorBlock !== block.next) {
