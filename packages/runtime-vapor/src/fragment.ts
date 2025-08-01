@@ -163,9 +163,13 @@ export class DynamicFragment extends VaporFragment {
       this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, '')!
     } else {
       let anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
-      if (!anchor && (label === 'slot' || label === 'if')) {
-        // fallback to fragment end anchor for ssr vdom slot
-        anchor = locateVaporFragmentAnchor(currentHydrationNode!, ']')!
+      if (!anchor) {
+        // TODO: comment anchors are not included in ssr slot vnode fallback
+        if (label === 'slot') {
+          // fallback to fragment end anchor for
+          anchor = locateVaporFragmentAnchor(currentHydrationNode!, ']')!
+        } else if (label === 'if') {
+        }
       }
       if (anchor) {
         this.anchor = anchor
