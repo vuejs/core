@@ -36,6 +36,7 @@ class ForBlock extends VaporFragment {
   key: any
   prev: ForBlock | undefined
   next: ForBlock | undefined
+  prevAnchor: ForBlock | undefined
 
   itemRef: ShallowRef<any>
   keyRef: ShallowRef<any> | undefined
@@ -89,7 +90,6 @@ export const createFor = (
   }
 
   let isMounted = false
-  let hasLinkedBlocks = false
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
@@ -268,7 +268,6 @@ export const createFor = (
             !(useFastRemove && canUseFastRemove),
             !useFastRemove,
           )
-          if (hasLinkedBlocks) moveLink(oldBlocks[leftoverIndex])
         }
         if (useFastRemove) {
           for (const selector of selectors) {
@@ -293,18 +292,26 @@ export const createFor = (
             )
           }
         } else if (opers.length) {
-          hasLinkedBlocks = true
-          oldBlocks = oldBlocks.filter(block => !oldKeyIndexMap.has(block.key))
-          let blocksTail = oldBlocks[0]
-          for (let i = 1; i < oldBlocks.length; i++) {
-            oldBlocks[i].prev = blocksTail
-            blocksTail = blocksTail.next = oldBlocks[i]
+          let anchor = oldBlocks[0]
+          let blocksTail: ForBlock | undefined
+          for (let i = 0; i < oldLength; i++) {
+            const block = oldBlocks[i]
+            if (oldKeyIndexMap.has(block.key)) {
+              continue
+            }
+            block.prevAnchor = anchor
+            anchor = oldBlocks[i + 1]
+            if (blocksTail !== undefined) {
+              blocksTail.next = block
+              block.prev = blocksTail
+            }
+            blocksTail = block
           }
           for (const action of opers) {
             if (action.type === 'mount') {
               const { source, index, item, key } = action
               if (index < newLength - 1) {
-                const anchorBlock = newBlocks[index + 1]
+                const anchorBlock = newBlocks[index + 1].prevAnchor!
                 const block = mount(
                   source,
                   index,
@@ -326,7 +333,7 @@ export const createFor = (
                   insert(
                     block,
                     parent!,
-                    normalizeAnchor(newBlocks[index + 1].nodes),
+                    normalizeAnchor(newBlocks[index + 1].prevAnchor!.nodes),
                   )
                   moveLink(block, anchorBlock.prev, anchorBlock)
                 }
@@ -336,6 +343,9 @@ export const createFor = (
                 blocksTail = block
               }
             }
+          }
+          for (const block of newBlocks) {
+            block.prevAnchor = block.next = block.prev = undefined
           }
         }
       }
@@ -496,6 +506,7 @@ function moveLink(block: ForBlock, newPrev?: ForBlock, newNext?: ForBlock) {
   if (newNext !== undefined) newNext.prev = block
   block.prev = newPrev
   block.next = newNext
+  block.prevAnchor = block
 }
 
 export function createForSlots(
