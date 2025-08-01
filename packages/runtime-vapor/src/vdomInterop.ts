@@ -52,11 +52,11 @@ import { __next, createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
 import {
+  advanceHydrationNode,
   currentHydrationNode,
   isHydrating,
   locateHydrationNode,
   locateVaporFragmentAnchor,
-  setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
 import { VaporFragment, isFragment, setFragmentFallback } from './fragment'
@@ -374,12 +374,11 @@ function renderVDOMSlot(
             )
           } else if (isHydrating) {
             // update hydration node to the next sibling of the slot anchor
-            locateHydrationNode()
             const nextNode = locateVaporFragmentAnchor(
               currentHydrationNode!,
               'slot',
             )
-            if (nextNode) setCurrentHydrationNode(__next(nextNode))
+            if (nextNode) advanceHydrationNode(nextNode)
           }
           oldVNode = null
         }
@@ -473,5 +472,5 @@ function hydrateVNode(
     null,
     false,
   )
-  setCurrentHydrationNode(nextNode)
+  if (nextNode) advanceHydrationNode(nextNode)
 }
