@@ -500,10 +500,10 @@ export const createFor = (
 
 function moveLink(block: ForBlock, newPrev?: ForBlock, newNext?: ForBlock) {
   const { prev: oldPrev, next: oldNext } = block
-  if (oldPrev !== undefined) oldPrev.next = oldNext
-  if (oldNext !== undefined) oldNext.prev = oldPrev
-  if (newPrev !== undefined) newPrev.next = block
-  if (newNext !== undefined) newNext.prev = block
+  if (oldPrev) oldPrev.next = oldNext
+  if (oldNext) oldNext.prev = oldPrev
+  if (newPrev) newPrev.next = block
+  if (newNext) newNext.prev = block
   block.prev = newPrev
   block.next = newNext
   block.prevAnchor = block
