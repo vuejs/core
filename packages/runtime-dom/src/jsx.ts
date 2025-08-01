@@ -1176,6 +1176,7 @@ export interface IntrinsicElementAttributes {
   s: HTMLAttributes
   samp: HTMLAttributes
   script: ScriptHTMLAttributes
+  search: HTMLAttributes
   section: HTMLAttributes
   select: SelectHTMLAttributes
   small: HTMLAttributes
