@@ -247,6 +247,7 @@ describe('compile', () => {
     _setText(x0, _toDisplayString(_ctx.bar))`,
       )
     })
+
     test('with v-once', () => {
       const code = compile(
         `<div>
@@ -260,6 +261,11 @@ describe('compile', () => {
         `_setText(n1, " " + _toDisplayString(_ctx.bar))
     _setText(n2, " " + _toDisplayString(_ctx.baz))`,
       )
+    })
+
+    test('with insertionState', () => {
+      const code = compile(`<div><slot /></div><Comp/>`)
+      expect(code).matchSnapshot()
     })
   })
 })
