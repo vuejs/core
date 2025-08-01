@@ -311,15 +311,12 @@ export const createFor = (
             if (action.type === 'mount') {
               const { source, index, item, key } = action
               if (index < newLength - 1) {
-                const anchorBlock = newBlocks[index + 1].prevAnchor!
-                const block = mount(
-                  source,
-                  index,
-                  normalizeAnchor(anchorBlock.nodes),
-                  item,
-                  key,
-                )
-                moveLink(block, anchorBlock.prev, anchorBlock)
+                const nextBlock = newBlocks[index + 1]
+                let anchorNode = normalizeAnchor(nextBlock.prevAnchor!.nodes)
+                if (!anchorNode.parentNode)
+                  anchorNode = normalizeAnchor(nextBlock.nodes)
+                const block = mount(source, index, anchorNode, item, key)
+                moveLink(block, nextBlock.prev, nextBlock)
               } else {
                 const block = mount(source, index, parentAnchor, item, key)
                 moveLink(block, blocksTail)
@@ -328,24 +325,20 @@ export const createFor = (
             } else {
               const { index, block } = action
               if (index < newLength - 1) {
-                const anchorBlock = newBlocks[index + 1]
-                if (anchorBlock !== block.next) {
-                  insert(
-                    block,
-                    parent!,
-                    normalizeAnchor(newBlocks[index + 1].prevAnchor!.nodes),
-                  )
-                  moveLink(block, anchorBlock.prev, anchorBlock)
+                const nextBlock = newBlocks[index + 1]
+                if (block.next !== nextBlock) {
+                  let anchorNode = normalizeAnchor(nextBlock.prevAnchor!.nodes)
+                  if (!anchorNode.parentNode)
+                    anchorNode = normalizeAnchor(nextBlock.nodes)
+                  insert(block, parent!, anchorNode)
+                  moveLink(block, nextBlock.prev, nextBlock)
                 }
               } else if (block.next !== undefined) {
-                let fallbackAnchor: Node = parentAnchor
-                if (anchor) {
-                  const node = normalizeAnchor(anchor.nodes)
-                  if (node.parentNode) {
-                    fallbackAnchor = node
-                  }
-                }
-                insert(block, parent!, fallbackAnchor)
+                let anchorNode: Node = anchor
+                  ? normalizeAnchor(anchor.nodes)
+                  : parentAnchor
+                if (!anchorNode.parentNode) anchorNode = parentAnchor
+                insert(block, parent!, anchorNode)
                 moveLink(block, blocksTail)
                 blocksTail = block
               }
