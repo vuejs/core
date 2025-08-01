@@ -212,6 +212,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compile > execution order > with insertionState 1`] = `
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createSlot as _createSlot, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = t0()
+  _setInsertionState(n1)
+  const n0 = _createSlot("default", null)
+  const n2 = _createComponentWithFallback(_component_Comp)
+  return [n1, n2]
+}"
+`;
+
 exports[`compile > execution order > with v-once 1`] = `
 "import { child as _child, next as _next, nthChild as _nthChild, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div><span> </span> <br> </div>", true)

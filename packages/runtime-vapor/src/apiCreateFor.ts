@@ -288,6 +288,7 @@ export const createFor = (
           const previousKeyIndexMap = new Map(previousKeyIndexPairs)
           const operations: (() => void)[] = []
 
+          let mountCounter = 0
           const relocateOrMountBlock = (
             blockIndex: number,
             blockItem: ReturnType<typeof getItem>,
@@ -312,6 +313,7 @@ export const createFor = (
                 )
               }
             } else {
+              mountCounter++
               operations.push(() =>
                 mount(
                   source,
@@ -342,7 +344,7 @@ export const createFor = (
             relocateOrMountBlock(i, blockItem, blockKey, -1)
           }
 
-          const useFastRemove = operations.length === newLength
+          const useFastRemove = mountCounter === newLength
 
           for (const leftoverIndex of previousKeyIndexMap.values()) {
             unmount(
