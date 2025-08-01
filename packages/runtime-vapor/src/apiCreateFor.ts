@@ -307,6 +307,13 @@ export const createFor = (
             }
             blocksTail = block
           }
+          let fallbackAnchor: Node = parentAnchor
+          if (anchor) {
+            const node = normalizeAnchor(anchor.nodes)
+            if (node.parentNode) {
+              fallbackAnchor = node
+            }
+          }
           for (const action of opers) {
             if (action.type === 'mount') {
               const { source, index, item, key } = action
@@ -321,7 +328,7 @@ export const createFor = (
                 )
                 moveLink(block, anchorBlock.prev, anchorBlock)
               } else {
-                const block = mount(source, index, parentAnchor, item, key)
+                const block = mount(source, index, fallbackAnchor, item, key)
                 moveLink(block, blocksTail)
                 blocksTail = block
               }
@@ -338,7 +345,7 @@ export const createFor = (
                   moveLink(block, anchorBlock.prev, anchorBlock)
                 }
               } else if (block.next !== undefined) {
-                insert(block, parent!, parentAnchor)
+                insert(block, parent!, fallbackAnchor)
                 moveLink(block, blocksTail)
                 blocksTail = block
               }
