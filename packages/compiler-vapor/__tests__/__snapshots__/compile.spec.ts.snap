@@ -213,16 +213,18 @@ export function render(_ctx) {
 `;
 
 exports[`compile > execution order > with insertionState 1`] = `
-"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createSlot as _createSlot, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+"import { resolveComponent as _resolveComponent, child as _child, setInsertionState as _setInsertionState, createSlot as _createSlot, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("<div><div></div></div>", true)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n1 = t0()
+  const n3 = t0()
+  const n1 = _child(n3)
   _setInsertionState(n1)
   const n0 = _createSlot("default", null)
+  _setInsertionState(n3)
   const n2 = _createComponentWithFallback(_component_Comp)
-  return [n1, n2]
+  return n3
 }"
 `;
 

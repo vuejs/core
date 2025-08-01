@@ -55,7 +55,6 @@ export function genChildren(
 
   let offset = 0
   let prev: [variable: string, elementIndex: number] | undefined
-  const childrenToGen: [IRDynamicInfo, string][] = []
 
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.NON_TEMPLATE) {
@@ -123,13 +122,7 @@ export function genChildren(
     }
 
     prev = [variable, elementIndex]
-    childrenToGen.push([child, variable])
-  }
-
-  if (childrenToGen.length) {
-    for (const [child, from] of childrenToGen) {
-      push(...genChildren(child, context, pushBlock, from))
-    }
+    push(...genChildren(child, context, pushBlock, variable))
   }
 
   return frag

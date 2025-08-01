@@ -264,7 +264,7 @@ describe('compile', () => {
     })
 
     test('with insertionState', () => {
-      const code = compile(`<div><slot /></div><Comp/>`)
+      const code = compile(`<div><div><slot /></div><Comp/></div>`)
       expect(code).matchSnapshot()
     })
   })
