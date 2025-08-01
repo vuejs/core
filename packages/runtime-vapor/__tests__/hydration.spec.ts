@@ -2644,6 +2644,109 @@ describe('Vapor Mode hydration', () => {
         `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->`,
       )
     })
+
+    test('forwarded slot', async () => {
+      const data = reactive({
+        foo: 'foo',
+        bar: 'bar',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <components.Parent>
+              <span>{{data.foo}}</span>
+            </components.Parent>
+            <div>{{data.bar}}</div>
+          </div>
+        </template>`,
+        {
+          Parent: `<template><div><components.Child><slot/></components.Child></div></template>`,
+          Child: `<template><div><slot/></div></template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<div>` +
+          `<div>` +
+          `<!--[-->` +
+          `<!--[--><span>foo</span><!--]--><!--slot-->` +
+          `<!--]-->` +
+          `<!--slot-->` +
+          `</div>` +
+          `</div>` +
+          `<div>bar</div>` +
+          `</div>`,
+      )
+
+      data.foo = 'foo1'
+      data.bar = 'bar1'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div>` +
+          `<div>` +
+          `<div>` +
+          `<!--[-->` +
+          `<!--[--><span>foo1</span><!--]--><!--slot-->` +
+          `<!--]-->` +
+          `<!--slot-->` +
+          `</div>` +
+          `</div>` +
+          `<div>bar1</div>` +
+          `</div>`,
+      )
+    })
+
+    test('forwarded slot with empty content', async () => {
+      const data = reactive({
+        foo: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Foo/>
+        </template>`,
+        {
+          Foo: `<template>
+                  <components.Bar>
+                    <template #foo>
+                      <slot name="foo" />
+                    </template>
+                  </components.Bar>
+                </template>`,
+          Bar: `<template>
+                  <components.Baz>
+                    <template #foo>
+                      <slot name="foo" />
+                    </template>
+                  </components.Baz>
+                </template>`,
+          Baz: `<template>
+                  <components.Qux>
+                    <template #foo>
+                      <slot name="foo" />
+                    </template>
+                  </components.Qux>
+                </template>`,
+          Qux: `<template>
+                  <div>
+                    <slot name="foo" />
+                    <div>{{data.foo}}</div>
+                  </div>
+                </template>`,
+        },
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        `<div><!--[--><!--]--><!--slot--><div>foo</div></div>`,
+      )
+
+      data.foo = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><!--[--><!--]--><!--slot--><div>bar</div></div>`,
+      )
+    })
   })
 
   describe.todo('transition', async () => {
