@@ -74,7 +74,7 @@ export class DynamicFragment extends VaporFragment {
 
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
-      if (isHydrating) this.hydrate(this.anchorLabel!, true)
+      if (isHydrating && this.anchorLabel) this.hydrate(this.anchorLabel!, true)
       return
     }
     this.current = key
@@ -155,30 +155,33 @@ export class DynamicFragment extends VaporFragment {
   }
 
   hydrate(label: string, isEmpty: boolean = false): void {
-    if (!label && isEmpty) return
-
-    // for `v-if="false"` the node will be an empty comment, use it as the anchor.
+    // for `v-if="false"`, the node will be an empty comment, use it as the anchor.
     // otherwise, find next sibling vapor fragment anchor
     if (label === 'if' && isEmpty) {
       this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, '')!
     } else {
-      let anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
-      if (!anchor) {
-        // TODO: comment anchors are not included in ssr slot vnode fallback
+      this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
+      if (!this.anchor) {
+        // comment anchors are not included in ssr slot vnode fallback
         if (label === 'slot') {
           // fallback to fragment end anchor for
-          anchor = locateVaporFragmentAnchor(currentHydrationNode!, ']')!
-        } else if (label === 'if') {
+          this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, ']')!
+        } else {
+          // create anchor
+          const { parentNode, nextSibling } = currentHydrationNode!
+          parentNode!.insertBefore(
+            (this.anchor = __DEV__ ? createComment(label) : createTextNode()),
+            nextSibling,
+          )
         }
       }
-      if (anchor) {
-        this.anchor = anchor
-      } else if (__DEV__) {
-        // this should not happen
-        throw new Error(`${label} fragment anchor node was not found.`)
-      }
     }
-    advanceHydrationNode(this.anchor)
+
+    if (this.anchor) {
+      advanceHydrationNode(this.anchor)
+    } else if (__DEV__) {
+      throw new Error(`${label} fragment anchor node was not found.`)
+    }
   }
 }
 
