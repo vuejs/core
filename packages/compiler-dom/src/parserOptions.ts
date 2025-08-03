@@ -1,5 +1,11 @@
-import { Namespaces, NodeTypes, type ParserOptions } from '@vue/compiler-core'
-import { isHTMLTag, isMathMLTag, isSVGTag, isVoidTag } from '@vue/shared'
+import { NodeTypes, type ParserOptions } from '@vue/compiler-core'
+import {
+  Namespaces,
+  isHTMLTag,
+  isMathMLTag,
+  isSVGTag,
+  isVoidTag,
+} from '@vue/shared'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 import { decodeHtmlBrowser } from './decodeHtmlBrowser'
 

@@ -4,12 +4,12 @@ import {
   type ElementNode,
   ElementTypes,
   type InterpolationNode,
-  Namespaces,
   NodeTypes,
   type TextNode,
   baseParse as parse,
 } from '@vue/compiler-core'
 import { parserOptions } from '../src/parserOptions'
+import { Namespaces } from '@vue/shared'
 
 describe('DOM parser', () => {
   describe('Text', () => {
