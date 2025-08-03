@@ -1,13 +1,14 @@
 import { mathmlNS, svgNS } from '@vue/runtime-dom'
 import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
 import { child, createTextNode } from './node'
+import { type Namespace, Namespaces } from '@vue/shared'
 
 let t: HTMLTemplateElement
 let st: HTMLTemplateElement
 let mt: HTMLTemplateElement
 
 /*! #__NO_SIDE_EFFECTS__ */
-export function template(html: string, root?: boolean, ns?: number) {
+export function template(html: string, root?: boolean, ns?: Namespace) {
   let node: Node
   return (): Node & { $root?: true } => {
     if (isHydrating) {
@@ -26,7 +27,7 @@ export function template(html: string, root?: boolean, ns?: number) {
         t = t || document.createElement('template')
         t.innerHTML = html
         node = child(t.content)
-      } else if (ns === 1) {
+      } else if (ns === Namespaces.SVG) {
         st = st || document.createElementNS(svgNS, 'template')
         st.innerHTML = html
         node = child(st)
