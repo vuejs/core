@@ -25,7 +25,6 @@ import {
   isHydrating,
   locateHydrationNode,
   locateVaporFragmentAnchor,
-  updateNextChildToHydrate,
 } from './dom/hydration'
 import { ForFragment, VaporFragment } from './fragment'
 import {
@@ -97,16 +96,7 @@ export const createFor = (
   // useSelector only
   let currentKey: any
   let parentAnchor: Node
-  if (isHydrating) {
-    parentAnchor =
-      locateVaporFragmentAnchor(currentHydrationNode!, FOR_ANCHOR_LABEL) ||
-      // fallback to the fragment end anchor if in ssr slots vnode fallback
-      locateVaporFragmentAnchor(currentHydrationNode!, ']')!
-    if (__DEV__ && !parentAnchor) {
-      // this should not happen
-      throw new Error(`v-for fragment anchor node was not found.`)
-    }
-  } else {
+  if (!isHydrating) {
     parentAnchor = __DEV__ ? createComment('for') : createTextNode()
   }
 
@@ -135,11 +125,18 @@ export const createFor = (
     if (!isMounted) {
       isMounted = true
       for (let i = 0; i < newLength; i++) {
-        // TODO add tests
-        if (isHydrating && i > 0 && _insertionParent) {
-          updateNextChildToHydrate(_insertionParent)
-        }
         mount(source, i)
+      }
+
+      if (isHydrating) {
+        parentAnchor =
+          locateVaporFragmentAnchor(currentHydrationNode!, FOR_ANCHOR_LABEL) ||
+          // fallback to the fragment end anchor if in ssr slots vnode fallback
+          locateVaporFragmentAnchor(currentHydrationNode!, ']')!
+        if (__DEV__ && !parentAnchor) {
+          // this should not happen
+          throw new Error(`v-for fragment anchor node was not found.`)
+        }
       }
     } else {
       parent = parent || parentAnchor!.parentNode
@@ -473,7 +470,7 @@ export const createFor = (
   }
   if (isHydrating) {
     advanceHydrationNode(
-      _insertionAnchor !== undefined ? _insertionParent! : parentAnchor,
+      _insertionAnchor !== undefined ? _insertionParent! : parentAnchor!,
     )
   }
 

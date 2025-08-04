@@ -73,7 +73,7 @@ export function hydrateNode(node: Node, fn: () => void): void {
 }
 
 export let adoptTemplate: (node: Node, template: string) => Node | null
-export let locateHydrationNode: (isFragment?: boolean) => void
+export let locateHydrationNode: () => void
 
 type Anchor = Comment & {
   // cached matching fragment end to avoid repeated traversal
@@ -114,19 +114,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
   return node
 }
 
-const childToHydrateMap = new WeakMap<ParentNode, Node>()
-
-export function updateNextChildToHydrate(parent: ParentNode): void {
-  let nextNode = childToHydrateMap.get(parent)
-  if (nextNode) {
-    nextNode = __next(nextNode)
-    if (nextNode) {
-      childToHydrateMap.set(parent, (currentHydrationNode = nextNode))
-    }
-  }
-}
-
-function locateHydrationNodeImpl(isFragment?: boolean): void {
+function locateHydrationNodeImpl(): void {
   let node: Node | null
   // prepend / firstChild
   if (insertionAnchor === 0) {
@@ -141,23 +129,7 @@ function locateHydrationNodeImpl(isFragment?: boolean): void {
   } else {
     node = currentHydrationNode
     if (insertionParent && (!node || node.parentNode !== insertionParent)) {
-      node =
-        childToHydrateMap.get(insertionParent) ||
-        __nthChild(insertionParent, insertionParent.$dp || 0)
-    }
-
-    // locate slot fragment start anchor
-    // if (isFragment && node && !isComment(node, '[')) {
-    //   node = locateVaporFragmentAnchor(node, '[')!
-    // } else {
-    //   while (node && isNonHydrationNode(node)) {
-    //     node = node.nextSibling!
-    //   }
-    // }
-
-    if (insertionParent && node) {
-      const nextNode = node.nextSibling
-      if (nextNode) childToHydrateMap.set(insertionParent, nextNode)
+      node = __nthChild(insertionParent, insertionParent.$dp || 0)
     }
   }
 

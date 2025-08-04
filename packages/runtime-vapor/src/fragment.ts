@@ -64,7 +64,7 @@ export class DynamicFragment extends VaporFragment {
   constructor(anchorLabel?: string) {
     super([])
     if (isHydrating) {
-      locateHydrationNode(anchorLabel === 'slot')
+      locateHydrationNode()
       this.anchorLabel = anchorLabel
     } else {
       this.anchor =
