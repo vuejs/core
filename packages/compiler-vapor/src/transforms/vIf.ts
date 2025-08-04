@@ -57,6 +57,7 @@ export function processIf(
       }
     }
   } else {
+    context.dynamic.isIfBranch = true
     // check the adjacent v-if
     const siblingIf = getSiblingIf(context, true)
 

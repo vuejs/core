@@ -92,7 +92,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
             prevDynamics,
             context,
             -1 /* prepend */,
-            children.findIndex(c => c === prevDynamics[0]),
+            getChildIndex(children, prevDynamics[0]),
           )
         }
         prevDynamics = []
@@ -106,7 +106,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
       prevDynamics,
       context,
       undefined,
-      children.findIndex(c => c === prevDynamics[0]),
+      getChildIndex(children, prevDynamics[0]),
     )
   }
 }
@@ -133,4 +133,18 @@ function registerInsertion(
       child.operation.childIndex = childIndex
     }
   }
+}
+
+function getChildIndex(
+  children: IRDynamicInfo[],
+  child: IRDynamicInfo,
+): number {
+  let index = 0
+  for (const c of children) {
+    // treat v-if/v-else/v-else-if as a single node
+    if (c.isIfBranch) continue
+    if (c === child) break
+    index++
+  }
+  return index
 }

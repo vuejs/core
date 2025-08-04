@@ -169,7 +169,7 @@ function genInsertionState(
   context: CodegenContext,
 ): CodeFragment[] {
   const { seenChildIndexes } = context
-  let { parent, childIndex, anchor } = operation
+  const { parent, childIndex, anchor } = operation
   const insertionAnchor =
     anchor == null
       ? undefined
@@ -178,11 +178,14 @@ function genInsertionState(
         : `n${anchor}`
 
   // the index of next block node, used to locate node during hydration
+  // only passed when anchor is null and childIndex > 0
   let index: number | undefined
-  if (anchor == null) {
+  if (anchor == null && childIndex) {
     const existingOffset = seenChildIndexes.get(parent!)
-    index = existingOffset ? existingOffset + 1 : childIndex
-    if (index) seenChildIndexes.set(parent!, index)
+    seenChildIndexes.set(
+      parent!,
+      (index = existingOffset ? existingOffset + 1 : childIndex),
+    )
   }
 
   return [

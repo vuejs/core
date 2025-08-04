@@ -53,9 +53,11 @@ export function genChildren(
   const { children } = dynamic
 
   let offset = 0
+  let ifBranchCount = 0
   let prev: [variable: string, elementIndex: number] | undefined
 
   for (const [index, child] of children.entries()) {
+    if (child.isIfBranch) ifBranchCount++
     if (child.flags & DynamicFlag.NON_TEMPLATE) {
       offset--
     }
@@ -97,7 +99,11 @@ export function genChildren(
             // this ensures that insertionAnchor points to the current node itself
             // rather than its next sibling, since insertionAnchor is used as the
             // hydration node
-            `${asAnchor ? index - 1 : index}`
+            `${
+              (asAnchor ? index - 1 : index) -
+              // treat v-if/v-else/v-else-if as a single node
+              ifBranchCount
+            }`
 
       if (elementIndex === 0) {
         pushBlock(...genCall(helper('child'), from, childIndex))
