@@ -218,7 +218,7 @@ const t0 = _template("<div><div></div></div>", true)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n3 = t0()
+  const n3 = t0(1)
   const n1 = _child(n3)
   _setInsertionState(n1)
   const n0 = _createSlot("default", null)
