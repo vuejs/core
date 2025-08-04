@@ -28,7 +28,8 @@ export function genSelf(
     dynamic
 
   if (id !== undefined && template !== undefined) {
-    push(NEWLINE, `const n${id} = t${template}(${dynamicChildOffset || ''})`)
+    push(NEWLINE, `const n${id} = t${template}()`)
+    if (dynamicChildOffset) push(`; n${id}.$dp = ${dynamicChildOffset};`)
     push(...genDirectivesForElement(id, context))
   }
 
@@ -112,6 +113,10 @@ export function genChildren(
         }
         pushBlock(...init)
       }
+    }
+
+    if (child.dynamicChildOffset) {
+      pushBlock(`; ${variable}.$dp = ${child.dynamicChildOffset};`)
     }
 
     if (id === child.anchor && !child.hasDynamicChild) {
