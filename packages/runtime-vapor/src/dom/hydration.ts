@@ -26,9 +26,10 @@ function findParentSibling(n: Node): Node | null {
   return next ? next : findParentSibling(n.parentNode)
 }
 
-export function advanceHydrationNode(node: Node): void {
+export function advanceHydrationNode(node: Node & { $ps?: Node | null }): void {
   // if no next sibling, find the next node in the parent chain
-  const next = node.nextSibling || findParentSibling(node)
+  const next =
+    node.nextSibling || node.$ps || (node.$ps = findParentSibling(node))
   if (next) setCurrentHydrationNode(next)
 }
 
