@@ -80,6 +80,7 @@ export interface IfIRNode extends BaseIRNode {
   once?: boolean
   parent?: number
   anchor?: number
+  childIndex?: number
 }
 
 export interface IRFor {
@@ -99,6 +100,7 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   onlyChild: boolean
   parent?: number
   anchor?: number
+  childIndex?: number
 }
 
 export interface SetPropIRNode extends BaseIRNode {
@@ -200,6 +202,7 @@ export interface CreateComponentIRNode extends BaseIRNode {
   dynamic?: SimpleExpressionNode
   parent?: number
   anchor?: number
+  childIndex?: number
   scopeId?: string | null
 }
 
@@ -217,6 +220,7 @@ export interface SlotOutletIRNode extends BaseIRNode {
   forwarded?: boolean
   parent?: number
   anchor?: number
+  childIndex?: number
 }
 
 export interface GetTextChildIRNode extends BaseIRNode {
@@ -266,7 +270,6 @@ export interface IRDynamicInfo {
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
-  dynamicChildOffset?: number
   operation?: OperationNode
   needsKey?: boolean
 }

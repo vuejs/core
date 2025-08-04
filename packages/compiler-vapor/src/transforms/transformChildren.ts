@@ -59,8 +59,7 @@ export const transformChildren: NodeTransform = (node, context) => {
 
 function processDynamicChildren(context: TransformContext<ElementNode>) {
   let prevDynamics: IRDynamicInfo[] = []
-  let staticCount = 0
-  let prependCount = 0
+  let hasStaticTemplate = false
   const children = context.dynamic.children
 
   for (const [index, child] of children.entries()) {
@@ -70,7 +69,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
 
     if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
       if (prevDynamics.length) {
-        if (staticCount) {
+        if (hasStaticTemplate) {
           // each dynamic child gets its own placeholder node.
           // this makes it easier to locate the corresponding node during hydration.
           for (let i = 0; i < prevDynamics.length; i++) {
@@ -89,18 +88,26 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
             }
           }
         } else {
-          prependCount += prevDynamics.length
-          registerInsertion(prevDynamics, context, -1 /* prepend */)
+          registerInsertion(
+            prevDynamics,
+            context,
+            -1 /* prepend */,
+            children.findIndex(c => c === prevDynamics[0]),
+          )
         }
         prevDynamics = []
       }
-      staticCount++
+      hasStaticTemplate = true
     }
   }
 
   if (prevDynamics.length) {
-    registerInsertion(prevDynamics, context)
-    context.dynamic.dynamicChildOffset = staticCount + prependCount
+    registerInsertion(
+      prevDynamics,
+      context,
+      undefined,
+      children.findIndex(c => c === prevDynamics[0]),
+    )
   }
 }
 
@@ -108,6 +115,7 @@ function registerInsertion(
   dynamics: IRDynamicInfo[],
   context: TransformContext,
   anchor?: number,
+  childIndex?: number,
 ) {
   for (const child of dynamics) {
     if (child.template != null) {
@@ -122,6 +130,7 @@ function registerInsertion(
       // block types
       child.operation.parent = context.reference()
       child.operation.anchor = anchor
+      child.operation.childIndex = childIndex
     }
   }
 }

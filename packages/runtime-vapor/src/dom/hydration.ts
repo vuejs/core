@@ -1,6 +1,7 @@
 import { warn } from '@vue/runtime-dom'
 import {
   insertionAnchor,
+  insertionChildIndex,
   insertionParent,
   resetInsertionState,
   setInsertionState,
@@ -45,7 +46,6 @@ function performHydration<T>(
     locateHydrationNode = locateHydrationNodeImpl
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
-    ;(Node.prototype as any).$dp = undefined
     ;(Node.prototype as any).$np = undefined
     isOptimized = true
   }
@@ -129,7 +129,7 @@ function locateHydrationNodeImpl(): void {
   } else {
     node = currentHydrationNode
     if (insertionParent && (!node || node.parentNode !== insertionParent)) {
-      node = __nthChild(insertionParent, insertionParent.$dp || 0)
+      node = __nthChild(insertionParent, insertionChildIndex || 0)
     }
   }
 
