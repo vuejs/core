@@ -98,10 +98,10 @@ export const createFor = (
   let currentKey: any
   let parentAnchor: Node
   if (isHydrating) {
-    parentAnchor = locateVaporFragmentAnchor(
-      currentHydrationNode!,
-      FOR_ANCHOR_LABEL,
-    )!
+    parentAnchor =
+      locateVaporFragmentAnchor(currentHydrationNode!, FOR_ANCHOR_LABEL) ||
+      // fallback to the fragment end anchor if in ssr slots vnode fallback
+      locateVaporFragmentAnchor(currentHydrationNode!, ']')!
     if (__DEV__ && !parentAnchor) {
       // this should not happen
       throw new Error(`v-for fragment anchor node was not found.`)
