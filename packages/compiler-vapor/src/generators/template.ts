@@ -89,7 +89,8 @@ export function genChildren(
       // child index is used to find the child during hydration.
       // if offset is not 0, we need to specify the offset to skip the dynamic
       // children and get the correct child.
-      const asAnchor = children.some(child => child.anchor === id)
+      const asAnchor =
+        id !== undefined && children.some(child => child.anchor === id)
       let childIndex =
         offset === 0
           ? undefined
