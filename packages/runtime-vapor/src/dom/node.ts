@@ -60,15 +60,23 @@ export function _child(node: ParentNode): Node {
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __child(node: ParentNode, offset?: number): Node {
+  // when offset is -1, it means we need to get the text node of this element
+  // since server-side rendering doesn't generate whitespace placeholder text nodes,
+  // if firstChild is null, manually insert a text node and return it
+  if (offset === -1 && !node.firstChild) {
+    node.textContent = ' '
+    return node.firstChild!
+  }
+
   let n = offset ? __nthChild(node, offset) : node.firstChild!
-
-  if (isComment(n, '[')) {
-    n = locateEndAnchor(n)!.nextSibling!
+  while (n && (isComment(n, '[') || isVaporAnchors(n))) {
+    if (isComment(n, '[')) {
+      n = locateEndAnchor(n)!.nextSibling!
+    } else {
+      n = n.nextSibling!
+    }
   }
 
-  while (n && isVaporAnchors(n)) {
-    n = n.nextSibling!
-  }
   return n
 }
 

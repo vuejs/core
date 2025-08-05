@@ -182,6 +182,20 @@ describe('Vapor Mode hydration', () => {
         `"<!--[--><span></span>barAbarBbar<span></span><!--]-->"`,
       )
     })
+
+    test('empty text nodes', async () => {
+      const data = reactive({ txt: '' })
+      const { container } = await testHydration(
+        `<template><div>{{ data.txt }}</div></template>`,
+        undefined,
+        data,
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(`"<div> </div>"`)
+
+      data.txt = 'foo'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(`"<div>foo</div>"`)
+    })
   })
 
   describe('element', () => {
