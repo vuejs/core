@@ -22,6 +22,7 @@ import {
   applyTransitionLeaveHooks,
 } from './components/Transition'
 import type { VaporComponentInstance } from './component'
+import { normalizeAnchor } from './block'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -161,18 +162,27 @@ export class DynamicFragment extends VaporFragment {
       this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, '')!
     } else {
       this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
+      // comment anchors are not included in ssr slot vnode fallback
       if (!this.anchor) {
-        // comment anchors are not included in ssr slot vnode fallback
         if (label === 'slot') {
           // fallback to fragment end anchor for
           this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, ']')!
         } else {
           // create anchor
-          const { parentNode, nextSibling } = currentHydrationNode!
-          parentNode!.insertBefore(
-            (this.anchor = __DEV__ ? createComment(label) : createTextNode()),
-            nextSibling,
-          )
+          if (isFragment(this.nodes) && this.nodes.anchor) {
+            // nested vapor fragment
+            const { parentNode, nextSibling } = this.nodes.anchor
+            parentNode!.insertBefore(
+              (this.anchor = __DEV__ ? createComment(label) : createTextNode()),
+              nextSibling,
+            )
+          } else {
+            const { parentNode, nextSibling } = normalizeAnchor(this.nodes)!
+            parentNode!.insertBefore(
+              (this.anchor = __DEV__ ? createComment(label) : createTextNode()),
+              nextSibling,
+            )
+          }
         }
       }
     }

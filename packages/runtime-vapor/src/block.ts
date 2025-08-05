@@ -157,6 +157,18 @@ export function remove(block: Block, parent?: ParentNode): void {
   }
 }
 
+export function normalizeAnchor(node: Block): Node | undefined {
+  if (node && node instanceof Node) {
+    return node
+  } else if (isArray(node)) {
+    return normalizeAnchor(node[0])
+  } else if (isVaporComponent(node)) {
+    return normalizeAnchor(node.block!)
+  } else {
+    return normalizeAnchor(node.nodes!)
+  }
+}
+
 /**
  * dev / test only
  */
