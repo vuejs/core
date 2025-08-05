@@ -197,7 +197,11 @@ export function processChildren(
             ssrProcessElement(child, context)
             break
           case ElementTypes.COMPONENT:
+            if (inElement)
+              context.pushStringPart(`<!--${DYNAMIC_START_ANCHOR_LABEL}-->`)
             ssrProcessComponent(child, context, parent)
+            if (inElement)
+              context.pushStringPart(`<!--${DYNAMIC_END_ANCHOR_LABEL}-->`)
             break
           case ElementTypes.SLOT:
             ssrProcessSlotOutlet(child, context)

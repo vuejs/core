@@ -713,7 +713,7 @@ describe('SSR hydration', () => {
     // server render
     container.innerHTML = await renderToString(h(App))
     expect(container.innerHTML).toBe(
-      '<div><!--teleport start--><!--teleport end--></div>',
+      '<div><!--[[--><!--teleport start--><!--teleport end--><!--]]--></div>',
     )
     expect(teleportContainer1.innerHTML).toBe('')
     expect(teleportContainer2.innerHTML).toBe('')
@@ -721,7 +721,7 @@ describe('SSR hydration', () => {
     // hydrate
     createSSRApp(App).mount(container)
     expect(container.innerHTML).toBe(
-      '<div><!--teleport start--><!--teleport end--></div>',
+      '<div><!--[[--><!--teleport start--><!--teleport end--><!--]]--></div>',
     )
     expect(teleportContainer1.innerHTML).toBe('<span>Teleported</span>')
     expect(teleportContainer2.innerHTML).toBe('')
@@ -1005,7 +1005,7 @@ describe('SSR hydration', () => {
     // server render
     container.innerHTML = await renderToString(h(App))
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span>1</span><span>2</span></div>"`,
+      `"<div><!--[[--><span>1</span><!--]]--><!--[[--><span>2</span><!--]]--></div>"`,
     )
     // reset asyncDeps from ssr
     asyncDeps.length = 0
@@ -1923,14 +1923,14 @@ describe('SSR hydration', () => {
     const root = document.createElement('div')
     root.innerHTML = await renderToString(h(App))
     createSSRApp(App).mount(root)
-    expect(root.innerHTML).toBe('<div><div>foo</div></div>')
+    expect(root.innerHTML).toBe('<div><!--[[--><div>foo</div><!--]]--></div>')
 
     reload(id, {
       __hmrId: id,
       template: `<div>bar</div>`,
     })
     await nextTick()
-    expect(root.innerHTML).toBe('<div><div>bar</div></div>')
+    expect(root.innerHTML).toBe('<div><!--[[--><div>bar</div><!--]]--></div>')
   })
 
   test('hmr root reload', async () => {

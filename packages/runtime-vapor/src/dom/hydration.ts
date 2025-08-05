@@ -12,7 +12,7 @@ import {
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
 } from './node'
-import { isVaporAnchors } from '@vue/shared'
+import { DYNAMIC_END_ANCHOR_LABEL, isVaporAnchors } from '@vue/shared'
 
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
@@ -23,15 +23,22 @@ export function setCurrentHydrationNode(node: Node | null): void {
 
 function findParentSibling(n: Node): Node | null {
   if (!n.parentNode) return null
-  const next = n.parentNode.nextSibling
+  let next = n.parentNode.nextSibling
+  while (next && isComment(next, DYNAMIC_END_ANCHOR_LABEL)) {
+    next = next.nextElementSibling
+  }
   return next ? next : findParentSibling(n.parentNode)
 }
 
 export function advanceHydrationNode(node: Node & { $ps?: Node | null }): void {
+  let next = node.nextSibling
+  while (next && isComment(next, DYNAMIC_END_ANCHOR_LABEL)) {
+    next = next.nextSibling
+  }
+
   // if no next sibling, find the next node in the parent chain
-  const next =
-    node.nextSibling || node.$ps || (node.$ps = findParentSibling(node))
-  if (next) setCurrentHydrationNode(next)
+  const ret = next || node.$ps || (node.$ps = findParentSibling(node))
+  if (ret) setCurrentHydrationNode(ret)
 }
 
 let isOptimized = false

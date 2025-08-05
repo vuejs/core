@@ -409,9 +409,9 @@ describe('ssr: element', () => {
         </div>
         `),
       ).toMatchInlineSnapshot(`
-        "\`<div><div></div>\`)
+        "\`<div><div></div><!--[[-->\`)
           _push(_ssrRenderComponent(_component_Comp1, null, null, _parent))
-          _push(\`<!--[[-->\`)
+          _push(\`<!--]]--><!--[[-->\`)
           _push(_ssrRenderComponent(_component_Comp2, null, null, _parent))
           _push(\`<!--]]--><div></div></div>\`"
       `)
@@ -430,15 +430,15 @@ describe('ssr: element', () => {
         </div>
         `),
       ).toMatchInlineSnapshot(`
-        "\`<div><div></div>\`)
+        "\`<div><div></div><!--[[-->\`)
           _push(_ssrRenderComponent(_component_Comp1, null, null, _parent))
-          _push(\`<!--[[-->\`)
+          _push(\`<!--]]--><!--[[-->\`)
           _push(_ssrRenderComponent(_component_Comp2, null, null, _parent))
           _push(\`<!--]]--><!--[[-->\`)
           _push(_ssrRenderComponent(_component_Comp3, null, null, _parent))
-          _push(\`<!--]]-->\`)
+          _push(\`<!--]]--><!--[[-->\`)
           _push(_ssrRenderComponent(_component_Comp4, null, null, _parent))
-          _push(\`<div></div></div>\`"
+          _push(\`<!--]]--><div></div></div>\`"
       `)
     })
   })
