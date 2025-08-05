@@ -9,6 +9,7 @@ import {
 import {
   __next,
   __nthChild,
+  createTextNode,
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
 } from './node'
@@ -97,7 +98,19 @@ export const isComment = (node: Node, data: string): node is Anchor =>
  */
 function adoptTemplateImpl(node: Node, template: string): Node | null {
   if (!(template[0] === '<' && template[1] === '!')) {
-    while (node.nodeType === 8) node = node.nextSibling!
+    while (node.nodeType === 8) {
+      node = node.nextSibling!
+
+      // empty text node in slot
+      if (
+        template === ' ' &&
+        isComment(node, ']') &&
+        isComment(node.previousSibling!, '[')
+      ) {
+        node = node.parentNode!.insertBefore(createTextNode(' '), node)
+        break
+      }
+    }
   }
 
   if (__DEV__) {

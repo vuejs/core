@@ -183,7 +183,7 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
-    test('empty text nodes', async () => {
+    test('empty text node', async () => {
       const data = reactive({ txt: '' })
       const { container } = await testHydration(
         `<template><div>{{ data.txt }}</div></template>`,
@@ -195,6 +195,26 @@ describe('Vapor Mode hydration', () => {
       data.txt = 'foo'
       await nextTick()
       expect(container.innerHTML).toMatchInlineSnapshot(`"<div>foo</div>"`)
+    })
+
+    test('empty text node in slot', async () => {
+      const data = reactive({ txt: '' })
+      const { container } = await testHydration(
+        `<template><components.Child>{{data.txt}}</components.Child></template>`,
+        {
+          Child: `<template><slot/></template>`,
+        },
+        data,
+      )
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--[--> <!--]--><!--slot-->"`,
+      )
+
+      data.txt = 'foo'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--[-->foo<!--]--><!--slot-->"`,
+      )
     })
   })
 
