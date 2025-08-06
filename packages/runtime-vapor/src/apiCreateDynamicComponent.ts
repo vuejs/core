@@ -49,11 +49,13 @@ export function createDynamicComponent(
     )
   })
 
-  if (!isHydrating && _insertionParent) {
-    insert(frag, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+  } else {
+    if (_insertionAnchor !== undefined) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
-  if (isHydrating && _insertionAnchor !== undefined) {
-    advanceHydrationNode(_insertionParent!)
-  }
+
   return frag
 }

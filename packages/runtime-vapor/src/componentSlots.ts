@@ -16,8 +16,12 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
-import { advanceHydrationNode, isHydrating } from './dom/hydration'
-import { DynamicFragment } from './fragment'
+import {
+  advanceHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
+import { DynamicFragment, type VaporFragment } from './fragment'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -127,6 +131,7 @@ export function createSlot(
 
   let fragment: DynamicFragment
   if (isRef(rawSlots._)) {
+    if (isHydrating) locateHydrationNode()
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,
@@ -166,17 +171,15 @@ export function createSlot(
     if (scopeId) setScopeId(fragment, `${scopeId}-s`)
   }
 
-  if (
-    _insertionParent &&
-    (!isHydrating ||
-      // for vdom interop fragment, `fragment.insert` handles both hydration and mounting
-      fragment.insert)
-  ) {
-    insert(fragment, _insertionParent, _insertionAnchor)
-  }
-
-  if (isHydrating && _insertionAnchor !== undefined) {
-    advanceHydrationNode(_insertionParent!)
+  if (!isHydrating) {
+    if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
+  } else {
+    if (fragment.insert) {
+      ;(fragment as VaporFragment).hydrate!()
+    }
+    if (_insertionAnchor !== undefined) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
 
   return fragment

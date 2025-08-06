@@ -74,15 +74,15 @@ export function createIf(
     isHydrating && ifStack.pop()
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(frag, _insertionParent, _insertionAnchor)
-  }
-
-  // if _insertionAnchor is defined, insertionParent contains a static node
-  // that should be skipped during hydration.
-  // Advance to the next sibling node to bypass this static node.
-  if (isHydrating && _insertionAnchor !== undefined) {
-    advanceHydrationNode(_insertionParent!)
+  if (!isHydrating) {
+    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+  } else {
+    // if _insertionAnchor is defined, insertionParent contains a static node
+    // that should be skipped during hydration.
+    // Advance to the next sibling node to bypass this static node.
+    if (_insertionAnchor !== undefined) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
 
   return frag

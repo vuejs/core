@@ -471,10 +471,9 @@ export const createFor = (
     renderEffect(renderList)
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(frag, _insertionParent, _insertionAnchor)
-  }
-  if (isHydrating) {
+  if (!isHydrating) {
+    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+  } else {
     advanceHydrationNode(
       _insertionAnchor !== undefined ? _insertionParent! : parentAnchor!,
     )

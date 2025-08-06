@@ -279,9 +279,9 @@ export function createHydrationFunctions(
         }
         break
       case VaporSlot:
-        getVaporInterface(parentComponent, vnode).hydrateSlot(
+        nextNode = getVaporInterface(parentComponent, vnode).hydrateSlot(
           vnode,
-          parentNode(node)!,
+          node,
         )
         break
       default:
@@ -327,7 +327,7 @@ export function createHydrationFunctions(
           // hydrate vapor component
           if ((vnode.type as ConcreteComponent).__vapor) {
             const vaporInterface = getVaporInterface(parentComponent, vnode)
-            vaporInterface.hydrate(node, () => {
+            nextNode = vaporInterface.hydrate(node, () => {
               vaporInterface.mount(vnode, container, null, parentComponent)
             })
           } else {

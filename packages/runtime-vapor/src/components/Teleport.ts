@@ -209,7 +209,7 @@ export class TeleportFragment extends VaporFragment {
     this.mountAnchor = undefined
   }
 
-  hydrate(): void {
+  hydrate = (): void => {
     // TODO
   }
 }

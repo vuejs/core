@@ -2,6 +2,7 @@ import {
   type App,
   type ComponentInternalInstance,
   type ConcreteComponent,
+  Fragment,
   type HydrationRenderer,
   MoveType,
   type Plugin,
@@ -20,6 +21,7 @@ import {
   ensureRenderer,
   ensureVaporSlotFallback,
   isEmitListener,
+  isRef,
   isVNode,
   onScopeDispose,
   renderSlot,
@@ -34,6 +36,7 @@ import {
   type VaporComponent,
   VaporComponentInstance,
   createComponent,
+  isVaporComponent,
   mountComponent,
   unmountComponent,
 } from './component'
@@ -54,9 +57,11 @@ import { setTransitionHooks as setVaporTransitionHooks } from './components/Tran
 import {
   advanceHydrationNode,
   currentHydrationNode,
+  isComment,
   isHydrating,
   locateHydrationNode,
   locateVaporFragmentAnchor,
+  setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
 import { VaporFragment, isFragment, setFragmentFallback } from './fragment'
@@ -99,6 +104,10 @@ const vaporInteropImpl: Omit<
       {
         _: slotsRef, // pass the slots ref
       } as any as RawSlots,
+      undefined,
+      undefined,
+      undefined,
+      (parentComponent ? parentComponent.appContext : vnode.appContext) as any,
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
@@ -169,16 +178,21 @@ const vaporInteropImpl: Omit<
     setVaporTransitionHooks(component as any, hooks as VaporTransitionHooks)
   },
 
-  hydrate: vaporHydrateNode,
-  hydrateSlot(vnode, container) {
+  hydrate(node, fn) {
+    vaporHydrateNode(node, fn)
+    return __next(node)
+  },
+  hydrateSlot(vnode, node) {
     const { slot } = vnode.vs!
     const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
-    const slotBlock = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
-    vaporHydrateNode(slotBlock, () => {
-      const anchor = locateVaporFragmentAnchor(currentHydrationNode!, 'slot')!
-      vnode.el = vnode.anchor = anchor
-      insert((vnode.vb = slotBlock), container, anchor)
+    vaporHydrateNode(node, () => {
+      vnode.vb = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
+      vnode.el = vnode.anchor = locateVaporFragmentAnchor(
+        currentHydrationNode!,
+        'slot',
+      )
     })
+    return __next(node)
   },
 }
 
@@ -256,25 +270,29 @@ function createVDOMComponent(
 
   vnode.scopeId = parentInstance && parentInstance.type.__scopeId!
 
+  frag.hydrate = () => {
+    hydrateVNode(vnode, parentInstance as any)
+    onScopeDispose(unmount, true)
+    isMounted = true
+    frag.nodes = [vnode.el as Node]
+  }
+
   frag.insert = (parentNode, anchor, transition) => {
+    if (isHydrating) return
+
     const prev = currentInstance
     simpleSetCurrentInstance(parentInstance)
-    if (!isMounted || isHydrating) {
+    if (!isMounted) {
       if (transition) setVNodeTransitionHooks(vnode, transition)
-
-      if (isHydrating) {
-        hydrateVNode(vnode, parentInstance as any)
-      } else {
-        internals.mt(
-          vnode,
-          parentNode,
-          anchor,
-          parentInstance as any,
-          null,
-          undefined,
-          false,
-        )
-      }
+      internals.mt(
+        vnode,
+        parentNode,
+        anchor,
+        parentInstance as any,
+        null,
+        undefined,
+        false,
+      )
       onScopeDispose(unmount, true)
       isMounted = true
     } else {
@@ -317,76 +335,14 @@ function renderVDOMSlot(
 
   frag.fallback = fallback
   frag.insert = (parentNode, anchor) => {
-    if (!isMounted) {
-      renderEffect(() => {
-        let vnode: VNode | undefined
-        let isValidSlot = false
-        // only render slot if rawSlots is defined and slot nodes are not empty
-        // otherwise, render fallback
-        if (slotsRef.value) {
-          vnode = renderSlot(
-            slotsRef.value,
-            isFunction(name) ? name() : name,
-            props,
-          )
+    if (isHydrating) return
 
-          let children = vnode.children as any[]
-          // handle forwarded vapor slot without its own fallback
-          // use the fallback provided by the slot outlet
-          ensureVaporSlotFallback(children, fallback as any)
-          isValidSlot = children.length > 0
-        }
-        if (isValidSlot) {
-          if (isHydrating) {
-            hydrateVNode(vnode!, parentComponent as any)
-          } else {
-            if (fallbackNodes) {
-              remove(fallbackNodes, parentNode)
-              fallbackNodes = undefined
-            }
-            internals.p(
-              oldVNode,
-              vnode!,
-              parentNode,
-              anchor,
-              parentComponent as any,
-              null,
-              undefined,
-              null,
-              false,
-            )
-          }
-          oldVNode = vnode!
-        } else {
-          // for forwarded slot without its own fallback, use the fallback
-          // provided by the slot outlet.
-          // re-fetch `frag.fallback` as it may have been updated at `createSlot`
-          fallback = frag.fallback
-          if (fallback && !fallbackNodes) {
-            // mount fallback
-            if (oldVNode) {
-              internals.um(oldVNode, parentComponent as any, null, true)
-            }
-            insert(
-              (fallbackNodes = fallback(internals, parentComponent)),
-              parentNode,
-              anchor,
-            )
-          } else if (isHydrating) {
-            // update hydration node to the next sibling of the slot anchor
-            const nextNode = locateVaporFragmentAnchor(
-              currentHydrationNode!,
-              'slot',
-            )
-            if (nextNode) advanceHydrationNode(nextNode)
-          }
-          oldVNode = null
-        }
-      })
+    if (!isMounted) {
+      render(parentNode, anchor)
       isMounted = true
     } else {
       // move
-      if (oldVNode && !isHydrating) {
+      if (oldVNode) {
         internals.m(
           oldVNode,
           parentNode,
@@ -404,6 +360,72 @@ function renderVDOMSlot(
         internals.um(oldVNode, parentComponent as any, null)
       }
     }
+  }
+
+  const render = (parentNode?: ParentNode, anchor?: Node | null) => {
+    renderEffect(() => {
+      let vnode: VNode | undefined
+      let isValidSlot = false
+      if (slotsRef.value) {
+        vnode = renderSlot(
+          slotsRef.value,
+          isFunction(name) ? name() : name,
+          props,
+        )
+
+        let children = vnode.children as any[]
+        // handle forwarded vapor slot without its own fallback
+        // use the fallback provided by the slot outlet
+        ensureVaporSlotFallback(children, fallback as any)
+        isValidSlot = children.length > 0
+      }
+      if (isValidSlot) {
+        if (isHydrating) {
+          hydrateVNode(vnode!, parentComponent as any)
+        } else {
+          if (fallbackNodes) {
+            remove(fallbackNodes, parentNode)
+            fallbackNodes = undefined
+          }
+          internals.p(
+            oldVNode,
+            vnode!,
+            parentNode!,
+            anchor,
+            parentComponent as any,
+            null,
+            undefined,
+            null,
+            false,
+          )
+        }
+        oldVNode = vnode!
+      } else {
+        // for forwarded slot without its own fallback, use the fallback
+        // provided by the slot outlet.
+        // re-fetch `frag.fallback` as it may have been updated at `createSlot`
+        fallback = frag.fallback
+        if (fallback && !fallbackNodes) {
+          fallbackNodes = fallback(internals, parentComponent)
+          if (isHydrating) {
+            // hydrate fallback
+            hydrateVNode(fallbackNodes as any, parentComponent as any)
+          } else {
+            // mount fallback
+            if (oldVNode) {
+              internals.um(oldVNode, parentComponent as any, null, true)
+            }
+            insert(fallbackNodes, parentNode!, anchor)
+          }
+        }
+        oldVNode = null
+      }
+    })
+  }
+
+  frag.hydrate = () => {
+    render()
+    isMounted = true
   }
 
   return frag
@@ -460,9 +482,24 @@ function hydrateVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
 ) {
-  // keep fragment start anchor, hydrateNode uses it to
-  // determine if node is a fragmentStart
   locateHydrationNode()
+
+  // skip fragment start anchor
+  let node = currentHydrationNode!
+  while (
+    isComment(node, '[') &&
+    // vnode is not a fragment
+    vnode.type !== Fragment &&
+    // not inside vdom slot
+    !(
+      isVaporComponent(parentComponent) &&
+      isRef((parentComponent as VaporComponentInstance).rawSlots._)
+    )
+  ) {
+    node = node.nextSibling!
+  }
+  if (currentHydrationNode !== node) setCurrentHydrationNode(node)
+
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
   const nextNode = vdomHydrateNode(
     currentHydrationNode!,

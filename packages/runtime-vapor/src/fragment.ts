@@ -36,6 +36,7 @@ export class VaporFragment<T extends Block = Block>
     anchor: Node | null,
     transitionHooks?: TransitionHooks,
   ) => void
+  hydrate?: (...args: any[]) => any
   remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
   fallback?: BlockFn
 
@@ -155,7 +156,7 @@ export class DynamicFragment extends VaporFragment {
     }
   }
 
-  hydrate(label: string, isEmpty: boolean = false): void {
+  hydrate = (label: string, isEmpty: boolean = false): void => {
     // for `v-if="false"`, the node will be an empty comment, use it as the anchor.
     // otherwise, find next sibling vapor fragment anchor
     if (label === 'if' && isEmpty) {

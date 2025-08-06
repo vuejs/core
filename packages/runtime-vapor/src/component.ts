@@ -179,27 +179,28 @@ export function createComponent(
       scopeId,
     )
 
-    // `frag.insert` handles both hydration and mounting
-    if (_insertionParent) {
-      insert(frag, _insertionParent, _insertionAnchor)
+    if (!isHydrating) {
+      if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+    } else {
+      frag.hydrate()
+      if (_insertionAnchor !== undefined) {
+        advanceHydrationNode(_insertionParent!)
+      }
     }
-    if (isHydrating && _insertionAnchor !== undefined) {
-      advanceHydrationNode(_insertionParent!)
-    }
+
     return frag
   }
 
   // teleport
   if (isVaporTeleport(component)) {
     const frag = component.process(rawProps!, rawSlots!)
-    if (!isHydrating && _insertionParent) {
-      insert(frag, _insertionParent, _insertionAnchor)
+    if (!isHydrating) {
+      if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
       frag.hydrate()
-    }
-
-    if (isHydrating && _insertionAnchor !== undefined) {
-      advanceHydrationNode(_insertionParent!)
+      if (_insertionAnchor !== undefined) {
+        advanceHydrationNode(_insertionParent!)
+      }
     }
 
     return frag as any
@@ -316,8 +317,14 @@ export function createComponent(
 
   if (scopeId) setScopeId(instance.block, scopeId)
 
-  if (!isHydrating && _insertionParent) {
-    mountComponent(instance, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (_insertionParent) {
+      mountComponent(instance, _insertionParent, _insertionAnchor)
+    }
+  } else {
+    if (_insertionAnchor !== undefined) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
   return instance
 }
@@ -591,12 +598,12 @@ export function createComponentWithFallback(
     }
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(el, _insertionParent, _insertionAnchor)
-  }
-
-  if (isHydrating && _insertionAnchor !== undefined) {
-    advanceHydrationNode(_insertionParent!)
+  if (!isHydrating) {
+    if (_insertionParent) insert(el, _insertionParent, _insertionAnchor)
+  } else {
+    if (_insertionAnchor !== undefined) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
 
   return el
