@@ -150,6 +150,7 @@ export class DynamicFragment extends VaporFragment {
     const createAnchor = () => {
       const { parentNode, nextSibling } = findLastChild(this.nodes)!
       parentNode!.insertBefore(
+        // TODO use empty text node in PROD?
         (this.anchor = createComment(label)),
         nextSibling,
       )

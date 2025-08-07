@@ -51,7 +51,7 @@ import {
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
-import { __next, createTextNode } from './dom/node'
+import { _next, createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
 import {
@@ -74,8 +74,11 @@ const vaporInteropImpl: Omit<
   'vdomMount' | 'vdomUnmount' | 'vdomSlot'
 > = {
   mount(vnode, container, anchor, parentComponent) {
-    const selfAnchor = (vnode.el = vnode.anchor = createTextNode())
-    container.insertBefore(selfAnchor, anchor)
+    let selfAnchor: Node | null = null
+    if (!isHydrating) {
+      selfAnchor = vnode.el = vnode.anchor = createTextNode()
+      container.insertBefore(selfAnchor, anchor)
+    }
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
@@ -178,10 +181,13 @@ const vaporInteropImpl: Omit<
     setVaporTransitionHooks(component as any, hooks as VaporTransitionHooks)
   },
 
-  hydrate(node, fn) {
-    vaporHydrateNode(node, fn)
-    return __next(node)
+  hydrate(vnode, node, container, anchor, parentComponent) {
+    vaporHydrateNode(node, () => {
+      this.mount(vnode, container, anchor, parentComponent)
+    })
+    return _next(node)
   },
+
   hydrateSlot(vnode, node) {
     const { slot } = vnode.vs!
     const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
@@ -192,7 +198,7 @@ const vaporInteropImpl: Omit<
         'slot',
       )
     })
-    return __next(node)
+    return _next(node)
   },
 }
 

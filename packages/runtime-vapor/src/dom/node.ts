@@ -98,7 +98,7 @@ export function __nthChild(node: Node, i: number): Node {
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
-function _next(node: Node): Node {
+export function _next(node: Node): Node {
   return node.nextSibling!
 }
 

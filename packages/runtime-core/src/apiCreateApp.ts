@@ -191,7 +191,13 @@ export interface VaporInteropInterface {
     component: ComponentInternalInstance,
     transition: TransitionHooks,
   ): void
-  hydrate(node: Node, fn: () => void): Node
+  hydrate(
+    vnode: VNode,
+    node: any,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance | null,
+  ): Node
   hydrateSlot(vnode: VNode, node: any): Node
 
   vdomMount: (
