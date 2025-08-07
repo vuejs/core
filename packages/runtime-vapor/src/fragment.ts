@@ -5,6 +5,7 @@ import {
   type BlockFn,
   type TransitionOptions,
   type VaporTransitionHooks,
+  findLastChild,
   insert,
   isValidBlock,
   remove,
@@ -22,7 +23,7 @@ import {
   applyTransitionLeaveHooks,
 } from './components/Transition'
 import type { VaporComponentInstance } from './component'
-import { normalizeAnchor } from './block'
+import { ELSE_IF_ANCHOR_LABEL } from '@vue/shared'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -76,7 +77,7 @@ export class DynamicFragment extends VaporFragment {
 
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
-      if (isHydrating && this.anchorLabel) this.hydrate(this.anchorLabel!, true)
+      if (isHydrating) this.hydrate(this.anchorLabel!, true)
       return
     }
     this.current = key
@@ -142,49 +143,43 @@ export class DynamicFragment extends VaporFragment {
 
     setActiveSub(prevSub)
 
-    if (isHydrating && this.anchorLabel) {
-      // skip hydration for empty forwarded slots because
-      // the server output does not include their anchors
-      if (
-        this.nodes instanceof DynamicFragment &&
-        this.nodes.forwarded &&
-        !isValidBlock(this.nodes)
-      ) {
-        return
-      }
-      this.hydrate(this.anchorLabel)
-    }
+    if (isHydrating) this.hydrate(this.anchorLabel!)
   }
 
   hydrate = (label: string, isEmpty: boolean = false): void => {
-    // for `v-if="false"`, the node will be an empty comment, use it as the anchor.
-    // otherwise, find next sibling vapor fragment anchor
-    if (label === 'if' && isEmpty) {
-      this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, '')!
+    const createAnchor = () => {
+      const { parentNode, nextSibling } = findLastChild(this.nodes)!
+      parentNode!.insertBefore(
+        (this.anchor = createComment(label)),
+        nextSibling,
+      )
+    }
+
+    // manually create anchors for:
+    // 1. else-if branch
+    // 2. empty forwarded slot
+    // (not present in SSR output)
+    if (
+      label === ELSE_IF_ANCHOR_LABEL ||
+      (this.nodes instanceof DynamicFragment &&
+        this.nodes.forwarded &&
+        !isValidBlock(this.nodes))
+    ) {
+      createAnchor()
     } else {
-      this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
-      // comment anchors are not included in ssr slot vnode fallback
-      if (!this.anchor) {
-        if (label === 'slot') {
+      // for `v-if="false"`, the node will be an empty comment, use it as the anchor.
+      // otherwise, find next sibling vapor fragment anchor
+      if (label === 'if' && isEmpty) {
+        this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, '')!
+      } else {
+        this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
+        if (!this.anchor && label === 'slot') {
           // fallback to fragment end anchor for
           this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, ']')!
-        } else {
-          // create anchor
-          if (isFragment(this.nodes) && this.nodes.anchor) {
-            // nested vapor fragment
-            const { parentNode, nextSibling } = this.nodes.anchor
-            parentNode!.insertBefore(
-              (this.anchor = __DEV__ ? createComment(label) : createTextNode()),
-              nextSibling,
-            )
-          } else {
-            const { parentNode, nextSibling } = normalizeAnchor(this.nodes)!
-            parentNode!.insertBefore(
-              (this.anchor = __DEV__ ? createComment(label) : createTextNode()),
-              nextSibling,
-            )
-          }
         }
+
+        // anchors are not present in ssr slot vnode fallback
+        if (!this.anchor) createAnchor()
       }
     }
 

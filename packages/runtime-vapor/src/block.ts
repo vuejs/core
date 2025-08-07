@@ -14,11 +14,7 @@ import {
 } from '@vue/runtime-dom'
 import { isHydrating } from './dom/hydration'
 import { getInheritedScopeIds } from '@vue/runtime-dom'
-import {
-  type DynamicFragment,
-  type VaporFragment,
-  isFragment,
-} from './fragment'
+import { DynamicFragment, type VaporFragment, isFragment } from './fragment'
 
 export interface TransitionOptions {
   $key?: any
@@ -166,6 +162,19 @@ export function normalizeAnchor(node: Block): Node | undefined {
     return normalizeAnchor(node.block!)
   } else {
     return normalizeAnchor(node.nodes!)
+  }
+}
+
+export function findLastChild(node: Block): Node | undefined | null {
+  if (node && node instanceof Node) {
+    return node
+  } else if (isArray(node)) {
+    return findLastChild(node[node.length - 1])
+  } else if (isVaporComponent(node)) {
+    return findLastChild(node.block!)
+  } else {
+    if (node instanceof DynamicFragment) return node.anchor
+    return findLastChild(node.nodes!)
   }
 }
 

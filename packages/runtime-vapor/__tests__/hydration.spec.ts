@@ -1195,11 +1195,15 @@ describe('Vapor Mode hydration', () => {
 
       data.value = 'b'
       await nextTick()
-      expect(container.innerHTML).toBe(`<div>bar</div><!--${anchorLabel}-->`)
+      expect(container.innerHTML).toBe(
+        `<div>bar</div><!--${anchorLabel}--><!--${anchorLabel}-->`,
+      )
 
       data.value = 'c'
       await nextTick()
-      expect(container.innerHTML).toBe(`<div>baz</div><!--${anchorLabel}-->`)
+      expect(container.innerHTML).toBe(
+        `<div>baz</div><!--${anchorLabel}--><!--${anchorLabel}-->`,
+      )
 
       data.value = 'a'
       await nextTick()
@@ -1390,13 +1394,13 @@ describe('Vapor Mode hydration', () => {
       data.value = 'b'
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<span>b child2</span><!--${anchorLabel}-->`,
+        `<span>b child2</span><!--${anchorLabel}--><!--${anchorLabel}-->`,
       )
 
       data.value = 'c'
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<span>c child3</span><!--${anchorLabel}-->`,
+        `<span>c child3</span><!--${anchorLabel}--><!--${anchorLabel}-->`,
       )
 
       data.value = 'a'
@@ -2762,13 +2766,13 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(container.innerHTML).toBe(
-        `<div><!--[--><!--]--><!--slot--><div>foo</div></div>`,
+        `<div><!--[--><!--]--><!--slot--><!--slot--><!--slot--><!--slot--><div>foo</div></div>`,
       )
 
       data.foo = 'bar'
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<div><!--[--><!--]--><!--slot--><div>bar</div></div>`,
+        `<div><!--[--><!--]--><!--slot--><!--slot--><!--slot--><!--slot--><div>bar</div></div>`,
       )
     })
   })

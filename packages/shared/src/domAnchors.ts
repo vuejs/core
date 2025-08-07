@@ -2,6 +2,7 @@ export const DYNAMIC_START_ANCHOR_LABEL = '[['
 export const DYNAMIC_END_ANCHOR_LABEL = ']]'
 
 export const IF_ANCHOR_LABEL: string = 'if'
+export const ELSE_IF_ANCHOR_LABEL: string = 'else-if'
 export const DYNAMIC_COMPONENT_ANCHOR_LABEL: string = 'dynamic-component'
 export const FOR_ANCHOR_LABEL: string = 'for'
 export const SLOT_ANCHOR_LABEL: string = 'slot'

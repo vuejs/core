@@ -1,4 +1,4 @@
-import { IF_ANCHOR_LABEL } from '@vue/shared'
+import { ELSE_IF_ANCHOR_LABEL, IF_ANCHOR_LABEL } from '@vue/shared'
 import { type Block, type BlockFn, insert } from './block'
 import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import {
@@ -56,8 +56,10 @@ export function createIf(
     frag = condition() ? b1() : b2 ? b2() : []
   } else {
     frag =
-      (isHydrating || __DEV__) && !elseIf
-        ? new DynamicFragment(IF_ANCHOR_LABEL)
+      isHydrating || __DEV__
+        ? new DynamicFragment(
+            elseIf && isHydrating ? ELSE_IF_ANCHOR_LABEL : IF_ANCHOR_LABEL,
+          )
         : new DynamicFragment()
     if (isHydrating) {
       ;(frag as DynamicFragment).teardown = () => {
