@@ -136,8 +136,10 @@ describe('unwraps custom symbols', () => {
   const obj = reactive({
     [customSymbol]: ref(1),
     foo: ref(2),
+    [Symbol.toStringTag]: ref(3),
   })
 
   expectType<number>(obj[customSymbol])
   expectType<number>(obj.foo)
+  expectType<Ref<number, number>>(obj[Symbol.toStringTag])
 })
