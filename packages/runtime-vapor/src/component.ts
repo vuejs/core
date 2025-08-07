@@ -317,14 +317,12 @@ export function createComponent(
 
   if (scopeId) setScopeId(instance.block, scopeId)
 
-  if (!isHydrating) {
-    if (_insertionParent) {
-      mountComponent(instance, _insertionParent, _insertionAnchor)
-    }
-  } else {
-    if (_insertionAnchor !== undefined) {
-      advanceHydrationNode(_insertionParent!)
-    }
+  if (_insertionParent) {
+    mountComponent(instance, _insertionParent, _insertionAnchor)
+  }
+
+  if (isHydrating && _insertionAnchor !== undefined) {
+    advanceHydrationNode(_insertionParent!)
   }
   return instance
 }
