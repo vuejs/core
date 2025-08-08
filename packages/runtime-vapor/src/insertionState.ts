@@ -1,6 +1,3 @@
-import { collectInsertionParents } from './apiCreateIf'
-import { isHydrating } from './dom/hydration'
-
 export let insertionParent:
   | (ParentNode & {
       // number of prepends - hydration only
@@ -26,10 +23,6 @@ export function setInsertionState(
   insertionParent = parent
   insertionAnchor = anchor
   insertionChildIndex = offset
-
-  if (isHydrating) {
-    collectInsertionParents(parent)
-  }
 }
 
 export function resetInsertionState(): void {

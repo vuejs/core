@@ -12,9 +12,11 @@ export function template(html: string, root?: boolean) {
         // TODO this should not happen
         throw new Error('No current hydration node')
       }
-      node = adoptTemplate(currentHydrationNode!, html)!
-      if (root) (node as any).$root = true
-      return node
+      // do not cache the adopted node in node because it contains child nodes
+      // this avoids duplicate rendering of children
+      const adopted = adoptTemplate(currentHydrationNode!, html)!
+      if (root) (adopted as any).$root = true
+      return adopted
     }
     // fast path for text nodes
     if (html[0] !== '<') {

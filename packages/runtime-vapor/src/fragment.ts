@@ -61,7 +61,6 @@ export class DynamicFragment extends VaporFragment {
    * indicates forwarded slot
    */
   forwarded?: boolean
-  teardown?: () => void
   anchorLabel?: string
 
   constructor(anchorLabel?: string) {
@@ -102,7 +101,6 @@ export class DynamicFragment extends VaporFragment {
     // teardown previous branch
     if (this.scope) {
       this.scope.stop()
-      if (parent) this.teardown && this.teardown()
       const mode = transition && transition.mode
       if (mode) {
         applyTransitionLeaveHooks(this.nodes, transition, renderBranch)
