@@ -26,8 +26,8 @@ export function render(_ctx) {
   const n0 = _child(n3)
   const n1 = _next(n0)
   const n2 = _next(n1)
-  const x0 = _child(n0)
-  const x2 = _child(n2)
+  const x0 = _child(n0, -1)
+  const x2 = _child(n2, -1)
   _renderEffect(() => {
     _setText(x0, _toDisplayString(_ctx.first))
     _setText(n1, " " + _toDisplayString(_ctx.second) + " " + _toDisplayString(_ctx.third) + " ")
@@ -44,7 +44,7 @@ const t0 = _template("<div><div>x</div><div>x</div><div> </div></div>", true)
 export function render(_ctx) {
   const n1 = t0()
   const n0 = _nthChild(n1, 2)
-  const x0 = _child(n0)
+  const x0 = _child(n0, -1)
   _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
   return n1
 }"
@@ -62,9 +62,9 @@ export function render(_ctx) {
   const n1 = _child(p1)
   const p2 = _next(p1)
   const n2 = _child(p2)
-  const x0 = _child(n0)
-  const x1 = _child(n1)
-  const x2 = _child(n2)
+  const x0 = _child(n0, -1)
+  const x1 = _child(n1, -1)
+  const x2 = _child(n2, -1)
   _renderEffect(() => {
     const _msg = _ctx.msg
     _setText(x0, _toDisplayString(_msg))

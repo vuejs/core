@@ -7,7 +7,7 @@ const t0 = _template("<div> </div>", true)
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
-    const x2 = _child(n2)
+    const x2 = _child(n2, -1)
     _renderEffect(() => _setText(x2, _toDisplayString(_ctx.msg)))
     return n2
   })
@@ -38,7 +38,7 @@ export function render(_ctx) {
     return [n10, n11]
   }, null, true))
   const n13 = t5()
-  const x13 = _child(n13)
+  const x13 = _child(n13, -1)
   _renderEffect(() => _setText(x13, _toDisplayString(_ctx.text)))
   return [n0, n13]
 }"
@@ -72,7 +72,7 @@ export function render(_ctx) {
     const n2 = t0()
     const n3 = t1()
     const n4 = t2()
-    const x4 = _child(n4)
+    const x4 = _child(n4, -1)
     _renderEffect(() => _setText(x4, _toDisplayString(_ctx.msg)))
     return [n2, n3, n4]
   })

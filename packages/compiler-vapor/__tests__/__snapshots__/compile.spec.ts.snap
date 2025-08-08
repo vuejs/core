@@ -6,7 +6,7 @@ const t0 = _template("<div> </div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  const x0 = _child(n0)
+  const x0 = _child(n0, -1)
   _renderEffect(() => _setText(x0, "count is " + _toDisplayString(_ctx.count) + "."))
   return n0
 }"
@@ -186,7 +186,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  const x0 = _child(n0)
+  const x0 = _child(n0, -1)
   n0.$evtclick = e => _ctx.handleClick(e)
   _renderEffect(() => {
     const _count = _ctx.count
@@ -203,7 +203,7 @@ const t0 = _template("<div> </div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  const x0 = _child(n0)
+  const x0 = _child(n0, -1)
   _renderEffect(() => {
     _setProp(n0, "id", _ctx.foo)
     _setText(x0, _toDisplayString(_ctx.bar))
@@ -237,7 +237,7 @@ export function render(_ctx) {
   const n0 = _child(n3)
   const n1 = _next(n0)
   const n2 = _nthChild(n3, 3)
-  const x0 = _child(n0)
+  const x0 = _child(n0, -1)
   _setText(x0, _toDisplayString(_ctx.foo))
   _renderEffect(() => {
     _setText(n1, " " + _toDisplayString(_ctx.bar))

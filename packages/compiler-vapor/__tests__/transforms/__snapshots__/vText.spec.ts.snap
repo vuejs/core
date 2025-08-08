@@ -6,7 +6,7 @@ const t0 = _template("<div> </div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  const x0 = _child(n0)
+  const x0 = _child(n0, -1)
   _renderEffect(() => _setText(x0, _toDisplayString(_ctx.str)))
   return n0
 }"
@@ -18,7 +18,7 @@ const t0 = _template("<div> </div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  const x0 = _child(n0)
+  const x0 = _child(n0, -1)
   _renderEffect(() => _setText(x0, _toDisplayString(_ctx.test)))
   return n0
 }"

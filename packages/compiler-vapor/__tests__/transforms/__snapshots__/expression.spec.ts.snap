@@ -48,7 +48,7 @@ const t0 = _template("<div> </div>", true)
 export function render(_ctx) {
   const n1 = t0()
   const n0 = _child(n1)
-  const x1 = _child(n1)
+  const x1 = _child(n1, -1)
   _renderEffect(() => {
     const _foo = _ctx.foo
     _setText(n0, _toDisplayString(_foo))
@@ -87,7 +87,7 @@ const t0 = _template("<div> </div>", true)
 export function render(_ctx) {
   const n1 = t0()
   const n0 = _child(n1)
-  const x1 = _child(n1)
+  const x1 = _child(n1, -1)
   _renderEffect(() => {
     const _String = String
     const _foo = _ctx.foo
