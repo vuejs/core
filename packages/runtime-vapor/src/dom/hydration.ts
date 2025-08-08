@@ -103,7 +103,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
 
       // empty text node in slot
       if (
-        template === ' ' &&
+        template.trim() === '' &&
         isComment(node, ']') &&
         isComment(node.previousSibling!, '[')
       ) {
