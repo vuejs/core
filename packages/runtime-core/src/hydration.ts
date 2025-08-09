@@ -32,7 +32,7 @@ import {
   isRenderableAttrValue,
   isReservedProp,
   isString,
-  isVaporAnchors,
+  isVaporAnchor,
   normalizeClass,
   normalizeCssVarValue,
   normalizeStyle,
@@ -129,7 +129,7 @@ export function createHydrationFunctions(
   function nextSibling(node: Node) {
     let n = next(node)
     // skip vapor mode specific anchors
-    if (n && isVaporAnchors(n)) {
+    if (n && isVaporAnchor(n)) {
       n = next(n)
     }
     return n
@@ -162,7 +162,7 @@ export function createHydrationFunctions(
     optimized = false,
   ): Node | null => {
     // skip vapor mode specific anchors
-    if (isVaporAnchors(node)) {
+    if (isVaporAnchor(node)) {
       node = nextSibling(node)!
     }
     optimized = optimized || !!vnode.dynamicChildren

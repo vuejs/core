@@ -1,8 +1,8 @@
 import { isComment, isNonHydrationNode, locateEndAnchor } from './hydration'
 import {
-  DYNAMIC_END_ANCHOR_LABEL,
-  DYNAMIC_START_ANCHOR_LABEL,
-  isVaporAnchors,
+  BLOCK_END_ANCHOR_LABEL,
+  BLOCK_START_ANCHOR_LABEL,
+  isVaporAnchor,
 } from '@vue/shared'
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -54,7 +54,7 @@ export function _child(node: ParentNode): Node {
  *     The subsequent `_setText(n1, ...)` would fail or target the wrong node.
  *
  *   Solution (`__child`):
- *   - `__child(n2, offset)` is used during hydration. It skips the dynamic children
+ *   - `__child(n2, offset)` is used during hydration. It skips the block children
  *     to find the "Actual Text Node", correctly matching the client's expectation
  *     for `n1`.
  */
@@ -69,7 +69,7 @@ export function __child(node: ParentNode, offset?: number): Node {
   }
 
   let n = offset ? __nthChild(node, offset) : node.firstChild!
-  while (n && (isComment(n, '[') || isVaporAnchors(n))) {
+  while (n && (isComment(n, '[') || isVaporAnchor(n))) {
     if (isComment(n, '[')) {
       n = locateEndAnchor(n)!.nextSibling!
     } else {
@@ -105,13 +105,13 @@ export function _next(node: Node): Node {
 /**
  * Hydration-specific version of `next`.
  *
- * SSR comment anchors (fragments `<!--[-->...<!--]-->`, dynamic `<!--[[-->...<!--]]-->`)
+ * SSR comment anchors (fragments `<!--[-->...<!--]-->`, block `<!--[[-->...<!--]]-->`)
  * disrupt standard `node.nextSibling` traversal during hydration. `_next` might
  * return a comment node or an internal node of a fragment instead of skipping
  * the entire fragment block.
  *
  * Example:
- *   Template: `<div>Node1<!>Node2</div>` (where <!> is a dynamic component placeholder)
+ *   Template: `<div>Node1<!>Node2</div>` (where <!> is a block node placeholder)
  *
  *   Client Compiled Code (Simplified):
  *     const n2 = t0() // n2 = `<div>Node1<!---->Node2</div>`
@@ -139,17 +139,17 @@ export function _next(node: Node): Node {
  *     allowing the component to be hydrated correctly relative to `Node1` and `Node2`.
  *
  * This function ensures traversal correctly skips over non-hydration nodes and
- * treats entire fragment/dynamic blocks (when starting *from* their beginning anchor)
+ * treats entire fragment/block nodes (when starting *from* their beginning anchor)
  * as single logical units to find the next actual sibling node for hydration matching.
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __next(node: Node): Node {
-  // process dynamic node (<!--[[-->...<!--]]-->) as a single node
-  if (isComment(node, DYNAMIC_START_ANCHOR_LABEL)) {
+  // process block node (<!--[[-->...<!--]]-->) as a single node
+  if (isComment(node, BLOCK_START_ANCHOR_LABEL)) {
     node = locateEndAnchor(
       node,
-      DYNAMIC_START_ANCHOR_LABEL,
-      DYNAMIC_END_ANCHOR_LABEL,
+      BLOCK_START_ANCHOR_LABEL,
+      BLOCK_END_ANCHOR_LABEL,
     )!
   }
 

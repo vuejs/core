@@ -1,5 +1,5 @@
-export const DYNAMIC_START_ANCHOR_LABEL = '[['
-export const DYNAMIC_END_ANCHOR_LABEL = ']]'
+export const BLOCK_START_ANCHOR_LABEL = '[['
+export const BLOCK_END_ANCHOR_LABEL = ']]'
 
 export const IF_ANCHOR_LABEL: string = 'if'
 export const ELSE_IF_ANCHOR_LABEL: string = 'else-if'
@@ -7,13 +7,11 @@ export const DYNAMIC_COMPONENT_ANCHOR_LABEL: string = 'dynamic-component'
 export const FOR_ANCHOR_LABEL: string = 'for'
 export const SLOT_ANCHOR_LABEL: string = 'slot'
 
-export function isDynamicAnchor(node: Node): node is Comment {
+export function isBlockAnchor(node: Node): node is Comment {
   if (node.nodeType !== 8) return false
 
   const data = (node as Comment).data
-  return (
-    data === DYNAMIC_START_ANCHOR_LABEL || data === DYNAMIC_END_ANCHOR_LABEL
-  )
+  return data === BLOCK_START_ANCHOR_LABEL || data === BLOCK_END_ANCHOR_LABEL
 }
 
 export function isVaporFragmentAnchor(node: Node): node is Comment {
@@ -28,6 +26,6 @@ export function isVaporFragmentAnchor(node: Node): node is Comment {
   )
 }
 
-export function isVaporAnchors(node: Node): node is Comment {
-  return isDynamicAnchor(node) || isVaporFragmentAnchor(node)
+export function isVaporAnchor(node: Node): node is Comment {
+  return isBlockAnchor(node) || isVaporFragmentAnchor(node)
 }

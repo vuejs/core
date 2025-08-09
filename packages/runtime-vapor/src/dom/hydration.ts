@@ -13,7 +13,7 @@ import {
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
 } from './node'
-import { DYNAMIC_END_ANCHOR_LABEL, isVaporAnchors } from '@vue/shared'
+import { BLOCK_END_ANCHOR_LABEL, isVaporAnchor } from '@vue/shared'
 
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
@@ -25,7 +25,7 @@ export function setCurrentHydrationNode(node: Node | null): void {
 function findParentSibling(n: Node): Node | null {
   if (!n.parentNode) return null
   let next = n.parentNode.nextSibling
-  while (next && isComment(next, DYNAMIC_END_ANCHOR_LABEL)) {
+  while (next && isComment(next, BLOCK_END_ANCHOR_LABEL)) {
     next = next.nextElementSibling
   }
   return next ? next : findParentSibling(n.parentNode)
@@ -33,7 +33,7 @@ function findParentSibling(n: Node): Node | null {
 
 export function advanceHydrationNode(node: Node & { $ps?: Node | null }): void {
   let next = node.nextSibling
-  while (next && isComment(next, DYNAMIC_END_ANCHOR_LABEL)) {
+  while (next && isComment(next, BLOCK_END_ANCHOR_LABEL)) {
     next = next.nextSibling
   }
 
@@ -195,7 +195,7 @@ export function isNonHydrationNode(node: Node): boolean {
     // vdom fragment end anchor (`<!--]-->`)
     isComment(node, ']') ||
     // vapor mode specific anchors
-    isVaporAnchors(node)
+    isVaporAnchor(node)
   )
 }
 
