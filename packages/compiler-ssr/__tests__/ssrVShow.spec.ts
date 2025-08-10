@@ -26,9 +26,9 @@ describe('ssr: v-show', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           _push(\`<div\${
             _ssrRenderAttrs(_attrs)
-          }><div style="\${
+          }><div\${
             _ssrRenderStyle((_ctx.foo) ? null : { display: "none" })
-          }"></div></div>\`)
+          }></div></div>\`)
         }"
       `)
   })
@@ -41,12 +41,12 @@ describe('ssr: v-show', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           _push(\`<div\${
             _ssrRenderAttrs(_attrs)
-          }><div style="\${
+          }><div\${
             _ssrRenderStyle([
               {"color":"red"},
               (_ctx.foo) ? null : { display: "none" }
             ])
-          }"></div></div>\`)
+          }></div></div>\`)
         }"
       `)
   })
@@ -60,12 +60,12 @@ describe('ssr: v-show', () => {
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
-        }><div style="\${
+        }><div\${
           _ssrRenderStyle([
             { color: 'red' },
             (_ctx.foo) ? null : { display: "none" }
           ])
-        }"></div></div>\`)
+        }></div></div>\`)
       }"
     `)
   })
@@ -81,13 +81,13 @@ describe('ssr: v-show', () => {
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${
           _ssrRenderAttrs(_attrs)
-        }><div style="\${
+        }><div\${
           _ssrRenderStyle([
             {"color":"red"},
             { fontSize: 14 },
             (_ctx.foo) ? null : { display: "none" }
           ])
-        }"></div></div>\`)
+        }></div></div>\`)
       }"
     `)
   })
