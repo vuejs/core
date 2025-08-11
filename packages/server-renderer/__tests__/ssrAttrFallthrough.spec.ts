@@ -25,10 +25,10 @@ describe('ssr: attr fallthrough', () => {
       template: `<child :ok="ok" class="bar"/>`,
     }
     expect(await renderToString(createApp(Parent, { ok: true }))).toBe(
-      `<div class="foo bar"></div><!--if-->`,
+      `<div class="foo bar"></div>`,
     )
     expect(await renderToString(createApp(Parent, { ok: false }))).toBe(
-      `<span class="bar"></span><!--if-->`,
+      `<span class="bar"></span>`,
     )
   })
 

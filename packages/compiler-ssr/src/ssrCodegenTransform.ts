@@ -22,8 +22,9 @@ import {
   processExpression,
 } from '@vue/compiler-dom'
 import {
-  BLOCK_END_ANCHOR_LABEL,
-  BLOCK_START_ANCHOR_LABEL,
+  BLOCK_APPEND_ANCHOR_LABEL,
+  BLOCK_INSERTION_ANCHOR_LABEL,
+  BLOCK_PREPEND_ANCHOR_LABEL,
   escapeHtml,
   isString,
 } from '@vue/shared'
@@ -163,33 +164,23 @@ export function processChildren(
   asFragment = false,
   disableNestedFragments = false,
   disableComment = false,
-  asBlock = false,
 ): void {
-  if (asBlock) {
-    context.pushStringPart(`<!--${BLOCK_START_ANCHOR_LABEL}-->`)
-  }
   if (asFragment) {
     context.pushStringPart(`<!--[-->`)
   }
 
   const { children, type, tagType } = parent as PlainElementNode
-  const inElement =
-    type === NodeTypes.ELEMENT && tagType === ElementTypes.ELEMENT
-  if (inElement) processChildrenBlockInfo(children)
+
+  if (
+    context.options.vapor &&
+    type === NodeTypes.ELEMENT &&
+    tagType === ElementTypes.ELEMENT
+  ) {
+    processBlockNodeAnchor(children)
+  }
 
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    if (inElement && shouldProcessChildAsBlock(parent, child)) {
-      processChildren(
-        { children: [child] },
-        context,
-        asFragment,
-        disableNestedFragments,
-        disableComment,
-        true,
-      )
-      continue
-    }
     switch (child.type) {
       case NodeTypes.ELEMENT:
         switch (child.tagType) {
@@ -197,14 +188,14 @@ export function processChildren(
             ssrProcessElement(child, context)
             break
           case ElementTypes.COMPONENT:
-            if (inElement)
-              context.pushStringPart(`<!--${BLOCK_START_ANCHOR_LABEL}-->`)
+            if (child.anchor) context.pushStringPart(`<!--[${child.anchor}-->`)
             ssrProcessComponent(child, context, parent)
-            if (inElement)
-              context.pushStringPart(`<!--${BLOCK_END_ANCHOR_LABEL}-->`)
+            if (child.anchor) context.pushStringPart(`<!--${child.anchor}]-->`)
             break
           case ElementTypes.SLOT:
+            if (child.anchor) context.pushStringPart(`<!--[${child.anchor}-->`)
             ssrProcessSlotOutlet(child, context)
+            if (child.anchor) context.pushStringPart(`<!--${child.anchor}]-->`)
             break
           case ElementTypes.TEMPLATE:
             // TODO
@@ -239,10 +230,14 @@ export function processChildren(
         )
         break
       case NodeTypes.IF:
+        if (child.anchor) context.pushStringPart(`<!--[${child.anchor}-->`)
         ssrProcessIf(child, context, disableNestedFragments, disableComment)
+        if (child.anchor) context.pushStringPart(`<!--${child.anchor}]-->`)
         break
       case NodeTypes.FOR:
+        if (child.anchor) context.pushStringPart(`<!--[${child.anchor}-->`)
         ssrProcessFor(child, context, disableNestedFragments)
+        if (child.anchor) context.pushStringPart(`<!--${child.anchor}]-->`)
         break
       case NodeTypes.IF_BRANCH:
         // no-op - handled by ssrProcessIf
@@ -267,9 +262,6 @@ export function processChildren(
   if (asFragment) {
     context.pushStringPart(`<!--]-->`)
   }
-  if (asBlock) {
-    context.pushStringPart(`<!--${BLOCK_END_ANCHOR_LABEL}-->`)
-  }
 }
 
 export function processChildrenAsStatement(
@@ -283,117 +275,69 @@ export function processChildrenAsStatement(
   return createBlockStatement(childContext.body)
 }
 
-const isStaticChildNode = (c: TemplateChildNode): boolean =>
-  (c.type === NodeTypes.ELEMENT && c.tagType !== ElementTypes.COMPONENT) ||
-  c.type === NodeTypes.TEXT ||
-  c.type === NodeTypes.COMMENT
+export function processBlockNodeAnchor(children: TemplateChildNode[]): void {
+  let prevBlocks: (TemplateChildNode & { anchor?: string })[] = []
+  let hasStaticNode = false
+  for (const child of children) {
+    if (isBlockNode(child)) {
+      prevBlocks.push(child)
+    }
 
-interface BlockInfo {
-  hasStaticPrevious: boolean
-  hasStaticNext: boolean
-  prevBlockCount: number
-  nextBlockCount: number
+    if (isStaticNode(child)) {
+      if (prevBlocks.length) {
+        if (hasStaticNode) {
+          // insertion anchor
+          prevBlocks.forEach(
+            child => (child.anchor = BLOCK_INSERTION_ANCHOR_LABEL),
+          )
+        } else {
+          // prepend
+          prevBlocks.forEach(
+            child => (child.anchor = BLOCK_PREPEND_ANCHOR_LABEL),
+          )
+        }
+        prevBlocks = []
+      }
+      hasStaticNode = true
+    }
+  }
+
+  if (prevBlocks.length) {
+    // append anchor
+    prevBlocks.forEach(child => (child.anchor = BLOCK_APPEND_ANCHOR_LABEL))
+  }
 }
 
-function processChildrenBlockInfo(
-  children: (TemplateChildNode & { _ssrBlockInfo?: BlockInfo })[],
-): void {
-  const filteredChildren = children.filter(
-    child => !(child.type === NodeTypes.TEXT && !child.content.trim()),
+function isBlockNode(child: TemplateChildNode): boolean {
+  return (
+    child.type === NodeTypes.IF ||
+    child.type === NodeTypes.FOR ||
+    (child.type === NodeTypes.ELEMENT &&
+      (child.tagType === ElementTypes.COMPONENT ||
+        child.tagType === ElementTypes.SLOT ||
+        child.props.some(
+          p =>
+            p.name === 'if' ||
+            p.name === 'else-if' ||
+            p.name === 'else' ||
+            p.name === 'for',
+        )))
   )
-
-  for (let i = 0; i < filteredChildren.length; i++) {
-    const child = filteredChildren[i]
-    if (
-      isStaticChildNode(child) ||
-      // fragment has it's own anchor, which can be used to distinguish the boundary
-      isFragmentChild(child)
-    ) {
-      continue
-    }
-    child._ssrBlockInfo = {
-      hasStaticPrevious: false,
-      hasStaticNext: false,
-      prevBlockCount: 0,
-      nextBlockCount: 0,
-    }
-
-    const info = child._ssrBlockInfo
-
-    // Calculate the previous static and block node counts
-    let foundStaticPrev = false
-    let blockCountPrev = 0
-    for (let j = i - 1; j >= 0; j--) {
-      const prevChild = filteredChildren[j]
-      if (isStaticChildNode(prevChild)) {
-        foundStaticPrev = true
-        break
-      }
-      // if the previous child has block info, use it
-      else if (prevChild._ssrBlockInfo) {
-        foundStaticPrev = prevChild._ssrBlockInfo.hasStaticPrevious
-        blockCountPrev = prevChild._ssrBlockInfo.prevBlockCount + 1
-        break
-      }
-      blockCountPrev++
-    }
-    info.hasStaticPrevious = foundStaticPrev
-    info.prevBlockCount = blockCountPrev
-
-    // Calculate the number of static and block nodes afterwards
-    let foundStaticNext = false
-    let blockCountNext = 0
-    for (let j = i + 1; j < filteredChildren.length; j++) {
-      const nextChild = filteredChildren[j]
-      if (isStaticChildNode(nextChild)) {
-        foundStaticNext = true
-        break
-      }
-      // if the next child has block info, use it
-      else if (nextChild._ssrBlockInfo) {
-        foundStaticNext = nextChild._ssrBlockInfo.hasStaticNext
-        blockCountNext = nextChild._ssrBlockInfo.nextBlockCount + 1
-        break
-      }
-      blockCountNext++
-    }
-    info.hasStaticNext = foundStaticNext
-    info.nextBlockCount = blockCountNext
-  }
 }
 
-function shouldProcessChildAsBlock(
-  parent: { tag?: string; children: TemplateChildNode[] },
-  node: TemplateChildNode & { _ssrBlockInfo?: BlockInfo },
-): boolean {
-  // must be inside a parent element
-  if (!parent.tag) return false
-
-  // must has block info
-  const { _ssrBlockInfo: info } = node
-  if (!info) return false
-
-  const { hasStaticPrevious, hasStaticNext, prevBlockCount, nextBlockCount } =
-    info
-
-  // must have static nodes on both sides
-  if (!hasStaticPrevious || !hasStaticNext) return false
-
-  const blockNodeCount = 1 + prevBlockCount + nextBlockCount
-
-  // For two consecutive block nodes, mark the second one as block
-  if (blockNodeCount === 2) {
-    return prevBlockCount > 0
-  }
-  // For three or more block nodes, mark the middle nodes as block
-  else if (blockNodeCount >= 3) {
-    return prevBlockCount > 0 && nextBlockCount > 0
-  }
-
-  return false
-}
-
-function isFragmentChild(child: TemplateChildNode): boolean {
-  const { type } = child
-  return type === NodeTypes.IF || type === NodeTypes.FOR
+function isStaticNode(child: TemplateChildNode): boolean {
+  return (
+    child.type === NodeTypes.TEXT ||
+    child.type === NodeTypes.INTERPOLATION ||
+    child.type === NodeTypes.COMMENT ||
+    (child.type === NodeTypes.ELEMENT &&
+      child.tagType === ElementTypes.ELEMENT &&
+      !child.props.some(
+        p =>
+          p.name === 'if' ||
+          p.name === 'else-if' ||
+          p.name === 'else' ||
+          p.name === 'for',
+      ))
+  )
 }

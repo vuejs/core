@@ -39,8 +39,6 @@ export class CodegenContext {
 
   seenInlineHandlerNames: Record<string, number> = Object.create(null)
 
-  seenChildIndexes: Map<number, number> = new Map()
-
   block: BlockIRNode
   withId<T>(
     fn: () => T,
@@ -88,6 +86,7 @@ export class CodegenContext {
       isTS: false,
       inSSR: false,
       inline: false,
+      vapor: false,
       bindingMetadata: {},
       expressionPlugins: [],
     }

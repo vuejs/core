@@ -5,7 +5,7 @@ import {
   type SSRBufferItem,
   renderVNodeChildren,
 } from '../render'
-import { SLOT_ANCHOR_LABEL, isArray } from '@vue/shared'
+import { isArray } from '@vue/shared'
 
 const { ensureValidVNode } = ssrUtils
 
@@ -37,7 +37,7 @@ export function ssrRenderSlot(
     parentComponent,
     slotScopeId,
   )
-  push(`<!--]--><!--${SLOT_ANCHOR_LABEL}-->`)
+  push(`<!--]-->`)
 }
 
 export function ssrRenderSlotInner(
@@ -104,7 +104,7 @@ export function ssrRenderSlotInner(
         if (
           transition &&
           slotBuffer[0] === '<!--[-->' &&
-          (slotBuffer[end - 1] as string).startsWith('<!--]-->')
+          slotBuffer[end - 1] === '<!--]-->'
         ) {
           start++
           end--

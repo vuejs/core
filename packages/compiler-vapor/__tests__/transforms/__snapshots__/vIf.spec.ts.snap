@@ -144,12 +144,12 @@ const t3 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n8 = t3()
-  _setInsertionState(n8)
+  _setInsertionState(n8, null)
   const n0 = _createIf(() => (_ctx.foo), () => {
     const n2 = t0()
     return n2
   })
-  _setInsertionState(n8)
+  _setInsertionState(n8, null)
   const n3 = _createIf(() => (_ctx.bar), () => {
     const n5 = t1()
     return n5

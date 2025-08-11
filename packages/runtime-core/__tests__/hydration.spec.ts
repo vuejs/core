@@ -601,14 +601,14 @@ describe('SSR hydration', () => {
     const ctx: SSRContext = {}
     container.innerHTML = await renderToString(h(App), ctx)
     expect(container.innerHTML).toBe(
-      '<div><!--teleport start--><!--teleport end--><!--if--></div>',
+      '<div><!--teleport start--><!--teleport end--></div>',
     )
     teleportContainer.innerHTML = ctx.teleports!['#target']
 
     // hydrate
     createSSRApp(App).mount(container)
     expect(container.innerHTML).toBe(
-      '<div><!--teleport start--><!--teleport end--><!--if--></div>',
+      '<div><!--teleport start--><!--teleport end--></div>',
     )
     expect(teleportContainer.innerHTML).toBe(
       '<!--teleport start anchor--><span>Teleported Comp1</span><!--teleport anchor-->',
@@ -617,7 +617,7 @@ describe('SSR hydration', () => {
 
     toggle.value = false
     await nextTick()
-    expect(container.innerHTML).toBe('<div><div>Comp2</div><!--if--></div>')
+    expect(container.innerHTML).toBe('<div><div>Comp2</div></div>')
     expect(teleportContainer.innerHTML).toBe('')
   })
 
@@ -660,21 +660,21 @@ describe('SSR hydration', () => {
     // server render
     container.innerHTML = await renderToString(h(App))
     expect(container.innerHTML).toBe(
-      '<div><!--teleport start--><!--teleport end--><!--if--></div>',
+      '<div><!--teleport start--><!--teleport end--></div>',
     )
     expect(teleportContainer.innerHTML).toBe('')
 
     // hydrate
     createSSRApp(App).mount(container)
     expect(container.innerHTML).toBe(
-      '<div><!--teleport start--><!--teleport end--><!--if--></div>',
+      '<div><!--teleport start--><!--teleport end--></div>',
     )
     expect(teleportContainer.innerHTML).toBe('<span>Teleported Comp1</span>')
     expect(`Hydration children mismatch`).toHaveBeenWarned()
 
     toggle.value = false
     await nextTick()
-    expect(container.innerHTML).toBe('<div><div>Comp2</div><!--if--></div>')
+    expect(container.innerHTML).toBe('<div><div>Comp2</div></div>')
     expect(teleportContainer.innerHTML).toBe('')
   })
 
@@ -713,7 +713,7 @@ describe('SSR hydration', () => {
     // server render
     container.innerHTML = await renderToString(h(App))
     expect(container.innerHTML).toBe(
-      '<div><!--[[--><!--teleport start--><!--teleport end--><!--]]--></div>',
+      '<div><!--teleport start--><!--teleport end--></div>',
     )
     expect(teleportContainer1.innerHTML).toBe('')
     expect(teleportContainer2.innerHTML).toBe('')
@@ -721,7 +721,7 @@ describe('SSR hydration', () => {
     // hydrate
     createSSRApp(App).mount(container)
     expect(container.innerHTML).toBe(
-      '<div><!--[[--><!--teleport start--><!--teleport end--><!--]]--></div>',
+      '<div><!--teleport start--><!--teleport end--></div>',
     )
     expect(teleportContainer1.innerHTML).toBe('<span>Teleported</span>')
     expect(teleportContainer2.innerHTML).toBe('')
@@ -1005,7 +1005,7 @@ describe('SSR hydration', () => {
     // server render
     container.innerHTML = await renderToString(h(App))
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><!--[[--><span>1</span><!--]]--><!--[[--><span>2</span><!--]]--></div>"`,
+      `"<div><span>1</span><span>2</span></div>"`,
     )
     // reset asyncDeps from ssr
     asyncDeps.length = 0
@@ -1869,36 +1869,6 @@ describe('SSR hydration', () => {
     }
   })
 
-  describe('dynamic anchor', () => {
-    test('two consecutive components', () => {
-      const Comp = {
-        render() {
-          return createTextVNode('foo')
-        },
-      }
-      const { vnode, container } = mountWithHydration(
-        `<div><span></span>foo<!--[[-->foo<!--]]--><span></span></div>`,
-        () => h('div', null, [h('span'), h(Comp), h(Comp), h('span')]),
-      )
-      expect(vnode.el).toBe(container.firstChild)
-      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-    })
-
-    test('multiple consecutive components', () => {
-      const Comp = {
-        render() {
-          return createTextVNode('foo')
-        },
-      }
-      const { vnode, container } = mountWithHydration(
-        `<div><span></span>foo<!--[[-->foo<!--]]-->foo<span></span></div>`,
-        () => h('div', null, [h('span'), h(Comp), h(Comp), h(Comp), h('span')]),
-      )
-      expect(vnode.el).toBe(container.firstChild)
-      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-    })
-  })
-
   test('hmr reload child wrapped in KeepAlive', async () => {
     const id = 'child-reload'
     const Child = {
@@ -1923,14 +1893,14 @@ describe('SSR hydration', () => {
     const root = document.createElement('div')
     root.innerHTML = await renderToString(h(App))
     createSSRApp(App).mount(root)
-    expect(root.innerHTML).toBe('<div><!--[[--><div>foo</div><!--]]--></div>')
+    expect(root.innerHTML).toBe('<div><div>foo</div></div>')
 
     reload(id, {
       __hmrId: id,
       template: `<div>bar</div>`,
     })
     await nextTick()
-    expect(root.innerHTML).toBe('<div><!--[[--><div>bar</div><!--]]--></div>')
+    expect(root.innerHTML).toBe('<div><div>bar</div></div>')
   })
 
   test('hmr root reload', async () => {

@@ -53,11 +53,9 @@ export function genChildren(
   const { children } = dynamic
 
   let offset = 0
-  let ifBranchCount = 0
   let prev: [variable: string, elementIndex: number] | undefined
 
   for (const [index, child] of children.entries()) {
-    if (child.isIfBranch) ifBranchCount++
     if (child.flags & DynamicFlag.NON_TEMPLATE) {
       offset--
     }
@@ -87,29 +85,11 @@ export function genChildren(
         pushBlock(...genCall(helper('nthChild'), from, String(elementIndex)))
       }
     } else {
-      // child index is used to find the child during hydration.
-      // if offset is not 0, we need to specify the offset to skip the dynamic
-      // children and get the correct child.
-      const asAnchor =
-        id !== undefined && children.some(child => child.anchor === id)
-      let childIndex =
-        offset === 0
-          ? undefined
-          : // if the current node is used as insertionAnchor, subtract 1 here
-            // this ensures that insertionAnchor points to the current node itself
-            // rather than its next sibling, since insertionAnchor is used as the
-            // hydration node
-            `${
-              (asAnchor ? index - 1 : index) -
-              // treat v-if/v-else/v-else-if as a single node
-              ifBranchCount
-            }`
-
       if (elementIndex === 0) {
-        pushBlock(...genCall(helper('child'), from, childIndex))
+        pushBlock(...genCall(helper('child'), from))
       } else {
         // check if there's a node that we can reuse from
-        let init = genCall(helper('child'), from, childIndex)
+        let init = genCall(helper('child'), from)
         if (elementIndex === 1) {
           init = genCall(helper('next'), init)
         } else if (elementIndex > 1) {

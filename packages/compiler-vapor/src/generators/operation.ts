@@ -168,33 +168,19 @@ function genInsertionState(
   operation: InsertionStateTypes,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { seenChildIndexes } = context
-  const { parent, childIndex, anchor } = operation
-  const insertionAnchor =
-    anchor == null
-      ? undefined
-      : anchor === -1 // -1 indicates prepend
-        ? `0` // runtime anchor value for prepend
-        : `n${anchor}`
-
-  // the index of next block node, used to locate node during hydration
-  // only passed when anchor is null and childIndex > 0
-  let index: number | undefined
-  if (anchor == null && childIndex) {
-    const existingOffset = seenChildIndexes.get(parent!)
-    seenChildIndexes.set(
-      parent!,
-      (index = existingOffset ? existingOffset + 1 : childIndex),
-    )
-  }
-
+  const { parent, anchor } = operation
   return [
     NEWLINE,
     ...genCall(
       context.helper('setInsertionState'),
       `n${parent}`,
-      insertionAnchor,
-      index ? `${index}` : undefined,
+      anchor == null
+        ? undefined
+        : anchor === -1 // -1 indicates prepend
+          ? `0` // runtime anchor value for prepend
+          : anchor === -2 // -2 indicates append
+            ? `null` // runtime anchor value for append
+            : `n${anchor}`,
     ),
   ]
 }

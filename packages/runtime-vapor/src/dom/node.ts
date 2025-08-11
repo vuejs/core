@@ -1,7 +1,7 @@
 import { isComment, isNonHydrationNode, locateEndAnchor } from './hydration'
 import {
-  BLOCK_END_ANCHOR_LABEL,
-  BLOCK_START_ANCHOR_LABEL,
+  BLOCK_INSERTION_ANCHOR_LABEL,
+  BLOCK_PREPEND_ANCHOR_LABEL,
   isVaporAnchor,
 } from '@vue/shared'
 
@@ -23,6 +23,29 @@ export function createComment(data: string): Comment {
 /*! #__NO_SIDE_EFFECTS__ */
 export function querySelector(selectors: string): Element | null {
   return document.querySelector(selectors)
+}
+
+function skipBlockNodes(node: Node): Node {
+  while (node) {
+    if (isComment(node, `[${BLOCK_PREPEND_ANCHOR_LABEL}`)) {
+      node = locateEndAnchor(
+        node,
+        `[${BLOCK_PREPEND_ANCHOR_LABEL}`,
+        `${BLOCK_PREPEND_ANCHOR_LABEL}]`,
+      )!
+      continue
+    } else if (isComment(node, `[${BLOCK_INSERTION_ANCHOR_LABEL}`)) {
+      node = locateEndAnchor(
+        node,
+        `[${BLOCK_INSERTION_ANCHOR_LABEL}`,
+        `${BLOCK_INSERTION_ANCHOR_LABEL}]`,
+      )!
+      continue
+    }
+
+    break
+  }
+  return node
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -60,16 +83,19 @@ export function _child(node: ParentNode): Node {
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __child(node: ParentNode, offset?: number): Node {
+  let n = node.firstChild!
+
   // when offset is -1, it means we need to get the text node of this element
   // since server-side rendering doesn't generate whitespace placeholder text nodes,
   // if firstChild is null, manually insert a text node and return it
-  if (offset === -1 && !node.firstChild) {
+  if (offset === -1 && !n) {
     node.textContent = ' '
     return node.firstChild!
   }
 
-  let n = offset ? __nthChild(node, offset) : node.firstChild!
   while (n && (isComment(n, '[') || isVaporAnchor(n))) {
+    // skip block node
+    n = skipBlockNodes(n) as ChildNode
     if (isComment(n, '[')) {
       n = locateEndAnchor(n)!.nextSibling!
     } else {
@@ -90,7 +116,7 @@ export function _nthChild(node: Node, i: number): Node {
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __nthChild(node: Node, i: number): Node {
-  let n = node.firstChild!
+  let n = __child(node as ParentNode)
   for (let start = 0; start < i; start++) {
     n = __next(n) as ChildNode
   }
@@ -105,7 +131,7 @@ export function _next(node: Node): Node {
 /**
  * Hydration-specific version of `next`.
  *
- * SSR comment anchors (fragments `<!--[-->...<!--]-->`, block `<!--[[-->...<!--]]-->`)
+ * SSR comment anchors (fragments `<!--[-->...<!--]-->`, block nodes `<!--[x-->...<!--x]-->`)
  * disrupt standard `node.nextSibling` traversal during hydration. `_next` might
  * return a comment node or an internal node of a fragment instead of skipping
  * the entire fragment block.
@@ -144,19 +170,12 @@ export function _next(node: Node): Node {
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __next(node: Node): Node {
-  // process block node (<!--[[-->...<!--]]-->) as a single node
-  if (isComment(node, BLOCK_START_ANCHOR_LABEL)) {
-    node = locateEndAnchor(
-      node,
-      BLOCK_START_ANCHOR_LABEL,
-      BLOCK_END_ANCHOR_LABEL,
-    )!
-  }
-
   // process fragment (<!--[-->...<!--]-->) as a single node
-  else if (isComment(node, '[')) {
+  if (isComment(node, '[')) {
     node = locateEndAnchor(node)!
   }
+
+  node = skipBlockNodes(node)
 
   let n = node.nextSibling!
   while (n && isNonHydrationNode(n)) {

@@ -1,19 +1,25 @@
 import { warn } from '@vue/runtime-dom'
 import {
   insertionAnchor,
-  insertionChildIndex,
   insertionParent,
   resetInsertionState,
   setInsertionState,
 } from '../insertionState'
 import {
-  __next,
-  __nthChild,
+  _child,
+  _next,
   createTextNode,
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
 } from './node'
-import { BLOCK_END_ANCHOR_LABEL, isVaporAnchor } from '@vue/shared'
+import {
+  BLOCK_APPEND_ANCHOR_LABEL,
+  BLOCK_INSERTION_ANCHOR_LABEL,
+  BLOCK_PREPEND_ANCHOR_LABEL,
+  isVaporAnchor,
+} from '@vue/shared'
+
+const isHydratingStack = [] as boolean[]
 
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
@@ -24,21 +30,13 @@ export function setCurrentHydrationNode(node: Node | null): void {
 
 function findParentSibling(n: Node): Node | null {
   if (!n.parentNode) return null
-  let next = n.parentNode.nextSibling
-  while (next && isComment(next, BLOCK_END_ANCHOR_LABEL)) {
-    next = next.nextElementSibling
-  }
-  return next ? next : findParentSibling(n.parentNode)
+  return n.parentNode.nextSibling || findParentSibling(n.parentNode)
 }
 
 export function advanceHydrationNode(node: Node & { $ps?: Node | null }): void {
-  let next = node.nextSibling
-  while (next && isComment(next, BLOCK_END_ANCHOR_LABEL)) {
-    next = next.nextSibling
-  }
-
   // if no next sibling, find the next node in the parent chain
-  const ret = next || node.$ps || (node.$ps = findParentSibling(node))
+  const ret =
+    node.nextSibling || node.$ps || (node.$ps = findParentSibling(node))
   if (ret) setCurrentHydrationNode(ret)
 }
 
@@ -54,22 +52,26 @@ function performHydration<T>(
     locateHydrationNode = locateHydrationNodeImpl
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
-    ;(Node.prototype as any).$np = undefined
+    ;(Node.prototype as any).$pa = undefined
+    ;(Node.prototype as any).$ia = undefined
+    ;(Node.prototype as any).$aa = undefined
     isOptimized = true
   }
   enableHydrationNodeLookup()
-  isHydrating = true
+  isHydratingStack.push((isHydrating = true))
   setup()
   const res = fn()
   cleanup()
   currentHydrationNode = null
-  isHydrating = false
+  isHydratingStack.pop()
+  isHydrating = isHydratingStack[isHydratingStack.length - 1] || false
   disableHydrationNodeLookup()
   return res
 }
 
 export function withHydration(container: ParentNode, fn: () => void): void {
-  const setup = () => setInsertionState(container, 0)
+  // @ts-expect-error
+  const setup = () => setInsertionState(container, -1)
   const cleanup = () => resetInsertionState()
   return performHydration(fn, setup, cleanup)
 }
@@ -136,20 +138,32 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
 
 function locateHydrationNodeImpl(): void {
   let node: Node | null
-  // prepend / firstChild
-  if (insertionAnchor === 0) {
-    const n = insertionParent!.$np || 0
-    node = __nthChild(insertionParent!, n)
-    insertionParent!.$np = n + 1
+  // @ts-expect-error
+  if (insertionAnchor === -1) {
+    // firstChild
+    node = _child(insertionParent!)!
+  } else if (insertionAnchor === 0) {
+    // prepend
+    node = insertionParent!.$pa = locateHydrationNodeByAnchor(
+      insertionParent!.$pa || _child(insertionParent!),
+      BLOCK_PREPEND_ANCHOR_LABEL,
+    )!
   } else if (insertionAnchor) {
-    // `insertionAnchor` is a Node, it is the DOM node to hydrate
-    // Template:   `...<span/><!----><span/>...`// `insertionAnchor` is the placeholder
-    // SSR Output: `...<span/>Content<span/>...`// `insertionAnchor` is the actual node
-    node = insertionAnchor
+    // insertion anchor
+    node = insertionParent!.$ia = locateHydrationNodeByAnchor(
+      insertionParent!.$ia || _child(insertionParent!),
+      BLOCK_INSERTION_ANCHOR_LABEL,
+    )!
+  } else if (insertionAnchor === null) {
+    // append anchor
+    node = insertionParent!.$aa = locateHydrationNodeByAnchor(
+      insertionParent!.$aa || _child(insertionParent!),
+      BLOCK_APPEND_ANCHOR_LABEL,
+    )!
   } else {
     node = currentHydrationNode
     if (insertionParent && (!node || node.parentNode !== insertionParent)) {
-      node = __nthChild(insertionParent, insertionChildIndex || 0)
+      node = _child(insertionParent)
     }
   }
 
@@ -212,4 +226,21 @@ export function locateVaporFragmentAnchor(
 
 export function isEmptyTextNode(node: Node): node is Text {
   return node.nodeType === 3 && !(node as Text).data.trim()
+}
+
+function locateHydrationNodeByAnchor(
+  node: Node,
+  anchorLabel: string,
+): Node | null {
+  while (node) {
+    if (isComment(node, `[${anchorLabel}`)) return node.nextSibling
+    node = node.nextSibling!
+  }
+
+  if (__DEV__) {
+    throw new Error(
+      `Could not locate hydration node with anchor label: ${anchorLabel}`,
+    )
+  }
+  return null
 }

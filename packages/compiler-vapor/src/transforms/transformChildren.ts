@@ -70,30 +70,12 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
     if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
       if (prevDynamics.length) {
         if (hasStaticTemplate) {
-          // each dynamic child gets its own placeholder node.
-          // this makes it easier to locate the corresponding node during hydration.
-          for (let i = 0; i < prevDynamics.length; i++) {
-            const idx = index - prevDynamics.length + i
-            context.childrenTemplate[idx] = `<!>`
-            const dynamicChild = prevDynamics[i]
-            dynamicChild.flags -= DynamicFlag.NON_TEMPLATE
-            const anchor = (dynamicChild.anchor = context.increaseId())
-            if (
-              dynamicChild.operation &&
-              isBlockOperation(dynamicChild.operation)
-            ) {
-              // block types
-              dynamicChild.operation.parent = context.reference()
-              dynamicChild.operation.anchor = anchor
-            }
-          }
+          context.childrenTemplate[index - prevDynamics.length] = `<!>`
+          prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
+          const anchor = (prevDynamics[0].anchor = context.increaseId())
+          registerInsertion(prevDynamics, context, anchor)
         } else {
-          registerInsertion(
-            prevDynamics,
-            context,
-            -1 /* prepend */,
-            getChildIndex(children, prevDynamics[0]),
-          )
+          registerInsertion(prevDynamics, context, -1 /* prepend */)
         }
         prevDynamics = []
       }
@@ -102,12 +84,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
   }
 
   if (prevDynamics.length) {
-    registerInsertion(
-      prevDynamics,
-      context,
-      undefined,
-      getChildIndex(children, prevDynamics[0]),
-    )
+    registerInsertion(prevDynamics, context, -2 /* append */)
   }
 }
 
@@ -115,7 +92,6 @@ function registerInsertion(
   dynamics: IRDynamicInfo[],
   context: TransformContext,
   anchor?: number,
-  childIndex?: number,
 ) {
   for (const child of dynamics) {
     if (child.template != null) {
@@ -124,27 +100,12 @@ function registerInsertion(
         type: IRNodeTypes.INSERT_NODE,
         elements: dynamics.map(child => child.id!),
         parent: context.reference(),
-        anchor,
+        anchor: anchor === -2 ? undefined : anchor,
       })
     } else if (child.operation && isBlockOperation(child.operation)) {
       // block types
       child.operation.parent = context.reference()
       child.operation.anchor = anchor
-      child.operation.childIndex = childIndex
     }
   }
-}
-
-function getChildIndex(
-  children: IRDynamicInfo[],
-  child: IRDynamicInfo,
-): number {
-  let index = 0
-  for (const c of children) {
-    // treat v-if/v-else/v-else-if as a single node
-    if (c.isIfBranch) continue
-    if (c === child) break
-    index++
-  }
-  return index
 }

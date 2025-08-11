@@ -43,6 +43,7 @@ import {
 import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
   type SSRTransformContext,
+  processBlockNodeAnchor,
   processChildren,
   processChildrenAsStatement,
 } from '../ssrCodegenTransform'
@@ -271,8 +272,11 @@ export function ssrProcessComponent(
       // dynamic component (`resolveDynamicComponent` call)
       // the codegen node is a `renderVNode` call
       context.pushStatement(node.ssrCodegenNode)
-      // anchor for dynamic component for vapor hydration
-      context.pushStringPart(`<!--${DYNAMIC_COMPONENT_ANCHOR_LABEL}-->`)
+
+      // anchor for vapor dynamic component
+      if (context.options.vapor) {
+        context.pushStringPart(`<!--${DYNAMIC_COMPONENT_ANCHOR_LABEL}-->`)
+      }
     }
   }
 }
@@ -339,6 +343,11 @@ function createVNodeSlotBranch(
     loc: locStub,
     codegenNode: undefined,
   }
+
+  if (parentContext.vapor) {
+    injectVaporInsertionAnchors(children)
+  }
+
   subTransform(wrapperNode, subOptions, parentContext)
   return createReturnStatement(children)
 }
@@ -378,6 +387,71 @@ function subTransform(
   // - imports are only used for asset urls and should be consistent between
   //   node/client branches
   // - hoists are not enabled for the client branch here
+}
+
+function injectVaporInsertionAnchors(children: TemplateChildNode[]) {
+  processBlockNodeAnchor(children)
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    switch (child.type) {
+      case NodeTypes.ELEMENT:
+        switch (child.tagType) {
+          case ElementTypes.COMPONENT:
+          case ElementTypes.SLOT:
+            if (child.anchor) {
+              children.splice(i, 0, {
+                type: NodeTypes.COMMENT,
+                content: `[${child.anchor}`,
+                loc: locStub,
+              })
+              children.splice(i + 2, 0, {
+                type: NodeTypes.COMMENT,
+                content: `${child.anchor}]`,
+                loc: locStub,
+              })
+              i += 2
+            }
+            break
+          default: {
+            const { props } = child
+            if (
+              props.some(
+                p =>
+                  p.name === 'if' ||
+                  p.name === 'else-if' ||
+                  p.name === 'else' ||
+                  p.name === 'for',
+              )
+            ) {
+              // @ts-expect-error
+              if (child.anchor) {
+                children.splice(i, 0, {
+                  type: NodeTypes.COMMENT,
+                  // @ts-expect-error
+                  content: `[${child.anchor}`,
+                  loc: locStub,
+                })
+                children.splice(i + 2, 0, {
+                  type: NodeTypes.COMMENT,
+                  // @ts-expect-error
+                  content: `${child.anchor}]`,
+                  loc: locStub,
+                })
+              }
+              i += 2
+              break
+            }
+          }
+        }
+    }
+
+    if (
+      child.type === NodeTypes.ELEMENT &&
+      child.tagType === ElementTypes.ELEMENT
+    ) {
+      injectVaporInsertionAnchors(child.children)
+    }
+  }
 }
 
 function clone(v: any): any {

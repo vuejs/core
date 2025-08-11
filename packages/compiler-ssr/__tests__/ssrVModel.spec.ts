@@ -70,7 +70,7 @@ describe('ssr: v-model', () => {
               : _ssrLooseEqual(_ctx.model, i))) ? " selected" : ""
           }></option>\`)
         })
-        _push(\`<!--]--><!--for--></select></div>\`)
+        _push(\`<!--]--></select></div>\`)
       }"
     `)
 
@@ -91,7 +91,6 @@ describe('ssr: v-model', () => {
               ? _ssrLooseContain(_ctx.model, _ctx.i)
               : _ssrLooseEqual(_ctx.model, _ctx.i))) ? " selected" : ""
           }></option>\`)
-          _push(\`<!--if-->\`)
         } else {
           _push(\`<!---->\`)
         }
@@ -191,7 +190,7 @@ describe('ssr: v-model', () => {
             _ssrInterpolate(item)
           }</option>\`)
         })
-        _push(\`<!--]--><!--for--></optgroup></select></div>\`)
+        _push(\`<!--]--></optgroup></select></div>\`)
       }"
     `)
 
@@ -217,7 +216,6 @@ describe('ssr: v-model', () => {
           }>\${
             _ssrInterpolate(_ctx.item)
           }</option>\`)
-          _push(\`<!--if-->\`)
         } else {
           _push(\`<!---->\`)
         }
@@ -252,8 +250,7 @@ describe('ssr: v-model', () => {
               _ssrInterpolate(item)
             }</option>\`)
           })
-          _push(\`<!--]--><!--for-->\`)
-          _push(\`<!--if-->\`)
+          _push(\`<!--]-->\`)
         } else {
           _push(\`<!---->\`)
         }
@@ -287,13 +284,12 @@ describe('ssr: v-model', () => {
             }>\${
               _ssrInterpolate(item)
             }</option>\`)
-            _push(\`<!--if-->\`)
           } else {
             _push(\`<!---->\`)
           }
           _push(\`<!--]-->\`)
         })
-        _push(\`<!--]--><!--for--></optgroup></select></div>\`)
+        _push(\`<!--]--></optgroup></select></div>\`)
       }"
     `)
   })

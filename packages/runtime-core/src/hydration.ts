@@ -32,7 +32,6 @@ import {
   isRenderableAttrValue,
   isReservedProp,
   isString,
-  isVaporAnchor,
   normalizeClass,
   normalizeCssVarValue,
   normalizeStyle,
@@ -118,22 +117,13 @@ export function createHydrationFunctions(
     o: {
       patchProp,
       createText,
-      nextSibling: next,
+      nextSibling,
       parentNode,
       remove,
       insert,
       createComment,
     },
   } = rendererInternals
-
-  function nextSibling(node: Node) {
-    let n = next(node)
-    // skip vapor mode specific anchors
-    if (n && isVaporAnchor(n)) {
-      n = next(n)
-    }
-    return n
-  }
 
   const hydrate: RootHydrateFunction = (vnode, container) => {
     if (!container.hasChildNodes()) {
@@ -161,10 +151,6 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     optimized = false,
   ): Node | null => {
-    // skip vapor mode specific anchors
-    if (isVaporAnchor(node)) {
-      node = nextSibling(node)!
-    }
     optimized = optimized || !!vnode.dynamicChildren
     const isFragmentStart = isComment(node) && node.data === '['
     const onMismatch = () =>
@@ -486,7 +472,7 @@ export function createHydrationFunctions(
 
           // The SSRed DOM contains more nodes than it should. Remove them.
           const cur = next
-          next = nextSibling(next)
+          next = next.nextSibling
           remove(cur)
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
@@ -592,7 +578,7 @@ export function createHydrationFunctions(
       }
     }
 
-    return nextSibling(el)
+    return el.nextSibling
   }
 
   const hydrateChildren = (

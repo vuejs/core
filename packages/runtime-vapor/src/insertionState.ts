@@ -1,14 +1,11 @@
 export let insertionParent:
   | (ParentNode & {
-      // number of prepends - hydration only
-      // consecutive prepends need to skip nodes that were prepended earlier
-      // each prepend increases the value of $prepend
-      $np?: number
+      $pa?: Node
+      $ia?: Node
+      $aa?: Node
     })
   | undefined
-export let insertionAnchor: Node | 0 | undefined
-
-export let insertionChildIndex: number | undefined
+export let insertionAnchor: Node | 0 | undefined | null
 
 /**
  * This function is called before a block type that requires insertion
@@ -17,14 +14,12 @@ export let insertionChildIndex: number | undefined
  */
 export function setInsertionState(
   parent: ParentNode,
-  anchor?: Node | 0,
-  offset?: number,
+  anchor?: Node | 0 | null,
 ): void {
   insertionParent = parent
   insertionAnchor = anchor
-  insertionChildIndex = offset
 }
 
 export function resetInsertionState(): void {
-  insertionParent = insertionAnchor = insertionChildIndex = undefined
+  insertionParent = insertionAnchor = undefined
 }
