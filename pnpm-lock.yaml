@@ -204,8 +204,8 @@ importers:
   packages-private/sfc-playground:
     dependencies:
       '@vue/repl':
-        specifier: ^4.6.2
-        version: 4.6.2
+        specifier: ^4.6.3
+        version: 4.6.3
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
@@ -1490,8 +1490,8 @@ packages:
     resolution: {integrity: sha512-oTyUE+QHIzLw2PpV14GD/c7EohDyP64xCniWTcqcEmTd699eFqTIwOmtDYjcO1j3QgdXoJEoWv1/cCdLrRoOfg==}
     engines: {node: '>= 0.12.0'}
 
-  '@vue/repl@4.6.2':
-    resolution: {integrity: sha512-Rjl/X++MbfWNncry+qiIadY5BdrB3hp0Iu9W7R9eLJAce3hXnjUiykMK5rLAkQJpB6N83SR0LGNJbKg7gpzplg==}
+  '@vue/repl@4.6.3':
+    resolution: {integrity: sha512-2ckL15D67pOlnH0wtPHkGCoggCzZiPqWuZbNeYvLQTY24ey6P6GX1TY6b7uruAIC6etecCJQdrGSnc+XXsWDDA==}
 
   '@zeit/schemas@2.36.0':
     resolution: {integrity: sha512-7kjMwcChYEzMKjeex9ZFXkt1AyNov9R5HZtjBKVsmVpw7pa7ZtlCGvCBC2vnnXctaYN+aRI61HjIqeetZW5ROg==}
@@ -4417,7 +4417,7 @@ snapshots:
 
   '@vue/consolidate@1.0.0': {}
 
-  '@vue/repl@4.6.2': {}
+  '@vue/repl@4.6.3': {}
 
   '@zeit/schemas@2.36.0': {}
 
