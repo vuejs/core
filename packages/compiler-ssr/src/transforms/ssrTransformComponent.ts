@@ -8,7 +8,9 @@ import {
   type DirectiveNode,
   ElementTypes,
   type ExpressionNode,
+  type ForNode,
   type FunctionExpression,
+  type IfNode,
   type JSChildNode,
   Namespaces,
   type NodeTransform,
@@ -43,6 +45,7 @@ import {
 import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
   type SSRTransformContext,
+  isElementWithChildren,
   processBlockNodeAnchor,
   processChildren,
   processChildrenAsStatement,
@@ -333,6 +336,11 @@ function createVNodeSlotBranch(
   if (vFor) {
     wrapperProps.push(extend({}, vFor))
   }
+
+  if (parentContext.vapor) {
+    children = injectVaporInsertionAnchors(children)
+  }
+
   const wrapperNode: TemplateNode = {
     type: NodeTypes.ELEMENT,
     ns: Namespaces.HTML,
@@ -342,10 +350,6 @@ function createVNodeSlotBranch(
     children,
     loc: locStub,
     codegenNode: undefined,
-  }
-
-  if (parentContext.vapor) {
-    injectVaporInsertionAnchors(children)
   }
 
   subTransform(wrapperNode, subOptions, parentContext)
@@ -389,69 +393,131 @@ function subTransform(
   // - hoists are not enabled for the client branch here
 }
 
-function injectVaporInsertionAnchors(children: TemplateChildNode[]) {
+function injectVaporInsertionAnchors(
+  children: TemplateChildNode[],
+): TemplateChildNode[] {
   processBlockNodeAnchor(children)
+  const newChildren: TemplateChildNode[] = new Array(children.length * 3)
+  let newIndex = 0
+
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    switch (child.type) {
-      case NodeTypes.ELEMENT:
-        switch (child.tagType) {
-          case ElementTypes.COMPONENT:
-          case ElementTypes.SLOT:
-            if (child.anchor) {
-              children.splice(i, 0, {
-                type: NodeTypes.COMMENT,
-                content: `[${child.anchor}`,
-                loc: locStub,
-              })
-              children.splice(i + 2, 0, {
-                type: NodeTypes.COMMENT,
-                content: `${child.anchor}]`,
-                loc: locStub,
-              })
-              i += 2
-            }
-            break
-          default: {
-            const { props } = child
-            if (
-              props.some(
-                p =>
-                  p.name === 'if' ||
-                  p.name === 'else-if' ||
-                  p.name === 'else' ||
-                  p.name === 'for',
-              )
-            ) {
-              // @ts-expect-error
-              if (child.anchor) {
-                children.splice(i, 0, {
-                  type: NodeTypes.COMMENT,
-                  // @ts-expect-error
-                  content: `[${child.anchor}`,
-                  loc: locStub,
-                })
-                children.splice(i + 2, 0, {
-                  type: NodeTypes.COMMENT,
-                  // @ts-expect-error
-                  content: `${child.anchor}]`,
-                  loc: locStub,
-                })
-              }
-              i += 2
-              break
-            }
-          }
-        }
+
+    if (child.type !== NodeTypes.ELEMENT) {
+      newChildren[newIndex++] = child
+      continue
     }
 
-    if (
-      child.type === NodeTypes.ELEMENT &&
-      child.tagType === ElementTypes.ELEMENT
-    ) {
-      injectVaporInsertionAnchors(child.children)
+    const { tagType, props } = child
+    let anchor: string | undefined
+
+    if (tagType === ElementTypes.COMPONENT || tagType === ElementTypes.SLOT) {
+      anchor = child.anchor
+    } else if (tagType === ElementTypes.ELEMENT) {
+      let hasIf = false
+      let hasFor = false
+
+      for (const prop of props) {
+        if (prop.name === 'if') {
+          hasIf = true
+          break
+        } else if (prop.name === 'for') {
+          hasFor = true
+        }
+      }
+
+      if (hasIf) {
+        anchor = (child as any as IfNode).anchor
+        if (anchor) {
+          // find sibling else-if/else branches
+          // inject anchor after else-if/else branch if founded
+          // otherwise inject after if node
+          const lastBranchIndex = findLastIfBranchIndex(children, i)
+          if (lastBranchIndex > i) {
+            // inject anchor before if node
+            newChildren[newIndex++] = createAnchorComment(`[${anchor}`)
+
+            // copy branch nodes
+            for (let j = i; j <= lastBranchIndex; j++) {
+              const node = children[j]
+              newChildren[newIndex++] = node
+
+              if (isElementWithChildren(node)) {
+                node.children = injectVaporInsertionAnchors(node.children)
+              }
+            }
+
+            // inject anchor after branch nodes
+            newChildren[newIndex++] = createAnchorComment(`${anchor}]`)
+
+            i = lastBranchIndex
+            continue
+          }
+        }
+      } else if (hasFor) {
+        anchor = (child as any as ForNode).anchor
+      }
+    }
+
+    // inject anchor before and after the child
+    if (anchor) newChildren[newIndex++] = createAnchorComment(`[${anchor}`)
+    newChildren[newIndex++] = child
+    if (anchor) newChildren[newIndex++] = createAnchorComment(`${anchor}]`)
+
+    if (isElementWithChildren(child)) {
+      child.children = injectVaporInsertionAnchors(child.children)
     }
   }
+
+  newChildren.length = newIndex
+  return newChildren
+}
+
+function createAnchorComment(content: string): TemplateChildNode {
+  return {
+    type: NodeTypes.COMMENT,
+    content,
+    loc: locStub,
+  }
+}
+
+function findLastIfBranchIndex(
+  children: TemplateChildNode[],
+  ifIndex: number,
+): number {
+  let lastIndex = ifIndex
+
+  for (let i = ifIndex + 1; i < children.length; i++) {
+    const sibling = children[i]
+
+    if (sibling.type !== NodeTypes.ELEMENT) {
+      continue
+    }
+
+    let hasElseIf = false
+    let hasElse = false
+
+    for (const prop of sibling.props) {
+      if (prop.name === 'else-if') {
+        hasElseIf = true
+        break
+      } else if (prop.name === 'else') {
+        hasElse = true
+        break
+      }
+    }
+
+    if (hasElseIf || hasElse) {
+      lastIndex = i
+      if (hasElse) {
+        break
+      }
+    } else {
+      break
+    }
+  }
+
+  return lastIndex
 }
 
 function clone(v: any): any {

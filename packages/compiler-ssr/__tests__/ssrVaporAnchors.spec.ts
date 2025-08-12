@@ -1,8 +1,3 @@
-// import {
-//   BLOCK_APPEND_ANCHOR_LABEL,
-//   BLOCK_INSERTION_ANCHOR_LABEL,
-//   BLOCK_PREPEND_ANCHOR_LABEL,
-// } from '@vue/shared'
 import { getCompiledString } from './utils'
 
 describe('insertion anchors', () => {
@@ -109,29 +104,46 @@ describe('insertion anchors', () => {
       `)
     })
 
-    test('prepend anchor with v-if', () => {
+    test('prepend anchor with v-if/else-if/else', () => {
       expect(
-        getCompiledString('<div><span v-if="foo"/><span/></div>', {
-          vapor: true,
-        }),
+        getCompiledString(
+          `<div>
+            <span v-if="foo"/>
+            <span v-else-if="bar"/>
+            <span v-else/>
+            <span/>
+          </div>`,
+          {
+            vapor: true,
+          },
+        ),
       ).toMatchInlineSnapshot(`
         "\`<div><!--[p-->\`)
           if (_ctx.foo) {
             _push(\`<span></span>\`)
             _push(\`<!--if-->\`)
+          } else if (_ctx.bar) {
+            _push(\`<span></span>\`)
+            _push(\`<!--if-->\`)
           } else {
-            _push(\`<!---->\`)
+            _push(\`<span></span>\`)
+            _push(\`<!--if-->\`)
           }
           _push(\`<!--p]--><span></span></div>\`"
       `)
     })
 
-    test('prepend anchor with v-if in ssr slot vnode fallback', () => {
+    test('prepend anchor with v-if/else-if/else in ssr slot vnode fallback', () => {
       expect(
         getCompiledString(
           `<component :is="'div'">
-            <div><span v-if="foo"/><span/></div>
-          </component>`,
+              <div>
+                <span v-if="foo"/>
+                <span v-else-if="bar"/>
+                <span v-else/>
+                <span/>
+              </div>
+            </component>`,
           { vapor: true },
         ),
       ).toMatchInlineSnapshot(`
@@ -143,8 +155,12 @@ describe('insertion anchors', () => {
                 if (_ctx.foo) {
                   _push(\`<span\${_scopeId}></span>\`)
                   _push(\`<!--if-->\`)
+                } else if (_ctx.bar) {
+                  _push(\`<span\${_scopeId}></span>\`)
+                  _push(\`<!--if-->\`)
                 } else {
-                  _push(\`<!---->\`)
+                  _push(\`<span\${_scopeId}></span>\`)
+                  _push(\`<!--if-->\`)
                 }
                 _push(\`<!--p]--><span\${_scopeId}></span></div>\`)
               } else {
@@ -153,7 +169,170 @@ describe('insertion anchors', () => {
                     _createCommentVNode("[p"),
                     (_ctx.foo)
                       ? (_openBlock(), _createBlock("span", { key: 0 }))
-                      : _createCommentVNode("v-if", true),
+                      : (_ctx.bar)
+                        ? (_openBlock(), _createBlock("span", { key: 1 }))
+                        : (_openBlock(), _createBlock("span", { key: 2 })),
+                    _createCommentVNode("p]"),
+                    _createVNode("span")
+                  ])
+                ]
+              }
+            }),
+            _: 1 /* STABLE */
+          }), _parent)
+          _push(\`<!--dynamic-component--><!--a]-->\`"
+      `)
+    })
+
+    test('prepend anchor with nested v-if', () => {
+      expect(
+        getCompiledString(
+          `<div>
+            <span v-if="foo">
+              <span v-if="foo1" />
+              <span />
+            </span>
+            <span v-else-if="bar">
+              <span v-if="bar1" />
+              <span />
+            </span>
+            <span v-else>
+              <span v-if="bar2" />
+              <span />
+            </span>
+            <span />
+          </div>`,
+          {
+            vapor: true,
+          },
+        ),
+      ).toMatchInlineSnapshot(`
+        "\`<div><!--[p-->\`)
+          if (_ctx.foo) {
+            _push(\`<span><!--[p-->\`)
+            if (_ctx.foo1) {
+              _push(\`<span></span>\`)
+              _push(\`<!--if-->\`)
+            } else {
+              _push(\`<!---->\`)
+            }
+            _push(\`<!--p]--><span></span></span>\`)
+            _push(\`<!--if-->\`)
+          } else if (_ctx.bar) {
+            _push(\`<span><!--[p-->\`)
+            if (_ctx.bar1) {
+              _push(\`<span></span>\`)
+              _push(\`<!--if-->\`)
+            } else {
+              _push(\`<!---->\`)
+            }
+            _push(\`<!--p]--><span></span></span>\`)
+            _push(\`<!--if-->\`)
+          } else {
+            _push(\`<span><!--[p-->\`)
+            if (_ctx.bar2) {
+              _push(\`<span></span>\`)
+              _push(\`<!--if-->\`)
+            } else {
+              _push(\`<!---->\`)
+            }
+            _push(\`<!--p]--><span></span></span>\`)
+            _push(\`<!--if-->\`)
+          }
+          _push(\`<!--p]--><span></span></div>\`"
+      `)
+    })
+
+    test('prepend anchor with nested v-if in ssr slot vnode fallback', () => {
+      expect(
+        getCompiledString(
+          `<component :is="'div'">
+              <div>
+              <span v-if="foo">
+                <span v-if="foo1" />
+                <span />
+              </span>
+              <span v-else-if="bar">
+                <span v-if="bar1" />
+                <span />
+              </span>
+              <span v-else>
+                <span v-if="bar2" />
+                <span />
+              </span>
+              <span />
+            </div>
+          </component>`,
+          { vapor: true },
+        ),
+      ).toMatchInlineSnapshot(`
+        "\`<!--[a-->\`)
+          _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
+            default: _withCtx((_, _push, _parent, _scopeId) => {
+              if (_push) {
+                _push(\`<div\${_scopeId}><!--[p-->\`)
+                if (_ctx.foo) {
+                  _push(\`<span\${_scopeId}><!--[p-->\`)
+                  if (_ctx.foo1) {
+                    _push(\`<span\${_scopeId}></span>\`)
+                    _push(\`<!--if-->\`)
+                  } else {
+                    _push(\`<!---->\`)
+                  }
+                  _push(\`<!--p]--><span\${_scopeId}></span></span>\`)
+                  _push(\`<!--if-->\`)
+                } else if (_ctx.bar) {
+                  _push(\`<span\${_scopeId}><!--[p-->\`)
+                  if (_ctx.bar1) {
+                    _push(\`<span\${_scopeId}></span>\`)
+                    _push(\`<!--if-->\`)
+                  } else {
+                    _push(\`<!---->\`)
+                  }
+                  _push(\`<!--p]--><span\${_scopeId}></span></span>\`)
+                  _push(\`<!--if-->\`)
+                } else {
+                  _push(\`<span\${_scopeId}><!--[p-->\`)
+                  if (_ctx.bar2) {
+                    _push(\`<span\${_scopeId}></span>\`)
+                    _push(\`<!--if-->\`)
+                  } else {
+                    _push(\`<!---->\`)
+                  }
+                  _push(\`<!--p]--><span\${_scopeId}></span></span>\`)
+                  _push(\`<!--if-->\`)
+                }
+                _push(\`<!--p]--><span\${_scopeId}></span></div>\`)
+              } else {
+                return [
+                  _createVNode("div", null, [
+                    _createCommentVNode("[p"),
+                    (_ctx.foo)
+                      ? (_openBlock(), _createBlock("span", { key: 0 }, [
+                          _createCommentVNode("[p"),
+                          (_ctx.foo1)
+                            ? (_openBlock(), _createBlock("span", { key: 0 }))
+                            : _createCommentVNode("v-if", true),
+                          _createCommentVNode("p]"),
+                          _createVNode("span")
+                        ]))
+                      : (_ctx.bar)
+                        ? (_openBlock(), _createBlock("span", { key: 1 }, [
+                            _createCommentVNode("[p"),
+                            (_ctx.bar1)
+                              ? (_openBlock(), _createBlock("span", { key: 0 }))
+                              : _createCommentVNode("v-if", true),
+                            _createCommentVNode("p]"),
+                            _createVNode("span")
+                          ]))
+                        : (_openBlock(), _createBlock("span", { key: 2 }, [
+                            _createCommentVNode("[p"),
+                            (_ctx.bar2)
+                              ? (_openBlock(), _createBlock("span", { key: 0 }))
+                              : _createCommentVNode("v-if", true),
+                            _createCommentVNode("p]"),
+                            _createVNode("span")
+                          ])),
                     _createCommentVNode("p]"),
                     _createVNode("span")
                   ])

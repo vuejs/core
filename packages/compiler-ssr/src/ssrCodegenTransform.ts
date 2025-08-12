@@ -1,8 +1,11 @@
 import {
+  type AttributeNode,
   type BlockStatement,
   type CallExpression,
   type CompilerError,
   type CompilerOptions,
+  type DirectiveNode,
+  type ElementNode,
   ElementTypes,
   type IfStatement,
   type JSChildNode,
@@ -169,12 +172,11 @@ export function processChildren(
     context.pushStringPart(`<!--[-->`)
   }
 
-  const { children, type, tagType } = parent as PlainElementNode
+  const { children } = parent
 
   if (
     context.options.vapor &&
-    type === NodeTypes.ELEMENT &&
-    tagType === ElementTypes.ELEMENT
+    isElementWithChildren(parent as PlainElementNode)
   ) {
     processBlockNodeAnchor(children)
   }
@@ -308,6 +310,12 @@ export function processBlockNodeAnchor(children: TemplateChildNode[]): void {
   }
 }
 
+export function hasBlockDir(
+  props: Array<AttributeNode | DirectiveNode>,
+): boolean {
+  return props.some(p => p.name === 'if' || p.name === 'for')
+}
+
 function isBlockNode(child: TemplateChildNode): boolean {
   return (
     child.type === NodeTypes.IF ||
@@ -315,13 +323,7 @@ function isBlockNode(child: TemplateChildNode): boolean {
     (child.type === NodeTypes.ELEMENT &&
       (child.tagType === ElementTypes.COMPONENT ||
         child.tagType === ElementTypes.SLOT ||
-        child.props.some(
-          p =>
-            p.name === 'if' ||
-            p.name === 'else-if' ||
-            p.name === 'else' ||
-            p.name === 'for',
-        )))
+        hasBlockDir(child.props)))
   )
 }
 
@@ -332,12 +334,16 @@ function isStaticNode(child: TemplateChildNode): boolean {
     child.type === NodeTypes.COMMENT ||
     (child.type === NodeTypes.ELEMENT &&
       child.tagType === ElementTypes.ELEMENT &&
-      !child.props.some(
-        p =>
-          p.name === 'if' ||
-          p.name === 'else-if' ||
-          p.name === 'else' ||
-          p.name === 'for',
-      ))
+      !hasBlockDir(child.props))
+  )
+}
+
+export function isElementWithChildren(
+  node: TemplateChildNode,
+): node is ElementNode {
+  return (
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType === ElementTypes.ELEMENT &&
+    node.children.length > 0
   )
 }
