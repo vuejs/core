@@ -65,7 +65,7 @@ function performHydration<T>(
   currentHydrationNode = null
   isHydratingStack.pop()
   isHydrating = isHydratingStack[isHydratingStack.length - 1] || false
-  disableHydrationNodeLookup()
+  if (!isHydrating) disableHydrationNodeLookup()
   return res
 }
 
