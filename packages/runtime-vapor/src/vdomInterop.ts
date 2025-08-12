@@ -142,7 +142,7 @@ const vaporInteropImpl: Omit<
     } else if (vnode.vb) {
       remove(vnode.vb, container)
     }
-    remove(vnode.anchor as Node, container)
+    if (vnode.anchor) remove(vnode.anchor as Node, container)
   },
 
   /**
