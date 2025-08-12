@@ -130,10 +130,10 @@ describe('insertion anchors', () => {
             _push(\`<!--if-->\`)
           } else if (_ctx.bar) {
             _push(\`<span></span>\`)
-            _push(\`<!--if-->\`)
+            _push(\`<!--if--><!--if-->\`)
           } else {
             _push(\`<span></span>\`)
-            _push(\`<!--if-->\`)
+            _push(\`<!--if--><!--if-->\`)
           }
           _push(\`<!--p]--><span></span></div>\`"
       `)
@@ -163,10 +163,10 @@ describe('insertion anchors', () => {
                   _push(\`<!--if-->\`)
                 } else if (_ctx.bar) {
                   _push(\`<span\${_scopeId}></span>\`)
-                  _push(\`<!--if-->\`)
+                  _push(\`<!--if--><!--if-->\`)
                 } else {
                   _push(\`<span\${_scopeId}></span>\`)
-                  _push(\`<!--if-->\`)
+                  _push(\`<!--if--><!--if-->\`)
                 }
                 _push(\`<!--p]--><span\${_scopeId}></span></div>\`)
               } else {
@@ -233,7 +233,7 @@ describe('insertion anchors', () => {
               _push(\`<!---->\`)
             }
             _push(\`<!--p]--><span></span></span>\`)
-            _push(\`<!--if-->\`)
+            _push(\`<!--if--><!--if-->\`)
           } else {
             _push(\`<span><!--[p-->\`)
             if (_ctx.bar2) {
@@ -243,7 +243,7 @@ describe('insertion anchors', () => {
               _push(\`<!---->\`)
             }
             _push(\`<!--p]--><span></span></span>\`)
-            _push(\`<!--if-->\`)
+            _push(\`<!--if--><!--if-->\`)
           }
           _push(\`<!--p]--><span></span></div>\`"
       `)
@@ -296,7 +296,7 @@ describe('insertion anchors', () => {
                     _push(\`<!---->\`)
                   }
                   _push(\`<!--p]--><span\${_scopeId}></span></span>\`)
-                  _push(\`<!--if-->\`)
+                  _push(\`<!--if--><!--if-->\`)
                 } else {
                   _push(\`<span\${_scopeId}><!--[p-->\`)
                   if (_ctx.bar2) {
@@ -306,7 +306,7 @@ describe('insertion anchors', () => {
                     _push(\`<!---->\`)
                   }
                   _push(\`<!--p]--><span\${_scopeId}></span></span>\`)
-                  _push(\`<!--if-->\`)
+                  _push(\`<!--if--><!--if-->\`)
                 }
                 _push(\`<!--p]--><span\${_scopeId}></span></div>\`)
               } else {
@@ -500,8 +500,36 @@ describe('insertion anchors', () => {
   })
 })
 
-describe.todo('block anchors', () => {
-  test('if', () => {})
+describe('block anchors', () => {
+  test('if', () => {
+    expect(
+      getCompiledString(
+        `<span v-if="count === 1">1</span>
+        <span v-else-if="count === 2">2</span>
+        <span v-else-if="count === 3">3</span>
+        <span v-else>4</span>`,
+        {
+          vapor: true,
+        },
+      ),
+    ).toMatchInlineSnapshot(`
+      "\`<!--[a-->\`)
+        if (_ctx.count === 1) {
+          _push(\`<span>1</span>\`)
+          _push(\`<!--if-->\`)
+        } else if (_ctx.count === 2) {
+          _push(\`<span>2</span>\`)
+          _push(\`<!--if--><!--if-->\`)
+        } else if (_ctx.count === 3) {
+          _push(\`<span>3</span>\`)
+          _push(\`<!--if--><!--if--><!--if-->\`)
+        } else {
+          _push(\`<span>4</span>\`)
+          _push(\`<!--if--><!--if--><!--if-->\`)
+        }
+        _push(\`<!--a]-->\`"
+    `)
+  })
 
   test('if in ssr slot vnode fallback', () => {})
 
@@ -512,6 +540,8 @@ describe.todo('block anchors', () => {
   test('slot', () => {})
 
   test('slot in ssr slot vnode fallback', () => {})
+
+  test('forwarded slot', () => {})
 
   test('dynamic component', () => {})
 

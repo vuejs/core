@@ -36,7 +36,7 @@ export function render(_ctx) {
     const n10 = t3()
     const n11 = t4()
     return [n10, n11]
-  }, null, true))
+  }))
   const n13 = t5()
   const x13 = _child(n13, -1)
   _renderEffect(() => _setText(x13, _toDisplayString(_ctx.text)))
@@ -113,7 +113,7 @@ export function render(_ctx) {
   }, () => {
     const n7 = t2()
     return n7
-  }, null, true))
+  }))
   return n0
 }"
 `;
@@ -130,7 +130,7 @@ export function render(_ctx) {
   }, () => _createIf(() => (_ctx.orNot), () => {
     const n4 = t1()
     return n4
-  }, null, null, true))
+  }))
   return n0
 }"
 `;

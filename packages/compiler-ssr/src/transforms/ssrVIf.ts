@@ -37,6 +37,16 @@ export function ssrProcessIf(
   )
   context.pushStatement(ifStatement)
 
+  // anchor addition rules (matching runtime-vapor behavior):
+  // - v-else-if: the N-th branch → add N anchors
+  // - v-else: if there are M preceding branches → add M anchors
+  const isVapor = context.options.vapor
+  if (isVapor) {
+    ifStatement.consequent.body.push(
+      createCallExpression(`_push`, createIfAnchors(1)),
+    )
+  }
+
   let currentIf = ifStatement
   for (let i = 1; i < node.branches.length; i++) {
     const branch = node.branches[i]
@@ -51,9 +61,21 @@ export function ssrProcessIf(
         branch.condition,
         branchBlockStatement,
       )
+
+      if (isVapor) {
+        branchBlockStatement.body.push(
+          createCallExpression(`_push`, createIfAnchors(i + 1)),
+        )
+      }
     } else {
       // else
       currentIf.alternate = branchBlockStatement
+
+      if (isVapor) {
+        branchBlockStatement.body.push(
+          createCallExpression(`_push`, createIfAnchors(i)),
+        )
+      }
     }
   }
 
@@ -75,18 +97,14 @@ function processIfBranch(
     (children.length !== 1 || children[0].type !== NodeTypes.ELEMENT) &&
     // optimize away nested fragments when the only child is a ForNode
     !(children.length === 1 && children[0].type === NodeTypes.FOR)
-  const statement = processChildrenAsStatement(
-    branch,
-    context,
-    needFragmentWrapper,
-  )
 
-  // anchor for vapor v-if/v-else-if
-  if (context.options.vapor) {
-    statement.body.push(
-      createCallExpression(`_push`, [`\`<!--${IF_ANCHOR_LABEL}-->\``]),
-    )
+  return processChildrenAsStatement(branch, context, needFragmentWrapper)
+}
+
+function createIfAnchors(count: number): string[] {
+  const anchors: string[] = []
+  for (let i = 0; i < count; i++) {
+    anchors.push(`<!--${IF_ANCHOR_LABEL}-->`)
   }
-
-  return statement
+  return [`\`${anchors.join('')}\``]
 }

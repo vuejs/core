@@ -23,7 +23,6 @@ import {
   applyTransitionLeaveHooks,
 } from './components/Transition'
 import type { VaporComponentInstance } from './component'
-import { ELSE_IF_ANCHOR_LABEL } from '@vue/shared'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -148,34 +147,25 @@ export class DynamicFragment extends VaporFragment {
     // avoid repeated hydration during rendering fallback
     if (this.anchor) return
 
-    const createAnchor = () => {
-      const { parentNode, nextSibling } = findLastChild(this.nodes)!
-      parentNode!.insertBefore(
-        // TODO use empty text node in PROD?
-        (this.anchor = createComment(label)),
-        nextSibling,
-      )
-    }
-
-    // manually create anchors for:
-    // 1. else-if branch
-    // (not present in SSR output)
-    if (label === ELSE_IF_ANCHOR_LABEL) {
-      createAnchor()
+    // for `v-if="false"`, the node will be an empty comment, use it as the anchor.
+    // otherwise, find next sibling vapor fragment anchor
+    if (label === 'if' && isEmpty) {
+      this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, '')!
     } else {
-      // for `v-if="false"`, the node will be an empty comment, use it as the anchor.
-      // otherwise, find next sibling vapor fragment anchor
-      if (label === 'if' && isEmpty) {
-        this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, '')!
-      } else {
-        this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
-        if (!this.anchor && label === 'slot') {
-          // fallback to fragment end anchor for
-          this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, ']')!
-        }
+      this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
+      if (!this.anchor && label === 'slot') {
+        // fallback to fragment end anchor for
+        this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, ']')!
+      }
 
-        // anchors are not present in ssr slot vnode fallback
-        if (!this.anchor) createAnchor()
+      // anchors are not present in ssr slot vnode fallback
+      if (!this.anchor) {
+        const { parentNode, nextSibling } = findLastChild(this.nodes)!
+        parentNode!.insertBefore(
+          // TODO use empty text node in PROD?
+          (this.anchor = createComment(label)),
+          nextSibling,
+        )
       }
     }
 

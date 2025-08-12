@@ -38,7 +38,6 @@ export function genIf(
       positiveArg,
       negativeArg,
       once && 'true',
-      isNested && 'true',
     ),
   )
 
