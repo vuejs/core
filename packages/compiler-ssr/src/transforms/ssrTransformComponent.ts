@@ -417,7 +417,11 @@ function injectVaporInsertionAnchors(
     const { tagType, props } = child
     let anchor: string | undefined
 
-    if (tagType === ElementTypes.COMPONENT || tagType === ElementTypes.SLOT) {
+    if (
+      tagType === ElementTypes.COMPONENT ||
+      tagType === ElementTypes.SLOT ||
+      tagType === ElementTypes.TEMPLATE
+    ) {
       anchor = child.anchor
     } else if (tagType === ElementTypes.ELEMENT) {
       let hasIf = false

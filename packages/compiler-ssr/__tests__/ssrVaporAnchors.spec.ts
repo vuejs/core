@@ -351,6 +351,60 @@ describe('insertion anchors', () => {
       `)
     })
 
+    test('prepend anchor with template v-if', () => {
+      expect(
+        getCompiledString(
+          `<component :is="tag">
+            <div v-if="foo">
+              <template v-if="depth < 5">
+                foo
+              </template>
+              <div></div>
+            </div>
+          </component>`,
+          { vapor: true },
+        ),
+      ).toMatchInlineSnapshot(`
+        "\`<!--[a-->\`)
+          _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.tag), null, {
+            default: _withCtx((_, _push, _parent, _scopeId) => {
+              if (_push) {
+                if (_ctx.foo) {
+                  _push(\`<div\${_scopeId}><!--[p-->\`)
+                  if (_ctx.depth < 5) {
+                    _push(\`<!--[--> foo <!--]-->\`)
+                    _push(\`<!--if-->\`)
+                  } else {
+                    _push(\`<!---->\`)
+                  }
+                  _push(\`<!--p]--><div\${_scopeId}></div></div>\`)
+                  _push(\`<!--if-->\`)
+                } else {
+                  _push(\`<!---->\`)
+                }
+              } else {
+                return [
+                  (_ctx.foo)
+                    ? (_openBlock(), _createBlock("div", { key: 0 }, [
+                        _createCommentVNode("[p"),
+                        (_ctx.depth < 5)
+                          ? (_openBlock(), _createBlock(_Fragment, { key: 0 }, [
+                              _createTextVNode(" foo ")
+                            ], 64 /* STABLE_FRAGMENT */))
+                          : _createCommentVNode("v-if", true),
+                        _createCommentVNode("p]"),
+                        _createVNode("div")
+                      ]))
+                    : _createCommentVNode("v-if", true)
+                ]
+              }
+            }),
+            _: 1 /* STABLE */
+          }), _parent)
+          _push(\`<!--dynamic-component--><!--a]-->\`"
+      `)
+    })
+
     test('prepend anchor with v-for', () => {
       expect(
         getCompiledString('<div><span v-for="item in items"/><span/></div>', {

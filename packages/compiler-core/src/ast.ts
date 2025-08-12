@@ -180,6 +180,7 @@ export interface TemplateNode extends BaseElementNode {
   tagType: ElementTypes.TEMPLATE
   // TemplateNode is a container type that always gets compiled away
   codegenNode: undefined
+  anchor?: string
 }
 
 export interface TextNode extends Node {
