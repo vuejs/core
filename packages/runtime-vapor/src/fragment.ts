@@ -145,6 +145,9 @@ export class DynamicFragment extends VaporFragment {
   }
 
   hydrate = (label: string, isEmpty: boolean = false): void => {
+    // avoid repeated hydration during rendering fallback
+    if (this.anchor) return
+
     const createAnchor = () => {
       const { parentNode, nextSibling } = findLastChild(this.nodes)!
       parentNode!.insertBefore(
@@ -156,14 +159,8 @@ export class DynamicFragment extends VaporFragment {
 
     // manually create anchors for:
     // 1. else-if branch
-    // 2. empty forwarded slot
     // (not present in SSR output)
-    if (
-      label === ELSE_IF_ANCHOR_LABEL ||
-      (this.nodes instanceof DynamicFragment &&
-        this.nodes.forwarded &&
-        !isValidBlock(this.nodes))
-    ) {
+    if (label === ELSE_IF_ANCHOR_LABEL) {
       createAnchor()
     } else {
       // for `v-if="false"`, the node will be an empty comment, use it as the anchor.

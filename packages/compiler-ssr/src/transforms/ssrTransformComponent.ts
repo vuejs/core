@@ -15,6 +15,7 @@ import {
   Namespaces,
   type NodeTransform,
   NodeTypes,
+  type PlainElementNode,
   RESOLVE_DYNAMIC_COMPONENT,
   type ReturnStatement,
   type RootNode,
@@ -139,7 +140,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     if (clonedNode.children.length) {
       buildSlots(clonedNode, context, (props, vFor, children) => {
         vnodeBranches.push(
-          createVNodeSlotBranch(props, vFor, children, context),
+          createVNodeSlotBranch(props, vFor, children, context, clonedNode),
         )
         return createFunctionExpression(undefined)
       })
@@ -302,6 +303,7 @@ function createVNodeSlotBranch(
   vFor: DirectiveNode | undefined,
   children: TemplateChildNode[],
   parentContext: TransformContext,
+  parent: TemplateChildNode,
 ): ReturnStatement {
   // apply a sub-transform using vnode-based transforms.
   const rawOptions = rawOptionsMap.get(parentContext.root)!
@@ -338,7 +340,7 @@ function createVNodeSlotBranch(
   }
 
   if (parentContext.vapor) {
-    children = injectVaporInsertionAnchors(children)
+    children = injectVaporInsertionAnchors(children, parent)
   }
 
   const wrapperNode: TemplateNode = {
@@ -395,8 +397,12 @@ function subTransform(
 
 function injectVaporInsertionAnchors(
   children: TemplateChildNode[],
+  parent: TemplateChildNode,
 ): TemplateChildNode[] {
-  processBlockNodeAnchor(children)
+  if (isElementWithChildren(parent)) {
+    processBlockNodeAnchor(children)
+  }
+
   const newChildren: TemplateChildNode[] = new Array(children.length * 3)
   let newIndex = 0
 
@@ -439,12 +445,10 @@ function injectVaporInsertionAnchors(
 
             // copy branch nodes
             for (let j = i; j <= lastBranchIndex; j++) {
-              const node = children[j]
+              const node = children[j] as PlainElementNode
               newChildren[newIndex++] = node
 
-              if (isElementWithChildren(node)) {
-                node.children = injectVaporInsertionAnchors(node.children)
-              }
+              node.children = injectVaporInsertionAnchors(node.children, node)
             }
 
             // inject anchor after branch nodes
@@ -464,9 +468,7 @@ function injectVaporInsertionAnchors(
     newChildren[newIndex++] = child
     if (anchor) newChildren[newIndex++] = createAnchorComment(`${anchor}]`)
 
-    if (isElementWithChildren(child)) {
-      child.children = injectVaporInsertionAnchors(child.children)
-    }
+    child.children = injectVaporInsertionAnchors(child.children, child)
   }
 
   newChildren.length = newIndex

@@ -3027,6 +3027,43 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('forwarded slot with fallback', async () => {
+      const data = reactive({
+        foo: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Parent/>
+        </template>`,
+        {
+          Parent: `<template><components.Child><slot/></components.Child></template>`,
+          Child: `<template><div><slot>{{data.foo}}</slot></div></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[a-->
+        <!--[--><!--slot-->foo<!--]-->
+        <!--slot--><!--a]-->
+        </div>"
+      `,
+      )
+
+      data.foo = 'foo1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[a-->
+        <!--[--><!--slot-->foo1<!--]-->
+        <!--slot--><!--a]-->
+        </div>"
+      `,
+      )
+    })
+
     test('forwarded slot with empty content', async () => {
       const data = reactive({
         foo: 'foo',
@@ -3071,8 +3108,8 @@ describe('Vapor Mode hydration', () => {
         `
         "<div>
         <!--[p-->
-        <!--[--><!--]-->
-        <!--slot--><!--slot--><!--slot--><!--slot--><!--p]-->
+        <!--[--><!--slot--><!--slot--><!--slot--><!--]-->
+        <!--slot--><!--p]-->
         <div>foo</div></div>"
       `,
       )
@@ -3083,8 +3120,8 @@ describe('Vapor Mode hydration', () => {
         `
         "<div>
         <!--[p-->
-        <!--[--><!--]-->
-        <!--slot--><!--slot--><!--slot--><!--slot--><!--p]-->
+        <!--[--><!--slot--><!--slot--><!--slot--><!--]-->
+        <!--slot--><!--p]-->
         <div>bar</div></div>"
       `,
       )

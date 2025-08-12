@@ -18,7 +18,9 @@ describe('insertion anchors', () => {
       expect(
         getCompiledString(
           `<component :is="'div'">
-            <div><Comp/><Comp/><span/></div>
+            <div>
+              <Comp/><Comp/><span/>
+            </div>
           </component>`,
           { vapor: true },
         ),
@@ -70,7 +72,11 @@ describe('insertion anchors', () => {
       expect(
         getCompiledString(
           `<component :is="'div'">
-            <div><slot name="foo"/><slot/><span/></div>
+            <div>
+              <slot name="foo"/>
+              <slot/>
+              <span/>
+            </div>
           </component>`,
           { vapor: true },
         ),
@@ -137,13 +143,13 @@ describe('insertion anchors', () => {
       expect(
         getCompiledString(
           `<component :is="'div'">
-              <div>
-                <span v-if="foo"/>
-                <span v-else-if="bar"/>
-                <span v-else/>
-                <span/>
-              </div>
-            </component>`,
+            <div>
+              <span v-if="foo"/>
+              <span v-else-if="bar"/>
+              <span v-else/>
+              <span/>
+            </div>
+          </component>`,
           { vapor: true },
         ),
       ).toMatchInlineSnapshot(`
@@ -247,7 +253,7 @@ describe('insertion anchors', () => {
       expect(
         getCompiledString(
           `<component :is="'div'">
-              <div>
+            <div>
               <span v-if="foo">
                 <span v-if="foo1" />
                 <span />
@@ -363,7 +369,9 @@ describe('insertion anchors', () => {
       expect(
         getCompiledString(
           `<component :is="'div'">
-            <div><span v-for="item in items"/><span/></div>
+            <div>
+              <span v-for="item in items"/><span/>
+            </div>
           </component>`,
           { vapor: true },
         ),
@@ -444,7 +452,13 @@ describe('insertion anchors', () => {
   test('mixed anchors in ssr slot vnode fallback', () => {
     expect(
       getCompiledString(
-        `<component :is="'div'"><Comp/><span/><Comp/><span/><Comp/></component>`,
+        `<component :is="'div'">
+          <div>
+            <Comp/><span/>
+            <Comp/><span/>
+            <Comp/>
+          </div>
+        </component>`,
         {
           vapor: true,
         },
@@ -454,24 +468,28 @@ describe('insertion anchors', () => {
         _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
+              _push(\`<div\${_scopeId}><!--[p-->\`)
               _push(_ssrRenderComponent(_component_Comp, null, null, _parent, _scopeId))
-              _push(\`<span\${_scopeId}></span>\`)
+              _push(\`<!--p]--><span\${_scopeId}></span><!--[i-->\`)
               _push(_ssrRenderComponent(_component_Comp, null, null, _parent, _scopeId))
-              _push(\`<span\${_scopeId}></span>\`)
+              _push(\`<!--i]--><span\${_scopeId}></span><!--[a-->\`)
               _push(_ssrRenderComponent(_component_Comp, null, null, _parent, _scopeId))
+              _push(\`<!--a]--></div>\`)
             } else {
               return [
-                _createCommentVNode("[p"),
-                _createVNode(_component_Comp),
-                _createCommentVNode("p]"),
-                _createVNode("span"),
-                _createCommentVNode("[i"),
-                _createVNode(_component_Comp),
-                _createCommentVNode("i]"),
-                _createVNode("span"),
-                _createCommentVNode("[a"),
-                _createVNode(_component_Comp),
-                _createCommentVNode("a]")
+                _createVNode("div", null, [
+                  _createCommentVNode("[p"),
+                  _createVNode(_component_Comp),
+                  _createCommentVNode("p]"),
+                  _createVNode("span"),
+                  _createCommentVNode("[i"),
+                  _createVNode(_component_Comp),
+                  _createCommentVNode("i]"),
+                  _createVNode("span"),
+                  _createCommentVNode("[a"),
+                  _createVNode(_component_Comp),
+                  _createCommentVNode("a]")
+                ])
               ]
             }
           }),
