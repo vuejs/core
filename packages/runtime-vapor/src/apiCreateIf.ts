@@ -35,7 +35,7 @@ export function createIf(
   } else {
     // if _insertionAnchor is defined, insertionParent contains a static node
     // that should be skipped during hydration.
-    // Advance to the next sibling node to bypass this static node.
+    // Advance to the next sibling node of parent to skip the static node.
     if (_insertionAnchor !== undefined) {
       advanceHydrationNode(_insertionParent!)
     }
