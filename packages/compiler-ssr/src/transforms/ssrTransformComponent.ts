@@ -529,9 +529,7 @@ function injectIfAnchors(
     if (blockAnchorLabel) {
       const repeatCount = j - i - (isElse ? 1 : 0) + 1
       wrapperNode.children.push(
-        createAnchor(
-          `<!--${blockAnchorLabel}-->`.repeat(repeatCount).slice(4, -3),
-        ),
+        createAnchor(`<!--${blockAnchorLabel}-->`.repeat(repeatCount)),
       )
     }
     node.children = injectVaporAnchors(node.children, node)
