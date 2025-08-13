@@ -5,7 +5,6 @@ import {
   type BlockFn,
   type TransitionOptions,
   type VaporTransitionHooks,
-  findLastChild,
   insert,
   isValidBlock,
   remove,
@@ -153,17 +152,16 @@ export class DynamicFragment extends VaporFragment {
       this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, '')!
     } else {
       this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
-      if (!this.anchor && label === 'slot') {
-        // fallback to fragment end anchor for
-        this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, ']')!
-      }
 
-      // anchors are not present in ssr slot vnode fallback
-      if (!this.anchor) {
-        const { parentNode, nextSibling } = findLastChild(this.nodes)!
+      // forwarded slots anchors are not present in ssr vnode-based slot
+      if (
+        !this.anchor &&
+        this.nodes instanceof DynamicFragment &&
+        this.nodes.forwarded
+      ) {
+        const { parentNode, nextSibling } = this.nodes.anchor
         parentNode!.insertBefore(
-          // TODO use empty text node in PROD?
-          (this.anchor = createComment(label)),
+          (this.anchor = __DEV__ ? createComment(label) : createTextNode()),
           nextSibling,
         )
       }
