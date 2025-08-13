@@ -176,16 +176,19 @@ describe('insertion anchors', () => {
                   _createVNode("div", null, [
                     _createCommentVNode("[p"),
                     (_ctx.foo)
-                      ? (_openBlock(), _createBlock("span", { key: 0 }, [
+                      ? (_openBlock(), _createBlock(_Fragment, { key: 0 }, [
+                          _createVNode("span"),
                           _createCommentVNode("if")
-                        ]))
+                        ], 64 /* STABLE_FRAGMENT */))
                       : (_ctx.bar)
-                        ? (_openBlock(), _createBlock("span", { key: 1 }, [
+                        ? (_openBlock(), _createBlock(_Fragment, { key: 1 }, [
+                            _createVNode("span"),
                             _createCommentVNode("if--><!--if")
-                          ]))
-                        : (_openBlock(), _createBlock("span", { key: 2 }, [
+                          ], 64 /* STABLE_FRAGMENT */))
+                        : (_openBlock(), _createBlock(_Fragment, { key: 2 }, [
+                            _createVNode("span"),
                             _createCommentVNode("if--><!--if")
-                          ])),
+                          ], 64 /* STABLE_FRAGMENT */)),
                     _createCommentVNode("p]"),
                     _createVNode("span")
                   ])
@@ -322,37 +325,43 @@ describe('insertion anchors', () => {
                   _createVNode("div", null, [
                     _createCommentVNode("[p"),
                     (_ctx.foo)
-                      ? (_openBlock(), _createBlock("span", { key: 0 }, [
-                          _createCommentVNode("[p"),
-                          (_ctx.foo1)
-                            ? (_openBlock(), _createBlock("span", { key: 0 }))
-                            : _createCommentVNode("v-if", true),
-                          _createCommentVNode("if"),
-                          _createCommentVNode("p]"),
-                          _createVNode("span"),
+                      ? (_openBlock(), _createBlock(_Fragment, { key: 0 }, [
+                          _createVNode("span", null, [
+                            _createCommentVNode("[p"),
+                            (_ctx.foo1)
+                              ? (_openBlock(), _createBlock("span", { key: 0 }))
+                              : _createCommentVNode("v-if", true),
+                            _createCommentVNode("if"),
+                            _createCommentVNode("p]"),
+                            _createVNode("span")
+                          ]),
                           _createCommentVNode("if")
-                        ]))
+                        ], 64 /* STABLE_FRAGMENT */))
                       : (_ctx.bar)
-                        ? (_openBlock(), _createBlock("span", { key: 1 }, [
-                            _createCommentVNode("[p"),
-                            (_ctx.bar1)
-                              ? (_openBlock(), _createBlock("span", { key: 0 }))
-                              : _createCommentVNode("v-if", true),
-                            _createCommentVNode("if"),
-                            _createCommentVNode("p]"),
-                            _createVNode("span"),
+                        ? (_openBlock(), _createBlock(_Fragment, { key: 1 }, [
+                            _createVNode("span", null, [
+                              _createCommentVNode("[p"),
+                              (_ctx.bar1)
+                                ? (_openBlock(), _createBlock("span", { key: 0 }))
+                                : _createCommentVNode("v-if", true),
+                              _createCommentVNode("if"),
+                              _createCommentVNode("p]"),
+                              _createVNode("span")
+                            ]),
                             _createCommentVNode("if--><!--if")
-                          ]))
-                        : (_openBlock(), _createBlock("span", { key: 2 }, [
-                            _createCommentVNode("[p"),
-                            (_ctx.bar2)
-                              ? (_openBlock(), _createBlock("span", { key: 0 }))
-                              : _createCommentVNode("v-if", true),
-                            _createCommentVNode("if"),
-                            _createCommentVNode("p]"),
-                            _createVNode("span"),
+                          ], 64 /* STABLE_FRAGMENT */))
+                        : (_openBlock(), _createBlock(_Fragment, { key: 2 }, [
+                            _createVNode("span", null, [
+                              _createCommentVNode("[p"),
+                              (_ctx.bar2)
+                                ? (_openBlock(), _createBlock("span", { key: 0 }))
+                                : _createCommentVNode("v-if", true),
+                              _createCommentVNode("if"),
+                              _createCommentVNode("p]"),
+                              _createVNode("span")
+                            ]),
                             _createCommentVNode("if--><!--if")
-                          ])),
+                          ], 64 /* STABLE_FRAGMENT */)),
                     _createCommentVNode("p]"),
                     _createVNode("span")
                   ])
@@ -606,24 +615,86 @@ describe('block anchors', () => {
             } else {
               return [
                 (_ctx.count === 1)
-                  ? (_openBlock(), _createBlock("span", { key: 0 }, [
-                      _createTextVNode("1"),
+                  ? (_openBlock(), _createBlock(_Fragment, { key: 0 }, [
+                      _createVNode("span", null, "1"),
                       _createCommentVNode("if")
-                    ]))
+                    ], 64 /* STABLE_FRAGMENT */))
                   : (_ctx.count === 2)
-                    ? (_openBlock(), _createBlock("span", { key: 1 }, [
-                        _createTextVNode("2"),
+                    ? (_openBlock(), _createBlock(_Fragment, { key: 1 }, [
+                        _createVNode("span", null, "2"),
                         _createCommentVNode("if--><!--if")
-                      ]))
+                      ], 64 /* STABLE_FRAGMENT */))
                     : (_ctx.count === 3)
-                      ? (_openBlock(), _createBlock("span", { key: 2 }, [
-                          _createTextVNode("3"),
+                      ? (_openBlock(), _createBlock(_Fragment, { key: 2 }, [
+                          _createVNode("span", null, "3"),
                           _createCommentVNode("if--><!--if--><!--if")
-                        ]))
-                      : (_openBlock(), _createBlock("span", { key: 3 }, [
-                          _createTextVNode("4"),
+                        ], 64 /* STABLE_FRAGMENT */))
+                      : (_openBlock(), _createBlock(_Fragment, { key: 3 }, [
+                          _createVNode("span", null, "4"),
                           _createCommentVNode("if--><!--if--><!--if")
-                        ]))
+                        ], 64 /* STABLE_FRAGMENT */))
+              ]
+            }
+          }),
+          _: 1 /* STABLE */
+        }), _parent)
+        _push(\`<!--dynamic-component--><!--a]-->\`"
+    `)
+  })
+
+  test('if + v-html/v-text', () => {
+    expect(
+      getCompiledString(
+        `<component :is="tag">
+          <span v-if="count === 1" v-html="html"></span>
+          <span v-else-if="count === 2" v-text="txt"></span>
+          <span v-else>4</span>
+        </component>`,
+        {
+          vapor: true,
+        },
+      ),
+    ).toMatchInlineSnapshot(`
+      "\`<!--[a-->\`)
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.tag), null, {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
+            if (_push) {
+              if (_ctx.count === 1) {
+                _push(\`<span\${
+                  _scopeId
+                }>\${
+                  (_ctx.html) ?? ''
+                }</span>\`)
+                _push(\`<!--if-->\`)
+              } else if (_ctx.count === 2) {
+                _push(\`<span\${
+                  _scopeId
+                }>\${
+                  _ssrInterpolate(_ctx.txt)
+                }</span>\`)
+                _push(\`<!--if--><!--if-->\`)
+              } else {
+                _push(\`<span\${_scopeId}>4</span>\`)
+                _push(\`<!--if--><!--if-->\`)
+              }
+            } else {
+              return [
+                (_ctx.count === 1)
+                  ? (_openBlock(), _createBlock(_Fragment, { key: 0 }, [
+                      _createVNode("span", { innerHTML: _ctx.html }, null, 8 /* PROPS */, ["innerHTML"]),
+                      _createCommentVNode("if")
+                    ], 64 /* STABLE_FRAGMENT */))
+                  : (_ctx.count === 2)
+                    ? (_openBlock(), _createBlock(_Fragment, { key: 1 }, [
+                        _createVNode("span", {
+                          textContent: _toDisplayString(_ctx.txt)
+                        }, null, 8 /* PROPS */, ["textContent"]),
+                        _createCommentVNode("if--><!--if")
+                      ], 64 /* STABLE_FRAGMENT */))
+                    : (_openBlock(), _createBlock(_Fragment, { key: 2 }, [
+                        _createVNode("span", null, "4"),
+                        _createCommentVNode("if--><!--if")
+                      ], 64 /* STABLE_FRAGMENT */))
               ]
             }
           }),

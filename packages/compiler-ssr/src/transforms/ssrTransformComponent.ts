@@ -407,7 +407,6 @@ function injectVaporAnchors(
   }
 
   const newChildren: TemplateChildNode[] = []
-
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
 
@@ -440,41 +439,15 @@ function injectVaporAnchors(
 
       if (hasIf) {
         insertionAnchor = (child as any as IfNode).anchor
-        // find sibling else-if/else branches
-        // inject anchor after else-if/else branch if founded
-        // otherwise inject after if node
         const lastBranchIndex = findLastIfBranchIndex(children, i)
         if (lastBranchIndex > i) {
-          // inject anchor before if node
-          if (insertionAnchor) {
-            newChildren.push(createAnchor(`[${insertionAnchor}`))
-          }
-
-          // copy branch nodes
-          for (let j = i; j <= lastBranchIndex; j++) {
-            const node = children[j] as PlainElementNode
-            newChildren.push(node)
-
-            // inject block anchor
-            const blockAnchorLabel = getBlockAnchorLabel(node)
-            if (blockAnchorLabel) {
-              const isElse = node.props.some(p => p.name === 'else')
-              const repeatCount = j - i - (isElse ? 1 : 0) + 1
-              node.children.push(
-                createAnchor(
-                  `<!--${blockAnchorLabel}-->`.repeat(repeatCount).slice(4, -3),
-                ),
-              )
-            }
-
-            node.children = injectVaporAnchors(node.children, node)
-          }
-
-          // inject anchor after branch nodes
-          if (insertionAnchor) {
-            newChildren.push(createAnchor(`${insertionAnchor}]`))
-          }
-
+          injectIfAnchors(
+            insertionAnchor,
+            newChildren,
+            i,
+            lastBranchIndex,
+            children,
+          )
           i = lastBranchIndex
           continue
         }
@@ -503,6 +476,71 @@ function injectVaporAnchors(
   }
 
   return newChildren
+}
+
+function injectIfAnchors(
+  insertionAnchor: string | undefined,
+  newChildren: TemplateChildNode[],
+  i: number,
+  lastBranchIndex: number,
+  children: TemplateChildNode[],
+) {
+  // inject anchor before if node
+  if (insertionAnchor) {
+    newChildren.push(createAnchor(`[${insertionAnchor}`))
+  }
+
+  for (let j = i; j <= lastBranchIndex; j++) {
+    const node = children[j] as PlainElementNode
+    const blockAnchorLabel = getBlockAnchorLabel(node)
+    let isElse = false
+
+    const conditionalProps: typeof node.props = []
+    const restProps: typeof node.props = []
+
+    for (const prop of node.props) {
+      if (
+        prop.name === 'if' ||
+        prop.name === 'else-if' ||
+        prop.name === 'else'
+      ) {
+        conditionalProps.push(prop)
+        if (prop.name === 'else') isElse = true
+      } else {
+        restProps.push(prop)
+      }
+    }
+    node.props = restProps
+
+    // wrap the node with a template node
+    const wrapperNode: TemplateNode = {
+      type: NodeTypes.ELEMENT,
+      ns: Namespaces.HTML,
+      tag: 'template',
+      tagType: ElementTypes.TEMPLATE,
+      props: conditionalProps,
+      children: [node],
+      loc: node.loc,
+      codegenNode: undefined,
+    }
+    newChildren.push(wrapperNode)
+
+    // inject block anchor
+    if (blockAnchorLabel) {
+      const repeatCount = j - i - (isElse ? 1 : 0) + 1
+      wrapperNode.children.push(
+        createAnchor(
+          `<!--${blockAnchorLabel}-->`.repeat(repeatCount).slice(4, -3),
+        ),
+      )
+    }
+    node.children = injectVaporAnchors(node.children, node)
+  }
+
+  // inject anchor after branch nodes
+  if (insertionAnchor) {
+    newChildren.push(createAnchor(`${insertionAnchor}]`))
+  }
 }
 
 function createAnchor(content: string): CommentNode {
