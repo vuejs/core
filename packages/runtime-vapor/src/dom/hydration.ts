@@ -16,29 +16,11 @@ import {
   BLOCK_APPEND_ANCHOR_LABEL,
   BLOCK_INSERTION_ANCHOR_LABEL,
   BLOCK_PREPEND_ANCHOR_LABEL,
-  isVaporAnchor,
 } from '@vue/shared'
 
 const isHydratingStack = [] as boolean[]
-
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
-
-export function setCurrentHydrationNode(node: Node | null): void {
-  currentHydrationNode = node
-}
-
-function findParentSibling(n: Node): Node | null {
-  if (!n.parentNode) return null
-  return n.parentNode.nextSibling || findParentSibling(n.parentNode)
-}
-
-export function advanceHydrationNode(node: Node & { $ps?: Node | null }): void {
-  // if no next sibling, find the next node in the parent chain
-  const ret =
-    node.nextSibling || node.$ps || (node.$ps = findParentSibling(node))
-  if (ret) setCurrentHydrationNode(ret)
-}
 
 let isOptimized = false
 
@@ -92,6 +74,22 @@ type Anchor = Comment & {
 
 export const isComment = (node: Node, data: string): node is Anchor =>
   node.nodeType === 8 && (node as Comment).data === data
+
+export function setCurrentHydrationNode(node: Node | null): void {
+  currentHydrationNode = node
+}
+
+function findParentSibling(n: Node): Node | null {
+  if (!n.parentNode) return null
+  return n.parentNode.nextSibling || findParentSibling(n.parentNode)
+}
+
+export function advanceHydrationNode(node: Node & { $ps?: Node | null }): void {
+  // if no next sibling, find the next node in the parent chain
+  const ret =
+    node.nextSibling || node.$ps || (node.$ps = findParentSibling(node))
+  if (ret) setCurrentHydrationNode(ret)
+}
 
 /**
  * Locate the first non-fragment-comment node and locate the next node
@@ -197,17 +195,6 @@ export function locateEndAnchor(
   return null
 }
 
-export function isNonHydrationNode(node: Node): boolean {
-  return (
-    // empty text node
-    isEmptyTextNode(node) ||
-    // vdom fragment end anchor (`<!--]-->`)
-    isComment(node, ']') ||
-    // vapor mode specific anchors
-    isVaporAnchor(node)
-  )
-}
-
 export function locateVaporFragmentAnchor(
   node: Node,
   anchorLabel: string,
@@ -217,10 +204,6 @@ export function locateVaporFragmentAnchor(
     node = node.nextSibling!
   }
   return null
-}
-
-export function isEmptyTextNode(node: Node): node is Text {
-  return node.nodeType === 3 && !(node as Text).data.trim()
 }
 
 function locateHydrationNodeByAnchor(

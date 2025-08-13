@@ -1,8 +1,8 @@
-import { isComment, isNonHydrationNode, locateEndAnchor } from './hydration'
+import { isComment, locateEndAnchor } from './hydration'
 import {
   BLOCK_INSERTION_ANCHOR_LABEL,
   BLOCK_PREPEND_ANCHOR_LABEL,
-  isVaporAnchor,
+  isInsertionAnchor,
 } from '@vue/shared'
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -55,45 +55,20 @@ export function _child(node: ParentNode): Node {
 
 /**
  * Hydration-specific version of `child`.
- *
- * This function skips leading fragment anchors to find the first node relevant
- * for hydration matching against the client-side template structure.
- *
- * Problem:
- *   Template: `<div><slot />{{ msg }}</div>`
- *
- *   Client Compiled Code (Simplified):
- *     const n2 = t0() // n2 = `<div> </div>`
- *     const n1 = _child(n2, 1) // n1 = text node
- *     // ... slot creation ...
- *     _renderEffect(() => _setText(n1, _ctx.msg))
- *
- *   SSR Output: `<div><!--[-->slot content<!--]-->Actual Text Node</div>`
- *
- *   Hydration Mismatch:
- *   - During hydration, `n2` refers to the SSR `<div>`.
- *   - `_child(n2, 1)` would return `<!--[-->`.
- *   - The client code expects `n1` to be the text node, but gets the comment.
- *     The subsequent `_setText(n1, ...)` would fail or target the wrong node.
- *
- *   Solution (`__child`):
- *   - `__child(n2, offset)` is used during hydration. It skips the block children
- *     to find the "Actual Text Node", correctly matching the client's expectation
- *     for `n1`.
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __child(node: ParentNode, offset?: number): Node {
   let n = node.firstChild!
 
   // when offset is -1, it means we need to get the text node of this element
-  // since server-side rendering doesn't generate whitespace placeholder text nodes,
-  // if firstChild is null, manually insert a text node and return it
+  // since SSR doesn't generate whitespace placeholder text nodes, if firstChild
+  // is null, manually insert a text node as the first child
   if (offset === -1 && !n) {
     node.textContent = ' '
     return node.firstChild!
   }
 
-  while (n && (isComment(n, '[') || isVaporAnchor(n))) {
+  while (n && (isComment(n, '[') || isInsertionAnchor(n))) {
     // skip block node
     n = skipBlockNodes(n) as ChildNode
     if (isComment(n, '[')) {
@@ -130,43 +105,6 @@ export function _next(node: Node): Node {
 
 /**
  * Hydration-specific version of `next`.
- *
- * SSR comment anchors (fragments `<!--[-->...<!--]-->`, block nodes `<!--[x-->...<!--x]-->`)
- * disrupt standard `node.nextSibling` traversal during hydration. `_next` might
- * return a comment node or an internal node of a fragment instead of skipping
- * the entire fragment block.
- *
- * Example:
- *   Template: `<div>Node1<!>Node2</div>` (where <!> is a block node placeholder)
- *
- *   Client Compiled Code (Simplified):
- *     const n2 = t0() // n2 = `<div>Node1<!---->Node2</div>`
- *     const n1 = _next(_child(n2)) // n1 = _next(Node1) returns `<!---->`
- *     _setInsertionState(n2, n1) // insertion anchor is `<!---->`
- *     const n0 = _createComponent(_ctx.Comp) // inserted before `<!---->`
- *
- *   SSR Output: `<div>Node1<!--[-->Node3 Node4<!--]-->Node2</div>`
- *
- *   Hydration Mismatch:
- *   - During hydration, `n2` refers to the SSR `<div>`.
- *   - `_child(n2)` returns `Node1`.
- *   - `_next(Node1)` would return `<!--[-->`.
- *   - The client logic expects `n1` to be the node *after* `Node1` in its structure
- *     (the placeholder), but gets the fragment start anchor `<!--[-->` from SSR.
- *   - Using `<!--[-->` as the insertion anchor for hydrating the component is incorrect.
- *
- *   Solution (`__next`):
- *   - During hydration, `next.impl` is `__next`.
- *   - `n1 = __next(Node1)` is called.
- *   - `__next` recognizes that the immediate sibling `<!--[-->` is a fragment start anchor.
- *   - It skips the entire fragment block (`<!--[-->Node3 Node4<!--]-->`).
- *   - It returns the node immediately *after* the fragment's end anchor, which is `Node2`.
- *   - This correctly identifies the logical "next sibling" anchor (`Node2`) in the SSR structure,
- *     allowing the component to be hydrated correctly relative to `Node1` and `Node2`.
- *
- * This function ensures traversal correctly skips over non-hydration nodes and
- * treats entire fragment/block nodes (when starting *from* their beginning anchor)
- * as single logical units to find the next actual sibling node for hydration matching.
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __next(node: Node): Node {
@@ -174,14 +112,8 @@ export function __next(node: Node): Node {
   if (isComment(node, '[')) {
     node = locateEndAnchor(node)!
   }
-
   node = skipBlockNodes(node)
-
-  let n = node.nextSibling!
-  while (n && isNonHydrationNode(n)) {
-    n = n.nextSibling!
-  }
-  return n
+  return node.nextSibling!
 }
 
 type DelegatedFunction<T extends (...args: any[]) => any> = T & {
