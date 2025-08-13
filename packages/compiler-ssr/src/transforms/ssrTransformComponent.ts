@@ -1,6 +1,7 @@
 import {
   CREATE_VNODE,
   type CallExpression,
+  type CommentNode,
   type CompilerOptions,
   type ComponentNode,
   DOMDirectiveTransforms,
@@ -62,6 +63,9 @@ import {
 } from './ssrTransformTransitionGroup'
 import {
   DYNAMIC_COMPONENT_ANCHOR_LABEL,
+  FOR_ANCHOR_LABEL,
+  IF_ANCHOR_LABEL,
+  SLOT_ANCHOR_LABEL,
   extend,
   isArray,
   isObject,
@@ -338,9 +342,8 @@ function createVNodeSlotBranch(
   if (vFor) {
     wrapperProps.push(extend({}, vFor))
   }
-
   if (parentContext.vapor) {
-    children = injectVaporInsertionAnchors(children, parent)
+    children = injectVaporAnchors(children, parent)
   }
 
   const wrapperNode: TemplateNode = {
@@ -395,7 +398,7 @@ function subTransform(
   // - hoists are not enabled for the client branch here
 }
 
-function injectVaporInsertionAnchors(
+function injectVaporAnchors(
   children: TemplateChildNode[],
   parent: TemplateChildNode,
 ): TemplateChildNode[] {
@@ -403,26 +406,25 @@ function injectVaporInsertionAnchors(
     processBlockNodeAnchor(children)
   }
 
-  const newChildren: TemplateChildNode[] = new Array(children.length * 3)
-  let newIndex = 0
+  const newChildren: TemplateChildNode[] = []
 
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
 
     if (child.type !== NodeTypes.ELEMENT) {
-      newChildren[newIndex++] = child
+      newChildren.push(child)
       continue
     }
 
     const { tagType, props } = child
-    let anchor: string | undefined
+    let insertionAnchor: string | undefined
 
     if (
       tagType === ElementTypes.COMPONENT ||
       tagType === ElementTypes.SLOT ||
       tagType === ElementTypes.TEMPLATE
     ) {
-      anchor = child.anchor
+      insertionAnchor = child.anchor
     } else if (tagType === ElementTypes.ELEMENT) {
       let hasIf = false
       let hasFor = false
@@ -437,49 +439,73 @@ function injectVaporInsertionAnchors(
       }
 
       if (hasIf) {
-        anchor = (child as any as IfNode).anchor
-        if (anchor) {
-          // find sibling else-if/else branches
-          // inject anchor after else-if/else branch if founded
-          // otherwise inject after if node
-          const lastBranchIndex = findLastIfBranchIndex(children, i)
-          if (lastBranchIndex > i) {
-            // inject anchor before if node
-            newChildren[newIndex++] = createAnchorComment(`[${anchor}`)
+        insertionAnchor = (child as any as IfNode).anchor
+        // find sibling else-if/else branches
+        // inject anchor after else-if/else branch if founded
+        // otherwise inject after if node
+        const lastBranchIndex = findLastIfBranchIndex(children, i)
+        if (lastBranchIndex > i) {
+          // inject anchor before if node
+          if (insertionAnchor) {
+            newChildren.push(createAnchor(`[${insertionAnchor}`))
+          }
 
-            // copy branch nodes
-            for (let j = i; j <= lastBranchIndex; j++) {
-              const node = children[j] as PlainElementNode
-              newChildren[newIndex++] = node
+          // copy branch nodes
+          for (let j = i; j <= lastBranchIndex; j++) {
+            const node = children[j] as PlainElementNode
+            newChildren.push(node)
 
-              node.children = injectVaporInsertionAnchors(node.children, node)
+            // inject block anchor
+            const blockAnchorLabel = getBlockAnchorLabel(node)
+            if (blockAnchorLabel) {
+              const isElse = node.props.some(p => p.name === 'else')
+              const repeatCount = j - i - (isElse ? 1 : 0) + 1
+              node.children.push(
+                createAnchor(
+                  `<!--${blockAnchorLabel}-->`.repeat(repeatCount).slice(4, -3),
+                ),
+              )
             }
 
-            // inject anchor after branch nodes
-            newChildren[newIndex++] = createAnchorComment(`${anchor}]`)
-
-            i = lastBranchIndex
-            continue
+            node.children = injectVaporAnchors(node.children, node)
           }
+
+          // inject anchor after branch nodes
+          if (insertionAnchor) {
+            newChildren.push(createAnchor(`${insertionAnchor}]`))
+          }
+
+          i = lastBranchIndex
+          continue
         }
       } else if (hasFor) {
-        anchor = (child as any as ForNode).anchor
+        insertionAnchor = (child as any as ForNode).anchor
       }
     }
 
     // inject anchor before and after the child
-    if (anchor) newChildren[newIndex++] = createAnchorComment(`[${anchor}`)
-    newChildren[newIndex++] = child
-    if (anchor) newChildren[newIndex++] = createAnchorComment(`${anchor}]`)
+    if (insertionAnchor) {
+      newChildren.push(createAnchor(`[${insertionAnchor}`))
+    }
 
-    child.children = injectVaporInsertionAnchors(child.children, child)
+    newChildren.push(child)
+
+    // inject block anchor
+    const blockAnchorLabel = getBlockAnchorLabel(child)
+    if (blockAnchorLabel) newChildren.push(createAnchor(blockAnchorLabel))
+
+    // inject insertion anchor
+    if (insertionAnchor) {
+      newChildren.push(createAnchor(`${insertionAnchor}]`))
+    }
+
+    child.children = injectVaporAnchors(child.children, child)
   }
 
-  newChildren.length = newIndex
   return newChildren
 }
 
-function createAnchorComment(content: string): TemplateChildNode {
+function createAnchor(content: string): CommentNode {
   return {
     type: NodeTypes.COMMENT,
     content,
@@ -524,6 +550,24 @@ function findLastIfBranchIndex(
   }
 
   return lastIndex
+}
+
+function getBlockAnchorLabel(child: TemplateChildNode): string | undefined {
+  if (child.type !== NodeTypes.ELEMENT) return
+
+  if (child.tagType === ElementTypes.COMPONENT && child.tag === 'component') {
+    return DYNAMIC_COMPONENT_ANCHOR_LABEL
+  } else if (child.tagType === ElementTypes.SLOT) {
+    return SLOT_ANCHOR_LABEL
+  } else if (
+    child.props.some(
+      p => p.name === 'if' || p.name === 'else-if' || p.name === 'else',
+    )
+  ) {
+    return IF_ANCHOR_LABEL
+  } else if (child.props.some(p => p.name === 'for')) {
+    return FOR_ANCHOR_LABEL
+  }
 }
 
 function clone(v: any): any {

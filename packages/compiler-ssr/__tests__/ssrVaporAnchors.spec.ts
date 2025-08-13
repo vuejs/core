@@ -95,9 +95,11 @@ describe('insertion anchors', () => {
                   _createVNode("div", null, [
                     _createCommentVNode("[p"),
                     _renderSlot(_ctx.$slots, "foo"),
+                    _createCommentVNode("slot"),
                     _createCommentVNode("p]"),
                     _createCommentVNode("[p"),
                     _renderSlot(_ctx.$slots, "default"),
+                    _createCommentVNode("slot"),
                     _createCommentVNode("p]"),
                     _createVNode("span")
                   ])
@@ -174,10 +176,16 @@ describe('insertion anchors', () => {
                   _createVNode("div", null, [
                     _createCommentVNode("[p"),
                     (_ctx.foo)
-                      ? (_openBlock(), _createBlock("span", { key: 0 }))
+                      ? (_openBlock(), _createBlock("span", { key: 0 }, [
+                          _createCommentVNode("if")
+                        ]))
                       : (_ctx.bar)
-                        ? (_openBlock(), _createBlock("span", { key: 1 }))
-                        : (_openBlock(), _createBlock("span", { key: 2 })),
+                        ? (_openBlock(), _createBlock("span", { key: 1 }, [
+                            _createCommentVNode("if--><!--if")
+                          ]))
+                        : (_openBlock(), _createBlock("span", { key: 2 }, [
+                            _createCommentVNode("if--><!--if")
+                          ])),
                     _createCommentVNode("p]"),
                     _createVNode("span")
                   ])
@@ -319,8 +327,10 @@ describe('insertion anchors', () => {
                           (_ctx.foo1)
                             ? (_openBlock(), _createBlock("span", { key: 0 }))
                             : _createCommentVNode("v-if", true),
+                          _createCommentVNode("if"),
                           _createCommentVNode("p]"),
-                          _createVNode("span")
+                          _createVNode("span"),
+                          _createCommentVNode("if")
                         ]))
                       : (_ctx.bar)
                         ? (_openBlock(), _createBlock("span", { key: 1 }, [
@@ -328,16 +338,20 @@ describe('insertion anchors', () => {
                             (_ctx.bar1)
                               ? (_openBlock(), _createBlock("span", { key: 0 }))
                               : _createCommentVNode("v-if", true),
+                            _createCommentVNode("if"),
                             _createCommentVNode("p]"),
-                            _createVNode("span")
+                            _createVNode("span"),
+                            _createCommentVNode("if--><!--if")
                           ]))
                         : (_openBlock(), _createBlock("span", { key: 2 }, [
                             _createCommentVNode("[p"),
                             (_ctx.bar2)
                               ? (_openBlock(), _createBlock("span", { key: 0 }))
                               : _createCommentVNode("v-if", true),
+                            _createCommentVNode("if"),
                             _createCommentVNode("p]"),
-                            _createVNode("span")
+                            _createVNode("span"),
+                            _createCommentVNode("if--><!--if")
                           ])),
                     _createCommentVNode("p]"),
                     _createVNode("span")
@@ -392,10 +406,12 @@ describe('insertion anchors', () => {
                               _createTextVNode(" foo ")
                             ], 64 /* STABLE_FRAGMENT */))
                           : _createCommentVNode("v-if", true),
+                        _createCommentVNode("if"),
                         _createCommentVNode("p]"),
                         _createVNode("div")
                       ]))
-                    : _createCommentVNode("v-if", true)
+                    : _createCommentVNode("v-if", true),
+                  _createCommentVNode("if")
                 ]
               }
             }),
@@ -446,6 +462,7 @@ describe('insertion anchors', () => {
                     (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.items, (item) => {
                       return (_openBlock(), _createBlock("span"))
                     }), 256 /* UNKEYED_FRAGMENT */)),
+                    _createCommentVNode("for"),
                     _createCommentVNode("p]"),
                     _createVNode("span")
                   ])
@@ -558,46 +575,186 @@ describe('block anchors', () => {
   test('if', () => {
     expect(
       getCompiledString(
-        `<span v-if="count === 1">1</span>
-        <span v-else-if="count === 2">2</span>
-        <span v-else-if="count === 3">3</span>
-        <span v-else>4</span>`,
+        `<component :is="tag">
+          <span v-if="count === 1">1</span>
+          <span v-else-if="count === 2">2</span>
+          <span v-else-if="count === 3">3</span>
+          <span v-else>4</span>
+        </component>`,
         {
           vapor: true,
         },
       ),
     ).toMatchInlineSnapshot(`
       "\`<!--[a-->\`)
-        if (_ctx.count === 1) {
-          _push(\`<span>1</span>\`)
-          _push(\`<!--if-->\`)
-        } else if (_ctx.count === 2) {
-          _push(\`<span>2</span>\`)
-          _push(\`<!--if--><!--if-->\`)
-        } else if (_ctx.count === 3) {
-          _push(\`<span>3</span>\`)
-          _push(\`<!--if--><!--if--><!--if-->\`)
-        } else {
-          _push(\`<span>4</span>\`)
-          _push(\`<!--if--><!--if--><!--if-->\`)
-        }
-        _push(\`<!--a]-->\`"
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.tag), null, {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
+            if (_push) {
+              if (_ctx.count === 1) {
+                _push(\`<span\${_scopeId}>1</span>\`)
+                _push(\`<!--if-->\`)
+              } else if (_ctx.count === 2) {
+                _push(\`<span\${_scopeId}>2</span>\`)
+                _push(\`<!--if--><!--if-->\`)
+              } else if (_ctx.count === 3) {
+                _push(\`<span\${_scopeId}>3</span>\`)
+                _push(\`<!--if--><!--if--><!--if-->\`)
+              } else {
+                _push(\`<span\${_scopeId}>4</span>\`)
+                _push(\`<!--if--><!--if--><!--if-->\`)
+              }
+            } else {
+              return [
+                (_ctx.count === 1)
+                  ? (_openBlock(), _createBlock("span", { key: 0 }, [
+                      _createTextVNode("1"),
+                      _createCommentVNode("if")
+                    ]))
+                  : (_ctx.count === 2)
+                    ? (_openBlock(), _createBlock("span", { key: 1 }, [
+                        _createTextVNode("2"),
+                        _createCommentVNode("if--><!--if")
+                      ]))
+                    : (_ctx.count === 3)
+                      ? (_openBlock(), _createBlock("span", { key: 2 }, [
+                          _createTextVNode("3"),
+                          _createCommentVNode("if--><!--if--><!--if")
+                        ]))
+                      : (_openBlock(), _createBlock("span", { key: 3 }, [
+                          _createTextVNode("4"),
+                          _createCommentVNode("if--><!--if--><!--if")
+                        ]))
+              ]
+            }
+          }),
+          _: 1 /* STABLE */
+        }), _parent)
+        _push(\`<!--dynamic-component--><!--a]-->\`"
     `)
   })
 
-  test('if in ssr slot vnode fallback', () => {})
+  test('for', () => {
+    expect(
+      getCompiledString(
+        `<component :is="tag">
+          <span v-for="item in items">{{item}}</span>
+        </component>`,
+        {
+          vapor: true,
+        },
+      ),
+    ).toMatchInlineSnapshot(`
+      "\`<!--[a-->\`)
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.tag), null, {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
+            if (_push) {
+              _push(\`<!--[-->\`)
+              _ssrRenderList(_ctx.items, (item) => {
+                _push(\`<span\${
+                  _scopeId
+                }>\${
+                  _ssrInterpolate(item)
+                }</span>\`)
+              })
+              _push(\`<!--]--><!--for-->\`)
+            } else {
+              return [
+                (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.items, (item) => {
+                  return (_openBlock(), _createBlock("span", null, _toDisplayString(item), 1 /* TEXT */))
+                }), 256 /* UNKEYED_FRAGMENT */)),
+                _createCommentVNode("for")
+              ]
+            }
+          }),
+          _: 1 /* STABLE */
+        }), _parent)
+        _push(\`<!--dynamic-component--><!--a]-->\`"
+    `)
+  })
 
-  test('for', () => {})
+  test('slot', () => {
+    expect(
+      getCompiledString(
+        `<div>
+          <slot name="foo"/>
+          <slot/>
+        </div>`,
+        { vapor: true },
+      ),
+    ).toMatchInlineSnapshot(`
+      "\`<div><!--[a-->\`)
+        _ssrRenderSlot(_ctx.$slots, "foo", {}, null, _push, _parent)
+        _push(\`<!--slot--><!--a]--><!--[a-->\`)
+        _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent)
+        _push(\`<!--slot--><!--a]--></div>\`"
+    `)
+  })
 
-  test('for in ssr slot vnode fallback', () => {})
+  test('forwarded slot', () => {
+    expect(
+      getCompiledString(
+        `<component :is="tag">
+          <slot name="foo"/>
+          <slot/>
+        </component>`,
+        { vapor: true },
+      ),
+    ).toMatchInlineSnapshot(`
+      "\`<!--[a-->\`)
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.tag), null, {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
+            if (_push) {
+              _ssrRenderSlot(_ctx.$slots, "foo", {}, null, _push, _parent, _scopeId)
+              _push(\`<!--slot-->\`)
+              _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent, _scopeId)
+              _push(\`<!--slot-->\`)
+            } else {
+              return [
+                _renderSlot(_ctx.$slots, "foo"),
+                _createCommentVNode("slot"),
+                _renderSlot(_ctx.$slots, "default"),
+                _createCommentVNode("slot")
+              ]
+            }
+          }),
+          _: 3 /* FORWARDED */
+        }), _parent)
+        _push(\`<!--dynamic-component--><!--a]-->\`"
+    `)
+  })
 
-  test('slot', () => {})
-
-  test('slot in ssr slot vnode fallback', () => {})
-
-  test('forwarded slot', () => {})
-
-  test('dynamic component', () => {})
-
-  test('dynamic in ssr slot vnode fallback', () => {})
+  test('dynamic component', () => {
+    expect(
+      getCompiledString(
+        `<component is='tag'>
+          <div>
+            <component is="foo"/>
+          </div>
+        </component>`,
+        { vapor: true },
+      ),
+    ).toMatchInlineSnapshot(`
+      "\`<!--[a-->\`)
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent("tag"), null, {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
+            if (_push) {
+              _push(\`<div\${_scopeId}><!--[a-->\`)
+              _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent("foo"), null, null), _parent, _scopeId)
+              _push(\`<!--dynamic-component--><!--a]--></div>\`)
+            } else {
+              return [
+                _createVNode("div", null, [
+                  _createCommentVNode("[a"),
+                  (_openBlock(), _createBlock(_resolveDynamicComponent("foo"))),
+                  _createCommentVNode("dynamic-component"),
+                  _createCommentVNode("a]")
+                ])
+              ]
+            }
+          }),
+          _: 1 /* STABLE */
+        }), _parent)
+        _push(\`<!--dynamic-component--><!--a]-->\`"
+    `)
+  })
 })
