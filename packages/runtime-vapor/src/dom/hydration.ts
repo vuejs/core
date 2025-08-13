@@ -70,8 +70,7 @@ function performHydration<T>(
 }
 
 export function withHydration(container: ParentNode, fn: () => void): void {
-  // @ts-expect-error
-  const setup = () => setInsertionState(container, -1)
+  const setup = () => setInsertionState(container)
   const cleanup = () => resetInsertionState()
   return performHydration(fn, setup, cleanup)
 }
@@ -138,11 +137,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
 
 function locateHydrationNodeImpl(): void {
   let node: Node | null
-  // @ts-expect-error
-  if (insertionAnchor === -1) {
-    // firstChild
-    node = _child(insertionParent!)!
-  } else if (insertionAnchor === 0) {
+  if (insertionAnchor === 0) {
     // prepend
     node = insertionParent!.$pa = locateHydrationNodeByAnchor(
       insertionParent!.$pa || _child(insertionParent!),
