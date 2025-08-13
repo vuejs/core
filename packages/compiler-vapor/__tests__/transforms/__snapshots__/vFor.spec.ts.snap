@@ -87,7 +87,7 @@ const t1 = _template("<div></div>", true)
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n5 = t1()
-    _setInsertionState(n5, null)
+    _setInsertionState(n5)
     const n2 = _createFor(() => (_for_item0.value), (_for_item1) => {
       const n4 = t0()
       const x4 = _child(n4, -1)

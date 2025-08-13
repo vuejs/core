@@ -280,9 +280,11 @@ export function processChildrenAsStatement(
 export function processBlockNodeAnchor(children: TemplateChildNode[]): void {
   let prevBlocks: (TemplateChildNode & { anchor?: string })[] = []
   let hasStaticNode = false
+  let blockCount = 0
   for (const child of children) {
     if (isBlockNode(child)) {
       prevBlocks.push(child)
+      blockCount++
     }
 
     if (isStaticNode(child)) {
@@ -304,7 +306,9 @@ export function processBlockNodeAnchor(children: TemplateChildNode[]): void {
     }
   }
 
-  if (prevBlocks.length) {
+  // When there is only one block node, no anchor is needed,
+  // firstChild is used as the hydration node
+  if (prevBlocks.length && !(blockCount === 1 && !hasStaticNode)) {
     // append anchor
     prevBlocks.forEach(child => (child.anchor = BLOCK_APPEND_ANCHOR_LABEL))
   }

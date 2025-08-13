@@ -42,7 +42,7 @@ const t0 = _template("<div></div>", true)
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = t0()
-  _setInsertionState(n1, null)
+  _setInsertionState(n1)
   const n0 = _createComponentWithFallback(_component_Comp, { id: () => (_ctx.foo) }, null, null, true)
   return n1
 }"

@@ -60,11 +60,13 @@ export const transformChildren: NodeTransform = (node, context) => {
 function processDynamicChildren(context: TransformContext<ElementNode>) {
   let prevDynamics: IRDynamicInfo[] = []
   let hasStaticTemplate = false
+  let dynamicCount = 0
   const children = context.dynamic.children
 
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.INSERT) {
       prevDynamics.push(child)
+      dynamicCount++
     }
 
     if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
@@ -84,7 +86,13 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
   }
 
   if (prevDynamics.length) {
-    registerInsertion(prevDynamics, context, -2 /* append */)
+    registerInsertion(
+      prevDynamics,
+      context,
+      // When there is only one dynamic node, no anchor is needed,
+      // firstChild is used as the hydration node
+      dynamicCount === 1 && !hasStaticTemplate ? undefined : -2 /* append */,
+    )
   }
 }
 

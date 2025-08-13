@@ -1354,11 +1354,7 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `
-        "<div>
-        <!--[a-->foo<!--a]-->
-        </div><!--if-->"
-      `,
+        `"<div>foo</div><!--if-->"`,
       )
 
       data.value = false
@@ -1731,10 +1727,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[a-->
         <!--[--><div>true</div>-true-<!--]-->
-        <!--if--><!--a]-->
-        </div>"
+        <!--if--></div>"
       `,
       )
 
@@ -1743,10 +1737,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[a-->
         <!--[--><!--]-->
-        <!--if--><!--a]-->
-        </div>"
+        <!--if--></div>"
       `,
       )
 
@@ -1754,10 +1746,8 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "<div>
-        <!--[a-->
         <!--[--><!--]-->
-        <div>true</div>-true-<!--if--><!--a]-->
-        </div>"
+        <div>true</div>-true-<!--if--></div>"
       `)
     })
 
@@ -1922,10 +1912,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[a-->
         <!--[--><span>a</span><span>b</span><span>c</span><!--]-->
-        <!--for--><!--a]-->
-        </div>"
+        <!--for--></div>"
       `,
       )
 
@@ -1934,10 +1922,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[a-->
         <!--[--><span>a</span><span>b</span><span>c</span><!--]-->
-        <span>d</span><!--for--><!--a]-->
-        </div>"
+        <span>d</span><!--for--></div>"
       `,
       )
     })
@@ -2062,10 +2048,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[a-->
         <!--[--><div>comp</div><div>comp</div><div>comp</div><!--]-->
-        <!--for--><!--a]-->
-        </div>"
+        <!--for--></div>"
       `,
       )
 
@@ -2074,10 +2058,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[a-->
         <!--[--><div>comp</div><div>comp</div><div>comp</div><!--]-->
-        <div>comp</div><!--for--><!--a]-->
-        </div>"
+        <div>comp</div><!--for--></div>"
       `,
       )
     })
@@ -2099,7 +2081,6 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[a-->
         <!--[-->
         <!--[--><span>a</span><!--]-->
         <!--slot-->
@@ -2107,8 +2088,7 @@ describe('Vapor Mode hydration', () => {
         <!--slot-->
         <!--[--><span>c</span><!--]-->
         <!--slot--><!--]-->
-        <!--for--><!--a]-->
-        </div>"
+        <!--for--></div>"
       `,
       )
 
@@ -2117,7 +2097,6 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[a-->
         <!--[-->
         <!--[--><span>a</span><!--]-->
         <!--slot-->
@@ -2125,8 +2104,7 @@ describe('Vapor Mode hydration', () => {
         <!--slot-->
         <!--[--><span>c</span><!--]-->
         <!--slot--><!--]-->
-        <span>d</span><!--slot--><!--for--><!--a]-->
-        </div>"
+        <span>d</span><!--slot--><!--for--></div>"
       `,
       )
     })
@@ -2146,14 +2124,12 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[a-->
         <!--[-->
         <!--[--><div>foo</div>-bar-<!--]-->
         <!--[--><div>foo</div>-bar-<!--]-->
         <!--[--><div>foo</div>-bar-<!--]-->
         <!--]-->
-        <!--for--><!--a]-->
-        </div>"
+        <!--for--></div>"
       `,
       )
 
@@ -2162,14 +2138,12 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[a-->
         <!--[-->
         <!--[--><div>foo</div>-bar-<!--]-->
         <!--[--><div>foo</div>-bar-<!--]-->
         <!--[--><div>foo</div>-bar-<!--]-->
         <!--]-->
-        <div>foo</div>-bar-<!--for--><!--a]-->
-        </div>"
+        <div>foo</div>-bar-<!--for--></div>"
       `,
       )
     })
@@ -3029,15 +3003,11 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[p--><div>
-        <!--[a--><div>
-        <!--[a-->
+        <!--[p--><div><div>
         <!--[-->
         <!--[--><span>foo</span><!--]-->
         <!--slot--><!--]-->
-        <!--slot--><!--a]-->
-        </div><!--a]-->
-        </div><!--p]-->
+        <!--slot--></div></div><!--p]-->
         <div>bar</div></div>"
       `,
       )
@@ -3048,15 +3018,11 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[p--><div>
-        <!--[a--><div>
-        <!--[a-->
+        <!--[p--><div><div>
         <!--[-->
         <!--[--><span>foo1</span><!--]-->
         <!--slot--><!--]-->
-        <!--slot--><!--a]-->
-        </div><!--a]-->
-        </div><!--p]-->
+        <!--slot--></div></div><!--p]-->
         <div>bar1</div></div>"
       `,
       )
@@ -3079,10 +3045,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[a-->
         <!--[--><!--slot-->foo<!--]-->
-        <!--slot--><!--a]-->
-        </div>"
+        <!--slot--></div>"
       `,
       )
 
@@ -3091,10 +3055,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[a-->
         <!--[--><!--slot-->foo1<!--]-->
-        <!--slot--><!--a]-->
-        </div>"
+        <!--slot--></div>"
       `,
       )
     })
@@ -3378,10 +3340,8 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "<div>
-      <!--[a-->
       <!--[-->true<!--]-->
-      <!--slot--><!--a]-->
-      </div>"
+      <!--slot--></div>"
     `,
     )
 
@@ -3390,10 +3350,8 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "<div>
-      <!--[a-->
       <!--[-->false<!--]-->
-      <!--slot--><!--a]-->
-      </div>"
+      <!--slot--></div>"
     `,
     )
   })

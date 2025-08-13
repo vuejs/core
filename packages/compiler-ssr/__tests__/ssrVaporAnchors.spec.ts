@@ -25,7 +25,7 @@ describe('insertion anchors', () => {
           { vapor: true },
         ),
       ).toMatchInlineSnapshot(`
-        "\`<!--[a-->\`)
+        "\`\`)
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
@@ -50,7 +50,7 @@ describe('insertion anchors', () => {
             }),
             _: 1 /* STABLE */
           }), _parent)
-          _push(\`<!--dynamic-component--><!--a]-->\`"
+          _push(\`<!--dynamic-component-->\`"
       `)
     })
 
@@ -81,7 +81,7 @@ describe('insertion anchors', () => {
           { vapor: true },
         ),
       ).toMatchInlineSnapshot(`
-        "\`<!--[a-->\`)
+        "\`\`)
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
@@ -108,7 +108,7 @@ describe('insertion anchors', () => {
             }),
             _: 3 /* FORWARDED */
           }), _parent)
-          _push(\`<!--dynamic-component--><!--a]-->\`"
+          _push(\`<!--dynamic-component-->\`"
       `)
     })
 
@@ -155,7 +155,7 @@ describe('insertion anchors', () => {
           { vapor: true },
         ),
       ).toMatchInlineSnapshot(`
-        "\`<!--[a-->\`)
+        "\`\`)
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
@@ -197,7 +197,7 @@ describe('insertion anchors', () => {
             }),
             _: 1 /* STABLE */
           }), _parent)
-          _push(\`<!--dynamic-component--><!--a]-->\`"
+          _push(\`<!--dynamic-component-->\`"
       `)
     })
 
@@ -283,7 +283,7 @@ describe('insertion anchors', () => {
           { vapor: true },
         ),
       ).toMatchInlineSnapshot(`
-        "\`<!--[a-->\`)
+        "\`\`)
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
@@ -370,7 +370,7 @@ describe('insertion anchors', () => {
             }),
             _: 1 /* STABLE */
           }), _parent)
-          _push(\`<!--dynamic-component--><!--a]-->\`"
+          _push(\`<!--dynamic-component-->\`"
       `)
     })
 
@@ -388,7 +388,7 @@ describe('insertion anchors', () => {
           { vapor: true },
         ),
       ).toMatchInlineSnapshot(`
-        "\`<!--[a-->\`)
+        "\`\`)
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.tag), null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
@@ -426,7 +426,7 @@ describe('insertion anchors', () => {
             }),
             _: 1 /* STABLE */
           }), _parent)
-          _push(\`<!--dynamic-component--><!--a]-->\`"
+          _push(\`<!--dynamic-component-->\`"
       `)
     })
 
@@ -455,7 +455,7 @@ describe('insertion anchors', () => {
           { vapor: true },
         ),
       ).toMatchInlineSnapshot(`
-        "\`<!--[a-->\`)
+        "\`\`)
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
@@ -480,7 +480,7 @@ describe('insertion anchors', () => {
             }),
             _: 1 /* STABLE */
           }), _parent)
-          _push(\`<!--dynamic-component--><!--a]-->\`"
+          _push(\`<!--dynamic-component-->\`"
       `)
     })
   })
@@ -544,7 +544,7 @@ describe('insertion anchors', () => {
         },
       ),
     ).toMatchInlineSnapshot(`
-      "\`<!--[a-->\`)
+      "\`\`)
         _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
@@ -575,7 +575,7 @@ describe('insertion anchors', () => {
           }),
           _: 1 /* STABLE */
         }), _parent)
-        _push(\`<!--dynamic-component--><!--a]-->\`"
+        _push(\`<!--dynamic-component-->\`"
     `)
   })
 })
@@ -595,7 +595,7 @@ describe('block anchors', () => {
         },
       ),
     ).toMatchInlineSnapshot(`
-      "\`<!--[a-->\`)
+      "\`\`)
         _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.tag), null, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
@@ -638,7 +638,7 @@ describe('block anchors', () => {
           }),
           _: 1 /* STABLE */
         }), _parent)
-        _push(\`<!--dynamic-component--><!--a]-->\`"
+        _push(\`<!--dynamic-component-->\`"
     `)
   })
 
@@ -655,7 +655,7 @@ describe('block anchors', () => {
         },
       ),
     ).toMatchInlineSnapshot(`
-      "\`<!--[a-->\`)
+      "\`\`)
         _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.tag), null, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
@@ -700,7 +700,7 @@ describe('block anchors', () => {
           }),
           _: 1 /* STABLE */
         }), _parent)
-        _push(\`<!--dynamic-component--><!--a]-->\`"
+        _push(\`<!--dynamic-component-->\`"
     `)
   })
 
@@ -715,7 +715,7 @@ describe('block anchors', () => {
         },
       ),
     ).toMatchInlineSnapshot(`
-      "\`<!--[a-->\`)
+      "\`\`)
         _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.tag), null, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
@@ -739,7 +739,7 @@ describe('block anchors', () => {
           }),
           _: 1 /* STABLE */
         }), _parent)
-        _push(\`<!--dynamic-component--><!--a]-->\`"
+        _push(\`<!--dynamic-component-->\`"
     `)
   })
 
@@ -771,7 +771,7 @@ describe('block anchors', () => {
         { vapor: true },
       ),
     ).toMatchInlineSnapshot(`
-      "\`<!--[a-->\`)
+      "\`\`)
         _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.tag), null, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
@@ -790,7 +790,7 @@ describe('block anchors', () => {
           }),
           _: 3 /* FORWARDED */
         }), _parent)
-        _push(\`<!--dynamic-component--><!--a]-->\`"
+        _push(\`<!--dynamic-component-->\`"
     `)
   })
 
@@ -805,27 +805,25 @@ describe('block anchors', () => {
         { vapor: true },
       ),
     ).toMatchInlineSnapshot(`
-      "\`<!--[a-->\`)
+      "\`\`)
         _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent("tag"), null, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
-              _push(\`<div\${_scopeId}><!--[a-->\`)
+              _push(\`<div\${_scopeId}>\`)
               _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent("foo"), null, null), _parent, _scopeId)
-              _push(\`<!--dynamic-component--><!--a]--></div>\`)
+              _push(\`<!--dynamic-component--></div>\`)
             } else {
               return [
                 _createVNode("div", null, [
-                  _createCommentVNode("[a"),
                   (_openBlock(), _createBlock(_resolveDynamicComponent("foo"))),
-                  _createCommentVNode("dynamic-component"),
-                  _createCommentVNode("a]")
+                  _createCommentVNode("dynamic-component")
                 ])
               ]
             }
           }),
           _: 1 /* STABLE */
         }), _parent)
-        _push(\`<!--dynamic-component--><!--a]-->\`"
+        _push(\`<!--dynamic-component-->\`"
     `)
   })
 })
