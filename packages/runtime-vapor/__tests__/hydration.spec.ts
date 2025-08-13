@@ -1263,7 +1263,42 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
-    test.todo('with ssr slot vnode fallback', () => {})
+    test('in ssr slot vnode fallback', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+            <components.Child>
+              <span>{{ data }}</span>
+            </components.Child>
+          </template>`,
+        {
+          Child: `
+          <template>
+            <component :is="'div'">
+              <slot />
+            </component>
+          </template>`,
+        },
+        ref('foo'),
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--></div><!--dynamic-component-->"
+      `,
+      )
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><span>bar</span><!--]-->
+        <!--slot--></div><!--dynamic-component-->"
+      `,
+      )
+    })
   })
 
   describe('if', () => {
