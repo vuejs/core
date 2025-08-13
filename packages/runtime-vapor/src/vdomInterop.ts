@@ -43,6 +43,7 @@ import {
 import { type Block, type VaporTransitionHooks, insert, remove } from './block'
 import {
   EMPTY_OBJ,
+  SLOT_ANCHOR_LABEL,
   extend,
   isArray,
   isFunction,
@@ -195,7 +196,7 @@ const vaporInteropImpl: Omit<
       vnode.vb = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
       vnode.el = vnode.anchor = locateVaporFragmentAnchor(
         currentHydrationNode!,
-        'slot',
+        SLOT_ANCHOR_LABEL,
       )
     })
     return _next(node)

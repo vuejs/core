@@ -168,16 +168,14 @@ export function processChildren(
   disableNestedFragments = false,
   disableComment = false,
 ): void {
-  if (asFragment) {
+  const vapor = context.options.vapor
+  if (asFragment && !vapor) {
     context.pushStringPart(`<!--[-->`)
   }
 
   const { children } = parent
 
-  if (
-    context.options.vapor &&
-    isElementWithChildren(parent as PlainElementNode)
-  ) {
+  if (vapor && isElementWithChildren(parent as PlainElementNode)) {
     processBlockNodeAnchor(children)
   }
 
@@ -261,7 +259,7 @@ export function processChildren(
         return exhaustiveCheck
     }
   }
-  if (asFragment) {
+  if (asFragment && !vapor) {
     context.pushStringPart(`<!--]-->`)
   }
 }

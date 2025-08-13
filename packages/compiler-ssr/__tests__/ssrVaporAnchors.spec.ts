@@ -395,7 +395,7 @@ describe('insertion anchors', () => {
                 if (_ctx.foo) {
                   _push(\`<div\${_scopeId}><!--[p-->\`)
                   if (_ctx.depth < 5) {
-                    _push(\`<!--[--> foo <!--]-->\`)
+                    _push(\` foo \`)
                     _push(\`<!--if-->\`)
                   } else {
                     _push(\`<!---->\`)
@@ -436,11 +436,11 @@ describe('insertion anchors', () => {
           vapor: true,
         }),
       ).toMatchInlineSnapshot(`
-        "\`<div><!--[p--><!--[-->\`)
+        "\`<div><!--[p-->\`)
           _ssrRenderList(_ctx.items, (item) => {
             _push(\`<span></span>\`)
           })
-          _push(\`<!--]--><!--for--><!--p]--><span></span></div>\`"
+          _push(\`<!--for--><!--p]--><span></span></div>\`"
       `)
     })
 
@@ -459,11 +459,11 @@ describe('insertion anchors', () => {
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
-                _push(\`<div\${_scopeId}><!--[p--><!--[-->\`)
+                _push(\`<div\${_scopeId}><!--[p-->\`)
                 _ssrRenderList(_ctx.items, (item) => {
                   _push(\`<span\${_scopeId}></span>\`)
                 })
-                _push(\`<!--]--><!--for--><!--p]--><span\${_scopeId}></span></div>\`)
+                _push(\`<!--for--><!--p]--><span\${_scopeId}></span></div>\`)
               } else {
                 return [
                   _createVNode("div", null, [
@@ -719,7 +719,6 @@ describe('block anchors', () => {
         _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.tag), null, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
-              _push(\`<!--[-->\`)
               _ssrRenderList(_ctx.items, (item) => {
                 _push(\`<span\${
                   _scopeId
@@ -727,7 +726,7 @@ describe('block anchors', () => {
                   _ssrInterpolate(item)
                 }</span>\`)
               })
-              _push(\`<!--]--><!--for-->\`)
+              _push(\`<!--for-->\`)
             } else {
               return [
                 (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.items, (item) => {
