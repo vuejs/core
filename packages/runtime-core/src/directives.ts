@@ -125,8 +125,8 @@ export function validateDirectiveName(name: string): void {
 export type DirectiveArguments = Array<
   | [Directive | undefined]
   | [Directive | undefined, any]
-  | [Directive | undefined, any, string]
-  | [Directive | undefined, any, string | undefined, DirectiveModifiers]
+  | [Directive | undefined, any, any]
+  | [Directive | undefined, any, any, DirectiveModifiers]
 >
 
 /**
