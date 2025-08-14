@@ -223,3 +223,26 @@ function locateHydrationNodeByAnchor(
   }
   return null
 }
+
+export function skipBlockNodes(node: Node): Node {
+  while (node) {
+    if (isComment(node, `[${BLOCK_PREPEND_ANCHOR_LABEL}`)) {
+      node = locateEndAnchor(
+        node,
+        `[${BLOCK_PREPEND_ANCHOR_LABEL}`,
+        `${BLOCK_PREPEND_ANCHOR_LABEL}]`,
+      )!
+      continue
+    } else if (isComment(node, `[${BLOCK_INSERTION_ANCHOR_LABEL}`)) {
+      node = locateEndAnchor(
+        node,
+        `[${BLOCK_INSERTION_ANCHOR_LABEL}`,
+        `${BLOCK_INSERTION_ANCHOR_LABEL}]`,
+      )!
+      continue
+    }
+
+    break
+  }
+  return node
+}

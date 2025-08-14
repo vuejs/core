@@ -1,9 +1,5 @@
-import { isComment, locateEndAnchor } from './hydration'
-import {
-  BLOCK_INSERTION_ANCHOR_LABEL,
-  BLOCK_PREPEND_ANCHOR_LABEL,
-  isInsertionAnchor,
-} from '@vue/shared'
+import { skipBlockNodes } from './hydration'
+import { isInsertionAnchor } from '@vue/shared'
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function createElement(tagName: string): HTMLElement {
@@ -23,29 +19,6 @@ export function createComment(data: string): Comment {
 /*! #__NO_SIDE_EFFECTS__ */
 export function querySelector(selectors: string): Element | null {
   return document.querySelector(selectors)
-}
-
-function skipBlockNodes(node: Node): Node {
-  while (node) {
-    if (isComment(node, `[${BLOCK_PREPEND_ANCHOR_LABEL}`)) {
-      node = locateEndAnchor(
-        node,
-        `[${BLOCK_PREPEND_ANCHOR_LABEL}`,
-        `${BLOCK_PREPEND_ANCHOR_LABEL}]`,
-      )!
-      continue
-    } else if (isComment(node, `[${BLOCK_INSERTION_ANCHOR_LABEL}`)) {
-      node = locateEndAnchor(
-        node,
-        `[${BLOCK_INSERTION_ANCHOR_LABEL}`,
-        `${BLOCK_INSERTION_ANCHOR_LABEL}]`,
-      )!
-      continue
-    }
-
-    break
-  }
-  return node
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -78,15 +51,11 @@ export function _child(node: ParentNode): Node {
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __child(node: ParentNode): Node {
-  let n = node.firstChild!
-  while (n && (isComment(n, '[') || isInsertionAnchor(n))) {
+  let n: Node = node.firstChild!
+  while (n && isInsertionAnchor(n)) {
     // skip block node
-    n = skipBlockNodes(n) as ChildNode
-    if (isComment(n, '[')) {
-      n = locateEndAnchor(n)!.nextSibling!
-    } else {
-      n = n.nextSibling!
-    }
+    n = skipBlockNodes(n)
+    n = n.nextSibling!
   }
 
   return n
@@ -119,11 +88,9 @@ export function _next(node: Node): Node {
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __next(node: Node): Node {
-  // process fragment (<!--[-->...<!--]-->) as a single node
-  if (isComment(node, '[')) {
-    node = locateEndAnchor(node)!
+  if (isInsertionAnchor(node)) {
+    node = skipBlockNodes(node)
   }
-  node = skipBlockNodes(node)
   return node.nextSibling!
 }
 
