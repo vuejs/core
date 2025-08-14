@@ -70,6 +70,6 @@ export function genGetTextChild(
 
   return [
     NEWLINE,
-    `const x${oper.parent} = ${context.helper('child')}(n${oper.parent}, -1)`,
+    `const x${oper.parent} = ${context.helper('txt')}(n${oper.parent})`,
   ]
 }

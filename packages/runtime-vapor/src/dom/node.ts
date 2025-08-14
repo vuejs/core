@@ -49,6 +49,26 @@ function skipBlockNodes(node: Node): Node {
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
+const _txt: typeof _child = _child
+
+/**
+ * Hydration-specific version of `child`.
+ */
+/*! #__NO_SIDE_EFFECTS__ */
+const __txt: typeof __child = (node: ParentNode): Node => {
+  let n = node.firstChild!
+
+  // since SSR doesn't generate whitespace placeholder text nodes, if firstChild
+  // is null, manually insert a text node as the first child
+  if (!n) {
+    node.textContent = ' '
+    return node.firstChild!
+  }
+
+  return n
+}
+
+/*! #__NO_SIDE_EFFECTS__ */
 export function _child(node: ParentNode): Node {
   return node.firstChild!
 }
@@ -57,17 +77,8 @@ export function _child(node: ParentNode): Node {
  * Hydration-specific version of `child`.
  */
 /*! #__NO_SIDE_EFFECTS__ */
-export function __child(node: ParentNode, offset?: number): Node {
+export function __child(node: ParentNode): Node {
   let n = node.firstChild!
-
-  // when offset is -1, it means we need to get the text node of this element
-  // since SSR doesn't generate whitespace placeholder text nodes, if firstChild
-  // is null, manually insert a text node as the first child
-  if (offset === -1 && !n) {
-    node.textContent = ' '
-    return node.firstChild!
-  }
-
   while (n && (isComment(n, '[') || isInsertionAnchor(n))) {
     // skip block node
     n = skipBlockNodes(n) as ChildNode
@@ -121,8 +132,14 @@ type DelegatedFunction<T extends (...args: any[]) => any> = T & {
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
-export const child: DelegatedFunction<typeof __child> = (node, offset) => {
-  return child.impl(node, offset)
+export const txt: DelegatedFunction<typeof _txt> = node => {
+  return txt.impl(node)
+}
+txt.impl = _child
+
+/*! #__NO_SIDE_EFFECTS__ */
+export const child: DelegatedFunction<typeof _child> = node => {
+  return child.impl(node)
 }
 child.impl = _child
 
@@ -142,17 +159,19 @@ nthChild.impl = _nthChild
  * Enables hydration-specific node lookup behavior.
  *
  * Temporarily switches the implementations of the exported
- * `child`, `next`, and `nthChild` functions to their hydration-specific
- * versions (`__child`, `__next`, `__nthChild`). This allows traversal
+ * `txt`, `child`, `next`, and `nthChild` functions to their hydration-specific
+ * versions (`__txt`, `__child`, `__next`, `__nthChild`). This allows traversal
  * logic to correctly handle SSR comment anchors during hydration.
  */
 export function enableHydrationNodeLookup(): void {
+  txt.impl = __txt
   child.impl = __child
   next.impl = __next
   nthChild.impl = __nthChild
 }
 
 export function disableHydrationNodeLookup(): void {
+  txt.impl = _txt
   child.impl = _child
   next.impl = _next
   nthChild.impl = _nthChild
