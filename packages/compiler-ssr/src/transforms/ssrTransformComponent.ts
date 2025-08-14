@@ -456,7 +456,6 @@ function injectVaporAnchors(
       }
     }
 
-    // inject anchor before and after the child
     if (insertionAnchor) {
       newChildren.push(createAnchor(`[${insertionAnchor}`))
     }
@@ -467,7 +466,6 @@ function injectVaporAnchors(
     const blockAnchorLabel = getBlockAnchorLabel(child)
     if (blockAnchorLabel) newChildren.push(createAnchor(blockAnchorLabel))
 
-    // inject insertion anchor
     if (insertionAnchor) {
       newChildren.push(createAnchor(`${insertionAnchor}]`))
     }
@@ -485,7 +483,6 @@ function injectIfAnchors(
   lastBranchIndex: number,
   children: TemplateChildNode[],
 ) {
-  // inject anchor before if node
   if (insertionAnchor) {
     newChildren.push(createAnchor(`[${insertionAnchor}`))
   }
@@ -525,7 +522,6 @@ function injectIfAnchors(
     }
     newChildren.push(wrapperNode)
 
-    // inject block anchor
     if (blockAnchorLabel) {
       const repeatCount = j - i - (isElse ? 1 : 0) + 1
       wrapperNode.children.push(
@@ -535,7 +531,6 @@ function injectIfAnchors(
     node.children = injectVaporAnchors(node.children, node)
   }
 
-  // inject anchor after branch nodes
   if (insertionAnchor) {
     newChildren.push(createAnchor(`${insertionAnchor}]`))
   }

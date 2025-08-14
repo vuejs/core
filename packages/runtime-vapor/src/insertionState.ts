@@ -1,5 +1,6 @@
 export let insertionParent:
   | (ParentNode & {
+      $ps?: Node
       $pa?: Node
       $ia?: Node
       $aa?: Node
