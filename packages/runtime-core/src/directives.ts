@@ -28,7 +28,7 @@ import { pauseTracking, resetTracking, traverse } from '@vue/reactivity'
 export interface DirectiveBinding<
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > {
   instance: ComponentPublicInstance | Record<string, any> | null
   value: Value
@@ -43,7 +43,7 @@ export type DirectiveHook<
   Prev = VNode<any, HostElement> | null,
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > = (
   el: HostElement,
   binding: DirectiveBinding<Value, Modifiers, Arg>,
@@ -54,7 +54,7 @@ export type DirectiveHook<
 export type SSRDirectiveHook<
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > = (
   binding: DirectiveBinding<Value, Modifiers, Arg>,
   vnode: VNode,
@@ -64,7 +64,7 @@ export interface ObjectDirective<
   HostElement = any,
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > {
   /**
    * @internal without this, ts-expect-error in directives.test-d.ts somehow
@@ -99,14 +99,14 @@ export type FunctionDirective<
   HostElement = any,
   V = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > = DirectiveHook<HostElement, any, V, Modifiers, Arg>
 
 export type Directive<
   HostElement = any,
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > =
   | ObjectDirective<HostElement, Value, Modifiers, Arg>
   | FunctionDirective<HostElement, Value, Modifiers, Arg>
