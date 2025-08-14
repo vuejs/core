@@ -74,7 +74,7 @@ export class DynamicFragment extends VaporFragment {
 
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
-      if (isHydrating) this.hydrate(this.anchorLabel!, true)
+      if (isHydrating) this.hydrate(this.anchorLabel!)
       return
     }
     this.current = key
@@ -142,34 +142,14 @@ export class DynamicFragment extends VaporFragment {
     if (isHydrating) this.hydrate(this.anchorLabel!)
   }
 
-  hydrate = (label: string, isEmpty: boolean = false): void => {
+  hydrate = (label: string): void => {
     // avoid repeated hydration during rendering fallback
     if (this.anchor) return
 
-    // for `v-if="false"`, the node will be an empty comment, use it as the anchor.
-    // otherwise, find next sibling vapor fragment anchor
-    if (label === 'if' && isEmpty) {
-      this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, '')!
-    } else {
-      this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
-
-      // forwarded slots anchors are not present in ssr vnode-based slot
-      if (
-        !this.anchor &&
-        this.nodes instanceof DynamicFragment &&
-        this.nodes.forwarded
-      ) {
-        const { parentNode, nextSibling } = this.nodes.anchor
-        parentNode!.insertBefore(
-          (this.anchor = __DEV__ ? createComment(label) : createTextNode()),
-          nextSibling,
-        )
-      }
-    }
-
+    this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
     if (this.anchor) {
       advanceHydrationNode(this.anchor)
-    } else if (__DEV__) {
+    } else if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
       throw new Error(`${label} fragment anchor node was not found.`)
     }
   }

@@ -43,7 +43,6 @@ import {
 import { type Block, type VaporTransitionHooks, insert, remove } from './block'
 import {
   EMPTY_OBJ,
-  SLOT_ANCHOR_LABEL,
   extend,
   isArray,
   isFunction,
@@ -183,9 +182,9 @@ const vaporInteropImpl: Omit<
   },
 
   hydrate(vnode, node, container, anchor, parentComponent) {
-    vaporHydrateNode(node, () => {
-      this.mount(vnode, container, anchor, parentComponent)
-    })
+    vaporHydrateNode(node, () =>
+      this.mount(vnode, container, anchor, parentComponent),
+    )
     return _next(node)
   },
 
@@ -196,8 +195,17 @@ const vaporInteropImpl: Omit<
       vnode.vb = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
       vnode.el = vnode.anchor = locateVaporFragmentAnchor(
         currentHydrationNode!,
-        SLOT_ANCHOR_LABEL,
+        // there is not vapor slot anchor (<!--slot-->) injected in vdom component,
+        // so here use the fragment end anchor label
+        ']',
       )
+
+      if (
+        (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+        !vnode.anchor
+      ) {
+        throw new Error(`vapor slot anchor node was not found.`)
+      }
     })
     return _next(node)
   },

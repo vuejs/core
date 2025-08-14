@@ -1229,14 +1229,14 @@ describe('Vapor Mode hydration', () => {
         undefined,
         data,
       )
-      // v-if="false" is rendered as <!----> in the server-rendered HTML
-      // it reused as anchor, so the anchor label is empty
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
 
       data.value = true
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div>foo</div><!---->"`,
+        `"<div>foo</div><!--if-->"`,
       )
     })
 
@@ -3078,6 +3078,51 @@ describe('VDOM interop', () => {
       "
       <!--[--><span>false vapor fallback</span><!--]-->
       "
+    `,
+    )
+  })
+
+  test('nested components (VDOM -> Vapor(with slot fallback) -> Vapor)', async () => {
+    const data = ref(true)
+    const { container } = await testHydrationInterop(
+      `<script setup>const data = _data; const components = _components;</script>
+          <template>
+            <components.VaporChild/>
+          </template>`,
+      {
+        VaporChild: {
+          code: `<template>
+            <components.VaporChild2>
+              <template #default>
+                <span>{{data}} vapor fallback</span>
+              </template>
+            </components.VaporChild2>
+          </template>`,
+          vapor: true,
+        },
+        VaporChild2: {
+          code: `<template><slot><span>vapor fallback2</span></slot></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>true vapor fallback</span><!--]-->
+      <!--slot-->"
+    `,
+    )
+
+    data.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>false vapor fallback</span><!--]-->
+      <!--slot-->"
     `,
     )
   })

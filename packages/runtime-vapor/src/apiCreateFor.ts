@@ -139,8 +139,10 @@ export const createFor = (
           currentHydrationNode!,
           FOR_ANCHOR_LABEL,
         )!
-        if (__DEV__ && !parentAnchor) {
-          // this should not happen
+        if (
+          (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+          !parentAnchor
+        ) {
           throw new Error(`v-for fragment anchor node was not found.`)
         }
       }
