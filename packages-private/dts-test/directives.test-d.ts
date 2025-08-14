@@ -13,7 +13,7 @@ type ExtractBinding<T> = T extends (
 declare function testDirective<
   Value,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 >(): ExtractBinding<Directive<any, Value, Modifiers, Arg>>
 
 describe('vmodel', () => {
@@ -36,23 +36,27 @@ describe('custom', () => {
     value: number
     oldValue: number | null
     arg?: 'Arg'
-    modifiers: Record<'a' | 'b', boolean>
-    // @ts-expect-error
+    modifiers: Partial<Record<'a' | 'b', boolean>>
   }>(testDirective<number, 'a', 'Arg'>())
 
   expectType<{
     value: number
     oldValue: number | null
     arg?: 'Arg'
-    modifiers: Record<'a' | 'b', boolean>
-    // @ts-expect-error
-  }>(testDirective<number, 'a' | 'b', 'Argx'>())
+    modifiers: Partial<Record<'a' | 'b', boolean>>
+  }>(testDirective<number, 'a' | 'b', 'Arg'>())
 
   expectType<{
     value: number
     oldValue: number | null
     arg?: 'Arg'
-    modifiers: Record<'a' | 'b', boolean>
-    // @ts-expect-error
-  }>(testDirective<string, 'a' | 'b', 'Arg'>())
+    modifiers: Partial<Record<'a' | 'b', boolean>>
+  }>(testDirective<number, 'a' | 'b', 'Arg'>())
+
+  expectType<{
+    value: number
+    oldValue: number | null
+    arg?: HTMLElement
+    modifiers: Partial<Record<'a' | 'b', boolean>>
+  }>(testDirective<number, 'a' | 'b', HTMLElement>())
 })
