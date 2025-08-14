@@ -388,7 +388,12 @@ function renderVDOMSlot(
       }
       if (isValidSlot) {
         if (isHydrating) {
-          hydrateVNode(vnode!, parentComponent as any)
+          // if slot content is a vnode, hydrate it
+          // otherwise, it is a vapor Block that is already hydrated during
+          // renderSlot
+          if (isVNode(vnode)) {
+            hydrateVNode(vnode!, parentComponent as any)
+          }
         } else {
           if (fallbackNodes) {
             remove(fallbackNodes, parentNode)
@@ -416,7 +421,9 @@ function renderVDOMSlot(
           fallbackNodes = fallback(internals, parentComponent)
           if (isHydrating) {
             // hydrate fallback
-            hydrateVNode(fallbackNodes as any, parentComponent as any)
+            if (isVNode(vnode)) {
+              hydrateVNode(fallbackNodes as any, parentComponent as any)
+            }
           } else {
             // mount fallback
             if (oldVNode) {
@@ -516,5 +523,6 @@ function hydrateVNode(
     null,
     false,
   )
-  if (nextNode) advanceHydrationNode(nextNode)
+  if (nextNode) setCurrentHydrationNode(nextNode)
+  else advanceHydrationNode(node)
 }
