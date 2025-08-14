@@ -35,7 +35,7 @@ export interface DirectiveBinding<
   oldValue: Value | null
   arg?: Arg
   modifiers: DirectiveModifiers<Modifiers>
-  dir: ObjectDirective<any, Value>
+  dir: ObjectDirective<any, Value, Modifiers, Arg>
 }
 
 export type DirectiveHook<
