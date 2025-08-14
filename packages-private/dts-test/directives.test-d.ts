@@ -36,7 +36,8 @@ describe('custom', () => {
     value: number
     oldValue: number | null
     arg?: 'Arg'
-    modifiers: Partial<Record<'a' | 'b', boolean>>
+    modifiers: Record<'a' | 'b', boolean>
+    // @ts-expect-error
   }>(testDirective<number, 'a', 'Arg'>())
 
   expectType<{
@@ -44,14 +45,16 @@ describe('custom', () => {
     oldValue: number | null
     arg?: 'Arg'
     modifiers: Partial<Record<'a' | 'b', boolean>>
-  }>(testDirective<number, 'a' | 'b', 'Arg'>())
+    // @ts-expect-error
+  }>(testDirective<number, 'a' | 'b', 'Argx'>())
 
   expectType<{
     value: number
     oldValue: number | null
     arg?: 'Arg'
     modifiers: Partial<Record<'a' | 'b', boolean>>
-  }>(testDirective<number, 'a' | 'b', 'Arg'>())
+    // @ts-expect-error
+  }>(testDirective<string, 'a' | 'b', 'Arg'>())
 
   expectType<{
     value: number
@@ -59,4 +62,19 @@ describe('custom', () => {
     arg?: HTMLElement
     modifiers: Partial<Record<'a' | 'b', boolean>>
   }>(testDirective<number, 'a' | 'b', HTMLElement>())
+
+  expectType<{
+    value: number
+    oldValue: number | null
+    arg?: HTMLElement
+    modifiers: Partial<Record<'a' | 'b', boolean>>
+    // @ts-expect-error
+  }>(testDirective<number, 'a' | 'b', string>())
+
+  expectType<{
+    value: number
+    oldValue: number | null
+    arg?: HTMLElement
+    modifiers: Partial<Record<'a' | 'b', boolean>>
+  }>(testDirective<number, 'a' | 'b'>())
 })
