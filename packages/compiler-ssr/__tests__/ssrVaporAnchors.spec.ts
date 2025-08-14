@@ -231,7 +231,7 @@ describe('insertion anchors', () => {
               _push(\`<span></span>\`)
               _push(\`<!--if-->\`)
             } else {
-              _push(\`<!---->\`)
+              _push(\`<!--if-->\`)
             }
             _push(\`<!--p]--><span></span></span>\`)
             _push(\`<!--if-->\`)
@@ -241,7 +241,7 @@ describe('insertion anchors', () => {
               _push(\`<span></span>\`)
               _push(\`<!--if-->\`)
             } else {
-              _push(\`<!---->\`)
+              _push(\`<!--if-->\`)
             }
             _push(\`<!--p]--><span></span></span>\`)
             _push(\`<!--if--><!--if-->\`)
@@ -251,7 +251,7 @@ describe('insertion anchors', () => {
               _push(\`<span></span>\`)
               _push(\`<!--if-->\`)
             } else {
-              _push(\`<!---->\`)
+              _push(\`<!--if-->\`)
             }
             _push(\`<!--p]--><span></span></span>\`)
             _push(\`<!--if--><!--if-->\`)
@@ -294,7 +294,7 @@ describe('insertion anchors', () => {
                     _push(\`<span\${_scopeId}></span>\`)
                     _push(\`<!--if-->\`)
                   } else {
-                    _push(\`<!---->\`)
+                    _push(\`<!--if-->\`)
                   }
                   _push(\`<!--p]--><span\${_scopeId}></span></span>\`)
                   _push(\`<!--if-->\`)
@@ -304,7 +304,7 @@ describe('insertion anchors', () => {
                     _push(\`<span\${_scopeId}></span>\`)
                     _push(\`<!--if-->\`)
                   } else {
-                    _push(\`<!---->\`)
+                    _push(\`<!--if-->\`)
                   }
                   _push(\`<!--p]--><span\${_scopeId}></span></span>\`)
                   _push(\`<!--if--><!--if-->\`)
@@ -314,7 +314,7 @@ describe('insertion anchors', () => {
                     _push(\`<span\${_scopeId}></span>\`)
                     _push(\`<!--if-->\`)
                   } else {
-                    _push(\`<!---->\`)
+                    _push(\`<!--if-->\`)
                   }
                   _push(\`<!--p]--><span\${_scopeId}></span></span>\`)
                   _push(\`<!--if--><!--if-->\`)
@@ -398,12 +398,12 @@ describe('insertion anchors', () => {
                     _push(\` foo \`)
                     _push(\`<!--if-->\`)
                   } else {
-                    _push(\`<!---->\`)
+                    _push(\`<!--if-->\`)
                   }
                   _push(\`<!--p]--><div\${_scopeId}></div></div>\`)
                   _push(\`<!--if-->\`)
                 } else {
-                  _push(\`<!---->\`)
+                  _push(\`<!--if-->\`)
                 }
               } else {
                 return [
