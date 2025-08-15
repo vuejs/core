@@ -59,8 +59,8 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
+  locateFragmentAnchor,
   locateHydrationNode,
-  locateVaporFragmentAnchor,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
@@ -193,17 +193,14 @@ const vaporInteropImpl: Omit<
     const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
     vaporHydrateNode(node, () => {
       vnode.vb = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
-      vnode.el = vnode.anchor = locateVaporFragmentAnchor(
+      vnode.el = vnode.anchor = locateFragmentAnchor(
         currentHydrationNode!,
-        // there is not vapor slot anchor (<!--slot-->) injected in vdom component,
-        // so here use the fragment end anchor label
+        // locate the vdom fragment end anchor (<!--]-->), since no vapor slot
+        // anchor (<!--slot-->) is injected in vdom component
         ']',
       )
 
-      if (
-        (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-        !vnode.anchor
-      ) {
+      if (__DEV__ && !vnode.anchor) {
         throw new Error(`vapor slot anchor node was not found.`)
       }
     })
@@ -397,7 +394,7 @@ function renderVDOMSlot(
       if (isValidSlot) {
         if (isHydrating) {
           // if slot content is a vnode, hydrate it
-          // otherwise, it is a vapor Block that is already hydrated during
+          // otherwise, it's a vapor Block that was already hydrated during
           // renderSlot
           if (isVNode(vnode)) {
             hydrateVNode(vnode!, parentComponent as any)

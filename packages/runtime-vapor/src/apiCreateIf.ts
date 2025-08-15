@@ -33,9 +33,12 @@ export function createIf(
   if (!isHydrating) {
     if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
   } else {
-    // if _insertionAnchor is defined, insertionParent contains a static node
-    // that should be skipped during hydration.
-    // Advance to the next sibling node of parent to skip the static node.
+    // After block node hydration is completed, advance currentHydrationNode to
+    // _insertionParent's next sibling if _insertionAnchor has a value
+    // _insertionAnchor values:
+    // 1. Node type: _insertionAnchor is a static node, no hydration needed
+    // 2. null: block node is appended, potentially without next sibling
+    // 3. 0: next sibling of current block node is static, no hydration needed
     if (_insertionAnchor !== undefined) {
       advanceHydrationNode(_insertionParent!)
     }

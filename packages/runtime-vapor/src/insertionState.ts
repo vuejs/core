@@ -1,9 +1,11 @@
 export let insertionParent:
   | (ParentNode & {
-      $ps?: Node
-      $pa?: Node
-      $ia?: Node
-      $aa?: Node
+      // the latest prepend node
+      $lpn?: Node
+      // the latest insert node
+      $lin?: Node
+      // the latest append node
+      $lan?: Node
     })
   | undefined
 export let insertionAnchor: Node | 0 | undefined | null

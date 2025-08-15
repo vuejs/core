@@ -34,10 +34,10 @@ function performHydration<T>(
     locateHydrationNode = locateHydrationNodeImpl
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
-    ;(Node.prototype as any).$ps = undefined
-    ;(Node.prototype as any).$pa = undefined
-    ;(Node.prototype as any).$ia = undefined
-    ;(Node.prototype as any).$aa = undefined
+    ;(Node.prototype as any).$pns = undefined
+    ;(Node.prototype as any).$lpn = undefined
+    ;(Node.prototype as any).$lin = undefined
+    ;(Node.prototype as any).$lan = undefined
     isOptimized = true
   }
   enableHydrationNodeLookup()
@@ -80,15 +80,20 @@ export function setCurrentHydrationNode(node: Node | null): void {
   currentHydrationNode = node
 }
 
-function findParentSibling(n: Node): Node | null {
+function locateNextSiblingOfParent(n: Node): Node | null {
   if (!n.parentNode) return null
-  return n.parentNode.nextSibling || findParentSibling(n.parentNode)
+  return n.parentNode.nextSibling || locateNextSiblingOfParent(n.parentNode)
 }
 
-export function advanceHydrationNode(node: Node & { $ps?: Node | null }): void {
+export function advanceHydrationNode(
+  node: Node & { $pns?: Node | null },
+): void {
   // if no next sibling, find the next node in the parent chain
   const ret =
-    node.nextSibling || node.$ps || (node.$ps = findParentSibling(node))
+    node.nextSibling ||
+    // pns is short for "parent next sibling"
+    node.$pns ||
+    (node.$pns = locateNextSiblingOfParent(node))
   if (ret) setCurrentHydrationNode(ret)
 }
 
@@ -138,20 +143,20 @@ function locateHydrationNodeImpl(): void {
   let node: Node | null
   if (insertionAnchor === 0) {
     // prepend
-    node = insertionParent!.$pa = locateHydrationNodeByAnchor(
-      insertionParent!.$pa || _child(insertionParent!),
+    node = insertionParent!.$lpn = locateHydrationNodeByAnchor(
+      insertionParent!.$lpn || _child(insertionParent!),
       BLOCK_PREPEND_ANCHOR_LABEL,
     )!
   } else if (insertionAnchor) {
-    // insertion anchor
-    node = insertionParent!.$ia = locateHydrationNodeByAnchor(
-      insertionParent!.$ia || _child(insertionParent!),
+    // insert
+    node = insertionParent!.$lin = locateHydrationNodeByAnchor(
+      insertionParent!.$lin || _child(insertionParent!),
       BLOCK_INSERTION_ANCHOR_LABEL,
     )!
   } else if (insertionAnchor === null) {
-    // append anchor
-    node = insertionParent!.$aa = locateHydrationNodeByAnchor(
-      insertionParent!.$aa || _child(insertionParent!),
+    // append
+    node = insertionParent!.$lan = locateHydrationNodeByAnchor(
+      insertionParent!.$lan || _child(insertionParent!),
       BLOCK_APPEND_ANCHOR_LABEL,
     )!
   } else {
@@ -196,35 +201,32 @@ export function locateEndAnchor(
   return null
 }
 
-export function locateVaporFragmentAnchor(
+export function locateFragmentAnchor(
   node: Node,
-  anchorLabel: string,
+  label: string,
 ): Comment | null {
-  while (node) {
-    if (isComment(node, anchorLabel)) return node
+  while (node && node.nodeType === 8) {
+    if (isComment(node, label)) return node
     node = node.nextSibling!
   }
   return null
 }
 
-function locateHydrationNodeByAnchor(
-  node: Node,
-  anchorLabel: string,
-): Node | null {
+function locateHydrationNodeByAnchor(node: Node, label: string): Node | null {
   while (node) {
-    if (isComment(node, `[${anchorLabel}`)) return node.nextSibling
+    if (isComment(node, `[${label}`)) return node.nextSibling
     node = node.nextSibling!
   }
 
   if (__DEV__) {
     throw new Error(
-      `Could not locate hydration node with anchor label: ${anchorLabel}`,
+      `Could not locate hydration node with anchor label: ${label}`,
     )
   }
   return null
 }
 
-export function skipBlockNodes(node: Node): Node {
+export function advanceToNonBlockNode(node: Node): Node {
   while (node) {
     if (isComment(node, `[${BLOCK_PREPEND_ANCHOR_LABEL}`)) {
       node = locateEndAnchor(

@@ -29,8 +29,8 @@ import {
   advanceHydrationNode,
   currentHydrationNode,
   isHydrating,
+  locateFragmentAnchor,
   locateHydrationNode,
-  locateVaporFragmentAnchor,
 } from './dom/hydration'
 import { ForFragment, VaporFragment } from './fragment'
 import {
@@ -135,14 +135,11 @@ export const createFor = (
       }
 
       if (isHydrating) {
-        parentAnchor = locateVaporFragmentAnchor(
+        parentAnchor = locateFragmentAnchor(
           currentHydrationNode!,
           FOR_ANCHOR_LABEL,
         )!
-        if (
-          (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-          !parentAnchor
-        ) {
+        if (__DEV__ && !parentAnchor) {
           throw new Error(`v-for fragment anchor node was not found.`)
         }
       }

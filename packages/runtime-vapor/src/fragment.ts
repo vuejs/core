@@ -14,8 +14,8 @@ import {
   advanceHydrationNode,
   currentHydrationNode,
   isHydrating,
+  locateFragmentAnchor,
   locateHydrationNode,
-  locateVaporFragmentAnchor,
 } from './dom/hydration'
 import {
   applyTransitionHooks,
@@ -146,10 +146,10 @@ export class DynamicFragment extends VaporFragment {
     // avoid repeated hydration during rendering fallback
     if (this.anchor) return
 
-    this.anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
+    this.anchor = locateFragmentAnchor(currentHydrationNode!, label)!
     if (this.anchor) {
       advanceHydrationNode(this.anchor)
-    } else if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
+    } else if (__DEV__) {
       throw new Error(`${label} fragment anchor node was not found.`)
     }
   }

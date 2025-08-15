@@ -1,4 +1,4 @@
-import { skipBlockNodes } from './hydration'
+import { advanceToNonBlockNode } from './hydration'
 import { isInsertionAnchor } from '@vue/shared'
 
 /*! #__NO_SIDE_EFFECTS__ */
@@ -53,8 +53,7 @@ export function _child(node: ParentNode): Node {
 export function __child(node: ParentNode): Node {
   let n: Node = node.firstChild!
   while (n && isInsertionAnchor(n)) {
-    // skip block node
-    n = skipBlockNodes(n)
+    n = advanceToNonBlockNode(n)
     n = n.nextSibling!
   }
 
@@ -89,7 +88,7 @@ export function _next(node: Node): Node {
 /*! #__NO_SIDE_EFFECTS__ */
 export function __next(node: Node): Node {
   if (isInsertionAnchor(node)) {
-    node = skipBlockNodes(node)
+    node = advanceToNonBlockNode(node)
   }
   return node.nextSibling!
 }
