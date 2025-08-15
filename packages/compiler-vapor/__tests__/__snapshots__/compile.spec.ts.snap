@@ -180,14 +180,14 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { child as _child, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { child as _child, createInvoker as _createInvoker, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<button> </button>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
   const x0 = _child(n0)
-  n0.$evtclick = e => _ctx.handleClick(e)
+  n0.$evtclick = _createInvoker(e => _ctx.handleClick(e))
   _renderEffect(() => {
     const _count = _ctx.count
     _setProp(n0, "id", _count)

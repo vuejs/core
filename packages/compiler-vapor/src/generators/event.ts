@@ -28,7 +28,11 @@ export function genSetEvent(
   const { element, key, keyOverride, value, modifiers, delegate, effect } = oper
 
   const name = genName()
-  const handler = genEventHandler(context, value, modifiers)
+  const handler = [
+    `${context.helper('createInvoker')}(`,
+    ...genEventHandler(context, value, modifiers),
+    `)`,
+  ]
   const eventOptions = genEventOptions()
 
   if (delegate) {

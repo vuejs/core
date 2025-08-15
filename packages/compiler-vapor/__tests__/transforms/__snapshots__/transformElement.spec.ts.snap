@@ -374,14 +374,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: event handlers 1`] = `
-"import { withKeys as _withKeys, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { createInvoker as _createInvoker, withKeys as _withKeys, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", _withKeys(e => _ctx.a(e), ["foo"]))
-  _delegate(n0, "click", _withKeys(e => _ctx.b(e), ["bar"]))
+  _delegate(n0, "click", _createInvoker(_withKeys(e => _ctx.a(e), ["foo"])))
+  _delegate(n0, "click", _createInvoker(_withKeys(e => _ctx.b(e), ["bar"])))
   return n0
 }"
 `;
