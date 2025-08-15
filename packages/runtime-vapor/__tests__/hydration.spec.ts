@@ -55,19 +55,33 @@ function compile(
   )
 }
 
-async function testHydrationInterop(
+async function testWithVaporApp(
   code: string,
   components?: Record<string, string | { code: string; vapor: boolean }>,
   data?: any,
 ) {
-  return testHydration(code, components, data, { interop: true, vapor: false })
+  return testHydration(code, components, data, {
+    isVaporApp: true,
+    interop: true,
+  })
+}
+
+async function testWithVDOMApp(
+  code: string,
+  components?: Record<string, string | { code: string; vapor: boolean }>,
+  data?: any,
+) {
+  return testHydration(code, components, data, {
+    isVaporApp: false,
+    interop: true,
+  })
 }
 
 async function testHydration(
   code: string,
   components: Record<string, string | { code: string; vapor: boolean }> = {},
   data: any = ref('foo'),
-  { interop = false, vapor = true } = {},
+  { isVaporApp = true, interop = false } = {},
 ) {
   const ssrComponents: any = {}
   const clientComponents: any = {}
@@ -85,7 +99,10 @@ async function testHydration(
     })
   }
 
-  const serverComp = compile(code, data, ssrComponents, { vapor, ssr: true })
+  const serverComp = compile(code, data, ssrComponents, {
+    vapor: isVaporApp,
+    ssr: true,
+  })
   const html = await VueServerRenderer.renderToString(
     runtimeDom.createSSRApp(serverComp),
   )
@@ -94,16 +111,20 @@ async function testHydration(
   container.innerHTML = html
 
   const clientComp = compile(code, data, clientComponents, {
-    vapor,
+    vapor: isVaporApp,
     ssr: false,
   })
   let app
-  if (interop) {
-    app = runtimeDom.createSSRApp(clientComp)
-    app.use(runtimeVapor.vaporInteropPlugin)
-  } else {
+  if (isVaporApp) {
     app = createVaporSSRApp(clientComp)
+  } else {
+    app = runtimeDom.createSSRApp(clientComp)
   }
+
+  if (interop) {
+    app.use(runtimeVapor.vaporInteropPlugin)
+  }
+
   app.mount(container)
   return { data, container }
 }
@@ -2945,9 +2966,9 @@ describe('Vapor Mode hydration', () => {
 })
 
 describe('VDOM interop', () => {
-  test('basic vapor component', async () => {
+  test('basic render vapor component', async () => {
     const data = ref(true)
-    const { container } = await testHydrationInterop(
+    const { container } = await testWithVDOMApp(
       `<script setup>const data = _data; const components = _components;</script>
       <template>
         <components.VaporChild/>
@@ -2970,7 +2991,7 @@ describe('VDOM interop', () => {
 
   test('nested components (VDOM -> Vapor -> VDOM)', async () => {
     const data = ref(true)
-    const { container } = await testHydrationInterop(
+    const { container } = await testWithVDOMApp(
       `<script setup>const data = _data; const components = _components;</script>
       <template>
         <components.VaporChild/>
@@ -2998,7 +3019,7 @@ describe('VDOM interop', () => {
 
   test('nested components (VDOM -> Vapor -> VDOM (with slot fallback))', async () => {
     const data = ref(true)
-    const { container } = await testHydrationInterop(
+    const { container } = await testWithVDOMApp(
       `<script setup>const data = _data; const components = _components;</script>
       <template>
         <components.VaporChild/>
@@ -3036,9 +3057,9 @@ describe('VDOM interop', () => {
     )
   })
 
-  test('nested components (VDOM -> Vapor(with slot fallback) -> VDOM)', async () => {
+  test('nested components (VDOM -> Vapor(with slot content) -> VDOM)', async () => {
     const data = ref(true)
-    const { container } = await testHydrationInterop(
+    const { container } = await testWithVDOMApp(
       `<script setup>const data = _data; const components = _components;</script>
           <template>
             <components.VaporChild/>
@@ -3082,9 +3103,9 @@ describe('VDOM interop', () => {
     )
   })
 
-  test('nested components (VDOM -> Vapor(with slot fallback) -> Vapor)', async () => {
+  test('nested components (VDOM -> Vapor(with slot content) -> Vapor)', async () => {
     const data = ref(true)
-    const { container } = await testHydrationInterop(
+    const { container } = await testWithVDOMApp(
       `<script setup>const data = _data; const components = _components;</script>
           <template>
             <components.VaporChild/>
@@ -3129,7 +3150,7 @@ describe('VDOM interop', () => {
 
   test('vapor slot render vdom component', async () => {
     const data = ref(true)
-    const { container } = await testHydrationInterop(
+    const { container } = await testWithVDOMApp(
       `<script setup>const data = _data; const components = _components;</script>
       <template>
         <components.VaporChild>
@@ -3164,6 +3185,53 @@ describe('VDOM interop', () => {
       `
       "<div>
       <!--[-->false<!--]-->
+      <!--slot--></div>"
+    `,
+    )
+  })
+
+  test('vapor slot render vdom component (render function)', async () => {
+    const data = ref(true)
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data; const components = _components;
+        const VdomChild = {
+          setup() {
+            return () => h('div', null, [h('div', [String(data.value)])])
+          }
+        }
+      </script>
+      <template>
+        <components.VaporChild>
+          <VdomChild/>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><div><slot/></div></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "<div>
+      <!--[--><div><div>true</div></div><!--]-->
+      <!--slot--></div>"
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "<div>
+      <!--[--><div><div>false</div></div><!--]-->
       <!--slot--></div>"
     `,
     )
