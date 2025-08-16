@@ -70,7 +70,6 @@ describe('ssr: inject <style vars>', () => {
         const _cssVars = { style: { color: _ctx.color }}
         if (_ctx.ok) {
           _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
-          _push(\`<!--if-->\`)
         } else {
           _push(\`<!--[--><div\${
             _ssrRenderAttrs(_cssVars)

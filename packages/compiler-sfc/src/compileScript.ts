@@ -980,6 +980,11 @@ export function compileScript(
     ctx.hasDefineExposeCall || options.inlineTemplate ? `` : `  __expose();\n`
   // wrap setup code with function.
   if (ctx.isTS) {
+    // in SSR, always use defineComponent, so __vapor flag is required
+    if (ssr && vapor) {
+      runtimeOptions += `\n  __vapor: true,`
+    }
+
     // for TS, make sure the exported type is still valid type with
     // correct props information
     // we have to use object spread for types to be merged properly

@@ -8,7 +8,6 @@ describe('ssr: v-if', () => {
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         if (_ctx.foo) {
           _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
-          _push(\`<!--if-->\`)
         } else {
           _push(\`<!---->\`)
         }
@@ -24,7 +23,6 @@ describe('ssr: v-if', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}>hello<span>ok</span></div>\`)
-            _push(\`<!--if-->\`)
           } else {
             _push(\`<!---->\`)
           }
@@ -40,7 +38,6 @@ describe('ssr: v-if', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
-            _push(\`<!--if-->\`)
           } else {
             _push(\`<span\${_ssrRenderAttrs(_attrs)}></span>\`)
           }
@@ -56,10 +53,8 @@ describe('ssr: v-if', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
-            _push(\`<!--if-->\`)
           } else if (_ctx.bar) {
             _push(\`<span\${_ssrRenderAttrs(_attrs)}></span>\`)
-            _push(\`<!--if-->\`)
           } else {
             _push(\`<!---->\`)
           }
@@ -75,10 +70,8 @@ describe('ssr: v-if', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
-            _push(\`<!--if-->\`)
           } else if (_ctx.bar) {
             _push(\`<span\${_ssrRenderAttrs(_attrs)}></span>\`)
-            _push(\`<!--if-->\`)
           } else {
             _push(\`<p\${_ssrRenderAttrs(_attrs)}></p>\`)
           }
@@ -93,7 +86,6 @@ describe('ssr: v-if', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           if (_ctx.foo) {
             _push(\`<!--[-->hello<!--]-->\`)
-            _push(\`<!--if-->\`)
           } else {
             _push(\`<!---->\`)
           }
@@ -110,7 +102,6 @@ describe('ssr: v-if', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           if (_ctx.foo) {
             _push(\`<div\${_ssrRenderAttrs(_attrs)}>hi</div>\`)
-            _push(\`<!--if-->\`)
           } else {
             _push(\`<!---->\`)
           }
@@ -127,7 +118,6 @@ describe('ssr: v-if', () => {
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         if (_ctx.foo) {
           _push(\`<!--[--><div>hi</div><div>ho</div><!--]-->\`)
-          _push(\`<!--if-->\`)
         } else {
           _push(\`<!---->\`)
         }
@@ -147,8 +137,7 @@ describe('ssr: v-if', () => {
           _ssrRenderList(_ctx.list, (i) => {
             _push(\`<div></div>\`)
           })
-          _push(\`<!--]--><!--for-->\`)
-          _push(\`<!--if-->\`)
+          _push(\`<!--]-->\`)
         } else {
           _push(\`<!---->\`)
         }
@@ -167,7 +156,6 @@ describe('ssr: v-if', () => {
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         if (_ctx.foo) {
           _push(\`<!--[--><div>hi</div><div>ho</div><!--]-->\`)
-          _push(\`<!--if-->\`)
         } else {
           _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
         }

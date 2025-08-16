@@ -4,13 +4,14 @@ import { compileScript, parse } from '@vue/compiler-sfc'
 import * as runtimeVapor from '../src'
 import * as runtimeDom from '@vue/runtime-dom'
 import * as VueServerRenderer from '@vue/server-renderer'
-import {
-  DYNAMIC_COMPONENT_ANCHOR_LABEL,
-  FOR_ANCHOR_LABEL,
-  IF_ANCHOR_LABEL,
-  SLOT_ANCHOR_LABEL,
-  isString,
-} from '@vue/shared'
+import { isString } from '@vue/shared'
+
+const formatHtml = (raw: string) => {
+  return raw
+    .replace(/<!--\[/g, '\n<!--[')
+    .replace(/]-->/g, ']-->\n')
+    .replace(/\n{2,}/g, '\n')
+}
 
 const Vue = { ...runtimeDom, ...runtimeVapor }
 
@@ -54,19 +55,33 @@ function compile(
   )
 }
 
-async function testHydrationInterop(
+async function testWithVaporApp(
   code: string,
   components?: Record<string, string | { code: string; vapor: boolean }>,
   data?: any,
 ) {
-  return testHydration(code, components, data, { interop: true, vapor: false })
+  return testHydration(code, components, data, {
+    isVaporApp: true,
+    interop: true,
+  })
+}
+
+async function testWithVDOMApp(
+  code: string,
+  components?: Record<string, string | { code: string; vapor: boolean }>,
+  data?: any,
+) {
+  return testHydration(code, components, data, {
+    isVaporApp: false,
+    interop: true,
+  })
 }
 
 async function testHydration(
   code: string,
   components: Record<string, string | { code: string; vapor: boolean }> = {},
   data: any = ref('foo'),
-  { interop = false, vapor = true } = {},
+  { isVaporApp = true, interop = false } = {},
 ) {
   const ssrComponents: any = {}
   const clientComponents: any = {}
@@ -84,7 +99,10 @@ async function testHydration(
     })
   }
 
-  const serverComp = compile(code, data, ssrComponents, { vapor, ssr: true })
+  const serverComp = compile(code, data, ssrComponents, {
+    vapor: isVaporApp,
+    ssr: true,
+  })
   const html = await VueServerRenderer.renderToString(
     runtimeDom.createSSRApp(serverComp),
   )
@@ -93,16 +111,20 @@ async function testHydration(
   container.innerHTML = html
 
   const clientComp = compile(code, data, clientComponents, {
-    vapor,
+    vapor: isVaporApp,
     ssr: false,
   })
   let app
-  if (interop) {
-    app = runtimeDom.createSSRApp(clientComp)
-    app.use(runtimeVapor.vaporInteropPlugin)
-  } else {
+  if (isVaporApp) {
     app = createVaporSSRApp(clientComp)
+  } else {
+    app = runtimeDom.createSSRApp(clientComp)
   }
+
+  if (interop) {
+    app.use(runtimeVapor.vaporInteropPlugin)
+  }
+
   app.mount(container)
   return { data, container }
 }
@@ -124,36 +146,36 @@ describe('Vapor Mode hydration', () => {
       const { data, container } = await testHydration(`
       <template>{{ data }}</template>
     `)
-      expect(container.innerHTML).toMatchInlineSnapshot(`"foo"`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"foo"`)
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(`"bar"`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"bar"`)
     })
 
     test('consecutive text nodes', async () => {
       const { data, container } = await testHydration(`
       <template>{{ data }}{{ data }}</template>
     `)
-      expect(container.innerHTML).toMatchInlineSnapshot(`"foofoo"`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"foofoo"`)
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(`"barbar"`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"barbar"`)
     })
 
-    test('consecutive text nodes with anchor insertion', async () => {
+    test('consecutive text nodes with insertion anchor', async () => {
       const { data, container } = await testHydration(`
       <template><span/>{{ data }}{{ data }}<span/></template>
     `)
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--[--><span></span>foofoo<span></span><!--]-->"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<span></span>foofoo<span></span>"`,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--[--><span></span>barbar<span></span><!--]-->"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<span></span>barbar<span></span>"`,
       )
     })
 
@@ -161,25 +183,75 @@ describe('Vapor Mode hydration', () => {
       const { data, container } = await testHydration(`
       <template>{{ data }}A{{ data }}B{{ data }}</template>
     `)
-      expect(container.innerHTML).toMatchInlineSnapshot(`"fooAfooBfoo"`)
-
-      data.value = 'bar'
-      await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(`"barAbarBbar"`)
-    })
-
-    test('mixed text nodes with anchor insertion', async () => {
-      const { data, container } = await testHydration(`
-      <template><span/>{{ data }}A{{ data }}B{{ data }}<span/></template>
-    `)
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--[--><span></span>fooAfooBfoo<span></span><!--]-->"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"fooAfooBfoo"`,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--[--><span></span>barAbarBbar<span></span><!--]-->"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"barAbarBbar"`,
+      )
+    })
+
+    test('mixed text nodes with insertion anchor', async () => {
+      const { data, container } = await testHydration(`
+      <template><span/>{{ data }}A{{ data }}B{{ data }}<span/></template>
+    `)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<span></span>fooAfooBfoo<span></span>"`,
+      )
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<span></span>barAbarBbar<span></span>"`,
+      )
+    })
+
+    test('empty text node', async () => {
+      const data = reactive({ txt: '' })
+      const { container } = await testHydration(
+        `<template><div>{{ data.txt }}</div></template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div> </div>"`,
+      )
+
+      data.txt = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div>"`,
+      )
+    })
+
+    test('empty text node in slot', async () => {
+      const data = reactive({ txt: '' })
+      const { container } = await testHydration(
+        `<template><components.Child>{{data.txt}}</components.Child></template>`,
+        {
+          Child: `<template><slot/></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--> <!--]-->
+        <!--slot-->"
+      `,
+      )
+
+      data.txt = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[-->foo<!--]-->
+        <!--slot-->"
+      `,
       )
     })
   })
@@ -189,7 +261,7 @@ describe('Vapor Mode hydration', () => {
       const { container } = await testHydration(`
       <template><!----></template>
     `)
-      expect(container.innerHTML).toBe('<!---->')
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
       expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
     })
 
@@ -197,14 +269,14 @@ describe('Vapor Mode hydration', () => {
       const { container, data } = await testHydration(`
       <template> A<span>{{ data }}</span>{{ data }}</template>
     `)
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--[--> A<span>foo</span>foo<!--]-->"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `" A<span>foo</span>foo"`,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--[--> A<span>bar</span>bar<!--]-->"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `" A<span>bar</span>bar"`,
       )
     })
 
@@ -212,7 +284,9 @@ describe('Vapor Mode hydration', () => {
       const { container } = await testHydration(`
       <template><div/></template>
     `)
-      expect(container.innerHTML).toBe('<div></div>')
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div></div>"`,
+      )
       expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
     })
 
@@ -220,13 +294,13 @@ describe('Vapor Mode hydration', () => {
       const { container, data } = await testHydration(`
       <template><div :class="data">{{ data }}</div></template>
     `)
-      expect(container.innerHTML).toMatchInlineSnapshot(
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `"<div class="foo">foo</div>"`,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `"<div class="bar">bar</div>"`,
       )
     })
@@ -240,7 +314,7 @@ describe('Vapor Mode hydration', () => {
         </div>
       </template>
     `)
-      expect(container.innerHTML).toMatchInlineSnapshot(
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `"<div><span>foo</span><span class="foo"></span></div>"`,
       )
 
@@ -248,7 +322,7 @@ describe('Vapor Mode hydration', () => {
       triggerEvent('click', container.querySelector('.foo')!)
 
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `"<div><span>bar</span><span class="bar"></span></div>"`,
       )
     })
@@ -275,14 +349,22 @@ describe('Vapor Mode hydration', () => {
       `,
         { Child: `<template>{{ data }}</template>` },
       )
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div><span></span>foo</div>"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[a-->foo<!--a]-->
+        </div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div><span></span>bar</div>"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[a-->bar<!--a]-->
+        </div>"
+      `,
       )
     })
 
@@ -293,14 +375,22 @@ describe('Vapor Mode hydration', () => {
       `,
         { Child: `<template><div>{{ data }}</div>-{{ data }}-</template>` },
       )
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div><span></span><!--[--><div>foo</div>-foo-<!--]--></div>"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[a--><div>foo</div>-foo-<!--a]-->
+        </div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div><span></span><!--[--><div>bar</div>-bar-<!--]--></div>"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[a--><div>bar</div>-bar-<!--a]-->
+        </div>"
+      `,
       )
     })
 
@@ -311,14 +401,22 @@ describe('Vapor Mode hydration', () => {
       `,
         { Child: `<template><div>{{ data }}</div>-{{ data }}-</template>` },
       )
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div><!--[--><div>foo</div>-foo-<!--]--><span></span></div>"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p--><div>foo</div>-foo-<!--p]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div><!--[--><div>bar</div>-bar-<!--]--><span></span></div>"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p--><div>bar</div>-bar-<!--p]-->
+        <span></span></div>"
+      `,
       )
     })
 
@@ -332,32 +430,26 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[-->` +
-          `<div></div>` +
-          `<!--[--><div>foo</div>-foo-<!--]-->` +
-          `<div></div>` +
-          `<!--]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p--><div></div><div>foo</div>-foo-<div></div><!--p]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[-->` +
-          `<div></div>` +
-          `<!--[--><div>bar</div>-bar-<!--]-->` +
-          `<div></div>` +
-          `<!--]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p--><div></div><div>bar</div>-bar-<div></div><!--p]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('component with anchor insertion', async () => {
+    test('component with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
         <div>
@@ -371,18 +463,26 @@ describe('Vapor Mode hydration', () => {
           Child: `<template>{{ data }}</template>`,
         },
       )
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div><span></span>foo<span></span></div>"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->foo<!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div><span></span>bar<span></span></div>"`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->bar<!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('nested components with anchor insertion', async () => {
+    test('nested components with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `
       <template><components.Parent/></template>
@@ -392,14 +492,22 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div></template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div><span></span><div>foo</div><span></span></div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>foo</div><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div><span></span><div>bar</div><span></span></div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>bar</div><!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
@@ -413,34 +521,30 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div></template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>` +
-          `<span></span>` +
-          `<div>foo</div>` +
-          `<span></span>` +
-          `</div>` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div><span></span>
+        <!--[i--><div>foo</div><!--i]-->
+        <span></span></div><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>` +
-          `<span></span>` +
-          `<div>bar</div>` +
-          `<span></span>` +
-          `</div>` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div><span></span>
+        <!--[i--><div>bar</div><!--i]-->
+        <span></span></div><!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('consecutive components with anchor insertion', async () => {
+    test('consecutive components with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
         <div>
@@ -455,24 +559,24 @@ describe('Vapor Mode hydration', () => {
           Child: `<template>{{ data }}</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `foo` +
-          `<!--[[-->foo<!--]]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->foo<!--i]-->
+        <!--[i-->foo<!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `bar` +
-          `<!--[[-->bar<!--]]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->bar<!--i]-->
+        <!--[i-->bar<!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
@@ -492,19 +596,29 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<div><span>foo</span><span>bar</span></div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[a--><span>foo</span><!--a]-->
+        <!--[a--><span>bar</span><!--a]-->
+        </div>"
+      `,
       )
 
       data.foo = 'foo1'
       data.bar = 'bar1'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div><span>foo1</span><span>bar1</span></div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[a--><span>foo1</span><!--a]-->
+        <!--[a--><span>bar1</span><!--a]-->
+        </div>"
+      `,
       )
     })
 
-    test('nested consecutive components with anchor insertion', async () => {
+    test('nested consecutive components with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `
       <template><components.Parent/></template>
@@ -514,24 +628,24 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div></template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>foo</div>` +
-          `<!--[[--><div>foo</div><!--]]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>foo</div><!--i]-->
+        <!--[i--><div>foo</div><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>bar</div>` +
-          `<!--[[--><div>bar</div><!--]]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>bar</div><!--i]-->
+        <!--[i--><div>bar</div><!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
@@ -545,36 +659,32 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div></template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>` +
-          `<span></span>` +
-          `<div>foo</div>` +
-          `<!--[[--><div>foo</div><!--]]-->` +
-          `<span></span>` +
-          `</div>` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div><span></span>
+        <!--[i--><div>foo</div><!--i]-->
+        <!--[i--><div>foo</div><!--i]-->
+        <span></span></div><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>` +
-          `<span></span>` +
-          `<div>bar</div>` +
-          `<!--[[--><div>bar</div><!--]]-->` +
-          `<span></span>` +
-          `</div>` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div><span></span>
+        <!--[i--><div>bar</div><!--i]-->
+        <!--[i--><div>bar</div><!--i]-->
+        <span></span></div><!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('mixed component and element with anchor insertion', async () => {
+    test('mixed component and element with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
         <div>
@@ -590,30 +700,30 @@ describe('Vapor Mode hydration', () => {
           Child: `<template>{{ data }}</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `foo` +
-          `<span></span>` +
-          `foo` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->foo<!--i]-->
+        <span></span>
+        <!--[i-->foo<!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `bar` +
-          `<span></span>` +
-          `bar` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->bar<!--i]-->
+        <span></span>
+        <!--[i-->bar<!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('mixed component and text with anchor insertion', async () => {
+    test('mixed component and text with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
         <div>
@@ -629,30 +739,30 @@ describe('Vapor Mode hydration', () => {
           Child: `<template>{{ data }}</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `foo` +
-          `<!--[[--> foo <!--]]-->` +
-          `foo` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->foo<!--i]-->
+         foo 
+        <!--[i-->foo<!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `bar` +
-          `<!--[[--> bar <!--]]-->` +
-          `bar` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->bar<!--i]-->
+         bar 
+        <!--[i-->bar<!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('fragment component with anchor insertion', async () => {
+    test('fragment component with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
         <div>
@@ -666,26 +776,26 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>foo</div>-foo<!--]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>foo</div>-foo<!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>bar</div>-bar<!--]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>bar</div>-bar<!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('nested fragment component with anchor insertion', async () => {
+    test('nested fragment component with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `
       <template><components.Parent/></template>
@@ -695,22 +805,22 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>foo</div>-foo-<!--]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>foo</div>-foo-<!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>bar</div>-bar-<!--]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>bar</div>-bar-<!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
@@ -724,34 +834,30 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>` +
-          `<span></span>` +
-          `<!--[--><div>foo</div>-foo-<!--]-->` +
-          `<span></span>` +
-          `</div>` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div><span></span>
+        <!--[i--><div>foo</div>-foo-<!--i]-->
+        <span></span></div><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>` +
-          `<span></span>` +
-          `<!--[--><div>bar</div>-bar-<!--]-->` +
-          `<span></span>` +
-          `</div>` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div><span></span>
+        <!--[i--><div>bar</div>-bar-<!--i]-->
+        <span></span></div><!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('consecutive fragment components with anchor insertion', async () => {
+    test('consecutive fragment components with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
           <div>
@@ -766,32 +872,28 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>foo</div>-foo<!--]-->` +
-          `<!--[[-->` +
-          `<!--[--><div>foo</div>-foo<!--]-->` +
-          `<!--]]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>foo</div>-foo<!--i]-->
+        <!--[i--><div>foo</div>-foo<!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>bar</div>-bar<!--]-->` +
-          `<!--[[-->` +
-          `<!--[--><div>bar</div>-bar<!--]-->` +
-          `<!--]]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>bar</div>-bar<!--i]-->
+        <!--[i--><div>bar</div>-bar<!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('nested consecutive fragment components with anchor insertion', async () => {
+    test('nested consecutive fragment components with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `
       <template><components.Parent/></template>
@@ -801,28 +903,24 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>foo</div>-foo-<!--]-->` +
-          `<!--[[-->` +
-          `<!--[--><div>foo</div>-foo-<!--]-->` +
-          `<!--]]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>foo</div>-foo-<!--i]-->
+        <!--[i--><div>foo</div>-foo-<!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>bar</div>-bar-<!--]-->` +
-          `<!--[[-->` +
-          `<!--[--><div>bar</div>-bar-<!--]-->` +
-          `<!--]]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>bar</div>-bar-<!--i]-->
+        <!--[i--><div>bar</div>-bar-<!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
@@ -836,36 +934,28 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>` +
-          `<span></span>` +
-          `<!--[--><div>foo</div>-foo-<!--]-->` +
-          `<!--[[-->` +
-          `<!--[--><div>foo</div>-foo-<!--]-->` +
-          `<!--]]-->` +
-          `<span></span>` +
-          `</div>` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div><span></span>
+        <!--[i--><div>foo</div>-foo-<!--i]-->
+        <!--[i--><div>foo</div>-foo-<!--i]-->
+        <span></span></div><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>` +
-          `<span></span>` +
-          `<!--[--><div>bar</div>-bar-<!--]-->` +
-          `<!--[[-->` +
-          `<!--[--><div>bar</div>-bar-<!--]-->` +
-          `<!--]]-->` +
-          `<span></span>` +
-          `</div>` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div><span></span>
+        <!--[i--><div>bar</div>-bar-<!--i]-->
+        <!--[i--><div>bar</div>-bar-<!--i]-->
+        <span></span></div><!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
@@ -879,32 +969,26 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div>-{{ data }}-</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[-->` +
-          `<!--[--><div>foo</div>-foo-<!--]-->` +
-          `<!--[--><div>foo</div>-foo-<!--]-->` +
-          `<!--]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>foo</div>-foo-<div>foo</div>-foo-<!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[-->` +
-          `<!--[--><div>bar</div>-bar-<!--]-->` +
-          `<!--[--><div>bar</div>-bar-<!--]-->` +
-          `<!--]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>bar</div>-bar-<div>bar</div>-bar-<!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('mixed fragment component and element with anchor insertion', async () => {
+    test('mixed fragment component and element with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
         <div>
@@ -920,30 +1004,30 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>foo</div>-foo<!--]-->` +
-          `<span></span>` +
-          `<!--[--><div>foo</div>-foo<!--]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>foo</div>-foo<!--i]-->
+        <span></span>
+        <!--[i--><div>foo</div>-foo<!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>bar</div>-bar<!--]-->` +
-          `<span></span>` +
-          `<!--[--><div>bar</div>-bar<!--]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>bar</div>-bar<!--i]-->
+        <span></span>
+        <!--[i--><div>bar</div>-bar<!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('mixed fragment component and text with anchor insertion', async () => {
+    test('mixed fragment component and text with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
         <div>
@@ -959,33 +1043,31 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><div>{{ data }}</div>-{{ data }}</template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>foo</div>-foo<!--]-->` +
-          ` <!--[[--> foo <!--]]--> ` +
-          `<!--[--><div>foo</div>-foo<!--]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>foo</div>-foo<!--i]-->
+         foo 
+        <!--[i--><div>foo</div>-foo<!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>bar</div>-bar<!--]-->` +
-          ` <!--[[--> bar <!--]]--> ` +
-          `<!--[--><div>bar</div>-bar<!--]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>bar</div>-bar<!--i]-->
+         bar 
+        <!--[i--><div>bar</div>-bar<!--i]-->
+        <span></span></div>"
+      `,
       )
     })
   })
 
   describe('dynamic component', () => {
-    const anchorLabel = DYNAMIC_COMPONENT_ANCHOR_LABEL
-
     test('basic dynamic component', async () => {
       const { container, data } = await testHydration(
         `<template>
@@ -997,14 +1079,18 @@ describe('Vapor Mode hydration', () => {
         },
         ref('foo'),
       )
-      expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!--dynamic-component-->"`,
+      )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(`<div>bar</div><!--${anchorLabel}-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>bar</div><!--dynamic-component-->"`,
+      )
     })
 
-    test('dynamic component with anchor insertion', async () => {
+    test('dynamic component with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
           <div>
@@ -1019,26 +1105,26 @@ describe('Vapor Mode hydration', () => {
         },
         ref('foo'),
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>foo</div><!--${anchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>foo</div><!--dynamic-component--><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>bar</div><!--${anchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>bar</div><!--dynamic-component--><!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('consecutive dynamic components with anchor insertion', async () => {
+    test('consecutive dynamic components with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
           <div>
@@ -1054,24 +1140,24 @@ describe('Vapor Mode hydration', () => {
         },
         ref('foo'),
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>foo</div><!--${anchorLabel}-->` +
-          `<!--[[--><div>foo</div><!--${anchorLabel}--><!--]]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>foo</div><!--dynamic-component--><!--i]-->
+        <!--[i--><div>foo</div><!--dynamic-component--><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<div>bar</div><!--${anchorLabel}-->` +
-          `<!--[[--><div>bar</div><!--${anchorLabel}--><!--]]-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>bar</div><!--dynamic-component--><!--i]-->
+        <!--[i--><div>bar</div><!--dynamic-component--><!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
@@ -1086,20 +1172,55 @@ describe('Vapor Mode hydration', () => {
         ref('foo'),
       )
 
-      expect(container.innerHTML).toBe(
-        `<button><span>foo</span></button><!--${anchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<button><span>foo</span></button><!--dynamic-component-->"`,
       )
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<button><span>bar</span></button><!--${anchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<button><span>bar</span></button><!--dynamic-component-->"`,
+      )
+    })
+
+    test('in ssr slot vnode fallback', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+            <components.Child>
+              <span>{{ data }}</span>
+            </components.Child>
+          </template>`,
+        {
+          Child: `
+          <template>
+            <component :is="'div'">
+              <slot />
+            </component>
+          </template>`,
+        },
+        ref('foo'),
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--></div><!--dynamic-component-->"
+      `,
+      )
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><span>bar</span><!--]-->
+        <!--slot--></div><!--dynamic-component-->"
+      `,
       )
     })
   })
 
   describe('if', () => {
-    const anchorLabel = IF_ANCHOR_LABEL
-
     test('basic toggle - true -> false', async () => {
       const data = ref(true)
       const { container } = await testHydration(
@@ -1109,11 +1230,15 @@ describe('Vapor Mode hydration', () => {
         undefined,
         data,
       )
-      expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if-->"`,
+      )
 
       data.value = false
       await nextTick()
-      expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
     })
 
     test('basic toggle - false -> true', async () => {
@@ -1125,13 +1250,15 @@ describe('Vapor Mode hydration', () => {
         undefined,
         data,
       )
-      // v-if="false" is rendered as <!----> in the server-rendered HTML
-      // it reused as anchor, so the anchor label is empty
-      expect(container.innerHTML).toBe(`<!---->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
 
       data.value = true
       await nextTick()
-      expect(container.innerHTML).toBe(`<div>foo</div><!---->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if-->"`,
+      )
     })
 
     test('v-if on insertion parent', async () => {
@@ -1145,15 +1272,21 @@ describe('Vapor Mode hydration', () => {
         { Child: `<template>foo</template>` },
         data,
       )
-      expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if-->"`,
+      )
 
       data.value = false
       await nextTick()
-      expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
 
       data.value = true
       await nextTick()
-      expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if-->"`,
+      )
     })
 
     test('v-if/else-if/else chain - switch branches', async () => {
@@ -1167,57 +1300,27 @@ describe('Vapor Mode hydration', () => {
         undefined,
         data,
       )
-      expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if-->"`,
+      )
 
       data.value = 'b'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>bar</div><!--${anchorLabel}--><!--${anchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>bar</div><!--if--><!--if-->"`,
       )
 
       data.value = 'c'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>baz</div><!--${anchorLabel}--><!--${anchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>baz</div><!--if--><!--if-->"`,
       )
 
       data.value = 'a'
       await nextTick()
-      expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
-    })
-
-    test('v-if/else-if/else chain - switch branches (PROD)', async () => {
-      try {
-        __DEV__ = false
-        const data = ref('a')
-        const { container } = await testHydration(
-          `<template>
-            <div v-if="data === 'a'">foo</div>
-            <div v-else-if="data === 'b'">bar</div>
-            <div v-else>baz</div>
-          </template>`,
-          undefined,
-          data,
-        )
-        expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
-
-        data.value = 'b'
-        await nextTick()
-        // In PROD, the anchor of v-else-if (DynamicFragment) is an empty text node,
-        // so it won't be rendered
-        expect(container.innerHTML).toBe(`<div>bar</div><!--${anchorLabel}-->`)
-
-        data.value = 'c'
-        await nextTick()
-        // same as above
-        expect(container.innerHTML).toBe(`<div>baz</div><!--${anchorLabel}-->`)
-
-        data.value = 'a'
-        await nextTick()
-        expect(container.innerHTML).toBe(`<div>foo</div><!--${anchorLabel}-->`)
-      } finally {
-        __DEV__ = true
-      }
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if-->"`,
+      )
     })
 
     test('nested if', async () => {
@@ -1232,25 +1335,29 @@ describe('Vapor Mode hydration', () => {
         undefined,
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span>outer</span>` +
-          `<div>inner</div><!--${anchorLabel}-->` +
-          `</div><!--${anchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span>outer</span>
+        <!--[a--><div>inner</div><!--if--><!--a]-->
+        </div><!--if-->"
+      `,
       )
 
       data.inner = false
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span>outer</span>` +
-          `<!--${anchorLabel}-->` +
-          `</div><!--${anchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span>outer</span>
+        <!--[a--><!--if--><!--a]-->
+        </div><!--if-->"
+      `,
       )
 
       data.outer = false
       await nextTick()
-      expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
     })
 
     test('on component', async () => {
@@ -1262,11 +1369,15 @@ describe('Vapor Mode hydration', () => {
         { Child: `<template>foo</template>` },
         data,
       )
-      expect(container.innerHTML).toBe(`foo<!--${anchorLabel}-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"foo<!--if-->"`,
+      )
 
       data.value = false
       await nextTick()
-      expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
     })
 
     test('consecutive if node', async () => {
@@ -1278,15 +1389,83 @@ describe('Vapor Mode hydration', () => {
         { Child: `<template><div v-if="data">foo</div></template>` },
         data,
       )
-      expect(container.innerHTML).toBe(`<div>foo</div><!--if--><!--if-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if--><!--if-->"`,
+      )
 
       data.value = false
       await nextTick()
-      expect(container.innerHTML).toBe(`<!--if-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
 
       data.value = true
       await nextTick()
-      expect(container.innerHTML).toBe(`<div>foo</div><!--if--><!--if-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!--if--><!--if-->"`,
+      )
+    })
+
+    test('mixed prepend and insertion anchor', async () => {
+      const data = reactive({
+        show: true,
+        foo: 'foo',
+        bar: 'bar',
+        qux: 'qux',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child/>
+        </template>`,
+        {
+          Child: `<template>
+            <span v-if="data.show">
+              <span v-if="data.show">{{data.foo}}</span>
+              <span v-if="data.show">{{data.bar}}</span>
+              <span>baz</span>
+              <span v-if="data.show">{{data.qux}}</span>
+              <span>quux</span>
+            </span>
+          </template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<span>
+        <!--[p--><span>foo</span><!--if--><!--p]-->
+        <!--[p--><span>bar</span><!--if--><!--p]-->
+        <span>baz</span>
+        <!--[i--><span>qux</span><!--if--><!--i]-->
+        <span>quux</span></span><!--if-->"
+      `,
+      )
+
+      data.qux = 'qux1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<span>
+        <!--[p--><span>foo</span><!--if--><!--p]-->
+        <!--[p--><span>bar</span><!--if--><!--p]-->
+        <span>baz</span>
+        <!--[i--><span>qux1</span><!--if--><!--i]-->
+        <span>quux</span></span><!--if-->"
+      `,
+      )
+
+      data.foo = 'foo1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<span>
+        <!--[p--><span>foo1</span><!--if--><!--p]-->
+        <!--[p--><span>bar</span><!--if--><!--p]-->
+        <span>baz</span>
+        <!--[i--><span>qux1</span><!--if--><!--i]-->
+        <span>quux</span></span><!--if-->"
+      `,
+      )
     })
 
     test('v-if/else-if/else chain on component - switch branches', async () => {
@@ -1304,76 +1483,30 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<span>a child1</span><!--${anchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<span>a child1</span><!--if-->"`,
       )
 
       data.value = 'b'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<span>b child2</span><!--${anchorLabel}--><!--${anchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<span>b child2</span><!--if--><!--if-->"`,
       )
 
       data.value = 'c'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<span>c child3</span><!--${anchorLabel}--><!--${anchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<span>c child3</span><!--if--><!--if-->"`,
       )
 
       data.value = 'a'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<span>a child1</span><!--${anchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<span>a child1</span><!--if-->"`,
       )
     })
 
-    test('v-if/else-if/else chain on component - switch branches (PROD)', async () => {
-      try {
-        __DEV__ = false
-        const data = ref('a')
-        const { container } = await testHydration(
-          `<template>
-            <components.Child1 v-if="data === 'a'"/>
-            <components.Child2 v-else-if="data === 'b'"/>
-            <components.Child3 v-else/>
-          </template>`,
-          {
-            Child1: `<template><span>{{data}} child1</span></template>`,
-            Child2: `<template><span>{{data}} child2</span></template>`,
-            Child3: `<template><span>{{data}} child3</span></template>`,
-          },
-          data,
-        )
-        expect(container.innerHTML).toBe(
-          `<span>a child1</span><!--${anchorLabel}-->`,
-        )
-
-        data.value = 'b'
-        await nextTick()
-        // In PROD, the anchor of v-else-if (DynamicFragment) is an empty text node,
-        // so it won't be rendered
-        expect(container.innerHTML).toBe(
-          `<span>b child2</span><!--${anchorLabel}-->`,
-        )
-
-        data.value = 'c'
-        await nextTick()
-        // same as above
-        expect(container.innerHTML).toBe(
-          `<span>c child3</span><!--${anchorLabel}-->`,
-        )
-
-        data.value = 'a'
-        await nextTick()
-        expect(container.innerHTML).toBe(
-          `<span>a child1</span><!--${anchorLabel}-->`,
-        )
-      } finally {
-        __DEV__ = true
-      }
-    })
-
-    test('on component with anchor insertion', async () => {
+    test('on component with insertion anchor', async () => {
       const data = ref(true)
       const { container } = await testHydration(
         `<template>
@@ -1386,22 +1519,22 @@ describe('Vapor Mode hydration', () => {
         { Child: `<template>foo</template>` },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `foo<!--${anchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->foo<!--if--><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = false
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--${anchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><!--if--><!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
@@ -1424,20 +1557,36 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span>foo</span>` +
-          `<span>bar</span>` +
-          `</div>` +
-          `<!--${anchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[a--><span>foo</span><!--a]-->
+        <!--[a--><span>bar</span><!--a]-->
+        </div><!--if-->"
+      `,
       )
 
       data.show = false
       await nextTick()
-      expect(container.innerHTML).toBe(`<!--${anchorLabel}-->`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
+
+      data.show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>foo</span><span>bar</span></div><!--if-->"`,
+      )
+
+      data.foo = 'foo1'
+      data.bar = 'bar1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>foo1</span><span>bar1</span></div><!--if-->"`,
+      )
     })
 
-    test('consecutive v-if on component with anchor insertion', async () => {
+    test('consecutive v-if on component with insertion anchor', async () => {
       const data = ref(true)
       const { container } = await testHydration(
         `<template>
@@ -1451,25 +1600,34 @@ describe('Vapor Mode hydration', () => {
         { Child: `<template>foo</template>` },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `foo<!--${anchorLabel}-->` +
-          `foo<!--${anchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->foo<!--if--><!--i]-->
+        <!--[i-->foo<!--if--><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = false
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--${anchorLabel}-->` +
-          `<!--${anchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><!--if--><!--i]-->
+        <!--[i--><!--if--><!--i]-->
+        <span></span></div>"
+      `,
       )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div><span></span>
+        <!--[i-->foo<!--if--><!--i]-->
+        <!--[i-->foo<!--if--><!--i]-->
+        <span></span></div>"
+      `)
     })
 
     test('on fragment component', async () => {
@@ -1485,21 +1643,24 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[--><div>true</div>-true-<!--]-->` +
-          `<!--if-->` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><div>true</div>-true-<!--if--></div>"`,
       )
 
       data.value = false
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div><!--[--><!--]--><!--${anchorLabel}--></div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><!--if--></div>"`,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><div>true</div>-true-<!--if--></div>"`,
       )
     })
 
-    test('on fragment component with anchor insertion', async () => {
+    test('on fragment component with insertion anchor', async () => {
       const data = ref(true)
       const { container } = await testHydration(
         `<template>
@@ -1514,28 +1675,34 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>true</div>-true-<!--]-->` +
-          `<!--if-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>true</div>-true-<!--if--><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = false
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><!--]-->` +
-          `<!--${anchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><!--if--><!--i]-->
+        <span></span></div>"
+      `,
       )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div><span></span>
+        <!--[i--><div>true</div>-true-<!--if--><!--i]-->
+        <span></span></div>"
+      `)
     })
 
-    test('consecutive v-if on fragment component with anchor insertion', async () => {
+    test('consecutive v-if on fragment component with insertion anchor', async () => {
       const data = ref(true)
       const { container } = await testHydration(
         `<template>
@@ -1551,29 +1718,37 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><div>true</div>-true-<!--]--><!--${anchorLabel}-->` +
-          `<!--[--><div>true</div>-true-<!--]--><!--${anchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><div>true</div>-true-<!--if--><!--i]-->
+        <!--[i--><div>true</div>-true-<!--if--><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = false
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><!--]--><!--${anchorLabel}-->` +
-          `<!--[--><!--]--><!--${anchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><!--if--><!--i]-->
+        <!--[i--><!--if--><!--i]-->
+        <span></span></div>"
+      `,
       )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div><span></span>
+        <!--[i--><div>true</div>-true-<!--if--><!--i]-->
+        <!--[i--><div>true</div>-true-<!--if--><!--i]-->
+        <span></span></div>"
+      `)
     })
 
-    test('on dynamic component with anchor insertion', async () => {
-      const dynamicComponentAnchorLabel = DYNAMIC_COMPONENT_ANCHOR_LABEL
+    test('on dynamic component with insertion anchor', async () => {
       const data = ref(true)
       const { container } = await testHydration(
         `<template>
@@ -1586,30 +1761,35 @@ describe('Vapor Mode hydration', () => {
         { Child: `<template>foo</template>` },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `foo<!--${dynamicComponentAnchorLabel}--><!--${anchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->foo<!--dynamic-component--><!--if--><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value = false
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--${anchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><!--if--><!--i]-->
+        <span></span></div>"
+      `,
       )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div><span></span>
+        <!--[i-->foo<!--dynamic-component--><!--if--><!--i]-->
+        <span></span></div>"
+      `)
     })
   })
 
   describe('for', () => {
-    const forAnchorLabel = FOR_ANCHOR_LABEL
-    const slotAnchorLabel = SLOT_ANCHOR_LABEL
-
     test('basic v-for', async () => {
       const { container, data } = await testHydration(
         `<template>
@@ -1620,63 +1800,18 @@ describe('Vapor Mode hydration', () => {
         undefined,
         ref(['a', 'b', 'c']),
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[-->` +
-          `<span>a</span>` +
-          `<span>b</span>` +
-          `<span>c</span>` +
-          `<!--]--><!--${forAnchorLabel}-->` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>a</span><span>b</span><span>c</span><!--for--></div>"`,
       )
 
       data.value.push('d')
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[-->` +
-          `<span>a</span>` +
-          `<span>b</span>` +
-          `<span>c</span>` +
-          `<!--]-->` +
-          `<span>d</span>` +
-          `<!--${forAnchorLabel}-->` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>a</span><span>b</span><span>c</span><span>d</span><!--for--></div>"`,
       )
     })
 
-    test('v-for with text node', async () => {
-      const { container, data } = await testHydration(
-        `<template>
-          <div>
-            <span v-for="item in data" :key="item">{{ item }}</span>
-          </div>
-        </template>`,
-        undefined,
-        ref(['a', 'b', 'c']),
-      )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[-->` +
-          `<span>a</span><span>b</span><span>c</span>` +
-          `<!--]--><!--${forAnchorLabel}-->` +
-          `</div>`,
-      )
-
-      data.value.push('d')
-      await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[-->` +
-          `<span>a</span><span>b</span><span>c</span>` +
-          `<!--]-->` +
-          `<span>d</span>` +
-          `<!--${forAnchorLabel}-->` +
-          `</div>`,
-      )
-    })
-
-    test('v-for with anchor insertion', async () => {
+    test('v-for with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
           <div>
@@ -1688,51 +1823,36 @@ describe('Vapor Mode hydration', () => {
         undefined,
         ref(['a', 'b', 'c']),
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[-->` +
-          `<span>a</span>` +
-          `<span>b</span>` +
-          `<span>c</span>` +
-          `<!--]--><!--${forAnchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><span>a</span><span>b</span><span>c</span><!--for--><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value.push('d')
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[-->` +
-          `<span>a</span>` +
-          `<span>b</span>` +
-          `<span>c</span>` +
-          `<!--]-->` +
-          `<span>d</span>` +
-          `<!--${forAnchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><span>a</span><span>b</span><span>c</span><span>d</span><!--for--><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value.splice(0, 1)
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[-->` +
-          `<span>b</span>` +
-          `<span>c</span>` +
-          `<!--]-->` +
-          `<span>d</span>` +
-          `<!--${forAnchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><span>b</span><span>c</span><span>d</span><!--for--><!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
-    test('consecutive v-for with anchor insertion', async () => {
+    test('consecutive v-for with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
           <div>
@@ -1745,63 +1865,35 @@ describe('Vapor Mode hydration', () => {
         undefined,
         ref(['a', 'b', 'c']),
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[-->` +
-          `<span>a</span>` +
-          `<span>b</span>` +
-          `<span>c</span>` +
-          `<!--]--><!--${forAnchorLabel}-->` +
-          `<!--[-->` +
-          `<span>a</span>` +
-          `<span>b</span>` +
-          `<span>c</span>` +
-          `<!--]--><!--${forAnchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><span>a</span><span>b</span><span>c</span><!--for--><!--i]-->
+        <!--[i--><span>a</span><span>b</span><span>c</span><!--for--><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value.push('d')
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[-->` +
-          `<span>a</span>` +
-          `<span>b</span>` +
-          `<span>c</span>` +
-          `<!--]-->` +
-          `<span>d</span>` +
-          `<!--${forAnchorLabel}-->` +
-          `<!--[-->` +
-          `<span>a</span>` +
-          `<span>b</span>` +
-          `<span>c</span>` +
-          `<!--]-->` +
-          `<span>d</span>` +
-          `<!--${forAnchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><span>a</span><span>b</span><span>c</span><span>d</span><!--for--><!--i]-->
+        <!--[i--><span>a</span><span>b</span><span>c</span><span>d</span><!--for--><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.value.splice(0, 2)
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[-->` +
-          `<span>c</span>` +
-          `<!--]-->` +
-          `<span>d</span>` +
-          `<!--${forAnchorLabel}-->` +
-          `<!--[-->` +
-          `<span>c</span>` +
-          `<!--]-->` +
-          `<span>d</span>` +
-          `<!--${forAnchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i--><span>c</span><span>d</span><!--for--><!--i]-->
+        <!--[i--><span>c</span><span>d</span><!--for--><!--i]-->
+        <span></span></div>"
+      `,
       )
     })
 
@@ -1818,28 +1910,14 @@ describe('Vapor Mode hydration', () => {
         ref(['a', 'b', 'c']),
       )
 
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[-->` +
-          `<div>comp</div>` +
-          `<div>comp</div>` +
-          `<div>comp</div>` +
-          `<!--]--><!--${forAnchorLabel}-->` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><div>comp</div><div>comp</div><div>comp</div><!--for--></div>"`,
       )
 
       data.value.push('d')
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[-->` +
-          `<div>comp</div>` +
-          `<div>comp</div>` +
-          `<div>comp</div>` +
-          `<!--]-->` +
-          `<div>comp</div>` +
-          `<!--${forAnchorLabel}-->` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><div>comp</div><div>comp</div><div>comp</div><div>comp</div><!--for--></div>"`,
       )
     })
 
@@ -1857,28 +1935,30 @@ describe('Vapor Mode hydration', () => {
         },
         ref(['a', 'b', 'c']),
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[-->` +
-          `<!--[--><span>a</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><span>b</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><span>c</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--]--><!--${forAnchorLabel}-->` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><span>a</span><!--]-->
+        <!--slot-->
+        <!--[--><span>b</span><!--]-->
+        <!--slot-->
+        <!--[--><span>c</span><!--]-->
+        <!--slot--><!--for--></div>"
+      `,
       )
 
       data.value.push('d')
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[-->` +
-          `<!--[--><span>a</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><span>b</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><span>c</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--]-->` +
-          `<span>d</span><!--${slotAnchorLabel}-->` +
-          `<!--${forAnchorLabel}-->` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><span>a</span><!--]-->
+        <!--slot-->
+        <!--[--><span>b</span><!--]-->
+        <!--slot-->
+        <!--[--><span>c</span><!--]-->
+        <!--slot--><span>d</span><!--slot--><!--for--></div>"
+      `,
       )
     })
 
@@ -1894,35 +1974,19 @@ describe('Vapor Mode hydration', () => {
         },
         ref(['a', 'b', 'c']),
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[-->` +
-          `<!--[--><div>foo</div>-bar-<!--]-->` +
-          `<!--[--><div>foo</div>-bar-<!--]-->` +
-          `<!--[--><div>foo</div>-bar-<!--]-->` +
-          `<!--]--><!--${forAnchorLabel}-->` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><div>foo</div>-bar-<div>foo</div>-bar-<div>foo</div>-bar-<!--for--></div>"`,
       )
 
       data.value.push('d')
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[-->` +
-          `<!--[--><div>foo</div>-bar-<!--]-->` +
-          `<!--[--><div>foo</div>-bar-<!--]-->` +
-          `<!--[--><div>foo</div>-bar-<!--]-->` +
-          `<!--]-->` +
-          `<div>foo</div>-bar-` +
-          `<!--${forAnchorLabel}-->` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><div>foo</div>-bar-<div>foo</div>-bar-<div>foo</div>-bar-<div>foo</div>-bar-<!--for--></div>"`,
       )
     })
   })
 
   describe('slots', () => {
-    const slotAnchorLabel = SLOT_ANCHOR_LABEL
-    const forAnchorLabel = FOR_ANCHOR_LABEL
     test('basic slot', async () => {
       const { data, container } = await testHydration(
         `<template>
@@ -1934,14 +1998,22 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><slot/></template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>foo</span><!--]-->
+        <!--slot-->"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>bar</span><!--]-->
+        <!--slot-->"
+      `,
       )
     })
 
@@ -1955,17 +2027,29 @@ describe('Vapor Mode hydration', () => {
           </components.Child>
         </template>`,
         {
-          Child: `<template><slot name="foo"/></template>`,
+          Child: `<template><slot/><slot name="foo"/></template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><!--]-->
+        <!--slot-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot-->"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><!--]-->
+        <!--slot-->
+        <!--[--><span>bar</span><!--]-->
+        <!--slot-->"
+      `,
       )
     })
 
@@ -1982,15 +2066,31 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><slot name="foo"/></template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>foo</span><!--]-->
+        <!--slot-->"
+      `,
       )
 
       data.value = false
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<!--[--><!--]--><!--${slotAnchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><!--]-->
+        <!--slot-->"
+      `,
       )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><!--]-->
+        <span>true</span><!--slot-->"
+      `)
     })
 
     test('named slot with v-if and v-for', async () => {
@@ -2011,21 +2111,36 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `<!--[--><span>a</span><span>b</span><span>c</span><!--]--><!--${forAnchorLabel}-->` +
-          `<!--]-->` +
-          `<!--${slotAnchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>a</span><span>b</span><span>c</span><!--for--><!--]-->
+        <!--slot-->"
+      `,
       )
 
       data.show = false
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<!--[--><!--[--><!--]--><!--]--><!--${slotAnchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><!--]-->
+        <!--slot-->"
+      `,
+      )
+
+      data.show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><!--]-->
+        <span>a</span><span>b</span><span>c</span><!--for--><!--slot-->"
+      `,
       )
     })
 
-    test('with anchor insertion', async () => {
+    test('with insertion anchor', async () => {
       const { data, container } = await testHydration(
         `<template>
           <components.Child>
@@ -2038,24 +2153,22 @@ describe('Vapor Mode hydration', () => {
           Child: `<template><slot/></template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `<span></span>` +
-          `<span>foo</span>` +
-          `<span></span>` +
-          `<!--]-->` +
-          `<!--${slotAnchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span></span><span>foo</span><span></span><!--]-->
+        <!--slot-->"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `<span></span>` +
-          `<span>bar</span>` +
-          `<span></span>` +
-          `<!--]-->` +
-          `<!--${slotAnchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span></span><span>bar</span><span></span><!--]-->
+        <!--slot-->"
+      `,
       )
     })
 
@@ -2079,34 +2192,22 @@ describe('Vapor Mode hydration', () => {
           </template>`,
         },
       )
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `<div></div>` +
-          `<div></div>` +
-          `<!--[-->` +
-          `<span></span>` +
-          `<span>foo</span>` +
-          `<span></span>` +
-          `<!--]-->` +
-          `<!--${slotAnchorLabel}-->` +
-          `<div></div>` +
-          `<!--]-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div></div><div></div>
+        <!--[--><span></span><span>foo</span><span></span><!--]-->
+        <!--slot--><div></div>"
+      `,
       )
 
       data.value = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `<div></div>` +
-          `<div></div>` +
-          `<!--[-->` +
-          `<span></span>` +
-          `<span>bar</span>` +
-          `<span></span>` +
-          `<!--]-->` +
-          `<!--${slotAnchorLabel}-->` +
-          `<div></div>` +
-          `<!--]-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div></div><div></div>
+        <!--[--><span></span><span>bar</span><span></span><!--]-->
+        <!--slot--><div></div>"
+      `,
       )
     })
 
@@ -2127,20 +2228,26 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `hi` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--p]-->
+        hi</div>"
+      `,
       )
 
       data.msg = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `bar` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--p]-->
+        bar</div>"
+      `,
       )
     })
 
@@ -2161,22 +2268,22 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `foo` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `hi` +
-          `<!--]-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "foo
+        <!--[--><span>foo</span><!--]-->
+        <!--slot-->hi"
+      `,
       )
 
       data.msg = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `foo` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `bar` +
-          `<!--]-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "foo
+        <!--[--><span>foo</span><!--]-->
+        <!--slot-->bar"
+      `,
       )
     })
 
@@ -2198,22 +2305,32 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<div>hi</div>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--p]-->
+        <!--[p-->
+        <!--[--><span>bar</span><!--]-->
+        <!--slot--><!--p]-->
+        <div>hi</div></div>"
+      `,
       )
 
       data.msg = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<div>bar</div>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--p]-->
+        <!--[p-->
+        <!--[--><span>bar</span><!--]-->
+        <!--slot--><!--p]-->
+        <div>bar</div></div>"
+      `,
       )
     })
 
@@ -2234,20 +2351,26 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<div>hi</div>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--p]-->
+        <div>hi</div></div>"
+      `,
       )
 
       data.msg = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<div>bar</div>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--p]-->
+        <div>bar</div></div>"
+      `,
       )
     })
 
@@ -2278,22 +2401,30 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<div>bar</div>` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<div>bar</div>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[a--><div>bar</div><!--a]-->
+        <!--[a-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--a]-->
+        <!--[a--><div>bar</div><!--a]-->
+        </div>"
+      `,
       )
 
       data.msg2 = 'hello'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<div>hello</div>` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<div>hello</div>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[a--><div>hello</div><!--a]-->
+        <!--[a-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--a]-->
+        <!--[a--><div>hello</div><!--a]-->
+        </div>"
+      `,
       )
     })
 
@@ -2324,23 +2455,31 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[--><div>foo</div> bar<!--]-->` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><div>foo</div> bar<!--]-->` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[a--><div>foo</div> bar<!--a]-->
+        <!--[a-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--a]-->
+        <!--[a--><div>foo</div> bar<!--a]-->
+        </div>"
+      `,
       )
 
       data.msg1 = 'hello'
       data.msg2 = 'vapor'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<!--[--><div>hello</div> vapor<!--]-->` +
-          `<!--[--><span>hello</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><div>hello</div> vapor<!--]-->` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[a--><div>hello</div> vapor<!--a]-->
+        <!--[a-->
+        <!--[--><span>hello</span><!--]-->
+        <!--slot--><!--a]-->
+        <!--[a--><div>hello</div> vapor<!--a]-->
+        </div>"
+      `,
       )
     })
 
@@ -2366,23 +2505,31 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `<div>foo</div><!--if-->` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<div>foo</div><!--if-->` +
-          `<!--]-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>foo</div><!--if-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><div>foo</div><!--if-->"
+      `,
       )
 
       data.show = false
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `<!--if-->` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--if-->` +
-          `<!--]-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<!--if-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--if-->"
+      `,
       )
+
+      data.show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div>foo</div><!--if-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><div>foo</div><!--if-->"
+      `)
     })
 
     test('mixed slot and v-for', async () => {
@@ -2407,22 +2554,22 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `<!--[--><div>a</div><div>b</div><div>c</div><!--]--><!--${forAnchorLabel}-->` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><div>a</div><div>b</div><div>c</div><!--]--><!--${forAnchorLabel}-->` +
-          `<!--]-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>a</div><div>b</div><div>c</div><!--for-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><div>a</div><div>b</div><div>c</div><!--for-->"
+      `,
       )
 
       data.items.push('d')
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `<!--[--><div>a</div><div>b</div><div>c</div><!--]--><div>d</div><!--${forAnchorLabel}-->` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><div>a</div><div>b</div><div>c</div><!--]--><div>d</div><!--${forAnchorLabel}-->` +
-          `<!--]-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>a</div><div>b</div><div>c</div><div>d</div><!--for-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><div>a</div><div>b</div><div>c</div><div>d</div><!--for-->"
+      `,
       )
     })
 
@@ -2447,25 +2594,31 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--]-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>foo</span><!--]-->
+        <!--slot-->
+        <!--[--><span>bar</span><!--]-->
+        <!--slot-->"
+      `,
       )
 
       data.msg1 = 'hello'
       data.msg2 = 'vapor'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<!--[-->` +
-          `<!--[--><span>hello</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><span>vapor</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--]-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>hello</span><!--]-->
+        <!--slot-->
+        <!--[--><span>vapor</span><!--]-->
+        <!--slot-->"
+      `,
       )
     })
 
-    test('consecutive slots with anchor insertion', async () => {
+    test('consecutive slots with insertion anchor', async () => {
       const data = reactive({
         msg1: 'foo',
         msg2: 'bar',
@@ -2493,25 +2646,93 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--i]-->
+        <!--[i-->
+        <!--[--><span>bar</span><!--]-->
+        <!--slot--><!--i]-->
+        <span></span></div>"
+      `,
       )
 
       data.msg1 = 'hello'
       data.msg2 = 'vapor'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<div>` +
-          `<span></span>` +
-          `<!--[--><span>hello</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<!--[--><span>vapor</span><!--]--><!--${slotAnchorLabel}-->` +
-          `<span></span>` +
-          `</div>`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div><span></span>
+        <!--[i-->
+        <!--[--><span>hello</span><!--]-->
+        <!--slot--><!--i]-->
+        <!--[i-->
+        <!--[--><span>vapor</span><!--]-->
+        <!--slot--><!--i]-->
+        <span></span></div>"
+      `,
+      )
+    })
+
+    test('consecutive slots prepend', async () => {
+      const data = reactive({
+        msg1: 'foo',
+        msg2: 'bar',
+        msg3: 'baz',
+      })
+
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #foo>
+              <span>{{data.msg1}}</span>
+            </template>
+            <template #bar>
+              <span>{{data.msg2}}</span>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <div>
+              <slot name="foo"/>
+              <slot name="bar"/>
+              <div>{{data.msg3}}</div>
+            </div>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--p]-->
+        <!--[p-->
+        <!--[--><span>bar</span><!--]-->
+        <!--slot--><!--p]-->
+        <div>baz</div></div>"
+      `,
+      )
+
+      data.msg1 = 'hello'
+      data.msg2 = 'vapor'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p-->
+        <!--[--><span>hello</span><!--]-->
+        <!--slot--><!--p]-->
+        <!--[p-->
+        <!--[--><span>vapor</span><!--]-->
+        <!--slot--><!--p]-->
+        <div>baz</div></div>"
+      `,
       )
     })
 
@@ -2529,1526 +2750,228 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      expect(container.innerHTML).toBe(
-        `<!--[--><span>foo</span><!--]--><!--${slotAnchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>foo</span><!--]-->
+        <!--slot-->"
+      `,
       )
 
       data.foo = 'bar'
       await nextTick()
-      expect(container.innerHTML).toBe(
-        `<!--[--><span>bar</span><!--]--><!--${slotAnchorLabel}-->`,
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>bar</span><!--]-->
+        <!--slot-->"
+      `,
+      )
+    })
+
+    // required https://github.com/vuejs/core/pull/13408 get merged
+    test.todo('forwarded slot', async () => {
+      const data = reactive({
+        foo: 'foo',
+        bar: 'bar',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <components.Parent>
+              <span>{{data.foo}}</span>
+            </components.Parent>
+            <div>{{data.bar}}</div>
+          </div>
+        </template>`,
+        {
+          Parent: `<template><div><components.Child><slot/></components.Child></div></template>`,
+          Child: `<template><div><slot/></div></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p--><div><div>
+        <!--[-->
+        <!--[--><span>foo</span><!--]-->
+        <!--slot--><!--]-->
+        <!--slot--></div></div><!--p]-->
+        <div>bar</div></div>"
+      `,
+      )
+
+      data.foo = 'foo1'
+      data.bar = 'bar1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p--><div><div>
+        <!--[-->
+        <!--[--><span>foo1</span><!--]-->
+        <!--slot--><!--]-->
+        <!--slot--></div></div><!--p]-->
+        <div>bar1</div></div>"
+      `,
+      )
+    })
+
+    // required https://github.com/vuejs/core/pull/13408 get merged
+    test.todo('forwarded slot with fallback', async () => {
+      const data = reactive({
+        foo: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Parent/>
+        </template>`,
+        {
+          Parent: `<template><components.Child><slot/></components.Child></template>`,
+          Child: `<template><div><slot>{{data.foo}}</slot></div></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><!--slot-->foo<!--]-->
+        <!--slot--></div>"
+      `,
+      )
+
+      data.foo = 'foo1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><!--slot-->foo1<!--]-->
+        <!--slot--></div>"
+      `,
+      )
+    })
+
+    // required https://github.com/vuejs/core/pull/13408 get merged
+    test.todo('forwarded slot with empty content', async () => {
+      const data = reactive({
+        foo: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Foo/>
+        </template>`,
+        {
+          Foo: `<template>
+                  <components.Bar>
+                    <template #foo>
+                      <slot name="foo" />
+                    </template>
+                  </components.Bar>
+                </template>`,
+          Bar: `<template>
+                  <components.Baz>
+                    <template #foo>
+                      <slot name="foo" />
+                    </template>
+                  </components.Baz>
+                </template>`,
+          Baz: `<template>
+                  <components.Qux>
+                    <template #foo>
+                      <slot name="foo" />
+                    </template>
+                  </components.Qux>
+                </template>`,
+          Qux: `<template>
+                  <div>
+                    <slot name="foo" />
+                    <div>{{data.foo}}</div>
+                  </div>
+                </template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p-->
+        <!--[--><!--slot--><!--slot--><!--slot--><!--]-->
+        <!--slot--><!--p]-->
+        <div>foo</div></div>"
+      `,
+      )
+
+      data.foo = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[p-->
+        <!--[--><!--slot--><!--slot--><!--slot--><!--]-->
+        <!--slot--><!--p]-->
+        <div>bar</div></div>"
+      `,
       )
     })
   })
 
   describe.todo('transition', async () => {
     test('transition appear', async () => {})
+
     test('transition appear with v-if', async () => {})
+
     test('transition appear with v-show', async () => {})
+
     test('transition appear w/ event listener', async () => {})
   })
 
-  describe.todo('async component')
+  describe.todo('async component', async () => {
+    test('async component', async () => {})
+
+    test('update async wrapper before resolve', async () => {})
+
+    test('hydrate safely when property used by async setup changed before render', async () => {})
+
+    test('unmount async wrapper before load', async () => {})
+
+    test('nested async wrapper', async () => {})
+
+    test('unmount async wrapper before load (fragment)', async () => {})
+  })
+
+  describe.todo('force hydrate prop', async () => {
+    test.todo('force hydrate prop with `.prop` modifier', () => {})
+
+    test.todo(
+      'force hydrate input v-model with non-string value bindings',
+      () => {},
+    )
+
+    test.todo('force hydrate checkbox with indeterminate', () => {})
+
+    test.todo(
+      'force hydrate select option with non-string value bindings',
+      () => {},
+    )
+
+    test.todo('force hydrate custom element with dynamic props', () => {})
+  })
 
   describe.todo('data-allow-mismatch')
 
-  // test('with data-allow-mismatch component when using onServerPrefetch', async () => {
-  //   const Comp = {
-  //     template: `
-  //       <div>Comp2</div>
-  //     `,
-  //   }
-  //   let foo: any
-  //   const App = {
-  //     setup() {
-  //       const flag = ref(true)
-  //       foo = () => {
-  //         flag.value = false
-  //       }
-  //       onServerPrefetch(() => (flag.value = false))
-  //       return { flag }
-  //     },
-  //     components: {
-  //       Comp,
-  //     },
-  //     template: `
-  //       <span data-allow-mismatch>
-  //         <Comp v-if="flag"></Comp>
-  //       </span>
-  //     `,
-  //   }
-  //   // hydrate
-  //   const container = document.createElement('div')
-  //   container.innerHTML = await renderToString(h(App))
-  //   createSSRApp(App).mount(container)
-  //   expect(container.innerHTML).toBe(
-  //     '<span data-allow-mismatch=""><div>Comp2</div></span>',
-  //   )
-  //   foo()
-  //   await nextTick()
-  //   expect(container.innerHTML).toBe(
-  //     '<span data-allow-mismatch=""><!--v-if--></span>',
-  //   )
-  // })
+  describe.todo('mismatch handling')
 
-  // // compile SSR + client render fn from the same template & hydrate
-  // test('full compiler integration', async () => {
-  //   const mounted: string[] = []
-  //   const log = vi.fn()
-  //   const toggle = ref(true)
+  describe.todo('Teleport')
 
-  //   const Child = {
-  //     data() {
-  //       return {
-  //         count: 0,
-  //         text: 'hello',
-  //         style: {
-  //           color: 'red',
-  //         },
-  //       }
-  //     },
-  //     mounted() {
-  //       mounted.push('child')
-  //     },
-  //     template: `
-  //     <div>
-  //       <span class="count" :style="style">{{ count }}</span>
-  //       <button class="inc" @click="count++">inc</button>
-  //       <button class="change" @click="style.color = 'green'" >change color</button>
-  //       <button class="emit" @click="$emit('foo')">emit</button>
-  //       <span class="text">{{ text }}</span>
-  //       <input v-model="text">
-  //     </div>
-  //     `,
-  //   }
-
-  //   const App = {
-  //     setup() {
-  //       return { toggle }
-  //     },
-  //     mounted() {
-  //       mounted.push('parent')
-  //     },
-  //     template: `
-  //       <div>
-  //         <span>hello</span>
-  //         <template v-if="toggle">
-  //           <Child @foo="log('child')"/>
-  //           <template v-if="true">
-  //             <button class="parent-click" @click="log('click')">click me</button>
-  //           </template>
-  //         </template>
-  //         <span>hello</span>
-  //       </div>`,
-  //     components: {
-  //       Child,
-  //     },
-  //     methods: {
-  //       log,
-  //     },
-  //   }
-
-  //   const container = document.createElement('div')
-  //   // server render
-  //   container.innerHTML = await renderToString(h(App))
-  //   // hydrate
-  //   createSSRApp(App).mount(container)
-
-  //   // assert interactions
-  //   // 1. parent button click
-  //   triggerEvent('click', container.querySelector('.parent-click')!)
-  //   expect(log).toHaveBeenCalledWith('click')
-
-  //   // 2. child inc click + text interpolation
-  //   const count = container.querySelector('.count') as HTMLElement
-  //   expect(count.textContent).toBe(`0`)
-  //   triggerEvent('click', container.querySelector('.inc')!)
-  //   await nextTick()
-  //   expect(count.textContent).toBe(`1`)
-
-  //   // 3. child color click + style binding
-  //   expect(count.style.color).toBe('red')
-  //   triggerEvent('click', container.querySelector('.change')!)
-  //   await nextTick()
-  //   expect(count.style.color).toBe('green')
-
-  //   // 4. child event emit
-  //   triggerEvent('click', container.querySelector('.emit')!)
-  //   expect(log).toHaveBeenCalledWith('child')
-
-  //   // 5. child v-model
-  //   const text = container.querySelector('.text')!
-  //   const input = container.querySelector('input')!
-  //   expect(text.textContent).toBe('hello')
-  //   input.value = 'bye'
-  //   triggerEvent('input', input)
-  //   await nextTick()
-  //   expect(text.textContent).toBe('bye')
-  // })
-
-  // test('handle click error in ssr mode', async () => {
-  //   const App = {
-  //     setup() {
-  //       const throwError = () => {
-  //         throw new Error('Sentry Error')
-  //       }
-  //       return { throwError }
-  //     },
-  //     template: `
-  //       <div>
-  //         <button class="parent-click" @click="throwError">click me</button>
-  //       </div>`,
-  //   }
-
-  //   const container = document.createElement('div')
-  //   // server render
-  //   container.innerHTML = await renderToString(h(App))
-  //   // hydrate
-  //   const app = createSSRApp(App)
-  //   const handler = (app.config.errorHandler = vi.fn())
-  //   app.mount(container)
-  //   // assert interactions
-  //   // parent button click
-  //   triggerEvent('click', container.querySelector('.parent-click')!)
-  //   expect(handler).toHaveBeenCalled()
-  // })
-
-  // test('handle blur error in ssr mode', async () => {
-  //   const App = {
-  //     setup() {
-  //       const throwError = () => {
-  //         throw new Error('Sentry Error')
-  //       }
-  //       return { throwError }
-  //     },
-  //     template: `
-  //       <div>
-  //         <input class="parent-click" @blur="throwError"/>
-  //       </div>`,
-  //   }
-
-  //   const container = document.createElement('div')
-  //   // server render
-  //   container.innerHTML = await renderToString(h(App))
-  //   // hydrate
-  //   const app = createSSRApp(App)
-  //   const handler = (app.config.errorHandler = vi.fn())
-  //   app.mount(container)
-  //   // assert interactions
-  //   // parent blur event
-  //   triggerEvent('blur', container.querySelector('.parent-click')!)
-  //   expect(handler).toHaveBeenCalled()
-  // })
-
-  // test('async component', async () => {
-  //   const spy = vi.fn()
-  //   const Comp = () =>
-  //     h(
-  //       'button',
-  //       {
-  //         onClick: spy,
-  //       },
-  //       'hello!',
-  //     )
-
-  //   let serverResolve: any
-  //   let AsyncComp = defineAsyncComponent(
-  //     () =>
-  //       new Promise(r => {
-  //         serverResolve = r
-  //       }),
-  //   )
-
-  //   const App = {
-  //     render() {
-  //       return ['hello', h(AsyncComp), 'world']
-  //     },
-  //   }
-
-  //   // server render
-  //   const htmlPromise = renderToString(h(App))
-  //   serverResolve(Comp)
-  //   const html = await htmlPromise
-  //   expect(html).toMatchInlineSnapshot(
-  //     `"<!--[-->hello<button>hello!</button>world<!--]-->"`,
-  //   )
-
-  //   // hydration
-  //   let clientResolve: any
-  //   AsyncComp = defineAsyncComponent(
-  //     () =>
-  //       new Promise(r => {
-  //         clientResolve = r
-  //       }),
-  //   )
-
-  //   const container = document.createElement('div')
-  //   container.innerHTML = html
-  //   createSSRApp(App).mount(container)
-
-  //   // hydration not complete yet
-  //   triggerEvent('click', container.querySelector('button')!)
-  //   expect(spy).not.toHaveBeenCalled()
-
-  //   // resolve
-  //   clientResolve(Comp)
-  //   await new Promise(r => setTimeout(r))
-
-  //   // should be hydrated now
-  //   triggerEvent('click', container.querySelector('button')!)
-  //   expect(spy).toHaveBeenCalled()
-  // })
-
-  // test('update async wrapper before resolve', async () => {
-  //   const Comp = {
-  //     render() {
-  //       return h('h1', 'Async component')
-  //     },
-  //   }
-  //   let serverResolve: any
-  //   let AsyncComp = defineAsyncComponent(
-  //     () =>
-  //       new Promise(r => {
-  //         serverResolve = r
-  //       }),
-  //   )
-
-  //   const toggle = ref(true)
-  //   const App = {
-  //     setup() {
-  //       onMounted(() => {
-  //         // change state, this makes updateComponent(AsyncComp) execute before
-  //         // the async component is resolved
-  //         toggle.value = false
-  //       })
-
-  //       return () => {
-  //         return [toggle.value ? 'hello' : 'world', h(AsyncComp)]
-  //       }
-  //     },
-  //   }
-
-  //   // server render
-  //   const htmlPromise = renderToString(h(App))
-  //   serverResolve(Comp)
-  //   const html = await htmlPromise
-  //   expect(html).toMatchInlineSnapshot(
-  //     `"<!--[-->hello<h1>Async component</h1><!--]-->"`,
-  //   )
-
-  //   // hydration
-  //   let clientResolve: any
-  //   AsyncComp = defineAsyncComponent(
-  //     () =>
-  //       new Promise(r => {
-  //         clientResolve = r
-  //       }),
-  //   )
-
-  //   const container = document.createElement('div')
-  //   container.innerHTML = html
-  //   createSSRApp(App).mount(container)
-
-  //   // resolve
-  //   clientResolve(Comp)
-  //   await new Promise(r => setTimeout(r))
-
-  //   // should be hydrated now
-  //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  //   expect(container.innerHTML).toMatchInlineSnapshot(
-  //     `"<!--[-->world<h1>Async component</h1><!--]-->"`,
-  //   )
-  // })
-
-  // test('hydrate safely when property used by async setup changed before render', async () => {
-  //   const toggle = ref(true)
-
-  //   const AsyncComp = {
-  //     async setup() {
-  //       await new Promise<void>(r => setTimeout(r, 10))
-  //       return () => h('h1', 'Async component')
-  //     },
-  //   }
-
-  //   const AsyncWrapper = {
-  //     render() {
-  //       return h(AsyncComp)
-  //     },
-  //   }
-
-  //   const SiblingComp = {
-  //     setup() {
-  //       toggle.value = false
-  //       return () => h('span')
-  //     },
-  //   }
-
-  //   const App = {
-  //     setup() {
-  //       return () =>
-  //         h(
-  //           Suspense,
-  //           {},
-  //           {
-  //             default: () => [
-  //               h('main', {}, [
-  //                 h(AsyncWrapper, {
-  //                   prop: toggle.value ? 'hello' : 'world',
-  //                 }),
-  //                 h(SiblingComp),
-  //               ]),
-  //             ],
-  //           },
-  //         )
-  //     },
-  //   }
-
-  //   // server render
-  //   const html = await renderToString(h(App))
-
-  //   expect(html).toMatchInlineSnapshot(
-  //     `"<main><h1 prop="hello">Async component</h1><span></span></main>"`,
-  //   )
-
-  //   expect(toggle.value).toBe(false)
-
-  //   // hydration
-
-  //   // reset the value
-  //   toggle.value = true
-  //   expect(toggle.value).toBe(true)
-
-  //   const container = document.createElement('div')
-  //   container.innerHTML = html
-  //   createSSRApp(App).mount(container)
-
-  //   await new Promise(r => setTimeout(r, 10))
-
-  //   expect(toggle.value).toBe(false)
-
-  //   // should be hydrated now
-  //   expect(container.innerHTML).toMatchInlineSnapshot(
-  //     `"<main><h1 prop="world">Async component</h1><span></span></main>"`,
-  //   )
-  // })
-
-  // test('hydrate safely when property used by deep nested async setup changed before render', async () => {
-  //   const toggle = ref(true)
-
-  //   const AsyncComp = {
-  //     async setup() {
-  //       await new Promise<void>(r => setTimeout(r, 10))
-  //       return () => h('h1', 'Async component')
-  //     },
-  //   }
-
-  //   const AsyncWrapper = { render: () => h(AsyncComp) }
-  //   const AsyncWrapperWrapper = { render: () => h(AsyncWrapper) }
-
-  //   const SiblingComp = {
-  //     setup() {
-  //       toggle.value = false
-  //       return () => h('span')
-  //     },
-  //   }
-
-  //   const App = {
-  //     setup() {
-  //       return () =>
-  //         h(
-  //           Suspense,
-  //           {},
-  //           {
-  //             default: () => [
-  //               h('main', {}, [
-  //                 h(AsyncWrapperWrapper, {
-  //                   prop: toggle.value ? 'hello' : 'world',
-  //                 }),
-  //                 h(SiblingComp),
-  //               ]),
-  //             ],
-  //           },
-  //         )
-  //     },
-  //   }
-
-  //   // server render
-  //   const html = await renderToString(h(App))
-
-  //   expect(html).toMatchInlineSnapshot(
-  //     `"<main><h1 prop="hello">Async component</h1><span></span></main>"`,
-  //   )
-
-  //   expect(toggle.value).toBe(false)
-
-  //   // hydration
-
-  //   // reset the value
-  //   toggle.value = true
-  //   expect(toggle.value).toBe(true)
-
-  //   const container = document.createElement('div')
-  //   container.innerHTML = html
-  //   createSSRApp(App).mount(container)
-
-  //   await new Promise(r => setTimeout(r, 10))
-
-  //   expect(toggle.value).toBe(false)
-
-  //   // should be hydrated now
-  //   expect(container.innerHTML).toMatchInlineSnapshot(
-  //     `"<main><h1 prop="world">Async component</h1><span></span></main>"`,
-  //   )
-  // })
-
-  // // #3787
-  // test('unmount async wrapper before load', async () => {
-  //   let resolve: any
-  //   const AsyncComp = defineAsyncComponent(
-  //     () =>
-  //       new Promise(r => {
-  //         resolve = r
-  //       }),
-  //   )
-
-  //   const show = ref(true)
-  //   const root = document.createElement('div')
-  //   root.innerHTML = '<div><div>async</div></div>'
-
-  //   createSSRApp({
-  //     render() {
-  //       return h('div', [show.value ? h(AsyncComp) : h('div', 'hi')])
-  //     },
-  //   }).mount(root)
-
-  //   show.value = false
-  //   await nextTick()
-  //   expect(root.innerHTML).toBe('<div><div>hi</div></div>')
-  //   resolve({})
-  // })
-
-  // //#12362
-  // test('nested async wrapper', async () => {
-  //   const Toggle = defineAsyncComponent(
-  //     () =>
-  //       new Promise(r => {
-  //         r(
-  //           defineComponent({
-  //             setup(_, { slots }) {
-  //               const show = ref(false)
-  //               onMounted(() => {
-  //                 nextTick(() => {
-  //                   show.value = true
-  //                 })
-  //               })
-  //               return () =>
-  //                 withDirectives(
-  //                   h('div', null, [renderSlot(slots, 'default')]),
-  //                   [[vShow, show.value]],
-  //                 )
-  //             },
-  //           }) as any,
-  //         )
-  //       }),
-  //   )
-
-  //   const Wrapper = defineAsyncComponent(() => {
-  //     return new Promise(r => {
-  //       r(
-  //         defineComponent({
-  //           render(this: any) {
-  //             return renderSlot(this.$slots, 'default')
-  //           },
-  //         }) as any,
-  //       )
-  //     })
-  //   })
-
-  //   const count = ref(0)
-  //   const fn = vi.fn()
-  //   const Child = {
-  //     setup() {
-  //       onMounted(() => {
-  //         fn()
-  //         count.value++
-  //       })
-  //       return () => h('div', count.value)
-  //     },
-  //   }
-
-  //   const App = {
-  //     render() {
-  //       return h(Toggle, null, {
-  //         default: () =>
-  //           h(Wrapper, null, {
-  //             default: () =>
-  //               h(Wrapper, null, {
-  //                 default: () => h(Child),
-  //               }),
-  //           }),
-  //       })
-  //     },
-  //   }
-
-  //   const root = document.createElement('div')
-  //   root.innerHTML = await renderToString(h(App))
-  //   expect(root.innerHTML).toMatchInlineSnapshot(
-  //     `"<div style="display:none;"><!--[--><!--[--><!--[--><div>0</div><!--]--><!--]--><!--]--></div>"`,
-  //   )
-
-  //   createSSRApp(App).mount(root)
-  //   await nextTick()
-  //   await nextTick()
-  //   expect(root.innerHTML).toMatchInlineSnapshot(
-  //     `"<div style=""><!--[--><!--[--><!--[--><div>1</div><!--]--><!--]--><!--]--></div>"`,
-  //   )
-  //   expect(fn).toBeCalledTimes(1)
-  // })
-
-  // test('unmount async wrapper before load (fragment)', async () => {
-  //   let resolve: any
-  //   const AsyncComp = defineAsyncComponent(
-  //     () =>
-  //       new Promise(r => {
-  //         resolve = r
-  //       }),
-  //   )
-
-  //   const show = ref(true)
-  //   const root = document.createElement('div')
-  //   root.innerHTML = '<div><!--[-->async<!--]--></div>'
-
-  //   createSSRApp({
-  //     render() {
-  //       return h('div', [show.value ? h(AsyncComp) : h('div', 'hi')])
-  //     },
-  //   }).mount(root)
-
-  //   show.value = false
-  //   await nextTick()
-  //   expect(root.innerHTML).toBe('<div><div>hi</div></div>')
-  //   resolve({})
-  // })
-
-  // test('elements with camel-case in svg ', () => {
-  //   const { vnode, container } = mountWithHydration(
-  //     '<animateTransform></animateTransform>',
-  //     () => h('animateTransform'),
-  //   )
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  // })
-
-  // test('SVG as a mount container', () => {
-  //   const svgContainer = document.createElement('svg')
-  //   svgContainer.innerHTML = '<g></g>'
-  //   const app = createSSRApp({
-  //     render: () => h('g'),
-  //   })
-
-  //   expect(
-  //     (
-  //       app.mount(svgContainer).$.subTree as VNode<Node, Element> & {
-  //         el: Element
-  //       }
-  //     ).el instanceof SVGElement,
-  //   )
-  // })
-
-  // test('force hydrate prop with `.prop` modifier', () => {
-  //   const { container } = mountWithHydration('<input type="checkbox">', () =>
-  //     h('input', {
-  //       type: 'checkbox',
-  //       '.indeterminate': true,
-  //     }),
-  //   )
-  //   expect((container.firstChild! as any).indeterminate).toBe(true)
-  // })
-
-  // test('force hydrate input v-model with non-string value bindings', () => {
-  //   const { container } = mountWithHydration(
-  //     '<input type="checkbox" value="true">',
-  //     () =>
-  //       withDirectives(
-  //         createVNode(
-  //           'input',
-  //           { type: 'checkbox', 'true-value': true },
-  //           null,
-  //           PatchFlags.PROPS,
-  //           ['true-value'],
-  //         ),
-  //         [[vModelCheckbox, true]],
-  //       ),
-  //   )
-  //   expect((container.firstChild as any)._trueValue).toBe(true)
-  // })
-
-  // test('force hydrate checkbox with indeterminate', () => {
-  //   const { container } = mountWithHydration(
-  //     '<input type="checkbox" indeterminate>',
-  //     () =>
-  //       createVNode(
-  //         'input',
-  //         { type: 'checkbox', indeterminate: '' },
-  //         null,
-  //         PatchFlags.CACHED,
-  //       ),
-  //   )
-  //   expect((container.firstChild as any).indeterminate).toBe(true)
-  // })
-
-  // test('force hydrate select option with non-string value bindings', () => {
-  //   const { container } = mountWithHydration(
-  //     '<select><option value="true">ok</option></select>',
-  //     () =>
-  //       h('select', [
-  //         // hoisted because bound value is a constant...
-  //         createVNode('option', { value: true }, null, -1 /* HOISTED */),
-  //       ]),
-  //   )
-  //   expect((container.firstChild!.firstChild as any)._value).toBe(true)
-  // })
-
-  // // #7203
-  // test('force hydrate custom element with dynamic props', () => {
-  //   class MyElement extends HTMLElement {
-  //     foo = ''
-  //     constructor() {
-  //       super()
-  //     }
-  //   }
-  //   customElements.define('my-element-7203', MyElement)
-
-  //   const msg = ref('bar')
-  //   const container = document.createElement('div')
-  //   container.innerHTML = '<my-element-7203></my-element-7203>'
-  //   const app = createSSRApp({
-  //     render: () => h('my-element-7203', { foo: msg.value }),
-  //   })
-  //   app.mount(container)
-  //   expect((container.firstChild as any).foo).toBe(msg.value)
-  // })
-
-  // // #5728
-  // test('empty text node in slot', () => {
-  //   const Comp = {
-  //     render(this: any) {
-  //       return renderSlot(this.$slots, 'default', {}, () => [
-  //         createTextVNode(''),
-  //       ])
-  //     },
-  //   }
-  //   const { container, vnode } = mountWithHydration('<!--[--><!--]-->', () =>
-  //     h(Comp),
-  //   )
-  //   expect(container.childNodes.length).toBe(3)
-  //   const text = container.childNodes[1]
-  //   expect(text.nodeType).toBe(3)
-  //   expect(vnode.el).toBe(container.childNodes[0])
-  //   // component => slot fragment => text node
-  //   expect((vnode as any).component?.subTree.children[0].el).toBe(text)
-  // })
-
-  // // #7215
-  // test('empty text node', () => {
-  //   const Comp = {
-  //     render(this: any) {
-  //       return h('p', [''])
-  //     },
-  //   }
-  //   const { container } = mountWithHydration('<p></p>', () => h(Comp))
-  //   expect(container.childNodes.length).toBe(1)
-  //   const p = container.childNodes[0]
-  //   expect(p.childNodes.length).toBe(1)
-  //   const text = p.childNodes[0]
-  //   expect(text.nodeType).toBe(3)
-  // })
-
-  // // #11372
-  // test('object style value tracking in prod', async () => {
-  //   __DEV__ = false
-  //   try {
-  //     const style = reactive({ color: 'red' })
-  //     const Comp = {
-  //       render(this: any) {
-  //         return (
-  //           openBlock(),
-  //           createElementBlock(
-  //             'div',
-  //             {
-  //               style: normalizeStyle(style),
-  //             },
-  //             null,
-  //             4 /* STYLE */,
-  //           )
-  //         )
-  //       },
-  //     }
-  //     const { container } = mountWithHydration(
-  //       `<div style="color: red;"></div>`,
-  //       () => h(Comp),
-  //     )
-  //     style.color = 'green'
-  //     await nextTick()
-  //     expect(container.innerHTML).toBe(`<div style="color: green;"></div>`)
-  //   } finally {
-  //     __DEV__ = true
-  //   }
-  // })
-
-  // test('app.unmount()', async () => {
-  //   const container = document.createElement('DIV')
-  //   container.innerHTML = '<button></button>'
-  //   const App = defineComponent({
-  //     setup(_, { expose }) {
-  //       const count = ref(0)
-
-  //       expose({ count })
-
-  //       return () =>
-  //         h('button', {
-  //           onClick: () => count.value++,
-  //         })
-  //     },
-  //   })
-
-  //   const app = createSSRApp(App)
-  //   const vm = app.mount(container)
-  //   await nextTick()
-  //   expect((container as any)._vnode).toBeDefined()
-  //   // @ts-expect-error - expose()'d properties are not available on vm type
-  //   expect(vm.count).toBe(0)
-
-  //   app.unmount()
-  //   expect((container as any)._vnode).toBe(null)
-  // })
-
-  // // #6637
-  // test('stringified root fragment', () => {
-  //   mountWithHydration(`<!--[--><div></div><!--]-->`, () =>
-  //     createStaticVNode(`<div></div>`, 1),
-  //   )
-  //   expect(`mismatch`).not.toHaveBeenWarned()
-  // })
-
-  // test('transition appear', () => {
-  //   const { vnode, container } = mountWithHydration(
-  //     `<template><div>foo</div></template>`,
-  //     () =>
-  //       h(
-  //         Transition,
-  //         { appear: true },
-  //         {
-  //           default: () => h('div', 'foo'),
-  //         },
-  //       ),
-  //   )
-  //   expect(container.firstChild).toMatchInlineSnapshot(`
-  //     <div
-  //       class="v-enter-from v-enter-active"
-  //     >
-  //       foo
-  //     </div>
-  //   `)
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(`mismatch`).not.toHaveBeenWarned()
-  // })
-
-  // test('transition appear with v-if', () => {
-  //   const show = false
-  //   const { vnode, container } = mountWithHydration(
-  //     `<template><!----></template>`,
-  //     () =>
-  //       h(
-  //         Transition,
-  //         { appear: true },
-  //         {
-  //           default: () => (show ? h('div', 'foo') : createCommentVNode('')),
-  //         },
-  //       ),
-  //   )
-  //   expect(container.firstChild).toMatchInlineSnapshot('<!---->')
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(`mismatch`).not.toHaveBeenWarned()
-  // })
-
-  // test('transition appear with v-show', () => {
-  //   const show = false
-  //   const { vnode, container } = mountWithHydration(
-  //     `<template><div style="display: none;">foo</div></template>`,
-  //     () =>
-  //       h(
-  //         Transition,
-  //         { appear: true },
-  //         {
-  //           default: () =>
-  //             withDirectives(createVNode('div', null, 'foo'), [[vShow, show]]),
-  //         },
-  //       ),
-  //   )
-  //   expect(container.firstChild).toMatchInlineSnapshot(`
-  //     <div
-  //       class="v-enter-from v-enter-active"
-  //       style="display: none;"
-  //     >
-  //       foo
-  //     </div>
-  //   `)
-  //   expect((container.firstChild as any)[vShowOriginalDisplay]).toBe('')
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   expect(`mismatch`).not.toHaveBeenWarned()
-  // })
-
-  // test('transition appear w/ event listener', async () => {
-  //   const container = document.createElement('div')
-  //   container.innerHTML = `<template><button>0</button></template>`
-  //   createSSRApp({
-  //     data() {
-  //       return {
-  //         count: 0,
-  //       }
-  //     },
-  //     template: `
-  //       <Transition appear>
-  //         <button @click="count++">{{count}}</button>
-  //       </Transition>
-  //     `,
-  //   }).mount(container)
-
-  //   expect(container.firstChild).toMatchInlineSnapshot(`
-  //     <button
-  //       class="v-enter-from v-enter-active"
-  //     >
-  //       0
-  //     </button>
-  //   `)
-
-  //   triggerEvent('click', container.querySelector('button')!)
-  //   await nextTick()
-  //   expect(container.firstChild).toMatchInlineSnapshot(`
-  //     <button
-  //       class="v-enter-from v-enter-active"
-  //     >
-  //       1
-  //     </button>
-  //   `)
-  // })
-
-  // test('Suspense + transition appear', async () => {
-  //   const { vnode, container } = mountWithHydration(
-  //     `<template><div>foo</div></template>`,
-  //     () =>
-  //       h(Suspense, {}, () =>
-  //         h(
-  //           Transition,
-  //           { appear: true },
-  //           {
-  //             default: () => h('div', 'foo'),
-  //           },
-  //         ),
-  //       ),
-  //   )
-
-  //   expect(vnode.el).toBe(container.firstChild)
-  //   // wait for hydration to finish
-  //   await new Promise(r => setTimeout(r))
-
-  //   expect(container.firstChild).toMatchInlineSnapshot(`
-  //     <div
-  //       class="v-enter-from v-enter-active"
-  //     >
-  //       foo
-  //     </div>
-  //   `)
-  //   await nextTick()
-  //   expect(vnode.el).toBe(container.firstChild)
-  // })
-
-  // // #10607
-  // test('update component stable slot (prod + optimized mode)', async () => {
-  //   __DEV__ = false
-  //   try {
-  //     const container = document.createElement('div')
-  //     container.innerHTML = `<template><div show="false"><!--[--><div><div><!----></div></div><div>0</div><!--]--></div></template>`
-  //     const Comp = {
-  //       render(this: any) {
-  //         return (
-  //           openBlock(),
-  //           createElementBlock('div', null, [
-  //             renderSlot(this.$slots, 'default'),
-  //           ])
-  //         )
-  //       },
-  //     }
-  //     const show = ref(false)
-  //     const clicked = ref(false)
-
-  //     const Wrapper = {
-  //       setup() {
-  //         const items = ref<number[]>([])
-  //         onMounted(() => {
-  //           items.value = [1]
-  //         })
-  //         return () => {
-  //           return (
-  //             openBlock(),
-  //             createBlock(Comp, null, {
-  //               default: withCtx(() => [
-  //                 createElementVNode('div', null, [
-  //                   createElementVNode('div', null, [
-  //                     clicked.value
-  //                       ? (openBlock(),
-  //                         createElementBlock('div', { key: 0 }, 'foo'))
-  //                       : createCommentVNode('v-if', true),
-  //                   ]),
-  //                 ]),
-  //                 createElementVNode(
-  //                   'div',
-  //                   null,
-  //                   items.value.length,
-  //                   1 /* TEXT */,
-  //                 ),
-  //               ]),
-  //               _: 1 /* STABLE */,
-  //             })
-  //           )
-  //         }
-  //       },
-  //     }
-  //     createSSRApp({
-  //       components: { Wrapper },
-  //       data() {
-  //         return { show }
-  //       },
-  //       template: `<Wrapper :show="show"/>`,
-  //     }).mount(container)
-
-  //     await nextTick()
-  //     expect(container.innerHTML).toBe(
-  //       `<div show="false"><!--[--><div><div><!----></div></div><div>1</div><!--]--></div>`,
-  //     )
-
-  //     show.value = true
-  //     await nextTick()
-  //     expect(async () => {
-  //       clicked.value = true
-  //       await nextTick()
-  //     }).not.toThrow("Cannot read properties of null (reading 'insertBefore')")
-
-  //     await nextTick()
-  //     expect(container.innerHTML).toBe(
-  //       `<div show="true"><!--[--><div><div><div>foo</div></div></div><div>1</div><!--]--></div>`,
-  //     )
-  //   } catch (e) {
-  //     throw e
-  //   } finally {
-  //     __DEV__ = true
-  //   }
-  // })
-
-  // describe('mismatch handling', () => {
-  //   test('text node', () => {
-  //     const { container } = mountWithHydration(`foo`, () => 'bar')
-  //     expect(container.textContent).toBe('bar')
-  //     expect(`Hydration text mismatch`).toHaveBeenWarned()
-  //   })
-
-  //   test('element text content', () => {
-  //     const { container } = mountWithHydration(`<div>foo</div>`, () =>
-  //       h('div', 'bar'),
-  //     )
-  //     expect(container.innerHTML).toBe('<div>bar</div>')
-  //     expect(`Hydration text content mismatch`).toHaveBeenWarned()
-  //   })
-
-  //   test('not enough children', () => {
-  //     const { container } = mountWithHydration(`<div></div>`, () =>
-  //       h('div', [h('span', 'foo'), h('span', 'bar')]),
-  //     )
-  //     expect(container.innerHTML).toBe(
-  //       '<div><span>foo</span><span>bar</span></div>',
-  //     )
-  //     expect(`Hydration children mismatch`).toHaveBeenWarned()
-  //   })
-
-  //   test('too many children', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div><span>foo</span><span>bar</span></div>`,
-  //       () => h('div', [h('span', 'foo')]),
-  //     )
-  //     expect(container.innerHTML).toBe('<div><span>foo</span></div>')
-  //     expect(`Hydration children mismatch`).toHaveBeenWarned()
-  //   })
-
-  //   test('complete mismatch', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div><span>foo</span><span>bar</span></div>`,
-  //       () => h('div', [h('div', 'foo'), h('p', 'bar')]),
-  //     )
-  //     expect(container.innerHTML).toBe('<div><div>foo</div><p>bar</p></div>')
-  //     expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(2)
-  //   })
-
-  //   test('fragment mismatch removal', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div><!--[--><div>foo</div><div>bar</div><!--]--></div>`,
-  //       () => h('div', [h('span', 'replaced')]),
-  //     )
-  //     expect(container.innerHTML).toBe('<div><span>replaced</span></div>')
-  //     expect(`Hydration node mismatch`).toHaveBeenWarned()
-  //   })
-
-  //   test('fragment not enough children', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
-  //       () => h('div', [[h('div', 'foo'), h('div', 'bar')], h('div', 'baz')]),
-  //     )
-  //     expect(container.innerHTML).toBe(
-  //       '<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
-  //     )
-  //     expect(`Hydration node mismatch`).toHaveBeenWarned()
-  //   })
-
-  //   test('fragment too many children', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
-  //       () => h('div', [[h('div', 'foo')], h('div', 'baz')]),
-  //     )
-  //     expect(container.innerHTML).toBe(
-  //       '<div><!--[--><div>foo</div><!--]--><div>baz</div></div>',
-  //     )
-  //     // fragment ends early and attempts to hydrate the extra <div>bar</div>
-  //     // as 2nd fragment child.
-  //     expect(`Hydration text content mismatch`).toHaveBeenWarned()
-  //     // excessive children removal
-  //     expect(`Hydration children mismatch`).toHaveBeenWarned()
-  //   })
-
-  //   test('Teleport target has empty children', () => {
-  //     const teleportContainer = document.createElement('div')
-  //     teleportContainer.id = 'teleport'
-  //     document.body.appendChild(teleportContainer)
-
-  //     mountWithHydration('<!--teleport start--><!--teleport end-->', () =>
-  //       h(Teleport, { to: '#teleport' }, [h('span', 'value')]),
-  //     )
-  //     expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
-  //     expect(`Hydration children mismatch`).toHaveBeenWarned()
-  //   })
-
-  //   test('comment mismatch (element)', () => {
-  //     const { container } = mountWithHydration(`<div><span></span></div>`, () =>
-  //       h('div', [createCommentVNode('hi')]),
-  //     )
-  //     expect(container.innerHTML).toBe('<div><!--hi--></div>')
-  //     expect(`Hydration node mismatch`).toHaveBeenWarned()
-  //   })
-
-  //   test('comment mismatch (text)', () => {
-  //     const { container } = mountWithHydration(`<div>foobar</div>`, () =>
-  //       h('div', [createCommentVNode('hi')]),
-  //     )
-  //     expect(container.innerHTML).toBe('<div><!--hi--></div>')
-  //     expect(`Hydration node mismatch`).toHaveBeenWarned()
-  //   })
-
-  //   test('class mismatch', () => {
-  //     mountWithHydration(`<div class="foo bar"></div>`, () =>
-  //       h('div', { class: ['foo', 'bar'] }),
-  //     )
-  //     mountWithHydration(`<div class="foo bar"></div>`, () =>
-  //       h('div', { class: { foo: true, bar: true } }),
-  //     )
-  //     mountWithHydration(`<div class="foo bar"></div>`, () =>
-  //       h('div', { class: 'foo bar' }),
-  //     )
-  //     // SVG classes
-  //     mountWithHydration(`<svg class="foo bar"></svg>`, () =>
-  //       h('svg', { class: 'foo bar' }),
-  //     )
-  //     // class with different order
-  //     mountWithHydration(`<div class="foo bar"></div>`, () =>
-  //       h('div', { class: 'bar foo' }),
-  //     )
-  //     expect(`Hydration class mismatch`).not.toHaveBeenWarned()
-  //     mountWithHydration(`<div class="foo bar"></div>`, () =>
-  //       h('div', { class: 'foo' }),
-  //     )
-  //     expect(`Hydration class mismatch`).toHaveBeenWarned()
-  //   })
-
-  //   test('style mismatch', () => {
-  //     mountWithHydration(`<div style="color:red;"></div>`, () =>
-  //       h('div', { style: { color: 'red' } }),
-  //     )
-  //     mountWithHydration(`<div style="color:red;"></div>`, () =>
-  //       h('div', { style: `color:red;` }),
-  //     )
-  //     mountWithHydration(
-  //       `<div style="color:red; font-size: 12px;"></div>`,
-  //       () => h('div', { style: `font-size: 12px; color:red;` }),
-  //     )
-  //     mountWithHydration(`<div style="color:red;display:none;"></div>`, () =>
-  //       withDirectives(createVNode('div', { style: 'color: red' }, ''), [
-  //         [vShow, false],
-  //       ]),
-  //     )
-  //     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-  //     mountWithHydration(`<div style="color:red;"></div>`, () =>
-  //       h('div', { style: { color: 'green' } }),
-  //     )
-  //     expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
-  //   })
-
-  //   test('style mismatch when no style attribute is present', () => {
-  //     mountWithHydration(`<div></div>`, () =>
-  //       h('div', { style: { color: 'red' } }),
-  //     )
-  //     expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
-  //   })
-
-  //   test('style mismatch w/ v-show', () => {
-  //     mountWithHydration(`<div style="color:red;display:none"></div>`, () =>
-  //       withDirectives(createVNode('div', { style: 'color: red' }, ''), [
-  //         [vShow, false],
-  //       ]),
-  //     )
-  //     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-  //     mountWithHydration(`<div style="color:red;"></div>`, () =>
-  //       withDirectives(createVNode('div', { style: 'color: red' }, ''), [
-  //         [vShow, false],
-  //       ]),
-  //     )
-  //     expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
-  //   })
-
-  //   test('attr mismatch', () => {
-  //     mountWithHydration(`<div id="foo"></div>`, () => h('div', { id: 'foo' }))
-  //     mountWithHydration(`<div spellcheck></div>`, () =>
-  //       h('div', { spellcheck: '' }),
-  //     )
-  //     mountWithHydration(`<div></div>`, () => h('div', { id: undefined }))
-  //     // boolean
-  //     mountWithHydration(`<select multiple></div>`, () =>
-  //       h('select', { multiple: true }),
-  //     )
-  //     mountWithHydration(`<select multiple></div>`, () =>
-  //       h('select', { multiple: 'multiple' }),
-  //     )
-  //     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-
-  //     mountWithHydration(`<div></div>`, () => h('div', { id: 'foo' }))
-  //     expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
-
-  //     mountWithHydration(`<div id="bar"></div>`, () => h('div', { id: 'foo' }))
-  //     expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
-  //   })
-
-  //   test('attr special case: textarea value', () => {
-  //     mountWithHydration(`<textarea>foo</textarea>`, () =>
-  //       h('textarea', { value: 'foo' }),
-  //     )
-  //     mountWithHydration(`<textarea></textarea>`, () =>
-  //       h('textarea', { value: '' }),
-  //     )
-  //     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-
-  //     mountWithHydration(`<textarea>foo</textarea>`, () =>
-  //       h('textarea', { value: 'bar' }),
-  //     )
-  //     expect(`Hydration attribute mismatch`).toHaveBeenWarned()
-  //   })
-
-  //   // #11873
-  //   test('<textarea> with newlines at the beginning', async () => {
-  //     const render = () => h('textarea', null, '\nhello')
-  //     const html = await renderToString(createSSRApp({ render }))
-  //     mountWithHydration(html, render)
-  //     expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('<pre> with newlines at the beginning', async () => {
-  //     const render = () => h('pre', null, '\n')
-  //     const html = await renderToString(createSSRApp({ render }))
-  //     mountWithHydration(html, render)
-  //     expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('boolean attr handling', () => {
-  //     mountWithHydration(`<input />`, () => h('input', { readonly: false }))
-  //     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-
-  //     mountWithHydration(`<input readonly />`, () =>
-  //       h('input', { readonly: true }),
-  //     )
-  //     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-
-  //     mountWithHydration(`<input readonly="readonly" />`, () =>
-  //       h('input', { readonly: true }),
-  //     )
-  //     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('client value is null or undefined', () => {
-  //     mountWithHydration(`<div></div>`, () =>
-  //       h('div', { draggable: undefined }),
-  //     )
-  //     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-
-  //     mountWithHydration(`<input />`, () => h('input', { type: null }))
-  //     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('should not warn against object values', () => {
-  //     mountWithHydration(`<input />`, () => h('input', { from: {} }))
-  //     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('should not warn on falsy bindings of non-property keys', () => {
-  //     mountWithHydration(`<button />`, () => h('button', { href: undefined }))
-  //     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('should not warn on non-renderable option values', () => {
-  //     mountWithHydration(`<select><option>hello</option></select>`, () =>
-  //       h('select', [h('option', { value: ['foo'] }, 'hello')]),
-  //     )
-  //     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('should not warn css v-bind', () => {
-  //     const container = document.createElement('div')
-  //     container.innerHTML = `<div style="--foo:red;color:var(--foo);" />`
-  //     const app = createSSRApp({
-  //       setup() {
-  //         useCssVars(() => ({
-  //           foo: 'red',
-  //         }))
-  //         return () => h('div', { style: { color: 'var(--foo)' } })
-  //       },
-  //     })
-  //     app.mount(container)
-  //     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   // #10317 - test case from #10325
-  //   test('css vars should only be added to expected on component root dom', () => {
-  //     const container = document.createElement('div')
-  //     container.innerHTML = `<div style="--foo:red;"><div style="color:var(--foo);" /></div>`
-  //     const app = createSSRApp({
-  //       setup() {
-  //         useCssVars(() => ({
-  //           foo: 'red',
-  //         }))
-  //         return () =>
-  //           h('div', null, [h('div', { style: { color: 'var(--foo)' } })])
-  //       },
-  //     })
-  //     app.mount(container)
-  //     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   // #11188
-  //   test('css vars support fallthrough', () => {
-  //     const container = document.createElement('div')
-  //     container.innerHTML = `<div style="padding: 4px;--foo:red;"></div>`
-  //     const app = createSSRApp({
-  //       setup() {
-  //         useCssVars(() => ({
-  //           foo: 'red',
-  //         }))
-  //         return () => h(Child)
-  //       },
-  //     })
-  //     const Child = {
-  //       setup() {
-  //         return () => h('div', { style: 'padding: 4px' })
-  //       },
-  //     }
-  //     app.mount(container)
-  //     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   // #11189
-  //   test('should not warn for directives that mutate DOM in created', () => {
-  //     const container = document.createElement('div')
-  //     container.innerHTML = `<div class="test red"></div>`
-  //     const vColor: ObjectDirective = {
-  //       created(el, binding) {
-  //         el.classList.add(binding.value)
-  //       },
-  //     }
-  //     const app = createSSRApp({
-  //       setup() {
-  //         return () =>
-  //           withDirectives(h('div', { class: 'test' }), [[vColor, 'red']])
-  //       },
-  //     })
-  //     app.mount(container)
-  //     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('escape css var name', () => {
-  //     const container = document.createElement('div')
-  //     container.innerHTML = `<div style="padding: 4px;--foo\\.bar:red;"></div>`
-  //     const app = createSSRApp({
-  //       setup() {
-  //         useCssVars(() => ({
-  //           'foo.bar': 'red',
-  //         }))
-  //         return () => h(Child)
-  //       },
-  //     })
-  //     const Child = {
-  //       setup() {
-  //         return () => h('div', { style: 'padding: 4px' })
-  //       },
-  //     }
-  //     app.mount(container)
-  //     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-  //   })
-  // })
-
-  // describe('data-allow-mismatch', () => {
-  //   test('element text content', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div data-allow-mismatch="text">foo</div>`,
-  //       () => h('div', 'bar'),
-  //     )
-  //     expect(container.innerHTML).toBe(
-  //       '<div data-allow-mismatch="text">bar</div>',
-  //     )
-  //     expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('not enough children', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div data-allow-mismatch="children"></div>`,
-  //       () => h('div', [h('span', 'foo'), h('span', 'bar')]),
-  //     )
-  //     expect(container.innerHTML).toBe(
-  //       '<div data-allow-mismatch="children"><span>foo</span><span>bar</span></div>',
-  //     )
-  //     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('too many children', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div data-allow-mismatch="children"><span>foo</span><span>bar</span></div>`,
-  //       () => h('div', [h('span', 'foo')]),
-  //     )
-  //     expect(container.innerHTML).toBe(
-  //       '<div data-allow-mismatch="children"><span>foo</span></div>',
-  //     )
-  //     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('complete mismatch', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div data-allow-mismatch="children"><span>foo</span><span>bar</span></div>`,
-  //       () => h('div', [h('div', 'foo'), h('p', 'bar')]),
-  //     )
-  //     expect(container.innerHTML).toBe(
-  //       '<div data-allow-mismatch="children"><div>foo</div><p>bar</p></div>',
-  //     )
-  //     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('fragment mismatch removal', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--></div>`,
-  //       () => h('div', [h('span', 'replaced')]),
-  //     )
-  //     expect(container.innerHTML).toBe(
-  //       '<div data-allow-mismatch="children"><span>replaced</span></div>',
-  //     )
-  //     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('fragment not enough children', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
-  //       () => h('div', [[h('div', 'foo'), h('div', 'bar')], h('div', 'baz')]),
-  //     )
-  //     expect(container.innerHTML).toBe(
-  //       '<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
-  //     )
-  //     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('fragment too many children', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
-  //       () => h('div', [[h('div', 'foo')], h('div', 'baz')]),
-  //     )
-  //     expect(container.innerHTML).toBe(
-  //       '<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>',
-  //     )
-  //     // fragment ends early and attempts to hydrate the extra <div>bar</div>
-  //     // as 2nd fragment child.
-  //     expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
-  //     // excessive children removal
-  //     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('comment mismatch (element)', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div data-allow-mismatch="children"><span></span></div>`,
-  //       () => h('div', [createCommentVNode('hi')]),
-  //     )
-  //     expect(container.innerHTML).toBe(
-  //       '<div data-allow-mismatch="children"><!--hi--></div>',
-  //     )
-  //     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('comment mismatch (text)', () => {
-  //     const { container } = mountWithHydration(
-  //       `<div data-allow-mismatch="children">foobar</div>`,
-  //       () => h('div', [createCommentVNode('hi')]),
-  //     )
-  //     expect(container.innerHTML).toBe(
-  //       '<div data-allow-mismatch="children"><!--hi--></div>',
-  //     )
-  //     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('class mismatch', () => {
-  //     mountWithHydration(
-  //       `<div class="foo bar" data-allow-mismatch="class"></div>`,
-  //       () => h('div', { class: 'foo' }),
-  //     )
-  //     expect(`Hydration class mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('style mismatch', () => {
-  //     mountWithHydration(
-  //       `<div style="color:red;" data-allow-mismatch="style"></div>`,
-  //       () => h('div', { style: { color: 'green' } }),
-  //     )
-  //     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-  //   })
-
-  //   test('attr mismatch', () => {
-  //     mountWithHydration(`<div data-allow-mismatch="attribute"></div>`, () =>
-  //       h('div', { id: 'foo' }),
-  //     )
-  //     mountWithHydration(
-  //       `<div id="bar" data-allow-mismatch="attribute"></div>`,
-  //       () => h('div', { id: 'foo' }),
-  //     )
-  //     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-  //   })
-  // })
-
-  test.todo('Teleport')
-  test.todo('Suspense')
+  describe.todo('Suspense')
 })
 
-describe('VDOM hydration interop', () => {
-  test('basic vapor component', async () => {
+describe('VDOM interop', () => {
+  test('basic render vapor component', async () => {
     const data = ref(true)
-    const { container } = await testHydrationInterop(
+    const { container } = await testWithVDOMApp(
       `<script setup>const data = _data; const components = _components;</script>
       <template>
         <components.VaporChild/>
@@ -4062,16 +2985,16 @@ describe('VDOM hydration interop', () => {
       data,
     )
 
-    expect(container.innerHTML).toMatchInlineSnapshot(`"true"`)
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"true"`)
 
     data.value = false
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(`"false"`)
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"false"`)
   })
 
   test('nested components (VDOM -> Vapor -> VDOM)', async () => {
     const data = ref(true)
-    const { container } = await testHydrationInterop(
+    const { container } = await testWithVDOMApp(
       `<script setup>const data = _data; const components = _components;</script>
       <template>
         <components.VaporChild/>
@@ -4090,16 +3013,16 @@ describe('VDOM hydration interop', () => {
       data,
     )
 
-    expect(container.innerHTML).toMatchInlineSnapshot(`"true"`)
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"true"`)
 
     data.value = false
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(`"false"`)
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"false"`)
   })
 
   test('nested components (VDOM -> Vapor -> VDOM (with slot fallback))', async () => {
     const data = ref(true)
-    const { container } = await testHydrationInterop(
+    const { container } = await testWithVDOMApp(
       `<script setup>const data = _data; const components = _components;</script>
       <template>
         <components.VaporChild/>
@@ -4118,20 +3041,28 @@ describe('VDOM hydration interop', () => {
       data,
     )
 
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--><span>true</span><!--]--><!--slot-->"`,
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>true</span><!--]-->
+      "
+    `,
     )
 
     data.value = false
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--><span>false</span><!--]--><!--slot-->"`,
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>false</span><!--]-->
+      "
+    `,
     )
   })
 
-  test('nested components (VDOM -> Vapor(with slot fallback) -> VDOM)', async () => {
+  test('nested components (VDOM -> Vapor(with slot content) -> VDOM)', async () => {
     const data = ref(true)
-    const { container } = await testHydrationInterop(
+    const { container } = await testWithVDOMApp(
       `<script setup>const data = _data; const components = _components;</script>
           <template>
             <components.VaporChild/>
@@ -4156,20 +3087,73 @@ describe('VDOM hydration interop', () => {
       data,
     )
 
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--><span>true vapor fallback</span><!--]--><!--slot-->"`,
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>true vapor fallback</span><!--]-->
+      "
+    `,
     )
 
     data.value = false
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--><span>false vapor fallback</span><!--]--><!--slot-->"`,
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>false vapor fallback</span><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('nested components (VDOM -> Vapor(with slot content) -> Vapor)', async () => {
+    const data = ref(true)
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+          <template>
+            <components.VaporChild/>
+          </template>`,
+      {
+        VaporChild: {
+          code: `<template>
+            <components.VaporChild2>
+              <template #default>
+                <span>{{data}} vapor fallback</span>
+              </template>
+            </components.VaporChild2>
+          </template>`,
+          vapor: true,
+        },
+        VaporChild2: {
+          code: `<template><slot><span>vapor fallback2</span></slot></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>true vapor fallback</span><!--]-->
+      <!--slot-->"
+    `,
+    )
+
+    data.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>false vapor fallback</span><!--]-->
+      <!--slot-->"
+    `,
     )
   })
 
   test('vapor slot render vdom component', async () => {
     const data = ref(true)
-    const { container } = await testHydrationInterop(
+    const { container } = await testWithVDOMApp(
       `<script setup>const data = _data; const components = _components;</script>
       <template>
         <components.VaporChild>
@@ -4190,14 +3174,69 @@ describe('VDOM hydration interop', () => {
       data,
     )
 
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><!--[-->true<!--]--><!--slot--></div>"`,
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "<div>
+      <!--[-->true<!--]-->
+      <!--slot--></div>"
+    `,
     )
 
     data.value = false
     await nextTick()
-    expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><!--[-->false<!--]--><!--slot--></div>"`,
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "<div>
+      <!--[-->false<!--]-->
+      <!--slot--></div>"
+    `,
+    )
+  })
+
+  test('vapor slot render vdom component (render function)', async () => {
+    const data = ref(true)
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data; const components = _components;
+        const VdomChild = {
+          setup() {
+            return () => h('div', null, [h('div', [String(data.value)])])
+          }
+        }
+      </script>
+      <template>
+        <components.VaporChild>
+          <VdomChild/>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><div><slot/></div></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "<div>
+      <!--[--><div><div>true</div></div><!--]-->
+      <!--slot--></div>"
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "<div>
+      <!--[--><div><div>false</div></div><!--]-->
+      <!--slot--></div>"
+    `,
     )
   })
 })

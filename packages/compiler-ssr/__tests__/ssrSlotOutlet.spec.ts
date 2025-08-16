@@ -153,7 +153,6 @@ describe('ssr: <slot>', () => {
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         if (true) {
           _ssrRenderSlotInner(_ctx.$slots, "default", {}, null, _push, _parent, null, true)
-          _push(\`<!--if-->\`)
         } else {
           _push(\`<!---->\`)
         }

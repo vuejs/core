@@ -42,7 +42,6 @@ import {
   getPropsProxyHandlers,
   hasFallthroughAttrs,
   normalizePropsOptions,
-  resolveDynamicProps,
   setupPropsValidation,
 } from './componentProps'
 import { renderEffect } from './renderEffect'
@@ -59,6 +58,7 @@ import {
 import { hmrReload, hmrRerender } from './hmr'
 import {
   adoptTemplate,
+  advanceHydrationNode,
   currentHydrationNode,
   isHydrating,
   locateHydrationNode,
@@ -69,6 +69,7 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
+import { createElement } from './dom/node'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -163,9 +164,13 @@ export function createComponent(
       rawSlots,
     )
 
-    // `frag.insert` handles both hydration and mounting
-    if (_insertionParent) {
-      insert(frag, _insertionParent, _insertionAnchor)
+    if (!isHydrating) {
+      if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+    } else {
+      frag.hydrate()
+      if (_insertionAnchor !== undefined) {
+        advanceHydrationNode(_insertionParent!)
+      }
     }
     return frag
   }
@@ -283,8 +288,12 @@ export function createComponent(
 
   onScopeDispose(() => unmountComponent(instance), true)
 
-  if (!isHydrating && _insertionParent) {
+  if (_insertionParent) {
     mountComponent(instance, _insertionParent, _insertionAnchor)
+  }
+
+  if (isHydrating && _insertionAnchor !== undefined) {
+    advanceHydrationNode(_insertionParent!)
   }
 
   return instance
@@ -509,27 +518,32 @@ export function createComponentWithFallback(
 
   const el = isHydrating
     ? (adoptTemplate(currentHydrationNode!, `<${comp}/>`) as HTMLElement)
-    : document.createElement(comp)
+    : createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
 
-  if (rawProps) {
-    renderEffect(() => {
-      setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)])
-    })
-  }
-
   if (rawSlots) {
-    isHydrating && setCurrentHydrationNode(el.firstChild)
+    let prev: Node
+    if (isHydrating) {
+      prev = currentHydrationNode!
+      setCurrentHydrationNode(el.firstChild)
+    }
     if (rawSlots.$) {
       // TODO dynamic slot fragment
     } else {
       insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
     }
+    if (isHydrating) {
+      setCurrentHydrationNode(prev!)
+    }
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(el, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (_insertionParent) insert(el, _insertionParent, _insertionAnchor)
+  } else {
+    if (_insertionAnchor !== undefined) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
 
   return el

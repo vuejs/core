@@ -37,6 +37,16 @@ export function ssrProcessIf(
   )
   context.pushStatement(ifStatement)
 
+  // anchor addition rules (matching runtime-vapor behavior):
+  // - v-else-if: the N-th branch → add N anchors
+  // - v-else: if there are M preceding branches → add M anchors
+  const isVapor = context.options.vapor
+  if (isVapor) {
+    ifStatement.consequent.body.push(
+      createCallExpression(`_push`, createIfAnchors(1)),
+    )
+  }
+
   let currentIf = ifStatement
   for (let i = 1; i < node.branches.length; i++) {
     const branch = node.branches[i]
@@ -51,15 +61,29 @@ export function ssrProcessIf(
         branch.condition,
         branchBlockStatement,
       )
+
+      if (isVapor) {
+        branchBlockStatement.body.push(
+          createCallExpression(`_push`, createIfAnchors(i + 1)),
+        )
+      }
     } else {
       // else
       currentIf.alternate = branchBlockStatement
+
+      if (isVapor) {
+        branchBlockStatement.body.push(
+          createCallExpression(`_push`, createIfAnchors(i)),
+        )
+      }
     }
   }
 
   if (!currentIf.alternate && !disableComment) {
     currentIf.alternate = createBlockStatement([
-      createCallExpression(`_push`, ['`<!---->`']),
+      createCallExpression(`_push`, [
+        isVapor ? `\`<!--${IF_ANCHOR_LABEL}-->\`` : '`<!---->`',
+      ]),
     ])
   }
 }
@@ -75,16 +99,10 @@ function processIfBranch(
     (children.length !== 1 || children[0].type !== NodeTypes.ELEMENT) &&
     // optimize away nested fragments when the only child is a ForNode
     !(children.length === 1 && children[0].type === NodeTypes.FOR)
-  const statement = processChildrenAsStatement(
-    branch,
-    context,
-    needFragmentWrapper,
-  )
-  if (branch.condition) {
-    // v-if/v-else-if anchor for vapor hydration
-    statement.body.push(
-      createCallExpression(`_push`, [`\`<!--${IF_ANCHOR_LABEL}-->\``]),
-    )
-  }
-  return statement
+
+  return processChildrenAsStatement(branch, context, needFragmentWrapper)
+}
+
+function createIfAnchors(count: number): string[] {
+  return [`\`${`<!--${IF_ANCHOR_LABEL}-->`.repeat(count)}\``]
 }

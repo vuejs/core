@@ -10,10 +10,9 @@ import { EffectScope, setActiveSub } from '@vue/reactivity'
 import {
   advanceHydrationNode,
   currentHydrationNode,
-  isComment,
   isHydrating,
+  locateFragmentAnchor,
   locateHydrationNode,
-  locateVaporFragmentAnchor,
 } from './dom/hydration'
 
 export type Block =
@@ -30,6 +29,7 @@ export class VaporFragment {
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
+  hydrate?: (...args: any[]) => any
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -41,7 +41,6 @@ export class DynamicFragment extends VaporFragment {
   scope: EffectScope | undefined
   current?: BlockFn
   fallback?: BlockFn
-  teardown?: () => void
   anchorLabel?: string
 
   constructor(anchorLabel?: string) {
@@ -68,10 +67,7 @@ export class DynamicFragment extends VaporFragment {
     // teardown previous branch
     if (this.scope) {
       this.scope.stop()
-      if (parent) {
-        remove(this.nodes, parent)
-        this.teardown && this.teardown()
-      }
+      parent && remove(this.nodes, parent)
     }
 
     if (render) {
@@ -96,21 +92,16 @@ export class DynamicFragment extends VaporFragment {
     if (isHydrating) this.hydrate(this.anchorLabel!)
   }
 
-  hydrate(label: string): void {
-    // for `v-if="false"` the node will be an empty comment, use it as the anchor.
-    // otherwise, find next sibling vapor fragment anchor
-    if (isComment(currentHydrationNode!, '')) {
-      this.anchor = currentHydrationNode
-    } else {
-      const anchor = locateVaporFragmentAnchor(currentHydrationNode!, label)!
-      if (anchor) {
-        this.anchor = anchor
-      } else if (__DEV__) {
-        // this should not happen
-        throw new Error(`${label} fragment anchor node was not found.`)
-      }
+  hydrate = (label: string): void => {
+    // avoid repeated hydration during rendering fallback
+    if (this.anchor) return
+
+    this.anchor = locateFragmentAnchor(currentHydrationNode!, label)!
+    if (this.anchor) {
+      advanceHydrationNode(this.anchor)
+    } else if (__DEV__) {
+      throw new Error(`${label} fragment anchor node was not found.`)
     }
-    advanceHydrationNode(this.anchor)
   }
 }
 
@@ -133,7 +124,7 @@ export function isValidBlock(block: Block): boolean {
   } else if (isVaporComponent(block)) {
     return isValidBlock(block.block)
   } else if (isArray(block)) {
-    return block.length > 0 && block.every(isValidBlock)
+    return block.length > 0 && block.some(isValidBlock)
   } else {
     // fragment
     return isValidBlock(block.nodes)

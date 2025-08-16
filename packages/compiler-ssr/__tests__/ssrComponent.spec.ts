@@ -39,7 +39,6 @@ describe('ssr: components', () => {
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent("foo"), _mergeProps({ prop: "b" }, _attrs), null), _parent)
-          _push(\`<!--dynamic-component-->\`)
         }"
       `)
 
@@ -50,7 +49,6 @@ describe('ssr: components', () => {
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.foo), _mergeProps({ prop: "b" }, _attrs), null), _parent)
-          _push(\`<!--dynamic-component-->\`)
         }"
       `)
   })
@@ -246,8 +244,7 @@ describe('ssr: components', () => {
                   _ssrRenderList(list, (i) => {
                     _push(\`<span\${_scopeId}></span>\`)
                   })
-                  _push(\`<!--]--><!--for--></div>\`)
-                  _push(\`<!--if-->\`)
+                  _push(\`<!--]--></div>\`)
                 } else {
                   _push(\`<!---->\`)
                 }
@@ -270,8 +267,7 @@ describe('ssr: components', () => {
                   _ssrRenderList(_ctx.list, (i) => {
                     _push(\`<span\${_scopeId}></span>\`)
                   })
-                  _push(\`<!--]--><!--for--></div>\`)
-                  _push(\`<!--if-->\`)
+                  _push(\`<!--]--></div>\`)
                 } else {
                   _push(\`<!---->\`)
                 }
@@ -365,7 +361,6 @@ describe('ssr: components', () => {
                   _push(\`\`)
                   if (false) {
                     _push(\`<div\${_scopeId}></div>\`)
-                    _push(\`<!--if-->\`)
                   } else {
                     _push(\`<!---->\`)
                   }

@@ -10,7 +10,7 @@ describe('ssr: v-for', () => {
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
-        _push(\`<!--]--><!--for-->\`)
+        _push(\`<!--]-->\`)
       }"
     `)
   })
@@ -25,7 +25,7 @@ describe('ssr: v-for', () => {
           _ssrRenderList(_ctx.list, (i) => {
             _push(\`<div>foo<span>bar</span></div>\`)
           })
-          _push(\`<!--]--><!--for-->\`)
+          _push(\`<!--]-->\`)
         }"
       `)
   })
@@ -51,9 +51,9 @@ describe('ssr: v-for', () => {
               _ssrInterpolate(j)
             }</div>\`)
           })
-          _push(\`<!--]--><!--for--></div>\`)
+          _push(\`<!--]--></div>\`)
         })
-        _push(\`<!--]--><!--for-->\`)
+        _push(\`<!--]-->\`)
       }"
     `)
   })
@@ -68,7 +68,7 @@ describe('ssr: v-for', () => {
           _ssrRenderList(_ctx.list, (i) => {
             _push(\`<!--[-->\${_ssrInterpolate(i)}<!--]-->\`)
           })
-          _push(\`<!--]--><!--for-->\`)
+          _push(\`<!--]-->\`)
         }"
       `)
   })
@@ -85,7 +85,7 @@ describe('ssr: v-for', () => {
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<span>\${_ssrInterpolate(i)}</span>\`)
         })
-        _push(\`<!--]--><!--for-->\`)
+        _push(\`<!--]-->\`)
       }"
     `)
   })
@@ -107,7 +107,7 @@ describe('ssr: v-for', () => {
             _ssrInterpolate(i + 1)
           }</span><!--]-->\`)
         })
-        _push(\`<!--]--><!--for-->\`)
+        _push(\`<!--]-->\`)
       }"
     `)
   })
@@ -127,7 +127,7 @@ describe('ssr: v-for', () => {
         _ssrRenderList(_ctx.list, ({ foo }, index) => {
           _push(\`<div>\${_ssrInterpolate(foo + _ctx.bar + index)}</div>\`)
         })
-        _push(\`<!--]--><!--for-->\`)
+        _push(\`<!--]-->\`)
       }"
     `)
   })

@@ -69,7 +69,7 @@ export class TransformContext<T extends AllNode = AllNode> {
 
   block: BlockIRNode = this.ir.block
   options: Required<
-    Omit<TransformOptions, 'filename' | keyof CompilerCompatOptions>
+    Omit<TransformOptions, 'vapor' | 'filename' | keyof CompilerCompatOptions>
   >
 
   template: string = ''

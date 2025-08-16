@@ -24,10 +24,10 @@ export function genSelf(
   context: CodegenContext,
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
-  const { id, template, operation, dynamicChildOffset } = dynamic
+  const { id, template, operation } = dynamic
 
   if (id !== undefined && template !== undefined) {
-    push(NEWLINE, `const n${id} = t${template}(${dynamicChildOffset || ''})`)
+    push(NEWLINE, `const n${id} = t${template}()`)
     push(...genDirectivesForElement(id, context))
   }
 
@@ -82,15 +82,11 @@ export function genChildren(
         pushBlock(...genCall(helper('nthChild'), from, String(elementIndex)))
       }
     } else {
-      // offset is used to determine the child during hydration.
-      // if offset is not 0, we need to specify the offset to skip the dynamic
-      // children and get the correct child.
-      let childOffset = offset === 0 ? undefined : `${Math.abs(offset)}`
       if (elementIndex === 0) {
-        pushBlock(...genCall(helper('child'), from, childOffset))
+        pushBlock(...genCall(helper('child'), from))
       } else {
         // check if there's a node that we can reuse from
-        let init = genCall(helper('child'), from, childOffset)
+        let init = genCall(helper('child'), from)
         if (elementIndex === 1) {
           init = genCall(helper('next'), init)
         } else if (elementIndex > 1) {

@@ -188,9 +188,14 @@ export interface VaporInteropInterface {
   unmount(vnode: VNode, doRemove?: boolean): void
   move(vnode: VNode, container: any, anchor: any): void
   slot(n1: VNode | null, n2: VNode, container: any, anchor: any): void
-  hydrate(node: Node, fn: () => void): void
-  hydrateSlot(vnode: VNode, container: any): void
-
+  hydrate(
+    vnode: VNode,
+    node: any,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance | null,
+  ): Node
+  hydrateSlot(vnode: VNode, node: any): Node
   vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
   vdomUnmount: UnmountComponentFn
   vdomSlot: (
