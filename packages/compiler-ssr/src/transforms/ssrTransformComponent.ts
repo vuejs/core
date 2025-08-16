@@ -142,9 +142,9 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     // fallback in case the child is render-fn based). Store them in an array
     // for later use.
     if (clonedNode.children.length) {
-      buildSlots(clonedNode, context, (props, vFor, children) => {
+      buildSlots(clonedNode, context, (props, vFor, children, _loc, parent) => {
         vnodeBranches.push(
-          createVNodeSlotBranch(props, vFor, children, context, clonedNode),
+          createVNodeSlotBranch(props, vFor, children, context, parent),
         )
         return createFunctionExpression(undefined)
       })
