@@ -79,6 +79,9 @@ export const createFor = (
   ) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
   flags = 0,
+  setup?: (_: {
+    createSelector: (source: () => any) => (cb: () => void) => void
+  }) => void,
 ): VaporFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -167,6 +170,24 @@ export const createFor = (
           unmount(oldBlocks[i])
         }
       } else {
+        if (__DEV__) {
+          const keyToIndexMap: Map<any, number> = new Map()
+          for (let i = 0; i < newLength; i++) {
+            const item = getItem(source, i)
+            const key = getKey(...item)
+            if (key != null) {
+              if (keyToIndexMap.has(key)) {
+                warn(
+                  `Duplicate keys found during update:`,
+                  JSON.stringify(key),
+                  `Make sure keys are unique.`,
+                )
+              }
+              keyToIndexMap.set(key, i)
+            }
+          }
+        }
+
         const sharedBlockCount = Math.min(oldLength, newLength)
         const previousKeyIndexPairs: [any, number][] = new Array(oldLength)
         const queuedBlocks: [
@@ -192,10 +213,13 @@ export const createFor = (
             endOffset++
             continue
           }
-          if (endOffset !== 0) {
-            anchorFallback = normalizeAnchor(newBlocks[currentIndex + 1].nodes)
-          }
           break
+        }
+
+        if (endOffset !== 0) {
+          anchorFallback = normalizeAnchor(
+            newBlocks[newLength - endOffset].nodes,
+          )
         }
 
         while (startOffset < sharedBlockCount - endOffset) {
@@ -247,13 +271,9 @@ export const createFor = (
           previousKeyIndexPairs.length = previousKeyIndexInsertIndex
 
           const previousKeyIndexMap = new Map(previousKeyIndexPairs)
-          const blocksToMount: [
-            blockIndex: number,
-            blockItem: ReturnType<typeof getItem>,
-            blockKey: any,
-            anchorOffset: number,
-          ][] = []
+          const operations: (() => void)[] = []
 
+          let mountCounter = 0
           const relocateOrMountBlock = (
             blockIndex: number,
             blockItem: ReturnType<typeof getItem>,
@@ -265,21 +285,31 @@ export const createFor = (
               const reusedBlock = (newBlocks[blockIndex] =
                 oldBlocks[previousIndex])
               update(reusedBlock, ...blockItem)
-              insert(
-                reusedBlock,
-                parent!,
-                anchorOffset === -1
-                  ? anchorFallback
-                  : normalizeAnchor(newBlocks[anchorOffset].nodes),
-              )
               previousKeyIndexMap.delete(blockKey)
+              if (previousIndex !== blockIndex) {
+                operations.push(() =>
+                  insert(
+                    reusedBlock,
+                    parent!,
+                    anchorOffset === -1
+                      ? anchorFallback
+                      : normalizeAnchor(newBlocks[anchorOffset].nodes),
+                  ),
+                )
+              }
             } else {
-              blocksToMount.push([
-                blockIndex,
-                blockItem,
-                blockKey,
-                anchorOffset,
-              ])
+              mountCounter++
+              operations.push(() =>
+                mount(
+                  source,
+                  blockIndex,
+                  anchorOffset === -1
+                    ? anchorFallback
+                    : normalizeAnchor(newBlocks[anchorOffset].nodes),
+                  blockItem,
+                  blockKey,
+                ),
+              )
             }
           }
 
@@ -299,7 +329,7 @@ export const createFor = (
             relocateOrMountBlock(i, blockItem, blockKey, -1)
           }
 
-          const useFastRemove = blocksToMount.length === newLength
+          const useFastRemove = mountCounter === newLength
 
           for (const leftoverIndex of previousKeyIndexMap.values()) {
             unmount(
@@ -318,21 +348,9 @@ export const createFor = (
             }
           }
 
-          for (const [
-            blockIndex,
-            blockItem,
-            blockKey,
-            anchorOffset,
-          ] of blocksToMount) {
-            mount(
-              source,
-              blockIndex,
-              anchorOffset === -1
-                ? anchorFallback
-                : normalizeAnchor(newBlocks[anchorOffset].nodes),
-              blockItem,
-              blockKey,
-            )
+          // perform mount and move operations
+          for (const action of operations) {
+            action()
           }
         }
       }
@@ -419,6 +437,10 @@ export const createFor = (
     }
   }
 
+  if (setup) {
+    setup({ createSelector })
+  }
+
   if (flags & VaporVForFlags.ONCE) {
     renderList()
   } else {
@@ -429,12 +451,9 @@ export const createFor = (
     insert(frag, _insertionParent, _insertionAnchor)
   }
 
-  // @ts-expect-error
-  frag.useSelector = useSelector
-
   return frag
 
-  function useSelector(source: () => any): (key: any, cb: () => void) => void {
+  function createSelector(source: () => any): (cb: () => void) => void {
     let operMap = new Map<any, (() => void)[]>()
     let activeKey = source()
     let activeOpers: (() => void)[] | undefined
