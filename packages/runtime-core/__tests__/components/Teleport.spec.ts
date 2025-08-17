@@ -872,6 +872,40 @@ describe('renderer: teleport', () => {
       // children[0] is the start anchor
       expect(tRefInMounted).toBe(target.children[1])
     })
+
+    test('should handle null nextSibling in nested teleport with conditional rendering', async () => {
+      const target = nodeOps.createElement('div')
+      const root = nodeOps.createElement('div')
+      const show = ref(true)
+
+      const NestedComponent = {
+        setup() {
+          return { show }
+        },
+        render() {
+          return show.value
+            ? h(Teleport, { to: target }, h('div', 'nested-teleported'))
+            : null
+        },
+      }
+
+      const App = {
+        render() {
+          return h(Fragment, [h(NestedComponent), h('div', 'root')])
+        },
+      }
+
+      render(h(App), root)
+      expect(serializeInner(target)).toBe(`<div>nested-teleported</div>`)
+
+      show.value = false
+      await nextTick()
+      expect(serializeInner(target)).toBe(``)
+
+      show.value = true
+      await nextTick()
+      expect(serializeInner(target)).toBe(`<div>nested-teleported</div>`)
+    })
   }
 
   test('handle update and hmr rerender', async () => {

@@ -501,6 +501,9 @@ function updateCssVars(vnode: VNode, isDisabled: boolean) {
     while (node && node !== anchor) {
       if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
       node = node.nextSibling
+      // Null safety: break if nextSibling is null to prevent accessing
+      // properties of null during conditional rendering scenarios
+      if (!node) break
     }
     ctx.ut()
   }
