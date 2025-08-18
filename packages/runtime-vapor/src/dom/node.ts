@@ -1,5 +1,5 @@
 import { advanceToNonBlockNode } from './hydration'
-import { isInsertionAnchor } from '@vue/shared'
+import { isBlockStartAnchor } from '@vue/shared'
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function createElement(tagName: string): HTMLElement {
@@ -52,7 +52,7 @@ export function _child(node: ParentNode): Node {
 /*! #__NO_SIDE_EFFECTS__ */
 export function __child(node: ParentNode): Node {
   let n: Node = node.firstChild!
-  while (n && isInsertionAnchor(n)) {
+  while (n && isBlockStartAnchor(n)) {
     n = advanceToNonBlockNode(n)
     n = n.nextSibling!
   }
@@ -87,7 +87,7 @@ export function _next(node: Node): Node {
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __next(node: Node): Node {
-  if (isInsertionAnchor(node)) {
+  if (isBlockStartAnchor(node)) {
     node = advanceToNonBlockNode(node)
   }
   return node.nextSibling!

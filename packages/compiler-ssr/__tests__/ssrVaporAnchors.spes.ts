@@ -1,16 +1,16 @@
 import { getCompiledString } from './utils'
 
-describe('insertion anchors', () => {
+describe('block anchors', () => {
   describe('prepend', () => {
     test('prepend anchor with component', () => {
       expect(
         getCompiledString('<div><Comp/><Comp/><span/></div>', { vapor: true }),
       ).toMatchInlineSnapshot(`
-        "\`<div><!--[p-->\`)
+        "\`<div><!--[[-->\`)
           _push(_ssrRenderComponent(_component_Comp, null, null, _parent))
-          _push(\`<!--p]--><!--[p-->\`)
+          _push(\`<!--]]--><!--[[-->\`)
           _push(_ssrRenderComponent(_component_Comp, null, null, _parent))
-          _push(\`<!--p]--><span></span></div>\`"
+          _push(\`<!--]]--><span></span></div>\`"
       `)
     })
 
@@ -29,20 +29,20 @@ describe('insertion anchors', () => {
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
-                _push(\`<div\${_scopeId}><!--[p-->\`)
+                _push(\`<div\${_scopeId}><!--[[-->\`)
                 _push(_ssrRenderComponent(_component_Comp, null, null, _parent, _scopeId))
-                _push(\`<!--p]--><!--[p-->\`)
+                _push(\`<!--]]--><!--[[-->\`)
                 _push(_ssrRenderComponent(_component_Comp, null, null, _parent, _scopeId))
-                _push(\`<!--p]--><span\${_scopeId}></span></div>\`)
+                _push(\`<!--]]--><span\${_scopeId}></span></div>\`)
               } else {
                 return [
                   _createVNode("div", null, [
-                    _createCommentVNode("[p"),
+                    _createCommentVNode("[["),
                     _createVNode(_component_Comp),
-                    _createCommentVNode("p]"),
-                    _createCommentVNode("[p"),
+                    _createCommentVNode("]]"),
+                    _createCommentVNode("[["),
                     _createVNode(_component_Comp),
-                    _createCommentVNode("p]"),
+                    _createCommentVNode("]]"),
                     _createVNode("span")
                   ])
                 ]
@@ -60,11 +60,11 @@ describe('insertion anchors', () => {
           vapor: true,
         }),
       ).toMatchInlineSnapshot(`
-        "\`<div><!--[p-->\`)
+        "\`<div><!--[[-->\`)
           _ssrRenderSlot(_ctx.$slots, "foo", {}, null, _push, _parent)
-          _push(\`<!--slot--><!--p]--><!--[p-->\`)
+          _push(\`<!--slot--><!--]]--><!--[[-->\`)
           _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent)
-          _push(\`<!--slot--><!--p]--><span></span></div>\`"
+          _push(\`<!--slot--><!--]]--><span></span></div>\`"
       `)
     })
 
@@ -85,22 +85,22 @@ describe('insertion anchors', () => {
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
-                _push(\`<div\${_scopeId}><!--[p-->\`)
+                _push(\`<div\${_scopeId}><!--[[-->\`)
                 _ssrRenderSlot(_ctx.$slots, "foo", {}, null, _push, _parent, _scopeId)
-                _push(\`<!--slot--><!--p]--><!--[p-->\`)
+                _push(\`<!--slot--><!--]]--><!--[[-->\`)
                 _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent, _scopeId)
-                _push(\`<!--slot--><!--p]--><span\${_scopeId}></span></div>\`)
+                _push(\`<!--slot--><!--]]--><span\${_scopeId}></span></div>\`)
               } else {
                 return [
                   _createVNode("div", null, [
-                    _createCommentVNode("[p"),
+                    _createCommentVNode("[["),
                     _renderSlot(_ctx.$slots, "foo"),
                     _createCommentVNode("slot"),
-                    _createCommentVNode("p]"),
-                    _createCommentVNode("[p"),
+                    _createCommentVNode("]]"),
+                    _createCommentVNode("[["),
                     _renderSlot(_ctx.$slots, "default"),
                     _createCommentVNode("slot"),
-                    _createCommentVNode("p]"),
+                    _createCommentVNode("]]"),
                     _createVNode("span")
                   ])
                 ]
@@ -126,7 +126,7 @@ describe('insertion anchors', () => {
           },
         ),
       ).toMatchInlineSnapshot(`
-        "\`<div><!--[p-->\`)
+        "\`<div><!--[[-->\`)
           if (_ctx.foo) {
             _push(\`<span></span>\`)
             _push(\`<!--if-->\`)
@@ -137,7 +137,7 @@ describe('insertion anchors', () => {
             _push(\`<span></span>\`)
             _push(\`<!--if--><!--if-->\`)
           }
-          _push(\`<!--p]--><span></span></div>\`"
+          _push(\`<!--]]--><span></span></div>\`"
       `)
     })
 
@@ -159,7 +159,7 @@ describe('insertion anchors', () => {
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
-                _push(\`<div\${_scopeId}><!--[p-->\`)
+                _push(\`<div\${_scopeId}><!--[[-->\`)
                 if (_ctx.foo) {
                   _push(\`<span\${_scopeId}></span>\`)
                   _push(\`<!--if-->\`)
@@ -170,11 +170,11 @@ describe('insertion anchors', () => {
                   _push(\`<span\${_scopeId}></span>\`)
                   _push(\`<!--if--><!--if-->\`)
                 }
-                _push(\`<!--p]--><span\${_scopeId}></span></div>\`)
+                _push(\`<!--]]--><span\${_scopeId}></span></div>\`)
               } else {
                 return [
                   _createVNode("div", null, [
-                    _createCommentVNode("[p"),
+                    _createCommentVNode("[["),
                     (_ctx.foo)
                       ? (_openBlock(), _createBlock(_Fragment, { key: 0 }, [
                           _createVNode("span"),
@@ -189,7 +189,7 @@ describe('insertion anchors', () => {
                             _createVNode("span"),
                             _createCommentVNode("<!--if--><!--if-->")
                           ], 64 /* STABLE_FRAGMENT */)),
-                    _createCommentVNode("p]"),
+                    _createCommentVNode("]]"),
                     _createVNode("span")
                   ])
                 ]
@@ -224,39 +224,39 @@ describe('insertion anchors', () => {
           },
         ),
       ).toMatchInlineSnapshot(`
-        "\`<div><!--[p-->\`)
+        "\`<div><!--[[-->\`)
           if (_ctx.foo) {
-            _push(\`<span><!--[p-->\`)
+            _push(\`<span><!--[[-->\`)
             if (_ctx.foo1) {
               _push(\`<span></span>\`)
               _push(\`<!--if-->\`)
             } else {
               _push(\`<!--if-->\`)
             }
-            _push(\`<!--p]--><span></span></span>\`)
+            _push(\`<!--]]--><span></span></span>\`)
             _push(\`<!--if-->\`)
           } else if (_ctx.bar) {
-            _push(\`<span><!--[p-->\`)
+            _push(\`<span><!--[[-->\`)
             if (_ctx.bar1) {
               _push(\`<span></span>\`)
               _push(\`<!--if-->\`)
             } else {
               _push(\`<!--if-->\`)
             }
-            _push(\`<!--p]--><span></span></span>\`)
+            _push(\`<!--]]--><span></span></span>\`)
             _push(\`<!--if--><!--if-->\`)
           } else {
-            _push(\`<span><!--[p-->\`)
+            _push(\`<span><!--[[-->\`)
             if (_ctx.bar2) {
               _push(\`<span></span>\`)
               _push(\`<!--if-->\`)
             } else {
               _push(\`<!--if-->\`)
             }
-            _push(\`<!--p]--><span></span></span>\`)
+            _push(\`<!--]]--><span></span></span>\`)
             _push(\`<!--if--><!--if-->\`)
           }
-          _push(\`<!--p]--><span></span></div>\`"
+          _push(\`<!--]]--><span></span></div>\`"
       `)
     })
 
@@ -287,52 +287,52 @@ describe('insertion anchors', () => {
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
-                _push(\`<div\${_scopeId}><!--[p-->\`)
+                _push(\`<div\${_scopeId}><!--[[-->\`)
                 if (_ctx.foo) {
-                  _push(\`<span\${_scopeId}><!--[p-->\`)
+                  _push(\`<span\${_scopeId}><!--[[-->\`)
                   if (_ctx.foo1) {
                     _push(\`<span\${_scopeId}></span>\`)
                     _push(\`<!--if-->\`)
                   } else {
                     _push(\`<!--if-->\`)
                   }
-                  _push(\`<!--p]--><span\${_scopeId}></span></span>\`)
+                  _push(\`<!--]]--><span\${_scopeId}></span></span>\`)
                   _push(\`<!--if-->\`)
                 } else if (_ctx.bar) {
-                  _push(\`<span\${_scopeId}><!--[p-->\`)
+                  _push(\`<span\${_scopeId}><!--[[-->\`)
                   if (_ctx.bar1) {
                     _push(\`<span\${_scopeId}></span>\`)
                     _push(\`<!--if-->\`)
                   } else {
                     _push(\`<!--if-->\`)
                   }
-                  _push(\`<!--p]--><span\${_scopeId}></span></span>\`)
+                  _push(\`<!--]]--><span\${_scopeId}></span></span>\`)
                   _push(\`<!--if--><!--if-->\`)
                 } else {
-                  _push(\`<span\${_scopeId}><!--[p-->\`)
+                  _push(\`<span\${_scopeId}><!--[[-->\`)
                   if (_ctx.bar2) {
                     _push(\`<span\${_scopeId}></span>\`)
                     _push(\`<!--if-->\`)
                   } else {
                     _push(\`<!--if-->\`)
                   }
-                  _push(\`<!--p]--><span\${_scopeId}></span></span>\`)
+                  _push(\`<!--]]--><span\${_scopeId}></span></span>\`)
                   _push(\`<!--if--><!--if-->\`)
                 }
-                _push(\`<!--p]--><span\${_scopeId}></span></div>\`)
+                _push(\`<!--]]--><span\${_scopeId}></span></div>\`)
               } else {
                 return [
                   _createVNode("div", null, [
-                    _createCommentVNode("[p"),
+                    _createCommentVNode("[["),
                     (_ctx.foo)
                       ? (_openBlock(), _createBlock(_Fragment, { key: 0 }, [
                           _createVNode("span", null, [
-                            _createCommentVNode("[p"),
+                            _createCommentVNode("[["),
                             (_ctx.foo1)
                               ? (_openBlock(), _createBlock("span", { key: 0 }))
                               : _createCommentVNode("v-if", true),
                             _createCommentVNode("if"),
-                            _createCommentVNode("p]"),
+                            _createCommentVNode("]]"),
                             _createVNode("span")
                           ]),
                           _createCommentVNode("<!--if-->")
@@ -340,29 +340,29 @@ describe('insertion anchors', () => {
                       : (_ctx.bar)
                         ? (_openBlock(), _createBlock(_Fragment, { key: 1 }, [
                             _createVNode("span", null, [
-                              _createCommentVNode("[p"),
+                              _createCommentVNode("[["),
                               (_ctx.bar1)
                                 ? (_openBlock(), _createBlock("span", { key: 0 }))
                                 : _createCommentVNode("v-if", true),
                               _createCommentVNode("if"),
-                              _createCommentVNode("p]"),
+                              _createCommentVNode("]]"),
                               _createVNode("span")
                             ]),
                             _createCommentVNode("<!--if--><!--if-->")
                           ], 64 /* STABLE_FRAGMENT */))
                         : (_openBlock(), _createBlock(_Fragment, { key: 2 }, [
                             _createVNode("span", null, [
-                              _createCommentVNode("[p"),
+                              _createCommentVNode("[["),
                               (_ctx.bar2)
                                 ? (_openBlock(), _createBlock("span", { key: 0 }))
                                 : _createCommentVNode("v-if", true),
                               _createCommentVNode("if"),
-                              _createCommentVNode("p]"),
+                              _createCommentVNode("]]"),
                               _createVNode("span")
                             ]),
                             _createCommentVNode("<!--if--><!--if-->")
                           ], 64 /* STABLE_FRAGMENT */)),
-                    _createCommentVNode("p]"),
+                    _createCommentVNode("]]"),
                     _createVNode("span")
                   ])
                 ]
@@ -393,14 +393,14 @@ describe('insertion anchors', () => {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
                 if (_ctx.foo) {
-                  _push(\`<div\${_scopeId}><!--[p-->\`)
+                  _push(\`<div\${_scopeId}><!--[[-->\`)
                   if (_ctx.depth < 5) {
                     _push(\` foo \`)
                     _push(\`<!--if-->\`)
                   } else {
                     _push(\`<!--if-->\`)
                   }
-                  _push(\`<!--p]--><div\${_scopeId}></div></div>\`)
+                  _push(\`<!--]]--><div\${_scopeId}></div></div>\`)
                   _push(\`<!--if-->\`)
                 } else {
                   _push(\`<!--if-->\`)
@@ -409,14 +409,14 @@ describe('insertion anchors', () => {
                 return [
                   (_ctx.foo)
                     ? (_openBlock(), _createBlock("div", { key: 0 }, [
-                        _createCommentVNode("[p"),
+                        _createCommentVNode("[["),
                         (_ctx.depth < 5)
                           ? (_openBlock(), _createBlock(_Fragment, { key: 0 }, [
                               _createTextVNode(" foo ")
                             ], 64 /* STABLE_FRAGMENT */))
                           : _createCommentVNode("v-if", true),
                         _createCommentVNode("if"),
-                        _createCommentVNode("p]"),
+                        _createCommentVNode("]]"),
                         _createVNode("div")
                       ]))
                     : _createCommentVNode("v-if", true),
@@ -436,11 +436,11 @@ describe('insertion anchors', () => {
           vapor: true,
         }),
       ).toMatchInlineSnapshot(`
-        "\`<div><!--[p-->\`)
+        "\`<div><!--[[-->\`)
           _ssrRenderList(_ctx.items, (item) => {
             _push(\`<span></span>\`)
           })
-          _push(\`<!--for--><!--p]--><span></span></div>\`"
+          _push(\`<!--for--><!--]]--><span></span></div>\`"
       `)
     })
 
@@ -459,20 +459,20 @@ describe('insertion anchors', () => {
           _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
-                _push(\`<div\${_scopeId}><!--[p-->\`)
+                _push(\`<div\${_scopeId}><!--[[-->\`)
                 _ssrRenderList(_ctx.items, (item) => {
                   _push(\`<span\${_scopeId}></span>\`)
                 })
-                _push(\`<!--for--><!--p]--><span\${_scopeId}></span></div>\`)
+                _push(\`<!--for--><!--]]--><span\${_scopeId}></span></div>\`)
               } else {
                 return [
                   _createVNode("div", null, [
-                    _createCommentVNode("[p"),
+                    _createCommentVNode("[["),
                     (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.items, (item) => {
                       return (_openBlock(), _createBlock("span"))
                     }), 256 /* UNKEYED_FRAGMENT */)),
                     _createCommentVNode("for"),
-                    _createCommentVNode("p]"),
+                    _createCommentVNode("]]"),
                     _createVNode("span")
                   ])
                 ]
@@ -486,14 +486,14 @@ describe('insertion anchors', () => {
   })
 
   // TODO add more tests
-  describe('insertion anchor', () => {
+  describe('insert', () => {
     test('insertion anchor with component', () => {
       expect(
         getCompiledString('<div><span/><Comp/><span/></div>', { vapor: true }),
       ).toMatchInlineSnapshot(`
-        "\`<div><span></span><!--[i-->\`)
+        "\`<div><span></span><!--[[-->\`)
           _push(_ssrRenderComponent(_component_Comp, null, null, _parent))
-          _push(\`<!--i]--><span></span></div>\`"
+          _push(\`<!--]]--><span></span></div>\`"
       `)
     })
   })
@@ -504,11 +504,11 @@ describe('insertion anchors', () => {
       expect(
         getCompiledString('<div><span/><Comp/><Comp/></div>', { vapor: true }),
       ).toMatchInlineSnapshot(`
-        "\`<div><span></span><!--[a-->\`)
+        "\`<div><span></span><!--[[-->\`)
           _push(_ssrRenderComponent(_component_Comp, null, null, _parent))
-          _push(\`<!--a]--><!--[a-->\`)
+          _push(\`<!--]]--><!--[[-->\`)
           _push(_ssrRenderComponent(_component_Comp, null, null, _parent))
-          _push(\`<!--a]--></div>\`"
+          _push(\`<!--]]--></div>\`"
       `)
     })
   })
@@ -519,13 +519,13 @@ describe('insertion anchors', () => {
         vapor: true,
       }),
     ).toMatchInlineSnapshot(`
-      "\`<div><!--[p-->\`)
+      "\`<div><!--[[-->\`)
         _push(_ssrRenderComponent(_component_Comp, null, null, _parent))
-        _push(\`<!--p]--><span></span><!--[i-->\`)
+        _push(\`<!--]]--><span></span><!--[[-->\`)
         _push(_ssrRenderComponent(_component_Comp, null, null, _parent))
-        _push(\`<!--i]--><span></span><!--[a-->\`)
+        _push(\`<!--]]--><span></span><!--[[-->\`)
         _push(_ssrRenderComponent(_component_Comp, null, null, _parent))
-        _push(\`<!--a]--></div>\`"
+        _push(\`<!--]]--></div>\`"
     `)
   })
 
@@ -548,27 +548,27 @@ describe('insertion anchors', () => {
         _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent('div'), null, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
-              _push(\`<div\${_scopeId}><!--[p-->\`)
+              _push(\`<div\${_scopeId}><!--[[-->\`)
               _push(_ssrRenderComponent(_component_Comp, null, null, _parent, _scopeId))
-              _push(\`<!--p]--><span\${_scopeId}></span><!--[i-->\`)
+              _push(\`<!--]]--><span\${_scopeId}></span><!--[[-->\`)
               _push(_ssrRenderComponent(_component_Comp, null, null, _parent, _scopeId))
-              _push(\`<!--i]--><span\${_scopeId}></span><!--[a-->\`)
+              _push(\`<!--]]--><span\${_scopeId}></span><!--[[-->\`)
               _push(_ssrRenderComponent(_component_Comp, null, null, _parent, _scopeId))
-              _push(\`<!--a]--></div>\`)
+              _push(\`<!--]]--></div>\`)
             } else {
               return [
                 _createVNode("div", null, [
-                  _createCommentVNode("[p"),
+                  _createCommentVNode("[["),
                   _createVNode(_component_Comp),
-                  _createCommentVNode("p]"),
+                  _createCommentVNode("]]"),
                   _createVNode("span"),
-                  _createCommentVNode("[i"),
+                  _createCommentVNode("[["),
                   _createVNode(_component_Comp),
-                  _createCommentVNode("i]"),
+                  _createCommentVNode("]]"),
                   _createVNode("span"),
-                  _createCommentVNode("[a"),
+                  _createCommentVNode("[["),
                   _createVNode(_component_Comp),
-                  _createCommentVNode("a]")
+                  _createCommentVNode("]]")
                 ])
               ]
             }
@@ -580,7 +580,7 @@ describe('insertion anchors', () => {
   })
 })
 
-describe('block anchors', () => {
+describe('fragment anchors', () => {
   test('if', () => {
     expect(
       getCompiledString(
@@ -752,11 +752,11 @@ describe('block anchors', () => {
         { vapor: true },
       ),
     ).toMatchInlineSnapshot(`
-      "\`<div><!--[a-->\`)
+      "\`<div><!--[[-->\`)
         _ssrRenderSlot(_ctx.$slots, "foo", {}, null, _push, _parent)
-        _push(\`<!--slot--><!--a]--><!--[a-->\`)
+        _push(\`<!--slot--><!--]]--><!--[[-->\`)
         _ssrRenderSlot(_ctx.$slots, "default", {}, null, _push, _parent)
-        _push(\`<!--slot--><!--a]--></div>\`"
+        _push(\`<!--slot--><!--]]--></div>\`"
     `)
   })
 

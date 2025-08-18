@@ -25,9 +25,8 @@ import {
   processExpression,
 } from '@vue/compiler-dom'
 import {
-  BLOCK_APPEND_ANCHOR_LABEL,
-  BLOCK_INSERTION_ANCHOR_LABEL,
-  BLOCK_PREPEND_ANCHOR_LABEL,
+  BLOCK_ANCHOR_END_LABEL,
+  BLOCK_ANCHOR_START_LABEL,
   escapeHtml,
   isString,
 } from '@vue/shared'
@@ -188,14 +187,19 @@ export function processChildren(
             ssrProcessElement(child, context)
             break
           case ElementTypes.COMPONENT:
-            if (child.anchor) context.pushStringPart(`<!--[${child.anchor}-->`)
+            if (child.needAnchor)
+              context.pushStringPart(`<!--${BLOCK_ANCHOR_START_LABEL}-->`)
             ssrProcessComponent(child, context, parent)
-            if (child.anchor) context.pushStringPart(`<!--${child.anchor}]-->`)
+            if (child.needAnchor)
+              context.pushStringPart(`<!--${BLOCK_ANCHOR_END_LABEL}-->`)
+
             break
           case ElementTypes.SLOT:
-            if (child.anchor) context.pushStringPart(`<!--[${child.anchor}-->`)
+            if (child.needAnchor)
+              context.pushStringPart(`<!--${BLOCK_ANCHOR_START_LABEL}-->`)
             ssrProcessSlotOutlet(child, context)
-            if (child.anchor) context.pushStringPart(`<!--${child.anchor}]-->`)
+            if (child.needAnchor)
+              context.pushStringPart(`<!--${BLOCK_ANCHOR_END_LABEL}-->`)
             break
           case ElementTypes.TEMPLATE:
             // TODO
@@ -230,14 +234,18 @@ export function processChildren(
         )
         break
       case NodeTypes.IF:
-        if (child.anchor) context.pushStringPart(`<!--[${child.anchor}-->`)
+        if (child.needAnchor)
+          context.pushStringPart(`<!--${BLOCK_ANCHOR_START_LABEL}-->`)
         ssrProcessIf(child, context, disableNestedFragments, disableComment)
-        if (child.anchor) context.pushStringPart(`<!--${child.anchor}]-->`)
+        if (child.needAnchor)
+          context.pushStringPart(`<!--${BLOCK_ANCHOR_END_LABEL}-->`)
         break
       case NodeTypes.FOR:
-        if (child.anchor) context.pushStringPart(`<!--[${child.anchor}-->`)
+        if (child.needAnchor)
+          context.pushStringPart(`<!--${BLOCK_ANCHOR_START_LABEL}-->`)
         ssrProcessFor(child, context, disableNestedFragments)
-        if (child.anchor) context.pushStringPart(`<!--${child.anchor}]-->`)
+        if (child.needAnchor)
+          context.pushStringPart(`<!--${BLOCK_ANCHOR_END_LABEL}-->`)
         break
       case NodeTypes.IF_BRANCH:
         // no-op - handled by ssrProcessIf
@@ -276,7 +284,7 @@ export function processChildrenAsStatement(
 }
 
 export function processBlockNodeAnchor(children: TemplateChildNode[]): void {
-  let prevBlocks: (TemplateChildNode & { anchor?: string })[] = []
+  let prevBlocks: (TemplateChildNode & { needAnchor?: boolean })[] = []
   let hasStaticNode = false
   let blockCount = 0
   for (const child of children) {
@@ -288,15 +296,11 @@ export function processBlockNodeAnchor(children: TemplateChildNode[]): void {
     if (isStaticNode(child)) {
       if (prevBlocks.length) {
         if (hasStaticNode) {
-          // insertion anchor
-          prevBlocks.forEach(
-            child => (child.anchor = BLOCK_INSERTION_ANCHOR_LABEL),
-          )
+          // insert
+          prevBlocks.forEach(child => (child.needAnchor = true))
         } else {
           // prepend
-          prevBlocks.forEach(
-            child => (child.anchor = BLOCK_PREPEND_ANCHOR_LABEL),
-          )
+          prevBlocks.forEach(child => (child.needAnchor = true))
         }
         prevBlocks = []
       }
@@ -307,8 +311,8 @@ export function processBlockNodeAnchor(children: TemplateChildNode[]): void {
   // When there is only one block node, no anchor is needed,
   // firstChild is used as the hydration node
   if (prevBlocks.length && !(blockCount === 1 && !hasStaticNode)) {
-    // append anchor
-    prevBlocks.forEach(child => (child.anchor = BLOCK_APPEND_ANCHOR_LABEL))
+    // append
+    prevBlocks.forEach(child => (child.needAnchor = true))
   }
 }
 

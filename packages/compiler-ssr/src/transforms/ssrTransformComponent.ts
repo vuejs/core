@@ -7,7 +7,6 @@ import {
   DOMDirectiveTransforms,
   DOMNodeTransforms,
   type DirectiveNode,
-  type ElementNode,
   ElementTypes,
   type ExpressionNode,
   type ForNode,
@@ -63,6 +62,8 @@ import {
   ssrTransformTransitionGroup,
 } from './ssrTransformTransitionGroup'
 import {
+  BLOCK_ANCHOR_END_LABEL,
+  BLOCK_ANCHOR_START_LABEL,
   DYNAMIC_COMPONENT_ANCHOR_LABEL,
   FOR_ANCHOR_LABEL,
   IF_ANCHOR_LABEL,
@@ -417,14 +418,14 @@ function injectVaporAnchors(
     }
 
     const { tagType, props } = child
-    let insertionAnchor: string | undefined
+    let needBlockAnchor: boolean | undefined
 
     if (
       tagType === ElementTypes.COMPONENT ||
       tagType === ElementTypes.SLOT ||
       tagType === ElementTypes.TEMPLATE
     ) {
-      insertionAnchor = child.anchor
+      needBlockAnchor = child.needAnchor
     } else if (tagType === ElementTypes.ELEMENT) {
       let hasIf = false
       let hasFor = false
@@ -439,11 +440,11 @@ function injectVaporAnchors(
       }
 
       if (hasIf) {
-        insertionAnchor = (child as any as IfNode).anchor
+        needBlockAnchor = (child as any as IfNode).needAnchor
         const lastBranchIndex = findLastIfBranchIndex(children, i)
         if (lastBranchIndex > i) {
           injectIfAnchors(
-            insertionAnchor,
+            needBlockAnchor,
             newChildren,
             i,
             lastBranchIndex,
@@ -453,22 +454,22 @@ function injectVaporAnchors(
           continue
         }
       } else if (hasFor) {
-        insertionAnchor = (child as any as ForNode).anchor
+        needBlockAnchor = (child as any as ForNode).needAnchor
       }
     }
 
-    if (insertionAnchor) {
-      newChildren.push(createAnchor(`[${insertionAnchor}`))
+    if (needBlockAnchor) {
+      newChildren.push(createAnchor(BLOCK_ANCHOR_START_LABEL))
     }
 
     newChildren.push(child)
 
-    // inject block anchor
-    const blockAnchorLabel = resolveBlockAnchorLabel(child)
-    if (blockAnchorLabel) newChildren.push(createAnchor(blockAnchorLabel))
+    // inject fragment anchor
+    const fragmentAnchorLabel = resolveFragmentAnchorLabel(child)
+    if (fragmentAnchorLabel) newChildren.push(createAnchor(fragmentAnchorLabel))
 
-    if (insertionAnchor) {
-      newChildren.push(createAnchor(`${insertionAnchor}]`))
+    if (needBlockAnchor) {
+      newChildren.push(createAnchor(BLOCK_ANCHOR_END_LABEL))
     }
 
     child.children = injectVaporAnchors(child.children, child)
@@ -478,19 +479,19 @@ function injectVaporAnchors(
 }
 
 function injectIfAnchors(
-  insertionAnchor: string | undefined,
+  needBlockAnchor: boolean | undefined,
   newChildren: TemplateChildNode[],
   i: number,
   lastBranchIndex: number,
   children: TemplateChildNode[],
 ) {
-  if (insertionAnchor) {
-    newChildren.push(createAnchor(`[${insertionAnchor}`))
+  if (needBlockAnchor) {
+    newChildren.push(createAnchor(BLOCK_ANCHOR_START_LABEL))
   }
 
   for (let j = i; j <= lastBranchIndex; j++) {
     const node = children[j] as PlainElementNode
-    const blockAnchorLabel = resolveBlockAnchorLabel(node)
+    const fragmentAnchorLabel = resolveFragmentAnchorLabel(node)
     let isElse = false
 
     const conditionalProps: typeof node.props = []
@@ -523,17 +524,17 @@ function injectIfAnchors(
     }
     newChildren.push(wrapperNode)
 
-    if (blockAnchorLabel) {
+    if (fragmentAnchorLabel) {
       const repeatCount = j - i - (isElse ? 1 : 0) + 1
       wrapperNode.children.push(
-        createAnchor(`<!--${blockAnchorLabel}-->`.repeat(repeatCount)),
+        createAnchor(`<!--${fragmentAnchorLabel}-->`.repeat(repeatCount)),
       )
     }
     node.children = injectVaporAnchors(node.children, node)
   }
 
-  if (insertionAnchor) {
-    newChildren.push(createAnchor(`${insertionAnchor}]`))
+  if (needBlockAnchor) {
+    newChildren.push(createAnchor(BLOCK_ANCHOR_END_LABEL))
   }
 }
 
@@ -584,7 +585,11 @@ function findLastIfBranchIndex(
   return lastIndex
 }
 
-function resolveBlockAnchorLabel(child: ElementNode): string | undefined {
+function resolveFragmentAnchorLabel(
+  child: TemplateChildNode,
+): string | undefined {
+  if (child.type !== NodeTypes.ELEMENT) return
+
   if (child.tagType === ElementTypes.COMPONENT && child.tag === 'component') {
     return DYNAMIC_COMPONENT_ANCHOR_LABEL
   } else if (child.tagType === ElementTypes.SLOT) {
