@@ -12,11 +12,7 @@ import {
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
 } from './node'
-import {
-  BLOCK_APPEND_ANCHOR_LABEL,
-  BLOCK_INSERTION_ANCHOR_LABEL,
-  BLOCK_PREPEND_ANCHOR_LABEL,
-} from '@vue/shared'
+import { BLOCK_ANCHOR_END_LABEL, BLOCK_ANCHOR_START_LABEL } from '@vue/shared'
 
 const isHydratingStack = [] as boolean[]
 export let isHydrating = false
@@ -34,10 +30,7 @@ function performHydration<T>(
     locateHydrationNode = locateHydrationNodeImpl
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
-    ;(Node.prototype as any).$pns = undefined
-    ;(Node.prototype as any).$lpn = undefined
-    ;(Node.prototype as any).$lin = undefined
-    ;(Node.prototype as any).$lan = undefined
+    ;(Node.prototype as any).$lbn = undefined
     isOptimized = true
   }
   enableHydrationNodeLookup()
@@ -141,23 +134,10 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
 
 function locateHydrationNodeImpl(): void {
   let node: Node | null
-  if (insertionAnchor === 0) {
-    // prepend
-    node = insertionParent!.$lpn = locateHydrationNodeByAnchor(
-      insertionParent!.$lpn || _child(insertionParent!),
-      BLOCK_PREPEND_ANCHOR_LABEL,
-    )!
-  } else if (insertionAnchor) {
-    // insert
-    node = insertionParent!.$lin = locateHydrationNodeByAnchor(
-      insertionParent!.$lin || _child(insertionParent!),
-      BLOCK_INSERTION_ANCHOR_LABEL,
-    )!
-  } else if (insertionAnchor === null) {
-    // append
-    node = insertionParent!.$lan = locateHydrationNodeByAnchor(
-      insertionParent!.$lan || _child(insertionParent!),
-      BLOCK_APPEND_ANCHOR_LABEL,
+  if (insertionAnchor !== undefined) {
+    // prepend / insert / append
+    node = insertionParent!.$lbn = locateNextBlockNode(
+      insertionParent!.$lbn || _child(insertionParent!),
     )!
   } else {
     node = currentHydrationNode
@@ -212,15 +192,15 @@ export function locateFragmentAnchor(
   return null
 }
 
-function locateHydrationNodeByAnchor(node: Node, label: string): Node | null {
+function locateNextBlockNode(node: Node): Node | null {
   while (node) {
-    if (isComment(node, `[${label}`)) return node.nextSibling
+    if (isComment(node, BLOCK_ANCHOR_START_LABEL)) return node.nextSibling
     node = node.nextSibling!
   }
 
   if (__DEV__) {
     throw new Error(
-      `Could not locate hydration node with anchor label: ${label}`,
+      `Could not locate hydration node with anchor label: ${BLOCK_ANCHOR_START_LABEL}`,
     )
   }
   return null
@@ -228,18 +208,11 @@ function locateHydrationNodeByAnchor(node: Node, label: string): Node | null {
 
 export function advanceToNonBlockNode(node: Node): Node {
   while (node) {
-    if (isComment(node, `[${BLOCK_PREPEND_ANCHOR_LABEL}`)) {
+    if (isComment(node, BLOCK_ANCHOR_START_LABEL)) {
       node = locateEndAnchor(
         node,
-        `[${BLOCK_PREPEND_ANCHOR_LABEL}`,
-        `${BLOCK_PREPEND_ANCHOR_LABEL}]`,
-      )!
-      continue
-    } else if (isComment(node, `[${BLOCK_INSERTION_ANCHOR_LABEL}`)) {
-      node = locateEndAnchor(
-        node,
-        `[${BLOCK_INSERTION_ANCHOR_LABEL}`,
-        `${BLOCK_INSERTION_ANCHOR_LABEL}]`,
+        BLOCK_ANCHOR_START_LABEL,
+        BLOCK_ANCHOR_END_LABEL,
       )!
       continue
     }
