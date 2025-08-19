@@ -186,7 +186,7 @@ export function locateFragmentAnchor(
   label: string,
 ): Comment | null {
   while (node && node.nodeType === 8) {
-    if (isComment(node, label)) return node
+    if ((node as Comment).data === label) return node as Comment
     node = node.nextSibling!
   }
   return null
