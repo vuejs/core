@@ -18,6 +18,7 @@ import {
   genCall,
 } from './generators/utils'
 import { setTemplateRefIdent } from './generators/templateRef'
+import { createForwardedSlotIdent } from './generators/slotOutlet'
 
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
@@ -85,6 +86,7 @@ export class CodegenContext {
       isTS: false,
       inSSR: false,
       inline: false,
+      vapor: false,
       bindingMetadata: {},
       expressionPlugins: [],
     }
@@ -127,6 +129,12 @@ export function generate(
     push(
       NEWLINE,
       `const ${setTemplateRefIdent} = ${context.helper('createTemplateRefSetter')}()`,
+    )
+  }
+  if (ir.hasForwardedSlot) {
+    push(
+      NEWLINE,
+      `const ${createForwardedSlotIdent} = ${context.helper('forwardedSlotCreator')}()`,
     )
   }
   push(...genBlockContent(ir.block, context, true))

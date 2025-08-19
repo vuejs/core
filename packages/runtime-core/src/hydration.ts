@@ -5,6 +5,7 @@ import {
   Comment as VComment,
   type VNode,
   type VNodeHook,
+  VaporSlot,
   createTextVNode,
   createVNode,
   invokeVNodeHook,
@@ -36,7 +37,11 @@ import {
   normalizeStyle,
   stringifyStyle,
 } from '@vue/shared'
-import { type RendererInternals, needTransition } from './renderer'
+import {
+  type RendererInternals,
+  getVaporInterface,
+  needTransition,
+} from './renderer'
 import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
@@ -259,6 +264,12 @@ export function createHydrationFunctions(
           )
         }
         break
+      case VaporSlot:
+        nextNode = getVaporInterface(parentComponent, vnode).hydrateSlot(
+          vnode,
+          node,
+        )
+        break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           if (
@@ -279,10 +290,6 @@ export function createHydrationFunctions(
             )
           }
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
-          if ((vnode.type as ConcreteComponent).__vapor) {
-            throw new Error('Vapor component hydration is not supported yet.')
-          }
-
           // when setting up the render effect, if the initial vnode already
           // has .el set, the component will perform hydration instead of mount
           // on its sub-tree.
@@ -303,15 +310,26 @@ export function createHydrationFunctions(
             nextNode = nextSibling(node)
           }
 
-          mountComponent(
-            vnode,
-            container,
-            null,
-            parentComponent,
-            parentSuspense,
-            getContainerType(container),
-            optimized,
-          )
+          // hydrate vapor component
+          if ((vnode.type as ConcreteComponent).__vapor) {
+            nextNode = getVaporInterface(parentComponent, vnode).hydrate(
+              vnode,
+              node,
+              container,
+              null,
+              parentComponent,
+            )
+          } else {
+            mountComponent(
+              vnode,
+              container,
+              null,
+              parentComponent,
+              parentSuspense,
+              getContainerType(container),
+              optimized,
+            )
+          }
 
           // #3787
           // if component is async, it may get moved / unmounted before its

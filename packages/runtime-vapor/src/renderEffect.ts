@@ -82,10 +82,14 @@ class RenderEffect extends ReactiveEffect {
   }
 }
 
-export function renderEffect(fn: () => void, noLifecycle = false): void {
+export function renderEffect(
+  fn: () => void,
+  noLifecycle = false,
+): RenderEffect {
   const effect = new RenderEffect(fn)
   if (noLifecycle) {
     effect.fn = fn
   }
   effect.run()
+  return effect
 }

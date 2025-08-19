@@ -5,7 +5,7 @@ import {
   type SSRBufferItem,
   renderVNodeChildren,
 } from '../render'
-import { isArray } from '@vue/shared'
+import { isArray, isString } from '@vue/shared'
 
 const { ensureValidVNode } = ssrUtils
 
@@ -83,7 +83,20 @@ export function ssrRenderSlotInner(
         isEmptySlot = false
       } else {
         for (let i = 0; i < slotBuffer.length; i++) {
-          if (!isComment(slotBuffer[i])) {
+          const buffer = slotBuffer[i]
+
+          // preserve empty slot anchor in vapor components
+          // DynamicFragment requires this anchor
+          if (
+            parentComponent.type.__vapor &&
+            isString(buffer) &&
+            buffer === '<!--slot-->'
+          ) {
+            push(buffer)
+            continue
+          }
+
+          if (!isComment(buffer)) {
             isEmptySlot = false
             break
           }

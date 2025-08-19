@@ -118,6 +118,7 @@ export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'
 export {
   BaseTransition,
   BaseTransitionPropsValidators,
+  checkTransitionMode,
   type BaseTransitionProps,
 } from './components/BaseTransition'
 // For using custom directives
@@ -150,8 +151,10 @@ export { registerRuntimeCompiler, isRuntimeOnly } from './component'
 export {
   useTransitionState,
   resolveTransitionHooks,
+  baseResolveTransitionHooks,
   setTransitionHooks,
   getTransitionRawChildren,
+  leaveCbKey,
 } from './components/BaseTransition'
 export { initCustomFormatter } from './customFormatter'
 
@@ -335,6 +338,8 @@ export type { SuspenseBoundary } from './components/Suspense'
 export type {
   TransitionState,
   TransitionHooks,
+  TransitionHooksContext,
+  TransitionElement,
 } from './components/BaseTransition'
 export type {
   AsyncComponentOptions,
@@ -505,7 +510,11 @@ export { type VaporInteropInterface } from './apiCreateApp'
 /**
  * @internal
  */
-export { type RendererInternals, MoveType } from './renderer'
+export {
+  type RendererInternals,
+  MoveType,
+  getInheritedScopeIds,
+} from './renderer'
 /**
  * @internal
  */
@@ -558,6 +567,31 @@ export { startMeasure, endMeasure } from './profiling'
  * @internal
  */
 export { initFeatureFlags } from './featureFlags'
+/**
+ * @internal
+ */
+export { performTransitionEnter, performTransitionLeave } from './renderer'
+/**
+ * @internal
+ */
+export { ensureVaporSlotFallback } from './helpers/renderSlot'
+/**
+ * @internal
+ */
+export {
+  resolveTarget as resolveTeleportTarget,
+  isTeleportDisabled,
+  isTeleportDeferred,
+} from './components/Teleport'
+export {
+  createAsyncComponentContext,
+  useAsyncComponentState,
+  isAsyncWrapper,
+} from './apiAsyncComponent'
+/**
+ * @internal
+ */
+export { markAsyncBoundary } from './helpers/useId'
 /**
  * @internal
  */

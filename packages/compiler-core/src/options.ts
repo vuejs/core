@@ -220,6 +220,11 @@ interface SharedTransformCodegenOptions {
    * @default 'template.vue.html'
    */
   filename?: string
+
+  /**
+   * Indicates vapor component
+   */
+  vapor?: boolean
 }
 
 export interface TransformOptions

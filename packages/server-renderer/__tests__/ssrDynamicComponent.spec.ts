@@ -30,7 +30,7 @@ describe('ssr: dynamic component', () => {
         }),
       ),
     ).toBe(
-      `<div><!--[--><div style=\"display:none;\"><!--[-->hi<!--]--></div><!--]--></div>`,
+      `<div><!--[--><div style="display:none;"><!--[-->hi<!--]--></div><!--]--></div>`,
     )
   })
 
