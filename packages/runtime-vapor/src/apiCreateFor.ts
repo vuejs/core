@@ -234,14 +234,14 @@ export const createFor = (
           item: ReturnType<typeof getItem>
           key: any
         }
-        interface InsertOper {
-          type: 'insert'
+        interface MoveOper {
+          type: 'move'
           index: number
           block: ForBlock
         }
 
         const oldKeyIndexMap = new Map(oldKeyIndexPairs)
-        const opers: (MountOper | InsertOper)[] = new Array(queuedBlocks.length)
+        const opers: (MountOper | MoveOper)[] = new Array(queuedBlocks.length)
 
         let mountCounter = 0
         let opersLength = 0
@@ -253,7 +253,7 @@ export const createFor = (
             oldKeyIndexMap.delete(key)
             const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
             update(reusedBlock, ...item)
-            opers[opersLength++] = { type: 'insert', index, block: reusedBlock }
+            opers[opersLength++] = { type: 'move', index, block: reusedBlock }
           } else {
             mountCounter++
             opers[opersLength++] = { type: 'mount', source, index, item, key }
