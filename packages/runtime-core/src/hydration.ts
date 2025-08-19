@@ -991,7 +991,7 @@ function resolveCssVars(
 
 const allowMismatchAttr = 'data-allow-mismatch'
 
-enum MismatchTypes {
+export enum MismatchTypes {
   TEXT = 0,
   CHILDREN = 1,
   CLASS = 2,
@@ -1007,7 +1007,7 @@ const MismatchTypeString: Record<MismatchTypes, string> = {
   [MismatchTypes.ATTRIBUTE]: 'attribute',
 } as const
 
-function isMismatchAllowed(
+export function isMismatchAllowed(
   el: Element | null,
   allowedType: MismatchTypes,
 ): boolean {

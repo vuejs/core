@@ -22,6 +22,11 @@ export function querySelector(selectors: string): Element | null {
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
+export function parentNode(node: Node): ParentNode | null {
+  return node.parentNode
+}
+
+/*! #__NO_SIDE_EFFECTS__ */
 const _txt: typeof _child = _child
 
 /**

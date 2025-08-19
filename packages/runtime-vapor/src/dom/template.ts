@@ -8,10 +8,6 @@ export function template(html: string, root?: boolean) {
   let node: Node
   return (): Node & { $root?: true } => {
     if (isHydrating) {
-      if (__DEV__ && !currentHydrationNode) {
-        // TODO this should not happen
-        throw new Error('No current hydration node')
-      }
       // do not cache the adopted node in node because it contains child nodes
       // this avoids duplicate rendering of children
       const adopted = adoptTemplate(currentHydrationNode!, html)!

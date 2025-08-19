@@ -1,4 +1,4 @@
-import { warn } from '@vue/runtime-dom'
+import { MismatchTypes, isMismatchAllowed, warn } from '@vue/runtime-dom'
 import {
   insertionAnchor,
   insertionParent,
@@ -8,11 +8,15 @@ import {
 import {
   _child,
   _next,
+  child,
+  createElement,
   createTextNode,
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
+  parentNode,
 } from './node'
 import { BLOCK_ANCHOR_END_LABEL, BLOCK_ANCHOR_START_LABEL } from '@vue/shared'
+import { insert, remove } from '../block'
 
 const isHydratingStack = [] as boolean[]
 export let isHydrating = false
@@ -83,7 +87,7 @@ export function advanceHydrationNode(
 ): void {
   // if no next sibling, find the next node in the parent chain
   const ret =
-    node.nextSibling ||
+    _next(node) ||
     // pns is short for "parent next sibling"
     node.$pns ||
     (node.$pns = locateNextSiblingOfParent(node))
@@ -97,7 +101,7 @@ export function advanceHydrationNode(
 function adoptTemplateImpl(node: Node, template: string): Node | null {
   if (!(template[0] === '<' && template[1] === '!')) {
     while (node.nodeType === 8) {
-      node = node.nextSibling!
+      node = _next(node)
 
       // empty text node in slot
       if (
@@ -105,27 +109,37 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
         isComment(node, ']') &&
         isComment(node.previousSibling!, '[')
       ) {
-        node = node.parentNode!.insertBefore(createTextNode(' '), node)
+        node = parentNode(node)!.insertBefore(createTextNode(' '), node)
         break
       }
     }
   }
 
-  if (__DEV__) {
-    const type = node.nodeType
-    if (
-      (type === 8 && !template.startsWith('<!')) ||
-      (type === 1 &&
-        !template.startsWith(`<` + (node as Element).tagName.toLowerCase())) ||
-      (type === 3 &&
-        template.trim() &&
-        !template.startsWith((node as Text).data))
-    ) {
-      // TODO recover and provide more info
-      warn(`adopted: `, node)
-      warn(`template: ${template}`)
-      warn('hydration mismatch!')
-    }
+  const type = node.nodeType
+  if (
+    // comment node
+    (type === 8 && !template.startsWith('<!')) ||
+    // element node
+    (type === 1 &&
+      !template.startsWith(`<` + (node as Element).tagName.toLowerCase()))
+  ) {
+    node = handleMismatch(node, template)
+  }
+  // text node
+  else if (
+    type === 3 &&
+    template.trim() &&
+    !template.startsWith((node as Text).data)
+  ) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Hydration text mismatch in`,
+        parentNode(node),
+        `\n  - rendered on server: ${JSON.stringify((node as Text).data)}` +
+          `\n  - expected on client: ${JSON.stringify(template)}`,
+      )
+    logMismatchError()
+    ;(node as Text).data = template
   }
 
   advanceHydrationNode(node)
@@ -141,14 +155,16 @@ function locateHydrationNodeImpl(): void {
     )!
   } else {
     node = currentHydrationNode
-    if (insertionParent && (!node || node.parentNode !== insertionParent)) {
+    if (insertionParent && (!node || parentNode(node) !== insertionParent)) {
       node = _child(insertionParent)
     }
   }
 
   if (__DEV__ && !node) {
-    // TODO more info
-    warn('Hydration mismatch in ', insertionParent)
+    throw new Error(
+      `No current hydration node was found.\n` +
+        `this is likely a Vue internal bug.`,
+    )
   }
 
   resetInsertionState()
@@ -166,7 +182,7 @@ export function locateEndAnchor(
   }
 
   const stack: Anchor[] = [node]
-  while ((node = node.nextSibling as Anchor) && stack.length > 0) {
+  while ((node = _next(node) as Anchor) && stack.length > 0) {
     if (node.nodeType === 8) {
       if (node.data === open) {
         stack.push(node)
@@ -187,20 +203,29 @@ export function locateFragmentAnchor(
 ): Comment | null {
   while (node && node.nodeType === 8) {
     if ((node as Comment).data === label) return node as Comment
-    node = node.nextSibling!
+    node = _next(node)
   }
+
+  if (__DEV__) {
+    throw new Error(
+      `Could not locate fragment anchor node with label: ${label}\n` +
+        `this is likely a Vue internal bug.`,
+    )
+  }
+
   return null
 }
 
 function locateNextBlockNode(node: Node): Node | null {
   while (node) {
-    if (isComment(node, BLOCK_ANCHOR_START_LABEL)) return node.nextSibling
-    node = node.nextSibling!
+    if (isComment(node, BLOCK_ANCHOR_START_LABEL)) return _next(node)
+    node = _next(node)
   }
 
   if (__DEV__) {
     throw new Error(
-      `Could not locate hydration node with anchor label: ${BLOCK_ANCHOR_START_LABEL}`,
+      `Could not locate hydration node with anchor label: ${BLOCK_ANCHOR_START_LABEL}\n` +
+        `this is likely a Vue internal bug.`,
     )
   }
   return null
@@ -220,4 +245,64 @@ export function advanceToNonBlockNode(node: Node): Node {
     break
   }
   return node
+}
+
+function handleMismatch(node: Node, template: string): Node {
+  if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Hydration node mismatch:\n- rendered on server:`,
+        node,
+        node.nodeType === 3
+          ? `(text)`
+          : isComment(node, '[[')
+            ? `(start of block node)`
+            : ``,
+        `\n- expected on client:`,
+        template,
+      )
+    logMismatchError()
+  }
+
+  // block node start
+  if (isComment(node, BLOCK_ANCHOR_START_LABEL)) {
+    const end = locateEndAnchor(
+      node as Anchor,
+      BLOCK_ANCHOR_START_LABEL,
+      BLOCK_ANCHOR_END_LABEL,
+    )
+    while (true) {
+      const next = _next(node)
+      if (next && next !== end) {
+        remove(next, parentNode(node)!)
+      } else {
+        break
+      }
+    }
+  }
+
+  const next = _next(node)
+  const container = parentNode(node)!
+  remove(node, container)
+
+  let newNode: Node | null
+  if (template[0] !== '<') {
+    newNode = createTextNode(template)
+  } else {
+    const t = createElement('template') as HTMLTemplateElement
+    t.innerHTML = template
+    newNode = child(t.content).cloneNode(true)
+  }
+  insert(newNode, container, next)
+  return newNode
+}
+
+let hasLoggedMismatchError = false
+const logMismatchError = () => {
+  if (__TEST__ || hasLoggedMismatchError) {
+    return
+  }
+  // this error should show up in production
+  console.error('Hydration completed but contains mismatches.')
+  hasLoggedMismatchError = true
 }

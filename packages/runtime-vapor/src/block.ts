@@ -99,8 +99,6 @@ export class DynamicFragment extends VaporFragment {
     this.anchor = locateFragmentAnchor(currentHydrationNode!, label)!
     if (this.anchor) {
       advanceHydrationNode(this.anchor)
-    } else if (__DEV__) {
-      throw new Error(`${label} fragment anchor node was not found.`)
     }
   }
 }
