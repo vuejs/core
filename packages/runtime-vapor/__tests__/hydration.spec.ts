@@ -3019,6 +3019,17 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toBe('<div>bar</div>')
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
     })
+
+    test('element with v-html', async () => {
+      const data = ref('<p>bar</p>')
+      const { container } = await mountWithHydration(
+        `<div><p>foo</p></div>`,
+        `<div v-html="data"></div>`,
+        data,
+      )
+      expect(container.innerHTML).toBe('<div><p>bar</p></div>')
+      expect(`Hydration children mismatch on`).toHaveBeenWarned()
+    })
     // test('not enough children', () => {
     //   const { container } = mountWithHydration(`<div></div>`, () =>
     //     h('div', [h('span', 'foo'), h('span', 'bar')]),
@@ -3036,14 +3047,16 @@ describe('Vapor Mode hydration', () => {
     //   expect(container.innerHTML).toBe('<div><span>foo</span></div>')
     //   expect(`Hydration children mismatch`).toHaveBeenWarned()
     // })
-    test.todo('complete mismatch', async () => {
+    test('complete mismatch', async () => {
       const data = ref('span')
       const { container } = await mountWithHydration(
         `<div>foo</div><!--dynamic-component-->`,
         `<component :is="data">foo</component>`,
         data,
       )
-      expect(container.innerHTML).toBe('<span>foo</span>')
+      expect(container.innerHTML).toBe(
+        '<span>foo</span><!--dynamic-component-->',
+      )
       expect(`Hydration node mismatch`).toHaveBeenWarned()
     })
     // test('fragment mismatch removal', () => {
@@ -3102,30 +3115,30 @@ describe('Vapor Mode hydration', () => {
     //   expect(container.innerHTML).toBe('<div><!--hi--></div>')
     //   expect(`Hydration node mismatch`).toHaveBeenWarned()
     // })
-    // test('class mismatch', () => {
-    //   mountWithHydration(`<div class="foo bar"></div>`, () =>
-    //     h('div', { class: ['foo', 'bar'] }),
-    //   )
-    //   mountWithHydration(`<div class="foo bar"></div>`, () =>
-    //     h('div', { class: { foo: true, bar: true } }),
-    //   )
-    //   mountWithHydration(`<div class="foo bar"></div>`, () =>
-    //     h('div', { class: 'foo bar' }),
-    //   )
-    //   // SVG classes
-    //   mountWithHydration(`<svg class="foo bar"></svg>`, () =>
-    //     h('svg', { class: 'foo bar' }),
-    //   )
-    //   // class with different order
-    //   mountWithHydration(`<div class="foo bar"></div>`, () =>
-    //     h('div', { class: 'bar foo' }),
-    //   )
-    //   expect(`Hydration class mismatch`).not.toHaveBeenWarned()
-    //   mountWithHydration(`<div class="foo bar"></div>`, () =>
-    //     h('div', { class: 'foo' }),
-    //   )
-    //   expect(`Hydration class mismatch`).toHaveBeenWarned()
-    // })
+    test('class mismatch', () => {
+      //   mountWithHydration(`<div class="foo bar"></div>`, () =>
+      //     h('div', { class: ['foo', 'bar'] }),
+      //   )
+      //   mountWithHydration(`<div class="foo bar"></div>`, () =>
+      //     h('div', { class: { foo: true, bar: true } }),
+      //   )
+      //   mountWithHydration(`<div class="foo bar"></div>`, () =>
+      //     h('div', { class: 'foo bar' }),
+      //   )
+      //   // SVG classes
+      //   mountWithHydration(`<svg class="foo bar"></svg>`, () =>
+      //     h('svg', { class: 'foo bar' }),
+      //   )
+      //   // class with different order
+      //   mountWithHydration(`<div class="foo bar"></div>`, () =>
+      //     h('div', { class: 'bar foo' }),
+      //   )
+      //   expect(`Hydration class mismatch`).not.toHaveBeenWarned()
+      //   mountWithHydration(`<div class="foo bar"></div>`, () =>
+      //     h('div', { class: 'foo' }),
+      //   )
+      //   expect(`Hydration class mismatch`).toHaveBeenWarned()
+    })
     // test('style mismatch', () => {
     //   mountWithHydration(`<div style="color:red;"></div>`, () =>
     //     h('div', { style: { color: 'red' } }),

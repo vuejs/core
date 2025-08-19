@@ -565,4 +565,10 @@ export { createInternalObject } from './internalObject'
 /**
  * @internal
  */
-export { MismatchTypes, isMismatchAllowed } from './hydration'
+export {
+  MismatchTypes,
+  isMismatchAllowed,
+  toClassSet,
+  isSetEqual,
+  warnPropMismatch,
+} from './hydration'

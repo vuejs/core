@@ -16,7 +16,7 @@ import {
   parentNode,
 } from './node'
 import { BLOCK_ANCHOR_END_LABEL, BLOCK_ANCHOR_START_LABEL } from '@vue/shared'
-import { insert, remove } from '../block'
+import { remove } from '../block'
 
 const isHydratingStack = [] as boolean[]
 export let isHydrating = false
@@ -269,15 +269,20 @@ function handleMismatch(node: Node, template: string): Node {
   const container = parentNode(node)!
   remove(node, container)
 
-  let newNode: Node | null
+  // fast path for text nodes
   if (template[0] !== '<') {
-    newNode = createTextNode(template)
-  } else {
-    const t = createElement('template') as HTMLTemplateElement
-    t.innerHTML = template
-    newNode = child(t.content).cloneNode(true)
+    return container.insertBefore(createTextNode(template), next)
   }
-  insert(newNode, container, next)
+
+  // element node
+  const t = createElement('template') as HTMLTemplateElement
+  t.innerHTML = template
+  const newNode = child(t.content).cloneNode(true) as Element
+  newNode.innerHTML = (node as Element).innerHTML
+  Array.from((node as Element).attributes).forEach(attr => {
+    newNode.setAttribute(attr.name, attr.value)
+  })
+  container.insertBefore(newNode, next)
   return newNode
 }
 

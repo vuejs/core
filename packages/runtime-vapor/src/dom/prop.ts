@@ -13,10 +13,13 @@ import {
   MismatchTypes,
   currentInstance,
   isMismatchAllowed,
+  isSetEqual,
   mergeProps,
   patchStyle,
   shouldSetAsProp,
+  toClassSet,
   warn,
+  warnPropMismatch,
 } from '@vue/runtime-dom'
 import {
   type VaporComponentInstance,
@@ -113,6 +116,31 @@ export function setDOMProp(el: any, key: string, value: any): void {
 }
 
 export function setClass(el: TargetElement, value: any): void {
+  if (isHydrating) {
+    const actual = el.getAttribute('class')
+    const actualClassSet = toClassSet(actual || '')
+    let expected = normalizeClass(value)
+    const expectedClassSet = toClassSet(expected)
+    let hasMismatch = false
+    if (el.$root) {
+      hasMismatch = Array.from(expectedClassSet).some(
+        cls => !actualClassSet.has(cls),
+      )
+      if (hasMismatch) {
+        setClassIncremental(el, value)
+        expected = el.getAttribute('class')!
+      }
+    }
+
+    if (hasMismatch || !isSetEqual(actualClassSet, expectedClassSet)) {
+      warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)
+      if (!el.$root) el.className = expected
+    }
+
+    if (!el.$root) el.$cls = expected
+    return
+  }
+
   if (el.$root) {
     setClassIncremental(el, value)
   } else if ((value = normalizeClass(value)) !== el.$cls) {
@@ -192,7 +220,6 @@ export function setText(el: Text & { $txt?: string }, value: string): void {
             `\n  - expected on client: ${JSON.stringify(value)}`,
         )
       logMismatchError()
-
       el.nodeValue = value
     }
 
@@ -248,6 +275,26 @@ export function setElementText(
 
 export function setHtml(el: TargetElement, value: any): void {
   value = value == null ? '' : value
+
+  if (isHydrating) {
+    if (el.innerHTML !== value) {
+      if (!isMismatchAllowed(el, MismatchTypes.CHILDREN)) {
+        if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
+          warn(
+            `Hydration children mismatch on`,
+            el,
+            `\nServer rendered element contains different child nodes from client nodes.`,
+          )
+        }
+        logMismatchError()
+      }
+      el.innerHTML = value
+    }
+
+    el.$html = value
+    return
+  }
+
   if (el.$html !== value) {
     el.innerHTML = el.$html = value
   }

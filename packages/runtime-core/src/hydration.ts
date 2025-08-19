@@ -899,32 +899,42 @@ function propHasMismatch(
   }
 
   if (mismatchType != null && !isMismatchAllowed(el, mismatchType)) {
-    const format = (v: any) =>
-      v === false ? `(not rendered)` : `${mismatchKey}="${v}"`
-    const preSegment = `Hydration ${MismatchTypeString[mismatchType]} mismatch on`
-    const postSegment =
-      `\n  - rendered on server: ${format(actual)}` +
-      `\n  - expected on client: ${format(expected)}` +
-      `\n  Note: this mismatch is check-only. The DOM will not be rectified ` +
-      `in production due to performance overhead.` +
-      `\n  You should fix the source of the mismatch.`
-    if (__TEST__) {
-      // during tests, log the full message in one single string for easier
-      // debugging.
-      warn(`${preSegment} ${el.tagName}${postSegment}`)
-    } else {
-      warn(preSegment, el, postSegment)
-    }
+    warnPropMismatch(el, mismatchKey, mismatchType, actual, expected)
     return true
   }
   return false
 }
 
-function toClassSet(str: string): Set<string> {
+export function warnPropMismatch(
+  el: Element & { $cls?: string },
+  mismatchKey: string | undefined,
+  mismatchType: MismatchTypes,
+  actual: string | boolean | null | undefined,
+  expected: string | boolean | null | undefined,
+): void {
+  const format = (v: any) =>
+    v === false ? `(not rendered)` : `${mismatchKey}="${v}"`
+  const preSegment = `Hydration ${MismatchTypeString[mismatchType]} mismatch on`
+  const postSegment =
+    `\n  - rendered on server: ${format(actual)}` +
+    `\n  - expected on client: ${format(expected)}` +
+    `\n  Note: this mismatch is check-only. The DOM will not be rectified ` +
+    `in production due to performance overhead.` +
+    `\n  You should fix the source of the mismatch.`
+  if (__TEST__) {
+    // during tests, log the full message in one single string for easier
+    // debugging.
+    warn(`${preSegment} ${el.tagName}${postSegment}`)
+  } else {
+    warn(preSegment, el, postSegment)
+  }
+}
+
+export function toClassSet(str: string): Set<string> {
   return new Set(str.trim().split(/\s+/))
 }
 
-function isSetEqual(a: Set<string>, b: Set<string>): boolean {
+export function isSetEqual(a: Set<string>, b: Set<string>): boolean {
   if (a.size !== b.size) {
     return false
   }
