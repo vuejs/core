@@ -34,9 +34,9 @@ import {
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
   key: any
-  prev: ForBlock | undefined
-  next: ForBlock | undefined
-  prevAnchor: ForBlock | undefined
+  prev?: ForBlock
+  next?: ForBlock
+  prevAnchor?: ForBlock
 
   itemRef: ShallowRef<any>
   keyRef: ShallowRef<any> | undefined
