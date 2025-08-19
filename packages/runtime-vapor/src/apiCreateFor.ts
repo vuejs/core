@@ -228,14 +228,12 @@ export const createFor = (
         oldKeyIndexPairs.length = oldKeyIndexPairsLength
 
         interface MountOper {
-          type: 'mount'
           source: ResolvedSource
           index: number
           item: ReturnType<typeof getItem>
           key: any
         }
         interface MoveOper {
-          type: 'move'
           index: number
           block: ForBlock
         }
@@ -253,10 +251,10 @@ export const createFor = (
             oldKeyIndexMap.delete(key)
             const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
             update(reusedBlock, ...item)
-            opers[opersLength++] = { type: 'move', index, block: reusedBlock }
+            opers[opersLength++] = { index, block: reusedBlock }
           } else {
             mountCounter++
-            opers[opersLength++] = { type: 'mount', source, index, item, key }
+            opers[opersLength++] = { source, index, item, key }
           }
         }
 
@@ -308,13 +306,13 @@ export const createFor = (
             blocksTail = block
           }
           for (const action of opers) {
-            const { index, type } = action
+            const { index } = action
             if (index < newLength - 1) {
               const nextBlock = newBlocks[index + 1]
               let anchorNode = normalizeAnchor(nextBlock.prevAnchor!.nodes)
               if (!anchorNode.parentNode)
                 anchorNode = normalizeAnchor(nextBlock.nodes)
-              if (type === 'mount') {
+              if ('source' in action) {
                 const { item, key } = action
                 const block = mount(source, index, anchorNode, item, key)
                 moveLink(block, nextBlock.prev, nextBlock)
@@ -322,7 +320,7 @@ export const createFor = (
                 insert(action.block, parent!, anchorNode)
                 moveLink(action.block, nextBlock.prev, nextBlock)
               }
-            } else if (type === 'mount') {
+            } else if ('source' in action) {
               const { item, key } = action
               const block = mount(source, index, parentAnchor, item, key)
               moveLink(block, blocksTail)
