@@ -1793,21 +1793,43 @@ describe('Vapor Mode hydration', () => {
     test('basic v-for', async () => {
       const { container, data } = await testHydration(
         `<template>
-          <div>
-            <span v-for="item in data" :key="item">{{ item }}</span>
-          </div>
+          <span v-for="item in data" :key="item">{{ item }}</span>
         </template>`,
         undefined,
         ref(['a', 'b', 'c']),
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><span>a</span><span>b</span><span>c</span><!--for--></div>"`,
+        `"<span>a</span><span>b</span><span>c</span><!--for-->"`,
       )
 
       data.value.push('d')
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><span>a</span><span>b</span><span>c</span><span>d</span><!--for--></div>"`,
+        `"<span>a</span><span>b</span><span>c</span><span>d</span><!--for-->"`,
+      )
+    })
+
+    test('v-for with insertion parent + sibling component', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <span v-for="item in data" :key="item">{{ item }}</span>
+          </div>
+          <components.Child/>
+        </template>`,
+        {
+          Child: `<template><div>{{data.length}}</div></template>`,
+        },
+        ref(['a', 'b', 'c']),
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>a</span><span>b</span><span>c</span><!--for--></div><div>3</div>"`,
+      )
+
+      data.value.push('d')
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>a</span><span>b</span><span>c</span><span>d</span><!--for--></div><div>4</div>"`,
       )
     })
 
