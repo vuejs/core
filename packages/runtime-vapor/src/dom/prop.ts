@@ -10,7 +10,9 @@ import {
 } from '@vue/shared'
 import { on } from './event'
 import {
+  MismatchTypes,
   currentInstance,
+  isMismatchAllowed,
   mergeProps,
   patchStyle,
   shouldSetAsProp,
@@ -20,6 +22,7 @@ import {
   type VaporComponentInstance,
   isApplyingFallthroughProps,
 } from '../component'
+import { isHydrating, logMismatchError } from './hydration'
 
 type TargetElement = Element & {
   $root?: true
@@ -179,6 +182,24 @@ export function setValue(el: TargetElement, value: any): void {
  * `toDisplayString`
  */
 export function setText(el: Text & { $txt?: string }, value: string): void {
+  if (isHydrating) {
+    if (el.nodeValue !== value) {
+      ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+        warn(
+          `Hydration text mismatch in`,
+          el.parentNode,
+          `\n  - rendered on server: ${JSON.stringify((el as Text).data)}` +
+            `\n  - expected on client: ${JSON.stringify(value)}`,
+        )
+      logMismatchError()
+
+      el.nodeValue = value
+    }
+
+    el.$txt = value
+    return
+  }
+
   if (el.$txt !== value) {
     el.nodeValue = el.$txt = value
   }
@@ -191,7 +212,36 @@ export function setElementText(
   el: Node & { $txt?: string },
   value: unknown,
 ): void {
-  if (el.$txt !== (value = toDisplayString(value))) {
+  value = toDisplayString(value)
+  if (isHydrating) {
+    let clientText = value as string
+    if (
+      clientText[0] === '\n' &&
+      ((el as Element).tagName === 'PRE' ||
+        (el as Element).tagName === 'TEXTAREA')
+    ) {
+      clientText = clientText.slice(1)
+    }
+
+    if (el.textContent !== clientText) {
+      if (!isMismatchAllowed(el as Element, MismatchTypes.TEXT)) {
+        ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+          warn(
+            `Hydration text content mismatch on`,
+            el,
+            `\n  - rendered on server: ${el.textContent}` +
+              `\n  - expected on client: ${clientText}`,
+          )
+        logMismatchError()
+      }
+      el.textContent = clientText
+    }
+
+    el.$txt = clientText
+    return
+  }
+
+  if (el.$txt !== value) {
     el.textContent = el.$txt = value as string
   }
 }

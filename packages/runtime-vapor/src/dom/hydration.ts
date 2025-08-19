@@ -125,22 +125,6 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
   ) {
     node = handleMismatch(node, template)
   }
-  // text node
-  else if (
-    type === 3 &&
-    template.trim() &&
-    !template.startsWith((node as Text).data)
-  ) {
-    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      warn(
-        `Hydration text mismatch in`,
-        parentNode(node),
-        `\n  - rendered on server: ${JSON.stringify((node as Text).data)}` +
-          `\n  - expected on client: ${JSON.stringify(template)}`,
-      )
-    logMismatchError()
-    ;(node as Text).data = template
-  }
 
   advanceHydrationNode(node)
   return node
@@ -298,7 +282,7 @@ function handleMismatch(node: Node, template: string): Node {
 }
 
 let hasLoggedMismatchError = false
-const logMismatchError = () => {
+export const logMismatchError = (): void => {
   if (__TEST__ || hasLoggedMismatchError) {
     return
   }
