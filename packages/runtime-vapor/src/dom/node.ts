@@ -39,8 +39,7 @@ const __txt: typeof __child = (node: ParentNode): Node => {
   // since SSR doesn't generate whitespace placeholder text nodes, if firstChild
   // is null, manually insert a text node as the first child
   if (!n) {
-    node.textContent = ' '
-    return node.firstChild!
+    return node.appendChild(createTextNode())
   }
 
   return n

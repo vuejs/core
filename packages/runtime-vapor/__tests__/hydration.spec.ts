@@ -237,7 +237,7 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div> </div>"`,
+        `"<div></div>"`,
       )
 
       data.txt = 'foo'
@@ -259,7 +259,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--> <!--]-->
+        <!--[--><!--]-->
         <!--slot-->"
       `,
       )
@@ -3036,14 +3036,16 @@ describe('Vapor Mode hydration', () => {
     //   expect(container.innerHTML).toBe('<div><span>foo</span></div>')
     //   expect(`Hydration children mismatch`).toHaveBeenWarned()
     // })
-    // test('complete mismatch', () => {
-    //   const { container } = mountWithHydration(
-    //     `<div><span>foo</span><span>bar</span></div>`,
-    //     () => h('div', [h('div', 'foo'), h('p', 'bar')]),
-    //   )
-    //   expect(container.innerHTML).toBe('<div><div>foo</div><p>bar</p></div>')
-    //   expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(2)
-    // })
+    test.todo('complete mismatch', async () => {
+      const data = ref('span')
+      const { container } = await mountWithHydration(
+        `<div>foo</div><!--dynamic-component-->`,
+        `<component :is="data">foo</component>`,
+        data,
+      )
+      expect(container.innerHTML).toBe('<span>foo</span>')
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+    })
     // test('fragment mismatch removal', () => {
     //   const { container } = mountWithHydration(
     //     `<div><!--[--><div>foo</div><div>bar</div><!--]--></div>`,
@@ -3334,7 +3336,7 @@ describe('Vapor Mode hydration', () => {
     // })
   })
 
-  describe('data-allow-mismatch', () => {
+  describe.todo('data-allow-mismatch', () => {
     // test('element text content', () => {
     //   const { container } = mountWithHydration(
     //     `<div data-allow-mismatch="text">foo</div>`,

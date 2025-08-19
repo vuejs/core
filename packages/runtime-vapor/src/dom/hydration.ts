@@ -109,7 +109,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
         isComment(node, ']') &&
         isComment(node.previousSibling!, '[')
       ) {
-        node = parentNode(node)!.insertBefore(createTextNode(' '), node)
+        node = parentNode(node)!.insertBefore(createTextNode(), node)
         break
       }
     }
