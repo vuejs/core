@@ -308,40 +308,33 @@ export const createFor = (
             blocksTail = block
           }
           for (const action of opers) {
-            if (action.type === 'mount') {
-              const { source, index, item, key } = action
-              if (index < newLength - 1) {
-                const nextBlock = newBlocks[index + 1]
-                let anchorNode = normalizeAnchor(nextBlock.prevAnchor!.nodes)
-                if (!anchorNode.parentNode)
-                  anchorNode = normalizeAnchor(nextBlock.nodes)
+            const { index, type } = action
+            if (index < newLength - 1) {
+              const nextBlock = newBlocks[index + 1]
+              let anchorNode = normalizeAnchor(nextBlock.prevAnchor!.nodes)
+              if (!anchorNode.parentNode)
+                anchorNode = normalizeAnchor(nextBlock.nodes)
+              if (type === 'mount') {
+                const { item, key } = action
                 const block = mount(source, index, anchorNode, item, key)
                 moveLink(block, nextBlock.prev, nextBlock)
-              } else {
-                const block = mount(source, index, parentAnchor, item, key)
-                moveLink(block, blocksTail)
-                blocksTail = block
+              } else if (action.block.next !== nextBlock) {
+                insert(action.block, parent!, anchorNode)
+                moveLink(action.block, nextBlock.prev, nextBlock)
               }
-            } else {
-              const { index, block } = action
-              if (index < newLength - 1) {
-                const nextBlock = newBlocks[index + 1]
-                if (block.next !== nextBlock) {
-                  let anchorNode = normalizeAnchor(nextBlock.prevAnchor!.nodes)
-                  if (!anchorNode.parentNode)
-                    anchorNode = normalizeAnchor(nextBlock.nodes)
-                  insert(block, parent!, anchorNode)
-                  moveLink(block, nextBlock.prev, nextBlock)
-                }
-              } else if (block.next !== undefined) {
-                let anchorNode: Node = anchor
-                  ? normalizeAnchor(anchor.nodes)
-                  : parentAnchor
-                if (!anchorNode.parentNode) anchorNode = parentAnchor
-                insert(block, parent!, anchorNode)
-                moveLink(block, blocksTail)
-                blocksTail = block
-              }
+            } else if (type === 'mount') {
+              const { item, key } = action
+              const block = mount(source, index, parentAnchor, item, key)
+              moveLink(block, blocksTail)
+              blocksTail = block
+            } else if (action.block.next !== undefined) {
+              let anchorNode = anchor
+                ? normalizeAnchor(anchor.nodes)
+                : parentAnchor
+              if (!anchorNode.parentNode) anchorNode = parentAnchor
+              insert(action.block, parent!, anchorNode)
+              moveLink(action.block, blocksTail)
+              blocksTail = action.block
             }
           }
           for (const block of newBlocks) {
