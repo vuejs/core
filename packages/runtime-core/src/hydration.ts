@@ -946,7 +946,7 @@ export function isSetEqual(a: Set<string>, b: Set<string>): boolean {
   return true
 }
 
-function toStyleMap(str: string): Map<string, string> {
+export function toStyleMap(str: string): Map<string, string> {
   const styleMap: Map<string, string> = new Map()
   for (const item of str.split(';')) {
     let [key, value] = item.split(':')
@@ -959,7 +959,10 @@ function toStyleMap(str: string): Map<string, string> {
   return styleMap
 }
 
-function isMapEqual(a: Map<string, string>, b: Map<string, string>): boolean {
+export function isMapEqual(
+  a: Map<string, string>,
+  b: Map<string, string>,
+): boolean {
   if (a.size !== b.size) {
     return false
   }

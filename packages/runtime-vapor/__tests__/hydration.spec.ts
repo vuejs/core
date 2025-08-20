@@ -3121,22 +3121,26 @@ describe('Vapor Mode hydration', () => {
         `<div :class="data"></div>`,
         ref(['foo', 'bar']),
       )
+
       await mountWithHydration(
         `<div class="foo bar"></div>`,
         `<div :class="data"></div>`,
         ref({ foo: true, bar: true }),
       )
+
       await mountWithHydration(
         `<div class="foo bar"></div>`,
         `<div :class="data"></div>`,
         ref('foo bar'),
       )
+
       // svg classes
       await mountWithHydration(
         `<svg class="foo bar"></svg>`,
         `<svg :class="data"></svg>`,
         ref('foo bar'),
       )
+
       // class with different order
       await mountWithHydration(
         `<div class="foo bar"></div>`,
@@ -3163,48 +3167,74 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toBe('<div class="foo"></div><span></span>')
       expect(`Hydration class mismatch`).toHaveBeenWarned()
     })
-    // test('style mismatch', () => {
-    //   mountWithHydration(`<div style="color:red;"></div>`, () =>
-    //     h('div', { style: { color: 'red' } }),
-    //   )
-    //   mountWithHydration(`<div style="color:red;"></div>`, () =>
-    //     h('div', { style: `color:red;` }),
-    //   )
-    //   mountWithHydration(
-    //     `<div style="color:red; font-size: 12px;"></div>`,
-    //     () => h('div', { style: `font-size: 12px; color:red;` }),
-    //   )
-    //   mountWithHydration(`<div style="color:red;display:none;"></div>`, () =>
-    //     withDirectives(createVNode('div', { style: 'color: red' }, ''), [
-    //       [vShow, false],
-    //     ]),
-    //   )
-    //   expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-    //   mountWithHydration(`<div style="color:red;"></div>`, () =>
-    //     h('div', { style: { color: 'green' } }),
-    //   )
-    //   expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
-    // })
-    // test('style mismatch when no style attribute is present', () => {
-    //   mountWithHydration(`<div></div>`, () =>
-    //     h('div', { style: { color: 'red' } }),
-    //   )
-    //   expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
-    // })
-    // test('style mismatch w/ v-show', () => {
-    //   mountWithHydration(`<div style="color:red;display:none"></div>`, () =>
-    //     withDirectives(createVNode('div', { style: 'color: red' }, ''), [
-    //       [vShow, false],
-    //     ]),
-    //   )
-    //   expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-    //   mountWithHydration(`<div style="color:red;"></div>`, () =>
-    //     withDirectives(createVNode('div', { style: 'color: red' }, ''), [
-    //       [vShow, false],
-    //     ]),
-    //   )
-    //   expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
-    // })
+
+    test('style mismatch', async () => {
+      await mountWithHydration(
+        `<div style="color:red;"></div>`,
+        `<div :style="data"></div>`,
+        ref({ color: 'red' }),
+      )
+
+      await mountWithHydration(
+        `<div style="color:red;"></div>`,
+        `<div :style="data"></div>`,
+        ref('color:red;'),
+      )
+
+      // style with different order
+      await mountWithHydration(
+        `<div style="color:red; font-size: 12px;"></div>`,
+        `<div :style="data"></div>`,
+        ref(`font-size: 12px; color:red;`),
+      )
+
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+
+      // single root mismatch
+      const { container: root } = await mountWithHydration(
+        `<div style="color:red;"></div>`,
+        `<div :style="data"></div>`,
+        ref({ color: 'green' }),
+      )
+      expect(root.innerHTML).toBe('<div style="color: green;"></div>')
+      expect(`Hydration style mismatch`).toHaveBeenWarned()
+
+      // multiple root mismatch
+      const { container } = await mountWithHydration(
+        `<div style="color:red;"></div><span/>`,
+        `<div :style="data"></div><span/>`,
+        ref({ color: 'green' }),
+      )
+      expect(container.innerHTML).toBe(
+        '<div style="color: green;"></div><span></span>',
+      )
+      expect(`Hydration style mismatch`).toHaveBeenWarned()
+    })
+
+    test('style mismatch when no style attribute is present', async () => {
+      await mountWithHydration(
+        `<div></div>`,
+        `<div :style="data"></div>`,
+        ref({ color: 'red' }),
+      )
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    })
+
+    test.todo('style mismatch w/ v-show', () => {
+      // mountWithHydration(`<div style="color:red;display:none"></div>`, () =>
+      //   withDirectives(createVNode('div', { style: 'color: red' }, ''), [
+      //     [vShow, false],
+      //   ]),
+      // )
+      // expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+      // mountWithHydration(`<div style="color:red;"></div>`, () =>
+      //   withDirectives(createVNode('div', { style: 'color: red' }, ''), [
+      //     [vShow, false],
+      //   ]),
+      // )
+      // expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    })
+
     // test('attr mismatch', () => {
     //   mountWithHydration(`<div id="foo"></div>`, () => h('div', { id: 'foo' }))
     //   mountWithHydration(`<div spellcheck></div>`, () =>

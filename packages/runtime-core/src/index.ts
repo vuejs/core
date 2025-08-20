@@ -571,4 +571,6 @@ export {
   toClassSet,
   isSetEqual,
   warnPropMismatch,
+  toStyleMap,
+  isMapEqual,
 } from './hydration'

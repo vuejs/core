@@ -6,18 +6,21 @@ import {
   normalizeClass,
   normalizeStyle,
   parseStringStyle,
+  stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
 import { on } from './event'
 import {
   MismatchTypes,
   currentInstance,
+  isMapEqual,
   isMismatchAllowed,
   isSetEqual,
   mergeProps,
   patchStyle,
   shouldSetAsProp,
   toClassSet,
+  toStyleMap,
   warn,
   warnPropMismatch,
 } from '@vue/runtime-dom'
@@ -116,40 +119,60 @@ export function setDOMProp(el: any, key: string, value: any): void {
 }
 
 export function setClass(el: TargetElement, value: any): void {
-  if (isHydrating) {
-    const actual = el.getAttribute('class')
-    const actualClassSet = toClassSet(actual || '')
-    let expected = normalizeClass(value)
-    const expectedClassSet = toClassSet(expected)
-    let hasMismatch = false
-    if (el.$root) {
-      hasMismatch = Array.from(expectedClassSet).some(
-        cls => !actualClassSet.has(cls),
-      )
-      if (hasMismatch) {
-        setClassIncremental(el, value)
-        expected = el.getAttribute('class')!
-      }
-    }
-
-    if (hasMismatch || !isSetEqual(actualClassSet, expectedClassSet)) {
-      warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)
-      if (!el.$root) el.className = expected
-    }
-
-    if (!el.$root) el.$cls = expected
-    return
-  }
-
   if (el.$root) {
     setClassIncremental(el, value)
-  } else if ((value = normalizeClass(value)) !== el.$cls) {
-    el.className = el.$cls = value
+  } else {
+    if (
+      (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      isHydrating
+    ) {
+      const actual = el.getAttribute('class')
+      const actualClassSet = toClassSet(actual || '')
+      const expected = normalizeClass(value)
+      const expectedClassSet = toClassSet(expected)
+      if (!isSetEqual(actualClassSet, expectedClassSet)) {
+        warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)
+        logMismatchError()
+        el.className = expected
+      }
+
+      el.$cls = expected
+      return
+    }
+
+    if ((value = normalizeClass(value)) !== el.$cls) {
+      el.className = el.$cls = value
+    }
   }
 }
 
 function setClassIncremental(el: any, value: any): void {
   const cacheKey = `$clsi${isApplyingFallthroughProps ? '$' : ''}`
+
+  if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
+    const actual = el.getAttribute('class')
+    const actualClassSet = toClassSet(actual || '')
+    const expected = normalizeClass(value)
+    const expectedClassSet = toClassSet(expected)
+    // check if the expected classes are present in the actual classes
+    const hasMismatch = Array.from(expectedClassSet).some(
+      cls => !actualClassSet.has(cls),
+    )
+    if (hasMismatch) {
+      warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)
+      logMismatchError()
+
+      const nextList = value.split(/\s+/)
+      if (value) {
+        el.classList.add(...nextList)
+      }
+    } else {
+      el[cacheKey] = expected
+    }
+
+    return
+  }
+
   const prev = el[cacheKey]
   if ((value = el[cacheKey] = normalizeClass(value)) !== prev) {
     const nextList = value.split(/\s+/)
@@ -168,20 +191,59 @@ export function setStyle(el: TargetElement, value: any): void {
   if (el.$root) {
     setStyleIncremental(el, value)
   } else {
-    const prev = el.$sty
-    value = el.$sty = normalizeStyle(value)
-    patchStyle(el, prev, value)
+    if (
+      (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      isHydrating
+    ) {
+      const actual = el.getAttribute('style')
+      const actualStyleMap = toStyleMap(actual || '')
+      const normalizedValue = normalizeStyle(value)
+      const expected = stringifyStyle(normalizedValue)
+      const expectedStyleMap = toStyleMap(expected)
+
+      // TODO: handle v-show="false"
+      // TODO: handle css vars
+
+      if (!isMapEqual(actualStyleMap, expectedStyleMap)) {
+        warnPropMismatch(el, 'style', MismatchTypes.STYLE, actual, expected)
+        logMismatchError()
+        patchStyle(el, el.$sty, (el.$sty = normalizedValue))
+      }
+      return
+    }
+
+    patchStyle(el, el.$sty, (el.$sty = normalizeStyle(value)))
   }
 }
 
 function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
   const cacheKey = `$styi${isApplyingFallthroughProps ? '$' : ''}`
-  const prev = el[cacheKey]
-  value = el[cacheKey] = isString(value)
+  const normalizedValue = isString(value)
     ? parseStringStyle(value)
     : (normalizeStyle(value) as NormalizedStyle | undefined)
-  patchStyle(el, prev, value)
-  return value
+
+  if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
+    const actual = el.getAttribute('style')
+    const actualStyleMap = toStyleMap(actual || '')
+    const expected = isString(value) ? value : stringifyStyle(normalizedValue)
+    const expectedStyleMap = toStyleMap(expected)
+
+    // TODO: handle v-show="false"
+    // TODO: handle css vars
+
+    // check if the expected styles are present in the actual styles
+    const hasMismatch = Array.from(expectedStyleMap.entries()).some(
+      ([key, val]) => actualStyleMap.get(key) !== val,
+    )
+    if (hasMismatch) {
+      warnPropMismatch(el, 'style', MismatchTypes.STYLE, actual, expected)
+      logMismatchError()
+      patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
+    }
+    return
+  }
+
+  patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
 }
 
 export function setValue(el: TargetElement, value: any): void {
