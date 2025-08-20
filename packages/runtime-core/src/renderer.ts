@@ -2277,30 +2277,13 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const {
-      bum,
-      scope,
-      job,
-      subTree,
-      um,
-      m,
-      a,
-      parent,
-      slots: { __: slotCacheKeys },
-    } = instance
+    const { bum, scope, job, subTree, um, m, a } = instance
     invalidateMount(m)
     invalidateMount(a)
 
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
-    }
-
-    // remove slots content from parent renderCache
-    if (parent && isArray(slotCacheKeys)) {
-      slotCacheKeys.forEach(v => {
-        parent.renderCache[v] = undefined
-      })
     }
 
     if (
@@ -2513,7 +2496,11 @@ export function traverseStaticChildren(
           traverseStaticChildren(c1, c2)
       }
       // #6852 also inherit for text nodes
-      if (c2.type === Text) {
+      if (
+        c2.type === Text &&
+        // avoid cached text nodes retaining detached dom nodes
+        c2.patchFlag !== PatchFlags.CACHED
+      ) {
         c2.el = c1.el
       }
       // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
