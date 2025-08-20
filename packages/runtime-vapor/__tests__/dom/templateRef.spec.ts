@@ -19,6 +19,7 @@ import {
   nextTick,
   reactive,
   ref,
+  shallowRef,
   useTemplateRef,
   watchEffect,
 } from '@vue/runtime-dom'
@@ -208,8 +209,8 @@ describe('api: template ref', () => {
     const { render } = define({
       setup() {
         return {
-          foo: fooEl,
-          bar: barEl,
+          foo: shallowRef(fooEl),
+          bar: shallowRef(barEl),
         }
       },
       render() {
@@ -251,6 +252,7 @@ describe('api: template ref', () => {
     })
     const { host } = render()
     expect(state.refKey).toBe(host.children[0])
+    expect('Template ref "refKey" used on a non-ref value').toHaveBeenWarned()
   })
 
   test('multiple root refs', () => {
@@ -711,6 +713,45 @@ describe('api: template ref', () => {
     refKey.value.setMsg('changed')
     await nextTick()
     expect(html()).toBe('<div>changed</div><!--dynamic-component-->')
+  })
+
+  test('should not attempt to set when variable name is same as key', () => {
+    let tRef: ShallowRef
+    const key = 'refKey'
+    define({
+      setup() {
+        tRef = useTemplateRef('_')
+        return {
+          [key]: tRef,
+        }
+      },
+      render() {
+        const n0 = template('<div></div>')() as Element
+        createTemplateRefSetter()(n0, key)
+        return n0
+      },
+    }).render()
+    expect('target is readonly').not.toHaveBeenWarned()
+    expect(tRef!.value).toBe(null)
+  })
+
+  test('should work when used as direct ref value (compiled in prod mode)', () => {
+    __DEV__ = false
+    try {
+      let foo: ShallowRef
+      const { host } = define({
+        setup() {
+          foo = useTemplateRef('foo')
+          const n0 = template('<div></div>')() as Element
+          createTemplateRefSetter()(n0, foo)
+          return n0
+        },
+      }).render()
+      expect('target is readonly').not.toHaveBeenWarned()
+      expect(foo!.value).toBe(host.children[0])
+    } finally {
+      __DEV__ = true
+    }
   })
 
   // TODO: can not reproduce in Vapor
