@@ -127,17 +127,8 @@ export function setClass(el: TargetElement, value: any): void {
       (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       isHydrating
     ) {
-      const actual = el.getAttribute('class')
-      const actualClassSet = toClassSet(actual || '')
       const expected = normalizeClass(value)
-      const expectedClassSet = toClassSet(expected)
-      if (!isSetEqual(actualClassSet, expectedClassSet)) {
-        warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)
-        logMismatchError()
-        el.className = expected
-      }
-
-      el.$cls = expected
+      handleClassHydration(el, value, expected, false, '$cls')
       return
     }
 
@@ -151,26 +142,8 @@ function setClassIncremental(el: any, value: any): void {
   const cacheKey = `$clsi${isApplyingFallthroughProps ? '$' : ''}`
 
   if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
-    const actual = el.getAttribute('class')
-    const actualClassSet = toClassSet(actual || '')
     const expected = normalizeClass(value)
-    const expectedClassSet = toClassSet(expected)
-    // check if the expected classes are present in the actual classes
-    const hasMismatch = Array.from(expectedClassSet).some(
-      cls => !actualClassSet.has(cls),
-    )
-    if (hasMismatch) {
-      warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)
-      logMismatchError()
-
-      const nextList = value.split(/\s+/)
-      if (value) {
-        el.classList.add(...nextList)
-      }
-    } else {
-      el[cacheKey] = expected
-    }
-
+    handleClassHydration(el, value, expected, true, cacheKey)
     return
   }
 
@@ -196,24 +169,8 @@ export function setStyle(el: TargetElement, value: any): void {
       (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       isHydrating
     ) {
-      const actual = el.getAttribute('style')
-      const actualStyleMap = toStyleMap(actual || '')
       const normalizedValue = normalizeStyle(value)
-      const expected = stringifyStyle(normalizedValue)
-      const expectedStyleMap = toStyleMap(expected)
-
-      // If `v-show=false`, `display: 'none'` should be added to expected
-      if ((el as any)[vShowHidden]) {
-        expectedStyleMap.set('display', 'none')
-      }
-
-      // TODO: handle css vars
-
-      if (!isMapEqual(actualStyleMap, expectedStyleMap)) {
-        warnPropMismatch(el, 'style', MismatchTypes.STYLE, actual, expected)
-        logMismatchError()
-        patchStyle(el, el.$sty, (el.$sty = normalizedValue))
-      }
+      handleStyleHydration(el, value, normalizedValue, false, '$sty')
       return
     }
 
@@ -228,27 +185,7 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
     : (normalizeStyle(value) as NormalizedStyle | undefined)
 
   if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
-    const actual = el.getAttribute('style')
-    const actualStyleMap = toStyleMap(actual || '')
-    const expected = isString(value) ? value : stringifyStyle(normalizedValue)
-    const expectedStyleMap = toStyleMap(expected)
-
-    // If `v-show=false`, `display: 'none'` should be added to expected
-    if (el[vShowHidden]) {
-      expectedStyleMap.set('display', 'none')
-    }
-
-    // TODO: handle css vars
-
-    // check if the expected styles are present in the actual styles
-    const hasMismatch = Array.from(expectedStyleMap.entries()).some(
-      ([key, val]) => actualStyleMap.get(key) !== val,
-    )
-    if (hasMismatch) {
-      warnPropMismatch(el, 'style', MismatchTypes.STYLE, actual, expected)
-      logMismatchError()
-      patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
-    }
+    handleStyleHydration(el, value, normalizedValue, true, cacheKey)
     return
   }
 
@@ -445,4 +382,72 @@ export function optimizePropertyLookup(): void {
     proto.$sty =
     (Text.prototype as any).$txt =
       ''
+}
+
+function handleClassHydration(
+  el: TargetElement | any,
+  value: any,
+  expected: string,
+  isIncremental: boolean,
+  cacheKey: string,
+) {
+  const actual = el.getAttribute('class')
+  const actualClassSet = toClassSet(actual || '')
+  const expectedClassSet = toClassSet(expected)
+
+  const hasMismatch = isIncremental
+    ? // check if the expected classes are present in the actual classes
+      Array.from(expectedClassSet).some(cls => !actualClassSet.has(cls))
+    : !isSetEqual(actualClassSet, expectedClassSet)
+
+  if (hasMismatch) {
+    warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)
+    logMismatchError()
+
+    if (isIncremental) {
+      const nextList = value.split(/\s+/)
+      if (value) {
+        el.classList.add(...nextList)
+      }
+    } else {
+      el.className = expected
+    }
+  }
+
+  el[cacheKey] = expected
+}
+
+function handleStyleHydration(
+  el: TargetElement | any,
+  value: any,
+  normalizedValue: string | NormalizedStyle | undefined,
+  isIncremental: boolean,
+  cacheKey: string,
+) {
+  const actual = el.getAttribute('style')
+  const actualStyleMap = toStyleMap(actual || '')
+  const expected = isString(value) ? value : stringifyStyle(normalizedValue)
+  const expectedStyleMap = toStyleMap(expected)
+
+  // If `v-show=false`, `display: 'none'` should be added to expected
+  if (el[vShowHidden]) {
+    expectedStyleMap.set('display', 'none')
+  }
+
+  // TODO: handle css vars
+
+  const hasMismatch = isIncremental
+    ? // check if the expected styles are present in the actual styles
+      Array.from(expectedStyleMap.entries()).some(
+        ([key, val]) => actualStyleMap.get(key) !== val,
+      )
+    : !isMapEqual(actualStyleMap, expectedStyleMap)
+
+  if (hasMismatch) {
+    warnPropMismatch(el, 'style', MismatchTypes.STYLE, actual, expected)
+    logMismatchError()
+    patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
+  }
+
+  el[cacheKey] = normalizedValue
 }
