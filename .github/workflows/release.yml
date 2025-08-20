@@ -36,12 +36,13 @@ jobs:
       - name: Install deps
         run: pnpm install
 
+      - name: Update npm
+        run: npm i -g npm@latest
+
       - name: Build and publish
         id: publish
         run: |
           pnpm release --publishOnly
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub release
         id: release_tag
