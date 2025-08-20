@@ -21,6 +21,7 @@ import {
   shouldSetAsProp,
   toClassSet,
   toStyleMap,
+  vShowHidden,
   warn,
   warnPropMismatch,
 } from '@vue/runtime-dom'
@@ -201,7 +202,11 @@ export function setStyle(el: TargetElement, value: any): void {
       const expected = stringifyStyle(normalizedValue)
       const expectedStyleMap = toStyleMap(expected)
 
-      // TODO: handle v-show="false"
+      // If `v-show=false`, `display: 'none'` should be added to expected
+      if ((el as any)[vShowHidden]) {
+        expectedStyleMap.set('display', 'none')
+      }
+
       // TODO: handle css vars
 
       if (!isMapEqual(actualStyleMap, expectedStyleMap)) {
@@ -228,7 +233,11 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
     const expected = isString(value) ? value : stringifyStyle(normalizedValue)
     const expectedStyleMap = toStyleMap(expected)
 
-    // TODO: handle v-show="false"
+    // If `v-show=false`, `display: 'none'` should be added to expected
+    if (el[vShowHidden]) {
+      expectedStyleMap.set('display', 'none')
+    }
+
     // TODO: handle css vars
 
     // check if the expected styles are present in the actual styles

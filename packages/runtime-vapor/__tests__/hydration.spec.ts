@@ -3220,19 +3220,35 @@ describe('Vapor Mode hydration', () => {
       expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
     })
 
-    test.todo('style mismatch w/ v-show', () => {
-      // mountWithHydration(`<div style="color:red;display:none"></div>`, () =>
-      //   withDirectives(createVNode('div', { style: 'color: red' }, ''), [
-      //     [vShow, false],
-      //   ]),
-      // )
-      // expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-      // mountWithHydration(`<div style="color:red;"></div>`, () =>
-      //   withDirectives(createVNode('div', { style: 'color: red' }, ''), [
-      //     [vShow, false],
-      //   ]),
-      // )
-      // expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    test('style mismatch w/ v-show', async () => {
+      await mountWithHydration(
+        `<div style="color:red;display:none"></div>`,
+        `<div v-show="data" style="color: red;"></div>`,
+        ref(false),
+      )
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+
+      // mismatch with single root
+      const { container: root } = await mountWithHydration(
+        `<div style="color:red;"></div>`,
+        `<div v-show="data" style="color: red;"></div>`,
+        ref(false),
+      )
+      expect(root.innerHTML).toBe(
+        '<div style="color: red; display: none;"></div>',
+      )
+      expect(`Hydration style mismatch`).toHaveBeenWarned()
+
+      // mismatch with multiple root
+      const { container } = await mountWithHydration(
+        `<div style="color:red;"></div><span/>`,
+        `<div v-show="data.show" :style="data.style"></div><span/>`,
+        ref({ show: false, style: 'color: red' }),
+      )
+      expect(container.innerHTML).toBe(
+        '<div style="color: red; display: none;"></div><span></span>',
+      )
+      expect(`Hydration style mismatch`).toHaveBeenWarned()
     })
 
     // test('attr mismatch', () => {
