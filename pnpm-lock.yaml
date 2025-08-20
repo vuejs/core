@@ -7,11 +7,11 @@ settings:
 catalogs:
   default:
     '@babel/parser':
-      specifier: ^7.28.0
-      version: 7.28.0
+      specifier: ^7.28.3
+      version: 7.28.3
     '@babel/types':
-      specifier: ^7.28.1
-      version: 7.28.1
+      specifier: ^7.28.2
+      version: 7.28.2
     '@vitejs/plugin-vue':
       specifier: ^5.2.4
       version: 5.2.4
@@ -34,10 +34,10 @@ importers:
     devDependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.28.0
+        version: 7.28.3
       '@babel/types':
         specifier: 'catalog:'
-        version: 7.28.1
+        version: 7.28.2
       '@rollup/plugin-alias':
         specifier: ^5.1.1
         version: 5.1.1(rollup@4.46.4)
@@ -248,7 +248,7 @@ importers:
     dependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.28.0
+        version: 7.28.3
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
@@ -264,7 +264,7 @@ importers:
     devDependencies:
       '@babel/types':
         specifier: 'catalog:'
-        version: 7.28.1
+        version: 7.28.2
 
   packages/compiler-dom:
     dependencies:
@@ -279,7 +279,7 @@ importers:
     dependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.28.0
+        version: 7.28.3
       '@vue/compiler-core':
         specifier: workspace:*
         version: link:../compiler-core
@@ -307,7 +307,7 @@ importers:
     devDependencies:
       '@babel/types':
         specifier: 'catalog:'
-        version: 7.28.1
+        version: 7.28.2
       '@vue/consolidate':
         specifier: ^1.0.0
         version: 1.0.0
@@ -427,7 +427,7 @@ importers:
     dependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.28.0
+        version: 7.28.3
       estree-walker:
         specifier: 'catalog:'
         version: 2.0.2
@@ -463,13 +463,13 @@ packages:
     resolution: {integrity: sha512-D2hP9eA+Sqx1kBZgzxZh0y1trbuU+JoDkiEwqhQ36nodYqJwyEIhPSdMNd7lOm/4io72luTPWH20Yda0xOuUow==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/parser@7.28.0':
-    resolution: {integrity: sha512-jVZGvOxOuNSsuQuLRTh13nU0AogFlw32w/MT+LV6D3sP5WdbW61E77RnkbaO2dUvmPAYrBDJXGn5gGS6tH4j8g==}
+  '@babel/parser@7.28.3':
+    resolution: {integrity: sha512-7+Ey1mAgYqFAx2h0RuoxcQT5+MlG3GTV0TQrgr7/ZliKsm/MNDxVVutlWaziMq7wJNAz8MTqz55XLpWvva6StA==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
-  '@babel/types@7.28.1':
-    resolution: {integrity: sha512-x0LvFTekgSX+83TI28Y9wYPUfzrnl2aT5+5QLnO6v7mSJYtEEevuDRN0F0uSHRk1G1IWZC43o00Y0xDDrpBGPQ==}
+  '@babel/types@7.28.2':
+    resolution: {integrity: sha512-ruv7Ae4J5dUYULmeXw1gmb7rYRz57OWCPM57pHojnLq/3Z1CK2lNSLTCVjxVk1F/TZHwOZZrOWi0ur95BbLxNQ==}
     engines: {node: '>=6.9.0'}
 
   '@bcoe/v8-coverage@1.0.2':
@@ -3627,11 +3627,11 @@ snapshots:
 
   '@babel/helper-validator-identifier@7.27.1': {}
 
-  '@babel/parser@7.28.0':
+  '@babel/parser@7.28.3':
     dependencies:
-      '@babel/types': 7.28.1
+      '@babel/types': 7.28.2
 
-  '@babel/types@7.28.1':
+  '@babel/types@7.28.2':
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
@@ -4505,7 +4505,7 @@ snapshots:
 
   babel-walk@3.0.0-canary-5:
     dependencies:
-      '@babel/types': 7.28.1
+      '@babel/types': 7.28.2
 
   balanced-match@1.0.2: {}
 
@@ -4675,8 +4675,8 @@ snapshots:
 
   constantinople@4.0.1:
     dependencies:
-      '@babel/parser': 7.28.0
-      '@babel/types': 7.28.1
+      '@babel/parser': 7.28.3
+      '@babel/types': 7.28.2
 
   content-disposition@0.5.2: {}
 
@@ -5575,8 +5575,8 @@ snapshots:
 
   magicast@0.3.5:
     dependencies:
-      '@babel/parser': 7.28.0
-      '@babel/types': 7.28.1
+      '@babel/parser': 7.28.3
+      '@babel/types': 7.28.2
       source-map-js: 1.2.1
 
   make-dir@4.0.0:
@@ -6562,8 +6562,8 @@ snapshots:
 
   with@7.0.2:
     dependencies:
-      '@babel/parser': 7.28.0
-      '@babel/types': 7.28.1
+      '@babel/parser': 7.28.3
+      '@babel/types': 7.28.2
       assert-never: 1.3.0
       babel-walk: 3.0.0-canary-5
 
