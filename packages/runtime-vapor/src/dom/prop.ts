@@ -13,9 +13,11 @@ import { on } from './event'
 import {
   MismatchTypes,
   currentInstance,
+  getAttributeMismatch,
   isMapEqual,
   isMismatchAllowed,
   isSetEqual,
+  isValidHtmlOrSvgAttribute,
   mergeProps,
   patchStyle,
   shouldSetAsProp,
@@ -67,6 +69,15 @@ export function setAttr(el: any, key: string, value: any): void {
     ;(el as any)._falseValue = value
   }
 
+  if (
+    (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+    isHydrating &&
+    !attributeHasMismatch(el, key, value)
+  ) {
+    el[`$${key}`] = value
+    return
+  }
+
   if (value !== el[`$${key}`]) {
     el[`$${key}`] = value
     if (value != null) {
@@ -79,6 +90,14 @@ export function setAttr(el: any, key: string, value: any): void {
 
 export function setDOMProp(el: any, key: string, value: any): void {
   if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey(key)) {
+    return
+  }
+
+  if (
+    (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+    isHydrating &&
+    !attributeHasMismatch(el, key, value)
+  ) {
     return
   }
 
@@ -123,16 +142,17 @@ export function setClass(el: TargetElement, value: any): void {
   if (el.$root) {
     setClassIncremental(el, value)
   } else {
+    value = normalizeClass(value)
     if (
       (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      isHydrating
+      isHydrating &&
+      !classHasMismatch(el, value, false)
     ) {
-      const expected = normalizeClass(value)
-      handleClassHydration(el, value, expected, false, '$cls')
+      el.$cls = value
       return
     }
 
-    if ((value = normalizeClass(value)) !== el.$cls) {
+    if (value !== el.$cls) {
       el.className = el.$cls = value
     }
   }
@@ -140,15 +160,19 @@ export function setClass(el: TargetElement, value: any): void {
 
 function setClassIncremental(el: any, value: any): void {
   const cacheKey = `$clsi${isApplyingFallthroughProps ? '$' : ''}`
+  const normalizedValue = normalizeClass(value)
 
-  if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
-    const expected = normalizeClass(value)
-    handleClassHydration(el, value, expected, true, cacheKey)
+  if (
+    (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+    isHydrating &&
+    !classHasMismatch(el, normalizedValue, true)
+  ) {
+    el[cacheKey] = normalizedValue
     return
   }
 
   const prev = el[cacheKey]
-  if ((value = el[cacheKey] = normalizeClass(value)) !== prev) {
+  if ((value = el[cacheKey] = normalizedValue) !== prev) {
     const nextList = value.split(/\s+/)
     if (value) {
       el.classList.add(...nextList)
@@ -165,16 +189,17 @@ export function setStyle(el: TargetElement, value: any): void {
   if (el.$root) {
     setStyleIncremental(el, value)
   } else {
+    const normalizedValue = normalizeStyle(value)
     if (
       (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      isHydrating
+      isHydrating &&
+      !styleHasMismatch(el, value, normalizedValue, false)
     ) {
-      const normalizedValue = normalizeStyle(value)
-      handleStyleHydration(el, value, normalizedValue, false, '$sty')
+      el.$sty = normalizedValue
       return
     }
 
-    patchStyle(el, el.$sty, (el.$sty = normalizeStyle(value)))
+    patchStyle(el, el.$sty, (el.$sty = normalizedValue))
   }
 }
 
@@ -184,8 +209,12 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
     ? parseStringStyle(value)
     : (normalizeStyle(value) as NormalizedStyle | undefined)
 
-  if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
-    handleStyleHydration(el, value, normalizedValue, true, cacheKey)
+  if (
+    (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+    isHydrating &&
+    !styleHasMismatch(el, value, normalizedValue, true)
+  ) {
+    el[cacheKey] = normalizedValue
     return
   }
 
@@ -200,6 +229,15 @@ export function setValue(el: TargetElement, value: any): void {
   // store value as _value as well since
   // non-string values will be stringified.
   el._value = value
+
+  if (
+    (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+    isHydrating &&
+    !attributeHasMismatch(el, 'value', value)
+  ) {
+    return
+  }
+
   // #4956: <option> value will fallback to its text content so we need to
   // compare against its attribute value instead.
   const oldValue = el.tagName === 'OPTION' ? el.getAttribute('value') : el.value
@@ -219,20 +257,19 @@ export function setValue(el: TargetElement, value: any): void {
  */
 export function setText(el: Text & { $txt?: string }, value: string): void {
   if (isHydrating) {
-    if (el.nodeValue !== value) {
-      ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-        warn(
-          `Hydration text mismatch in`,
-          el.parentNode,
-          `\n  - rendered on server: ${JSON.stringify((el as Text).data)}` +
-            `\n  - expected on client: ${JSON.stringify(value)}`,
-        )
-      logMismatchError()
-      el.nodeValue = value
+    if (el.nodeValue == value) {
+      el.$txt = value
+      return
     }
 
-    el.$txt = value
-    return
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Hydration text mismatch in`,
+        el.parentNode,
+        `\n  - rendered on server: ${JSON.stringify((el as Text).data)}` +
+          `\n  - expected on client: ${JSON.stringify(value)}`,
+      )
+    logMismatchError()
   }
 
   if (el.$txt !== value) {
@@ -258,22 +295,21 @@ export function setElementText(
       clientText = clientText.slice(1)
     }
 
-    if (el.textContent !== clientText) {
-      if (!isMismatchAllowed(el as Element, MismatchTypes.TEXT)) {
-        ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-          warn(
-            `Hydration text content mismatch on`,
-            el,
-            `\n  - rendered on server: ${el.textContent}` +
-              `\n  - expected on client: ${clientText}`,
-          )
-        logMismatchError()
-      }
-      el.textContent = clientText
+    if (el.textContent === clientText) {
+      el.$txt = clientText
+      return
     }
 
-    el.$txt = clientText
-    return
+    if (!isMismatchAllowed(el as Element, MismatchTypes.TEXT)) {
+      ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+        warn(
+          `Hydration text content mismatch on`,
+          el,
+          `\n  - rendered on server: ${el.textContent}` +
+            `\n  - expected on client: ${clientText}`,
+        )
+      logMismatchError()
+    }
   }
 
   if (el.$txt !== value) {
@@ -285,22 +321,21 @@ export function setHtml(el: TargetElement, value: any): void {
   value = value == null ? '' : value
 
   if (isHydrating) {
-    if (el.innerHTML !== value) {
-      if (!isMismatchAllowed(el, MismatchTypes.CHILDREN)) {
-        if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
-          warn(
-            `Hydration children mismatch on`,
-            el,
-            `\nServer rendered element contains different child nodes from client nodes.`,
-          )
-        }
-        logMismatchError()
-      }
-      el.innerHTML = value
+    if (el.innerHTML === value) {
+      el.$html = value
+      return
     }
 
-    el.$html = value
-    return
+    if (!isMismatchAllowed(el, MismatchTypes.CHILDREN)) {
+      if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
+        warn(
+          `Hydration children mismatch on`,
+          el,
+          `\nServer rendered element contains different child nodes from client nodes.`,
+        )
+      }
+      logMismatchError()
+    }
   }
 
   if (el.$html !== value) {
@@ -384,13 +419,11 @@ export function optimizePropertyLookup(): void {
       ''
 }
 
-function handleClassHydration(
+function classHasMismatch(
   el: TargetElement | any,
-  value: any,
   expected: string,
   isIncremental: boolean,
-  cacheKey: string,
-) {
+): boolean {
   const actual = el.getAttribute('class')
   const actualClassSet = toClassSet(actual || '')
   const expectedClassSet = toClassSet(expected)
@@ -403,27 +436,18 @@ function handleClassHydration(
   if (hasMismatch) {
     warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)
     logMismatchError()
-
-    if (isIncremental) {
-      const nextList = value.split(/\s+/)
-      if (value) {
-        el.classList.add(...nextList)
-      }
-    } else {
-      el.className = expected
-    }
+    return true
   }
 
-  el[cacheKey] = expected
+  return false
 }
 
-function handleStyleHydration(
+function styleHasMismatch(
   el: TargetElement | any,
   value: any,
   normalizedValue: string | NormalizedStyle | undefined,
   isIncremental: boolean,
-  cacheKey: string,
-) {
+): boolean {
   const actual = el.getAttribute('style')
   const actualStyleMap = toStyleMap(actual || '')
   const expected = isString(value) ? value : stringifyStyle(normalizedValue)
@@ -446,8 +470,20 @@ function handleStyleHydration(
   if (hasMismatch) {
     warnPropMismatch(el, 'style', MismatchTypes.STYLE, actual, expected)
     logMismatchError()
-    patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
+    return true
   }
 
-  el[cacheKey] = normalizedValue
+  return false
+}
+
+function attributeHasMismatch(el: any, key: string, value: any): boolean {
+  if (isValidHtmlOrSvgAttribute(el, key)) {
+    const { actual, expected } = getAttributeMismatch(el, key, value)
+    if (actual !== expected) {
+      warnPropMismatch(el, key, MismatchTypes.ATTRIBUTE, actual, expected)
+      logMismatchError()
+      return true
+    }
+  }
+  return false
 }

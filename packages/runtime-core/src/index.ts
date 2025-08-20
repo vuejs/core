@@ -573,4 +573,6 @@ export {
   warnPropMismatch,
   toStyleMap,
   isMapEqual,
+  isValidHtmlOrSvgAttribute,
+  getAttributeMismatch,
 } from './hydration'
