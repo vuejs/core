@@ -3,8 +3,8 @@ packages:
   - 'packages-private/*'
 
 catalog:
-  '@babel/parser': ^7.27.5
-  '@babel/types': ^7.27.6
+  '@babel/parser': ^7.28.0
+  '@babel/types': ^7.28.1
   'estree-walker': ^2.0.2
   'magic-string': ^0.30.17
   'source-map-js': ^1.2.1

@@ -86,7 +86,8 @@ export type RawSlots = {
   __?: number[]
 }
 
-const isInternalKey = (key: string) => key[0] === '_' || key === '$stable'
+const isInternalKey = (key: string) =>
+  key === '_' || key === '__' || key === '_ctx' || key === '$stable'
 
 const normalizeSlotValue = (value: unknown): VNode[] =>
   isArray(value)
