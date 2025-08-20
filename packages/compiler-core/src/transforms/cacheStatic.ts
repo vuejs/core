@@ -24,7 +24,13 @@ import {
   getVNodeHelper,
 } from '../ast'
 import type { TransformContext } from '../transform'
-import { PatchFlags, isArray, isString, isSymbol } from '@vue/shared'
+import {
+  PatchFlagNames,
+  PatchFlags,
+  isArray,
+  isString,
+  isSymbol,
+} from '@vue/shared'
 import { findDir, isSlotOutlet } from '../utils'
 import {
   GUARD_REACTIVE_PROPS,
@@ -109,6 +115,15 @@ function walk(
         ? ConstantTypes.NOT_CONSTANT
         : getConstantType(child, context)
       if (constantType >= ConstantTypes.CAN_CACHE) {
+        if (
+          child.codegenNode.type === NodeTypes.JS_CALL_EXPRESSION &&
+          child.codegenNode.arguments.length > 0
+        ) {
+          child.codegenNode.arguments.push(
+            PatchFlags.CACHED +
+              (__DEV__ ? ` /* ${PatchFlagNames[PatchFlags.CACHED]} */` : ``),
+          )
+        }
         toCache.push(child)
         continue
       }
