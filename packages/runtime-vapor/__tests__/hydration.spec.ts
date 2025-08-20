@@ -3115,29 +3115,53 @@ describe('Vapor Mode hydration', () => {
     //   expect(container.innerHTML).toBe('<div><!--hi--></div>')
     //   expect(`Hydration node mismatch`).toHaveBeenWarned()
     // })
-    test('class mismatch', () => {
-      //   mountWithHydration(`<div class="foo bar"></div>`, () =>
-      //     h('div', { class: ['foo', 'bar'] }),
-      //   )
-      //   mountWithHydration(`<div class="foo bar"></div>`, () =>
-      //     h('div', { class: { foo: true, bar: true } }),
-      //   )
-      //   mountWithHydration(`<div class="foo bar"></div>`, () =>
-      //     h('div', { class: 'foo bar' }),
-      //   )
-      //   // SVG classes
-      //   mountWithHydration(`<svg class="foo bar"></svg>`, () =>
-      //     h('svg', { class: 'foo bar' }),
-      //   )
-      //   // class with different order
-      //   mountWithHydration(`<div class="foo bar"></div>`, () =>
-      //     h('div', { class: 'bar foo' }),
-      //   )
-      //   expect(`Hydration class mismatch`).not.toHaveBeenWarned()
-      //   mountWithHydration(`<div class="foo bar"></div>`, () =>
-      //     h('div', { class: 'foo' }),
-      //   )
-      //   expect(`Hydration class mismatch`).toHaveBeenWarned()
+    test('class mismatch', async () => {
+      await mountWithHydration(
+        `<div class="foo bar"></div>`,
+        `<div :class="data"></div>`,
+        ref(['foo', 'bar']),
+      )
+      await mountWithHydration(
+        `<div class="foo bar"></div>`,
+        `<div :class="data"></div>`,
+        ref({ foo: true, bar: true }),
+      )
+      await mountWithHydration(
+        `<div class="foo bar"></div>`,
+        `<div :class="data"></div>`,
+        ref('foo bar'),
+      )
+      // svg classes
+      await mountWithHydration(
+        `<svg class="foo bar"></svg>`,
+        `<svg :class="data"></svg>`,
+        ref('foo bar'),
+      )
+      // class with different order
+      await mountWithHydration(
+        `<div class="foo bar"></div>`,
+        `<div :class="data"></div>`,
+        ref('bar foo'),
+      )
+      expect(`Hydration class mismatch`).not.toHaveBeenWarned()
+
+      // single root mismatch
+      const { container: root } = await mountWithHydration(
+        `<div class="foo bar"></div>`,
+        `<div :class="data"></div>`,
+        ref('baz'),
+      )
+      expect(root.innerHTML).toBe('<div class="foo bar baz"></div>')
+      expect(`Hydration class mismatch`).toHaveBeenWarned()
+
+      // multiple root mismatch
+      const { container } = await mountWithHydration(
+        `<div class="foo bar"></div><span/>`,
+        `<div :class="data"></div><span/>`,
+        ref('foo'),
+      )
+      expect(container.innerHTML).toBe('<div class="foo"></div><span></span>')
+      expect(`Hydration class mismatch`).toHaveBeenWarned()
     })
     // test('style mismatch', () => {
     //   mountWithHydration(`<div style="color:red;"></div>`, () =>
