@@ -85,7 +85,7 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import type { TransitionHooks } from './components/BaseTransition'
+import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
 import type { VueElement } from '@vue/runtime-dom'
 
 export interface Renderer<HostElement = RendererElement> {
@@ -2070,6 +2070,12 @@ function baseCreateRenderer(
           }
         }
         const performLeave = () => {
+          // #13153 move kept-alive node before v-show transition leave finishes
+          // it needs to call the leaving callback to ensure element's `display`
+          // is `none`
+          if (el!._isLeaving) {
+            el![leaveCbKey](true /* cancelled */)
+          }
           leave(el!, () => {
             remove()
             afterLeave && afterLeave()
