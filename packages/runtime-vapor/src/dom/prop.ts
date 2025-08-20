@@ -233,7 +233,7 @@ export function setValue(el: TargetElement, value: any): void {
   if (
     (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
     isHydrating &&
-    !attributeHasMismatch(el, 'value', value)
+    !attributeHasMismatch(el, 'value', getClientText(el, value))
   ) {
     return
   }
@@ -257,8 +257,9 @@ export function setValue(el: TargetElement, value: any): void {
  */
 export function setText(el: Text & { $txt?: string }, value: string): void {
   if (isHydrating) {
-    if (el.nodeValue == value) {
-      el.$txt = value
+    const clientText = getClientText(el.parentNode!, value)
+    if (el.nodeValue == clientText) {
+      el.$txt = clientText
       return
     }
 
@@ -286,15 +287,7 @@ export function setElementText(
 ): void {
   value = toDisplayString(value)
   if (isHydrating) {
-    let clientText = value as string
-    if (
-      clientText[0] === '\n' &&
-      ((el as Element).tagName === 'PRE' ||
-        (el as Element).tagName === 'TEXTAREA')
-    ) {
-      clientText = clientText.slice(1)
-    }
-
+    let clientText = getClientText(el, value as string)
     if (el.textContent === clientText) {
       el.$txt = clientText
       return
@@ -486,4 +479,15 @@ function attributeHasMismatch(el: any, key: string, value: any): boolean {
     }
   }
   return false
+}
+
+function getClientText(el: Node, value: string): string {
+  if (
+    value[0] === '\n' &&
+    ((el as Element).tagName === 'PRE' ||
+      (el as Element).tagName === 'TEXTAREA')
+  ) {
+    value = value.slice(1)
+  }
+  return value
 }

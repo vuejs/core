@@ -3251,45 +3251,97 @@ describe('Vapor Mode hydration', () => {
       expect(`Hydration style mismatch`).toHaveBeenWarned()
     })
 
-    // test('attr mismatch', () => {
-    //   mountWithHydration(`<div id="foo"></div>`, () => h('div', { id: 'foo' }))
-    //   mountWithHydration(`<div spellcheck></div>`, () =>
-    //     h('div', { spellcheck: '' }),
-    //   )
-    //   mountWithHydration(`<div></div>`, () => h('div', { id: undefined }))
-    //   // boolean
-    //   mountWithHydration(`<select multiple></div>`, () =>
-    //     h('select', { multiple: true }),
-    //   )
-    //   mountWithHydration(`<select multiple></div>`, () =>
-    //     h('select', { multiple: 'multiple' }),
-    //   )
-    //   expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-    //   mountWithHydration(`<div></div>`, () => h('div', { id: 'foo' }))
-    //   expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
-    //   mountWithHydration(`<div id="bar"></div>`, () => h('div', { id: 'foo' }))
-    //   expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
-    // })
-    // test('attr special case: textarea value', () => {
-    //   mountWithHydration(`<textarea>foo</textarea>`, () =>
-    //     h('textarea', { value: 'foo' }),
-    //   )
-    //   mountWithHydration(`<textarea></textarea>`, () =>
-    //     h('textarea', { value: '' }),
-    //   )
-    //   expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-    //   mountWithHydration(`<textarea>foo</textarea>`, () =>
-    //     h('textarea', { value: 'bar' }),
-    //   )
-    //   expect(`Hydration attribute mismatch`).toHaveBeenWarned()
-    // })
-    // // #11873
-    // test('<textarea> with newlines at the beginning', async () => {
-    //   const render = () => h('textarea', null, '\nhello')
-    //   const html = await renderToString(createSSRApp({ render }))
-    //   mountWithHydration(html, render)
-    //   expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
-    // })
+    test('attr mismatch', async () => {
+      await mountWithHydration(
+        `<div id="foo"></div>`,
+        `<div :id="data"></div>`,
+        ref('foo'),
+      )
+
+      await mountWithHydration(
+        `<div spellcheck></div>`,
+        `<div :spellcheck="data"></div>`,
+        ref(''),
+      )
+
+      await mountWithHydration(
+        `<div></div>`,
+        `<div :id="data"></div>`,
+        ref(undefined),
+      )
+
+      // boolean
+      await mountWithHydration(
+        `<select multiple></div>`,
+        `<select :multiple="data"></select>`,
+        ref(true),
+      )
+
+      await mountWithHydration(
+        `<select multiple></div>`,
+        `<select :multiple="data"></select>`,
+        ref('multiple'),
+      )
+
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+      await mountWithHydration(
+        `<div></div>`,
+        `<div :id="data"></div>`,
+        ref('foo'),
+      )
+      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
+
+      await mountWithHydration(
+        `<div id="bar"></div>`,
+        `<div :id="data"></div>`,
+        ref('foo'),
+      )
+      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
+    })
+
+    test('attr special case: textarea value', async () => {
+      await mountWithHydration(
+        `<textarea>foo</textarea>`,
+        `<textarea :value="data"></textarea>`,
+        ref('foo'),
+      )
+
+      await mountWithHydration(
+        `<textarea></textarea>`,
+        `<textarea :value="data"></textarea>`,
+        ref(''),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      await mountWithHydration(
+        `<textarea>foo</textarea>`,
+        `<textarea :value="data"></textarea>`,
+        ref('bar'),
+      )
+      expect(`Hydration attribute mismatch`).toHaveBeenWarned()
+    })
+
+    test('<textarea> with newlines at the beginning', async () => {
+      await mountWithHydration(
+        `<textarea>\nhello</textarea>`,
+        `<textarea :value="data"></textarea>`,
+        ref('\nhello'),
+      )
+
+      await mountWithHydration(
+        `<textarea>\nhello</textarea>`,
+        `<textarea v-text="data"></textarea>`,
+        ref('\nhello'),
+      )
+
+      await mountWithHydration(
+        `<textarea>\nhello</textarea>`,
+        `<textarea v-bind="data"></textarea>`,
+        ref({ textContent: '\nhello' }),
+      )
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
+
     // test('<pre> with newlines at the beginning', async () => {
     //   const render = () => h('pre', null, '\n')
     //   const html = await renderToString(createSSRApp({ render }))
