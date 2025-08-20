@@ -7,6 +7,7 @@ import type {
 } from './vnode'
 import {
   EMPTY_OBJ,
+  NO,
   ShapeFlags,
   hasOwn,
   isArray,
@@ -82,7 +83,7 @@ export function setRef(
   const rawSetupState = toRaw(setupState)
   const canSetSetupRef =
     setupState === EMPTY_OBJ
-      ? () => false
+      ? NO
       : (key: string) => {
           if (__DEV__) {
             if (hasOwn(rawSetupState, key) && !isRef(rawSetupState[key])) {
