@@ -17,6 +17,7 @@ import {
   render,
   renderSlot,
   useHost,
+  useNativeSlots,
   useShadowRoot,
 } from '../src'
 
@@ -1398,6 +1399,112 @@ describe('defineCustomElement', () => {
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
+    })
+
+    describe('useNativeSlots', () => {
+      test('default slot', async () => {
+        async function testDefaultSlot(shadowRoot: boolean) {
+          let slots: Record<string, Node[]>
+          const Comp = defineCustomElement(
+            {
+              setup() {
+                slots = useNativeSlots()!
+              },
+              render() {
+                return h('div', null, [
+                  renderSlot(this.$slots, 'default', undefined, () => [
+                    'fallback',
+                  ]),
+                ])
+              },
+            },
+            { shadowRoot },
+          )
+
+          const ceTag =
+            'my-el-use-native-slots' + (shadowRoot ? '-sr' : '-no-sr')
+          customElements.define(ceTag, Comp)
+
+          container.innerHTML = `<${ceTag}><div>Content</div></${ceTag}>`
+          await nextTick()
+          expect(Object.keys(slots!)).toHaveLength(1)
+          expect(slots!['default']).toMatchObject([
+            { tagName: 'DIV', textContent: 'Content' },
+          ])
+
+          container.innerHTML = `<${ceTag}><div>New Content</div></${ceTag}>`
+          await nextTick()
+          expect(Object.keys(slots!)).toHaveLength(1)
+          expect(slots!['default']).toMatchObject([
+            { tagName: 'DIV', textContent: 'New Content' },
+          ])
+
+          container.innerHTML = `<${ceTag}><div>New Content</div><span>More Content</span></${ceTag}>`
+          await nextTick()
+          expect(Object.keys(slots!)).toHaveLength(1)
+          expect(slots!['default']).toMatchObject([
+            { tagName: 'DIV', textContent: 'New Content' },
+            { tagName: 'SPAN', textContent: 'More Content' },
+          ])
+
+          container.innerHTML = `<${ceTag}></${ceTag}>`
+          await nextTick()
+          expect(Object.keys(slots!)).toHaveLength(0)
+        }
+
+        await testDefaultSlot(true)
+        await testDefaultSlot(false)
+      })
+
+      test('named slots', async () => {
+        async function testNamedSlots(shadowRoot: boolean) {
+          let slots: Record<string, Node[]>
+          const Comp = defineCustomElement(
+            {
+              setup() {
+                slots = useNativeSlots()!
+              },
+              render() {
+                return h('div', null, [
+                  renderSlot(this.$slots, 'slot1', undefined, () => [
+                    'fallback',
+                  ]),
+                  renderSlot(this.$slots, 'slot2', undefined, () => [
+                    'fallback',
+                  ]),
+                ])
+              },
+            },
+            { shadowRoot },
+          )
+
+          const ceTag =
+            'my-el-use-native-slots-named' + (shadowRoot ? '-sr' : '-no-sr')
+          customElements.define(ceTag, Comp)
+
+          container.innerHTML = `<${ceTag}><div slot="slot1">Content</div></${ceTag}>`
+          await nextTick()
+          expect(Object.keys(slots!)).toHaveLength(1)
+          expect(slots!['slot1']).toMatchObject([
+            { tagName: 'DIV', textContent: 'Content' },
+          ])
+
+          container.innerHTML = `<${ceTag}><div slot="slot2">Content</div></${ceTag}>`
+          await nextTick()
+          expect(Object.keys(slots!)).toHaveLength(1)
+          expect(slots!['slot2']).toMatchObject([
+            { tagName: 'DIV', textContent: 'Content' },
+          ])
+
+          container.innerHTML = `<${ceTag}><div>New Content</div><span>More Content</span><p slot="nonExisting">Even More</p></${ceTag}>`
+          await nextTick()
+          // The slot values provided were not defined as outlets by component
+          expect(Object.keys(slots!)).toHaveLength(0)
+        }
+
+        await testNamedSlots(true)
+        await testNamedSlots(false)
+      })
     })
   })
 
