@@ -28,6 +28,7 @@ import {
 } from './ir'
 import { isConstantExpression, isStaticExpression } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
+import type { ImportItem } from '@vue/compiler-core'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -60,7 +61,6 @@ export type StructuralDirectiveTransform = (
 ) => void | (() => void)
 
 export type TransformOptions = HackOptions<BaseTransformOptions>
-
 export class TransformContext<T extends AllNode = AllNode> {
   selfName: string | null = null
   parent: TransformContext<RootNode | ElementNode> | null = null
@@ -75,6 +75,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   template: string = ''
   childrenTemplate: (string | null)[] = []
   dynamic: IRDynamicInfo = this.ir.block.dynamic
+  imports: ImportItem[] = []
 
   inVOnce: boolean = false
   inVFor: number = 0
@@ -224,6 +225,8 @@ export function transform(
   const context = new TransformContext(ir, node, options)
 
   transformNode(context)
+
+  ir.node.imports = context.imports
 
   return ir
 }
