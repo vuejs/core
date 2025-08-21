@@ -278,6 +278,23 @@ describe('resolveType', () => {
     })
   })
 
+  test('utility type: mapped type with Omit and Pick', () => {
+    expect(
+      resolve(`
+      type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
+      interface Test {
+        foo: string;
+        bar?: string;
+      }
+      type OptionalTest = Optional<Test, 'foo'>
+      defineProps<OptionalTest>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['String'],
+    })
+  })
+
   test('utility type: ReadonlyArray', () => {
     expect(
       resolve(`
@@ -714,6 +731,49 @@ describe('resolveType', () => {
     })
   })
 
+  describe('type alias declaration', () => {
+    // #13240
+    test('function type', () => {
+      expect(
+        resolve(`
+      type FunFoo<O> = (item: O) => boolean;
+      type FunBar = FunFoo<number>;
+      defineProps<{
+        foo?: FunFoo<number>;
+        bar?: FunBar;
+      }>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Function'],
+        bar: ['Function'],
+      })
+    })
+
+    test('with intersection type', () => {
+      expect(
+        resolve(`
+      type Brand<T> = T & {};
+      defineProps<{
+        foo: Brand<string>;
+      }>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['String', 'Object'],
+      })
+    })
+
+    test('with union type', () => {
+      expect(
+        resolve(`
+        type Wrapped<T> = T | symbol | number
+        defineProps<{foo?: Wrapped<boolean>}>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Boolean', 'Symbol', 'Number'],
+      })
+    })
+  })
+
   describe('generics', () => {
     test('generic with type literal', () => {
       expect(
@@ -776,17 +836,6 @@ describe('resolveType', () => {
       `).props,
       ).toStrictEqual({
         foo: ['String'],
-      })
-    })
-
-    test('generic type parameter with union type', () => {
-      expect(
-        resolve(`
-        type Wrapped<T> = T | symbol | number
-        defineProps<{foo?: Wrapped<boolean>}>()
-      `).props,
-      ).toStrictEqual({
-        foo: ['Boolean', 'Symbol', 'Number'],
       })
     })
 
@@ -1443,6 +1492,29 @@ describe('resolveType', () => {
         colsSm: ['Number'],
         colsMd: ['Number'],
         colsLg: ['Number'],
+      })
+    })
+
+    test('allowArbitraryExtensions', () => {
+      const files = {
+        '/foo.d.vue.ts': 'export type Foo = number;',
+        '/foo.vue': '<template><div /></template>',
+        '/bar.d.css.ts': 'export type Bar = string;',
+        '/bar.css': ':root { --color: red; }',
+      }
+
+      const { props } = resolve(
+        `
+        import { Foo } from './foo.vue'
+        import { Bar } from './bar.css'
+        defineProps<{ foo: Foo; bar: Bar }>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String'],
       })
     })
   })
