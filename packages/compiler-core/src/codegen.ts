@@ -136,6 +136,7 @@ export interface CodegenContext
     | 'inline'
     | 'vaporRuntimeModuleName'
     | 'expressionPlugins'
+    | 'vapor'
   > {
   source: string
   code: string

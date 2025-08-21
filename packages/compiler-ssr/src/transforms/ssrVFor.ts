@@ -13,6 +13,7 @@ import {
   processChildrenAsStatement,
 } from '../ssrCodegenTransform'
 import { SSR_RENDER_LIST } from '../runtimeHelpers'
+import { FOR_ANCHOR_LABEL } from '@vue/shared'
 
 // Plugin for the first transform pass, which simply constructs the AST node
 export const ssrTransformFor: NodeTransform =
@@ -36,8 +37,10 @@ export function ssrProcessFor(
     context,
     needFragmentWrapper,
   )
+
+  const vapor = context.options.vapor
   // v-for always renders a fragment unless explicitly disabled
-  if (!disableNestedFragments) {
+  if (!disableNestedFragments && !vapor) {
     context.pushStringPart(`<!--[-->`)
   }
   context.pushStatement(
@@ -46,7 +49,12 @@ export function ssrProcessFor(
       renderLoop,
     ]),
   )
-  if (!disableNestedFragments) {
+  if (!disableNestedFragments && !vapor) {
     context.pushStringPart(`<!--]-->`)
+  }
+
+  // anchor for vapor v-for fragment
+  if (vapor) {
+    context.pushStringPart(`<!--${FOR_ANCHOR_LABEL}-->`)
   }
 }

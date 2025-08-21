@@ -1,12 +1,16 @@
 import {
+  type AttributeNode,
   type BlockStatement,
   type CallExpression,
   type CompilerError,
   type CompilerOptions,
+  type DirectiveNode,
+  type ElementNode,
   ElementTypes,
   type IfStatement,
   type JSChildNode,
   NodeTypes,
+  type PlainElementNode,
   type RootNode,
   type TemplateChildNode,
   type TemplateLiteral,
@@ -20,7 +24,12 @@ import {
   isText,
   processExpression,
 } from '@vue/compiler-dom'
-import { escapeHtml, isString } from '@vue/shared'
+import {
+  BLOCK_ANCHOR_END_LABEL,
+  BLOCK_ANCHOR_START_LABEL,
+  escapeHtml,
+  isString,
+} from '@vue/shared'
 import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
 import { ssrProcessIf } from './transforms/ssrVIf'
 import { ssrProcessFor } from './transforms/ssrVFor'
@@ -158,10 +167,17 @@ export function processChildren(
   disableNestedFragments = false,
   disableComment = false,
 ): void {
-  if (asFragment) {
+  const vapor = context.options.vapor
+  if (asFragment && !vapor) {
     context.pushStringPart(`<!--[-->`)
   }
+
   const { children } = parent
+
+  if (vapor && isElementWithChildren(parent as PlainElementNode)) {
+    processBlockNodeAnchor(children)
+  }
+
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     switch (child.type) {
@@ -171,10 +187,19 @@ export function processChildren(
             ssrProcessElement(child, context)
             break
           case ElementTypes.COMPONENT:
+            if (child.needAnchor)
+              context.pushStringPart(`<!--${BLOCK_ANCHOR_START_LABEL}-->`)
             ssrProcessComponent(child, context, parent)
+            if (child.needAnchor)
+              context.pushStringPart(`<!--${BLOCK_ANCHOR_END_LABEL}-->`)
+
             break
           case ElementTypes.SLOT:
+            if (child.needAnchor)
+              context.pushStringPart(`<!--${BLOCK_ANCHOR_START_LABEL}-->`)
             ssrProcessSlotOutlet(child, context)
+            if (child.needAnchor)
+              context.pushStringPart(`<!--${BLOCK_ANCHOR_END_LABEL}-->`)
             break
           case ElementTypes.TEMPLATE:
             // TODO
@@ -209,10 +234,18 @@ export function processChildren(
         )
         break
       case NodeTypes.IF:
+        if (child.needAnchor)
+          context.pushStringPart(`<!--${BLOCK_ANCHOR_START_LABEL}-->`)
         ssrProcessIf(child, context, disableNestedFragments, disableComment)
+        if (child.needAnchor)
+          context.pushStringPart(`<!--${BLOCK_ANCHOR_END_LABEL}-->`)
         break
       case NodeTypes.FOR:
+        if (child.needAnchor)
+          context.pushStringPart(`<!--${BLOCK_ANCHOR_START_LABEL}-->`)
         ssrProcessFor(child, context, disableNestedFragments)
+        if (child.needAnchor)
+          context.pushStringPart(`<!--${BLOCK_ANCHOR_END_LABEL}-->`)
         break
       case NodeTypes.IF_BRANCH:
         // no-op - handled by ssrProcessIf
@@ -234,7 +267,7 @@ export function processChildren(
         return exhaustiveCheck
     }
   }
-  if (asFragment) {
+  if (asFragment && !vapor) {
     context.pushStringPart(`<!--]-->`)
   }
 }
@@ -248,4 +281,75 @@ export function processChildrenAsStatement(
   const childContext = createChildContext(parentContext, withSlotScopeId)
   processChildren(parent, childContext, asFragment)
   return createBlockStatement(childContext.body)
+}
+
+export function processBlockNodeAnchor(children: TemplateChildNode[]): void {
+  let prevBlocks: (TemplateChildNode & { needAnchor?: boolean })[] = []
+  let hasStaticNode = false
+  let blockCount = 0
+  for (const child of children) {
+    if (isBlockNode(child)) {
+      prevBlocks.push(child)
+      blockCount++
+    }
+
+    if (isStaticNode(child)) {
+      if (prevBlocks.length) {
+        if (hasStaticNode) {
+          // insert
+          prevBlocks.forEach(child => (child.needAnchor = true))
+        } else {
+          // prepend
+          prevBlocks.forEach(child => (child.needAnchor = true))
+        }
+        prevBlocks = []
+      }
+      hasStaticNode = true
+    }
+  }
+
+  // When there is only one block node, no anchor is needed,
+  // firstChild is used as the hydration node
+  if (prevBlocks.length && !(blockCount === 1 && !hasStaticNode)) {
+    // append
+    prevBlocks.forEach(child => (child.needAnchor = true))
+  }
+}
+
+export function hasBlockDir(
+  props: Array<AttributeNode | DirectiveNode>,
+): boolean {
+  return props.some(p => p.name === 'if' || p.name === 'for')
+}
+
+function isBlockNode(child: TemplateChildNode): boolean {
+  return (
+    child.type === NodeTypes.IF ||
+    child.type === NodeTypes.FOR ||
+    (child.type === NodeTypes.ELEMENT &&
+      (child.tagType === ElementTypes.COMPONENT ||
+        child.tagType === ElementTypes.SLOT ||
+        hasBlockDir(child.props)))
+  )
+}
+
+function isStaticNode(child: TemplateChildNode): boolean {
+  return (
+    child.type === NodeTypes.TEXT ||
+    child.type === NodeTypes.INTERPOLATION ||
+    child.type === NodeTypes.COMMENT ||
+    (child.type === NodeTypes.ELEMENT &&
+      child.tagType === ElementTypes.ELEMENT &&
+      !hasBlockDir(child.props))
+  )
+}
+
+export function isElementWithChildren(
+  node: TemplateChildNode,
+): node is ElementNode {
+  return (
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType === ElementTypes.ELEMENT &&
+    node.children.length > 0
+  )
 }
