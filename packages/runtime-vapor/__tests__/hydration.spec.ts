@@ -3342,146 +3342,189 @@ describe('Vapor Mode hydration', () => {
       expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
     })
 
-    // test('<pre> with newlines at the beginning', async () => {
-    //   const render = () => h('pre', null, '\n')
-    //   const html = await renderToString(createSSRApp({ render }))
-    //   mountWithHydration(html, render)
-    //   expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
-    // })
-    // test('boolean attr handling', () => {
-    //   mountWithHydration(`<input />`, () => h('input', { readonly: false }))
-    //   expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-    //   mountWithHydration(`<input readonly />`, () =>
-    //     h('input', { readonly: true }),
-    //   )
-    //   expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-    //   mountWithHydration(`<input readonly="readonly" />`, () =>
-    //     h('input', { readonly: true }),
-    //   )
-    //   expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-    // })
-    // test('client value is null or undefined', () => {
-    //   mountWithHydration(`<div></div>`, () =>
-    //     h('div', { draggable: undefined }),
-    //   )
-    //   expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-    //   mountWithHydration(`<input />`, () => h('input', { type: null }))
-    //   expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-    // })
-    // test('should not warn against object values', () => {
-    //   mountWithHydration(`<input />`, () => h('input', { from: {} }))
-    //   expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-    // })
-    // test('should not warn on falsy bindings of non-property keys', () => {
-    //   mountWithHydration(`<button />`, () => h('button', { href: undefined }))
-    //   expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-    // })
-    // test('should not warn on non-renderable option values', () => {
-    //   mountWithHydration(`<select><option>hello</option></select>`, () =>
-    //     h('select', [h('option', { value: ['foo'] }, 'hello')]),
-    //   )
-    //   expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-    // })
-    // test('should not warn css v-bind', () => {
-    //   const container = document.createElement('div')
-    //   container.innerHTML = `<div style="--foo:red;color:var(--foo);" />`
-    //   const app = createSSRApp({
-    //     setup() {
-    //       useCssVars(() => ({
-    //         foo: 'red',
-    //       }))
-    //       return () => h('div', { style: { color: 'var(--foo)' } })
-    //     },
-    //   })
-    //   app.mount(container)
-    //   expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-    // })
-    // // #10317 - test case from #10325
-    // test('css vars should only be added to expected on component root dom', () => {
-    //   const container = document.createElement('div')
-    //   container.innerHTML = `<div style="--foo:red;"><div style="color:var(--foo);" /></div>`
-    //   const app = createSSRApp({
-    //     setup() {
-    //       useCssVars(() => ({
-    //         foo: 'red',
-    //       }))
-    //       return () =>
-    //         h('div', null, [h('div', { style: { color: 'var(--foo)' } })])
-    //     },
-    //   })
-    //   app.mount(container)
-    //   expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-    // })
-    // // #11188
-    // test('css vars support fallthrough', () => {
-    //   const container = document.createElement('div')
-    //   container.innerHTML = `<div style="padding: 4px;--foo:red;"></div>`
-    //   const app = createSSRApp({
-    //     setup() {
-    //       useCssVars(() => ({
-    //         foo: 'red',
-    //       }))
-    //       return () => h(Child)
-    //     },
-    //   })
-    //   const Child = {
-    //     setup() {
-    //       return () => h('div', { style: 'padding: 4px' })
-    //     },
-    //   }
-    //   app.mount(container)
-    //   expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-    // })
-    // // #11189
-    // test('should not warn for directives that mutate DOM in created', () => {
-    //   const container = document.createElement('div')
-    //   container.innerHTML = `<div class="test red"></div>`
-    //   const vColor: ObjectDirective = {
-    //     created(el, binding) {
-    //       el.classList.add(binding.value)
-    //     },
-    //   }
-    //   const app = createSSRApp({
-    //     setup() {
-    //       return () =>
-    //         withDirectives(h('div', { class: 'test' }), [[vColor, 'red']])
-    //     },
-    //   })
-    //   app.mount(container)
-    //   expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-    // })
-    // test('escape css var name', () => {
-    //   const container = document.createElement('div')
-    //   container.innerHTML = `<div style="padding: 4px;--foo\\.bar:red;"></div>`
-    //   const app = createSSRApp({
-    //     setup() {
-    //       useCssVars(() => ({
-    //         'foo.bar': 'red',
-    //       }))
-    //       return () => h(Child)
-    //     },
-    //   })
-    //   const Child = {
-    //     setup() {
-    //       return () => h('div', { style: 'padding: 4px' })
-    //     },
-    //   }
-    //   app.mount(container)
-    //   expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-    // })
+    test('<pre> with newlines at the beginning', async () => {
+      await mountWithHydration(
+        `<pre>\n</pre>`,
+        `<pre>{{data}}</pre>`,
+        ref('\n'),
+      )
+
+      await mountWithHydration(
+        `<pre>\n</pre>`,
+        `<pre v-text="data"></pre>`,
+        ref('\n'),
+      )
+
+      await mountWithHydration(
+        `<pre>\n</pre>`,
+        `<pre v-bind="data"></pre>`,
+        ref({ textContent: '\n' }),
+      )
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('boolean attr handling', async () => {
+      await mountWithHydration(
+        `<input />`,
+        `<input :readonly="data" />`,
+        ref(false),
+      )
+
+      await mountWithHydration(
+        `<input readonly />`,
+        `<input :readonly="data" />`,
+        ref(true),
+      )
+
+      await mountWithHydration(
+        `<input readonly="readonly" />`,
+        `<input :readonly="data" />`,
+        ref(true),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('client value is null or undefined', async () => {
+      await mountWithHydration(
+        `<div></div>`,
+        `<div :draggable="data"></div>`,
+        ref(undefined),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+      await mountWithHydration(`<input />`, `<input :type="data" />`, ref(null))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn against object values', async () => {
+      await mountWithHydration(`<input />`, `<input :from="data" />`, ref({}))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn on falsy bindings of non-property keys', async () => {
+      await mountWithHydration(
+        `<button></button>`,
+        `<button :href="data"></button>`,
+        ref(undefined),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn on non-renderable option values', async () => {
+      await mountWithHydration(
+        `<select><option>hello</option></select>`,
+        `<select><option :value="data">hello</option></select>`,
+        ref(['foo']),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test.todo('should not warn css v-bind', () => {
+      // const container = document.createElement('div')
+      // container.innerHTML = `<div style="--foo:red;color:var(--foo);" />`
+      // const app = createSSRApp({
+      //   setup() {
+      //     useCssVars(() => ({
+      //       foo: 'red',
+      //     }))
+      //     return () => h('div', { style: { color: 'var(--foo)' } })
+      //   },
+      // })
+      // app.mount(container)
+      // expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    test.todo(
+      'css vars should only be added to expected on component root dom',
+      () => {
+        // const container = document.createElement('div')
+        // container.innerHTML = `<div style="--foo:red;"><div style="color:var(--foo);" /></div>`
+        // const app = createSSRApp({
+        //   setup() {
+        //     useCssVars(() => ({
+        //       foo: 'red',
+        //     }))
+        //     return () =>
+        //       h('div', null, [h('div', { style: { color: 'var(--foo)' } })])
+        //   },
+        // })
+        // app.mount(container)
+        // expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+      },
+    )
+
+    test.todo('css vars support fallthrough', () => {
+      // const container = document.createElement('div')
+      // container.innerHTML = `<div style="padding: 4px;--foo:red;"></div>`
+      // const app = createSSRApp({
+      //   setup() {
+      //     useCssVars(() => ({
+      //       foo: 'red',
+      //     }))
+      //     return () => h(Child)
+      //   },
+      // })
+      // const Child = {
+      //   setup() {
+      //     return () => h('div', { style: 'padding: 4px' })
+      //   },
+      // }
+      // app.mount(container)
+      // expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    // vapor directive does not have a created hook
+    test('should not warn for directives that mutate DOM in created', () => {
+      // const container = document.createElement('div')
+      // container.innerHTML = `<div class="test red"></div>`
+      // const vColor: ObjectDirective = {
+      //   created(el, binding) {
+      //     el.classList.add(binding.value)
+      //   },
+      // }
+      // const app = createSSRApp({
+      //   setup() {
+      //     return () =>
+      //       withDirectives(h('div', { class: 'test' }), [[vColor, 'red']])
+      //   },
+      // })
+      // app.mount(container)
+      // expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    test.todo('escape css var name', () => {
+      // const container = document.createElement('div')
+      // container.innerHTML = `<div style="padding: 4px;--foo\\.bar:red;"></div>`
+      // const app = createSSRApp({
+      //   setup() {
+      //     useCssVars(() => ({
+      //       'foo.bar': 'red',
+      //     }))
+      //     return () => h(Child)
+      //   },
+      // })
+      // const Child = {
+      //   setup() {
+      //     return () => h('div', { style: 'padding: 4px' })
+      //   },
+      // }
+      // app.mount(container)
+      // expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
   })
 
-  describe.todo('data-allow-mismatch', () => {
-    // test('element text content', () => {
-    //   const { container } = mountWithHydration(
-    //     `<div data-allow-mismatch="text">foo</div>`,
-    //     () => h('div', 'bar'),
-    //   )
-    //   expect(container.innerHTML).toBe(
-    //     '<div data-allow-mismatch="text">bar</div>',
-    //   )
-    //   expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
-    // })
+  describe('data-allow-mismatch', () => {
+    test('element text content', async () => {
+      const data = ref({ textContent: 'bar' })
+      const { container } = await mountWithHydration(
+        `<div data-allow-mismatch="text">foo</div>`,
+        `<div v-bind="data"></div>`,
+        data,
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="text">bar</div>',
+      )
+      expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
+    })
     // test('not enough children', () => {
     //   const { container } = mountWithHydration(
     //     `<div data-allow-mismatch="children"></div>`,
@@ -3502,16 +3545,17 @@ describe('Vapor Mode hydration', () => {
     //   )
     //   expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     // })
-    // test('complete mismatch', () => {
-    //   const { container } = mountWithHydration(
-    //     `<div data-allow-mismatch="children"><span>foo</span><span>bar</span></div>`,
-    //     () => h('div', [h('div', 'foo'), h('p', 'bar')]),
-    //   )
-    //   expect(container.innerHTML).toBe(
-    //     '<div data-allow-mismatch="children"><div>foo</div><p>bar</p></div>',
-    //   )
-    //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-    // })
+    test('complete mismatch', async () => {
+      const { container } = await mountWithHydration(
+        `<div data-allow-mismatch="children"><div>foo</div><!--dynamic-component--></div>`,
+        `<div><component :is="data">foo</component></div>`,
+        ref('span'),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="children"><span>foo</span><!--dynamic-component--></div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
     // test('fragment mismatch removal', () => {
     //   const { container } = mountWithHydration(
     //     `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--></div>`,
@@ -3566,30 +3610,39 @@ describe('Vapor Mode hydration', () => {
     //   )
     //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     // })
-    // test('class mismatch', () => {
-    //   mountWithHydration(
-    //     `<div class="foo bar" data-allow-mismatch="class"></div>`,
-    //     () => h('div', { class: 'foo' }),
-    //   )
-    //   expect(`Hydration class mismatch`).not.toHaveBeenWarned()
-    // })
-    // test('style mismatch', () => {
-    //   mountWithHydration(
-    //     `<div style="color:red;" data-allow-mismatch="style"></div>`,
-    //     () => h('div', { style: { color: 'green' } }),
-    //   )
-    //   expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-    // })
-    // test('attr mismatch', () => {
-    //   mountWithHydration(`<div data-allow-mismatch="attribute"></div>`, () =>
-    //     h('div', { id: 'foo' }),
-    //   )
-    //   mountWithHydration(
-    //     `<div id="bar" data-allow-mismatch="attribute"></div>`,
-    //     () => h('div', { id: 'foo' }),
-    //   )
-    //   expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-    // })
+    test('class mismatch', async () => {
+      await mountWithHydration(
+        `<div class="foo bar" data-allow-mismatch="class"></div>`,
+        `<div :class="data"></div>`,
+        ref('foo'),
+      )
+      expect(`Hydration class mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('style mismatch', async () => {
+      await mountWithHydration(
+        `<div style="color:red;" data-allow-mismatch="style"></div>`,
+        `<div :style="data"></div>`,
+        ref({ color: 'green' }),
+      )
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('attr mismatch', async () => {
+      await mountWithHydration(
+        `<div data-allow-mismatch="attribute"></div>`,
+        `<div :id="data"></div>`,
+        ref('foo'),
+      )
+
+      await mountWithHydration(
+        `<div id="bar" data-allow-mismatch="attribute"></div>`,
+        `<div :id="data"></div>`,
+        ref('foo'),
+      )
+
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
   })
 
   describe.todo('Teleport')
