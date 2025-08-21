@@ -597,7 +597,6 @@ export class VueElement
     _extraStyles && fullStyles.push(..._extraStyles)
     if (!fullStyles.length) return
 
-    if (!fullStyles) return
     if (owner) {
       if (owner === this._def || this._styleChildren.has(owner)) {
         return
