@@ -1,7 +1,13 @@
 import type { SuspenseBoundary } from './components/Suspense'
-import type { VNode, VNodeNormalizedRef, VNodeNormalizedRefAtom } from './vnode'
+import type {
+  VNode,
+  VNodeNormalizedRef,
+  VNodeNormalizedRefAtom,
+  VNodeRef,
+} from './vnode'
 import {
   EMPTY_OBJ,
+  NO,
   ShapeFlags,
   hasOwn,
   isArray,
@@ -79,6 +85,10 @@ export function setRef(
   const setupState = owner.setupState
   const canSetSetupRef = createCanSetSetupRefChecker(setupState)
 
+  const canSetRef = (ref: VNodeRef) => {
+    return !__DEV__ || !knownTemplateRefs.has(ref as any)
+  }
+
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
@@ -87,7 +97,13 @@ export function setRef(
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
-      oldRef.value = null
+      if (canSetRef(oldRef)) {
+        oldRef.value = null
+      }
+
+      // this type assertion is valid since `oldRef` has already been asserted to be non-null
+      const oldRawRefAtom = oldRawRef as VNodeNormalizedRefAtom
+      if (oldRawRefAtom.k) refs[oldRawRefAtom.k] = null
     }
   }
 
@@ -104,7 +120,9 @@ export function setRef(
             ? canSetSetupRef(ref)
               ? setupState[ref]
               : refs[ref]
-            : ref.value
+            : canSetRef(ref) || !rawRef.k
+              ? ref.value
+              : refs[rawRef.k]
           if (isUnmount) {
             isArray(existing) && remove(existing, refValue)
           } else {
@@ -115,8 +133,11 @@ export function setRef(
                   setupState[ref] = refs[ref]
                 }
               } else {
-                ref.value = [refValue]
-                if (rawRef.k) refs[rawRef.k] = ref.value
+                const newVal = [refValue]
+                if (canSetRef(ref)) {
+                  ref.value = newVal
+                }
+                if (rawRef.k) refs[rawRef.k] = newVal
               }
             } else if (!existing.includes(refValue)) {
               existing.push(refValue)
@@ -128,7 +149,9 @@ export function setRef(
             setupState[ref] = value
           }
         } else if (_isRef) {
-          ref.value = value
+          if (canSetRef(ref)) {
+            ref.value = value
+          }
           if (rawRef.k) refs[rawRef.k] = value
         } else if (__DEV__) {
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
@@ -153,7 +176,7 @@ export function createCanSetSetupRefChecker(
 ): (key: string) => boolean {
   const rawSetupState = toRaw(setupState)
   return setupState === EMPTY_OBJ
-    ? () => false
+    ? NO
     : (key: string) => {
         if (__DEV__) {
           if (hasOwn(rawSetupState, key) && !isRef(rawSetupState[key])) {
