@@ -172,6 +172,7 @@ export function defineCustomElement(
    */
   _createApp?: CreateAppFunction<Element>,
 ): VueElementConstructor {
+  if (isPlainObject(options)) options = extend({}, options)
   const Comp = defineComponent(options, extraOptions) as any
   if (isPlainObject(Comp)) extend(Comp, extraOptions)
   class VueCustomElement extends VueElement {

@@ -1774,4 +1774,16 @@ describe('defineCustomElement', () => {
       `<el-hyphenated-attr-removal></el-hyphenated-attr-removal>`,
     )
   })
+
+  test('no unexpected mutation of the 1st argument', () => {
+    const Foo = {
+      name: 'Foo',
+    }
+
+    defineCustomElement(Foo, { shadowRoot: false })
+
+    expect(Foo).toEqual({
+      name: 'Foo',
+    })
+  })
 })
