@@ -65,7 +65,11 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
       key: arg,
       value: handler,
       handler: true,
-      handlerModifiers: eventOptionModifiers,
+      handlerModifiers: {
+        keys: keyModifiers,
+        nonKeys: nonKeyModifiers,
+        options: eventOptionModifiers,
+      },
     }
   }
 
