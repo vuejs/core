@@ -161,13 +161,35 @@ const previewOptions = computed(() => ({
 </script>
 
 <template>
-  <Header :store="store" :prod="productionMode" :ssr="useSSRMode" :autoSave="autoSave" :theme="theme"
-    @toggle-theme="toggleTheme" @toggle-prod="toggleProdMode" @toggle-ssr="toggleSSR" @toggle-autosave="toggleAutoSave"
-    @reload-page="reloadPage" />
-  <Repl ref="replRef" :theme="theme" :editor="Monaco" @keydown.ctrl.s.prevent @keydown.meta.s.prevent :ssr="useSSRMode"
-    :model-value="autoSave" :editorOptions="{ autoSaveText: false }" :store="store" :showCompileOutput="true"
-    :showSsrOutput="useSSRMode" :showOpenSourceMap="true" :autoResize="true" :clearConsole="false"
-    :preview-options="previewOptions" />
+  <Header
+    :store="store"
+    :prod="productionMode"
+    :ssr="useSSRMode"
+    :autoSave="autoSave"
+    :theme="theme"
+    @toggle-theme="toggleTheme"
+    @toggle-prod="toggleProdMode"
+    @toggle-ssr="toggleSSR"
+    @toggle-autosave="toggleAutoSave"
+    @reload-page="reloadPage"
+  />
+  <Repl
+    ref="replRef"
+    :theme="theme"
+    :editor="Monaco"
+    @keydown.ctrl.s.prevent
+    @keydown.meta.s.prevent
+    :ssr="useSSRMode"
+    :model-value="autoSave"
+    :editorOptions="{ autoSaveText: false }"
+    :store="store"
+    :showCompileOutput="true"
+    :showSsrOutput="useSSRMode"
+    :showOpenSourceMap="true"
+    :autoResize="true"
+    :clearConsole="false"
+    :preview-options="previewOptions"
+  />
 </template>
 
 <style>
