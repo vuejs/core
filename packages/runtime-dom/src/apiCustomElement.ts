@@ -592,9 +592,14 @@ export class VueElement
     owner?: ConcreteComponent,
   ) {
     const fullStyles: string[] = []
-    styles && fullStyles.push(...styles)
-    const { _extraStyles } = this
-    _extraStyles && fullStyles.push(..._extraStyles)
+    if (styles && styles.length) {
+      fullStyles.push(...styles)
+    }
+    // Only apply extraStyles for the root element injection.
+    if (!owner) {
+      const { _extraStyles } = this
+      _extraStyles && fullStyles.push(..._extraStyles)
+    }
     if (!fullStyles.length) return
 
     if (owner) {
