@@ -36,6 +36,7 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import { setParentSuspense } from './components/Suspense'
 
 export const interopKey: unique symbol = Symbol(`interop`)
 
@@ -44,7 +45,7 @@ const vaporInteropImpl: Omit<
   VaporInteropInterface,
   'vdomMount' | 'vdomUnmount' | 'vdomSlot'
 > = {
-  mount(vnode, container, anchor, parentComponent) {
+  mount(vnode, container, anchor, parentComponent, parentSuspense) {
     const selfAnchor = (vnode.el = vnode.anchor = createTextNode())
     container.insertBefore(selfAnchor, anchor)
     const prev = currentInstance
@@ -52,6 +53,10 @@ const vaporInteropImpl: Omit<
 
     const propsRef = shallowRef(vnode.props)
     const slotsRef = shallowRef(vnode.children)
+
+    if (__FEATURE_SUSPENSE__) {
+      setParentSuspense(parentSuspense)
+    }
 
     const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
       () => propsRef.value,
@@ -67,6 +72,8 @@ const vaporInteropImpl: Omit<
       {
         _: slotsRef, // pass the slots ref
       } as any as RawSlots,
+      undefined,
+      undefined,
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
@@ -87,8 +94,12 @@ const vaporInteropImpl: Omit<
 
   unmount(vnode, doRemove) {
     const container = doRemove ? vnode.anchor!.parentNode : undefined
-    if (vnode.component) {
-      unmountComponent(vnode.component as any, container)
+    const instance = vnode.component as any as VaporComponentInstance
+    if (instance) {
+      // the async component may not be resolved yet, block is null
+      if (instance.block) {
+        unmountComponent(instance, container)
+      }
     } else if (vnode.vb) {
       remove(vnode.vb, container)
     }
