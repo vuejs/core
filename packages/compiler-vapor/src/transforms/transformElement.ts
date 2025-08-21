@@ -250,7 +250,7 @@ function transformNativeElement(
   }
 
   if (singleRoot) {
-    context.ir.rootTemplateIndex = context.ir.template.length
+    context.ir.rootTemplateIndex = context.ir.template.size
   }
 
   if (

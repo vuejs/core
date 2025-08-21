@@ -1,5 +1,11 @@
-import { Namespaces, NodeTypes, type ParserOptions } from '@vue/compiler-core'
-import { isHTMLTag, isMathMLTag, isSVGTag, isVoidTag } from '@vue/shared'
+import { NodeTypes, type ParserOptions } from '@vue/compiler-core'
+import {
+  Namespaces,
+  isHTMLTag,
+  isMathMLTag,
+  isSVGTag,
+  isVoidTag,
+} from '@vue/shared'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 import { decodeHtmlBrowser } from './decodeHtmlBrowser'
 
@@ -24,7 +30,7 @@ export const parserOptions: ParserOptions = {
     let ns = parent ? parent.ns : rootNamespace
     if (parent && ns === Namespaces.MATH_ML) {
       if (parent.tag === 'annotation-xml') {
-        if (tag === 'svg') {
+        if (isSVGTag(tag)) {
           return Namespaces.SVG
         }
         if (
@@ -57,10 +63,10 @@ export const parserOptions: ParserOptions = {
     }
 
     if (ns === Namespaces.HTML) {
-      if (tag === 'svg') {
+      if (isSVGTag(tag)) {
         return Namespaces.SVG
       }
-      if (tag === 'math') {
+      if (isMathMLTag(tag)) {
         return Namespaces.MATH_ML
       }
     }

@@ -465,6 +465,17 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > :class w/ svg elements 1`] = `
+"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<svg></svg>", true, 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setAttr(n0, "class", _ctx.cls))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > :innerHTML 1`] = `
 "import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
