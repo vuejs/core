@@ -1589,38 +1589,32 @@ export function inferRuntimeType(
       case 'TSTypeReference': {
         const resolved = resolveTypeReference(ctx, node, scope)
         if (resolved) {
-          // #13240
-          // Special case for function type aliases to ensure correct runtime behavior
-          // other type aliases still fallback to unknown as before
-          if (
-            resolved.type === 'TSTypeAliasDeclaration' &&
-            resolved.typeAnnotation.type === 'TSFunctionType'
-          ) {
-            return ['Function']
+          if (resolved.type === 'TSTypeAliasDeclaration') {
+            // #13240
+            // Special case for function type aliases to ensure correct runtime behavior
+            // other type aliases still fallback to unknown as before
+            if (resolved.typeAnnotation.type === 'TSFunctionType') {
+              return ['Function']
+            }
+
+            if (node.typeParameters) {
+              const typeParams: Record<string, Node> = Object.create(null)
+              if (resolved.typeParameters) {
+                resolved.typeParameters.params.forEach((p, i) => {
+                  typeParams![p.name] = node.typeParameters!.params[i]
+                })
+              }
+              return inferRuntimeType(
+                ctx,
+                resolved.typeAnnotation,
+                resolved._ownerScope,
+                isKeyOf,
+                typeParams,
+              )
+            }
           }
 
-          if (!node.typeParameters) {
-            return inferRuntimeType(
-              ctx,
-              resolved,
-              resolved._ownerScope,
-              isKeyOf,
-            )
-          } else if (resolved.type === 'TSTypeAliasDeclaration') {
-            const typeParams: Record<string, Node> = Object.create(null)
-            if (resolved.typeParameters) {
-              resolved.typeParameters.params.forEach((p, i) => {
-                typeParams![p.name] = node.typeParameters!.params[i]
-              })
-            }
-            return inferRuntimeType(
-              ctx,
-              resolved.typeAnnotation,
-              resolved._ownerScope,
-              isKeyOf,
-              typeParams,
-            )
-          }
+          return inferRuntimeType(ctx, resolved, resolved._ownerScope, isKeyOf)
         }
         if (node.typeName.type === 'Identifier') {
           if (typeParameters && typeParameters[node.typeName.name]) {
