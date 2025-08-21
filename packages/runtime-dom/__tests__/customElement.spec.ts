@@ -852,12 +852,13 @@ describe('defineCustomElement', () => {
           return h('div', 'hello')
         },
       })
-      const Foo = defineCustomElement(def)
+      const Foo = defineCustomElement(def, {
+        extraStyles: [`div { color: green; }`],
+      })
       customElements.define('my-el-with-styles', Foo)
       container.innerHTML = `<my-el-with-styles></my-el-with-styles>`
       const el = container.childNodes[0] as VueElement
-      const style = el.shadowRoot?.querySelector('style')!
-      expect(style.textContent).toBe(`div { color: red; }`)
+      assertStyles(el, [`div { color: red; }`, `div { color: green; }`])
 
       // hmr
       __VUE_HMR_RUNTIME__.reload('foo', {
@@ -866,7 +867,11 @@ describe('defineCustomElement', () => {
       } as any)
 
       await nextTick()
-      assertStyles(el, [`div { color: blue; }`, `div { color: yellow; }`])
+      assertStyles(el, [
+        `div { color: blue; }`,
+        `div { color: yellow; }`,
+        `div { color: green; }`,
+      ])
     })
 
     test("child components should inject styles to root element's shadow root", async () => {

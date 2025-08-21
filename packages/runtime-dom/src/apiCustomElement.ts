@@ -52,6 +52,7 @@ export type VueElementConstructor<P = {}> = {
 
 export interface CustomElementOptions {
   styles?: string[]
+  extraStyles?: string[]
   shadowRoot?: boolean
   nonce?: string
   configureApp?: (app: App) => void
@@ -220,6 +221,10 @@ export class VueElement
    * @internal
    */
   _nonce: string | undefined = this._def.nonce
+  /**
+   * @internal
+   */
+  _extraStyles?: string[] = this._def.extraStyles
 
   /**
    * @internal
@@ -391,7 +396,7 @@ export class VueElement
       // apply CSS
       if (this.shadowRoot) {
         this._applyStyles(styles)
-      } else if (__DEV__ && styles) {
+      } else if (__DEV__ && (styles || this._extraStyles)) {
         warn(
           'Custom element style injection is not supported when using ' +
             'shadowRoot: false',
@@ -586,7 +591,13 @@ export class VueElement
     styles: string[] | undefined,
     owner?: ConcreteComponent,
   ) {
-    if (!styles) return
+    const fullStyles: string[] = []
+    styles && fullStyles.push(...styles)
+    const { _extraStyles } = this
+    _extraStyles && fullStyles.push(..._extraStyles)
+    if (!fullStyles.length) return
+
+    if (!fullStyles) return
     if (owner) {
       if (owner === this._def || this._styleChildren.has(owner)) {
         return
@@ -594,10 +605,10 @@ export class VueElement
       this._styleChildren.add(owner)
     }
     const nonce = this._nonce
-    for (let i = styles.length - 1; i >= 0; i--) {
+    for (let i = fullStyles.length - 1; i >= 0; i--) {
       const s = document.createElement('style')
       if (nonce) s.setAttribute('nonce', nonce)
-      s.textContent = styles[i]
+      s.textContent = fullStyles[i]
       this.shadowRoot!.prepend(s)
       // record for HMR
       if (__DEV__) {
