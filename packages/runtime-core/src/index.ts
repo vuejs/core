@@ -576,3 +576,7 @@ export {
   isValidHtmlOrSvgAttribute,
   getAttributeMismatch,
 } from './hydration'
+/**
+ * @internal
+ */
+export { createCanSetSetupRefChecker } from './rendererTemplateRef'

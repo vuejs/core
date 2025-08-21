@@ -74,6 +74,8 @@ export function ssrRenderSlotInner(
         )
       } else if (fallbackRenderFn) {
         fallbackRenderFn()
+      } else if (transition) {
+        push(`<!---->`)
       }
     } else {
       // ssr slot.
@@ -123,13 +125,19 @@ export function ssrRenderSlotInner(
           end--
         }
 
-        for (let i = start; i < end; i++) {
-          push(slotBuffer[i])
+        if (start < end) {
+          for (let i = start; i < end; i++) {
+            push(slotBuffer[i])
+          }
+        } else if (transition) {
+          push(`<!---->`)
         }
       }
     }
   } else if (fallbackRenderFn) {
     fallbackRenderFn()
+  } else if (transition) {
+    push(`<!---->`)
   }
 }
 
