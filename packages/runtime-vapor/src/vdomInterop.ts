@@ -158,7 +158,7 @@ function createVDOMComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
 ): VaporFragment {
-  const frag = new VaporFragment([])
+  const frag = new VaporFragment([] as Block[])
   const vnode = createVNode(
     component,
     rawProps && new Proxy(rawProps, rawPropsProxyHandlers),
@@ -216,6 +216,8 @@ function createVDOMComponent(
         parentInstance as any,
       )
     }
+
+    frag.nodes = [vnode.el] as Block[]
   }
 
   frag.remove = unmount

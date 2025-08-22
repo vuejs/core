@@ -1402,6 +1402,34 @@ describe('defineCustomElement', () => {
   })
 
   describe('expose', () => {
+    test('expose w/ options api', async () => {
+      const E = defineCustomElement({
+        data() {
+          return {
+            value: 0,
+          }
+        },
+        methods: {
+          foo() {
+            ;(this as any).value++
+          },
+        },
+        expose: ['foo'],
+        render(_ctx: any) {
+          return h('div', null, _ctx.value)
+        },
+      })
+      customElements.define('my-el-expose-options-api', E)
+
+      container.innerHTML = `<my-el-expose-options-api></my-el-expose-options-api>`
+      const e = container.childNodes[0] as VueElement & {
+        foo: () => void
+      }
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>0</div>`)
+      e.foo()
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>1</div>`)
+    })
     test('expose attributes and callback', async () => {
       type SetValue = (value: string) => void
       let fn: MockedFunction<SetValue>

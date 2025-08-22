@@ -11,6 +11,7 @@ import {
 import { makeInteropRender } from './_utils'
 import {
   applyTextModel,
+  applyVShow,
   child,
   createComponent,
   defineVaporComponent,
@@ -110,6 +111,37 @@ describe('vdomInterop', () => {
 
       // fn should be called once
       expect(fn).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('v-show', () => {
+    test('apply v-show to vdom child', async () => {
+      const VDomChild = {
+        setup() {
+          return () => h('div')
+        },
+      }
+
+      const show = ref(false)
+      const VaporChild = defineVaporComponent({
+        setup() {
+          const n1 = createComponent(VDomChild as any)
+          applyVShow(n1, () => show.value)
+          return n1
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div style="display: none;"></div>')
+
+      show.value = true
+      await nextTick()
+      expect(html()).toBe('<div style=""></div>')
     })
   })
 

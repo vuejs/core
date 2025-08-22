@@ -12,6 +12,7 @@ import {
   insert,
   prepend,
   renderEffect,
+  setInsertionState,
   template,
 } from '../src'
 import {
@@ -508,6 +509,36 @@ describe('component: slots', () => {
       toggle.value = true
       await nextTick()
       expect(host.innerHTML).toBe('<div><h1></h1><!--slot--></div>')
+    })
+
+    test('consecutive slots with insertion state', async () => {
+      const { component: Child } = define({
+        setup() {
+          const n2 = template('<div><div>baz</div></div>', true)() as any
+          setInsertionState(n2, 0)
+          createSlot('default', null)
+          setInsertionState(n2, 0)
+          createSlot('foo', null)
+          return n2
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => template('default')(),
+            foo: () => template('foo')(),
+          })
+        },
+      }).render()
+
+      expect(html()).toBe(
+        `<div>` +
+          `default<!--slot-->` +
+          `foo<!--slot-->` +
+          `<div>baz</div>` +
+          `</div>`,
+      )
     })
 
     test('render fallback when slot content is not valid', async () => {
