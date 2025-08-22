@@ -99,13 +99,27 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
-function setFragmentFallback(fragment: VaporFragment, fallback: BlockFn): void {
-  // stop recursion if fragment has its own fallback
-  if (fragment.fallback) return
+export function setFragmentFallback(
+  fragment: VaporFragment,
+  fallback: BlockFn,
+): void {
+  if (fragment.fallback) {
+    const originalFallback = fragment.fallback
+    // if the original fallback also renders invalid blocks,
+    // this ensures proper fallback chaining
+    fragment.fallback = () => {
+      const fallbackNodes = originalFallback()
+      if (isValidBlock(fallbackNodes)) {
+        return fallbackNodes
+      }
+      return fallback()
+    }
+  } else {
+    fragment.fallback = fallback
+  }
 
-  fragment.fallback = fallback
   if (isFragment(fragment.nodes)) {
-    setFragmentFallback(fragment.nodes, fallback)
+    setFragmentFallback(fragment.nodes, fragment.fallback)
   }
 }
 
