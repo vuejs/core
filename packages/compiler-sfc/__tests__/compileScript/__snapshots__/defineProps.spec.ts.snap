@@ -154,27 +154,6 @@ return {  }
 })"
 `;
 
-exports[`defineProps > w/ TSTypeAliasDeclaration 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-type FunFoo<O> = (item: O) => boolean;
-    type FunBar = FunFoo<number>;
-    
-export default /*@__PURE__*/_defineComponent({
-  props: {
-    foo: { type: Function, required: false, default: () => true },
-    bar: { type: Function, required: false, default: () => true }
-  },
-  setup(__props: any, { expose: __expose }) {
-  __expose();
-
-    
-    
-return {  }
-}
-
-})"
-`;
-
 exports[`defineProps > w/ exported interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Props { x?: number }
