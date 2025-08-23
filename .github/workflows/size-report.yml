@@ -22,7 +22,7 @@ jobs:
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4.1.0
@@ -37,7 +37,7 @@ jobs:
         run: pnpm install
 
       - name: Download Size Data
-        uses: dawidd6/action-download-artifact@v9
+        uses: dawidd6/action-download-artifact@v11
         with:
           name: size-data
           run_id: ${{ github.event.workflow_run.id }}
@@ -56,7 +56,7 @@ jobs:
           path: temp/size/base.txt
 
       - name: Download Previous Size Data
-        uses: dawidd6/action-download-artifact@v9
+        uses: dawidd6/action-download-artifact@v11
         with:
           branch: ${{ steps.pr-base.outputs.content }}
           workflow: size-data.yml

@@ -538,7 +538,7 @@ describe('resolveType', () => {
 
     expect(props).toStrictEqual({
       foo: ['Symbol', 'String', 'Number'],
-      bar: [UNKNOWN_TYPE],
+      bar: ['String', 'Number'],
     })
   })
 
@@ -728,6 +728,49 @@ describe('resolveType', () => {
     defineProps<UploadProps>()`)
     expect(props).toStrictEqual({
       fileList: ['Array'],
+    })
+  })
+
+  describe('type alias declaration', () => {
+    // #13240
+    test('function type', () => {
+      expect(
+        resolve(`
+      type FunFoo<O> = (item: O) => boolean;
+      type FunBar = FunFoo<number>;
+      defineProps<{
+        foo?: FunFoo<number>;
+        bar?: FunBar;
+      }>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Function'],
+        bar: ['Function'],
+      })
+    })
+
+    test('with intersection type', () => {
+      expect(
+        resolve(`
+      type Brand<T> = T & {};
+      defineProps<{
+        foo: Brand<string>;
+      }>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['String', 'Object'],
+      })
+    })
+
+    test('with union type', () => {
+      expect(
+        resolve(`
+        type Wrapped<T> = T | symbol | number
+        defineProps<{foo?: Wrapped<boolean>}>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Boolean', 'Symbol', 'Number'],
+      })
     })
   })
 
