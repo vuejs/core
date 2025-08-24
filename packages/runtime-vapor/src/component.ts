@@ -63,6 +63,7 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
+import type { VaporNode, VaporParentNode } from './dom/nodeDraft'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -526,8 +527,8 @@ export function createComponentWithFallback(
 
 export function mountComponent(
   instance: VaporComponentInstance,
-  parent: ParentNode,
-  anchor?: Node | null | 0,
+  parent: VaporParentNode,
+  anchor?: VaporNode | null | 0,
 ): void {
   if (__DEV__) {
     startMeasure(instance, `mount`)
@@ -543,7 +544,7 @@ export function mountComponent(
 
 export function unmountComponent(
   instance: VaporComponentInstance,
-  parentNode?: ParentNode,
+  parentNode?: VaporParentNode,
 ): void {
   if (instance.isMounted && !instance.isUnmounted) {
     if (__DEV__ && instance.type.__hmrId) {
