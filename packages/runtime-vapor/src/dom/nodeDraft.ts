@@ -5,9 +5,18 @@ export type VaporNode<N extends Node = Node, D extends NodeDraft = NodeDraft> =
 export type VaporParentNode<
   N extends ParentNode = ParentNode,
   D extends NodeDraft = NodeDraft,
-> = N | NodeRef<boolean, N, D>
+> =
+  | (N & { $anchor?: VaporNode | null })
+  | NodeRef<
+      boolean,
+      N & { $anchor?: VaporNode | null },
+      D & { $anchor?: VaporNode | null }
+    >
 
-export type MaybeNodeDraft = Node | NodeDraft
+export type MaybeNodeDraft<
+  N extends Node = Node,
+  D extends NodeDraft = NodeDraft,
+> = N | D
 
 function unenumerable(obj: any, key: string | symbol) {
   Object.defineProperty(obj, key, {
@@ -22,7 +31,7 @@ export class NodeRef<
   N extends Node = Node,
   D extends NodeDraft = NodeDraft,
 > {
-  get ref(): T extends true ? N : D {
+  get ref(): typeof this.resolved extends true ? N : D {
     return this.resolved ? (this.source! as any) : (this.draft as any)
   }
   private source?: N
@@ -56,14 +65,14 @@ export class NodeDraft {
   constructor(
     private __v_nodeRef: NodeRef,
     private __v_childNodes: NodeRef<false>[] = [],
-    private __v_parentNode: NodeRef<false> | null = null,
+    private __v_parentNode: NodeRef<false, ParentNode> | null = null,
   ) {
     unenumerable(this, '__v_nodeRef')
     unenumerable(this, '__v_childNodes')
     unenumerable(this, '__v_parentNode')
   }
 
-  get parentNode(): NodeRef | null {
+  get parentNode(): NodeRef<boolean, ParentNode> | null {
     return this.__v_parentNode
   }
 
@@ -91,10 +100,21 @@ export class CommentDraft extends NodeDraft {
   public data: string = ''
 }
 
-export function toNode(node: VaporNode): MaybeNodeDraft {
-  return node instanceof NodeRef ? node.ref : node
+type ToNode<T extends VaporNode> =
+  T extends VaporNode<infer N, infer D> ? MaybeNodeDraft<N, D> : never
+
+export function toNode<T>(
+  node: T,
+): T extends NodeRef
+  ? T['ref']
+  : T extends Node
+    ? T
+    : T extends VaporNode
+      ? ToNode<T>
+      : T {
+  return node instanceof NodeRef ? (node.ref as any) : (node as any)
 }
 
-export function isUnresolvedNode(node: VaporNode): node is NodeRef<false> {
+export function isUnresolvedVaporNode(node: VaporNode): node is NodeRef<false> {
   return node instanceof NodeRef && !node.resolved
 }

@@ -7,7 +7,7 @@ import {
   TextNodeDraft,
   type VaporNode,
   type VaporParentNode,
-  isUnresolvedNode,
+  isUnresolvedVaporNode,
   toNode,
 } from './nodeDraft'
 
@@ -32,7 +32,7 @@ export function createComment(data: string): VaporNode<Comment, CommentDraft> {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function child(node: VaporParentNode): VaporNode {
-  if (isUnresolvedNode(node) && !node.ref.childNodes[0]) {
+  if (isUnresolvedVaporNode(node) && !node.ref.childNodes[0]) {
     return (node.ref.childNodes[0] = new NodeRef())
   }
 
@@ -41,7 +41,7 @@ export function child(node: VaporParentNode): VaporNode {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function nthChild(node: ParentNode, i: number): VaporNode {
-  if (isUnresolvedNode(node) && !node.ref.childNodes[i]) {
+  if (isUnresolvedVaporNode(node) && !node.ref.childNodes[i]) {
     return (node.ref.childNodes[i] = new NodeRef())
   }
 
@@ -50,7 +50,7 @@ export function nthChild(node: ParentNode, i: number): VaporNode {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function next(node: VaporParentNode): VaporNode {
-  if (isUnresolvedNode(node) && !node.ref.nextSibling) {
+  if (isUnresolvedVaporNode(node) && !node.ref.nextSibling) {
     const childNodes = node.ref.childNodes
     return (childNodes[childNodes.indexOf(node) + 1] = new NodeRef())
   }
