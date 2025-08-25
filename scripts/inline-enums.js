@@ -40,8 +40,19 @@ function evaluate(exp) {
   return new Function(`return ${exp}`)()
 }
 
+/**
+ * @param {import('oxc-parser').Expression | import('oxc-parser').PrivateIdentifier} exp
+ * @returns { exp is import('oxc-parser').StringLiteral | import('oxc-parser').NumericLiteral }
+ */
+function isStringOrNumberLiteral(exp) {
+  return (
+    exp.type === 'Literal' &&
+    (typeof exp.value === 'string' || typeof exp.value === 'number')
+  )
+}
+
 // this is called in the build script entry once
-// so the data can be shared across concurrent Rollup processes
+// so the data can be shared across concurrent Rolldown processes
 export function scanEnums() {
   /** @type {{ [file: string]: EnumDeclaration[] }} */
   const declarations = Object.create(null)
@@ -61,13 +72,10 @@ export function scanEnums() {
   ]
 
   // 2. parse matched files to collect enum info
-  let i = 0
   for (const relativeFile of files) {
     const file = path.resolve(process.cwd(), relativeFile)
     const content = readFileSync(file, 'utf-8')
-    const res = parseSync(content, {
-      // plugins: ['typescript'],
-      sourceFilename: file,
+    const res = parseSync(file, content, {
       sourceType: 'module',
     })
 
@@ -99,9 +107,16 @@ export function scanEnums() {
         /** @type {Array<EnumMember>} */
         const members = []
 
-        for (let i = 0; i < decl.members.length; i++) {
-          const e = decl.members[i]
-          const key = e.id.type === 'Identifier' ? e.id.name : e.id.value
+        for (let i = 0; i < decl.body.members.length; i++) {
+          const e = decl.body.members[i]
+          const key =
+            e.id.type === 'Identifier'
+              ? e.id.name
+              : e.id.type === 'Literal'
+                ? e.id.value
+                : ''
+          if (key === '') continue
+
           const fullKey = /** @type {const} */ (`${id}.${key}`)
           const saveValue = (/** @type {string | number} */ value) => {
             // We need allow same name enum in different file.
@@ -120,23 +135,17 @@ export function scanEnums() {
           if (init) {
             /** @type {string | number} */
             let value
-            if (
-              init.type === 'StringLiteral' ||
-              init.type === 'NumericLiteral'
-            ) {
+            if (isStringOrNumberLiteral(init)) {
               value = init.value
             }
             // e.g. 1 << 2
             else if (init.type === 'BinaryExpression') {
               const resolveValue = (
-                /** @type {import('@babel/types').Expression | import('@babel/types').PrivateName} */ node,
+                /** @type {import('oxc-parser').Expression | import('oxc-parser').PrivateIdentifier} */ node,
               ) => {
                 assert.ok(typeof node.start === 'number')
                 assert.ok(typeof node.end === 'number')
-                if (
-                  node.type === 'NumericLiteral' ||
-                  node.type === 'StringLiteral'
-                ) {
+                if (isStringOrNumberLiteral(node)) {
                   return node.value
                 } else if (
                   node.type === 'MemberExpression' ||
@@ -163,10 +172,7 @@ export function scanEnums() {
               }${resolveValue(init.right)}`
               value = evaluate(exp)
             } else if (init.type === 'UnaryExpression') {
-              if (
-                init.argument.type === 'StringLiteral' ||
-                init.argument.type === 'NumericLiteral'
-              ) {
+              if (isStringOrNumberLiteral(init.argument)) {
                 const exp = `${init.operator}${init.argument.value}`
                 value = evaluate(exp)
               } else {
@@ -227,7 +233,7 @@ export function scanEnums() {
 }
 
 /**
- * @returns {[import('rollup').Plugin, Record<string, string>]}
+ * @returns {[import('rolldown').Plugin, Record<string, string>]}
  */
 export function inlineEnums() {
   if (!existsSync(ENUM_CACHE_PATH)) {
@@ -242,7 +248,7 @@ export function inlineEnums() {
   //    3.1 files w/ enum declaration: rewrite declaration as object literal
   //    3.2 files using enum: inject into rolldown define
   /**
-   * @type {import('rollup').Plugin}
+   * @type {import('rolldown').Plugin}
    */
   const plugin = {
     name: 'inline-enum',
