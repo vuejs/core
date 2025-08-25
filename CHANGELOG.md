@@ -1,3 +1,12 @@
+## [3.5.20](https://github.com/vuejs/core/compare/v3.5.19...v3.5.20) (2025-08-25)
+
+
+### Bug Fixes
+
+* **runtime-dom:** add name to vShow for prop mismatch check ([#13806](https://github.com/vuejs/core/issues/13806)) ([1031e8d](https://github.com/vuejs/core/commit/1031e8de08b735059217b1ad0057f62565c99c4f)), closes [#13805](https://github.com/vuejs/core/issues/13805) re-fix [#13744](https://github.com/vuejs/core/issues/13744) revert [#13777](https://github.com/vuejs/core/issues/13777) 
+
+
+
 ## [3.5.19](https://github.com/vuejs/core/compare/v3.5.18...v3.5.19) (2025-08-21)
 
 
