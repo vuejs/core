@@ -70,18 +70,22 @@ describe('useTemplateRef', () => {
     expect(t1!.value).toBe(null)
   })
 
-  test('should warn on duplicate useTemplateRef', () => {
+  test('should return same element for multiple useTemplateRef calls with same key', async () => {
+    let t1, t2
+    const key = ref('foo')
     const root = nodeOps.createElement('div')
     render(
       h(() => {
-        useTemplateRef('foo')
-        useTemplateRef('foo')
-        return ''
+        t1 = useTemplateRef('foo')
+        t2 = useTemplateRef('foo')
+        return h('div', { ref: key.value })
       }),
       root,
     )
-
-    expect(`useTemplateRef('foo') already exists.`).toHaveBeenWarned()
+    await nextTick()
+    expect(t1!.value).toBe(root.children[0])
+    expect(t2!.value).toBe(root.children[0])
+    expect(t1!.value).toBe(t2!.value)
   })
 
   // #11795
