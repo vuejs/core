@@ -28,10 +28,9 @@
       groupName: 'build',
       matchPackageNames: [
         'vite',
-        '@swc/core',
-        'rollup{/,}**',
-        'esbuild{/,}**',
-        '@rollup{/,}**',
+        'rolldown{/,}**',
+        '@rolldown{/,}**',
+        'oxc{/,}**',
         '@vitejs{/,}**',
       ],
     },

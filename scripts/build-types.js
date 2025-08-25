@@ -23,10 +23,7 @@ for (const file of await glob('packages/*/src/**/*.ts')) {
   })
   if (dts.errors.length) {
     dts.errors.forEach(err => {
-      // temporary workaround for https://github.com/oxc-project/oxc/issues/5668
-      if (!err.includes('set value(_: S)')) {
-        console.error(err)
-      }
+      console.error(err)
       errs += err + '\n'
     })
   }

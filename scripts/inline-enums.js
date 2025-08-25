@@ -52,7 +52,7 @@ function isStringOrNumberLiteral(exp) {
 }
 
 // this is called in the build script entry once
-// so the data can be shared across concurrent Rollup processes
+// so the data can be shared across concurrent Rolldown processes
 export function scanEnums() {
   /** @type {{ [file: string]: EnumDeclaration[] }} */
   const declarations = Object.create(null)
@@ -72,7 +72,6 @@ export function scanEnums() {
   ]
 
   // 2. parse matched files to collect enum info
-  let i = 0
   for (const relativeFile of files) {
     const file = path.resolve(process.cwd(), relativeFile)
     const content = readFileSync(file, 'utf-8')
@@ -234,7 +233,7 @@ export function scanEnums() {
 }
 
 /**
- * @returns {[import('rollup').Plugin, Record<string, string>]}
+ * @returns {[import('rolldown').Plugin, Record<string, string>]}
  */
 export function inlineEnums() {
   if (!existsSync(ENUM_CACHE_PATH)) {
@@ -249,7 +248,7 @@ export function inlineEnums() {
   //    3.1 files w/ enum declaration: rewrite declaration as object literal
   //    3.2 files using enum: inject into rolldown define
   /**
-   * @type {import('rollup').Plugin}
+   * @type {import('rolldown').Plugin}
    */
   const plugin = {
     name: 'inline-enum',

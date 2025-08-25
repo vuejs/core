@@ -147,7 +147,6 @@ export function createConfigsForPackage({
 
     output.externalLiveBindings = false
 
-    // https://github.com/rollup/rollup/pull/5380
     // @ts-expect-error Not supported yet
     output.reexportProtoFromExternal = false
 
@@ -158,7 +157,7 @@ export function createConfigsForPackage({
     let entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
 
     // the compat build needs both default AND named exports. This will cause
-    // Rollup to complain for non-ESM targets, so we use separate entries for
+    // Rolldown to complain for non-ESM targets, so we use separate entries for
     // esm vs. non-esm builds.
     if (isCompatPackage && (isBrowserESMBuild || isBundlerESMBuild)) {
       entryFile = /runtime$/.test(format)
@@ -240,7 +239,11 @@ export function createConfigsForPackage({
       }
 
       if (Object.keys(replacements).length) {
-        return [replacePlugin(replacements)]
+        return [
+          replacePlugin(replacements, {
+            preventAssignment: true,
+          }),
+        ]
       } else {
         return []
       }
@@ -328,7 +331,6 @@ export function createConfigsForPackage({
         }
       },
       treeshake: {
-        // https://github.com/rolldown/rolldown/issues/1917
         moduleSideEffects: false,
       },
     }

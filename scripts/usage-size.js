@@ -2,9 +2,8 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { rolldown } from 'rolldown'
-import nodeResolve from '@rollup/plugin-node-resolve'
 import { minify } from 'oxc-minify'
-import replace from '@rollup/plugin-replace'
+import { replacePlugin } from 'rolldown/experimental'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { parseArgs } from 'node:util'
 import pico from 'picocolors'
@@ -108,28 +107,27 @@ async function generateBundle(preset) {
           if (_id === id) return content
         },
       },
-      nodeResolve(),
-      replace({
-        'process.env.NODE_ENV': '"production"',
-        __VUE_PROD_DEVTOOLS__: 'false',
-        __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
-        __VUE_OPTIONS_API__: 'true',
-        preventAssignment: true,
-        ...preset.replace,
-      }),
+      replacePlugin(
+        {
+          'process.env.NODE_ENV': '"production"',
+          __VUE_PROD_DEVTOOLS__: 'false',
+          __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
+          __VUE_OPTIONS_API__: 'true',
+          ...preset.replace,
+        },
+        { preventAssignment: true },
+      ),
     ],
   })
 
   const generated = await result.generate({})
   const bundled = generated.output[0].code
   const file = preset.name + '.js'
-  const minified = (
-    await minify(file, bundled, {
-      mangle: {
-        toplevel: true,
-      },
-    })
-  ).code
+  const minified = minify(file, bundled, {
+    mangle: {
+      toplevel: true,
+    },
+  }).code
 
   const size = minified.length
   const gzip = gzipSync(minified).length
