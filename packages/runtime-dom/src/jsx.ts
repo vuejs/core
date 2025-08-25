@@ -1296,15 +1296,15 @@ export interface Events {
 
   // form events
   onChange: Event
-  onBeforeinput: Event
-  onInput: Event
+  onBeforeinput: InputEvent
+  onInput: InputEvent
   onReset: Event
-  onSubmit: Event
+  onSubmit: SubmitEvent
   onInvalid: Event
 
   // image events
   onLoad: Event
-  onError: Event
+  onError: ErrorEvent
 
   // keyboard events
   onKeydown: KeyboardEvent
@@ -1330,7 +1330,7 @@ export interface Events {
   onCanplaythrough: Event
   onDurationchange: Event
   onEmptied: Event
-  onEncrypted: Event
+  onEncrypted: MediaEncryptedEvent
   onEnded: Event
   onLoadeddata: Event
   onLoadedmetadata: Event
@@ -1338,7 +1338,7 @@ export interface Events {
   onPause: Event
   onPlay: Event
   onPlaying: Event
-  onProgress: Event
+  onProgress: ProgressEvent
   onRatechange: Event
   onSeeked: Event
   onSeeking: Event
