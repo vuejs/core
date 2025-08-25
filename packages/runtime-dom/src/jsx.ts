@@ -1304,7 +1304,7 @@ export interface Events {
 
   // image events
   onLoad: Event
-  onError: ErrorEvent
+  onError: Event
 
   // keyboard events
   onKeydown: KeyboardEvent
