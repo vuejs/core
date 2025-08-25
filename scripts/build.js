@@ -129,9 +129,12 @@ async function buildAll(targets) {
             })
           }),
         ).then(files => {
+          const from = process.cwd()
           files.forEach(f => {
             count++
-            console.log(pico.gray('built: ') + pico.green(f))
+            console.log(
+              pico.gray('built: ') + pico.green(path.relative(from, f)),
+            )
           })
         }),
       )
