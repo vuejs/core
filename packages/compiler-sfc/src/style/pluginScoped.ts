@@ -8,8 +8,8 @@ import {
 import selectorParser from 'postcss-selector-parser'
 import { warn } from '../warn'
 
-const animationNameRE = /^(-\w+-)?animation-name$/
-const animationRE = /^(-\w+-)?animation$/
+const animationNameRE = /^(?:-\w+-)?animation-name$/
+const animationRE = /^(?:-\w+-)?animation$/
 const keyframesRE = /^(?:-\w+-)?keyframes$/
 
 const scopedPlugin: PluginCreator<string> = (id = '') => {

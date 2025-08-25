@@ -103,7 +103,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
           if (e && e.target !== el) {
             return
           }
-          if (!e || /transform$/.test(e.propertyName)) {
+          if (!e || e.propertyName.endsWith('transform')) {
             el.removeEventListener('transitionend', cb)
             ;(el as any)[moveCbKey] = null
             removeTransitionClass(el, moveClass)
