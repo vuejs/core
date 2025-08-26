@@ -1,5 +1,5 @@
-export const BLOCK_ANCHOR_START_LABEL = '[['
-export const BLOCK_ANCHOR_END_LABEL = ']]'
+export const BLOCK_ANCHOR_START_LABEL = '{'
+export const BLOCK_ANCHOR_END_LABEL = '}'
 export const IF_ANCHOR_LABEL: string = 'if'
 export const DYNAMIC_COMPONENT_ANCHOR_LABEL: string = 'dynamic-component'
 export const FOR_ANCHOR_LABEL: string = 'for'
