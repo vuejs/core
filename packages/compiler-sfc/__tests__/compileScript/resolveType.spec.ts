@@ -1198,6 +1198,42 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(['/user.ts'])
     })
 
+    test('node subpath imports', () => {
+      const files = {
+        '/package.json': JSON.stringify({
+          imports: {
+            '#t1': './t1.ts',
+            '#t2': '/t2.ts',
+            '#o/*.ts': './other/*.ts',
+          },
+        }),
+        '/t1.ts': 'export type T1 = { foo: string }',
+        '/t2.ts': 'export type T2 = { bar: number }',
+        '/other/t3.ts': 'export type T3 = { baz: string }',
+      }
+
+      const { props, deps } = resolve(
+        `
+        import type { T1 } from '#t1'
+        import type { T2 } from '#t2'
+        import type { T3 } from '#o/t3.ts'
+        defineProps<T1 & T2 & T3>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        foo: ['String'],
+        bar: ['Number'],
+        baz: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual([
+        '/t1.ts',
+        '/t2.ts',
+        '/other/t3.ts',
+      ])
+    })
+
     test('ts module resolve w/ project reference folder', () => {
       const files = {
         '/tsconfig.json': JSON.stringify({
