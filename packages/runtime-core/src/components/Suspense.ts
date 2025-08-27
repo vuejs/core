@@ -2,6 +2,7 @@ import {
   Comment,
   type VNode,
   type VNodeProps,
+  cloneVNode,
   closeBlock,
   createVNode,
   currentBlock,
@@ -10,7 +11,14 @@ import {
   normalizeVNode,
   openBlock,
 } from '../vnode'
-import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  ShapeFlags,
+  extend,
+  isArray,
+  isFunction,
+  toNumber,
+} from '@vue/shared'
 import { type ComponentInternalInstance, handleSetupResult } from '../component'
 import type { Slots } from '../componentSlots'
 import {
@@ -31,6 +39,7 @@ import {
 } from '../warning'
 import { ErrorCodes, handleError } from '../errorHandling'
 import { NULL_DYNAMIC_COMPONENT } from '../helpers/resolveAssets'
+import type { Writable } from '../../types/util'
 
 export interface SuspenseProps {
   onResolve?: () => void
@@ -44,6 +53,14 @@ export interface SuspenseProps {
    */
   suspensible?: boolean
 }
+
+const ComponentProps = [
+  'onFallback',
+  'onPending',
+  'onResolve',
+  'timeout',
+  'suspensible',
+]
 
 export const isSuspense = (type: any): boolean => type.__isSuspense
 
@@ -820,11 +837,15 @@ function hydrateSuspense(
 function normalizeSuspenseChildren(vnode: VNode): void {
   const { shapeFlag, children } = vnode
   const isSlotChildren = shapeFlag & ShapeFlags.SLOTS_CHILDREN
-  vnode.ssContent = normalizeSuspenseSlot(
-    isSlotChildren ? (children as Slots).default : children,
+  const attrs = getFallthroughAttrs(vnode)
+  vnode.ssContent = cloneVNode(
+    normalizeSuspenseSlot(
+      isSlotChildren ? (children as Slots).default : children,
+    ),
+    attrs,
   )
   vnode.ssFallback = isSlotChildren
-    ? normalizeSuspenseSlot((children as Slots).fallback)
+    ? cloneVNode(normalizeSuspenseSlot((children as Slots).fallback), attrs)
     : createVNode(Comment)
 }
 
@@ -901,4 +922,36 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
 function isVNodeSuspensible(vnode: VNode) {
   const suspensible = vnode.props && vnode.props.suspensible
   return suspensible != null && suspensible !== false
+}
+
+/**
+ * TODO: The standard renderer should be abstracted to also allow Suspense to work, so
+ * Suspense can work as a normal component (like Transition and KeepAlive), instead of a "fake" one,
+ * as it currently is. This is why in some places special handling for it exists. Having it working
+ * as an standard component means that there's no need to re-implement all the handling of fallthrough attributes.
+ * Hence, this is just a workaround to normalize the behaviour across built-in components.
+ * See: https://github.com/vuejs/rfcs/discussions/664
+ *
+ * Suspense can receive fallthrough attributes from props and attrs
+ * - From props: When they are specified directly in the Suspense component (they're filtered here)
+ * - From attrs: When Suspense is a child of another component
+ */
+function getFallthroughAttrs(n2: VNode) {
+  const props = n2.props ?? EMPTY_OBJ
+  const fallthrough: Writable<typeof props> = {}
+  for (const key in props) {
+    if (!ComponentProps.includes(key)) {
+      fallthrough[key] = props[key]
+    }
+  }
+
+  if (
+    n2.suspense &&
+    n2.suspense.parentComponent &&
+    n2.suspense.parentComponent.attrs
+  ) {
+    return extend({}, fallthrough, n2.suspense.parentComponent.attrs)
+  }
+
+  return fallthrough
 }
