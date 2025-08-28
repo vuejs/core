@@ -217,6 +217,7 @@ function transformNativeElement(
         element: context.reference(),
         props: dynamicArgs,
         root: singleRoot,
+        tag,
       },
       getEffectIndex,
     )

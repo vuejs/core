@@ -661,7 +661,15 @@ describe('compiler v-bind', () => {
       <svg :class="cls"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setAttr(n0, "class", _ctx.cls))')
+    expect(code).contains('_setAttr(n0, "class", _ctx.cls, true))')
+  })
+
+  test('v-bind w/ svg elements', () => {
+    const { code } = compileWithVBind(`
+      <svg v-bind="obj"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], true, true))')
   })
 
   test('number value', () => {

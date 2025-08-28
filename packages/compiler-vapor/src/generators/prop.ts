@@ -23,6 +23,7 @@ import {
 import {
   canSetValueDirectly,
   capitalize,
+  extend,
   isSVGTag,
   shouldSetAsAttr,
   toHandlerKey,
@@ -31,6 +32,7 @@ import {
 export type HelperConfig = {
   name: VaporHelper
   needKey?: boolean
+  isSVG?: boolean
   acceptRoot?: boolean
 }
 
@@ -44,7 +46,6 @@ const helpers = {
   setAttr: { name: 'setAttr', needKey: true },
   setProp: { name: 'setProp', needKey: true },
   setDOMProp: { name: 'setDOMProp', needKey: true },
-  setDynamicProps: { name: 'setDynamicProps' },
 } as const satisfies Partial<Record<VaporHelper, HelperConfig>>
 
 // only the static key prop will reach here
@@ -66,6 +67,7 @@ export function genSetProp(
       `n${oper.element}`,
       resolvedHelper.needKey ? genExpression(key, context) : false,
       propValue,
+      resolvedHelper.isSVG && 'true',
     ),
   ]
 }
@@ -76,6 +78,7 @@ export function genDynamicProps(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
+  const isSVG = isSVGTag(oper.tag)
   const values = oper.props.map(props =>
     Array.isArray(props)
       ? genLiteralObjectProps(props, context) // static and dynamic arg props
@@ -90,6 +93,7 @@ export function genDynamicProps(
       `n${oper.element}`,
       genMulti(DELIMITERS_ARRAY, ...values),
       oper.root && 'true',
+      isSVG && 'true',
     ),
   ]
 }
@@ -173,8 +177,7 @@ function getRuntimeHelper(
 
   // 1. SVG: always attribute
   if (isSVG) {
-    // TODO pass svg flag
-    return helpers.setAttr
+    return extend({ isSVG: true }, helpers.setAttr)
   }
 
   if (modifier) {
