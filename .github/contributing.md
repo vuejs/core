@@ -94,8 +94,7 @@ $ pnpm i # install the dependencies of the project
 A high level overview of tools used:
 
 - [TypeScript](https://www.typescriptlang.org/) as the development language
-- [Vite](https://vitejs.dev/) and [ESBuild](https://esbuild.github.io/) for development bundling
-- [Rollup](https://rollupjs.org) for production bundling
+- [Rolldown](https://rolldown.rs/) for bundling
 - [Vitest](https://vitest.dev/) for unit testing
 - [Prettier](https://prettier.io/) for code formatting
 - [ESLint](https://eslint.org/) for static error prevention (outside of types)
@@ -138,7 +137,7 @@ nr build runtime-core
 nr build runtime --all
 ```
 
-Note that `nr build` uses `rollup-plugin-esbuild` for transpiling typescript and **does not perform type checking**. To run type check on the entire codebase, run `nr check`. Type checks are also automatically run on each commit.
+Note that `nr build` uses [`oxc-transform`](https://oxc.rs/docs/guide/usage/transformer.html) for transpiling typescript and **does not perform type checking**. To run type check on the entire codebase, run `nr check`. Type checks are also automatically run on each commit.
 
 #### Build Formats
 
@@ -155,7 +154,7 @@ Additional formats that only apply to the main `vue` package:
 - **`esm-bundler-runtime`**
 - **`esm-browser-runtime`**
 
-More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/core/blob/main/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/core/blob/main/rollup.config.js).
+More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/core/blob/main/packages/vue/README.md#which-dist-file-to-use) and the [Rolldown config file](https://github.com/vuejs/core/blob/main/scripts/create-rolldown-config.js).
 
 For example, to build `runtime-core` with the global build only:
 
@@ -175,7 +174,7 @@ Use the `--sourcemap` or `-s` flag to build with source maps. Note this will mak
 
 ### `nr build-dts`
 
-This command builds the type declarations for all packages. It first generates the raw `.d.ts` files in the `temp` directory, then uses [rollup-plugin-dts](https://github.com/Swatinem/rollup-plugin-dts) to roll the types into a single `.d.ts` file for each package.
+This command builds the type declarations for all packages. It first generates the raw `.d.ts` files in the `temp` directory, then uses [rolldown-plugin-dts](https://github.com/sxzz/rolldown-plugin-dts) to roll the types into a single `.d.ts` file for each package.
 
 ### `nr check`
 
@@ -283,7 +282,7 @@ import { h } from '@vue/runtime-core'
 This is made possible via several configurations:
 
 - For TypeScript, `compilerOptions.paths` in `tsconfig.json`
-- Vitest and Rollup share the same set of aliases from `scripts/aliases.js`
+- Vitest and Rolldown share the same set of aliases from `scripts/aliases.js`
 - For plain Node.js, they are linked using [PNPM Workspaces](https://pnpm.io/workspaces).
 
 ### Package Dependencies
