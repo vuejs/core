@@ -8,7 +8,6 @@ import pico from 'picocolors'
 import polyfillNode from '@rolldown/plugin-node-polyfills'
 import { entries } from './aliases.js'
 import { inlineEnums } from './inline-enums.js'
-import { minify as minifyOxc } from 'oxc-minify'
 
 const require = createRequire(import.meta.url)
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -344,29 +343,11 @@ export function createConfigsForPackage({
   }
 
   function createMinifiedConfig(/** @type {PackageFormat} */ format) {
-    return createConfig(
-      format,
-      {
-        file: String(outputConfigs[format].file).replace(/\.js$/, '.prod.js'),
-        format: outputConfigs[format].format,
-        // minify: true,
-      },
-      [
-        {
-          name: 'oxc-minify',
-          async renderChunk(contents, _, { file }) {
-            // @ts-expect-error
-            const { code } = await minifyOxc(file, contents, {
-              mangle: true,
-              compress: {
-                target: 'es2016',
-              },
-            })
-            return { code: banner + code, map: null }
-          },
-        },
-      ],
-    )
+    return createConfig(format, {
+      file: String(outputConfigs[format].file).replace(/\.js$/, '.prod.js'),
+      format: outputConfigs[format].format,
+      minify: true,
+    })
   }
 
   return packageConfigs
