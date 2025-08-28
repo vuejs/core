@@ -43,6 +43,7 @@ import {
   isCoreComponent,
   isSimpleIdentifier,
   isStaticArgOf,
+  isVPre,
 } from './utils'
 import { decodeHTML } from 'entities/lib/decode.js'
 import {
@@ -246,7 +247,7 @@ const tokenizer = new Tokenizer(stack, {
   ondirarg(start, end) {
     if (start === end) return
     const arg = getSlice(start, end)
-    if (inVPre) {
+    if (inVPre && !isVPre(currentProp!)) {
       ;(currentProp as AttributeNode).name += arg
       setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else {
@@ -262,7 +263,7 @@ const tokenizer = new Tokenizer(stack, {
 
   ondirmodifier(start, end) {
     const mod = getSlice(start, end)
-    if (inVPre) {
+    if (inVPre && !isVPre(currentProp!)) {
       ;(currentProp as AttributeNode).name += '.' + mod
       setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else if ((currentProp as DirectiveNode).name === 'slot') {

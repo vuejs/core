@@ -353,8 +353,8 @@ const t2 = _template("<form></form>")
 
 export function render(_ctx) {
   const n1 = t1()
-  const n3 = t2()
   const n0 = t0()
+  const n3 = t2()
   const n2 = t2()
   _insert(n0, n1)
   _insert(n2, n3)
