@@ -268,4 +268,59 @@ describe('compile', () => {
       expect(code).matchSnapshot()
     })
   })
+
+  describe('gen unique variables', () => {
+    test('should avoid binding conflicts for node vars (n*/x*)', () => {
+      const code = compile(`<div>{{ foo }}</div>`, {
+        inline: true,
+        bindingMetadata: {
+          n0: BindingTypes.SETUP_REACTIVE_CONST,
+          x0: BindingTypes.SETUP_MAYBE_REF,
+        },
+      })
+
+      expect(code).matchSnapshot()
+      expect(code).contains('const n1 = t0()')
+      expect(code).contains('const x1 = _child(n1)')
+    })
+
+    test('should bump old ref var (r*) on conflict', () => {
+      const code = compile(`<div :ref="bar" />`, {
+        inline: true,
+        bindingMetadata: {
+          r0: BindingTypes.SETUP_REF,
+          bar: BindingTypes.SETUP_REF,
+        },
+      })
+
+      expect(code).matchSnapshot()
+      expect(code).contains('let r1')
+      expect(code).contains('_setTemplateRef(n1, bar, r1)')
+    })
+
+    test('should bump template var (t*) on conflict', () => {
+      const code = compile(`<div />`, {
+        inline: true,
+        bindingMetadata: {
+          t0: BindingTypes.SETUP_REF,
+        },
+      })
+
+      expect(code).matchSnapshot()
+      expect(code).contains('const n0 = t1()')
+    })
+
+    test('should bump placeholder var (p*) on conflict', () => {
+      const code = compile(`<div><div><span :id="foo" /></div></div>`, {
+        inline: true,
+        bindingMetadata: {
+          p0: BindingTypes.SETUP_REF,
+          foo: BindingTypes.SETUP_REF,
+        },
+      })
+
+      expect(code).matchSnapshot()
+      expect(code).contains('const p1 = ')
+    })
+  })
 })

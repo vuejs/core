@@ -117,7 +117,20 @@ export class TransformContext<T extends AllNode = AllNode> {
     }
   }
 
-  increaseId = (): number => this.globalId++
+  increaseId = (): number => {
+    // allocate an id that won't conflict with user-defined bindings when used
+    // as generated identifiers with n/x/r prefixes (e.g., n1, x1, r1)
+    const binding = this.root.options.bindingMetadata
+    let id = this.globalId
+    while (
+      binding &&
+      ('n' + id in binding || 'x' + id in binding || 'r' + id in binding)
+    ) {
+      id++
+    }
+    this.globalId = id + 1
+    return id
+  }
   reference(): number {
     if (this.dynamic.id !== undefined) return this.dynamic.id
     this.dynamic.flags |= DynamicFlag.REFERENCED
