@@ -214,6 +214,32 @@ describe('vdomInterop', () => {
   describe.todo('dynamic component', () => {})
 
   describe('attribute fallthrough', () => {
+    it('should fallthrough attrs to vdom child', () => {
+      const VDomChild = defineComponent({
+        setup() {
+          return () => h('div')
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            { foo: () => 'vapor foo' },
+            null,
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any, { foo: 'foo', bar: 'bar' })
+        },
+      }).render()
+      expect(html()).toBe('<div foo="foo" bar="bar"></div>')
+    })
+
     it('should not fallthrough emit handlers to vdom child', () => {
       const VDomChild = defineComponent({
         emits: ['click'],
