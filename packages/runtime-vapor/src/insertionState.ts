@@ -1,5 +1,10 @@
-export let insertionParent: ParentNode | undefined
-export let insertionAnchor: Node | 0 | undefined
+export let insertionParent:
+  | (ParentNode & {
+      // the last hydrated block node
+      $lbn?: Node
+    })
+  | undefined
+export let insertionAnchor: Node | 0 | undefined | null
 
 /**
  * This function is called before a block type that requires insertion
@@ -8,7 +13,7 @@ export let insertionAnchor: Node | 0 | undefined
  */
 export function setInsertionState(
   parent: ParentNode & { $anchor?: Node | null },
-  anchor?: Node | 0,
+  anchor?: Node | 0 | null,
 ): void {
   // When setInsertionState(n3, 0) is called consecutively, the first prepend operation
   // uses parent.firstChild as the anchor. However, after insertion, parent.firstChild

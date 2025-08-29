@@ -16,6 +16,7 @@ import {
   type SSRTransformContext,
   processChildrenAsStatement,
 } from '../ssrCodegenTransform'
+import { SLOT_ANCHOR_LABEL } from '@vue/shared'
 
 export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
   if (isSlotOutlet(node)) {
@@ -93,4 +94,9 @@ export function ssrProcessSlotOutlet(
   }
 
   context.pushStatement(node.ssrCodegenNode!)
+
+  // anchor for vapor slot
+  if (context.options.vapor) {
+    context.pushStringPart(`<!--${SLOT_ANCHOR_LABEL}-->`)
+  }
 }
