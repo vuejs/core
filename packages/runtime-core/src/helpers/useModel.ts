@@ -1,5 +1,11 @@
 import { type Ref, customRef, ref } from '@vue/reactivity'
-import { EMPTY_OBJ, camelize, hasChanged, hyphenate } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  camelize,
+  getModifierPropName,
+  hasChanged,
+  hyphenate,
+} from '@vue/shared'
 import type { DefineModelOptions, ModelRef } from '../apiSetupHelpers'
 import {
   type ComponentInternalInstance,
@@ -145,9 +151,9 @@ export const getModelModifiers = (
   modelName: string,
   getter: (props: Record<string, any>, key: string) => any,
 ): Record<string, boolean> | undefined => {
-  return modelName === 'modelValue' || modelName === 'model-value'
-    ? getter(props, 'modelModifiers')
-    : getter(props, `${modelName}Modifiers`) ||
-        getter(props, `${camelize(modelName)}Modifiers`) ||
-        getter(props, `${hyphenate(modelName)}Modifiers`)
+  return (
+    getter(props, getModifierPropName(modelName)) ||
+    getter(props, `${camelize(modelName)}Modifiers`) ||
+    getter(props, `${hyphenate(modelName)}Modifiers`)
+  )
 }
