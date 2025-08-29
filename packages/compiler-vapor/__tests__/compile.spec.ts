@@ -268,4 +268,18 @@ describe('compile', () => {
       expect(code).matchSnapshot()
     })
   })
+
+  describe('helper alias', () => {
+    test('should avoid conflicts with existing variable names', () => {
+      const code = compile(`<div>{{ foo }}</div>`, {
+        bindingMetadata: {
+          _child: BindingTypes.LITERAL_CONST,
+          _child1: BindingTypes.SETUP_REF,
+        },
+      })
+      expect(code).matchSnapshot()
+      expect(code).contains('child as _child2')
+      expect(code).contains('const x0 = _child2(n0)')
+    })
+  })
 })

@@ -24,11 +24,31 @@ export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 export class CodegenContext {
   options: Required<CodegenOptions>
 
-  helpers: Set<string> = new Set<string>([])
+  bindingNames: Set<string> = new Set<string>()
 
-  helper = (name: CoreHelper | VaporHelper) => {
-    this.helpers.add(name)
-    return `_${name}`
+  helpers: Map<string, string> = new Map()
+
+  helper = (name: CoreHelper | VaporHelper): string => {
+    if (this.helpers.has(name)) {
+      return this.helpers.get(name)!
+    }
+
+    const base = `_${name}`
+    if (this.bindingNames.size === 0) {
+      this.helpers.set(name, base)
+      return base
+    }
+
+    // check whether an alias is already used bindings
+    let alias = base
+    let i = 0
+    while (this.bindingNames.has(alias)) {
+      i++
+      alias = `${base}${i}`
+    }
+
+    this.helpers.set(name, alias)
+    return alias
   }
 
   delegates: Set<string> = new Set<string>()
@@ -90,6 +110,11 @@ export class CodegenContext {
     }
     this.options = extend(defaultOptions, options)
     this.block = ir.block
+    this.bindingNames = new Set<string>(
+      this.options.bindingMetadata
+        ? Object.keys(this.options.bindingMetadata)
+        : [],
+    )
   }
 }
 
@@ -105,7 +130,6 @@ export function generate(
 ): VaporCodegenResult {
   const [frag, push] = buildCodeFragment()
   const context = new CodegenContext(ir, options)
-  const { helpers } = context
   const { inline, bindingMetadata } = options
   const functionName = 'render'
 
@@ -156,7 +180,7 @@ export function generate(
     ast: ir,
     preamble,
     map: map && map.toJSON(),
-    helpers,
+    helpers: new Set<string>(Array.from(context.helpers.keys())),
   }
 }
 
@@ -169,11 +193,11 @@ function genDelegates({ delegates, helper }: CodegenContext) {
     : ''
 }
 
-function genHelperImports({ helpers, helper, options }: CodegenContext) {
+function genHelperImports({ helpers, options }: CodegenContext) {
   let imports = ''
   if (helpers.size) {
-    imports += `import { ${[...helpers]
-      .map(h => `${h} as _${h}`)
+    imports += `import { ${Array.from(helpers)
+      .map(([h, alias]) => `${h} as ${alias}`)
       .join(', ')} } from '${options.runtimeModuleName}';\n`
   }
   return imports
