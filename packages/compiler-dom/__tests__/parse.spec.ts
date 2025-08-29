@@ -4,12 +4,12 @@ import {
   type ElementNode,
   ElementTypes,
   type InterpolationNode,
-  Namespaces,
   NodeTypes,
   type TextNode,
   baseParse as parse,
 } from '@vue/compiler-core'
 import { parserOptions } from '../src/parserOptions'
+import { Namespaces } from '@vue/shared'
 
 describe('DOM parser', () => {
   describe('Text', () => {
@@ -491,6 +491,17 @@ describe('DOM parser', () => {
       expect(element.ns).toBe(Namespaces.SVG)
     })
 
+    test('SVG tags without explicit root', () => {
+      const ast = parse('<text/><view/><tspan/>', parserOptions)
+      const textNode = ast.children[0] as ElementNode
+      const viewNode = ast.children[1] as ElementNode
+      const tspanNode = ast.children[2] as ElementNode
+
+      expect(textNode.ns).toBe(Namespaces.SVG)
+      expect(viewNode.ns).toBe(Namespaces.SVG)
+      expect(tspanNode.ns).toBe(Namespaces.SVG)
+    })
+
     test('MATH in HTML namespace', () => {
       const ast = parse('<html><math></math></html>', parserOptions)
       const elementHtml = ast.children[0] as ElementNode
@@ -498,6 +509,17 @@ describe('DOM parser', () => {
 
       expect(elementHtml.ns).toBe(Namespaces.HTML)
       expect(element.ns).toBe(Namespaces.MATH_ML)
+    })
+
+    test('MATH tags without explicit root', () => {
+      const ast = parse('<mi/><mn/><mo/>', parserOptions)
+      const miNode = ast.children[0] as ElementNode
+      const mnNode = ast.children[1] as ElementNode
+      const moNode = ast.children[2] as ElementNode
+
+      expect(miNode.ns).toBe(Namespaces.MATH_ML)
+      expect(mnNode.ns).toBe(Namespaces.MATH_ML)
+      expect(moNode.ns).toBe(Namespaces.MATH_ML)
     })
 
     test('root ns', () => {

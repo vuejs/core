@@ -217,6 +217,7 @@ function transformNativeElement(
         element: context.reference(),
         props: dynamicArgs,
         root: singleRoot,
+        tag,
       },
       getEffectIndex,
     )
@@ -250,7 +251,7 @@ function transformNativeElement(
   }
 
   if (singleRoot) {
-    context.ir.rootTemplateIndex = context.ir.template.length
+    context.ir.rootTemplateIndex = context.ir.template.size
   }
 
   if (
