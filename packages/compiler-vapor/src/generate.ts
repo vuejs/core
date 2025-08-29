@@ -26,6 +26,8 @@ export class CodegenContext {
 
   helpers: Set<string> = new Set<string>([])
 
+  bindingNames: Set<string> = new Set<string>()
+
   helper = (name: CoreHelper | VaporHelper) => {
     this.helpers.add(name)
     return `_${name}`
@@ -68,6 +70,30 @@ export class CodegenContext {
     return [this.scopeLevel++, () => this.scopeLevel--] as const
   }
 
+  seenVarNames: Set<string> = new Set()
+  templateVars: Map<number, string> = new Map()
+  genVarName(prefix: string, baseNum: number): string {
+    let num = baseNum
+    let name = `${prefix}${num}`
+    while (this.bindingNames.has(name) || this.seenVarNames.has(name)) {
+      name = `${prefix}${++num}`
+    }
+    this.seenVarNames.add(name)
+    return name
+  }
+
+  tName(i: number): string {
+    let name = this.templateVars.get(i)
+    if (!name) {
+      this.templateVars.set(i, (name = this.genVarName('t', i)))
+    }
+    return name
+  }
+
+  pName(i: number): string {
+    return this.genVarName('p', i)
+  }
+
   constructor(
     public ir: RootIRNode,
     options: CodegenOptions,
@@ -90,6 +116,11 @@ export class CodegenContext {
     }
     this.options = extend(defaultOptions, options)
     this.block = ir.block
+    this.bindingNames = new Set<string>(
+      this.options.bindingMetadata
+        ? Object.keys(this.options.bindingMetadata)
+        : [],
+    )
   }
 }
 

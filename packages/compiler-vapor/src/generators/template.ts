@@ -7,12 +7,12 @@ import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
 export function genTemplates(
   templates: string[],
   rootIndex: number | undefined,
-  { helper }: CodegenContext,
+  context: CodegenContext,
 ): string {
   return templates
     .map(
       (template, i) =>
-        `const t${i} = ${helper('template')}(${JSON.stringify(
+        `const ${context.tName(i)} = ${context.helper('template')}(${JSON.stringify(
           template,
         )}${i === rootIndex ? ', true' : ''})\n`,
     )
@@ -27,7 +27,7 @@ export function genSelf(
   const { id, template, operation, hasDynamicChild } = dynamic
 
   if (id !== undefined && template !== undefined) {
-    push(NEWLINE, `const n${id} = t${template}()`)
+    push(NEWLINE, `const n${id} = ${context.tName(template)}()`)
     push(...genDirectivesForElement(id, context))
   }
 
@@ -75,7 +75,8 @@ export function genChildren(
     const elementIndex = Number(index) + offset
     // p for "placeholder" variables that are meant for possible reuse by
     // other access paths
-    const variable = id === undefined ? `p${context.block.tempId++}` : `n${id}`
+    const variable =
+      id === undefined ? context.pName(context.block.tempId++) : `n${id}`
     pushBlock(NEWLINE, `const ${variable} = `)
 
     if (prev) {

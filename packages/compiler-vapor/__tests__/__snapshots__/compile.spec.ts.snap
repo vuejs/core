@@ -280,6 +280,42 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compile > gen unique variables > should avoid binding conflicts for node vars (n*/x*) 1`] = `
+"
+  const n1 = t0()
+  const x1 = _child(n1)
+  _renderEffect(() => _setText(x1, _toDisplayString(foo)))
+  return n1
+"
+`;
+
+exports[`compile > gen unique variables > should bump old ref var (r*) on conflict 1`] = `
+"
+  const _setTemplateRef = _createTemplateRefSetter()
+  const n1 = t0()
+  let r1
+  _renderEffect(() => r1 = _setTemplateRef(n1, bar, r1))
+  return n1
+"
+`;
+
+exports[`compile > gen unique variables > should bump placeholder var (p*) on conflict 1`] = `
+"
+  const n1 = t0()
+  const p1 = _child(n1)
+  const n0 = _child(p1)
+  _renderEffect(() => _setProp(n0, "id", foo.value))
+  return n1
+"
+`;
+
+exports[`compile > gen unique variables > should bump template var (t*) on conflict 1`] = `
+"
+  const n0 = t1()
+  return n0
+"
+`;
+
 exports[`compile > setInsertionState > next, child and nthChild should be above the setInsertionState 1`] = `
 "import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, nthChild as _nthChild, createIf as _createIf, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
