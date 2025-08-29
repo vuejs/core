@@ -35,26 +35,32 @@ export type setRefFn = (
 
 export function createTemplateRefSetter(): setRefFn {
   const instance = currentInstance as VaporComponentInstance
-  return (...args) => setRef(instance, ...args)
+  return (el, ref, oldRef, refFor) => setRef(el, ref, oldRef, refFor, instance)
 }
 
 /**
  * Function for handling a template ref
  */
 export function setRef(
-  instance: VaporComponentInstance,
   el: RefEl,
   ref: NodeRef,
   oldRef?: NodeRef,
   refFor = false,
+  instance?: VaporComponentInstance,
 ): NodeRef | undefined {
-  if (!instance || instance.isUnmounted) return
+  const _isString = isString(ref)
+  if (_isString && (!instance || instance.isUnmounted)) return
 
-  const setupState: any = __DEV__ ? instance.setupState || {} : null
+  const setupState: any = __DEV__
+    ? (instance && instance.setupState) || {}
+    : null
   const refValue = getRefValue(el)
 
-  const refs =
-    instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
+  const refs = instance
+    ? instance.refs === EMPTY_OBJ
+      ? (instance.refs = {})
+      : instance.refs
+    : {}
 
   const canSetSetupRef = createCanSetSetupRefChecker(setupState)
   // dynamic ref changed. unset old ref
@@ -81,7 +87,6 @@ export function setRef(
     // TODO this gets called repeatedly in renderEffect when it's dynamic ref?
     onScopeDispose(() => invokeRefSetter())
   } else {
-    const _isString = isString(ref)
     const _isRef = isRef(ref)
     let existing: unknown
 
