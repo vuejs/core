@@ -32,3 +32,13 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`v-html > work with dynamic component 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, setHtml as _setHtml, renderEffect as _renderEffect } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createDynamicComponent(() => ('button'), null, null, true)
+  _renderEffect(() => _setHtml(n0.nodes, _ctx.foo))
+  return n0
+}"
+`;
