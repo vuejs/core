@@ -280,6 +280,18 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compile > helper alias > should avoid conflicts with existing variable names 1`] = `
+"import { child as _child2, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> </div>", true)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  const x0 = _child2(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.foo)))
+  return n0
+}"
+`;
+
 exports[`compile > setInsertionState > next, child and nthChild should be above the setInsertionState 1`] = `
 "import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, nthChild as _nthChild, createIf as _createIf, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
