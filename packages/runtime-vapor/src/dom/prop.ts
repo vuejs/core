@@ -20,6 +20,7 @@ import {
   type VaporComponentInstance,
   isApplyingFallthroughProps,
 } from '../component'
+import { type TextNodeDraft, toNode } from './nodeDraft'
 
 type TargetElement = Element & {
   $root?: true
@@ -178,7 +179,11 @@ export function setValue(el: TargetElement, value: any): void {
  * Compiler should also ensure value passed here is already converted by
  * `toDisplayString`
  */
-export function setText(el: Text & { $txt?: string }, value: string): void {
+export function setText(
+  _el: (Text & { $txt?: string }) | TextNodeDraft,
+  value: string,
+): void {
+  const el = toNode(_el)
   if (el.$txt !== value) {
     el.nodeValue = el.$txt = value
   }

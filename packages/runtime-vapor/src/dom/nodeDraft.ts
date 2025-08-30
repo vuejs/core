@@ -93,7 +93,9 @@ export class NodeDraft {
 }
 
 export class TextNodeDraft extends NodeDraft {
-  public textContent: string = ''
+  public textContent: string | null = null
+  public nodeValue: string | null = null
+  public $txt?: string
 }
 
 export class CommentDraft extends NodeDraft {
