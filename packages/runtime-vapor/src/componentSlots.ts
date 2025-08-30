@@ -15,7 +15,7 @@ export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
 }
 
-export type StaticSlots = Record<string, VaporSlot>
+export type StaticSlots = Record<string, VaporSlot | undefined>
 
 export type VaporSlot = BlockFn
 export type DynamicSlot = { name: string; fn: VaporSlot }

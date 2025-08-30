@@ -131,7 +131,7 @@ export const Suspense = (__FEATURE_SUSPENSE__
   ? SuspenseImpl
   : null) as unknown as {
   __isSuspense: true
-  new (): {
+  new (props?: VNodeProps & SuspenseProps): {
     $props: VNodeProps & SuspenseProps
     $slots: {
       default(): VNode[]

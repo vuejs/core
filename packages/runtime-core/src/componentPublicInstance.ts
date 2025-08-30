@@ -140,7 +140,7 @@ export type ComponentPublicInstanceConstructor<
     C,
     M
   > = ComponentPublicInstance<any>,
-  Props = any,
+  Props = T['$props'] & T['props'],
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
@@ -149,7 +149,7 @@ export type ComponentPublicInstanceConstructor<
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-  new (...args: any[]): T
+  new (props?: Props): T
 }
 
 /**
