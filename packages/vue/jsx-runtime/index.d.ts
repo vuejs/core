@@ -9,13 +9,7 @@ import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
 export { h as jsx, h as jsxDEV, Fragment, h as jsxs } from '@vue/runtime-dom'
 
 export namespace JSX {
-  export interface Element extends VNode {}
-  export interface ElementClass {
-    $props: {}
-  }
-  export interface ElementAttributesProperty {
-    $props: {}
-  }
+  export type Element = VNode | Block
   export interface IntrinsicElements extends NativeElements {
     // allow arbitrary elements
     // @ts-ignore suppress ts:2374 = Duplicate string index signature.
