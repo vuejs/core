@@ -28,6 +28,7 @@ export default defineConfig({
     environmentMatchGlobs: [
       ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom'],
     ],
+    projects: ['./vitest.unit.config.ts', './vitest.e2e.config.ts'],
     sequence: {
       hooks: 'list',
     },
