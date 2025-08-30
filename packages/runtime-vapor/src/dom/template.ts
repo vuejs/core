@@ -1,18 +1,15 @@
-import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
-import { child, createTextNode } from './node'
+import { isHydrating } from './hydration'
+import { createTextNode } from './node'
+import { NodeRef, type VaporNode } from './nodeDraft'
 
 let t: HTMLTemplateElement
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function template(html: string, root?: boolean) {
   let node: Node
-  return (): Node & { $root?: true } => {
+  return (): VaporNode & { $root?: true } => {
     if (isHydrating) {
-      if (__DEV__ && !currentHydrationNode) {
-        // TODO this should not happen
-        throw new Error('No current hydration node')
-      }
-      return adoptTemplate(currentHydrationNode!, html)!
+      return hydrationTemplate(html, root)
     }
     // fast path for text nodes
     if (html[0] !== '<') {
@@ -21,10 +18,16 @@ export function template(html: string, root?: boolean) {
     if (!node) {
       t = t || document.createElement('template')
       t.innerHTML = html
-      node = child(t.content)
+      node = t.content.firstChild!
     }
     const ret = node.cloneNode(true)
     if (root) (ret as any).$root = true
     return ret
   }
+}
+
+function hydrationTemplate(html: string, root?: boolean): VaporNode {
+  const node = new NodeRef()
+  if (root && html[0] === '<') (node.ref as any).$root = true
+  return node
 }

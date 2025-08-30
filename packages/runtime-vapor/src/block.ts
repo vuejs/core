@@ -7,10 +7,17 @@ import {
 } from './component'
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, setActiveSub } from '@vue/reactivity'
-import { isHydrating } from './dom/hydration'
+import {
+  CommentDraft,
+  NodeDraft,
+  NodeRef,
+  type VaporNode,
+  type VaporParentNode,
+  toNode,
+} from './dom/nodeDraft'
 
 export type Block =
-  | Node
+  | VaporNode
   | VaporFragment
   | DynamicFragment
   | VaporComponentInstance
@@ -20,9 +27,9 @@ export type BlockFn = (...args: any[]) => Block
 
 export class VaporFragment {
   nodes: Block
-  anchor?: Node
-  insert?: (parent: ParentNode, anchor: Node | null) => void
-  remove?: (parent?: ParentNode) => void
+  anchor?: VaporNode
+  insert?: (parent: VaporParentNode, anchor: VaporNode | null) => void
+  remove?: (parent?: VaporParentNode) => void
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -30,7 +37,7 @@ export class VaporFragment {
 }
 
 export class DynamicFragment extends VaporFragment {
-  anchor: Node
+  anchor: VaporNode
   scope: EffectScope | undefined
   current?: BlockFn
   fallback?: BlockFn
@@ -48,7 +55,7 @@ export class DynamicFragment extends VaporFragment {
     this.current = key
 
     const prevSub = setActiveSub()
-    const parent = this.anchor.parentNode
+    const parent = toNode(this.anchor).parentNode
 
     // teardown previous branch
     if (this.scope) {
@@ -93,6 +100,8 @@ export function isBlock(val: NonNullable<unknown>): val is Block {
 export function isValidBlock(block: Block): boolean {
   if (block instanceof Node) {
     return !(block instanceof Comment)
+  } else if (block instanceof NodeRef) {
+    return !(block instanceof CommentDraft)
   } else if (isVaporComponent(block)) {
     return isValidBlock(block.block)
   } else if (isArray(block)) {
@@ -105,62 +114,91 @@ export function isValidBlock(block: Block): boolean {
 
 export function insert(
   block: Block,
-  parent: ParentNode & { $anchor?: Node | null },
-  anchor: Node | null | 0 = null, // 0 means prepend
+  parent: VaporParentNode,
+  anchor: VaporNode | null | 0 = null, // 0 means prepend
 ): void {
-  anchor = anchor === 0 ? parent.$anchor || parent.firstChild : anchor
-  if (block instanceof Node) {
-    if (!isHydrating) {
-      parent.insertBefore(block, anchor)
+  const _parent = toNode(parent)
+  const blockOrDraft = toNode(block)
+
+  anchor = anchor === 0 ? _parent.$anchor || _parent.firstChild : anchor
+  if (blockOrDraft instanceof Node) {
+    ;(_parent as Node).insertBefore(blockOrDraft, anchor as Node)
+  } else if (blockOrDraft instanceof NodeDraft) {
+    // Hydration
+    if (!(_parent instanceof Node)) {
+      const index = anchor ? _parent.childNodes.indexOf(anchor as NodeRef) : -1
+      if (index === -1) {
+        _parent.childNodes.push(block as NodeRef<false>)
+      } else {
+        _parent.childNodes.splice(index, 0, block as NodeRef<false>)
+      }
+    } else if (__DEV__) {
+      throw new Error(
+        'Cannot insert a NodeDraft to a real ParentNode. Did you forget to resolve it?',
+      )
     }
-  } else if (isVaporComponent(block)) {
-    if (block.isMounted) {
-      insert(block.block!, parent, anchor)
+  } else if (isVaporComponent(blockOrDraft)) {
+    if (blockOrDraft.isMounted) {
+      insert(blockOrDraft.block!, parent, anchor)
     } else {
-      mountComponent(block, parent, anchor)
+      mountComponent(blockOrDraft, parent, anchor)
     }
-  } else if (isArray(block)) {
-    for (const b of block) {
+  } else if (isArray(blockOrDraft)) {
+    for (const b of blockOrDraft) {
       insert(b, parent, anchor)
     }
   } else {
     // fragment
-    if (block.insert) {
-      // TODO handle hydration for vdom interop
-      block.insert(parent, anchor)
+    if (blockOrDraft.insert) {
+      blockOrDraft.insert(parent, anchor)
     } else {
-      insert(block.nodes, parent, anchor)
+      insert(blockOrDraft.nodes, parent, anchor)
     }
-    if (block.anchor) insert(block.anchor, parent, anchor)
+    if (blockOrDraft.anchor) insert(blockOrDraft.anchor, parent, anchor)
   }
 }
 
 export type InsertFn = typeof insert
 
-export function prepend(parent: ParentNode, ...blocks: Block[]): void {
+export function prepend(parent: VaporParentNode, ...blocks: Block[]): void {
   let i = blocks.length
   while (i--) insert(blocks[i], parent, 0)
 }
 
-export function remove(block: Block, parent?: ParentNode): void {
-  if (block instanceof Node) {
-    parent && parent.removeChild(block)
-  } else if (isVaporComponent(block)) {
-    unmountComponent(block, parent)
-  } else if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      remove(block[i], parent)
+export function remove(block: Block, parent?: VaporParentNode): void {
+  const _parent = toNode(parent)
+  const blockOrDraft = toNode(block)
+
+  if (blockOrDraft instanceof Node) {
+    _parent && (_parent as Node).removeChild(blockOrDraft)
+  } else if (blockOrDraft instanceof NodeDraft) {
+    // Hydration
+    if (_parent && !(_parent instanceof Node)) {
+      const index = _parent.childNodes.indexOf(block as NodeRef)
+      if (index > -1) {
+        _parent.childNodes.splice(index, 1)
+      }
+    } else if (__DEV__) {
+      throw new Error(
+        'Cannot remove a NodeDraft from a real ParentNode. Did you forget to resolve it?',
+      )
+    }
+  } else if (isVaporComponent(blockOrDraft)) {
+    unmountComponent(blockOrDraft, parent)
+  } else if (isArray(blockOrDraft)) {
+    for (let i = 0; i < blockOrDraft.length; i++) {
+      remove(blockOrDraft[i], parent)
     }
   } else {
     // fragment
-    if (block.remove) {
-      block.remove(parent)
+    if (blockOrDraft.remove) {
+      blockOrDraft.remove(parent)
     } else {
-      remove(block.nodes, parent)
+      remove(blockOrDraft.nodes, parent)
     }
-    if (block.anchor) remove(block.anchor, parent)
-    if ((block as DynamicFragment).scope) {
-      ;(block as DynamicFragment).scope!.stop()
+    if (blockOrDraft.anchor) remove(blockOrDraft.anchor, parent)
+    if ((blockOrDraft as DynamicFragment).scope) {
+      ;(blockOrDraft as DynamicFragment).scope!.stop()
     }
   }
 }
@@ -168,14 +206,14 @@ export function remove(block: Block, parent?: ParentNode): void {
 /**
  * dev / test only
  */
-export function normalizeBlock(block: Block): Node[] {
+export function normalizeBlock(block: Block): VaporNode[] {
   if (!__DEV__ && !__TEST__) {
     throw new Error(
       'normalizeBlock should not be used in production code paths',
     )
   }
-  const nodes: Node[] = []
-  if (block instanceof Node) {
+  const nodes: VaporNode[] = []
+  if (block instanceof Node || block instanceof NodeRef) {
     nodes.push(block)
   } else if (isArray(block)) {
     block.forEach(child => nodes.push(...normalizeBlock(child)))
