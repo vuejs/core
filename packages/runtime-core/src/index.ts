@@ -564,3 +564,7 @@ export { initFeatureFlags } from './featureFlags'
  * @internal
  */
 export { createInternalObject } from './internalObject'
+/**
+ * @internal
+ */
+export { createCanSetSetupRefChecker } from './rendererTemplateRef'

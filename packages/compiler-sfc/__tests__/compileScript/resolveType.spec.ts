@@ -538,7 +538,7 @@ describe('resolveType', () => {
 
     expect(props).toStrictEqual({
       foo: ['Symbol', 'String', 'Number'],
-      bar: [UNKNOWN_TYPE],
+      bar: ['String', 'Number'],
     })
   })
 
@@ -749,7 +749,7 @@ describe('resolveType', () => {
       })
     })
 
-    test('fallback to Unknown', () => {
+    test('with intersection type', () => {
       expect(
         resolve(`
       type Brand<T> = T & {};
@@ -758,7 +758,18 @@ describe('resolveType', () => {
       }>()
       `).props,
       ).toStrictEqual({
-        foo: [UNKNOWN_TYPE],
+        foo: ['String', 'Object'],
+      })
+    })
+
+    test('with union type', () => {
+      expect(
+        resolve(`
+        type Wrapped<T> = T | symbol | number
+        defineProps<{foo?: Wrapped<boolean>}>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Boolean', 'Symbol', 'Number'],
       })
     })
   })
