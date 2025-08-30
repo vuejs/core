@@ -6,10 +6,10 @@ export type VaporParentNode<
   N extends ParentNode = ParentNode,
   D extends NodeDraft = NodeDraft,
 > =
-  | (N & { $anchor?: VaporNode | null })
+  | (N & { $anchor?: Node | null })
   | NodeRef<
       boolean,
-      N & { $anchor?: VaporNode | null },
+      N & { $anchor?: Node | null },
       D & { $anchor?: VaporNode | null }
     >
 
@@ -119,4 +119,83 @@ export function toNode<T>(
 
 export function isUnresolvedVaporNode(node: VaporNode): node is NodeRef<false> {
   return node instanceof NodeRef && !node.resolved
+}
+
+/**
+ * # Functionality:
+ *
+ * ## Resolve Nodes
+ * Find the actual Node based on the Ref tree and set it to the Ref. We call this behavior resolution.
+ *
+ * ## Patch Nodes
+ * Compare the differences between the real nodes found in the Ref tree and the previous Draft, and apply patches.
+ * If differences exist, we need to update the node values to the actual Draft values.
+ *
+ * @param block
+ * @param parent
+ * @param anchor
+ */
+export function nodeDraftPatch(
+  block: NodeRef | NodeRef[],
+  parent: ParentNode & { $anchor?: Node | null },
+  anchor: Node | null | 0 = null, // 0 means prepend
+): void {
+  let anchorIndex = -1
+
+  anchor = anchor === 0 ? parent.$anchor || parent.firstChild : anchor
+
+  if (!Array.isArray(block)) {
+    block = [block]
+  }
+
+  if (anchor) {
+    anchorIndex = getNodeIndexOf(parent, anchor)
+    if (anchorIndex === -1) {
+      throw new Error('anchor node is not a child of parent')
+    }
+    anchorIndex = anchorIndex - block.length
+  } else {
+    anchorIndex = 0
+  }
+
+  _nodeDraftPatch(block, parent, anchorIndex)
+}
+
+function _nodeDraftPatch(
+  block: NodeRef[],
+  parent: ParentNode,
+  anchorIndex: number,
+) {
+  for (let i = 0; i < block.length; i++) {
+    const nodeRef = block[i]
+    if (!nodeRef || nodeRef.ref instanceof Node) {
+      continue
+    }
+
+    const realNode = parent.childNodes[anchorIndex + i]
+
+    if (!realNode) {
+      if (__DEV__) throw new Error('Cannot find the real node for NodeRef')
+      continue
+    }
+
+    const childNodes = nodeRef.ref.childNodes
+    if (childNodes.length) {
+      let $anchor = (realNode as any).$anchor
+      const theChildAnchorIndex = $anchor ? getNodeIndexOf(parent, $anchor) : 0
+
+      _nodeDraftPatch(
+        childNodes,
+        realNode as unknown as ParentNode,
+        theChildAnchorIndex,
+      )
+    }
+
+    nodeRef.resolve(realNode)
+  }
+}
+
+function getNodeIndexOf(parent: ParentNode, anchor: Node | null) {
+  if (!anchor) return -1
+  return Array.prototype.indexOf.call(parent.childNodes, anchor)
 }

@@ -63,7 +63,12 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
-import type { VaporNode, VaporParentNode } from './dom/nodeDraft'
+import {
+  NodeRef,
+  type VaporNode,
+  type VaporParentNode,
+  nodeDraftPatch,
+} from './dom/nodeDraft'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -534,7 +539,17 @@ export function mountComponent(
     startMeasure(instance, `mount`)
   }
   if (instance.bm) invokeArrayFns(instance.bm)
-  insert(instance.block, parent, anchor)
+  const block = instance.block
+  if (isHydrating && block instanceof NodeRef && parent instanceof Node) {
+    if (anchor && !(anchor instanceof Node)) {
+      throw new Error(
+        'When mount a Vapor Instance. Cannot use NodeDraft as an anchor, a Node is needed',
+      )
+    }
+    nodeDraftPatch(block, parent, anchor)
+  } else {
+    insert(block, parent, anchor)
+  }
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
   instance.isMounted = true
   if (__DEV__) {
