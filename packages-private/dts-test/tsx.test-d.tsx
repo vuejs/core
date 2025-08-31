@@ -1,12 +1,5 @@
 // TSX w/ defineComponent is tested in defineComponent.test-d.tsx
-import {
-  Fragment,
-  KeepAlive,
-  type RenderReturn,
-  Suspense,
-  Teleport,
-  type VNode,
-} from 'vue'
+import { Fragment, KeepAlive, type RenderReturn, Suspense, Teleport } from 'vue'
 import { expectType } from './utils'
 
 expectType<RenderReturn>(<div />)

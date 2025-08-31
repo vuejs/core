@@ -32,8 +32,7 @@ export type VaporPublicProps = ReservedProps &
   AllowedComponentProps &
   ComponentCustomProps
 
-export type RenderReturn = VNode | Block | ArrayRenderReturn
-type ArrayRenderReturn = Array<RenderReturn>
+export type RenderReturn = VNode | Block | RenderReturn[]
 
 export type DefineVaporComponent<
   RuntimePropsOptions = {},
