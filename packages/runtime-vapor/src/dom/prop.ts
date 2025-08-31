@@ -20,9 +20,14 @@ import {
   type VaporComponentInstance,
   isApplyingFallthroughProps,
 } from '../component'
-import { type TextNodeDraft, toNode } from './nodeDraft'
+import {
+  type NodeDraft,
+  type TextNodeDraft,
+  type VaporNode,
+  toNode,
+} from './nodeDraft'
 
-type TargetElement = Element & {
+type TargetElementExtendedKeys = {
   $root?: true
   $html?: string
   $cls?: string
@@ -30,6 +35,9 @@ type TargetElement = Element & {
   value?: string
   _value?: any
 }
+
+type TargetElement = Element & TargetElementExtendedKeys
+type TargetElementDraft = NodeDraft & TargetElementExtendedKeys
 
 const hasFallthroughKey = (key: string) =>
   (currentInstance as VaporComponentInstance).hasFallthrough &&
@@ -154,23 +162,34 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
   return value
 }
 
-export function setValue(el: TargetElement, value: any): void {
+export function setValue(
+  _el: VaporNode<TargetElement, TargetElementDraft>,
+  value: any,
+): void {
+  const el = toNode(_el)
   if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey('value')) {
     return
   }
+
+  const isRealNode = el instanceof Node
 
   // store value as _value as well since
   // non-string values will be stringified.
   el._value = value
   // #4956: <option> value will fallback to its text content so we need to
   // compare against its attribute value instead.
-  const oldValue = el.tagName === 'OPTION' ? el.getAttribute('value') : el.value
+  const oldValue =
+    isRealNode && el.tagName === 'OPTION' ? el.getAttribute('value') : el.value
   const newValue = value == null ? '' : value
   if (oldValue !== newValue) {
     el.value = newValue
   }
   if (value == null) {
-    el.removeAttribute('value')
+    if (isRealNode) {
+      el.removeAttribute('value')
+    } else {
+      delete el.value
+    }
   }
 }
 
@@ -259,7 +278,17 @@ export function setDynamicProp(
       setDOMProp(el, key, value)
     }
   } else {
-    // TODO special case for <input v-model type="checkbox">
+    // special case for <input v-model type="checkbox"> with
+    // :true-value & :false-value
+    // store value as dom properties since non-string values will be
+    // stringified.
+    if (!(!isApplyingFallthroughProps && el.$root && hasFallthroughKey(key))) {
+      if (key === 'true-value') {
+        ;(el as any)._trueValue = value
+      } else if (key === 'false-value') {
+        ;(el as any)._falseValue = value
+      }
+    }
     setAttr(el, key, value)
   }
   return value

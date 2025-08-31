@@ -42,14 +42,13 @@ export class NodeRef<
   }
 
   get resolved(): T {
-    return (this.draft === undefined) as T
+    return (this.source !== undefined) as T
   }
 
   resolve(theRef: N): void {
     if (this.resolved) {
       throw new Error('HydrationNode has already been resolved')
     }
-    this.source = theRef
     ;(Object.keys(this.ref) as Array<keyof NodeDraft>).forEach(key => {
       const newValue = this.draft![key]
       const oldValue = theRef[key]
@@ -57,6 +56,7 @@ export class NodeRef<
         ;(theRef as any)[key] = newValue
       }
     })
+    this.source = theRef
     this.draft = undefined
   }
 }
@@ -172,7 +172,7 @@ function _nodeDraftPatch(
       continue
     }
 
-    const realNode = parent.childNodes[anchorIndex + i]
+    const realNode = getRealNode(parent, anchorIndex + i)
 
     if (!realNode) {
       if (__DEV__) throw new Error('Cannot find the real node for NodeRef')
@@ -192,6 +192,16 @@ function _nodeDraftPatch(
     }
 
     nodeRef.resolve(realNode)
+  }
+
+  // TODO: Better solution for skipping <!--[--> and  <!--]--> tags
+  function getRealNode(parent: ParentNode, index: number) {
+    let node = parent.childNodes[index] || null
+    if (node && node instanceof Comment && node.data === '[') {
+      anchorIndex += 1
+      return getRealNode(parent, (index += 1))
+    }
+    return node
   }
 }
 

@@ -1,5 +1,6 @@
 import { onEffectCleanup } from '@vue/reactivity'
 import { isArray } from '@vue/shared'
+import { toNode } from './nodeDraft'
 
 export function addEventListener(
   el: Element,
@@ -26,10 +27,11 @@ export function on(
 }
 
 export function delegate(
-  el: any,
+  _el: any,
   event: string,
   handler: (e: Event) => any,
 ): void {
+  const el = toNode(_el)
   const key = `$evt${event}`
   const existing = el[key]
   if (existing) {

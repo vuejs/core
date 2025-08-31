@@ -34,12 +34,15 @@ export function genSetEvent(
   if (delegate) {
     // key is static
     context.delegates.add(key.content)
-    // if this is the only delegated event of this name on this element,
-    // we can generate optimized handler attachment code
-    // e.g. n1.$evtclick = () => {}
-    if (!context.block.operation.some(isSameDelegateEvent)) {
-      return [NEWLINE, `n${element}.$evt${key.content} = `, ...handler]
-    }
+
+    // TODO: If it is SSR hydration, it can't be generated here, but I don't know how to judge whether it's SSR hydration, so I'll annotate it first.
+
+    // // if this is the only delegated event of this name on this element,
+    // // we can generate optimized handler attachment code
+    // // e.g. n1.$evtclick = () => {}
+    // if (!context.block.operation.some(isSameDelegateEvent)) {
+    //   return [NEWLINE, `n${element}.$evt${key.content} = `, ...handler]
+    // }
   }
 
   return [

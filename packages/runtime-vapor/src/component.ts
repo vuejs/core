@@ -508,6 +508,7 @@ export function createComponentWithFallback(
   const el = document.createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
+  ;(el as any).$isSingleRoot = isSingleRoot
 
   if (rawProps) {
     renderEffect(() => {
@@ -540,13 +541,19 @@ export function mountComponent(
   }
   if (instance.bm) invokeArrayFns(instance.bm)
   const block = instance.block
-  if (isHydrating && block instanceof NodeRef && parent instanceof Node) {
+  if (
+    isHydrating &&
+    (Array.isArray(block)
+      ? block[0] instanceof NodeRef
+      : block instanceof NodeRef) &&
+    parent instanceof Node
+  ) {
     if (anchor && !(anchor instanceof Node)) {
       throw new Error(
         'When mount a Vapor Instance. Cannot use NodeDraft as an anchor, a Node is needed',
       )
     }
-    nodeDraftPatch(block, parent, anchor)
+    nodeDraftPatch(block as NodeRef[], parent, anchor)
   } else {
     insert(block, parent, anchor)
   }

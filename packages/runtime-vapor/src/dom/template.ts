@@ -28,6 +28,9 @@ export function template(html: string, root?: boolean) {
 
 function hydrationTemplate(html: string, root?: boolean): VaporNode {
   const node = new NodeRef()
-  if (root && html[0] === '<') (node.ref as any).$root = true
+  if (root && html[0] === '<') {
+    ;(node.ref as any).$root = true
+    ;(node.ref as any).$isTemplateRoot = true
+  }
   return node
 }
