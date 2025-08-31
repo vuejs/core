@@ -72,8 +72,8 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(vitest@3.2.4(@types/node@22.17.2)(jsdom@26.1.0)(sass@1.90.0))
       '@vitest/eslint-plugin':
-        specifier: ^1.3.4
-        version: 1.3.4(eslint@9.27.0)(typescript@5.6.3)(vitest@3.2.4(@types/node@22.17.2)(jsdom@26.1.0)(sass@1.90.0))
+        specifier: ^1.3.5
+        version: 1.3.5(eslint@9.27.0)(typescript@5.6.3)(vitest@3.2.4(@types/node@22.17.2)(jsdom@26.1.0)(sass@1.90.0))
       '@vue/consolidate':
         specifier: 1.0.0
         version: 1.0.0
@@ -132,8 +132,8 @@ importers:
         specifier: ^3.0.3
         version: 3.0.3
       puppeteer:
-        specifier: ~24.16.2
-        version: 24.16.2(typescript@5.6.3)
+        specifier: ~24.17.1
+        version: 24.17.1(typescript@5.6.3)
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1
@@ -1018,8 +1018,8 @@ packages:
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
 
-  '@puppeteer/browsers@2.10.6':
-    resolution: {integrity: sha512-pHUn6ZRt39bP3698HFQlu2ZHCkS/lPcpv7fVQcGBSzNNygw171UXAKrCUhy+TEMw4lEttOKDgNpb04hwUAJeiQ==}
+  '@puppeteer/browsers@2.10.8':
+    resolution: {integrity: sha512-f02QYEnBDE0p8cteNoPYHHjbDuwyfbe4cCIVlNi8/MRicIxFW4w4CfgU0LNgWEID6s06P+hRJ1qjpBLMhPRCiQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -1328,6 +1328,10 @@ packages:
     resolution: {integrity: sha512-7IsIaIDeZn7kffk7qXC3o6Z4UblZJKV3UBpkvRNpr5NSyLji7tvTcvmnMNYuYLyh26mN8W723xpo3i4MlD33vA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
+  '@typescript-eslint/scope-manager@8.41.0':
+    resolution: {integrity: sha512-n6m05bXn/Cd6DZDGyrpXrELCPVaTnLdPToyhBoFkLIMznRUQUEQdSp96s/pcWSQdqOhrgR1mzJ+yItK7T+WPMQ==}
+    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
   '@typescript-eslint/type-utils@8.32.1':
     resolution: {integrity: sha512-mv9YpQGA8iIsl5KyUPi+FGLm7+bA4fgXaeRcFKRDRwDMu4iwrSHeDPipwueNXhdIIZltwCJv+NkxftECbIZWfA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -1337,6 +1341,10 @@ packages:
 
   '@typescript-eslint/types@8.32.1':
     resolution: {integrity: sha512-YmybwXUJcgGqgAp6bEsgpPXEg6dcCyPyCSr0CAAueacR/CCBi25G3V8gGQ2kRzQRBNol7VQknxMs9HvVa9Rvfg==}
+    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@typescript-eslint/types@8.41.0':
+    resolution: {integrity: sha512-9EwxsWdVqh42afLbHP90n2VdHaWU/oWgbH2P0CfcNfdKL7CuKpwMQGjwev56vWu9cSKU7FWSu6r9zck6CVfnag==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
   '@typescript-eslint/typescript-estree@8.32.1':
@@ -1354,6 +1362,10 @@ packages:
 
   '@typescript-eslint/visitor-keys@8.32.1':
     resolution: {integrity: sha512-ar0tjQfObzhSaW3C3QNmTc5ofj0hDoNQ5XWrCy6zDyabdr0TWhCkClp+rywGNj/odAFBVzzJrK4tEq5M4Hmu4w==}
+    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@typescript-eslint/visitor-keys@8.41.0':
+    resolution: {integrity: sha512-+GeGMebMCy0elMNg67LRNoVnUFPIm37iu5CmHESVx56/9Jsfdpsvbv605DQ81Pi/x11IdKUsS5nzgTYbCQU9fg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
   '@unrs/resolver-binding-darwin-arm64@1.7.2':
@@ -1457,8 +1469,8 @@ packages:
       '@vitest/browser':
         optional: true
 
-  '@vitest/eslint-plugin@1.3.4':
-    resolution: {integrity: sha512-EOg8d0jn3BAiKnR55WkFxmxfWA3nmzrbIIuOXyTe6A72duryNgyU+bdBEauA97Aab3ho9kLmAwgPX63Ckj4QEg==}
+  '@vitest/eslint-plugin@1.3.5':
+    resolution: {integrity: sha512-vdQL1s+Yb9i7xXFur0qRpECwkafrp+L84EXppg3Xs+Iu+5M8smkh5I2rD5opD7cEaSBE3UEebB3xbDANqALpKA==}
     peerDependencies:
       eslint: '>= 8.57.0'
       typescript: '>= 5.0.0'
@@ -1695,8 +1707,8 @@ packages:
     resolution: {integrity: sha512-n8enUVCED/KVRQlab1hr3MVpcVMvxtZjmEa956u+4YijlmQED223XMSYj2tLuKvr4jcCTzNNMpQDUer72MMmzA==}
     engines: {node: '>= 14.16.0'}
 
-  chromium-bidi@7.3.1:
-    resolution: {integrity: sha512-i+BMGluhZZc4Jic9L1aHJBTfaopxmCqQxGklyMcqFx4fvF3nI4BJ3bCe1ad474nvYRIo/ZN/VrdA4eOaRZua4Q==}
+  chromium-bidi@8.0.0:
+    resolution: {integrity: sha512-d1VmE0FD7lxZQHzcDUCKZSNRtRwISXDsdg4HjdTR5+Ll5nQ/vzU12JeNmupD6VWffrPSlrnGhEWlLESKH3VO+g==}
     peerDependencies:
       devtools-protocol: '*'
 
@@ -2044,6 +2056,10 @@ packages:
 
   eslint-visitor-keys@4.2.0:
     resolution: {integrity: sha512-UyLnSehNt62FFhSwjZlHmeokpRK59rcz29j+F1/aDgbkbRTk7wIc9XzdoasMUbRNKDM0qQt/+BJ4BrpFeABemw==}
+    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  eslint-visitor-keys@4.2.1:
+    resolution: {integrity: sha512-Uhdk5sfqcee/9H/rCOJikYz67o0a2Tw2hGRPOG2Y1R2dg7brRe1uG0yaNQDHu+TO/uQPF/5eCapvYSmHUjt7JQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
   eslint@9.27.0:
@@ -2961,12 +2977,12 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
-  puppeteer-core@24.16.2:
-    resolution: {integrity: sha512-areKSSQzpoHa5nCk3uD/o504yjrW5ws0N6jZfdFZ3a4H+Q7NBgvuDydjN5P87jN4Rj+eIpLcK3ELOThTtYuuxg==}
+  puppeteer-core@24.17.1:
+    resolution: {integrity: sha512-Msh/kf9k1XFN0wuKiT4/npMmMWOT7kPBEUw01gWvRoKOOoz3It9TEmWjnt4Gl4eO+p73VMrvR+wfa0dm9rfxjw==}
     engines: {node: '>=18'}
 
-  puppeteer@24.16.2:
-    resolution: {integrity: sha512-eNjKzwjITM4Lvho6iHb+VQamadUBgc8TsjAApsKi5N8DXipxAaAZWssBOFsrIOLo4eYWYj0Qk5gmr4wBSqzJWw==}
+  puppeteer@24.17.1:
+    resolution: {integrity: sha512-KIuX0w+0um4TUbm55yFl2WIsbgjya2BHIgW9ylTuhavtwjXCOM7lMo9oLR1jQnCxrFvm9h/Yeb+zfs4nlgntPg==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -4026,7 +4042,7 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
-  '@puppeteer/browsers@2.10.6':
+  '@puppeteer/browsers@2.10.8':
     dependencies:
       debug: 4.4.1
       extract-zip: 2.0.1
@@ -4283,6 +4299,11 @@ snapshots:
       '@typescript-eslint/types': 8.32.1
       '@typescript-eslint/visitor-keys': 8.32.1
 
+  '@typescript-eslint/scope-manager@8.41.0':
+    dependencies:
+      '@typescript-eslint/types': 8.41.0
+      '@typescript-eslint/visitor-keys': 8.41.0
+
   '@typescript-eslint/type-utils@8.32.1(eslint@9.27.0)(typescript@5.6.3)':
     dependencies:
       '@typescript-eslint/typescript-estree': 8.32.1(typescript@5.6.3)
@@ -4295,6 +4316,8 @@ snapshots:
       - supports-color
 
   '@typescript-eslint/types@8.32.1': {}
+
+  '@typescript-eslint/types@8.41.0': {}
 
   '@typescript-eslint/typescript-estree@8.32.1(typescript@5.6.3)':
     dependencies:
@@ -4325,6 +4348,11 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 8.32.1
       eslint-visitor-keys: 4.2.0
+
+  '@typescript-eslint/visitor-keys@8.41.0':
+    dependencies:
+      '@typescript-eslint/types': 8.41.0
+      eslint-visitor-keys: 4.2.1
 
   '@unrs/resolver-binding-darwin-arm64@1.7.2':
     optional: true
@@ -4404,8 +4432,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/eslint-plugin@1.3.4(eslint@9.27.0)(typescript@5.6.3)(vitest@3.2.4(@types/node@22.17.2)(jsdom@26.1.0)(sass@1.90.0))':
+  '@vitest/eslint-plugin@1.3.5(eslint@9.27.0)(typescript@5.6.3)(vitest@3.2.4(@types/node@22.17.2)(jsdom@26.1.0)(sass@1.90.0))':
     dependencies:
+      '@typescript-eslint/scope-manager': 8.41.0
       '@typescript-eslint/utils': 8.32.1(eslint@9.27.0)(typescript@5.6.3)
       eslint: 9.27.0
     optionalDependencies:
@@ -4643,7 +4672,7 @@ snapshots:
     dependencies:
       readdirp: 4.0.1
 
-  chromium-bidi@7.3.1(devtools-protocol@0.0.1475386):
+  chromium-bidi@8.0.0(devtools-protocol@0.0.1475386):
     dependencies:
       devtools-protocol: 0.0.1475386
       mitt: 3.0.1
@@ -5029,6 +5058,8 @@ snapshots:
   eslint-visitor-keys@3.4.3: {}
 
   eslint-visitor-keys@4.2.0: {}
+
+  eslint-visitor-keys@4.2.1: {}
 
   eslint@9.27.0:
     dependencies:
@@ -5996,10 +6027,10 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  puppeteer-core@24.16.2:
+  puppeteer-core@24.17.1:
     dependencies:
-      '@puppeteer/browsers': 2.10.6
-      chromium-bidi: 7.3.1(devtools-protocol@0.0.1475386)
+      '@puppeteer/browsers': 2.10.8
+      chromium-bidi: 8.0.0(devtools-protocol@0.0.1475386)
       debug: 4.4.1
       devtools-protocol: 0.0.1475386
       typed-query-selector: 2.12.0
@@ -6009,13 +6040,13 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  puppeteer@24.16.2(typescript@5.6.3):
+  puppeteer@24.17.1(typescript@5.6.3):
     dependencies:
-      '@puppeteer/browsers': 2.10.6
-      chromium-bidi: 7.3.1(devtools-protocol@0.0.1475386)
+      '@puppeteer/browsers': 2.10.8
+      chromium-bidi: 8.0.0(devtools-protocol@0.0.1475386)
       cosmiconfig: 9.0.0(typescript@5.6.3)
       devtools-protocol: 0.0.1475386
-      puppeteer-core: 24.16.2
+      puppeteer-core: 24.17.1
       typed-query-selector: 2.12.0
     transitivePeerDependencies:
       - bufferutil
