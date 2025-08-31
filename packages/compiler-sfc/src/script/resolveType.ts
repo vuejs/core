@@ -39,7 +39,7 @@ import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
 import type TS from 'typescript'
-import { dirname, extname, join, resolve } from 'path'
+import { dirname, extname, isAbsolute, join } from 'path'
 import { minimatch as isMatch } from 'minimatch'
 import * as process from 'process'
 import { imports as resolveImports } from 'resolve.exports'
@@ -961,7 +961,7 @@ function importSourceToScope(
       }
       resolved =
         resolveWithTS(scope.filename, source, ts, fs) ||
-        resolveWithNodeSubpathImports(source, fs)
+        resolveWithNodeSubpathImports(scope.filename, source, fs)
     }
     if (resolved) {
       resolved = scope.resolvedImportSources[source] = normalizePath(resolved)
@@ -1127,13 +1127,14 @@ function loadTSConfig(
 }
 
 function resolveWithNodeSubpathImports(
+  containingFile: string,
   source: string,
   fs: FS,
 ): string | undefined {
   if (!__CJS__) return
 
   try {
-    const pkgPath = findPackageJsonFile(fs)
+    const pkgPath = findPackageJsonFile(containingFile, fs)
     if (!pkgPath) {
       return
     }
@@ -1149,14 +1150,19 @@ function resolveWithNodeSubpathImports(
       return
     }
 
-    const resolved = resolve(dirname(pkgPath), resolvedImports[0])
+    const resolved = isAbsolute(resolvedImports[0])
+      ? resolvedImports[0]
+      : joinPaths(dirname(pkgPath), resolvedImports[0])
 
     return fs.realpath ? fs.realpath(resolved) : resolved
   } catch (e) {}
 }
 
-function findPackageJsonFile(fs: FS): string | undefined {
-  let currDir = process.cwd()
+function findPackageJsonFile(
+  searchStartPath: string,
+  fs: FS,
+): string | undefined {
+  let currDir = searchStartPath
   while (true) {
     const filePath = joinPaths(currDir, 'package.json')
     if (fs.fileExists(filePath)) {

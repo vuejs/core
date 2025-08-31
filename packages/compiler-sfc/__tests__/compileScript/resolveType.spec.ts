@@ -1234,6 +1234,52 @@ describe('resolveType', () => {
       ])
     })
 
+    test.runIf(process.platform === 'win32')(
+      'node subpath imports on Windows',
+      () => {
+        const files = {
+          'C:\\Test\\package.json': JSON.stringify({
+            imports: {
+              '#t1': '.\\t1.ts',
+              '#t2': '..\\t2.ts',
+              '#t3': 'C:\\Test/t3.ts',
+              '#o/*.ts': '.\\Other\\*.ts',
+            },
+          }),
+          'C:\\Test\\t1.ts': 'export type T1 = { foo: string }',
+          'C:\\t2.ts': 'export type T2 = { bar: number }',
+          'C:\\Test\\t3.ts': 'export type T3 = { baz: number }',
+          'C:\\Test\\Other\\t4.ts': 'export type T4 = { qux: string }',
+        }
+
+        const { props, deps } = resolve(
+          `
+        import type { T1 } from '#t1'
+        import type { T2 } from '#t2'
+        import type { T3 } from '#t3'
+        import type { T4 } from '#o/t4.ts'
+        defineProps<T1 & T2 & T3 & T4>()
+        `,
+          files,
+          {},
+          'C:\\Test\\Test.vue',
+        )
+
+        expect(props).toStrictEqual({
+          foo: ['String'],
+          bar: ['Number'],
+          baz: ['Number'],
+          qux: ['String'],
+        })
+        expect(deps && [...deps]).toStrictEqual([
+          'C:/Test/t1.ts',
+          'C:/t2.ts',
+          'C:/Test/t3.ts',
+          'C:/Test/Other/t4.ts',
+        ])
+      },
+    )
+
     test('ts module resolve w/ project reference folder', () => {
       const files = {
         '/tsconfig.json': JSON.stringify({
