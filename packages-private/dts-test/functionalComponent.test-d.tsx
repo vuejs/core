@@ -9,7 +9,7 @@ import { expectType } from './utils'
 
 // simple function signature
 const Foo = (props: { foo: number }) => h(Text, null, props.foo)
-const VaporComp = (props: { foo: number }) => document.createElement('div')
+const VaporComp = (props: { foo: number }) => [<div>123</div>]
 
 // TSX
 expectType<JSX.Element>(<Foo foo={1} />)

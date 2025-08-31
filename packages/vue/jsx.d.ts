@@ -6,7 +6,7 @@ import type { Block } from '@vue/runtime-vapor'
 
 declare global {
   namespace JSX {
-    export type Element = VNode | Block
+    export type Element = VNode | Block | Element[]
     export interface IntrinsicElements extends NativeElements {
       // allow arbitrary elements
       // @ts-ignore suppress ts:2374 = Duplicate string index signature.
