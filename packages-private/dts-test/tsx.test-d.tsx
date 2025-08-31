@@ -1,15 +1,15 @@
 // TSX w/ defineComponent is tested in defineComponent.test-d.tsx
 import {
-  type Block,
   Fragment,
   KeepAlive,
+  type RenderReturn,
   Suspense,
   Teleport,
   type VNode,
 } from 'vue'
 import { expectType } from './utils'
 
-expectType<VNode | Block>(<div />)
+expectType<RenderReturn>(<div />)
 expectType<JSX.Element>(<div />)
 expectType<JSX.Element>(<div id="foo" />)
 expectType<JSX.Element>(<div>hello</div>)

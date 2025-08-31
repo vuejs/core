@@ -32,6 +32,9 @@ export type VaporPublicProps = ReservedProps &
   AllowedComponentProps &
   ComponentCustomProps
 
+export type RenderReturn = VNode | Block | ArrayRenderReturn
+type ArrayRenderReturn = Array<RenderReturn>
+
 export type DefineVaporComponent<
   RuntimePropsOptions = {},
   RuntimePropsKeys extends string = string,
@@ -100,7 +103,7 @@ export function defineVaporComponent<
       attrs: Record<string, any>
       expose: (exposed: Exposed) => void
     },
-  ) => Block | VNode,
+  ) => RenderReturn,
   extraOptions?: ObjectVaporComponent<
     (keyof Props)[],
     Emits,
@@ -125,7 +128,7 @@ export function defineVaporComponent<
       attrs: Record<string, any>
       expose: (exposed: Exposed) => void
     },
-  ) => Block | VNode,
+  ) => RenderReturn,
   extraOptions?: ObjectVaporComponent<
     ComponentObjectPropsOptions<Props>,
     Emits,

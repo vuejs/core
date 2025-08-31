@@ -14,7 +14,6 @@ import {
   type ObjectEmitsOptions,
   type ShallowUnwrapRef,
   type SuspenseBoundary,
-  type VNode,
   callWithErrorHandling,
   currentInstance,
   endMeasure,
@@ -67,7 +66,7 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
-import type { DefineVaporComponent } from './apiDefineComponent'
+import type { DefineVaporComponent, RenderReturn } from './apiDefineComponent'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -118,7 +117,7 @@ export interface ObjectVaporComponent<
     emit: EmitFn<Emits>,
     attrs: any,
     slots: StaticSlots,
-  ): Block | VNode | void
+  ): RenderReturn
 
   name?: string
   vapor?: boolean
