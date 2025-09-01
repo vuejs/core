@@ -21,7 +21,7 @@ import {
   isApplyingFallthroughProps,
 } from '../component'
 import {
-  type NodeDraft,
+  NodeDraft,
   type TextNodeDraft,
   type VaporNode,
   toNode,
@@ -171,7 +171,7 @@ export function setValue(
     return
   }
 
-  const isRealNode = el instanceof Node
+  const isRealNode = !(el instanceof NodeDraft)
 
   // store value as _value as well since
   // non-string values will be stringified.

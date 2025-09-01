@@ -18,12 +18,6 @@ export type MaybeNodeDraft<
   D extends NodeDraft = NodeDraft,
 > = N | D
 
-function unenumerable(obj: any, key: string | symbol) {
-  Object.defineProperty(obj, key, {
-    enumerable: false,
-  })
-}
-
 type Constructor<T> = new (ref: NodeRef) => T
 
 export class NodeRef<
@@ -50,6 +44,8 @@ export class NodeRef<
       throw new Error('HydrationNode has already been resolved')
     }
     ;(Object.keys(this.ref) as Array<keyof NodeDraft>).forEach(key => {
+      if (DraftSkippedKeys.has(key as string)) return
+
       const newValue = this.draft![key]
       const oldValue = theRef[key]
       if (newValue !== oldValue) {
@@ -61,16 +57,18 @@ export class NodeRef<
   }
 }
 
+const DraftSkippedKeys = new Set([
+  '__v_nodeRef',
+  '__v_parentNode',
+  '__v_childNodes',
+])
+
 export class NodeDraft {
   constructor(
     private __v_nodeRef: NodeRef,
     private __v_childNodes: NodeRef<false>[] = [],
     private __v_parentNode: NodeRef<false, ParentNode> | null = null,
-  ) {
-    unenumerable(this, '__v_nodeRef')
-    unenumerable(this, '__v_childNodes')
-    unenumerable(this, '__v_parentNode')
-  }
+  ) {}
 
   get parentNode(): NodeRef<boolean, ParentNode> | null {
     return this.__v_parentNode
@@ -184,7 +182,7 @@ export function nodeDraftPatch(
 }
 
 function _nodeDraftPatch(
-  block: NodeRef[],
+  block: readonly NodeRef[],
   parent: ParentNode,
   anchorIndex: number,
 ) {
@@ -204,7 +202,9 @@ function _nodeDraftPatch(
     const childNodes = nodeRef.ref.childNodes
     if (childNodes.length) {
       let $anchor = (realNode as any).$anchor
-      const theChildAnchorIndex = $anchor ? getNodeIndexOf(parent, $anchor) : 0
+      const theChildAnchorIndex = $anchor
+        ? getNodeIndexOf(realNode as unknown as ParentNode, $anchor)
+        : 0
 
       _nodeDraftPatch(
         childNodes,
