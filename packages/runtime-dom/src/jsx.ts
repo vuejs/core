@@ -1296,10 +1296,10 @@ export interface Events {
 
   // form events
   onChange: Event
-  onBeforeinput: Event
+  onBeforeinput: InputEvent
   onInput: Event
   onReset: Event
-  onSubmit: Event
+  onSubmit: SubmitEvent
   onInvalid: Event
 
   // image events
@@ -1312,9 +1312,9 @@ export interface Events {
   onKeyup: KeyboardEvent
 
   // mouse events
-  onAuxclick: MouseEvent
-  onClick: MouseEvent
-  onContextmenu: MouseEvent
+  onAuxclick: PointerEvent
+  onClick: PointerEvent
+  onContextmenu: PointerEvent
   onDblclick: MouseEvent
   onMousedown: MouseEvent
   onMouseenter: MouseEvent
@@ -1325,12 +1325,12 @@ export interface Events {
   onMouseup: MouseEvent
 
   // media events
-  onAbort: Event
+  onAbort: UIEvent
   onCanplay: Event
   onCanplaythrough: Event
   onDurationchange: Event
   onEmptied: Event
-  onEncrypted: Event
+  onEncrypted: MediaEncryptedEvent
   onEnded: Event
   onLoadeddata: Event
   onLoadedmetadata: Event
@@ -1338,7 +1338,7 @@ export interface Events {
   onPause: Event
   onPlay: Event
   onPlaying: Event
-  onProgress: Event
+  onProgress: ProgressEvent
   onRatechange: Event
   onSeeked: Event
   onSeeking: Event
