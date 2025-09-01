@@ -75,9 +75,31 @@ export class NodeDraft {
   get parentNode(): NodeRef<boolean, ParentNode> | null {
     return this.__v_parentNode
   }
+  set parentNode(v: NodeRef<false, ParentNode> | null) {
+    this.__v_parentNode = v
+  }
 
-  get childNodes(): NodeRef[] {
+  // TODO Change to linked list drive
+  get childNodes(): readonly NodeRef[] {
     return this.__v_childNodes
+  }
+
+  appendChild<T extends NodeRef>(node: T): T {
+    this.__v_childNodes.push(node as NodeRef<false>)
+    ;(node as NodeRef<false>).ref.parentNode = this.__v_nodeRef as NodeRef<
+      false,
+      ParentNode
+    >
+    return node
+  }
+
+  setChild<T extends NodeRef>(i: number, node: T): T {
+    this.__v_childNodes[i] = node as NodeRef<false>
+    ;(node as NodeRef<false>).ref.parentNode = this.__v_nodeRef as NodeRef<
+      false,
+      ParentNode
+    >
+    return node
   }
 
   get firstChild(): NodeRef | null {

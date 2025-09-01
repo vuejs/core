@@ -3,6 +3,7 @@
 import { isHydrating } from './hydration'
 import {
   CommentDraft,
+  type NodeDraft,
   NodeRef,
   TextNodeDraft,
   type VaporNode,
@@ -33,7 +34,7 @@ export function createComment(data: string): VaporNode<Comment, CommentDraft> {
 /*! #__NO_SIDE_EFFECTS__ */
 export function child(node: VaporParentNode): VaporNode {
   if (isUnresolvedVaporNode(node) && !node.ref.childNodes[0]) {
-    return (node.ref.childNodes[0] = new NodeRef())
+    return (node.ref.setChild(0, new NodeRef()), node.ref.childNodes[0])
   }
 
   return toNode(node).firstChild!
@@ -42,7 +43,7 @@ export function child(node: VaporParentNode): VaporNode {
 /*! #__NO_SIDE_EFFECTS__ */
 export function nthChild(node: ParentNode, i: number): VaporNode {
   if (isUnresolvedVaporNode(node) && !node.ref.childNodes[i]) {
-    return (node.ref.childNodes[i] = new NodeRef())
+    return node.ref.setChild(i, new NodeRef())
   }
 
   return toNode(node).childNodes[i]
@@ -51,8 +52,11 @@ export function nthChild(node: ParentNode, i: number): VaporNode {
 /*! #__NO_SIDE_EFFECTS__ */
 export function next(node: VaporParentNode): VaporNode {
   if (isUnresolvedVaporNode(node) && !node.ref.nextSibling) {
-    const childNodes = node.ref.childNodes
-    return (childNodes[childNodes.indexOf(node) + 1] = new NodeRef())
+    const parentDraft = node.ref.parentNode!.ref as NodeDraft
+    return parentDraft.setChild(
+      parentDraft.childNodes.indexOf(node) + 1,
+      new NodeRef(),
+    )
   }
 
   return toNode(node).nextSibling!

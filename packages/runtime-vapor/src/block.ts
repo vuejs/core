@@ -128,7 +128,7 @@ export function insert(
     if (!(_parent instanceof Node)) {
       const index = anchor ? _parent.childNodes.indexOf(anchor as NodeRef) : -1
       if (index === -1) {
-        _parent.childNodes.push(block as NodeRef<false>)
+        _parent.appendChild(block as NodeRef<false>)
       } else {
         _parent.childNodes.splice(index, 0, block as NodeRef<false>)
       }
