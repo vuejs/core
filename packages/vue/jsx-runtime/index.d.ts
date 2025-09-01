@@ -7,9 +7,10 @@ import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
  * https://www.typescriptlang.org/tsconfig#jsxImportSource
  */
 export { h as jsx, h as jsxDEV, Fragment, h as jsxs } from '@vue/runtime-dom'
+import type { RenderReturn } from '@vue/runtime-vapor'
 
 export namespace JSX {
-  export type Element = VNode | Block
+  export type Element = RenderReturn
   export interface IntrinsicElements extends NativeElements {
     // allow arbitrary elements
     // @ts-ignore suppress ts:2374 = Duplicate string index signature.
