@@ -652,10 +652,10 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`return (_ctx, _push`)
       expect(content).toMatch(`ssrInterpolate`)
       expect(content).not.toMatch(`useCssVars`)
-      expect(content).toMatch(`"--${mockId}-count": (count.value)`)
-      expect(content).toMatch(`"--${mockId}-style\\\\.color": (style.color)`)
+      expect(content).toMatch(`":--${mockId}-count": (count.value)`)
+      expect(content).toMatch(`":--${mockId}-style\\\\.color": (style.color)`)
       expect(content).toMatch(
-        `"--${mockId}-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")`,
+        `":--${mockId}-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")`,
       )
       assertCode(content)
     })
@@ -912,6 +912,13 @@ describe('SFC compile <script setup>', () => {
     test('<script> and <script setup> must have same lang', () => {
       expect(() =>
         compile(`<script>foo()</script><script setup lang="ts">bar()</script>`),
+      ).toThrow(`<script> and <script setup> must have the same language type`)
+
+      // #13193 must check lang before parsing with babel
+      expect(() =>
+        compile(
+          `<script lang="ts">const a = 1</script><script setup lang="tsx">const Comp = () => <p>test</p></script>`,
+        ),
       ).toThrow(`<script> and <script setup> must have the same language type`)
     })
 
