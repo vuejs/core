@@ -163,7 +163,7 @@ export function defineCustomElement<
   T extends DefineComponent<infer P, any, any, any> ? P : unknown
 >
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function defineCustomElement(
   options: any,
   extraOptions?: ComponentOptions,
@@ -184,7 +184,7 @@ export function defineCustomElement(
   return VueCustomElement
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export const defineSSRCustomElement = ((
   options: any,
   extraOptions?: ComponentOptions,
