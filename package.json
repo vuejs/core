@@ -90,7 +90,7 @@
     "magic-string": "^0.30.18",
     "markdown-table": "^3.0.4",
     "marked": "13.0.3",
-    "npm-run-all2": "^7.0.2",
+    "npm-run-all2": "^8.0.4",
     "picocolors": "^1.1.1",
     "prettier": "^3.5.3",
     "pretty-bytes": "^6.1.1",
