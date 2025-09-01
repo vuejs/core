@@ -7,7 +7,7 @@ import {
   type InternalRenderFunction,
   isClassComponent,
 } from './component'
-import { queueJob, queuePostFlushCb } from './scheduler'
+import { SchedulerJobFlags, queueJob, queuePostFlushCb } from './scheduler'
 import { extend, getGlobalThis } from '@vue/shared'
 
 type HMRComponent = ComponentOptions | ClassComponent
@@ -96,7 +96,10 @@ function rerender(id: string, newRender?: Function): void {
     instance.renderCache = []
     // this flag forces child components with slot content to update
     isHmrUpdating = true
-    instance.update()
+    // #13771 don't update if the job is already disposed
+    if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
+      instance.update()
+    }
     isHmrUpdating = false
   })
 }

@@ -37,7 +37,7 @@ import {
   helperNameMap,
 } from './runtimeHelpers'
 import { isVSlot } from './utils'
-import { cacheStatic, isSingleElementRoot } from './transforms/cacheStatic'
+import { cacheStatic, getSingleElementRoot } from './transforms/cacheStatic'
 import type { CompilerCompatOptions } from './compat/compatConfig'
 
 // There are two types of transforms:
@@ -116,7 +116,7 @@ export interface TransformContext
   addIdentifiers(exp: ExpressionNode | string): void
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
-  cache(exp: JSChildNode, isVNode?: boolean): CacheExpression
+  cache(exp: JSChildNode, isVNode?: boolean, inVOnce?: boolean): CacheExpression
   constantCache: WeakMap<TemplateChildNode, ConstantTypes>
 
   // 2.x Compat only
@@ -297,11 +297,12 @@ export function createTransformContext(
       identifier.hoisted = exp
       return identifier
     },
-    cache(exp, isVNode = false) {
+    cache(exp, isVNode = false, inVOnce = false) {
       const cacheExp = createCacheExpression(
         context.cached.length,
         exp,
         isVNode,
+        inVOnce,
       )
       context.cached.push(cacheExp)
       return cacheExp
@@ -355,12 +356,12 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
   const { helper } = context
   const { children } = root
   if (children.length === 1) {
-    const child = children[0]
+    const singleElementRootChild = getSingleElementRoot(root)
     // if the single child is an element, turn it into a block.
-    if (isSingleElementRoot(root, child) && child.codegenNode) {
+    if (singleElementRootChild && singleElementRootChild.codegenNode) {
       // single element root is never hoisted so codegenNode will never be
       // SimpleExpressionNode
-      const codegenNode = child.codegenNode
+      const codegenNode = singleElementRootChild.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
         convertToBlock(codegenNode, context)
       }
@@ -369,7 +370,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       // - single <slot/>, IfNode, ForNode: already blocks.
       // - single text node: always patched.
       // root codegen falls through via genNode()
-      root.codegenNode = child
+      root.codegenNode = children[0]
     }
   } else if (children.length > 1) {
     // root has multiple nodes - return a fragment block.
