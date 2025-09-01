@@ -546,26 +546,43 @@ function resolveStringType(
   ctx: TypeResolveContext,
   node: Node,
   scope: TypeScope,
+  typeParameters?: Record<string, Node>,
 ): string[] {
   switch (node.type) {
     case 'StringLiteral':
       return [node.value]
     case 'TSLiteralType':
-      return resolveStringType(ctx, node.literal, scope)
+      return resolveStringType(ctx, node.literal, scope, typeParameters)
     case 'TSUnionType':
-      return node.types.map(t => resolveStringType(ctx, t, scope)).flat()
+      return node.types
+        .map(t => resolveStringType(ctx, t, scope, typeParameters))
+        .flat()
     case 'TemplateLiteral': {
       return resolveTemplateKeys(ctx, node, scope)
     }
     case 'TSTypeReference': {
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
-        return resolveStringType(ctx, resolved, scope)
+        return resolveStringType(ctx, resolved, scope, typeParameters)
       }
       if (node.typeName.type === 'Identifier') {
+        const name = node.typeName.name
+        if (typeParameters && typeParameters[name]) {
+          return resolveStringType(
+            ctx,
+            typeParameters[name],
+            scope,
+            typeParameters,
+          )
+        }
         const getParam = (index = 0) =>
-          resolveStringType(ctx, node.typeParameters!.params[index], scope)
-        switch (node.typeName.name) {
+          resolveStringType(
+            ctx,
+            node.typeParameters!.params[index],
+            scope,
+            typeParameters,
+          )
+        switch (name) {
           case 'Extract':
             return getParam(1)
           case 'Exclude': {
@@ -671,6 +688,7 @@ function resolveBuiltin(
         ctx,
         node.typeParameters!.params[1],
         scope,
+        typeParameters,
       )
       const res: ResolvedElements = { props: {}, calls: t.calls }
       for (const key of picked) {
@@ -683,6 +701,7 @@ function resolveBuiltin(
         ctx,
         node.typeParameters!.params[1],
         scope,
+        typeParameters,
       )
       const res: ResolvedElements = { props: {}, calls: t.calls }
       for (const key in t.props) {
@@ -860,13 +879,13 @@ function resolveFS(ctx: TypeResolveContext): FS | undefined {
   }
   return (ctx.fs = {
     fileExists(file) {
-      if (file.endsWith('.vue.ts')) {
+      if (file.endsWith('.vue.ts') && !file.endsWith('.d.vue.ts')) {
         file = file.replace(/\.ts$/, '')
       }
       return fs.fileExists(file)
     },
     readFile(file) {
-      if (file.endsWith('.vue.ts')) {
+      if (file.endsWith('.vue.ts') && !file.endsWith('.d.vue.ts')) {
         file = file.replace(/\.ts$/, '')
       }
       return fs.readFile(file)
@@ -1059,7 +1078,7 @@ function resolveWithTS(
 
   if (res.resolvedModule) {
     let filename = res.resolvedModule.resolvedFileName
-    if (filename.endsWith('.vue.ts')) {
+    if (filename.endsWith('.vue.ts') && !filename.endsWith('.d.vue.ts')) {
       filename = filename.replace(/\.ts$/, '')
     }
     return fs.realpath ? fs.realpath(filename) : filename
@@ -1129,7 +1148,7 @@ export function fileToScope(
   // fs should be guaranteed to exist here
   const fs = resolveFS(ctx)!
   const source = fs.readFile(filename) || ''
-  const body = parseFile(filename, source, ctx.options.babelParserPlugins)
+  const body = parseFile(filename, source, fs, ctx.options.babelParserPlugins)
   const scope = new TypeScope(filename, source, 0, recordImports(body))
   recordTypes(ctx, body, scope, asGlobal)
   fileToScopeCache.set(filename, scope)
@@ -1139,6 +1158,7 @@ export function fileToScope(
 function parseFile(
   filename: string,
   content: string,
+  fs: FS,
   parserPlugins?: SFCScriptCompileOptions['babelParserPlugins'],
 ): Statement[] {
   const ext = extname(filename)
@@ -1151,7 +1171,21 @@ function parseFile(
       ),
       sourceType: 'module',
     }).program.body
-  } else if (ext === '.vue') {
+  }
+
+  // simulate `allowArbitraryExtensions` on TypeScript >= 5.0
+  const isUnknownTypeSource = !/\.[cm]?[tj]sx?$/.test(filename)
+  const arbitraryTypeSource = `${filename.slice(0, -ext.length)}.d${ext}.ts`
+  const hasArbitraryTypeDeclaration =
+    isUnknownTypeSource && fs.fileExists(arbitraryTypeSource)
+  if (hasArbitraryTypeDeclaration) {
+    return babelParse(fs.readFile(arbitraryTypeSource)!, {
+      plugins: resolveParserPlugins('ts', parserPlugins, true),
+      sourceType: 'module',
+    }).program.body
+  }
+
+  if (ext === '.vue') {
     const {
       descriptor: { script, scriptSetup },
     } = parse(content)
@@ -1466,6 +1500,7 @@ export function inferRuntimeType(
   node: Node & MaybeWithScope,
   scope: TypeScope = node._ownerScope || ctxToScope(ctx),
   isKeyOf = false,
+  typeParameters?: Record<string, Node>,
 ): string[] {
   try {
     switch (node.type) {
@@ -1554,10 +1589,43 @@ export function inferRuntimeType(
       case 'TSTypeReference': {
         const resolved = resolveTypeReference(ctx, node, scope)
         if (resolved) {
+          if (resolved.type === 'TSTypeAliasDeclaration') {
+            // #13240
+            // Special case for function type aliases to ensure correct runtime behavior
+            // other type aliases still fallback to unknown as before
+            if (resolved.typeAnnotation.type === 'TSFunctionType') {
+              return ['Function']
+            }
+
+            if (node.typeParameters) {
+              const typeParams: Record<string, Node> = Object.create(null)
+              if (resolved.typeParameters) {
+                resolved.typeParameters.params.forEach((p, i) => {
+                  typeParams![p.name] = node.typeParameters!.params[i]
+                })
+              }
+              return inferRuntimeType(
+                ctx,
+                resolved.typeAnnotation,
+                resolved._ownerScope,
+                isKeyOf,
+                typeParams,
+              )
+            }
+          }
+
           return inferRuntimeType(ctx, resolved, resolved._ownerScope, isKeyOf)
         }
-
         if (node.typeName.type === 'Identifier') {
+          if (typeParameters && typeParameters[node.typeName.name]) {
+            return inferRuntimeType(
+              ctx,
+              typeParameters[node.typeName.name],
+              scope,
+              isKeyOf,
+              typeParameters,
+            )
+          }
           if (isKeyOf) {
             switch (node.typeName.name) {
               case 'String':
@@ -1690,11 +1758,15 @@ export function inferRuntimeType(
         return inferRuntimeType(ctx, node.typeAnnotation, scope)
 
       case 'TSUnionType':
-        return flattenTypes(ctx, node.types, scope, isKeyOf)
+        return flattenTypes(ctx, node.types, scope, isKeyOf, typeParameters)
       case 'TSIntersectionType': {
-        return flattenTypes(ctx, node.types, scope, isKeyOf).filter(
-          t => t !== UNKNOWN_TYPE,
-        )
+        return flattenTypes(
+          ctx,
+          node.types,
+          scope,
+          isKeyOf,
+          typeParameters,
+        ).filter(t => t !== UNKNOWN_TYPE)
       }
 
       case 'TSEnumDeclaration':
@@ -1765,14 +1837,17 @@ function flattenTypes(
   types: TSType[],
   scope: TypeScope,
   isKeyOf: boolean = false,
+  typeParameters: Record<string, Node> | undefined = undefined,
 ): string[] {
   if (types.length === 1) {
-    return inferRuntimeType(ctx, types[0], scope, isKeyOf)
+    return inferRuntimeType(ctx, types[0], scope, isKeyOf, typeParameters)
   }
   return [
     ...new Set(
       ([] as string[]).concat(
-        ...types.map(t => inferRuntimeType(ctx, t, scope, isKeyOf)),
+        ...types.map(t =>
+          inferRuntimeType(ctx, t, scope, isKeyOf, typeParameters),
+        ),
       ),
     ),
   ]

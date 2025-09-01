@@ -444,6 +444,36 @@ describe('defineCustomElement', () => {
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe('hello')
     })
+
+    test('prop types validation', async () => {
+      const E = defineCustomElement({
+        props: {
+          num: {
+            type: [Number, String],
+          },
+          bool: {
+            type: Boolean,
+          },
+        },
+        render() {
+          return h('div', [
+            h('span', [`${this.num} is ${typeof this.num}`]),
+            h('span', [`${this.bool} is ${typeof this.bool}`]),
+          ])
+        },
+      })
+
+      customElements.define('my-el-with-type-props', E)
+      render(h('my-el-with-type-props', { num: 1, bool: true }), container)
+      const e = container.childNodes[0] as VueElement
+      // @ts-expect-error
+      expect(e.num).toBe(1)
+      // @ts-expect-error
+      expect(e.bool).toBe(true)
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<div><span>1 is number</span><span>true is boolean</span></div>',
+      )
+    })
   })
 
   describe('attrs', () => {
@@ -708,6 +738,101 @@ describe('defineCustomElement', () => {
         `<div>changedA! changedB!</div>`,
       )
     })
+
+    // #13212
+    test('inherited from app context within nested elements', async () => {
+      const outerValues: (string | undefined)[] = []
+      const innerValues: (string | undefined)[] = []
+      const innerChildValues: (string | undefined)[] = []
+
+      const Outer = defineCustomElement(
+        {
+          setup() {
+            outerValues.push(
+              inject<string>('shared'),
+              inject<string>('outer'),
+              inject<string>('inner'),
+            )
+          },
+          render() {
+            return h('div', [renderSlot(this.$slots, 'default')])
+          },
+        },
+        {
+          configureApp(app) {
+            app.provide('shared', 'shared')
+            app.provide('outer', 'outer')
+          },
+        },
+      )
+
+      const Inner = defineCustomElement(
+        {
+          setup() {
+            // ensure values are not self-injected
+            provide('inner', 'inner-child')
+
+            innerValues.push(
+              inject<string>('shared'),
+              inject<string>('outer'),
+              inject<string>('inner'),
+            )
+          },
+          render() {
+            return h('div', [renderSlot(this.$slots, 'default')])
+          },
+        },
+        {
+          configureApp(app) {
+            app.provide('outer', 'override-outer')
+            app.provide('inner', 'inner')
+          },
+        },
+      )
+
+      const InnerChild = defineCustomElement({
+        setup() {
+          innerChildValues.push(
+            inject<string>('shared'),
+            inject<string>('outer'),
+            inject<string>('inner'),
+          )
+        },
+        render() {
+          return h('div')
+        },
+      })
+
+      customElements.define('provide-from-app-outer', Outer)
+      customElements.define('provide-from-app-inner', Inner)
+      customElements.define('provide-from-app-inner-child', InnerChild)
+
+      container.innerHTML =
+        '<provide-from-app-outer>' +
+        '<provide-from-app-inner>' +
+        '<provide-from-app-inner-child></provide-from-app-inner-child>' +
+        '</provide-from-app-inner>' +
+        '</provide-from-app-outer>'
+
+      const outer = container.childNodes[0] as VueElement
+      expect(outer.shadowRoot!.innerHTML).toBe('<div><slot></slot></div>')
+
+      expect('[Vue warn]: injection "inner" not found.').toHaveBeenWarnedTimes(
+        1,
+      )
+      expect(
+        '[Vue warn]: App already provides property with key "outer" inherited from its parent element. ' +
+          'It will be overwritten with the new value.',
+      ).toHaveBeenWarnedTimes(1)
+
+      expect(outerValues).toEqual(['shared', 'outer', undefined])
+      expect(innerValues).toEqual(['shared', 'override-outer', 'inner'])
+      expect(innerChildValues).toEqual([
+        'shared',
+        'override-outer',
+        'inner-child',
+      ])
+    })
   })
 
   describe('styles', () => {
@@ -789,6 +914,30 @@ describe('defineCustomElement', () => {
       } as any)
       await nextTick()
       assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
+    })
+
+    test("child components should not inject styles to root element's shadow root w/ shadowRoot false", async () => {
+      const Bar = defineComponent({
+        styles: [`div { color: green; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const Baz = () => h(Bar)
+      const Foo = defineCustomElement(
+        {
+          render() {
+            return [h(Baz)]
+          },
+        },
+        { shadowRoot: false },
+      )
+
+      customElements.define('my-foo-with-shadowroot-false', Foo)
+      container.innerHTML = `<my-foo-with-shadowroot-false></my-foo-with-shadowroot-false>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')
+      expect(style).toBeUndefined()
     })
 
     test('with nonce', () => {
@@ -1131,6 +1280,92 @@ describe('defineCustomElement', () => {
       expect(target.innerHTML).toBe(`<span>default</span>`)
       app.unmount()
     })
+
+    test('toggle nested custom element with shadowRoot: false', async () => {
+      customElements.define(
+        'my-el-child-shadow-false',
+        defineCustomElement(
+          {
+            render(ctx: any) {
+              return h('div', null, [renderSlot(ctx.$slots, 'default')])
+            },
+          },
+          { shadowRoot: false },
+        ),
+      )
+      const ChildWrapper = {
+        render() {
+          return h('my-el-child-shadow-false', null, 'child')
+        },
+      }
+
+      customElements.define(
+        'my-el-parent-shadow-false',
+        defineCustomElement(
+          {
+            props: {
+              isShown: { type: Boolean, required: true },
+            },
+            render(ctx: any, _: any, $props: any) {
+              return $props.isShown
+                ? h('div', { key: 0 }, [renderSlot(ctx.$slots, 'default')])
+                : null
+            },
+          },
+          { shadowRoot: false },
+        ),
+      )
+      const ParentWrapper = {
+        props: {
+          isShown: { type: Boolean, required: true },
+        },
+        render(ctx: any, _: any, $props: any) {
+          return h('my-el-parent-shadow-false', { isShown: $props.isShown }, [
+            renderSlot(ctx.$slots, 'default'),
+          ])
+        },
+      }
+
+      const isShown = ref(true)
+      const App = {
+        render() {
+          return h(ParentWrapper, { isShown: isShown.value } as any, {
+            default: () => [h(ChildWrapper)],
+          })
+        },
+      }
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createApp(App)
+      app.mount(container)
+      expect(container.innerHTML).toBe(
+        `<my-el-parent-shadow-false is-shown="" data-v-app="">` +
+          `<div>` +
+          `<my-el-child-shadow-false data-v-app="">` +
+          `<div>child</div>` +
+          `</my-el-child-shadow-false>` +
+          `</div>` +
+          `</my-el-parent-shadow-false>`,
+      )
+
+      isShown.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<my-el-parent-shadow-false data-v-app=""><!----></my-el-parent-shadow-false>`,
+      )
+
+      isShown.value = true
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<my-el-parent-shadow-false data-v-app="" is-shown="">` +
+          `<div>` +
+          `<my-el-child-shadow-false data-v-app="">` +
+          `<div>child</div>` +
+          `</my-el-child-shadow-false>` +
+          `</div>` +
+          `</my-el-parent-shadow-false>`,
+      )
+    })
   })
 
   describe('helpers', () => {
@@ -1167,6 +1402,34 @@ describe('defineCustomElement', () => {
   })
 
   describe('expose', () => {
+    test('expose w/ options api', async () => {
+      const E = defineCustomElement({
+        data() {
+          return {
+            value: 0,
+          }
+        },
+        methods: {
+          foo() {
+            ;(this as any).value++
+          },
+        },
+        expose: ['foo'],
+        render(_ctx: any) {
+          return h('div', null, _ctx.value)
+        },
+      })
+      customElements.define('my-el-expose-options-api', E)
+
+      container.innerHTML = `<my-el-expose-options-api></my-el-expose-options-api>`
+      const e = container.childNodes[0] as VueElement & {
+        foo: () => void
+      }
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>0</div>`)
+      e.foo()
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>1</div>`)
+    })
     test('expose attributes and callback', async () => {
       type SetValue = (value: string) => void
       let fn: MockedFunction<SetValue>
@@ -1329,6 +1592,64 @@ describe('defineCustomElement', () => {
       const e = container.childNodes[0] as VueElement
 
       expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
+    })
+
+    // #12448
+    test('work with async component', async () => {
+      const AsyncComp = defineAsyncComponent(() => {
+        return Promise.resolve({
+          render() {
+            const msg: string | undefined = inject('msg')
+            return h('div', {}, msg)
+          },
+        } as any)
+      })
+      const E = defineCustomElement(AsyncComp, {
+        configureApp(app) {
+          app.provide('msg', 'app-injected')
+        },
+      })
+      customElements.define('my-async-element-with-app', E)
+
+      container.innerHTML = `<my-async-element-with-app></my-async-element-with-app>`
+      const e = container.childNodes[0] as VueElement
+      await new Promise(r => setTimeout(r))
+      expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
+    })
+
+    test('with hmr reload', async () => {
+      const __hmrId = '__hmrWithApp'
+      const def = defineComponent({
+        __hmrId,
+        setup() {
+          const msg = inject('msg')
+          return { msg }
+        },
+        render(this: any) {
+          return h('div', [h('span', this.msg), h('span', this.$foo)])
+        },
+      })
+      const E = defineCustomElement(def, {
+        configureApp(app) {
+          app.provide('msg', 'app-injected')
+          app.config.globalProperties.$foo = 'foo'
+        },
+      })
+      customElements.define('my-element-with-app-hmr', E)
+
+      container.innerHTML = `<my-element-with-app-hmr></my-element-with-app-hmr>`
+      const el = container.childNodes[0] as VueElement
+      expect(el.shadowRoot?.innerHTML).toBe(
+        `<div><span>app-injected</span><span>foo</span></div>`,
+      )
+
+      // hmr
+      __VUE_HMR_RUNTIME__.reload(__hmrId, def as any)
+
+      await nextTick()
+      expect(el.shadowRoot?.innerHTML).toBe(
+        `<div><span>app-injected</span><span>foo</span></div>`,
+      )
     })
   })
 
