@@ -40,7 +40,7 @@ function onCompositionEnd(e: Event) {
 const assignKey: unique symbol = Symbol('_assign')
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
-  T & { [assignKey]: AssignerFn; _assigning?: boolean },
+  T & { [assignKey]: AssignerFn; _assigning?: boolean; _initialValue?: any },
   any,
   Modifiers
 >
@@ -52,6 +52,7 @@ export const vModelText: ModelDirective<
   'trim' | 'number' | 'lazy'
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
+    el._initialValue = el.value
     el[assignKey] = getModelAssigner(vnode)
     const castToNumber =
       number || (vnode.props && vnode.props.type === 'number')
@@ -83,6 +84,7 @@ export const vModelText: ModelDirective<
   },
   // set value on mounted so it's after min/max for type="range"
   mounted(el, { value }) {
+    if (el._initialValue !== el.value) return
     el.value = value == null ? '' : value
   },
   beforeUpdate(
@@ -122,6 +124,7 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   deep: true,
   created(el, _, vnode) {
     el[assignKey] = getModelAssigner(vnode)
+    el._initialValue = el.checked
     addEventListener(el, 'change', () => {
       const modelValue = (el as any)._modelValue
       const elementValue = getValue(el)
@@ -151,7 +154,10 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
     })
   },
   // set initial checked on mount to wait for true-value/false-value
-  mounted: setChecked,
+  mounted(el, binding, vnode) {
+    if (el._initialValue !== el.checked) return
+    setChecked(el, binding, vnode)
+  },
   beforeUpdate(el, binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
     setChecked(el, binding, vnode)
