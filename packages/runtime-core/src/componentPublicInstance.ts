@@ -577,19 +577,20 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, setupState, accessCache, ctx, appContext, propsOptions },
+      _: { data, setupState, accessCache, ctx, appContext, propsOptions, type },
     }: ComponentRenderContext,
     key: string,
   ) {
-    let normalizedProps
-    return (
-      !!accessCache![key] ||
-      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
+    let normalizedProps, cssModules
+    return !!(
+      accessCache![key] ||
+      (data !== EMPTY_OBJ && key[0] !== '$' && hasOwn(data, key)) ||
       hasSetupBinding(setupState, key) ||
       ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
-      hasOwn(appContext.config.globalProperties, key)
+      hasOwn(appContext.config.globalProperties, key) ||
+      ((cssModules = type.__cssModules) && cssModules[key])
     )
   },
 
