@@ -894,4 +894,47 @@ describe('hot module replacement', () => {
     await timeout()
     expect(serializeInner(root)).toBe('<div>bar</div>')
   })
+
+  test('rerender for nested component', () => {
+    const id = 'child-nested-rerender'
+    const Foo: ComponentOptions = {
+      __hmrId: id,
+      render() {
+        return this.$slots.default()
+      },
+    }
+    createRecord(id, Foo)
+
+    const parentId = 'parent-nested-rerender'
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      render() {
+        return h(Foo, null, {
+          default: () => this.$slots.default(),
+          _: 3 /* FORWARDED */,
+        })
+      },
+    }
+
+    const appId = 'app-nested-rerender'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      render: () =>
+        h(Parent, null, {
+          default: () => [
+            h(Foo, null, {
+              default: () => ['foo'],
+            }),
+          ],
+        }),
+    }
+    createRecord(parentId, App)
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('foo')
+
+    rerender(id, () => 'bar')
+    expect(serializeInner(root)).toBe('bar')
+  })
 })
