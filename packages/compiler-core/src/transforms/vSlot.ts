@@ -131,9 +131,17 @@ export function buildSlots(
   // since it likely uses a scope variable.
   let hasDynamicSlots = context.scopes.vSlot > 0 || context.scopes.vFor > 0
   // with `prefixIdentifiers: true`, this can be further optimized to make
-  // it dynamic only when the slot actually uses the scope variables.
+  // it dynamic when
+  // 1. the slot arg or exp uses the scope variables.
+  // 2. the slot children use the scope variables.
   if (!__BROWSER__ && !context.ssr && context.prefixIdentifiers) {
-    hasDynamicSlots = hasScopeRef(node, context.identifiers)
+    hasDynamicSlots =
+      node.props.some(
+        prop =>
+          isVSlot(prop) &&
+          (hasScopeRef(prop.arg, context.identifiers) ||
+            hasScopeRef(prop.exp, context.identifiers)),
+      ) || children.some(child => hasScopeRef(child, context.identifiers))
   }
 
   // 1. Check for slot with slotProps on component itself.
@@ -222,7 +230,7 @@ export function buildSlots(
       let prev
       while (j--) {
         prev = children[j]
-        if (prev.type !== NodeTypes.COMMENT) {
+        if (prev.type !== NodeTypes.COMMENT && isNonWhitespaceContent(prev)) {
           break
         }
       }
@@ -342,7 +350,6 @@ export function buildSlots(
     : hasForwardedSlots(node.children)
       ? SlotFlags.FORWARDED
       : SlotFlags.STABLE
-
   let slots = createObjectExpression(
     slotsProperties.concat(
       createObjectProperty(
