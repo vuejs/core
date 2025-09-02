@@ -189,8 +189,6 @@ export function compileScript(
     )
   }
 
-  const ctx = new ScriptCompileContext(sfc, options)
-
   if (!scriptSetup) {
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
@@ -204,13 +202,6 @@ export function compileScript(
 
     const ctx = new ScriptCompileContext(sfc, options)
     return processNormalScript(ctx, scopeId)
-  }
-
-  if (script && scriptLang !== scriptSetupLang) {
-    throw new Error(
-      `[@vue/compiler-sfc] <script> and <script setup> must have the same ` +
-        `language type.`,
-    )
   }
 
   if (scriptSetupLang && !isJSOrTS) {
