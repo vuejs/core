@@ -80,6 +80,7 @@ export type VaporSetupFn<
   Emits extends EmitsOptions = {},
   Slots extends StaticSlots = StaticSlots,
   Exposed extends Record<string, any> = Record<string, any>,
+  TypeBlock extends Block = Block,
 > = (
   props: Readonly<Props>,
   ctx: {
@@ -88,7 +89,7 @@ export type VaporSetupFn<
     attrs: Record<string, any>
     expose: <T extends Record<string, any> = Exposed>(exposed: T) => void
   },
-) => Block | Exposed | Promise<Exposed> | void
+) => TypeBlock | Exposed | Promise<Exposed> | void
 
 export type FunctionalVaporComponent = VaporSetupFn &
   Omit<ObjectVaporComponent, 'setup'> & {
@@ -111,7 +112,7 @@ export interface ObjectVaporComponent<
   props?: Props
   emits?: Emits | RuntimeEmitsKeys[]
   slots?: Slots
-  setup?: VaporSetupFn<InferredProps, Emits, Slots, Exposed>
+  setup?: VaporSetupFn<InferredProps, Emits, Slots, Exposed, TypeBlock>
   render?(
     ctx: Exposed extends Block ? undefined : ShallowUnwrapRef<Exposed>,
     props: Readonly<InferredProps>,

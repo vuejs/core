@@ -1213,6 +1213,12 @@ describe('__typeEl backdoor', () => {
   const Comp2 = defineVaporComponent(() => document.createElement('a'))
   const c2 = new Comp2()
   expectType<HTMLAnchorElement>(c2.block)
+
+  const Comp3 = defineVaporComponent({
+    setup: () => document.createElement('a'),
+  })
+  const c3 = new Comp3()
+  expectType<HTMLAnchorElement>(c3.block)
 })
 
 defineVaporComponent({
