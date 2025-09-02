@@ -204,7 +204,7 @@ const BaseTransitionImpl: ComponentOptions = {
       if (
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
-        !isSameVNodeType(innerChild, oldInnerChild) &&
+        !isSameVNodeType(oldInnerChild, innerChild) &&
         recursiveGetSubtree(instance).type !== Comment
       ) {
         let leavingHooks = resolveTransitionHooks(

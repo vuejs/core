@@ -895,6 +895,58 @@ describe('hot module replacement', () => {
     expect(serializeInner(root)).toBe('<div>bar</div>')
   })
 
+  test('multi reload child wrapped in Suspense + KeepAlive', async () => {
+    const id = 'test-child-reload-3'
+    const Child: ComponentOptions = {
+      __hmrId: id,
+      setup() {
+        const count = ref(0)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    }
+    createRecord(id, Child)
+
+    const appId = 'test-app-id'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      components: { Child },
+      render: compileToFunction(`
+        <KeepAlive>
+          <Suspense>
+            <Child />
+          </Suspense>
+        </KeepAlive>
+      `),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div>0</div>')
+    await timeout()
+    reload(id, {
+      __hmrId: id,
+      setup() {
+        const count = ref(1)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>1</div>')
+
+    reload(id, {
+      __hmrId: id,
+      setup() {
+        const count = ref(2)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>2</div>')
+  })
+
   test('rerender for nested component', () => {
     const id = 'child-nested-rerender'
     const Foo: ComponentOptions = {
