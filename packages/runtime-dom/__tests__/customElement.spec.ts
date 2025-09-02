@@ -916,6 +916,30 @@ describe('defineCustomElement', () => {
       assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
     })
 
+    test("child components should not inject styles to root element's shadow root w/ shadowRoot false", async () => {
+      const Bar = defineComponent({
+        styles: [`div { color: green; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const Baz = () => h(Bar)
+      const Foo = defineCustomElement(
+        {
+          render() {
+            return [h(Baz)]
+          },
+        },
+        { shadowRoot: false },
+      )
+
+      customElements.define('my-foo-with-shadowroot-false', Foo)
+      container.innerHTML = `<my-foo-with-shadowroot-false></my-foo-with-shadowroot-false>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')
+      expect(style).toBeUndefined()
+    })
+
     test('with nonce', () => {
       const Foo = defineCustomElement(
         {
@@ -1378,6 +1402,34 @@ describe('defineCustomElement', () => {
   })
 
   describe('expose', () => {
+    test('expose w/ options api', async () => {
+      const E = defineCustomElement({
+        data() {
+          return {
+            value: 0,
+          }
+        },
+        methods: {
+          foo() {
+            ;(this as any).value++
+          },
+        },
+        expose: ['foo'],
+        render(_ctx: any) {
+          return h('div', null, _ctx.value)
+        },
+      })
+      customElements.define('my-el-expose-options-api', E)
+
+      container.innerHTML = `<my-el-expose-options-api></my-el-expose-options-api>`
+      const e = container.childNodes[0] as VueElement & {
+        foo: () => void
+      }
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>0</div>`)
+      e.foo()
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>1</div>`)
+    })
     test('expose attributes and callback', async () => {
       type SetValue = (value: string) => void
       let fn: MockedFunction<SetValue>
@@ -1542,6 +1594,29 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
     })
 
+    // #12448
+    test('work with async component', async () => {
+      const AsyncComp = defineAsyncComponent(() => {
+        return Promise.resolve({
+          render() {
+            const msg: string | undefined = inject('msg')
+            return h('div', {}, msg)
+          },
+        } as any)
+      })
+      const E = defineCustomElement(AsyncComp, {
+        configureApp(app) {
+          app.provide('msg', 'app-injected')
+        },
+      })
+      customElements.define('my-async-element-with-app', E)
+
+      container.innerHTML = `<my-async-element-with-app></my-async-element-with-app>`
+      const e = container.childNodes[0] as VueElement
+      await new Promise(r => setTimeout(r))
+      expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
+    })
+
     test('with hmr reload', async () => {
       const __hmrId = '__hmrWithApp'
       const def = defineComponent({
@@ -1698,5 +1773,17 @@ describe('defineCustomElement', () => {
     expect((el as any).outerHTML).toBe(
       `<el-hyphenated-attr-removal></el-hyphenated-attr-removal>`,
     )
+  })
+
+  test('no unexpected mutation of the 1st argument', () => {
+    const Foo = {
+      name: 'Foo',
+    }
+
+    defineCustomElement(Foo, { shadowRoot: false })
+
+    expect(Foo).toEqual({
+      name: 'Foo',
+    })
   })
 })
