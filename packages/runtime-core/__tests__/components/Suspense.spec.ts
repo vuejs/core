@@ -17,6 +17,8 @@ import {
   onUnmounted,
   ref,
   render,
+  renderList,
+  renderSlot,
   resolveDynamicComponent,
   serializeInner,
   shallowRef,
@@ -2159,6 +2161,80 @@ describe('Suspense', () => {
     // should not throw error due to Suspense vnode.el being null
     data.value = 'data2'
     await Promise.all(deps)
+  })
+
+  // #13453
+  test('add new async deps during patching', async () => {
+    const getComponent = (type: string) => {
+      if (type === 'A') {
+        return defineAsyncComponent({
+          setup() {
+            return () => h('div', 'A')
+          },
+        })
+      }
+      return defineAsyncComponent({
+        setup() {
+          return () => h('div', 'B')
+        },
+      })
+    }
+
+    const types = ref(['A'])
+    const add = async () => {
+      types.value.push('B')
+    }
+
+    const update = async () => {
+      // mount Suspense B
+      // [Suspense A] -> [Suspense A(pending), Suspense B(pending)]
+      await add()
+      // patch Suspense B (still pending)
+      // [Suspense A(pending), Suspense B(pending)] -> [Suspense B(pending)]
+      types.value.shift()
+    }
+
+    const Comp = {
+      render(this: any) {
+        return h(Fragment, null, [
+          renderList(types.value, type => {
+            return h(
+              Suspense,
+              { key: type },
+              {
+                default: () => [
+                  renderSlot(this.$slots, 'default', { type: type }),
+                ],
+              },
+            )
+          }),
+        ])
+      },
+    }
+
+    const App = {
+      setup() {
+        return () =>
+          h(Comp, null, {
+            default: (params: any) => [h(getComponent(params.type))],
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(`<div>A</div>`)
+
+    update()
+    await nextTick()
+    // wait for both A and B to resolve
+    await Promise.all(deps)
+    // wait for new B to resolve
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(`<div>B</div>`)
   })
 
   describe('warnings', () => {
