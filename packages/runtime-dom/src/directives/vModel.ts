@@ -4,6 +4,7 @@ import {
   type ObjectDirective,
   type VNode,
   nextTick,
+  toRaw,
   warn,
 } from '@vue/runtime-core'
 import { addEventListener } from '../modules/events'
@@ -38,9 +39,15 @@ function onCompositionEnd(e: Event) {
 }
 
 const assignKey: unique symbol = Symbol('_assign')
+const assignValueKey: unique symbol = Symbol('_value')
+const assigningKey: unique symbol = Symbol('_assigning')
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
-  T & { [assignKey]: AssignerFn; _assigning?: boolean },
+  T & {
+    [assignKey]: AssignerFn
+    [assignValueKey]: any
+    [assigningKey]?: boolean
+  },
   any,
   Modifiers
 >
@@ -210,16 +217,15 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
         .map((o: HTMLOptionElement) =>
           number ? looseToNumber(getValue(o)) : getValue(o),
         )
-      el[assignKey](
-        el.multiple
-          ? isSetModel
-            ? new Set(selectedVal)
-            : selectedVal
-          : selectedVal[0],
-      )
-      el._assigning = true
+      const value = (el[assignValueKey] = el.multiple
+        ? isSetModel
+          ? new Set(selectedVal)
+          : selectedVal
+        : selectedVal[0])
+      el[assignKey](value)
+      el[assigningKey] = true
       nextTick(() => {
-        el._assigning = false
+        el[assigningKey] = false
       })
     })
     el[assignKey] = getModelAssigner(vnode)
@@ -233,7 +239,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
     el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {
-    if (!el._assigning) {
+    if (!el[assigningKey] || toRaw(value) !== el[assignValueKey]) {
       setSelected(el, value)
     }
   },
