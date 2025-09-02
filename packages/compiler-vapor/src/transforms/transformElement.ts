@@ -221,11 +221,30 @@ function transformNativeElement(
       getEffectIndex,
     )
   } else {
+    let needsQuoting = false
+
     for (const prop of propsResult[1]) {
       const { key, values } = prop
       if (key.isStatic && values.length === 1 && values[0].isStatic) {
-        template += ` ${key.content}`
-        if (values[0].content) template += `="${values[0].content}"`
+        const value = values[0].content
+
+        if (!needsQuoting) template += ` `
+        template += key.content
+
+        if (value) {
+          // https://html.spec.whatwg.org/multipage/introduction.html#intro-early-example
+          needsQuoting = /[\s>]|^["'=]/.test(value)
+
+          if (needsQuoting) {
+            const encoded = value.replace(/"/g, '&#34;')
+
+            template += `="${encoded}"`
+          } else {
+            template += `=${value}`
+          }
+        } else {
+          needsQuoting = false
+        }
       } else {
         dynamicProps.push(key.content)
         context.registerEffect(
