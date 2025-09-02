@@ -101,6 +101,7 @@ export interface ObjectVaporComponent<
   RuntimeEmitsKeys extends string = string,
   Slots extends StaticSlots = StaticSlots,
   Exposed extends Record<string, any> = Record<string, any>,
+  TypeEl extends Block = Block,
   InferredProps = ComponentObjectPropsOptions extends Props
     ? {}
     : ExtractPropTypes<Props>,
@@ -117,7 +118,7 @@ export interface ObjectVaporComponent<
     emit: EmitFn<Emits>,
     attrs: any,
     slots: StaticSlots,
-  ): RenderReturn
+  ): RenderReturn<TypeEl>
 
   name?: string
   vapor?: boolean
@@ -362,6 +363,7 @@ export class VaporComponentInstance<
   Emits extends EmitsOptions = {},
   Slots extends StaticSlots = StaticSlots,
   Exposed extends Record<string, any> = Record<string, any>,
+  TypeEl extends Block = Block,
   Refs extends Record<string, any> = Record<string, any>,
 > implements GenericComponentInstance
 {
@@ -372,7 +374,7 @@ export class VaporComponentInstance<
   parent: GenericComponentInstance | null
   appContext: GenericAppContext
 
-  block: Block
+  block: TypeEl
   scope: EffectScope
 
   rawProps: RawProps

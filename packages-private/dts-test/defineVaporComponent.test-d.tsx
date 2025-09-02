@@ -1041,6 +1041,7 @@ declare const MyButton: DefineVaporComponent<
   {},
   {},
   {},
+  Block,
   true,
   Readonly<ExtractPropTypes<{}>>,
   VaporPublicProps & AllowedComponentProps & ComponentCustomProps,
@@ -1194,6 +1195,24 @@ describe('__typeRefs backdoor, object syntax', () => {
 
   expectType<InstanceType<typeof Child>>(refs.child)
   expectType<number>(refs.child.refs.foo)
+})
+
+describe('__typeEl backdoor', () => {
+  const Comp = defineVaporComponent({
+    __typeEl: {} as HTMLAnchorElement,
+  })
+  const c = new Comp()
+  expectType<HTMLAnchorElement>(c.block)
+
+  const Comp1 = defineVaporComponent({
+    render: () => document.createElement('a'),
+  })
+  const c1 = new Comp1()
+  expectType<HTMLAnchorElement>(c1.block)
+
+  const Comp2 = defineVaporComponent(() => document.createElement('a'))
+  const c2 = new Comp2()
+  expectType<HTMLAnchorElement>(c2.block)
 })
 
 defineVaporComponent({
