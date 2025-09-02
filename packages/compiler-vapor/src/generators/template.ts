@@ -12,9 +12,12 @@ export function genTemplates(
   return templates
     .map(
       (template, i) =>
-        `const t${i} = ${helper('template')}(${JSON.stringify(
-          template,
-        )}${i === rootIndex ? ', true' : ''})\n`,
+        `const t${i} = ${helper('template')}(${
+          JSON.stringify(template).replace(
+            /\$\{(.*?)\}\$/g,
+            (_, expr) => `" + ${expr} + "`,
+          ) // replace asset imports with string concatenation
+        }${i === rootIndex ? ', true' : ''})\n`,
     )
     .join('')
 }
