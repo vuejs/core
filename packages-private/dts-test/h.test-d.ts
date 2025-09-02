@@ -39,6 +39,51 @@ describe('h inference w/ element', () => {
     onClick: e => {
       expectType<MouseEvent>(e)
     },
+    onClickCapture: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickCaptureOnce: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickCaptureOncePassive: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickCapturePassive: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickCapturePassiveOnce: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickOnce: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickOnceCapture: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickOnceCapturePassive: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickOncePassive: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickOncePassiveCapture: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickPassive: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickPassiveCapture: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickPassiveCaptureOnce: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickPassiveOnce: e => {
+      expectType<MouseEvent>(e)
+    },
+    onClickPassiveOnceCapture: e => {
+      expectType<MouseEvent>(e)
+    },
   })
   h('input', {
     onFocus(e) {
