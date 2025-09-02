@@ -126,18 +126,10 @@ export function createSlot(
     const renderSlot = () => {
       const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
       if (slot) {
+        fragment.fallback = fallback
         // create and cache bound version of the slot to make it stable
         // so that we avoid unnecessary updates if it resolves to the same slot
-        fragment.update(
-          slot._bound ||
-            (slot._bound = () => {
-              const slotContent = slot(slotProps)
-              if (slotContent instanceof DynamicFragment) {
-                slotContent.fallback = fallback
-              }
-              return slotContent
-            }),
-        )
+        fragment.update(slot._bound || (slot._bound = () => slot(slotProps)))
       } else {
         fragment.update(fallback)
       }
