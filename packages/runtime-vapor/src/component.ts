@@ -101,7 +101,7 @@ export interface ObjectVaporComponent<
   RuntimeEmitsKeys extends string = string,
   Slots extends StaticSlots = StaticSlots,
   Exposed extends Record<string, any> = Record<string, any>,
-  TypeEl extends Block = Block,
+  TypeBlock extends Block = Block,
   InferredProps = ComponentObjectPropsOptions extends Props
     ? {}
     : ExtractPropTypes<Props>,
@@ -118,7 +118,7 @@ export interface ObjectVaporComponent<
     emit: EmitFn<Emits>,
     attrs: any,
     slots: StaticSlots,
-  ): RenderReturn<TypeEl>
+  ): RenderReturn<TypeBlock>
 
   name?: string
   vapor?: boolean
