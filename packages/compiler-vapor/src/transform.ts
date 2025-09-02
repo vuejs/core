@@ -61,6 +61,8 @@ export type StructuralDirectiveTransform = (
 
 export type TransformOptions = HackOptions<BaseTransformOptions>
 
+const generatedVarRE = /^[nxr](\d+)$/
+
 export class TransformContext<T extends AllNode = AllNode> {
   selfName: string | null = null
   parent: TransformContext<RootNode | ElementNode> | null = null
@@ -86,6 +88,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   slots: IRSlots[] = []
 
   private globalId = 0
+  private nextIdMap: Map<number, number> | null = null
 
   constructor(
     public ir: RootIRNode,
@@ -95,6 +98,7 @@ export class TransformContext<T extends AllNode = AllNode> {
     this.options = extend({}, defaultOptions, options)
     this.root = this as TransformContext<RootNode>
     if (options.filename) this.selfName = getSelfName(options.filename)
+    this.initNextIdMap()
   }
 
   enterBlock(ir: BlockIRNode, isVFor: boolean = false): () => void {
@@ -119,17 +123,31 @@ export class TransformContext<T extends AllNode = AllNode> {
 
   increaseId = (): number => {
     // allocate an id that won't conflict with user-defined bindings when used
-    // as generated identifiers with n/x/r prefixes (e.g., n1, x1, r1)
-    const binding = this.root.options.bindingMetadata
-    let id = this.globalId
-    while (
-      binding &&
-      ('n' + id in binding || 'x' + id in binding || 'r' + id in binding)
-    ) {
-      id++
-    }
-    this.globalId = id + 1
+    // as generated identifiers with n/x/r prefixes (e.g., n1, x1, r1).
+    const id = this.nextIdMap
+      ? (this.nextIdMap.get(this.globalId) ?? this.globalId)
+      : this.globalId
+    // advance next
+    this.globalId = getNextId(this.nextIdMap, id + 1)
     return id
+  }
+
+  private initNextIdMap(): void {
+    const binding = this.root.options.bindingMetadata
+    if (!binding) return
+
+    const keys = Object.keys(binding)
+    if (keys.length === 0) return
+
+    // extract numbers for specific literal prefixes
+    const numbers = new Set<number>()
+    for (const name of keys) {
+      const m = generatedVarRE.exec(name)
+      if (m) numbers.add(Number(m[1]))
+    }
+    if (numbers.size === 0) return
+
+    this.globalId = getNextId((this.nextIdMap = buildNextIdMap(numbers)), 0)
   }
   reference(): number {
     if (this.dynamic.id !== undefined) return this.dynamic.id
@@ -308,4 +326,39 @@ export function createStructuralDirectiveTransform(
       return exitFns
     }
   }
+}
+
+/**
+ * Build a "next-id" map from an occupied number set.
+ * For each consecutive range [start..end], map every v in the range to end + 1.
+ * Example: input [0, 1, 2, 4] => { 0: 3, 1: 3, 2: 3, 4: 5 }.
+ */
+export function buildNextIdMap(nums: Iterable<number>): Map<number, number> {
+  const map: Map<number, number> = new Map()
+  const arr = Array.from(new Set(nums)).sort((a, b) => a - b)
+  if (arr.length === 0) return map
+
+  for (let i = 0; i < arr.length; i++) {
+    let start = arr[i]
+    let end = start
+    while (i + 1 < arr.length && arr[i + 1] === end + 1) {
+      i++
+      end = arr[i]
+    }
+    for (let v = start; v <= end; v++) map.set(v, end + 1)
+  }
+  return map
+}
+
+/**
+ * Return the available id for n using a map built by buildNextIdMap:
+ * - If n is not occupied, return n.
+ * - If n is occupied, return the mapped value
+ */
+export function getNextId(
+  map: Map<number, number> | null | undefined,
+  n: number,
+): number {
+  if (map && map.has(n)) return map.get(n)!
+  return n
 }

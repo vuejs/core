@@ -18,8 +18,11 @@ import {
   genCall,
 } from './generators/utils'
 import { setTemplateRefIdent } from './generators/templateRef'
+import { buildNextIdMap, getNextId } from './transform'
 
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
+
+const generatedVarRE = /^([pt])(\d+)$/
 
 export class CodegenContext {
   options: Required<CodegenOptions>
@@ -70,28 +73,50 @@ export class CodegenContext {
     return [this.scopeLevel++, () => this.scopeLevel--] as const
   }
 
-  seenVarNames: Set<string> = new Set()
-  templateVars: Map<number, string> = new Map()
-  genVarName(prefix: string, baseNum: number): string {
-    let num = baseNum
-    let name = `${prefix}${num}`
-    while (this.bindingNames.has(name) || this.seenVarNames.has(name)) {
-      name = `${prefix}${++num}`
-    }
-    this.seenVarNames.add(name)
-    return name
-  }
+  private templateVars: Map<number, string> = new Map()
+  private nextIdMap: Map<string, Map<number, number>> = new Map()
+  private lastPId: number = -1
+  private lastTIndex: number = -1
+  private lastTId: number = -1
+  private initNextIdMap(): void {
+    if (this.bindingNames.size === 0) return
 
+    // build a map of binding names to their occupied ids
+    const map = new Map<string, Set<number>>()
+    for (const name of this.bindingNames) {
+      const m = generatedVarRE.exec(name)
+      if (!m) continue
+
+      const prefix = m[1]
+      const num = Number(m[2])
+      let set = map.get(prefix)
+      if (!set) map.set(prefix, (set = new Set<number>()))
+      set.add(num)
+    }
+
+    for (const [prefix, nums] of map) {
+      if (nums.size === 0) continue
+      this.nextIdMap.set(prefix, buildNextIdMap(nums))
+    }
+  }
   tName(i: number): string {
     let name = this.templateVars.get(i)
-    if (!name) {
-      this.templateVars.set(i, (name = this.genVarName('t', i)))
+    if (name) return name
+
+    const map = this.nextIdMap.get('t')
+    for (let j = this.lastTIndex + 1; j <= i; j++) {
+      this.templateVars.set(
+        j,
+        `t${(this.lastTId = getNextId(map, Math.max(j, this.lastTId + 1)))}`,
+      )
     }
-    return name
+    this.lastTIndex = i
+    return this.templateVars.get(i)!
   }
 
   pName(i: number): string {
-    return this.genVarName('p', i)
+    const map = this.nextIdMap.get('p')
+    return `p${(this.lastPId = getNextId(map, Math.max(i, this.lastPId + 1)))}`
   }
 
   constructor(
@@ -121,6 +146,7 @@ export class CodegenContext {
         ? Object.keys(this.options.bindingMetadata)
         : [],
     )
+    this.initNextIdMap()
   }
 }
 
