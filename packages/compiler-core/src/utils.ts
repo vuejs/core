@@ -63,7 +63,7 @@ export function isCoreComponent(tag: string): symbol | void {
   }
 }
 
-const nonIdentifierRE = /^\d|[^\$\w\xA0-\uFFFF]/
+const nonIdentifierRE = /^$|^\d|[^\$\w\xA0-\uFFFF]/
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
@@ -341,6 +341,10 @@ export function isText(
   node: TemplateChildNode,
 ): node is TextNode | InterpolationNode {
   return node.type === NodeTypes.INTERPOLATION || node.type === NodeTypes.TEXT
+}
+
+export function isVPre(p: ElementNode['props'][0]): p is DirectiveNode {
+  return p.type === NodeTypes.DIRECTIVE && p.name === 'pre'
 }
 
 export function isVSlot(p: ElementNode['props'][0]): p is DirectiveNode {
