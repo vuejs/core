@@ -18,6 +18,7 @@ import type {
   Declaration,
   ExportSpecifier,
   Identifier,
+  LVal,
   Node,
   ObjectPattern,
   Statement,
@@ -180,6 +181,15 @@ export function compileScript(
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const isJSOrTS =
     isJS(scriptLang, scriptSetupLang) || isTS(scriptLang, scriptSetupLang)
+
+  if (script && scriptSetup && scriptLang !== scriptSetupLang) {
+    throw new Error(
+      `[@vue/compiler-sfc] <script> and <script setup> must have the same ` +
+        `language type.`,
+    )
+  }
+
+  const ctx = new ScriptCompileContext(sfc, options)
 
   if (!scriptSetup) {
     if (!script) {
@@ -556,7 +566,7 @@ export function compileScript(
           }
 
           // defineProps
-          const isDefineProps = processDefineProps(ctx, init, decl.id)
+          const isDefineProps = processDefineProps(ctx, init, decl.id as LVal)
           if (ctx.propsDestructureRestId) {
             setupBindings[ctx.propsDestructureRestId] =
               BindingTypes.SETUP_REACTIVE_CONST
@@ -564,10 +574,10 @@ export function compileScript(
 
           // defineEmits
           const isDefineEmits =
-            !isDefineProps && processDefineEmits(ctx, init, decl.id)
+            !isDefineProps && processDefineEmits(ctx, init, decl.id as LVal)
           !isDefineEmits &&
-            (processDefineSlots(ctx, init, decl.id) ||
-              processDefineModel(ctx, init, decl.id))
+            (processDefineSlots(ctx, init, decl.id as LVal) ||
+              processDefineModel(ctx, init, decl.id as LVal))
 
           if (
             isDefineProps &&
