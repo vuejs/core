@@ -278,17 +278,7 @@ export function setDynamicProp(
       setDOMProp(el, key, value)
     }
   } else {
-    // special case for <input v-model type="checkbox"> with
-    // :true-value & :false-value
-    // store value as dom properties since non-string values will be
-    // stringified.
-    if (!(!isApplyingFallthroughProps && el.$root && hasFallthroughKey(key))) {
-      if (key === 'true-value') {
-        ;(el as any)._trueValue = value
-      } else if (key === 'false-value') {
-        ;(el as any)._falseValue = value
-      }
-    }
+    // TODO special case for <input v-model type="checkbox">
     setAttr(el, key, value)
   }
   return value
