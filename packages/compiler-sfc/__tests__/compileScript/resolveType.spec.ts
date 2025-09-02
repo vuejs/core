@@ -1342,6 +1342,33 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('global types with named exports', () => {
+      const files = {
+        '/global.d.ts': `
+          declare global {
+            export interface ExportedInterface { foo: number }
+            export type ExportedType = { bar: boolean }
+          }
+          export {}
+        `,
+      }
+
+      const globalTypeFiles = { globalTypeFiles: Object.keys(files) }
+
+      expect(
+        resolve(`defineProps<ExportedInterface>()`, files, globalTypeFiles)
+          .props,
+      ).toStrictEqual({
+        foo: ['Number'],
+      })
+
+      expect(
+        resolve(`defineProps<ExportedType>()`, files, globalTypeFiles).props,
+      ).toStrictEqual({
+        bar: ['Boolean'],
+      })
+    })
+
     test('global types with ambient references', () => {
       const files = {
         // with references

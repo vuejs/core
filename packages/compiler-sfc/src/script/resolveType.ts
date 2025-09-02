@@ -1296,7 +1296,12 @@ function recordTypes(
         }
       } else if (stmt.type === 'TSModuleDeclaration' && stmt.global) {
         for (const s of (stmt.body as TSModuleBlock).body) {
-          recordType(s, types, declares)
+          if (s.type === 'ExportNamedDeclaration' && s.declaration) {
+            // Handle export declarations inside declare global
+            recordType(s.declaration, types, declares)
+          } else {
+            recordType(s, types, declares)
+          }
         }
       }
     } else {
