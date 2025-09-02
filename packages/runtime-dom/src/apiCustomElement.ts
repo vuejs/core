@@ -176,11 +176,13 @@ export function defineCustomElement(
   if (isPlainObject(Comp)) extend(Comp, extraOptions)
   class VueCustomElement extends VueElement {
     static def = Comp
+    static asyncDef: any | null = null
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, _createApp)
+      super(VueCustomElement.def, initialProps, _createApp)
     }
   }
 
+  _defineProps(VueCustomElement.prototype, Comp)
   return VueCustomElement
 }
 
@@ -406,7 +408,16 @@ export class VueElement
     if (asyncDef) {
       this._pendingResolve = asyncDef().then((def: InnerComponentDef) => {
         def.configureApp = this._def.configureApp
-        resolve((this._def = def), true)
+        this._def = def
+        const ctor = this.constructor as any
+        if (!ctor.asyncDef) {
+          const proto = Object.getPrototypeOf(this)
+          _defineProps(proto, def)
+          ctor.asyncDef = def
+        } else if (ctor.asyncDef !== def) {
+          warn('async loader returned inconsistent value')
+        }
+        resolve(def, true)
       })
     } else {
       resolve(this._def)
@@ -431,7 +442,7 @@ export class VueElement
     const exposed = this._instance && this._instance.exposed
     if (!exposed) return
     for (const key in exposed) {
-      if (!hasOwn(this, key)) {
+      if (!hasOwn(this, key) && !hasOwn(Object.getPrototypeOf(this), key)) {
         // exposed properties are readonly
         Object.defineProperty(this, key, {
           // unwrap ref to be consistent with public instance behavior
@@ -451,19 +462,8 @@ export class VueElement
     for (const key of Object.keys(this)) {
       if (key[0] !== '_' && declaredPropKeys.includes(key)) {
         this._setProp(key, this[key as keyof this])
+        delete this[key as keyof this]
       }
-    }
-
-    // defining getter/setters on prototype
-    for (const key of declaredPropKeys.map(camelize)) {
-      Object.defineProperty(this, key, {
-        get() {
-          return this._getProp(key)
-        },
-        set(val) {
-          this._setProp(key, val, true, true)
-        },
-      })
     }
   }
 
@@ -685,6 +685,28 @@ export class VueElement
         }
       }
     }
+  }
+}
+
+function _defineProps(proto: object, def: InnerComponentDef) {
+  const { props } = def
+  const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
+  // defining getter/setters on prototype
+  for (const key of declaredPropKeys.map(camelize)) {
+    Object.defineProperty(proto, key, {
+      get() {
+        return this._getProp(key)
+      },
+      set(val) {
+        if (this._resolved) {
+          this._setProp(key, val, true, true)
+        } else {
+          // when pre-upgrade or connect, set values directly on the instance
+          Reflect.set({}, key, val, this)
+        }
+      },
+      enumerable: true,
+    })
   }
 }
 
