@@ -205,9 +205,11 @@ export function h(type: any, propsOrChildren?: any, children?: any): VNode {
   // #6913 disable tracking block in h function
   const doCreateVNode = (type: any, props?: any, children?: any) => {
     setBlockTracking(-1)
-    const vnode = createVNode(type, props, children)
-    setBlockTracking(1)
-    return vnode
+    try {
+      return createVNode(type, props, children)
+    } finally {
+      setBlockTracking(1)
+    }
   }
 
   const l = arguments.length
