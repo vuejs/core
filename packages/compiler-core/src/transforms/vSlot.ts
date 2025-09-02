@@ -223,7 +223,7 @@ export function buildSlots(
         ),
       )
     } else if (
-      (vElse = findDir(slotElement, /^else(-if)?$/, true /* allowEmpty */))
+      (vElse = findDir(slotElement, /^else(?:-if)?$/, true /* allowEmpty */))
     ) {
       // find adjacent v-if
       let j = i
@@ -234,7 +234,7 @@ export function buildSlots(
           break
         }
       }
-      if (prev && isTemplateNode(prev) && findDir(prev, /^(else-)?if$/)) {
+      if (prev && isTemplateNode(prev) && findDir(prev, /^(?:else-)?if$/)) {
         __TEST__ && assert(dynamicSlots.length > 0)
         // attach this slot to previous conditional
         let conditional = dynamicSlots[
