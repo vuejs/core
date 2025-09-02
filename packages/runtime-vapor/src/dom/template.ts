@@ -1,5 +1,5 @@
 import { isHydrating } from './hydration'
-import { createTextNode } from './node'
+import { child, createTextNode } from './node'
 import { NodeRef, type VaporNode } from './nodeDraft'
 
 let t: HTMLTemplateElement
@@ -18,7 +18,7 @@ export function template(html: string, root?: boolean) {
     if (!node) {
       t = t || document.createElement('template')
       t.innerHTML = html
-      node = t.content.firstChild!
+      node = child(t) as Node
     }
     const ret = node.cloneNode(true)
     if (root) (ret as any).$root = true
