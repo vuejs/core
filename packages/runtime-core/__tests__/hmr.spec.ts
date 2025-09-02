@@ -946,7 +946,7 @@ describe('hot module replacement', () => {
     await timeout()
     expect(serializeInner(root)).toBe('<div>2</div>')
   })
-  
+
   test('rerender for nested component', () => {
     const id = 'child-nested-rerender'
     const Foo: ComponentOptions = {
