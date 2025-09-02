@@ -348,3 +348,11 @@ export {
   vModelSelectInit,
   vModelSetSelected,
 } from './directives/vModel'
+/**
+ * @internal
+ */
+export { svgNS, mathmlNS } from './nodeOps'
+/**
+ * @internal
+ */
+export { xlinkNS } from './modules/attrs'
