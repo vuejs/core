@@ -1,3 +1,29 @@
+## [3.5.21](https://github.com/vuejs/core/compare/v3.5.20...v3.5.21) (2025-09-02)
+
+
+### Bug Fixes
+
+* **compiler-core:** force dynamic slots when slot referencing scope vars ([#9427](https://github.com/vuejs/core/issues/9427)) ([99d54b2](https://github.com/vuejs/core/commit/99d54b28b46dbea006205dff71c383a31dd1b87a)), closes [#9380](https://github.com/vuejs/core/issues/9380)
+* **compiler-sfc:** check lang before attempt to compile script ([#13508](https://github.com/vuejs/core/issues/13508)) ([55922ff](https://github.com/vuejs/core/commit/55922ff3168a1397ad72f18946eb1c4051cdab3b)), closes [#8368](https://github.com/vuejs/core/issues/8368)
+* **compiler-sfc:** support `${configDir}` in paths for TypeScript 5.5+ ([#13491](https://github.com/vuejs/core/issues/13491)) ([8696e34](https://github.com/vuejs/core/commit/8696e346b4780d88247464490f1a992cc0c3658c)), closes [#13484](https://github.com/vuejs/core/issues/13484)
+* **compiler-sfc:** support global augments with named exports ([#13789](https://github.com/vuejs/core/issues/13789)) ([35da3c6](https://github.com/vuejs/core/commit/35da3c6dcb30030ef60fa22e30aa83a56e396c60))
+* **custom-element:** prevent defineCustomElement from mutating the options object ([#13791](https://github.com/vuejs/core/issues/13791)) ([e322436](https://github.com/vuejs/core/commit/e322436887549c129e61eb58a0084167103451bb))
+* **hmr:** prevent `__VUE_HMR_RUNTIME__` from being overwritten by vue runtime in 3rd-party libraries ([#13817](https://github.com/vuejs/core/issues/13817)) ([1392734](https://github.com/vuejs/core/commit/1392734ae5d5a3b2be124753e198eafa324f6815)), closes [vitejs/vite-plugin-vue#644](https://github.com/vitejs/vite-plugin-vue/issues/644)
+* **hmr:** prevent update unmounting component during HMR reload ([#13815](https://github.com/vuejs/core/issues/13815)) ([ef20b86](https://github.com/vuejs/core/commit/ef20b86b36a127e317f8981df970dc8efd277053)), closes [vitejs/vite-plugin-vue#599](https://github.com/vitejs/vite-plugin-vue/issues/599)
+* **runtime-core:** disable tracking block in h function ([#8213](https://github.com/vuejs/core/issues/8213)) ([8f6b505](https://github.com/vuejs/core/commit/8f6b5050518441a5047d128138da44f798836002)), closes [#6913](https://github.com/vuejs/core/issues/6913)
+* **runtime-core:** use separate emits caches for components and mixins ([#11661](https://github.com/vuejs/core/issues/11661)) ([15fc75f](https://github.com/vuejs/core/commit/15fc75f4031dea805c3bbb67a75e48a9dc307c11))
+* **Suspence:** handle Suspense + KeepAlive HMR updating edge case ([#13076](https://github.com/vuejs/core/issues/13076)) ([5d75a17](https://github.com/vuejs/core/commit/5d75a170c8d23acd11ef2513173d4cbc4d0b54de)), closes [#13075](https://github.com/vuejs/core/issues/13075)
+* **Teleport:** hydrate disabled Teleport with undefined target ([#11235](https://github.com/vuejs/core/issues/11235)) ([00978f7](https://github.com/vuejs/core/commit/00978f7d14e85b49d9d334ea92fa8c03733ce64c)), closes [#11230](https://github.com/vuejs/core/issues/11230)
+* **templateRef:** prevent unnecessary set ref on dynamic ref change or component unmount ([#12642](https://github.com/vuejs/core/issues/12642)) ([93ba107](https://github.com/vuejs/core/commit/93ba10767230872fcdca974a1e19e8bd69b7eb6a)), closes [#12639](https://github.com/vuejs/core/issues/12639)
+* **watch:** use maximum depth for duplicates ([#13434](https://github.com/vuejs/core/issues/13434)) ([f2699a5](https://github.com/vuejs/core/commit/f2699a5cb376ffa452a54feb171c14411c67287c))
+
+
+### Performance Improvements
+
+* improve regexp performance with non-capturing groups ([#13567](https://github.com/vuejs/core/issues/13567)) ([1e8b65a](https://github.com/vuejs/core/commit/1e8b65aa4934c94ef6142b4f49cdfb13ba5e6ce5))
+
+
+
 ## [3.5.20](https://github.com/vuejs/core/compare/v3.5.19...v3.5.20) (2025-08-25)
 
 
