@@ -363,8 +363,8 @@ export class VaporComponentInstance<
   Emits extends EmitsOptions = {},
   Slots extends StaticSlots = StaticSlots,
   Exposed extends Record<string, any> = Record<string, any>,
-  TypeEl extends Block = Block,
-  Refs extends Record<string, any> = Record<string, any>,
+  TypeBlock extends Block = Block,
+  TypeRefs extends Record<string, any> = Record<string, any>,
 > implements GenericComponentInstance
 {
   vapor: true
@@ -374,7 +374,7 @@ export class VaporComponentInstance<
   parent: GenericComponentInstance | null
   appContext: GenericAppContext
 
-  block: TypeEl
+  block: TypeBlock
   scope: EffectScope
 
   rawProps: RawProps
@@ -400,7 +400,7 @@ export class VaporComponentInstance<
   exposeProxy: ShallowUnwrapRef<Exposed> | null
 
   // for useTemplateRef()
-  refs: Refs
+  refs: TypeRefs
   // for provide / inject
   provides: Record<string, any>
   // for useId
@@ -467,7 +467,7 @@ export class VaporComponentInstance<
 
     this.emit = emit.bind(null, this) as any
     this.expose = expose.bind(null, this) as any
-    this.refs = EMPTY_OBJ as Refs
+    this.refs = EMPTY_OBJ as TypeRefs
     this.emitted =
       this.exposed =
       this.exposeProxy =

@@ -44,8 +44,8 @@ export type DefineVaporComponent<
   RuntimeEmitsKeys extends string = string,
   Slots extends StaticSlots = StaticSlots,
   Exposed extends Record<string, any> = Record<string, any>,
+  TypeBlock extends Block = Block,
   TypeRefs extends Record<string, unknown> = {},
-  TypeEl extends Block = Block,
   MakeDefaultsOptional extends boolean = true,
   InferredProps = string extends RuntimePropsKeys
     ? ComponentObjectPropsOptions extends RuntimePropsOptions
@@ -66,7 +66,7 @@ export type DefineVaporComponent<
     Emits,
     Slots,
     Exposed,
-    TypeEl,
+    TypeBlock,
     TypeRefs
   >
 > &
@@ -83,13 +83,13 @@ export type DefineVaporSetupFnComponent<
   Emits extends EmitsOptions = {},
   Slots extends SlotsType = SlotsType,
   Exposed extends Record<string, any> = Record<string, any>,
-  TypeEl extends Block = Block,
+  TypeBlock extends Block = Block,
   ResolvedProps extends Record<string, any> = Props &
     EmitsToProps<Emits> &
     VaporPublicProps,
 > = new (
   props?: ResolvedProps,
-) => VaporComponentInstance<ResolvedProps, Emits, Slots, Exposed, TypeEl>
+) => VaporComponentInstance<ResolvedProps, Emits, Slots, Exposed, TypeBlock>
 
 // overload 1: direct setup function
 // (uses user defined props interface)
@@ -99,7 +99,7 @@ export function defineVaporComponent<
   RuntimeEmitsKeys extends string = string,
   Slots extends StaticSlots = StaticSlots,
   Exposed extends Record<string, any> = Record<string, any>,
-  TypeEl extends Block = Block,
+  TypeBlock extends Block = Block,
 >(
   setup: (
     props: Props,
@@ -109,7 +109,7 @@ export function defineVaporComponent<
       attrs: Record<string, any>
       expose: (exposed: Exposed) => void
     },
-  ) => RenderReturn<TypeEl>,
+  ) => RenderReturn<TypeBlock>,
   extraOptions?: ObjectVaporComponent<
     (keyof Props)[],
     Emits,
@@ -118,14 +118,14 @@ export function defineVaporComponent<
     Exposed
   > &
     ThisType<void>,
-): DefineVaporSetupFnComponent<Props, Emits, Slots, Exposed, TypeEl>
+): DefineVaporSetupFnComponent<Props, Emits, Slots, Exposed, TypeBlock>
 export function defineVaporComponent<
   Props extends Record<string, any>,
   Emits extends EmitsOptions = {},
   RuntimeEmitsKeys extends string = string,
   Slots extends StaticSlots = StaticSlots,
   Exposed extends Record<string, any> = Record<string, any>,
-  TypeEl extends Block = Block,
+  TypeBlock extends Block = Block,
 >(
   setup: (
     props: Props,
@@ -135,7 +135,7 @@ export function defineVaporComponent<
       attrs: Record<string, any>
       expose: (exposed: Exposed) => void
     },
-  ) => RenderReturn<TypeEl>,
+  ) => RenderReturn<TypeBlock>,
   extraOptions?: ObjectVaporComponent<
     ComponentObjectPropsOptions<Props>,
     Emits,
@@ -144,7 +144,7 @@ export function defineVaporComponent<
     Exposed
   > &
     ThisType<void>,
-): DefineVaporSetupFnComponent<Props, Emits, Slots, Exposed, TypeEl>
+): DefineVaporSetupFnComponent<Props, Emits, Slots, Exposed, TypeBlock>
 
 // overload 2: defineVaporComponent with options object, infer props from options
 export function defineVaporComponent<
@@ -171,7 +171,7 @@ export function defineVaporComponent<
         : ExtractPropTypes<RuntimePropsOptions>
       : { [key in RuntimePropsKeys]?: any },
   TypeRefs extends Record<string, unknown> = {},
-  TypeEl extends Block = Block,
+  TypeBlock extends Block = Block,
 >(
   options: ObjectVaporComponent<
     RuntimePropsOptions | RuntimePropsKeys[],
@@ -179,7 +179,7 @@ export function defineVaporComponent<
     RuntimeEmitsKeys,
     Slots,
     Exposed,
-    TypeEl,
+    TypeBlock,
     InferredProps
   > & {
     /**
@@ -197,7 +197,7 @@ export function defineVaporComponent<
     /**
      * @private for language-tools use only
      */
-    __typeEl?: TypeEl
+    __typeEl?: TypeBlock
   } & ThisType<void>,
 ): DefineVaporComponent<
   RuntimePropsOptions,
@@ -206,8 +206,8 @@ export function defineVaporComponent<
   RuntimeEmitsKeys,
   Slots,
   Exposed extends Block ? Record<string, any> : Exposed,
+  TypeBlock,
   TypeRefs,
-  TypeEl,
   // MakeDefaultsOptional - if TypeProps is provided, set to false to use
   // user props types verbatim
   unknown extends TypeProps ? true : false,
