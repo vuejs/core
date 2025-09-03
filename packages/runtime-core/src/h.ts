@@ -202,35 +202,31 @@ export function h<P>(
 
 // Actual implementation
 export function h(type: any, propsOrChildren?: any, children?: any): VNode {
-  // #6913 disable tracking block in h function
-  const doCreateVNode = (type: any, props?: any, children?: any) => {
+  try {
+    // #6913 disable tracking block in h function
     setBlockTracking(-1)
-    try {
-      return createVNode(type, props, children)
-    } finally {
-      setBlockTracking(1)
-    }
-  }
-
-  const l = arguments.length
-  if (l === 2) {
-    if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
-      // single vnode without props
-      if (isVNode(propsOrChildren)) {
-        return doCreateVNode(type, null, [propsOrChildren])
+    const l = arguments.length
+    if (l === 2) {
+      if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
+        // single vnode without props
+        if (isVNode(propsOrChildren)) {
+          return createVNode(type, null, [propsOrChildren])
+        }
+        // props without children
+        return createVNode(type, propsOrChildren)
+      } else {
+        // omit props
+        return createVNode(type, null, propsOrChildren)
       }
-      // props without children
-      return doCreateVNode(type, propsOrChildren)
     } else {
-      // omit props
-      return doCreateVNode(type, null, propsOrChildren)
+      if (l > 3) {
+        children = Array.prototype.slice.call(arguments, 2)
+      } else if (l === 3 && isVNode(children)) {
+        children = [children]
+      }
+      return createVNode(type, propsOrChildren, children)
     }
-  } else {
-    if (l > 3) {
-      children = Array.prototype.slice.call(arguments, 2)
-    } else if (l === 3 && isVNode(children)) {
-      children = [children]
-    }
-    return doCreateVNode(type, propsOrChildren, children)
+  } finally {
+    setBlockTracking(1)
   }
 }
