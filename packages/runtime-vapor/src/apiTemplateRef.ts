@@ -29,13 +29,17 @@ export type RefEl = Element | VaporComponentInstance
 export type setRefFn = (
   el: RefEl,
   ref: NodeRef,
-  oldRef?: NodeRef,
   refFor?: boolean,
 ) => NodeRef | undefined
 
 export function createTemplateRefSetter(): setRefFn {
   const instance = currentInstance as VaporComponentInstance
-  return (...args) => setRef(instance, ...args)
+  const oldRefMap = new WeakMap<RefEl, NodeRef | undefined>()
+  return (el, ref, refFor) => {
+    const oldRef = setRef(instance, el, ref, oldRefMap.get(el), refFor)
+    oldRefMap.set(el, oldRef)
+    return oldRef
+  }
 }
 
 /**
