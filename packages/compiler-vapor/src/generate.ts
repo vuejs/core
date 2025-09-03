@@ -107,11 +107,11 @@ export class CodegenContext {
     for (let j = this.lastTIndex + 1; j <= i; j++) {
       this.templateVars.set(
         j,
-        `t${(this.lastTId = getNextId(map, Math.max(j, this.lastTId + 1)))}`,
+        (name = `t${(this.lastTId = getNextId(map, Math.max(j, this.lastTId + 1)))}`),
       )
     }
     this.lastTIndex = i
-    return this.templateVars.get(i)!
+    return name!
   }
 
   pName(i: number): string {
