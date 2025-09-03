@@ -1364,6 +1364,29 @@ describe('function syntax w/ generics', () => {
     // @ts-expect-error generics don't match
     <Comp msg={123} list={['123']} />,
   )
+
+  const CompWithProps = defineComponent(
+    <T extends string | number>(props: { msg: T; list: T[] }) => {
+      const count = ref(0)
+      return () => (
+        <div>
+          {props.msg} {count.value}
+        </div>
+      )
+    },
+    { props: ['msg', 'list'] },
+  )
+
+  expectType<JSX.Element>(<CompWithProps msg="hello" list={['world']} />)
+  expectType<JSX.Element>(<CompWithProps msg={123} list={[456]} />)
+
+  expectType<JSX.Element>(
+    // @ts-expect-error missing prop
+    <CompWithProps msg={123} />,
+  )
+
+  expectType<JSX.Element>(<CompWithProps msg="hello" list={[123]} />)
+  expectType<JSX.Element>(<CompWithProps msg={123} list={['hello']} />)
 })
 
 describe('function syntax w/ emits', () => {
@@ -1431,7 +1454,6 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
-  // @ts-expect-error string prop names don't match
   defineComponent(
     (_props: { msg: string }) => {
       return () => {}
