@@ -21,6 +21,27 @@ export function querySelector(selectors: string): Element | null {
   return document.querySelector(selectors)
 }
 
+export interface StaticNode extends Element {
+  $sc?: Node[]
+  $index?: number
+}
+
+export function initStaticSnapshots(root: StaticNode & { $sc?: Node[] }): void {
+  const stack: StaticNode[] = [root]
+  while (stack.length) {
+    const cur = stack.pop()!
+    const list: Node[] = []
+    cur.childNodes.forEach((n, i) => {
+      ;(n as StaticNode).$index = i
+      list.push(n)
+      if (n.nodeType === 1) {
+        stack.push(n as StaticNode)
+      }
+    })
+    cur.$sc = list
+  }
+}
+
 /*! #__NO_SIDE_EFFECTS__ */
 const _txt: typeof _child = _child
 
@@ -43,7 +64,8 @@ const __txt: typeof __child = (node: ParentNode): Node => {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _child(node: ParentNode): Node {
-  return node.firstChild!
+  const sc = (node as StaticNode).$sc
+  return sc ? sc[0] : node.firstChild!
 }
 
 /**
@@ -62,7 +84,8 @@ export function __child(node: ParentNode): Node {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _nthChild(node: Node, i: number): Node {
-  return node.childNodes[i]
+  const sc = (node as StaticNode).$sc
+  return sc ? sc[i] : node.childNodes[i]
 }
 
 /**
@@ -79,7 +102,8 @@ export function __nthChild(node: Node, i: number): Node {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _next(node: Node): Node {
-  return node.nextSibling!
+  const sc = (node.parentNode! as StaticNode).$sc
+  return sc ? sc[(node as StaticNode).$index! + 1] : node.nextSibling!
 }
 
 /**
