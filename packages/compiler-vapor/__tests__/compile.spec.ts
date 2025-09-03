@@ -269,7 +269,21 @@ describe('compile', () => {
     })
   })
 
-  describe('gen unique variables', () => {
+  describe('gen unique helper alias', () => {
+    test('should avoid conflicts with existing variable names', () => {
+      const code = compile(`<div>{{ foo }}</div>`, {
+        bindingMetadata: {
+          _child: BindingTypes.LITERAL_CONST,
+          _child1: BindingTypes.SETUP_REF,
+        },
+      })
+      expect(code).matchSnapshot()
+      expect(code).contains('child as _child2')
+      expect(code).contains('const x0 = _child2(n0)')
+    })
+  })
+
+  describe('gen unique node variables', () => {
     test('should avoid binding conflicts for node vars (n*/x*)', () => {
       const code = compile(`<div>{{ foo }}</div><div>{{ foo }}</div>`, {
         bindingMetadata: {

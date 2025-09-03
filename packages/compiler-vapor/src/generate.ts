@@ -22,18 +22,31 @@ import { buildNextIdMap, getNextId } from './transform'
 
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
-const generatedVarRE = /^([pt])(\d+)$/
+const idWithTrailingDigitsRE = /^([A-Za-z_$][\w$]*)(\d+)$/
 
 export class CodegenContext {
   options: Required<CodegenOptions>
 
-  helpers: Set<string> = new Set<string>([])
-
   bindingNames: Set<string> = new Set<string>()
 
-  helper = (name: CoreHelper | VaporHelper) => {
-    this.helpers.add(name)
-    return `_${name}`
+  helpers: Map<string, string> = new Map()
+
+  helper = (name: CoreHelper | VaporHelper): string => {
+    if (this.helpers.has(name)) {
+      return this.helpers.get(name)!
+    }
+
+    const base = `_${name}`
+    if (this.bindingNames.size === 0 || !this.bindingNames.has(base)) {
+      this.helpers.set(name, base)
+      return base
+    }
+
+    const map = this.nextIdMap.get(base)
+    // start from 1 because "base" (no suffix) is already taken.
+    const alias = `${base}${getNextId(map, 1)}`
+    this.helpers.set(name, alias)
+    return alias
   }
 
   delegates: Set<string> = new Set<string>()
@@ -75,16 +88,15 @@ export class CodegenContext {
 
   private templateVars: Map<number, string> = new Map()
   private nextIdMap: Map<string, Map<number, number>> = new Map()
-  private lastPId: number = -1
+  private lastIdMap: Map<string, number> = new Map()
   private lastTIndex: number = -1
-  private lastTId: number = -1
   private initNextIdMap(): void {
     if (this.bindingNames.size === 0) return
 
     // build a map of binding names to their occupied ids
     const map = new Map<string, Set<number>>()
     for (const name of this.bindingNames) {
-      const m = generatedVarRE.exec(name)
+      const m = idWithTrailingDigitsRE.exec(name)
       if (!m) continue
 
       const prefix = m[1]
@@ -99,24 +111,29 @@ export class CodegenContext {
       this.nextIdMap.set(prefix, buildNextIdMap(nums))
     }
   }
+
   tName(i: number): string {
     let name = this.templateVars.get(i)
     if (name) return name
 
     const map = this.nextIdMap.get('t')
+    let lastId = this.lastIdMap.get('t') || -1
     for (let j = this.lastTIndex + 1; j <= i; j++) {
       this.templateVars.set(
         j,
-        (name = `t${(this.lastTId = getNextId(map, Math.max(j, this.lastTId + 1)))}`),
+        (name = `t${(lastId = getNextId(map, Math.max(j, lastId + 1)))}`),
       )
     }
+    this.lastIdMap.set('t', lastId)
     this.lastTIndex = i
     return name!
   }
 
   pName(i: number): string {
     const map = this.nextIdMap.get('p')
-    return `p${(this.lastPId = getNextId(map, Math.max(i, this.lastPId + 1)))}`
+    let lastId = this.lastIdMap.get('p') || -1
+    this.lastIdMap.set('p', (lastId = getNextId(map, Math.max(i, lastId + 1))))
+    return `p${lastId}`
   }
 
   constructor(
@@ -162,7 +179,6 @@ export function generate(
 ): VaporCodegenResult {
   const [frag, push] = buildCodeFragment()
   const context = new CodegenContext(ir, options)
-  const { helpers } = context
   const { inline, bindingMetadata } = options
   const functionName = 'render'
 
@@ -213,7 +229,7 @@ export function generate(
     ast: ir,
     preamble,
     map: map && map.toJSON(),
-    helpers,
+    helpers: new Set<string>(Array.from(context.helpers.keys())),
   }
 }
 
@@ -226,11 +242,11 @@ function genDelegates({ delegates, helper }: CodegenContext) {
     : ''
 }
 
-function genHelperImports({ helpers, helper, options }: CodegenContext) {
+function genHelperImports({ helpers, options }: CodegenContext) {
   let imports = ''
   if (helpers.size) {
-    imports += `import { ${[...helpers]
-      .map(h => `${h} as _${h}`)
+    imports += `import { ${Array.from(helpers)
+      .map(([h, alias]) => `${h} as ${alias}`)
       .join(', ')} } from '${options.runtimeModuleName}';\n`
   }
   return imports

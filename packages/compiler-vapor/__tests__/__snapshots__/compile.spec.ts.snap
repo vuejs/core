@@ -280,7 +280,19 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compile > gen unique variables > should avoid binding conflicts for node vars (n*/x*) 1`] = `
+exports[`compile > gen unique helper alias > should avoid conflicts with existing variable names 1`] = `
+"import { child as _child2, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> </div>", true)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  const x0 = _child2(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.foo)))
+  return n0
+}"
+`;
+
+exports[`compile > gen unique node variables > should avoid binding conflicts for node vars (n*/x*) 1`] = `
 "import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div> </div>")
 
@@ -298,7 +310,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
-exports[`compile > gen unique variables > should bump old ref var (r*) on conflict 1`] = `
+exports[`compile > gen unique node variables > should bump old ref var (r*) on conflict 1`] = `
 "import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
@@ -320,7 +332,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
-exports[`compile > gen unique variables > should bump placeholder var (p*) on conflict 1`] = `
+exports[`compile > gen unique node variables > should bump placeholder var (p*) on conflict 1`] = `
 "import { child as _child, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div><div><div><span></span></div></div></div>", true)
 
@@ -334,7 +346,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
-exports[`compile > gen unique variables > should bump template var (t*) on conflict 1`] = `
+exports[`compile > gen unique node variables > should bump template var (t*) on conflict 1`] = `
 "import { template as _template } from 'vue';
 const t1 = _template("<div></div>")
 const t3 = _template("<span></span>")
