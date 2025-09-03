@@ -124,9 +124,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   increaseId = (): number => {
     // allocate an id that won't conflict with user-defined bindings when used
     // as generated identifiers with n/x/r prefixes (e.g., n1, x1, r1).
-    const id = this.nextIdMap
-      ? (this.nextIdMap.get(this.globalId) ?? this.globalId)
-      : this.globalId
+    const id = getNextId(this.nextIdMap, this.globalId)
     // advance next
     this.globalId = getNextId(this.nextIdMap, id + 1)
     return id

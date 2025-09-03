@@ -107,7 +107,6 @@ export class CodegenContext {
     }
 
     for (const [prefix, nums] of map) {
-      if (nums.size === 0) continue
       this.nextIdMap.set(prefix, buildNextIdMap(nums))
     }
   }
