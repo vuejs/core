@@ -215,7 +215,7 @@ function iterator(
     iter._next = iter.next
     iter.next = () => {
       const result = iter._next()
-      if (result.value) {
+      if (!result.done) {
         result.value = wrapValue(result.value)
       }
       return result
