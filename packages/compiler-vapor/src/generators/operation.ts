@@ -12,7 +12,7 @@ import { genFor } from './for'
 import { genSetHtml } from './html'
 import { genIf } from './if'
 import { genDynamicProps, genSetProp } from './prop'
-import { genDeclareOldRef, genSetTemplateRef } from './templateRef'
+import { genSetTemplateRef } from './templateRef'
 import { genGetTextChild, genSetText } from './text'
 import {
   type CodeFragment,
@@ -79,8 +79,6 @@ export function genOperation(
       return genFor(oper, context)
     case IRNodeTypes.CREATE_COMPONENT_NODE:
       return genCreateComponent(oper, context)
-    case IRNodeTypes.DECLARE_OLD_REF:
-      return genDeclareOldRef(oper)
     case IRNodeTypes.SLOT_OUTLET_NODE:
       return genSlotOutlet(oper, context)
     case IRNodeTypes.DIRECTIVE:
