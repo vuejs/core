@@ -290,18 +290,21 @@ export let isApplyingFallthroughProps = false
 export function devRender(instance: VaporComponentInstance): void {
   instance.block =
     (instance.type.render
-      ? callWithErrorHandling(
-          instance.type.render,
-          instance,
-          ErrorCodes.RENDER_FUNCTION,
-          [
-            instance.setupState,
-            instance.props,
-            instance.emit,
-            instance.attrs,
-            instance.slots,
-          ],
-        )
+      ? instance.type.__file && !instance.type.__vapor
+        ? // TODO
+          (warn('Need to activate vapor mode to compile SFC!'), [])
+        : callWithErrorHandling(
+            instance.type.render,
+            instance,
+            ErrorCodes.RENDER_FUNCTION,
+            [
+              instance.setupState,
+              instance.props,
+              instance.emit,
+              instance.attrs,
+              instance.slots,
+            ],
+          )
       : callWithErrorHandling(
           isFunction(instance.type) ? instance.type : instance.type.setup!,
           instance,
