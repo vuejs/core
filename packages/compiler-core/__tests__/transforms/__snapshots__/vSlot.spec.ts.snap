@@ -225,7 +225,30 @@ return function render(_ctx, _cache) {
     header: _withCtx(() => [" Header "]),
     default: _withCtx(() => [
       " ",
-      _createElementVNode("p")
+      " ",
+      _createElementVNode("p"),
+      " "
+    ]),
+    _: 1 /* STABLE */
+  }))
+}"
+`;
+
+exports[`compiler: transform component slots > with whitespace: 'preserve' > implicit default slot before and after template 1`] = `
+"const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
+
+return function render(_ctx, _cache) {
+  const _component_Comp = _resolveComponent("Comp")
+
+  return (_openBlock(), _createBlock(_component_Comp, null, {
+    header: _withCtx(() => [" Header "]),
+    default: _withCtx(() => [
+      " ",
+      _createElementVNode("p"),
+      " ",
+      " ",
+      _createElementVNode("p"),
+      " "
     ]),
     _: 1 /* STABLE */
   }))
