@@ -21,7 +21,6 @@ import type {
   ExtractDefaultPropTypes,
   ExtractPropTypes,
   ReservedProps,
-  SlotsType,
   TypeEmitsToOptions,
   VNode,
 } from '@vue/runtime-dom'
@@ -81,7 +80,7 @@ export type DefineVaporComponent<
 export type DefineVaporSetupFnComponent<
   Props extends Record<string, any> = {},
   Emits extends EmitsOptions = {},
-  Slots extends SlotsType = SlotsType,
+  Slots extends StaticSlots = StaticSlots,
   Exposed extends Record<string, any> = Record<string, any>,
   TypeBlock extends Block = Block,
   ResolvedProps extends Record<string, any> = Props &
