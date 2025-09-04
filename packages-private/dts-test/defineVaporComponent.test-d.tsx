@@ -969,6 +969,29 @@ describe('slots', () => {
   )
 })
 
+describe('render', () => {
+  defineVaporComponent({
+    props: {
+      foo: Number,
+    },
+    emits: {
+      change: (e: number) => {},
+    },
+    slots: {} as { default: () => [] },
+    setup() {
+      return {
+        bar: '',
+      }
+    },
+    render(ctx, props, emit, attrs, slots) {
+      expectType<number | undefined>(props.foo)
+      expectType<string>(ctx.bar)
+      emit('change', 1)
+      return slots.default()
+    },
+  })
+})
+
 // #5885
 describe('should work when props type is incompatible with setup returned type ', () => {
   type SizeType = 'small' | 'big'

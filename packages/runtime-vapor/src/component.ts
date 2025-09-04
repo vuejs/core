@@ -118,7 +118,7 @@ export interface ObjectVaporComponent<
     props: Readonly<InferredProps>,
     emit: EmitFn<Emits>,
     attrs: any,
-    slots: StaticSlots,
+    slots: Slots,
   ): RenderReturn<TypeBlock>
 
   name?: string
