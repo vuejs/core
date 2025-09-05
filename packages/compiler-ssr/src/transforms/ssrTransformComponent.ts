@@ -9,9 +9,7 @@ import {
   type DirectiveNode,
   ElementTypes,
   type ExpressionNode,
-  type ForNode,
   type FunctionExpression,
-  type IfNode,
   type JSChildNode,
   Namespaces,
   type NodeTransform,
@@ -47,8 +45,6 @@ import {
 import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
   type SSRTransformContext,
-  isElementWithChildren,
-  processBlockNodeAnchor,
   processChildren,
   processChildrenAsStatement,
 } from '../ssrCodegenTransform'
@@ -62,8 +58,6 @@ import {
   ssrTransformTransitionGroup,
 } from './ssrTransformTransitionGroup'
 import {
-  BLOCK_ANCHOR_END_LABEL,
-  BLOCK_ANCHOR_START_LABEL,
   DYNAMIC_COMPONENT_ANCHOR_LABEL,
   FOR_ANCHOR_LABEL,
   IF_ANCHOR_LABEL,
@@ -345,7 +339,7 @@ function createVNodeSlotBranch(
     wrapperProps.push(extend({}, vFor))
   }
   if (parentContext.vapor) {
-    children = injectVaporAnchors(children, parent)
+    children = injectVaporAnchors(children)
   }
 
   const wrapperNode: TemplateNode = {
@@ -402,12 +396,7 @@ function subTransform(
 
 function injectVaporAnchors(
   children: TemplateChildNode[],
-  parent: TemplateChildNode,
 ): TemplateChildNode[] {
-  if (isElementWithChildren(parent)) {
-    processBlockNodeAnchor(children)
-  }
-
   const newChildren: TemplateChildNode[] = []
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
@@ -418,48 +407,30 @@ function injectVaporAnchors(
     }
 
     const { tagType, props } = child
-    let needBlockAnchor: boolean | undefined
 
     if (
       tagType === ElementTypes.COMPONENT ||
       tagType === ElementTypes.SLOT ||
       tagType === ElementTypes.TEMPLATE
     ) {
-      needBlockAnchor = child.needAnchor
     } else if (tagType === ElementTypes.ELEMENT) {
       let hasIf = false
-      let hasFor = false
 
       for (const prop of props) {
         if (prop.name === 'if') {
           hasIf = true
           break
-        } else if (prop.name === 'for') {
-          hasFor = true
         }
       }
 
       if (hasIf) {
-        needBlockAnchor = (child as any as IfNode).needAnchor
         const lastBranchIndex = findLastIfBranchIndex(children, i)
         if (lastBranchIndex > i) {
-          injectIfAnchors(
-            needBlockAnchor,
-            newChildren,
-            i,
-            lastBranchIndex,
-            children,
-          )
+          injectIfAnchors(newChildren, i, lastBranchIndex, children)
           i = lastBranchIndex
           continue
         }
-      } else if (hasFor) {
-        needBlockAnchor = (child as any as ForNode).needAnchor
       }
-    }
-
-    if (needBlockAnchor) {
-      newChildren.push(createAnchor(BLOCK_ANCHOR_START_LABEL))
     }
 
     newChildren.push(child)
@@ -468,27 +439,18 @@ function injectVaporAnchors(
     const fragmentAnchorLabel = getFragmentAnchorLabel(child)
     if (fragmentAnchorLabel) newChildren.push(createAnchor(fragmentAnchorLabel))
 
-    if (needBlockAnchor) {
-      newChildren.push(createAnchor(BLOCK_ANCHOR_END_LABEL))
-    }
-
-    child.children = injectVaporAnchors(child.children, child)
+    child.children = injectVaporAnchors(child.children)
   }
 
   return newChildren
 }
 
 function injectIfAnchors(
-  needBlockAnchor: boolean | undefined,
   newChildren: TemplateChildNode[],
   i: number,
   lastBranchIndex: number,
   children: TemplateChildNode[],
 ) {
-  if (needBlockAnchor) {
-    newChildren.push(createAnchor(BLOCK_ANCHOR_START_LABEL))
-  }
-
   for (let j = i; j <= lastBranchIndex; j++) {
     const node = children[j] as PlainElementNode
     const fragmentAnchorLabel = getFragmentAnchorLabel(node)
@@ -530,11 +492,7 @@ function injectIfAnchors(
         createAnchor(`<!--${fragmentAnchorLabel}-->`.repeat(repeatCount)),
       )
     }
-    node.children = injectVaporAnchors(node.children, node)
-  }
-
-  if (needBlockAnchor) {
-    newChildren.push(createAnchor(BLOCK_ANCHOR_END_LABEL))
+    node.children = injectVaporAnchors(node.children)
   }
 }
 
