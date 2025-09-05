@@ -31,16 +31,17 @@ export function setInsertionState(
   if (isHydrating) {
     insertionAnchor = anchor as Node
     if (!hydrationContextMap.has(parent)) {
-      const children: ChildItem[] = []
       const childNodes = parent.childNodes
       const len = childNodes.length
-      // pre-assign index to all nodes to allow O(1) fragment skipping later.
+      const children = new Array(len) as ChildItem[]
+
+      // 1. pre-assign index to all nodes to allow O(1) fragment skipping later.
       for (let i = 0; i < len; i++) {
         ;(childNodes[i] as ChildItem).$idx = i
       }
-      // build children, treating a fragment [ ... ] as a single node by
-      // pushing only the opening '[' anchor and jumping to its matching end.
-      let newIndex = 0
+
+      // 2. build children, treating a fragment [ ... ] as a single node
+      let index = 0
       for (let i = 0; i < len; i++) {
         const n = childNodes[i] as ChildItem
         if (isComment(n, '[')) {
@@ -48,9 +49,11 @@ export function setInsertionState(
           const end = locateEndAnchor(n) as ChildItem
           i = end.$idx
         }
-        n.$idx = newIndex++
-        children.push(n)
+        n.$idx = index
+        children[index++] = n
       }
+      children.length = index
+
       hydrationContextMap.set(parent, {
         prevDynamicCount: 0,
         children,
