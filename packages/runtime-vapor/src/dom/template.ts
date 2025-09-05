@@ -1,4 +1,4 @@
-import { resetStaticChildren } from '../insertionState'
+import { resetCurrentTemplateChildren } from '../insertionState'
 import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
 import { child, createElement, createTextNode } from './node'
 
@@ -20,7 +20,7 @@ export function template(html: string, root?: boolean) {
       return adopted
     }
 
-    resetStaticChildren()
+    resetCurrentTemplateChildren()
     // fast path for text nodes
     if (html[0] !== '<') {
       return createTextNode(html)

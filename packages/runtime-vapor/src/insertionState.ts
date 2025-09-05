@@ -3,20 +3,20 @@ import { isComment, isHydrating, locateEndAnchor } from './dom/hydration'
 export let insertionParent: ParentNode | undefined
 export let insertionAnchor: Node | 0 | undefined | null
 
-const staticChildNodes = new WeakMap<ParentNode, ChildNode[]>()
-export let currentStaticChildren: ChildNode[] | undefined
+const templateChildrenCache = new WeakMap<ParentNode, ChildNode[]>()
+export let currentTemplateChildren: ChildNode[] | undefined
 
 export interface ChildItem extends ChildNode {
   $idx: number
 }
-type HydrationContext = {
+type HydrationState = {
   prevDynamicCount: number
   children: ChildItem[]
   insertAnchors: Map<Node, number> | null
   lastAppendNode: Node | null
 }
 
-const hydrationContextMap = new WeakMap<ParentNode, HydrationContext>()
+const hydrationStateCache = new WeakMap<ParentNode, HydrationState>()
 
 /**
  * This function is called before a block type that requires insertion
@@ -30,7 +30,7 @@ export function setInsertionState(
   insertionParent = parent
   if (isHydrating) {
     insertionAnchor = anchor as Node
-    if (!hydrationContextMap.has(parent)) {
+    if (!hydrationStateCache.has(parent)) {
       const childNodes = parent.childNodes
       const len = childNodes.length
       const children = new Array(len) as ChildItem[]
@@ -54,7 +54,7 @@ export function setInsertionState(
       }
       children.length = index
 
-      hydrationContextMap.set(parent, {
+      hydrationStateCache.set(parent, {
         prevDynamicCount: 0,
         children,
         lastAppendNode: null,
@@ -65,18 +65,18 @@ export function setInsertionState(
     // special handling append anchor value to null
     insertionAnchor =
       typeof anchor === 'number' && anchor > 0 ? null : (anchor as Node)
-    if (staticChildNodes.has(parent)) {
-      currentStaticChildren = staticChildNodes.get(parent)
+    if (templateChildrenCache.has(parent)) {
+      currentTemplateChildren = templateChildrenCache.get(parent)
     } else {
       const nodes = parent.childNodes
       const len = nodes.length
-      currentStaticChildren = new Array(len)
+      currentTemplateChildren = new Array(len)
       for (let i = 0; i < len; i++) {
         const node = nodes[i] as ChildItem
         node.$idx = i
-        currentStaticChildren[i] = node
+        currentTemplateChildren[i] = node
       }
-      staticChildNodes.set(parent, currentStaticChildren)
+      templateChildrenCache.set(parent, currentTemplateChildren)
     }
   }
 }
@@ -85,12 +85,12 @@ export function resetInsertionState(): void {
   insertionParent = insertionAnchor = undefined
 }
 
-export function resetStaticChildren(): void {
-  currentStaticChildren = undefined
+export function resetCurrentTemplateChildren(): void {
+  currentTemplateChildren = undefined
 }
 
-export function getHydrationContext(
+export function getHydrationState(
   parent: ParentNode,
-): HydrationContext | undefined {
-  return hydrationContextMap.get(parent)
+): HydrationState | undefined {
+  return hydrationStateCache.get(parent)
 }

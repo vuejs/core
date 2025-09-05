@@ -2,8 +2,8 @@
 
 import {
   type ChildItem,
-  currentStaticChildren,
-  getHydrationContext,
+  currentTemplateChildren,
+  getHydrationState,
 } from '../insertionState'
 
 export function createElement(tagName: string): HTMLElement {
@@ -47,7 +47,7 @@ const __txt: typeof __child = (node: ParentNode): Node => {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _child(node: ParentNode): Node {
-  return currentStaticChildren ? currentStaticChildren[0] : node.firstChild!
+  return currentTemplateChildren ? currentTemplateChildren[0] : node.firstChild!
 }
 
 /**
@@ -60,7 +60,9 @@ export function __child(node: ParentNode & { $lpn?: Node }): Node {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _nthChild(node: Node, i: number): Node {
-  return currentStaticChildren ? currentStaticChildren[i] : node.childNodes[i]
+  return currentTemplateChildren
+    ? currentTemplateChildren[i]
+    : node.childNodes[i]
 }
 
 /**
@@ -68,22 +70,30 @@ export function _nthChild(node: Node, i: number): Node {
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __nthChild(node: Node, i: number): Node {
-  const hydrationContext = getHydrationContext(node as ParentNode)
-  if (hydrationContext) {
-    const { prevDynamicCount, insertAnchors, children } = hydrationContext
-    return children[
-      prevDynamicCount - (insertAnchors ? insertAnchors.size : 0) + i
-    ]
+  const hydrationState = getHydrationState(node as ParentNode)
+  if (hydrationState) {
+    const { prevDynamicCount, insertAnchors, children } = hydrationState
+    // prevDynamicCount tracks how many dynamic nodes have been processed
+    // so far (prepend/insert/append).
+    // For anchor-based insert, the first time an anchor is used we adopt the
+    // anchor node itself and do NOT consume the next child in `children`,
+    // yet prevDynamicCount is still incremented. This overcounts the base
+    // offset by 1 per unique anchor that has appeared.
+    // insertAnchors.size equals the number of unique anchors seen, so we
+    // subtract it to neutralize those "first-use doesn't consume" cases:
+    //   base = prevDynamicCount - insertAnchors.size
+    // Then index from this base: children[base + i].
+    const size = insertAnchors ? insertAnchors.size : 0
+    return children[prevDynamicCount - size + i]
   }
   return node.childNodes[i]
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _next(node: Node): Node {
-  if (currentStaticChildren) {
-    return currentStaticChildren[(node as ChildItem).$idx + 1]
-  }
-  return node.nextSibling!
+  return currentTemplateChildren
+    ? currentTemplateChildren[(node as ChildItem).$idx + 1]
+    : node.nextSibling!
 }
 
 /**
@@ -91,12 +101,12 @@ export function _next(node: Node): Node {
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __next(node: Node): Node {
-  const hydrationContext = getHydrationContext(node.parentNode!)
-  if (hydrationContext) {
-    const { children, insertAnchors } = hydrationContext
+  const hydrationState = getHydrationState(node.parentNode!)
+  if (hydrationState) {
+    const { children, insertAnchors } = hydrationState
     const seenCount = (insertAnchors && insertAnchors.get(node)) || 0
     // If node is used as an anchor, the first hydration uses node itself,
-    // so insertNodesCount needs -1
+    // but seenCount increases, so here insertNodesCount needs -1
     const insertNodesCount = seenCount === 0 ? 0 : seenCount - 1
     return children[(node as ChildItem).$idx + insertNodesCount + 1]
   }

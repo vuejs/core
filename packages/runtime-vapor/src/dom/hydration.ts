@@ -1,7 +1,7 @@
 import { warn } from '@vue/runtime-dom'
 import {
   type ChildItem,
-  getHydrationContext,
+  getHydrationState,
   insertionAnchor,
   insertionParent,
   resetInsertionState,
@@ -134,9 +134,9 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
 function locateHydrationNodeImpl(): void {
   let node: Node | null
   if (insertionAnchor !== undefined) {
-    const hydrationContext = getHydrationContext(insertionParent!)!
+    const hydrationState = getHydrationState(insertionParent!)!
     const { prevDynamicCount, children, lastAppendNode, insertAnchors } =
-      hydrationContext
+      hydrationState
     // prepend
     if (insertionAnchor === 0) {
       node = children[prevDynamicCount]
@@ -144,14 +144,12 @@ function locateHydrationNodeImpl(): void {
     // insert
     else if (insertionAnchor instanceof Node) {
       const seen = (insertAnchors && insertAnchors.get(insertionAnchor)) || 0
-      if (seen) {
-        node = children[(insertionAnchor as ChildItem).$idx + seen]
-      } else {
-        node = insertionAnchor
-      }
+      node = seen
+        ? children[(insertionAnchor as ChildItem).$idx + seen]
+        : insertionAnchor
 
-      hydrationContext.insertAnchors = (
-        hydrationContext.insertAnchors || new Map()
+      hydrationState.insertAnchors = (
+        hydrationState.insertAnchors || new Map()
       ).set(insertionAnchor, seen + 1)
     }
     // append
@@ -159,15 +157,16 @@ function locateHydrationNodeImpl(): void {
       if (lastAppendNode) {
         node = children[(lastAppendNode as ChildItem).$idx + 1]
       } else {
-        if (insertionAnchor === null) {
-          node = children[0]
-        } else {
-          node = children[prevDynamicCount + insertionAnchor]
-        }
+        node =
+          insertionAnchor === null
+            ? children[0]
+            : // insertionAnchor is a number > 0
+              // indicates how many static nodes precede the node to append
+              children[prevDynamicCount + insertionAnchor]
       }
-      hydrationContext.lastAppendNode = node
+      hydrationState.lastAppendNode = node
     }
-    hydrationContext.prevDynamicCount++
+    hydrationState.prevDynamicCount++
   } else {
     node = currentHydrationNode
     if (insertionParent && (!node || node.parentNode !== insertionParent)) {
