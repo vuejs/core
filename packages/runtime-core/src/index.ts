@@ -299,7 +299,6 @@ export type {
 } from './componentEmits'
 export type {
   ComponentPublicInstance,
-  ComponentPublicInstanceConstructor,
   ComponentCustomProperties,
   CreateComponentPublicInstance,
   CreateComponentPublicInstanceWithMixins,

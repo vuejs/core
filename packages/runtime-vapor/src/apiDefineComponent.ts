@@ -13,7 +13,6 @@ import type {
   AllowedComponentProps,
   ComponentCustomProps,
   ComponentObjectPropsOptions,
-  ComponentPublicInstanceConstructor,
   ComponentTypeEmits,
   EmitFn,
   EmitsOptions,
@@ -36,6 +35,13 @@ export type RenderReturn<T extends Block = Block> =
   | T
   | RenderReturn<T>[]
 
+type VaporComponentInstanceConstructor<T extends VaporComponentInstance> = {
+  __isFragment?: never
+  __isTeleport?: never
+  __isSuspense?: never
+  new (props?: T['props']): T
+}
+
 export type DefineVaporComponent<
   RuntimePropsOptions = {},
   RuntimePropsKeys extends string = string,
@@ -54,7 +60,7 @@ export type DefineVaporComponent<
   PublicProps = VaporPublicProps,
   ResolvedProps = InferredProps & EmitsToProps<Emits>,
   Defaults = ExtractDefaultPropTypes<RuntimePropsOptions>,
-> = ComponentPublicInstanceConstructor<
+> = VaporComponentInstanceConstructor<
   VaporComponentInstance<
     MakeDefaultsOptional extends true
       ? keyof Defaults extends never
