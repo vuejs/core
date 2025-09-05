@@ -6,13 +6,14 @@ export let insertionAnchor: Node | 0 | undefined | null
 const staticChildNodes = new WeakMap<ParentNode, ChildNode[]>()
 export let currentStaticChildren: ChildNode[] | undefined
 
+export interface ChildItem extends ChildNode {
+  $idx: number
+}
 type HydrationContext = {
-  dynamicCount: number
-  insertCount: number
-  nodes: ChildNode[]
-  insertAnchor: Node | null
-  seenInsertAnchors: Set<Node> | null
-  appendAnchor: Node | null
+  prevDynamicCount: number
+  children: ChildItem[]
+  insertAnchors: Map<Node, number> | null
+  lastAppendNode: Node | null
 }
 
 const hydrationContextMap = new WeakMap<ParentNode, HydrationContext>()
@@ -30,40 +31,47 @@ export function setInsertionState(
   if (isHydrating) {
     insertionAnchor = anchor as Node
     if (!hydrationContextMap.has(parent)) {
-      const nodes: ChildNode[] = []
-      const childNodes = Array.from(parent.childNodes)
-      for (let i = 0; i < childNodes.length; i++) {
-        const n = childNodes[i]
+      const children: ChildItem[] = []
+      const childNodes = parent.childNodes
+      const len = childNodes.length
+      // pre-assign index to all nodes to allow O(1) fragment skipping later.
+      for (let i = 0; i < len; i++) {
+        ;(childNodes[i] as ChildItem).$idx = i
+      }
+      // build children, treating a fragment [ ... ] as a single node by
+      // pushing only the opening '[' anchor and jumping to its matching end.
+      for (let i = 0; i < len; i++) {
+        const n = childNodes[i] as ChildItem
         if (isComment(n, '[')) {
-          // process vdom fragment as single node
-          // TODO: perf locateEndAnchorIndex
-          const end = locateEndAnchor(n)
-          i = childNodes.indexOf(end as ChildNode, i)
+          // locate end anchor, then use its pre-computed $idx to jump in O(1)
+          const end = locateEndAnchor(n) as ChildItem
+          i = end.$idx
         }
-        nodes.push(n)
+        children.push(n)
       }
       hydrationContextMap.set(parent, {
-        dynamicCount: 0,
-        insertCount: 0,
-        nodes,
-        appendAnchor: null,
-        insertAnchor: null,
-        seenInsertAnchors: null,
+        prevDynamicCount: 0,
+        children,
+        lastAppendNode: null,
+        insertAnchors: null,
       })
     }
   } else {
     // special handling append anchor value to null
     insertionAnchor =
       typeof anchor === 'number' && anchor > 0 ? null : (anchor as Node)
-    // cache the static child nodes
     if (staticChildNodes.has(parent)) {
       currentStaticChildren = staticChildNodes.get(parent)
     } else {
-      staticChildNodes.set(
-        parent,
-        // TODO: perf avoid Array.from?
-        (currentStaticChildren = Array.from(parent.childNodes)),
-      )
+      const nodes = parent.childNodes
+      const len = nodes.length
+      currentStaticChildren = new Array(len)
+      for (let i = 0; i < len; i++) {
+        const node = nodes[i] as ChildItem
+        node.$idx = i
+        currentStaticChildren[i] = node
+      }
+      staticChildNodes.set(parent, currentStaticChildren)
     }
   }
 }

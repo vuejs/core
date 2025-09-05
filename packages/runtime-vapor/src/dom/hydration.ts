@@ -1,5 +1,6 @@
 import { warn } from '@vue/runtime-dom'
 import {
+  type ChildItem,
   getHydrationContext,
   insertionAnchor,
   insertionParent,
@@ -7,9 +8,6 @@ import {
   setInsertionState,
 } from '../insertionState'
 import {
-  __child,
-  __next,
-  __nthChild,
   createTextNode,
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
@@ -137,53 +135,39 @@ function locateHydrationNodeImpl(): void {
   let node: Node | null
   if (insertionAnchor !== undefined) {
     const hydrationContext = getHydrationContext(insertionParent!)!
-    const {
-      dynamicCount,
-      nodes,
-      insertAnchor,
-      appendAnchor,
-      seenInsertAnchors,
-    } = hydrationContext!
+    const { prevDynamicCount, children, lastAppendNode, insertAnchors } =
+      hydrationContext
     // prepend
     if (insertionAnchor === 0) {
-      node = nodes[dynamicCount]
+      node = children[prevDynamicCount]
     }
     // insert
     else if (insertionAnchor instanceof Node) {
-      // There may be insert multiple times with different anchors
-      // If anchor has not seen, use it directly as hydration node
-      const seen = seenInsertAnchors && seenInsertAnchors.has(insertionAnchor)
-
-      if (insertAnchor && seen) {
-        node = __next(insertAnchor)
+      const seen = (insertAnchors && insertAnchors.get(insertionAnchor)) || 0
+      if (seen) {
+        node = children[children.indexOf(insertionAnchor as ChildItem) + seen]
       } else {
         node = insertionAnchor
       }
 
-      // The same anchor, insertCount is no longer added,
-      // Because there is only one placeholder in the continuous insertion
-      if (!seen) hydrationContext!.insertCount++
-
-      hydrationContext!.seenInsertAnchors = (
-        hydrationContext!.seenInsertAnchors || new Set()
-      ).add(insertionAnchor)
-      hydrationContext!.insertAnchor = node
+      hydrationContext.insertAnchors = (
+        hydrationContext.insertAnchors || new Map()
+      ).set(insertionAnchor, seen + 1)
     }
     // append
     else {
-      if (appendAnchor) {
-        node = __next(appendAnchor)
+      if (lastAppendNode) {
+        node = children[children.indexOf(lastAppendNode as ChildItem) + 1]
       } else {
         if (insertionAnchor === null) {
-          node = nodes[0]
+          node = children[0]
         } else {
-          node = nodes[dynamicCount + insertionAnchor]
+          node = children[prevDynamicCount + insertionAnchor]
         }
       }
-      hydrationContext!.appendAnchor = node
+      hydrationContext.lastAppendNode = node
     }
-
-    hydrationContext!.dynamicCount++
+    hydrationContext.prevDynamicCount++
   } else {
     node = currentHydrationNode
     if (insertionParent && (!node || node.parentNode !== insertionParent)) {

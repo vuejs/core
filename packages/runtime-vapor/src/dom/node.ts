@@ -1,6 +1,10 @@
 /*! #__NO_SIDE_EFFECTS__ */
 
-import { currentStaticChildren, getHydrationContext } from '../insertionState'
+import {
+  type ChildItem,
+  currentStaticChildren,
+  getHydrationContext,
+} from '../insertionState'
 
 export function createElement(tagName: string): HTMLElement {
   return document.createElement(tagName)
@@ -87,8 +91,10 @@ export function _nthChild(node: Node, i: number): Node {
 export function __nthChild(node: Node, i: number): Node {
   const hydrationContext = getHydrationContext(node as ParentNode)
   if (hydrationContext) {
-    const { dynamicCount, insertCount, nodes } = hydrationContext!
-    return nodes[dynamicCount - insertCount + i]
+    const { prevDynamicCount, insertAnchors, children } = hydrationContext
+    return children[
+      prevDynamicCount - (insertAnchors ? insertAnchors.size : 0) + i
+    ]
   }
   return node.childNodes[i]
 }
@@ -96,8 +102,7 @@ export function __nthChild(node: Node, i: number): Node {
 /*! #__NO_SIDE_EFFECTS__ */
 export function _next(node: Node): Node {
   if (currentStaticChildren) {
-    const idx = currentStaticChildren.indexOf(node as ChildNode)
-    return currentStaticChildren[idx + 1]
+    return currentStaticChildren[(node as ChildItem).$idx + 1]
   }
   return node.nextSibling!
 }
@@ -109,8 +114,12 @@ export function _next(node: Node): Node {
 export function __next(node: Node): Node {
   const hydrationContext = getHydrationContext(node.parentNode!)
   if (hydrationContext) {
-    const { nodes } = hydrationContext!
-    return nodes[nodes.indexOf(node as ChildNode) + 1]
+    const { children, insertAnchors } = hydrationContext
+    const seenCount = (insertAnchors && insertAnchors.get(node)) || 0
+    // If node is used as an anchor, the first hydration uses node itself,
+    // so insertNodesCount needs -1
+    const insertNodesCount = seenCount === 0 ? 0 : seenCount - 1
+    return children[children.indexOf(node as ChildItem) + insertNodesCount + 1]
   }
   return node.nextSibling!
 }
