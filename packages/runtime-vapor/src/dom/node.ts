@@ -25,27 +25,6 @@ export function querySelector(selectors: string): Element | null {
   return document.querySelector(selectors)
 }
 
-export interface StaticNode extends Element {
-  $sc?: Node[]
-  $index?: number
-}
-
-export function initStaticSnapshots(root: StaticNode & { $sc?: Node[] }): void {
-  const stack: StaticNode[] = [root]
-  while (stack.length) {
-    const cur = stack.pop()!
-    const list: Node[] = []
-    cur.childNodes.forEach((n, i) => {
-      ;(n as StaticNode).$index = i
-      list.push(n)
-      if (n.nodeType === 1) {
-        stack.push(n as StaticNode)
-      }
-    })
-    cur.$sc = list
-  }
-}
-
 /*! #__NO_SIDE_EFFECTS__ */
 const _txt: typeof _child = _child
 
