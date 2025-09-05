@@ -2,8 +2,8 @@
 
 import {
   type ChildItem,
-  currentTemplateChildren,
   getHydrationState,
+  getTemplateChildren,
 } from '../insertionState'
 
 export function createElement(tagName: string): HTMLElement {
@@ -47,7 +47,8 @@ const __txt: typeof __child = (node: ParentNode): Node => {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _child(node: ParentNode): Node {
-  return currentTemplateChildren ? currentTemplateChildren[0] : node.firstChild!
+  const templateChildren = getTemplateChildren(node)
+  return templateChildren ? templateChildren[0] : node.firstChild!
 }
 
 /**
@@ -60,9 +61,8 @@ export function __child(node: ParentNode & { $lpn?: Node }): Node {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _nthChild(node: Node, i: number): Node {
-  return currentTemplateChildren
-    ? currentTemplateChildren[i]
-    : node.childNodes[i]
+  const templateChildren = getTemplateChildren(node as ParentNode)
+  return templateChildren ? templateChildren[i] : node.childNodes[i]
 }
 
 /**
@@ -91,8 +91,9 @@ export function __nthChild(node: Node, i: number): Node {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _next(node: Node): Node {
-  return currentTemplateChildren
-    ? currentTemplateChildren[(node as ChildItem).$idx + 1]
+  const templateChildren = getTemplateChildren(node as ParentNode)
+  return templateChildren
+    ? templateChildren[(node as ChildItem).$idx + 1]
     : node.nextSibling!
 }
 

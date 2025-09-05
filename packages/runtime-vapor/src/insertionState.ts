@@ -1,14 +1,13 @@
 import { isComment, isHydrating, locateEndAnchor } from './dom/hydration'
-
-export let insertionParent: ParentNode | undefined
-export let insertionAnchor: Node | 0 | undefined | null
-
-const templateChildrenCache = new WeakMap<ParentNode, ChildNode[]>()
-export let currentTemplateChildren: ChildNode[] | undefined
-
 export interface ChildItem extends ChildNode {
   $idx: number
 }
+export let insertionParent: ParentNode | undefined
+export let insertionAnchor: Node | 0 | undefined | null
+
+const templateChildrenCache = new WeakMap<ParentNode, ChildItem[]>()
+export let currentTemplateChildren: ChildItem[] | undefined
+
 type HydrationState = {
   prevDynamicCount: number
   children: ChildItem[]
@@ -85,8 +84,10 @@ export function resetInsertionState(): void {
   insertionParent = insertionAnchor = undefined
 }
 
-export function resetCurrentTemplateChildren(): void {
-  currentTemplateChildren = undefined
+export function getTemplateChildren(
+  parent: ParentNode,
+): ChildItem[] | undefined {
+  return templateChildrenCache.get(parent)
 }
 
 export function getHydrationState(

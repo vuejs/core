@@ -19,6 +19,7 @@ import {
   type VaporFragment,
   isFragment,
 } from './fragment'
+import { child } from './dom/node'
 
 export interface TransitionOptions {
   $key?: any
@@ -71,7 +72,7 @@ export function insert(
   anchor: Node | null | 0 = null, // 0 means prepend
   parentSuspense?: any, // TODO Suspense
 ): void {
-  anchor = anchor === 0 ? parent.firstChild : anchor
+  anchor = anchor === 0 ? child(parent) : anchor
   if (block instanceof Node) {
     if (!isHydrating) {
       // only apply transition on Element nodes
