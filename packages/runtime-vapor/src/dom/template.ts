@@ -1,11 +1,6 @@
+import { resetStaticChildren } from '../insertionState'
 import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
-import {
-  type StaticNode,
-  child,
-  createElement,
-  createTextNode,
-  initStaticSnapshots,
-} from './node'
+import { child, createElement, createTextNode } from './node'
 
 let t: HTMLTemplateElement
 
@@ -24,6 +19,8 @@ export function template(html: string, root?: boolean) {
       if (root) (adopted as any).$root = true
       return adopted
     }
+
+    resetStaticChildren()
     // fast path for text nodes
     if (html[0] !== '<') {
       return createTextNode(html)
@@ -34,7 +31,6 @@ export function template(html: string, root?: boolean) {
       node = child(t.content)
     }
     const ret = node.cloneNode(true)
-    initStaticSnapshots(ret as StaticNode)
     if (root) (ret as any).$root = true
     return ret
   }

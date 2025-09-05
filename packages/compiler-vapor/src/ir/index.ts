@@ -80,6 +80,7 @@ export interface IfIRNode extends BaseIRNode {
   once?: boolean
   parent?: number
   anchor?: number
+  append?: boolean
   childIndex?: number
 }
 
@@ -100,6 +101,7 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   onlyChild: boolean
   parent?: number
   anchor?: number
+  append?: boolean
   childIndex?: number
 }
 
@@ -202,6 +204,7 @@ export interface CreateComponentIRNode extends BaseIRNode {
   dynamic?: SimpleExpressionNode
   parent?: number
   anchor?: number
+  append?: boolean
   childIndex?: number
   scopeId?: string | null
 }
@@ -220,6 +223,7 @@ export interface SlotOutletIRNode extends BaseIRNode {
   forwarded?: boolean
   parent?: number
   anchor?: number
+  append?: boolean
   childIndex?: number
 }
 

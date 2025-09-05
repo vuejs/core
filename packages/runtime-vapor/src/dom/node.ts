@@ -1,7 +1,7 @@
-import { advanceToNonBlockNode } from './hydration'
-import { isBlockStartAnchor } from '@vue/shared'
-
 /*! #__NO_SIDE_EFFECTS__ */
+
+import { currentStaticChildren, getHydrationContext } from '../insertionState'
+
 export function createElement(tagName: string): HTMLElement {
   return document.createElement(tagName)
 }
@@ -64,28 +64,20 @@ const __txt: typeof __child = (node: ParentNode): Node => {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _child(node: ParentNode): Node {
-  const sc = (node as StaticNode).$sc
-  return sc ? sc[0] : node.firstChild!
+  return currentStaticChildren ? currentStaticChildren[0] : node.firstChild!
 }
 
 /**
  * Hydration-specific version of `child`.
  */
 /*! #__NO_SIDE_EFFECTS__ */
-export function __child(node: ParentNode): Node {
-  let n: Node = node.firstChild!
-  while (n && isBlockStartAnchor(n)) {
-    n = advanceToNonBlockNode(n)
-    n = n.nextSibling!
-  }
-
-  return n
+export function __child(node: ParentNode & { $lpn?: Node }): Node {
+  return __nthChild(node, 0)!
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _nthChild(node: Node, i: number): Node {
-  const sc = (node as StaticNode).$sc
-  return sc ? sc[i] : node.childNodes[i]
+  return currentStaticChildren ? currentStaticChildren[i] : node.childNodes[i]
 }
 
 /**
@@ -93,17 +85,21 @@ export function _nthChild(node: Node, i: number): Node {
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __nthChild(node: Node, i: number): Node {
-  let n = __child(node as ParentNode)
-  for (let start = 0; start < i; start++) {
-    n = __next(n) as ChildNode
+  const hydrationContext = getHydrationContext(node as ParentNode)
+  if (hydrationContext) {
+    const { dynamicCount, insertCount, nodes } = hydrationContext!
+    return nodes[dynamicCount - insertCount + i]
   }
-  return n
+  return node.childNodes[i]
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _next(node: Node): Node {
-  const sc = (node.parentNode! as StaticNode).$sc
-  return sc ? sc[(node as StaticNode).$index! + 1] : node.nextSibling!
+  if (currentStaticChildren) {
+    const idx = currentStaticChildren.indexOf(node as ChildNode)
+    return currentStaticChildren[idx + 1]
+  }
+  return node.nextSibling!
 }
 
 /**
@@ -111,8 +107,10 @@ export function _next(node: Node): Node {
  */
 /*! #__NO_SIDE_EFFECTS__ */
 export function __next(node: Node): Node {
-  if (isBlockStartAnchor(node)) {
-    node = advanceToNonBlockNode(node)
+  const hydrationContext = getHydrationContext(node.parentNode!)
+  if (hydrationContext) {
+    const { nodes } = hydrationContext!
+    return nodes[nodes.indexOf(node as ChildNode) + 1]
   }
   return node.nextSibling!
 }

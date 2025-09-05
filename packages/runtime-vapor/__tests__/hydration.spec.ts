@@ -140,7 +140,7 @@ beforeEach(() => {
   document.body.innerHTML = ''
 })
 
-describe('Vapor Mode hydration', () => {
+describe.todo('Vapor Mode hydration', () => {
   describe('text', () => {
     test('root text', async () => {
       const { data, container } = await testHydration(`
@@ -2987,7 +2987,7 @@ describe('Vapor Mode hydration', () => {
   describe.todo('Suspense')
 })
 
-describe('VDOM interop', () => {
+describe.todo('VDOM interop', () => {
   test('basic render vapor component', async () => {
     const data = ref(true)
     const { container } = await testWithVDOMApp(

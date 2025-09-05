@@ -24,12 +24,7 @@ import {
   isText,
   processExpression,
 } from '@vue/compiler-dom'
-import {
-  BLOCK_ANCHOR_END_LABEL,
-  BLOCK_ANCHOR_START_LABEL,
-  escapeHtml,
-  isString,
-} from '@vue/shared'
+import { BLOCK_ANCHOR_START_LABEL, escapeHtml, isString } from '@vue/shared'
 import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
 import { ssrProcessIf } from './transforms/ssrVIf'
 import { ssrProcessFor } from './transforms/ssrVFor'
@@ -168,7 +163,7 @@ export function processChildren(
   disableComment = false,
 ): void {
   const vapor = context.options.vapor
-  if (asFragment && !vapor) {
+  if (asFragment) {
     context.pushStringPart(`<!--[-->`)
   }
 
@@ -190,16 +185,12 @@ export function processChildren(
             if (child.needAnchor)
               context.pushStringPart(`<!--${BLOCK_ANCHOR_START_LABEL}-->`)
             ssrProcessComponent(child, context, parent)
-            if (child.needAnchor)
-              context.pushStringPart(`<!--${BLOCK_ANCHOR_END_LABEL}-->`)
 
             break
           case ElementTypes.SLOT:
             if (child.needAnchor)
               context.pushStringPart(`<!--${BLOCK_ANCHOR_START_LABEL}-->`)
             ssrProcessSlotOutlet(child, context)
-            if (child.needAnchor)
-              context.pushStringPart(`<!--${BLOCK_ANCHOR_END_LABEL}-->`)
             break
           case ElementTypes.TEMPLATE:
             // TODO
@@ -237,15 +228,11 @@ export function processChildren(
         if (child.needAnchor)
           context.pushStringPart(`<!--${BLOCK_ANCHOR_START_LABEL}-->`)
         ssrProcessIf(child, context, disableNestedFragments, disableComment)
-        if (child.needAnchor)
-          context.pushStringPart(`<!--${BLOCK_ANCHOR_END_LABEL}-->`)
         break
       case NodeTypes.FOR:
         if (child.needAnchor)
           context.pushStringPart(`<!--${BLOCK_ANCHOR_START_LABEL}-->`)
         ssrProcessFor(child, context, disableNestedFragments)
-        if (child.needAnchor)
-          context.pushStringPart(`<!--${BLOCK_ANCHOR_END_LABEL}-->`)
         break
       case NodeTypes.IF_BRANCH:
         // no-op - handled by ssrProcessIf
@@ -267,7 +254,7 @@ export function processChildren(
         return exhaustiveCheck
     }
   }
-  if (asFragment && !vapor) {
+  if (asFragment) {
     context.pushStringPart(`<!--]-->`)
   }
 }
@@ -297,10 +284,10 @@ export function processBlockNodeAnchor(children: TemplateChildNode[]): void {
       if (prevBlocks.length) {
         if (hasStaticNode) {
           // insert
-          prevBlocks.forEach(child => (child.needAnchor = true))
+          // prevBlocks.forEach(child => (child.needAnchor = true))
         } else {
           // prepend
-          prevBlocks.forEach(child => (child.needAnchor = true))
+          // prevBlocks.forEach(child => (child.needAnchor = true))
         }
         prevBlocks = []
       }
@@ -312,7 +299,8 @@ export function processBlockNodeAnchor(children: TemplateChildNode[]): void {
   // firstChild is used as the hydration node
   if (prevBlocks.length && !(blockCount === 1 && !hasStaticNode)) {
     // append
-    prevBlocks.forEach(child => (child.needAnchor = true))
+    // prevBlocks.forEach(child => (child.needAnchor = true))
+    // prevBlocks[0].needAnchor = true
   }
 }
 
