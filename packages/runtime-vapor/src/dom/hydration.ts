@@ -145,7 +145,7 @@ function locateHydrationNodeImpl(): void {
     else if (insertionAnchor instanceof Node) {
       const seen = (insertAnchors && insertAnchors.get(insertionAnchor)) || 0
       if (seen) {
-        node = children[children.indexOf(insertionAnchor as ChildItem) + seen]
+        node = children[(insertionAnchor as ChildItem).$idx + seen]
       } else {
         node = insertionAnchor
       }
@@ -157,7 +157,7 @@ function locateHydrationNodeImpl(): void {
     // append
     else {
       if (lastAppendNode) {
-        node = children[children.indexOf(lastAppendNode as ChildItem) + 1]
+        node = children[(lastAppendNode as ChildItem).$idx + 1]
       } else {
         if (insertionAnchor === null) {
           node = children[0]

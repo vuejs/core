@@ -119,7 +119,7 @@ export function __next(node: Node): Node {
     // If node is used as an anchor, the first hydration uses node itself,
     // so insertNodesCount needs -1
     const insertNodesCount = seenCount === 0 ? 0 : seenCount - 1
-    return children[children.indexOf(node as ChildItem) + insertNodesCount + 1]
+    return children[(node as ChildItem).$idx + insertNodesCount + 1]
   }
   return node.nextSibling!
 }

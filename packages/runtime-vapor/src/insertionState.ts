@@ -40,6 +40,7 @@ export function setInsertionState(
       }
       // build children, treating a fragment [ ... ] as a single node by
       // pushing only the opening '[' anchor and jumping to its matching end.
+      let newIndex = 0
       for (let i = 0; i < len; i++) {
         const n = childNodes[i] as ChildItem
         if (isComment(n, '[')) {
@@ -47,6 +48,7 @@ export function setInsertionState(
           const end = locateEndAnchor(n) as ChildItem
           i = end.$idx
         }
+        n.$idx = newIndex++
         children.push(n)
       }
       hydrationContextMap.set(parent, {
