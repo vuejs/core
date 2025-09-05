@@ -38,9 +38,8 @@ export function ssrProcessFor(
     needFragmentWrapper,
   )
 
-  const vapor = context.options.vapor
   // v-for always renders a fragment unless explicitly disabled
-  if (!disableNestedFragments && !vapor) {
+  if (!disableNestedFragments) {
     context.pushStringPart(`<!--[-->`)
   }
   context.pushStatement(
@@ -49,12 +48,12 @@ export function ssrProcessFor(
       renderLoop,
     ]),
   )
-  if (!disableNestedFragments && !vapor) {
+  if (!disableNestedFragments) {
     context.pushStringPart(`<!--]-->`)
   }
 
   // anchor for vapor v-for fragment
-  if (vapor) {
+  if (context.options.vapor) {
     context.pushStringPart(`<!--${FOR_ANCHOR_LABEL}-->`)
   }
 }

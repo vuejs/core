@@ -1,4 +1,5 @@
-import { isComment, isHydrating, locateEndAnchor } from './dom/hydration'
+import { isFragmentAnchors } from '@vue/shared'
+import { isHydrating, locateEndAnchor } from './dom/hydration'
 export interface ChildItem extends ChildNode {
   $idx: number
 }
@@ -43,10 +44,17 @@ export function setInsertionState(
       let index = 0
       for (let i = 0; i < len; i++) {
         const n = childNodes[i] as ChildItem
-        if (isComment(n, '[')) {
-          // locate end anchor, then use its pre-computed $idx to jump in O(1)
-          const end = locateEndAnchor(n) as ChildItem
-          i = end.$idx
+        if (n.nodeType === 8) {
+          const data = (n as any as Comment).data
+          if (data === '[') {
+            // locate end anchor, then use its pre-computed $idx to jump in O(1)
+            const end = locateEndAnchor(n as any) as ChildItem
+            i = end.$idx
+          }
+          // skip vapor fragment anchors
+          else if (isFragmentAnchors(data)) {
+            continue
+          }
         }
         n.$idx = index
         children[index++] = n

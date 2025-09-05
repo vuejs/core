@@ -139,6 +139,7 @@ describe('fragment anchors', () => {
         _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.tag), null, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
+              _push(\`<!--[-->\`)
               _ssrRenderList(_ctx.items, (item) => {
                 _push(\`<span\${
                   _scopeId
@@ -146,7 +147,7 @@ describe('fragment anchors', () => {
                   _ssrInterpolate(item)
                 }</span>\`)
               })
-              _push(\`<!--for-->\`)
+              _push(\`<!--]--><!--for-->\`)
             } else {
               return [
                 (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.items, (item) => {
