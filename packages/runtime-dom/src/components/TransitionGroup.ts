@@ -92,7 +92,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
-      forceReflow()
+      forceReflow(instance.vnode.el as Node)
 
       movedChildren.forEach(c => {
         const el = c.el as ElementWithTransition
