@@ -72,19 +72,19 @@ export function _nthChild(node: Node, i: number): Node {
 export function __nthChild(node: Node, i: number): Node {
   const hydrationState = getHydrationState(node as ParentNode)
   if (hydrationState) {
-    const { prevDynamicCount, insertAnchors, children } = hydrationState
+    const { prevDynamicCount, insertAnchors, logicalChildren } = hydrationState
     // prevDynamicCount tracks how many dynamic nodes have been processed
     // so far (prepend/insert/append).
     // For anchor-based insert, the first time an anchor is used we adopt the
-    // anchor node itself and do NOT consume the next child in `children`,
+    // anchor node itself and do NOT consume the next child in `logicalChildren`,
     // yet prevDynamicCount is still incremented. This overcounts the base
     // offset by 1 per unique anchor that has appeared.
     // insertAnchors.size equals the number of unique anchors seen, so we
     // subtract it to neutralize those "first-use doesn't consume" cases:
     //   base = prevDynamicCount - insertAnchors.size
-    // Then index from this base: children[base + i].
+    // Then index from this base: logicalChildren[base + i].
     const size = insertAnchors ? insertAnchors.size : 0
-    return children[prevDynamicCount - size + i]
+    return logicalChildren[prevDynamicCount - size + i]
   }
   return node.childNodes[i]
 }
@@ -104,12 +104,12 @@ export function _next(node: Node): Node {
 export function __next(node: Node): Node {
   const hydrationState = getHydrationState(node.parentNode!)
   if (hydrationState) {
-    const { children, insertAnchors } = hydrationState
+    const { logicalChildren, insertAnchors } = hydrationState
     const seenCount = (insertAnchors && insertAnchors.get(node)) || 0
     // If node is used as an anchor, the first hydration uses node itself,
     // but seenCount increases, so here insertNodesCount needs -1
     const insertNodesCount = seenCount === 0 ? 0 : seenCount - 1
-    return children[(node as ChildItem).$idx + insertNodesCount + 1]
+    return logicalChildren[(node as ChildItem).$idx + insertNodesCount + 1]
   }
   return node.nextSibling!
 }
