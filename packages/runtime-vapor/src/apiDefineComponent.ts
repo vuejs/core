@@ -114,7 +114,7 @@ export function defineVaporComponent<
       attrs: Record<string, any>
       expose: (exposed: Exposed) => void
     },
-  ) => RenderReturn<TypeBlock>,
+  ) => RenderReturn<TypeBlock> | void,
   extraOptions?: ObjectVaporComponent<
     (keyof Props)[],
     Emits,
@@ -140,7 +140,7 @@ export function defineVaporComponent<
       attrs: Record<string, any>
       expose: (exposed: Exposed) => void
     },
-  ) => RenderReturn<TypeBlock>,
+  ) => RenderReturn<TypeBlock> | void,
   extraOptions?: ObjectVaporComponent<
     ComponentObjectPropsOptions<Props>,
     Emits,
