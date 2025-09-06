@@ -91,7 +91,7 @@ export function __nthChild(node: Node, i: number): Node {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function _next(node: Node): Node {
-  const templateChildren = getTemplateChildren(node as ParentNode)
+  const templateChildren = getTemplateChildren(node.parentNode!)
   return templateChildren
     ? templateChildren[(node as ChildItem).$idx + 1]
     : node.nextSibling!
