@@ -29,7 +29,7 @@ function performHydration<T>(
     locateHydrationNode = locateHydrationNodeImpl
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
-    ;(Node.prototype as any).$lbn = undefined
+    ;(Node.prototype as any).$idx = undefined
     isOptimized = true
   }
   enableHydrationNodeLookup()
