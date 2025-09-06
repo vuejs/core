@@ -82,7 +82,7 @@ export function ssrProcessIf(
   if (!currentIf.alternate && !disableComment) {
     currentIf.alternate = createBlockStatement([
       createCallExpression(`_push`, [
-        isVapor ? `\`<!--${IF_ANCHOR_LABEL}-->\`` : '`<!---->`',
+        isVapor ? `\`<!----><!--${IF_ANCHOR_LABEL}-->\`` : '`<!---->`',
       ]),
     ])
   }

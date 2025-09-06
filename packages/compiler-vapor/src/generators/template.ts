@@ -36,7 +36,7 @@ export function genSelf(
   }
 
   if (hasDynamicChild) {
-    push(...genChildren(dynamic, context, push, `n${id}`))
+    push(...genChildren(dynamic, context, `n${id}`))
   }
 
   return frag
@@ -45,7 +45,6 @@ export function genSelf(
 export function genChildren(
   dynamic: IRDynamicInfo,
   context: CodegenContext,
-  pushBlock: (...items: CodeFragment[]) => number,
   from: string = `n${dynamic.id}`,
 ): CodeFragment[] {
   const { helper } = context
@@ -76,17 +75,17 @@ export function genChildren(
     // p for "placeholder" variables that are meant for possible reuse by
     // other access paths
     const variable = id === undefined ? `p${context.block.tempId++}` : `n${id}`
-    pushBlock(NEWLINE, `const ${variable} = `)
+    push(NEWLINE, `const ${variable} = `)
 
     if (prev) {
       if (elementIndex - prev[1] === 1) {
-        pushBlock(...genCall(helper('next'), prev[0]))
+        push(...genCall(helper('next'), prev[0]))
       } else {
-        pushBlock(...genCall(helper('nthChild'), from, String(elementIndex)))
+        push(...genCall(helper('nthChild'), from, String(elementIndex)))
       }
     } else {
       if (elementIndex === 0) {
-        pushBlock(...genCall(helper('child'), from))
+        push(...genCall(helper('child'), from))
       } else {
         // check if there's a node that we can reuse from
         let init = genCall(helper('child'), from)
@@ -95,7 +94,7 @@ export function genChildren(
         } else if (elementIndex > 1) {
           init = genCall(helper('nthChild'), from, String(elementIndex))
         }
-        pushBlock(...init)
+        push(...init)
       }
     }
 
@@ -108,7 +107,7 @@ export function genChildren(
     }
 
     prev = [variable, elementIndex]
-    push(...genChildren(child, context, pushBlock, variable))
+    push(...genChildren(child, context, variable))
   }
 
   return frag

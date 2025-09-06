@@ -38,7 +38,7 @@ export function render(_ctx) {
     "default": () => {
       const n0 = _createIf(() => (true), () => {
         const n3 = t0()
-        _setInsertionState(n3)
+        _setInsertionState(n3, null)
         const n2 = _createComponentWithFallback(_component_Bar)
         _withVaporDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
         return n3
@@ -157,9 +157,9 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = t0()
   const n3 = t1()
-  const n2 = _child(n3)
   _setInsertionState(n3, 0)
   const n1 = _createComponentWithFallback(_component_Comp)
+  const n2 = _child(n3)
   _renderEffect(() => {
     _setProp(n3, "id", _ctx.foo)
     _setText(n2, _toDisplayString(_ctx.bar))
@@ -220,9 +220,9 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n3 = t0()
   const n1 = _child(n3)
-  _setInsertionState(n1)
+  _setInsertionState(n1, null)
   const n0 = _createSlot("default", null)
-  _setInsertionState(n3, null)
+  _setInsertionState(n3, 1)
   const n2 = _createComponentWithFallback(_component_Comp)
   return n3
 }"
@@ -277,30 +277,6 @@ export function render(_ctx) {
   const n1 = t1()
   const n2 = t2()
   return [n0, n1, n2]
-}"
-`;
-
-exports[`compile > setInsertionState > next, child and nthChild should be above the setInsertionState 1`] = `
-"import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, nthChild as _nthChild, createIf as _createIf, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-const t1 = _template("<div><div></div><!><div></div><!><div><button></button></div></div>", true)
-
-export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n6 = t1()
-  const n5 = _next(_child(n6))
-  const n7 = _nthChild(n6, 3)
-  const p0 = _next(n7)
-  const n4 = _child(p0)
-  _setInsertionState(n6, n5)
-  const n0 = _createComponentWithFallback(_component_Comp)
-  _setInsertionState(n6, n7)
-  const n1 = _createIf(() => (true), () => {
-    const n3 = t0()
-    return n3
-  })
-  _renderEffect(() => _setProp(n4, "disabled", _ctx.foo))
-  return n6
 }"
 `;
 
