@@ -135,27 +135,32 @@ function locateHydrationNodeImpl(): void {
   let node: Node | null
   if (insertionAnchor !== undefined) {
     const hydrationState = getHydrationState(insertionParent!)!
-    const { prevDynamicCount, logicalChildren, lastAppend, insertAnchors } =
-      hydrationState
+    const {
+      prevDynamicCount,
+      logicalChildren,
+      appendAnchor,
+      insertionAnchors,
+    } = hydrationState
     // prepend
     if (insertionAnchor === 0) {
       node = logicalChildren[prevDynamicCount]
     }
     // insert
     else if (insertionAnchor instanceof Node) {
-      const seen = (insertAnchors && insertAnchors.get(insertionAnchor)) || 0
+      const seen =
+        (insertionAnchors && insertionAnchors.get(insertionAnchor)) || 0
       node = seen
         ? logicalChildren[(insertionAnchor as ChildItem).$idx + seen]
         : insertionAnchor
 
-      hydrationState.insertAnchors = (
-        hydrationState.insertAnchors || new Map()
+      hydrationState.insertionAnchors = (
+        hydrationState.insertionAnchors || new Map()
       ).set(insertionAnchor, seen + 1)
     }
     // append
     else {
-      if (lastAppend) {
-        node = logicalChildren[(lastAppend as ChildItem).$idx + 1]
+      if (appendAnchor) {
+        node = logicalChildren[(appendAnchor as ChildItem).$idx + 1]
       } else {
         node =
           insertionAnchor === null
@@ -164,7 +169,7 @@ function locateHydrationNodeImpl(): void {
               // indicates how many static nodes precede the node to append
               logicalChildren[prevDynamicCount + insertionAnchor]
       }
-      hydrationState.lastAppend = node
+      hydrationState.appendAnchor = node
     }
     hydrationState.prevDynamicCount++
   } else {

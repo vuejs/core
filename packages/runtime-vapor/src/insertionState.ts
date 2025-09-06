@@ -1,20 +1,18 @@
 import { isFragmentAnchors } from '@vue/shared'
-import { isHydrating, locateEndAnchor } from './dom/hydration'
+import { isHydrating } from './dom/hydration'
 export interface ChildItem extends ChildNode {
   $idx: number
+}
+type HydrationState = {
+  logicalChildren: ChildItem[]
+  prevDynamicCount: number
+  insertionAnchors: Map<Node, number> | null
+  appendAnchor: Node | null
 }
 export let insertionParent: ParentNode | undefined
 export let insertionAnchor: Node | 0 | undefined | null
 
 const templateChildrenCache = new WeakMap<ParentNode, ChildItem[]>()
-export let currentTemplateChildren: ChildItem[] | undefined
-
-type HydrationState = {
-  logicalChildren: ChildItem[]
-  prevDynamicCount: number
-  insertAnchors: Map<Node, number> | null
-  lastAppend: Node | null
-}
 
 const hydrationStateCache = new WeakMap<ParentNode, HydrationState>()
 
@@ -44,28 +42,38 @@ function initializeHydrationState(
     const childNodes = parent.childNodes
     const len = childNodes.length
     const logicalChildren = new Array(len) as ChildItem[]
-
-    // 1. pre-assign index to all nodes to allow O(1) fragment skipping later.
-    for (let i = 0; i < len; i++) {
-      ;(childNodes[i] as ChildItem).$idx = i
-    }
-
-    // 2. build logical children:
+    // Build logical children:
     // - static node: keep the node as a child
-    // - fragment: represent the whole fragment by its start anchor ('<!--[-->')
-    // - vapor fragment anchors: skip them (not part of logical children)
+    // - fragment: keep only the start anchor ('<!--[-->') as a child,
+    // - vapor fragment anchors: skip (internal markers, not logical children)
     let index = 0
     for (let i = 0; i < len; i++) {
       const n = childNodes[i] as ChildItem
       if (n.nodeType === 8) {
         const data = (n as any as Comment).data
+        // vdom fragment
         if (data === '[') {
-          // locate end anchor, then use its pre-computed $idx to jump in O(1)
-          const end = locateEndAnchor(n as any) as ChildItem
-          i = end.$idx
+          n.$idx = index
+          logicalChildren[index++] = n
+          // find matching end anchor, accounting for nested fragments
+          let depth = 1
+          let j = i + 1
+          for (; j < len; j++) {
+            const c = childNodes[j] as Comment
+            if (c.nodeType === 8) {
+              const d = c.data
+              if (d === '[') depth++
+              else if (d === ']') {
+                depth--
+                if (depth === 0) break
+              }
+            }
+          }
+          // jump i to the end anchor
+          i = j
+          continue
         }
-
-        // vapor fragment anchors
+        // skip vapor fragment anchors
         else if (isFragmentAnchors(data)) {
           continue
         }
@@ -75,10 +83,10 @@ function initializeHydrationState(
     }
     logicalChildren.length = index
     hydrationStateCache.set(parent, {
-      prevDynamicCount: 0,
       logicalChildren,
-      lastAppend: null,
-      insertAnchors: null,
+      prevDynamicCount: 0,
+      insertionAnchors: null,
+      appendAnchor: null,
     })
   }
 }
@@ -90,18 +98,17 @@ function cacheTemplateChildren(
   // special handling append anchor value to null
   insertionAnchor =
     typeof anchor === 'number' && anchor > 0 ? null : (anchor as Node)
-  if (templateChildrenCache.has(parent)) {
-    currentTemplateChildren = templateChildrenCache.get(parent)
-  } else {
+
+  if (!templateChildrenCache.has(parent)) {
     const nodes = parent.childNodes
     const len = nodes.length
-    currentTemplateChildren = new Array(len)
+    const children = new Array(len)
     for (let i = 0; i < len; i++) {
       const node = nodes[i] as ChildItem
       node.$idx = i
-      currentTemplateChildren[i] = node
+      children[i] = node
     }
-    templateChildrenCache.set(parent, currentTemplateChildren)
+    templateChildrenCache.set(parent, children)
   }
 }
 
