@@ -585,13 +585,13 @@ export interface ComponentInternalInstance {
    * For updating css vars on contained teleports
    * @internal
    */
-  ut?: (vars?: Record<string, string>) => void
+  ut?: (vars?: Record<string, unknown>) => void
 
   /**
    * dev only. For style v-bind hydration mismatch checks
    * @internal
    */
-  getCssVars?: () => Record<string, string>
+  getCssVars?: () => Record<string, unknown>
 
   /**
    * v2 compat only, for caching mutated $options
@@ -1203,7 +1203,7 @@ export function getComponentPublicInstance(
   }
 }
 
-const classifyRE = /(?:^|[-_])(\w)/g
+const classifyRE = /(?:^|[-_])\w/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 

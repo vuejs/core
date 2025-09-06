@@ -447,7 +447,7 @@ export function getTransitionInfo(
   }
   const hasTransform =
     type === TRANSITION &&
-    /\b(transform|all)(,|$)/.test(
+    /\b(?:transform|all)(?:,|$)/.test(
       getStyleProperties(`${TRANSITION}Property`).toString(),
     )
   return {
