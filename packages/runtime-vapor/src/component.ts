@@ -489,10 +489,10 @@ export class VaporComponentInstance<
     this.hasFallthrough = hasFallthroughAttrs(comp, rawProps)
     if (rawProps || comp.props) {
       const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp)
-      this.attrs = new Proxy(this, attrsHandlers as any)
+      this.attrs = new Proxy(this, attrsHandlers)
       this.props = (
         comp.props
-          ? new Proxy(this, propsHandlers! as any)
+          ? new Proxy(this, propsHandlers!)
           : isFunction(comp)
             ? this.attrs
             : EMPTY_OBJ
