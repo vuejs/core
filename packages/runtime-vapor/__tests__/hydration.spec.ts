@@ -1102,13 +1102,13 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<!--if-->"`,
+        `"<!----><!--if-->"`,
       )
 
       data.value = true
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div>foo</div><!--if-->"`,
+        `"<!----><div>foo</div><!--if-->"`,
       )
     })
 
