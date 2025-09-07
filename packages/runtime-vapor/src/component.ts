@@ -397,10 +397,8 @@ export class VaporComponentInstance<
   expose: (<T extends Record<string, any> = Exposed>(exposed: T) => void) &
     // compatible with vdom components
     string[]
-  exposed: Record<string, any> extends Exposed ? Exposed | null : Exposed
-  exposeProxy: Record<string, any> extends Exposed
-    ? Exposed | null
-    : ShallowUnwrapRef<Exposed>
+  exposed: Exposed | null
+  exposeProxy: ShallowUnwrapRef<Exposed> | null
 
   // for useTemplateRef()
   refs: TypeRefs
@@ -476,7 +474,7 @@ export class VaporComponentInstance<
       this.exposeProxy =
       this.propsDefaults =
       this.suspense =
-        null as any
+        null
 
     this.isMounted =
       this.isUnmounted =
