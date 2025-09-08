@@ -2189,6 +2189,7 @@ function baseCreateRenderer(
           transition,
           () => hostInsert(el!, container, anchor),
           parentSuspense,
+          true,
         )
       } else {
         const { leave, delayLeave, afterLeave } = transition!
@@ -2738,8 +2739,9 @@ export function performTransitionEnter(
   transition: TransitionHooks,
   insert: () => void,
   parentSuspense: SuspenseBoundary | null,
+  force: boolean = false,
 ): void {
-  if (needTransition(parentSuspense, transition)) {
+  if (force || needTransition(parentSuspense, transition)) {
     transition.beforeEnter(el)
     insert()
     queuePostRenderEffect(() => transition.enter(el), undefined, parentSuspense)
