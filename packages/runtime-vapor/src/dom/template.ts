@@ -18,6 +18,7 @@ export function template(html: string, root?: boolean) {
       if (root) (adopted as any).$root = true
       return adopted
     }
+
     // fast path for text nodes
     if (html[0] !== '<') {
       return createTextNode(html)

@@ -1,33 +1,37 @@
-import { advanceToNonBlockNode } from './hydration'
-import { isBlockStartAnchor } from '@vue/shared'
+/* @__NO_SIDE_EFFECTS__ */
 
-/*! #__NO_SIDE_EFFECTS__ */
+import {
+  type ChildItem,
+  getHydrationState,
+  getTemplateChildren,
+} from '../insertionState'
+
 export function createElement(tagName: string): HTMLElement {
   return document.createElement(tagName)
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function createTextNode(value = ''): Text {
   return document.createTextNode(value)
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function createComment(data: string): Comment {
   return document.createComment(data)
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function querySelector(selectors: string): Element | null {
   return document.querySelector(selectors)
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 const _txt: typeof _child = _child
 
 /**
  * Hydration-specific version of `child`.
  */
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 const __txt: typeof __child = (node: ParentNode): Node => {
   let n = node.firstChild!
 
@@ -41,54 +45,72 @@ const __txt: typeof __child = (node: ParentNode): Node => {
   return n
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function _child(node: ParentNode): Node {
-  return node.firstChild!
+  const templateChildren = getTemplateChildren(node)
+  return templateChildren ? templateChildren[0] : node.firstChild!
 }
 
 /**
  * Hydration-specific version of `child`.
  */
-/*! #__NO_SIDE_EFFECTS__ */
-export function __child(node: ParentNode): Node {
-  let n: Node = node.firstChild!
-  while (n && isBlockStartAnchor(n)) {
-    n = advanceToNonBlockNode(n)
-    n = n.nextSibling!
-  }
-
-  return n
+/* @__NO_SIDE_EFFECTS__ */
+export function __child(node: ParentNode & { $lpn?: Node }): Node {
+  return __nthChild(node, 0)!
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function _nthChild(node: Node, i: number): Node {
-  return node.childNodes[i]
+  const templateChildren = getTemplateChildren(node as ParentNode)
+  return templateChildren ? templateChildren[i] : node.childNodes[i]
 }
 
 /**
  * Hydration-specific version of `nthChild`.
  */
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function __nthChild(node: Node, i: number): Node {
-  let n = __child(node as ParentNode)
-  for (let start = 0; start < i; start++) {
-    n = __next(n) as ChildNode
+  const hydrationState = getHydrationState(node as ParentNode)
+  if (hydrationState) {
+    const { prevDynamicCount, insertionAnchors, logicalChildren } =
+      hydrationState
+    // prevDynamicCount tracks how many dynamic nodes have been processed
+    // so far (prepend/insert/append).
+    // For anchor-based insert, the first time an anchor is used we adopt the
+    // anchor node itself and do NOT consume the next child in `logicalChildren`,
+    // yet prevDynamicCount is still incremented. This overcounts the base
+    // offset by 1 per unique anchor that has appeared.
+    // insertionAnchors.size equals the number of unique anchors seen, so we
+    // subtract it to neutralize those "first-use doesn't consume" cases:
+    //   base = prevDynamicCount - insertionAnchors.size
+    // Then index from this base: logicalChildren[base + i].
+    const size = insertionAnchors ? insertionAnchors.size : 0
+    return logicalChildren[prevDynamicCount - size + i]
   }
-  return n
+  return node.childNodes[i]
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function _next(node: Node): Node {
-  return node.nextSibling!
+  const templateChildren = getTemplateChildren(node.parentNode!)
+  return templateChildren
+    ? templateChildren[(node as ChildItem).$idx + 1]
+    : node.nextSibling!
 }
 
 /**
  * Hydration-specific version of `next`.
  */
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function __next(node: Node): Node {
-  if (isBlockStartAnchor(node)) {
-    node = advanceToNonBlockNode(node)
+  const hydrationState = getHydrationState(node.parentNode!)
+  if (hydrationState) {
+    const { logicalChildren, insertionAnchors } = hydrationState
+    const seenCount = (insertionAnchors && insertionAnchors.get(node)) || 0
+    // If node is used as an anchor, the first hydration uses node itself,
+    // but seenCount increases, so here needs -1
+    const insertedNodesCount = seenCount === 0 ? 0 : seenCount - 1
+    return logicalChildren[(node as ChildItem).$idx + insertedNodesCount + 1]
   }
   return node.nextSibling!
 }
@@ -97,25 +119,25 @@ type DelegatedFunction<T extends (...args: any[]) => any> = T & {
   impl: T
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export const txt: DelegatedFunction<typeof _txt> = node => {
   return txt.impl(node)
 }
 txt.impl = _child
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export const child: DelegatedFunction<typeof _child> = node => {
   return child.impl(node)
 }
 child.impl = _child
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export const next: DelegatedFunction<typeof _next> = node => {
   return next.impl(node)
 }
 next.impl = _next
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export const nthChild: DelegatedFunction<typeof _nthChild> = (node, i) => {
   return nthChild.impl(node, i)
 }

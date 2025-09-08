@@ -253,7 +253,6 @@ function doCompileTemplate({
       slotted,
       sourceMap: true,
       ...compilerOptions,
-      vapor,
       hmr: !isProd,
       nodeTransforms: nodeTransforms.concat(
         compilerOptions.nodeTransforms || [],

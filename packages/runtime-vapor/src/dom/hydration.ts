@@ -1,18 +1,17 @@
 import { warn } from '@vue/runtime-dom'
 import {
+  type ChildItem,
+  getHydrationState,
   insertionAnchor,
   insertionParent,
   resetInsertionState,
   setInsertionState,
 } from '../insertionState'
 import {
-  _child,
-  _next,
   createTextNode,
   disableHydrationNodeLookup,
   enableHydrationNodeLookup,
 } from './node'
-import { BLOCK_ANCHOR_END_LABEL, BLOCK_ANCHOR_START_LABEL } from '@vue/shared'
 
 const isHydratingStack = [] as boolean[]
 export let isHydrating = false
@@ -30,7 +29,7 @@ function performHydration<T>(
     locateHydrationNode = locateHydrationNodeImpl
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
-    ;(Node.prototype as any).$lbn = undefined
+    ;(Node.prototype as any).$idx = undefined
     isOptimized = true
   }
   enableHydrationNodeLookup()
@@ -135,14 +134,48 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
 function locateHydrationNodeImpl(): void {
   let node: Node | null
   if (insertionAnchor !== undefined) {
-    // prepend / insert / append
-    node = insertionParent!.$lbn = locateNextBlockNode(
-      insertionParent!.$lbn || _child(insertionParent!),
-    )!
+    const hydrationState = getHydrationState(insertionParent!)!
+    const {
+      prevDynamicCount,
+      logicalChildren,
+      appendAnchor,
+      insertionAnchors,
+    } = hydrationState
+    // prepend
+    if (insertionAnchor === 0) {
+      node = logicalChildren[prevDynamicCount]
+    }
+    // insert
+    else if (insertionAnchor instanceof Node) {
+      const seen =
+        (insertionAnchors && insertionAnchors.get(insertionAnchor)) || 0
+      node = seen
+        ? logicalChildren[(insertionAnchor as ChildItem).$idx + seen]
+        : insertionAnchor
+
+      hydrationState.insertionAnchors = (
+        hydrationState.insertionAnchors || new Map()
+      ).set(insertionAnchor, seen + 1)
+    }
+    // append
+    else {
+      if (appendAnchor) {
+        node = logicalChildren[(appendAnchor as ChildItem).$idx + 1]
+      } else {
+        node =
+          insertionAnchor === null
+            ? logicalChildren[0]
+            : // insertionAnchor is a number > 0
+              // indicates how many static nodes precede the node to append
+              logicalChildren[prevDynamicCount + insertionAnchor]
+      }
+      hydrationState.appendAnchor = node
+    }
+    hydrationState.prevDynamicCount++
   } else {
     node = currentHydrationNode
     if (insertionParent && (!node || node.parentNode !== insertionParent)) {
-      node = _child(insertionParent)
+      node = insertionParent.firstChild
     }
   }
 
@@ -181,43 +214,11 @@ export function locateEndAnchor(
   return null
 }
 
-export function locateFragmentAnchor(
-  node: Node,
-  label: string,
-): Comment | null {
-  while (node && node.nodeType === 8) {
+export function locateFragmentEndAnchor(label: string = ']'): Comment | null {
+  let node = currentHydrationNode!
+  while (node) {
     if (isComment(node, label)) return node
     node = node.nextSibling!
   }
   return null
-}
-
-function locateNextBlockNode(node: Node): Node | null {
-  while (node) {
-    if (isComment(node, BLOCK_ANCHOR_START_LABEL)) return node.nextSibling
-    node = node.nextSibling!
-  }
-
-  if (__DEV__) {
-    throw new Error(
-      `Could not locate hydration node with anchor label: ${BLOCK_ANCHOR_START_LABEL}`,
-    )
-  }
-  return null
-}
-
-export function advanceToNonBlockNode(node: Node): Node {
-  while (node) {
-    if (isComment(node, BLOCK_ANCHOR_START_LABEL)) {
-      node = locateEndAnchor(
-        node,
-        BLOCK_ANCHOR_START_LABEL,
-        BLOCK_ANCHOR_END_LABEL,
-      )!
-      continue
-    }
-
-    break
-  }
-  return node
 }

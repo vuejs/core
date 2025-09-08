@@ -167,7 +167,6 @@ function createCodegenContext(
     ssr = false,
     isTS = false,
     inSSR = false,
-    vapor = false,
   }: CodegenOptions,
 ): CodegenContext {
   const context: CodegenContext = {
@@ -183,7 +182,6 @@ function createCodegenContext(
     ssr,
     isTS,
     inSSR,
-    vapor,
     source: ast.source,
     code: ``,
     column: 1,

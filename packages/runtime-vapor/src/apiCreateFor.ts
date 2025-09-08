@@ -11,7 +11,7 @@ import {
   toReadonly,
   watch,
 } from '@vue/reactivity'
-import { FOR_ANCHOR_LABEL, isArray, isObject, isString } from '@vue/shared'
+import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
@@ -27,9 +27,8 @@ import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import {
   advanceHydrationNode,
-  currentHydrationNode,
   isHydrating,
-  locateFragmentAnchor,
+  locateFragmentEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
 import { ForFragment, VaporFragment } from './fragment'
@@ -135,10 +134,8 @@ export const createFor = (
       }
 
       if (isHydrating) {
-        parentAnchor = locateFragmentAnchor(
-          currentHydrationNode!,
-          FOR_ANCHOR_LABEL,
-        )!
+        parentAnchor = locateFragmentEndAnchor()!
+        // TODO: special handling vFor not render as a fragment. (inside Transition/TransitionGroup)
         if (__DEV__ && !parentAnchor) {
           throw new Error(`v-for fragment anchor node was not found.`)
         }
