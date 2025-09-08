@@ -72,7 +72,7 @@ export function _nthChild(node: InsertionParent, i: number): Node {
 export function __nthChild(node: Node, i: number): Node {
   const hydrationState = getHydrationState(node as ParentNode)
   if (hydrationState) {
-    const { prevDynamicCount, insertionAnchors, logicalChildren } =
+    const { prevDynamicCount, insertionAnchorCount, logicalChildren } =
       hydrationState
     // prevDynamicCount tracks how many dynamic nodes have been processed
     // so far (prepend/insert/append).
@@ -80,12 +80,11 @@ export function __nthChild(node: Node, i: number): Node {
     // anchor node itself and do NOT consume the next child in `logicalChildren`,
     // yet prevDynamicCount is still incremented. This overcounts the base
     // offset by 1 per unique anchor that has appeared.
-    // insertionAnchors.size equals the number of unique anchors seen, so we
+    // insertionAnchorCount equals the number of unique anchors seen, so we
     // subtract it to neutralize those "first-use doesn't consume" cases:
-    //   base = prevDynamicCount - insertionAnchors.size
+    //   base = prevDynamicCount - insertionAnchorCount
     // Then index from this base: logicalChildren[base + i].
-    const size = insertionAnchors ? insertionAnchors.size : 0
-    return logicalChildren[prevDynamicCount - size + i]
+    return logicalChildren[prevDynamicCount - insertionAnchorCount + i]
   }
   return node.childNodes[i]
 }
@@ -103,12 +102,10 @@ export function _next(node: Node): Node {
 export function __next(node: Node): Node {
   const hydrationState = getHydrationState(node.parentNode!)
   if (hydrationState) {
-    const { logicalChildren, insertionAnchors } = hydrationState
-    const seenCount = (insertionAnchors && insertionAnchors.get(node)) || 0
-    // If node is used as an anchor, the first hydration uses node itself,
-    // but seenCount increases, so here needs -1
-    const insertedNodesCount = seenCount === 0 ? 0 : seenCount - 1
-    return logicalChildren[(node as ChildItem).$idx + insertedNodesCount + 1]
+    const { logicalChildren } = hydrationState
+    return logicalChildren[
+      (node as ChildItem).$idx + ((node as ChildItem).$auc || 0) + 1
+    ]
   }
   return node.nextSibling!
 }

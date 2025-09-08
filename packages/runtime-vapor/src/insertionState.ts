@@ -1,11 +1,11 @@
 import { isHydrating } from './dom/hydration'
-export type ChildItem = ChildNode & { $idx: number }
+export type ChildItem = ChildNode & { $idx: number; $auc?: number }
 export type InsertionParent = ParentNode & { $children?: ChildItem[] }
 
 type HydrationState = {
   logicalChildren: ChildItem[]
   prevDynamicCount: number
-  insertionAnchors: Map<Node, number> | null
+  insertionAnchorCount: number
   appendAnchor: Node | null
 }
 export let insertionParent: InsertionParent | undefined
@@ -77,7 +77,7 @@ function initializeHydrationState(
     hydrationStateCache.set(parent, {
       logicalChildren,
       prevDynamicCount: 0,
-      insertionAnchors: null,
+      insertionAnchorCount: 0,
       appendAnchor: null,
     })
   }

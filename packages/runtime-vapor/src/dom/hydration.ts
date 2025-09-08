@@ -30,6 +30,7 @@ function performHydration<T>(
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
     ;(Node.prototype as any).$idx = undefined
+    ;(Node.prototype as any).$auc = undefined
     ;(Node.prototype as any).$children = undefined
     isOptimized = true
   }
@@ -136,27 +137,23 @@ function locateHydrationNodeImpl(): void {
   let node: Node | null
   if (insertionAnchor !== undefined) {
     const hydrationState = getHydrationState(insertionParent!)!
-    const {
-      prevDynamicCount,
-      logicalChildren,
-      appendAnchor,
-      insertionAnchors,
-    } = hydrationState
+    const { prevDynamicCount, logicalChildren, appendAnchor } = hydrationState
     // prepend
     if (insertionAnchor === 0) {
       node = logicalChildren[prevDynamicCount]
     }
     // insert
     else if (insertionAnchor instanceof Node) {
-      const seen =
-        (insertionAnchors && insertionAnchors.get(insertionAnchor)) || 0
-      node = seen
-        ? logicalChildren[(insertionAnchor as ChildItem).$idx + seen]
-        : insertionAnchor
-
-      hydrationState.insertionAnchors = (
-        hydrationState.insertionAnchors || new Map()
-      ).set(insertionAnchor, seen + 1)
+      const usedCount = (insertionAnchor as ChildItem).$auc
+      if (usedCount !== undefined) {
+        node =
+          logicalChildren[(insertionAnchor as ChildItem).$idx + usedCount + 1]
+        ;(insertionAnchor as ChildItem).$auc = usedCount + 1
+      } else {
+        node = insertionAnchor
+        hydrationState.insertionAnchorCount++
+        ;(insertionAnchor as ChildItem).$auc = 0
+      }
     }
     // append
     else {
