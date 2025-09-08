@@ -1,4 +1,4 @@
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 
 import {
   type ChildItem,
@@ -10,28 +10,28 @@ export function createElement(tagName: string): HTMLElement {
   return document.createElement(tagName)
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function createTextNode(value = ''): Text {
   return document.createTextNode(value)
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function createComment(data: string): Comment {
   return document.createComment(data)
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function querySelector(selectors: string): Element | null {
   return document.querySelector(selectors)
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 const _txt: typeof _child = _child
 
 /**
  * Hydration-specific version of `child`.
  */
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 const __txt: typeof __child = (node: ParentNode): Node => {
   let n = node.firstChild!
 
@@ -45,7 +45,7 @@ const __txt: typeof __child = (node: ParentNode): Node => {
   return n
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function _child(node: ParentNode): Node {
   const templateChildren = getTemplateChildren(node)
   return templateChildren ? templateChildren[0] : node.firstChild!
@@ -54,12 +54,12 @@ export function _child(node: ParentNode): Node {
 /**
  * Hydration-specific version of `child`.
  */
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function __child(node: ParentNode & { $lpn?: Node }): Node {
   return __nthChild(node, 0)!
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function _nthChild(node: Node, i: number): Node {
   const templateChildren = getTemplateChildren(node as ParentNode)
   return templateChildren ? templateChildren[i] : node.childNodes[i]
@@ -68,7 +68,7 @@ export function _nthChild(node: Node, i: number): Node {
 /**
  * Hydration-specific version of `nthChild`.
  */
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function __nthChild(node: Node, i: number): Node {
   const hydrationState = getHydrationState(node as ParentNode)
   if (hydrationState) {
@@ -90,7 +90,7 @@ export function __nthChild(node: Node, i: number): Node {
   return node.childNodes[i]
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function _next(node: Node): Node {
   const templateChildren = getTemplateChildren(node.parentNode!)
   return templateChildren
@@ -101,7 +101,7 @@ export function _next(node: Node): Node {
 /**
  * Hydration-specific version of `next`.
  */
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function __next(node: Node): Node {
   const hydrationState = getHydrationState(node.parentNode!)
   if (hydrationState) {
@@ -119,25 +119,25 @@ type DelegatedFunction<T extends (...args: any[]) => any> = T & {
   impl: T
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export const txt: DelegatedFunction<typeof _txt> = node => {
   return txt.impl(node)
 }
 txt.impl = _child
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export const child: DelegatedFunction<typeof _child> = node => {
   return child.impl(node)
 }
 child.impl = _child
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export const next: DelegatedFunction<typeof _next> = node => {
   return next.impl(node)
 }
 next.impl = _next
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export const nthChild: DelegatedFunction<typeof _nthChild> = (node, i) => {
   return nthChild.impl(node, i)
 }
