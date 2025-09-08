@@ -11,8 +11,8 @@ import {
 } from './block'
 import type { TransitionHooks } from '@vue/runtime-dom'
 import {
-  advanceHydrationNode,
   currentHydrationNode,
+  isComment,
   isHydrating,
   locateFragmentAnchor,
   locateHydrationNode,
@@ -21,7 +21,8 @@ import {
   applyTransitionHooks,
   applyTransitionLeaveHooks,
 } from './components/Transition'
-import type { VaporComponentInstance } from './component'
+import { type VaporComponentInstance, isVaporComponent } from './component'
+import { IF_ANCHOR_LABEL, SLOT_ANCHOR_LABEL, isArray } from '@vue/shared'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -74,7 +75,7 @@ export class DynamicFragment extends VaporFragment {
 
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
-      if (isHydrating) this.hydrate(this.anchorLabel!)
+      if (isHydrating) this.hydrate(true)
       return
     }
     this.current = key
@@ -139,18 +140,38 @@ export class DynamicFragment extends VaporFragment {
 
     setActiveSub(prevSub)
 
-    if (isHydrating) this.hydrate(this.anchorLabel!)
+    if (isHydrating) this.hydrate()
   }
 
-  hydrate = (label: string): void => {
-    // avoid repeated hydration during rendering fallback
+  hydrate = (isEmpty = false): void => {
+    // avoid repeated hydration during fallback rendering
     if (this.anchor) return
 
-    this.anchor = locateFragmentAnchor(currentHydrationNode!, label)!
-    if (this.anchor) {
-      advanceHydrationNode(this.anchor)
-    } else if (__DEV__) {
-      throw new Error(`${label} fragment anchor node was not found.`)
+    // reuse the empty comment node as the anchor for an empty if
+    if (
+      this.anchorLabel === IF_ANCHOR_LABEL &&
+      isEmpty &&
+      isComment(currentHydrationNode!, '')
+    ) {
+      this.anchor = currentHydrationNode!
+      if (__DEV__) (this.anchor as Comment).data = this.anchorLabel
+      return
+    }
+
+    // reuse the vdom fragment end anchor for non-empty slots
+    // for empty slots, fallback to create
+    if (this.anchorLabel === SLOT_ANCHOR_LABEL) {
+      this.anchor = locateFragmentAnchor(currentHydrationNode!, ']')!
+      if (this.anchor) return
+    }
+
+    // create an anchor
+    if (!isEmpty) {
+      const { parentNode, nextSibling } = findLastChild(this)!
+      parentNode!.insertBefore(
+        (this.anchor = createComment(this.anchorLabel!)),
+        nextSibling,
+      )
     }
   }
 }
@@ -194,4 +215,17 @@ function findInvalidFragment(fragment: VaporFragment): VaporFragment | null {
   return isFragment(fragment.nodes)
     ? findInvalidFragment(fragment.nodes) || fragment
     : fragment
+}
+
+export function findLastChild(node: Block): Node | undefined | null {
+  if (node && node instanceof Node) {
+    return node
+  } else if (isArray(node)) {
+    return findLastChild(node[node.length - 1])
+  } else if (isVaporComponent(node)) {
+    return findLastChild(node.block!)
+  } else {
+    if (node instanceof DynamicFragment && node.anchor) return node.anchor
+    return findLastChild(node.nodes!)
+  }
 }

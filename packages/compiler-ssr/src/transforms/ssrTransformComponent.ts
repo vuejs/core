@@ -1,7 +1,6 @@
 import {
   CREATE_VNODE,
   type CallExpression,
-  type CommentNode,
   type CompilerOptions,
   type ComponentNode,
   DOMDirectiveTransforms,
@@ -14,7 +13,6 @@ import {
   Namespaces,
   type NodeTransform,
   NodeTypes,
-  type PlainElementNode,
   RESOLVE_DYNAMIC_COMPONENT,
   type ReturnStatement,
   type RootNode,
@@ -57,17 +55,7 @@ import {
   ssrProcessTransitionGroup,
   ssrTransformTransitionGroup,
 } from './ssrTransformTransitionGroup'
-import {
-  DYNAMIC_COMPONENT_ANCHOR_LABEL,
-  FOR_ANCHOR_LABEL,
-  IF_ANCHOR_LABEL,
-  SLOT_ANCHOR_LABEL,
-  extend,
-  isArray,
-  isObject,
-  isPlainObject,
-  isSymbol,
-} from '@vue/shared'
+import { extend, isArray, isObject, isPlainObject, isSymbol } from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
 import {
   ssrProcessTransition,
@@ -276,11 +264,6 @@ export function ssrProcessComponent(
       // dynamic component (`resolveDynamicComponent` call)
       // the codegen node is a `renderVNode` call
       context.pushStatement(node.ssrCodegenNode)
-
-      // anchor for vapor dynamic component
-      if (context.options.vapor) {
-        context.pushStringPart(`<!--${DYNAMIC_COMPONENT_ANCHOR_LABEL}-->`)
-      }
     }
   }
 }
@@ -338,9 +321,6 @@ function createVNodeSlotBranch(
   if (vFor) {
     wrapperProps.push(extend({}, vFor))
   }
-  if (parentContext.vapor) {
-    children = injectVaporAnchors(children)
-  }
 
   const wrapperNode: TemplateNode = {
     type: NodeTypes.ELEMENT,
@@ -392,173 +372,6 @@ function subTransform(
   // - imports are only used for asset urls and should be consistent between
   //   node/client branches
   // - hoists are not enabled for the client branch here
-}
-
-function injectVaporAnchors(
-  children: TemplateChildNode[],
-): TemplateChildNode[] {
-  const newChildren: TemplateChildNode[] = []
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i]
-
-    if (child.type !== NodeTypes.ELEMENT) {
-      newChildren.push(child)
-      continue
-    }
-
-    const { tagType, props } = child
-
-    if (
-      tagType === ElementTypes.COMPONENT ||
-      tagType === ElementTypes.SLOT ||
-      tagType === ElementTypes.TEMPLATE
-    ) {
-    } else if (tagType === ElementTypes.ELEMENT) {
-      let hasIf = false
-
-      for (const prop of props) {
-        if (prop.name === 'if') {
-          hasIf = true
-          break
-        }
-      }
-
-      if (hasIf) {
-        const lastBranchIndex = findLastIfBranchIndex(children, i)
-        if (lastBranchIndex > i) {
-          injectIfAnchors(newChildren, i, lastBranchIndex, children)
-          i = lastBranchIndex
-          continue
-        }
-      }
-    }
-
-    newChildren.push(child)
-
-    // inject fragment anchor
-    const fragmentAnchorLabel = getFragmentAnchorLabel(child)
-    if (fragmentAnchorLabel) newChildren.push(createAnchor(fragmentAnchorLabel))
-
-    child.children = injectVaporAnchors(child.children)
-  }
-
-  return newChildren
-}
-
-function injectIfAnchors(
-  newChildren: TemplateChildNode[],
-  i: number,
-  lastBranchIndex: number,
-  children: TemplateChildNode[],
-) {
-  for (let j = i; j <= lastBranchIndex; j++) {
-    const node = children[j] as PlainElementNode
-    const fragmentAnchorLabel = getFragmentAnchorLabel(node)
-    let isElse = false
-
-    const conditionalProps: typeof node.props = []
-    const restProps: typeof node.props = []
-
-    for (const prop of node.props) {
-      if (
-        prop.name === 'if' ||
-        prop.name === 'else-if' ||
-        prop.name === 'else'
-      ) {
-        conditionalProps.push(prop)
-        if (prop.name === 'else') isElse = true
-      } else {
-        restProps.push(prop)
-      }
-    }
-    node.props = restProps
-
-    // wrap the node with a template node
-    const wrapperNode: TemplateNode = {
-      type: NodeTypes.ELEMENT,
-      ns: Namespaces.HTML,
-      tag: 'template',
-      tagType: ElementTypes.TEMPLATE,
-      props: conditionalProps,
-      children: [node],
-      loc: node.loc,
-      codegenNode: undefined,
-    }
-    newChildren.push(wrapperNode)
-
-    if (fragmentAnchorLabel) {
-      const repeatCount = j - i - (isElse ? 1 : 0) + 1
-      wrapperNode.children.push(
-        createAnchor(`<!--${fragmentAnchorLabel}-->`.repeat(repeatCount)),
-      )
-    }
-    node.children = injectVaporAnchors(node.children)
-  }
-}
-
-function createAnchor(content: string): CommentNode {
-  return {
-    type: NodeTypes.COMMENT,
-    content,
-    loc: locStub,
-  }
-}
-
-function findLastIfBranchIndex(
-  children: TemplateChildNode[],
-  ifIndex: number,
-): number {
-  let lastIndex = ifIndex
-
-  for (let i = ifIndex + 1; i < children.length; i++) {
-    const sibling = children[i]
-
-    if (sibling.type !== NodeTypes.ELEMENT) {
-      continue
-    }
-
-    let hasElseIf = false
-    let hasElse = false
-
-    for (const prop of sibling.props) {
-      if (prop.name === 'else-if') {
-        hasElseIf = true
-        break
-      } else if (prop.name === 'else') {
-        hasElse = true
-        break
-      }
-    }
-
-    if (hasElseIf || hasElse) {
-      lastIndex = i
-      if (hasElse) {
-        break
-      }
-    } else {
-      break
-    }
-  }
-
-  return lastIndex
-}
-
-function getFragmentAnchorLabel(child: TemplateChildNode): string | undefined {
-  if (child.type !== NodeTypes.ELEMENT) return
-
-  if (child.tagType === ElementTypes.COMPONENT && child.tag === 'component') {
-    return DYNAMIC_COMPONENT_ANCHOR_LABEL
-  } else if (child.tagType === ElementTypes.SLOT) {
-    return SLOT_ANCHOR_LABEL
-  } else if (
-    child.props.some(
-      p => p.name === 'if' || p.name === 'else-if' || p.name === 'else',
-    )
-  ) {
-    return IF_ANCHOR_LABEL
-  } else if (child.props.some(p => p.name === 'for')) {
-    return FOR_ANCHOR_LABEL
-  }
 }
 
 function clone(v: any): any {

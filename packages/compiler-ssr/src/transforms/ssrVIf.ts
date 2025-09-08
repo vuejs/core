@@ -14,7 +14,6 @@ import {
   type SSRTransformContext,
   processChildrenAsStatement,
 } from '../ssrCodegenTransform'
-import { IF_ANCHOR_LABEL } from '@vue/shared'
 
 // Plugin for the first transform pass, which simply constructs the AST node
 export const ssrTransformIf: NodeTransform = createStructuralDirectiveTransform(
@@ -37,16 +36,6 @@ export function ssrProcessIf(
   )
   context.pushStatement(ifStatement)
 
-  // anchor addition rules (matching runtime-vapor behavior):
-  // - v-else-if: the N-th branch → add N anchors
-  // - v-else: if there are M preceding branches → add M anchors
-  const isVapor = context.options.vapor
-  if (isVapor) {
-    ifStatement.consequent.body.push(
-      createCallExpression(`_push`, createIfAnchors(1)),
-    )
-  }
-
   let currentIf = ifStatement
   for (let i = 1; i < node.branches.length; i++) {
     const branch = node.branches[i]
@@ -61,29 +50,15 @@ export function ssrProcessIf(
         branch.condition,
         branchBlockStatement,
       )
-
-      if (isVapor) {
-        branchBlockStatement.body.push(
-          createCallExpression(`_push`, createIfAnchors(i + 1)),
-        )
-      }
     } else {
       // else
       currentIf.alternate = branchBlockStatement
-
-      if (isVapor) {
-        branchBlockStatement.body.push(
-          createCallExpression(`_push`, createIfAnchors(i)),
-        )
-      }
     }
   }
 
   if (!currentIf.alternate && !disableComment) {
     currentIf.alternate = createBlockStatement([
-      createCallExpression(`_push`, [
-        isVapor ? `\`<!----><!--${IF_ANCHOR_LABEL}-->\`` : '`<!---->`',
-      ]),
+      createCallExpression(`_push`, ['`<!---->`']),
     ])
   }
 }
@@ -101,12 +76,4 @@ function processIfBranch(
     !(children.length === 1 && children[0].type === NodeTypes.FOR)
 
   return processChildrenAsStatement(branch, context, needFragmentWrapper)
-}
-
-function createIfAnchors(count: number): string[] {
-  const anchors: string[] = []
-  for (let i = 0; i < count; i++) {
-    anchors.push(`<!--${IF_ANCHOR_LABEL}-->`)
-  }
-  return [`\`${anchors.join('')}\``]
 }
