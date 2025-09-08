@@ -11,6 +11,7 @@ import {
 } from './block'
 import type { TransitionHooks } from '@vue/runtime-dom'
 import {
+  advanceHydrationNode,
   currentHydrationNode,
   isComment,
   isHydrating,
@@ -158,21 +159,24 @@ export class DynamicFragment extends VaporFragment {
       return
     }
 
-    // reuse the vdom fragment end anchor for non-empty slots
-    // for empty slots, fallback to create
+    // reuse the vdom fragment end anchor for slots
     if (this.anchorLabel === SLOT_ANCHOR_LABEL) {
       this.anchor = locateFragmentAnchor(currentHydrationNode!, ']')!
-      if (this.anchor) return
+      if (!this.anchor) {
+        throw new Error('Failed to locate slot anchor')
+      } else {
+        return
+      }
     }
 
     // create an anchor
-    if (!isEmpty) {
-      const { parentNode, nextSibling } = findLastChild(this)!
-      parentNode!.insertBefore(
-        (this.anchor = createComment(this.anchorLabel!)),
-        nextSibling,
-      )
-    }
+    const { parentNode, nextSibling } = findLastChild(this)!
+    parentNode!.insertBefore(
+      (this.anchor = createComment(this.anchorLabel!)),
+      nextSibling,
+    )
+
+    advanceHydrationNode(this.anchor)
   }
 }
 
