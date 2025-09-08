@@ -1,17 +1,15 @@
 import { isHydrating } from './dom/hydration'
-export interface ChildItem extends ChildNode {
-  $idx: number
-}
+export type ChildItem = ChildNode & { $idx: number }
+export type InsertionParent = ParentNode & { $children?: ChildItem[] }
+
 type HydrationState = {
   logicalChildren: ChildItem[]
   prevDynamicCount: number
   insertionAnchors: Map<Node, number> | null
   appendAnchor: Node | null
 }
-export let insertionParent: ParentNode | undefined
+export let insertionParent: InsertionParent | undefined
 export let insertionAnchor: Node | 0 | undefined | null
-
-const templateChildrenCache = new WeakMap<ParentNode, ChildItem[]>()
 
 const hydrationStateCache = new WeakMap<ParentNode, HydrationState>()
 
@@ -87,33 +85,27 @@ function initializeHydrationState(
 
 function cacheTemplateChildren(
   anchor: number | Node | null | undefined,
-  parent: ParentNode,
+  parent: InsertionParent,
 ) {
   // special handling append anchor value to null
   insertionAnchor =
     typeof anchor === 'number' && anchor > 0 ? null : (anchor as Node)
 
-  if (!templateChildrenCache.has(parent)) {
+  if (!parent.$children) {
     const nodes = parent.childNodes
     const len = nodes.length
-    const children = new Array(len)
+    const children = new Array(len) as ChildItem[]
     for (let i = 0; i < len; i++) {
       const node = nodes[i] as ChildItem
       node.$idx = i
       children[i] = node
     }
-    templateChildrenCache.set(parent, children)
+    parent.$children = children
   }
 }
 
 export function resetInsertionState(): void {
   insertionParent = insertionAnchor = undefined
-}
-
-export function getTemplateChildren(
-  parent: ParentNode,
-): ChildItem[] | undefined {
-  return templateChildrenCache.get(parent)
 }
 
 export function getHydrationState(

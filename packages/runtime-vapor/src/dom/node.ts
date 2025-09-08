@@ -2,8 +2,8 @@
 
 import {
   type ChildItem,
+  type InsertionParent,
   getHydrationState,
-  getTemplateChildren,
 } from '../insertionState'
 
 export function createElement(tagName: string): HTMLElement {
@@ -46,23 +46,23 @@ const __txt: typeof __child = (node: ParentNode): Node => {
 }
 
 /* @__NO_SIDE_EFFECTS__ */
-export function _child(node: ParentNode): Node {
-  const templateChildren = getTemplateChildren(node)
-  return templateChildren ? templateChildren[0] : node.firstChild!
+export function _child(node: InsertionParent): Node {
+  const children = node.$children
+  return children ? children[0] : node.firstChild!
 }
 
 /**
  * Hydration-specific version of `child`.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export function __child(node: ParentNode & { $lpn?: Node }): Node {
+export function __child(node: ParentNode): Node {
   return __nthChild(node, 0)!
 }
 
 /* @__NO_SIDE_EFFECTS__ */
-export function _nthChild(node: Node, i: number): Node {
-  const templateChildren = getTemplateChildren(node as ParentNode)
-  return templateChildren ? templateChildren[i] : node.childNodes[i]
+export function _nthChild(node: InsertionParent, i: number): Node {
+  const children = node.$children
+  return children ? children[i] : node.childNodes[i]
 }
 
 /**
@@ -92,10 +92,8 @@ export function __nthChild(node: Node, i: number): Node {
 
 /* @__NO_SIDE_EFFECTS__ */
 export function _next(node: Node): Node {
-  const templateChildren = getTemplateChildren(node.parentNode!)
-  return templateChildren
-    ? templateChildren[(node as ChildItem).$idx + 1]
-    : node.nextSibling!
+  const children = (node.parentNode! as InsertionParent).$children
+  return children ? children[(node as ChildItem).$idx + 1] : node.nextSibling!
 }
 
 /**
