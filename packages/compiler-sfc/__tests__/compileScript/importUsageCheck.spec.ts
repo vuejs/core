@@ -265,3 +265,31 @@ test('shorthand binding w/ kebab-case', () => {
   )
   expect(content).toMatch('return { get fooBar() { return fooBar }')
 })
+
+test('custom template lang', () => {
+  const { content } = compile(
+    `
+    <script setup lang="ts">
+      import { Thing1, Thing2, Thing3, Thing4, Thing5, Thing6 } from "./types.ts"
+    </script>
+    <template lang="pug">
+      h1 Thing1
+        div {{ Thing2 }}
+      
+        Thing3 World
+
+        div(v-bind:abc='Thing4')
+
+        div(v-text='Thing5')
+
+        div(ref='Thing6')
+    </template>
+    `,
+    { templateOptions: { preprocessLang: 'pug' } },
+  )
+  // Thing1 is just a string in the template so should not be included
+  expect(content).toMatch(
+    'return { get Thing2() { return Thing2 }, get Thing3() { return Thing3 }, get Thing4() { return Thing4 }, get Thing5() { return Thing5 }, get Thing6() { return Thing6 } }',
+  )
+  assertCode(content)
+})

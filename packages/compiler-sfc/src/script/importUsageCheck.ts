@@ -1,7 +1,7 @@
-import type { SFCDescriptor } from '../parse'
 import {
   type ExpressionNode,
   NodeTypes,
+  type RootNode,
   type SimpleExpressionNode,
   type TemplateChildNode,
   parserOptions,
@@ -15,14 +15,20 @@ import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
  * the properties that should be included in the object returned from setup()
  * when not using inline mode.
  */
-export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
-  return resolveTemplateUsedIdentifiers(sfc).has(local)
+export function isImportUsed(
+  local: string,
+  content: string,
+  ast: RootNode,
+): boolean {
+  return resolveTemplateUsedIdentifiers(content, ast).has(local)
 }
 
 const templateUsageCheckCache = createCache<Set<string>>()
 
-function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
-  const { content, ast } = sfc.template!
+function resolveTemplateUsedIdentifiers(
+  content: string,
+  ast: RootNode,
+): Set<string> {
   const cached = templateUsageCheckCache.get(content)
   if (cached) {
     return cached
@@ -30,7 +36,7 @@ function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
 
   const ids = new Set<string>()
 
-  ast!.children.forEach(walk)
+  ast.children.forEach(walk)
 
   function walk(node: TemplateChildNode) {
     switch (node.type) {
@@ -89,6 +95,10 @@ function extractIdentifiers(ids: Set<string>, node: ExpressionNode) {
   if (node.ast) {
     walkIdentifiers(node.ast, n => ids.add(n.name))
   } else if (node.ast === null) {
-    ids.add((node as SimpleExpressionNode).content)
+    const content = (node as SimpleExpressionNode).content.replace(
+      /^_ctx\./,
+      '',
+    )
+    ids.add(content)
   }
 }
