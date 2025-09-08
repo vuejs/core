@@ -31,17 +31,11 @@ export interface HMRRuntime {
 // Note: for a component to be eligible for HMR it also needs the __hmrId option
 // to be set so that its instances can be registered / removed.
 if (__DEV__) {
-  const g = getGlobalThis()
-  // vite-plugin-vue/issues/644, #13202
-  // custom-element libraries bundle Vue to simplify usage outside Vue projects but
-  // it overwrite __VUE_HMR_RUNTIME__, causing HMR to break.
-  if (!g.__VUE_HMR_RUNTIME__) {
-    g.__VUE_HMR_RUNTIME__ = {
-      createRecord: tryWrap(createRecord),
-      rerender: tryWrap(rerender),
-      reload: tryWrap(reload),
-    } as HMRRuntime
-  }
+  getGlobalThis().__VUE_HMR_RUNTIME__ = {
+    createRecord: tryWrap(createRecord),
+    rerender: tryWrap(rerender),
+    reload: tryWrap(reload),
+  } as HMRRuntime
 }
 
 const map: Map<
