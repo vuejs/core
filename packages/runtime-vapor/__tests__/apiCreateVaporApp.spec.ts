@@ -319,28 +319,6 @@ describe('api: createVaporApp', () => {
     })
   })
 
-  describe('config.performance', () => {
-    afterEach(() => {
-      window.performance.clearMeasures()
-    })
-
-    test('with performance enabled', () => {
-      const { app, mount } = define({ setup: () => [] }).create()
-
-      app.config.performance = true
-      mount()
-      expect(window.performance.getEntries()).lengthOf(2)
-    })
-
-    test('with performance disabled', () => {
-      const { app, mount } = define({ setup: () => [] }).create()
-
-      app.config.performance = false
-      mount()
-      expect(window.performance.getEntries()).lengthOf(0)
-    })
-  })
-
   test.todo('config.globalProperty', () => {
     const { app } = define({
       setup() {

@@ -68,7 +68,7 @@ export function isValidBlock(block: Block): boolean {
 
 export function insert(
   block: Block,
-  parent: ParentNode,
+  parent: ParentNode & { $anchor?: Node | null },
   anchor: Node | null | 0 = null, // 0 means prepend
   parentSuspense?: any, // TODO Suspense
 ): void {

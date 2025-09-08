@@ -59,7 +59,7 @@ import { DEFINE_SLOTS, processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
 import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
-import { isImportUsed } from './script/importUsageCheck'
+import { isUsedInTemplate } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
 
 export interface SFCScriptCompileOptions {
@@ -173,7 +173,6 @@ export function compileScript(
     )
   }
 
-  const ctx = new ScriptCompileContext(sfc, options)
   const { script, scriptSetup, source, filename } = sfc
   const hoistStatic = options.hoistStatic !== false && !script
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
@@ -181,6 +180,16 @@ export function compileScript(
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const vapor = sfc.vapor || options.vapor
   const ssr = options.templateOptions?.ssr
+  const setupPreambleLines = [] as string[]
+
+  if (script && scriptSetup && scriptLang !== scriptSetupLang) {
+    throw new Error(
+      `[@vue/compiler-sfc] <script> and <script setup> must have the same ` +
+        `language type.`,
+    )
+  }
+
+  const ctx = new ScriptCompileContext(sfc, options)
 
   if (!scriptSetup) {
     if (!script) {
@@ -188,13 +197,6 @@ export function compileScript(
     }
     // normal <script> only
     return processNormalScript(ctx, scopeId)
-  }
-
-  if (script && scriptLang !== scriptSetupLang) {
-    throw new Error(
-      `[@vue/compiler-sfc] <script> and <script setup> must have the same ` +
-        `language type.`,
-    )
   }
 
   if (scriptSetupLang && !ctx.isJS && !ctx.isTS) {
@@ -246,7 +248,7 @@ export function compileScript(
   ) {
     // template usage check is only needed in non-inline mode, so we can skip
     // the work if inlineTemplate is true.
-    let isUsedInTemplate = needTemplateUsageCheck
+    let isImportUsed = needTemplateUsageCheck
     if (
       needTemplateUsageCheck &&
       ctx.isTS &&
@@ -254,7 +256,7 @@ export function compileScript(
       !sfc.template.src &&
       !sfc.template.lang
     ) {
-      isUsedInTemplate = isImportUsed(local, sfc)
+      isImportUsed = isUsedInTemplate(local, sfc)
     }
 
     ctx.userImports[local] = {
@@ -263,7 +265,7 @@ export function compileScript(
       local,
       source,
       isFromSetup,
-      isUsedInTemplate,
+      isUsedInTemplate: isImportUsed,
     }
   }
 
@@ -284,8 +286,42 @@ export function compileScript(
     })
   }
 
+  function buildDestructureElements() {
+    if (!sfc.template || !sfc.template.ast) return
+
+    const builtins = {
+      $props: {
+        bindingType: BindingTypes.SETUP_REACTIVE_CONST,
+        setup: () => setupPreambleLines.push(`const $props = __props`),
+      },
+      $emit: {
+        bindingType: BindingTypes.SETUP_CONST,
+        setup: () =>
+          ctx.emitDecl
+            ? setupPreambleLines.push(`const $emit = __emit`)
+            : destructureElements.push('emit: $emit'),
+      },
+      $attrs: {
+        bindingType: BindingTypes.SETUP_REACTIVE_CONST,
+        setup: () => destructureElements.push('attrs: $attrs'),
+      },
+      $slots: {
+        bindingType: BindingTypes.SETUP_REACTIVE_CONST,
+        setup: () => destructureElements.push('slots: $slots'),
+      },
+    }
+
+    for (const [name, config] of Object.entries(builtins)) {
+      if (isUsedInTemplate(name, sfc) && !ctx.bindingMetadata[name]) {
+        config.setup()
+        ctx.bindingMetadata[name] = config.bindingType
+      }
+    }
+  }
+
   const scriptAst = ctx.scriptAst
   const scriptSetupAst = ctx.scriptSetupAst!
+  const inlineMode = options.inlineTemplate
 
   // 1.1 walk import declarations of <script>
   if (scriptAst) {
@@ -302,7 +338,7 @@ export function compileScript(
               (specifier.type === 'ImportSpecifier' &&
                 specifier.importKind === 'type'),
             false,
-            !options.inlineTemplate,
+            !inlineMode,
           )
         }
       }
@@ -370,7 +406,7 @@ export function compileScript(
               (specifier.type === 'ImportSpecifier' &&
                 specifier.importKind === 'type'),
             true,
-            !options.inlineTemplate,
+            !inlineMode,
           )
         }
       }
@@ -811,12 +847,16 @@ export function compileScript(
   }
 
   const destructureElements =
-    ctx.hasDefineExposeCall || !options.inlineTemplate
-      ? [`expose: __expose`]
-      : []
+    ctx.hasDefineExposeCall || !inlineMode ? [`expose: __expose`] : []
   if (ctx.emitDecl) {
     destructureElements.push(`emit: __emit`)
   }
+
+  // destructure built-in properties (e.g. $emit, $attrs, $slots)
+  if (inlineMode) {
+    buildDestructureElements()
+  }
+
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
   }
@@ -824,10 +864,7 @@ export function compileScript(
   let templateMap
   // 9. generate return statement
   let returned
-  if (
-    !options.inlineTemplate ||
-    (!sfc.template && ctx.hasDefaultExportRender)
-  ) {
+  if (!inlineMode || (!sfc.template && ctx.hasDefaultExportRender)) {
     // non-inline mode, or has manual render in normal <script>
     // return bindings from script and script setup
     const allBindings: Record<string, any> = {
@@ -927,7 +964,7 @@ export function compileScript(
     }
   }
 
-  if (!options.inlineTemplate && !__TEST__) {
+  if (!inlineMode && !__TEST__) {
     // in non-inline mode, the `__isScriptSetup: true` flag is used by
     // componentPublicInstance proxy to allow properties that start with $ or _
     ctx.s.appendRight(
@@ -976,8 +1013,12 @@ export function compileScript(
 
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
-  const exposeCall =
-    ctx.hasDefineExposeCall || options.inlineTemplate ? `` : `  __expose();\n`
+  if (!ctx.hasDefineExposeCall && !inlineMode)
+    setupPreambleLines.push(`__expose();`)
+
+  const setupPreamble = setupPreambleLines.length
+    ? `  ${setupPreambleLines.join('\n  ')}\n`
+    : ''
   // wrap setup code with function.
   if (ctx.isTS) {
     // in SSR, always use defineComponent, so __vapor flag is required
@@ -999,7 +1040,7 @@ export function compileScript(
         vapor && !ssr ? `defineVaporComponent` : `defineComponent`,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
-      }setup(${args}) {\n${exposeCall}`,
+      }setup(${args}) {\n${setupPreamble}`,
     )
     ctx.s.appendRight(endOffset, `})`)
   } else {
@@ -1015,14 +1056,14 @@ export function compileScript(
         `\n${genDefaultAs} /*@__PURE__*/Object.assign(${
           defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`,
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
       )
       ctx.s.appendRight(endOffset, `})`)
     } else {
       ctx.s.prependLeft(
         startOffset,
         `\n${genDefaultAs} {${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`,
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
       )
       ctx.s.appendRight(endOffset, `}`)
     }

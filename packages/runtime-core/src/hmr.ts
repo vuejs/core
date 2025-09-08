@@ -1,4 +1,5 @@
 /* eslint-disable no-restricted-globals */
+import { EffectFlags } from '@vue/reactivity'
 import {
   type ClassComponent,
   type ComponentInternalInstance,
@@ -99,8 +100,11 @@ function rerender(id: string, newRender?: Function): void {
       instance.hmrRerender!()
     } else {
       const i = instance as ComponentInternalInstance
-      i.renderCache = []
-      i.effect.run()
+      // #13771 don't update if the job is already disposed
+      if (!(i.effect.flags! & EffectFlags.STOP)) {
+        i.renderCache = []
+        i.effect.run()
+      }
     }
     nextTick(() => {
       isHmrUpdating = false

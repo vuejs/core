@@ -8,7 +8,7 @@ import { renderEffect } from '../renderEffect'
 import { isVaporComponent } from '../component'
 import type { Block, TransitionBlock } from '../block'
 import { isArray } from '@vue/shared'
-import { DynamicFragment } from '../fragment'
+import { DynamicFragment, VaporFragment } from '../fragment'
 
 export function applyVShow(target: Block, source: () => any): void {
   if (isVaporComponent(target)) {
@@ -25,6 +25,12 @@ export function applyVShow(target: Block, source: () => any): void {
       update.call(target, render, key)
       setDisplay(target, source())
     }
+  } else if (target instanceof VaporFragment && target.insert) {
+    const insert = target.insert
+    target.insert = (parent, anchor) => {
+      insert.call(target, parent, anchor)
+      setDisplay(target, source())
+    }
   }
 
   renderEffect(() => setDisplay(target, source()))
@@ -34,13 +40,17 @@ function setDisplay(target: Block, value: unknown): void {
   if (isVaporComponent(target)) {
     return setDisplay(target, value)
   }
-  if (isArray(target) && target.length === 1) {
-    return setDisplay(target[0], value)
+  if (isArray(target)) {
+    if (target.length === 0) return
+    if (target.length === 1) return setDisplay(target[0], value)
   }
   if (target instanceof DynamicFragment) {
     return setDisplay(target.nodes, value)
   }
   const { $transition } = target as TransitionBlock
+  if (target instanceof VaporFragment && target.insert) {
+    return setDisplay(target.nodes, value)
+  }
   if (target instanceof Element) {
     const el = target as VShowElement
     if (!(vShowOriginalDisplay in el)) {

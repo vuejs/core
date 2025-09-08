@@ -170,6 +170,24 @@ export function createComponent(
     resetInsertionState()
   }
 
+  if (
+    isSingleRoot &&
+    component.inheritAttrs !== false &&
+    isVaporComponent(currentInstance) &&
+    currentInstance.hasFallthrough
+  ) {
+    // check if we are the single root of the parent
+    // if yes, inject parent attrs as dynamic props source
+    const attrs = currentInstance.attrs
+    if (rawProps) {
+      ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
+        () => attrs,
+      )
+    } else {
+      rawProps = { $: [() => attrs] } as RawProps
+    }
+  }
+
   // vdom interop enabled and component is not an explicit vapor component
   if (appContext.vapor && !component.__vapor) {
     const frag = appContext.vapor.vdomMount(
@@ -204,24 +222,6 @@ export function createComponent(
     }
 
     return frag as any
-  }
-
-  if (
-    isSingleRoot &&
-    component.inheritAttrs !== false &&
-    isVaporComponent(currentInstance) &&
-    currentInstance.hasFallthrough
-  ) {
-    // check if we are the single root of the parent
-    // if yes, inject parent attrs as dynamic props source
-    const attrs = currentInstance.attrs
-    if (rawProps) {
-      ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
-        () => attrs,
-      )
-    } else {
-      rawProps = { $: [() => attrs] } as RawProps
-    }
   }
 
   const instance = new VaporComponentInstance(

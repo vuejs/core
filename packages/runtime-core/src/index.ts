@@ -596,3 +596,7 @@ export { markAsyncBoundary } from './helpers/useId'
  * @internal
  */
 export { createInternalObject } from './internalObject'
+/**
+ * @internal
+ */
+export { createCanSetSetupRefChecker } from './rendererTemplateRef'

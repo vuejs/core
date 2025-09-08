@@ -69,28 +69,31 @@ export function defineAsyncComponent<
 
     __asyncHydrate(el, instance, hydrate) {
       let patched = false
+      ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
+      const performHydrate = () => {
+        // skip hydration if the component has been patched
+        if (patched) {
+          if (__DEV__) {
+            const resolvedComp = getResolvedComp()
+            warn(
+              `Skipping lazy hydration for component '${getComponentName(resolvedComp!) || resolvedComp!.__file}': ` +
+                `it was updated before lazy hydration performed.`,
+            )
+          }
+          return
+        }
+        hydrate()
+      }
       const doHydrate = hydrateStrategy
         ? () => {
-            const performHydrate = () => {
-              // skip hydration if the component has been patched
-              if (__DEV__ && patched) {
-                warn(
-                  `Skipping lazy hydration for component '${getComponentName(getResolvedComp()!)}': ` +
-                    `it was updated before lazy hydration performed.`,
-                )
-                return
-              }
-              hydrate()
-            }
             const teardown = hydrateStrategy(performHydrate, cb =>
               forEachElement(el, cb),
             )
             if (teardown) {
               ;(instance.bum || (instance.bum = [])).push(teardown)
             }
-            ;(instance.u || (instance.u = [])).push(() => (patched = true))
           }
-        : hydrate
+        : performHydrate
       if (getResolvedComp()) {
         doHydrate()
       } else {

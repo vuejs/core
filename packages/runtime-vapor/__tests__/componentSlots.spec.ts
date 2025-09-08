@@ -13,6 +13,7 @@ import {
   insert,
   prepend,
   renderEffect,
+  setInsertionState,
   template,
   vaporInteropPlugin,
 } from '../src'
@@ -2700,6 +2701,36 @@ describe('component: slots', () => {
         await nextTick()
         expect(root.innerHTML).toBe('<span>bar</span>')
       })
+    })
+
+    test('consecutive slots with insertion state', async () => {
+      const { component: Child } = define({
+        setup() {
+          const n2 = template('<div><div>baz</div></div>', true)() as any
+          setInsertionState(n2, 0)
+          createSlot('default', null)
+          setInsertionState(n2, 0)
+          createSlot('foo', null)
+          return n2
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => template('default')(),
+            foo: () => template('foo')(),
+          })
+        },
+      }).render()
+
+      expect(html()).toBe(
+        `<div>` +
+          `default<!--slot-->` +
+          `foo<!--slot-->` +
+          `<div>baz</div>` +
+          `</div>`,
+      )
     })
   })
 })
