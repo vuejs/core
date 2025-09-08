@@ -320,7 +320,6 @@ function createVNodeSlotBranch(
   if (vFor) {
     wrapperProps.push(extend({}, vFor))
   }
-
   const wrapperNode: TemplateNode = {
     type: NodeTypes.ELEMENT,
     ns: Namespaces.HTML,
@@ -331,7 +330,6 @@ function createVNodeSlotBranch(
     loc: locStub,
     codegenNode: undefined,
   }
-
   subTransform(wrapperNode, subOptions, parentContext)
   return createReturnStatement(children)
 }

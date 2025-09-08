@@ -36,7 +36,6 @@ export function ssrProcessFor(
     context,
     needFragmentWrapper,
   )
-
   // v-for always renders a fragment unless explicitly disabled
   if (!disableNestedFragments) {
     context.pushStringPart(`<!--[-->`)

@@ -3,7 +3,6 @@ import {
   type CallExpression,
   type CompilerError,
   type CompilerOptions,
-  type ElementNode,
   ElementTypes,
   type IfStatement,
   type JSChildNode,
@@ -162,9 +161,7 @@ export function processChildren(
   if (asFragment) {
     context.pushStringPart(`<!--[-->`)
   }
-
   const { children } = parent
-
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     switch (child.type) {
@@ -175,7 +172,6 @@ export function processChildren(
             break
           case ElementTypes.COMPONENT:
             ssrProcessComponent(child, context, parent)
-
             break
           case ElementTypes.SLOT:
             ssrProcessSlotOutlet(child, context)
@@ -252,14 +248,4 @@ export function processChildrenAsStatement(
   const childContext = createChildContext(parentContext, withSlotScopeId)
   processChildren(parent, childContext, asFragment)
   return createBlockStatement(childContext.body)
-}
-
-export function isElementWithChildren(
-  node: TemplateChildNode,
-): node is ElementNode {
-  return (
-    node.type === NodeTypes.ELEMENT &&
-    node.tagType === ElementTypes.ELEMENT &&
-    node.children.length > 0
-  )
 }
