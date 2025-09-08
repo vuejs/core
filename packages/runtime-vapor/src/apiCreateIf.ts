@@ -1,4 +1,3 @@
-import { IF_ANCHOR_LABEL } from '@vue/shared'
 import { type Block, type BlockFn, insert } from './block'
 import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import {
@@ -24,9 +23,7 @@ export function createIf(
     frag = condition() ? b1() : b2 ? b2() : []
   } else {
     frag =
-      isHydrating || __DEV__
-        ? new DynamicFragment(IF_ANCHOR_LABEL)
-        : new DynamicFragment()
+      isHydrating || __DEV__ ? new DynamicFragment('if') : new DynamicFragment()
     renderEffect(() => (frag as DynamicFragment).update(condition() ? b1 : b2))
   }
 

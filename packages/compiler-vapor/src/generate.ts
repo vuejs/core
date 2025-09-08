@@ -86,7 +86,6 @@ export class CodegenContext {
       isTS: false,
       inSSR: false,
       inline: false,
-      vapor: false,
       bindingMetadata: {},
       expressionPlugins: [],
     }

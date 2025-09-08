@@ -21,7 +21,7 @@ import {
   applyTransitionLeaveHooks,
 } from './components/Transition'
 import { type VaporComponentInstance, isVaporComponent } from './component'
-import { IF_ANCHOR_LABEL, SLOT_ANCHOR_LABEL, isArray } from '@vue/shared'
+import { isArray } from '@vue/shared'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -147,7 +147,7 @@ export class DynamicFragment extends VaporFragment {
     if (this.anchor) return
 
     // reuse the empty comment node as the anchor for empty if
-    if (this.anchorLabel === IF_ANCHOR_LABEL && isEmpty) {
+    if (this.anchorLabel === 'if' && isEmpty) {
       this.anchor = locateFragmentEndAnchor('')!
       if (!this.anchor) {
         throw new Error('Failed to locate if anchor')
@@ -158,7 +158,7 @@ export class DynamicFragment extends VaporFragment {
     }
 
     // reuse the vdom fragment end anchor for slots
-    if (this.anchorLabel === SLOT_ANCHOR_LABEL) {
+    if (this.anchorLabel === 'slot') {
       this.anchor = locateFragmentEndAnchor()!
       if (!this.anchor) {
         throw new Error('Failed to locate slot anchor')

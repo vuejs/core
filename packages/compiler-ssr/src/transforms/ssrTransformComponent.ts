@@ -126,9 +126,9 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     // fallback in case the child is render-fn based). Store them in an array
     // for later use.
     if (clonedNode.children.length) {
-      buildSlots(clonedNode, context, (props, vFor, children, _loc, parent) => {
+      buildSlots(clonedNode, context, (props, vFor, children) => {
         vnodeBranches.push(
-          createVNodeSlotBranch(props, vFor, children, context, parent),
+          createVNodeSlotBranch(props, vFor, children, context),
         )
         return createFunctionExpression(undefined)
       })
@@ -286,7 +286,6 @@ function createVNodeSlotBranch(
   vFor: DirectiveNode | undefined,
   children: TemplateChildNode[],
   parentContext: TransformContext,
-  parent: TemplateChildNode,
 ): ReturnStatement {
   // apply a sub-transform using vnode-based transforms.
   const rawOptions = rawOptionsMap.get(parentContext.root)!

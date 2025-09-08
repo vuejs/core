@@ -1,4 +1,3 @@
-import { isFragmentAnchors } from '@vue/shared'
 import { isHydrating } from './dom/hydration'
 export interface ChildItem extends ChildNode {
   $idx: number
@@ -44,8 +43,7 @@ function initializeHydrationState(
     const logicalChildren = new Array(len) as ChildItem[]
     // Build logical children:
     // - static node: keep the node as a child
-    // - fragment: keep only the start anchor ('<!--[-->') as a child,
-    // - vapor fragment anchors: skip (internal markers, not logical children)
+    // - fragment: keep only the start anchor ('<!--[-->') as a child
     let index = 0
     for (let i = 0; i < len; i++) {
       const n = childNodes[i] as ChildItem
@@ -71,10 +69,6 @@ function initializeHydrationState(
           }
           // jump i to the end anchor
           i = j
-          continue
-        }
-        // skip vapor fragment anchors
-        else if (isFragmentAnchors(data)) {
           continue
         }
       }
