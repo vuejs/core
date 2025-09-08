@@ -130,6 +130,7 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
+export type { SchedulerJob } from './scheduler'
 import { warn as _warn } from './warning'
 export const warn = (__DEV__ ? _warn : NOOP) as typeof _warn
 
@@ -530,7 +531,7 @@ export { baseEmit, isEmitListener } from './componentEmits'
 /**
  * @internal
  */
-export { type SchedulerJob, queueJob, flushOnAppMount } from './scheduler'
+export { queueJob, flushOnAppMount } from './scheduler'
 /**
  * @internal
  */
