@@ -12,10 +12,8 @@ import {
 import type { TransitionHooks } from '@vue/runtime-dom'
 import {
   advanceHydrationNode,
-  currentHydrationNode,
-  isComment,
   isHydrating,
-  locateFragmentAnchor,
+  locateFragmentEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
 import {
@@ -148,20 +146,20 @@ export class DynamicFragment extends VaporFragment {
     // avoid repeated hydration during fallback rendering
     if (this.anchor) return
 
-    // reuse the empty comment node as the anchor for an empty if
-    if (
-      this.anchorLabel === IF_ANCHOR_LABEL &&
-      isEmpty &&
-      isComment(currentHydrationNode!, '')
-    ) {
-      this.anchor = currentHydrationNode!
-      if (__DEV__) (this.anchor as Comment).data = this.anchorLabel
-      return
+    // reuse the empty comment node as the anchor for empty if
+    if (this.anchorLabel === IF_ANCHOR_LABEL && isEmpty) {
+      this.anchor = locateFragmentEndAnchor('')!
+      if (!this.anchor) {
+        throw new Error('Failed to locate if anchor')
+      } else {
+        ;(this.anchor as Comment).data = this.anchorLabel
+        return
+      }
     }
 
     // reuse the vdom fragment end anchor for slots
     if (this.anchorLabel === SLOT_ANCHOR_LABEL) {
-      this.anchor = locateFragmentAnchor(currentHydrationNode!, ']')!
+      this.anchor = locateFragmentEndAnchor()!
       if (!this.anchor) {
         throw new Error('Failed to locate slot anchor')
       } else {
@@ -175,7 +173,6 @@ export class DynamicFragment extends VaporFragment {
       (this.anchor = createComment(this.anchorLabel!)),
       nextSibling,
     )
-
     advanceHydrationNode(this.anchor)
   }
 }

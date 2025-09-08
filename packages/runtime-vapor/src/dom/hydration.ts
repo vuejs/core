@@ -214,10 +214,8 @@ export function locateEndAnchor(
   return null
 }
 
-export function locateFragmentAnchor(
-  node: Node,
-  label: string,
-): Comment | null {
+export function locateFragmentEndAnchor(label: string = ']'): Comment | null {
+  let node = currentHydrationNode!
   while (node) {
     if (isComment(node, label)) return node
     node = node.nextSibling!
