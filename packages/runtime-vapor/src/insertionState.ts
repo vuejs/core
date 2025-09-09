@@ -1,17 +1,24 @@
 import { isHydrating } from './dom/hydration'
-export type ChildItem = ChildNode & { $idx: number; $auc?: number }
+export type ChildItem = ChildNode & {
+  $idx: number
+  // used count as an anchor
+  $uc?: number
+}
 export type InsertionParent = ParentNode & { $children?: ChildItem[] }
-
 type HydrationState = {
+  // static nodes and the start anchors of fragments
   logicalChildren: ChildItem[]
+  // hydrated dynamic children count so far
   prevDynamicCount: number
-  insertionAnchorCount: number
+  // number of unique insertion anchors that have appeared
+  uniqueAnchorCount: number
+  // current append anchor
   appendAnchor: Node | null
 }
-export let insertionParent: InsertionParent | undefined
-export let insertionAnchor: Node | 0 | undefined | null
 
 const hydrationStateCache = new WeakMap<ParentNode, HydrationState>()
+export let insertionParent: InsertionParent | undefined
+export let insertionAnchor: Node | 0 | undefined | null
 
 /**
  * This function is called before a block type that requires insertion
@@ -77,7 +84,7 @@ function initializeHydrationState(
     hydrationStateCache.set(parent, {
       logicalChildren,
       prevDynamicCount: 0,
-      insertionAnchorCount: 0,
+      uniqueAnchorCount: 0,
       appendAnchor: null,
     })
   }

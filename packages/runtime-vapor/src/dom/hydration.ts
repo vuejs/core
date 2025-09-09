@@ -29,8 +29,9 @@ function performHydration<T>(
     locateHydrationNode = locateHydrationNodeImpl
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
+    ;(Node.prototype as any).$pns = undefined
     ;(Node.prototype as any).$idx = undefined
-    ;(Node.prototype as any).$auc = undefined
+    ;(Node.prototype as any).$uc = undefined
     ;(Node.prototype as any).$children = undefined
     isOptimized = true
   }
@@ -140,20 +141,28 @@ function locateHydrationNodeImpl(): void {
     const { prevDynamicCount, logicalChildren, appendAnchor } = hydrationState
     // prepend
     if (insertionAnchor === 0) {
+      // use prevDynamicCount as index to locate the hydration node
       node = logicalChildren[prevDynamicCount]
     }
     // insert
     else if (insertionAnchor instanceof Node) {
-      const usedCount = (insertionAnchor as ChildItem).$auc
+      // handling insertion anchors:
+      // 1. first encounter: use insertionAnchor itself as the hydration node
+      // 2. subsequent: use node following the insertionAnchor as the hydration node
+      // used count tracks how many times insertionAnchor has been used, ensuring
+      // consecutive insert operations locate the correct hydration node.
+      let { $idx, $uc: usedCount } = insertionAnchor as ChildItem
       if (usedCount !== undefined) {
-        node =
-          logicalChildren[(insertionAnchor as ChildItem).$idx + usedCount + 1]
-        ;(insertionAnchor as ChildItem).$auc = usedCount + 1
+        node = logicalChildren[$idx + usedCount + 1]
+        usedCount++
       } else {
         node = insertionAnchor
-        hydrationState.insertionAnchorCount++
-        ;(insertionAnchor as ChildItem).$auc = 0
+        // first use of this anchor: it doesn't consume the next child
+        // so we track unique anchor appearances for later offset correction
+        hydrationState.uniqueAnchorCount++
+        usedCount = 0
       }
+      ;(insertionAnchor as ChildItem).$uc = usedCount
     }
     // append
     else {
@@ -161,14 +170,18 @@ function locateHydrationNodeImpl(): void {
         node = logicalChildren[(appendAnchor as ChildItem).$idx + 1]
       } else {
         node =
+          // insertionAnchor is null, indicates no previous static nodes
+          // use the first child as hydration node
           insertionAnchor === null
             ? logicalChildren[0]
             : // insertionAnchor is a number > 0
               // indicates how many static nodes precede the node to append
+              // use it as index to locate the hydration node
               logicalChildren[prevDynamicCount + insertionAnchor]
       }
       hydrationState.appendAnchor = node
     }
+
     hydrationState.prevDynamicCount++
   } else {
     node = currentHydrationNode

@@ -72,7 +72,7 @@ export function _nthChild(node: InsertionParent, i: number): Node {
 export function __nthChild(node: Node, i: number): Node {
   const hydrationState = getHydrationState(node as ParentNode)
   if (hydrationState) {
-    const { prevDynamicCount, insertionAnchorCount, logicalChildren } =
+    const { prevDynamicCount, uniqueAnchorCount, logicalChildren } =
       hydrationState
     // prevDynamicCount tracks how many dynamic nodes have been processed
     // so far (prepend/insert/append).
@@ -80,11 +80,11 @@ export function __nthChild(node: Node, i: number): Node {
     // anchor node itself and do NOT consume the next child in `logicalChildren`,
     // yet prevDynamicCount is still incremented. This overcounts the base
     // offset by 1 per unique anchor that has appeared.
-    // insertionAnchorCount equals the number of unique anchors seen, so we
+    // uniqueAnchorCount equals the number of unique anchors seen, so we
     // subtract it to neutralize those "first-use doesn't consume" cases:
-    //   base = prevDynamicCount - insertionAnchorCount
+    //   base = prevDynamicCount - uniqueAnchorCount
     // Then index from this base: logicalChildren[base + i].
-    return logicalChildren[prevDynamicCount - insertionAnchorCount + i]
+    return logicalChildren[prevDynamicCount - uniqueAnchorCount + i]
   }
   return node.childNodes[i]
 }
@@ -103,9 +103,8 @@ export function __next(node: Node): Node {
   const hydrationState = getHydrationState(node.parentNode!)
   if (hydrationState) {
     const { logicalChildren } = hydrationState
-    return logicalChildren[
-      (node as ChildItem).$idx + ((node as ChildItem).$auc || 0) + 1
-    ]
+    const { $idx, $uc: usedCount = 0 } = node as ChildItem
+    return logicalChildren[$idx + usedCount + 1]
   }
   return node.nextSibling!
 }
