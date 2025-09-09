@@ -402,7 +402,7 @@ export function optimizePropertyLookup(): void {
   if (isOptimized) return
   isOptimized = true
   const proto = Element.prototype as any
-  proto.$anchor = proto.$evtclick = undefined
+  proto.$evtclick = undefined
   proto.$root = false
   proto.$html =
     proto.$txt =

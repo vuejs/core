@@ -9,7 +9,6 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
-import { DYNAMIC_COMPONENT_ANCHOR_LABEL } from '@vue/shared'
 import { advanceHydrationNode, isHydrating } from './dom/hydration'
 
 export function createDynamicComponent(
@@ -24,7 +23,7 @@ export function createDynamicComponent(
 
   const frag =
     isHydrating || __DEV__
-      ? new DynamicFragment(DYNAMIC_COMPONENT_ANCHOR_LABEL)
+      ? new DynamicFragment('dynamic-component')
       : new DynamicFragment()
 
   renderEffect(() => {

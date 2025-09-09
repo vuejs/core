@@ -236,17 +236,11 @@ export function renderVNode(
       push(escapeHtml(children as string))
       break
     case Comment:
-      if (children) {
-        const content = children as string
-        // avoid escaping comments
-        if (content.startsWith('<!--') && content.endsWith('-->')) {
-          push(content)
-        } else {
-          push(`<!--${escapeHtmlComment(content)}-->`)
-        }
-      } else {
-        push(`<!---->`)
-      }
+      push(
+        children
+          ? `<!--${escapeHtmlComment(children as string)}-->`
+          : `<!---->`,
+      )
       break
     case Static:
       push(children as string)

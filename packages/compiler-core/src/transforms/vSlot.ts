@@ -100,7 +100,6 @@ export type SlotFnBuilder = (
   vFor: DirectiveNode | undefined,
   slotChildren: TemplateChildNode[],
   loc: SourceLocation,
-  parent: ElementNode,
 ) => FunctionExpression
 
 const buildClientSlotFn: SlotFnBuilder = (props, _vForExp, children, loc) =>
@@ -148,7 +147,7 @@ export function buildSlots(
     slotsProperties.push(
       createObjectProperty(
         arg || createSimpleExpression('default', true),
-        buildSlotFn(exp, undefined, children, loc, node),
+        buildSlotFn(exp, undefined, children, loc),
       ),
     )
   }
@@ -201,13 +200,7 @@ export function buildSlots(
     }
 
     const vFor = findDir(slotElement, 'for')
-    const slotFunction = buildSlotFn(
-      slotProps,
-      vFor,
-      slotChildren,
-      slotLoc,
-      slotElement,
-    )
+    const slotFunction = buildSlotFn(slotProps, vFor, slotChildren, slotLoc)
 
     // check if this slot is conditional (v-if/v-for)
     let vIf: DirectiveNode | undefined
@@ -311,7 +304,7 @@ export function buildSlots(
       props: ExpressionNode | undefined,
       children: TemplateChildNode[],
     ) => {
-      const fn = buildSlotFn(props, undefined, children, loc, node)
+      const fn = buildSlotFn(props, undefined, children, loc)
       if (__COMPAT__ && context.compatConfig) {
         fn.isNonScopedSlot = true
       }

@@ -47,7 +47,7 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
-  locateFragmentAnchor,
+  locateFragmentEndAnchor,
   locateHydrationNode,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
@@ -161,18 +161,14 @@ const vaporInteropImpl: Omit<
     const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
     vaporHydrateNode(node, () => {
       vnode.vb = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
-      vnode.el = vnode.anchor = locateFragmentAnchor(
-        currentHydrationNode!,
-        // locate the vdom fragment end anchor (<!--]-->), since no vapor slot
-        // anchor (<!--slot-->) is injected in vdom component
-        ']',
-      )
+      vnode.el = currentHydrationNode!
+      vnode.anchor = locateFragmentEndAnchor()
 
       if (__DEV__ && !vnode.anchor) {
-        throw new Error(`vapor slot anchor node was not found.`)
+        throw new Error(`Failed to locate slot anchor`)
       }
     })
-    return _next(node)
+    return _next(vnode.anchor as Node)
   },
 }
 

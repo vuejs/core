@@ -941,10 +941,8 @@ export function warnPropMismatch(
     } else {
       warn(preSegment, el, postSegment)
     }
-
     return true
   }
-
   return false
 }
 

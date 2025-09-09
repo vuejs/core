@@ -163,7 +163,6 @@ export interface ComponentNode extends BaseElementNode {
     | MemoExpression // when cached by v-memo
     | undefined
   ssrCodegenNode?: CallExpression
-  needAnchor?: boolean
 }
 
 export interface SlotOutletNode extends BaseElementNode {
@@ -173,14 +172,12 @@ export interface SlotOutletNode extends BaseElementNode {
     | CacheExpression // when cached by v-once
     | undefined
   ssrCodegenNode?: CallExpression
-  needAnchor?: boolean
 }
 
 export interface TemplateNode extends BaseElementNode {
   tagType: ElementTypes.TEMPLATE
   // TemplateNode is a container type that always gets compiled away
   codegenNode: undefined
-  needAnchor?: boolean
 }
 
 export interface TextNode extends Node {
@@ -290,7 +287,6 @@ export interface IfNode extends Node {
   type: NodeTypes.IF
   branches: IfBranchNode[]
   codegenNode?: IfConditionalExpression | CacheExpression // <div v-if v-once>
-  needAnchor?: boolean
 }
 
 export interface IfBranchNode extends Node {
@@ -310,7 +306,6 @@ export interface ForNode extends Node {
   parseResult: ForParseResult
   children: TemplateChildNode[]
   codegenNode?: ForCodegenNode
-  needAnchor?: boolean
 }
 
 export interface ForParseResult {

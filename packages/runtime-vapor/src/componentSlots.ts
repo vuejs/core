@@ -1,11 +1,4 @@
-import {
-  EMPTY_OBJ,
-  NO,
-  SLOT_ANCHOR_LABEL,
-  hasOwn,
-  isArray,
-  isFunction,
-} from '@vue/shared'
+import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
 import {
   type Block,
   type BlockFn,
@@ -136,7 +129,7 @@ export function createSlot(
   } else {
     fragment =
       isHydrating || __DEV__
-        ? new DynamicFragment(SLOT_ANCHOR_LABEL)
+        ? new DynamicFragment('slot')
         : new DynamicFragment()
     const isDynamicName = isFunction(name)
     const renderSlot = () => {

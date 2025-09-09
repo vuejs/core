@@ -59,19 +59,17 @@ export const transformChildren: NodeTransform = (node, context) => {
 
 function processDynamicChildren(context: TransformContext<ElementNode>) {
   let prevDynamics: IRDynamicInfo[] = []
-  let hasStaticTemplate = false
-  let dynamicCount = 0
+  let staticCount = 0
   const children = context.dynamic.children
 
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.INSERT) {
       prevDynamics.push(child)
-      dynamicCount++
     }
 
     if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
       if (prevDynamics.length) {
-        if (hasStaticTemplate) {
+        if (staticCount) {
           context.childrenTemplate[index - prevDynamics.length] = `<!>`
           prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
           const anchor = (prevDynamics[0].anchor = context.increaseId())
@@ -81,25 +79,20 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
         }
         prevDynamics = []
       }
-      hasStaticTemplate = true
+      staticCount++
     }
   }
 
   if (prevDynamics.length) {
-    registerInsertion(
-      prevDynamics,
-      context,
-      // When there is only one dynamic node, no anchor is needed,
-      // firstChild is used as the hydration node
-      dynamicCount === 1 && !hasStaticTemplate ? undefined : -2 /* append */,
-    )
+    registerInsertion(prevDynamics, context, staticCount, true)
   }
 }
 
 function registerInsertion(
   dynamics: IRDynamicInfo[],
   context: TransformContext,
-  anchor?: number,
+  anchor: number,
+  append?: boolean,
 ) {
   for (const child of dynamics) {
     if (child.template != null) {
@@ -108,12 +101,13 @@ function registerInsertion(
         type: IRNodeTypes.INSERT_NODE,
         elements: dynamics.map(child => child.id!),
         parent: context.reference(),
-        anchor: anchor === -2 ? undefined : anchor,
+        anchor: append ? undefined : anchor,
       })
     } else if (child.operation && isBlockOperation(child.operation)) {
       // block types
       child.operation.parent = context.reference()
       child.operation.anchor = anchor
+      child.operation.append = append
     }
   }
 }

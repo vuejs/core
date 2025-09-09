@@ -19,10 +19,7 @@ import {
 } from './generators/utils'
 import { setTemplateRefIdent } from './generators/templateRef'
 
-export type CodegenOptions = Omit<
-  BaseCodegenOptions,
-  'optimizeImports' | 'vapor'
->
+export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
 export class CodegenContext {
   options: Required<CodegenOptions>
