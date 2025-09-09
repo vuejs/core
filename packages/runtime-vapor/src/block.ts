@@ -119,7 +119,9 @@ export class DynamicFragment extends VaporFragment {
     // create an anchor
     const { parentNode, nextSibling } = findLastChild(this)!
     parentNode!.insertBefore(
-      (this.anchor = createComment(this.anchorLabel!)),
+      (this.anchor = __DEV__
+        ? createComment(this.anchorLabel!)
+        : createTextNode()),
       nextSibling,
     )
     advanceHydrationNode(this.anchor)
