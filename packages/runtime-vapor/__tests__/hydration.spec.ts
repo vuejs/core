@@ -2725,14 +2725,26 @@ describe('Vapor Mode hydration', () => {
     })
   })
 
-  describe.todo('transition', async () => {
-    test('transition appear', async () => {})
+  describe('transition', async () => {
+    test('transition appear', async () => {
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <div>foo</div>
+          </transition>
+        </template>`,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div style="" class="v-enter-from v-enter-active">foo</div>"`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
 
-    test('transition appear with v-if', async () => {})
+    test.todo('transition appear with v-if', async () => {})
 
-    test('transition appear with v-show', async () => {})
+    test.todo('transition appear with v-show', async () => {})
 
-    test('transition appear w/ event listener', async () => {})
+    test.todo('transition appear w/ event listener', async () => {})
   })
 
   describe.todo('async component', async () => {
