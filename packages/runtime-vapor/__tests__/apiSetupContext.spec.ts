@@ -54,7 +54,7 @@ describe('api: setup context', () => {
         })
         const n = createTextNode()
         renderEffect(() => {
-          setText(n, props.count)
+          setText(n, props.count + '')
         })
         return n
       },
@@ -191,7 +191,7 @@ describe('api: setup context', () => {
           emit('inc', props.count + 1)
         })
         const n = createTextNode()
-        renderEffect(() => setText(n, props.count))
+        renderEffect(() => setText(n, props.count + ''))
         insert(n, n0)
         return n0
       },
