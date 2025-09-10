@@ -135,9 +135,11 @@ export const createFor = (
 
       if (isHydrating) {
         parentAnchor = locateFragmentEndAnchor()!
-        // TODO: special handling vFor not render as a fragment. (inside Transition/TransitionGroup)
-        if (__DEV__ && !parentAnchor) {
-          throw new Error(`v-for fragment anchor node was not found.`)
+        if (__DEV__) {
+          if (!parentAnchor) {
+            throw new Error(`v-for fragment anchor node was not found.`)
+          }
+          ;(parentAnchor as Comment).data = 'for'
         }
       }
     } else {

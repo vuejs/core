@@ -158,7 +158,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       return container
     } else {
       const frag = __DEV__
-        ? new DynamicFragment('transitionGroup')
+        ? new DynamicFragment('transition-group')
         : new DynamicFragment()
       renderEffect(() => frag.update(() => slottedBlock))
       return frag
