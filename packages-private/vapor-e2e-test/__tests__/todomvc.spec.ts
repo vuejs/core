@@ -5,7 +5,6 @@ import {
 } from '../../../packages/vue/__tests__/e2e/e2eUtils'
 import connect from 'connect'
 import sirv from 'sirv'
-import { ports } from '../utils'
 
 describe('e2e: todomvc', () => {
   const {
@@ -24,7 +23,7 @@ describe('e2e: todomvc', () => {
   } = setupPuppeteer()
 
   let server: any
-  const port = ports.todomvc
+  const port = '8194'
   beforeAll(() => {
     server = connect()
       .use(sirv(path.resolve(import.meta.dirname, '../dist')))

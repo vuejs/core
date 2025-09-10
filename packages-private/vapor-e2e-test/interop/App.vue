@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import VaporComp from './components/VaporComp.vue'
-import SimpleVaporComp from './components/SimpleVaporComp.vue'
+import VaporComp from './VaporComp.vue'
 
 const msg = ref('hello')
 const passSlot = ref(true)
-const disabled = ref(true)
 </script>
 
 <template>
@@ -21,16 +19,4 @@ const disabled = ref(true)
 
     <template #test v-if="passSlot">A test slot</template>
   </VaporComp>
-
-  <!-- teleport -->
-  <div class="teleport">
-    <div class="teleport-target"></div>
-    <div class="render-vapor-comp">
-      <button @click="disabled = !disabled">toggle</button>
-      <Teleport to=".teleport-target" defer :disabled="disabled">
-        <SimpleVaporComp />
-      </Teleport>
-    </div>
-  </div>
-  <!-- teleport end-->
 </template>
