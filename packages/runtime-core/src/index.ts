@@ -571,3 +571,7 @@ export {
  * @internal
  */
 export { createInternalObject } from './internalObject'
+/**
+ * @internal
+ */
+export { createCanSetSetupRefChecker } from './rendererTemplateRef'

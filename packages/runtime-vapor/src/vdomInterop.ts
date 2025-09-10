@@ -217,6 +217,8 @@ function createVDOMComponent(
         parentInstance as any,
       )
     }
+
+    frag.nodes = vnode.el as Block
   }
 
   frag.remove = unmount
