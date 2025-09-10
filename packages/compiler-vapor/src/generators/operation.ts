@@ -168,16 +168,23 @@ function genInsertionState(
   operation: InsertionStateTypes,
   context: CodegenContext,
 ): CodeFragment[] {
+  const { parent, anchor, append } = operation
   return [
     NEWLINE,
     ...genCall(
       context.helper('setInsertionState'),
-      `n${operation.parent}`,
-      operation.anchor == null
+      `n${parent}`,
+      anchor == null
         ? undefined
-        : operation.anchor === -1 // -1 indicates prepend
+        : anchor === -1 // -1 indicates prepend
           ? `0` // runtime anchor value for prepend
-          : `n${operation.anchor}`,
+          : append // -2 indicates append
+            ? // null or number > 0 for append
+              // number > 0 is used for locate the previous static node during hydration
+              anchor === 0
+              ? 'null'
+              : `${anchor}`
+            : `n${anchor}`,
     ),
   ]
 }

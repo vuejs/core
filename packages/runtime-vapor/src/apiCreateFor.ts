@@ -24,7 +24,12 @@ import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import {
+  advanceHydrationNode,
+  isHydrating,
+  locateFragmentEndAnchor,
+  locateHydrationNode,
+} from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
@@ -92,8 +97,11 @@ export const createFor = (
   let parent: ParentNode | undefined | null
   // useSelector only
   let currentKey: any
-  // TODO handle this in hydration
-  const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+  let parentAnchor: Node
+  if (!isHydrating) {
+    parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+  }
+
   const frag = new VaporFragment(oldBlocks)
   const instance = currentInstance!
   const canUseFastRemove = !!(flags & VaporVForFlags.FAST_REMOVE)
@@ -119,6 +127,16 @@ export const createFor = (
       isMounted = true
       for (let i = 0; i < newLength; i++) {
         mount(source, i)
+      }
+
+      if (isHydrating) {
+        parentAnchor = locateFragmentEndAnchor()!
+        if (__DEV__) {
+          if (!parentAnchor) {
+            throw new Error(`v-for fragment anchor node was not found.`)
+          }
+          ;(parentAnchor as Comment).data = 'for'
+        }
       }
     } else {
       parent = parent || parentAnchor!.parentNode
@@ -430,8 +448,12 @@ export const createFor = (
     renderEffect(renderList)
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(frag, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+  } else {
+    advanceHydrationNode(
+      _insertionAnchor !== undefined ? _insertionParent! : parentAnchor!,
+    )
   }
 
   return frag

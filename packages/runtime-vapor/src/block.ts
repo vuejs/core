@@ -5,9 +5,16 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { createComment, createTextNode } from './dom/node'
+import { child, createComment, createTextNode } from './dom/node'
 import { EffectScope, setActiveSub } from '@vue/reactivity'
-import { isHydrating } from './dom/hydration'
+import {
+  advanceHydrationNode,
+  currentHydrationNode,
+  isComment,
+  isHydrating,
+  locateFragmentEndAnchor,
+  locateHydrationNode,
+} from './dom/hydration'
 
 export type Block =
   | Node
@@ -23,6 +30,7 @@ export class VaporFragment {
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
+  hydrate?: (...args: any[]) => any
 
   constructor(nodes: Block) {
     this.nodes = nodes
@@ -30,25 +38,32 @@ export class VaporFragment {
 }
 
 export class DynamicFragment extends VaporFragment {
-  anchor: Node
+  anchor!: Node
   scope: EffectScope | undefined
   current?: BlockFn
   fallback?: BlockFn
+  anchorLabel?: string
 
   constructor(anchorLabel?: string) {
     super([])
-    this.anchor =
-      __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    if (isHydrating) {
+      this.anchorLabel = anchorLabel
+      locateHydrationNode()
+    } else {
+      this.anchor =
+        __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    }
   }
 
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
+      if (isHydrating) this.hydrate(true)
       return
     }
     this.current = key
 
     const prevSub = setActiveSub()
-    const parent = this.anchor.parentNode
+    const parent = isHydrating ? null : this.anchor.parentNode
 
     // teardown previous branch
     if (this.scope) {
@@ -74,6 +89,54 @@ export class DynamicFragment extends VaporFragment {
     }
 
     setActiveSub(prevSub)
+
+    if (isHydrating) this.hydrate()
+  }
+
+  hydrate = (isEmpty = false): void => {
+    // avoid repeated hydration during rendering fallback
+    if (this.anchor) return
+
+    // reuse the empty comment node as the anchor for empty if
+    if (this.anchorLabel === 'if' && isEmpty) {
+      this.anchor = locateFragmentEndAnchor('')!
+      if (!this.anchor) {
+        throw new Error('Failed to locate if anchor')
+      } else {
+        ;(this.anchor as Comment).data = this.anchorLabel
+        return
+      }
+    }
+
+    if (this.anchorLabel === 'slot') {
+      // reuse the empty comment node for empty slot
+      // e.g. `<slot v-if="false"></slot>`
+      if (isEmpty && isComment(currentHydrationNode!, '')) {
+        this.anchor = currentHydrationNode!
+        if (__DEV__) {
+          ;(this.anchor as Comment).data = this.anchorLabel!
+        }
+        return
+      }
+
+      // reuse the vdom fragment end anchor for slots
+      this.anchor = locateFragmentEndAnchor()!
+      if (!this.anchor) {
+        throw new Error('Failed to locate slot anchor')
+      } else {
+        return
+      }
+    }
+
+    // create an anchor
+    const { parentNode, nextSibling } = findLastChild(this)!
+    parentNode!.insertBefore(
+      (this.anchor = __DEV__
+        ? createComment(this.anchorLabel!)
+        : createTextNode()),
+      nextSibling,
+    )
+    advanceHydrationNode(this.anchor)
   }
 }
 
@@ -96,7 +159,7 @@ export function isValidBlock(block: Block): boolean {
   } else if (isVaporComponent(block)) {
     return isValidBlock(block.block)
   } else if (isArray(block)) {
-    return block.length > 0 && block.every(isValidBlock)
+    return block.length > 0 && block.some(isValidBlock)
   } else {
     // fragment
     return isValidBlock(block.nodes)
@@ -105,10 +168,10 @@ export function isValidBlock(block: Block): boolean {
 
 export function insert(
   block: Block,
-  parent: ParentNode & { $anchor?: Node | null },
+  parent: ParentNode,
   anchor: Node | null | 0 = null, // 0 means prepend
 ): void {
-  anchor = anchor === 0 ? parent.$anchor || parent.firstChild : anchor
+  anchor = anchor === 0 ? child(parent) : anchor
   if (block instanceof Node) {
     if (!isHydrating) {
       parent.insertBefore(block, anchor)
@@ -126,7 +189,6 @@ export function insert(
   } else {
     // fragment
     if (block.insert) {
-      // TODO handle hydration for vdom interop
       block.insert(parent, anchor)
     } else {
       insert(block.nodes, parent, anchor)
@@ -186,4 +248,17 @@ export function normalizeBlock(block: Block): Node[] {
     block.anchor && nodes.push(block.anchor)
   }
   return nodes
+}
+
+export function findLastChild(node: Block): Node | undefined | null {
+  if (node && node instanceof Node) {
+    return node
+  } else if (isArray(node)) {
+    return findLastChild(node[node.length - 1])
+  } else if (isVaporComponent(node)) {
+    return findLastChild(node.block!)
+  } else {
+    if (node instanceof DynamicFragment && node.anchor) return node.anchor
+    return findLastChild(node.nodes!)
+  }
 }
