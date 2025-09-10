@@ -41,8 +41,6 @@ export class VaporFragment<T extends Block = Block>
   remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
   fallback?: BlockFn
 
-  target?: ParentNode | null
-  targetAnchor?: Node | null
   getNodes?: () => Block
   setRef?: (comp: VaporComponentInstance) => void
 

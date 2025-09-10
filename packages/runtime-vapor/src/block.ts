@@ -110,12 +110,7 @@ export function insert(
     if (block.insert) {
       block.insert(parent, anchor, (block as TransitionBlock).$transition)
     } else {
-      insert(
-        block.nodes,
-        block.target || parent,
-        block.targetAnchor || anchor,
-        parentSuspense,
-      )
+      insert(block.nodes, parent, anchor, parentSuspense)
     }
   }
 }
