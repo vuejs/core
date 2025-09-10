@@ -1,5 +1,5 @@
 import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
-import { child, createTextNode } from './node'
+import { child, createElement, createTextNode } from './node'
 
 let t: HTMLTemplateElement
 
@@ -12,14 +12,19 @@ export function template(html: string, root?: boolean) {
         // TODO this should not happen
         throw new Error('No current hydration node')
       }
-      return adoptTemplate(currentHydrationNode!, html)!
+      // do not cache the adopted node in node because it contains child nodes
+      // this avoids duplicate rendering of children
+      const adopted = adoptTemplate(currentHydrationNode!, html)!
+      if (root) (adopted as any).$root = true
+      return adopted
     }
+
     // fast path for text nodes
     if (html[0] !== '<') {
       return createTextNode(html)
     }
     if (!node) {
-      t = t || document.createElement('template')
+      t = t || createElement('template')
       t.innerHTML = html
       node = child(t.content)
     }

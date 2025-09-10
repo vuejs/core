@@ -6,8 +6,9 @@ import {
 } from '@vue/runtime-dom'
 import { renderEffect } from '../renderEffect'
 import { isVaporComponent } from '../component'
-import { type Block, DynamicFragment, VaporFragment } from '../block'
+import type { Block, TransitionBlock } from '../block'
 import { isArray } from '@vue/shared'
+import { DynamicFragment, VaporFragment } from '../fragment'
 
 export function applyVShow(target: Block, source: () => any): void {
   if (isVaporComponent(target)) {
@@ -46,6 +47,7 @@ function setDisplay(target: Block, value: unknown): void {
   if (target instanceof DynamicFragment) {
     return setDisplay(target.nodes, value)
   }
+  const { $transition } = target as TransitionBlock
   if (target instanceof VaporFragment && target.insert) {
     return setDisplay(target.nodes, value)
   }
@@ -55,7 +57,25 @@ function setDisplay(target: Block, value: unknown): void {
       el[vShowOriginalDisplay] =
         el.style.display === 'none' ? '' : el.style.display
     }
-    el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
+    if ($transition) {
+      if (value) {
+        $transition.beforeEnter(target)
+        el.style.display = el[vShowOriginalDisplay]!
+        $transition.enter(target)
+      } else {
+        // during initial render, the element is not yet inserted into the
+        // DOM, and it is hidden, no need to trigger transition
+        if (target.isConnected) {
+          $transition.leave(target, () => {
+            el.style.display = 'none'
+          })
+        } else {
+          el.style.display = 'none'
+        }
+      }
+    } else {
+      el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
+    }
     el[vShowHidden] = !value
   } else if (__DEV__) {
     warn(
