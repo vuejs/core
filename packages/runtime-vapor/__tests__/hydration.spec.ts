@@ -2754,7 +2754,7 @@ describe('Vapor Mode hydration', () => {
       expect(`mismatch`).not.toHaveBeenWarned()
     })
 
-    test.todo('transition appear work with empty content', async () => {
+    test('transition appear work with empty content', async () => {
       const data = ref(true)
       const { container } = await testHydration(
         `<template>
@@ -2767,14 +2767,14 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<!--if-->"`,
+        `"<!--slot--><!--if-->"`,
       )
       expect(`mismatch`).not.toHaveBeenWarned()
 
       data.value = false
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<span style="" class="v-enter-from v-enter-active">foo</span><!--if-->"`,
+        `"<span class="v-enter-from v-enter-active">foo</span><!--if-->"`,
       )
     })
 
