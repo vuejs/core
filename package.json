@@ -89,7 +89,7 @@
     "markdown-table": "^3.0.4",
     "marked": "13.0.3",
     "npm-run-all2": "^7.0.2",
-    "oxlint": "^0.16.10",
+    "oxlint": "^1.14.0",
     "picocolors": "^1.1.1",
     "prettier": "^3.5.3",
     "pretty-bytes": "^6.1.1",
