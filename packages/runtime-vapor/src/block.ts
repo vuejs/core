@@ -9,6 +9,8 @@ import { child, createComment, createTextNode } from './dom/node'
 import { EffectScope, setActiveSub } from '@vue/reactivity'
 import {
   advanceHydrationNode,
+  currentHydrationNode,
+  isComment,
   isHydrating,
   locateFragmentEndAnchor,
   locateHydrationNode,
@@ -106,8 +108,18 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    // reuse the vdom fragment end anchor for slots
     if (this.anchorLabel === 'slot') {
+      // reuse the empty comment node for empty slot
+      // e.g. `<slot v-if="false"></slot>`
+      if (isEmpty && isComment(currentHydrationNode!, '')) {
+        this.anchor = currentHydrationNode!
+        if (__DEV__) {
+          ;(this.anchor as Comment).data = this.anchorLabel!
+        }
+        return
+      }
+
+      // reuse the vdom fragment end anchor for slots
       this.anchor = locateFragmentEndAnchor()!
       if (!this.anchor) {
         throw new Error('Failed to locate slot anchor')

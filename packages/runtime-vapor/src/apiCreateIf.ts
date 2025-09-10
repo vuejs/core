@@ -32,9 +32,9 @@ export function createIf(
     // After block node hydration is completed, advance currentHydrationNode to
     // _insertionParent's next sibling if _insertionAnchor has a value
     // _insertionAnchor values:
-    // 1. Node type: _insertionAnchor is a static node, no hydration needed
-    // 2. null: block node is appended, potentially without next sibling
-    // 3. 0: next sibling of current block node is static, no hydration needed
+    // 1. insert: _insertionAnchor is a static node, no hydration needed
+    // 2. append: block node is appended, potentially without next sibling
+    // 3. prepend: next sibling of current block node is static, no hydration needed
     if (_insertionAnchor !== undefined) {
       advanceHydrationNode(_insertionParent!)
     }
