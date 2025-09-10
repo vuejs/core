@@ -55,12 +55,17 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
         parentNode,
       } = currentHydrationNode
       if (firstChild) {
-        const innerChild = firstChild as HTMLElement
-        const originalDisplay = innerChild.style.display
-        innerChild.style.display = 'none'
-        parentNode!.replaceChild(innerChild, currentHydrationNode)
-        setCurrentHydrationNode(innerChild)
-        resetDisplay = () => (innerChild.style.display = originalDisplay)
+        if (
+          firstChild instanceof HTMLElement ||
+          firstChild instanceof SVGElement
+        ) {
+          const originalDisplay = firstChild.style.display
+          firstChild.style.display = 'none'
+          resetDisplay = () => (firstChild.style.display = originalDisplay)
+        }
+
+        parentNode!.replaceChild(firstChild, currentHydrationNode)
+        setCurrentHydrationNode(firstChild)
       }
     }
 
@@ -122,9 +127,10 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
     )
 
     if (resetDisplay && resolvedProps!.appear) {
-      hooks.beforeEnter(children)
+      const child = findTransitionBlock(children)!
+      hooks.beforeEnter(child)
       resetDisplay()
-      queuePostFlushCb(() => hooks.enter(children))
+      queuePostFlushCb(() => hooks.enter(child))
     }
 
     return children

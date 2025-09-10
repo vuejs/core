@@ -2740,11 +2740,100 @@ describe('Vapor Mode hydration', () => {
       expect(`mismatch`).not.toHaveBeenWarned()
     })
 
-    test.todo('transition appear with v-if', async () => {})
+    test('transition appear work with pre-existing class', async () => {
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <div class="foo">foo</div>
+          </transition>
+        </template>`,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div class="foo v-enter-from v-enter-active" style="">foo</div>"`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
 
-    test.todo('transition appear with v-show', async () => {})
+    test.todo('transition appear work with empty content', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <slot v-if="data"></slot>
+            <span v-else>foo</span>
+          </transition>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
 
-    test.todo('transition appear w/ event listener', async () => {})
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<span style="" class="v-enter-from v-enter-active">foo</span><!--if-->"`,
+      )
+    })
+
+    test('transition appear with v-if', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <div v-if="data">foo</div>
+          </transition>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('transition appear with v-show', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <div v-show="data">foo</div>
+          </transition>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div style="display:none;" class="v-enter-from v-enter-active v-leave-from v-leave-active">foo</div>"`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('transition appear w/ event listener', async () => {
+      const { container } = await testHydration(
+        `<script setup>
+          import { ref } from 'vue'
+          const count = ref(0)
+        </script>
+        <template>
+          <transition appear>
+            <button @click="count++">{{ count }}</button>
+          </transition>
+        </template>`,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<button style="" class="v-enter-from v-enter-active">0</button>"`,
+      )
+
+      triggerEvent('click', container.querySelector('button')!)
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<button style="" class="v-enter-from v-enter-active">1</button>"`,
+      )
+    })
   })
 
   describe.todo('async component', async () => {
