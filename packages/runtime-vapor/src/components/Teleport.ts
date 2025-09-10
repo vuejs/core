@@ -35,13 +35,12 @@ export const VaporTeleportImpl = {
     )
 
     const updateEffect = renderEffect(() => {
-      frag.update(
-        // access the props to trigger tracking
-        extend(
-          {},
-          new Proxy(props, rawPropsProxyHandlers) as any as TeleportProps,
-        ),
+      // access the props to trigger tracking
+      frag.props = extend(
+        {},
+        new Proxy(props, rawPropsProxyHandlers) as any as TeleportProps,
       )
+      frag.update()
     })
 
     if (__DEV__) {
@@ -82,7 +81,10 @@ export const VaporTeleportImpl = {
 }
 
 export class TeleportFragment extends VaporFragment {
+  target?: ParentNode | null
+  targetAnchor?: Node | null
   anchor: Node
+  props?: TeleportProps
 
   private targetStart?: Node
   private mainAnchor?: Node
@@ -92,7 +94,7 @@ export class TeleportFragment extends VaporFragment {
 
   constructor() {
     super([])
-    this.anchor = __DEV__ ? createComment('teleport') : createTextNode()
+    this.anchor = createTextNode()
   }
 
   get currentParent(): ParentNode {
@@ -104,7 +106,7 @@ export class TeleportFragment extends VaporFragment {
   }
 
   get parent(): ParentNode | null {
-    return this.anchor.parentNode
+    return this.anchor && this.anchor.parentNode
   }
 
   updateChildren(children: Block): void {
@@ -120,7 +122,10 @@ export class TeleportFragment extends VaporFragment {
     insert((this.nodes = children), this.currentParent, this.currentAnchor)
   }
 
-  update(props: TeleportProps): void {
+  update(): void {
+    // not mounted yet
+    if (!this.parent) return
+
     const mount = (parent: ParentNode, anchor: Node | null) => {
       insert(
         this.nodes,
@@ -130,7 +135,10 @@ export class TeleportFragment extends VaporFragment {
     }
 
     const mountToTarget = () => {
-      const target = (this.target = resolveTeleportTarget(props, querySelector))
+      const target = (this.target = resolveTeleportTarget(
+        this.props!,
+        querySelector,
+      ))
       if (target) {
         if (
           // initial mount into target
@@ -153,34 +161,28 @@ export class TeleportFragment extends VaporFragment {
     }
 
     // mount into main container
-    if (isTeleportDisabled(props)) {
-      if (this.parent) {
-        if (!this.mainAnchor) {
-          this.mainAnchor = __DEV__
-            ? createComment('teleport end')
-            : createTextNode()
-        }
-        if (!this.placeholder) {
-          this.placeholder = __DEV__
-            ? createComment('teleport start')
-            : createTextNode()
-        }
-        if (!this.mainAnchor.isConnected) {
-          insert(this.placeholder, this.parent, this.anchor)
-          insert(this.mainAnchor, this.parent, this.anchor)
-        }
-
-        mount(this.parent, this.mainAnchor)
-      }
+    if (isTeleportDisabled(this.props!)) {
+      mount(this.parent, this.mainAnchor!)
     }
     // mount into target container
     else {
-      if (isTeleportDeferred(props)) {
+      if (isTeleportDeferred(this.props!)) {
         queuePostFlushCb(mountToTarget)
       } else {
         mountToTarget()
       }
     }
+  }
+
+  insert = (container: ParentNode, anchor: Node | null): void => {
+    // insert anchors in the main view
+    this.placeholder = __DEV__
+      ? createComment('teleport start')
+      : createTextNode()
+    this.mainAnchor = __DEV__ ? createComment('teleport end') : createTextNode()
+    insert(this.placeholder, container, anchor)
+    insert(this.mainAnchor, container, anchor)
+    this.update()
   }
 
   remove = (parent: ParentNode | undefined = this.parent!): void => {

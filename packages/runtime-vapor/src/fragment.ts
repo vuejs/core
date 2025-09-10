@@ -4,8 +4,6 @@ import { type Block, type BlockFn, insert, isValidBlock, remove } from './block'
 
 export class VaporFragment {
   nodes: Block
-  target?: ParentNode | null
-  targetAnchor?: Node | null
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void

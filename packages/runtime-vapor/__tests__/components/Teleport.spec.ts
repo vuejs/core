@@ -2,6 +2,7 @@ import {
   type LooseRawProps,
   type VaporComponent,
   createComponent as createComp,
+  createComponent,
 } from '../../src/component'
 import {
   type VaporDirective,
@@ -9,15 +10,18 @@ import {
   child,
   createIf,
   createTemplateRefSetter,
+  createVaporApp,
   defineVaporComponent,
   renderEffect,
   setInsertionState,
   setText,
   template,
+  vaporInteropPlugin,
   withVaporDirectives,
 } from '@vue/runtime-vapor'
 import { makeRender } from '../_utils'
 import {
+  h,
   nextTick,
   onBeforeUnmount,
   onMounted,
@@ -63,7 +67,7 @@ describe('renderer: VaporTeleport', () => {
       mount(root)
 
       expect(root.innerHTML).toBe(
-        '<!--teleport--><div id="target"><div>teleported</div></div>',
+        '<!--teleport start--><!--teleport end--><div id="target"><div>teleported</div></div>',
       )
     })
 
@@ -116,7 +120,7 @@ describe('renderer: VaporTeleport', () => {
       show.value = true
       await nextTick()
       expect(root.innerHTML).toBe(
-        `<!--teleport--><div>Footer</div><div id="targetId"><div>bar</div></div><!--if-->`,
+        `<!--teleport start--><!--teleport end--><div>Footer</div><div id="targetId"><div>bar</div></div><!--if-->`,
       )
     })
   })
@@ -155,7 +159,9 @@ describe('renderer: VaporTeleport', () => {
       createRecord(parentId, Parent as any)
       mount(root)
 
-      expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+      expect(root.innerHTML).toBe(
+        '<!--teleport start--><!--teleport end--><div>root</div>',
+      )
       expect(target.innerHTML).toBe('<div>teleported</div>')
 
       // rerender child
@@ -163,7 +169,9 @@ describe('renderer: VaporTeleport', () => {
         return template('<div>teleported 2</div>')()
       })
 
-      expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+      expect(root.innerHTML).toBe(
+        '<!--teleport start--><!--teleport end--><div>root</div>',
+      )
       expect(target.innerHTML).toBe('<div>teleported 2</div>')
 
       // rerender parent
@@ -181,7 +189,9 @@ describe('renderer: VaporTeleport', () => {
         return [n0, n1]
       })
 
-      expect(root.innerHTML).toBe('<!--teleport--><div>root 2</div>')
+      expect(root.innerHTML).toBe(
+        '<!--teleport start--><!--teleport end--><div>root 2</div>',
+      )
       expect(target.innerHTML).toBe('<div>teleported 2</div>')
     })
 
@@ -219,7 +229,7 @@ describe('renderer: VaporTeleport', () => {
       mount(root)
 
       expect(root.innerHTML).toBe(
-        '<div><div>teleported</div><!--teleport--><div>root</div></div>',
+        '<div><!--teleport start--><div>teleported</div><!--teleport end--><div>root</div></div>',
       )
       expect(target.innerHTML).toBe('')
 
@@ -241,14 +251,16 @@ describe('renderer: VaporTeleport', () => {
       })
 
       expect(root.innerHTML).toBe(
-        '<div><div>teleported</div><!--teleport--><div>root 2</div></div>',
+        '<div><!--teleport start--><div>teleported</div><!--teleport end--><div>root 2</div></div>',
       )
       expect(target.innerHTML).toBe('')
 
       // toggle disabled
       disabled.value = false
       await nextTick()
-      expect(root.innerHTML).toBe('<div><!--teleport--><div>root 2</div></div>')
+      expect(root.innerHTML).toBe(
+        '<div><!--teleport start--><!--teleport end--><div>root 2</div></div>',
+      )
       expect(target.innerHTML).toBe('<div>teleported</div>')
     })
 
@@ -300,7 +312,9 @@ describe('renderer: VaporTeleport', () => {
       createRecord(parentId, Parent as any)
       mount(root)
 
-      expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+      expect(root.innerHTML).toBe(
+        '<!--teleport start--><!--teleport end--><div>root</div>',
+      )
       expect(target.innerHTML).toBe('<div>teleported</div>')
 
       // reload child by changing msg
@@ -318,7 +332,9 @@ describe('renderer: VaporTeleport', () => {
           return [n0]
         },
       })
-      expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+      expect(root.innerHTML).toBe(
+        '<!--teleport start--><!--teleport end--><div>root</div>',
+      )
       expect(target.innerHTML).toBe('<div>teleported 2</div>')
 
       // reload parent by changing msg
@@ -348,7 +364,9 @@ describe('renderer: VaporTeleport', () => {
         },
       })
 
-      expect(root.innerHTML).toBe('<!--teleport--><div>root 2</div>')
+      expect(root.innerHTML).toBe(
+        '<!--teleport start--><!--teleport end--><div>root 2</div>',
+      )
       expect(target.innerHTML).toBe('<div>teleported 2</div>')
 
       // reload parent again by changing disabled
@@ -379,7 +397,7 @@ describe('renderer: VaporTeleport', () => {
       })
 
       expect(root.innerHTML).toBe(
-        '<div>teleported 2</div><!--teleport--><div>root 2</div>',
+        '<!--teleport start--><div>teleported 2</div><!--teleport end--><div>root 2</div>',
       )
       expect(target.innerHTML).toBe('')
     })
@@ -434,7 +452,7 @@ describe('renderer: VaporTeleport', () => {
       mount(root)
 
       expect(root.innerHTML).toBe(
-        '<div>teleported</div><!--teleport--><div>root</div>',
+        '<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>',
       )
       expect(target.innerHTML).toBe('')
 
@@ -454,7 +472,7 @@ describe('renderer: VaporTeleport', () => {
         },
       })
       expect(root.innerHTML).toBe(
-        '<div>teleported 2</div><!--teleport--><div>root</div>',
+        '<!--teleport start--><div>teleported 2</div><!--teleport end--><div>root</div>',
       )
       expect(target.innerHTML).toBe('')
 
@@ -474,14 +492,16 @@ describe('renderer: VaporTeleport', () => {
         },
       })
       expect(root.innerHTML).toBe(
-        '<div>teleported 3</div><!--teleport--><div>root</div>',
+        '<!--teleport start--><div>teleported 3</div><!--teleport end--><div>root</div>',
       )
       expect(target.innerHTML).toBe('')
 
       // toggle disabled
       disabled.value = false
       await nextTick()
-      expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+      expect(root.innerHTML).toBe(
+        '<!--teleport start--><!--teleport end--><div>root</div>',
+      )
       expect(target.innerHTML).toBe('<div>teleported 3</div>')
     })
 
@@ -537,7 +557,7 @@ describe('renderer: VaporTeleport', () => {
       mount(root)
 
       expect(root.innerHTML).toBe(
-        '<div>teleported</div><span>child</span><!--teleport--><div>root</div>',
+        '<!--teleport start--><div>teleported</div><span>child</span><!--teleport end--><div>root</div>',
       )
       expect(target.innerHTML).toBe('')
 
@@ -557,7 +577,7 @@ describe('renderer: VaporTeleport', () => {
         },
       })
       expect(root.innerHTML).toBe(
-        '<div>teleported 2</div><span>child</span><!--teleport--><div>root</div>',
+        '<!--teleport start--><div>teleported 2</div><span>child</span><!--teleport end--><div>root</div>',
       )
       expect(target.innerHTML).toBe('')
 
@@ -577,15 +597,66 @@ describe('renderer: VaporTeleport', () => {
         },
       })
       expect(root.innerHTML).toBe(
-        '<div>teleported 3</div><span>child</span><!--teleport--><div>root</div>',
+        '<!--teleport start--><div>teleported 3</div><span>child</span><!--teleport end--><div>root</div>',
       )
       expect(target.innerHTML).toBe('')
 
       // toggle disabled
       disabled.value = false
       await nextTick()
-      expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+      expect(root.innerHTML).toBe(
+        '<!--teleport start--><!--teleport end--><div>root</div>',
+      )
       expect(target.innerHTML).toBe('<div>teleported 3</div><span>child</span>')
+    })
+  })
+
+  describe('VDOM interop', () => {
+    test('render vdom component', async () => {
+      const target = document.createElement('div')
+      const root = document.createElement('div')
+
+      const VDOMComp = {
+        setup() {
+          return () => h('h1', null, 'vdom comp')
+        },
+      }
+
+      const disabled = ref(true)
+      const App = defineVaporComponent({
+        setup() {
+          const n1 = createComponent(
+            VaporTeleport,
+            {
+              to: () => target,
+              defer: () => '',
+              disabled: () => disabled.value,
+            },
+            {
+              default: () => {
+                const n0 = createComponent(VDOMComp)
+                return n0
+              },
+            },
+            true,
+          )
+          return n1
+        },
+      })
+
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(target.innerHTML).toBe('')
+      expect(root.innerHTML).toBe(
+        '<!--teleport start--><h1>vdom comp</h1><!--teleport end-->',
+      )
+
+      disabled.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
+      expect(target.innerHTML).toBe('<h1>vdom comp</h1>')
     })
   })
 })
@@ -625,7 +696,9 @@ function runSharedTests(deferMode: boolean): void {
     }).create()
     mount(root)
 
-    expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+    expect(root.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><div>root</div>',
+    )
     expect(target.innerHTML).toBe('<div>teleported</div>')
   })
 
@@ -654,14 +727,18 @@ function runSharedTests(deferMode: boolean): void {
     }).create()
     mount(root)
 
-    expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+    expect(root.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><div>root</div>',
+    )
     expect(targetA.innerHTML).toBe('<div>teleported</div>')
     expect(targetB.innerHTML).toBe('')
 
     target.value = targetB
     await nextTick()
 
-    expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+    expect(root.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><div>root</div>',
+    )
     expect(targetA.innerHTML).toBe('')
     expect(targetB.innerHTML).toBe('<div>teleported</div>')
   })
@@ -834,7 +911,9 @@ function runSharedTests(deferMode: boolean): void {
       },
     }).create()
     mount(root)
-    expect(root.innerHTML).toBe('<div><!--teleport--><!--teleport--></div>')
+    expect(root.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--></div>',
+    )
     expect(target.innerHTML).toBe('<div>one</div>two')
 
     // update existing content
@@ -849,7 +928,9 @@ function runSharedTests(deferMode: boolean): void {
     // toggling
     child1.value = [] as any
     await nextTick()
-    expect(root.innerHTML).toBe('<div><!--teleport--><!--teleport--></div>')
+    expect(root.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--></div>',
+    )
     expect(target.innerHTML).toBe('three')
 
     // toggle back
@@ -859,14 +940,18 @@ function runSharedTests(deferMode: boolean): void {
     ] as any
     child2.value = [template('three')()] as any
     await nextTick()
-    expect(root.innerHTML).toBe('<div><!--teleport--><!--teleport--></div>')
+    expect(root.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--></div>',
+    )
     // should append
     expect(target.innerHTML).toBe('<div>one</div><div>two</div>three')
 
     // toggle the other teleport
     child2.value = [] as any
     await nextTick()
-    expect(root.innerHTML).toBe('<div><!--teleport--><!--teleport--></div>')
+    expect(root.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--></div>',
+    )
     expect(target.innerHTML).toBe('<div>one</div><div>two</div>')
   })
 
@@ -897,12 +982,12 @@ function runSharedTests(deferMode: boolean): void {
     mount(root)
 
     expect(root.innerHTML).toBe(
-      '<div></div><div>teleported</div><!--teleport-->',
+      '<div></div><!--teleport start--><div>teleported</div><!--teleport end-->',
     )
     disabled.value = false
     await nextTick()
     expect(root.innerHTML).toBe(
-      '<div><div>teleported</div></div><!--teleport-->',
+      '<div><div>teleported</div></div><!--teleport start--><!--teleport end-->',
     )
   })
 
@@ -929,13 +1014,15 @@ function runSharedTests(deferMode: boolean): void {
     }).create()
     mount(root)
 
-    expect(root.innerHTML).toBe('<!--teleport--><div>root</div>')
+    expect(root.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><div>root</div>',
+    )
     expect(target.innerHTML).toBe('<div>teleported</div>')
 
     disabled.value = true
     await nextTick()
     expect(root.innerHTML).toBe(
-      '<!--teleport start--><div>teleported</div><!--teleport end--><!--teleport--><div>root</div>',
+      '<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>',
     )
     expect(target.innerHTML).toBe('')
 
@@ -943,7 +1030,7 @@ function runSharedTests(deferMode: boolean): void {
     disabled.value = false
     await nextTick()
     expect(root.innerHTML).toBe(
-      '<!--teleport start--><!--teleport end--><!--teleport--><div>root</div>',
+      '<!--teleport start--><!--teleport end--><div>root</div>',
     )
     expect(target.innerHTML).toBe('<div>teleported</div>')
   })
@@ -984,14 +1071,14 @@ function runSharedTests(deferMode: boolean): void {
     }).create()
 
     mount(root)
-    expect(root.innerHTML).toBe('<!--teleport-->')
+    expect(root.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
     expect(target.innerHTML).toBe('<div>foo</div><!--if-->')
     expect(spy).toHaveBeenCalledTimes(1)
     expect(teardown).not.toHaveBeenCalled()
 
     toggle.value = false
     await nextTick()
-    expect(root.innerHTML).toBe('<!--teleport-->')
+    expect(root.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
     expect(target.innerHTML).toBe('<!--if-->')
     expect(spy).toHaveBeenCalledTimes(1)
     expect(teardown).toHaveBeenCalledTimes(1)
@@ -1078,7 +1165,9 @@ function runSharedTests(deferMode: boolean): void {
 
     show.value = true
     await nextTick()
-    expect(root.innerHTML).toBe('<!--teleport--><!--if--><div>teleported</div>')
+    expect(root.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><!--if--><div>teleported</div>',
+    )
 
     show.value = false
     await nextTick()
@@ -1125,7 +1214,7 @@ function runSharedTests(deferMode: boolean): void {
     parentShow.value = true
     await nextTick()
     expect(root.innerHTML).toBe(
-      '<!--teleport--><!--if--><!--if--><div>foo</div>',
+      '<!--teleport start--><!--teleport end--><!--if--><!--if--><div>foo</div>',
     )
 
     parentShow.value = false
