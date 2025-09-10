@@ -96,7 +96,7 @@
       }
     },
     {
-      "files": ["packages/{vue,vue-compat,runtime-dom}/**"],
+      "files": ["packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**"],
       "rules": {
         "no-restricted-globals": ["error", "module", "require"]
       }
@@ -138,7 +138,9 @@
         "scripts/**",
         "./*.{js,ts}",
         "packages/*/*.js",
-        "packages/vue/*/*.js"
+        "packages/vue/*/*.js",
+        "packages-private/benchmark/*",
+        "packages-private/e2e-utils/*"
       ],
       "rules": {
         "no-restricted-globals": "off",
