@@ -1,4 +1,5 @@
 import {
+  type BaseTransitionProps,
   type GenericComponentInstance,
   type TransitionElement,
   type TransitionHooks,
@@ -9,7 +10,9 @@ import {
   baseResolveTransitionHooks,
   checkTransitionMode,
   currentInstance,
+  isTemplateNode,
   leaveCbKey,
+  queuePostFlushCb,
   resolveTransitionProps,
   useTransitionState,
   warn,
@@ -24,6 +27,11 @@ import {
 import { extend, isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import { isFragment } from '../fragment'
+import {
+  currentHydrationNode,
+  isHydrating,
+  setCurrentHydrationNode,
+} from '../dom/hydration'
 
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = 'VaporTransition'
@@ -34,6 +42,33 @@ const decorate = (t: typeof VaporTransition) => {
 
 export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
   (props, { slots, attrs }) => {
+    // wrapped <transition appear>
+    let resetDisplay: Function | undefined
+    if (
+      isHydrating &&
+      currentHydrationNode &&
+      isTemplateNode(currentHydrationNode)
+    ) {
+      // replace <template> node with inner child
+      const {
+        content: { firstChild },
+        parentNode,
+      } = currentHydrationNode
+      if (firstChild) {
+        if (
+          firstChild instanceof HTMLElement ||
+          firstChild instanceof SVGElement
+        ) {
+          const originalDisplay = firstChild.style.display
+          firstChild.style.display = 'none'
+          resetDisplay = () => (firstChild.style.display = originalDisplay)
+        }
+
+        parentNode!.replaceChild(firstChild, currentHydrationNode)
+        setCurrentHydrationNode(firstChild)
+      }
+    }
+
     const children = (slots.default && slots.default()) as any as Block
     if (!children) return
 
@@ -41,7 +76,7 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
     const { mode } = props
     checkTransitionMode(mode)
 
-    let resolvedProps
+    let resolvedProps: BaseTransitionProps<Element>
     let isMounted = false
     renderEffect(() => {
       resolvedProps = resolveTransitionProps(props)
@@ -81,7 +116,7 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
       })
     }
 
-    applyTransitionHooks(
+    const hooks = applyTransitionHooks(
       children,
       {
         state: useTransitionState(),
@@ -90,6 +125,13 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
       } as VaporTransitionHooks,
       fallthroughAttrs,
     )
+
+    if (resetDisplay && resolvedProps!.appear) {
+      const child = findTransitionBlock(children)!
+      hooks.beforeEnter(child)
+      resetDisplay()
+      queuePostFlushCb(() => hooks.enter(child))
+    }
 
     return children
   },
