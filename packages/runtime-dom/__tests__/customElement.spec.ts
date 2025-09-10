@@ -837,7 +837,7 @@ describe('defineCustomElement', () => {
 
   describe('styles', () => {
     function assertStyles(el: VueElement, css: string[]) {
-      const styles = el.shadowRoot?.querySelectorAll('style')!
+      const styles = el.shadowRoot?.querySelectorAll('style')
       expect(styles.length).toBe(css.length) // should not duplicate multiple copies from Bar
       for (let i = 0; i < css.length; i++) {
         expect(styles[i].textContent).toBe(css[i])
@@ -856,7 +856,7 @@ describe('defineCustomElement', () => {
       customElements.define('my-el-with-styles', Foo)
       container.innerHTML = `<my-el-with-styles></my-el-with-styles>`
       const el = container.childNodes[0] as VueElement
-      const style = el.shadowRoot?.querySelector('style')!
+      const style = el.shadowRoot?.querySelector('style')
       expect(style.textContent).toBe(`div { color: red; }`)
 
       // hmr
@@ -953,7 +953,7 @@ describe('defineCustomElement', () => {
       customElements.define('my-el-with-nonce', Foo)
       container.innerHTML = `<my-el-with-nonce></my-el-with-nonce>`
       const el = container.childNodes[0] as VueElement
-      const style = el.shadowRoot?.querySelector('style')!
+      const style = el.shadowRoot?.querySelector('style')
       expect(style.getAttribute('nonce')).toBe('xxx')
     })
   })
@@ -1396,7 +1396,7 @@ describe('defineCustomElement', () => {
       customElements.define('my-el-use-shadow-root', Foo)
       container.innerHTML = `<my-el-use-shadow-root>`
       const el = container.childNodes[0] as VueElement
-      const style = el.shadowRoot?.querySelector('style')!
+      const style = el.shadowRoot?.querySelector('style')
       expect(style.textContent).toBe(`div { color: red; }`)
     })
   })
