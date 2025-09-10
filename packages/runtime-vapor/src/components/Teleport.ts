@@ -1,8 +1,8 @@
 import {
   type TeleportProps,
-  currentInstance,
   isTeleportDeferred,
   isTeleportDisabled,
+  onScopeDispose,
   queuePostFlushCb,
   resolveTeleportTarget,
   warn,
@@ -30,17 +30,21 @@ export const VaporTeleportImpl = {
 
   process(props: LooseRawProps, slots: LooseRawSlots): TeleportFragment {
     const frag = new TeleportFragment()
-    const updateChildrenEffect = renderEffect(() =>
+    renderEffect(() =>
       frag.updateChildren(slots.default && (slots.default as BlockFn)()),
     )
 
-    const updateEffect = renderEffect(() => {
+    renderEffect(() => {
       // access the props to trigger tracking
       frag.props = extend(
         {},
         new Proxy(props, rawPropsProxyHandlers) as any as TeleportProps,
       )
       frag.update()
+    })
+
+    onScopeDispose(() => {
+      frag.remove()
     })
 
     if (__DEV__) {
@@ -50,19 +54,6 @@ export const VaporTeleportImpl = {
       frag.getNodes = () => {
         return frag.parent !== frag.currentParent ? [] : frag.nodes
       }
-
-      // for HMR rerender
-      const instance = currentInstance as VaporComponentInstance
-      ;(
-        instance!.hmrRerenderEffects || (instance!.hmrRerenderEffects = [])
-      ).push(() => {
-        // remove the teleport content
-        frag.remove()
-
-        // stop effects
-        updateChildrenEffect.stop()
-        updateEffect.stop()
-      })
 
       // for HMR reload
       const nodes = frag.nodes

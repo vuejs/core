@@ -19,9 +19,14 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   const parent = normalized[0].parentNode!
   const anchor = normalized[normalized.length - 1].nextSibling
   remove(instance.block, parent)
-  if (instance.hmrRerenderEffects) {
-    instance.hmrRerenderEffects.forEach(e => e())
-    instance.hmrRerenderEffects.length = 0
+  // cleanup scope
+  const sub = instance.scope!
+  const l = sub.cleanupsLength
+  if (l) {
+    for (let i = 0; i < l; i++) {
+      sub.cleanups[i]()
+    }
+    sub.cleanupsLength = 0
   }
   const prev = setCurrentInstance(instance)
   pushWarningContext(instance)

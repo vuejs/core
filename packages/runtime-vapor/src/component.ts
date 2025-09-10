@@ -445,7 +445,6 @@ export class VaporComponentInstance implements GenericComponentInstance {
   setupState?: Record<string, any>
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
-  hmrRerenderEffects?: (() => void)[]
   hmrReload?: (newComp: VaporComponent) => void
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
