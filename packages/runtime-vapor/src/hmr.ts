@@ -12,12 +12,13 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-
+import { isArray } from '@vue/shared'
 export function hmrRerender(instance: VaporComponentInstance): void {
   const normalized = normalizeBlock(instance.block)
   const parent = normalized[0].parentNode!
   const anchor = normalized[normalized.length - 1].nextSibling
   remove(instance.block, parent)
+  instance.scope!.cleanup()
   const prev = setCurrentInstance(instance)
   pushWarningContext(instance)
   devRender(instance)
@@ -34,7 +35,8 @@ export function hmrReload(
   const parent = normalized[0].parentNode!
   const anchor = normalized[normalized.length - 1].nextSibling
   unmountComponent(instance, parent)
-  const prev = setCurrentInstance(instance.parent)
+  const parentInstance = instance.parent as VaporComponentInstance | null
+  const prev = setCurrentInstance(parentInstance)
   const newInstance = createComponent(
     newComp,
     instance.rawProps,
@@ -43,4 +45,20 @@ export function hmrReload(
   )
   setCurrentInstance(...prev)
   mountComponent(newInstance, parent, anchor)
+
+  // update parentInstance.block to ensure that the correct parent and
+  // anchor are found during parentInstance HMR rerender/reload, as
+  // `normalizeBlock` relies on the current instance.block
+  if (parentInstance) {
+    if (parentInstance.block === instance) {
+      parentInstance.block = newInstance
+    } else if (isArray(parentInstance.block)) {
+      for (let i = 0; i < parentInstance.block.length; i++) {
+        if (parentInstance.block[i] === instance) {
+          parentInstance.block[i] = newInstance
+          break
+        }
+      }
+    }
+  }
 }
