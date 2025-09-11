@@ -3848,6 +3848,380 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
 }
 `;
 
+exports[`compiler: parse > Errors > X_DIRECTIVE_SHORTHAND_NO_ARGUMENT > <div #="obj" /> 1`] = `
+{
+  "cached": 0,
+  "children": [
+    {
+      "children": [],
+      "codegenNode": undefined,
+      "isSelfClosing": true,
+      "loc": {
+        "end": {
+          "column": 16,
+          "line": 1,
+          "offset": 15,
+        },
+        "source": "<div #="obj" />",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [
+        {
+          "arg": undefined,
+          "exp": {
+            "constType": 0,
+            "content": "obj",
+            "isStatic": false,
+            "loc": {
+              "end": {
+                "column": 12,
+                "line": 1,
+                "offset": 11,
+              },
+              "source": "obj",
+              "start": {
+                "column": 9,
+                "line": 1,
+                "offset": 8,
+              },
+            },
+            "type": 4,
+          },
+          "loc": {
+            "end": {
+              "column": 13,
+              "line": 1,
+              "offset": 12,
+            },
+            "source": "#="obj"",
+            "start": {
+              "column": 6,
+              "line": 1,
+              "offset": 5,
+            },
+          },
+          "modifiers": [],
+          "name": "slot",
+          "rawName": "#",
+          "type": 7,
+        },
+      ],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 16,
+      "line": 1,
+      "offset": 15,
+    },
+    "source": "<div #="obj" />",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<div #="obj" />",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
+exports[`compiler: parse > Errors > X_DIRECTIVE_SHORTHAND_NO_ARGUMENT > <div .="obj" /> 1`] = `
+{
+  "cached": 0,
+  "children": [
+    {
+      "children": [],
+      "codegenNode": undefined,
+      "isSelfClosing": true,
+      "loc": {
+        "end": {
+          "column": 16,
+          "line": 1,
+          "offset": 15,
+        },
+        "source": "<div .="obj" />",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [
+        {
+          "arg": undefined,
+          "exp": {
+            "constType": 0,
+            "content": "obj",
+            "isStatic": false,
+            "loc": {
+              "end": {
+                "column": 12,
+                "line": 1,
+                "offset": 11,
+              },
+              "source": "obj",
+              "start": {
+                "column": 9,
+                "line": 1,
+                "offset": 8,
+              },
+            },
+            "type": 4,
+          },
+          "loc": {
+            "end": {
+              "column": 13,
+              "line": 1,
+              "offset": 12,
+            },
+            "source": ".="obj"",
+            "start": {
+              "column": 6,
+              "line": 1,
+              "offset": 5,
+            },
+          },
+          "modifiers": [
+            "prop",
+          ],
+          "name": "bind",
+          "rawName": ".",
+          "type": 7,
+        },
+      ],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 16,
+      "line": 1,
+      "offset": 15,
+    },
+    "source": "<div .="obj" />",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<div .="obj" />",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
+exports[`compiler: parse > Errors > X_DIRECTIVE_SHORTHAND_NO_ARGUMENT > <div :="obj" /> 1`] = `
+{
+  "cached": 0,
+  "children": [
+    {
+      "children": [],
+      "codegenNode": undefined,
+      "isSelfClosing": true,
+      "loc": {
+        "end": {
+          "column": 16,
+          "line": 1,
+          "offset": 15,
+        },
+        "source": "<div :="obj" />",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [
+        {
+          "arg": undefined,
+          "exp": {
+            "constType": 0,
+            "content": "obj",
+            "isStatic": false,
+            "loc": {
+              "end": {
+                "column": 12,
+                "line": 1,
+                "offset": 11,
+              },
+              "source": "obj",
+              "start": {
+                "column": 9,
+                "line": 1,
+                "offset": 8,
+              },
+            },
+            "type": 4,
+          },
+          "loc": {
+            "end": {
+              "column": 13,
+              "line": 1,
+              "offset": 12,
+            },
+            "source": ":="obj"",
+            "start": {
+              "column": 6,
+              "line": 1,
+              "offset": 5,
+            },
+          },
+          "modifiers": [],
+          "name": "bind",
+          "rawName": ":",
+          "type": 7,
+        },
+      ],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 16,
+      "line": 1,
+      "offset": 15,
+    },
+    "source": "<div :="obj" />",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<div :="obj" />",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
+exports[`compiler: parse > Errors > X_DIRECTIVE_SHORTHAND_NO_ARGUMENT > <div @="obj" /> 1`] = `
+{
+  "cached": 0,
+  "children": [
+    {
+      "children": [],
+      "codegenNode": undefined,
+      "isSelfClosing": true,
+      "loc": {
+        "end": {
+          "column": 16,
+          "line": 1,
+          "offset": 15,
+        },
+        "source": "<div @="obj" />",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [
+        {
+          "arg": undefined,
+          "exp": {
+            "constType": 0,
+            "content": "obj",
+            "isStatic": false,
+            "loc": {
+              "end": {
+                "column": 12,
+                "line": 1,
+                "offset": 11,
+              },
+              "source": "obj",
+              "start": {
+                "column": 9,
+                "line": 1,
+                "offset": 8,
+              },
+            },
+            "type": 4,
+          },
+          "loc": {
+            "end": {
+              "column": 13,
+              "line": 1,
+              "offset": 12,
+            },
+            "source": "@="obj"",
+            "start": {
+              "column": 6,
+              "line": 1,
+              "offset": 5,
+            },
+          },
+          "modifiers": [],
+          "name": "on",
+          "rawName": "@",
+          "type": 7,
+        },
+      ],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 16,
+      "line": 1,
+      "offset": 15,
+    },
+    "source": "<div @="obj" />",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<div @="obj" />",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]></svg> 1`] = `
 {
   "cached": [],
