@@ -39,9 +39,8 @@ export const VaporTeleportImpl = {
       frag.update()
     })
 
-    onScopeDispose(frag.remove)
-
     if (__DEV__) {
+      onScopeDispose(frag.remove)
       // used in `normalizeBlock` to get nodes of TeleportFragment during
       // HMR updates. returns empty array if content is mounted in target
       // container to prevent incorrect parent node lookup.
