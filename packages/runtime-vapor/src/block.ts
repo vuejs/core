@@ -64,13 +64,16 @@ export function insert(
       insert(b, parent, anchor)
     }
   } else {
-    if (block.anchor) insert(block.anchor, parent, anchor)
+    if (block.anchor) {
+      insert(block.anchor, parent, anchor)
+      anchor = block.anchor
+    }
     // fragment
     if (block.insert) {
       // TODO handle hydration for vdom interop
-      block.insert(parent, block.anchor || anchor)
+      block.insert(parent, anchor)
     } else {
-      insert(block.nodes, parent, block.anchor || anchor)
+      insert(block.nodes, parent, anchor)
     }
   }
 }
