@@ -411,7 +411,14 @@ const hasSetupBinding = (state: Data, key: string) =>
   state !== EMPTY_OBJ && !state.__isScriptSetup && hasOwn(state, key)
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
-  get({ _: instance }: ComponentRenderContext, key: string) {
+  get(
+    { _: instance }: ComponentRenderContext,
+    key: string | typeof Symbol.unscopables,
+  ) {
+    if (key === Symbol.unscopables) {
+      return
+    }
+
     if (key === ReactiveFlags.SKIP) {
       return true
     }
