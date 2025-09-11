@@ -87,6 +87,10 @@ export class EffectScope implements ReactiveNode {
     if (sub !== undefined) {
       unlink(sub)
     }
+    this.cleanup()
+  }
+
+  cleanup(): void {
     cleanup(this)
   }
 }

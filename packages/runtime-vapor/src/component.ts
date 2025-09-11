@@ -73,7 +73,7 @@ import {
   locateHydrationNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { isVaporTeleport } from './components/Teleport'
+import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
 import {
   insertionAnchor,
   insertionParent,
@@ -446,6 +446,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void
+  parentTeleport?: TeleportFragment | null
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean

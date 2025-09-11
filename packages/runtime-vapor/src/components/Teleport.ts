@@ -12,16 +12,12 @@ import { createComment, createTextNode, querySelector } from '../dom/node'
 import {
   type LooseRawProps,
   type LooseRawSlots,
-  type VaporComponentInstance,
   isVaporComponent,
 } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend, isArray } from '@vue/shared'
 import { VaporFragment } from '../fragment'
-
-const instanceToTeleportMap: WeakMap<VaporComponentInstance, TeleportFragment> =
-  __DEV__ ? new WeakMap() : (undefined as any)
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -55,14 +51,12 @@ export const VaporTeleportImpl = {
         return frag.parent !== frag.currentParent ? [] : frag.nodes
       }
 
-      // for HMR reload
       const nodes = frag.nodes
       if (isVaporComponent(nodes)) {
-        instanceToTeleportMap.set(nodes, frag)
+        nodes.parentTeleport = frag
       } else if (isArray(nodes)) {
         nodes.forEach(
-          node =>
-            isVaporComponent(node) && instanceToTeleportMap.set(node, frag),
+          node => isVaporComponent(node) && (node.parentTeleport = frag),
         )
       }
     }
@@ -211,26 +205,4 @@ export function isVaporTeleport(
   value: unknown,
 ): value is typeof VaporTeleportImpl {
   return value === VaporTeleportImpl
-}
-
-/**
- * dev only
- * during root component HMR reload, since the old component will be unmounted
- * and a new one will be mounted, we need to update the teleport's nodes
- * to ensure they are up to date.
- */
-export function handleTeleportRootComponentHmrReload(
-  instance: VaporComponentInstance,
-  newInstance: VaporComponentInstance,
-): void {
-  const teleport = instanceToTeleportMap.get(instance)
-  if (teleport) {
-    instanceToTeleportMap.set(newInstance, teleport)
-    if (teleport.nodes === instance) {
-      teleport.nodes = newInstance
-    } else if (isArray(teleport.nodes)) {
-      const i = teleport.nodes.indexOf(instance)
-      if (i !== -1) teleport.nodes[i] = newInstance
-    }
-  }
 }
