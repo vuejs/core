@@ -1,5 +1,6 @@
 import {
   type TeleportProps,
+  type TeleportTargetElement,
   isTeleportDeferred,
   isTeleportDisabled,
   onScopeDispose,
@@ -8,7 +9,13 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import { type Block, type BlockFn, insert, remove } from '../block'
-import { createComment, createTextNode, querySelector } from '../dom/node'
+import {
+  child,
+  createComment,
+  createTextNode,
+  next,
+  querySelector,
+} from '../dom/node'
 import {
   type LooseRawProps,
   type LooseRawSlots,
@@ -18,6 +25,13 @@ import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend, isArray } from '@vue/shared'
 import { VaporFragment } from '../fragment'
+import {
+  advanceHydrationNode,
+  currentHydrationNode,
+  isComment,
+  isHydrating,
+  setCurrentHydrationNode,
+} from '../dom/hydration'
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -25,61 +39,32 @@ export const VaporTeleportImpl = {
   __vapor: true,
 
   process(props: LooseRawProps, slots: LooseRawSlots): TeleportFragment {
-    const frag = new TeleportFragment()
-    renderEffect(() =>
-      frag.updateChildren(slots.default && (slots.default as BlockFn)()),
-    )
-
-    renderEffect(() => {
-      // access the props to trigger tracking
-      frag.props = extend(
-        {},
-        new Proxy(props, rawPropsProxyHandlers) as any as TeleportProps,
-      )
-      frag.update()
-    })
-
-    onScopeDispose(() => {
-      frag.remove()
-    })
-
-    if (__DEV__) {
-      // used in `normalizeBlock` to get nodes of TeleportFragment during
-      // HMR updates. returns empty array if content is mounted in target
-      // container to prevent incorrect parent node lookup.
-      frag.getNodes = () => {
-        return frag.parent !== frag.currentParent ? [] : frag.nodes
-      }
-
-      const nodes = frag.nodes
-      if (isVaporComponent(nodes)) {
-        nodes.parentTeleport = frag
-      } else if (isArray(nodes)) {
-        nodes.forEach(
-          node => isVaporComponent(node) && (node.parentTeleport = frag),
-        )
-      }
-    }
-
-    return frag
+    return new TeleportFragment(props, slots)
   },
 }
 
 export class TeleportFragment extends VaporFragment {
+  rawProps?: LooseRawProps
+  resolvedProps?: TeleportProps
+  rawSlots?: LooseRawSlots
+
   target?: ParentNode | null
   targetAnchor?: Node | null
-  anchor: Node
-  props?: TeleportProps
+  anchor?: Node
 
-  private targetStart?: Node
+  private targetStart?: Node | null
   private mainAnchor?: Node
   private placeholder?: Node
   private mountContainer?: ParentNode | null
   private mountAnchor?: Node | null
 
-  constructor() {
+  constructor(props: LooseRawProps, slots: LooseRawSlots) {
     super([])
-    this.anchor = createTextNode()
+    this.anchor = isHydrating ? undefined : createTextNode()
+    this.rawProps = props
+    this.rawSlots = slots
+
+    this.init()
   }
 
   get currentParent(): ParentNode {
@@ -87,16 +72,62 @@ export class TeleportFragment extends VaporFragment {
   }
 
   get currentAnchor(): Node | null {
-    return this.mountAnchor || this.anchor
+    return this.mountAnchor || this.mainAnchor!
   }
 
   get parent(): ParentNode | null {
-    return this.anchor && this.anchor.parentNode
+    return this.anchor ? this.anchor.parentNode : null
   }
 
-  updateChildren(children: Block): void {
+  init(): void {
+    renderEffect(() => {
+      // access the props to trigger tracking
+      this.resolvedProps = extend(
+        {},
+        new Proxy(
+          this.rawProps!,
+          rawPropsProxyHandlers,
+        ) as any as TeleportProps,
+      )
+      this.handlePropsUpdate()
+    })
+
+    if (!isHydrating) {
+      this.initChildren()
+    }
+
+    if (__DEV__) {
+      onScopeDispose(this.remove)
+      // used in `normalizeBlock` to get nodes of TeleportFragment during
+      // HMR updates. returns empty array if content is mounted in target
+      // container to prevent incorrect parent node lookup.
+      this.getNodes = () =>
+        this.parent !== this.currentParent ? [] : this.nodes
+    }
+  }
+
+  initChildren(): void {
+    renderEffect(() =>
+      this.handleChildrenUpdate(
+        this.rawSlots!.default && (this.rawSlots!.default as BlockFn)(),
+      ),
+    )
+
+    if (__DEV__) {
+      const nodes = this.nodes
+      if (isVaporComponent(nodes)) {
+        nodes.parentTeleport = this
+      } else if (isArray(nodes)) {
+        nodes.forEach(
+          node => isVaporComponent(node) && (node.parentTeleport = this),
+        )
+      }
+    }
+  }
+
+  handleChildrenUpdate(children: Block): void {
     // not mounted yet
-    if (!this.parent) {
+    if (!this.parent || isHydrating) {
       this.nodes = children
       return
     }
@@ -107,9 +138,9 @@ export class TeleportFragment extends VaporFragment {
     insert((this.nodes = children), this.currentParent, this.currentAnchor)
   }
 
-  update(): void {
+  handlePropsUpdate(): void {
     // not mounted yet
-    if (!this.parent) return
+    if (!this.parent || isHydrating) return
 
     const mount = (parent: ParentNode, anchor: Node | null) => {
       insert(
@@ -121,7 +152,7 @@ export class TeleportFragment extends VaporFragment {
 
     const mountToTarget = () => {
       const target = (this.target = resolveTeleportTarget(
-        this.props!,
+        this.resolvedProps!,
         querySelector,
       ))
       if (target) {
@@ -146,12 +177,12 @@ export class TeleportFragment extends VaporFragment {
     }
 
     // mount into main container
-    if (isTeleportDisabled(this.props!)) {
+    if (isTeleportDisabled(this.resolvedProps!)) {
       mount(this.parent, this.mainAnchor!)
     }
     // mount into target container
     else {
-      if (isTeleportDeferred(this.props!)) {
+      if (isTeleportDeferred(this.resolvedProps!)) {
         queuePostFlushCb(mountToTarget)
       } else {
         mountToTarget()
@@ -160,6 +191,8 @@ export class TeleportFragment extends VaporFragment {
   }
 
   insert = (container: ParentNode, anchor: Node | null): void => {
+    if (isHydrating) return
+
     // insert anchors in the main view
     this.placeholder = __DEV__
       ? createComment('teleport start')
@@ -167,7 +200,8 @@ export class TeleportFragment extends VaporFragment {
     this.mainAnchor = __DEV__ ? createComment('teleport end') : createTextNode()
     insert(this.placeholder, container, anchor)
     insert(this.mainAnchor, container, anchor)
-    this.update()
+    insert(this.anchor!, container, anchor)
+    this.handlePropsUpdate()
   }
 
   remove = (parent: ParentNode | undefined = this.parent!): void => {
@@ -197,7 +231,45 @@ export class TeleportFragment extends VaporFragment {
   }
 
   hydrate = (): void => {
-    // TODO
+    const target = (this.target = resolveTeleportTarget(
+      this.resolvedProps!,
+      querySelector,
+    ))
+    if (target) {
+      const disabled = isTeleportDisabled(this.resolvedProps!)
+      const targetNode = (target as TeleportTargetElement)._lpa || child(target)
+      if (disabled) {
+        this.placeholder = currentHydrationNode!
+        let nextNode = next(this.placeholder)
+        setCurrentHydrationNode(nextNode)
+        while (nextNode && !isComment(nextNode, 'teleport end')) {
+          nextNode = next(nextNode)
+        }
+        this.mainAnchor = this.anchor = nextNode
+        this.targetStart = targetNode
+        this.targetAnchor = targetNode && next(targetNode)
+      } else {
+        this.mainAnchor = this.anchor = next(currentHydrationNode!)
+        let targetAnchor = targetNode
+        while (targetAnchor) {
+          if (targetAnchor && targetAnchor.nodeType === 8) {
+            if ((targetAnchor as Comment).data === 'teleport start anchor') {
+              this.targetStart = targetAnchor
+            } else if ((targetAnchor as Comment).data === 'teleport anchor') {
+              this.targetAnchor = targetAnchor
+              ;(target as TeleportTargetElement)._lpa =
+                this.targetAnchor && next(this.targetAnchor)
+              break
+            }
+          }
+          targetAnchor = next(targetAnchor)
+        }
+        setCurrentHydrationNode(targetNode && next(targetNode))
+      }
+
+      this.initChildren()
+      advanceHydrationNode(this.anchor!)
+    }
   }
 }
 

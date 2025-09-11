@@ -77,6 +77,26 @@ async function testWithVDOMApp(
   })
 }
 
+async function mountWithHydration(
+  html: string,
+  code: string,
+  data: runtimeDom.Ref<any>,
+) {
+  const container = document.createElement('div')
+  container.innerHTML = html
+
+  const clientComp = compile(`<template>${code}</template>`, data, undefined, {
+    vapor: true,
+    ssr: false,
+  })
+  const app = createVaporSSRApp(clientComp)
+  app.mount(container)
+
+  return {
+    container,
+  }
+}
+
 async function testHydration(
   code: string,
   components: Record<string, string | { code: string; vapor: boolean }> = {},
@@ -2853,7 +2873,65 @@ describe('Vapor Mode hydration', () => {
 
   describe.todo('mismatch handling')
 
-  describe.todo('Teleport')
+  describe('Teleport', () => {
+    test('basic', async () => {
+      const data = ref({
+        msg: ref('foo'),
+        disabled: ref(false),
+        fn: vi.fn(),
+      })
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport'
+      teleportContainer.innerHTML = `<!--teleport start anchor--><span>foo</span><span class="foo"></span><!--teleport anchor-->`
+      document.body.appendChild(teleportContainer)
+      const { container } = await mountWithHydration(
+        '<!--teleport start--><!--teleport end-->',
+        `<teleport to="#teleport" :disabled="data.disabled">
+          <span>{{data.msg}}</span>
+          <span :class="data.msg" @click="data.fn"></span>
+        </teleport>`,
+        data,
+      )
+
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><!--teleport end-->"`,
+      )
+
+      // event handler
+      triggerEvent('click', teleportContainer.querySelector('.foo')!)
+      expect(data.value.fn).toHaveBeenCalled()
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(formatHtml(teleportContainer.innerHTML)).toMatchInlineSnapshot(
+        `"<!--teleport start anchor--><span>bar</span><span class="bar"></span><!--teleport anchor-->"`,
+      )
+
+      data.value.disabled = true
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><span>bar</span><span class="bar"></span><!--teleport end-->"`,
+      )
+      expect(formatHtml(teleportContainer.innerHTML)).toMatchInlineSnapshot(
+        `"<!--teleport start anchor--><!--teleport anchor-->"`,
+      )
+
+      data.value.msg = 'baz'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><span>baz</span><span class="baz"></span><!--teleport end-->"`,
+      )
+
+      data.value.disabled = false
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><!--teleport end-->"`,
+      )
+      expect(formatHtml(teleportContainer.innerHTML)).toMatchInlineSnapshot(
+        `"<!--teleport start anchor--><span>baz</span><span class="baz"></span><!--teleport anchor-->"`,
+      )
+    })
+  })
 
   describe.todo('Suspense')
 })
