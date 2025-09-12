@@ -3,7 +3,6 @@ import {
   type TeleportTargetElement,
   isTeleportDeferred,
   isTeleportDisabled,
-  onScopeDispose,
   queuePostFlushCb,
   resolveTeleportTarget,
   warn,
@@ -61,14 +60,6 @@ export class TeleportFragment extends VaporFragment {
         ? createComment('teleport end')
         : createTextNode()
 
-    this.init()
-  }
-
-  get parent(): ParentNode | null {
-    return this.anchor ? this.anchor.parentNode : null
-  }
-
-  private init(): void {
     renderEffect(() => {
       // access the props to trigger tracking
       this.resolvedProps = extend(
@@ -84,23 +75,18 @@ export class TeleportFragment extends VaporFragment {
     if (!isHydrating) {
       this.initChildren()
     }
+  }
 
-    if (__DEV__) {
-      onScopeDispose(this.remove)
-      // used in `normalizeBlock` to get nodes of TeleportFragment during
-      // HMR updates. returns empty array if content is mounted in target
-      // container to prevent incorrect parent node lookup.
-      this.getNodes = () =>
-        this.parent !== this.mountContainer! ? [] : this.nodes
-    }
+  get parent(): ParentNode | null {
+    return this.anchor ? this.anchor.parentNode : null
   }
 
   private initChildren(): void {
-    renderEffect(() =>
+    renderEffect(() => {
       this.handleChildrenUpdate(
         this.rawSlots!.default && (this.rawSlots!.default as BlockFn)(),
-      ),
-    )
+      )
+    })
 
     if (__DEV__) {
       const nodes = this.nodes

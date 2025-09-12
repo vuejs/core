@@ -20,6 +20,7 @@ import {
   isFragment,
 } from './fragment'
 import { child } from './dom/node'
+import { TeleportFragment } from './components/Teleport'
 
 export interface TransitionOptions {
   $key?: any
@@ -182,12 +183,12 @@ export function normalizeBlock(block: Block): Node[] {
   } else if (isVaporComponent(block)) {
     nodes.push(...normalizeBlock(block.block!))
   } else {
-    if (block.getNodes) {
-      nodes.push(...normalizeBlock(block.getNodes()))
+    if (block instanceof TeleportFragment) {
+      nodes.push(block.placeholder!, block.anchor!)
     } else {
       nodes.push(...normalizeBlock(block.nodes))
+      block.anchor && nodes.push(block.anchor)
     }
-    block.anchor && nodes.push(block.anchor)
   }
   return nodes
 }

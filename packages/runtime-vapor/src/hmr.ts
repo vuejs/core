@@ -19,7 +19,6 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   const parent = normalized[0].parentNode!
   const anchor = normalized[normalized.length - 1].nextSibling
   remove(instance.block, parent)
-  instance.scope!.cleanup()
   const prev = setCurrentInstance(instance)
   pushWarningContext(instance)
   devRender(instance)
@@ -46,7 +45,6 @@ export function hmrReload(
   )
   setCurrentInstance(...prev)
   mountComponent(newInstance, parent, anchor)
-
   updateParentBlockOnHmrReload(parentInstance, instance, newInstance)
   updateParentTeleportOnHmrReload(instance, newInstance)
 }
