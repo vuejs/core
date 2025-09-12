@@ -79,6 +79,18 @@ async function testWithVDOMApp(
   })
 }
 
+function compileVaporComponent(
+  code: string,
+  data: runtimeDom.Ref<any> = ref({}),
+  components?: Record<string, any>,
+  ssr = false,
+) {
+  return compile(`<template>${code}</template>`, data, components, {
+    vapor: true,
+    ssr,
+  })
+}
+
 async function mountWithHydration(
   html: string,
   code: string,
@@ -89,10 +101,7 @@ async function mountWithHydration(
   container.innerHTML = html
   document.body.appendChild(container)
 
-  const clientComp = compile(`<template>${code}</template>`, data, components, {
-    vapor: true,
-    ssr: false,
-  })
+  const clientComp = compileVaporComponent(code, data, components)
   const app = createVaporSSRApp(clientComp)
   app.mount(container)
 
@@ -303,7 +312,7 @@ describe('Vapor Mode hydration', () => {
       <template><!----></template>
     `)
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
-      expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
+      expect(`mismatch in <div>`).not.toHaveBeenWarned()
     })
 
     test('root with mixed element and text', async () => {
@@ -336,7 +345,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `"<div></div>"`,
       )
-      expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
+      expect(`mismatch in <div>`).not.toHaveBeenWarned()
     })
 
     test('element with binding and text children', async () => {
@@ -2888,8 +2897,13 @@ describe('Vapor Mode hydration', () => {
 
       const teleportContainer = document.createElement('div')
       teleportContainer.id = 'teleport'
-      teleportContainer.innerHTML = `<!--teleport start anchor--><span>foo</span><span class="foo"></span><!--teleport anchor-->`
+      teleportContainer.innerHTML =
+        `<!--teleport start anchor-->` +
+        `<span>foo</span>` +
+        `<span class="foo"></span>` +
+        `<!--teleport anchor-->`
       document.body.appendChild(teleportContainer)
+
       const { block, container } = await mountWithHydration(
         '<!--teleport start--><!--teleport end-->',
         `<teleport to="#teleport" :disabled="data.disabled">
@@ -2921,14 +2935,20 @@ describe('Vapor Mode hydration', () => {
 
       data.value.msg = 'bar'
       await nextTick()
-      expect(formatHtml(teleportContainer.innerHTML)).toMatchInlineSnapshot(
-        `"<!--teleport start anchor--><span>bar</span><span class="bar"></span><!--teleport anchor-->"`,
+      expect(formatHtml(teleportContainer.innerHTML)).toBe(
+        `<!--teleport start anchor-->` +
+          `<span>bar</span>` +
+          `<span class="bar"></span>` +
+          `<!--teleport anchor-->`,
       )
 
       data.value.disabled = true
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--teleport start--><span>bar</span><span class="bar"></span><!--teleport end-->"`,
+      expect(container.innerHTML).toBe(
+        `<!--teleport start-->` +
+          `<span>bar</span>` +
+          `<span class="bar"></span>` +
+          `<!--teleport end-->`,
       )
       expect(formatHtml(teleportContainer.innerHTML)).toMatchInlineSnapshot(
         `"<!--teleport start anchor--><!--teleport anchor-->"`,
@@ -2936,8 +2956,11 @@ describe('Vapor Mode hydration', () => {
 
       data.value.msg = 'baz'
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--teleport start--><span>baz</span><span class="baz"></span><!--teleport end-->"`,
+      expect(container.innerHTML).toBe(
+        `<!--teleport start-->` +
+          `<span>baz</span>` +
+          `<span class="baz"></span>` +
+          `<!--teleport end-->`,
       )
 
       data.value.disabled = false
@@ -2945,8 +2968,11 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toMatchInlineSnapshot(
         `"<!--teleport start--><!--teleport end-->"`,
       )
-      expect(formatHtml(teleportContainer.innerHTML)).toMatchInlineSnapshot(
-        `"<!--teleport start anchor--><span>baz</span><span class="baz"></span><!--teleport anchor-->"`,
+      expect(formatHtml(teleportContainer.innerHTML)).toBe(
+        `<!--teleport start anchor-->` +
+          `<span>baz</span>` +
+          `<span class="baz"></span>` +
+          `<!--teleport anchor-->`,
       )
     })
 
@@ -2967,30 +2993,29 @@ describe('Vapor Mode hydration', () => {
             <span :class="data.msg + 2" @click="data.fn2"></span>
           </teleport>`
 
-      const serverComp = compile(
-        `<template>${code}</template>`,
-        data,
-        undefined,
-        {
-          vapor: true,
-          ssr: true,
-        },
-      )
-
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
       const teleportContainer = document.createElement('div')
       teleportContainer.id = 'teleport2'
       const ctx = {} as any
       const mainHtml = await VueServerRenderer.renderToString(
-        runtimeDom.createSSRApp(serverComp),
+        runtimeDom.createSSRApp(SSRComp),
         ctx,
       )
-      expect(mainHtml).toMatchInlineSnapshot(
-        `"<!--[--><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--><!--]-->"`,
+      expect(mainHtml).toBe(
+        `<!--[-->` +
+          `<!--teleport start--><!--teleport end-->` +
+          `<!--teleport start--><!--teleport end-->` +
+          `<!--]-->`,
       )
 
       const teleportHtml = ctx.teleports!['#teleport2']
-      expect(teleportHtml).toMatchInlineSnapshot(
-        `"<!--teleport start anchor--><span>foo</span><span class="foo"></span><!--teleport anchor--><!--teleport start anchor--><span>foo2</span><span class="foo2"></span><!--teleport anchor-->"`,
+      expect(teleportHtml).toBe(
+        `<!--teleport start anchor-->` +
+          `<span>foo</span><span class="foo"></span>` +
+          `<!--teleport anchor-->` +
+          `<!--teleport start anchor-->` +
+          `<span>foo2</span><span class="foo2"></span>` +
+          `<!--teleport anchor-->`,
       )
 
       teleportContainer.innerHTML = teleportHtml
@@ -3022,8 +3047,11 @@ describe('Vapor Mode hydration', () => {
       )
       expect(teleport2.targetAnchor).toBe(teleportContainer.childNodes[7])
 
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--[--><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--><!--]-->"`,
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<!--teleport start--><!--teleport end-->` +
+          `<!--teleport start--><!--teleport end-->` +
+          `<!--]-->`,
       )
 
       // event handler
@@ -3035,8 +3063,15 @@ describe('Vapor Mode hydration', () => {
 
       data.value.msg = 'bar'
       await nextTick()
-      expect(formatHtml(teleportContainer.innerHTML)).toMatchInlineSnapshot(
-        `"<!--teleport start anchor--><span>bar</span><span class="bar"></span><!--teleport anchor--><!--teleport start anchor--><span>bar2</span><span class="bar2"></span><!--teleport anchor-->"`,
+      expect(teleportContainer.innerHTML).toBe(
+        `<!--teleport start anchor-->` +
+          `<span>bar</span>` +
+          `<span class="bar"></span>` +
+          `<!--teleport anchor-->` +
+          `<!--teleport start anchor-->` +
+          `<span>bar2</span>` +
+          `<span class="bar2"></span>` +
+          `<!--teleport anchor-->`,
       )
     })
 
@@ -3056,25 +3091,23 @@ describe('Vapor Mode hydration', () => {
           <div :class="data.msg + 2" @click="data.fn2">bar</div>
           `
 
-      const serverComp = compile(
-        `<template>${code}</template>`,
-        data,
-        undefined,
-        {
-          vapor: true,
-          ssr: true,
-        },
-      )
-
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
       const teleportContainer = document.createElement('div')
       teleportContainer.id = 'teleport3'
       const ctx = {} as any
       const mainHtml = await VueServerRenderer.renderToString(
-        runtimeDom.createSSRApp(serverComp),
+        runtimeDom.createSSRApp(SSRComp),
         ctx,
       )
-      expect(mainHtml).toMatchInlineSnapshot(
-        `"<!--[--><div>foo</div><!--teleport start--><span>foo</span><span class="foo"></span><!--teleport end--><div class="foo2">bar</div><!--]-->"`,
+      expect(mainHtml).toBe(
+        `<!--[-->` +
+          `<div>foo</div>` +
+          `<!--teleport start-->` +
+          `<span>foo</span>` +
+          `<span class="foo"></span>` +
+          `<!--teleport end-->` +
+          `<div class="foo2">bar</div>` +
+          `<!--]-->`,
       )
 
       const teleportHtml = ctx.teleports!['#teleport3']
@@ -3103,8 +3136,15 @@ describe('Vapor Mode hydration', () => {
       expect(teleport.targetAnchor).toBe(teleportContainer.childNodes[1])
       expect(blocks[2]).toBe(container.childNodes[6])
 
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--[--><div>foo</div><!--teleport start--><span>foo</span><span class="foo"></span><!--teleport end--><div class="foo2">bar</div><!--]-->"`,
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<div>foo</div>` +
+          `<!--teleport start-->` +
+          `<span>foo</span>` +
+          `<span class="foo"></span>` +
+          `<!--teleport end-->` +
+          `<div class="foo2">bar</div>` +
+          `<!--]-->`,
       )
 
       // event handler
@@ -3116,14 +3156,24 @@ describe('Vapor Mode hydration', () => {
 
       data.value.msg = 'bar'
       await nextTick()
-      expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--[--><div>foo</div><!--teleport start--><span>bar</span><span class="bar"></span><!--teleport end--><div class="bar2">bar</div><!--]-->"`,
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<div>foo</div>` +
+          `<!--teleport start-->` +
+          `<span>bar</span>` +
+          `<span class="bar"></span>` +
+          `<!--teleport end-->` +
+          `<div class="bar2">bar</div>` +
+          `<!--]-->`,
       )
     })
 
     test('disabled + as component root', async () => {
       const { container } = await mountWithHydration(
-        '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->',
+        `<!--[-->` +
+          `<div>Parent fragment</div>` +
+          `<!--teleport start--><div>Teleport content</div><!--teleport end-->` +
+          `<!--]-->`,
         `
           <div>Parent fragment</div>
           <teleport to="body" disabled>
@@ -3132,11 +3182,14 @@ describe('Vapor Mode hydration', () => {
         `,
       )
       expect(container.innerHTML).toBe(
-        '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->',
+        `<!--[-->` +
+          `<div>Parent fragment</div>` +
+          `<!--teleport start-->` +
+          `<div>Teleport content</div>` +
+          `<!--teleport end-->` +
+          `<!--]-->`,
       )
-      expect(
-        `Hydration completed but contains mismatches.`,
-      ).not.toHaveBeenWarned()
+      expect(`mismatch`).not.toHaveBeenWarned()
     })
 
     test('as component root', async () => {
@@ -3145,24 +3198,14 @@ describe('Vapor Mode hydration', () => {
       teleportContainer.innerHTML = `<!--teleport start anchor-->hello<!--teleport anchor-->`
       document.body.appendChild(teleportContainer)
 
-      const Wrapper = compile(
-        `<template>
-          <teleport to="#teleport4">hello</teleport>
-        </template>`,
-        ref({}),
-        undefined,
-        {
-          vapor: true,
-          ssr: false,
-        },
-      )
-
       const { block, container } = await mountWithHydration(
         '<!--teleport start--><!--teleport end-->',
         `<components.Wrapper></components.Wrapper>`,
         undefined,
         {
-          Wrapper,
+          Wrapper: compileVaporComponent(
+            `<teleport to="#teleport4">hello</teleport>`,
+          ),
         },
       )
 
@@ -3178,7 +3221,13 @@ describe('Vapor Mode hydration', () => {
     test('nested', async () => {
       const teleportContainer = document.createElement('div')
       teleportContainer.id = 'teleport5'
-      teleportContainer.innerHTML = `<!--teleport start anchor--><!--teleport start--><!--teleport end--><!--teleport anchor--><!--teleport start anchor--><div>child</div><!--teleport anchor-->`
+      teleportContainer.innerHTML =
+        `<!--teleport start anchor-->` +
+        `<!--teleport start--><!--teleport end-->` +
+        `<!--teleport anchor-->` +
+        `<!--teleport start anchor-->` +
+        `<div>child</div>` +
+        `<!--teleport anchor-->`
       document.body.appendChild(teleportContainer)
 
       const { block, container } = await mountWithHydration(
@@ -3201,83 +3250,59 @@ describe('Vapor Mode hydration', () => {
     })
 
     test('unmount (full integration)', async () => {
+      const targetId = 'teleport6'
       const data = ref({
         toggle: ref(true),
       })
 
-      const comp1Code = `<Teleport to="#target"> 
-            <span>Teleported Comp1</span>
-          </Teleport>`
-      const Comp1 = compile(
-        `<template>${comp1Code}</template>`,
-        data,
+      const template1 = `<Teleport to="#${targetId}"><span>Teleported Comp1</span></Teleport>`
+      const Comp1 = compileVaporComponent(template1)
+      const SSRComp1 = compileVaporComponent(
+        template1,
         undefined,
-        {
-          vapor: true,
-          ssr: false,
-        },
-      )
-      const ssrComp1 = compile(
-        `<template>${comp1Code}</template>`,
-        data,
         undefined,
-        {
-          vapor: true,
-          ssr: true,
-        },
+        true,
       )
 
-      const comp2Code = `<div>Comp2</div>`
-      const Comp2 = compile(
-        `<template>${comp2Code}</template>`,
-        data,
+      const template2 = `<div>Comp2</div>`
+      const Comp2 = compileVaporComponent(template2)
+      const SSRComp2 = compileVaporComponent(
+        template2,
         undefined,
-        {
-          vapor: true,
-          ssr: false,
-        },
-      )
-      const ssrComp2 = compile(
-        `<template>${comp2Code}</template>`,
-        data,
         undefined,
-        {
-          vapor: true,
-          ssr: true,
-        },
+        true,
       )
 
-      const appCode = `<div>
-            <components.Comp1 v-if="data.toggle"/>
-            <components.Comp2 v-else/>
-          </div>`
+      const appCode = `
+        <div>
+          <components.Comp1 v-if="data.toggle"/>
+          <components.Comp2 v-else/>
+        </div>
+      `
 
-      const ssrApp = compile(
-        `<template>${appCode}</template>`,
+      const SSRApp = compileVaporComponent(
+        appCode,
         data,
         {
-          Comp1: ssrComp1,
-          Comp2: ssrComp2,
+          Comp1: SSRComp1,
+          Comp2: SSRComp2,
         },
-        {
-          vapor: true,
-          ssr: true,
-        },
+        true,
       )
 
       const teleportContainer = document.createElement('div')
-      teleportContainer.id = 'target'
+      teleportContainer.id = targetId
       document.body.appendChild(teleportContainer)
 
       const ctx = {} as any
       const mainHtml = await VueServerRenderer.renderToString(
-        runtimeDom.createSSRApp(ssrApp),
+        runtimeDom.createSSRApp(SSRApp),
         ctx,
       )
       expect(mainHtml).toBe(
         '<div><!--teleport start--><!--teleport end--></div>',
       )
-      teleportContainer.innerHTML = ctx.teleports!['#target']
+      teleportContainer.innerHTML = ctx.teleports![`#${targetId}`]
 
       const { container } = await mountWithHydration(mainHtml, appCode, data, {
         Comp1,
@@ -3292,7 +3317,7 @@ describe('Vapor Mode hydration', () => {
           `<span>Teleported Comp1</span>` +
           `<!--teleport anchor-->`,
       )
-      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(`mismatch`).not.toHaveBeenWarned()
 
       data.value.toggle = false
       await nextTick()
