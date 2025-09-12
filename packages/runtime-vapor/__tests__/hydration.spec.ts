@@ -82,12 +82,14 @@ async function testWithVDOMApp(
 async function mountWithHydration(
   html: string,
   code: string,
-  data: runtimeDom.Ref<any>,
+  data: runtimeDom.Ref<any> = ref({}),
+  components?: Record<string, any>,
 ) {
   const container = document.createElement('div')
   container.innerHTML = html
+  document.body.appendChild(container)
 
-  const clientComp = compile(`<template>${code}</template>`, data, undefined, {
+  const clientComp = compile(`<template>${code}</template>`, data, components, {
     vapor: true,
     ssr: false,
   })
@@ -95,7 +97,7 @@ async function mountWithHydration(
   app.mount(container)
 
   return {
-    frag: (app._instance! as VaporComponentInstance).block as TeleportFragment,
+    block: (app._instance! as VaporComponentInstance).block,
     container,
   }
 }
@@ -2888,7 +2890,7 @@ describe('Vapor Mode hydration', () => {
       teleportContainer.id = 'teleport'
       teleportContainer.innerHTML = `<!--teleport start anchor--><span>foo</span><span class="foo"></span><!--teleport anchor-->`
       document.body.appendChild(teleportContainer)
-      const { frag, container } = await mountWithHydration(
+      const { block, container } = await mountWithHydration(
         '<!--teleport start--><!--teleport end-->',
         `<teleport to="#teleport" :disabled="data.disabled">
           <span>{{data.msg}}</span>
@@ -2897,12 +2899,17 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(frag.anchor).toBe(container.lastChild)
-      expect(frag.target).toBe(teleportContainer)
-      expect(frag.targetStart).toBe(teleportContainer.childNodes[0])
-      expect((frag.nodes as Node[])[0]).toBe(teleportContainer.childNodes[1])
-      expect((frag.nodes as Node[])[1]).toBe(teleportContainer.childNodes[2])
-      expect(frag.targetAnchor).toBe(teleportContainer.childNodes[3])
+      const teleport = block as TeleportFragment
+      expect(teleport.anchor).toBe(container.lastChild)
+      expect(teleport.target).toBe(teleportContainer)
+      expect(teleport.targetStart).toBe(teleportContainer.childNodes[0])
+      expect((teleport.nodes as Node[])[0]).toBe(
+        teleportContainer.childNodes[1],
+      )
+      expect((teleport.nodes as Node[])[1]).toBe(
+        teleportContainer.childNodes[2],
+      )
+      expect(teleport.targetAnchor).toBe(teleportContainer.childNodes[3])
 
       expect(container.innerHTML).toMatchInlineSnapshot(
         `"<!--teleport start--><!--teleport end-->"`,
@@ -2989,9 +2996,13 @@ describe('Vapor Mode hydration', () => {
       teleportContainer.innerHTML = teleportHtml
       document.body.appendChild(teleportContainer)
 
-      const { frag, container } = await mountWithHydration(mainHtml, code, data)
+      const { block, container } = await mountWithHydration(
+        mainHtml,
+        code,
+        data,
+      )
 
-      const teleports = frag as any as TeleportFragment[]
+      const teleports = block as any as TeleportFragment[]
       const teleport1 = teleports[0]
       const teleport2 = teleports[1]
       expect(teleport1.anchor).toBe(container.childNodes[2])
@@ -3029,11 +3040,140 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
-    test('disabled', async () => {})
+    test('disabled', async () => {
+      const data = ref({
+        msg: ref('foo'),
+        fn1: vi.fn(),
+        fn2: vi.fn(),
+      })
 
-    test('disabled + as component root', async () => {})
+      const code = `
+          <div>foo</div>
+          <teleport to="#teleport3" disabled="true">
+            <span>{{data.msg}}</span>
+            <span :class="data.msg" @click="data.fn1"></span>
+          </teleport>
+          <div :class="data.msg + 2" @click="data.fn2">bar</div>
+          `
 
-    test('as component root', async () => {})
+      const serverComp = compile(
+        `<template>${code}</template>`,
+        data,
+        undefined,
+        {
+          vapor: true,
+          ssr: true,
+        },
+      )
+
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport3'
+      const ctx = {} as any
+      const mainHtml = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(serverComp),
+        ctx,
+      )
+      expect(mainHtml).toMatchInlineSnapshot(
+        `"<!--[--><div>foo</div><!--teleport start--><span>foo</span><span class="foo"></span><!--teleport end--><div class="foo2">bar</div><!--]-->"`,
+      )
+
+      const teleportHtml = ctx.teleports!['#teleport3']
+      expect(teleportHtml).toMatchInlineSnapshot(
+        `"<!--teleport start anchor--><!--teleport anchor-->"`,
+      )
+
+      teleportContainer.innerHTML = teleportHtml
+      document.body.appendChild(teleportContainer)
+
+      const { block, container } = await mountWithHydration(
+        mainHtml,
+        code,
+        data,
+      )
+
+      const blocks = block as any[]
+      expect(blocks[0]).toBe(container.childNodes[1])
+
+      const teleport = blocks[1] as TeleportFragment
+      expect((teleport.nodes as Node[])[0]).toBe(container.childNodes[3])
+      expect((teleport.nodes as Node[])[1]).toBe(container.childNodes[4])
+      expect(teleport.anchor).toBe(container.childNodes[5])
+      expect(teleport.target).toBe(teleportContainer)
+      expect(teleport.targetStart).toBe(teleportContainer.childNodes[0])
+      expect(teleport.targetAnchor).toBe(teleportContainer.childNodes[1])
+      expect(blocks[2]).toBe(container.childNodes[6])
+
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--[--><div>foo</div><!--teleport start--><span>foo</span><span class="foo"></span><!--teleport end--><div class="foo2">bar</div><!--]-->"`,
+      )
+
+      // event handler
+      triggerEvent('click', container.querySelector('.foo')!)
+      expect(data.value.fn1).toHaveBeenCalled()
+
+      triggerEvent('click', container.querySelector('.foo2')!)
+      expect(data.value.fn2).toHaveBeenCalled()
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--[--><div>foo</div><!--teleport start--><span>bar</span><span class="bar"></span><!--teleport end--><div class="bar2">bar</div><!--]-->"`,
+      )
+    })
+
+    test('disabled + as component root', async () => {
+      const { container } = await mountWithHydration(
+        '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->',
+        `
+          <div>Parent fragment</div>
+          <teleport to="body" disabled>
+            <div>Teleport content</div>
+          </teleport>
+        `,
+      )
+      expect(container.innerHTML).toBe(
+        '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->',
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('as component root', async () => {
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport4'
+      teleportContainer.innerHTML = `<!--teleport start anchor-->hello<!--teleport anchor-->`
+      document.body.appendChild(teleportContainer)
+
+      const Wrapper = compile(
+        `<template>
+          <teleport to="#teleport4">hello</teleport>
+        </template>`,
+        ref({}),
+        undefined,
+        {
+          vapor: true,
+          ssr: false,
+        },
+      )
+
+      const { block, container } = await mountWithHydration(
+        '<!--teleport start--><!--teleport end-->',
+        `<components.Wrapper></components.Wrapper>`,
+        undefined,
+        {
+          Wrapper,
+        },
+      )
+
+      const teleport = (block as VaporComponentInstance)
+        .block as TeleportFragment
+      expect(teleport.anchor).toBe(container.childNodes[1])
+      expect(teleport.target).toBe(teleportContainer)
+      expect(teleport.targetStart).toBe(teleportContainer.childNodes[0])
+      expect(teleport.nodes).toBe(teleportContainer.childNodes[1])
+      expect(teleport.targetAnchor).toBe(teleportContainer.childNodes[2])
+    })
 
     test('nested', async () => {})
 

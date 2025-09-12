@@ -230,7 +230,7 @@ export class TeleportFragment extends VaporFragment {
         setCurrentHydrationNode(nextNode)
         this.anchor = locateTeleportEndAnchor(nextNode)!
         this.targetStart = targetNode
-        this.targetAnchor = targetNode && targetNode.nextSibling!
+        this.targetAnchor = targetNode && targetNode.nextSibling
       } else {
         this.anchor = locateTeleportEndAnchor()!
         let targetAnchor = targetNode
@@ -241,13 +241,13 @@ export class TeleportFragment extends VaporFragment {
             } else if ((targetAnchor as Comment).data === 'teleport anchor') {
               this.targetAnchor = targetAnchor
               ;(target as TeleportTargetElement)._lpa =
-                this.targetAnchor && this.targetAnchor.nextSibling!
+                this.targetAnchor && this.targetAnchor.nextSibling
               break
             }
           }
-          targetAnchor = targetAnchor.nextSibling!
+          targetAnchor = targetAnchor.nextSibling
         }
-        setCurrentHydrationNode(targetNode && targetNode.nextSibling!)
+        setCurrentHydrationNode(targetNode && targetNode.nextSibling)
       }
 
       this.initChildren()
