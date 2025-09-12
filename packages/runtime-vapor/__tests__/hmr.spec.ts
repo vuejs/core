@@ -76,6 +76,25 @@ describe('hot module replacement', () => {
       `"<div>child changed</div><div>root</div>"`,
     )
 
+    // reload child again
+    reload(childId, {
+      __hmrId: childId,
+      __vapor: true,
+      setup() {
+        const msg = ref('child changed2')
+        return { msg }
+      },
+      render(ctx: any) {
+        const n0 = template(`<div> </div>`)()
+        const x0 = child(n0 as any)
+        renderEffect(() => setText(x0 as any, ctx.msg))
+        return [n0]
+      },
+    })
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      `"<div>child changed2</div><div>root</div>"`,
+    )
+
     // reload parent
     reload(parentId, {
       __hmrId: parentId,
@@ -93,7 +112,7 @@ describe('hot module replacement', () => {
       },
     })
     expect(root.innerHTML).toMatchInlineSnapshot(
-      `"<div>child changed</div><div>root changed</div>"`,
+      `"<div>child changed2</div><div>root changed</div>"`,
     )
   })
 })
