@@ -206,6 +206,11 @@ export class TeleportFragment extends VaporFragment {
       this.targetAnchor = undefined
     }
 
+    if (this.anchor) {
+      remove(this.anchor, this.anchor.parentNode!)
+      this.anchor = undefined
+    }
+
     if (this.placeholder) {
       remove(this.placeholder!, parent)
       this.placeholder = undefined
@@ -224,13 +229,14 @@ export class TeleportFragment extends VaporFragment {
       const disabled = isTeleportDisabled(this.resolvedProps!)
       const targetNode =
         (target as TeleportTargetElement)._lpa || target.firstChild
+      this.placeholder = currentHydrationNode!
       if (disabled) {
-        this.placeholder = currentHydrationNode!
         let nextNode = this.placeholder.nextSibling!
         setCurrentHydrationNode(nextNode)
-        this.anchor = locateTeleportEndAnchor(nextNode)!
+        this.mountAnchor = this.anchor = locateTeleportEndAnchor(nextNode)!
         this.targetStart = targetNode
         this.targetAnchor = targetNode && targetNode.nextSibling
+        this.mountContainer = this.anchor.parentNode
       } else {
         this.anchor = locateTeleportEndAnchor()!
         let targetAnchor = targetNode
@@ -239,7 +245,7 @@ export class TeleportFragment extends VaporFragment {
             if ((targetAnchor as Comment).data === 'teleport start anchor') {
               this.targetStart = targetAnchor
             } else if ((targetAnchor as Comment).data === 'teleport anchor') {
-              this.targetAnchor = targetAnchor
+              this.mountAnchor = this.targetAnchor = targetAnchor
               ;(target as TeleportTargetElement)._lpa =
                 this.targetAnchor && this.targetAnchor.nextSibling
               break
@@ -247,7 +253,10 @@ export class TeleportFragment extends VaporFragment {
           }
           targetAnchor = targetAnchor.nextSibling
         }
-        setCurrentHydrationNode(targetNode && targetNode.nextSibling)
+        if (targetNode) {
+          this.mountContainer = this.targetAnchor!.parentNode
+          setCurrentHydrationNode(targetNode.nextSibling)
+        }
       }
 
       this.initChildren()

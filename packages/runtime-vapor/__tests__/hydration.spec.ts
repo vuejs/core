@@ -3175,9 +3175,130 @@ describe('Vapor Mode hydration', () => {
       expect(teleport.targetAnchor).toBe(teleportContainer.childNodes[2])
     })
 
-    test('nested', async () => {})
+    test('nested', async () => {
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport5'
+      teleportContainer.innerHTML = `<!--teleport start anchor--><!--teleport start--><!--teleport end--><!--teleport anchor--><!--teleport start anchor--><div>child</div><!--teleport anchor-->`
+      document.body.appendChild(teleportContainer)
 
-    test('unmount (full integration)', async () => {})
+      const { block, container } = await mountWithHydration(
+        '<!--teleport start--><!--teleport end-->',
+        `<teleport to="#teleport5">
+          <teleport to="#teleport5"><div>child</div></teleport>
+        </teleport>`,
+      )
+
+      const teleport = block as TeleportFragment
+      expect(teleport.anchor).toBe(container.childNodes[1])
+      expect(teleport.targetStart).toBe(teleportContainer.childNodes[0])
+      expect(teleport.targetAnchor).toBe(teleportContainer.childNodes[3])
+
+      const childTeleport = teleport.nodes as TeleportFragment
+      expect(childTeleport.anchor).toBe(teleportContainer.childNodes[2])
+      expect(childTeleport.targetStart).toBe(teleportContainer.childNodes[4])
+      expect(childTeleport.targetAnchor).toBe(teleportContainer.childNodes[6])
+      expect(childTeleport.nodes).toBe(teleportContainer.childNodes[5])
+    })
+
+    test('unmount (full integration)', async () => {
+      const data = ref({
+        toggle: ref(true),
+      })
+
+      const comp1Code = `<Teleport to="#target"> 
+            <span>Teleported Comp1</span>
+          </Teleport>`
+      const Comp1 = compile(
+        `<template>${comp1Code}</template>`,
+        data,
+        undefined,
+        {
+          vapor: true,
+          ssr: false,
+        },
+      )
+      const ssrComp1 = compile(
+        `<template>${comp1Code}</template>`,
+        data,
+        undefined,
+        {
+          vapor: true,
+          ssr: true,
+        },
+      )
+
+      const comp2Code = `<div>Comp2</div>`
+      const Comp2 = compile(
+        `<template>${comp2Code}</template>`,
+        data,
+        undefined,
+        {
+          vapor: true,
+          ssr: false,
+        },
+      )
+      const ssrComp2 = compile(
+        `<template>${comp2Code}</template>`,
+        data,
+        undefined,
+        {
+          vapor: true,
+          ssr: true,
+        },
+      )
+
+      const appCode = `<div>
+            <components.Comp1 v-if="data.toggle"/>
+            <components.Comp2 v-else/>
+          </div>`
+
+      const ssrApp = compile(
+        `<template>${appCode}</template>`,
+        data,
+        {
+          Comp1: ssrComp1,
+          Comp2: ssrComp2,
+        },
+        {
+          vapor: true,
+          ssr: true,
+        },
+      )
+
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'target'
+      document.body.appendChild(teleportContainer)
+
+      const ctx = {} as any
+      const mainHtml = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(ssrApp),
+        ctx,
+      )
+      expect(mainHtml).toBe(
+        '<div><!--teleport start--><!--teleport end--></div>',
+      )
+      teleportContainer.innerHTML = ctx.teleports!['#target']
+
+      const { container } = await mountWithHydration(mainHtml, appCode, data, {
+        Comp1,
+        Comp2,
+      })
+
+      expect(container.innerHTML).toBe(
+        '<div><!--teleport start--><!--teleport end--><!--if--></div>',
+      )
+      expect(teleportContainer.innerHTML).toBe(
+        `<!--teleport start anchor-->` +
+          `<span>Teleported Comp1</span>` +
+          `<!--teleport anchor-->`,
+      )
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.value.toggle = false
+      await nextTick()
+      expect(container.innerHTML).toBe('<div><div>Comp2</div><!--if--></div>')
+      expect(teleportContainer.innerHTML).toBe('')
+    })
 
     test('unmount (mismatch + full integration)', async () => {})
 
