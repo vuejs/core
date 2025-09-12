@@ -21,6 +21,10 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
   pushWarningContext(instance)
+  if (instance.renderEffects) {
+    instance.renderEffects.forEach(e => e.stop())
+    instance.renderEffects = []
+  }
   devRender(instance)
   popWarningContext()
   setCurrentInstance(...prev)
@@ -45,6 +49,7 @@ export function hmrReload(
   )
   setCurrentInstance(...prev)
   mountComponent(newInstance, parent, anchor)
+
   updateParentBlockOnHmrReload(parentInstance, instance, newInstance)
   updateParentTeleportOnHmrReload(instance, newInstance)
 }
