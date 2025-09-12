@@ -2942,6 +2942,106 @@ describe('Vapor Mode hydration', () => {
         `"<!--teleport start anchor--><span>baz</span><span class="baz"></span><!--teleport anchor-->"`,
       )
     })
+
+    test('multiple + integration', async () => {
+      const data = ref({
+        msg: ref('foo'),
+        fn1: vi.fn(),
+        fn2: vi.fn(),
+      })
+
+      const code = `
+          <teleport to="#teleport2">
+            <span>{{data.msg}}</span>
+            <span :class="data.msg" @click="data.fn1"></span>
+          </teleport>
+          <teleport to="#teleport2">
+            <span>{{data.msg}}2</span>
+            <span :class="data.msg + 2" @click="data.fn2"></span>
+          </teleport>`
+
+      const serverComp = compile(
+        `<template>${code}</template>`,
+        data,
+        undefined,
+        {
+          vapor: true,
+          ssr: true,
+        },
+      )
+
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport2'
+      const ctx = {} as any
+      const mainHtml = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(serverComp),
+        ctx,
+      )
+      expect(mainHtml).toMatchInlineSnapshot(
+        `"<!--[--><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--><!--]-->"`,
+      )
+
+      const teleportHtml = ctx.teleports!['#teleport2']
+      expect(teleportHtml).toMatchInlineSnapshot(
+        `"<!--teleport start anchor--><span>foo</span><span class="foo"></span><!--teleport anchor--><!--teleport start anchor--><span>foo2</span><span class="foo2"></span><!--teleport anchor-->"`,
+      )
+
+      teleportContainer.innerHTML = teleportHtml
+      document.body.appendChild(teleportContainer)
+
+      const { frag, container } = await mountWithHydration(mainHtml, code, data)
+
+      const teleports = frag as any as TeleportFragment[]
+      const teleport1 = teleports[0]
+      const teleport2 = teleports[1]
+      expect(teleport1.anchor).toBe(container.childNodes[2])
+      expect(teleport2.anchor).toBe(container.childNodes[4])
+
+      expect(teleport1.target).toBe(teleportContainer)
+      expect(teleport1.targetStart).toBe(teleportContainer.childNodes[0])
+      expect((teleport1.nodes as Node[])[0]).toBe(
+        teleportContainer.childNodes[1],
+      )
+      expect(teleport1.targetAnchor).toBe(teleportContainer.childNodes[3])
+
+      expect(teleport2.target).toBe(teleportContainer)
+      expect(teleport2.targetStart).toBe(teleportContainer.childNodes[4])
+      expect((teleport2.nodes as Node[])[0]).toBe(
+        teleportContainer.childNodes[5],
+      )
+      expect(teleport2.targetAnchor).toBe(teleportContainer.childNodes[7])
+
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<!--[--><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--><!--]-->"`,
+      )
+
+      // event handler
+      triggerEvent('click', teleportContainer.querySelector('.foo')!)
+      expect(data.value.fn1).toHaveBeenCalled()
+
+      triggerEvent('click', teleportContainer.querySelector('.foo2')!)
+      expect(data.value.fn2).toHaveBeenCalled()
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(formatHtml(teleportContainer.innerHTML)).toMatchInlineSnapshot(
+        `"<!--teleport start anchor--><span>bar</span><span class="bar"></span><!--teleport anchor--><!--teleport start anchor--><span>bar2</span><span class="bar2"></span><!--teleport anchor-->"`,
+      )
+    })
+
+    test('disabled', async () => {})
+
+    test('disabled + as component root', async () => {})
+
+    test('as component root', async () => {})
+
+    test('nested', async () => {})
+
+    test('unmount (full integration)', async () => {})
+
+    test('unmount (mismatch + full integration)', async () => {})
+
+    test('target change (mismatch + full integration)', async () => {})
   })
 
   describe.todo('Suspense')

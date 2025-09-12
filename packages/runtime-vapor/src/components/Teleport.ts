@@ -9,13 +9,7 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import { type Block, type BlockFn, insert, remove } from '../block'
-import {
-  child,
-  createComment,
-  createTextNode,
-  next,
-  querySelector,
-} from '../dom/node'
+import { createComment, createTextNode, querySelector } from '../dom/node'
 import {
   type LooseRawProps,
   type LooseRawSlots,
@@ -228,19 +222,17 @@ export class TeleportFragment extends VaporFragment {
     ))
     if (target) {
       const disabled = isTeleportDisabled(this.resolvedProps!)
-      const targetNode = (target as TeleportTargetElement)._lpa || child(target)
+      const targetNode =
+        (target as TeleportTargetElement)._lpa || target.firstChild
       if (disabled) {
         this.placeholder = currentHydrationNode!
-        let nextNode = next(this.placeholder)
+        let nextNode = this.placeholder.nextSibling!
         setCurrentHydrationNode(nextNode)
-        while (nextNode && !isComment(nextNode, 'teleport end')) {
-          nextNode = next(nextNode)
-        }
-        this.anchor = nextNode
+        this.anchor = locateTeleportEndAnchor(nextNode)!
         this.targetStart = targetNode
-        this.targetAnchor = targetNode && next(targetNode)
+        this.targetAnchor = targetNode && targetNode.nextSibling!
       } else {
-        this.anchor = next(currentHydrationNode!)
+        this.anchor = locateTeleportEndAnchor()!
         let targetAnchor = targetNode
         while (targetAnchor) {
           if (targetAnchor && targetAnchor.nodeType === 8) {
@@ -249,13 +241,13 @@ export class TeleportFragment extends VaporFragment {
             } else if ((targetAnchor as Comment).data === 'teleport anchor') {
               this.targetAnchor = targetAnchor
               ;(target as TeleportTargetElement)._lpa =
-                this.targetAnchor && next(this.targetAnchor)
+                this.targetAnchor && this.targetAnchor.nextSibling!
               break
             }
           }
-          targetAnchor = next(targetAnchor)
+          targetAnchor = targetAnchor.nextSibling!
         }
-        setCurrentHydrationNode(targetNode && next(targetNode))
+        setCurrentHydrationNode(targetNode && targetNode.nextSibling!)
       }
 
       this.initChildren()
@@ -268,4 +260,16 @@ export function isVaporTeleport(
   value: unknown,
 ): value is typeof VaporTeleportImpl {
   return value === VaporTeleportImpl
+}
+
+function locateTeleportEndAnchor(
+  node: Node = currentHydrationNode!,
+): Node | null {
+  while (node) {
+    if (isComment(node, 'teleport end')) {
+      return node
+    }
+    node = node.nextSibling as Node
+  }
+  return null
 }
