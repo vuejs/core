@@ -234,11 +234,12 @@ export class TeleportFragment extends VaporFragment {
         let nextNode = this.placeholder.nextSibling!
         setCurrentHydrationNode(nextNode)
         this.mountAnchor = this.anchor = locateTeleportEndAnchor(nextNode)!
+        this.mountContainer = this.anchor.parentNode
         this.targetStart = targetNode
         this.targetAnchor = targetNode && targetNode.nextSibling
-        this.mountContainer = this.anchor.parentNode
       } else {
         this.anchor = locateTeleportEndAnchor()!
+        this.mountContainer = target
         let targetAnchor = targetNode
         while (targetAnchor) {
           if (targetAnchor && targetAnchor.nodeType === 8) {
@@ -253,8 +254,19 @@ export class TeleportFragment extends VaporFragment {
           }
           targetAnchor = targetAnchor.nextSibling
         }
+
+        // if the HTML corresponding to Teleport is not embedded in the
+        // correct position on the final page during SSR. the targetAnchor will
+        // always be null, we need to manually add targetAnchor to ensure
+        // Teleport it can properly unmount or move
+        if (!this.targetAnchor) {
+          target.appendChild((this.targetStart = createTextNode('1')))
+          target.appendChild(
+            (this.mountAnchor = this.targetAnchor = createTextNode('2')),
+          )
+        }
+
         if (targetNode) {
-          this.mountContainer = this.targetAnchor!.parentNode
           setCurrentHydrationNode(targetNode.nextSibling)
         }
       }

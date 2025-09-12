@@ -3325,7 +3325,77 @@ describe('Vapor Mode hydration', () => {
       expect(teleportContainer.innerHTML).toBe('')
     })
 
-    test('unmount (mismatch + full integration)', async () => {})
+    // TODO: need merge mismatch handling code from #13226
+    test.todo('unmount (mismatch + full integration)', async () => {
+      const targetId = 'teleport7'
+      const data = ref({
+        toggle: ref(true),
+      })
+
+      const template1 = `<Teleport to="#${targetId}"><span>Teleported Comp1</span></Teleport>`
+      const Comp1 = compileVaporComponent(template1)
+      const SSRComp1 = compileVaporComponent(
+        template1,
+        undefined,
+        undefined,
+        true,
+      )
+
+      const template2 = `<div>Comp2</div>`
+      const Comp2 = compileVaporComponent(template2)
+      const SSRComp2 = compileVaporComponent(
+        template2,
+        undefined,
+        undefined,
+        true,
+      )
+
+      const appCode = `
+        <div>
+          <components.Comp1 v-if="data.toggle"/>
+          <components.Comp2 v-else/>
+        </div>
+      `
+
+      const SSRApp = compileVaporComponent(
+        appCode,
+        data,
+        {
+          Comp1: SSRComp1,
+          Comp2: SSRComp2,
+        },
+        true,
+      )
+
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = targetId
+      document.body.appendChild(teleportContainer)
+
+      const mainHtml = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      expect(mainHtml).toBe(
+        '<div><!--teleport start--><!--teleport end--></div>',
+      )
+      // teleportContainer.innerHTML =
+      expect(teleportContainer.innerHTML).toBe('')
+
+      const { container } = await mountWithHydration(mainHtml, appCode, data, {
+        Comp1,
+        Comp2,
+      })
+
+      expect(container.innerHTML).toBe(
+        '<div><!--teleport start--><!--teleport end--><!--if--></div>',
+      )
+      expect(teleportContainer.innerHTML).toBe(`<span>Teleported Comp1</span>`)
+      expect(`mismatch`).toHaveBeenWarned()
+
+      data.value.toggle = false
+      await nextTick()
+      expect(container.innerHTML).toBe('<div><div>Comp2</div><!--if--></div>')
+      expect(teleportContainer.innerHTML).toBe('')
+    })
 
     test('target change (mismatch + full integration)', async () => {})
   })
