@@ -42,7 +42,7 @@ export class RenderEffect extends ReactiveEffect {
           ? e => invokeArrayFns(instance.rtg!, e)
           : void 0
 
-        // hmr rerender needs to stop all effects under the current instance
+        // register effect for stopping them during HMR rerender
         ;(instance.renderEffects || (instance.renderEffects = [])).push(this)
       }
       job.i = instance
