@@ -44,42 +44,37 @@ export const VaporTeleportImpl = {
 }
 
 export class TeleportFragment extends VaporFragment {
-  rawProps?: LooseRawProps
-  resolvedProps?: TeleportProps
-  rawSlots?: LooseRawSlots
+  anchor?: Node
+  private rawProps?: LooseRawProps
+  private resolvedProps?: TeleportProps
+  private rawSlots?: LooseRawSlots
 
   target?: ParentNode | null
   targetAnchor?: Node | null
-  anchor?: Node
+  targetStart?: Node | null
 
-  private targetStart?: Node | null
-  private mainAnchor?: Node
-  private placeholder?: Node
-  private mountContainer?: ParentNode | null
-  private mountAnchor?: Node | null
+  placeholder?: Node
+  mountContainer?: ParentNode | null
+  mountAnchor?: Node | null
 
   constructor(props: LooseRawProps, slots: LooseRawSlots) {
     super([])
-    this.anchor = isHydrating ? undefined : createTextNode()
     this.rawProps = props
     this.rawSlots = slots
+    this.anchor = isHydrating
+      ? undefined
+      : __DEV__
+        ? createComment('teleport end')
+        : createTextNode()
 
     this.init()
-  }
-
-  get currentParent(): ParentNode {
-    return (this.mountContainer || this.parent)!
-  }
-
-  get currentAnchor(): Node | null {
-    return this.mountAnchor || this.mainAnchor!
   }
 
   get parent(): ParentNode | null {
     return this.anchor ? this.anchor.parentNode : null
   }
 
-  init(): void {
+  private init(): void {
     renderEffect(() => {
       // access the props to trigger tracking
       this.resolvedProps = extend(
@@ -102,11 +97,11 @@ export class TeleportFragment extends VaporFragment {
       // HMR updates. returns empty array if content is mounted in target
       // container to prevent incorrect parent node lookup.
       this.getNodes = () =>
-        this.parent !== this.currentParent ? [] : this.nodes
+        this.parent !== this.mountContainer! ? [] : this.nodes
     }
   }
 
-  initChildren(): void {
+  private initChildren(): void {
     renderEffect(() =>
       this.handleChildrenUpdate(
         this.rawSlots!.default && (this.rawSlots!.default as BlockFn)(),
@@ -125,7 +120,7 @@ export class TeleportFragment extends VaporFragment {
     }
   }
 
-  handleChildrenUpdate(children: Block): void {
+  private handleChildrenUpdate(children: Block): void {
     // not mounted yet
     if (!this.parent || isHydrating) {
       this.nodes = children
@@ -133,12 +128,12 @@ export class TeleportFragment extends VaporFragment {
     }
 
     // teardown previous nodes
-    remove(this.nodes, this.currentParent)
+    remove(this.nodes, this.mountContainer!)
     // mount new nodes
-    insert((this.nodes = children), this.currentParent, this.currentAnchor)
+    insert((this.nodes = children), this.mountContainer!, this.mountAnchor!)
   }
 
-  handlePropsUpdate(): void {
+  private handlePropsUpdate(): void {
     // not mounted yet
     if (!this.parent || isHydrating) return
 
@@ -178,7 +173,7 @@ export class TeleportFragment extends VaporFragment {
 
     // mount into main container
     if (isTeleportDisabled(this.resolvedProps!)) {
-      mount(this.parent, this.mainAnchor!)
+      mount(this.parent, this.anchor!)
     }
     // mount into target container
     else {
@@ -197,9 +192,7 @@ export class TeleportFragment extends VaporFragment {
     this.placeholder = __DEV__
       ? createComment('teleport start')
       : createTextNode()
-    this.mainAnchor = __DEV__ ? createComment('teleport end') : createTextNode()
     insert(this.placeholder, container, anchor)
-    insert(this.mainAnchor, container, anchor)
     insert(this.anchor!, container, anchor)
     this.handlePropsUpdate()
   }
@@ -207,7 +200,7 @@ export class TeleportFragment extends VaporFragment {
   remove = (parent: ParentNode | undefined = this.parent!): void => {
     // remove nodes
     if (this.nodes) {
-      remove(this.nodes, this.currentParent)
+      remove(this.nodes, this.mountContainer!)
       this.nodes = []
     }
 
@@ -222,8 +215,6 @@ export class TeleportFragment extends VaporFragment {
     if (this.placeholder) {
       remove(this.placeholder!, parent)
       this.placeholder = undefined
-      remove(this.mainAnchor!, parent)
-      this.mainAnchor = undefined
     }
 
     this.mountContainer = undefined
@@ -245,11 +236,11 @@ export class TeleportFragment extends VaporFragment {
         while (nextNode && !isComment(nextNode, 'teleport end')) {
           nextNode = next(nextNode)
         }
-        this.mainAnchor = this.anchor = nextNode
+        this.anchor = nextNode
         this.targetStart = targetNode
         this.targetAnchor = targetNode && next(targetNode)
       } else {
-        this.mainAnchor = this.anchor = next(currentHydrationNode!)
+        this.anchor = next(currentHydrationNode!)
         let targetAnchor = targetNode
         while (targetAnchor) {
           if (targetAnchor && targetAnchor.nodeType === 8) {

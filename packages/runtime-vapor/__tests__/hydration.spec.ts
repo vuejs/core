@@ -5,6 +5,8 @@ import * as runtimeVapor from '../src'
 import * as runtimeDom from '@vue/runtime-dom'
 import * as VueServerRenderer from '@vue/server-renderer'
 import { isString } from '@vue/shared'
+import type { VaporComponentInstance } from '../src/component'
+import type { TeleportFragment } from '../src/components/Teleport'
 
 const formatHtml = (raw: string) => {
   return raw
@@ -93,6 +95,7 @@ async function mountWithHydration(
   app.mount(container)
 
   return {
+    frag: (app._instance! as VaporComponentInstance).block as TeleportFragment,
     container,
   }
 }
@@ -2880,11 +2883,12 @@ describe('Vapor Mode hydration', () => {
         disabled: ref(false),
         fn: vi.fn(),
       })
+
       const teleportContainer = document.createElement('div')
       teleportContainer.id = 'teleport'
       teleportContainer.innerHTML = `<!--teleport start anchor--><span>foo</span><span class="foo"></span><!--teleport anchor-->`
       document.body.appendChild(teleportContainer)
-      const { container } = await mountWithHydration(
+      const { frag, container } = await mountWithHydration(
         '<!--teleport start--><!--teleport end-->',
         `<teleport to="#teleport" :disabled="data.disabled">
           <span>{{data.msg}}</span>
@@ -2892,6 +2896,13 @@ describe('Vapor Mode hydration', () => {
         </teleport>`,
         data,
       )
+
+      expect(frag.anchor).toBe(container.lastChild)
+      expect(frag.target).toBe(teleportContainer)
+      expect(frag.targetStart).toBe(teleportContainer.childNodes[0])
+      expect((frag.nodes as Node[])[0]).toBe(teleportContainer.childNodes[1])
+      expect((frag.nodes as Node[])[1]).toBe(teleportContainer.childNodes[2])
+      expect(frag.targetAnchor).toBe(teleportContainer.childNodes[3])
 
       expect(container.innerHTML).toMatchInlineSnapshot(
         `"<!--teleport start--><!--teleport end-->"`,
