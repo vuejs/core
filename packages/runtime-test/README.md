@@ -12,7 +12,7 @@ const App = {
     return {
       msg: 'Hello World!'
     }
-  }
+  },
   render () {
     return h('div', this.msg)
   }
