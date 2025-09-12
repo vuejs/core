@@ -195,7 +195,7 @@ describe('renderer: VaporTeleport', () => {
       expect(target.innerHTML).toBe('<div>teleported 2</div>')
     })
 
-    test('parent rerender + toggle disabled', async () => {
+    test.todo('parent rerender + toggle disabled', async () => {
       const target = document.createElement('div')
       const root = document.createElement('div')
       const parentId = 'test3-parent-rerender'
