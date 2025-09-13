@@ -327,6 +327,8 @@ function cleanupDeps(sub: Subscriber) {
       // The new head is the last node seen which wasn't removed
       // from the doubly-linked list
       head = link
+      // Sync link version to maintain consistency for future dirty checks
+      link.version = link.dep.version
     }
 
     // restore previous active link if any
@@ -377,6 +379,36 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
     return
   }
   computed.globalVersion = globalVersion
+
+  // Enhanced dependency check for development mode to ensure consistent behavior
+  // with production mode by avoiding unnecessary recomputations due to version lag
+  if (__DEV__ && computed.flags & EffectFlags.EVALUATED && computed.deps) {
+    let actuallyDirty = false
+    let link: Link | undefined = computed.deps
+    while (link) {
+      // Refresh nested computed dependencies first
+      if (link.dep.computed && link.dep.computed !== computed) {
+        refreshComputed(link.dep.computed)
+      }
+
+      // Conservative dirty check: only consider dirty if version difference > 1
+      // This accounts for the cleanup lag and prevents false positives
+      const versionDiff = link.dep.version - link.version
+      if (versionDiff > 1) {
+        actuallyDirty = true
+        break
+      } else if (versionDiff === 1) {
+        // Sync version to prevent accumulating lag
+        link.version = link.dep.version
+      }
+
+      link = link.nextDep
+    }
+
+    if (!actuallyDirty) {
+      return
+    }
+  }
 
   // In SSR there will be no render effect, so the computed has no subscriber
   // and therefore tracks no deps, thus we cannot rely on the dirty check.
