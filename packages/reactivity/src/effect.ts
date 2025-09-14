@@ -327,8 +327,6 @@ function cleanupDeps(sub: Subscriber) {
       // The new head is the last node seen which wasn't removed
       // from the doubly-linked list
       head = link
-      // Sync link version to maintain consistency for future dirty checks
-      link.version = link.dep.version
     }
 
     // restore previous active link if any
@@ -380,32 +378,31 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   }
   computed.globalVersion = globalVersion
 
-  // Enhanced dependency check for development mode to ensure consistent behavior
-  // with production mode by avoiding unnecessary recomputations due to version lag
+  // In development mode, perform enhanced dependency tracking to prevent
+  // unnecessary recomputations while preserving correct reactivity behavior
   if (__DEV__ && computed.flags & EffectFlags.EVALUATED && computed.deps) {
-    let actuallyDirty = false
+    let hasActualChanges = false
     let link: Link | undefined = computed.deps
+
     while (link) {
-      // Refresh nested computed dependencies first
+      // Always refresh nested computed dependencies first
       if (link.dep.computed && link.dep.computed !== computed) {
         refreshComputed(link.dep.computed)
       }
 
-      // Conservative dirty check: only consider dirty if version difference > 1
-      // This accounts for the cleanup lag and prevents false positives
-      const versionDiff = link.dep.version - link.version
-      if (versionDiff > 1) {
-        actuallyDirty = true
+      // Check if this dependency actually changed
+      // Only skip recomputation if ALL dependencies are unchanged
+      if (link.dep.version !== link.version) {
+        hasActualChanges = true
         break
-      } else if (versionDiff === 1) {
-        // Sync version to prevent accumulating lag
-        link.version = link.dep.version
       }
 
       link = link.nextDep
     }
 
-    if (!actuallyDirty) {
+    // If no dependencies actually changed, we can safely skip recomputation
+    // This prevents the dev mode lag issue while preserving correctness
+    if (!hasActualChanges) {
       return
     }
   }
