@@ -47,6 +47,7 @@ export type WatchCallback<V = any, OV = any> = (
 export type OnCleanup = (cleanupFn: () => void) => void
 
 export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
+  signal?: AbortSignal
   immediate?: Immediate
   deep?: boolean | number
   once?: boolean
@@ -122,7 +123,7 @@ export function watch(
   cb?: WatchCallback | null,
   options: WatchOptions = EMPTY_OBJ,
 ): WatchHandle {
-  const { immediate, deep, once, scheduler, augmentJob, call } = options
+  const { immediate, deep, once, signal, scheduler, augmentJob, call } = options
 
   const warnInvalidSource = (s: unknown) => {
     ;(options.onWarn || warn)(
@@ -224,6 +225,10 @@ export function watch(
       _cb(...args)
       watchHandle()
     }
+  }
+
+  if (signal) {
+    signal.addEventListener('abort', watchHandle, { once: true })
   }
 
   let oldValue: any = isMultiSource
