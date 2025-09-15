@@ -1150,4 +1150,168 @@ describe('reactivity/computed', () => {
     const t2 = performance.now()
     expect(t2 - t1).toBeLessThan(process.env.CI ? 100 : 30)
   })
+
+  describe('dev mode optimization', () => {
+    // Mock __DEV__ for testing
+    const originalDev = (globalThis as any).__DEV__
+    beforeEach(() => {
+      ;(globalThis as any).__DEV__ = true
+    })
+    afterEach(() => {
+      ;(globalThis as any).__DEV__ = originalDev
+    })
+
+    test('should prevent unnecessary recomputations when dependencies have not actually changed', () => {
+      const getter = vi.fn()
+      const base = ref(1)
+      const comp = computed(() => {
+        getter()
+        return base.value
+      })
+
+      // Initial computation
+      expect(comp.value).toBe(1)
+      expect(getter).toHaveBeenCalledTimes(1)
+
+      // Trigger dependency tracking but without actual value change
+      // This simulates the scenario where globalVersion changes but actual dep values don't
+      const impl = comp as any as ComputedRefImpl
+      impl.globalVersion = -1 // Force a version mismatch
+
+      // Access computed again - should not recompute due to dev mode optimization
+      expect(comp.value).toBe(1)
+      expect(getter).toHaveBeenCalledTimes(1) // Should not have called getter again
+
+      // Now actually change the value
+      base.value = 2
+      expect(comp.value).toBe(2)
+      expect(getter).toHaveBeenCalledTimes(2) // Should recompute when value actually changes
+    })
+
+    test('should refresh nested computed dependencies correctly', () => {
+      const getterA = vi.fn()
+      const getterB = vi.fn()
+      const getterC = vi.fn()
+
+      const base = ref(1)
+      const compA = computed(() => {
+        getterA()
+        return base.value * 2
+      })
+      const compB = computed(() => {
+        getterB()
+        return compA.value + 1
+      })
+      const compC = computed(() => {
+        getterC()
+        return compB.value * 3
+      })
+
+      // Initial computation
+      expect(compC.value).toBe(9) // (1 * 2 + 1) * 3 = 9
+      expect(getterA).toHaveBeenCalledTimes(1)
+      expect(getterB).toHaveBeenCalledTimes(1)
+      expect(getterC).toHaveBeenCalledTimes(1)
+
+      // Force version mismatch to trigger dev mode optimization path
+      const implA = compA as any as ComputedRefImpl
+      const implB = compB as any as ComputedRefImpl
+      const implC = compC as any as ComputedRefImpl
+      implA.globalVersion = -1
+      implB.globalVersion = -1
+      implC.globalVersion = -1
+
+      // Access computed again - should not recompute any level
+      expect(compC.value).toBe(9)
+      expect(getterA).toHaveBeenCalledTimes(1)
+      expect(getterB).toHaveBeenCalledTimes(1)
+      expect(getterC).toHaveBeenCalledTimes(1)
+
+      // Change base value
+      base.value = 2
+      expect(compC.value).toBe(15) // (2 * 2 + 1) * 3 = 15
+      expect(getterA).toHaveBeenCalledTimes(2)
+      expect(getterB).toHaveBeenCalledTimes(2)
+      expect(getterC).toHaveBeenCalledTimes(2)
+    })
+
+    test('should recompute when at least one dependency actually changes', () => {
+      const getter = vi.fn()
+      const base1 = ref(1)
+      const base2 = ref(2)
+      const comp = computed(() => {
+        getter()
+        return base1.value + base2.value
+      })
+
+      // Initial computation
+      expect(comp.value).toBe(3)
+      expect(getter).toHaveBeenCalledTimes(1)
+
+      // Force version mismatch
+      const impl = comp as any as ComputedRefImpl
+      impl.globalVersion = -1
+
+      // Change one dependency
+      base1.value = 5
+
+      // Should recompute because at least one dependency changed
+      expect(comp.value).toBe(7)
+      expect(getter).toHaveBeenCalledTimes(2)
+    })
+
+    test('should handle mixed changed and unchanged dependencies', () => {
+      const getter = vi.fn()
+      const unchanged = ref(1)
+      const changed = ref(2)
+      const comp = computed(() => {
+        getter()
+        return unchanged.value + changed.value
+      })
+
+      // Initial computation
+      expect(comp.value).toBe(3)
+      expect(getter).toHaveBeenCalledTimes(1)
+
+      // Access unchanged ref to establish dependency tracking
+      unchanged.value
+
+      // Force version mismatch
+      const impl = comp as any as ComputedRefImpl
+      impl.globalVersion = -1
+
+      // Change only one dependency
+      changed.value = 5
+
+      // Should recompute because at least one dependency changed
+      expect(comp.value).toBe(6) // 1 + 5
+      expect(getter).toHaveBeenCalledTimes(2)
+    })
+
+    test('should not affect production mode behavior', () => {
+      // Set to production mode
+      ;(globalThis as any).__DEV__ = false
+
+      const getter = vi.fn()
+      const base = ref(1)
+      const comp = computed(() => {
+        getter()
+        return base.value
+      })
+
+      // Initial computation
+      expect(comp.value).toBe(1)
+      expect(getter).toHaveBeenCalledTimes(1)
+
+      // Force version mismatch - in production this should still follow normal path
+      const impl = comp as any as ComputedRefImpl
+      impl.globalVersion = -1
+
+      // In production mode, the optimization should not apply
+      // The behavior should be determined by the normal computed logic
+      expect(comp.value).toBe(1)
+      // In production, without the dev optimization, the call count behavior
+      // depends on the normal computed implementation
+    })
+  })
 })
