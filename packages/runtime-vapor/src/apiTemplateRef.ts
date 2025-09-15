@@ -21,7 +21,7 @@ import {
   isString,
   remove,
 } from '@vue/shared'
-import { DynamicFragment } from './block'
+import { DynamicFragment } from './fragment'
 
 export type NodeRef = string | Ref | ((ref: Element) => void)
 export type RefEl = Element | VaporComponentInstance

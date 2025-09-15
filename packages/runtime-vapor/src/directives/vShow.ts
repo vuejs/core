@@ -6,8 +6,9 @@ import {
 } from '@vue/runtime-dom'
 import { renderEffect } from '../renderEffect'
 import { isVaporComponent } from '../component'
-import { type Block, DynamicFragment, VaporFragment } from '../block'
+import type { Block } from '../block'
 import { isArray } from '@vue/shared'
+import { DynamicFragment, VaporFragment } from '../fragment'
 
 export function applyVShow(target: Block, source: () => any): void {
   if (isVaporComponent(target)) {
