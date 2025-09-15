@@ -130,6 +130,19 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
         tag = 'span'
       }
 
+      // Filter out transition-specific props and TransitionGroup-specific props
+      // to avoid invalid HTML attributes
+      const filteredProps: Record<string, any> = {}
+      for (const key in rawProps) {
+        if (
+          !(key in TransitionPropsValidators) &&
+          key !== 'tag' &&
+          key !== 'moveClass'
+        ) {
+          filteredProps[key] = (rawProps as any)[key]
+        }
+      }
+
       prevChildren = []
       if (children) {
         for (let i = 0; i < children.length; i++) {
@@ -167,7 +180,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
         }
       }
 
-      return createVNode(tag, null, children)
+      return createVNode(tag, filteredProps, children)
     }
   },
 })
