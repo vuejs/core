@@ -525,4 +525,14 @@ describe('stringify static html', () => {
 
     expect(code).toMatchSnapshot()
   })
+
+  test('eligible content + v-once node', () => {
+    const { code } = compileWithStringify(
+      `<div>
+        <div v-once>{{ msg }}</div>
+        ${repeat(`<span class="foo">foo</span>`, StringifyThresholds.ELEMENT_WITH_BINDING_COUNT)}
+      </div>`,
+    )
+    expect(code).toMatchSnapshot()
+  })
 })
