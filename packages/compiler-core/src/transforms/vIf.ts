@@ -8,16 +8,19 @@ import {
   type AttributeNode,
   type BlockCodegenNode,
   type CacheExpression,
+  type CallExpression,
   ConstantTypes,
   type DirectiveNode,
   type ElementNode,
   ElementTypes,
+  type FunctionExpression,
   type IfBranchNode,
   type IfConditionalExpression,
   type IfNode,
   type MemoExpression,
   NodeTypes,
   type SimpleExpressionNode,
+  type VNodeCall,
   convertToBlock,
   createCallExpression,
   createConditionalExpression,
@@ -293,7 +296,12 @@ function createChildrenCodegenNode(
     const ret = (firstChild as ElementNode).codegenNode as
       | BlockCodegenNode
       | MemoExpression
-    const vnodeCall = getMemoedVNodeCall(ret)
+
+    const vnodeCall = findDir(firstChild, 'scope')
+      ? (((ret as CallExpression).callee as FunctionExpression)
+          .returns as VNodeCall)
+      : getMemoedVNodeCall(ret)
+
     // Change createVNode to createBlock.
     if (vnodeCall.type === NodeTypes.VNODE_CALL) {
       convertToBlock(vnodeCall, context)
