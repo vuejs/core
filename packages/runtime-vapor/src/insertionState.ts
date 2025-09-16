@@ -30,18 +30,23 @@ export function setInsertionState(
   anchor?: Node | 0 | null | number,
 ): void {
   insertionParent = parent
-  if (isHydrating) {
-    initializeHydrationState(anchor, parent)
+
+  if (anchor !== undefined) {
+    if (isHydrating) {
+      insertionAnchor = anchor as Node
+      initializeHydrationState(parent)
+    } else {
+      // special handling append anchor value to null
+      insertionAnchor =
+        typeof anchor === 'number' && anchor > 0 ? null : (anchor as Node)
+      cacheTemplateChildren(parent)
+    }
   } else {
-    cacheTemplateChildren(anchor, parent)
+    insertionAnchor = undefined
   }
 }
 
-function initializeHydrationState(
-  anchor: number | Node | null | undefined,
-  parent: ParentNode,
-) {
-  insertionAnchor = anchor as Node
+function initializeHydrationState(parent: ParentNode) {
   if (!hydrationStateCache.has(parent)) {
     const childNodes = parent.childNodes
     const len = childNodes.length
@@ -90,14 +95,7 @@ function initializeHydrationState(
   }
 }
 
-function cacheTemplateChildren(
-  anchor: number | Node | null | undefined,
-  parent: InsertionParent,
-) {
-  // special handling append anchor value to null
-  insertionAnchor =
-    typeof anchor === 'number' && anchor > 0 ? null : (anchor as Node)
-
+function cacheTemplateChildren(parent: InsertionParent) {
   if (!parent.$children) {
     const nodes = parent.childNodes
     const len = nodes.length
