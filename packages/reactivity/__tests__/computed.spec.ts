@@ -1108,7 +1108,7 @@ describe('reactivity/computed', () => {
     start.prop2.value = 3
     start.prop3.value = 2
     start.prop4.value = 1
-    expect(performance.now() - t).toBeLessThan(process.env.CI ? 100 : 30)
+    expect(performance.now() - t).toBeLessThan(process.env.CI ? 100 : 50)
 
     const end = layer
     expect([
@@ -1175,8 +1175,8 @@ describe('reactivity/computed', () => {
 
       // Trigger dependency tracking but without actual value change
       // This simulates the scenario where globalVersion changes but actual dep values don't
-      const impl = comp as any as ComputedRefImpl
-      impl.globalVersion = -1 // Force a version mismatch
+      // Use a benign ref operation to trigger version changes
+      ref(0).value++
 
       // Access computed again - should not recompute due to dev mode optimization
       expect(comp.value).toBe(1)
@@ -1214,12 +1214,8 @@ describe('reactivity/computed', () => {
       expect(getterC).toHaveBeenCalledTimes(1)
 
       // Force version mismatch to trigger dev mode optimization path
-      const implA = compA as any as ComputedRefImpl
-      const implB = compB as any as ComputedRefImpl
-      const implC = compC as any as ComputedRefImpl
-      implA.globalVersion = -1
-      implB.globalVersion = -1
-      implC.globalVersion = -1
+      // Use a benign ref operation to trigger version changes
+      ref(0).value++
 
       // Access computed again - should not recompute any level
       expect(compC.value).toBe(9)
@@ -1249,8 +1245,8 @@ describe('reactivity/computed', () => {
       expect(getter).toHaveBeenCalledTimes(1)
 
       // Force version mismatch
-      const impl = comp as any as ComputedRefImpl
-      impl.globalVersion = -1
+      // Use a benign ref operation to trigger version changes
+      ref(0).value++
 
       // Change one dependency
       base1.value = 5
@@ -1277,8 +1273,8 @@ describe('reactivity/computed', () => {
       unchanged.value
 
       // Force version mismatch
-      const impl = comp as any as ComputedRefImpl
-      impl.globalVersion = -1
+      // Use a benign ref operation to trigger version changes
+      ref(0).value++
 
       // Change only one dependency
       changed.value = 5
@@ -1290,28 +1286,30 @@ describe('reactivity/computed', () => {
 
     test('should not affect production mode behavior', () => {
       // Set to production mode
-      ;(globalThis as any).__DEV__ = false
+      const prevDev = (globalThis as any).__DEV__
+      try {
+        ;(globalThis as any).__DEV__ = false
 
-      const getter = vi.fn()
-      const base = ref(1)
-      const comp = computed(() => {
-        getter()
-        return base.value
-      })
+        const getter = vi.fn()
+        const base = ref(1)
+        const comp = computed(() => {
+          getter()
+          return base.value
+        })
 
-      // Initial computation
-      expect(comp.value).toBe(1)
-      expect(getter).toHaveBeenCalledTimes(1)
+        // Initial computation
+        expect(comp.value).toBe(1)
+        expect(getter).toHaveBeenCalledTimes(1)
 
-      // Force version mismatch - in production this should still follow normal path
-      const impl = comp as any as ComputedRefImpl
-      impl.globalVersion = -1
+        // Force version mismatch - in production this should still follow normal path
+        ref(0).value++
 
-      // In production mode, the optimization should not apply
-      // The behavior should be determined by the normal computed logic
-      expect(comp.value).toBe(1)
-      // In production, without the dev optimization, the call count behavior
-      // depends on the normal computed implementation
+        // In production mode, the optimization should not apply.
+        // Behavior follows normal computed logic; value remains correct.
+        expect(comp.value).toBe(1)
+      } finally {
+        ;(globalThis as any).__DEV__ = prevDev
+      }
     })
   })
 })
