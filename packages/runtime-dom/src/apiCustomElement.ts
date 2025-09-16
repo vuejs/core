@@ -342,6 +342,12 @@ export class VueElement
     })
   }
 
+  private _processMutations(mutations: MutationRecord[]) {
+    for (const m of mutations) {
+      this._setAttr(m.attributeName!)
+    }
+  }
+
   /**
    * resolve inner component definition (handle possible async component)
    */
@@ -356,11 +362,7 @@ export class VueElement
     }
 
     // watch future attr changes
-    this._ob = new MutationObserver(mutations => {
-      for (const m of mutations) {
-        this._setAttr(m.attributeName!)
-      }
-    })
+    this._ob = new MutationObserver(this._processMutations.bind(this))
 
     this._ob.observe(this, { attributes: true })
 
@@ -510,7 +512,10 @@ export class VueElement
       // reflect
       if (shouldReflect) {
         const ob = this._ob
-        ob && ob.disconnect()
+        if (ob) {
+          this._processMutations(ob.takeRecords())
+          ob.disconnect()
+        }
         if (val === true) {
           this.setAttribute(hyphenate(key), '')
         } else if (typeof val === 'string' || typeof val === 'number') {
