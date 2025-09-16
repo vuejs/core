@@ -1746,8 +1746,8 @@ describe('Vapor Mode hydration', () => {
         <!--[-->
         <!--[--><span>a</span><!--]-->
         <!--[--><span>b</span><!--]-->
-        <!--[--><span>c</span><!--for--><!--]-->
-        </div>"
+        <!--[--><span>c</span><!--]-->
+        <!--for--></div>"
       `,
       )
 
@@ -1759,8 +1759,8 @@ describe('Vapor Mode hydration', () => {
         <!--[-->
         <!--[--><span>a</span><!--]-->
         <!--[--><span>b</span><!--]-->
-        <!--[--><span>c</span><span>d</span><!--slot--><!--for--><!--]-->
-        </div>"
+        <!--[--><span>c</span><!--]-->
+        <span>d</span><!--slot--><!--for--></div>"
       `,
       )
     })
@@ -1800,6 +1800,57 @@ describe('Vapor Mode hydration', () => {
         </div>"
       `,
       )
+    })
+
+    test('on component with non-hydration node', async () => {
+      const data = ref({ show: true, msg: 'foo' })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <components.Child v-for="item in 2" :key="item"/>
+          </div>
+        </template>`,
+        {
+          Child: `<template>
+            <div>
+              <div>
+                <div v-if="data.show">{{ data.msg }}</div>
+              </div>
+              <span>non-hydration node</span>
+            </div>
+          </template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><div><div><div>foo</div><!--if--></div><span>non-hydration node</span></div><div><div><div>foo</div><!--if--></div><span>non-hydration node</span></div><!--for--></div>"
+      `,
+      )
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><!--for--></div>"
+      `,
+      )
+
+      data.value.show = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div>
+        <!--[--><div><div><!--if--></div><span>non-hydration node</span></div><div><div><!--if--></div><span>non-hydration node</span></div><!--for--></div>"
+      `)
+
+      data.value.show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div>
+        <!--[--><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><!--for--></div>"
+      `)
     })
   })
 
