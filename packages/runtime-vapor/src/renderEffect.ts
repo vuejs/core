@@ -68,7 +68,7 @@ class RenderEffect extends ReactiveEffect {
     } else {
       this.render()
     }
-    setCurrentInstance(...prev)
+    setCurrentInstance.apply(null, prev)
     if (__DEV__ && instance) {
       startMeasure(instance, `renderEffect`)
     }

@@ -279,7 +279,7 @@ export function createComponent(
   }
 
   setActiveSub(prevSub)
-  setCurrentInstance(...prevInstance)
+  setCurrentInstance.apply(null, prevInstance)
 
   if (__DEV__) {
     popWarningContext()

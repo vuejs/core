@@ -22,7 +22,7 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   pushWarningContext(instance)
   devRender(instance)
   popWarningContext()
-  setCurrentInstance(...prev)
+  setCurrentInstance.apply(null, prev)
   insert(instance.block, parent, anchor)
 }
 
@@ -41,6 +41,6 @@ export function hmrReload(
     instance.rawSlots,
     instance.isSingleRoot,
   )
-  setCurrentInstance(...prev)
+  setCurrentInstance.apply(null, prev)
   mountComponent(newInstance, parent, anchor)
 }

@@ -901,7 +901,7 @@ function setupStatefulComponent(
     )
     const isAsyncSetup = isPromise(setupResult)
     setActiveSub(prevSub)
-    setCurrentInstance(...prev)
+    setCurrentInstance.apply(null, prev)
 
     if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
       // async setup / serverPrefetch, mark as async boundary for useId()
@@ -1090,7 +1090,7 @@ export function finishComponentSetup(
       applyOptions(instance)
     } finally {
       setActiveSub(prevSub)
-      setCurrentInstance(...prevInstance)
+      setCurrentInstance.apply(null, prevInstance)
     }
   }
 

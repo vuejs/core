@@ -18,7 +18,7 @@ let removeComponentInstance = NOOP
 beforeEach(() => {
   const instance = new VaporComponentInstance({}, {}, null)
   const prev = setCurrentInstance(instance)
-  removeComponentInstance = () => setCurrentInstance(...prev)
+  removeComponentInstance = () => setCurrentInstance.apply(null, prev)
 })
 afterEach(() => {
   removeComponentInstance()

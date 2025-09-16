@@ -264,7 +264,7 @@ function resolveDefault(
 ) {
   const prev = setCurrentInstance(instance)
   const res = factory.call(null, instance.props)
-  setCurrentInstance(...prev)
+  setCurrentInstance.apply(null, prev)
   return res
 }
 

@@ -532,7 +532,7 @@ function baseResolveDefault(
       : null,
     props,
   )
-  setCurrentInstance(...prev)
+  setCurrentInstance.apply(null, prev)
   return value
 }
 
