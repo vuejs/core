@@ -223,6 +223,31 @@ describe('defineCustomElement', () => {
       expect(e.getAttribute('baz-qux')).toBe('four')
     })
 
+    test('props via attributes and properties changed together', async () => {
+      const e = new E()
+      e.foo = 'foo1'
+      e.bar = { x: 'bar1' }
+      container.appendChild(e)
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>foo1</div><div>bar1</div>')
+
+      // change attr then property
+      e.setAttribute('foo', 'foo2')
+      e.bar = { x: 'bar2' }
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>foo2</div><div>bar2</div>')
+      expect(e.getAttribute('foo')).toBe('foo2')
+      expect(e.hasAttribute('bar')).toBe(false)
+
+      // change prop then attr
+      e.bar = { x: 'bar3' }
+      e.setAttribute('foo', 'foo3')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>foo3</div><div>bar3</div>')
+      expect(e.getAttribute('foo')).toBe('foo3')
+      expect(e.hasAttribute('bar')).toBe(false)
+    })
+
     test('props via hyphen property', async () => {
       const Comp = defineCustomElement({
         props: {
