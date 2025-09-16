@@ -27,7 +27,7 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-core'
-import { extend } from '@vue/shared'
+import { extend, hasOwn } from '@vue/shared'
 
 const positionMap = new WeakMap<VNode, DOMRect>()
 const newPositionMap = new WeakMap<VNode, DOMRect>()
@@ -135,7 +135,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
       const filteredProps: Record<string, any> = {}
       for (const key in rawProps) {
         if (
-          !(key in TransitionPropsValidators) &&
+          !hasOwn(TransitionPropsValidators, key) &&
           key !== 'tag' &&
           key !== 'moveClass'
         ) {
@@ -179,8 +179,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
           warn(`<TransitionGroup> children must be keyed.`)
         }
       }
-
-      return createVNode(tag, filteredProps, children)
+      return createVNode(tag, tag === Fragment ? null : filteredProps, children)
     }
   },
 })
