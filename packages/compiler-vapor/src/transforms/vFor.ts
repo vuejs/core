@@ -47,7 +47,13 @@ export function processFor(
 
   const keyProp = findProp(node, 'key')
   const keyProperty = keyProp && propToExpression(keyProp)
-  const isComponent = node.tagType === ElementTypes.COMPONENT
+  const isComponent =
+    node.tagType === ElementTypes.COMPONENT ||
+    // template v-for with a single component child
+    (node.tag === 'template' &&
+      node.children.length === 1 &&
+      node.children[0].type === 1 &&
+      node.children[0].tagType === ElementTypes.COMPONENT)
   context.node = node = wrapTemplate(node, ['for'])
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()
