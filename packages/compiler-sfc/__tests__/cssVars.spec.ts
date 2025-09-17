@@ -105,18 +105,25 @@ describe('CSS vars injection', () => {
         `<style>div{
           color: v-bind(color);
           font-size: v-bind('font.size');
+          width: v-bind(width, 100%);
+          font-weight: v-bind('font.weight', bold);
         }</style>`,
       { isProd: true },
     )
     expect(content).toMatch(`_useCssVars(_ctx => ({
   "4003f1a6": (_ctx.color),
-  "41b6490a": (_ctx.font.size)
+  "41b6490a": (_ctx.font.size),
+  "3dd5f4e0": (_ctx.width),
+  "9848e57e": (_ctx.font.weight)
 }))}`)
 
     const { code } = compileStyle({
       source: `.foo {
         color: v-bind(color);
         font-size: v-bind('font.size');
+        width: v-bind(width, 100%);
+        font-weight: v-bind('font.weight', bold);
+        background-color: v-bind(['red', 'blue'][value]);
       }`,
       filename: 'test.css',
       id: mockId,
@@ -126,6 +133,9 @@ describe('CSS vars injection', () => {
       ".foo {
               color: var(--4003f1a6);
               font-size: var(--41b6490a);
+              width: var(--3dd5f4e0, 100%);
+              font-weight: var(--9848e57e, bold);
+              background-color: var(--6a45fa3c);
       }"
     `)
   })
