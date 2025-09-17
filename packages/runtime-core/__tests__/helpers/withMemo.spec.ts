@@ -204,6 +204,32 @@ describe('v-memo', () => {
     )
   })
 
+  // #12708
+  test('v-memo should work correctly when toggling v-if with v-for inside', async () => {
+    const [el, vm] = mount({
+      template: `<span v-if="show">
+          <span v-for="elem in [1]" :key="elem" v-memo="[count]">{{count}}</span>
+        </span>`,
+      data: () => ({
+        show: true,
+        count: 0,
+      }),
+    })
+    expect(el.innerHTML).toBe(`<span><span>0</span></span>`)
+
+    vm.show = false
+    await nextTick()
+    expect(el.innerHTML).toBe(`<!--v-if-->`)
+
+    vm.show = true
+    await nextTick()
+    expect(el.innerHTML).toBe(`<span><span>0</span></span>`)
+
+    vm.count++
+    await nextTick()
+    expect(el.innerHTML).toBe(`<span><span>1</span></span>`)
+  })
+
   test('on v-for /w constant expression ', async () => {
     const [el, vm] = mount({
       template: `<div v-for="item in 3"  v-memo="[count < 2 ? true : count]">
