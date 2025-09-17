@@ -157,7 +157,7 @@ export function normalizeAnchor(node: Block): Node | undefined {
   if (node && node instanceof Node) {
     return node
   } else if (isArray(node)) {
-    return normalizeAnchor(node[node.length - 1])
+    return normalizeAnchor(node[0])
   } else if (isVaporComponent(node)) {
     return normalizeAnchor(node.block!)
   } else {
