@@ -120,7 +120,12 @@ export const TeleportImpl = {
         // compiler and vnode children normalization.
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           if (parentComponent && parentComponent.isCE) {
-            parentComponent.ce!._teleportTarget = container
+            const _teleportTargets = parentComponent.ce!._teleportTargets
+            if (!_teleportTargets) {
+              parentComponent.ce!._teleportTargets = [container]
+            } else {
+              _teleportTargets.push(container)
+            }
           }
           mountChildren(
             children as VNodeArrayChildren,
