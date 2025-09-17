@@ -1281,7 +1281,7 @@ describe('defineCustomElement', () => {
       app.unmount()
     })
 
-    test('render nested tow Teleports w/ shadowRoot false', async () => {
+    test('render two Teleports w/ shadowRoot false', async () => {
       const target1 = document.createElement('div')
       const target2 = document.createElement('span')
       const Child = defineCustomElement(
@@ -1295,11 +1295,11 @@ describe('defineCustomElement', () => {
         },
         { shadowRoot: false },
       )
-      customElements.define('my-el-tow-teleport-child', Child)
+      customElements.define('my-el-two-teleport-child', Child)
 
       const App = {
         render() {
-          return h('my-el-tow-teleport-child', null, {
+          return h('my-el-two-teleport-child', null, {
             default: () => [
               h('div', { slot: 'header' }, 'header'),
               h('span', { slot: 'body' }, 'body'),
