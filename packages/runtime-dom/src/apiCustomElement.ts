@@ -635,7 +635,7 @@ export class VueElement
    * Only called when shadowRoot is false
    */
   private _renderSlots() {
-    const outlets = [...getSlots(this._teleportTargets), ...getSlots([this])]
+    const outlets = this._getSlots()
     const scopeId = this._instance!.type.__scopeId
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement
@@ -663,6 +663,19 @@ export class VueElement
     }
   }
 
+  /**
+   * @internal
+   */
+  private _getSlots(): HTMLSlotElement[] {
+    const roots: HTMLElement[] = [this]
+    if (this._teleportTargets) {
+      roots.push(...this._teleportTargets)
+    }
+    return roots.reduce<HTMLSlotElement[]>((res, i) => {
+      res.push(...Array.from(i.querySelectorAll('slot')))
+      return res
+    }, [])
+  }
   /**
    * @internal
    */
@@ -715,12 +728,4 @@ export function useHost(caller?: string): VueElement | null {
 export function useShadowRoot(): ShadowRoot | null {
   const el = __DEV__ ? useHost('useShadowRoot') : useHost()
   return el && el.shadowRoot
-}
-
-function getSlots(roots: HTMLElement[] | undefined): HTMLSlotElement[] {
-  if (!roots) return []
-  return roots.reduce<HTMLSlotElement[]>((res, i) => {
-    res.push(...Array.from(i.querySelectorAll('slot')))
-    return res
-  }, [])
 }
