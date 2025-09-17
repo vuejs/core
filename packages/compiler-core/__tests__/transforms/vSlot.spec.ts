@@ -371,6 +371,39 @@ describe('compiler: transform component slots', () => {
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
 
+  test('Properly handle v-for and ref on template', () => {
+    const { root, slots } = parseWithSlots(
+      `<Comp>
+        <template v-for="name in list" #[name]><p ref="slotItems">{{name}}</p></template>
+      </Comp>`,
+      { prefixIdentifiers: true },
+    )
+
+    const spy = {
+      type: NodeTypes.JS_PROPERTY,
+      key: {
+        constType: 3,
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'ref_for',
+        isStatic: true,
+      },
+      value: {
+        constType: 0,
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'true',
+        isStatic: false,
+      },
+    }
+
+    const properties = (slots as any).arguments[1].elements[0].arguments[1]
+      .returns.properties[1].value.returns[0].codegenNode.props.properties[0]
+    expect(properties).toMatchObject(spy)
+    expect((root as any).children[0].codegenNode.patchFlag).toMatch(
+      PatchFlags.DYNAMIC_SLOTS + '',
+    )
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
   test('nested slots scoping', () => {
     const { root, slots } = parseWithSlots(
       `<Comp>
