@@ -576,7 +576,19 @@ describe('compiler: element transform', () => {
       `<div id="foo" class="bar" />`,
     )
 
-    const template = '<div id="foo" class="bar"></div>'
+    const template = '<div id="foo" class="bar">'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect(ir.template).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('props + child', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div id="foo"><span/></div>`,
+    )
+
+    const template = '<div id="foo"><span>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
     expect(ir.template).toMatchObject([template])
@@ -585,10 +597,59 @@ describe('compiler: element transform', () => {
 
   test('props + children', () => {
     const { code, ir } = compileWithElementTransform(
-      `<div id="foo"><span/></div>`,
+      `<div id="foo"><span><b/></span><main><b/><div><div><span/><span/></div></div></main></div>`,
     )
 
-    const template = '<div id="foo"><span></span></div>'
+    const template =
+      '<div id="foo"><span><b></b></span><main><b></b><div><div><span></span><span>'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect(ir.template).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('span in nested divs', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div><div><span/></div><div/></div>`,
+    )
+
+    const template = '<div><div><span></div><div>'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect(ir.template).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('b in nested divs', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div><div><b/></div><div/></div>`,
+    )
+
+    const template = '<div><div><b></b></div><div>'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect(ir.template).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('pure nested divs', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div><div><div/></div><div/></div>`,
+    )
+
+    const template = '<div><div><div></div></div><div>'
+    expect(code).toMatchSnapshot()
+    expect(code).contains(JSON.stringify(template))
+    expect(ir.template).toMatchObject([template])
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('multiple roots', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div><span/></div><div><span /></div>`,
+    )
+
+    const template = '<div><span>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
     expect(ir.template).toMatchObject([template])
@@ -937,7 +998,7 @@ describe('compiler: element transform', () => {
       <form><form/></form>`,
     )
     expect(code).toMatchSnapshot()
-    expect(ir.template).toEqual(['<div>123</div>', '<p></p>', '<form></form>'])
+    expect(ir.template).toEqual(['<div>123', '<p>', '<form>'])
     expect(ir.block.dynamic).toMatchObject({
       children: [
         { id: 1, template: 1, children: [{ id: 0, template: 0 }] },
