@@ -1319,6 +1319,45 @@ describe('defineCustomElement', () => {
       app.unmount()
     })
 
+    test('render two Teleports w/ shadowRoot false (with disabled)', async () => {
+      const target1 = document.createElement('div')
+      const target2 = document.createElement('span')
+      const Child = defineCustomElement(
+        {
+          render() {
+            return [
+              // with disabled: true
+              h(Teleport, { to: target1, disabled: true }, [
+                renderSlot(this.$slots, 'header'),
+              ]),
+              h(Teleport, { to: target2 }, [renderSlot(this.$slots, 'body')]),
+            ]
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-two-teleport-child-0', Child)
+
+      const App = {
+        render() {
+          return h('my-el-two-teleport-child-0', null, {
+            default: () => [
+              h('div', { slot: 'header' }, 'header'),
+              h('span', { slot: 'body' }, 'body'),
+            ],
+          })
+        },
+      }
+      const app = createApp(App)
+      app.mount(container)
+      await nextTick()
+      expect(target1.outerHTML).toBe(`<div></div>`)
+      expect(target2.outerHTML).toBe(
+        `<span><span slot="body">body</span></span>`,
+      )
+      app.unmount()
+    })
+
     test('toggle nested custom element with shadowRoot: false', async () => {
       customElements.define(
         'my-el-child-shadow-false',
