@@ -33,7 +33,7 @@ export interface AssetURLOptions {
   includeAbsolute?: boolean
   tags?: AssetURLTagConfig
   /**
-   * Whether to preserve the tilde (~) in asset URLs.
+   * Whether to preserve the leading tilde (~) in asset URLs.
    * Nuxt uses ~ as alias for the /app directory.
    * see #13460
    */
