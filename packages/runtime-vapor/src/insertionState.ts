@@ -1,4 +1,4 @@
-import { isHydrating } from './dom/hydration'
+import { isComment, isHydrating } from './dom/hydration'
 export type ChildItem = ChildNode & {
   $idx: number
   // used count as an anchor
@@ -50,6 +50,18 @@ function initializeHydrationState(parent: ParentNode) {
   if (!hydrationStateCache.has(parent)) {
     const childNodes = parent.childNodes
     const len = childNodes.length
+
+    // fast path for single child case. No need to build logicalChildren
+    if (
+      len === 1 ||
+      (len === 3 &&
+        isComment(childNodes[0], '[') &&
+        isComment(childNodes[2], ']'))
+    ) {
+      insertionAnchor = undefined
+      return
+    }
+
     const logicalChildren = new Array(len) as ChildItem[]
     // Build logical children:
     // - static node: keep the node as a child
@@ -57,11 +69,11 @@ function initializeHydrationState(parent: ParentNode) {
     let index = 0
     for (let i = 0; i < len; i++) {
       const n = childNodes[i] as ChildItem
+      n.$idx = index
       if (n.nodeType === 8) {
         const data = (n as any as Comment).data
         // vdom fragment
         if (data === '[') {
-          n.$idx = index
           logicalChildren[index++] = n
           // find matching end anchor, accounting for nested fragments
           let depth = 1
@@ -82,7 +94,6 @@ function initializeHydrationState(parent: ParentNode) {
           continue
         }
       }
-      n.$idx = index
       logicalChildren[index++] = n
     }
     logicalChildren.length = index
