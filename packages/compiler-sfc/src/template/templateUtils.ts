@@ -21,10 +21,10 @@ export function isDataUrl(url: string): boolean {
  */
 export function parseUrl(
   url: string,
-  preserveTilde?: boolean,
+  preserveLeadingTilde?: boolean,
 ): UrlWithStringQuery {
   const firstChar = url.charAt(0)
-  if (firstChar === '~' && !preserveTilde) {
+  if (firstChar === '~' && !preserveLeadingTilde) {
     const secondChar = url.charAt(1)
     url = url.slice(secondChar === '/' ? 2 : 1)
   }

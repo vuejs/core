@@ -100,11 +100,11 @@ describe('compiler sfc: transform asset url', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('with preserveTilde: true', () => {
+  test('with preserveLeadingTilde: true', () => {
     const { code } = compileWithAssetUrls(
       `<img src="~/app/bar.png"/>` + `<img src="~app/bar.png"/>`,
       {
-        preserveTilde: true,
+        preserveLeadingTilde: true,
       },
     )
     expect(code).toMatchSnapshot()

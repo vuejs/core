@@ -119,7 +119,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler sfc: transform asset url > with preserveTilde: true 1`] = `
+exports[`compiler sfc: transform asset url > with preserveLeadingTilde: true 1`] = `
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 import _imports_0 from '~/app/bar.png'
 import _imports_1 from '~app/bar.png'

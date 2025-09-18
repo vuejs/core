@@ -16,7 +16,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler sfc: transform srcset > srcset w/ preserveTilde: true 1`] = `
+exports[`compiler sfc: transform srcset > srcset w/ preserveLeadingTilde: true 1`] = `
 "import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 import _imports_0 from '~/app/logo.png'
 import _imports_1 from '~app/logo.png'
