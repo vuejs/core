@@ -149,19 +149,6 @@ export function createComponent(
     resetInsertionState()
   }
 
-  // vdom interop enabled and component is not an explicit vapor component
-  if (appContext.vapor && !component.__vapor) {
-    const frag = appContext.vapor.vdomMount(
-      component as any,
-      rawProps,
-      rawSlots,
-    )
-    if (!isHydrating && _insertionParent) {
-      insert(frag, _insertionParent, _insertionAnchor)
-    }
-    return frag
-  }
-
   if (
     isSingleRoot &&
     component.inheritAttrs !== false &&
@@ -178,6 +165,19 @@ export function createComponent(
     } else {
       rawProps = { $: [() => attrs] } as RawProps
     }
+  }
+
+  // vdom interop enabled and component is not an explicit vapor component
+  if (appContext.vapor && !component.__vapor) {
+    const frag = appContext.vapor.vdomMount(
+      component as any,
+      rawProps,
+      rawSlots,
+    )
+    if (!isHydrating && _insertionParent) {
+      insert(frag, _insertionParent, _insertionAnchor)
+    }
+    return frag
   }
 
   const instance = new VaporComponentInstance(
