@@ -147,8 +147,8 @@ export const TeleportImpl = {
           if (parentComponent && parentComponent.isCE) {
             ;(
               parentComponent.ce!._teleportTargets ||
-              (parentComponent.ce!._teleportTargets = [])
-            ).push(target)
+              (parentComponent.ce!._teleportTargets = new Set())
+            ).add(target)
           }
 
           if (!disabled) {

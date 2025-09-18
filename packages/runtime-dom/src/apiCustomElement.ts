@@ -224,7 +224,7 @@ export class VueElement
   /**
    * @internal
    */
-  _teleportTargets?: HTMLElement[]
+  _teleportTargets?: Set<HTMLElement>
 
   private _connected = false
   private _resolved = false
