@@ -148,6 +148,27 @@ describe('transition-group', () => {
     `)
   })
 
+  test('transition props should NOT fallthrough (runtime should handle this)', () => {
+    // This test verifies that if runtime fallthrough is working correctly,
+    // SSR should still filter out transition props for clean HTML
+    expect(
+      compile(
+        `<transition-group tag="ul" name="fade" appear="true" class="container" data-test="value">
+        </transition-group>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<ul\${_ssrRenderAttrs(_mergeProps({
+          class: "container",
+          "data-test": "value"
+        }, _attrs))}></ul>\`)
+      }"
+    `)
+  })
+
   test('filters out transition-specific props', () => {
     expect(
       compile(

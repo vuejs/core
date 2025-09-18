@@ -1,7 +1,6 @@
 import {
   type ElementWithTransition,
   type TransitionProps,
-  TransitionPropsValidators,
   addTransitionClass,
   forceReflow,
   getTransitionInfo,
@@ -9,6 +8,7 @@ import {
   resolveTransitionProps,
   vtcKey,
 } from './Transition'
+import { BaseTransitionPropsValidators } from '@vue/runtime-core'
 import {
   type ComponentOptions,
   DeprecationTypes,
@@ -27,7 +27,7 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-core'
-import { extend, hasOwn } from '@vue/shared'
+import { extend } from '@vue/shared'
 
 const positionMap = new WeakMap<VNode, DOMRect>()
 const newPositionMap = new WeakMap<VNode, DOMRect>()
@@ -44,9 +44,7 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
  * so that it can be annotated as pure
  */
 const decorate = (t: typeof TransitionGroupImpl) => {
-  // TransitionGroup does not support "mode" so we need to remove it from the
-  // props declarations, but direct delete operation is considered a side effect
-  delete t.props.mode
+  // TransitionGroup does not support "mode", already excluded from props definition
   if (__COMPAT__) {
     t.__isBuiltIn = true
   }
@@ -56,10 +54,34 @@ const decorate = (t: typeof TransitionGroupImpl) => {
 const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
   name: 'TransitionGroup',
 
-  props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
-    tag: String,
-    moveClass: String,
-  }),
+  props: /*@__PURE__*/ (() => {
+    // Create TransitionGroup props by combining BaseTransition props (excluding mode)
+    // with DOM-specific transition props and TransitionGroup-specific props
+    const DOMTransitionPropsValidators = {
+      name: String,
+      type: String,
+      css: { type: Boolean, default: true },
+      duration: [String, Number, Object],
+      enterFromClass: String,
+      enterActiveClass: String,
+      enterToClass: String,
+      appearFromClass: String,
+      appearActiveClass: String,
+      appearToClass: String,
+      leaveFromClass: String,
+      leaveActiveClass: String,
+      leaveToClass: String,
+    }
+
+    // Combine all props except 'mode' (which TransitionGroup doesn't support)
+    const baseProps = extend({}, BaseTransitionPropsValidators)
+    delete baseProps.mode
+
+    return extend({}, baseProps, DOMTransitionPropsValidators, {
+      tag: String,
+      moveClass: String,
+    })
+  })(),
 
   setup(props: TransitionGroupProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
@@ -130,19 +152,6 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
         tag = 'span'
       }
 
-      // Filter out transition-specific props and TransitionGroup-specific props
-      // to avoid invalid HTML attributes
-      const filteredProps: Record<string, any> = {}
-      for (const key in rawProps) {
-        if (
-          !hasOwn(TransitionPropsValidators, key) &&
-          key !== 'tag' &&
-          key !== 'moveClass'
-        ) {
-          filteredProps[key] = (rawProps as any)[key]
-        }
-      }
-
       prevChildren = []
       if (children) {
         for (let i = 0; i < children.length; i++) {
@@ -179,7 +188,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
           warn(`<TransitionGroup> children must be keyed.`)
         }
       }
-      return createVNode(tag, tag === Fragment ? null : filteredProps, children)
+      return createVNode(tag, null, children)
     }
   },
 })
