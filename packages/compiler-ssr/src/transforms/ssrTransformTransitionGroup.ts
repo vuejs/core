@@ -32,7 +32,17 @@ export function ssrTransformTransitionGroup(
   return (): void => {
     const tag = findProp(node, 'tag')
     if (tag) {
-      const otherProps = node.props.filter(p => p !== tag)
+      // 在处理 TransitionGroup 的属性时，过滤掉 name/tag 等私有 props
+      const otherProps = node.props.filter(p => {
+        // 排除 tag（已单独处理）和 name（私有 props，不该透传）
+        if (
+          p === tag ||
+          (p.type === NodeTypes.ATTRIBUTE && p.name === 'name')
+        ) {
+          return false
+        }
+        return true
+      })
       const { props, directives } = buildProps(
         node,
         context,
