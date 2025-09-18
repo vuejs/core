@@ -506,7 +506,7 @@ describe('patchProp', () => {
       expect(html()).toBe('<div>foo</div>')
     })
 
-    test('with multiple roots component', async () => {
+    test('with component renders multiple roots nodes', async () => {
       const Comp = defineVaporComponent({
         setup() {
           return [
@@ -525,6 +525,25 @@ describe('patchProp', () => {
       }).render()
 
       expect(html()).toBe('<div>child</div><div>child</div>')
+      expect('Extraneous non-props attributes (textContent)').toHaveBeenWarned()
+    })
+
+    test('with component renders text node', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('child')()
+        },
+      })
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockText(n1, toDisplayString(value)))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('child')
       expect('Extraneous non-props attributes (textContent)').toHaveBeenWarned()
     })
   })
@@ -579,7 +598,7 @@ describe('patchProp', () => {
       expect(html()).toBe('<div><p>foo</p></div>')
     })
 
-    test('with multiple roots component', async () => {
+    test('with component renders multiple roots', async () => {
       const Comp = defineVaporComponent({
         setup() {
           return [
@@ -598,6 +617,25 @@ describe('patchProp', () => {
       }).render()
 
       expect(html()).toBe('<div>child</div><div>child</div>')
+      expect('Extraneous non-props attributes (innerHTML)').toHaveBeenWarned()
+    })
+
+    test('with component renders text node', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('child')()
+        },
+      })
+      const value = ref('<p>foo</p>')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockHtml(n1, value.value))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('child')
       expect('Extraneous non-props attributes (innerHTML)').toHaveBeenWarned()
     })
   })

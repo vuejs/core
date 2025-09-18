@@ -209,19 +209,30 @@ export function setBlockText(
   }
 }
 
+/**
+ * dev only
+ */
+function warnOnArrayBlock(prop: string): void {
+  warn(
+    `Extraneous non-props attributes (` +
+      `${prop}) ` +
+      `were passed to component but could not be automatically inherited ` +
+      `because component renders text or multiple root nodes.`,
+  )
+}
+
 function setTextToBlock(block: Block, value: any): void {
   if (block instanceof Node) {
-    ;(block as Element).textContent = value
+    if (block instanceof Element) {
+      block.textContent = value
+    } else if (__DEV__) {
+      warnOnArrayBlock('textContent')
+    }
   } else if (isVaporComponent(block)) {
     setTextToBlock(block.block, value)
   } else if (isArray(block)) {
     if (__DEV__) {
-      warn(
-        `Extraneous non-props attributes (` +
-          `textContent) ` +
-          `were passed to component but could not be automatically inherited ` +
-          `because component renders multiple root nodes.`,
-      )
+      warnOnArrayBlock('textContent')
     }
   } else {
     setTextToBlock(block.nodes, value)
@@ -247,17 +258,16 @@ export function setBlockHtml(
 
 function setHtmlToBlock(block: Block, value: any): void {
   if (block instanceof Node) {
-    ;(block as Element).innerHTML = value
+    if (block instanceof Element) {
+      block.innerHTML = value
+    } else if (__DEV__) {
+      warnOnArrayBlock('innerHTML')
+    }
   } else if (isVaporComponent(block)) {
     setHtmlToBlock(block.block, value)
   } else if (isArray(block)) {
     if (__DEV__) {
-      warn(
-        `Extraneous non-props attributes (` +
-          `innerHTML) ` +
-          `were passed to component but could not be automatically inherited ` +
-          `because component renders multiple root nodes.`,
-      )
+      warnOnArrayBlock('innerHTML')
     }
   } else {
     setHtmlToBlock(block.nodes, value)
