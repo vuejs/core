@@ -217,4 +217,20 @@ describe('transition-group', () => {
       }"
     `)
   })
+
+  test('filters out all transition props including empty values', () => {
+    expect(
+      compile(
+        `<transition-group tag="div" appear="" persisted="" css="true" type="transition" :duration="500" move-class="custom-move" enter-from-class="custom-enter-from" enter-active-class="custom-enter-active" enter-to-class="custom-enter-to" leave-from-class="custom-leave-from" leave-active-class="custom-leave-active" leave-to-class="custom-leave-to" appear-from-class="custom-appear-from" appear-active-class="custom-appear-active" appear-to-class="custom-appear-to" class="container">
+        </transition-group>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ class: "container" }, _attrs))}></div>\`)
+      }"
+    `)
+  })
 })

@@ -82,27 +82,27 @@ export function ssrTransformTransitionGroup(
   return (): void => {
     const tag = findProp(node, 'tag')
     if (tag) {
-      // 在处理 TransitionGroup 的属性时，过滤掉所有 transition 相关的私有 props
+      // Filter out all transition-related private props when processing TransitionGroup attributes
       const otherProps = node.props.filter(p => {
-        // 排除 tag（已单独处理）
+        // Exclude tag (already handled separately)
         if (p === tag) {
           return false
         }
 
-        // 排除所有 transition 相关的属性和 TransitionGroup 特有的属性
-        // 这里的逻辑镜像了运行时 TransitionGroup 的属性过滤逻辑
+        // Exclude all transition-related attributes and TransitionGroup-specific attributes
+        // This logic mirrors the runtime TransitionGroup attribute filtering logic
         if (p.type === NodeTypes.ATTRIBUTE) {
-          // 静态属性：检查属性名（支持 kebab-case 转 camelCase）
+          // Static attributes: check attribute name (supports kebab-case to camelCase conversion)
           const propName = p.name
           const camelCaseName = kebabToCamel(propName)
-          return (
-            !hasOwn(TransitionPropsValidators, propName) &&
-            !hasOwn(TransitionPropsValidators, camelCaseName) &&
-            propName !== 'moveClass' &&
-            propName !== 'move-class'
-          )
+          const shouldFilter =
+            hasOwn(TransitionPropsValidators, propName) ||
+            hasOwn(TransitionPropsValidators, camelCaseName) ||
+            propName === 'moveClass' ||
+            propName === 'move-class'
+          return !shouldFilter
         } else if (p.type === NodeTypes.DIRECTIVE && p.name === 'bind') {
-          // 动态属性：检查绑定的属性名
+          // Dynamic attributes: check bound attribute name
           if (
             p.arg &&
             p.arg.type === NodeTypes.SIMPLE_EXPRESSION &&
@@ -110,12 +110,12 @@ export function ssrTransformTransitionGroup(
           ) {
             const argName = p.arg.content
             const camelCaseArgName = kebabToCamel(argName)
-            return (
-              !hasOwn(TransitionPropsValidators, argName) &&
-              !hasOwn(TransitionPropsValidators, camelCaseArgName) &&
-              argName !== 'moveClass' &&
-              argName !== 'move-class'
-            )
+            const shouldFilter =
+              hasOwn(TransitionPropsValidators, argName) ||
+              hasOwn(TransitionPropsValidators, camelCaseArgName) ||
+              argName === 'moveClass' ||
+              argName === 'move-class'
+            return !shouldFilter
           }
         }
 
