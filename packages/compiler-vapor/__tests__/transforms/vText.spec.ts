@@ -59,13 +59,15 @@ describe('v-text', () => {
   })
 
   test('work with dynamic component', () => {
-    const { code } = compileWithVText(
-      `<component :is="'button'" v-text="foo"/>`,
-    )
+    const { code } = compileWithVText(`<component :is="Comp" v-text="foo"/>`)
     expect(code).matchSnapshot()
-    expect(code).contains(
-      'setElementText(n0.nodes, _toDisplayString(_ctx.foo), true)',
-    )
+    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+  })
+
+  test('work with component', () => {
+    const { code } = compileWithVText(`<Comp v-text="foo"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
   })
 
   test('should raise error and ignore children when v-text is present', () => {

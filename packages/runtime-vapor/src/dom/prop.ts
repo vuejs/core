@@ -1,6 +1,7 @@
 import {
   type NormalizedStyle,
   canSetValueDirectly,
+  isArray,
   isOn,
   isString,
   normalizeClass,
@@ -19,7 +20,9 @@ import {
 import {
   type VaporComponentInstance,
   isApplyingFallthroughProps,
+  isVaporComponent,
 } from '../component'
+import type { Block } from '../block'
 
 type TargetElement = Element & {
   $root?: true
@@ -185,17 +188,43 @@ export function setText(el: Text & { $txt?: string }, value: string): void {
 }
 
 /**
- * Used by
- * - setDynamicProps, need to guard with `toDisplayString`
- * - v-text on dynamic component, value passed here is already converted
+ * Used by setDynamicProps only, so need to guard with `toDisplayString`
  */
 export function setElementText(
   el: Node & { $txt?: string },
   value: unknown,
-  isConverted: boolean = false,
 ): void {
-  if (el.$txt !== (value = isConverted ? value : toDisplayString(value))) {
+  if (el.$txt !== (value = toDisplayString(value))) {
     el.textContent = el.$txt = value as string
+  }
+}
+
+export function setBlockText(
+  block: Block & { $txt?: string },
+  value: unknown,
+): void {
+  value = value == null ? '' : value
+  if (block.$txt !== value) {
+    setTextToBlock(block, (block.$txt = value as string))
+  }
+}
+
+function setTextToBlock(block: Block, value: any): void {
+  if (block instanceof Node) {
+    ;(block as Element).textContent = value
+  } else if (isVaporComponent(block)) {
+    setTextToBlock(block.block, value)
+  } else if (isArray(block)) {
+    if (__DEV__) {
+      warn(
+        `Extraneous non-props attributes (` +
+          `textContent) ` +
+          `were passed to component but could not be automatically inherited ` +
+          `because component renders multiple root nodes.`,
+      )
+    }
+  } else {
+    setTextToBlock(block.nodes, value)
   }
 }
 
@@ -203,6 +232,35 @@ export function setHtml(el: TargetElement, value: any): void {
   value = value == null ? '' : value
   if (el.$html !== value) {
     el.innerHTML = el.$html = value
+  }
+}
+
+export function setBlockHtml(
+  block: Block & { $html?: string },
+  value: any,
+): void {
+  value = value == null ? '' : value
+  if (block.$html !== value) {
+    setHtmlToBlock(block, (block.$html = value))
+  }
+}
+
+function setHtmlToBlock(block: Block, value: any): void {
+  if (block instanceof Node) {
+    ;(block as Element).innerHTML = value
+  } else if (isVaporComponent(block)) {
+    setHtmlToBlock(block.block, value)
+  } else if (isArray(block)) {
+    if (__DEV__) {
+      warn(
+        `Extraneous non-props attributes (` +
+          `innerHTML) ` +
+          `were passed to component but could not be automatically inherited ` +
+          `because component renders multiple root nodes.`,
+      )
+    }
+  } else {
+    setHtmlToBlock(block.nodes, value)
   }
 }
 

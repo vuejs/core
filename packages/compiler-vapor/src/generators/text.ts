@@ -9,33 +9,18 @@ export function genSetText(
   oper: SetTextIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const {
-    helper,
-    block: { dynamicComponents },
-  } = context
-  const { element, values, generated, jsx } = oper
+  const { helper } = context
+  const { element, values, generated, jsx, isComponent } = oper
   const texts = combineValues(values, context, jsx)
-
-  // if the element is a dynamic component, we need to use `setElementText`
-  // to set the textContent of the VaporFragment's nodes.
-  return dynamicComponents.includes(oper.element)
-    ? [
-        NEWLINE,
-        ...genCall(
-          helper('setElementText'),
-          `n${element}.nodes`,
-          texts,
-          'true', // isConverted
-        ),
-      ]
-    : [
-        NEWLINE,
-        ...genCall(
-          helper('setText'),
-          `${generated ? 'x' : 'n'}${element}`,
-          texts,
-        ),
-      ]
+  return [
+    NEWLINE,
+    ...genCall(
+      // use setBlockText for component
+      isComponent ? helper('setBlockText') : helper('setText'),
+      `${generated && !isComponent ? 'x' : 'n'}${element}`,
+      texts,
+    ),
+  ]
 }
 
 function combineValues(
@@ -60,14 +45,6 @@ export function genGetTextChild(
   oper: GetTextChildIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const {
-    block: { dynamicComponents },
-  } = context
-
-  // if the parent is a dynamic component, don't need to generate a child
-  // because it will use the `setElementText` helper directly.
-  if (dynamicComponents.includes(oper.parent)) return []
-
   return [
     NEWLINE,
     `const x${oper.parent} = ${context.helper('child')}(n${oper.parent})`,

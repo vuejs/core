@@ -34,12 +34,23 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`v-text > work with dynamic component 1`] = `
-"import { createDynamicComponent as _createDynamicComponent, toDisplayString as _toDisplayString, setElementText as _setElementText, renderEffect as _renderEffect } from 'vue';
+exports[`v-text > work with component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, toDisplayString as _toDisplayString, setBlockText as _setBlockText, renderEffect as _renderEffect } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => ('button'), null, null, true)
-  _renderEffect(() => _setElementText(n0.nodes, _toDisplayString(_ctx.foo), true))
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponentWithFallback(_component_Comp, null, null, true)
+  _renderEffect(() => _setBlockText(n0, _toDisplayString(_ctx.foo)))
+  return n0
+}"
+`;
+
+exports[`v-text > work with dynamic component 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, toDisplayString as _toDisplayString, setBlockText as _setBlockText, renderEffect as _renderEffect } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createDynamicComponent(() => (_ctx.Comp), null, null, true)
+  _renderEffect(() => _setBlockText(n0, _toDisplayString(_ctx.foo)))
   return n0
 }"
 `;

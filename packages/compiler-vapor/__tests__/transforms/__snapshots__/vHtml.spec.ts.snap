@@ -33,12 +33,23 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`v-html > work with dynamic component 1`] = `
-"import { createDynamicComponent as _createDynamicComponent, setHtml as _setHtml, renderEffect as _renderEffect } from 'vue';
+exports[`v-html > work with component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, setBlockHtml as _setBlockHtml, renderEffect as _renderEffect } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => ('button'), null, null, true)
-  _renderEffect(() => _setHtml(n0.nodes, _ctx.foo))
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponentWithFallback(_component_Comp, null, null, true)
+  _renderEffect(() => _setBlockHtml(n0, _ctx.foo))
+  return n0
+}"
+`;
+
+exports[`v-html > work with dynamic component 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, setBlockHtml as _setBlockHtml, renderEffect as _renderEffect } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createDynamicComponent(() => (_ctx.Comp), null, null, true)
+  _renderEffect(() => _setBlockHtml(n0, _ctx.foo))
   return n0
 }"
 `;
