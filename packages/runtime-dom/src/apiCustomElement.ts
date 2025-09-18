@@ -224,7 +224,7 @@ export class VueElement
   /**
    * @internal
    */
-  _teleportTargets?: Set<HTMLElement>
+  _teleportTargets?: Set<Element>
 
   private _connected = false
   private _resolved = false
@@ -338,6 +338,10 @@ export class VueElement
         this._app && this._app.unmount()
         if (this._instance) this._instance.ce = undefined
         this._app = this._instance = null
+        if (this._teleportTargets) {
+          this._teleportTargets.clear()
+          this._teleportTargets = undefined
+        }
       }
     })
   }
@@ -667,7 +671,7 @@ export class VueElement
    * @internal
    */
   private _getSlots(): HTMLSlotElement[] {
-    const roots: HTMLElement[] = [this]
+    const roots: Element[] = [this]
     if (this._teleportTargets) {
       roots.push(...this._teleportTargets)
     }
