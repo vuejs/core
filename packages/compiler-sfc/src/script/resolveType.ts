@@ -728,6 +728,13 @@ function resolveTypeReference(
   name?: string,
   onlyExported = false,
 ): ScopeTypeNode | undefined {
+  if (
+    node.leadingComments &&
+    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
+  ) {
+    return undefined
+  }
+
   const canCache = !scope?.isGenericScope
   if (canCache && node._resolvedReference) {
     return node._resolvedReference
