@@ -1781,6 +1781,47 @@ export function inferRuntimeType(
           typeParameters,
         ).filter(t => t !== UNKNOWN_TYPE)
       }
+      case 'TSMappedType': {
+        // only support { [K in keyof T]: T[K] }
+        const { typeAnnotation, typeParameter } = node
+        if (
+          typeAnnotation &&
+          typeAnnotation.type === 'TSIndexedAccessType' &&
+          typeParameter &&
+          typeParameter.constraint &&
+          typeParameters
+        ) {
+          const constraint = typeParameter.constraint
+          if (
+            constraint.type === 'TSTypeOperator' &&
+            constraint.operator === 'keyof' &&
+            constraint.typeAnnotation &&
+            constraint.typeAnnotation.type === 'TSTypeReference' &&
+            constraint.typeAnnotation.typeName.type === 'Identifier'
+          ) {
+            const typeName = constraint.typeAnnotation.typeName.name
+            const index = typeAnnotation.indexType
+            const obj = typeAnnotation.objectType
+            if (
+              obj &&
+              obj.type === 'TSTypeReference' &&
+              obj.typeName.type === 'Identifier' &&
+              obj.typeName.name === typeName &&
+              index &&
+              index.type === 'TSTypeReference' &&
+              index.typeName.type === 'Identifier' &&
+              index.typeName.name === typeParameter.name
+            ) {
+              const targetType = typeParameters[typeName]
+              if (targetType) {
+                return inferRuntimeType(ctx, targetType, scope)
+              }
+            }
+          }
+        }
+
+        return [UNKNOWN_TYPE]
+      }
 
       case 'TSEnumDeclaration':
         return inferEnumType(node)
