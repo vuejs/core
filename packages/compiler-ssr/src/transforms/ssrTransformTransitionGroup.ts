@@ -9,12 +9,62 @@ import {
   createCallExpression,
   findProp,
 } from '@vue/compiler-dom'
+import { hasOwn } from '@vue/shared'
 import { SSR_RENDER_ATTRS } from '../runtimeHelpers'
 import {
   type SSRTransformContext,
   processChildren,
 } from '../ssrCodegenTransform'
 import { buildSSRProps } from './ssrTransformElement'
+
+// Import transition props validators from the runtime
+const TransitionPropsValidators = (() => {
+  // Re-create the TransitionPropsValidators structure that's used at runtime
+  // This mirrors the logic from @vue/runtime-dom/src/components/Transition.ts
+  const BaseTransitionPropsValidators = {
+    mode: String,
+    appear: Boolean,
+    persisted: Boolean,
+    onBeforeEnter: [Function, Array],
+    onEnter: [Function, Array],
+    onAfterEnter: [Function, Array],
+    onEnterCancelled: [Function, Array],
+    onBeforeLeave: [Function, Array],
+    onLeave: [Function, Array],
+    onAfterLeave: [Function, Array],
+    onLeaveCancelled: [Function, Array],
+    onBeforeAppear: [Function, Array],
+    onAppear: [Function, Array],
+    onAfterAppear: [Function, Array],
+    onAppearCancelled: [Function, Array],
+  }
+
+  const DOMTransitionPropsValidators = {
+    name: String,
+    type: String,
+    css: { type: Boolean, default: true },
+    duration: [String, Number, Object],
+    enterFromClass: String,
+    enterActiveClass: String,
+    enterToClass: String,
+    appearFromClass: String,
+    appearActiveClass: String,
+    appearToClass: String,
+    leaveFromClass: String,
+    leaveActiveClass: String,
+    leaveToClass: String,
+  }
+
+  return {
+    ...BaseTransitionPropsValidators,
+    ...DOMTransitionPropsValidators,
+  }
+})()
+
+// Helper function to convert kebab-case to camelCase
+function kebabToCamel(str: string): string {
+  return str.replace(/-([a-z])/g, (_, char) => char.toUpperCase())
+}
 
 const wipMap = new WeakMap<ComponentNode, WIPEntry>()
 
@@ -32,7 +82,45 @@ export function ssrTransformTransitionGroup(
   return (): void => {
     const tag = findProp(node, 'tag')
     if (tag) {
-      const otherProps = node.props.filter(p => p !== tag)
+      // Filter out all transition-related private props when processing TransitionGroup attributes
+      const otherProps = node.props.filter(p => {
+        // Exclude tag (already handled separately)
+        if (p === tag) {
+          return false
+        }
+
+        // Exclude all transition-related attributes and TransitionGroup-specific attributes
+        // This logic mirrors the runtime TransitionGroup attribute filtering logic
+        if (p.type === NodeTypes.ATTRIBUTE) {
+          // Static attributes: check attribute name (supports kebab-case to camelCase conversion)
+          const propName = p.name
+          const camelCaseName = kebabToCamel(propName)
+          const shouldFilter =
+            hasOwn(TransitionPropsValidators, propName) ||
+            hasOwn(TransitionPropsValidators, camelCaseName) ||
+            propName === 'moveClass' ||
+            propName === 'move-class'
+          return !shouldFilter
+        } else if (p.type === NodeTypes.DIRECTIVE && p.name === 'bind') {
+          // Dynamic attributes: check bound attribute name
+          if (
+            p.arg &&
+            p.arg.type === NodeTypes.SIMPLE_EXPRESSION &&
+            p.arg.isStatic
+          ) {
+            const argName = p.arg.content
+            const camelCaseArgName = kebabToCamel(argName)
+            const shouldFilter =
+              hasOwn(TransitionPropsValidators, argName) ||
+              hasOwn(TransitionPropsValidators, camelCaseArgName) ||
+              argName === 'moveClass' ||
+              argName === 'move-class'
+            return !shouldFilter
+          }
+        }
+
+        return true
+      })
       const { props, directives } = buildProps(
         node,
         context,
