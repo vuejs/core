@@ -11,7 +11,7 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4.1.0
@@ -31,4 +31,4 @@ jobs:
       - name: Run prettier
         run: pnpm run format
 
-      - uses: autofix-ci/action@551dded8c6cc8a1054039c8bc0b8b48c51dfc6ef
+      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
