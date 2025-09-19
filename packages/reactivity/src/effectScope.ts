@@ -39,6 +39,16 @@ export class EffectScope {
    * @internal
    */
   private index: number | undefined
+  /**
+   * @internal
+   */
+  private _controller: AbortController | undefined
+
+  get signal(): AbortSignal {
+    if (!this._controller) this._controller = new AbortController()
+
+    return this._controller.signal
+  }
 
   constructor(public detached = false) {
     this.parent = activeEffectScope
@@ -129,6 +139,9 @@ export class EffectScope {
   stop(fromParent?: boolean): void {
     if (this._active) {
       this._active = false
+
+      if (this._controller) this._controller.abort()
+
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].stop()
