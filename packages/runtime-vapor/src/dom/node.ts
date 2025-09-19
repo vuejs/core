@@ -1,10 +1,6 @@
 /* @__NO_SIDE_EFFECTS__ */
 
-import {
-  type ChildItem,
-  type InsertionParent,
-  getHydrationState,
-} from '../insertionState'
+import type { ChildItem, InsertionParent } from '../insertionState'
 
 export function createElement(tagName: string): HTMLElement {
   return document.createElement(tagName)
@@ -70,21 +66,27 @@ export function _nthChild(node: InsertionParent, i: number): Node {
  */
 /* @__NO_SIDE_EFFECTS__ */
 export function __nthChild(node: Node, i: number): Node {
-  const hydrationState = getHydrationState(node as ParentNode)
-  if (hydrationState) {
-    const { prevDynamicCount, uniqueAnchorCount, logicalChildren } =
-      hydrationState
+  const parent = node as InsertionParent
+  if (parent.$idxMap) {
+    const {
+      $prevDynamicCount: prevDynamicCount = 0,
+      $anchorCount: anchorCount = 0,
+      $idxMap: idxMap,
+      $indexOffset: indexOffset = 0,
+    } = parent
     // prevDynamicCount tracks how many dynamic nodes have been processed
     // so far (prepend/insert/append).
     // For anchor-based insert, the first time an anchor is used we adopt the
-    // anchor node itself and do NOT consume the next child in `logicalChildren`,
+    // anchor node itself and do NOT consume the next child in `idxMap`,
     // yet prevDynamicCount is still incremented. This overcounts the base
     // offset by 1 per unique anchor that has appeared.
-    // uniqueAnchorCount equals the number of unique anchors seen, so we
+    // anchorCount equals the number of unique anchors seen, so we
     // subtract it to neutralize those "first-use doesn't consume" cases:
-    //   base = prevDynamicCount - uniqueAnchorCount
-    // Then index from this base: logicalChildren[base + i].
-    return logicalChildren[prevDynamicCount - uniqueAnchorCount + i]
+    //   base = prevDynamicCount - anchorCount
+    // Then index from this base: idxMap[base + i] + indexOffset.
+    const logicalIndex = prevDynamicCount - anchorCount + i
+    const realIndex = idxMap[logicalIndex] + indexOffset
+    return node.childNodes[realIndex]
   }
   return node.childNodes[i]
 }
@@ -100,11 +102,13 @@ export function _next(node: Node): Node {
  */
 /* @__NO_SIDE_EFFECTS__ */
 export function __next(node: Node): Node {
-  const hydrationState = getHydrationState(node.parentNode!)
-  if (hydrationState) {
-    const { logicalChildren } = hydrationState
+  const parent = node.parentNode! as InsertionParent
+  if (parent.$idxMap) {
+    const { $idxMap: idxMap, $indexOffset: indexOffset = 0 } = parent
     const { $idx, $uc: usedCount = 0 } = node as ChildItem
-    return logicalChildren[$idx + usedCount + 1]
+    const logicalIndex = $idx + usedCount + 1
+    const realIndex = idxMap[logicalIndex] + indexOffset
+    return node.parentNode!.childNodes[realIndex]
   }
   return node.nextSibling!
 }

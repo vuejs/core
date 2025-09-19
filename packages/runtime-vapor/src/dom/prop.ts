@@ -275,6 +275,8 @@ export function optimizePropertyLookup(): void {
   proto.$transition = undefined
   proto.$key = undefined
   proto.$evtclick = undefined
+  proto.$children = undefined
+  proto.$idx = undefined
   proto.$root = false
   proto.$html =
     proto.$txt =

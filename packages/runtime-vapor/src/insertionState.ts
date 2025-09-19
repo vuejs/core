@@ -1,22 +1,27 @@
 import { isComment, isHydrating } from './dom/hydration'
+import { currentTemplateFn, resetTemplateFn } from './dom/template'
 export type ChildItem = ChildNode & {
   $idx: number
   // used count as an anchor
   $uc?: number
 }
-export type InsertionParent = ParentNode & { $children?: ChildItem[] }
-type HydrationState = {
-  // static nodes and the start anchors of fragments
-  logicalChildren: ChildItem[]
-  // hydrated dynamic children count so far
-  prevDynamicCount: number
-  // number of unique insertion anchors that have appeared
-  uniqueAnchorCount: number
-  // current append anchor
-  appendAnchor: Node | null
-}
 
-const hydrationStateCache = new WeakMap<ParentNode, HydrationState>()
+export type InsertionParent = ParentNode & {
+  $children?: ChildItem[]
+  /**
+   * hydration-specific properties
+   */
+  // mapping from logical index to real index in childNodes
+  $idxMap?: number[]
+  // hydrated dynamic children count so far
+  $prevDynamicCount?: number
+  // number of unique insertion anchors that have appeared
+  $anchorCount?: number
+  // last append index
+  $appendIndex?: number | null
+  // number of dynamically inserted nodes (e.g., comment anchors)
+  $indexOffset?: number
+}
 export let insertionParent: InsertionParent | undefined
 export let insertionAnchor: Node | 0 | undefined | null
 
@@ -35,6 +40,7 @@ export function setInsertionState(
     if (isHydrating) {
       insertionAnchor = anchor as Node
       initializeHydrationState(parent)
+      resetTemplateFn()
     } else {
       // special handling append anchor value to null
       insertionAnchor =
@@ -46,12 +52,13 @@ export function setInsertionState(
   }
 }
 
-function initializeHydrationState(parent: ParentNode) {
-  if (!hydrationStateCache.has(parent)) {
+function initializeHydrationState(parent: InsertionParent) {
+  if (!parent.$idxMap) {
     const childNodes = parent.childNodes
     const len = childNodes.length
 
-    // fast path for single child case. No need to build logicalChildren
+    // fast path for single child case. use first child as hydration node
+    // no need to build logical index map
     if (
       len === 1 ||
       (len === 3 &&
@@ -62,48 +69,65 @@ function initializeHydrationState(parent: ParentNode) {
       return
     }
 
-    const logicalChildren = new Array(len) as ChildItem[]
-    // Build logical children:
-    // - static node: keep the node as a child
-    // - fragment: keep only the start anchor ('<!--[-->') as a child
-    let index = 0
-    for (let i = 0; i < len; i++) {
-      const n = childNodes[i] as ChildItem
-      n.$idx = index
-      if (n.nodeType === 8) {
-        const data = (n as any as Comment).data
-        // vdom fragment
-        if (data === '[') {
-          logicalChildren[index++] = n
-          // find matching end anchor, accounting for nested fragments
-          let depth = 1
-          let j = i + 1
-          for (; j < len; j++) {
-            const c = childNodes[j] as Comment
-            if (c.nodeType === 8) {
-              const d = c.data
-              if (d === '[') depth++
-              else if (d === ']') {
-                depth--
-                if (depth === 0) break
-              }
+    if (currentTemplateFn) {
+      if (currentTemplateFn.$idxMap) {
+        const idxMap = (parent.$idxMap = currentTemplateFn.$idxMap)
+        // set $idx to childNodes
+        for (let i = 0; i < idxMap.length; i++) {
+          ;(childNodes[idxMap[i]] as ChildItem).$idx = i
+        }
+      } else {
+        parent.$idxMap = currentTemplateFn.$idxMap = buildLogicalIndexMap(
+          len,
+          childNodes,
+        )
+      }
+    } else {
+      parent.$idxMap = buildLogicalIndexMap(len, childNodes)
+    }
+    parent.$prevDynamicCount = 0
+    parent.$anchorCount = 0
+    parent.$appendIndex = null
+    parent.$indexOffset = 0
+  }
+}
+
+function buildLogicalIndexMap(len: number, childNodes: NodeListOf<ChildNode>) {
+  const idxMap = new Array() as number[]
+  // Build logical index map:
+  // - static node: map logical index to real index
+  // - fragment: map logical index to start anchor's real index
+  let logicalIndex = 0
+  for (let i = 0; i < len; i++) {
+    const n = childNodes[i] as ChildItem
+    n.$idx = logicalIndex
+    if (n.nodeType === 8) {
+      const data = (n as any as Comment).data
+      // vdom fragment
+      if (data === '[') {
+        idxMap[logicalIndex++] = i
+        // find matching end anchor, accounting for nested fragments
+        let depth = 1
+        let j = i + 1
+        for (; j < len; j++) {
+          const c = childNodes[j] as Comment
+          if (c.nodeType === 8) {
+            const d = c.data
+            if (d === '[') depth++
+            else if (d === ']') {
+              depth--
+              if (depth === 0) break
             }
           }
-          // jump i to the end anchor
-          i = j
-          continue
         }
+        // jump i to the end anchor
+        i = j
+        continue
       }
-      logicalChildren[index++] = n
     }
-    logicalChildren.length = index
-    hydrationStateCache.set(parent, {
-      logicalChildren,
-      prevDynamicCount: 0,
-      uniqueAnchorCount: 0,
-      appendAnchor: null,
-    })
+    idxMap[logicalIndex++] = i
   }
+  return idxMap
 }
 
 function cacheTemplateChildren(parent: InsertionParent) {
@@ -124,8 +148,8 @@ export function resetInsertionState(): void {
   insertionParent = insertionAnchor = undefined
 }
 
-export function getHydrationState(
-  parent: ParentNode,
-): HydrationState | undefined {
-  return hydrationStateCache.get(parent)
+export function incrementIndexOffset(parent: InsertionParent): void {
+  if (parent.$indexOffset !== undefined) {
+    parent.$indexOffset++
+  }
 }

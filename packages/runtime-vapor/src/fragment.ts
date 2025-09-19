@@ -24,6 +24,7 @@ import {
 } from './components/Transition'
 import { type VaporComponentInstance, isVaporComponent } from './component'
 import { isArray } from '@vue/shared'
+import { incrementIndexOffset } from './insertionState'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -185,6 +186,8 @@ export class DynamicFragment extends VaporFragment {
       (this.anchor = createComment(this.anchorLabel!)),
       nextSibling,
     )
+    // increment index offset since we dynamically inserted a comment node
+    incrementIndexOffset(parentNode!)
     advanceHydrationNode(this.anchor)
   }
 }

@@ -3,11 +3,22 @@ import { child, createElement, createTextNode } from './node'
 
 let t: HTMLTemplateElement
 
+export let currentTemplateFn: (Function & { $idxMap?: number[] }) | undefined =
+  undefined
+
+export function resetTemplateFn(): void {
+  currentTemplateFn = undefined
+}
+
 /*! #__NO_SIDE_EFFECTS__ */
-export function template(html: string, root?: boolean) {
+export function template(
+  html: string,
+  root?: boolean,
+): () => Node & { $root?: true } {
   let node: Node
-  return (): Node & { $root?: true } => {
+  const fn = () => {
     if (isHydrating) {
+      currentTemplateFn = fn
       if (__DEV__ && !currentHydrationNode) {
         // TODO this should not happen
         throw new Error('No current hydration node')
@@ -32,4 +43,5 @@ export function template(html: string, root?: boolean) {
     if (root) (ret as any).$root = true
     return ret
   }
+  return fn
 }

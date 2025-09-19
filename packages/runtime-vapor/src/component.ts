@@ -616,10 +616,8 @@ export function mountComponent(
     startMeasure(instance, `mount`)
   }
   if (instance.bm) invokeArrayFns(instance.bm)
-  if (!isHydrating) {
-    insert(instance.block, parent, anchor)
-    setComponentScopeId(instance)
-  }
+  insert(instance.block, parent, anchor)
+  if (!isHydrating) setComponentScopeId(instance)
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
   instance.isMounted = true
   if (__DEV__) {
