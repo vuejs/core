@@ -74,7 +74,7 @@ enum MemberExpLexState {
   inString,
 }
 
-const validFirstIdentCharRE = /[A-Za-z_$\xA0-\uFFFF]/
+export const validFirstIdentCharRE: RegExp = /[A-Za-z_$\xA0-\uFFFF]/
 const validIdentCharRE = /[\.\?\w$\xA0-\uFFFF]/
 const whitespaceRE = /\s+[.[]\s*|\s*[.[]\s+/g
 
