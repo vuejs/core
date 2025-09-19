@@ -638,6 +638,33 @@ describe('defineCustomElement', () => {
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
       )
     })
+
+    test('render slot props', async () => {
+      const foo = ref('foo')
+      const E = defineCustomElement({
+        render() {
+          return [
+            h(
+              'div',
+              null,
+              renderSlot(this.$slots, 'default', { class: foo.value }),
+            ),
+          ]
+        },
+      })
+      customElements.define('my-el-slot-props', E)
+      container.innerHTML = `<my-el-slot-props><span>hi</span></my-el-slot-props>`
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot class="foo"></slot></div>`,
+      )
+
+      foo.value = 'bar'
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot class="bar"></slot></div>`,
+      )
+    })
   })
 
   describe('provide/inject', () => {
