@@ -134,6 +134,8 @@ function cacheTemplateChildren(parent: InsertionParent) {
   if (!parent.$children) {
     const nodes = parent.childNodes
     const len = nodes.length
+    if (len === 0) return
+
     const children = new Array(len) as ChildItem[]
     for (let i = 0; i < len; i++) {
       const node = nodes[i] as ChildItem
