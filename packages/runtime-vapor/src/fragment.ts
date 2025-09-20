@@ -42,7 +42,6 @@ export class VaporFragment<T extends Block = Block>
   remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
   fallback?: BlockFn
 
-  getNodes?: () => Block
   setRef?: (comp: VaporComponentInstance) => void
 
   constructor(nodes: T) {
@@ -241,7 +240,7 @@ export function findLastChild(node: Block): Node | undefined | null {
   } else if (isVaporComponent(node)) {
     return findLastChild(node.block!)
   } else {
-    if (node instanceof DynamicFragment && node.anchor) return node.anchor
+    if (node.anchor) return node.anchor
     return findLastChild(node.nodes!)
   }
 }
