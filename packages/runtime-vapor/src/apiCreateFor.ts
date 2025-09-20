@@ -15,21 +15,30 @@ import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
-  VaporFragment,
   insert,
+  normalizeAnchor,
+  remove,
   remove as removeBlock,
 } from './block'
 import { warn } from '@vue/runtime-dom'
-import { currentInstance, isVaporComponent } from './component'
+import { currentInstance } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import {
+  advanceHydrationNode,
+  isHydrating,
+  locateFragmentEndAnchor,
+  locateHydrationNode,
+  setCurrentHydrationNode,
+} from './dom/hydration'
+import { ForFragment, VaporFragment, findLastChild } from './fragment'
 import {
   insertionAnchor,
   insertionParent,
   resetInsertionState,
 } from './insertionState'
+import { applyTransitionHooks } from './components/Transition'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
@@ -77,7 +86,7 @@ export const createFor = (
   setup?: (_: {
     createSelector: (source: () => any) => (cb: () => void) => void
   }) => void,
-): VaporFragment => {
+): ForFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
@@ -92,9 +101,12 @@ export const createFor = (
   let parent: ParentNode | undefined | null
   // useSelector only
   let currentKey: any
-  // TODO handle this in hydration
-  const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
-  const frag = new VaporFragment(oldBlocks)
+  let parentAnchor: Node
+  if (!isHydrating) {
+    parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+  }
+
+  const frag = new ForFragment(oldBlocks)
   const instance = currentInstance!
   const canUseFastRemove = !!(flags & VaporVForFlags.FAST_REMOVE)
   const isComponent = !!(flags & VaporVForFlags.IS_COMPONENT)
@@ -112,17 +124,43 @@ export const createFor = (
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
+    let isFallback = false
 
     const prevSub = setActiveSub()
 
     if (!isMounted) {
       isMounted = true
       for (let i = 0; i < newLength; i++) {
+        if (isHydrating && isComponent && i > 0) {
+          setCurrentHydrationNode(
+            findLastChild(newBlocks[i - 1].nodes)!.nextSibling,
+          )
+        }
         mount(source, i)
+      }
+
+      if (isHydrating) {
+        if (isComponent) {
+          setCurrentHydrationNode(
+            findLastChild(newBlocks[newLength - 1].nodes)!.nextSibling,
+          )
+        }
+        parentAnchor = locateFragmentEndAnchor()!
+        if (__DEV__) {
+          if (!parentAnchor) {
+            throw new Error(`v-for fragment anchor node was not found.`)
+          }
+          ;(parentAnchor as Comment).data = 'for'
+        }
       }
     } else {
       parent = parent || parentAnchor!.parentNode
       if (!oldLength) {
+        // remove fallback nodes
+        if (frag.fallback && (frag.nodes[0] as Block[]).length > 0) {
+          remove(frag.nodes[0], parent!)
+        }
+
         // fast path for all new
         for (let i = 0; i < newLength; i++) {
           mount(source, i)
@@ -139,6 +177,12 @@ export const createFor = (
         if (canUseFastRemove) {
           parent!.textContent = ''
           parent!.appendChild(parentAnchor)
+        }
+
+        // render fallback nodes
+        if (frag.fallback) {
+          insert((frag.nodes[0] = frag.fallback()), parent!, parentAnchor)
+          isFallback = true
         }
       } else if (!getKey) {
         // unkeyed fast path
@@ -202,7 +246,7 @@ export const createFor = (
         if (endOffset !== 0) {
           anchorFallback = normalizeAnchor(
             newBlocks[newLength - endOffset].nodes,
-          )
+          )!
         }
 
         while (startOffset < sharedBlockCount - endOffset) {
@@ -339,11 +383,12 @@ export const createFor = (
       }
     }
 
-    frag.nodes = [(oldBlocks = newBlocks)]
-    if (parentAnchor) {
-      frag.nodes.push(parentAnchor)
+    if (!isFallback) {
+      frag.nodes = [(oldBlocks = newBlocks)]
+      if (parentAnchor) frag.nodes.push(parentAnchor)
+    } else {
+      oldBlocks = []
     }
-
     setActiveSub(prevSub)
   }
 
@@ -383,6 +428,11 @@ export const createFor = (
       indexRef,
       key2,
     ))
+
+    // apply transition for new nodes
+    if (frag.$transition) {
+      applyTransitionHooks(block.nodes, frag.$transition, false)
+    }
 
     if (parent) insert(block.nodes, parent, anchor)
 
@@ -430,8 +480,12 @@ export const createFor = (
     renderEffect(renderList)
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(frag, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+  } else {
+    advanceHydrationNode(
+      _insertionAnchor !== undefined ? _insertionParent! : parentAnchor!,
+    )
   }
 
   return frag
@@ -553,18 +607,6 @@ function getItem(
   }
 }
 
-function normalizeAnchor(node: Block): Node {
-  if (node instanceof Node) {
-    return node
-  } else if (isArray(node)) {
-    return normalizeAnchor(node[0])
-  } else if (isVaporComponent(node)) {
-    return normalizeAnchor(node.block!)
-  } else {
-    return normalizeAnchor(node.nodes!)
-  }
-}
-
 // runtime helper for rest element destructure
 export function getRestElement(val: any, keys: string[]): any {
   const res: any = {}
@@ -576,4 +618,8 @@ export function getRestElement(val: any, keys: string[]): any {
 
 export function getDefaultValue(val: any, defaultVal: any): any {
   return val === undefined ? defaultVal : val
+}
+
+export function isForBlock(block: Block): block is ForBlock {
+  return block instanceof ForBlock
 }

@@ -20,8 +20,8 @@ describe('api: template', () => {
 
   test('nthChild', () => {
     const t = template('<div><span><b>nested</b></span><p></p></div>')
-    const root = t()
-    const span = nthChild(root, 0)
+    const root = t() as ParentNode
+    const span = nthChild(root, 0) as ParentNode
     const b = nthChild(span, 0)
     const p = nthChild(root, 1)
     expect(span).toBe(root.firstChild)
@@ -31,7 +31,7 @@ describe('api: template', () => {
 
   test('next', () => {
     const t = template('<div><span></span><b></b><p></p></div>')
-    const root = t()
+    const root = t() as ParentNode
     const span = child(root as ParentNode)
     const b = next(span)
 
