@@ -37,7 +37,13 @@ import {
   setActiveSub,
   unref,
 } from '@vue/reactivity'
-import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  type Prettify,
+  invokeArrayFns,
+  isFunction,
+  isString,
+} from '@vue/shared'
 import {
   type DynamicPropsSource,
   type RawProps,
@@ -398,7 +404,7 @@ export class VaporComponentInstance<
     // compatible with vdom components
     string[]
   exposed: Exposed | null
-  exposeProxy: ShallowUnwrapRef<Exposed> | null
+  exposeProxy: Prettify<ShallowUnwrapRef<Exposed>> | null
 
   // for useTemplateRef()
   refs: TypeRefs
