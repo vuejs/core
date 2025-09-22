@@ -313,24 +313,6 @@ export function setElementText(
 export function setHtml(el: TargetElement, value: any): void {
   value = value == null ? '' : value
 
-  if (isHydrating) {
-    if (el.innerHTML === value) {
-      el.$html = value
-      return
-    }
-
-    if (!isMismatchAllowed(el, MismatchTypes.CHILDREN)) {
-      if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
-        warn(
-          `Hydration children mismatch on`,
-          el,
-          `\nServer rendered element contains different child nodes from client nodes.`,
-        )
-      }
-      logMismatchError()
-    }
-  }
-
   if (el.$html !== value) {
     el.innerHTML = el.$html = value
   }
