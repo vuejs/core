@@ -409,7 +409,7 @@ function classHasMismatch(
 
   let hasMismatch: boolean = false
   if (isIncremental) {
-    if (expectedClassSet.size > 0) {
+    if (expected) {
       hasMismatch = Array.from(expectedClassSet).some(
         cls => !actualClassSet.has(cls),
       )
@@ -447,7 +447,7 @@ function styleHasMismatch(
 
   let hasMismatch: boolean = false
   if (isIncremental) {
-    if (expectedStyleMap.size > 0) {
+    if (expected) {
       // check if the expected styles are present in the actual styles
       hasMismatch = Array.from(expectedStyleMap.entries()).some(
         ([key, val]) => actualStyleMap.get(key) !== val,

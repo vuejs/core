@@ -392,24 +392,26 @@ function createMinifiedConfig(/** @type {PackageFormat} */ format) {
       file: outputConfigs[format].file.replace(/\.js$/, '.prod.js'),
     },
     [
-      // {
-      //   name: 'swc-minify',
-      //   async renderChunk(contents, _, { format }) {
-      //     const { code } = await minifySwc(contents, {
-      //       module: format === 'es',
-      //       format: {
-      //         comments: false,
-      //       },
-      //       compress: {
-      //         ecma: 2016,
-      //         pure_getters: true,
-      //       },
-      //       safari10: true,
-      //       mangle: true,
-      //     })
-      //     return { code: banner + code, map: null }
-      //   },
-      // },
+      {
+        name: 'swc-minify',
+
+        async renderChunk(contents, _, { format }) {
+          const { code } = await minifySwc(contents, {
+            module: format === 'es',
+            format: {
+              comments: false,
+            },
+            compress: {
+              ecma: 2016,
+              pure_getters: true,
+            },
+            safari10: true,
+            mangle: true,
+          })
+
+          return { code: banner + code, map: null }
+        },
+      },
     ],
   )
 }
