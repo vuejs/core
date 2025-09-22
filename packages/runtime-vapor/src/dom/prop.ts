@@ -423,10 +423,16 @@ function classHasMismatch(
   const actualClassSet = toClassSet(actual || '')
   const expectedClassSet = toClassSet(expected)
 
-  const hasMismatch = isIncremental
-    ? // check if the expected classes are present in the actual classes
-      Array.from(expectedClassSet).some(cls => !actualClassSet.has(cls))
-    : !isSetEqual(actualClassSet, expectedClassSet)
+  let hasMismatch: boolean = false
+  if (isIncremental) {
+    if (expected) {
+      hasMismatch = Array.from(expectedClassSet).some(
+        cls => !actualClassSet.has(cls),
+      )
+    }
+  } else {
+    hasMismatch = !isSetEqual(actualClassSet, expectedClassSet)
+  }
 
   if (hasMismatch) {
     warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)
@@ -455,12 +461,17 @@ function styleHasMismatch(
 
   // TODO: handle css vars
 
-  const hasMismatch = isIncremental
-    ? // check if the expected styles are present in the actual styles
-      Array.from(expectedStyleMap.entries()).some(
+  let hasMismatch: boolean = false
+  if (isIncremental) {
+    if (expected) {
+      // check if the expected styles are present in the actual styles
+      hasMismatch = Array.from(expectedStyleMap.entries()).some(
         ([key, val]) => actualStyleMap.get(key) !== val,
       )
-    : !isMapEqual(actualStyleMap, expectedStyleMap)
+    }
+  } else {
+    hasMismatch = !isMapEqual(actualStyleMap, expectedStyleMap)
+  }
 
   if (hasMismatch) {
     warnPropMismatch(el, 'style', MismatchTypes.STYLE, actual, expected)
