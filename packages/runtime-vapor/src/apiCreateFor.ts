@@ -16,6 +16,7 @@ import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
   VaporFragment,
+  findLastChild,
   insert,
   remove as removeBlock,
 } from './block'
@@ -29,6 +30,7 @@ import {
   isHydrating,
   locateFragmentEndAnchor,
   locateHydrationNode,
+  setCurrentHydrationNode,
 } from './dom/hydration'
 import {
   insertionAnchor,
@@ -126,10 +128,20 @@ export const createFor = (
     if (!isMounted) {
       isMounted = true
       for (let i = 0; i < newLength; i++) {
+        if (isHydrating && isComponent && i > 0) {
+          setCurrentHydrationNode(
+            findLastChild(newBlocks[i - 1].nodes)!.nextSibling,
+          )
+        }
         mount(source, i)
       }
 
       if (isHydrating) {
+        if (isComponent) {
+          setCurrentHydrationNode(
+            findLastChild(newBlocks[newLength - 1].nodes)!.nextSibling,
+          )
+        }
         parentAnchor = locateFragmentEndAnchor()!
         if (__DEV__) {
           if (!parentAnchor) {
