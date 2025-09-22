@@ -913,6 +913,13 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script>foo()</script><script setup lang="ts">bar()</script>`),
       ).toThrow(`<script> and <script setup> must have the same language type`)
+
+      // #13193 must check lang before parsing with babel
+      expect(() =>
+        compile(
+          `<script lang="ts">const a = 1</script><script setup lang="tsx">const Comp = () => <p>test</p></script>`,
+        ),
+      ).toThrow(`<script> and <script setup> must have the same language type`)
     })
 
     const moduleErrorMsg = `cannot contain ES module exports`
@@ -1542,5 +1549,20 @@ describe('compileScript', () => {
       `import { withAsyncContext as _withAsyncContext } from "npm:vue"\n`,
     )
     assertCode(content)
+  })
+
+  test('should not compile unrecognized language', () => {
+    const { content, lang, scriptAst } = compile(
+      `<script lang="coffee">
+      export default
+        data: ->
+          myVal: 0
+      </script>`,
+    )
+    expect(content).toMatch(`export default
+        data: ->
+          myVal: 0`)
+    expect(lang).toBe('coffee')
+    expect(scriptAst).not.toBeDefined()
   })
 })

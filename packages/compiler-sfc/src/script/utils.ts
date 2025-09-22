@@ -121,3 +121,8 @@ export const propNameEscapeSymbolsRE: RegExp =
 export function getEscapedPropName(key: string): string {
   return propNameEscapeSymbolsRE.test(key) ? JSON.stringify(key) : key
 }
+
+export const isJS = (...langs: (string | null | undefined)[]): boolean =>
+  langs.some(lang => lang === 'js' || lang === 'jsx')
+export const isTS = (...langs: (string | null | undefined)[]): boolean =>
+  langs.some(lang => lang === 'ts' || lang === 'tsx')

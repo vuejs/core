@@ -7,7 +7,7 @@ import {
   type InternalRenderFunction,
   isClassComponent,
 } from './component'
-import { queueJob, queuePostFlushCb } from './scheduler'
+import { SchedulerJobFlags, queueJob, queuePostFlushCb } from './scheduler'
 import { extend, getGlobalThis } from '@vue/shared'
 
 type HMRComponent = ComponentOptions | ClassComponent
@@ -31,11 +31,17 @@ export interface HMRRuntime {
 // Note: for a component to be eligible for HMR it also needs the __hmrId option
 // to be set so that its instances can be registered / removed.
 if (__DEV__) {
-  getGlobalThis().__VUE_HMR_RUNTIME__ = {
-    createRecord: tryWrap(createRecord),
-    rerender: tryWrap(rerender),
-    reload: tryWrap(reload),
-  } as HMRRuntime
+  const g = getGlobalThis()
+  // vite-plugin-vue/issues/644, #13202
+  // custom-element libraries bundle Vue to simplify usage outside Vue projects but
+  // it overwrite __VUE_HMR_RUNTIME__, causing HMR to break.
+  if (!g.__VUE_HMR_RUNTIME__) {
+    g.__VUE_HMR_RUNTIME__ = {
+      createRecord: tryWrap(createRecord),
+      rerender: tryWrap(rerender),
+      reload: tryWrap(reload),
+    } as HMRRuntime
+  }
 }
 
 const map: Map<
@@ -96,7 +102,10 @@ function rerender(id: string, newRender?: Function): void {
     instance.renderCache = []
     // this flag forces child components with slot content to update
     isHmrUpdating = true
-    instance.update()
+    // #13771 don't update if the job is already disposed
+    if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
+      instance.update()
+    }
     isHmrUpdating = false
   })
 }
@@ -144,11 +153,15 @@ function reload(id: string, newComp: HMRComponent): void {
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.
       queueJob(() => {
-        isHmrUpdating = true
-        instance.parent!.update()
-        isHmrUpdating = false
-        // #6930, #11248 avoid infinite recursion
-        dirtyInstances.delete(instance)
+        // vite-plugin-vue/issues/599
+        // don't update if the job is already disposed
+        if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
+          isHmrUpdating = true
+          instance.parent!.update()
+          isHmrUpdating = false
+          // #6930, #11248 avoid infinite recursion
+          dirtyInstances.delete(instance)
+        }
       })
     } else if (instance.appContext.reload) {
       // root instance mounted via createApp() has a reload method
