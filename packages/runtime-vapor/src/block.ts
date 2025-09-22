@@ -15,6 +15,7 @@ import {
   locateFragmentEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
+import { incrementIndexOffset } from './insertionState'
 
 export type Block =
   | Node
@@ -136,6 +137,8 @@ export class DynamicFragment extends VaporFragment {
         : createTextNode()),
       nextSibling,
     )
+    // increment index offset since we dynamically inserted a comment node
+    incrementIndexOffset(parentNode!)
     advanceHydrationNode(this.anchor)
   }
 }
