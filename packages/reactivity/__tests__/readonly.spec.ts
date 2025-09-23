@@ -8,7 +8,9 @@ import {
   reactive,
   readonly,
   ref,
+  shallowRef,
   toRaw,
+  triggerRef,
 } from '../src'
 
 /**
@@ -496,9 +498,10 @@ describe('reactivity/readonly', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
-    expect(() => {
-      obj.ror = true
-    }).toThrow()
+    obj.ror = true
+    expect(
+      `Set operation on key "ror" failed: target is readonly.`,
+    ).toHaveBeenWarned()
     expect(obj.ror).toBe(false)
   })
 
@@ -519,4 +522,17 @@ describe('reactivity/readonly', () => {
     expect(obj.r).toBe(ro)
     expect(r.value).toBe(ro)
   })
+})
+
+test('should be able to trigger with triggerRef', () => {
+  const r = shallowRef({ a: 1 })
+  const ror = readonly(r)
+  let dummy
+  effect(() => {
+    dummy = ror.value.a
+  })
+  r.value.a = 2
+  expect(dummy).toBe(1)
+  triggerRef(ror)
+  expect(dummy).toBe(2)
 })
