@@ -6,6 +6,7 @@ import {
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import { DynamicFlag } from '../ir'
+import { escapeHtml } from '@vue/shared'
 
 export const transformComment: NodeTransform = (node, context) => {
   if (node.type !== NodeTypes.COMMENT) return
@@ -14,7 +15,7 @@ export const transformComment: NodeTransform = (node, context) => {
     context.comment.push(node)
     context.dynamic.flags |= DynamicFlag.NON_TEMPLATE
   } else {
-    context.template += `<!--${node.content}-->`
+    context.template += `<!--${escapeHtml(node.content)}-->`
   }
 }
 
