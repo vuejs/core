@@ -26,7 +26,7 @@ import {
   isComment,
   isHydrating,
   logMismatchError,
-  runWithNonHydrating,
+  runWithoutHydration,
   setCurrentHydrationNode,
 } from '../dom/hydration'
 import { incrementIndexOffset } from '../insertionState'
@@ -217,7 +217,7 @@ export class TeleportFragment extends VaporFragment {
       querySelector,
     ))
     if (target) {
-      let shouldMount = false
+      let needMount = false
       const disabled = isTeleportDisabled(this.resolvedProps!)
       const targetNode =
         (target as TeleportTargetElement)._lpa || target.firstChild
@@ -252,7 +252,7 @@ export class TeleportFragment extends VaporFragment {
         // always be null, we need to manually add targetAnchor to ensure
         // Teleport it can properly unmount or move
         if (!this.targetAnchor) {
-          shouldMount = true
+          needMount = true
           target.appendChild((this.targetStart = createTextNode('')))
           target.appendChild(
             (this.mountAnchor = this.targetAnchor = createTextNode('')),
@@ -275,8 +275,8 @@ export class TeleportFragment extends VaporFragment {
         }
       }
 
-      if (shouldMount) {
-        runWithNonHydrating(this.initChildren.bind(this))
+      if (needMount) {
+        runWithoutHydration(this.initChildren.bind(this))
         let count = 2 // for the two anchors
         let node = this.targetStart!.nextSibling
         while (node && node !== this.targetAnchor) {

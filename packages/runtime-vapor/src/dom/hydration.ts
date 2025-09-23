@@ -22,7 +22,7 @@ const isHydratingStack = [] as boolean[]
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
 
-export function runWithNonHydrating(fn: () => any): any {
+export function runWithoutHydration(fn: () => any): any {
   try {
     isHydrating = false
     return fn()
