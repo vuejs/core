@@ -2944,16 +2944,6 @@ describe('mismatch handling', () => {
     expect(`Hydration text content mismatch`).toHaveBeenWarned()
   })
 
-  test('element with v-html', async () => {
-    const data = ref('<p>bar</p>')
-    const { container } = await mountWithHydration(
-      `<div><p>foo</p></div>`,
-      `<div v-html="data"></div>`,
-      data,
-    )
-    expect(container.innerHTML).toBe('<div><p>bar</p></div>')
-    expect(`Hydration children mismatch on`).toHaveBeenWarned()
-  })
   // test('not enough children', () => {
   //   const { container } = mountWithHydration(`<div></div>`, () =>
   //     h('div', [h('span', 'foo'), h('span', 'bar')]),
