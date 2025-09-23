@@ -29,7 +29,7 @@ describe('transition-group', () => {
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
+        _push(\`<ul\${_ssrRenderAttrs(_attrs, "ul", true)}>\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
@@ -48,7 +48,7 @@ describe('transition-group', () => {
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
+        _push(\`<ul\${_ssrRenderAttrs(_attrs, "ul", true)}>\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
@@ -70,7 +70,7 @@ describe('transition-group', () => {
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
+        _push(\`<ul\${_ssrRenderAttrs(_attrs, "ul", true)}>\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
@@ -91,7 +91,7 @@ describe('transition-group', () => {
         _push(\`<\${
           _ctx.someTag
         }\${
-          _ssrRenderAttrs(_attrs)
+          _ssrRenderAttrs(_attrs, _ctx.someTag, true)
         }>\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
@@ -143,7 +143,7 @@ describe('transition-group', () => {
         _push(\`<ul\${_ssrRenderAttrs(_mergeProps({
           class: "red",
           id: "ok"
-        }, _attrs))}></ul>\`)
+        }, _attrs), "ul", true)}></ul>\`)
       }"
     `)
   })
@@ -164,7 +164,7 @@ describe('transition-group', () => {
         _push(\`<ul\${_ssrRenderAttrs(_mergeProps({
           class: "container",
           "data-test": "value"
-        }, _attrs))}></ul>\`)
+        }, _attrs), "ul", true)}></ul>\`)
       }"
     `)
   })
@@ -183,7 +183,7 @@ describe('transition-group', () => {
         _push(\`<ul\${_ssrRenderAttrs(_mergeProps({
           class: "container",
           id: "list"
-        }, _attrs))}></ul>\`)
+        }, _attrs), "ul", true)}></ul>\`)
       }"
     `)
   })
@@ -199,7 +199,7 @@ describe('transition-group', () => {
       const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ class: "list" }, _attrs))}></div>\`)
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ class: "list" }, _attrs), "div", true)}></div>\`)
       }"
     `)
   })
@@ -218,7 +218,7 @@ describe('transition-group', () => {
         _push(\`<ul\${_ssrRenderAttrs(_mergeProps({
           class: "dynamic-list",
           "data-test": "true"
-        }, _attrs))}></ul>\`)
+        }, _attrs), "ul", true)}></ul>\`)
       }"
     `)
   })
@@ -234,7 +234,7 @@ describe('transition-group', () => {
       const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ class: "events" }, _attrs))}></div>\`)
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ class: "events" }, _attrs), "div", true)}></div>\`)
       }"
     `)
   })
@@ -250,7 +250,7 @@ describe('transition-group', () => {
       const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ class: "container" }, _attrs))}></div>\`)
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ class: "container" }, _attrs), "div", true)}></div>\`)
       }"
     `)
   })
@@ -263,10 +263,10 @@ describe('transition-group', () => {
       ).code,
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require("vue")
-      const { ssrRenderAttrs: _ssrRenderAttrs, ssrFilterTransitionProps: _ssrFilterTransitionProps } = require("vue/server-renderer")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<ul\${_ssrRenderAttrs(_ssrFilterTransitionProps(_mergeProps(_ctx.transitionProps, { class: "container" }, _attrs)))}></ul>\`)
+        _push(\`<ul\${_ssrRenderAttrs(_mergeProps(_ctx.transitionProps, { class: "container" }, _attrs), "ul", true)}></ul>\`)
       }"
     `)
   })
@@ -279,10 +279,10 @@ describe('transition-group', () => {
       ).code,
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require("vue")
-      const { ssrRenderAttrs: _ssrRenderAttrs, ssrFilterTransitionProps: _ssrFilterTransitionProps } = require("vue/server-renderer")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${_ssrRenderAttrs(_ssrFilterTransitionProps(_mergeProps({ id: 'test', 'data-value': 42, name: 'fade', moveClass: 'move', class: 'dynamic' }, _attrs)))}></div>\`)
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ id: 'test', 'data-value': 42, name: 'fade', moveClass: 'move', class: 'dynamic' }, _attrs), "div", true)}></div>\`)
       }"
     `)
   })
@@ -295,13 +295,13 @@ describe('transition-group', () => {
       ).code,
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require("vue")
-      const { ssrRenderAttrs: _ssrRenderAttrs, ssrFilterTransitionProps: _ssrFilterTransitionProps } = require("vue/server-renderer")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<ul\${_ssrRenderAttrs(_ssrFilterTransitionProps(_mergeProps(_ctx.extraProps, {
+        _push(\`<ul\${_ssrRenderAttrs(_mergeProps(_ctx.extraProps, {
           class: "mixed",
           "data-test": "static"
-        }, _attrs)))}></ul>\`)
+        }, _attrs), "ul", true)}></ul>\`)
       }"
     `)
   })

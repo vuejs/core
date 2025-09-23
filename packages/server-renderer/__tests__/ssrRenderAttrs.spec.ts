@@ -7,6 +7,57 @@ import {
 import { escapeHtml } from '@vue/shared'
 
 describe('ssr: renderAttrs', () => {
+  test('filters transition props when isTransition is true', () => {
+    expect(
+      ssrRenderAttrs(
+        {
+          id: 'test',
+          class: 'container',
+          name: 'fade',
+          moveClass: 'move',
+          'data-value': 42,
+          appear: true,
+          duration: 300,
+          'enter-from-class': 'enter',
+        },
+        'ul',
+        true,
+      ),
+    ).toBe(' id="test" class="container" data-value="42"')
+  })
+
+  test('keeps all props when isTransition is false', () => {
+    expect(
+      ssrRenderAttrs(
+        {
+          id: 'test',
+          class: 'container',
+          name: 'fade',
+          moveClass: 'move',
+          'data-value': 42,
+        },
+        'ul',
+        false,
+      ),
+    ).toBe(
+      ' id="test" class="container" name="fade" moveclass="move" data-value="42"',
+    )
+  })
+
+  test('keeps all props when isTransition is undefined', () => {
+    expect(
+      ssrRenderAttrs({
+        id: 'test',
+        class: 'container',
+        name: 'fade',
+        moveClass: 'move',
+        'data-value': 42,
+      }),
+    ).toBe(
+      ' id="test" class="container" name="fade" moveclass="move" data-value="42"',
+    )
+  })
+
   test('ignore reserved props', () => {
     expect(
       ssrRenderAttrs({

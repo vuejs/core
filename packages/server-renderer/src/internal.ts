@@ -9,7 +9,6 @@ export {
   ssrRenderAttrs,
   ssrRenderAttr,
   ssrRenderDynamicAttr,
-  ssrFilterTransitionProps,
 } from './helpers/ssrRenderAttrs'
 export { ssrInterpolate } from './helpers/ssrInterpolate'
 export { ssrRenderList } from './helpers/ssrRenderList'

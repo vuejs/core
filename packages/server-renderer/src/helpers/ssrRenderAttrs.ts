@@ -27,13 +27,16 @@ const shouldIgnoreProp = /*@__PURE__*/ makeMap(
 export function ssrRenderAttrs(
   props: Record<string, unknown>,
   tag?: string,
+  isTransition?: boolean,
 ): string {
   let ret = ''
   for (const key in props) {
     if (
       shouldIgnoreProp(key) ||
       isOn(key) ||
-      (tag === 'textarea' && key === 'value')
+      (tag === 'textarea' && key === 'value') ||
+      (isTransition && transitionPropsToFilter(key)) ||
+      (isTransition && transitionPropsToFilter(kebabToCamel(key)))
     ) {
       continue
     }
@@ -128,20 +131,4 @@ const transitionPropsToFilter = /*@__PURE__*/ makeMap(
 
 function kebabToCamel(str: string): string {
   return str.replace(/-([a-z])/g, (_, char) => char.toUpperCase())
-}
-
-export function ssrFilterTransitionProps(
-  props: Record<string, unknown>,
-): Record<string, unknown> {
-  const filtered: Record<string, unknown> = {}
-  for (const key in props) {
-    // Filter out transition-specific props (both camelCase and kebab-case)
-    if (
-      !transitionPropsToFilter(key) &&
-      !transitionPropsToFilter(kebabToCamel(key))
-    ) {
-      filtered[key] = props[key]
-    }
-  }
-  return filtered
 }
