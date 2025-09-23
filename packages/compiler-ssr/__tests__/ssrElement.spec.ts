@@ -337,6 +337,39 @@ describe('ssr: element', () => {
         `)
     })
 
+    test('custom dir with v-text', () => {
+      expect(getCompiledString(`<div v-xxx v-text="foo" />`))
+        .toMatchInlineSnapshot(`
+          "\`<div\${
+              _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx))
+            }>\${
+              _ssrInterpolate(_ctx.foo)
+            }</div>\`"
+        `)
+    })
+
+    test('custom dir with v-text and normal attrs', () => {
+      expect(getCompiledString(`<div class="test" v-xxx v-text="foo" />`))
+        .toMatchInlineSnapshot(`
+          "\`<div\${
+              _ssrRenderAttrs(_mergeProps({ class: "test" }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+            }>\${
+              _ssrInterpolate(_ctx.foo)
+            }</div>\`"
+        `)
+    })
+
+    test('mulptiple custom dirs with v-text', () => {
+      expect(getCompiledString(`<div v-xxx v-yyy v-text="foo" />`))
+        .toMatchInlineSnapshot(`
+          "\`<div\${
+              _ssrRenderAttrs(_mergeProps(_ssrGetDirectiveProps(_ctx, _directive_xxx), _ssrGetDirectiveProps(_ctx, _directive_yyy)))
+            }>\${
+              _ssrInterpolate(_ctx.foo)
+            }</div>\`"
+        `)
+    })
+
     test('custom dir with object v-bind', () => {
       expect(getCompiledString(`<div v-bind="x" v-xxx />`))
         .toMatchInlineSnapshot(`

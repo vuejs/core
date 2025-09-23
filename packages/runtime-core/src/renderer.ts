@@ -85,7 +85,8 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import type { TransitionHooks } from './components/BaseTransition'
+import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
+import type { VueElement } from '@vue/runtime-dom'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -484,6 +485,8 @@ function baseCreateRenderer(
     // set ref
     if (ref != null && parentComponent) {
       setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
+    } else if (ref == null && n1 && n1.ref != null) {
+      setRef(n1.ref, null, parentSuspense, n1, true)
     }
   }
 
@@ -961,7 +964,8 @@ function baseCreateRenderer(
           // which also requires the correct parent container
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
+          oldVNode.shapeFlag &
+            (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE))
           ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
@@ -1208,12 +1212,12 @@ function baseCreateRenderer(
       }
     }
 
+    // avoid hydration for hmr updating
+    if (__DEV__ && isHmrUpdating) initialVNode.el = null
+
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      // avoid hydration for hmr updating
-      if (__DEV__ && isHmrUpdating) initialVNode.el = null
-
       parentSuspense &&
         parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
@@ -1222,6 +1226,7 @@ function baseCreateRenderer(
       if (!initialVNode.el) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
+        initialVNode.placeholder = placeholder.el
       }
     } else {
       setupRenderEffect(
@@ -1347,7 +1352,11 @@ function baseCreateRenderer(
           }
         } else {
           // custom element style injection
-          if (root.ce) {
+          if (
+            root.ce &&
+            // @ts-expect-error _def is private
+            (root.ce as VueElement)._def.shadowRoot !== false
+          ) {
             root.ce._injectChildStyle(type)
           }
 
@@ -1971,8 +1980,12 @@ function baseCreateRenderer(
       for (i = toBePatched - 1; i >= 0; i--) {
         const nextIndex = s2 + i
         const nextChild = c2[nextIndex] as VNode
+        const anchorVNode = c2[nextIndex + 1] as VNode
         const anchor =
-          nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
+          nextIndex + 1 < l2
+            ? // #13559, fallback to el placeholder for unresolved async component
+              anchorVNode.el || anchorVNode.placeholder
+            : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
           patch(
@@ -2049,8 +2062,20 @@ function baseCreateRenderer(
         queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
       } else {
         const { leave, delayLeave, afterLeave } = transition!
-        const remove = () => hostInsert(el!, container, anchor)
+        const remove = () => {
+          if (vnode.ctx!.isUnmounted) {
+            hostRemove(el!)
+          } else {
+            hostInsert(el!, container, anchor)
+          }
+        }
         const performLeave = () => {
+          // #13153 move kept-alive node before v-show transition leave finishes
+          // it needs to call the leaving callback to ensure element's `display`
+          // is `none`
+          if (el!._isLeaving) {
+            el![leaveCbKey](true /* cancelled */)
+          }
           leave(el!, () => {
             remove()
             afterLeave && afterLeave()
@@ -2092,7 +2117,9 @@ function baseCreateRenderer(
 
     // unset ref
     if (ref != null) {
+      pauseTracking()
       setRef(ref, null, parentSuspense, vnode, true)
+      resetTracking()
     }
 
     // #6593 should clean memo cache when unmount
@@ -2299,24 +2326,6 @@ function baseCreateRenderer(
       instance.isUnmounted = true
     }, parentSuspense)
 
-    // A component with async dep inside a pending suspense is unmounted before
-    // its async dep resolves. This should remove the dep from the suspense, and
-    // cause the suspense to resolve immediately if that was the last dep.
-    if (
-      __FEATURE_SUSPENSE__ &&
-      parentSuspense &&
-      parentSuspense.pendingBranch &&
-      !parentSuspense.isUnmounted &&
-      instance.asyncDep &&
-      !instance.asyncResolved &&
-      instance.suspenseId === parentSuspense.pendingId
-    ) {
-      parentSuspense.deps--
-      if (parentSuspense.deps === 0) {
-        parentSuspense.resolve()
-      }
-    }
-
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       devtoolsComponentRemoved(instance)
     }
@@ -2475,13 +2484,21 @@ export function traverseStaticChildren(
           traverseStaticChildren(c1, c2)
       }
       // #6852 also inherit for text nodes
-      if (c2.type === Text) {
+      if (
+        c2.type === Text &&
+        // avoid cached text nodes retaining detached dom nodes
+        c2.patchFlag !== PatchFlags.CACHED
+      ) {
         c2.el = c1.el
       }
-      // also inherit for comment nodes, but not placeholders (e.g. v-if which
+      // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
       // would have received .el during block patch)
-      if (__DEV__ && c2.type === Comment && !c2.el) {
+      if (c2.type === Comment && !c2.el) {
         c2.el = c1.el
+      }
+
+      if (__DEV__) {
+        c2.el && (c2.el.__vnode = c2)
       }
     }
   }

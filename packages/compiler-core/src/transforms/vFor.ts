@@ -63,17 +63,27 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
       const isTemplate = isTemplateNode(node)
       const memo = findDir(node, 'memo')
       const keyProp = findProp(node, `key`, false, true)
-      if (keyProp && keyProp.type === NodeTypes.DIRECTIVE && !keyProp.exp) {
+      const isDirKey = keyProp && keyProp.type === NodeTypes.DIRECTIVE
+      if (isDirKey && !keyProp.exp) {
         // resolve :key shorthand #10882
         transformBindShorthand(keyProp, context)
       }
-      const keyExp =
+      let keyExp =
         keyProp &&
         (keyProp.type === NodeTypes.ATTRIBUTE
           ? keyProp.value
             ? createSimpleExpression(keyProp.value.content, true)
             : undefined
           : keyProp.exp)
+
+      if (memo && keyExp && isDirKey) {
+        if (!__BROWSER__) {
+          keyProp.exp = keyExp = processExpression(
+            keyExp as SimpleExpressionNode,
+            context,
+          )
+        }
+      }
       const keyProperty =
         keyProp && keyExp ? createObjectProperty(`key`, keyExp) : null
 
@@ -253,7 +263,7 @@ export function processFor(
   dir: DirectiveNode,
   context: TransformContext,
   processCodegen?: (forNode: ForNode) => (() => void) | undefined,
-) {
+): (() => void) | undefined {
   if (!dir.exp) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_FOR_NO_EXPRESSION, dir.loc),
