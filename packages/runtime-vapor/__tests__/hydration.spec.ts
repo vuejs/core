@@ -3372,8 +3372,7 @@ describe('Vapor Mode hydration', () => {
       expect(teleportContainer.innerHTML).toBe('')
     })
 
-    // TODO: need merge mismatch handling code from #13226
-    test.todo('unmount (mismatch + full integration)', async () => {
+    test('unmount (mismatch + full integration)', async () => {
       const targetId = 'teleport7'
       const data = ref({
         toggle: ref(true),
@@ -3424,7 +3423,6 @@ describe('Vapor Mode hydration', () => {
       expect(mainHtml).toBe(
         '<div><!--teleport start--><!--teleport end--></div>',
       )
-      // teleportContainer.innerHTML =
       expect(teleportContainer.innerHTML).toBe('')
 
       const { container } = await mountWithHydration(mainHtml, appCode, data, {
@@ -3436,7 +3434,7 @@ describe('Vapor Mode hydration', () => {
         '<div><!--teleport start--><!--teleport end--><!--if--></div>',
       )
       expect(teleportContainer.innerHTML).toBe(`<span>Teleported Comp1</span>`)
-      expect(`mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
 
       data.value.toggle = false
       await nextTick()

@@ -150,8 +150,11 @@ export function resetInsertionState(): void {
   insertionParent = insertionAnchor = undefined
 }
 
-export function incrementIndexOffset(parent: InsertionParent): void {
+export function incrementIndexOffset(
+  parent: InsertionParent,
+  offset: number = 1,
+): void {
   if (parent.$indexOffset !== undefined) {
-    parent.$indexOffset++
+    parent.$indexOffset += offset
   }
 }

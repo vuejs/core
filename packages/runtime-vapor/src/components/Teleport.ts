@@ -1,6 +1,8 @@
 import {
+  MismatchTypes,
   type TeleportProps,
   type TeleportTargetElement,
+  isMismatchAllowed,
   isTeleportDeferred,
   isTeleportDisabled,
   queuePostFlushCb,
@@ -23,8 +25,11 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
+  logMismatchError,
+  runWithNonHydrating,
   setCurrentHydrationNode,
 } from '../dom/hydration'
+import { incrementIndexOffset } from '../insertionState'
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -212,6 +217,7 @@ export class TeleportFragment extends VaporFragment {
       querySelector,
     ))
     if (target) {
+      let shouldMount = false
       const disabled = isTeleportDisabled(this.resolvedProps!)
       const targetNode =
         (target as TeleportTargetElement)._lpa || target.firstChild
@@ -246,10 +252,22 @@ export class TeleportFragment extends VaporFragment {
         // always be null, we need to manually add targetAnchor to ensure
         // Teleport it can properly unmount or move
         if (!this.targetAnchor) {
-          target.appendChild((this.targetStart = createTextNode('1')))
+          shouldMount = true
+          target.appendChild((this.targetStart = createTextNode('')))
           target.appendChild(
-            (this.mountAnchor = this.targetAnchor = createTextNode('2')),
+            (this.mountAnchor = this.targetAnchor = createTextNode('')),
           )
+
+          if (!isMismatchAllowed(target as Element, MismatchTypes.CHILDREN)) {
+            if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
+              warn(
+                `Hydration children mismatch on`,
+                target,
+                `\nServer rendered element contains fewer child nodes than client nodes.`,
+              )
+            }
+            logMismatchError()
+          }
         }
 
         if (targetNode) {
@@ -257,7 +275,19 @@ export class TeleportFragment extends VaporFragment {
         }
       }
 
-      this.initChildren()
+      if (shouldMount) {
+        runWithNonHydrating(this.initChildren.bind(this))
+        let count = 2 // for the two anchors
+        let node = this.targetStart!.nextSibling
+        while (node && node !== this.targetAnchor) {
+          count++
+          node = node.nextSibling
+        }
+        incrementIndexOffset(target, count)
+      } else {
+        this.initChildren()
+      }
+
       advanceHydrationNode(this.anchor!)
     }
   }
