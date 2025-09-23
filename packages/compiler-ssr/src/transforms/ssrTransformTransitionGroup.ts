@@ -116,6 +116,10 @@ export function ssrTransformTransitionGroup(
               argName === 'moveClass' ||
               argName === 'move-class'
             return !shouldFilter
+          } else if (!p.arg) {
+            // v-bind without argument (e.g., v-bind="props") - filter out entirely
+            // since it may contain transition-specific props that should not be rendered
+            return false
           }
         }
 
