@@ -21,7 +21,7 @@ import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 import type { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from './helpers/useSsrContext'
-import { ComponentPublicInstance } from '@vue/runtime-core'
+import type { ComponentPublicInstance } from '@vue/runtime-core'
 
 export type {
   WatchHandle,
@@ -67,7 +67,9 @@ export function watchPostEffect(
   return doWatch(
     effect,
     null,
-    __DEV__ ? extend({}, options as WatchEffectOptions, { flush: 'post' }) : { flush: 'post' },
+    __DEV__
+      ? extend({}, options as WatchEffectOptions, { flush: 'post' })
+      : { flush: 'post' },
   )
 }
 
@@ -78,7 +80,9 @@ export function watchSyncEffect(
   return doWatch(
     effect,
     null,
-    __DEV__ ? extend({}, options as WatchEffectOptions, { flush: 'sync' }) : { flush: 'sync' },
+    __DEV__
+      ? extend({}, options as WatchEffectOptions, { flush: 'sync' })
+      : { flush: 'sync' },
   )
 }
 
@@ -263,7 +267,10 @@ export function instanceWatch(
   return res
 }
 
-export function createPathGetter(ctx: ComponentPublicInstance , path: string): WatchSource | WatchSource[] | WatchEffect | object {
+export function createPathGetter(
+  ctx: ComponentPublicInstance,
+  path: string,
+): WatchSource | WatchSource[] | WatchEffect | object {
   const segments = path.split('.')
   return (): WatchSource | WatchSource[] | WatchEffect | object => {
     let cur = ctx
