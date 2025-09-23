@@ -212,7 +212,7 @@ export function setBlockText(
 /**
  * dev only
  */
-function warnOnArrayBlock(prop: string): void {
+function warnCannotSetProp(prop: string): void {
   warn(
     `Extraneous non-props attributes (` +
       `${prop}) ` +
@@ -226,13 +226,13 @@ function setTextToBlock(block: Block, value: any): void {
     if (block instanceof Element) {
       block.textContent = value
     } else if (__DEV__) {
-      warnOnArrayBlock('textContent')
+      warnCannotSetProp('textContent')
     }
   } else if (isVaporComponent(block)) {
     setTextToBlock(block.block, value)
   } else if (isArray(block)) {
     if (__DEV__) {
-      warnOnArrayBlock('textContent')
+      warnCannotSetProp('textContent')
     }
   } else {
     setTextToBlock(block.nodes, value)
@@ -261,13 +261,13 @@ function setHtmlToBlock(block: Block, value: any): void {
     if (block instanceof Element) {
       block.innerHTML = value
     } else if (__DEV__) {
-      warnOnArrayBlock('innerHTML')
+      warnCannotSetProp('innerHTML')
     }
   } else if (isVaporComponent(block)) {
     setHtmlToBlock(block.block, value)
   } else if (isArray(block)) {
     if (__DEV__) {
-      warnOnArrayBlock('innerHTML')
+      warnCannotSetProp('innerHTML')
     }
   } else {
     setHtmlToBlock(block.nodes, value)
