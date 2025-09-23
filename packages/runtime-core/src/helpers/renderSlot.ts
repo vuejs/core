@@ -81,6 +81,10 @@ export function renderSlot(
   }
   openBlock()
   const validSlotContent = slot && ensureValidVNode(slot(props))
+
+  // handle forwarded vapor slot fallback
+  ensureVaporSlotFallback(validSlotContent, fallback)
+
   const slotKey =
     props.key ||
     // slot content array of a dynamic conditional slot may have a branch
@@ -123,4 +127,21 @@ export function ensureValidVNode(
   })
     ? vnodes
     : null
+}
+
+export function ensureVaporSlotFallback(
+  vnodes: VNodeArrayChildren | null | undefined,
+  fallback?: () => VNodeArrayChildren,
+): void {
+  let vaporSlot: any
+  if (
+    vnodes &&
+    vnodes.length === 1 &&
+    isVNode(vnodes[0]) &&
+    (vaporSlot = vnodes[0].vs)
+  ) {
+    if (!vaporSlot.fallback && fallback) {
+      vaporSlot.fallback = fallback
+    }
+  }
 }
