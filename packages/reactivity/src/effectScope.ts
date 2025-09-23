@@ -82,9 +82,6 @@ export class EffectScope implements ReactiveNode {
     if (!this.active) {
       return
     }
-    if (this._controller) {
-      this._controller.abort()
-    }
     this.flags = EffectFlags.STOP
     let dep = this.deps
     while (dep !== undefined) {
@@ -101,6 +98,9 @@ export class EffectScope implements ReactiveNode {
       unlink(sub)
     }
     cleanup(this)
+    if (this._controller) {
+      this._controller.abort()
+    }
   }
 }
 
