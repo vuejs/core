@@ -223,7 +223,9 @@ describe('transition-group', () => {
     `)
   })
 
-  test('filters out transition event handlers', () => {
+  test('event handlers are omitted in SSR (not transition-specific)', () => {
+    // This test verifies that event handlers are filtered out during SSR compilation,
+    // not because of transition filtering but because SSR skips event listeners entirely
     expect(
       compile(
         `<transition-group tag="div" @before-enter="onBeforeEnter" @enter="onEnter" @after-enter="onAfterEnter" @enter-cancelled="onEnterCancelled" @before-leave="onBeforeLeave" @leave="onLeave" @after-leave="onAfterLeave" @leave-cancelled="onLeaveCancelled" @before-appear="onBeforeAppear" @appear="onAppear" @after-appear="onAfterAppear" @appear-cancelled="onAppearCancelled" @click="onClick" class="events">
