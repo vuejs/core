@@ -115,3 +115,33 @@ function ssrResetCssVars(raw: unknown) {
   }
   return raw
 }
+
+// TransitionGroup transition props that should be filtered in SSR
+const transitionPropsToFilter = /*@__PURE__*/ makeMap(
+  `mode,appear,persisted,onBeforeEnter,onEnter,onAfterEnter,onEnterCancelled,` +
+    `onBeforeLeave,onLeave,onAfterLeave,onLeaveCancelled,onBeforeAppear,` +
+    `onAppear,onAfterAppear,onAppearCancelled,name,type,css,duration,` +
+    `enterFromClass,enterActiveClass,enterToClass,appearFromClass,` +
+    `appearActiveClass,appearToClass,leaveFromClass,leaveActiveClass,` +
+    `leaveToClass,moveClass,move-class`,
+)
+
+function kebabToCamel(str: string): string {
+  return str.replace(/-([a-z])/g, (_, char) => char.toUpperCase())
+}
+
+export function ssrFilterTransitionProps(
+  props: Record<string, unknown>,
+): Record<string, unknown> {
+  const filtered: Record<string, unknown> = {}
+  for (const key in props) {
+    // Filter out transition-specific props (both camelCase and kebab-case)
+    if (
+      !transitionPropsToFilter(key) &&
+      !transitionPropsToFilter(kebabToCamel(key))
+    ) {
+      filtered[key] = props[key]
+    }
+  }
+  return filtered
+}

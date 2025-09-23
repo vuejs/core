@@ -10,7 +10,10 @@ import {
   findProp,
 } from '@vue/compiler-dom'
 import { hasOwn } from '@vue/shared'
-import { SSR_RENDER_ATTRS } from '../runtimeHelpers'
+import {
+  SSR_FILTER_TRANSITION_PROPS,
+  SSR_RENDER_ATTRS,
+} from '../runtimeHelpers'
 import {
   type SSRTransformContext,
   processChildren,
@@ -72,6 +75,7 @@ interface WIPEntry {
   tag: AttributeNode | DirectiveNode
   propsExp: string | JSChildNode | null
   scopeId: string | null
+  sawObjectVBind: boolean
 }
 
 // phase 1: build props
@@ -82,6 +86,9 @@ export function ssrTransformTransitionGroup(
   return (): void => {
     const tag = findProp(node, 'tag')
     if (tag) {
+      // Track whether we saw object v-bind (v-bind without argument)
+      let sawObjectVBind = false
+
       // Filter out all transition-related private props when processing TransitionGroup attributes
       const otherProps = node.props.filter(p => {
         // Exclude tag (already handled separately)
@@ -116,10 +123,16 @@ export function ssrTransformTransitionGroup(
               argName === 'moveClass' ||
               argName === 'move-class'
             return !shouldFilter
-          } else if (!p.arg) {
-            // v-bind without argument (e.g., v-bind="props") - filter out entirely
-            // since it may contain transition-specific props that should not be rendered
-            return false
+          } else if (
+            !p.arg &&
+            p.exp &&
+            p.exp.type === NodeTypes.SIMPLE_EXPRESSION &&
+            p.exp.content !== '_attrs'
+          ) {
+            // Object v-bind (v-bind="props") - only count user-written bindings
+            // Exclude compiler-generated _attrs binding
+            sawObjectVBind = true
+            return true // Keep the object v-bind directive
           }
         }
 
@@ -135,14 +148,21 @@ export function ssrTransformTransitionGroup(
       )
       let propsExp = null
       if (props || directives.length) {
+        const ssrPropsExp = buildSSRProps(props, directives, context)
         propsExp = createCallExpression(context.helper(SSR_RENDER_ATTRS), [
-          buildSSRProps(props, directives, context),
+          sawObjectVBind
+            ? createCallExpression(
+                context.helper(SSR_FILTER_TRANSITION_PROPS),
+                [ssrPropsExp],
+              )
+            : ssrPropsExp,
         ])
       }
       wipMap.set(node, {
         tag,
         propsExp,
         scopeId: context.scopeId || null,
+        sawObjectVBind,
       })
     }
   }

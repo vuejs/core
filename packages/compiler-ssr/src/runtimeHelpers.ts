@@ -27,6 +27,9 @@ export const SSR_RENDER_TELEPORT: unique symbol = Symbol(`ssrRenderTeleport`)
 export const SSR_RENDER_SUSPENSE: unique symbol = Symbol(`ssrRenderSuspense`)
 export const SSR_GET_DIRECTIVE_PROPS: unique symbol =
   Symbol(`ssrGetDirectiveProps`)
+export const SSR_FILTER_TRANSITION_PROPS: unique symbol = Symbol(
+  `ssrFilterTransitionProps`,
+)
 
 export const ssrHelpers: Record<symbol, string> = {
   [SSR_INTERPOLATE]: `ssrInterpolate`,
@@ -48,6 +51,7 @@ export const ssrHelpers: Record<symbol, string> = {
   [SSR_RENDER_TELEPORT]: `ssrRenderTeleport`,
   [SSR_RENDER_SUSPENSE]: `ssrRenderSuspense`,
   [SSR_GET_DIRECTIVE_PROPS]: `ssrGetDirectiveProps`,
+  [SSR_FILTER_TRANSITION_PROPS]: `ssrFilterTransitionProps`,
 }
 
 // Note: these are helpers imported from @vue/server-renderer

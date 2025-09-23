@@ -254,4 +254,55 @@ describe('transition-group', () => {
       }"
     `)
   })
+
+  test('object v-bind with mixed valid and transition props', () => {
+    expect(
+      compile(
+        `<transition-group tag="ul" v-bind="transitionProps" class="container">
+        </transition-group>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrFilterTransitionProps: _ssrFilterTransitionProps } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<ul\${_ssrRenderAttrs(_ssrFilterTransitionProps(_mergeProps(_ctx.transitionProps, { class: "container" }, _attrs)))}></ul>\`)
+      }"
+    `)
+  })
+
+  test('object v-bind filters runtime computed transition props', () => {
+    expect(
+      compile(
+        `<transition-group tag="div" v-bind="{ id: 'test', 'data-value': 42, name: 'fade', moveClass: 'move', class: 'dynamic' }">
+        </transition-group>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrFilterTransitionProps: _ssrFilterTransitionProps } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_ssrFilterTransitionProps(_mergeProps({ id: 'test', 'data-value': 42, name: 'fade', moveClass: 'move', class: 'dynamic' }, _attrs)))}></div>\`)
+      }"
+    `)
+  })
+
+  test('mixed single prop bindings and object v-bind', () => {
+    expect(
+      compile(
+        `<transition-group tag="ul" :name="transitionName" v-bind="extraProps" class="mixed" data-test="static">
+        </transition-group>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrFilterTransitionProps: _ssrFilterTransitionProps } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<ul\${_ssrRenderAttrs(_ssrFilterTransitionProps(_mergeProps(_ctx.extraProps, {
+          class: "mixed",
+          "data-test": "static"
+        }, _attrs)))}></ul>\`)
+      }"
+    `)
+  })
 })
