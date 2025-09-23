@@ -3442,7 +3442,54 @@ describe('Vapor Mode hydration', () => {
       expect(teleportContainer.innerHTML).toBe('')
     })
 
-    test('target change (mismatch + full integration)', async () => {})
+    test('target change (mismatch + full integration)', async () => {
+      const targetId1 = 'teleport8-1'
+      const targetId2 = 'teleport8-2'
+      const data = ref({
+        target: ref(targetId1),
+        msg: ref('foo'),
+      })
+
+      const template = `<Teleport :to="'#' + data.target"><span>{{data.msg}}</span></Teleport>`
+      const Comp = compileVaporComponent(template, data)
+      const SSRComp = compileVaporComponent(template, data, undefined, true)
+
+      const teleportContainer1 = document.createElement('div')
+      teleportContainer1.id = targetId1
+      const teleportContainer2 = document.createElement('div')
+      teleportContainer2.id = targetId2
+      document.body.appendChild(teleportContainer1)
+      document.body.appendChild(teleportContainer2)
+
+      // server render
+      const mainHtml = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      expect(mainHtml).toBe(`<!--teleport start--><!--teleport end-->`)
+      expect(teleportContainer1.innerHTML).toBe('')
+      expect(teleportContainer2.innerHTML).toBe('')
+
+      // hydrate
+      const { container } = await mountWithHydration(mainHtml, template, data, {
+        Comp,
+      })
+
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><!--teleport end-->`,
+      )
+      expect(teleportContainer1.innerHTML).toBe(`<span>foo</span>`)
+      expect(teleportContainer2.innerHTML).toBe('')
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+      data.value.target = targetId2
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><!--teleport end-->`,
+      )
+      expect(teleportContainer1.innerHTML).toBe('')
+      expect(teleportContainer2.innerHTML).toBe(`<span>bar</span>`)
+    })
   })
 
   describe.todo('Suspense')
