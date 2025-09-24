@@ -14,6 +14,7 @@ import {
   mergeProps,
   patchStyle,
   shouldSetAsProp,
+  unsafeToTrustedHTML,
   warn,
 } from '@vue/runtime-dom'
 import {
@@ -197,7 +198,7 @@ export function setElementText(
 }
 
 export function setHtml(el: TargetElement, value: any): void {
-  value = value == null ? '' : value
+  value = value == null ? '' : unsafeToTrustedHTML(value)
   if (el.$html !== value) {
     el.innerHTML = el.$html = value
   }
@@ -269,7 +270,7 @@ export function optimizePropertyLookup(): void {
   if (isOptimized) return
   isOptimized = true
   const proto = Element.prototype as any
-  proto.$evtclick = undefined
+  proto.$anchor = proto.$evtclick = undefined
   proto.$root = false
   proto.$html =
     proto.$txt =

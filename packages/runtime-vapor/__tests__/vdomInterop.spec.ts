@@ -11,6 +11,7 @@ import {
 import { makeInteropRender } from './_utils'
 import {
   applyTextModel,
+  applyVShow,
   child,
   createComponent,
   defineVaporComponent,
@@ -113,6 +114,37 @@ describe('vdomInterop', () => {
     })
   })
 
+  describe('v-show', () => {
+    test('apply v-show to vdom child', async () => {
+      const VDomChild = {
+        setup() {
+          return () => h('div')
+        },
+      }
+
+      const show = ref(false)
+      const VaporChild = defineVaporComponent({
+        setup() {
+          const n1 = createComponent(VDomChild as any)
+          applyVShow(n1, () => show.value)
+          return n1
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div style="display: none;"></div>')
+
+      show.value = true
+      await nextTick()
+      expect(html()).toBe('<div style=""></div>')
+    })
+  })
+
   describe('slots', () => {
     test('basic', () => {
       const VDomChild = defineComponent({
@@ -182,6 +214,32 @@ describe('vdomInterop', () => {
   describe.todo('dynamic component', () => {})
 
   describe('attribute fallthrough', () => {
+    it('should fallthrough attrs to vdom child', () => {
+      const VDomChild = defineComponent({
+        setup() {
+          return () => h('div')
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            { foo: () => 'vapor foo' },
+            null,
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any, { foo: 'foo', bar: 'bar' })
+        },
+      }).render()
+      expect(html()).toBe('<div foo="foo" bar="bar"></div>')
+    })
+
     it('should not fallthrough emit handlers to vdom child', () => {
       const VDomChild = defineComponent({
         emits: ['click'],
