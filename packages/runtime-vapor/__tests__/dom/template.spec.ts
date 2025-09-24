@@ -40,4 +40,25 @@ describe('api: template', () => {
     expect(nthChild(root, 2)).toBe(root.childNodes[2])
     expect(next(b)).toBe(root.childNodes[2])
   })
+
+  test('attribute quote omission', () => {
+    {
+      const t = template('<div id=foo class=bar alt=`<="foo></div>')
+      const root = t() as HTMLElement
+
+      expect(root.attributes).toHaveLength(3)
+      expect(root.getAttribute('id')).toBe('foo')
+      expect(root.getAttribute('class')).toBe('bar')
+      expect(root.getAttribute('alt')).toBe('`<="foo')
+    }
+
+    {
+      const t = template('<div id="foo>bar"class="has whitespace"></div>')
+      const root = t() as HTMLElement
+
+      expect(root.attributes).toHaveLength(2)
+      expect(root.getAttribute('id')).toBe('foo>bar')
+      expect(root.getAttribute('class')).toBe('has whitespace')
+    }
+  })
 })
