@@ -39,10 +39,10 @@ export function ssrRenderAttrs(
     }
     const value = props[key]
     if (key === 'class') {
-      ret += ` class="${ssrRenderClass(value)}"`
+      ret += ssrRenderClass(value)
     } else if (key === 'style') {
-      ret += ` style="${ssrRenderStyle(value)}"`
-    } else if (key === 'className') {
+      ret += ssrRenderStyle(value)
+    } else if (key === 'className' && value != null) {
       ret += ` class="${String(value)}"`
     } else {
       ret += ssrRenderDynamicAttr(key, value, tag)
@@ -86,10 +86,20 @@ export function ssrRenderAttr(key: string, value: unknown): string {
 }
 
 export function ssrRenderClass(raw: unknown): string {
-  return escapeHtml(normalizeClass(raw))
+  if (raw == null) {
+    return ''
+  }
+  return ` class="${escapeHtml(normalizeClass(raw))}"`
 }
 
 export function ssrRenderStyle(raw: unknown): string {
+  if (raw == null) {
+    return ''
+  }
+  return ` style="${ssrRenderStyleHelper(raw)}"`
+}
+
+function ssrRenderStyleHelper(raw: unknown): string {
   if (!raw) {
     return ''
   }
