@@ -119,7 +119,8 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
 
     if (isRef(res)) {
       // ref unwrapping - skip unwrap for Array + integer key.
-      return targetIsArray && isIntegerKey(key) ? res : res.value
+      const value = targetIsArray && isIntegerKey(key) ? res : res.value
+      return isReadonly && isObject(value) ? readonly(value) : value
     }
 
     if (isObject(res)) {

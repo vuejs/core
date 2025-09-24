@@ -522,6 +522,16 @@ describe('reactivity/readonly', () => {
     expect(obj.r).toBe(ro)
     expect(r.value).toBe(ro)
   })
+
+  test('should keep nested ref readonly', () => {
+    const items = ref(['one', 'two', 'three'])
+    const obj = {
+      o: readonly({
+        items,
+      }),
+    }
+    expect(isReadonly(obj.o.items)).toBe(true)
+  })
 })
 
 test('should be able to trigger with triggerRef', () => {
