@@ -430,7 +430,6 @@ export interface DataHTMLAttributes extends HTMLAttributes {
 export interface DetailsHTMLAttributes extends HTMLAttributes {
   name?: string | undefined
   open?: Booleanish | undefined
-  onToggle?: ((payload: ToggleEvent) => void) | undefined
 }
 
 export interface DelHTMLAttributes extends HTMLAttributes {
@@ -441,6 +440,7 @@ export interface DelHTMLAttributes extends HTMLAttributes {
 export interface DialogHTMLAttributes extends HTMLAttributes {
   open?: Booleanish | undefined
   onClose?: ((payload: Event) => void) | undefined
+  onCancel?: ((payload: Event) => void) | undefined
 }
 
 export interface EmbedHTMLAttributes extends HTMLAttributes {
@@ -581,6 +581,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   type?: InputTypeHTMLAttribute | undefined
   value?: any // we support :value to be bound to anything w/ v-model
   width?: Numberish | undefined
+  onCancel?: ((payload: Event) => void) | undefined
 }
 
 export interface KeygenHTMLAttributes extends HTMLAttributes {
@@ -1327,10 +1328,15 @@ export interface Events {
   // form events
   onChange: Event
   onBeforeinput: InputEvent
-  onInput: Event
+  onFormdata: FormDataEvent
+  onInput: InputEvent
   onReset: Event
   onSubmit: SubmitEvent
   onInvalid: Event
+
+  // fullscreen events
+  onFullscreenchange: Event
+  onFullscreenerror: Event
 
   // image events
   onLoad: Event
@@ -1342,9 +1348,6 @@ export interface Events {
   onKeyup: KeyboardEvent
 
   // mouse events
-  onAuxclick: PointerEvent
-  onClick: PointerEvent
-  onContextmenu: PointerEvent
   onDblclick: MouseEvent
   onMousedown: MouseEvent
   onMouseenter: MouseEvent
@@ -1392,6 +1395,11 @@ export interface Events {
   onTouchstart: TouchEvent
 
   // pointer events
+  onAuxclick: PointerEvent
+  onClick: PointerEvent
+  onContextmenu: PointerEvent
+  onGotpointercapture: PointerEvent
+  onLostpointercapture: PointerEvent
   onPointerdown: PointerEvent
   onPointermove: PointerEvent
   onPointerup: PointerEvent
@@ -1401,16 +1409,26 @@ export interface Events {
   onPointerover: PointerEvent
   onPointerout: PointerEvent
 
+  // popover events
+  onBeforetoggle: ToggleEvent
+  onToggle: ToggleEvent
+
   // wheel events
   onWheel: WheelEvent
 
   // animation events
+  onAnimationcancel: AnimationEvent
   onAnimationstart: AnimationEvent
   onAnimationend: AnimationEvent
   onAnimationiteration: AnimationEvent
 
+  // security policy events
+  onSecuritypolicyviolation: SecurityPolicyViolationEvent
+
   // transition events
+  onTransitioncancel: TransitionEvent
   onTransitionend: TransitionEvent
+  onTransitionrun: TransitionEvent
   onTransitionstart: TransitionEvent
 }
 
