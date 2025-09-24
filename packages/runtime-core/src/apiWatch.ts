@@ -21,7 +21,7 @@ import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 import type { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from './helpers/useSsrContext'
-import type { ComponentPublicInstance } from '@vue/runtime-core'
+import type { ComponentPublicInstance } from './componentPublicInstance'
 
 export type {
   WatchHandle,
