@@ -224,7 +224,7 @@ export class VueElement
   /**
    * @internal
    */
-  _teleportTarget?: HTMLElement
+  _teleportTargets?: Set<Element>
 
   private _connected = false
   private _resolved = false
@@ -338,6 +338,10 @@ export class VueElement
         this._app && this._app.unmount()
         if (this._instance) this._instance.ce = undefined
         this._app = this._instance = null
+        if (this._teleportTargets) {
+          this._teleportTargets.clear()
+          this._teleportTargets = undefined
+        }
       }
     })
   }
@@ -640,7 +644,7 @@ export class VueElement
    * Only called when shadowRoot is false
    */
   private _renderSlots() {
-    const outlets = (this._teleportTarget || this).querySelectorAll('slot')
+    const outlets = this._getSlots()
     const scopeId = this._instance!.type.__scopeId
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement
@@ -668,6 +672,19 @@ export class VueElement
     }
   }
 
+  /**
+   * @internal
+   */
+  private _getSlots(): HTMLSlotElement[] {
+    const roots: Element[] = [this]
+    if (this._teleportTargets) {
+      roots.push(...this._teleportTargets)
+    }
+    return roots.reduce<HTMLSlotElement[]>((res, i) => {
+      res.push(...Array.from(i.querySelectorAll('slot')))
+      return res
+    }, [])
+  }
   /**
    * @internal
    */
