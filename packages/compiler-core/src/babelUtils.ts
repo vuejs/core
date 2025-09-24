@@ -85,11 +85,12 @@ export function walkIdentifiers(
       } else if (node.type === 'SwitchStatement') {
         if (node.scopeIds) {
           node.scopeIds.forEach(id => markKnownIds(id, knownIds))
+        } else {
+          // record switch case block-level local variables
+          walkSwitchStatement(node, false, id =>
+            markScopeIdentifier(node, id, knownIds),
+          )
         }
-        // record switch case block-level local variables
-        walkSwitchStatement(node, false, id =>
-          markScopeIdentifier(node, id, knownIds),
-        )
       } else if (node.type === 'CatchClause' && node.param) {
         for (const id of extractIdentifiers(node.param)) {
           markScopeIdentifier(node, id, knownIds)
