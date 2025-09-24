@@ -720,26 +720,17 @@ describe('compiler: expression transform', () => {
   // Test for switch case variable declarations bug fix
   describe('switch case variable declarations', () => {
     test('should handle const declarations in switch case without braces', () => {
-      const node = parseWithExpressionTransform(
+      const { code } = compile(
         `{{ (() => { switch (1) { case 1: const foo = "bar"; return \`\${foo}\`; } })() }}`,
-      ) as InterpolationNode
+      )
 
-      // The variable 'foo' should be recognized as local and not prefixed with _ctx
-      expect(node.content).toMatchObject({
-        type: NodeTypes.COMPOUND_EXPRESSION,
-      })
-
-      // Check that 'foo' is not prefixed with '_ctx.'
-      const children = (node.content as any).children
-      const codeStr = children
-        .map((c: any) => (typeof c === 'string' ? c : c.content))
-        .join('')
-      expect(codeStr).not.toContain('_ctx.foo')
-      expect(codeStr).toContain('foo')
+      expect(code).toMatch(`const foo = "bar";`)
+      expect(code).toMatch(`return \`\${foo}\`;`)
+      expect(code).not.toMatch(`_ctx.foo`)
     })
 
     test('should handle const declarations in switch case with braces (existing behavior)', () => {
-      const node = parseWithExpressionTransform(
+      const { code } = compile(
         `{{ (() => {
           switch (true) {
             case true: {
@@ -748,19 +739,20 @@ describe('compiler: expression transform', () => {
             }
           }
         })() }}`,
-      ) as InterpolationNode
+      )
 
-      // This should work correctly even before our fix
-      expect(node.content).toMatchObject({
-        type: NodeTypes.COMPOUND_EXPRESSION,
-      })
+      expect(code).toMatch(`const foo = "bar";`)
+      expect(code).toMatch(`return \`\${foo}\`;`)
+      expect(code).not.toMatch(`_ctx.foo`)
+    })
 
-      const children = (node.content as any).children
-      const codeStr = children
-        .map((c: any) => (typeof c === 'string' ? c : c.content))
-        .join('')
-      expect(codeStr).not.toContain('_ctx.foo')
-      expect(codeStr).toContain('foo')
+    test('should parse switch case test as local scoped variables', () => {
+      const { code } = compile(
+        `{{ (() => { switch (foo) { case bar: return \`\${bar}\`; } })() }}`,
+      )
+
+      expect(code).toMatch('_ctx.foo')
+      expect(code).toMatch(`_ctx.bar`)
     })
   })
 })

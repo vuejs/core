@@ -217,7 +217,7 @@ export function walkBlockDeclarations(
       onIdent(stmt.id)
     } else if (isForStatement(stmt)) {
       walkForStatement(stmt, true, onIdent)
-    } else if (stmt.type == 'SwitchStatement') {
+    } else if (stmt.type === 'SwitchStatement') {
       walkSwitchStatement(stmt, true, onIdent)
     }
   }
