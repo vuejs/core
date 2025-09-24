@@ -272,7 +272,9 @@ export function defineComponent<
         Slots,
         LocalComponents,
         Directives,
-        Exposed
+        Exposed,
+        TypeRefs,
+        TypeEl
       >
     >,
 ): DefineComponent<
