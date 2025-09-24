@@ -1,3 +1,6 @@
+import { type Block, isBlock } from '../block'
+import { isArray } from '@vue/shared'
+
 /*! #__NO_SIDE_EFFECTS__ */
 export function createTextNode(value = ''): Text {
   return document.createTextNode(value)
@@ -26,4 +29,24 @@ export function nthChild(node: Node, i: number): Node {
 /*! #__NO_SIDE_EFFECTS__ */
 export function next(node: Node): Node {
   return node.nextSibling!
+}
+
+type NodeChildAtom = Block | string | number | boolean | null | undefined | void
+
+export type NodeArrayChildren = Array<NodeArrayChildren | NodeChildAtom>
+
+export type NodeChild = NodeChildAtom | NodeArrayChildren
+
+export function normalizeNode(node: NodeChild): Block {
+  if (node == null || typeof node === 'boolean') {
+    // empty placeholder
+    return createComment('')
+  } else if (isArray(node) && node.length) {
+    return node.map(normalizeNode)
+  } else if (isBlock(node)) {
+    return node
+  } else {
+    // strings and numbers
+    return createTextNode(String(node))
+  }
 }
