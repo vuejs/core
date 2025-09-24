@@ -62,9 +62,7 @@ const vaporInteropImpl: Omit<
 > = {
   mount(vnode, container, anchor, parentComponent) {
     let selfAnchor = (vnode.el = vnode.anchor = createTextNode())
-    if (!isHydrating) {
-      container.insertBefore(selfAnchor, anchor)
-    }
+    container.insertBefore(selfAnchor, anchor)
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
@@ -90,12 +88,6 @@ const vaporInteropImpl: Omit<
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
-    if (isHydrating) {
-      // insert self anchor after hydration completed to avoid mismatching
-      ;(instance.m || (instance.m = [])).push(() => {
-        container.insertBefore(selfAnchor, anchor)
-      })
-    }
     mountComponent(instance, container, selfAnchor)
     simpleSetCurrentInstance(prev)
     return instance
