@@ -61,30 +61,27 @@ export function walkIdentifiers(
       ) {
         // mark property in destructure pattern
         ;(node as any).inPattern = true
-      } else if (isFunctionType(node)) {
-        if (node.scopeIds) {
-          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
-        } else {
-          // walk function expressions and add its arguments to known identifiers
-          // so that we don't prefix them
-          walkFunctionParams(node, id =>
-            markScopeIdentifier(node, id, knownIds),
-          )
-        }
-      } else if (node.type === 'BlockStatement') {
-        if (node.scopeIds) {
-          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
-        } else {
-          // #3445 record block-level local variables
-          walkBlockDeclarations(node, id =>
-            markScopeIdentifier(node, id, knownIds),
-          )
-        }
-      } else if (node.type === 'CatchClause' && node.param) {
+      } else if (isFunctionType(node) && !reuseScopeIds(node, knownIds)) {
+        // walk function expressions and add its arguments to known identifiers
+        // so that we don't prefix them
+        walkFunctionParams(node, id => markScopeIdentifier(node, id, knownIds))
+      } else if (
+        node.type === 'BlockStatement' &&
+        !reuseScopeIds(node, knownIds)
+      ) {
+        // #3445 record block-level local variables
+        walkBlockDeclarations(node, id =>
+          markScopeIdentifier(node, id, knownIds),
+        )
+      } else if (
+        node.type === 'CatchClause' &&
+        node.param &&
+        !reuseScopeIds(node, knownIds)
+      ) {
         for (const id of extractIdentifiers(node.param)) {
           markScopeIdentifier(node, id, knownIds)
         }
-      } else if (isForStatement(node)) {
+      } else if (isForStatement(node) && !reuseScopeIds(node, knownIds)) {
         walkForStatement(node, false, id =>
           markScopeIdentifier(node, id, knownIds),
         )
@@ -102,6 +99,17 @@ export function walkIdentifiers(
       }
     },
   })
+}
+
+function reuseScopeIds(
+  node: Node & { scopeIds?: Set<string> },
+  knownIds: Record<string, number>,
+): boolean {
+  if (node.scopeIds) {
+    node.scopeIds.forEach(id => markKnownIds(id, knownIds))
+    return true
+  }
+  return false
 }
 
 export function isReferencedIdentifier(
