@@ -63,6 +63,12 @@ import {
   insertionParent,
   resetInsertionState,
 } from './insertionState'
+import {
+  NodeRef,
+  type VaporNode,
+  type VaporParentNode,
+  nodeDraftPatch,
+} from './dom/nodeDraft'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -502,6 +508,7 @@ export function createComponentWithFallback(
   const el = document.createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
+  ;(el as any).$isSingleRoot = isSingleRoot
 
   if (rawProps) {
     renderEffect(() => {
@@ -526,14 +533,30 @@ export function createComponentWithFallback(
 
 export function mountComponent(
   instance: VaporComponentInstance,
-  parent: ParentNode,
-  anchor?: Node | null | 0,
+  parent: VaporParentNode,
+  anchor?: VaporNode | null | 0,
 ): void {
   if (__DEV__) {
     startMeasure(instance, `mount`)
   }
   if (instance.bm) invokeArrayFns(instance.bm)
-  insert(instance.block, parent, anchor)
+  const block = instance.block
+  if (
+    isHydrating &&
+    (Array.isArray(block)
+      ? block[0] instanceof NodeRef
+      : block instanceof NodeRef) &&
+    parent instanceof Node
+  ) {
+    if (anchor && !(anchor instanceof Node)) {
+      throw new Error(
+        'When mount a Vapor Instance. Cannot use NodeDraft as an anchor, a Node is needed',
+      )
+    }
+    nodeDraftPatch(block as NodeRef[], parent, anchor)
+  } else {
+    insert(block, parent, anchor)
+  }
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
   instance.isMounted = true
   if (__DEV__) {
@@ -543,7 +566,7 @@ export function mountComponent(
 
 export function unmountComponent(
   instance: VaporComponentInstance,
-  parentNode?: ParentNode,
+  parentNode?: VaporParentNode,
 ): void {
   if (instance.isMounted && !instance.isUnmounted) {
     if (__DEV__ && instance.type.__hmrId) {
