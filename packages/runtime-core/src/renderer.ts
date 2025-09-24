@@ -1185,6 +1185,7 @@ function baseCreateRenderer(
           container,
           anchor,
           parentComponent,
+          parentSuspense,
         )
       } else {
         getVaporInterface(parentComponent, n2).update(
