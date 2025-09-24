@@ -49,6 +49,7 @@ import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { PatchFlags } from '@vue/shared'
 import { transformBindShorthand } from './vBind'
+import { transformScopeExpression } from './vScope'
 
 export const transformFor: NodeTransform = createStructuralDirectiveTransform(
   'for',
@@ -62,6 +63,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
       ]) as ForRenderListExpression
       const isTemplate = isTemplateNode(node)
       const memo = findDir(node, 'memo')
+      const vScope = findDir(node, 'scope')
       const keyProp = findProp(node, `key`, false, true)
       const isDirKey = keyProp && keyProp.type === NodeTypes.DIRECTIVE
       if (isDirKey && !keyProp.exp) {
@@ -244,10 +246,22 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           // increment cache count
           context.cached.push(null)
         } else {
+          let child
+          if (vScope) {
+            child = createCallExpression(
+              createFunctionExpression(
+                transformScopeExpression(vScope.exp!),
+                childBlock,
+              ),
+            )
+          } else {
+            child = childBlock
+          }
+
           renderExp.arguments.push(
             createFunctionExpression(
               createForLoopParams(forNode.parseResult),
-              childBlock,
+              child,
               true /* force newline */,
             ) as ForIteratorExpression,
           )
