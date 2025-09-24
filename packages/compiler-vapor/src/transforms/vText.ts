@@ -1,4 +1,8 @@
-import { DOMErrorCodes, createDOMCompilerError } from '@vue/compiler-dom'
+import {
+  DOMErrorCodes,
+  ElementTypes,
+  createDOMCompilerError,
+} from '@vue/compiler-dom'
 import { IRNodeTypes } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
 import type { DirectiveTransform } from '../transform'
@@ -30,15 +34,19 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
     context.childrenTemplate = [String(literal)]
   } else {
     context.childrenTemplate = [' ']
-    context.registerOperation({
-      type: IRNodeTypes.GET_TEXT_CHILD,
-      parent: context.reference(),
-    })
+    const isComponent = node.tagType === ElementTypes.COMPONENT
+    if (!isComponent) {
+      context.registerOperation({
+        type: IRNodeTypes.GET_TEXT_CHILD,
+        parent: context.reference(),
+      })
+    }
     context.registerEffect([exp], {
       type: IRNodeTypes.SET_TEXT,
       element: context.reference(),
       values: [exp],
       generated: true,
+      isComponent,
     })
   }
 }

@@ -54,6 +54,18 @@ describe('v-html', () => {
     expect(code).matchSnapshot()
   })
 
+  test('work with dynamic component', () => {
+    const { code } = compileWithVHtml(`<component :is="Comp" v-html="foo"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('setBlockHtml(n0, _ctx.foo))')
+  })
+
+  test('work with component', () => {
+    const { code } = compileWithVHtml(`<Comp v-html="foo"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('setBlockHtml(n0, _ctx.foo))')
+  })
+
   test('should raise error and ignore children when v-html is present', () => {
     const onError = vi.fn()
     const { code, ir, helpers } = compileWithVHtml(
