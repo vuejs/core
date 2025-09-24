@@ -254,12 +254,6 @@ function walkSwitchStatement(
   onIdent: (id: Identifier) => void,
 ) {
   for (const cs of stmt.cases) {
-    if (cs.test) {
-      for (const id of extractIdentifiers(cs.test)) {
-        onIdent(id)
-      }
-    }
-
     for (const stmt of cs.consequent) {
       if (
         stmt.type === 'VariableDeclaration' &&
