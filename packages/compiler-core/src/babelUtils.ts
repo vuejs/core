@@ -10,6 +10,8 @@ import type {
   Node,
   ObjectProperty,
   Program,
+  SwitchCase,
+  SwitchStatement,
 } from '@babel/types'
 import { walk } from 'estree-walker'
 
@@ -80,6 +82,10 @@ export function walkIdentifiers(
             markScopeIdentifier(node, id, knownIds),
           )
         }
+      } else if (node.type === 'SwitchStatement') {
+        walkSwitchStatement(node, false, id =>
+          markScopeIdentifier(node, id, knownIds),
+        )
       } else if (node.type === 'CatchClause' && node.param) {
         for (const id of extractIdentifiers(node.param)) {
           markScopeIdentifier(node, id, knownIds)
@@ -187,10 +193,11 @@ export function walkFunctionParams(
 }
 
 export function walkBlockDeclarations(
-  block: BlockStatement | Program,
+  block: BlockStatement | SwitchCase | Program,
   onIdent: (node: Identifier) => void,
 ): void {
-  for (const stmt of block.body) {
+  const body = block.type === 'SwitchCase' ? block.consequent : block.body
+  for (const stmt of body) {
     if (stmt.type === 'VariableDeclaration') {
       if (stmt.declare) continue
       for (const decl of stmt.declarations) {
@@ -206,6 +213,8 @@ export function walkBlockDeclarations(
       onIdent(stmt.id)
     } else if (isForStatement(stmt)) {
       walkForStatement(stmt, true, onIdent)
+    } else if (stmt.type == 'SwitchStatement') {
+      walkSwitchStatement(stmt, true, onIdent)
     }
   }
 }
@@ -236,6 +245,34 @@ function walkForStatement(
         onIdent(id)
       }
     }
+  }
+}
+
+function walkSwitchStatement(
+  stmt: SwitchStatement,
+  isVar: boolean,
+  onIdent: (id: Identifier) => void,
+) {
+  for (const cs of stmt.cases) {
+    if (cs.test) {
+      for (const id of extractIdentifiers(cs.test)) {
+        onIdent(id)
+      }
+    }
+
+    for (const stmt of cs.consequent) {
+      if (
+        stmt.type === 'VariableDeclaration' &&
+        (stmt.kind === 'var' ? isVar : !isVar)
+      ) {
+        for (const decl of stmt.declarations) {
+          for (const id of extractIdentifiers(decl.id)) {
+            onIdent(id)
+          }
+        }
+      }
+    }
+    walkBlockDeclarations(cs, onIdent)
   }
 }
 
