@@ -742,6 +742,22 @@ describe('resolveType', () => {
     })
   })
 
+  test('TSMappedType with indexed access', () => {
+    const { props } = resolve(
+      `
+      type Prettify<T> = { [K in keyof T]: T[K] } & {}
+      type Side = 'top' | 'right' | 'bottom' | 'left'
+      type AlignedPlacement = \`\${Side}-\${Alignment}\`
+      type Alignment = 'start' | 'end'
+      type Placement = Prettify<Side | AlignedPlacement>
+      defineProps<{placement?: Placement}>()
+    `,
+    )
+    expect(props).toStrictEqual({
+      placement: ['String', 'Object'],
+    })
+  })
+
   describe('type alias declaration', () => {
     // #13240
     test('function type', () => {
