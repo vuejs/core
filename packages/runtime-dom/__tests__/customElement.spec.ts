@@ -223,6 +223,31 @@ describe('defineCustomElement', () => {
       expect(e.getAttribute('baz-qux')).toBe('four')
     })
 
+    test('props via attributes and properties changed together', async () => {
+      const e = new E()
+      e.foo = 'foo1'
+      e.bar = { x: 'bar1' }
+      container.appendChild(e)
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>foo1</div><div>bar1</div>')
+
+      // change attr then property
+      e.setAttribute('foo', 'foo2')
+      e.bar = { x: 'bar2' }
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>foo2</div><div>bar2</div>')
+      expect(e.getAttribute('foo')).toBe('foo2')
+      expect(e.hasAttribute('bar')).toBe(false)
+
+      // change prop then attr
+      e.bar = { x: 'bar3' }
+      e.setAttribute('foo', 'foo3')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>foo3</div><div>bar3</div>')
+      expect(e.getAttribute('foo')).toBe('foo3')
+      expect(e.hasAttribute('bar')).toBe(false)
+    })
+
     test('props via hyphen property', async () => {
       const Comp = defineCustomElement({
         props: {
@@ -656,6 +681,33 @@ describe('defineCustomElement', () => {
       // verify that we've rendered the correct native slots here...
       expect(e.shadowRoot!.innerHTML).toBe(
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
+      )
+    })
+
+    test('render slot props', async () => {
+      const foo = ref('foo')
+      const E = defineCustomElement({
+        render() {
+          return [
+            h(
+              'div',
+              null,
+              renderSlot(this.$slots, 'default', { class: foo.value }),
+            ),
+          ]
+        },
+      })
+      customElements.define('my-el-slot-props', E)
+      container.innerHTML = `<my-el-slot-props><span>hi</span></my-el-slot-props>`
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot class="foo"></slot></div>`,
+      )
+
+      foo.value = 'bar'
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot class="bar"></slot></div>`,
       )
     })
   })
@@ -1298,6 +1350,83 @@ describe('defineCustomElement', () => {
       app.mount(container)
       await nextTick()
       expect(target.innerHTML).toBe(`<span>default</span>`)
+      app.unmount()
+    })
+
+    test('render two Teleports w/ shadowRoot false', async () => {
+      const target1 = document.createElement('div')
+      const target2 = document.createElement('span')
+      const Child = defineCustomElement(
+        {
+          render() {
+            return [
+              h(Teleport, { to: target1 }, [renderSlot(this.$slots, 'header')]),
+              h(Teleport, { to: target2 }, [renderSlot(this.$slots, 'body')]),
+            ]
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-two-teleport-child', Child)
+
+      const App = {
+        render() {
+          return h('my-el-two-teleport-child', null, {
+            default: () => [
+              h('div', { slot: 'header' }, 'header'),
+              h('span', { slot: 'body' }, 'body'),
+            ],
+          })
+        },
+      }
+      const app = createApp(App)
+      app.mount(container)
+      await nextTick()
+      expect(target1.outerHTML).toBe(
+        `<div><div slot="header">header</div></div>`,
+      )
+      expect(target2.outerHTML).toBe(
+        `<span><span slot="body">body</span></span>`,
+      )
+      app.unmount()
+    })
+
+    test('render two Teleports w/ shadowRoot false (with disabled)', async () => {
+      const target1 = document.createElement('div')
+      const target2 = document.createElement('span')
+      const Child = defineCustomElement(
+        {
+          render() {
+            return [
+              // with disabled: true
+              h(Teleport, { to: target1, disabled: true }, [
+                renderSlot(this.$slots, 'header'),
+              ]),
+              h(Teleport, { to: target2 }, [renderSlot(this.$slots, 'body')]),
+            ]
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-two-teleport-child-0', Child)
+
+      const App = {
+        render() {
+          return h('my-el-two-teleport-child-0', null, {
+            default: () => [
+              h('div', { slot: 'header' }, 'header'),
+              h('span', { slot: 'body' }, 'body'),
+            ],
+          })
+        },
+      }
+      const app = createApp(App)
+      app.mount(container)
+      await nextTick()
+      expect(target1.outerHTML).toBe(`<div></div>`)
+      expect(target2.outerHTML).toBe(
+        `<span><span slot="body">body</span></span>`,
+      )
       app.unmount()
     })
 
