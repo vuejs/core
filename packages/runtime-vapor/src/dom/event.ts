@@ -1,5 +1,6 @@
 import { onEffectCleanup } from '@vue/reactivity'
 import { isArray } from '@vue/shared'
+import { ErrorCodes, callWithAsyncErrorHandling, currentInstance } from 'vue'
 
 export function addEventListener(
   el: Element,
@@ -106,4 +107,17 @@ export function setDynamicEvents(
   for (const name in events) {
     on(el, name, events[name], { effect: true })
   }
+}
+
+export function createInvoker(
+  handler: (...args: any[]) => any,
+): (...args: any[]) => any {
+  const i = currentInstance
+  return (...args: any[]) =>
+    callWithAsyncErrorHandling(
+      handler,
+      i,
+      ErrorCodes.NATIVE_EVENT_HANDLER,
+      args,
+    )
 }
