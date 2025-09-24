@@ -92,13 +92,21 @@ export function walkIdentifiers(
           )
         }
       } else if (node.type === 'CatchClause' && node.param) {
-        for (const id of extractIdentifiers(node.param)) {
-          markScopeIdentifier(node, id, knownIds)
+        if (node.scopeIds) {
+          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
+        } else {
+          for (const id of extractIdentifiers(node.param)) {
+            markScopeIdentifier(node, id, knownIds)
+          }
         }
       } else if (isForStatement(node)) {
-        walkForStatement(node, false, id =>
-          markScopeIdentifier(node, id, knownIds),
-        )
+        if (node.scopeIds) {
+          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
+        } else {
+          walkForStatement(node, false, id =>
+            markScopeIdentifier(node, id, knownIds),
+          )
+        }
       }
     },
     leave(node: Node & { scopeIds?: Set<string> }, parent: Node | null) {

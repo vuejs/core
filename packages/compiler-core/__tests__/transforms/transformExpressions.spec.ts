@@ -717,7 +717,6 @@ describe('compiler: expression transform', () => {
     })
   })
 
-  // Test for switch case variable declarations bug fix
   describe('switch case variable declarations', () => {
     test('should handle const declarations in switch case without braces', () => {
       const { code } = compile(
