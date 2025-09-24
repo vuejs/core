@@ -29,7 +29,11 @@ export const transformVBindShorthand: NodeTransform = (node, context) => {
           prop.exp = createSimpleExpression('', true, arg.loc)
         } else {
           const propName = camelize((arg as SimpleExpressionNode).content)
-          if (validFirstIdentCharRE.test(propName[0])) {
+          if (
+            validFirstIdentCharRE.test(propName[0]) ||
+            // allow hyphen first char for https://github.com/vuejs/language-tools/pull/3424
+            propName[0] === '-'
+          ) {
             prop.exp = createSimpleExpression(propName, false, arg.loc)
           }
         }
