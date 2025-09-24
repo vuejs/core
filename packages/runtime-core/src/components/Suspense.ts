@@ -614,7 +614,6 @@ function createSuspenseBoundary(
           }
         }
       }
-
       // invoke @resolve event
       triggerEvent(vnode, 'onResolve')
     },
@@ -901,4 +900,22 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
 function isVNodeSuspensible(vnode: VNode) {
   const suspensible = vnode.props && vnode.props.suspensible
   return suspensible != null && suspensible !== false
+}
+
+export type ssrSuspenseBoundary = {
+  deps: number
+  resolve: (node: VNode) => void
+  vnode: VNode
+  parentSuspense: null | ssrSuspenseBoundary
+} & SuspenseBoundary
+export function createSSRSuspenseBoundary(vnode: VNode) {
+  return {
+    deps: 0,
+    resolve(vnode: VNode) {
+      // invoke @resolve event
+      triggerEvent(vnode, 'onResolve')
+    },
+    vnode: vnode,
+    parentSuspense: null,
+  }
 }
