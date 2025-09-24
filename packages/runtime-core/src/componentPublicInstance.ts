@@ -149,7 +149,7 @@ export type ComponentPublicInstanceConstructor<
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-  new (...args: any[]): T
+  new (props?: T['$props']): T
 }
 
 /**
