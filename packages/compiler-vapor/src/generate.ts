@@ -138,7 +138,7 @@ export function generate(
 
   const delegates = genDelegates(context)
   const templates = genTemplates(ir.template, ir.rootTemplateIndex, context)
-  const imports = genHelperImports(context)
+  const imports = genHelperImports(context) + genAssetImports(context)
   const preamble = imports + templates + delegates
 
   const newlineCount = [...preamble].filter(c => c === '\n').length
@@ -175,6 +175,17 @@ function genHelperImports({ helpers, helper, options }: CodegenContext) {
     imports += `import { ${[...helpers]
       .map(h => `${h} as _${h}`)
       .join(', ')} } from '${options.runtimeModuleName}';\n`
+  }
+  return imports
+}
+
+function genAssetImports({ ir, helper, options }: CodegenContext) {
+  const assetImports = ir.node.imports
+  let imports = ''
+  for (const assetImport of assetImports) {
+    const exp = assetImport.exp as SimpleExpressionNode
+    const name = exp.content
+    imports += `import ${name} from '${assetImport.path}';\n`
   }
   return imports
 }
