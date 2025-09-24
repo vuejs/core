@@ -35,7 +35,7 @@ export {
   getRestElement,
   getDefaultValue,
 } from './apiCreateFor'
-export { createTemplateRefSetter } from './apiTemplateRef'
+export { createTemplateRefSetter, setRef } from './apiTemplateRef'
 export { createDynamicComponent } from './apiCreateDynamicComponent'
 export { applyVShow } from './directives/vShow'
 export {
