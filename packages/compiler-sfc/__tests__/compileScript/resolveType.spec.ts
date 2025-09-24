@@ -149,6 +149,17 @@ describe('resolveType', () => {
     })
   })
 
+  test('TSPropertySignature with ignore', () => {
+    expect(
+      resolve(`
+      type Foo = string
+      defineProps<{ foo: /* @vue-ignore */ Foo }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Unknown'],
+    })
+  })
+
   // #7553
   test('union type', () => {
     expect(
@@ -728,6 +739,22 @@ describe('resolveType', () => {
     defineProps<UploadProps>()`)
     expect(props).toStrictEqual({
       fileList: ['Array'],
+    })
+  })
+
+  test('TSMappedType with indexed access', () => {
+    const { props } = resolve(
+      `
+      type Prettify<T> = { [K in keyof T]: T[K] } & {}
+      type Side = 'top' | 'right' | 'bottom' | 'left'
+      type AlignedPlacement = \`\${Side}-\${Alignment}\`
+      type Alignment = 'start' | 'end'
+      type Placement = Prettify<Side | AlignedPlacement>
+      defineProps<{placement?: Placement}>()
+    `,
+    )
+    expect(props).toStrictEqual({
+      placement: ['String', 'Object'],
     })
   })
 
