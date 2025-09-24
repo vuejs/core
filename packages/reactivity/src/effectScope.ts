@@ -19,6 +19,16 @@ export class EffectScope implements ReactiveNode {
    * @internal
    */
   cleanupsLength = 0
+  /**
+   * @internal
+   */
+  private _controller: AbortController | undefined
+
+  get signal(): AbortSignal {
+    if (!this._controller) this._controller = new AbortController()
+
+    return this._controller.signal
+  }
 
   constructor(detached = false) {
     if (!detached && activeEffectScope) {
@@ -88,6 +98,9 @@ export class EffectScope implements ReactiveNode {
       unlink(sub)
     }
     cleanup(this)
+    if (this._controller) {
+      this._controller.abort()
+    }
   }
 }
 
