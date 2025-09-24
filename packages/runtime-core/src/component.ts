@@ -633,7 +633,9 @@ export function createComponentInstance(
     exposeProxy: null,
     withProxy: null,
 
-    provides: parent ? Object.create(parent.provides) : Object.create(appContext.provides),
+    provides: parent
+      ? Object.create(parent.provides)
+      : Object.create(appContext.provides),
     ids: parent ? parent.ids : ['', 0, 0],
     accessCache: null!,
     renderCache: [],
