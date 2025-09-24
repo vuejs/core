@@ -270,7 +270,7 @@ export function instanceWatch(
 export function createPathGetter(
   ctx: ComponentPublicInstance,
   path: string,
-): WatchSource | WatchSource[] | WatchEffect | object {
+): () => WatchSource | WatchSource[] | WatchEffect | object {
   const segments = path.split('.')
   return (): WatchSource | WatchSource[] | WatchEffect | object => {
     let cur = ctx
