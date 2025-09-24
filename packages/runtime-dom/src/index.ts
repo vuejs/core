@@ -38,8 +38,7 @@ import type { VModelDirective } from './directives/vModel'
  *
  * To enable proper types, add `"dom"` to `"lib"` in your `tsconfig.json`.
  */
-type DomStub = {}
-type DomType<T> = typeof globalThis extends { window: unknown } ? T : DomStub
+type DomType<T> = typeof globalThis extends { window: unknown } ? T : never
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {

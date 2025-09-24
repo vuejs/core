@@ -119,9 +119,6 @@ export const TeleportImpl = {
         // Teleport *always* has Array children. This is enforced in both the
         // compiler and vnode children normalization.
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-          if (parentComponent && parentComponent.isCE) {
-            parentComponent.ce!._teleportTarget = container
-          }
           mountChildren(
             children as VNodeArrayChildren,
             container,
@@ -145,6 +142,15 @@ export const TeleportImpl = {
           } else if (namespace !== 'mathml' && isTargetMathML(target)) {
             namespace = 'mathml'
           }
+
+          // track CE teleport targets
+          if (parentComponent && parentComponent.isCE) {
+            ;(
+              parentComponent.ce!._teleportTargets ||
+              (parentComponent.ce!._teleportTargets = new Set())
+            ).add(target)
+          }
+
           if (!disabled) {
             mount(target, targetAnchor)
             updateCssVars(n2, false)

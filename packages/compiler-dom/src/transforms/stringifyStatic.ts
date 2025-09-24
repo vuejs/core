@@ -17,6 +17,7 @@ import {
   type TextCallNode,
   type TransformContext,
   createCallExpression,
+  findDir,
   isStaticArgOf,
 } from '@vue/compiler-core'
 import {
@@ -210,6 +211,11 @@ const isNonStringifiable = /*@__PURE__*/ makeMap(
  */
 function analyzeNode(node: StringifiableNode): [number, number] | false {
   if (node.type === NodeTypes.ELEMENT && isNonStringifiable(node.tag)) {
+    return false
+  }
+
+  // v-once nodes should not be stringified
+  if (node.type === NodeTypes.ELEMENT && findDir(node, 'once', true)) {
     return false
   }
 

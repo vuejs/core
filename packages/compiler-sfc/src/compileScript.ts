@@ -833,6 +833,8 @@ export function compileScript(
   let templateMap
   // 9. generate return statement
   let returned
+  // ensure props bindings register before compile template in inline mode
+  const propsDecl = genRuntimeProps(ctx)
   if (
     !options.inlineTemplate ||
     (!sfc.template && ctx.hasDefaultExportRender)
@@ -965,7 +967,6 @@ export function compileScript(
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
 
-  const propsDecl = genRuntimeProps(ctx)
   if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
 
   const emitsDecl = genRuntimeEmits(ctx)
