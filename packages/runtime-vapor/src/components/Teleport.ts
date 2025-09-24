@@ -211,24 +211,55 @@ export class TeleportFragment extends VaporFragment {
     this.mountAnchor = undefined
   }
 
+  private hydrateDisabledTeleport(targetNode: Node | null): void {
+    let nextNode = this.placeholder!.nextSibling!
+    setCurrentHydrationNode(nextNode)
+    this.mountAnchor = this.anchor = locateTeleportEndAnchor(nextNode)!
+    this.mountContainer = this.anchor.parentNode
+    this.targetStart = targetNode
+    this.targetAnchor = targetNode && targetNode.nextSibling
+    this.initChildren()
+  }
+
+  private mount(target: Node): void {
+    target.appendChild((this.targetStart = createTextNode('')))
+    target.appendChild(
+      (this.mountAnchor = this.targetAnchor = createTextNode('')),
+    )
+
+    if (!isMismatchAllowed(target as Element, MismatchTypes.CHILDREN)) {
+      if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
+        warn(
+          `Hydration children mismatch on`,
+          target,
+          `\nServer rendered element contains fewer child nodes than client nodes.`,
+        )
+      }
+      logMismatchError()
+    }
+
+    runWithoutHydration(this.initChildren.bind(this))
+    let count = 2 // for the two anchors
+    let node = this.targetStart!.nextSibling
+    while (node && node !== this.targetAnchor) {
+      count++
+      node = node.nextSibling
+    }
+    incrementIndexOffset(target as ParentNode, count)
+  }
+
   hydrate = (): void => {
     const target = (this.target = resolveTeleportTarget(
       this.resolvedProps!,
       querySelector,
     ))
+    const disabled = isTeleportDisabled(this.resolvedProps!)
+    this.placeholder = currentHydrationNode!
     if (target) {
-      let needMount = false
-      const disabled = isTeleportDisabled(this.resolvedProps!)
       const targetNode =
         (target as TeleportTargetElement)._lpa || target.firstChild
-      this.placeholder = currentHydrationNode!
       if (disabled) {
-        let nextNode = this.placeholder.nextSibling!
-        setCurrentHydrationNode(nextNode)
-        this.mountAnchor = this.anchor = locateTeleportEndAnchor(nextNode)!
-        this.mountContainer = this.anchor.parentNode
-        this.targetStart = targetNode
-        this.targetAnchor = targetNode && targetNode.nextSibling
+        this.hydrateDisabledTeleport(targetNode)
       } else {
         this.anchor = locateTeleportEndAnchor()!
         this.mountContainer = target
@@ -247,49 +278,25 @@ export class TeleportFragment extends VaporFragment {
           targetAnchor = targetAnchor.nextSibling
         }
 
+        if (targetNode) {
+          setCurrentHydrationNode(targetNode.nextSibling)
+        }
+
         // if the HTML corresponding to Teleport is not embedded in the
         // correct position on the final page during SSR. the targetAnchor will
         // always be null, we need to manually add targetAnchor to ensure
         // Teleport it can properly unmount or move
         if (!this.targetAnchor) {
-          needMount = true
-          target.appendChild((this.targetStart = createTextNode('')))
-          target.appendChild(
-            (this.mountAnchor = this.targetAnchor = createTextNode('')),
-          )
-
-          if (!isMismatchAllowed(target as Element, MismatchTypes.CHILDREN)) {
-            if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
-              warn(
-                `Hydration children mismatch on`,
-                target,
-                `\nServer rendered element contains fewer child nodes than client nodes.`,
-              )
-            }
-            logMismatchError()
-          }
-        }
-
-        if (targetNode) {
-          setCurrentHydrationNode(targetNode.nextSibling)
+          this.mount(target)
+        } else {
+          this.initChildren()
         }
       }
-
-      if (needMount) {
-        runWithoutHydration(this.initChildren.bind(this))
-        let count = 2 // for the two anchors
-        let node = this.targetStart!.nextSibling
-        while (node && node !== this.targetAnchor) {
-          count++
-          node = node.nextSibling
-        }
-        incrementIndexOffset(target, count)
-      } else {
-        this.initChildren()
-      }
-
-      advanceHydrationNode(this.anchor!)
+    } else if (disabled) {
+      this.hydrateDisabledTeleport(currentHydrationNode!)
     }
+
+    advanceHydrationNode(this.anchor!)
   }
 }
 

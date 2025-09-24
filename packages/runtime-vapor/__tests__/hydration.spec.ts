@@ -3490,6 +3490,30 @@ describe('Vapor Mode hydration', () => {
       expect(teleportContainer1.innerHTML).toBe('')
       expect(teleportContainer2.innerHTML).toBe(`<span>bar</span>`)
     })
+
+    test('with disabled teleport + undefined target', async () => {
+      const data = ref({
+        msg: ref('foo'),
+      })
+
+      const { container } = await mountWithHydration(
+        '<!--teleport start--><span>foo</span><!--teleport end-->',
+        `<teleport :to="undefined" :disabled="true">
+          <span>{{data.msg}}</span>
+        </teleport>`,
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><span>foo</span><!--teleport end-->`,
+      )
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><span>bar</span><!--teleport end-->`,
+      )
+    })
   })
 
   describe.todo('Suspense')
