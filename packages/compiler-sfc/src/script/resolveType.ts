@@ -37,7 +37,7 @@ import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
 import { capitalize, hasOwn } from '@vue/shared'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
-import { createCache } from '../cache'
+import { COMPILER_CACHE_KEYS, createCache } from '../cache'
 import type TS from 'typescript'
 import { dirname, extname, join } from 'path'
 import { minimatch as isMatch } from 'minimatch'
@@ -999,7 +999,7 @@ interface CachedConfig {
   cache?: TS.ModuleResolutionCache
 }
 
-const tsConfigCache = createCache<CachedConfig[]>()
+const tsConfigCache = createCache<CachedConfig[]>(COMPILER_CACHE_KEYS.tsConfig)
 const tsConfigRefMap = new Map<string, string>()
 
 function resolveWithTS(
@@ -1123,7 +1123,7 @@ function loadTSConfig(
   return res
 }
 
-const fileToScopeCache = createCache<TypeScope>()
+const fileToScopeCache = createCache<TypeScope>(COMPILER_CACHE_KEYS.fileToScope)
 
 /**
  * @private

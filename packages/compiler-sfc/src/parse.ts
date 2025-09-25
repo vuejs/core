@@ -14,7 +14,7 @@ import * as CompilerDOM from '@vue/compiler-dom'
 import { SourceMapGenerator } from 'source-map-js'
 import type { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './style/cssVars'
-import { createCache } from './cache'
+import { COMPILER_CACHE_KEYS, createCache } from './cache'
 import type { ImportBinding } from './compileScript'
 import { isUsedInTemplate } from './script/importUsageCheck'
 import type { LRUCache } from 'lru-cache'
@@ -104,7 +104,9 @@ export interface SFCParseResult {
 
 export const parseCache:
   | Map<string, SFCParseResult>
-  | LRUCache<string, SFCParseResult> = createCache<SFCParseResult>()
+  | LRUCache<string, SFCParseResult> = createCache<SFCParseResult>(
+  COMPILER_CACHE_KEYS.parse,
+)
 
 export function parse(
   source: string,

@@ -7,7 +7,7 @@ import {
   parserOptions,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import { createCache } from '../cache'
+import { COMPILER_CACHE_KEYS, createCache } from '../cache'
 import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
 
 /**
@@ -23,7 +23,9 @@ export function isUsedInTemplate(
   return resolveTemplateUsedIdentifiers(sfc).has(identifier)
 }
 
-const templateUsageCheckCache = createCache<Set<string>>()
+const templateUsageCheckCache = createCache<Set<string>>(
+  COMPILER_CACHE_KEYS.templateUsageCheck,
+)
 
 function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
   const { content, ast } = sfc.template!
