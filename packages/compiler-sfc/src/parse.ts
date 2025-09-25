@@ -102,11 +102,9 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-export const parseCache:
+export let parseCache:
   | Map<string, SFCParseResult>
-  | LRUCache<string, SFCParseResult> = createCache<SFCParseResult>(
-  COMPILER_CACHE_KEYS.parse,
-)
+  | LRUCache<string, SFCParseResult>
 
 export function parse(
   source: string,
@@ -116,7 +114,10 @@ export function parse(
     ...options,
     compiler: { parse: options.compiler?.parse },
   })
-  const cache = parseCache.get(sourceKey)
+  const cache = (
+    parseCache ||
+    (parseCache = createCache<SFCParseResult>(COMPILER_CACHE_KEYS.parse))
+  ).get(sourceKey)
   if (cache) {
     return cache
   }
