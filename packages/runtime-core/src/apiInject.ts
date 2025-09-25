@@ -20,9 +20,8 @@ export function provide<T, K = InjectionKey<T> | string | number>(
     // using parent provides object as prototype.
     // this way in `inject` we can simply look up injections from direct
     // parent and let the prototype chain do the work.
-    const provides = currentInstance.provides
     // TS doesn't allow symbol as index type
-    provides[key as string] = value
+    currentInstance.provides[key as string] = value
   }
 }
 
