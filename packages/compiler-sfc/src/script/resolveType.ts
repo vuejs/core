@@ -37,11 +37,12 @@ import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
 import { capitalize, hasOwn } from '@vue/shared'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
-import { createCache } from '../cache'
+import { COMPILER_CACHE_KEYS, createCache } from '../cache'
 import type TS from 'typescript'
 import { dirname, extname, join } from 'path'
 import { minimatch as isMatch } from 'minimatch'
 import * as process from 'process'
+import type { LRUCache } from 'lru-cache'
 
 export type SimpleTypeResolveOptions = Partial<
   Pick<
@@ -999,7 +1000,7 @@ interface CachedConfig {
   cache?: TS.ModuleResolutionCache
 }
 
-const tsConfigCache = createCache<CachedConfig[]>()
+let tsConfigCache: LRUCache<string, CachedConfig[], unknown>
 const tsConfigRefMap = new Map<string, string>()
 
 function resolveWithTS(
@@ -1018,7 +1019,12 @@ function resolveWithTS(
   if (configPath) {
     let configs: CachedConfig[]
     const normalizedConfigPath = normalizePath(configPath)
-    const cached = tsConfigCache.get(normalizedConfigPath)
+    const cached = (
+      tsConfigCache ||
+      (tsConfigCache = createCache<CachedConfig[]>(
+        COMPILER_CACHE_KEYS.tsConfig,
+      ) as LRUCache<string, CachedConfig[], unknown>)
+    ).get(normalizedConfigPath)
     if (!cached) {
       configs = loadTSConfig(configPath, ts, fs).map(config => ({ config }))
       tsConfigCache.set(normalizedConfigPath, configs)
@@ -1123,17 +1129,21 @@ function loadTSConfig(
   return res
 }
 
-const fileToScopeCache = createCache<TypeScope>()
+let fileToScopeCache: LRUCache<string, TypeScope>
 
 /**
  * @private
  */
 export function invalidateTypeCache(filename: string): void {
   filename = normalizePath(filename)
-  fileToScopeCache.delete(filename)
-  tsConfigCache.delete(filename)
-  const affectedConfig = tsConfigRefMap.get(filename)
-  if (affectedConfig) tsConfigCache.delete(affectedConfig)
+  if (fileToScopeCache) {
+    fileToScopeCache.delete(filename)
+  }
+  if (tsConfigCache) {
+    tsConfigCache.delete(filename)
+    const affectedConfig = tsConfigRefMap.get(filename)
+    if (affectedConfig) tsConfigCache.delete(affectedConfig)
+  }
 }
 
 export function fileToScope(
@@ -1141,7 +1151,12 @@ export function fileToScope(
   filename: string,
   asGlobal = false,
 ): TypeScope {
-  const cached = fileToScopeCache.get(filename)
+  const cached = (
+    fileToScopeCache ||
+    (fileToScopeCache = createCache<TypeScope>(
+      COMPILER_CACHE_KEYS.fileToScope,
+    ) as LRUCache<string, TypeScope>)
+  ).get(filename)
   if (cached) {
     return cached
   }
@@ -1151,7 +1166,7 @@ export function fileToScope(
   const body = parseFile(filename, source, fs, ctx.options.babelParserPlugins)
   const scope = new TypeScope(filename, source, 0, recordImports(body))
   recordTypes(ctx, body, scope, asGlobal)
-  fileToScopeCache.set(filename, scope)
+  fileToScopeCache!.set(filename, scope)
   return scope
 }
 
