@@ -633,6 +633,7 @@ export function createComponentInstance(
     exposeProxy: null,
     withProxy: null,
 
+    // component instance always creates a new Provides object with prototype of parent provides (or app/global provides when there is no parent instance) so to ensure that Parent provides will always be inherited, even when parent provides after the fact.
     provides: parent
       ? Object.create(parent.provides)
       : Object.create(appContext.provides),
