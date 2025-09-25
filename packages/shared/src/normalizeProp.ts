@@ -61,24 +61,64 @@ export function stringifyStyle(
 }
 
 export function normalizeClass(value: unknown): string {
-  let res = ''
+  // do not implicitly deduplicate classes if user duplicates same class
+  const classes: (string | undefined)[] = []
+  // keep track of where in the above array each class name is specified
+  // to allow e.g. `<p class="my-class" :class="{ 'my-class': false }">`
+  // to remove `my-class` from the element
+  const classIndexes = new Map<string, number[]>()
+
+  normalizeClassHelper(value, classes, classIndexes)
+
+  let str = ''
+  for (const klass of classes) {
+    if (klass) {
+      str += klass + ' '
+    }
+  }
+  return str.trim()
+}
+
+function normalizeClassHelper(
+  value: unknown,
+  classes: (string | undefined)[],
+  classIndexes: Map<string, number[]>,
+): void {
   if (isString(value)) {
-    res = value
+    const splitClasses = value.trim().split(/\s+/)
+    for (const klass of splitClasses) {
+      if (!classIndexes.has(klass)) {
+        classIndexes.set(klass, [])
+      }
+      classIndexes.get(klass)!.push(classes.length)
+      classes.push(klass)
+    }
   } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
-      const normalized = normalizeClass(value[i])
-      if (normalized) {
-        res += normalized + ' '
-      }
+      normalizeClassHelper(value[i], classes, classIndexes)
     }
   } else if (isObject(value)) {
-    for (const name in value) {
-      if (value[name]) {
-        res += name + ' '
+    for (const names in value) {
+      const splitClasses = names.trim().split(/\s+/)
+      for (const klass of splitClasses) {
+        if (value[names]) {
+          if (!classIndexes.has(klass)) {
+            classIndexes.set(klass, [])
+          }
+          classIndexes.get(klass)!.push(classes.length)
+          classes.push(klass)
+        } else {
+          const indexes = classIndexes.get(klass)
+          if (indexes) {
+            for (const i of indexes) {
+              classes[i] = undefined
+            }
+            classIndexes.set(klass, [])
+          }
+        }
       }
     }
   }
-  return res.trim()
 }
 
 export function normalizeProps(
