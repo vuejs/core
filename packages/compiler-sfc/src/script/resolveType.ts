@@ -1515,6 +1515,13 @@ export function inferRuntimeType(
   isKeyOf = false,
   typeParameters?: Record<string, Node>,
 ): string[] {
+  if (
+    node.leadingComments &&
+    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
+  ) {
+    return [UNKNOWN_TYPE]
+  }
+
   try {
     switch (node.type) {
       case 'TSStringKeyword':
@@ -1780,6 +1787,47 @@ export function inferRuntimeType(
           isKeyOf,
           typeParameters,
         ).filter(t => t !== UNKNOWN_TYPE)
+      }
+      case 'TSMappedType': {
+        // only support { [K in keyof T]: T[K] }
+        const { typeAnnotation, typeParameter } = node
+        if (
+          typeAnnotation &&
+          typeAnnotation.type === 'TSIndexedAccessType' &&
+          typeParameter &&
+          typeParameter.constraint &&
+          typeParameters
+        ) {
+          const constraint = typeParameter.constraint
+          if (
+            constraint.type === 'TSTypeOperator' &&
+            constraint.operator === 'keyof' &&
+            constraint.typeAnnotation &&
+            constraint.typeAnnotation.type === 'TSTypeReference' &&
+            constraint.typeAnnotation.typeName.type === 'Identifier'
+          ) {
+            const typeName = constraint.typeAnnotation.typeName.name
+            const index = typeAnnotation.indexType
+            const obj = typeAnnotation.objectType
+            if (
+              obj &&
+              obj.type === 'TSTypeReference' &&
+              obj.typeName.type === 'Identifier' &&
+              obj.typeName.name === typeName &&
+              index &&
+              index.type === 'TSTypeReference' &&
+              index.typeName.type === 'Identifier' &&
+              index.typeName.name === typeParameter.name
+            ) {
+              const targetType = typeParameters[typeName]
+              if (targetType) {
+                return inferRuntimeType(ctx, targetType, scope)
+              }
+            }
+          }
+        }
+
+        return [UNKNOWN_TYPE]
       }
 
       case 'TSEnumDeclaration':
