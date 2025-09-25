@@ -6,6 +6,8 @@ import {
   hasInjectionContext,
   inject,
   nextTick,
+  onBeforeUpdate,
+  onMounted,
   provide,
   reactive,
   readonly,
@@ -345,6 +347,104 @@ describe('api: provide/inject', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serialize(root)).toBe(`<div><!----></div>`)
+  })
+
+  // #13921
+  it('overlapping inheritance cycles', async () => {
+    let shouldProvide = ref(false)
+
+    const Comp4 = {
+      props: ['data'],
+      setup() {
+        const data = ref('foo -1')
+
+        onMounted(() => {
+          data.value = inject('foo', 'foo 0')
+        })
+
+        onBeforeUpdate(() => {
+          data.value = inject('foo', 'foo 0')
+        })
+
+        return () => [h('div', data.value)]
+      },
+    }
+
+    const Comp3 = {
+      props: ['data'],
+      setup() {
+        const data = ref('foo -1')
+
+        onMounted(() => {
+          data.value = inject('foo', 'foo 0')
+        })
+
+        onBeforeUpdate(() => {
+          data.value = inject('foo', 'foo 0')
+        })
+
+        return () => [
+          h('div', data.value),
+          h(Comp4, { data: shouldProvide.value }),
+        ]
+      },
+    }
+
+    const Comp2 = {
+      setup() {
+        const data = ref('foo -1')
+
+        onMounted(() => {
+          data.value = inject('foo', 'foo 0')
+        })
+
+        onBeforeUpdate(() => {
+          if (shouldProvide.value) {
+            provide('foo', 'foo 2')
+          }
+
+          data.value = inject('foo', 'foo 0')
+        })
+
+        return () => [
+          h('div', data.value),
+          h(Comp3, { data: shouldProvide.value }),
+        ]
+      },
+    }
+
+    const Comp1 = {
+      setup() {
+        provide('foo', 'foo 1')
+        const data = ref('foo -1')
+
+        onMounted(() => {
+          data.value = inject('foo', 'foo 0')
+        })
+
+        onBeforeUpdate(() => {
+          data.value = inject('foo', 'foo 0')
+        })
+
+        return () => [h('div', data.value), h(Comp2)]
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp1), root)
+
+    shouldProvide.value = true
+    await nextTick()
+
+    /*
+      First (Root Component) should be "foo 0" because it is the Root Component and provdes shall only be injected to Descandents.
+      Second (Component 2) should be "foo 1" because it should inherit the provide from the Root Component
+      Third (Component 3) should be "foo 2" because it should inherit the provide from Component 2 (in the second render when shouldProvide = true)
+      Fourth (Component 4) should also be "foo 2" because it should inherit the provide from Component 3 which should inherit it from Component 2 (in the second render when shouldProvide = true)
+    */
+    expect(serialize(root)).toBe(
+      `<div><div>foo 0</div><div>foo 1</div><div>foo 2</div><div>foo 2</div></div>`,
+    )
   })
 
   describe('hasInjectionContext', () => {
