@@ -442,7 +442,10 @@ export class VueElement
     const exposed = this._instance && this._instance.exposed
     if (!exposed) return
     for (const key in exposed) {
-      if (!hasOwn(this, key)) {
+      const hasInstanceProperty = hasOwn(this, key)
+      const hasOwnPrototypeProperty = hasOwn(this.constructor.prototype, key)
+
+      if (!hasInstanceProperty && !hasOwnPrototypeProperty) {
         // exposed properties are readonly
         Object.defineProperty(this, key, {
           // unwrap ref to be consistent with public instance behavior
@@ -454,6 +457,12 @@ export class VueElement
     }
   }
 
+  /**
+   * Resolves component props by setting up property getters/setters on the prototype.
+   * This allows subclasses to override property setters for validation and custom behavior.
+   * @param def - The inner component definition containing props configuration
+   * @internal
+   */
   private _resolveProps(def: InnerComponentDef) {
     const { props } = def
     const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
@@ -465,16 +474,39 @@ export class VueElement
       }
     }
 
-    // defining getter/setters on prototype
+    // defining getter/setters to support property access
     for (const key of declaredPropKeys.map(camelize)) {
-      Object.defineProperty(this, key, {
-        get() {
-          return this._getProp(key)
-        },
-        set(val) {
-          this._setProp(key, val, true, true)
-        },
-      })
+      // Check if a subclass has already defined this property
+      const hasSubclassOverride = this.constructor.prototype.hasOwnProperty(key)
+
+      if (hasSubclassOverride) {
+        const parentPrototype = Object.getPrototypeOf(
+          this.constructor.prototype,
+        )
+        if (
+          parentPrototype &&
+          parentPrototype !== Object.prototype &&
+          !Object.prototype.hasOwnProperty.call(parentPrototype, key)
+        ) {
+          Object.defineProperty(parentPrototype, key, {
+            get() {
+              return this._getProp(key)
+            },
+            set(val) {
+              this._setProp(key, val, true, true)
+            },
+          })
+        }
+      } else {
+        Object.defineProperty(this, key, {
+          get() {
+            return this._getProp(key)
+          },
+          set(val) {
+            this._setProp(key, val, true, true)
+          },
+        })
+      }
     }
   }
 
@@ -486,6 +518,7 @@ export class VueElement
     if (has && this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
+
     this._setProp(camelKey, value, false, true)
   }
 
