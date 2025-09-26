@@ -728,6 +728,8 @@ function createSuspenseBoundary(
             optimized,
           )
           if (placeholder) {
+            // clean up placeholder reference
+            vnode.placeholder = null
             remove(placeholder)
           }
           updateHOCHostEl(instance, vnode.el)
