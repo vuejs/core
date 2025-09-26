@@ -14,7 +14,7 @@ import { DynamicFlag, IRNodeTypes } from '../ir'
 import { getLiteralExpressionValue } from '../utils'
 import { escapeHtml } from '@vue/shared'
 
-export type TextLike = TextNode | InterpolationNode
+type TextLike = TextNode | InterpolationNode
 const seen = new WeakMap<
   TransformContext<RootNode>,
   WeakSet<TemplateChildNode | RootNode>
