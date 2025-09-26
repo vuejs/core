@@ -11,14 +11,10 @@ import {
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import { DynamicFlag, IRNodeTypes } from '../ir'
-import {
-  getLiteralExpressionValue,
-  isConstantExpression,
-  isStaticExpression,
-} from '../utils'
+import { getLiteralExpressionValue } from '../utils'
 import { escapeHtml } from '@vue/shared'
 
-type TextLike = TextNode | InterpolationNode
+export type TextLike = TextNode | InterpolationNode
 const seen = new WeakMap<
   TransformContext<RootNode>,
   WeakSet<TemplateChildNode | RootNode>
@@ -62,7 +58,7 @@ export const transformText: NodeTransform = (node, context) => {
     // all text like with interpolation
     if (!isFragment && isAllTextLike && hasInterp) {
       processTextContainer(
-        node.children as TextLike[],
+        processTextLikeChildren(node.children as TextLike[], context),
         context as TransformContext<ElementNode>,
       )
     } else if (hasInterp) {
@@ -112,35 +108,17 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
     return
   }
 
-  const nonConstantExps = values.filter(v => !isConstantExpression(v))
-  const isStatic =
-    !nonConstantExps.length ||
-    nonConstantExps.every(e =>
-      isStaticExpression(e, context.options.bindingMetadata),
-    ) ||
-    context.inVOnce
-
-  if (isStatic) {
-    context.registerOperation({
-      type: IRNodeTypes.SET_TEXT,
-      element: id,
-      values,
-    })
-  } else {
-    context.registerEffect(values, {
-      type: IRNodeTypes.SET_TEXT,
-      element: id,
-      values,
-    })
-  }
+  context.registerEffect(values, {
+    type: IRNodeTypes.SET_TEXT,
+    element: id,
+    values,
+  })
 }
 
-function processTextContainer(
-  children: TextLike[],
+export function processTextContainer(
+  values: SimpleExpressionNode[],
   context: TransformContext<ElementNode>,
-) {
-  const values = processTextLikeChildren(children, context)
-
+): void {
   const literals = values.map(getLiteralExpressionValue)
 
   if (literals.every(l => l != null)) {
