@@ -852,7 +852,7 @@ export function createWatcher(
 ): void {
   let getter = key.includes('.')
     ? createPathGetter(publicThis, key)
-    : () => (publicThis as any)[key]
+    : () => publicThis[key as keyof typeof publicThis]
 
   const options: WatchOptions = {}
   if (__COMPAT__) {
