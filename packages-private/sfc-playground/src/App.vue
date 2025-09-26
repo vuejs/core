@@ -161,6 +161,7 @@ const previewOptions = computed(() => ({
   <Repl
     ref="replRef"
     :theme="theme"
+    :previewTheme="true"
     :editor="Monaco"
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
