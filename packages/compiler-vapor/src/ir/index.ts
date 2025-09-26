@@ -272,6 +272,7 @@ export interface IRDynamicInfo {
   hasDynamicChild?: boolean
   operation?: OperationNode
   needsKey?: boolean
+  ifBranch?: boolean
 }
 
 export interface IREffect {

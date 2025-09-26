@@ -1,14 +1,7 @@
 import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
-import { child, createElement, createTextNode } from './node'
+import { _child, createElement, createTextNode } from './node'
 
 let t: HTMLTemplateElement
-
-export let currentTemplateFn: (Function & { $idxMap?: number[] }) | undefined =
-  undefined
-
-export function resetTemplateFn(): void {
-  currentTemplateFn = undefined
-}
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function template(
@@ -18,8 +11,6 @@ export function template(
   let node: Node
   const fn = () => {
     if (isHydrating) {
-      currentTemplateFn = fn
-
       // do not cache the adopted node in node because it contains child nodes
       // this avoids duplicate rendering of children
       const adopted = adoptTemplate(currentHydrationNode!, html)!
@@ -34,7 +25,7 @@ export function template(
     if (!node) {
       t = t || createElement('template')
       t.innerHTML = html
-      node = child(t.content)
+      node = _child(t.content)
     }
     const ret = node.cloneNode(true)
     if (root) (ret as any).$root = true

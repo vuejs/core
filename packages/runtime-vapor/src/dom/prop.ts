@@ -386,8 +386,7 @@ export function optimizePropertyLookup(): void {
   const proto = Element.prototype as any
   proto.$transition = undefined
   proto.$key = undefined
-  proto.$evtclick = undefined
-  proto.$children = undefined
+  proto.$prependAnchor = proto.$evtclick = undefined
   proto.$idx = undefined
   proto.$root = false
   proto.$html =

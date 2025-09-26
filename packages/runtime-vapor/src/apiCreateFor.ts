@@ -150,7 +150,6 @@ export const createFor = (
           if (!parentAnchor) {
             throw new Error(`v-for fragment anchor node was not found.`)
           }
-          ;(parentAnchor as Comment).data = 'for'
         }
       }
     } else {
