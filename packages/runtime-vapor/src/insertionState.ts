@@ -19,8 +19,6 @@ export type InsertionParent = ParentNode & {
   $anchorCount?: number
   // last append index
   $appendIndex?: number | null
-  // number of dynamically inserted nodes (e.g., comment anchors)
-  $indexOffset?: number
 }
 export let insertionParent: InsertionParent | undefined
 export let insertionAnchor: Node | 0 | undefined | null
@@ -88,7 +86,6 @@ function initializeHydrationState(parent: InsertionParent) {
     parent.$prevDynamicCount = 0
     parent.$anchorCount = 0
     parent.$appendIndex = null
-    parent.$indexOffset = 0
   }
 }
 
@@ -148,13 +145,4 @@ function cacheTemplateChildren(parent: InsertionParent) {
 
 export function resetInsertionState(): void {
   insertionParent = insertionAnchor = undefined
-}
-
-export function incrementIndexOffset(
-  parent: InsertionParent,
-  offset: number = 1,
-): void {
-  if (parent.$indexOffset !== undefined) {
-    parent.$indexOffset += offset
-  }
 }

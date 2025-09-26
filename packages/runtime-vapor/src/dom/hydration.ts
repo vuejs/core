@@ -50,7 +50,6 @@ function performHydration<T>(
     ;(Node.prototype as any).$prevDynamicCount = undefined
     ;(Node.prototype as any).$anchorCount = undefined
     ;(Node.prototype as any).$appendIndex = undefined
-    ;(Node.prototype as any).$indexOffset = undefined
 
     isOptimized = true
   }
@@ -155,13 +154,12 @@ function locateHydrationNodeImpl(): void {
     const {
       $prevDynamicCount: prevDynamicCount = 0,
       $appendIndex: appendIndex,
-      $indexOffset: indexOffset = 0,
       $anchorCount: anchorCount = 0,
     } = insertionParent!
     // prepend
     if (insertionAnchor === 0) {
       // use prevDynamicCount as logical index to locate the hydration node
-      const realIndex = idxMap![prevDynamicCount] + indexOffset
+      const realIndex = idxMap![prevDynamicCount]
       node = insertionParent!.childNodes[realIndex]
     }
     // insert
@@ -173,7 +171,7 @@ function locateHydrationNodeImpl(): void {
       // consecutive insert operations locate the correct hydration node.
       let { $idx, $uc: usedCount } = insertionAnchor as ChildItem
       if (usedCount !== undefined) {
-        const realIndex = idxMap![$idx + usedCount + 1] + indexOffset
+        const realIndex = idxMap![$idx + usedCount + 1]
         node = insertionParent!.childNodes[realIndex]
         usedCount++
       } else {
@@ -189,19 +187,19 @@ function locateHydrationNodeImpl(): void {
     else {
       let realIndex: number
       if (appendIndex !== null && appendIndex !== undefined) {
-        realIndex = idxMap![appendIndex + 1] + indexOffset
+        realIndex = idxMap![appendIndex + 1]
         node = insertionParent!.childNodes[realIndex]
       } else {
         if (insertionAnchor === null) {
           // insertionAnchor is null, indicates no previous static nodes
           // use the first child as hydration node
-          realIndex = idxMap![0] + indexOffset
+          realIndex = idxMap![0]
           node = insertionParent!.childNodes[realIndex]
         } else {
           // insertionAnchor is a number > 0
           // indicates how many static nodes precede the node to append
           // use it as index to locate the hydration node
-          realIndex = idxMap![prevDynamicCount + insertionAnchor] + indexOffset
+          realIndex = idxMap![prevDynamicCount + insertionAnchor]
           node = insertionParent!.childNodes[realIndex]
         }
       }

@@ -76,7 +76,6 @@ export function __nthChild(node: Node, i: number): Node {
       $prevDynamicCount: prevDynamicCount = 0,
       $anchorCount: anchorCount = 0,
       $idxMap: idxMap,
-      $indexOffset: indexOffset = 0,
     } = parent
     // prevDynamicCount tracks how many dynamic nodes have been processed
     // so far (prepend/insert/append).
@@ -87,9 +86,9 @@ export function __nthChild(node: Node, i: number): Node {
     // anchorCount equals the number of unique anchors seen, so we
     // subtract it to neutralize those "first-use doesn't consume" cases:
     //   base = prevDynamicCount - anchorCount
-    // Then index from this base: idxMap[base + i] + indexOffset.
+    // Then index from this base: idxMap[base + i]
     const logicalIndex = prevDynamicCount - anchorCount + i
-    const realIndex = idxMap[logicalIndex] + indexOffset
+    const realIndex = idxMap[logicalIndex]
     return node.childNodes[realIndex]
   }
   return node.childNodes[i]
@@ -108,10 +107,10 @@ export function _next(node: Node): Node {
 export function __next(node: Node): Node {
   const parent = node.parentNode! as InsertionParent
   if (parent.$idxMap) {
-    const { $idxMap: idxMap, $indexOffset: indexOffset = 0 } = parent
+    const { $idxMap: idxMap } = parent
     const { $idx, $uc: usedCount = 0 } = node as ChildItem
     const logicalIndex = $idx + usedCount + 1
-    const realIndex = idxMap[logicalIndex] + indexOffset
+    const realIndex = idxMap[logicalIndex]
     return node.parentNode!.childNodes[realIndex]
   }
   return node.nextSibling!

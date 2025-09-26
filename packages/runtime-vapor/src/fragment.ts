@@ -9,9 +9,8 @@ import {
   isValidBlock,
   remove,
 } from './block'
-import type { TransitionHooks } from '@vue/runtime-dom'
+import { type TransitionHooks, queuePostFlushCb } from '@vue/runtime-dom'
 import {
-  advanceHydrationNode,
   currentHydrationNode,
   isComment,
   isHydrating,
@@ -24,7 +23,6 @@ import {
 } from './components/Transition'
 import { type VaporComponentInstance, isVaporComponent } from './component'
 import { isArray } from '@vue/shared'
-import { incrementIndexOffset } from './insertionState'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -181,13 +179,14 @@ export class DynamicFragment extends VaporFragment {
 
     // create an anchor
     const { parentNode, nextSibling } = findLastChild(this)!
-    parentNode!.insertBefore(
-      (this.anchor = createComment(this.anchorLabel!)),
-      nextSibling,
-    )
-    // increment index offset since we dynamically inserted a comment node
-    incrementIndexOffset(parentNode!)
-    advanceHydrationNode(this.anchor)
+    queuePostFlushCb(() => {
+      parentNode!.insertBefore(
+        (this.anchor = __DEV__
+          ? createComment(this.anchorLabel!)
+          : createTextNode()),
+        nextSibling,
+      )
+    })
   }
 }
 
