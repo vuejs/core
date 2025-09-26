@@ -1910,7 +1910,7 @@ function baseCreateRenderer(
 
       // 5.2 loop through old children left to be patched and try to patch
       // matching nodes & remove nodes that are no longer present
-      let j
+      let j: number
       let patched = 0
       const toBePatched = e2 - s2 + 1
       let moved = false
@@ -1931,7 +1931,7 @@ function baseCreateRenderer(
           unmount(prevChild, parentComponent, parentSuspense, true)
           continue
         }
-        let newIndex
+        let newIndex: number | undefined
         if (prevChild.key != null) {
           newIndex = keyToNewIndexMap.get(prevChild.key)
         } else {
