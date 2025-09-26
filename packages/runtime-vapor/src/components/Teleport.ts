@@ -29,7 +29,6 @@ import {
   runWithoutHydration,
   setCurrentHydrationNode,
 } from '../dom/hydration'
-import { incrementIndexOffset } from '../insertionState'
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -239,13 +238,6 @@ export class TeleportFragment extends VaporFragment {
     }
 
     runWithoutHydration(this.initChildren.bind(this))
-    let count = 2 // for the two anchors
-    let node = this.targetStart!.nextSibling
-    while (node && node !== this.targetAnchor) {
-      count++
-      node = node.nextSibling
-    }
-    incrementIndexOffset(target as ParentNode, count)
   }
 
   hydrate = (): void => {

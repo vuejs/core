@@ -1,7 +1,6 @@
 import { MismatchTypes, isMismatchAllowed, warn } from '@vue/runtime-dom'
 import {
   type ChildItem,
-  incrementIndexOffset,
   insertionAnchor,
   insertionParent,
   resetInsertionState,
@@ -129,7 +128,6 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
       ) {
         const parent = parentNode(node)!
         node = parent.insertBefore(createTextNode(), node)
-        incrementIndexOffset(parent)
         break
       }
     }
