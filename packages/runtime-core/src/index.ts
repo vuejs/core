@@ -584,6 +584,13 @@ export {
   isTeleportDisabled,
   isTeleportDeferred,
 } from './components/Teleport'
+/**
+ * @internal
+ */
+export type { TeleportTargetElement } from './components/Teleport'
+/**
+ * @internal
+ */
 export {
   createAsyncComponentContext,
   useAsyncComponentState,
