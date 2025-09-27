@@ -361,7 +361,7 @@ describe('reactivity/effect/scope', () => {
     expect(cleanupCalls).toBe(1)
 
     expect(getEffectsCount(scope)).toBe(0)
-    expect(scope.cleanupsLength).toBe(0)
+    expect(scope.signal.aborted).toBe(true)
   })
 
   test('signal', () => {

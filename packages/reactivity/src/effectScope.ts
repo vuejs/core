@@ -1,4 +1,4 @@
-import { EffectFlags, cleanup } from './effect'
+import { EffectFlags } from './effect'
 import { type Link, type ReactiveNode, link, unlink } from './system'
 import { warn } from './warning'
 
@@ -11,14 +11,6 @@ export class EffectScope implements ReactiveNode {
   subsTail: Link | undefined = undefined
   flags: number = 0
 
-  /**
-   * @internal
-   */
-  cleanups: (() => void)[] = []
-  /**
-   * @internal
-   */
-  cleanupsLength = 0
   /**
    * @internal
    */
@@ -97,7 +89,6 @@ export class EffectScope implements ReactiveNode {
     if (sub !== undefined) {
       unlink(sub)
     }
-    cleanup(this)
     if (this._controller) {
       this._controller.abort()
     }
@@ -143,7 +134,7 @@ export function setCurrentScope(scope?: EffectScope): EffectScope | undefined {
  */
 export function onScopeDispose(fn: () => void, failSilently = false): void {
   if (activeEffectScope !== undefined) {
-    activeEffectScope.cleanups[activeEffectScope.cleanupsLength++] = fn
+    activeEffectScope.signal.addEventListener('abort', fn, { once: true })
   } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
