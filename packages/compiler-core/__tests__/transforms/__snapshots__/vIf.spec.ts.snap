@@ -86,6 +86,129 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: v-if > codegen > user-defined keys > avoid duplicate keys 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { mergeProps: _mergeProps, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode } = _Vue
+
+    return ok
+      ? (_openBlock(), _createElementBlock("div", _mergeProps({ key: "custom_key" }, obj), null, 16 /* FULL_PROPS */))
+      : _createCommentVNode("v-if", true)
+  }
+}"
+`;
+
+exports[`compiler: v-if > codegen > user-defined keys > correct key matching 1`] = `
+"const _Vue = Vue
+const { createCommentVNode: _createCommentVNode } = _Vue
+
+const _hoisted_1 = Symbol()
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { normalizeProps: _normalizeProps, guardReactiveProps: _guardReactiveProps, openBlock: _openBlock, createElementBlock: _createElementBlock, mergeProps: _mergeProps, createCommentVNode: _createCommentVNode, Fragment: _Fragment } = _Vue
+
+    return (_openBlock(), _createElementBlock(_Fragment, null, [
+      ok
+        ? (_openBlock(), _createElementBlock("div", _normalizeProps(_mergeProps({ key: 0 }, separate)), null, 16 /* FULL_PROPS */))
+        : _createCommentVNode("v-if", true),
+      (_openBlock(), _createElementBlock("div", _mergeProps({ key: 123 }, other1), null, 16 /* FULL_PROPS */)),
+      ok1
+        ? (_openBlock(), _createElementBlock("div", _normalizeProps(_mergeProps({ key: _hoisted_1 }, obj1)), null, 16 /* FULL_PROPS */))
+        : (_openBlock(), _createElementBlock("div", _mergeProps({ key: 0 }, obj2), null, 16 /* FULL_PROPS */))
+    ], 64 /* STABLE_FRAGMENT */))
+  }
+}"
+`;
+
+exports[`compiler: v-if > codegen > user-defined keys > key on v-else 1`] = `
+"const _Vue = Vue
+const { createCommentVNode: _createCommentVNode } = _Vue
+
+const _hoisted_1 = Symbol()
+const _hoisted_2 = Symbol()
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { normalizeProps: _normalizeProps, guardReactiveProps: _guardReactiveProps, openBlock: _openBlock, createElementBlock: _createElementBlock, mergeProps: _mergeProps, createCommentVNode: _createCommentVNode } = _Vue
+
+    return ok1
+      ? (_openBlock(), _createElementBlock("div", _normalizeProps(_mergeProps({ key: _hoisted_1 }, obj1)), null, 16 /* FULL_PROPS */))
+      : ok2
+        ? (_openBlock(), _createElementBlock("div", _normalizeProps(_mergeProps({ key: _hoisted_2 }, obj2)), null, 16 /* FULL_PROPS */))
+        : (_openBlock(), _createElementBlock("div", _mergeProps({ key: 0 }, obj3), null, 16 /* FULL_PROPS */))
+  }
+}"
+`;
+
+exports[`compiler: v-if > codegen > user-defined keys > key on v-else with misc irrelevant nodes between 1`] = `
+"const _Vue = Vue
+const { createElementVNode: _createElementVNode, createCommentVNode: _createCommentVNode } = _Vue
+
+const _hoisted_1 = Symbol()
+const _hoisted_2 = Symbol()
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { normalizeProps: _normalizeProps, guardReactiveProps: _guardReactiveProps, openBlock: _openBlock, createElementBlock: _createElementBlock, mergeProps: _mergeProps, createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, Fragment: _Fragment } = _Vue
+
+    return ok1
+      ? (_openBlock(), _createElementBlock("div", _normalizeProps(_mergeProps({ key: _hoisted_1 }, obj1)), null, 16 /* FULL_PROPS */))
+      : ok2
+        ? (_openBlock(), _createElementBlock(_Fragment, { key: _hoisted_2 }, [
+            _createCommentVNode("comment1"),
+            _createElementVNode("div", _normalizeProps(_guardReactiveProps(obj2)), null, 16 /* FULL_PROPS */)
+          ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+        : (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
+            _createCommentVNode("comment2"),
+            (_openBlock(), _createElementBlock("div", _mergeProps({ key: 0 }, obj3), null, 16 /* FULL_PROPS */))
+          ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+  }
+}"
+`;
+
+exports[`compiler: v-if > codegen > user-defined keys > key on v-else-if 1`] = `
+"const _Vue = Vue
+const { createCommentVNode: _createCommentVNode } = _Vue
+
+const _hoisted_1 = Symbol()
+const _hoisted_2 = Symbol()
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { normalizeProps: _normalizeProps, guardReactiveProps: _guardReactiveProps, openBlock: _openBlock, createElementBlock: _createElementBlock, mergeProps: _mergeProps, createCommentVNode: _createCommentVNode } = _Vue
+
+    return ok1
+      ? (_openBlock(), _createElementBlock("div", _normalizeProps(_mergeProps({ key: _hoisted_1 }, obj1)), null, 16 /* FULL_PROPS */))
+      : ok2
+        ? (_openBlock(), _createElementBlock("div", _mergeProps({ key: 0 }, obj2), null, 16 /* FULL_PROPS */))
+        : (_openBlock(), _createElementBlock("div", _normalizeProps(_mergeProps({ key: _hoisted_2 }, obj3)), null, 16 /* FULL_PROPS */))
+  }
+}"
+`;
+
+exports[`compiler: v-if > codegen > user-defined keys > key on v-if 1`] = `
+"const _Vue = Vue
+const { createCommentVNode: _createCommentVNode } = _Vue
+
+const _hoisted_1 = Symbol()
+const _hoisted_2 = Symbol()
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { mergeProps: _mergeProps, openBlock: _openBlock, createElementBlock: _createElementBlock, createCommentVNode: _createCommentVNode, normalizeProps: _normalizeProps, guardReactiveProps: _guardReactiveProps } = _Vue
+
+    return ok1
+      ? (_openBlock(), _createElementBlock("div", _mergeProps({ key: 1 }, obj1), null, 16 /* FULL_PROPS */))
+      : ok2
+        ? (_openBlock(), _createElementBlock("div", _normalizeProps(_mergeProps({ key: _hoisted_1 }, obj2)), null, 16 /* FULL_PROPS */))
+        : (_openBlock(), _createElementBlock("div", _normalizeProps(_mergeProps({ key: _hoisted_2 }, obj3)), null, 16 /* FULL_PROPS */))
+  }
+}"
+`;
+
 exports[`compiler: v-if > codegen > v-if + v-else 1`] = `
 "const _Vue = Vue
 
