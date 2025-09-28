@@ -62,7 +62,6 @@ export function genChildren(
   let prependCount = 0
 
   for (const [index, child] of children.entries()) {
-    if (child.ifBranch) ifBranchCount++
     if (
       child.operation &&
       (child.operation as InsertionStateTypes).anchor === -1
@@ -70,7 +69,9 @@ export function genChildren(
       prependCount++
     }
     if (child.flags & DynamicFlag.NON_TEMPLATE) {
-      if (!child.ifBranch) offset--
+      offset--
+    } else if (child.ifBranch) {
+      ifBranchCount++
     }
 
     const id =
@@ -108,14 +109,19 @@ export function genChildren(
       if (elementIndex === 0) {
         pushBlock(...genCall(helper('child'), from, String(logicalIndex)))
       } else {
-        pushBlock(
-          ...genCall(
+        // check if there's a node that we can reuse from
+        let init = genCall(helper('child'), from)
+        if (elementIndex === 1) {
+          init = genCall(helper('next'), init, String(logicalIndex))
+        } else if (elementIndex > 1) {
+          init = genCall(
             helper('nthChild'),
             from,
             String(elementIndex),
             String(logicalIndex),
-          ),
-        )
+          )
+        }
+        pushBlock(...init)
       }
     }
 

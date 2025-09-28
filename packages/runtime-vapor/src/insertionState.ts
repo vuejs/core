@@ -38,7 +38,7 @@ export function setInsertionState(
     if (isHydrating) {
       insertionAnchor = anchor as Node
       // when the setInsertionState is called for the first time, reset $lastLogicalChild,
-      // in order to reuse it in locationChildByLogicalIndex
+      // in order to reuse it in locateChildByLogicalIndex
       if (insertionParent.$prevDynamicCount === undefined) {
         insertionParent!.$lastLogicalChild = null
       }

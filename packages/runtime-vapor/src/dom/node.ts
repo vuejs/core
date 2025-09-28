@@ -55,8 +55,8 @@ export function _child(node: InsertionParent): Node {
  * Hydration-specific version of `child`.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export function __child(node: ParentNode, logicalIndex: number): Node {
-  return __nthChild(node, 0, logicalIndex)!
+export function __child(node: ParentNode, logicalIndex: number = 0): Node {
+  return locateChildByLogicalIndex(node as InsertionParent, logicalIndex)!
 }
 
 /* @__NO_SIDE_EFFECTS__ */
@@ -68,21 +68,23 @@ export function locateChildByLogicalIndex(
   node: InsertionParent,
   logicalIndex: number,
 ): Node | null {
-  let child: Node | null = node.$lastLogicalChild || node.firstChild
-  let currentIndex = (child as ChildItem).$idx || 0
+  let child = (node.$lastLogicalChild || node.firstChild) as ChildItem
+  let fromIndex = child.$idx || 0
 
   while (child) {
-    if (currentIndex === logicalIndex) {
-      ;(child as ChildItem).$idx = logicalIndex
+    if (fromIndex === logicalIndex) {
+      child.$idx = logicalIndex
       return (node.$lastLogicalChild = child)
     }
 
-    child = isComment(child, '[')
-      ? // fragment start: jump to the node after the matching end anchor
-        locateEndAnchor(child)!.nextSibling
-      : child.nextSibling
+    child = (
+      isComment(child, '[')
+        ? // fragment start: jump to the node after the matching end anchor
+          locateEndAnchor(child)!.nextSibling
+        : child.nextSibling
+    ) as ChildItem
 
-    currentIndex++
+    fromIndex++
   }
 
   return null
@@ -92,7 +94,7 @@ export function locateChildByLogicalIndex(
  * Hydration-specific version of `nthChild`.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export function __nthChild(node: Node, i: number, logicalIndex: number): Node {
+export function __nthChild(node: Node, logicalIndex: number): Node {
   return locateChildByLogicalIndex(node as InsertionParent, logicalIndex)!
 }
 
