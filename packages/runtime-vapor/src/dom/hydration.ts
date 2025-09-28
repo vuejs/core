@@ -174,7 +174,7 @@ function locateHydrationNodeImpl(): void {
         )!
         usedCount++
       } else {
-        node = insertionAnchor
+        insertionParent!.$lastLogicalChild = node = insertionAnchor
         // first use of this anchor: it doesn't consume the next child
         // so we track unique anchor appearances for later offset correction
         insertionParent!.$anchorCount = anchorCount + 1
