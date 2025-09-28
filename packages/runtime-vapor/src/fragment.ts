@@ -14,7 +14,6 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
-  locateFragmentEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
 import {
@@ -146,7 +145,7 @@ export class DynamicFragment extends VaporFragment {
 
     // reuse the empty comment node as the anchor for empty if
     if (this.anchorLabel === 'if' && isEmpty) {
-      this.anchor = locateFragmentEndAnchor('')!
+      this.anchor = currentHydrationNode!
       if (!this.anchor) {
         throw new Error('Failed to locate if anchor')
       } else {
@@ -169,7 +168,7 @@ export class DynamicFragment extends VaporFragment {
       }
 
       // reuse the vdom fragment end anchor for slots
-      this.anchor = locateFragmentEndAnchor()!
+      this.anchor = currentHydrationNode!
       if (!this.anchor) {
         throw new Error('Failed to locate slot anchor')
       } else {

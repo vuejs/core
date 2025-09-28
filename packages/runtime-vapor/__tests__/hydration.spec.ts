@@ -1618,6 +1618,33 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('empty v-for', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <span v-for="item in data" :key="item">{{ item }}</span>
+        </template>`,
+        undefined,
+        ref([]),
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><!--]-->
+        "
+      `,
+      )
+
+      data.value.push('a')
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>a</span><!--]-->
+        "
+      `,
+      )
+    })
+
     test('v-for with insertion parent + sibling component', async () => {
       const { container, data } = await testHydration(
         `<template>

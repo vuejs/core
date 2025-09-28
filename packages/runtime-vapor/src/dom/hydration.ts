@@ -244,15 +244,6 @@ export function locateEndAnchor(
   return null
 }
 
-export function locateFragmentEndAnchor(label: string = ']'): Comment | null {
-  let node = currentHydrationNode!
-  while (node) {
-    if (isComment(node, label)) return node
-    node = node.nextSibling!
-  }
-  return null
-}
-
 function handleMismatch(node: Node, template: string): Node {
   if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
