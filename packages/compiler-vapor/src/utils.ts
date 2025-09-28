@@ -74,7 +74,7 @@ export function resolveExpression(
 
 export function getLiteralExpressionValue(
   exp: SimpleExpressionNode,
-): number | string | boolean | null {
+): string | null {
   if (exp.ast) {
     if (exp.ast.type === 'StringLiteral') {
       return exp.ast.value
