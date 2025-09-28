@@ -157,9 +157,9 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = t0()
   const n3 = t1()
+  const n2 = _child(n3, 1)
   _setInsertionState(n3, 0)
   const n1 = _createComponentWithFallback(_component_Comp)
-  const n2 = _child(n3)
   _renderEffect(() => {
     _setProp(n3, "id", _ctx.foo)
     _setText(n2, _toDisplayString(_ctx.bar))
@@ -212,6 +212,30 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compile > execution order > setInsertionState > next, child and nthChild should be above the setInsertionState 1`] = `
+"import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, nthChild as _nthChild, createIf as _createIf, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+const t1 = _template("<div><div></div><!><div></div><!><div><button></button></div></div>", true)
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n6 = t1()
+  const n5 = _next(_child(n6), 1)
+  const n7 = _nthChild(n6, 3, 3)
+  const p0 = _next(n7, 4)
+  const n4 = _child(p0, 0)
+  _setInsertionState(n6, n5)
+  const n0 = _createComponentWithFallback(_component_Comp)
+  _setInsertionState(n6, n7)
+  const n1 = _createIf(() => (true), () => {
+    const n3 = t0()
+    return n3
+  })
+  _renderEffect(() => _setProp(n4, "disabled", _ctx.foo))
+  return n6
+}"
+`;
+
 exports[`compile > execution order > with insertionState 1`] = `
 "import { resolveComponent as _resolveComponent, child as _child, setInsertionState as _setInsertionState, createSlot as _createSlot, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template("<div><div></div></div>", true)
@@ -219,7 +243,7 @@ const t0 = _template("<div><div></div></div>", true)
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n3 = t0()
-  const n1 = _child(n3)
+  const n1 = _child(n3, 0)
   _setInsertionState(n1, null)
   const n0 = _createSlot("default", null)
   _setInsertionState(n3, 1)
@@ -234,9 +258,9 @@ const t0 = _template("<div><span> </span> <br> </div>", true)
 
 export function render(_ctx) {
   const n3 = t0()
-  const n0 = _child(n3)
-  const n1 = _next(n0)
-  const n2 = _nthChild(n3, 3)
+  const n0 = _child(n3, 0)
+  const n1 = _next(n0, 1)
+  const n2 = _nthChild(n3, 3, 3)
   const x0 = _txt(n0)
   _setText(x0, _toDisplayString(_ctx.foo))
   _renderEffect(() => {

@@ -27,8 +27,9 @@ import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import {
   advanceHydrationNode,
+  currentHydrationNode,
+  isComment,
   isHydrating,
-  locateFragmentEndAnchor,
   locateHydrationNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
@@ -145,12 +146,12 @@ export const createFor = (
             findLastChild(newBlocks[newLength - 1].nodes)!.nextSibling,
           )
         }
-        parentAnchor = locateFragmentEndAnchor()!
-        if (__DEV__) {
-          if (!parentAnchor) {
-            throw new Error(`v-for fragment anchor node was not found.`)
-          }
-          ;(parentAnchor as Comment).data = 'for'
+        parentAnchor =
+          newLength === 0
+            ? currentHydrationNode!.nextSibling!
+            : currentHydrationNode!
+        if (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']'))) {
+          throw new Error(`v-for fragment anchor node was not found.`)
         }
       }
     } else {
