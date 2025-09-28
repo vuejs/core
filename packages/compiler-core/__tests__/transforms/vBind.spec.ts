@@ -112,10 +112,10 @@ describe('compiler: transform v-bind', () => {
     })
   })
 
-  test('no expression (shorthand) in-DOM template', () => {
+  test('no expression (shorthand) in-DOM templates', () => {
     try {
       __BROWSER__ = true
-      // in-DOM templates will be parsed by the browser into :id=""
+      // :id in in-DOM templates will be parsed into :id="" by browser
       const node = parseWithVBind(`<div :id="" />`)
       const props = (node.codegenNode as VNodeCall).props as ObjectExpression
       expect(props.properties[0]).toMatchObject({
