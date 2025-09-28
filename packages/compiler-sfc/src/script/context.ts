@@ -1,6 +1,6 @@
 import type { CallExpression, Node, ObjectPattern, Program } from '@babel/types'
 import type { SFCDescriptor } from '../parse'
-import { generateCodeFrame, isArray } from '@vue/shared'
+import { generateCodeFrame } from '@vue/shared'
 import { type ParserPlugin, parse as babelParse } from '@babel/parser'
 import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
 import type { PropsDestructureBindings } from './defineProps'
@@ -170,17 +170,6 @@ export function resolveParserPlugins(
   dts = false,
 ): ParserPlugin[] {
   const plugins: ParserPlugin[] = []
-  if (
-    !userPlugins ||
-    !userPlugins.some(
-      p =>
-        p === 'importAssertions' ||
-        p === 'importAttributes' ||
-        (isArray(p) && p[0] === 'importAttributes'),
-    )
-  ) {
-    plugins.push('importAttributes')
-  }
   if (lang === 'jsx' || lang === 'tsx' || lang === 'mtsx') {
     plugins.push('jsx')
   } else if (userPlugins) {
@@ -189,7 +178,7 @@ export function resolveParserPlugins(
     userPlugins = userPlugins.filter(p => p !== 'jsx')
   }
   if (lang === 'ts' || lang === 'mts' || lang === 'tsx' || lang === 'mtsx') {
-    plugins.push(['typescript', { dts }], 'explicitResourceManagement')
+    plugins.push(['typescript', { dts }])
     if (!userPlugins || !userPlugins.includes('decorators')) {
       plugins.push('decorators-legacy')
     }

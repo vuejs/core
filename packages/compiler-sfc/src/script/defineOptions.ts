@@ -19,7 +19,7 @@ export function processDefineOptions(
   if (ctx.hasDefineOptionsCall) {
     ctx.error(`duplicate ${DEFINE_OPTIONS}() call`, node)
   }
-  if (node.typeParameters) {
+  if (node.typeArguments) {
     ctx.error(`${DEFINE_OPTIONS}() cannot accept type arguments`, node)
   }
   if (!node.arguments[0]) return true

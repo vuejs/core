@@ -1161,7 +1161,7 @@ function walkDeclaration(
       }
     }
   } else if (node.type === 'TSEnumDeclaration') {
-    isAllLiteral = node.members.every(
+    isAllLiteral = node.body.members.every(
       member => !member.initializer || isStaticNode(member.initializer),
     )
     bindings[node.id!.name] = isAllLiteral

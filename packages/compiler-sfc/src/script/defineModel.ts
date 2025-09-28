@@ -24,8 +24,9 @@ export function processDefineModel(
 
   ctx.hasDefineModelCall = true
 
-  const type =
-    (node.typeParameters && node.typeParameters.params[0]) || undefined
+  const type = (node.typeArguments && node.typeArguments.params[0]) as
+    | TSType
+    | undefined
   let modelName: string
   let options: Node | undefined
   const arg0 = node.arguments[0] && unwrapTSNode(node.arguments[0])

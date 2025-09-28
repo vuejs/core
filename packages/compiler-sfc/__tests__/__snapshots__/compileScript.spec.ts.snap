@@ -1358,20 +1358,6 @@ _sfc_.setup = __setup__
 "
 `;
 
-exports[`SFC genDefaultAs > parser plugins > import attributes (user override for deprecated syntax) 1`] = `
-"import { foo } from './foo.js' assert { type: 'foobar' }
-        
-export default {
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-        
-return { get foo() { return foo } }
-}
-
-}"
-`;
-
 exports[`SFC genDefaultAs > parser plugins > import attributes 1`] = `
 "import { foo } from './foo.js' with { type: 'foobar' }
         

@@ -90,8 +90,8 @@ export function scanEnums() {
         /** @type {Array<EnumMember>} */
         const members = []
 
-        for (let i = 0; i < decl.members.length; i++) {
-          const e = decl.members[i]
+        for (let i = 0; i < decl.body.members.length; i++) {
+          const e = decl.body.members[i]
           const key = e.id.type === 'Identifier' ? e.id.name : e.id.value
           const fullKey = /** @type {const} */ (`${id}.${key}`)
           const saveValue = (/** @type {string | number} */ value) => {

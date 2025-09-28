@@ -1510,22 +1510,6 @@ describe('SFC genDefaultAs', () => {
         </script>`),
       ).toThrow()
     })
-
-    test('import attributes (user override for deprecated syntax)', () => {
-      const { content } = compile(
-        `
-        <script setup>
-        import { foo } from './foo.js' assert { type: 'foobar' }
-        </script>
-      `,
-        {
-          babelParserPlugins: [
-            ['importAttributes', { deprecatedAssertSyntax: true }],
-          ],
-        },
-      )
-      assertCode(content)
-    })
   })
 })
 

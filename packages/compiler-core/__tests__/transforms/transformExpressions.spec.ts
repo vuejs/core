@@ -592,7 +592,7 @@ describe('compiler: expression transform', () => {
           [
             'pipelineOperator',
             {
-              proposal: 'minimal',
+              proposal: 'fsharp',
             },
           ],
         ],

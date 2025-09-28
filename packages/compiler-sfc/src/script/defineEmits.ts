@@ -29,7 +29,7 @@ export function processDefineEmits(
   }
   ctx.hasDefineEmitCall = true
   ctx.emitsRuntimeDecl = node.arguments[0]
-  if (node.typeParameters) {
+  if (node.typeArguments) {
     if (ctx.emitsRuntimeDecl) {
       ctx.error(
         `${DEFINE_EMITS}() cannot accept both type and non-type arguments ` +
@@ -37,7 +37,7 @@ export function processDefineEmits(
         node,
       )
     }
-    ctx.emitsTypeDecl = node.typeParameters.params[0]
+    ctx.emitsTypeDecl = node.typeArguments.params[0]
   }
 
   ctx.emitDecl = declId
@@ -75,7 +75,7 @@ export function extractRuntimeEmits(ctx: TypeResolveContext): Set<string> {
   const node = ctx.emitsTypeDecl!
 
   if (node.type === 'TSFunctionType') {
-    extractEventNames(ctx, node.parameters[0], emits)
+    extractEventNames(ctx, node.params[0], emits)
     return emits
   }
 
@@ -95,7 +95,7 @@ export function extractRuntimeEmits(ctx: TypeResolveContext): Set<string> {
       )
     }
     for (const call of calls) {
-      extractEventNames(ctx, call.parameters[0], emits)
+      extractEventNames(ctx, call.params[0], emits)
     }
   }
 
