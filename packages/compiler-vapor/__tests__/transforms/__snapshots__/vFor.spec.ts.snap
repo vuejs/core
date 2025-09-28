@@ -243,7 +243,7 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n3 = _createComponentWithFallback(_component_Comp)
-    const n2 = _child(n3)
+    const n2 = _child(n3, 0)
     _renderEffect(() => _setText(n2, _toDisplayString(_for_item0.value)))
     return [n2, n3]
   }, undefined, 2)
@@ -259,7 +259,7 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n3 = _createComponentWithFallback(_component_Comp)
-    const n2 = _child(n3)
+    const n2 = _child(n3, 0)
     _renderEffect(() => _setText(n2, _toDisplayString(_for_item0.value)))
     return [n2, n3]
   }, undefined, 2)

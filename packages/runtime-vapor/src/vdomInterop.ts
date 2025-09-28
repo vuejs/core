@@ -59,7 +59,6 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
-  locateFragmentEndAnchor,
   locateHydrationNode,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
@@ -75,9 +74,7 @@ const vaporInteropImpl: Omit<
 > = {
   mount(vnode, container, anchor, parentComponent) {
     let selfAnchor = (vnode.el = vnode.anchor = createTextNode())
-    if (!isHydrating) {
-      container.insertBefore(selfAnchor, anchor)
-    }
+    container.insertBefore(selfAnchor, anchor)
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
@@ -118,12 +115,6 @@ const vaporInteropImpl: Omit<
         instance,
         vnode.transition as VaporTransitionHooks,
       )
-    }
-    if (isHydrating) {
-      // insert self anchor after hydration completed to avoid mismatching
-      ;(instance.m || (instance.m = [])).push(() => {
-        container.insertBefore(selfAnchor, anchor)
-      })
     }
     mountComponent(instance, container, selfAnchor)
     simpleSetCurrentInstance(prev)
@@ -198,8 +189,7 @@ const vaporInteropImpl: Omit<
     const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
     vaporHydrateNode(node, () => {
       vnode.vb = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
-      vnode.el = currentHydrationNode!
-      vnode.anchor = locateFragmentEndAnchor()
+      vnode.anchor = vnode.el = currentHydrationNode!
 
       if (__DEV__ && !vnode.anchor) {
         throw new Error(`Failed to locate slot anchor`)

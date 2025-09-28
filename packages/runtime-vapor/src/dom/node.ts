@@ -1,6 +1,7 @@
 /* @__NO_SIDE_EFFECTS__ */
 
 import type { ChildItem, InsertionParent } from '../insertionState'
+import { isComment, locateEndAnchor } from './hydration'
 
 export function createElement(tagName: string): HTMLElement {
   return document.createElement(tagName)
@@ -30,14 +31,14 @@ export function parentNode(node: Node): ParentNode | null {
 const _txt: typeof _child = _child
 
 /**
- * Hydration-specific version of `child`.
+ * Hydration-specific version of `txt`.
  */
 /* @__NO_SIDE_EFFECTS__ */
-const __txt: typeof __child = (node: ParentNode): Node => {
+const __txt = (node: ParentNode): Node => {
   let n = node.firstChild!
 
-  // since SSR doesn't generate whitespace placeholder text nodes, if firstChild
-  // is null, manually insert a text node as the first child
+  // since SSR doesn't generate blank text nodes,
+  // manually insert a text node as the first child
   if (!n) {
     return node.appendChild(createTextNode())
   }
@@ -47,74 +48,44 @@ const __txt: typeof __child = (node: ParentNode): Node => {
 
 /* @__NO_SIDE_EFFECTS__ */
 export function _child(node: InsertionParent): Node {
-  const children = node.$children
-  return children ? children[0] : node.firstChild!
+  return node.firstChild!
 }
 
 /**
  * Hydration-specific version of `child`.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export function __child(node: ParentNode): Node {
-  return __nthChild(node, 0)!
+export function __child(node: ParentNode, logicalIndex: number = 0): Node {
+  return locateChildByLogicalIndex(node as InsertionParent, logicalIndex)!
 }
 
 /* @__NO_SIDE_EFFECTS__ */
 export function _nthChild(node: InsertionParent, i: number): Node {
-  const children = node.$children
-  return children ? children[i] : node.childNodes[i]
+  return node.childNodes[i]
 }
 
 /**
  * Hydration-specific version of `nthChild`.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export function __nthChild(node: Node, i: number): Node {
-  const parent = node as InsertionParent
-  if (parent.$idxMap) {
-    const {
-      $prevDynamicCount: prevDynamicCount = 0,
-      $anchorCount: anchorCount = 0,
-      $idxMap: idxMap,
-      $indexOffset: indexOffset = 0,
-    } = parent
-    // prevDynamicCount tracks how many dynamic nodes have been processed
-    // so far (prepend/insert/append).
-    // For anchor-based insert, the first time an anchor is used we adopt the
-    // anchor node itself and do NOT consume the next child in `idxMap`,
-    // yet prevDynamicCount is still incremented. This overcounts the base
-    // offset by 1 per unique anchor that has appeared.
-    // anchorCount equals the number of unique anchors seen, so we
-    // subtract it to neutralize those "first-use doesn't consume" cases:
-    //   base = prevDynamicCount - anchorCount
-    // Then index from this base: idxMap[base + i] + indexOffset.
-    const logicalIndex = prevDynamicCount - anchorCount + i
-    const realIndex = idxMap[logicalIndex] + indexOffset
-    return node.childNodes[realIndex]
-  }
-  return node.childNodes[i]
+export function __nthChild(node: Node, logicalIndex: number): Node {
+  return locateChildByLogicalIndex(node as InsertionParent, logicalIndex)!
 }
 
 /* @__NO_SIDE_EFFECTS__ */
 export function _next(node: Node): Node {
-  const children = (node.parentNode! as InsertionParent).$children
-  return children ? children[(node as ChildItem).$idx + 1] : node.nextSibling!
+  return node.nextSibling!
 }
 
 /**
  * Hydration-specific version of `next`.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export function __next(node: Node): Node {
-  const parent = node.parentNode! as InsertionParent
-  if (parent.$idxMap) {
-    const { $idxMap: idxMap, $indexOffset: indexOffset = 0 } = parent
-    const { $idx, $uc: usedCount = 0 } = node as ChildItem
-    const logicalIndex = $idx + usedCount + 1
-    const realIndex = idxMap[logicalIndex] + indexOffset
-    return node.parentNode!.childNodes[realIndex]
-  }
-  return node.nextSibling!
+export function __next(node: Node, logicalIndex: number): Node {
+  return locateChildByLogicalIndex(
+    node.parentNode! as InsertionParent,
+    logicalIndex,
+  )!
 }
 
 type DelegatedFunction<T extends (...args: any[]) => any> = T & {
@@ -122,26 +93,26 @@ type DelegatedFunction<T extends (...args: any[]) => any> = T & {
 }
 
 /* @__NO_SIDE_EFFECTS__ */
-export const txt: DelegatedFunction<typeof _txt> = node => {
-  return txt.impl(node)
+export const txt: DelegatedFunction<typeof _txt> = (...args) => {
+  return txt.impl(...args)
 }
-txt.impl = _child
+txt.impl = _txt
 
 /* @__NO_SIDE_EFFECTS__ */
-export const child: DelegatedFunction<typeof _child> = node => {
-  return child.impl(node)
+export const child: DelegatedFunction<typeof _child> = (...args) => {
+  return child.impl(...args)
 }
 child.impl = _child
 
 /* @__NO_SIDE_EFFECTS__ */
-export const next: DelegatedFunction<typeof _next> = node => {
-  return next.impl(node)
+export const next: DelegatedFunction<typeof _next> = (...args) => {
+  return next.impl(...args)
 }
 next.impl = _next
 
 /* @__NO_SIDE_EFFECTS__ */
-export const nthChild: DelegatedFunction<typeof _nthChild> = (node, i) => {
-  return nthChild.impl(node, i)
+export const nthChild: DelegatedFunction<typeof _nthChild> = (...args) => {
+  return nthChild.impl(...args)
 }
 nthChild.impl = _nthChild
 
@@ -155,9 +126,9 @@ nthChild.impl = _nthChild
  */
 export function enableHydrationNodeLookup(): void {
   txt.impl = __txt
-  child.impl = __child
-  next.impl = __next
-  nthChild.impl = __nthChild
+  child.impl = __child as typeof _child
+  next.impl = __next as typeof _next
+  nthChild.impl = __nthChild as any as typeof _nthChild
 }
 
 export function disableHydrationNodeLookup(): void {
@@ -165,4 +136,30 @@ export function disableHydrationNodeLookup(): void {
   child.impl = _child
   next.impl = _next
   nthChild.impl = _nthChild
+}
+
+export function locateChildByLogicalIndex(
+  node: InsertionParent,
+  logicalIndex: number,
+): Node | null {
+  let child = (node.$lastLogicalChild || node.firstChild) as ChildItem
+  let fromIndex = child.$idx || 0
+
+  while (child) {
+    if (fromIndex === logicalIndex) {
+      child.$idx = logicalIndex
+      return (node.$lastLogicalChild = child)
+    }
+
+    child = (
+      isComment(child, '[')
+        ? // fragment start: jump to the node after the matching end anchor
+          locateEndAnchor(child)!.nextSibling
+        : child.nextSibling
+    ) as ChildItem
+
+    fromIndex++
+  }
+
+  return null
 }

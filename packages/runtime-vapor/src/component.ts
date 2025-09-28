@@ -52,7 +52,7 @@ import {
   resolveDynamicProps,
   setupPropsValidation,
 } from './componentProps'
-import { renderEffect } from './renderEffect'
+import { type RenderEffect, renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
 import { setDynamicProps } from './dom/prop'
 import {
@@ -73,7 +73,7 @@ import {
   locateHydrationNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { isVaporTeleport } from './components/Teleport'
+import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
 import {
   insertionAnchor,
   insertionParent,
@@ -445,8 +445,9 @@ export class VaporComponentInstance implements GenericComponentInstance {
   setupState?: Record<string, any>
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
-  hmrRerenderEffects?: (() => void)[]
   hmrReload?: (newComp: VaporComponent) => void
+  renderEffects?: RenderEffect[]
+  parentTeleport?: TeleportFragment | null
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean

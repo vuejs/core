@@ -9,13 +9,11 @@ import {
   isValidBlock,
   remove,
 } from './block'
-import type { TransitionHooks } from '@vue/runtime-dom'
+import { type TransitionHooks, queuePostFlushCb } from '@vue/runtime-dom'
 import {
-  advanceHydrationNode,
   currentHydrationNode,
   isComment,
   isHydrating,
-  locateFragmentEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
 import {
@@ -24,7 +22,6 @@ import {
 } from './components/Transition'
 import { type VaporComponentInstance, isVaporComponent } from './component'
 import { isArray } from '@vue/shared'
-import { incrementIndexOffset } from './insertionState'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -42,7 +39,6 @@ export class VaporFragment<T extends Block = Block>
   remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
   fallback?: BlockFn
 
-  getNodes?: () => Block
   setRef?: (comp: VaporComponentInstance) => void
 
   constructor(nodes: T) {
@@ -149,7 +145,7 @@ export class DynamicFragment extends VaporFragment {
 
     // reuse the empty comment node as the anchor for empty if
     if (this.anchorLabel === 'if' && isEmpty) {
-      this.anchor = locateFragmentEndAnchor('')!
+      this.anchor = currentHydrationNode!
       if (!this.anchor) {
         throw new Error('Failed to locate if anchor')
       } else {
@@ -172,7 +168,7 @@ export class DynamicFragment extends VaporFragment {
       }
 
       // reuse the vdom fragment end anchor for slots
-      this.anchor = locateFragmentEndAnchor()!
+      this.anchor = currentHydrationNode!
       if (!this.anchor) {
         throw new Error('Failed to locate slot anchor')
       } else {
@@ -182,13 +178,14 @@ export class DynamicFragment extends VaporFragment {
 
     // create an anchor
     const { parentNode, nextSibling } = findLastChild(this)!
-    parentNode!.insertBefore(
-      (this.anchor = createComment(this.anchorLabel!)),
-      nextSibling,
-    )
-    // increment index offset since we dynamically inserted a comment node
-    incrementIndexOffset(parentNode!)
-    advanceHydrationNode(this.anchor)
+    queuePostFlushCb(() => {
+      parentNode!.insertBefore(
+        (this.anchor = __DEV__
+          ? createComment(this.anchorLabel!)
+          : createTextNode()),
+        nextSibling,
+      )
+    })
   }
 }
 
@@ -241,7 +238,7 @@ export function findLastChild(node: Block): Node | undefined | null {
   } else if (isVaporComponent(node)) {
     return findLastChild(node.block!)
   } else {
-    if (node instanceof DynamicFragment && node.anchor) return node.anchor
+    if (node.anchor) return node.anchor
     return findLastChild(node.nodes!)
   }
 }

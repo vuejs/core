@@ -19,7 +19,8 @@ import {
   type VaporFragment,
   isFragment,
 } from './fragment'
-import { child } from './dom/node'
+import { _child } from './dom/node'
+import { TeleportFragment } from './components/Teleport'
 
 export interface TransitionOptions {
   $key?: any
@@ -68,11 +69,11 @@ export function isValidBlock(block: Block): boolean {
 
 export function insert(
   block: Block,
-  parent: ParentNode & { $anchor?: Node | null },
+  parent: ParentNode & { $prependAnchor?: Node | null },
   anchor: Node | null | 0 = null, // 0 means prepend
   parentSuspense?: any, // TODO Suspense
 ): void {
-  anchor = anchor === 0 ? child(parent) : anchor
+  anchor = anchor === 0 ? parent.$prependAnchor || _child(parent) : anchor
   if (block instanceof Node) {
     if (!isHydrating) {
       // only apply transition on Element nodes
@@ -182,12 +183,12 @@ export function normalizeBlock(block: Block): Node[] {
   } else if (isVaporComponent(block)) {
     nodes.push(...normalizeBlock(block.block!))
   } else {
-    if (block.getNodes) {
-      nodes.push(...normalizeBlock(block.getNodes()))
+    if (block instanceof TeleportFragment) {
+      nodes.push(block.placeholder!, block.anchor!)
     } else {
       nodes.push(...normalizeBlock(block.nodes))
+      block.anchor && nodes.push(block.anchor)
     }
-    block.anchor && nodes.push(block.anchor)
   }
   return nodes
 }
