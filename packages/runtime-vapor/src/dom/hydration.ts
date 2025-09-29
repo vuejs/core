@@ -157,7 +157,11 @@ function locateHydrationNodeImpl(): void {
     // prepend
     if (insertionAnchor === 0) {
       // use prevDynamicCount as logical index to locate the hydration node
-      node = locateChildByLogicalIndex(insertionParent!, prevDynamicCount)!
+      node =
+        prevDynamicCount === 0 &&
+        currentHydrationNode!.parentNode === insertionParent
+          ? currentHydrationNode
+          : locateChildByLogicalIndex(insertionParent!, prevDynamicCount)!
     }
     // insert
     else if (insertionAnchor instanceof Node) {
@@ -188,7 +192,10 @@ function locateHydrationNodeImpl(): void {
         node = locateChildByLogicalIndex(insertionParent!, appendIndex + 1)!
       } else {
         if (insertionAnchor === null) {
-          node = locateChildByLogicalIndex(insertionParent!, 0)!
+          node =
+            currentHydrationNode!.parentNode === insertionParent
+              ? currentHydrationNode
+              : locateChildByLogicalIndex(insertionParent!, 0)!
         } else {
           node = locateChildByLogicalIndex(
             insertionParent!,
