@@ -9,7 +9,7 @@ export function template(
   root?: boolean,
 ): () => Node & { $root?: true } {
   let node: Node
-  const fn = () => {
+  return (): Node & { $root?: true } => {
     if (isHydrating) {
       // do not cache the adopted node in node because it contains child nodes
       // this avoids duplicate rendering of children
@@ -31,5 +31,4 @@ export function template(
     if (root) (ret as any).$root = true
     return ret
   }
-  return fn
 }
