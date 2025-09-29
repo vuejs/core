@@ -1,5 +1,6 @@
 import importX from 'eslint-plugin-import-x'
 import tseslint from 'typescript-eslint'
+import { defineConfig } from 'eslint/config'
 import vitest from '@vitest/eslint-plugin'
 import { builtinModules } from 'node:module'
 
@@ -12,7 +13,7 @@ const banConstEnum = {
     'Please use non-const enums. This project automatically inlines enums.',
 }
 
-export default tseslint.config(
+export default defineConfig(
   {
     files: ['**/*.js', '**/*.ts', '**/*.tsx'],
     extends: [tseslint.configs.base],
