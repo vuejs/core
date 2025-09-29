@@ -41,7 +41,13 @@ import {
   setActiveSub,
   unref,
 } from '@vue/reactivity'
-import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  invokeArrayFns,
+  isArray,
+  isFunction,
+  isString,
+} from '@vue/shared'
 import {
   type DynamicPropsSource,
   type RawProps,
@@ -617,8 +623,19 @@ export function mountComponent(
     startMeasure(instance, `mount`)
   }
   if (instance.bm) invokeArrayFns(instance.bm)
-  insert(instance.block, parent, anchor)
-  if (!isHydrating) setComponentScopeId(instance)
+  const block = instance.block
+  if (isHydrating) {
+    if (
+      !(block instanceof Node) ||
+      (isArray(block) && block.some(b => !(b instanceof Node)))
+    ) {
+      insert(block, parent, anchor)
+    }
+  } else {
+    insert(block, parent, anchor)
+    setComponentScopeId(instance)
+  }
+
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
   instance.isMounted = true
   if (__DEV__) {
