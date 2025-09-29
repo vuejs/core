@@ -27,7 +27,7 @@ export function genFor(
   oper: ForIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { helper, ir } = context
+  const { helper } = context
   const {
     source,
     value,
@@ -93,7 +93,6 @@ export function genFor(
     render,
     keyProp,
     idMap,
-    ir.source,
   )
   const selectorDeclarations: CodeFragment[] = []
   const selectorSetup: CodeFragment[] = []
@@ -316,7 +315,6 @@ function matchPatterns(
   render: BlockIRNode,
   keyProp: SimpleExpressionNode | undefined,
   idMap: Record<string, string | SimpleExpressionNode | null>,
-  source: string,
 ) {
   const selectorPatterns: NonNullable<
     ReturnType<typeof matchSelectorPattern>
@@ -327,12 +325,12 @@ function matchPatterns(
 
   render.effect = render.effect.filter(effect => {
     if (keyProp !== undefined) {
-      const selector = matchSelectorPattern(effect, keyProp.ast, idMap, source)
+      const selector = matchSelectorPattern(effect, keyProp.content, idMap)
       if (selector) {
         selectorPatterns.push(selector)
         return false
       }
-      const keyOnly = matchKeyOnlyBindingPattern(effect, keyProp.ast, source)
+      const keyOnly = matchKeyOnlyBindingPattern(effect, keyProp.content)
       if (keyOnly) {
         keyOnlyBindingPatterns.push(keyOnly)
         return false
@@ -350,8 +348,7 @@ function matchPatterns(
 
 function matchKeyOnlyBindingPattern(
   effect: IREffect,
-  keyAst: any,
-  source: string,
+  key: string,
 ):
   | {
       effect: IREffect
@@ -359,9 +356,9 @@ function matchKeyOnlyBindingPattern(
   | undefined {
   // TODO: expressions can be multiple?
   if (effect.expressions.length === 1) {
-    const ast = effect.expressions[0].ast
+    const { ast, content } = effect.expressions[0]
     if (typeof ast === 'object' && ast !== null) {
-      if (isKeyOnlyBinding(ast, keyAst, source)) {
+      if (isKeyOnlyBinding(ast, key, content)) {
         return { effect }
       }
     }
@@ -370,9 +367,8 @@ function matchKeyOnlyBindingPattern(
 
 function matchSelectorPattern(
   effect: IREffect,
-  keyAst: any,
+  key: string,
   idMap: Record<string, string | SimpleExpressionNode | null>,
-  source: string,
 ):
   | {
       effect: IREffect
@@ -381,7 +377,7 @@ function matchSelectorPattern(
   | undefined {
   // TODO: expressions can be multiple?
   if (effect.expressions.length === 1) {
-    const ast = effect.expressions[0].ast
+    const { ast, content } = effect.expressions[0]
     if (typeof ast === 'object' && ast) {
       const matcheds: [key: Expression, selector: Expression][] = []
 
@@ -399,8 +395,16 @@ function matchSelectorPattern(
               [left, right],
               [right, left],
             ]) {
-              const aIsKey = isKeyOnlyBinding(a, keyAst, source)
-              const bIsKey = isKeyOnlyBinding(b, keyAst, source)
+              const aIsKey = isKeyOnlyBinding(
+                a,
+                key,
+                effect.expressions[0].content,
+              )
+              const bIsKey = isKeyOnlyBinding(
+                b,
+                key,
+                effect.expressions[0].content,
+              )
               const bVars = analyzeVariableScopes(b, idMap)
               if (aIsKey && !bIsKey && !bVars.locals.length) {
                 matcheds.push([a, b])
@@ -448,7 +452,6 @@ function matchSelectorPattern(
       }
     }
 
-    const content = effect.expressions[0].content
     if (
       typeof ast === 'object' &&
       ast &&
@@ -465,8 +468,8 @@ function matchSelectorPattern(
         [left, right],
         [right, left],
       ]) {
-        const aIsKey = isKeyOnlyBinding(a, keyAst, source)
-        const bIsKey = isKeyOnlyBinding(b, keyAst, source)
+        const aIsKey = isKeyOnlyBinding(a, key, content)
+        const bIsKey = isKeyOnlyBinding(b, key, content)
         const bVars = analyzeVariableScopes(b, idMap)
         if (aIsKey && !bIsKey && !bVars.locals.length) {
           return {
@@ -519,14 +522,11 @@ function analyzeVariableScopes(
   return { globals, locals }
 }
 
-function isKeyOnlyBinding(expr: Node, keyAst: Node, source: string) {
+function isKeyOnlyBinding(expr: Node, key: string, source: string) {
   let only = true
   walk(expr, {
     enter(node) {
-      if (
-        source.slice(node.start!, node.end!) ===
-        source.slice(keyAst.start!, keyAst.end!)
-      ) {
+      if (source.slice(node.start! - 1, node.end! - 1) === key) {
         this.skip()
         return
       }
