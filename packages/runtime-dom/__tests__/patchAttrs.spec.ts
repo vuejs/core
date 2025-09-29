@@ -88,4 +88,29 @@ describe('runtime-dom: attrs patching', () => {
     expect(el2.dataset.test).toBe(undefined)
     expect(testvalue).toBe(obj)
   })
+
+  // #13946
+  test('sandbox attribute should always be handled as attribute', () => {
+    const iframe = document.createElement('iframe')
+    
+    // Verify sandbox is treated as attribute, not property
+    patchProp(iframe, 'sandbox', null, 'allow-scripts')
+    expect(iframe.getAttribute('sandbox')).toBe('allow-scripts')
+    
+    // Setting to null should remove the attribute
+    patchProp(iframe, 'sandbox', 'allow-scripts', null)
+    expect(iframe.hasAttribute('sandbox')).toBe(false)
+    expect(iframe.getAttribute('sandbox')).toBe(null)
+    
+    // Setting to undefined should also remove the attribute
+    patchProp(iframe, 'sandbox', null, 'allow-forms')
+    expect(iframe.getAttribute('sandbox')).toBe('allow-forms')
+    patchProp(iframe, 'sandbox', 'allow-forms', undefined)
+    expect(iframe.hasAttribute('sandbox')).toBe(false)
+    
+    // Empty string should set empty attribute (most restrictive sandbox)
+    patchProp(iframe, 'sandbox', null, '')
+    expect(iframe.getAttribute('sandbox')).toBe('')
+    expect(iframe.hasAttribute('sandbox')).toBe(true)
+  })
 })
