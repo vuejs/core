@@ -90,27 +90,36 @@ describe('runtime-dom: attrs patching', () => {
   })
 
   // #13946
-  test('sandbox attribute should always be handled as attribute', () => {
-    const iframe = document.createElement('iframe')
-    
-    // Verify sandbox is treated as attribute, not property
+  test('sandbox should be handled as attribute even if property exists', () => {
+    const iframe = document.createElement('iframe') as any
+    let propSetCount = 0
+    // simulate sandbox property in jsdom environment
+    Object.defineProperty(iframe, 'sandbox', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return this._sandbox
+      },
+      set(v) {
+        propSetCount++
+        this._sandbox = v
+      },
+    })
+
     patchProp(iframe, 'sandbox', null, 'allow-scripts')
     expect(iframe.getAttribute('sandbox')).toBe('allow-scripts')
-    
-    // Setting to null should remove the attribute
+    expect(propSetCount).toBe(0)
+
     patchProp(iframe, 'sandbox', 'allow-scripts', null)
     expect(iframe.hasAttribute('sandbox')).toBe(false)
     expect(iframe.getAttribute('sandbox')).toBe(null)
-    
-    // Setting to undefined should also remove the attribute
-    patchProp(iframe, 'sandbox', null, 'allow-forms')
-    expect(iframe.getAttribute('sandbox')).toBe('allow-forms')
-    patchProp(iframe, 'sandbox', 'allow-forms', undefined)
-    expect(iframe.hasAttribute('sandbox')).toBe(false)
-    
-    // Empty string should set empty attribute (most restrictive sandbox)
+    expect(propSetCount).toBe(0)
+
     patchProp(iframe, 'sandbox', null, '')
     expect(iframe.getAttribute('sandbox')).toBe('')
     expect(iframe.hasAttribute('sandbox')).toBe(true)
+    expect(propSetCount).toBe(0)
+
+    delete iframe.sandbox
   })
 })
