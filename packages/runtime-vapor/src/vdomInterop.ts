@@ -24,6 +24,7 @@ import {
   isRef,
   isVNode,
   onScopeDispose,
+  queuePostFlushCb,
   renderSlot,
   setTransitionHooks as setVNodeTransitionHooks,
   shallowReactive,
@@ -74,7 +75,12 @@ const vaporInteropImpl: Omit<
 > = {
   mount(vnode, container, anchor, parentComponent) {
     let selfAnchor = (vnode.el = vnode.anchor = createTextNode())
-    container.insertBefore(selfAnchor, anchor)
+    if (isHydrating) {
+      // avoid vdom hydration children mismatch by the selfAnchor, delay its insertion
+      queuePostFlushCb(() => container.insertBefore(selfAnchor, anchor))
+    } else {
+      container.insertBefore(selfAnchor, anchor)
+    }
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
