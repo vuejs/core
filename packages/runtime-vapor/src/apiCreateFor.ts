@@ -35,6 +35,7 @@ import {
 } from './dom/hydration'
 import { ForFragment, VaporFragment, findLastChild } from './fragment'
 import {
+  type ChildItem,
   insertionAnchor,
   insertionParent,
   resetInsertionState,
@@ -149,6 +150,15 @@ export const createFor = (
             : currentHydrationNode!
         if (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']'))) {
           throw new Error(`v-for fragment anchor node was not found.`)
+        }
+
+        // $lastLogicalChild is the fragment start anchor; replacing it with end anchor
+        // can avoid the call to locateEndAnchor within locateChildByLogicalIndex
+        if (_insertionParent && _insertionParent!.$lastLogicalChild) {
+          ;(parentAnchor as any as ChildItem).$idx = (
+            _insertionParent!.$lastLogicalChild as ChildItem
+          ).$idx
+          _insertionParent.$lastLogicalChild = parentAnchor
         }
       }
     } else {
