@@ -139,16 +139,16 @@ export function disableHydrationNodeLookup(): void {
 }
 
 export function locateChildByLogicalIndex(
-  node: InsertionParent,
+  parent: InsertionParent,
   logicalIndex: number,
 ): Node | null {
-  let child = (node.$lastLogicalChild || node.firstChild) as ChildItem
+  let child = (parent.$lastLogicalChild || parent.firstChild) as ChildItem
   let fromIndex = child.$idx || 0
 
   while (child) {
     if (fromIndex === logicalIndex) {
       child.$idx = logicalIndex
-      return (node.$lastLogicalChild = child)
+      return (parent.$lastLogicalChild = child)
     }
 
     child = (
