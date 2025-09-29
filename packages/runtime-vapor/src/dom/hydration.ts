@@ -174,7 +174,7 @@ function locateHydrationNodeImpl(): void {
       if (usedCount !== undefined) {
         node = locateChildByLogicalIndex(
           insertionParent!,
-          ($idx || 0) + usedCount + 1,
+          $idx + usedCount + 1,
         )!
         usedCount++
       } else {
