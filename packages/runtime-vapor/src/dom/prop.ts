@@ -1,6 +1,7 @@
 import {
   type NormalizedStyle,
   canSetValueDirectly,
+  includeBooleanAttr,
   isOn,
   isString,
   normalizeClass,
@@ -81,7 +82,9 @@ export function setDOMProp(el: any, key: string, value: any): void {
   let needRemove = false
   if (value === '' || value == null) {
     const type = typeof prev
-    if (value == null && type === 'string') {
+    if (type === 'boolean') {
+      value = includeBooleanAttr(value)
+    } else if (value == null && type === 'string') {
       // e.g. <div :id="null">
       value = ''
       needRemove = true

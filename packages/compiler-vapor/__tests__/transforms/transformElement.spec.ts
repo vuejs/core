@@ -583,6 +583,15 @@ describe('compiler: element transform', () => {
     expect(ir.block.effect).lengthOf(0)
   })
 
+  test('checkbox with static indeterminate', () => {
+    const { code } = compileWithElementTransform(
+      `<input type="checkbox" indeterminate/>`,
+    )
+
+    expect(code).toContain('_setProp(n0, "indeterminate", "")')
+    expect(code).toMatchSnapshot()
+  })
+
   test('props + children', () => {
     const { code, ir } = compileWithElementTransform(
       `<div id="foo"><span/></div>`,

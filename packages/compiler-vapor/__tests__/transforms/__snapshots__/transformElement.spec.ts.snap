@@ -1,5 +1,16 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > checkbox with static indeterminate 1`] = `
+"import { setProp as _setProp, template as _template } from 'vue';
+const t0 = _template("<input type=\\"checkbox\\">", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setProp(n0, "indeterminate", "")
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > cache v-on expression with unique handler name 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
