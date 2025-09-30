@@ -142,7 +142,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
     node = handleMismatch(node, template)
   }
 
-  advanceHydrationNode(node)
+  currentHydrationNode = node.nextSibling
   return node
 }
 
