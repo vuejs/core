@@ -1,6 +1,6 @@
 import { type ComputedRef, computed } from '../src/computed'
 import { isReactive, reactive, shallowReactive, toRaw } from '../src/reactive'
-import { isRef, ref } from '../src/ref'
+import { isRef, ref, toRef, triggerRef } from '../src/ref'
 import { effect } from '../src/effect'
 
 describe('reactivity/reactive/Array', () => {
@@ -277,6 +277,17 @@ describe('reactivity/reactive/Array', () => {
     proxy.push(1)
     expect(array).toHaveLength(1)
     expect(proxy).toHaveLength(1)
+  })
+
+  // #12427
+  test('trigger the ref that is created by toRef from a reactive Array', () => {
+    const array = reactive<number[]>([1])
+    const first = toRef(array, 0)
+    const fn = vi.fn()
+    effect(() => fn(first.value))
+    expect(fn).toHaveBeenCalledTimes(1)
+    triggerRef(first)
+    expect(fn).toHaveBeenCalledTimes(2)
   })
 
   describe('Array methods w/ refs', () => {
