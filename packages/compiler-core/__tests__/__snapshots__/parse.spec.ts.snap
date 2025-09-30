@@ -2467,7 +2467,39 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
             },
           },
           "ns": 0,
-          "props": [],
+          "props": [
+            {
+              "loc": {
+                "end": {
+                  "column": 17,
+                  "line": 1,
+                  "offset": 16,
+                },
+                "source": """,
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "name": """,
+              "nameLoc": {
+                "end": {
+                  "column": 17,
+                  "line": 1,
+                  "offset": 16,
+                },
+                "source": """,
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "type": 6,
+              "value": undefined,
+            },
+          ],
           "tag": "div",
           "tagType": 0,
           "type": 1,
