@@ -142,13 +142,13 @@ export function locateChildByLogicalIndex(
   parent: InsertionParent,
   logicalIndex: number,
 ): Node | null {
-  let child = (parent.$lastLogicalChild || parent.firstChild) as ChildItem
+  let child = (parent.$llc || parent.firstChild) as ChildItem
   let fromIndex = child.$idx || 0
 
   while (child) {
     if (fromIndex === logicalIndex) {
       child.$idx = logicalIndex
-      return (parent.$lastLogicalChild = child)
+      return (parent.$llc = child)
     }
 
     child = (

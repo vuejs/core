@@ -60,6 +60,7 @@ export const transformChildren: NodeTransform = (node, context) => {
 function processDynamicChildren(context: TransformContext<ElementNode>) {
   let prevDynamics: IRDynamicInfo[] = []
   let staticCount = 0
+  let dynamicCount = 0
   const children = context.dynamic.children
 
   for (const [index, child] of children.entries()) {
@@ -77,6 +78,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
         } else {
           registerInsertion(prevDynamics, context, -1 /* prepend */)
         }
+        dynamicCount += prevDynamics.length
         prevDynamics = []
       }
       staticCount++
@@ -84,7 +86,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
   }
 
   if (prevDynamics.length) {
-    registerInsertion(prevDynamics, context, staticCount, true)
+    registerInsertion(prevDynamics, context, dynamicCount + staticCount, true)
   }
 }
 

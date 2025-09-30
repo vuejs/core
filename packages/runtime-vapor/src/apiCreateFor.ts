@@ -151,14 +151,13 @@ export const createFor = (
         if (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']'))) {
           throw new Error(`v-for fragment anchor node was not found.`)
         }
-
-        // $lastLogicalChild is the fragment start anchor; replacing it with end anchor
+        // the lastLogicalChild is the fragment start anchor; replacing it with end anchor
         // can avoid the call to locateEndAnchor within locateChildByLogicalIndex
-        if (_insertionParent && _insertionParent!.$lastLogicalChild) {
+        if (_insertionParent && _insertionParent!.$llc) {
           ;(parentAnchor as any as ChildItem).$idx = (
-            _insertionParent!.$lastLogicalChild as ChildItem
+            _insertionParent!.$llc as ChildItem
           ).$idx
-          _insertionParent.$lastLogicalChild = parentAnchor
+          _insertionParent.$llc = parentAnchor
         }
       }
     } else {

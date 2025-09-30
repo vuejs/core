@@ -44,11 +44,11 @@ function performHydration<T>(
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
     ;(Node.prototype as any).$pns = undefined
-    ;(Node.prototype as any).$uc = undefined
     ;(Node.prototype as any).$idx = undefined
-    ;(Node.prototype as any).$prevDynamicCount = undefined
-    ;(Node.prototype as any).$anchorCount = undefined
-    ;(Node.prototype as any).$appendIndex = undefined
+    ;(Node.prototype as any).$llc = undefined
+    ;(Node.prototype as any).$lpn = undefined
+    ;(Node.prototype as any).$lan = undefined
+    ;(Node.prototype as any).$lin = undefined
 
     isOptimized = true
   }
@@ -146,67 +146,37 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
   return node
 }
 
+function nextNode(node: Node): Node | null {
+  return isComment(node, '[')
+    ? locateEndAnchor(node as Anchor)!.nextSibling
+    : node.nextSibling
+}
+
 function locateHydrationNodeImpl(): void {
   let node: Node | null
   if (insertionAnchor !== undefined) {
-    const {
-      $prevDynamicCount: prevDynamicCount = 0,
-      $appendIndex: appendIndex,
-      $anchorCount: anchorCount = 0,
-    } = insertionParent!
+    const { $lpn: lastPrepend, $lan: lastAppend, firstChild } = insertionParent!
     // prepend
     if (insertionAnchor === 0) {
-      // use prevDynamicCount as logical index to locate the hydration node
-      node =
-        prevDynamicCount === 0 &&
-        currentHydrationNode!.parentNode === insertionParent
-          ? currentHydrationNode
-          : locateChildByLogicalIndex(insertionParent!, prevDynamicCount)!
+      node = insertionParent!.$lpn = lastPrepend
+        ? nextNode(lastPrepend)
+        : firstChild
     }
     // insert
     else if (insertionAnchor instanceof Node) {
-      // handling insertion anchors:
-      // 1. first encounter: use insertionAnchor itself as the hydration node
-      // 2. subsequent: use node following the insertionAnchor as the hydration node
-      // used count tracks how many times insertionAnchor has been used, ensuring
-      // consecutive insert operations locate the correct hydration node.
-      let { $idx, $uc: usedCount } = insertionAnchor as ChildItem
-      if (usedCount !== undefined) {
-        node = locateChildByLogicalIndex(
-          insertionParent!,
-          $idx + usedCount + 1,
-        )!
-        usedCount++
-      } else {
-        insertionParent!.$lastLogicalChild = node = insertionAnchor
-        // first use of this anchor: it doesn't consume the next child
-        // so we track unique anchor appearances for later offset correction
-        insertionParent!.$anchorCount = anchorCount + 1
-        usedCount = 0
-      }
-      ;(insertionAnchor as ChildItem).$uc = usedCount
+      const { $lin: lastInsertedNode } = insertionAnchor as ChildItem
+      node = (insertionAnchor as ChildItem).$lin = lastInsertedNode
+        ? nextNode(lastInsertedNode)
+        : insertionAnchor
     }
     // append
     else {
-      if (appendIndex !== null && appendIndex !== undefined) {
-        node = locateChildByLogicalIndex(insertionParent!, appendIndex + 1)!
-      } else {
-        if (insertionAnchor === null) {
-          node =
-            currentHydrationNode!.parentNode === insertionParent
-              ? currentHydrationNode
-              : locateChildByLogicalIndex(insertionParent!, 0)!
-        } else {
-          node = locateChildByLogicalIndex(
-            insertionParent!,
-            prevDynamicCount + insertionAnchor,
-          )!
-        }
-      }
-      insertionParent!.$appendIndex = (node as ChildItem).$idx
+      node = insertionParent!.$lan = lastAppend
+        ? nextNode(lastAppend)
+        : insertionAnchor === null
+          ? firstChild
+          : locateChildByLogicalIndex(insertionParent!, insertionAnchor)!
     }
-
-    insertionParent!.$prevDynamicCount = prevDynamicCount + 1
   } else {
     node = currentHydrationNode
     if (insertionParent && (!node || node.parentNode !== insertionParent)) {
