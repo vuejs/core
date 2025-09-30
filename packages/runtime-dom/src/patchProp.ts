@@ -114,7 +114,7 @@ function shouldSetAsProp(
   // #13946 iframe.sandbox should always be set as attribute since setting
   // the property to null results in 'null' string, and setting to empty string
   // enables the most restrictive sandbox mode instead of no sandboxing.
-  if (key === 'sandbox') {
+  if (key === 'sandbox' && el.tagName === 'IFRAME') {
     return false
   }
 
