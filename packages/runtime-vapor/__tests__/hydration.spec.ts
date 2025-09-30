@@ -2966,15 +2966,30 @@ describe('Vapor Mode hydration', () => {
     test('unmount async wrapper before load (fragment)', async () => {})
   })
 
-  describe.todo('force hydrate prop', async () => {
-    test.todo('force hydrate prop with `.prop` modifier', () => {})
+  describe('force hydrate prop', async () => {
+    test('force hydrate prop with `.prop` modifier', async () => {
+      const { container } = await mountWithHydration(
+        '<input type="checkbox">',
+        `<input type="checkbox" .indeterminate="true"/>`,
+      )
+      expect((container.firstChild! as any).indeterminate).toBe(true)
+    })
 
-    test.todo(
-      'force hydrate input v-model with non-string value bindings',
-      () => {},
-    )
+    test('force hydrate input v-model with non-string value bindings', async () => {
+      const { container } = await mountWithHydration(
+        '<input type="checkbox" value="true">',
+        `<input type="checkbox" :true-value="true"/>`,
+      )
+      expect((container.firstChild as any)._trueValue).toBe(true)
+    })
 
-    test.todo('force hydrate checkbox with indeterminate', () => {})
+    test.todo('force hydrate checkbox with indeterminate', async () => {
+      const { container } = await mountWithHydration(
+        '<input type="checkbox" indeterminate/>',
+        `<input type="checkbox" :indeterminate="true"/>`,
+      )
+      expect((container.firstChild! as any).indeterminate).toBe(true)
+    })
 
     test.todo(
       'force hydrate select option with non-string value bindings',

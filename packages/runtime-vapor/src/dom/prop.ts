@@ -96,7 +96,8 @@ export function setDOMProp(el: any, key: string, value: any): void {
   if (
     (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
     isHydrating &&
-    !attributeHasMismatch(el, key, value)
+    !attributeHasMismatch(el, key, value) &&
+    !shouldForcePatch(el, key)
   ) {
     return
   }
@@ -485,4 +486,10 @@ function getClientText(el: Node, value: string): string {
     value = value.slice(1)
   }
   return value
+}
+
+function shouldForcePatch(el: Element, key: string): boolean {
+  const { tagName } = el
+  const forcePatch = tagName === 'INPUT' || tagName === 'OPTION'
+  return forcePatch && (key.endsWith('value') || key === 'indeterminate')
 }
