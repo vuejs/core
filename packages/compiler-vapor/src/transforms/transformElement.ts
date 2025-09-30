@@ -199,6 +199,9 @@ function resolveSetupReference(name: string, context: TransformContext) {
         : undefined
 }
 
+// keys cannot be a part of the template and need to be set dynamically
+const dynamicKeys = ['indeterminate']
+
 function transformNativeElement(
   node: PlainElementNode,
   propsResult: PropsResult,
@@ -230,7 +233,12 @@ function transformNativeElement(
   } else {
     for (const prop of propsResult[1]) {
       const { key, values } = prop
-      if (key.isStatic && values.length === 1 && values[0].isStatic) {
+      if (
+        key.isStatic &&
+        values.length === 1 &&
+        values[0].isStatic &&
+        !dynamicKeys.includes(key.content)
+      ) {
         template += ` ${key.content}`
         if (values[0].content) template += `="${values[0].content}"`
       } else {
