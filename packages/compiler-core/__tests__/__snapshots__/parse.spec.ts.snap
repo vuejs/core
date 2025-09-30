@@ -2920,6 +2920,144 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
 }
 `;
 
+exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <template><div foo "></div></template> 1`] = `
+{
+  "cached": [],
+  "children": [
+    {
+      "children": [
+        {
+          "children": [],
+          "codegenNode": undefined,
+          "loc": {
+            "end": {
+              "column": 28,
+              "line": 1,
+              "offset": 27,
+            },
+            "source": "<div foo "></div>",
+            "start": {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
+          "props": [
+            {
+              "loc": {
+                "end": {
+                  "column": 19,
+                  "line": 1,
+                  "offset": 18,
+                },
+                "source": "foo",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "name": "foo",
+              "nameLoc": {
+                "end": {
+                  "column": 19,
+                  "line": 1,
+                  "offset": 18,
+                },
+                "source": "foo",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "type": 6,
+              "value": undefined,
+            },
+            {
+              "loc": {
+                "end": {
+                  "column": 21,
+                  "line": 1,
+                  "offset": 20,
+                },
+                "source": """,
+                "start": {
+                  "column": 20,
+                  "line": 1,
+                  "offset": 19,
+                },
+              },
+              "name": """,
+              "nameLoc": {
+                "end": {
+                  "column": 21,
+                  "line": 1,
+                  "offset": 20,
+                },
+                "source": """,
+                "start": {
+                  "column": 20,
+                  "line": 1,
+                  "offset": 19,
+                },
+              },
+              "type": 6,
+              "value": undefined,
+            },
+          ],
+          "tag": "div",
+          "tagType": 0,
+          "type": 1,
+        },
+      ],
+      "codegenNode": undefined,
+      "loc": {
+        "end": {
+          "column": 39,
+          "line": 1,
+          "offset": 38,
+        },
+        "source": "<template><div foo "></div></template>",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [],
+      "tag": "template",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 39,
+      "line": 1,
+      "offset": 38,
+    },
+    "source": "<template><div foo "></div></template>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<template><div foo "></div></template>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE > <template><div foo=bar"></div></template> 1`] = `
 {
   "cached": [],
@@ -3558,39 +3696,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
             },
           },
           "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 17,
-                  "line": 1,
-                  "offset": 16,
-                },
-                "source": "=",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "=",
-              "nameLoc": {
-                "end": {
-                  "column": 17,
-                  "line": 1,
-                  "offset": 16,
-                },
-                "source": "=",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "type": 6,
-              "value": undefined,
-            },
-          ],
+          "props": [],
           "tag": "div",
           "tagType": 0,
           "type": 1,
@@ -3673,25 +3779,25 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
                   "line": 1,
                   "offset": 23,
                 },
-                "source": "=foo=bar",
+                "source": "foo=bar",
                 "start": {
-                  "column": 16,
+                  "column": 17,
                   "line": 1,
-                  "offset": 15,
+                  "offset": 16,
                 },
               },
-              "name": "=foo",
+              "name": "foo",
               "nameLoc": {
                 "end": {
                   "column": 20,
                   "line": 1,
                   "offset": 19,
                 },
-                "source": "=foo",
+                "source": "foo",
                 "start": {
-                  "column": 16,
+                  "column": 17,
                   "line": 1,
-                  "offset": 15,
+                  "offset": 16,
                 },
               },
               "type": 6,

@@ -651,17 +651,16 @@ export default class Tokenizer {
       this.state = State.BeforeTagName
       this.sectionStart = this.index
     } else if (!isWhitespace(c)) {
-      if ((__DEV__ || !__BROWSER__) && c === CharCodes.Eq) {
-        this.cbs.onerr(
-          ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
-          this.index,
-        )
-      }
       this.handleAttrStart(c)
     }
   }
   private handleAttrStart(c: number) {
-    if (c === CharCodes.LowerV && this.peek() === CharCodes.Dash) {
+    if ((__DEV__ || !__BROWSER__) && c === CharCodes.Eq) {
+      this.cbs.onerr(
+        ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
+        this.index,
+      )
+    } else if (c === CharCodes.LowerV && this.peek() === CharCodes.Dash) {
       this.state = State.InDirName
       this.sectionStart = this.index
     } else if (
