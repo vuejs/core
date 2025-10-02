@@ -193,6 +193,78 @@ describe(`runtime-dom: events patching`, () => {
     expect(fn2).toHaveBeenCalledTimes(1)
   })
 
+  // #8334
+  test('should support once passive capture', async () => {
+    const el = document.createElement('div')
+
+    const onOnce = vi.fn()
+    const onPassive = vi.fn()
+    const onCapture = vi.fn()
+
+    patchProp(el, 'onOnce', null, onOnce)
+    patchProp(el, 'onPassive', null, onPassive)
+    patchProp(el, 'onCapture', null, onCapture)
+
+    el.dispatchEvent(new Event('once'))
+    await timeout()
+    expect(onOnce).toHaveBeenCalledTimes(1)
+
+    el.dispatchEvent(new Event('passive'))
+    await timeout()
+    expect(onPassive).toHaveBeenCalledTimes(1)
+
+    el.dispatchEvent(new Event('capture'))
+    await timeout()
+    expect(onCapture).toHaveBeenCalledTimes(1)
+  })
+
+  test('should support once passive capture in web-components', async () => {
+    class TestCustomElement extends HTMLElement {
+      constructor() {
+        super()
+      }
+    }
+
+    window.customElements.define('hello-world', TestCustomElement)
+
+    const customElement = document.createElement('hello-world', {
+      is: 'hello-world',
+    })
+
+    const onOnce = vi.fn()
+    const onPassive = vi.fn()
+    const onCapture = vi.fn()
+
+    patchProp(customElement, 'onOnce', null, onOnce)
+    patchProp(customElement, 'onPassive', null, onPassive)
+    patchProp(customElement, 'onCapture', null, onCapture)
+
+    customElement.dispatchEvent(new CustomEvent('once'))
+    expect(onOnce).toHaveBeenCalledTimes(1)
+
+    customElement.dispatchEvent(new CustomEvent('passive'))
+    expect(onPassive).toHaveBeenCalledTimes(1)
+
+    customElement.dispatchEvent(new CustomEvent('capture'))
+    expect(onCapture).toHaveBeenCalledTimes(1)
+  })
+
+  test('should support once event with the once modifier', async () => {
+    const el = document.createElement('div')
+
+    const onOnce = vi.fn()
+
+    patchProp(el, 'onOnceOnce', null, onOnce)
+
+    el.dispatchEvent(new Event('once'))
+    await timeout()
+    expect(onOnce).toHaveBeenCalledTimes(1)
+
+    el.dispatchEvent(new Event('once'))
+    await timeout()
+    expect(onOnce).toHaveBeenCalledTimes(1)
+  })
+
   it('handles an unknown type', () => {
     const el = document.createElement('div')
     patchProp(el, 'onClick', null, 'test')
