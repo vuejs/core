@@ -344,6 +344,9 @@ describe('vModel', () => {
     triggerEvent('input', number)
     await nextTick()
     expect(data.number).toEqual(1.2)
+    await nextTick()
+    triggerEvent('change', number)
+    expect(number.value).toEqual('1.2')
 
     trim.value = '    hello, world    '
     triggerEvent('input', trim)

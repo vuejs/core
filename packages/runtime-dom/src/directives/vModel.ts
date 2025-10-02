@@ -66,9 +66,16 @@ export const vModelText: ModelDirective<
       }
       el[assignKey](domValue)
     })
-    if (trim) {
+    if (trim || castToNumber) {
       addEventListener(el, 'change', () => {
-        el.value = el.value.trim()
+        let newValue = el.value
+        if (trim) {
+          newValue = newValue.trim()
+        }
+        if (castToNumber) {
+          newValue = looseToNumber(newValue)
+        }
+        el.value = newValue
       })
     }
     if (!lazy) {
