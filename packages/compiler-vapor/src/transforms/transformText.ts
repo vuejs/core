@@ -11,11 +11,7 @@ import {
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import { DynamicFlag, IRNodeTypes } from '../ir'
-import {
-  getLiteralExpressionValue,
-  isConstantExpression,
-  isStaticExpression,
-} from '../utils'
+import { getLiteralExpressionValue } from '../utils'
 import { escapeHtml } from '@vue/shared'
 
 type TextLike = TextNode | InterpolationNode
@@ -108,31 +104,19 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
   context.template += ' '
   const id = context.reference()
 
-  if (values.length === 0) {
+  if (
+    values.length === 0 ||
+    (values.every(v => getLiteralExpressionValue(v) != null) &&
+      parentNode.type !== NodeTypes.ROOT)
+  ) {
     return
   }
 
-  const nonConstantExps = values.filter(v => !isConstantExpression(v))
-  const isStatic =
-    !nonConstantExps.length ||
-    nonConstantExps.every(e =>
-      isStaticExpression(e, context.options.bindingMetadata),
-    ) ||
-    context.inVOnce
-
-  if (isStatic) {
-    context.registerOperation({
-      type: IRNodeTypes.SET_TEXT,
-      element: id,
-      values,
-    })
-  } else {
-    context.registerEffect(values, {
-      type: IRNodeTypes.SET_TEXT,
-      element: id,
-      values,
-    })
-  }
+  context.registerEffect(values, {
+    type: IRNodeTypes.SET_TEXT,
+    element: id,
+    values,
+  })
 }
 
 function processTextContainer(
@@ -141,7 +125,7 @@ function processTextContainer(
 ) {
   const values = processTextLikeChildren(children, context)
 
-  const literals = values.map(getLiteralExpressionValue)
+  const literals = values.map(value => getLiteralExpressionValue(value))
 
   if (literals.every(l => l != null)) {
     context.childrenTemplate = literals.map(l => escapeHtml(String(l)))

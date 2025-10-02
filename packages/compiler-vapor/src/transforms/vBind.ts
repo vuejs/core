@@ -1,4 +1,5 @@
 import {
+  ElementTypes,
   ErrorCodes,
   NodeTypes,
   type SimpleExpressionNode,
@@ -46,7 +47,8 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     exp = createSimpleExpression('', true, loc)
   }
 
-  exp = resolveExpression(exp)
+  const isComponent = node.tagType === ElementTypes.COMPONENT
+  exp = resolveExpression(exp, isComponent)
   arg = resolveExpression(arg)
 
   if (arg.isStatic && isReservedProp(arg.content)) return
