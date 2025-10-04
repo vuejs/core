@@ -686,20 +686,15 @@ export class VueElement
       roots.push(...this._teleportTargets)
     }
 
-    const seen = new Set<HTMLSlotElement>()
-    const slots: HTMLSlotElement[] = []
+    const slots = new Set<HTMLSlotElement>()
     for (const root of roots) {
       const found = root.querySelectorAll<HTMLSlotElement>('slot')
       for (let i = 0; i < found.length; i++) {
-        const slot = found[i]
-        if (!seen.has(slot)) {
-          seen.add(slot)
-          slots.push(slot)
-        }
+        slots.add(found[i])
       }
     }
 
-    return slots
+    return Array.from(slots)
   }
 
   /**
