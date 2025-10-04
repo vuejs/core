@@ -1430,6 +1430,44 @@ describe('defineCustomElement', () => {
       app.unmount()
     })
 
+    test('teleport target is ancestor of custom element host', async () => {
+      const Child = defineCustomElement(
+        {
+          render() {
+            return [
+              h(Teleport, { to: '#t1' }, [renderSlot(this.$slots, 'header')]),
+            ]
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-teleport-child-target', Child)
+
+      const App = {
+        render() {
+          return h('div', { id: 't1' }, [
+            h('my-el-teleport-child-target', null, {
+              default: () => [h('div', { slot: 'header' }, 'header')],
+            }),
+          ])
+        },
+      }
+      const app = createApp(App)
+      app.mount(container)
+
+      const target1 = document.getElementById('t1')!
+      expect(target1.outerHTML).toBe(
+        `<div id="t1">` +
+          `<my-el-teleport-child-target data-v-app="">` +
+          `<!--teleport start--><!--teleport end-->` +
+          `</my-el-teleport-child-target>` +
+          `<div slot="header">header</div>` +
+          `</div>`,
+      )
+
+      app.unmount()
+    })
+
     test('toggle nested custom element with shadowRoot: false', async () => {
       customElements.define(
         'my-el-child-shadow-false',
