@@ -239,7 +239,8 @@ function findOptionValue(node: PlainElementNode): OptionValue {
             let content = x.content
             if (i === 0) {
               content = content.trimStart()
-            } else if (i === relevantNodes.length - 1) {
+            }
+            if (i === relevantNodes.length - 1) {
               content = content.trimEnd()
             }
             return createSimpleExpression(content, true)
