@@ -34,7 +34,13 @@ import {
   setActiveSub,
   unref,
 } from '@vue/reactivity'
-import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  invokeArrayFns,
+  isArray,
+  isFunction,
+  isString,
+} from '@vue/shared'
 import {
   type DynamicPropsSource,
   type RawProps,
@@ -255,7 +261,7 @@ export function createComponent(
     component.inheritAttrs !== false &&
     Object.keys(instance.attrs).length
   ) {
-    const el = getRootElement(instance)
+    const el = getRootElement(instance.block)
     if (el) {
       renderEffect(() => {
         isApplyingFallthroughProps = true
@@ -579,9 +585,7 @@ export function getExposed(
   }
 }
 
-function getRootElement({
-  block,
-}: VaporComponentInstance): Element | undefined {
+function getRootElement(block: Block): Element | undefined {
   if (block instanceof Element) {
     return block
   }
@@ -591,5 +595,21 @@ function getRootElement({
     if (nodes instanceof Element && (nodes as any).$root) {
       return nodes
     }
+  }
+
+  if (isArray(block)) {
+    let singleRoot: Element | undefined
+    for (const b of block) {
+      if (b instanceof Comment) {
+        continue
+      }
+      const thisRoot = getRootElement(b)
+      // only return root if there is exactly one eligible root in the array
+      if (!thisRoot || singleRoot) {
+        return
+      }
+      singleRoot = thisRoot
+    }
+    return singleRoot
   }
 }

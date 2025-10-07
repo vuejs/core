@@ -57,6 +57,131 @@ describe('attribute fallthrough', () => {
     expect(host.innerHTML).toBe('<div id="b">2</div>')
   })
 
+  it('should allow attrs to fallthrough on component with comment at root', async () => {
+    const t0 = template('<!--comment-->')
+    const t1 = template('<div>')
+    const { component: Child } = define({
+      props: ['foo'],
+      setup(props: any) {
+        const n0 = t0()
+        const n1 = t1()
+        renderEffect(() => setElementText(n1, props.foo))
+        return [n0, n1]
+      },
+    })
+
+    const foo = ref(1)
+    const id = ref('a')
+    const { host } = define({
+      setup() {
+        return createComponent(
+          Child,
+          {
+            foo: () => foo.value,
+            id: () => id.value,
+          },
+          null,
+          true,
+        )
+      },
+    }).render()
+    expect(host.innerHTML).toBe('<!--comment--><div id="a">1</div>')
+
+    foo.value++
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--comment--><div id="a">2</div>')
+
+    id.value = 'b'
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--comment--><div id="b">2</div>')
+  })
+
+  it('should allow attrs to fallthrough on component with single-element array root', async () => {
+    const t0 = template('<div>')
+    const { component: Child } = define({
+      props: ['foo'],
+      setup(props: any) {
+        const n0 = t0()
+        renderEffect(() => setElementText(n0, props.foo))
+        return [n0]
+      },
+    })
+
+    const foo = ref(1)
+    const id = ref('a')
+    const { host } = define({
+      setup() {
+        return createComponent(
+          Child,
+          {
+            foo: () => foo.value,
+            id: () => id.value,
+          },
+          null,
+          true,
+        )
+      },
+    }).render()
+    expect(host.innerHTML).toBe('<div id="a">1</div>')
+
+    foo.value++
+    await nextTick()
+    expect(host.innerHTML).toBe('<div id="a">2</div>')
+
+    id.value = 'b'
+    await nextTick()
+    expect(host.innerHTML).toBe('<div id="b">2</div>')
+  })
+
+  it('should not allow attrs to fallthrough on component with multiple roots', async () => {
+    const t0 = template('<span>')
+    const t1 = template('<div>')
+    const { component: Child } = define({
+      props: ['foo'],
+      setup(props: any) {
+        const n0 = t0()
+        const n1 = t1()
+        renderEffect(() => setElementText(n1, props.foo))
+        return [n0, n1]
+      },
+    })
+
+    const foo = ref(1)
+    const id = ref('a')
+    const { host } = define({
+      setup() {
+        return createComponent(
+          Child,
+          {
+            foo: () => foo.value,
+            id: () => id.value,
+          },
+          null,
+          true,
+        )
+      },
+    }).render()
+    expect(host.innerHTML).toBe('<span></span><div>1</div>')
+  })
+
+  it('should not allow attrs to fallthrough on component with single comment root', async () => {
+    const t0 = template('<!--comment-->')
+    const { component: Child } = define({
+      setup() {
+        const n0 = t0()
+        return [n0]
+      },
+    })
+
+    const id = ref('a')
+    const { host } = define({
+      setup() {
+        return createComponent(Child, { id: () => id.value }, null, true)
+      },
+    }).render()
+    expect(host.innerHTML).toBe('<!--comment-->')
+  })
+
   it('should not fallthrough if explicitly pass inheritAttrs: false', async () => {
     const t0 = template('<div>', true)
     const { component: Child } = define({
