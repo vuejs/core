@@ -1550,6 +1550,198 @@ describe('defineCustomElement', () => {
     })
   })
 
+  test('subclasses can override property setters', async () => {
+    const E = defineCustomElement({
+      props: {
+        value: String,
+      },
+      render() {
+        return h('div', this.value)
+      },
+    })
+
+    class SubclassedElement extends E {
+      set value(val: string) {
+        if (val && val !== 'valid-date' && val.includes('invalid')) {
+          return
+        }
+        super.value = val
+      }
+
+      get value(): string {
+        return super.value || ''
+      }
+    }
+
+    customElements.define('my-subclassed-element', SubclassedElement)
+
+    const e = new SubclassedElement()
+    container.appendChild(e)
+
+    e.value = 'valid-date'
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe('<div>valid-date</div>')
+
+    e.value = 'invalid-date'
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe('<div>valid-date</div>') // Should remain unchanged
+
+    e.value = 'another-valid'
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe('<div>another-valid</div>')
+  })
+
+  test('properties are defined on instance for backward compatibility', () => {
+    const E = defineCustomElement({
+      props: {
+        testProp: String,
+        anotherProp: Number,
+      },
+      render() {
+        return h('div', `${this.testProp}-${this.anotherProp}`)
+      },
+    })
+
+    customElements.define('my-prototype-test', E)
+
+    const e1 = new E()
+    const e2 = new E()
+    container.appendChild(e1)
+    container.appendChild(e2)
+
+    // Properties should be defined on instances for backward compatibility
+    expect(e1.hasOwnProperty('testProp')).toBe(true)
+    expect(e1.hasOwnProperty('anotherProp')).toBe(true)
+
+    // Properties should have getter and setter functions
+    const descriptor = Object.getOwnPropertyDescriptor(e1, 'testProp')
+    expect(descriptor).toBeDefined()
+    expect(typeof descriptor!.get).toBe('function')
+    expect(typeof descriptor!.set).toBe('function')
+  })
+
+  test('multiple subclasses with different override behaviors', async () => {
+    const E = defineCustomElement({
+      props: {
+        value: String,
+      },
+      render() {
+        return h('div', this.value || 'empty')
+      },
+    })
+
+    class ValidatingSubclass extends E {
+      set value(val: string) {
+        // Only allow values that start with 'valid-'
+        if (val && val.startsWith('valid-')) {
+          super.value = val
+        }
+      }
+
+      get value(): string {
+        return super.value || ''
+      }
+    }
+
+    class UppercaseSubclass extends E {
+      set value(val: string) {
+        // Convert to uppercase
+        super.value = val ? val.toUpperCase() : val
+      }
+
+      get value(): string {
+        return super.value || ''
+      }
+    }
+
+    customElements.define('validating-element', ValidatingSubclass)
+    customElements.define('uppercase-element', UppercaseSubclass)
+
+    const validating = new ValidatingSubclass()
+    const uppercase = new UppercaseSubclass()
+    container.appendChild(validating)
+    container.appendChild(uppercase)
+
+    // Test validating subclass
+    validating.value = 'invalid-test'
+    await nextTick()
+    expect(validating.shadowRoot!.innerHTML).toBe('<div>empty</div>')
+
+    validating.value = 'valid-test'
+    await nextTick()
+    expect(validating.shadowRoot!.innerHTML).toBe('<div>valid-test</div>')
+
+    // Test uppercase subclass
+    uppercase.value = 'hello world'
+    await nextTick()
+    expect(uppercase.shadowRoot!.innerHTML).toBe('<div>HELLO WORLD</div>')
+  })
+
+  test('subclass override with multiple props', async () => {
+    const E = defineCustomElement({
+      props: {
+        name: String,
+        age: Number,
+        active: Boolean,
+      },
+      render() {
+        return h('div', `${this.name}-${this.age}-${this.active}`)
+      },
+    })
+
+    class RestrictedSubclass extends E {
+      set name(val: string) {
+        // Only allow names with at least 3 characters
+        if (val && val.length >= 3) {
+          super.name = val
+        }
+      }
+
+      get name(): string {
+        const value = super.name
+        return value != null ? value : 'default'
+      }
+
+      set age(val: number) {
+        // Only allow positive ages
+        if (val && val > 0) {
+          super.age = val
+        }
+      }
+
+      get age(): number {
+        const value = super.age
+        return value != null ? value : 0
+      }
+    }
+
+    customElements.define('restricted-element', RestrictedSubclass)
+
+    const e = new RestrictedSubclass()
+    container.appendChild(e)
+
+    // Test restricted name
+    e.name = 'ab' // Too short, should be rejected
+    e.age = 25
+    e.active = true
+    await nextTick()
+    // Since the short name was rejected, Vue property remains undefined
+    expect(e.shadowRoot!.innerHTML).toBe('<div>undefined-25-true</div>')
+
+    e.name = 'alice' // Valid
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe('<div>alice-25-true</div>')
+
+    // Test restricted age
+    e.age = -5 // Invalid
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe('<div>alice-25-true</div>')
+
+    e.age = 30 // Valid
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe('<div>alice-30-true</div>')
+  })
+
   describe('expose', () => {
     test('expose w/ options api', async () => {
       const E = defineCustomElement({
@@ -1643,7 +1835,7 @@ describe('defineCustomElement', () => {
     const E = defineCustomElement(
       defineAsyncComponent(() => {
         return Promise.resolve({
-          setup(props) {
+          setup() {
             provide('foo', 'foo')
           },
           render(this: any) {
@@ -1654,7 +1846,7 @@ describe('defineCustomElement', () => {
     )
 
     const EChild = defineCustomElement({
-      setup(props) {
+      setup() {
         fooVal = inject('foo')
       },
       render(this: any) {
@@ -1677,7 +1869,7 @@ describe('defineCustomElement', () => {
     const E = defineCustomElement(
       defineAsyncComponent(() => {
         return Promise.resolve({
-          setup(props) {
+          setup() {
             provide('foo', 'foo')
           },
           render(this: any) {
@@ -1688,7 +1880,7 @@ describe('defineCustomElement', () => {
     )
 
     const EChild = defineCustomElement({
-      setup(props) {
+      setup() {
         provide('bar', 'bar')
       },
       render(this: any) {
@@ -1697,7 +1889,7 @@ describe('defineCustomElement', () => {
     })
 
     const EChild2 = defineCustomElement({
-      setup(props) {
+      setup() {
         fooVal = inject('foo')
         barVal = inject('bar')
       },
