@@ -172,12 +172,45 @@ describe('ssr: directives', () => {
       ).toBe(`<input type="checkbox" value="foo">`)
     })
 
+    test('element with v-html', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ foo: 'hello' }),
+            template: `<span v-html="foo"/>`,
+          }),
+        ),
+      ).toBe(`<span>hello</span>`)
+    })
+
     test('textarea', async () => {
       expect(
         await renderToString(
           createApp({
             data: () => ({ foo: 'hello' }),
             template: `<textarea v-model="foo"/>`,
+          }),
+        ),
+      ).toBe(`<textarea>hello</textarea>`)
+    })
+
+    test('textarea with v-text', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ foo: 'hello' }),
+            template: `<textarea v-text="foo"/>`,
+          }),
+        ),
+      ).toBe(`<textarea>hello</textarea>`)
+    })
+
+    test('textarea with v-html', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ foo: 'hello' }),
+            template: `<textarea v-html="foo"/>`,
           }),
         ),
       ).toBe(`<textarea>hello</textarea>`)
