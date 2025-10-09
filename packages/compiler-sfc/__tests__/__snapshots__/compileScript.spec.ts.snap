@@ -7,7 +7,7 @@ export default {
   setup(__props, { expose: __expose }) {
   __expose();
 
-return { a }
+return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -24,7 +24,7 @@ export default /*@__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
   __expose();
 const a = 1
-return { a, defineComponent }
+return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') }, get defineComponent() { return defineComponent }, set defineComponent(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -40,7 +40,7 @@ export default /*@__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
   __expose();
 const a = 1
-return { a }
+return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -59,7 +59,7 @@ export default /*@__PURE__*/Object.assign(__default__, {
 
       console.log('foo')
       
-return { fn }
+return { get fn() { return fn }, set fn(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -78,7 +78,7 @@ export default {
         const emit = __emit;
         (function () {})()
         
-return { props, emit }
+return { props, get emit() { return emit }, set emit(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -97,7 +97,7 @@ export default /*@__PURE__*/Object.assign(__default__, {
 
       x()
       
-return { n, get x() { return x } }
+return { get n() { return n }, set n(v) { throw new Error('Assignment to constant variable.') }, get x() { return x } }
 }
 
 })"
@@ -116,7 +116,7 @@ export default /*@__PURE__*/Object.assign(__default__, {
 
       x()
       
-return { n, get x() { return x } }
+return { get n() { return n }, set n(v) { throw new Error('Assignment to constant variable.') }, get x() { return x } }
 }
 
 })"
@@ -160,7 +160,7 @@ export default /*@__PURE__*/Object.assign(__default__, {
 
       x()
       
-return { n, def, get x() { return x } }
+return { get n() { return n }, set n(v) { throw new Error('Assignment to constant variable.') }, get def() { return def }, set def(v) { throw new Error('Assignment to constant variable.') }, get x() { return x } }
 }
 
 })"
@@ -180,7 +180,7 @@ export default /*@__PURE__*/Object.assign(__default__, {
 
         x()
         
-return { n, get x() { return x } }
+return { get n() { return n }, set n(v) { throw new Error('Assignment to constant variable.') }, get x() { return x } }
 }
 
 })"
@@ -200,7 +200,7 @@ export default /*@__PURE__*/Object.assign(__default__, {
 
         x()
         
-return { n, get x() { return x } }
+return { get n() { return n }, set n(v) { throw new Error('Assignment to constant variable.') }, get x() { return x } }
 }
 
 })"
@@ -544,7 +544,7 @@ export default {
   setup(__props, { expose: __expose }) {
   __expose();
 async function foo() { await bar }
-return { foo }
+return { get foo() { return foo }, set foo(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -556,7 +556,7 @@ export default {
   setup(__props, { expose: __expose }) {
   __expose();
 const foo = async () => { await bar }
-return { foo }
+return { get foo() { return foo }, set foo(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -568,7 +568,7 @@ export default {
   setup(__props, { expose: __expose }) {
   __expose();
 const obj = { async method() { await bar }}
-return { obj }
+return { get obj() { return obj }, set obj(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -580,7 +580,7 @@ export default {
   setup(__props, { expose: __expose }) {
   __expose();
 const cls = class Foo { async method() { await bar }}
-return { cls }
+return { get cls() { return cls }, set cls(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -619,7 +619,7 @@ const a = 1 + ((
   __restore(),
   __temp
 ))
-return { a }
+return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -681,7 +681,7 @@ export default {
           
           
         
-return { bar }
+return { get bar() { return bar }, set bar(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -701,7 +701,7 @@ _useCssVars(_ctx => ({
 
       const msg = ref()
       
-return { msg, useCssVars, ref }
+return { msg, get useCssVars() { return useCssVars }, set useCssVars(v) { throw new Error('Assignment to constant variable.') }, get ref() { return ref }, set ref(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -737,7 +737,7 @@ export default {
       
       const r = ref(0)
       
-return { r, ref }
+return { r, get ref() { return ref }, set ref(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -767,7 +767,7 @@ export default {
   __expose();
 
           
-return { ref }
+return { get ref() { return ref }, set ref(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -1130,7 +1130,7 @@ export default {
   __expose();
 
       
-return { a, b }
+return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') }, get b() { return b }, set b(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -1155,7 +1155,7 @@ export default {
       function c() {}
       class d {}
       
-return { get aa() { return aa }, set aa(v) { aa = v }, bb, cc, dd, get a() { return a }, set a(v) { a = v }, b, c, d, get xx() { return xx }, get x() { return x } }
+return { get aa() { return aa }, set aa(v) { aa = v }, get bb() { return bb }, set bb(v) { throw new Error('Assignment to constant variable.') }, get cc() { return cc }, set cc(v) { throw new Error('Assignment to constant variable.') }, get dd() { return dd }, set dd(v) { throw new Error('Assignment to constant variable.') }, get a() { return a }, set a(v) { a = v }, get b() { return b }, set b(v) { throw new Error('Assignment to constant variable.') }, get c() { return c }, set c(v) { throw new Error('Assignment to constant variable.') }, get d() { return d }, set d(v) { throw new Error('Assignment to constant variable.') }, get xx() { return xx }, get x() { return x } }
 }
 
 }"
@@ -1170,7 +1170,7 @@ export default /*@__PURE__*/_defineComponent({
   __expose();
 
         
-return { Foo }
+return { get Foo() { return Foo }, set Foo(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -1217,7 +1217,7 @@ export default /*@__PURE__*/_defineComponent({
   __expose();
 
         
-return { Foo }
+return { get Foo() { return Foo }, set Foo(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -1236,7 +1236,7 @@ export default /*@__PURE__*/_defineComponent({
 
         enum Foo { A = 123 }
         
-return { D, C, B, Foo }
+return { get D() { return D }, set D(v) { throw new Error('Assignment to constant variable.') }, get C() { return C }, set C(v) { throw new Error('Assignment to constant variable.') }, get B() { return B }, set B(v) { throw new Error('Assignment to constant variable.') }, get Foo() { return Foo }, set Foo(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -1265,7 +1265,7 @@ const _sfc_ = {
   __expose();
 
       
-return { a }
+return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -1280,7 +1280,7 @@ const _sfc_ = /*@__PURE__*/_defineComponent({
   __expose();
 
       
-return { a }
+return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -1296,7 +1296,7 @@ const _sfc_ = /*@__PURE__*/Object.assign(__default__, {
 
       const a = 1
       
-return { a }
+return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -1312,7 +1312,7 @@ const _sfc_ = /*@__PURE__*/Object.assign(__default__, {
 
       const a = 1
       
-return { a }
+return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -1330,7 +1330,7 @@ const _sfc_ = /*@__PURE__*/_defineComponent({
 
       const a = 1
       
-return { a }
+return { get a() { return a }, set a(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
