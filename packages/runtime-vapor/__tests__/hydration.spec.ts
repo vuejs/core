@@ -2983,7 +2983,7 @@ describe('Vapor Mode hydration', () => {
       expect((container.firstChild as any)._trueValue).toBe(true)
     })
 
-    test.todo('force hydrate checkbox with indeterminate', async () => {
+    test('force hydrate checkbox with indeterminate', async () => {
       const { container } = await mountWithHydration(
         '<input type="checkbox" indeterminate/>',
         `<input type="checkbox" :indeterminate="true"/>`,
@@ -2991,11 +2991,24 @@ describe('Vapor Mode hydration', () => {
       expect((container.firstChild! as any).indeterminate).toBe(true)
     })
 
-    test.todo(
-      'force hydrate select option with non-string value bindings',
-      () => {},
-    )
+    test('force hydrate select option with non-string value bindings', async () => {
+      const { container } = await mountWithHydration(
+        '<select><option value="true">ok</option></select>',
+        `<select><option :value="true">ok</option></select>`,
+      )
+      expect((container.firstChild!.firstChild as any)._value).toBe(true)
+    })
 
+    test('force hydrate v-bind with .prop modifiers', async () => {
+      const { container } = await mountWithHydration(
+        '<div .foo="true"/>',
+        `<div v-bind="data"/>`,
+        ref({ '.foo': true }),
+      )
+      expect((container.firstChild! as any).foo).toBe(true)
+    })
+
+    // vapor custom element not implemented yet
     test.todo('force hydrate custom element with dynamic props', () => {})
   })
 
