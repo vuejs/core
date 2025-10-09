@@ -124,8 +124,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
         isComment(node, ']') &&
         isComment(node.previousSibling!, '[')
       ) {
-        const parent = parentNode(node)!
-        node = parent.insertBefore(createTextNode(), node)
+        node.before((node = createTextNode()))
         break
       }
     }
