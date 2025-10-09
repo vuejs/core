@@ -5,7 +5,10 @@ import {
   createAsyncComponentContext,
   currentInstance,
   handleError,
+  isInSSRComponentSetup,
+  loadInnerComponent,
   markAsyncBoundary,
+  performAsyncHydrate,
   useAsyncComponentState,
 } from '@vue/runtime-dom'
 import { defineVaporComponent } from './apiDefineComponent'
@@ -16,8 +19,9 @@ import {
 } from './component'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
+import { hydrateNode, isHydrating } from './dom/hydration'
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
   source: AsyncComponentLoader<T> | AsyncComponentOptions<T>,
 ): T {
@@ -29,9 +33,9 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       loadingComponent,
       errorComponent,
       delay,
-      // hydrate: hydrateStrategy,
+      hydrate: hydrateStrategy,
       timeout,
-      // suspensible = true,
+      suspensible = true,
     },
   } = createAsyncComponentContext<T, VaporComponent>(source)
 
@@ -40,9 +44,20 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
 
     __asyncLoader: load,
 
-    // __asyncHydrate(el, instance, hydrate) {
-    //   // TODO async hydrate
-    // },
+    __asyncHydrate(
+      el: Element,
+      instance: VaporComponentInstance,
+      hydrate: () => void,
+    ) {
+      performAsyncHydrate(
+        el,
+        instance,
+        () => hydrateNode(el, hydrate),
+        getResolvedComp,
+        load,
+        hydrateStrategy,
+      )
+    },
 
     get __asyncResolved() {
       return getResolvedComp()
@@ -52,9 +67,10 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       const instance = currentInstance as VaporComponentInstance
       markAsyncBoundary(instance)
 
-      const frag = __DEV__
-        ? new DynamicFragment('async component')
-        : new DynamicFragment()
+      const frag =
+        __DEV__ || isHydrating
+          ? new DynamicFragment('async component')
+          : new DynamicFragment()
 
       // already resolved
       let resolvedComp = getResolvedComp()
@@ -73,7 +89,19 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         )
       }
 
-      // TODO suspense-controlled or SSR.
+      // TODO suspense-controlled
+      if (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) {
+      }
+
+      // SSR
+      if (__SSR__ && isInSSRComponentSetup) {
+        return loadInnerComponent(
+          instance as any,
+          load,
+          onError,
+          errorComponent,
+        )
+      }
 
       const { loaded, error, delayed } = useAsyncComponentState(
         delay,

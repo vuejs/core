@@ -15,6 +15,7 @@ import {
   currentInstance,
   endMeasure,
   expose,
+  isAsyncWrapper,
   nextUid,
   popWarningContext,
   pushWarningContext,
@@ -118,8 +119,25 @@ export interface ObjectVaporComponent
 
   name?: string
   vapor?: boolean
+  /**
+   * marker for AsyncComponentWrapper
+   * @internal
+   */
   __asyncLoader?: () => Promise<VaporComponent>
+  /**
+   * the inner component resolved by the VaporAsyncComponentWrapper
+   * @internal
+   */
   __asyncResolved?: VaporComponent
+  /**
+   * Exposed for lazy hydration
+   * @internal
+   */
+  __asyncHydrate?: (
+    el: Element,
+    instance: VaporComponentInstance,
+    hydrate: () => void,
+  ) => void
 }
 
 interface SharedInternalOptions {
@@ -236,6 +254,27 @@ export function createComponent(
     rawSlots as RawSlots,
     appContext,
   )
+
+  // hydrating async component
+  if (
+    isHydrating &&
+    isAsyncWrapper(instance) &&
+    component.__asyncHydrate &&
+    !component.__asyncResolved
+  ) {
+    component.__asyncHydrate(currentHydrationNode! as Element, instance, () =>
+      createComponent(
+        component,
+        rawProps,
+        rawSlots,
+        isSingleRoot,
+        once,
+        scopeId,
+        appContext,
+      ),
+    )
+    return instance
+  }
 
   // HMR
   if (__DEV__ && component.__hmrId) {
@@ -626,8 +665,10 @@ export function mountComponent(
   const block = instance.block
   if (isHydrating) {
     if (
-      !(block instanceof Node) ||
-      (isArray(block) && block.some(b => !(b instanceof Node)))
+      (!(block instanceof Node) ||
+        (isArray(block) && block.some(b => !(b instanceof Node)))) &&
+      isAsyncWrapper(instance) &&
+      instance.type.__asyncResolved
     ) {
       insert(block, parent, anchor)
     }

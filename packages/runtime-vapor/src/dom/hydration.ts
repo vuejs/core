@@ -22,12 +22,21 @@ const isHydratingStack = [] as boolean[]
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
 
+function pushIsHydrating(value: boolean): void {
+  isHydratingStack.push((isHydrating = value))
+}
+
+function popIsHydrating(): void {
+  isHydratingStack.pop()
+  isHydrating = isHydratingStack[isHydratingStack.length - 1] || false
+}
+
 export function runWithoutHydration(fn: () => any): any {
   try {
-    isHydrating = false
+    pushIsHydrating(false)
     return fn()
   } finally {
-    isHydrating = true
+    popIsHydrating()
   }
 }
 
@@ -53,13 +62,12 @@ function performHydration<T>(
     isOptimized = true
   }
   enableHydrationNodeLookup()
-  isHydratingStack.push((isHydrating = true))
+  pushIsHydrating(true)
   setup()
   const res = fn()
   cleanup()
   currentHydrationNode = null
-  isHydratingStack.pop()
-  isHydrating = isHydratingStack[isHydratingStack.length - 1] || false
+  popIsHydrating()
   if (!isHydrating) disableHydrationNodeLookup()
   return res
 }

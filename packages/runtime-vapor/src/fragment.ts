@@ -144,6 +144,7 @@ export class DynamicFragment extends VaporFragment {
     if (this.anchor) return
 
     // reuse the empty comment node as the anchor for empty if
+    // e.g. `<div v-if="false"></div>` -> `<!---->`
     if (this.anchorLabel === 'if' && isEmpty) {
       this.anchor = currentHydrationNode!
       if (!this.anchor) {

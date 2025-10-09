@@ -535,7 +535,12 @@ export { queueJob, flushOnAppMount } from './scheduler'
 /**
  * @internal
  */
-export { expose, nextUid, validateComponentName } from './component'
+export {
+  expose,
+  nextUid,
+  validateComponentName,
+  isInSSRComponentSetup,
+} from './component'
 /**
  * @internal
  */
@@ -595,6 +600,8 @@ export {
   createAsyncComponentContext,
   useAsyncComponentState,
   isAsyncWrapper,
+  performAsyncHydrate,
+  loadInnerComponent,
 } from './apiAsyncComponent'
 /**
  * @internal
