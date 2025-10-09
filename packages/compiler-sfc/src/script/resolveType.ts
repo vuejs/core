@@ -853,7 +853,7 @@ export function registerTS(_loadTS: () => typeof TS): void {
       ) {
         throw new Error(
           'Failed to load TypeScript, which is required for resolving imported types. ' +
-            'Please make sure "typescript" is installed as a project dependency.',
+            'Please make sure "TypeScript" is installed as a project dependency.',
         )
       } else {
         throw new Error(
@@ -951,7 +951,7 @@ function importSourceToScope(
         if (!ts) {
           return ctx.error(
             `Failed to resolve import source ${JSON.stringify(source)}. ` +
-              `typescript is required as a peer dep for vue in order ` +
+              `TypeScript is required as a peer dep for vue in order ` +
               `to support resolving types from module imports.`,
             node,
             scope,
