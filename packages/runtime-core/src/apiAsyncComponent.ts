@@ -3,6 +3,7 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
+  type GenericComponent,
   type GenericComponentInstance,
   currentInstance,
   getComponentName,
@@ -310,8 +311,8 @@ export function performAsyncHydrate(
   el: Element,
   instance: GenericComponentInstance,
   hydrate: () => void,
-  getResolvedComp: () => any | undefined,
-  load: () => Promise<any>,
+  getResolvedComp: () => GenericComponent | undefined,
+  load: () => Promise<GenericComponent>,
   hydrateStrategy: HydrationStrategy | undefined,
 ): void {
   let patched = false
@@ -320,9 +321,9 @@ export function performAsyncHydrate(
     // skip hydration if the component has been patched
     if (patched) {
       if (__DEV__) {
-        const resolvedComp = getResolvedComp()
+        const resolvedComp = getResolvedComp()! as GenericComponent
         warn(
-          `Skipping lazy hydration for component '${getComponentName(resolvedComp!) || resolvedComp!.__file}': ` +
+          `Skipping lazy hydration for component '${getComponentName(resolvedComp) || resolvedComp.__file}': ` +
             `it was updated before lazy hydration performed.`,
         )
       }
