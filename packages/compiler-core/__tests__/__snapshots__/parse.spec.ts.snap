@@ -2467,39 +2467,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
             },
           },
           "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 17,
-                  "line": 1,
-                  "offset": 16,
-                },
-                "source": """,
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": """,
-              "nameLoc": {
-                "end": {
-                  "column": 17,
-                  "line": 1,
-                  "offset": 16,
-                },
-                "source": """,
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "type": 6,
-              "value": undefined,
-            },
-          ],
+          "props": [],
           "tag": "div",
           "tagType": 0,
           "type": 1,
@@ -2978,29 +2946,29 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
             {
               "loc": {
                 "end": {
-                  "column": 21,
+                  "column": 19,
                   "line": 1,
-                  "offset": 20,
+                  "offset": 18,
                 },
-                "source": """,
+                "source": "foo",
                 "start": {
-                  "column": 20,
+                  "column": 16,
                   "line": 1,
-                  "offset": 19,
+                  "offset": 15,
                 },
               },
-              "name": """,
+              "name": "foo",
               "nameLoc": {
                 "end": {
-                  "column": 21,
+                  "column": 19,
                   "line": 1,
-                  "offset": 20,
+                  "offset": 18,
                 },
-                "source": """,
+                "source": "foo",
                 "start": {
-                  "column": 20,
+                  "column": 16,
                   "line": 1,
-                  "offset": 19,
+                  "offset": 15,
                 },
               },
               "type": 6,
@@ -3696,7 +3664,39 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
             },
           },
           "ns": 0,
-          "props": [],
+          "props": [
+            {
+              "loc": {
+                "end": {
+                  "column": 17,
+                  "line": 1,
+                  "offset": 16,
+                },
+                "source": "=",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "name": "=",
+              "nameLoc": {
+                "end": {
+                  "column": 17,
+                  "line": 1,
+                  "offset": 16,
+                },
+                "source": "=",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "type": 6,
+              "value": undefined,
+            },
+          ],
           "tag": "div",
           "tagType": 0,
           "type": 1,
@@ -3779,25 +3779,25 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
                   "line": 1,
                   "offset": 23,
                 },
-                "source": "foo=bar",
+                "source": "=foo=bar",
                 "start": {
-                  "column": 17,
+                  "column": 16,
                   "line": 1,
-                  "offset": 16,
+                  "offset": 15,
                 },
               },
-              "name": "foo",
+              "name": "=foo",
               "nameLoc": {
                 "end": {
                   "column": 20,
                   "line": 1,
                   "offset": 19,
                 },
-                "source": "foo",
+                "source": "=foo",
                 "start": {
-                  "column": 17,
+                  "column": 16,
                   "line": 1,
-                  "offset": 16,
+                  "offset": 15,
                 },
               },
               "type": 6,

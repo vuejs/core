@@ -651,13 +651,24 @@ export default class Tokenizer {
       this.state = State.BeforeTagName
       this.sectionStart = this.index
     } else if (!isWhitespace(c)) {
+      if ((__DEV__ || !__BROWSER__) && c === CharCodes.Eq) {
+        this.cbs.onerr(
+          ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
+          this.index,
+        )
+      }
       this.handleAttrStart(c)
     }
   }
   private handleAttrStart(c: number) {
-    if ((__DEV__ || !__BROWSER__) && c === CharCodes.Eq) {
+    if (
+      (__DEV__ || !__BROWSER__) &&
+      (c === CharCodes.DoubleQuote ||
+        c === CharCodes.SingleQuote ||
+        c === CharCodes.Lt)
+    ) {
       this.cbs.onerr(
-        ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
+        ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
         this.index,
       )
     } else if (c === CharCodes.LowerV && this.peek() === CharCodes.Dash) {
@@ -675,7 +686,6 @@ export default class Tokenizer {
     } else {
       this.state = State.InAttrName
       this.sectionStart = this.index
-      this.stateInAttrName(c)
     }
   }
   private stateInSelfClosingTag(c: number): void {
