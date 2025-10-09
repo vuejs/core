@@ -93,7 +93,7 @@
     "npm-run-all2": "^8.0.4",
     "picocolors": "^1.1.1",
     "prettier": "^3.5.3",
-    "pretty-bytes": "^6.1.1",
+    "pretty-bytes": "^7.1.0",
     "pug": "^3.0.3",
     "puppeteer": "~24.22.2",
     "rimraf": "^6.0.1",
