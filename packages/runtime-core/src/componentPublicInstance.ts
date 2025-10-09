@@ -448,7 +448,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (hasSetupBinding(setupState, key)) {
         accessCache![key] = AccessTypes.SETUP
         return setupState[key]
-      } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+      } else if (
+        __FEATURE_OPTIONS_API__ &&
+        data !== EMPTY_OBJ &&
+        hasOwn(data, key)
+      ) {
         accessCache![key] = AccessTypes.DATA
         return data[key]
       } else if (
@@ -545,7 +549,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     ) {
       warn(`Cannot mutate <script setup> binding "${key}" from Options API.`)
       return false
-    } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+    } else if (
+      __FEATURE_OPTIONS_API__ &&
+      data !== EMPTY_OBJ &&
+      hasOwn(data, key)
+    ) {
       data[key] = value
       return true
     } else if (hasOwn(instance.props, key)) {
@@ -582,7 +590,10 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     let normalizedProps, cssModules
     return !!(
       accessCache![key] ||
-      (data !== EMPTY_OBJ && key[0] !== '$' && hasOwn(data, key)) ||
+      (__FEATURE_OPTIONS_API__ &&
+        data !== EMPTY_OBJ &&
+        key[0] !== '$' &&
+        hasOwn(data, key)) ||
       hasSetupBinding(setupState, key) ||
       ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
