@@ -1,4 +1,5 @@
 import {
+  type AsyncComponentInternalOptions,
   type ComponentInternalOptions,
   type ComponentPropsOptions,
   EffectScope,
@@ -104,6 +105,7 @@ export type FunctionalVaporComponent = VaporSetupFn &
 
 export interface ObjectVaporComponent
   extends ComponentInternalOptions,
+    AsyncComponentInternalOptions<ObjectVaporComponent, VaporComponentInstance>,
     SharedInternalOptions {
   setup?: VaporSetupFn
   inheritAttrs?: boolean
@@ -119,25 +121,6 @@ export interface ObjectVaporComponent
 
   name?: string
   vapor?: boolean
-  /**
-   * marker for AsyncComponentWrapper
-   * @internal
-   */
-  __asyncLoader?: () => Promise<VaporComponent>
-  /**
-   * the inner component resolved by the VaporAsyncComponentWrapper
-   * @internal
-   */
-  __asyncResolved?: VaporComponent
-  /**
-   * Exposed for lazy hydration
-   * @internal
-   */
-  __asyncHydrate?: (
-    el: Element,
-    instance: VaporComponentInstance,
-    hydrate: () => void,
-  ) => void
 }
 
 interface SharedInternalOptions {

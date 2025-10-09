@@ -271,6 +271,7 @@ export type {
   GlobalDirectives,
   ComponentInstance,
   ComponentCustomElementInterface,
+  AsyncComponentInternalOptions,
 } from './component'
 export type {
   DefineComponent,
