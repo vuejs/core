@@ -7,11 +7,11 @@ settings:
 catalogs:
   default:
     '@babel/parser':
-      specifier: ^7.28.4
-      version: 7.28.4
+      specifier: ^8.0.0-beta.2
+      version: 8.0.0-beta.2
     '@babel/types':
-      specifier: ^7.28.4
-      version: 7.28.4
+      specifier: ^8.0.0-beta.2
+      version: 8.0.0-beta.2
     '@vitejs/plugin-vue':
       specifier: ^6.0.1
       version: 6.0.1
@@ -34,10 +34,10 @@ importers:
     devDependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.28.4
+        version: 8.0.0-beta.2
       '@babel/types':
         specifier: 'catalog:'
-        version: 7.28.4
+        version: 8.0.0-beta.2
       '@rollup/plugin-alias':
         specifier: ^5.1.1
         version: 5.1.1(rollup@4.52.2)
@@ -248,7 +248,7 @@ importers:
     dependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.28.4
+        version: 8.0.0-beta.2
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
@@ -264,7 +264,7 @@ importers:
     devDependencies:
       '@babel/types':
         specifier: 'catalog:'
-        version: 7.28.4
+        version: 8.0.0-beta.2
 
   packages/compiler-dom:
     dependencies:
@@ -279,7 +279,7 @@ importers:
     dependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.28.4
+        version: 8.0.0-beta.2
       '@vue/compiler-core':
         specifier: workspace:*
         version: link:../compiler-core
@@ -307,7 +307,7 @@ importers:
     devDependencies:
       '@babel/types':
         specifier: 'catalog:'
-        version: 7.28.4
+        version: 8.0.0-beta.2
       '@vue/consolidate':
         specifier: ^1.0.0
         version: 1.0.0
@@ -427,7 +427,7 @@ importers:
     dependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.28.4
+        version: 8.0.0-beta.2
       estree-walker:
         specifier: 'catalog:'
         version: 2.0.2
@@ -461,18 +461,35 @@ packages:
     resolution: {integrity: sha512-qMlSxKbpRlAridDExk92nSobyDdpPijUq2DW6oDnUqd0iOGxmQjyqhMIihI9+zv4LPyZdRje2cavWPbCbWm3eA==}
     engines: {node: '>=6.9.0'}
 
+  '@babel/helper-string-parser@8.0.0-beta.2':
+    resolution: {integrity: sha512-AmrScvsE0jJzEGEmhM+KNg9IYZFmmvDmfN903qDnMR3fWKZ5UGLACAyb0dcaYFDatW/Ru21w8SzOZy8qP6Ix+A==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+
   '@babel/helper-validator-identifier@7.27.1':
     resolution: {integrity: sha512-D2hP9eA+Sqx1kBZgzxZh0y1trbuU+JoDkiEwqhQ36nodYqJwyEIhPSdMNd7lOm/4io72luTPWH20Yda0xOuUow==}
     engines: {node: '>=6.9.0'}
+
+  '@babel/helper-validator-identifier@8.0.0-beta.2':
+    resolution: {integrity: sha512-n5STLJIc4loOeI2G+mMZwYIiztQWZdy+3du0cspVWoUjZ4AgkCIld4XcY0jJPgLImStacvJKCO6qCf0UBMpETw==}
+    engines: {node: ^20.19.0 || >=22.12.0}
 
   '@babel/parser@7.28.4':
     resolution: {integrity: sha512-yZbBqeM6TkpP9du/I2pUZnJsRMGGvOuIrhjzC1AwHwW+6he4mni6Bp/m8ijn0iOuZuPI2BfkCoSRunpyjnrQKg==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  '@babel/parser@8.0.0-beta.2':
+    resolution: {integrity: sha512-91A5GVa6ROgyF1uzDvGJlscf9tktIrXS4ohp8cnW22gwX1ERMw9m9KzdtoFgfdzt9rmSXKYtjwHhh5samc4Pdg==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    hasBin: true
+
   '@babel/types@7.28.4':
     resolution: {integrity: sha512-bkFqkLhh3pMBUQQkpVgWDWq/lqzc2678eUyDlTBhRqhCHFguYYGM0Efga7tYk4TogG/3x0EEl66/OQ+WGbWB/Q==}
     engines: {node: '>=6.9.0'}
+
+  '@babel/types@8.0.0-beta.2':
+    resolution: {integrity: sha512-dnlxcfISuGiHBhyq+Jmbp14lis59INgqHX/i95bfZLqIvBztd5F1jMZ0ozq36z3eWs3hXUG3AgS867wkaeRKfA==}
+    engines: {node: ^20.19.0 || >=22.12.0}
 
   '@bcoe/v8-coverage@1.0.2':
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
@@ -3692,16 +3709,29 @@ snapshots:
 
   '@babel/helper-string-parser@7.27.1': {}
 
+  '@babel/helper-string-parser@8.0.0-beta.2': {}
+
   '@babel/helper-validator-identifier@7.27.1': {}
+
+  '@babel/helper-validator-identifier@8.0.0-beta.2': {}
 
   '@babel/parser@7.28.4':
     dependencies:
       '@babel/types': 7.28.4
 
+  '@babel/parser@8.0.0-beta.2':
+    dependencies:
+      '@babel/types': 8.0.0-beta.2
+
   '@babel/types@7.28.4':
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
+
+  '@babel/types@8.0.0-beta.2':
+    dependencies:
+      '@babel/helper-string-parser': 8.0.0-beta.2
+      '@babel/helper-validator-identifier': 8.0.0-beta.2
 
   '@bcoe/v8-coverage@1.0.2': {}
 

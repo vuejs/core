@@ -1653,7 +1653,7 @@ function resolve(
       s.expression.type === 'CallExpression' &&
       (s.expression.callee as Identifier).name === 'defineProps'
     ) {
-      target = s.expression.typeParameters!.params[0]
+      target = s.expression.typeArguments!.params[0]
     }
   }
   const raw = resolveTypeElements(ctx, target)

@@ -70,7 +70,7 @@ export function processDefineProps(
   }
 
   // call has type parameters - infer runtime types from it
-  if (node.typeParameters) {
+  if (node.typeArguments) {
     if (ctx.propsRuntimeDecl) {
       ctx.error(
         `${DEFINE_PROPS}() cannot accept both type and non-type arguments ` +
@@ -78,7 +78,7 @@ export function processDefineProps(
         node,
       )
     }
-    ctx.propsTypeDecl = node.typeParameters.params[0]
+    ctx.propsTypeDecl = node.typeArguments.params[0]
   }
 
   // handle props destructure

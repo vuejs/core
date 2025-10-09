@@ -1,12 +1,13 @@
 import type {
   CallExpression,
-  Expression,
   Identifier,
   ImportDefaultSpecifier,
   ImportNamespaceSpecifier,
   ImportSpecifier,
   Node,
   StringLiteral,
+  TSEntityName,
+  TSQualifiedName,
 } from '@babel/types'
 import path from 'path'
 
@@ -69,14 +70,16 @@ export function getImportedName(
   return 'default'
 }
 
-export function getId(node: Identifier | StringLiteral): string
-export function getId(node: Expression): string | null
-export function getId(node: Expression) {
+export function getId(node: Identifier | StringLiteral | TSEntityName): string
+export function getId(node: Node): string | null
+export function getId(node: Node) {
   return node.type === 'Identifier'
     ? node.name
     : node.type === 'StringLiteral'
       ? node.value
-      : null
+      : node.type === 'TSQualifiedName'
+        ? getId(node.left as TSQualifiedName)
+        : null
 }
 
 const identity = (str: string) => str
