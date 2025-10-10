@@ -153,7 +153,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
   return node
 }
 
-function nextNode(node: Node): Node | null {
+export function nextNode(node: Node): Node | null {
   return isComment(node, '[')
     ? locateEndAnchor(node as Anchor)!.nextSibling
     : node.nextSibling

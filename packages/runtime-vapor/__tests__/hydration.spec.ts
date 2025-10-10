@@ -1,4 +1,8 @@
-import { createVaporSSRApp, delegateEvents } from '../src'
+import {
+  createVaporSSRApp,
+  defineVaporAsyncComponent,
+  delegateEvents,
+} from '../src'
 import { nextTick, reactive, ref } from '@vue/runtime-dom'
 import { compileScript, parse } from '@vue/compiler-sfc'
 import * as runtimeVapor from '../src'
@@ -2952,8 +2956,63 @@ describe('Vapor Mode hydration', () => {
     })
   })
 
-  describe.todo('async component', async () => {
-    test('async component', async () => {})
+  describe('async component', async () => {
+    test('async component', async () => {
+      const data = ref({
+        spy: vi.fn(),
+      })
+
+      const compCode = `<button @click="data.spy">hello!</button>`
+      const SSRComp = compileVaporComponent(compCode, data, undefined, true)
+      let serverResolve: any
+      let AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            serverResolve = r
+          }),
+      )
+      const appCode = `hello<components.AsyncComp/>world`
+      const SSRApp = compileVaporComponent(appCode, data, { AsyncComp }, true)
+
+      // server render
+      const htmlPromise = VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      serverResolve(SSRComp)
+      const html = await htmlPromise
+      expect(html).toMatchInlineSnapshot(
+        `"<!--[-->hello<button>hello!</button>world<!--]-->"`,
+      )
+
+      // hydration
+      let clientResolve: any
+      AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      )
+
+      const Comp = compileVaporComponent(compCode, data)
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+
+      // hydration not complete yet
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).not.toHaveBeenCalled()
+
+      // resolve
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      // should be hydrated now
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).toHaveBeenCalled()
+    })
 
     test('update async wrapper before resolve', async () => {})
 

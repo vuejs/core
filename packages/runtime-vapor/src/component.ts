@@ -79,6 +79,7 @@ import {
   currentHydrationNode,
   isHydrating,
   locateHydrationNode,
+  nextNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
@@ -245,6 +246,7 @@ export function createComponent(
     component.__asyncHydrate &&
     !component.__asyncResolved
   ) {
+    const node = nextNode(currentHydrationNode!)
     component.__asyncHydrate(currentHydrationNode! as Element, instance, () =>
       createComponent(
         component,
@@ -256,6 +258,7 @@ export function createComponent(
         appContext,
       ),
     )
+    setCurrentHydrationNode(node)
     return instance
   }
 
