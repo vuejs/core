@@ -22,7 +22,7 @@ import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
 import { hydrateNode, isHydrating } from './dom/hydration'
 import { invokeArrayFns } from '@vue/shared'
-import { insert, remove } from './block'
+import { type Block, insert, remove } from './block'
 import { parentNode } from './dom/node'
 
 /*@ __NO_SIDE_EFFECTS__ */
@@ -61,7 +61,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         () => instance.attrs,
         () => {
           instance.bu && invokeArrayFns(instance.bu)
-          const block = hydrate() as VaporComponentInstance
+          const block = hydrate() as Block
           const parent = parentNode(el)!
           insert(block, parent, el)
           remove(el, parent)

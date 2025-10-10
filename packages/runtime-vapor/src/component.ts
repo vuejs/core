@@ -246,6 +246,13 @@ export function createComponent(
     component.__asyncHydrate &&
     !component.__asyncResolved
   ) {
+    // it may get unmounted before its inner component is loaded,
+    // so we need to give it a placeholder block that matches its
+    // adopted DOM
+    instance.block = currentHydrationNode!
+    // also mark it as mounted to ensure it can be unmounted
+    instance.isMounted = true
+
     const node = nextNode(currentHydrationNode!)
     component.__asyncHydrate(currentHydrationNode! as Element, instance, () =>
       createComponent(
@@ -649,19 +656,16 @@ export function mountComponent(
   }
   if (instance.bm) invokeArrayFns(instance.bm)
   const block = instance.block
-  // unresolved async component does not have a block
-  if (block) {
-    if (isHydrating) {
-      if (
-        !(block instanceof Node) ||
-        (isArray(block) && block.some(b => !(b instanceof Node)))
-      ) {
-        insert(block, parent, anchor)
-      }
-    } else {
+  if (isHydrating) {
+    if (
+      !(block instanceof Node) ||
+      (isArray(block) && block.some(b => !(b instanceof Node)))
+    ) {
       insert(block, parent, anchor)
-      setComponentScopeId(instance)
     }
+  } else {
+    insert(block, parent, anchor)
+    setComponentScopeId(instance)
   }
 
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
