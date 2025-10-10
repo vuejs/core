@@ -241,7 +241,7 @@ export interface AsyncComponentInternalOptions<
    * Exposed for lazy hydration
    * @internal
    */
-  __asyncHydrate?: (el: Element, instance: I, hydrate: () => any) => void
+  __asyncHydrate?: (el: Element, instance: I, hydrate: () => void) => void
 }
 
 export interface FunctionalComponent<

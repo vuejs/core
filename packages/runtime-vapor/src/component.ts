@@ -239,36 +239,6 @@ export function createComponent(
     appContext,
   )
 
-  // hydrating async component
-  if (
-    isHydrating &&
-    isAsyncWrapper(instance) &&
-    component.__asyncHydrate &&
-    !component.__asyncResolved
-  ) {
-    // it may get unmounted before its inner component is loaded,
-    // so we need to give it a placeholder block that matches its
-    // adopted DOM
-    instance.block = currentHydrationNode!
-    // also mark it as mounted to ensure it can be unmounted
-    instance.isMounted = true
-
-    const node = nextNode(currentHydrationNode!)
-    component.__asyncHydrate(currentHydrationNode! as Element, instance, () =>
-      createComponent(
-        component,
-        rawProps,
-        rawSlots,
-        isSingleRoot,
-        once,
-        scopeId,
-        appContext,
-      ),
-    )
-    setCurrentHydrationNode(node)
-    return instance
-  }
-
   // HMR
   if (__DEV__ && component.__hmrId) {
     registerHMR(instance)
@@ -286,6 +256,47 @@ export function createComponent(
     instance.emitsOptions = normalizeEmitsOptions(component)
   }
 
+  // hydrating async component
+  if (
+    isHydrating &&
+    isAsyncWrapper(instance) &&
+    component.__asyncHydrate &&
+    !component.__asyncResolved
+  ) {
+    // it may get unmounted before its inner component is loaded,
+    // so we need to give it a placeholder block that matches its
+    // adopted DOM
+    instance.block = currentHydrationNode!
+    // also mark it as mounted to ensure it can be unmounted before
+    // its inner component is resolved
+    instance.isMounted = true
+
+    const node = nextNode(currentHydrationNode!)
+    component.__asyncHydrate(currentHydrationNode! as Element, instance, () =>
+      setupComponent(instance, component, scopeId),
+    )
+    setCurrentHydrationNode(node)
+  } else {
+    setupComponent(instance, component, scopeId)
+  }
+
+  onScopeDispose(() => unmountComponent(instance), true)
+
+  if (_insertionParent) {
+    mountComponent(instance, _insertionParent, _insertionAnchor)
+  }
+
+  if (isHydrating && _insertionAnchor !== undefined) {
+    advanceHydrationNode(_insertionParent!)
+  }
+  return instance
+}
+
+export function setupComponent(
+  instance: VaporComponentInstance,
+  component: VaporComponent,
+  scopeId: string | undefined,
+): void {
   const prevInstance = setCurrentInstance(instance)
   const prevSub = setActiveSub()
 
@@ -352,17 +363,6 @@ export function createComponent(
     popWarningContext()
     endMeasure(instance, 'init')
   }
-
-  onScopeDispose(() => unmountComponent(instance), true)
-
-  if (_insertionParent) {
-    mountComponent(instance, _insertionParent, _insertionAnchor)
-  }
-
-  if (isHydrating && _insertionAnchor !== undefined) {
-    advanceHydrationNode(_insertionParent!)
-  }
-  return instance
 }
 
 export let isApplyingFallthroughProps = false

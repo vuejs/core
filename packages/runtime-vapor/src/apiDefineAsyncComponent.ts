@@ -22,7 +22,7 @@ import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
 import { hydrateNode, isHydrating } from './dom/hydration'
 import { invokeArrayFns } from '@vue/shared'
-import { type Block, insert, remove } from './block'
+import { insert, remove } from './block'
 import { parentNode } from './dom/node'
 
 /*@ __NO_SIDE_EFFECTS__ */
@@ -51,20 +51,22 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
     __asyncHydrate(
       el: Element,
       instance: VaporComponentInstance,
-      hydrate: () => any,
+      hydrate: () => void,
     ) {
-      // The setup of async components is not executed during hydration,
-      // which means beforeUpdate won't be called when attrs change. We need to watch
-      // for attrs changes and manually call beforeUpdate to avoid unnecessary hydration
-      // and mount the async component
+      // The setup of async components is not executed during hydration, which means
+      // the beforeUpdate hooks won't be called when attrs change. We need to watch
+      // for attrs changes and manually call beforeUpdate hooks to avoid unnecessary
+      // hydration and mount the async component
       watch(
         () => instance.attrs,
         () => {
           instance.bu && invokeArrayFns(instance.bu)
-          const block = hydrate() as Block
           const parent = parentNode(el)!
-          insert(block, parent, el)
-          remove(el, parent)
+          load().then(() => {
+            hydrate()
+            insert(instance.block, parent, el)
+            remove(el, parent)
+          })
         },
         { deep: true, once: true },
       )
