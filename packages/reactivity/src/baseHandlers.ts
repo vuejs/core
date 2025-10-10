@@ -27,6 +27,10 @@ import { warn } from './warning'
 
 const isNonTrackableKeys = /*@__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
+export type BuiltinSymbols = Extract<
+  (typeof Symbol)[keyof typeof Symbol],
+  symbol
+>
 const builtInSymbols = new Set(
   /*@__PURE__*/
   Object.getOwnPropertyNames(Symbol)
