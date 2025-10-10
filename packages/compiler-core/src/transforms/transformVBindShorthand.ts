@@ -15,7 +15,11 @@ export const transformVBindShorthand: NodeTransform = (node, context) => {
       if (
         prop.type === NodeTypes.DIRECTIVE &&
         prop.name === 'bind' &&
-        !prop.exp
+        (!prop.exp ||
+          // #13930 :foo in in-DOM templates will be parsed into :foo="" by browser
+          (__BROWSER__ &&
+            prop.exp.type === NodeTypes.SIMPLE_EXPRESSION &&
+            !prop.exp.content.trim()))
       ) {
         const arg = prop.arg!
         if (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) {
