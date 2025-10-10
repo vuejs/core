@@ -10,6 +10,7 @@ import {
   markAsyncBoundary,
   performAsyncHydrate,
   useAsyncComponentState,
+  watch,
 } from '@vue/runtime-dom'
 import { defineVaporComponent } from './apiDefineComponent'
 import {
@@ -20,6 +21,9 @@ import {
 import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
 import { hydrateNode, isHydrating } from './dom/hydration'
+import { invokeArrayFns } from '@vue/shared'
+import { insert, remove } from './block'
+import { parentNode } from './dom/node'
 
 /*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
@@ -47,8 +51,24 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
     __asyncHydrate(
       el: Element,
       instance: VaporComponentInstance,
-      hydrate: () => void,
+      hydrate: () => any,
     ) {
+      // The setup of async components is not executed during hydration,
+      // which means beforeUpdate won't be called when attrs change. We need to watch
+      // for attrs changes and manually call beforeUpdate to avoid unnecessary hydration
+      // and mount the async component
+      watch(
+        () => instance.attrs,
+        () => {
+          instance.bu && invokeArrayFns(instance.bu)
+          const block = hydrate() as VaporComponentInstance
+          const parent = parentNode(el)!
+          insert(block, parent, el)
+          remove(el, parent)
+        },
+        { deep: true, once: true },
+      )
+
       performAsyncHydrate(
         el,
         instance,

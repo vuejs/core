@@ -336,6 +336,8 @@ export function createComponent(
     }
   }
 
+  if (scopeId) setScopeId(instance.block, scopeId)
+
   setActiveSub(prevSub)
   setCurrentInstance(...prevInstance)
 
@@ -345,8 +347,6 @@ export function createComponent(
   }
 
   onScopeDispose(() => unmountComponent(instance), true)
-
-  if (scopeId) setScopeId(instance.block, scopeId)
 
   if (_insertionParent) {
     mountComponent(instance, _insertionParent, _insertionAnchor)
@@ -649,18 +649,19 @@ export function mountComponent(
   }
   if (instance.bm) invokeArrayFns(instance.bm)
   const block = instance.block
-  if (isHydrating) {
-    if (
-      (!(block instanceof Node) ||
-        (isArray(block) && block.some(b => !(b instanceof Node)))) &&
-      isAsyncWrapper(instance) &&
-      instance.type.__asyncResolved
-    ) {
+  // unresolved async component does not have a block
+  if (block) {
+    if (isHydrating) {
+      if (
+        !(block instanceof Node) ||
+        (isArray(block) && block.some(b => !(b instanceof Node)))
+      ) {
+        insert(block, parent, anchor)
+      }
+    } else {
       insert(block, parent, anchor)
+      setComponentScopeId(instance)
     }
-  } else {
-    insert(block, parent, anchor)
-    setComponentScopeId(instance)
   }
 
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))

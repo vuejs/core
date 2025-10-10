@@ -89,7 +89,10 @@ function compileVaporComponent(
   components?: Record<string, any>,
   ssr = false,
 ) {
-  return compile(`<template>${code}</template>`, data, components, {
+  if (!code.includes(`<script`)) {
+    code = `<template>${code}</template>`
+  }
+  return compile(code, data, components, {
     vapor: true,
     ssr,
   })
@@ -3014,7 +3017,87 @@ describe('Vapor Mode hydration', () => {
       expect(data.value.spy).toHaveBeenCalled()
     })
 
-    test('update async wrapper before resolve', async () => {})
+    // No longer needed, parent component updates in vapor mode no longer
+    // cause child components to re-render
+    // test.todo('update async wrapper before resolve', async () => {})
+
+    test('update async component after parent mount before async component resolve', async () => {
+      const data = ref({
+        toggle: true,
+      })
+      const compCode = `
+          <script vapor>
+            defineProps(['toggle'])
+          </script>
+          <template>
+            <h1>{{ toggle ? 'Async component' : 'Updated async component' }}</h1>
+          </template>
+        `
+      const SSRComp = compileVaporComponent(
+        compCode,
+        undefined,
+        undefined,
+        true,
+      )
+      let serverResolve: any
+      let AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            serverResolve = r
+          }),
+      )
+      const appCode = `
+          <script vapor>
+            import { onMounted, nextTick } from 'vue'
+            const data = _data; const components = _components;
+            onMounted(() => {
+              nextTick(() => {
+                data.value.toggle = false
+              })
+            })
+          </script>
+          <template>
+            <components.AsyncComp :toggle="data.toggle"/>
+          </template>
+        `
+      const SSRApp = compileVaporComponent(appCode, data, { AsyncComp }, true)
+
+      // server render
+      const htmlPromise = VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      serverResolve(SSRComp)
+      const html = await htmlPromise
+      expect(html).toMatchInlineSnapshot(`"<h1>Async component</h1>"`)
+
+      // hydration
+      let clientResolve: any
+      AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      )
+
+      const Comp = compileVaporComponent(compCode)
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+
+      // resolve
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      // prevent lazy hydration since the component has been patched
+      expect('Skipping lazy hydration for component').toHaveBeenWarned()
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<h1>Updated async component</h1><!--async component-->"`,
+      )
+    })
 
     test('hydrate safely when property used by async setup changed before render', async () => {})
 
