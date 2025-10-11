@@ -15,9 +15,10 @@ export const transformVBindShorthand: NodeTransform = (node, context) => {
       if (
         prop.type === NodeTypes.DIRECTIVE &&
         prop.name === 'bind' &&
-        !prop.exp
+        !prop.exp &&
+        prop.arg
       ) {
-        const arg = prop.arg!
+        const arg = prop.arg
         if (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) {
           // only simple expression is allowed for same-name shorthand
           context.onError(
