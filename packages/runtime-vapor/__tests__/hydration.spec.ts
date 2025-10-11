@@ -3144,7 +3144,110 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toBe(`<div><div>hi</div><!--if--></div>`)
     })
 
-    test('nested async wrapper', async () => {})
+    test('nested async wrapper', async () => {
+      const toggleCode = `
+      <script vapor>
+        import { onMounted, ref, nextTick } from 'vue'
+        const show = ref(false)
+        onMounted(() => {
+          nextTick(() => {
+            show.value = true
+          })
+        })
+      </script>
+      <template>
+        <div v-show="show">
+          <slot />
+        </div>
+      </template>
+      `
+
+      const SSRToggle = compileVaporComponent(
+        toggleCode,
+        undefined,
+        undefined,
+        true,
+      )
+
+      const wrapperCode = `<slot/>`
+      const SSRWrapper = compileVaporComponent(
+        wrapperCode,
+        undefined,
+        undefined,
+        true,
+      )
+
+      const data = ref({
+        count: 0,
+        fn: vi.fn(),
+      })
+
+      const childCode = `
+        <script vapor>
+          import { onMounted } from 'vue'
+          const data = _data; const components = _components;
+          onMounted(() => {
+            data.value.fn()
+            data.value.count++
+          })
+        </script>
+        <template>
+          <div>{{data.count}}</div>
+        </template>
+      `
+
+      const SSRChild = compileVaporComponent(childCode, data, undefined, true)
+
+      const appCode = `
+      <components.Toggle>
+        <components.Wrapper>
+          <components.Wrapper>
+            <components.Child/>
+          </components.Wrapper>
+        </components.Wrapper>
+      </components.Toggle>
+      `
+
+      const SSRApp = compileVaporComponent(
+        appCode,
+        undefined,
+        {
+          Toggle: SSRToggle,
+          Wrapper: SSRWrapper,
+          Child: SSRChild,
+        },
+        true,
+      )
+
+      const root = document.createElement('div')
+
+      // server render
+      root.innerHTML = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<div style="display:none;"><!--[--><!--[--><!--[--><div>0</div><!--]--><!--]--><!--]--></div>"`,
+      )
+
+      const Toggle = compileVaporComponent(toggleCode)
+      const Wrapper = compileVaporComponent(wrapperCode)
+      const Child = compileVaporComponent(childCode, data)
+
+      const App = compileVaporComponent(appCode, undefined, {
+        Toggle,
+        Wrapper,
+        Child,
+      })
+
+      // hydration
+      createVaporSSRApp(App).mount(root)
+      await nextTick()
+      await nextTick()
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<div style=""><!--[--><!--[--><!--[--><div>1</div><!--]--><!--]--><!--]--></div>"`,
+      )
+      expect(data.value.fn).toBeCalledTimes(1)
+    })
   })
 
   describe('force hydrate prop', async () => {
