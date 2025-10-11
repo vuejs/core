@@ -116,7 +116,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
           return () => createSSRInnerComp(resolvedComp! as any, instance as any)
         }
 
-        // TODO handling insertionState
         frag!.update(() => createInnerComp(resolvedComp!, instance))
         return frag
       }
@@ -176,7 +175,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         frag!.update(render)
       })
 
-      // TODO handling insertionState
       return frag
     },
   }) as T
