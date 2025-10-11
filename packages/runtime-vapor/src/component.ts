@@ -266,16 +266,16 @@ export function createComponent(
     // it may get unmounted before its inner component is loaded,
     // so we need to give it a placeholder block that matches its
     // adopted DOM
-    instance.block = currentHydrationNode!
+    const el = (instance.block = currentHydrationNode!)
     // also mark it as mounted to ensure it can be unmounted before
     // its inner component is resolved
     instance.isMounted = true
 
-    const node = nextNode(currentHydrationNode!)
-    component.__asyncHydrate(currentHydrationNode! as Element, instance, () =>
+    // advance current hydration node to the nextSibling
+    setCurrentHydrationNode(nextNode(el))
+    component.__asyncHydrate(el as Element, instance, () =>
       setupComponent(instance, component, scopeId),
     )
-    setCurrentHydrationNode(node)
   } else {
     setupComponent(instance, component, scopeId)
   }

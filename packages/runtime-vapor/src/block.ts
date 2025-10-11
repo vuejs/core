@@ -94,7 +94,7 @@ export function insert(
     }
   } else if (isVaporComponent(block)) {
     if (block.isMounted) {
-      insert(block.block, parent, anchor)
+      insert(block.block!, parent, anchor)
     } else {
       mountComponent(block, parent, anchor)
     }

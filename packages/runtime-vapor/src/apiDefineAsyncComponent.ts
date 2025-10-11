@@ -51,18 +51,25 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
     __asyncHydrate(
       el: Element,
       instance: VaporComponentInstance,
+      // Note: this hydrate function essentially calls the setup method of the component
+      // not the actual hydrate function
       hydrate: () => void,
     ) {
-      // The setup of async components is not executed during hydration, which means
-      // the beforeUpdate hooks won't be called when attrs change. We need to watch
-      // for attrs changes and manually call beforeUpdate hooks to avoid unnecessary
-      // hydration and mount the async component
+      // if async component needs to be updated before hydration, hydration is no longer needed.
+      let isHydrated = false
       watch(
         () => instance.attrs,
         () => {
+          // early return if already hydrated
+          if (isHydrated) return
+
+          // call the beforeUpdate hook to avoid calling hydrate in performAsyncHydrate
           instance.bu && invokeArrayFns(instance.bu)
+
+          // mount the inner component and remove the placeholder
           const parent = parentNode(el)!
           load().then(() => {
+            if (instance.isUnmounted) return
             hydrate()
             insert(instance.block, parent, el)
             remove(el, parent)
@@ -74,7 +81,11 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       performAsyncHydrate(
         el,
         instance,
-        () => hydrateNode(el, hydrate),
+        () => {
+          hydrateNode(el, hydrate)
+          insert(instance.block, parentNode(el)!, el)
+          isHydrated = true
+        },
         getResolvedComp,
         load,
         hydrateStrategy,
