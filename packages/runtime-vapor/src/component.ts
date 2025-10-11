@@ -77,9 +77,10 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
+  isComment,
   isHydrating,
+  locateEndAnchor,
   locateHydrationNode,
-  nextNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
@@ -272,7 +273,9 @@ export function createComponent(
     instance.isMounted = true
 
     // advance current hydration node to the nextSibling
-    setCurrentHydrationNode(nextNode(el))
+    setCurrentHydrationNode(
+      isComment(el, '[') ? locateEndAnchor(el)! : el.nextSibling,
+    )
     component.__asyncHydrate(el as Element, instance, () =>
       setupComponent(instance, component, scopeId),
     )

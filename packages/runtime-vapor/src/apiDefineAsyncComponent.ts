@@ -3,10 +3,11 @@ import {
   type AsyncComponentOptions,
   ErrorCodes,
   createAsyncComponentContext,
+  createInnerComp as createSSRInnerComp,
   currentInstance,
   handleError,
   isInSSRComponentSetup,
-  loadInnerComponent,
+  loadInnerComponent as loadSSRInnerComponent,
   markAsyncBoundary,
   performAsyncHydrate,
   useAsyncComponentState,
@@ -82,9 +83,11 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         el,
         instance,
         () => {
-          hydrateNode(el, hydrate)
-          insert(instance.block, parentNode(el)!, el)
-          isHydrated = true
+          hydrateNode(el, () => {
+            hydrate()
+            insert(instance.block, parentNode(el)!, el)
+            isHydrated = true
+          })
         },
         getResolvedComp,
         load,
@@ -108,7 +111,13 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // already resolved
       let resolvedComp = getResolvedComp()
       if (resolvedComp) {
-        frag.update(() => createInnerComp(resolvedComp!, instance))
+        // SSR
+        if (__SSR__ && isInSSRComponentSetup) {
+          return () => createSSRInnerComp(resolvedComp! as any, instance as any)
+        }
+
+        // TODO handling insertionState
+        frag!.update(() => createInnerComp(resolvedComp!, instance))
         return frag
       }
 
@@ -128,7 +137,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
 
       // SSR
       if (__SSR__ && isInSSRComponentSetup) {
-        return loadInnerComponent(
+        return loadSSRInnerComponent(
           instance as any,
           load,
           onError,
@@ -164,9 +173,10 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         } else if (loadingComponent && !delayed.value) {
           render = () => createComponent(loadingComponent)
         }
-        frag.update(render)
+        frag!.update(render)
       })
 
+      // TODO handling insertionState
       return frag
     },
   }) as T

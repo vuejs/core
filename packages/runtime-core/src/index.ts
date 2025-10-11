@@ -603,6 +603,7 @@ export {
   isAsyncWrapper,
   performAsyncHydrate,
   loadInnerComponent,
+  createInnerComp,
 } from './apiAsyncComponent'
 /**
  * @internal
