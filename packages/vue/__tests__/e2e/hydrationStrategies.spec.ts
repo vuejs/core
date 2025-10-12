@@ -128,8 +128,7 @@ describe('async component hydration strategies', () => {
       ).toBe(true)
     })
 
-    // TODO: problem is button click trigger twice
-    test.skipIf(vapor)('interaction', async () => {
+    test('interaction', async () => {
       await goToCase('interaction', '', vapor)
       await page().waitForFunction(() => window.isRootMounted)
       expect(await page().evaluate(() => window.isHydrated)).toBe(false)
@@ -140,7 +139,7 @@ describe('async component hydration strategies', () => {
       await assertHydrationSuccess('2')
     })
 
-    test.skipIf(vapor)('interaction (fragment)', async () => {
+    test('interaction (fragment)', async () => {
       await goToCase('interaction', '?fragment', vapor)
       await page().waitForFunction(() => window.isRootMounted)
       expect(await page().evaluate(() => window.isHydrated)).toBe(false)

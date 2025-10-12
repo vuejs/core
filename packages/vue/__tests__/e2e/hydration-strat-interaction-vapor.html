@@ -38,15 +38,20 @@
         console.log('hydrated')
         window.isHydrated = true
       })
-      const n0 = template('<button> </button>', true)()
-      const x0 = child(n0)
-      n0.$evtclick = () => count.value++
-      renderEffect(() => setText(x0, count.value))
+
       if (isFragment) {
         const n1 = template('<span>one</span>')()
+        const n0 = template('<button> </button>', true)()
+        const x0 = child(n0)
+        n0.$evtclick = () => count.value++
+        renderEffect(() => setText(x0, count.value))
         const n2 = template('<span>two</span>')()
         return [n1, n0, n2]
       } else {
+        const n0 = template('<button> </button>', true)()
+        const x0 = child(n0)
+        n0.$evtclick = () => count.value++
+        renderEffect(() => setText(x0, count.value))
         return n0
       }
     },
