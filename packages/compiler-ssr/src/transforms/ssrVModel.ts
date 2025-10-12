@@ -62,22 +62,17 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
         plainNode.ssrCodegenNode!.elements.push(
           createConditionalExpression(
             createCallExpression(context.helper(SSR_INCLUDE_BOOLEAN_ATTR), [
-              value.maybeArray
-                ? createConditionalExpression(
-                    createCallExpression(`Array.isArray`, [model]),
-                    createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
-                      model,
-                      value.node,
-                    ]),
-                    createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
-                      model,
-                      value.node,
-                    ]),
-                  )
-                : createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
-                    model,
-                    value.node,
-                  ]),
+              createConditionalExpression(
+                createCallExpression(`Array.isArray`, [model]),
+                createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
+                  model,
+                  value,
+                ]),
+                createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
+                  model,
+                  value,
+                ]),
+              ),
             ]),
             createSimpleExpression(' selected', true),
             createSimpleExpression('', true),
@@ -199,26 +194,19 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
   }
 }
 
-interface OptionValue {
-  node: ExpressionNode | TemplateLiteral
-  maybeArray: boolean
-}
-
-function findOptionValue(node: PlainElementNode): OptionValue {
+function findOptionValue(
+  node: PlainElementNode,
+): ExpressionNode | TemplateLiteral {
   const valueBinding = findProp(node, 'value')
   if (valueBinding) {
-    return {
-      node:
-        valueBinding.type === NodeTypes.DIRECTIVE
-          ? valueBinding.exp!
-          : createSimpleExpression(valueBinding.value!.content, true),
-      maybeArray: true,
-    }
+    return valueBinding.type === NodeTypes.DIRECTIVE
+      ? valueBinding.exp!
+      : createSimpleExpression(valueBinding.value!.content, true)
   }
 
   const textDir = findDir(node, 'text')
   if (textDir) {
-    return { node: textDir.exp!, maybeArray: false }
+    return textDir.exp!
   }
 
   if (
@@ -233,29 +221,30 @@ function findOptionValue(node: PlainElementNode): OptionValue {
       x => x.type !== NodeTypes.COMMENT,
     )
     if (relevantNodes.length) {
-      const textContentValue = createTemplateLiteral(
-        relevantNodes.map((x, i) => {
-          if (x.type === NodeTypes.TEXT) {
-            let content = x.content
-            if (i === 0) {
-              content = content.trimStart()
-            }
-            if (i === relevantNodes.length - 1) {
-              content = content.trimEnd()
-            }
-            return createSimpleExpression(content, true)
-          } else {
-            return x.content
+      const expressions = relevantNodes.map((x, i) => {
+        if (x.type === NodeTypes.TEXT) {
+          let content = x.content
+          if (i === 0) {
+            content = content.trimStart()
           }
-        }),
-      )
-      if (textContentValue) {
-        return { node: textContentValue, maybeArray: false }
+          if (i === relevantNodes.length - 1) {
+            content = content.trimEnd()
+          }
+          return createSimpleExpression(content, true)
+        } else {
+          return x.content
+        }
+      })
+
+      if (expressions.length === 1) {
+        return expressions[0]
+      } else {
+        return createTemplateLiteral(expressions)
       }
     }
   }
 
-  return { node: createSimpleExpression(``, true), maybeArray: false }
+  return createSimpleExpression(``, true)
 }
 
 function findValueBinding(node: PlainElementNode): ExpressionNode {
