@@ -8,11 +8,20 @@
 
 <script type="module">
   import {
-    createVaporSSRApp, defineVaporAsyncComponent, ref, onMounted, hydrateOnInteraction,
-    delegateEvents, template, createComponent, child, renderEffect, setText,
+    createVaporSSRApp,
+    defineVaporAsyncComponent,
+    ref,
+    onMounted,
+    hydrateOnInteraction,
+    delegateEvents,
+    template,
+    createComponent,
+    child,
+    renderEffect,
+    setText,
   } from '../../dist/vue.runtime-with-vapor.esm-browser.js'
 
-  delegateEvents("click")
+  delegateEvents('click')
 
   const isFragment = location.search.includes('?fragment')
   if (isFragment) {
@@ -29,13 +38,13 @@
         console.log('hydrated')
         window.isHydrated = true
       })
-      const n0 = template("<button> </button>", true)()
+      const n0 = template('<button> </button>', true)()
       const x0 = child(n0)
-      n0.$evtclick = () => (count.value++)
+      n0.$evtclick = () => count.value++
       renderEffect(() => setText(x0, count.value))
       if (isFragment) {
-        const n1 = template("<span>one</span>")()
-        const n2 = template("<span>two</span>")()
+        const n1 = template('<span>one</span>')()
+        const n2 = template('<span>two</span>')()
         return [n1, n0, n2]
       } else {
         return n0

@@ -3,11 +3,20 @@
 
 <script type="module">
   import {
-    createVaporSSRApp, defineVaporAsyncComponent, ref, onMounted,
-    delegateEvents, template, createIf, createComponent, child, renderEffect, setText,
+    createVaporSSRApp,
+    defineVaporAsyncComponent,
+    ref,
+    onMounted,
+    delegateEvents,
+    template,
+    createIf,
+    createComponent,
+    child,
+    renderEffect,
+    setText,
   } from '../../dist/vue.runtime-with-vapor.esm-browser.js'
 
-  delegateEvents("click")
+  delegateEvents('click')
 
   window.isHydrated = false
   const Comp = {
@@ -18,9 +27,9 @@
         window.isHydrated = true
       })
 
-      const n0 = template("<button> </button>", true)()
+      const n0 = template('<button> </button>', true)()
       const x0 = child(n0)
-      n0.$evtclick = () => (count.value++)
+      n0.$evtclick = () => count.value++
       renderEffect(() => setText(x0, count.value))
       return n0
     },
@@ -45,11 +54,15 @@
         window.isRootMounted = true
       })
 
-      const n0 = createIf(() => (show.value), () => {
-        return createComponent(AsyncComp)
-      }, () => {
-        return template("off")()
-      })
+      const n0 = createIf(
+        () => show.value,
+        () => {
+          return createComponent(AsyncComp)
+        },
+        () => {
+          return template('off')()
+        },
+      )
       return n0
     },
   }).mount('#app')
