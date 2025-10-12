@@ -2,6 +2,7 @@ import { type Ref, nextTick, ref } from '@vue/runtime-dom'
 import {
   createComponent,
   createDynamicComponent,
+  createIf,
   createSlot,
   defineVaporComponent,
   renderEffect,
@@ -94,6 +95,51 @@ describe('attribute fallthrough', () => {
     id.value = 'b'
     await nextTick()
     expect(host.innerHTML).toBe('<!--comment--><div id="b">2</div>')
+  })
+
+  it('if block', async () => {
+    const t0 = template('<div>foo</div>', true)
+    const t1 = template('<div>bar</div>', true)
+    const t2 = template('<div>baz</div>', true)
+    const { component: Child } = define({
+      setup() {
+        const n0 = createIf(
+          () => true,
+          () => {
+            const n2 = t0()
+            return n2
+          },
+          () =>
+            createIf(
+              () => false,
+              () => {
+                const n4 = t1()
+                return n4
+              },
+              () => {
+                const n7 = t2()
+                return n7
+              },
+            ),
+        )
+        return n0
+      },
+    })
+
+    const id = ref('a')
+    const { host } = define({
+      setup() {
+        return createComponent(
+          Child,
+          {
+            id: () => id.value,
+          },
+          null,
+          true,
+        )
+      },
+    }).render()
+    expect(host.innerHTML).toBe('<div id="a">foo</div><!--if-->')
   })
 
   it('should allow attrs to fallthrough on component with single-element array root', async () => {

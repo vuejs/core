@@ -215,6 +215,7 @@ export function transform(
     node,
     source: node.source,
     template: [],
+    rootTemplateIndexes: new Set(),
     component: new Set(),
     directive: new Set(),
     block: newBlock(node),

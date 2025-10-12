@@ -89,7 +89,6 @@ export function genDynamicProps(
       helper('setDynamicProps'),
       `n${oper.element}`,
       genMulti(DELIMITERS_ARRAY, ...values),
-      oper.root && 'true',
     ),
   ]
 }
