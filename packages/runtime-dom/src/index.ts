@@ -369,3 +369,7 @@ export {
   handleMovedChildren,
   baseApplyTranslation,
 } from './components/TransitionGroup'
+/**
+ * @internal
+ */
+export { unsafeToTrustedHTML } from './nodeOps'

@@ -24,6 +24,7 @@ import {
   shouldSetAsProp,
   toClassSet,
   toStyleMap,
+  unsafeToTrustedHTML,
   vShowHidden,
   warn,
   warnPropMismatch,
@@ -327,8 +328,7 @@ export function setElementText(
 }
 
 export function setHtml(el: TargetElement, value: any): void {
-  value = value == null ? '' : value
-
+  value = value == null ? '' : unsafeToTrustedHTML(value)
   if (el.$html !== value) {
     el.innerHTML = el.$html = value
   }
