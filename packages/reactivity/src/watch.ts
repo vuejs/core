@@ -64,6 +64,7 @@ export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
     type: WatchErrorCodes,
     args?: unknown[],
   ) => void
+  lazy?: boolean
 }
 
 export type WatchStopHandle = () => void
@@ -72,6 +73,7 @@ export interface WatchHandle extends WatchStopHandle {
   pause: () => void
   resume: () => void
   stop: () => void
+  start: () => void
 }
 
 // initial value for watchers to trigger on undefined initial values
@@ -122,7 +124,7 @@ export function watch(
   cb?: WatchCallback | null,
   options: WatchOptions = EMPTY_OBJ,
 ): WatchHandle {
-  const { immediate, deep, once, scheduler, augmentJob, call } = options
+  const { immediate, deep, once, scheduler, augmentJob, call, lazy } = options
 
   const warnInvalidSource = (s: unknown) => {
     ;(options.onWarn || warn)(
@@ -134,12 +136,9 @@ export function watch(
   }
 
   const reactiveGetter = (source: object) => {
-    // traverse will happen in wrapped getter below
     if (deep) return source
-    // for `deep: false | 0` or shallow reactive, only traverse root-level properties
     if (isShallow(source) || deep === false || deep === 0)
       return traverse(source, 1)
-    // for `deep: undefined` on a reactive object, deeply traverse all properties
     return traverse(source)
   }
 
@@ -173,12 +172,10 @@ export function watch(
       })
   } else if (isFunction(source)) {
     if (cb) {
-      // getter with cb
       getter = call
         ? () => call(source, WatchErrorCodes.WATCH_GETTER)
         : (source as () => any)
     } else {
-      // no cb -> simple effect
       getter = () => {
         if (cleanup) {
           pauseTracking()
@@ -238,7 +235,6 @@ export function watch(
       return
     }
     if (cb) {
-      // watch(source, cb)
       const newValue = effect.run()
       if (
         deep ||
@@ -247,7 +243,6 @@ export function watch(
           ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
           : hasChanged(newValue, oldValue))
       ) {
-        // cleanup before running cb again
         if (cleanup) {
           cleanup()
         }
@@ -256,7 +251,6 @@ export function watch(
         try {
           const args = [
             newValue,
-            // pass undefined as the old value when it's changed for the first time
             oldValue === INITIAL_WATCHER_VALUE
               ? undefined
               : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
@@ -274,7 +268,6 @@ export function watch(
         }
       }
     } else {
-      // watchEffect
       effect.run()
     }
   }
@@ -308,7 +301,6 @@ export function watch(
     effect.onTrigger = options.onTrigger
   }
 
-  // initial run
   if (cb) {
     if (immediate) {
       job(true)
@@ -320,10 +312,40 @@ export function watch(
   } else {
     effect.run()
   }
+  if (!lazy) {
+    if (cb) {
+      if (immediate) {
+        job(true)
+      } else {
+        oldValue = effect.run()
+      }
+    } else if (scheduler) {
+      scheduler(job.bind(null, true), true)
+    } else {
+      effect.run()
+    }
+  }
 
+  const start = () => {
+    if (cb) {
+      if (immediate) {
+        job(true)
+      } else {
+        oldValue = effect.run()
+      }
+    } else {
+      effect.run()
+    }
+  }
+
+  watchHandle.start = start
   watchHandle.pause = effect.pause.bind(effect)
   watchHandle.resume = effect.resume.bind(effect)
   watchHandle.stop = watchHandle
+
+  if (!lazy) {
+    start()
+  }
 
   return watchHandle
 }
