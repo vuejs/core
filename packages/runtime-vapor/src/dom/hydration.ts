@@ -153,10 +153,12 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
   return node
 }
 
-function nextNode(node: Node): Node | null {
+export function locateNextNode(node: Node): Node | null {
   return isComment(node, '[')
-    ? locateEndAnchor(node as Anchor)!.nextSibling
-    : node.nextSibling
+    ? _next(locateEndAnchor(node)!)
+    : isComment(node, 'teleport start')
+      ? _next(locateEndAnchor(node, 'teleport start', 'teleport end')!)
+      : _next(node)
 }
 
 function locateHydrationNodeImpl(): void {
@@ -166,20 +168,20 @@ function locateHydrationNodeImpl(): void {
     // prepend
     if (insertionAnchor === 0) {
       node = insertionParent!.$lpn = lastPrepend
-        ? nextNode(lastPrepend)
+        ? locateNextNode(lastPrepend)
         : firstChild
     }
     // insert
     else if (insertionAnchor instanceof Node) {
       const { $lin: lastInsertedNode } = insertionAnchor as ChildItem
       node = (insertionAnchor as ChildItem).$lin = lastInsertedNode
-        ? nextNode(lastInsertedNode)
+        ? locateNextNode(lastInsertedNode)
         : insertionAnchor
     }
     // append
     else {
       node = insertionParent!.$lan = lastAppend
-        ? nextNode(lastAppend)
+        ? locateNextNode(lastAppend)
         : insertionAnchor === null
           ? firstChild
           : locateChildByLogicalIndex(insertionParent!, insertionAnchor)!
@@ -225,6 +227,14 @@ export function locateEndAnchor(
     }
   }
 
+  return null
+}
+export function locateFragmentEndAnchor(label: string = ']'): Comment | null {
+  let node = currentHydrationNode!
+  while (node) {
+    if (isComment(node, label)) return node
+    node = node.nextSibling!
+  }
   return null
 }
 

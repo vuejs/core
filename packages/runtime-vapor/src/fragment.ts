@@ -14,6 +14,7 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
+  locateFragmentEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
 import {
@@ -143,21 +144,21 @@ export class DynamicFragment extends VaporFragment {
     // avoid repeated hydration during fallback rendering
     if (this.anchor) return
 
-    // reuse the empty comment node as the anchor for empty if
-    // e.g. `<div v-if="false"></div>` -> `<!---->`
-    if (this.anchorLabel === 'if' && isEmpty) {
-      this.anchor = currentHydrationNode!
-      if (!this.anchor) {
-        throw new Error('Failed to locate if anchor')
-      } else {
-        if (__DEV__) {
-          ;(this.anchor as Comment).data = this.anchorLabel
+    if (this.anchorLabel === 'if') {
+      // reuse the empty comment node as the anchor for empty if
+      // e.g. `<div v-if="false"></div>` -> `<!---->`
+      if (isEmpty) {
+        this.anchor = locateFragmentEndAnchor('')!
+        if (!this.anchor) {
+          throw new Error('Failed to locate if anchor')
+        } else {
+          if (__DEV__) {
+            ;(this.anchor as Comment).data = this.anchorLabel
+          }
+          return
         }
-        return
       }
-    }
-
-    if (this.anchorLabel === 'slot') {
+    } else if (this.anchorLabel === 'slot') {
       // reuse the empty comment node for empty slot
       // e.g. `<slot v-if="false"></slot>`
       if (isEmpty && isComment(currentHydrationNode!, '')) {
@@ -168,8 +169,8 @@ export class DynamicFragment extends VaporFragment {
         return
       }
 
-      // reuse the vdom fragment end anchor for slots
-      this.anchor = currentHydrationNode!
+      // reuse the vdom fragment end anchor
+      this.anchor = locateFragmentEndAnchor()!
       if (!this.anchor) {
         throw new Error('Failed to locate slot anchor')
       } else {

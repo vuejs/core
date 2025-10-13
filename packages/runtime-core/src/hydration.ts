@@ -312,7 +312,7 @@ export function createHydrationFunctions(
 
           // hydrate vapor component
           if ((vnode.type as ConcreteComponent).__vapor) {
-            nextNode = getVaporInterface(parentComponent, vnode).hydrate(
+            getVaporInterface(parentComponent, vnode).hydrate(
               vnode,
               node,
               container,
