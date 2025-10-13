@@ -66,7 +66,7 @@ import {
   getSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
-import { createElement } from './dom/node'
+import { _next, createElement } from './dom/node'
 import {
   adoptTemplate,
   advanceHydrationNode,
@@ -261,7 +261,22 @@ export function createComponent(
     // it may get unmounted before its inner component is loaded,
     // so we need to give it a placeholder block that matches its
     // adopted DOM
-    const el = (instance.block = currentHydrationNode!)
+    const el = currentHydrationNode!
+    if (isComment(el, '[')) {
+      const end = _next(locateEndAnchor(el)!)
+      const block = (instance.block = [el as Node])
+      let cur = el as Node
+      while (true) {
+        let n = _next(cur)
+        if (n && n !== end) {
+          block.push((cur = n))
+        } else {
+          break
+        }
+      }
+    } else {
+      instance.block = el
+    }
     // also mark it as mounted to ensure it can be unmounted before
     // its inner component is resolved
     instance.isMounted = true

@@ -247,15 +247,7 @@ function handleMismatch(node: Node, template: string): Node {
 
   // fragment
   if (isComment(node, '[')) {
-    const end = locateEndAnchor(node as Anchor)
-    while (true) {
-      const next = _next(node)
-      if (next && next !== end) {
-        remove(next, parentNode(node)!)
-      } else {
-        break
-      }
-    }
+    removeFragmentNodes(node)
   }
 
   const next = _next(node)
@@ -287,4 +279,16 @@ export const logMismatchError = (): void => {
   // this error should show up in production
   console.error('Hydration completed but contains mismatches.')
   hasLoggedMismatchError = true
+}
+
+export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
+  const end = endAnchor || locateEndAnchor(node as Anchor)
+  while (true) {
+    const next = _next(node)
+    if (next && next !== end) {
+      remove(next, parentNode(node)!)
+    } else {
+      break
+    }
+  }
 }

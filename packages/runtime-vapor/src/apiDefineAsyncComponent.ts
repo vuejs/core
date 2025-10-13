@@ -21,7 +21,13 @@ import {
 } from './component'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
-import { hydrateNode, isHydrating } from './dom/hydration'
+import {
+  hydrateNode,
+  isComment,
+  isHydrating,
+  locateEndAnchor,
+  removeFragmentNodes,
+} from './dom/hydration'
 import { invokeArrayFns } from '@vue/shared'
 import { insert, remove } from './block'
 import { parentNode } from './dom/node'
@@ -72,8 +78,14 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
           load().then(() => {
             if (instance.isUnmounted) return
             hydrate()
-            insert(instance.block, parent, el)
-            remove(el, parent)
+            if (isComment(el, '[')) {
+              const endAnchor = locateEndAnchor(el)!
+              removeFragmentNodes(el, endAnchor)
+              insert(instance.block, parent, endAnchor)
+            } else {
+              insert(instance.block, parent, el)
+              remove(el, parent)
+            }
           })
         },
         { deep: true, once: true },
