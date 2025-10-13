@@ -356,3 +356,7 @@ export { svgNS, mathmlNS } from './nodeOps'
  * @internal
  */
 export { xlinkNS } from './modules/attrs'
+/**
+ * @internal
+ */
+export { unsafeToTrustedHTML } from './nodeOps'

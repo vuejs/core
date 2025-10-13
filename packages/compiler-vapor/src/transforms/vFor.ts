@@ -2,6 +2,7 @@ import {
   type ElementNode,
   ElementTypes,
   ErrorCodes,
+  NodeTypes,
   type SimpleExpressionNode,
   createCompilerError,
 } from '@vue/compiler-dom'
@@ -28,7 +29,7 @@ export function processFor(
   node: ElementNode,
   dir: VaporDirectiveNode,
   context: TransformContext<ElementNode>,
-) {
+): (() => void) | undefined {
   if (!dir.exp) {
     context.options.onError(
       createCompilerError(ErrorCodes.X_V_FOR_NO_EXPRESSION, dir.loc),
@@ -47,7 +48,10 @@ export function processFor(
 
   const keyProp = findProp(node, 'key')
   const keyProperty = keyProp && propToExpression(keyProp)
-  const isComponent = node.tagType === ElementTypes.COMPONENT
+  const isComponent =
+    node.tagType === ElementTypes.COMPONENT ||
+    // template v-for with a single component child
+    isTemplateWithSingleComponent(node)
   context.node = node = wrapTemplate(node, ['for'])
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()
@@ -86,4 +90,17 @@ export function processFor(
       onlyChild: !!isOnlyChild,
     }
   }
+}
+
+function isTemplateWithSingleComponent(node: ElementNode): boolean {
+  if (node.tag !== 'template') return false
+
+  const nonCommentChildren = node.children.filter(
+    c => c.type !== NodeTypes.COMMENT,
+  )
+  return (
+    nonCommentChildren.length === 1 &&
+    nonCommentChildren[0].type === NodeTypes.ELEMENT &&
+    nonCommentChildren[0].tagType === ElementTypes.COMPONENT
+  )
 }
