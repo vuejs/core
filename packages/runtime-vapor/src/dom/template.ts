@@ -1,11 +1,8 @@
-import { mathmlNS, svgNS } from '@vue/runtime-dom'
 import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
 import { child, createTextNode } from './node'
 import { type Namespace, Namespaces } from '@vue/shared'
 
 let t: HTMLTemplateElement
-let st: HTMLTemplateElement
-let mt: HTMLTemplateElement
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function template(html: string, root?: boolean, ns?: Namespace) {
@@ -23,18 +20,14 @@ export function template(html: string, root?: boolean, ns?: Namespace) {
       return createTextNode(html)
     }
     if (!node) {
-      if (!ns) {
-        t = t || document.createElement('template')
+      t = t || document.createElement('template')
+      if (ns) {
+        const tag = ns === Namespaces.SVG ? 'svg' : 'math'
+        t.innerHTML = `<${tag}>${html}</${tag}>`
+        node = child(child(t.content) as ParentNode)
+      } else {
         t.innerHTML = html
         node = child(t.content)
-      } else if (ns === Namespaces.SVG) {
-        st = st || document.createElementNS(svgNS, 'template')
-        st.innerHTML = html
-        node = child(st)
-      } else {
-        mt = mt || document.createElementNS(mathmlNS, 'template')
-        mt.innerHTML = html
-        node = child(mt)
       }
     }
     const ret = node.cloneNode(true)
