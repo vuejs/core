@@ -22,12 +22,21 @@ const isHydratingStack = [] as boolean[]
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
 
+function pushIsHydrating(value: boolean): void {
+  isHydratingStack.push((isHydrating = value))
+}
+
+function popIsHydrating(): void {
+  isHydratingStack.pop()
+  isHydrating = isHydratingStack[isHydratingStack.length - 1] || false
+}
+
 export function runWithoutHydration(fn: () => any): any {
   try {
-    isHydrating = false
+    pushIsHydrating(false)
     return fn()
   } finally {
-    isHydrating = true
+    popIsHydrating()
   }
 }
 
@@ -53,13 +62,12 @@ function performHydration<T>(
     isOptimized = true
   }
   enableHydrationNodeLookup()
-  isHydratingStack.push((isHydrating = true))
+  pushIsHydrating(true)
   setup()
   const res = fn()
   cleanup()
   currentHydrationNode = null
-  isHydratingStack.pop()
-  isHydrating = isHydratingStack[isHydratingStack.length - 1] || false
+  popIsHydrating()
   if (!isHydrating) disableHydrationNodeLookup()
   return res
 }
@@ -239,15 +247,7 @@ function handleMismatch(node: Node, template: string): Node {
 
   // fragment
   if (isComment(node, '[')) {
-    const end = locateEndAnchor(node as Anchor)
-    while (true) {
-      const next = _next(node)
-      if (next && next !== end) {
-        remove(next, parentNode(node)!)
-      } else {
-        break
-      }
-    }
+    removeFragmentNodes(node)
   }
 
   const next = _next(node)
@@ -279,4 +279,16 @@ export const logMismatchError = (): void => {
   // this error should show up in production
   console.error('Hydration completed but contains mismatches.')
   hasLoggedMismatchError = true
+}
+
+export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
+  const end = endAnchor || locateEndAnchor(node as Anchor)
+  while (true) {
+    const next = _next(node)
+    if (next && next !== end) {
+      remove(next, parentNode(node)!)
+    } else {
+      break
+    }
+  }
 }

@@ -1,4 +1,5 @@
 import {
+  type AsyncComponentInternalOptions,
   type ComponentInternalOptions,
   type ComponentPropsOptions,
   EffectScope,
@@ -15,6 +16,7 @@ import {
   currentInstance,
   endMeasure,
   expose,
+  isAsyncWrapper,
   nextUid,
   popWarningContext,
   pushWarningContext,
@@ -41,13 +43,7 @@ import {
   setActiveSub,
   unref,
 } from '@vue/reactivity'
-import {
-  EMPTY_OBJ,
-  invokeArrayFns,
-  isArray,
-  isFunction,
-  isString,
-} from '@vue/shared'
+import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
 import {
   type DynamicPropsSource,
   type RawProps,
@@ -70,12 +66,14 @@ import {
   getSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
-import { createElement } from './dom/node'
+import { _next, createElement } from './dom/node'
 import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
+  isComment,
   isHydrating,
+  locateEndAnchor,
   locateHydrationNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
@@ -103,6 +101,7 @@ export type FunctionalVaporComponent = VaporSetupFn &
 
 export interface ObjectVaporComponent
   extends ComponentInternalOptions,
+    AsyncComponentInternalOptions<ObjectVaporComponent, VaporComponentInstance>,
     SharedInternalOptions {
   setup?: VaporSetupFn
   inheritAttrs?: boolean
@@ -118,8 +117,6 @@ export interface ObjectVaporComponent
 
   name?: string
   vapor?: boolean
-  __asyncLoader?: () => Promise<VaporComponent>
-  __asyncResolved?: VaporComponent
 }
 
 interface SharedInternalOptions {
@@ -254,6 +251,64 @@ export function createComponent(
     instance.emitsOptions = normalizeEmitsOptions(component)
   }
 
+  // hydrating async component
+  if (
+    isHydrating &&
+    isAsyncWrapper(instance) &&
+    component.__asyncHydrate &&
+    !component.__asyncResolved
+  ) {
+    // it may get unmounted before its inner component is loaded,
+    // so we need to give it a placeholder block that matches its
+    // adopted DOM
+    const el = currentHydrationNode!
+    if (isComment(el, '[')) {
+      const end = _next(locateEndAnchor(el)!)
+      const block = (instance.block = [el as Node])
+      let cur = el as Node
+      while (true) {
+        let n = _next(cur)
+        if (n && n !== end) {
+          block.push((cur = n))
+        } else {
+          break
+        }
+      }
+    } else {
+      instance.block = el
+    }
+    // also mark it as mounted to ensure it can be unmounted before
+    // its inner component is resolved
+    instance.isMounted = true
+
+    // advance current hydration node to the nextSibling
+    setCurrentHydrationNode(
+      isComment(el, '[') ? locateEndAnchor(el)! : el.nextSibling,
+    )
+    component.__asyncHydrate(el as Element, instance, () =>
+      setupComponent(instance, component, scopeId),
+    )
+  } else {
+    setupComponent(instance, component, scopeId)
+  }
+
+  onScopeDispose(() => unmountComponent(instance), true)
+
+  if (_insertionParent || isHydrating) {
+    mountComponent(instance, _insertionParent!, _insertionAnchor)
+  }
+
+  if (isHydrating && _insertionAnchor !== undefined) {
+    advanceHydrationNode(_insertionParent!)
+  }
+  return instance
+}
+
+export function setupComponent(
+  instance: VaporComponentInstance,
+  component: VaporComponent,
+  scopeId: string | undefined,
+): void {
   const prevInstance = setCurrentInstance(instance)
   const prevSub = setActiveSub()
 
@@ -311,6 +366,8 @@ export function createComponent(
     }
   }
 
+  if (scopeId) setScopeId(instance.block, scopeId)
+
   setActiveSub(prevSub)
   setCurrentInstance(...prevInstance)
 
@@ -318,19 +375,6 @@ export function createComponent(
     popWarningContext()
     endMeasure(instance, 'init')
   }
-
-  onScopeDispose(() => unmountComponent(instance), true)
-
-  if (scopeId) setScopeId(instance.block, scopeId)
-
-  if (_insertionParent) {
-    mountComponent(instance, _insertionParent, _insertionAnchor)
-  }
-
-  if (isHydrating && _insertionAnchor !== undefined) {
-    advanceHydrationNode(_insertionParent!)
-  }
-  return instance
 }
 
 export let isApplyingFallthroughProps = false
@@ -623,19 +667,10 @@ export function mountComponent(
     startMeasure(instance, `mount`)
   }
   if (instance.bm) invokeArrayFns(instance.bm)
-  const block = instance.block
-  if (isHydrating) {
-    if (
-      !(block instanceof Node) ||
-      (isArray(block) && block.some(b => !(b instanceof Node)))
-    ) {
-      insert(block, parent, anchor)
-    }
-  } else {
-    insert(block, parent, anchor)
+  if (!isHydrating) {
+    insert(instance.block, parent, anchor)
     setComponentScopeId(instance)
   }
-
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
   instance.isMounted = true
   if (__DEV__) {

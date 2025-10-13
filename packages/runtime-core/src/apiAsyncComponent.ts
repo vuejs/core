@@ -3,6 +3,7 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
+  type GenericComponent,
   type GenericComponentInstance,
   currentInstance,
   getComponentName,
@@ -68,37 +69,14 @@ export function defineAsyncComponent<
     __asyncLoader: load,
 
     __asyncHydrate(el, instance, hydrate) {
-      let patched = false
-      ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
-      const performHydrate = () => {
-        // skip hydration if the component has been patched
-        if (patched) {
-          if (__DEV__) {
-            const resolvedComp = getResolvedComp()
-            warn(
-              `Skipping lazy hydration for component '${getComponentName(resolvedComp!) || resolvedComp!.__file}': ` +
-                `it was updated before lazy hydration performed.`,
-            )
-          }
-          return
-        }
-        hydrate()
-      }
-      const doHydrate = hydrateStrategy
-        ? () => {
-            const teardown = hydrateStrategy(performHydrate, cb =>
-              forEachElement(el, cb),
-            )
-            if (teardown) {
-              ;(instance.bum || (instance.bum = [])).push(teardown)
-            }
-          }
-        : performHydrate
-      if (getResolvedComp()) {
-        doHydrate()
-      } else {
-        load().then(() => !instance.isUnmounted && doHydrate())
-      }
+      performAsyncHydrate(
+        el,
+        instance,
+        hydrate,
+        getResolvedComp,
+        load,
+        hydrateStrategy,
+      )
     },
 
     get __asyncResolved() {
@@ -130,19 +108,7 @@ export function defineAsyncComponent<
         (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) ||
         (__SSR__ && isInSSRComponentSetup)
       ) {
-        return load()
-          .then(comp => {
-            return () => createInnerComp(comp, instance)
-          })
-          .catch(err => {
-            onError(err)
-            return () =>
-              errorComponent
-                ? createVNode(errorComponent as ConcreteComponent, {
-                    error: err,
-                  })
-                : null
-          })
+        return loadInnerComponent(instance, load, onError, errorComponent)
       }
 
       const { loaded, error, delayed } = useAsyncComponentState(
@@ -185,10 +151,10 @@ export function defineAsyncComponent<
   }) as T
 }
 
-function createInnerComp(
+export function createInnerComp(
   comp: ConcreteComponent,
   parent: ComponentInternalInstance,
-) {
+): VNode {
   const { ref, props, children, ce } = parent.vnode
   const vnode = createVNode(comp, props, children)
   // ensure inner component inherits the async wrapper's ref owner
@@ -310,4 +276,74 @@ export const useAsyncComponentState = (
   }
 
   return { loaded, error, delayed }
+}
+
+/**
+ * shared between core and vapor
+ * @internal
+ */
+export function loadInnerComponent(
+  instance: ComponentInternalInstance,
+  load: () => Promise<any>,
+  onError: (err: Error) => void,
+  errorComponent: ConcreteComponent | undefined,
+): Promise<() => VNode | null> {
+  return load()
+    .then(comp => {
+      return () => createInnerComp(comp, instance)
+    })
+    .catch(err => {
+      onError(err)
+      return () =>
+        errorComponent
+          ? createVNode(errorComponent as ConcreteComponent, {
+              error: err,
+            })
+          : null
+    })
+}
+
+/**
+ * shared between core and vapor
+ * @internal
+ */
+export function performAsyncHydrate(
+  el: Element,
+  instance: GenericComponentInstance,
+  hydrate: () => void,
+  getResolvedComp: () => GenericComponent | undefined,
+  load: () => Promise<GenericComponent>,
+  hydrateStrategy: HydrationStrategy | undefined,
+): void {
+  let patched = false
+  ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
+  const performHydrate = () => {
+    // skip hydration if the component has been patched
+    if (patched) {
+      if (__DEV__) {
+        const resolvedComp = getResolvedComp()! as GenericComponent
+        warn(
+          `Skipping lazy hydration for component '${getComponentName(resolvedComp) || resolvedComp.__file}': ` +
+            `it was updated before lazy hydration performed.`,
+        )
+      }
+      return
+    }
+    hydrate()
+  }
+  const doHydrate = hydrateStrategy
+    ? () => {
+        const teardown = hydrateStrategy(performHydrate, cb =>
+          forEachElement(el, cb),
+        )
+        if (teardown) {
+          ;(instance.bum || (instance.bum = [])).push(teardown)
+        }
+      }
+    : performHydrate
+  if (getResolvedComp()) {
+    doHydrate()
+  } else {
+    load().then(() => !instance.isUnmounted && doHydrate())
+  }
 }
