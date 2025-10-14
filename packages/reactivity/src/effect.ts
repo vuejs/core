@@ -311,7 +311,7 @@ function prepareDeps(sub: Subscriber) {
 }
 
 function cleanupDeps(sub: Subscriber) {
-  // Cleanup unsued deps
+  // Cleanup unused deps
   let head
   let tail = sub.depsTail
   let link = tail

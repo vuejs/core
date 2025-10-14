@@ -1203,7 +1203,7 @@ export function getComponentPublicInstance(
   }
 }
 
-const classifyRE = /(?:^|[-_])(\w)/g
+const classifyRE = /(?:^|[-_])\w/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
@@ -1281,5 +1281,5 @@ export interface ComponentCustomElementInterface {
   /**
    * @internal attached by the nested Teleport when shadowRoot is false.
    */
-  _teleportTarget?: RendererElement
+  _teleportTargets?: Set<RendererElement>
 }
