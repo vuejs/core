@@ -1940,6 +1940,57 @@ describe('Vapor Mode hydration', () => {
         </div>"
       `)
     })
+
+    test('with non-hydration node', async () => {
+      const data = ref({ show: true, msg: 'foo' })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <div v-for="item in 2">
+              <div>
+                <div v-if="data.show">{{ data.msg }}</div>
+              </div>
+              <span>non-hydration node</span>
+            </div>
+          </div>
+        </template>`,
+        {},
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><div><div><div>foo</div><!--if--></div><span>non-hydration node</span></div><div><div><div>foo</div><!--if--></div><span>non-hydration node</span></div><!--]-->
+        </div>"
+      `,
+      )
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><!--]-->
+        </div>"
+      `,
+      )
+
+      data.value.show = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div>
+        <!--[--><div><div><!--if--></div><span>non-hydration node</span></div><div><div><!--if--></div><span>non-hydration node</span></div><!--]-->
+        </div>"
+      `)
+
+      data.value.show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div>
+        <!--[--><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><!--]-->
+        </div>"
+      `)
+    })
   })
 
   describe('slots', () => {

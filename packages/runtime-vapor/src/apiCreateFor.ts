@@ -132,18 +132,14 @@ export const createFor = (
 
     if (!isMounted) {
       isMounted = true
-      let prevNodes: Block
       for (let i = 0; i < newLength; i++) {
-        if (isHydrating && isComponent && i > 0) {
-          setCurrentHydrationNode(findLastChild(prevNodes!)!.nextSibling)
+        const nodes = mount(source, i).nodes
+        if (isHydrating) {
+          setCurrentHydrationNode(findLastChild(nodes!)!.nextSibling)
         }
-        prevNodes = mount(source, i).nodes
       }
 
       if (isHydrating) {
-        if (isComponent) {
-          setCurrentHydrationNode(findLastChild(prevNodes!)!.nextSibling)
-        }
         parentAnchor =
           newLength === 0
             ? currentHydrationNode!.nextSibling!
