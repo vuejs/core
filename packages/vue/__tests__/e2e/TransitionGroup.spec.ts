@@ -701,7 +701,7 @@ describe('e2e: TransitionGroup', () => {
     },
     E2E_TIMEOUT,
   )
-    
+
   test(
     'not leaking after children unmounted',
     async () => {
