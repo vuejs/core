@@ -172,7 +172,7 @@ export function compatH(
   }
 }
 
-const skipLegacyRootLevelProps = /*#__PURE__*/ makeMap(
+const skipLegacyRootLevelProps = /*@__PURE__*/ makeMap(
   'staticStyle,staticClass,directives,model,hook',
 )
 

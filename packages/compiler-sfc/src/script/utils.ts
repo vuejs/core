@@ -122,14 +122,7 @@ export function getEscapedPropName(key: string): string {
   return propNameEscapeSymbolsRE.test(key) ? JSON.stringify(key) : key
 }
 
-export const cssVarNameEscapeSymbolsRE: RegExp =
-  /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
-
-export function getEscapedCssVarName(
-  key: string,
-  doubleEscape: boolean,
-): string {
-  return key.replace(cssVarNameEscapeSymbolsRE, s =>
-    doubleEscape ? `\\\\${s}` : `\\${s}`,
-  )
-}
+export const isJS = (...langs: (string | null | undefined)[]): boolean =>
+  langs.some(lang => lang === 'js' || lang === 'jsx')
+export const isTS = (...langs: (string | null | undefined)[]): boolean =>
+  langs.some(lang => lang === 'ts' || lang === 'tsx')

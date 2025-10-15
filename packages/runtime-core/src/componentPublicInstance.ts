@@ -233,6 +233,7 @@ export type CreateComponentPublicInstanceWithMixins<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   TypeRefs extends Data = {},
+  TypeEl extends Element = any,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   // mixin inference
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
@@ -277,7 +278,8 @@ export type CreateComponentPublicInstanceWithMixins<
   I,
   S,
   Exposed,
-  TypeRefs
+  TypeRefs,
+  TypeEl
 >
 
 export type ExposedKeys<
@@ -302,6 +304,7 @@ export type ComponentPublicInstance<
   S extends SlotsType = {},
   Exposed extends string = '',
   TypeRefs extends Data = {},
+  TypeEl extends Element = any,
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -315,7 +318,7 @@ export type ComponentPublicInstance<
   $parent: ComponentPublicInstance | null
   $host: Element | null
   $emit: EmitFn<E>
-  $el: any
+  $el: TypeEl
   $options: Options & MergedComponentOptionsOverride
   $forceUpdate: () => void
   $nextTick: typeof nextTick
@@ -362,7 +365,7 @@ const getPublicInstance = (
 export const publicPropertiesMap: PublicPropertiesMap =
   // Move PURE marker to new line to workaround compiler discarding it
   // due to type annotation
-  /*#__PURE__*/ extend(Object.create(null), {
+  /*@__PURE__*/ extend(Object.create(null), {
     $: i => i,
     $el: i => i.vnode.el,
     $data: i => i.data,
@@ -572,19 +575,20 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, setupState, accessCache, ctx, appContext, propsOptions },
+      _: { data, setupState, accessCache, ctx, appContext, propsOptions, type },
     }: ComponentRenderContext,
     key: string,
   ) {
-    let normalizedProps
-    return (
-      !!accessCache![key] ||
-      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
+    let normalizedProps, cssModules
+    return !!(
+      accessCache![key] ||
+      (data !== EMPTY_OBJ && key[0] !== '$' && hasOwn(data, key)) ||
       hasSetupBinding(setupState, key) ||
       ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
-      hasOwn(appContext.config.globalProperties, key)
+      hasOwn(appContext.config.globalProperties, key) ||
+      ((cssModules = type.__cssModules) && cssModules[key])
     )
   },
 
@@ -614,7 +618,7 @@ if (__DEV__ && !__TEST__) {
 }
 
 export const RuntimeCompiledPublicInstanceProxyHandlers: ProxyHandler<any> =
-  /*#__PURE__*/ extend({}, PublicInstanceProxyHandlers, {
+  /*@__PURE__*/ extend({}, PublicInstanceProxyHandlers, {
     get(target: ComponentRenderContext, key: string) {
       // fast path for unscopables when using `with` block
       if ((key as any) === Symbol.unscopables) {

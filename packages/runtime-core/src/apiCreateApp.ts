@@ -22,7 +22,7 @@ import { warn } from './warning'
 import { type VNode, cloneVNode, createVNode } from './vnode'
 import type { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { NO, extend, isFunction, isObject } from '@vue/shared'
+import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
@@ -36,9 +36,9 @@ export interface App<HostElement = any> {
 
   use<Options extends unknown[]>(
     plugin: Plugin<Options>,
-    ...options: Options
+    ...options: NoInfer<Options>
   ): this
-  use<Options>(plugin: Plugin<Options>, options: Options): this
+  use<Options>(plugin: Plugin<Options>, options: NoInfer<Options>): this
 
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
@@ -46,8 +46,23 @@ export interface App<HostElement = any> {
     name: string,
     component: T,
   ): this
-  directive<T = any, V = any>(name: string): Directive<T, V> | undefined
-  directive<T = any, V = any>(name: string, directive: Directive<T, V>): this
+  directive<
+    HostElement = any,
+    Value = any,
+    Modifiers extends string = string,
+    Arg = any,
+  >(
+    name: string,
+  ): Directive<HostElement, Value, Modifiers, Arg> | undefined
+  directive<
+    HostElement = any,
+    Value = any,
+    Modifiers extends string = string,
+    Arg = any,
+  >(
+    name: string,
+    directive: Directive<HostElement, Value, Modifiers, Arg>,
+  ): this
   mount(
     rootContainer: HostElement | string,
     /**
@@ -200,9 +215,11 @@ export type ObjectPlugin<Options = any[]> = {
 export type FunctionPlugin<Options = any[]> = PluginInstallFunction<Options> &
   Partial<ObjectPlugin<Options>>
 
-export type Plugin<Options = any[]> =
-  | FunctionPlugin<Options>
-  | ObjectPlugin<Options>
+export type Plugin<
+  Options = any[],
+  // TODO: in next major Options extends unknown[] and remove P
+  P extends unknown[] = Options extends unknown[] ? Options : [Options],
+> = FunctionPlugin<P> | ObjectPlugin<P>
 
 export function createAppContext(): AppContext {
   return {
@@ -366,13 +383,12 @@ export function createAppAPI<HostElement>(
           // HMR root reload
           if (__DEV__) {
             context.reload = () => {
+              const cloned = cloneVNode(vnode)
+              // avoid hydration for hmr updating
+              cloned.el = null
               // casting to ElementNamespace because TS doesn't guarantee type narrowing
               // over function boundaries
-              render(
-                cloneVNode(vnode),
-                rootContainer,
-                namespace as ElementNamespace,
-              )
+              render(cloned, rootContainer, namespace as ElementNamespace)
             }
           }
 
@@ -432,10 +448,18 @@ export function createAppAPI<HostElement>(
 
       provide(key, value) {
         if (__DEV__ && (key as string | symbol) in context.provides) {
-          warn(
-            `App already provides property with key "${String(key)}". ` +
-              `It will be overwritten with the new value.`,
-          )
+          if (hasOwn(context.provides, key as string | symbol)) {
+            warn(
+              `App already provides property with key "${String(key)}". ` +
+                `It will be overwritten with the new value.`,
+            )
+          } else {
+            // #13212, context.provides can inherit the provides object from parent on custom elements
+            warn(
+              `App already provides property with key "${String(key)}" inherited from its parent element. ` +
+                `It will be overwritten with the new value.`,
+            )
+          }
         }
 
         context.provides[key as string | symbol] = value

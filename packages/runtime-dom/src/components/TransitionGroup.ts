@@ -14,6 +14,7 @@ import {
   DeprecationTypes,
   Fragment,
   type SetupContext,
+  Text,
   type VNode,
   compatUtils,
   createVNode,
@@ -43,10 +44,24 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   moveClass?: string
 }
 
-const TransitionGroupImpl: ComponentOptions = {
+/**
+ * Wrap logic that modifies TransitionGroup properties in a function
+ * so that it can be annotated as pure
+ */
+const decorate = (t: typeof TransitionGroupImpl) => {
+  // TransitionGroup does not support "mode" so we need to remove it from the
+  // props declarations, but direct delete operation is considered a side effect
+  delete t.props.mode
+  if (__COMPAT__) {
+    t.__isBuiltIn = true
+  }
+  return t
+}
+
+const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
   name: 'TransitionGroup',
 
-  props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
+  props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
     tag: String,
     moveClass: String,
   }),
@@ -71,6 +86,7 @@ const TransitionGroupImpl: ComponentOptions = {
           moveClass,
         )
       ) {
+        prevChildren = []
         return
       }
 
@@ -81,7 +97,7 @@ const TransitionGroupImpl: ComponentOptions = {
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
-      forceReflow()
+      forceReflow(instance.vnode.el as Node)
 
       movedChildren.forEach(c => {
         const el = c.el as ElementWithTransition
@@ -92,7 +108,7 @@ const TransitionGroupImpl: ComponentOptions = {
           if (e && e.target !== el) {
             return
           }
-          if (!e || /transform$/.test(e.propertyName)) {
+          if (!e || e.propertyName.endsWith('transform')) {
             el.removeEventListener('transitionend', cb)
             ;(el as any)[moveCbKey] = null
             removeTransitionClass(el, moveClass)
@@ -100,6 +116,7 @@ const TransitionGroupImpl: ComponentOptions = {
         })
         el.addEventListener('transitionend', cb)
       })
+      prevChildren = []
     })
 
     return () => {
@@ -150,7 +167,7 @@ const TransitionGroupImpl: ComponentOptions = {
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance),
           )
-        } else if (__DEV__) {
+        } else if (__DEV__ && child.type !== Text) {
           warn(`<TransitionGroup> children must be keyed.`)
         }
       }
@@ -158,20 +175,7 @@ const TransitionGroupImpl: ComponentOptions = {
       return createVNode(tag, null, children)
     }
   },
-}
-
-if (__COMPAT__) {
-  TransitionGroupImpl.__isBuiltIn = true
-}
-
-/**
- * TransitionGroup does not support "mode" so we need to remove it from the
- * props declarations, but direct delete operation is considered a side effect
- * and will make the entire transition feature non-tree-shakeable, so we do it
- * in a function and mark the function's invocation as pure.
- */
-const removeMode = (props: any) => delete props.mode
-/*#__PURE__*/ removeMode(TransitionGroupImpl.props)
+})
 
 export const TransitionGroup = TransitionGroupImpl as unknown as {
   new (): {

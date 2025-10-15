@@ -553,18 +553,6 @@ describe('vnode', () => {
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
 
-    test('with suspense', () => {
-      const hoist = createVNode('div')
-      let vnode1
-      const vnode =
-        (openBlock(),
-        createBlock('div', null, [
-          hoist,
-          (vnode1 = createVNode(() => {}, null, 'text')),
-        ]))
-      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
-    })
-
     // #1039
     // <component :is="foo">{{ bar }}</component>
     // - content is compiled as slot
@@ -629,7 +617,7 @@ describe('vnode', () => {
       const vnode =
         (openBlock(),
         createBlock('div', null, [
-          setBlockTracking(-1),
+          setBlockTracking(-1, true),
           (vnode1 = (openBlock(), createBlock('div'))),
           setBlockTracking(1),
           vnode1,

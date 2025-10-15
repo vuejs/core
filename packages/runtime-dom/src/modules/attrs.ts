@@ -48,7 +48,7 @@ export function patchAttr(
 
 // 2.x compat
 const isEnumeratedAttr = __COMPAT__
-  ? /*#__PURE__*/ makeMap('contenteditable,draggable,spellcheck')
+  ? /*@__PURE__*/ makeMap('contenteditable,draggable,spellcheck')
   : NOOP
 
 export function compatCoerceAttr(
@@ -79,6 +79,7 @@ export function compatCoerceAttr(
     }
   } else if (
     value === false &&
+    !(el.tagName === 'INPUT' && key === 'value') &&
     !isSpecialBooleanAttr(key) &&
     compatUtils.isCompatEnabled(DeprecationTypes.ATTR_FALSE_VALUE, instance)
   ) {

@@ -8,6 +8,7 @@ export function patchDOMProp(
   key: string,
   value: any,
   parentComponent: any,
+  attrName?: string,
 ): void {
   // __UNSAFE__
   // Reason: potentially setting innerHTML.
@@ -33,7 +34,14 @@ export function patchDOMProp(
     // compare against its attribute value instead.
     const oldValue =
       tag === 'OPTION' ? el.getAttribute('value') || '' : el.value
-    const newValue = value == null ? '' : String(value)
+    const newValue =
+      value == null
+        ? // #11647: value should be set as empty string for null and undefined,
+          // but <input type="checkbox"> should be set as 'on'.
+          el.type === 'checkbox'
+          ? 'on'
+          : ''
+        : String(value)
     if (oldValue !== newValue || !('_value' in el)) {
       el.value = newValue
     }
@@ -99,5 +107,5 @@ export function patchDOMProp(
       )
     }
   }
-  needRemove && el.removeAttribute(key)
+  needRemove && el.removeAttribute(attrName || key)
 }
