@@ -3,7 +3,7 @@ import {
   defineVaporAsyncComponent,
   delegateEvents,
 } from '../src'
-import { nextTick, reactive, ref } from '@vue/runtime-dom'
+import { defineAsyncComponent, nextTick, reactive, ref } from '@vue/runtime-dom'
 import { compileScript, parse } from '@vue/compiler-sfc'
 import * as runtimeVapor from '../src'
 import * as runtimeDom from '@vue/runtime-dom'
@@ -3019,7 +3019,8 @@ describe('Vapor Mode hydration', () => {
       const compCode = `<button @click="data.spy">hello!</button>`
       const SSRComp = compileVaporComponent(compCode, data, undefined, true)
       let serverResolve: any
-      let AsyncComp = defineVaporAsyncComponent(
+      // use defineAsyncComponent in SSR
+      let AsyncComp = defineAsyncComponent(
         () =>
           new Promise(r => {
             serverResolve = r
@@ -3045,7 +3046,7 @@ describe('Vapor Mode hydration', () => {
           new Promise(r => {
             clientResolve = r
           }),
-      )
+      ) as any
 
       const Comp = compileVaporComponent(compCode, data)
       const App = compileVaporComponent(appCode, data, { AsyncComp })
@@ -3091,7 +3092,8 @@ describe('Vapor Mode hydration', () => {
         true,
       )
       let serverResolve: any
-      let AsyncComp = defineVaporAsyncComponent(
+      // use defineAsyncComponent in SSR
+      let AsyncComp = defineAsyncComponent(
         () =>
           new Promise(r => {
             serverResolve = r
@@ -3115,7 +3117,7 @@ describe('Vapor Mode hydration', () => {
           new Promise(r => {
             clientResolve = r
           }),
-      )
+      ) as any
 
       const Comp = compileVaporComponent(compCode)
       const App = compileVaporComponent(appCode, data, { AsyncComp })
@@ -3161,7 +3163,8 @@ describe('Vapor Mode hydration', () => {
         true,
       )
       let serverResolve: any
-      let AsyncComp = defineVaporAsyncComponent(
+      // use defineAsyncComponent in SSR
+      let AsyncComp = defineAsyncComponent(
         () =>
           new Promise(r => {
             serverResolve = r
@@ -3187,7 +3190,7 @@ describe('Vapor Mode hydration', () => {
           new Promise(r => {
             clientResolve = r
           }),
-      )
+      ) as any
 
       const Comp = compileVaporComponent(compCode)
       const App = compileVaporComponent(appCode, data, { AsyncComp })

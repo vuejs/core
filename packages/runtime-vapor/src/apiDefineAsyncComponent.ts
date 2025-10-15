@@ -3,11 +3,8 @@ import {
   type AsyncComponentOptions,
   ErrorCodes,
   createAsyncComponentContext,
-  createInnerComp as createSSRInnerComp,
   currentInstance,
   handleError,
-  isInSSRComponentSetup,
-  loadInnerComponent as loadSSRInnerComponent,
   markAsyncBoundary,
   performAsyncHydrate,
   useAsyncComponentState,
@@ -123,11 +120,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // already resolved
       let resolvedComp = getResolvedComp()
       if (resolvedComp) {
-        // SSR
-        if (__SSR__ && isInSSRComponentSetup) {
-          return () => createSSRInnerComp(resolvedComp! as any, instance as any)
-        }
-
         frag!.update(() => createInnerComp(resolvedComp!, instance))
         return frag
       }
@@ -144,16 +136,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
 
       // TODO suspense-controlled
       if (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) {
-      }
-
-      // SSR
-      if (__SSR__ && isInSSRComponentSetup) {
-        return loadSSRInnerComponent(
-          instance as any,
-          load,
-          onError,
-          errorComponent,
-        )
       }
 
       const { loaded, error, delayed } = useAsyncComponentState(

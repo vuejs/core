@@ -602,8 +602,6 @@ export {
   useAsyncComponentState,
   isAsyncWrapper,
   performAsyncHydrate,
-  loadInnerComponent,
-  createInnerComp,
 } from './apiAsyncComponent'
 /**
  * @internal

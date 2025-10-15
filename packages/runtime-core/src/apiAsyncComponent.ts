@@ -108,7 +108,19 @@ export function defineAsyncComponent<
         (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) ||
         (__SSR__ && isInSSRComponentSetup)
       ) {
-        return loadInnerComponent(instance, load, onError, errorComponent)
+        return load()
+          .then(comp => {
+            return () => createInnerComp(comp, instance)
+          })
+          .catch(err => {
+            onError(err)
+            return () =>
+              errorComponent
+                ? createVNode(errorComponent as ConcreteComponent, {
+                    error: err,
+                  })
+                : null
+          })
       }
 
       const { loaded, error, delayed } = useAsyncComponentState(
@@ -151,7 +163,7 @@ export function defineAsyncComponent<
   }) as T
 }
 
-export function createInnerComp(
+function createInnerComp(
   comp: ConcreteComponent,
   parent: ComponentInternalInstance,
 ): VNode {
@@ -276,31 +288,6 @@ export const useAsyncComponentState = (
   }
 
   return { loaded, error, delayed }
-}
-
-/**
- * shared between core and vapor
- * @internal
- */
-export function loadInnerComponent(
-  instance: ComponentInternalInstance,
-  load: () => Promise<any>,
-  onError: (err: Error) => void,
-  errorComponent: ConcreteComponent | undefined,
-): Promise<() => VNode | null> {
-  return load()
-    .then(comp => {
-      return () => createInnerComp(comp, instance)
-    })
-    .catch(err => {
-      onError(err)
-      return () =>
-        errorComponent
-          ? createVNode(errorComponent as ConcreteComponent, {
-              error: err,
-            })
-          : null
-    })
 }
 
 /**
