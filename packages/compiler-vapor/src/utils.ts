@@ -1,3 +1,4 @@
+import type { BigIntLiteral, NumericLiteral, StringLiteral } from '@babel/types'
 import { isGloballyAllowed } from '@vue/shared'
 import {
   type AttributeNode,
@@ -74,10 +75,10 @@ export function resolveExpression(
 
 export function getLiteralExpressionValue(
   exp: SimpleExpressionNode,
-): string | null {
+): number | string | boolean | null {
   if (exp.ast) {
     if (exp.ast.type === 'StringLiteral') {
-      return exp.ast.value
+      return (exp.ast as StringLiteral | NumericLiteral | BigIntLiteral).value
     } else if (
       exp.ast.type === 'TemplateLiteral' &&
       exp.ast.expressions.length === 0
