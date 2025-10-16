@@ -206,9 +206,12 @@ describe('compiler: v-if', () => {
           },
         },
         negative: {
-          type: IRNodeTypes.BLOCK,
-          dynamic: {
-            children: [{ template: 2 }],
+          type: IRNodeTypes.IF,
+          negative: {
+            type: IRNodeTypes.BLOCK,
+            dynamic: {
+              children: [{ template: 2 }],
+            },
           },
         },
       },
