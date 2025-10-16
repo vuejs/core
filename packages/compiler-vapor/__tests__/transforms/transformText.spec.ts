@@ -60,13 +60,13 @@ describe('compiler: text transform', () => {
       `
         <div>
           {{ (2) }}
-          {{ \`foo\` }}
+          {{ \`foo\${1}\` }}
           {{ 1 }}
           {{ 1n }}
           {{ '1' }}
         </div>`,
     )
-    expect(code).includes(`_template("<div>2 foo 1 1 1</div>", true)`)
+    expect(code).includes(`_template("<div>2 foo1 1 1 1</div>", true)`)
     expect(code).toMatchSnapshot()
   })
 })

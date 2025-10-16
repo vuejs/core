@@ -85,11 +85,22 @@ export function getLiteralExpressionValue(
       (exp.ast.type === 'NumericLiteral' || exp.ast.type === 'BigIntLiteral')
     ) {
       return String(exp.ast.value)
-    } else if (
-      exp.ast.type === 'TemplateLiteral' &&
-      exp.ast.expressions.length === 0
-    ) {
-      return exp.ast.quasis[0].value.cooked!
+    } else if (exp.ast.type === 'TemplateLiteral') {
+      let result = ''
+      for (const [index, quasi] of exp.ast.quasis.entries()) {
+        result += quasi.value.cooked!
+        if (exp.ast.expressions[index]) {
+          let expressionValue = getLiteralExpressionValue({
+            ast: exp.ast.expressions[index],
+          } as SimpleExpressionNode)
+          if (expressionValue == null) {
+            return null
+          } else {
+            result += expressionValue
+          }
+        }
+      }
+      return result
     }
   }
   return exp.isStatic ? exp.content : null

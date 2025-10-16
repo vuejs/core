@@ -13,7 +13,7 @@ export function render(_ctx) {
 
 exports[`compiler: text transform > constant text 1`] = `
 "import { child as _child, template as _template } from 'vue';
-const t0 = _template("<div>2 foo 1 1 1</div>", true)
+const t0 = _template("<div>2 foo1 1 1 1</div>", true)
 
 export function render(_ctx) {
   const n1 = t0()
