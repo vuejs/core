@@ -6,6 +6,7 @@ import {
   type TransitionOptions,
   type VaporTransitionHooks,
   insert,
+  isFragmentBlock,
   isValidBlock,
   remove,
 } from './block'
@@ -178,14 +179,14 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
+    const { parentNode, nextNode } = findBlockNode(this.nodes)!
     // create an anchor
-    const { parentNode, nextSibling } = findLastChild(this)!
     queuePostFlushCb(() => {
       parentNode!.insertBefore(
         (this.anchor = __DEV__
           ? createComment(this.anchorLabel!)
           : createTextNode()),
-        nextSibling,
+        nextNode,
       )
     })
   }
@@ -243,7 +244,25 @@ function findInvalidFragment(fragment: VaporFragment): VaporFragment | null {
     : fragment
 }
 
-export function findLastChild(node: Block): Node | undefined | null {
+export function findBlockNode(block: Block): {
+  parentNode: Node | null
+  nextNode: Node | null
+} {
+  let { parentNode, nextSibling: nextNode } = findLastChild(block)!
+
+  // if nodes render as a fragment and the current nextNode is fragment
+  // end anchor, need to move to the next node
+  if (nextNode && isComment(nextNode, ']') && isFragmentBlock(block)) {
+    nextNode = nextNode.nextSibling
+  }
+
+  return {
+    parentNode,
+    nextNode,
+  }
+}
+
+function findLastChild(node: Block): Node | undefined | null {
   if (node && node instanceof Node) {
     return node
   } else if (isArray(node)) {

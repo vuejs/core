@@ -163,3 +163,14 @@ export function locateChildByLogicalIndex(
 
   return null
 }
+
+// use fragment end anchor as the logical child to avoid locateEndAnchor calls
+// in locateChildByLogicalIndex
+export function updateLastLogicalChild(
+  parent: InsertionParent,
+  child: Node,
+): void {
+  if (!isComment(child, ']')) return
+  ;(child as any as ChildItem).$idx = parent.$curIdx || 0
+  parent.$llc = child
+}

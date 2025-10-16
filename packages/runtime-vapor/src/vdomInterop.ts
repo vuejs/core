@@ -283,7 +283,7 @@ function createVDOMComponent(
     hydrateVNode(vnode, parentInstance as any)
     onScopeDispose(unmount, true)
     isMounted = true
-    frag.nodes = [vnode.el as Node]
+    frag.nodes = vnode.el as any
   }
 
   frag.insert = (parentNode, anchor, transition) => {
@@ -316,7 +316,7 @@ function createVDOMComponent(
     }
 
     // update the fragment nodes
-    frag.nodes = [vnode.el as Node]
+    frag.nodes = vnode.el as any
     simpleSetCurrentInstance(prev)
   }
 
@@ -441,6 +441,10 @@ function renderVDOMSlot(
 
   frag.hydrate = () => {
     render()
+    if (__DEV__ && isComment(currentHydrationNode!, ']')) {
+      throw new Error(`Failed to locate vdom slot anchor`)
+    }
+    frag.anchor = currentHydrationNode!
     isMounted = true
   }
 

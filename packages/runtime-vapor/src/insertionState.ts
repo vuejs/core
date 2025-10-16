@@ -16,6 +16,8 @@ export type InsertionParent = ParentNode & {
   $lpn?: Node | null
   // last append node
   $lan?: Node | null
+  // the logical index of current hydration node
+  $curIdx?: number
 }
 export let insertionParent: InsertionParent | undefined
 export let insertionAnchor: Node | 0 | undefined | null

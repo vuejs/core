@@ -12,7 +12,11 @@ import {
   watch,
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
-import { createComment, createTextNode } from './dom/node'
+import {
+  createComment,
+  createTextNode,
+  updateLastLogicalChild,
+} from './dom/node'
 import {
   type Block,
   insert,
@@ -33,9 +37,8 @@ import {
   locateHydrationNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { ForFragment, VaporFragment, findLastChild } from './fragment'
+import { ForFragment, VaporFragment, findBlockNode } from './fragment'
 import {
-  type ChildItem,
   insertionAnchor,
   insertionParent,
   resetInsertionState,
@@ -135,7 +138,7 @@ export const createFor = (
       for (let i = 0; i < newLength; i++) {
         const nodes = mount(source, i).nodes
         if (isHydrating) {
-          setCurrentHydrationNode(findLastChild(nodes!)!.nextSibling)
+          setCurrentHydrationNode(findBlockNode(nodes!).nextNode)
         }
       }
 
@@ -147,13 +150,9 @@ export const createFor = (
         if (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']'))) {
           throw new Error(`v-for fragment anchor node was not found.`)
         }
-        // the lastLogicalChild is the fragment start anchor; replacing it with end anchor
-        // can avoid the call to locateEndAnchor within locateChildByLogicalIndex
-        if (_insertionParent && _insertionParent!.$llc) {
-          ;(parentAnchor as any as ChildItem).$idx = (
-            _insertionParent!.$llc as ChildItem
-          ).$idx
-          _insertionParent.$llc = parentAnchor
+
+        if (_insertionParent) {
+          updateLastLogicalChild(_insertionParent!, parentAnchor)
         }
       }
     } else {

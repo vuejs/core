@@ -166,6 +166,17 @@ export function normalizeAnchor(node: Block): Node | undefined {
   }
 }
 
+export function isFragmentBlock(block: Block): boolean {
+  if (isArray(block)) {
+    return true
+  } else if (isVaporComponent(block)) {
+    return isFragmentBlock(block.block!)
+  } else if (isFragment(block)) {
+    return isFragmentBlock(block.nodes)
+  }
+  return false
+}
+
 /**
  * dev / test only
  */

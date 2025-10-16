@@ -58,6 +58,7 @@ function performHydration<T>(
     ;(Node.prototype as any).$lpn = undefined
     ;(Node.prototype as any).$lan = undefined
     ;(Node.prototype as any).$lin = undefined
+    ;(Node.prototype as any).$curIdx = undefined
 
     isOptimized = true
   }
@@ -186,6 +187,10 @@ function locateHydrationNodeImpl(): void {
           ? firstChild
           : locateChildByLogicalIndex(insertionParent!, insertionAnchor)!
     }
+
+    insertionParent!.$llc = node
+    ;(node as ChildItem).$idx = insertionParent!.$curIdx =
+      insertionParent!.$curIdx === undefined ? 0 : insertionParent!.$curIdx + 1
   } else {
     node = currentHydrationNode
     if (insertionParent && (!node || node.parentNode !== insertionParent)) {

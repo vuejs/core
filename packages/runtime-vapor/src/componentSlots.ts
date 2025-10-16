@@ -15,6 +15,7 @@ import {
   locateHydrationNode,
 } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
+import { updateLastLogicalChild } from './dom/node'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -169,6 +170,9 @@ export function createSlot(
   } else {
     if (fragment.insert) {
       ;(fragment as VaporFragment).hydrate!()
+    }
+    if (_insertionParent) {
+      updateLastLogicalChild(_insertionParent!, fragment.anchor)
     }
     if (_insertionAnchor !== undefined) {
       advanceHydrationNode(_insertionParent!)
