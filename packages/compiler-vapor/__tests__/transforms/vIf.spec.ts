@@ -182,7 +182,7 @@ describe('compiler: v-if', () => {
 
   test('v-if + v-else-if + v-else', () => {
     const { code, ir } = compileWithVIf(
-      `<div v-if="ok"/><p v-else-if="orNot"/><template v-else>fine</template>`,
+      `<div v-if="ok"/><p v-else-if="orNot"/><p v-else-if="false"/><template v-else>fine</template>`,
     )
     expect(code).matchSnapshot()
     expect(ir.template).toEqual(['<div></div>', '<p></p>', 'fine'])
