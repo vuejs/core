@@ -51,7 +51,7 @@ export function render(_ctx) {
         return n5
       }, () => {
         const n14 = t2()
-        _setInsertionState(n14, 0)
+        _setInsertionState(n14, 0, true)
         const n9 = _createIf(() => (_ctx.c), () => {
           const n11 = t1()
           return n11

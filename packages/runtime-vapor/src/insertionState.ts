@@ -22,6 +22,11 @@ export type InsertionParent = ParentNode & {
 export let insertionParent: InsertionParent | undefined
 export let insertionAnchor: Node | 0 | undefined | null
 
+// indicates whether the insertion is the last one in the parent.
+// if true, means no more nodes need to be hydrated after this insertion,
+// advancing current hydration node to parent nextSibling
+export let isLastInsertion: boolean | undefined
+
 /**
  * This function is called before a block type that requires insertion
  * (component, slot outlet, if, for) is created. The state is used for actual
@@ -30,8 +35,10 @@ export let insertionAnchor: Node | 0 | undefined | null
 export function setInsertionState(
   parent: ParentNode & { $fc?: Node | null },
   anchor?: Node | 0 | null | number,
+  last?: boolean,
 ): void {
   insertionParent = parent
+  isLastInsertion = last
 
   if (anchor !== undefined) {
     if (isHydrating) {
@@ -51,5 +58,5 @@ export function setInsertionState(
 }
 
 export function resetInsertionState(): void {
-  insertionParent = insertionAnchor = undefined
+  insertionParent = insertionAnchor = isLastInsertion = undefined
 }

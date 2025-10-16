@@ -81,6 +81,7 @@ import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import { DynamicFragment } from './fragment'
@@ -167,6 +168,7 @@ export function createComponent(
 ): VaporComponentInstance {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (isHydrating) {
     locateHydrationNode()
   } else {
@@ -204,7 +206,7 @@ export function createComponent(
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
       frag.hydrate()
-      if (_insertionAnchor !== undefined) {
+      if (_isLastInsertion) {
         advanceHydrationNode(_insertionParent!)
       }
     }
@@ -219,7 +221,7 @@ export function createComponent(
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
       frag.hydrate()
-      if (_insertionAnchor !== undefined) {
+      if (_isLastInsertion) {
         advanceHydrationNode(_insertionParent!)
       }
     }
@@ -610,6 +612,7 @@ export function createComponentWithFallback(
 
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (isHydrating) {
     locateHydrationNode()
   } else {
@@ -650,7 +653,7 @@ export function createComponentWithFallback(
   if (!isHydrating) {
     if (_insertionParent) insert(el, _insertionParent, _insertionAnchor)
   } else {
-    if (_insertionAnchor !== undefined) {
+    if (_isLastInsertion) {
       advanceHydrationNode(_insertionParent!)
     }
   }

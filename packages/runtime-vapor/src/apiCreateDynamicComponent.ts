@@ -7,6 +7,7 @@ import type { RawSlots } from './componentSlots'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import { advanceHydrationNode, isHydrating } from './dom/hydration'
@@ -22,6 +23,7 @@ export function createDynamicComponent(
 ): VaporFragment {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
 
   const frag =
@@ -51,7 +53,7 @@ export function createDynamicComponent(
   if (!isHydrating) {
     if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
   } else {
-    if (_insertionAnchor !== undefined) {
+    if (_isLastInsertion) {
       advanceHydrationNode(_insertionParent!)
     }
   }

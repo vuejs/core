@@ -354,7 +354,7 @@ export function render(_ctx) {
   const n6 = t0()
   _setInsertionState(n6, null)
   const n0 = _createSlot("foo", null)
-  _setInsertionState(n6, null)
+  _setInsertionState(n6, null, true)
   const n1 = _createIf(() => (true), () => {
     const n3 = _createComponentWithFallback(_component_Foo)
     return n3

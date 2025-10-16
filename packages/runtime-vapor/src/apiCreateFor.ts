@@ -41,6 +41,7 @@ import { ForFragment, VaporFragment, findBlockNode } from './fragment'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import { applyTransitionHooks } from './components/Transition'
@@ -94,6 +95,7 @@ export const createFor = (
 ): ForFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (isHydrating) {
     locateHydrationNode()
   } else {
@@ -485,9 +487,7 @@ export const createFor = (
   if (!isHydrating) {
     if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
   } else {
-    advanceHydrationNode(
-      _insertionAnchor !== undefined ? _insertionParent! : parentAnchor!,
-    )
+    advanceHydrationNode(_isLastInsertion ? _insertionParent! : parentAnchor!)
   }
 
   return frag
