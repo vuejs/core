@@ -241,7 +241,7 @@ export function defineAsyncComponent<
             error: error.value,
           })
         } else if (loadingComponent && !delayed.value) {
-          return createVNode(loadingComponent)
+          return createInnerComp(loadingComponent, instance)
         }
       }
     },
