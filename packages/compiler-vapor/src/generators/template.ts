@@ -6,7 +6,7 @@ import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
 
 export function genTemplates(
   templates: string[],
-  rootIndex: number | undefined,
+  rootIndexes: Set<number>,
   { helper }: CodegenContext,
 ): string {
   return templates
@@ -14,7 +14,7 @@ export function genTemplates(
       (template, i) =>
         `const t${i} = ${helper('template')}(${JSON.stringify(
           template,
-        )}${i === rootIndex ? ', true' : ''})\n`,
+        )}${rootIndexes.has(i) ? ', true' : ''})\n`,
     )
     .join('')
 }

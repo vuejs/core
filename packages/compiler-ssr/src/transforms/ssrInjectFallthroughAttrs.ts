@@ -2,19 +2,15 @@ import {
   ElementTypes,
   type NodeTransform,
   NodeTypes,
-  type ParentNode,
   type RootNode,
   type TemplateChildNode,
   createSimpleExpression,
+  filterCommentChildren,
   findDir,
+  hasSingleChild,
+  isSingleIfBlock,
   locStub,
 } from '@vue/compiler-dom'
-
-const filterChild = (node: ParentNode) =>
-  node.children.filter(n => n.type !== NodeTypes.COMMENT)
-
-const hasSingleChild = (node: ParentNode): boolean =>
-  filterChild(node).length === 1
 
 export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   // _attrs is provided as a function argument.
@@ -32,7 +28,7 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
       node.tag === 'KeepAlive' ||
       node.tag === 'keep-alive')
   ) {
-    const rootChildren = filterChild(context.root)
+    const rootChildren = filterCommentChildren(context.root)
     if (rootChildren.length === 1 && rootChildren[0] === node) {
       if (hasSingleChild(node)) {
         injectFallthroughAttrs(node.children[0])
@@ -47,26 +43,9 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   }
 
   if (node.type === NodeTypes.IF_BRANCH && hasSingleChild(node)) {
-    // detect cases where the parent v-if is not the only root level node
-    let hasEncounteredIf = false
-    for (const c of filterChild(parent)) {
-      if (
-        c.type === NodeTypes.IF ||
-        (c.type === NodeTypes.ELEMENT && findDir(c, 'if'))
-      ) {
-        // multiple root v-if
-        if (hasEncounteredIf) return
-        hasEncounteredIf = true
-      } else if (
-        // node before v-if
-        !hasEncounteredIf ||
-        // non else nodes
-        !(c.type === NodeTypes.ELEMENT && findDir(c, /else/, true))
-      ) {
-        return
-      }
+    if (isSingleIfBlock(parent)) {
+      injectFallthroughAttrs(node.children[0])
     }
-    injectFallthroughAttrs(node.children[0])
   } else if (hasSingleChild(parent)) {
     injectFallthroughAttrs(node)
   }

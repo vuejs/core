@@ -62,7 +62,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > with v-for 1`] = `
 "import { createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
@@ -88,8 +88,8 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > with v-if/else 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-const t1 = _template("<p></p>")
+const t0 = _template("<div></div>", true)
+const t1 = _template("<p></p>", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.expr), () => {

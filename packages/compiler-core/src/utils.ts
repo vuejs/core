@@ -12,6 +12,7 @@ import {
   type MemoExpression,
   NodeTypes,
   type ObjectExpression,
+  type ParentNode,
   type Position,
   type Property,
   type RenderSlotCall,
@@ -566,6 +567,38 @@ export function getMemoedVNodeCall(
   } else {
     return node
   }
+}
+
+export function filterCommentChildren(node: ParentNode): TemplateChildNode[] {
+  return node.children.filter(n => n.type !== NodeTypes.COMMENT)
+}
+
+export function hasSingleChild(node: ParentNode): boolean {
+  return filterCommentChildren(node).length === 1
+}
+
+export function isSingleIfBlock(parent: ParentNode): boolean {
+  // detect cases where the parent v-if is not the only root level node
+  let hasEncounteredIf = false
+  for (const c of filterCommentChildren(parent)) {
+    if (
+      c.type === NodeTypes.IF ||
+      (c.type === NodeTypes.ELEMENT && findDir(c, 'if'))
+    ) {
+      // multiple root v-if
+      if (hasEncounteredIf) return false
+      hasEncounteredIf = true
+    } else if (
+      // node before v-if
+      !hasEncounteredIf ||
+      // non else nodes
+      !(c.type === NodeTypes.ELEMENT && findDir(c, /^else(-if)?$/, true))
+    ) {
+      return false
+    }
+  }
+
+  return true
 }
 
 export const forAliasRE: RegExp = /([\s\S]*?)\s+(?:in|of)\s+(\S[\s\S]*)/
