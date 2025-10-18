@@ -20,6 +20,7 @@ describe('resolveType', () => {
       foo: number // property
       bar(): void // method
       'baz': string // string literal key
+      [\`qux\`]: boolean // template literal key
       (e: 'foo'): void // call signature
       (e: 'bar'): void
     }>()`)
@@ -27,6 +28,7 @@ describe('resolveType', () => {
       foo: ['Number'],
       bar: ['Function'],
       baz: ['String'],
+      qux: ['Boolean'],
     })
     expect(calls?.length).toBe(2)
   })
@@ -195,7 +197,7 @@ describe('resolveType', () => {
     type T = 'foo' | 'bar'
     type S = 'x' | 'y'
     defineProps<{
-      [\`_\${T}_\${S}_\`]: string
+      [K in \`_\${T}_\${S}_\`]: string
     }>()
     `).props,
     ).toStrictEqual({

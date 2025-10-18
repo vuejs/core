@@ -76,7 +76,9 @@ export function getId(node: Expression) {
     ? node.name
     : node.type === 'StringLiteral'
       ? node.value
-      : null
+      : node.type === 'TemplateLiteral' && !node.expressions.length
+        ? node.quasis.map(q => q.value.cooked).join('')
+        : null
 }
 
 const identity = (str: string) => str

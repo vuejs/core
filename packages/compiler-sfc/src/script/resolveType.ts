@@ -337,12 +337,8 @@ function typeElementsToMap(
       }
       ;(e as MaybeWithScope)._ownerScope = scope
       const name = getId(e.key)
-      if (name && !e.computed) {
+      if (name !== null) {
         res.props[name] = e as ResolvedElements['props'][string]
-      } else if (e.key.type === 'TemplateLiteral') {
-        for (const key of resolveTemplateKeys(ctx, e.key, scope)) {
-          res.props[key] = e as ResolvedElements['props'][string]
-        }
       } else {
         ctx.error(
           `Unsupported computed key in type referenced by a macro`,
