@@ -29,6 +29,7 @@ import {
   createGetCanonicalFileName,
   getId,
   getImportedName,
+  getStringLiteralKey,
   joinPaths,
   normalizePath,
 } from './utils'
@@ -336,8 +337,8 @@ function typeElementsToMap(
         Object.assign(scope.types, typeParameters)
       }
       ;(e as MaybeWithScope)._ownerScope = scope
-      const name = getId(e.key)
-      if (name !== null && (!e.computed || e.key.type === 'TemplateLiteral')) {
+      const name = getStringLiteralKey(e)
+      if (name !== null) {
         res.props[name] = e as ResolvedElements['props'][string]
       } else {
         ctx.error(
@@ -2025,8 +2026,7 @@ function findStaticPropertyType(node: TSTypeLiteral, key: string) {
   const prop = node.members.find(
     m =>
       m.type === 'TSPropertySignature' &&
-      !m.computed &&
-      getId(m.key) === key &&
+      getStringLiteralKey(m) === key &&
       m.typeAnnotation,
   )
   return prop && prop.typeAnnotation!.typeAnnotation

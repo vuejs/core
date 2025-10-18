@@ -21,6 +21,7 @@ describe('resolveType', () => {
       bar(): void // method
       'baz': string // string literal key
       [\`qux\`]: boolean // template literal key
+      123: symbol // numeric literal key
       (e: 'foo'): void // call signature
       (e: 'bar'): void
     }>()`)
@@ -29,6 +30,7 @@ describe('resolveType', () => {
       bar: ['Function'],
       baz: ['String'],
       qux: ['Boolean'],
+      123: ['Symbol'],
     })
     expect(calls?.length).toBe(2)
   })
