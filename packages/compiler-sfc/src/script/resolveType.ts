@@ -337,7 +337,7 @@ function typeElementsToMap(
       }
       ;(e as MaybeWithScope)._ownerScope = scope
       const name = getId(e.key)
-      if (name !== null) {
+      if (name !== null && (!e.computed || e.key.type === 'TemplateLiteral')) {
         res.props[name] = e as ResolvedElements['props'][string]
       } else {
         ctx.error(
