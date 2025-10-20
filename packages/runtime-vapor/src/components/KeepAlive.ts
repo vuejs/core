@@ -12,13 +12,7 @@ import {
   warn,
   watch,
 } from '@vue/runtime-dom'
-import {
-  type Block,
-  type VaporFragment,
-  insert,
-  isFragment,
-  remove,
-} from '../block'
+import { type Block, insert, remove } from '../block'
 import {
   type ObjectVaporComponent,
   type VaporComponent,
@@ -28,6 +22,7 @@ import {
 import { defineVaporComponent } from '../apiDefineComponent'
 import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
 import { createElement } from '../dom/node'
+import { type VaporFragment, isFragment } from '../fragment'
 
 export interface KeepAliveInstance extends VaporComponentInstance {
   activate: (

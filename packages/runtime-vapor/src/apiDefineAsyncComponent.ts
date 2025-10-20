@@ -14,8 +14,8 @@ import {
   type VaporComponentInstance,
   createComponent,
 } from './component'
-import { DynamicFragment } from './block'
 import { renderEffect } from './renderEffect'
+import { DynamicFragment } from './fragment'
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(

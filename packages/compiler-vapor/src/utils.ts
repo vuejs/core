@@ -120,8 +120,15 @@ export function isKeepAliveTag(tag: string): boolean {
   return tag === 'keepalive' || tag === 'vaporkeepalive'
 }
 
+export function isTeleportTag(tag: string): boolean {
+  tag = tag.toLowerCase()
+  return tag === 'teleport' || tag === 'vaporteleport'
+}
+
 export function isBuiltInComponent(tag: string): string | undefined {
-  if (isKeepAliveTag(tag)) {
+  if (isTeleportTag(tag)) {
+    return 'VaporTeleport'
+  } else if (isKeepAliveTag(tag)) {
     return 'VaporKeepAlive'
   } else if (isTransitionTag(tag)) {
     return 'VaporTransition'

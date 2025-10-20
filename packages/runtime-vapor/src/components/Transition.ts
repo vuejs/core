@@ -14,12 +14,7 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
-import {
-  type Block,
-  type TransitionBlock,
-  type VaporTransitionHooks,
-  isFragment,
-} from '../block'
+import type { Block, TransitionBlock, VaporTransitionHooks } from '../block'
 import {
   type FunctionalVaporComponent,
   type VaporComponentInstance,
@@ -28,6 +23,7 @@ import {
 } from '../component'
 import { extend, isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
+import { isFragment } from '../fragment'
 
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = 'VaporTransition'

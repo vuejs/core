@@ -42,15 +42,7 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import {
-  type Block,
-  VaporFragment,
-  type VaporTransitionHooks,
-  insert,
-  isFragment,
-  remove,
-  setFragmentFallback,
-} from './block'
+import { type Block, type VaporTransitionHooks, insert, remove } from './block'
 import {
   EMPTY_OBJ,
   ShapeFlags,
@@ -64,6 +56,7 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import { VaporFragment, isFragment, setFragmentFallback } from './fragment'
 import type { NodeRef } from './apiTemplateRef'
 import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
 import {

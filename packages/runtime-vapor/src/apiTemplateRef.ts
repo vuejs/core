@@ -22,7 +22,7 @@ import {
   isString,
   remove,
 } from '@vue/shared'
-import { DynamicFragment, isFragment } from './block'
+import { DynamicFragment, isFragment } from './fragment'
 
 export type NodeRef =
   | string

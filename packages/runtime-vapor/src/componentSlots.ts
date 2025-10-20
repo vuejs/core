@@ -1,5 +1,5 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, DynamicFragment, insert } from './block'
+import { type Block, type BlockFn, insert } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
@@ -10,6 +10,7 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { DynamicFragment } from './fragment'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]

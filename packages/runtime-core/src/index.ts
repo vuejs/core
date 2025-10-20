@@ -354,6 +354,7 @@ export type {
   HydrationStrategyFactory,
 } from './hydrationStrategies'
 export type { HMRRuntime } from './hmr'
+export type { SchedulerJob } from './scheduler'
 
 // Internal API ----------------------------------------------------------------
 
@@ -530,7 +531,7 @@ export { baseEmit, isEmitListener } from './componentEmits'
 /**
  * @internal
  */
-export { type SchedulerJob, queueJob, flushOnAppMount } from './scheduler'
+export { queueJob, flushOnAppMount } from './scheduler'
 /**
  * @internal
  */
@@ -567,6 +568,14 @@ export { startMeasure, endMeasure } from './profiling'
  * @internal
  */
 export { initFeatureFlags } from './featureFlags'
+/**
+ * @internal
+ */
+export {
+  resolveTarget as resolveTeleportTarget,
+  isTeleportDisabled,
+  isTeleportDeferred,
+} from './components/Teleport'
 /**
  * @internal
  */

@@ -26,7 +26,7 @@ import {
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, DynamicFragment, insert, isBlock, remove } from './block'
+import { type Block, insert, isBlock, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -52,7 +52,7 @@ import {
   resolveDynamicProps,
   setupPropsValidation,
 } from './componentProps'
-import { renderEffect } from './renderEffect'
+import { type RenderEffect, renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
 import { setDynamicProps } from './dom/prop'
 import {
@@ -66,12 +66,14 @@ import {
 import { hmrReload, hmrRerender } from './hmr'
 import { createElement } from './dom/node'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import {
   insertionAnchor,
   insertionParent,
   resetInsertionState,
 } from './insertionState'
+import { DynamicFragment } from './fragment'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -187,7 +189,7 @@ export function createComponent(
     const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
       component,
     )
-    // @ts-expect-error cached may be a fragment
+    // @ts-expect-error
     if (cached) return cached
   }
 
@@ -202,6 +204,18 @@ export function createComponent(
       insert(frag, _insertionParent, _insertionAnchor)
     }
     return frag
+  }
+
+  // teleport
+  if (isVaporTeleport(component)) {
+    const frag = component.process(rawProps!, rawSlots!)
+    if (!isHydrating && _insertionParent) {
+      insert(frag, _insertionParent, _insertionAnchor)
+    } else {
+      frag.hydrate()
+    }
+
+    return frag as any
   }
 
   const instance = new VaporComponentInstance(
@@ -421,6 +435,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void
+  renderEffects?: RenderEffect[]
+  parentTeleport?: TeleportFragment | null
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean

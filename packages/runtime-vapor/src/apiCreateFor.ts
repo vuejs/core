@@ -13,14 +13,7 @@ import {
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
-import {
-  type Block,
-  ForFragment,
-  VaporFragment,
-  insert,
-  remove,
-  remove as removeBlock,
-} from './block'
+import { type Block, insert, remove } from './block'
 import { warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
@@ -28,6 +21,7 @@ import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import { applyTransitionHooks } from './components/Transition'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { ForFragment, VaporFragment } from './fragment'
 import {
   insertionAnchor,
   insertionParent,
@@ -435,7 +429,7 @@ export const createFor = (
       block.scope!.stop()
     }
     if (doRemove) {
-      removeBlock(block.nodes, parent!)
+      remove(block.nodes, parent!)
     }
     if (doDeregister) {
       for (const selector of selectors) {

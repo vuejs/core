@@ -17,11 +17,9 @@ import {
 import { extend, isArray } from '@vue/shared'
 import {
   type Block,
-  DynamicFragment,
   type TransitionBlock,
   type VaporTransitionHooks,
   insert,
-  isFragment,
 } from '../block'
 import {
   resolveTransitionHooks,
@@ -37,6 +35,7 @@ import {
 import { isForBlock } from '../apiCreateFor'
 import { renderEffect } from '../renderEffect'
 import { createElement } from '../dom/node'
+import { DynamicFragment, isFragment } from '../fragment'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
