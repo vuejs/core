@@ -57,6 +57,7 @@ import {
   getSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
+import { createElement } from './dom/node'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
 import {
   insertionAnchor,
@@ -257,11 +258,7 @@ export function createComponent(
   ) {
     const el = getRootElement(instance)
     if (el) {
-      renderEffect(() => {
-        isApplyingFallthroughProps = true
-        setDynamicProps(el, [instance.attrs])
-        isApplyingFallthroughProps = false
-      })
+      renderEffect(() => applyFallthroughProps(el, instance.attrs))
     }
   }
 
@@ -283,6 +280,15 @@ export function createComponent(
 }
 
 export let isApplyingFallthroughProps = false
+
+export function applyFallthroughProps(
+  block: Block,
+  attrs: Record<string, any>,
+): void {
+  isApplyingFallthroughProps = true
+  setDynamicProps(block as Element, [attrs])
+  isApplyingFallthroughProps = false
+}
 
 /**
  * dev only
@@ -318,7 +324,7 @@ export function devRender(instance: VaporComponentInstance): void {
         )) || []
 }
 
-const emptyContext: GenericAppContext = {
+export const emptyContext: GenericAppContext = {
   app: null as any,
   config: {},
   provides: /*@__PURE__*/ Object.create(null),
@@ -486,11 +492,13 @@ export function createComponentWithFallback(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {
-    return createComponent(comp, rawProps, rawSlots, isSingleRoot)
+    return createComponent(comp, rawProps, rawSlots, isSingleRoot, appContext)
   }
 
+  const el = createElement(comp)
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
@@ -499,7 +507,6 @@ export function createComponentWithFallback(
     resetInsertionState()
   }
 
-  const el = document.createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
 
