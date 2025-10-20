@@ -126,6 +126,7 @@ function createInnerComp(
   )
 
   // set ref
+  // @ts-expect-error
   frag && frag.setRef && frag.setRef(instance)
 
   // TODO custom element
