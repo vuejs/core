@@ -2,6 +2,7 @@ import {
   type App,
   type ComponentInternalInstance,
   type ConcreteComponent,
+  type KeepAliveContext,
   MoveType,
   type Plugin,
   type RendererElement,
@@ -11,6 +12,7 @@ import {
   type Slots,
   type TransitionHooks,
   type VNode,
+  type VNodeNormalizedRef,
   type VaporInteropInterface,
   createInternalObject,
   createVNode,
@@ -20,6 +22,7 @@ import {
   isEmitListener,
   isKeepAlive,
   isVNode,
+  normalizeRef,
   onScopeDispose,
   renderSlot,
   setTransitionHooks as setVNodeTransitionHooks,
@@ -28,6 +31,7 @@ import {
   simpleSetCurrentInstance,
   activate as vdomActivate,
   deactivate as vdomDeactivate,
+  setRef as vdomSetRef,
 } from '@vue/runtime-dom'
 import {
   type LooseRawProps,
@@ -60,13 +64,13 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import type { NodeRef } from './apiTemplateRef'
 import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
 import {
   type KeepAliveInstance,
   activate,
   deactivate,
 } from './components/KeepAlive'
-import type { KeepAliveContext } from 'packages/runtime-core/src/components/KeepAlive'
 
 export const interopKey: unique symbol = Symbol(`interop`)
 
@@ -260,9 +264,12 @@ function createVDOMComponent(
         : new Proxy(wrapper.slots, vaporSlotsProxyHandler)
   }
 
+  let rawRef: VNodeNormalizedRef | null = null
   let isMounted = false
   const parentInstance = currentInstance as VaporComponentInstance
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
+    // unset ref
+    if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
     if (transition) setVNodeTransitionHooks(vnode, transition)
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       vdomDeactivate(
@@ -305,6 +312,8 @@ function createVDOMComponent(
         undefined,
         false,
       )
+      // set ref
+      if (rawRef) vdomSetRef(rawRef, null, null, vnode)
       onScopeDispose(unmount, true)
       isMounted = true
     } else {
@@ -323,6 +332,22 @@ function createVDOMComponent(
   }
 
   frag.remove = unmount
+
+  frag.setRef = (
+    instance: VaporComponentInstance,
+    ref: NodeRef,
+    refFor: boolean,
+    refKey: string | undefined,
+  ): void => {
+    rawRef = normalizeRef(
+      {
+        ref: ref as any,
+        ref_for: refFor,
+        ref_key: refKey,
+      },
+      instance as any,
+    )
+  }
 
   return frag
 }

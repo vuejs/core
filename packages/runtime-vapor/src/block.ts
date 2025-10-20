@@ -9,6 +9,7 @@ import {
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, setActiveSub } from '@vue/reactivity'
 import { isHydrating } from './dom/hydration'
+import type { NodeRef } from './apiTemplateRef'
 import {
   type TransitionHooks,
   type TransitionProps,
@@ -53,6 +54,12 @@ export class VaporFragment<T extends Block = Block>
   nodes: T
   vnode?: VNode | null = null
   anchor?: Node
+  setRef?: (
+    instance: VaporComponentInstance,
+    ref: NodeRef,
+    refFor: boolean,
+    refKey: string | undefined,
+  ) => void
   fallback?: BlockFn
   $key?: any
   $transition?: VaporTransitionHooks | undefined

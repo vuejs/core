@@ -114,7 +114,11 @@ export { Fragment, Text, Comment, Static, type VNodeRef } from './vnode'
 // Built-in components
 export { Teleport, type TeleportProps } from './components/Teleport'
 export { Suspense, type SuspenseProps } from './components/Suspense'
-export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'
+export {
+  KeepAlive,
+  type KeepAliveProps,
+  type KeepAliveContext,
+} from './components/KeepAlive'
 export {
   BaseTransition,
   BaseTransitionPropsValidators,
@@ -563,6 +567,14 @@ export { startMeasure, endMeasure } from './profiling'
  * @internal
  */
 export { initFeatureFlags } from './featureFlags'
+/**
+ * @internal
+ */
+export { setRef } from './rendererTemplateRef'
+/**
+ * @internal
+ */
+export { type VNodeNormalizedRef, normalizeRef } from './vnode'
 /**
  * @internal
  */

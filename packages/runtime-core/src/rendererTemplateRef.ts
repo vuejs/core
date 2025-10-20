@@ -175,7 +175,7 @@ export function createCanSetSetupRefChecker(
   setupState: Data,
 ): (key: string) => boolean {
   const rawSetupState = toRaw(setupState)
-  return setupState === EMPTY_OBJ
+  return setupState === undefined || setupState === EMPTY_OBJ
     ? NO
     : (key: string) => {
         if (__DEV__) {

@@ -55,8 +55,8 @@ describe('compiler: template ref transform', () => {
       bindingMetadata: { foo: BindingTypes.SETUP_REF },
     })
     expect(code).matchSnapshot()
-    // pass the actual ref
-    expect(code).contains('_setTemplateRef(n0, foo)')
+    // pass the actual ref and ref key
+    expect(code).contains('_setTemplateRef(n0, foo, null, null, "foo")')
   })
 
   test('dynamic ref', () => {
