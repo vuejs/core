@@ -15,8 +15,10 @@ import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
+  ForFragment,
   VaporFragment,
   insert,
+  remove,
   remove as removeBlock,
 } from './block'
 import { warn } from '@vue/runtime-dom'
@@ -81,7 +83,7 @@ export const createFor = (
   setup?: (_: {
     createSelector: (source: () => any) => (cb: () => void) => void
   }) => void,
-): VaporFragment => {
+): ForFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
@@ -98,7 +100,7 @@ export const createFor = (
   let currentKey: any
   // TODO handle this in hydration
   const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
-  const frag = new VaporFragment(oldBlocks)
+  const frag = new ForFragment(oldBlocks)
   const instance = currentInstance!
   const canUseFastRemove = !!(flags & VaporVForFlags.FAST_REMOVE)
   const isComponent = !!(flags & VaporVForFlags.IS_COMPONENT)
@@ -116,6 +118,7 @@ export const createFor = (
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
+    let isFallback = false
 
     const prevSub = setActiveSub()
 
@@ -127,6 +130,11 @@ export const createFor = (
     } else {
       parent = parent || parentAnchor!.parentNode
       if (!oldLength) {
+        // remove fallback nodes
+        if (frag.fallback && (frag.nodes[0] as Block[]).length > 0) {
+          remove(frag.nodes[0], parent!)
+        }
+
         // fast path for all new
         for (let i = 0; i < newLength; i++) {
           mount(source, i)
@@ -143,6 +151,12 @@ export const createFor = (
         if (canUseFastRemove) {
           parent!.textContent = ''
           parent!.appendChild(parentAnchor)
+        }
+
+        // render fallback nodes
+        if (frag.fallback) {
+          insert((frag.nodes[0] = frag.fallback()), parent!, parentAnchor)
+          isFallback = true
         }
       } else if (!getKey) {
         // unkeyed fast path
@@ -343,11 +357,12 @@ export const createFor = (
       }
     }
 
-    frag.nodes = [(oldBlocks = newBlocks)]
-    if (parentAnchor) {
-      frag.nodes.push(parentAnchor)
+    if (!isFallback) {
+      frag.nodes = [(oldBlocks = newBlocks)]
+      if (parentAnchor) frag.nodes.push(parentAnchor)
+    } else {
+      oldBlocks = []
     }
-
     setActiveSub(prevSub)
   }
 

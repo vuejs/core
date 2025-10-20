@@ -47,12 +47,15 @@ export type Block = TransitionBlock | VaporComponentInstance | Block[]
 
 export type BlockFn = (...args: any[]) => Block
 
-export class VaporFragment implements TransitionOptions {
-  $key?: any
-  $transition?: VaporTransitionHooks | undefined
-  nodes: Block
+export class VaporFragment<T extends Block = Block>
+  implements TransitionOptions
+{
+  nodes: T
   vnode?: VNode | null = null
   anchor?: Node
+  fallback?: BlockFn
+  $key?: any
+  $transition?: VaporTransitionHooks | undefined
   insert?: (
     parent: ParentNode,
     anchor: Node | null,
@@ -60,8 +63,14 @@ export class VaporFragment implements TransitionOptions {
   ) => void
   remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
 
-  constructor(nodes: Block) {
+  constructor(nodes: T) {
     this.nodes = nodes
+  }
+}
+
+export class ForFragment extends VaporFragment<Block[]> {
+  constructor(nodes: Block[]) {
+    super(nodes)
   }
 }
 
@@ -69,7 +78,6 @@ export class DynamicFragment extends VaporFragment {
   anchor: Node
   scope: EffectScope | undefined
   current?: BlockFn
-  fallback?: BlockFn
 
   constructor(anchorLabel?: string) {
     super([])
@@ -125,16 +133,73 @@ export class DynamicFragment extends VaporFragment {
 
     renderBranch()
 
-    if (this.fallback && !isValidBlock(this.nodes)) {
-      parent && remove(this.nodes, parent)
-      this.nodes =
-        (this.scope || (this.scope = new EffectScope())).run(this.fallback) ||
-        []
-      parent && insert(this.nodes, parent, this.anchor)
+    if (this.fallback) {
+      // set fallback for nested fragments
+      const hasNestedFragment = isFragment(this.nodes)
+      if (hasNestedFragment) {
+        setFragmentFallback(this.nodes as VaporFragment, this.fallback)
+      }
+
+      const invalidFragment = findInvalidFragment(this)
+      if (invalidFragment) {
+        parent && remove(this.nodes, parent)
+        const scope = this.scope || (this.scope = new EffectScope())
+        scope.run(() => {
+          // for nested fragments, render invalid fragment's fallback
+          if (hasNestedFragment) {
+            renderFragmentFallback(invalidFragment)
+          } else {
+            this.nodes = this.fallback!() || []
+          }
+        })
+        parent && insert(this.nodes, parent, this.anchor)
+      }
     }
 
     setActiveSub(prevSub)
   }
+}
+
+export function setFragmentFallback(
+  fragment: VaporFragment,
+  fallback: BlockFn,
+): void {
+  if (fragment.fallback) {
+    const originalFallback = fragment.fallback
+    // if the original fallback also renders invalid blocks,
+    // this ensures proper fallback chaining
+    fragment.fallback = () => {
+      const fallbackNodes = originalFallback()
+      if (isValidBlock(fallbackNodes)) {
+        return fallbackNodes
+      }
+      return fallback()
+    }
+  } else {
+    fragment.fallback = fallback
+  }
+
+  if (isFragment(fragment.nodes)) {
+    setFragmentFallback(fragment.nodes, fragment.fallback)
+  }
+}
+
+function renderFragmentFallback(fragment: VaporFragment): void {
+  if (fragment instanceof ForFragment) {
+    fragment.nodes[0] = [fragment.fallback!() || []] as Block[]
+  } else if (fragment instanceof DynamicFragment) {
+    fragment.update(fragment.fallback)
+  } else {
+    // vdom slots
+  }
+}
+
+function findInvalidFragment(fragment: VaporFragment): VaporFragment | null {
+  if (isValidBlock(fragment.nodes)) return null
+
+  return isFragment(fragment.nodes)
+    ? findInvalidFragment(fragment.nodes) || fragment
+    : fragment
 }
 
 export function isFragment(val: NonNullable<unknown>): val is VaporFragment {
@@ -156,7 +221,7 @@ export function isValidBlock(block: Block): boolean {
   } else if (isVaporComponent(block)) {
     return isValidBlock(block.block)
   } else if (isArray(block)) {
-    return block.length > 0 && block.every(isValidBlock)
+    return block.length > 0 && block.some(isValidBlock)
   } else {
     // fragment
     return isValidBlock(block.nodes)
@@ -181,7 +246,7 @@ export function insert(
         performTransitionEnter(
           block,
           (block as TransitionBlock).$transition as TransitionHooks,
-          () => parent.insertBefore(block, anchor),
+          () => parent.insertBefore(block, anchor as Node),
           parentSuspense,
         )
       } else {
@@ -199,6 +264,10 @@ export function insert(
       insert(b, parent, anchor)
     }
   } else {
+    if (block.anchor) {
+      insert(block.anchor, parent, anchor)
+      anchor = block.anchor
+    }
     // fragment
     if (block.insert) {
       // TODO handle hydration for vdom interop
@@ -206,7 +275,6 @@ export function insert(
     } else {
       insert(block.nodes, parent, anchor, parentSuspense)
     }
-    if (block.anchor) insert(block.anchor, parent, anchor)
   }
 }
 

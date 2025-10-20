@@ -14,7 +14,7 @@ export {
   isVaporComponent,
 } from './component'
 export { renderEffect } from './renderEffect'
-export { createSlot } from './componentSlots'
+export { createSlot, forwardedSlotCreator } from './componentSlots'
 export { template } from './dom/template'
 export { createTextNode, child, nthChild, next } from './dom/node'
 export {

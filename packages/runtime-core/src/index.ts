@@ -566,6 +566,10 @@ export { initFeatureFlags } from './featureFlags'
 /**
  * @internal
  */
+export { ensureVaporSlotFallback } from './helpers/renderSlot'
+/**
+ * @internal
+ */
 export { getComponentName } from './component'
 /**
  * @internal
