@@ -197,7 +197,7 @@ function isValidTransitionBlock(block: Block): boolean {
 }
 
 function getTransitionElement(c: TransitionBlock): Element {
-  return (isFragment(c) ? (c.nodes as Element[])[0] : c) as Element
+  return (isFragment(c) ? (c.nodes as Element) : c) as Element
 }
 
 function recordPosition(c: TransitionBlock) {

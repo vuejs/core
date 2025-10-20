@@ -9,7 +9,7 @@ export function render(_ctx) {
   const n2 = _createComponentWithFallback(_component_Comp, null, {
     $: [
       () => ({
-        name: _ctx.name, 
+        name: _ctx.name,
         fn: () => {
           const n0 = t0()
           return n0
@@ -30,7 +30,7 @@ export function render(_ctx) {
   const n2 = _createComponentWithFallback(_component_Comp, null, {
     $: [
       () => (_createForSlots(_ctx.list, (item) => ({
-        name: item, 
+        name: item,
         fn: (_slotProps0) => {
           const n0 = t0()
           _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["bar"])))
@@ -52,7 +52,7 @@ export function render(_ctx) {
   const n2 = _createComponentWithFallback(_component_Comp, null, {
     $: [
       () => (_createForSlots(_ctx.list, (_, __, index) => ({
-        name: index, 
+        name: index,
         fn: () => {
           const n0 = t0()
           return n0
@@ -76,7 +76,7 @@ export function render(_ctx) {
     $: [
       () => (_ctx.condition
         ? {
-          name: "condition", 
+          name: "condition",
           fn: () => {
             const n0 = t0()
             return n0
@@ -84,14 +84,14 @@ export function render(_ctx) {
         }
         : _ctx.anotherCondition
           ? {
-            name: "condition", 
+            name: "condition",
             fn: (_slotProps0) => {
               const n2 = t1()
               return n2
             }
           }
           : {
-            name: "condition", 
+            name: "condition",
             fn: () => {
               const n4 = t2()
               return n4
@@ -131,7 +131,7 @@ export function render(_ctx) {
     "one": () => {
       const n0 = t0()
       return n0
-    }, 
+    },
     "default": () => {
       const n2 = t1()
       const n3 = t2()
@@ -192,7 +192,7 @@ export function render(_ctx) {
   const n1 = _createComponentWithFallback(_component_Comp, null, {
     $: [
       () => ({
-        name: _ctx.named, 
+        name: _ctx.named,
         fn: (_slotProps0) => {
           const n0 = t0()
           _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
@@ -287,7 +287,7 @@ export function render(_ctx) {
     "header": () => {
       const n0 = t0()
       return n0
-    }, 
+    },
     "default": () => {
       const n2 = t1()
       const n3 = t2()
@@ -309,7 +309,7 @@ export function render(_ctx) {
     "header": () => {
       const n0 = t0()
       return n0
-    }, 
+    },
     "default": () => {
       const n3 = t1()
       return n3
@@ -330,7 +330,7 @@ export function render(_ctx) {
     "header": () => {
       const n0 = t0()
       return n0
-    }, 
+    },
     "footer": () => {
       const n3 = t1()
       return n3

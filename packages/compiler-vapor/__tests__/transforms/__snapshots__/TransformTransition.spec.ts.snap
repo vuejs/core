@@ -76,7 +76,7 @@ const t0 = _template("<h1>foo</h1>")
 export function render(_ctx) {
   const deferredApplyVShows = []
   const n1 = _createComponent(_VaporTransition, {
-    appear: () => (""), 
+    appear: () => (""),
     persisted: () => ("")
   }, {
     "default": () => {

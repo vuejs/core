@@ -571,3 +571,7 @@ export { performTransitionEnter, performTransitionLeave } from './renderer'
  * @internal
  */
 export { createInternalObject } from './internalObject'
+/**
+ * @internal
+ */
+export { createCanSetSetupRefChecker } from './rendererTemplateRef'
