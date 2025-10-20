@@ -27,10 +27,10 @@ export const TeleportEndKey: unique symbol = Symbol('_vte')
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
 
-const isTeleportDisabled = (props: VNode['props']): boolean =>
+export const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
-const isTeleportDeferred = (props: VNode['props']): boolean =>
+export const isTeleportDeferred = (props: VNode['props']): boolean =>
   props && (props.defer || props.defer === '')
 
 const isTargetSVG = (target: RendererElement): boolean =>
@@ -39,7 +39,7 @@ const isTargetSVG = (target: RendererElement): boolean =>
 const isTargetMathML = (target: RendererElement): boolean =>
   typeof MathMLElement === 'function' && target instanceof MathMLElement
 
-const resolveTarget = <T = RendererElement>(
+export const resolveTarget = <T = RendererElement>(
   props: TeleportProps | null,
   select: RendererOptions['querySelector'],
 ): T | null => {
@@ -394,7 +394,7 @@ function moveTeleport(
   }
 }
 
-interface TeleportTargetElement extends Element {
+export interface TeleportTargetElement extends Element {
   // last teleport target
   _lpa?: Node | null
 }

@@ -110,4 +110,22 @@ describe('api: createDynamicComponent', () => {
     await nextTick()
     expect(html()).toBe('<div><div>B</div><!--dynamic-component--></div>')
   })
+
+  test('render fallback with insertionState', async () => {
+    const { html, mount } = define({
+      setup() {
+        const html = ref('hi')
+        const n1 = template('<div></div>', true)() as any
+        setInsertionState(n1)
+        const n0 = createComponentWithFallback(
+          resolveDynamicComponent('button') as any,
+        ) as any
+        renderEffect(() => setHtml(n0, html.value))
+        return n1
+      },
+    }).create()
+
+    mount()
+    expect(html()).toBe('<div><button>hi</button></div>')
+  })
 })

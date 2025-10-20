@@ -118,6 +118,7 @@ export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'
 export {
   BaseTransition,
   BaseTransitionPropsValidators,
+  checkTransitionMode,
   type BaseTransitionProps,
 } from './components/BaseTransition'
 // For using custom directives
@@ -129,6 +130,7 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
+export type { SchedulerJob } from './scheduler'
 import { warn as _warn } from './warning'
 export const warn = (__DEV__ ? _warn : NOOP) as typeof _warn
 
@@ -150,8 +152,10 @@ export { registerRuntimeCompiler, isRuntimeOnly } from './component'
 export {
   useTransitionState,
   resolveTransitionHooks,
+  baseResolveTransitionHooks,
   setTransitionHooks,
   getTransitionRawChildren,
+  leaveCbKey,
 } from './components/BaseTransition'
 export { initCustomFormatter } from './customFormatter'
 
@@ -267,6 +271,7 @@ export type {
   GlobalDirectives,
   ComponentInstance,
   ComponentCustomElementInterface,
+  AsyncComponentInternalOptions,
 } from './component'
 export type {
   DefineComponent,
@@ -335,6 +340,8 @@ export type { SuspenseBoundary } from './components/Suspense'
 export type {
   TransitionState,
   TransitionHooks,
+  TransitionHooksContext,
+  TransitionElement,
 } from './components/BaseTransition'
 export type {
   AsyncComponentOptions,
@@ -505,7 +512,11 @@ export { type VaporInteropInterface } from './apiCreateApp'
 /**
  * @internal
  */
-export { type RendererInternals, MoveType } from './renderer'
+export {
+  type RendererInternals,
+  MoveType,
+  getInheritedScopeIds,
+} from './renderer'
 /**
  * @internal
  */
@@ -521,11 +532,16 @@ export { baseEmit, isEmitListener } from './componentEmits'
 /**
  * @internal
  */
-export { type SchedulerJob, queueJob, flushOnAppMount } from './scheduler'
+export { queueJob, flushOnAppMount } from './scheduler'
 /**
  * @internal
  */
-export { expose, nextUid, validateComponentName } from './component'
+export {
+  expose,
+  nextUid,
+  validateComponentName,
+  isInSSRComponentSetup,
+} from './component'
 /**
  * @internal
  */
@@ -561,8 +577,59 @@ export { initFeatureFlags } from './featureFlags'
 /**
  * @internal
  */
+export { performTransitionEnter, performTransitionLeave } from './renderer'
+/**
+ * @internal
+ */
+export { ensureVaporSlotFallback } from './helpers/renderSlot'
+/**
+ * @internal
+ */
+export {
+  resolveTarget as resolveTeleportTarget,
+  isTeleportDisabled,
+  isTeleportDeferred,
+} from './components/Teleport'
+/**
+ * @internal
+ */
+export type { TeleportTargetElement } from './components/Teleport'
+/**
+ * @internal
+ */
+export {
+  createAsyncComponentContext,
+  useAsyncComponentState,
+  isAsyncWrapper,
+  performAsyncHydrate,
+} from './apiAsyncComponent'
+/**
+ * @internal
+ */
+export { markAsyncBoundary } from './helpers/useId'
+/**
+ * @internal
+ */
 export { createInternalObject } from './internalObject'
 /**
  * @internal
  */
+export {
+  MismatchTypes,
+  isMismatchAllowed,
+  toClassSet,
+  isSetEqual,
+  warnPropMismatch,
+  toStyleMap,
+  isMapEqual,
+  isValidHtmlOrSvgAttribute,
+  getAttributeMismatch,
+} from './hydration'
+/**
+ * @internal
+ */
 export { createCanSetSetupRefChecker } from './rendererTemplateRef'
+/**
+ * @internal
+ */
+export { isTemplateNode } from './hydration'

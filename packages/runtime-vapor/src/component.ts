@@ -1,4 +1,5 @@
 import {
+  type AsyncComponentInternalOptions,
   type ComponentInternalOptions,
   type ComponentPropsOptions,
   EffectScope,
@@ -15,6 +16,7 @@ import {
   currentInstance,
   endMeasure,
   expose,
+  isAsyncWrapper,
   nextUid,
   popWarningContext,
   pushWarningContext,
@@ -25,7 +27,14 @@ import {
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, DynamicFragment, insert, isBlock, remove } from './block'
+import {
+  type Block,
+  insert,
+  isBlock,
+  remove,
+  setComponentScopeId,
+  setScopeId,
+} from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -45,7 +54,7 @@ import {
   resolveDynamicProps,
   setupPropsValidation,
 } from './componentProps'
-import { renderEffect } from './renderEffect'
+import { type RenderEffect, renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
 import { setDynamicProps } from './dom/prop'
 import {
@@ -57,12 +66,25 @@ import {
   getSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { _next, createElement } from './dom/node'
+import {
+  adoptTemplate,
+  advanceHydrationNode,
+  currentHydrationNode,
+  isComment,
+  isHydrating,
+  locateEndAnchor,
+  locateHydrationNode,
+  setCurrentHydrationNode,
+} from './dom/hydration'
+import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
+import { DynamicFragment } from './fragment'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -80,6 +102,7 @@ export type FunctionalVaporComponent = VaporSetupFn &
 
 export interface ObjectVaporComponent
   extends ComponentInternalOptions,
+    AsyncComponentInternalOptions<ObjectVaporComponent, VaporComponentInstance>,
     SharedInternalOptions {
   setup?: VaporSetupFn
   inheritAttrs?: boolean
@@ -137,12 +160,15 @@ export function createComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean, // TODO once support
+  scopeId?: string,
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
     emptyContext,
 ): VaporComponentInstance {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (isHydrating) {
     locateHydrationNode()
   } else {
@@ -173,11 +199,34 @@ export function createComponent(
       component as any,
       rawProps,
       rawSlots,
+      scopeId,
     )
-    if (!isHydrating && _insertionParent) {
-      insert(frag, _insertionParent, _insertionAnchor)
+
+    if (!isHydrating) {
+      if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+    } else {
+      frag.hydrate()
+      if (_isLastInsertion) {
+        advanceHydrationNode(_insertionParent!)
+      }
     }
+
     return frag
+  }
+
+  // teleport
+  if (isVaporTeleport(component)) {
+    const frag = component.process(rawProps!, rawSlots!)
+    if (!isHydrating) {
+      if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+    } else {
+      frag.hydrate()
+      if (_isLastInsertion) {
+        advanceHydrationNode(_insertionParent!)
+      }
+    }
+
+    return frag as any
   }
 
   const instance = new VaporComponentInstance(
@@ -204,6 +253,64 @@ export function createComponent(
     instance.emitsOptions = normalizeEmitsOptions(component)
   }
 
+  // hydrating async component
+  if (
+    isHydrating &&
+    isAsyncWrapper(instance) &&
+    component.__asyncHydrate &&
+    !component.__asyncResolved
+  ) {
+    // it may get unmounted before its inner component is loaded,
+    // so we need to give it a placeholder block that matches its
+    // adopted DOM
+    const el = currentHydrationNode!
+    if (isComment(el, '[')) {
+      const end = _next(locateEndAnchor(el)!)
+      const block = (instance.block = [el as Node])
+      let cur = el as Node
+      while (true) {
+        let n = _next(cur)
+        if (n && n !== end) {
+          block.push((cur = n))
+        } else {
+          break
+        }
+      }
+    } else {
+      instance.block = el
+    }
+    // also mark it as mounted to ensure it can be unmounted before
+    // its inner component is resolved
+    instance.isMounted = true
+
+    // advance current hydration node to the nextSibling
+    setCurrentHydrationNode(
+      isComment(el, '[') ? locateEndAnchor(el)! : el.nextSibling,
+    )
+    component.__asyncHydrate(el as Element, instance, () =>
+      setupComponent(instance, component, scopeId),
+    )
+  } else {
+    setupComponent(instance, component, scopeId)
+  }
+
+  onScopeDispose(() => unmountComponent(instance), true)
+
+  if (_insertionParent || isHydrating) {
+    mountComponent(instance, _insertionParent!, _insertionAnchor)
+  }
+
+  if (isHydrating && _insertionAnchor !== undefined) {
+    advanceHydrationNode(_insertionParent!)
+  }
+  return instance
+}
+
+export function setupComponent(
+  instance: VaporComponentInstance,
+  component: VaporComponent,
+  scopeId: string | undefined,
+): void {
   const prevInstance = setCurrentInstance(instance)
   const prevSub = setActiveSub()
 
@@ -257,13 +364,11 @@ export function createComponent(
   ) {
     const el = getRootElement(instance)
     if (el) {
-      renderEffect(() => {
-        isApplyingFallthroughProps = true
-        setDynamicProps(el, [instance.attrs])
-        isApplyingFallthroughProps = false
-      })
+      renderEffect(() => applyFallthroughProps(el, instance.attrs))
     }
   }
+
+  if (scopeId) setScopeId(instance.block, scopeId)
 
   setActiveSub(prevSub)
   setCurrentInstance(...prevInstance)
@@ -272,17 +377,18 @@ export function createComponent(
     popWarningContext()
     endMeasure(instance, 'init')
   }
-
-  onScopeDispose(() => unmountComponent(instance), true)
-
-  if (!isHydrating && _insertionParent) {
-    mountComponent(instance, _insertionParent, _insertionAnchor)
-  }
-
-  return instance
 }
 
 export let isApplyingFallthroughProps = false
+
+export function applyFallthroughProps(
+  block: Block,
+  attrs: Record<string, any>,
+): void {
+  isApplyingFallthroughProps = true
+  setDynamicProps(block as Element, [attrs])
+  isApplyingFallthroughProps = false
+}
 
 /**
  * dev only
@@ -318,7 +424,7 @@ export function devRender(instance: VaporComponentInstance): void {
         )) || []
 }
 
-const emptyContext: GenericAppContext = {
+export const emptyContext: GenericAppContext = {
   app: null as any,
   config: {},
   provides: /*@__PURE__*/ Object.create(null),
@@ -392,6 +498,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void
+  renderEffects?: RenderEffect[]
+  parentTeleport?: TeleportFragment | null
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
@@ -486,22 +594,39 @@ export function createComponentWithFallback(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean,
+  scopeId?: string,
+  appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {
-    return createComponent(comp, rawProps, rawSlots, isSingleRoot)
+    return createComponent(
+      comp,
+      rawProps,
+      rawSlots,
+      isSingleRoot,
+      once,
+      scopeId,
+      appContext,
+    )
   }
 
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (isHydrating) {
     locateHydrationNode()
   } else {
     resetInsertionState()
   }
 
-  const el = document.createElement(comp)
+  const el = isHydrating
+    ? (adoptTemplate(currentHydrationNode!, `<${comp}/>`) as HTMLElement)
+    : createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
+
+  scopeId = scopeId || currentInstance!.type.__scopeId
+  if (scopeId) setScopeId(el, scopeId)
 
   if (rawProps) {
     renderEffect(() => {
@@ -510,15 +635,27 @@ export function createComponentWithFallback(
   }
 
   if (rawSlots) {
+    let prev: Node
+    if (isHydrating) {
+      prev = currentHydrationNode!
+      setCurrentHydrationNode(el.firstChild)
+    }
     if (rawSlots.$) {
       // TODO dynamic slot fragment
     } else {
       insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
     }
+    if (isHydrating) {
+      setCurrentHydrationNode(prev!)
+    }
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(el, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (_insertionParent) insert(el, _insertionParent, _insertionAnchor)
+  } else {
+    if (_isLastInsertion) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
 
   return el
@@ -533,7 +670,10 @@ export function mountComponent(
     startMeasure(instance, `mount`)
   }
   if (instance.bm) invokeArrayFns(instance.bm)
-  insert(instance.block, parent, anchor)
+  if (!isHydrating) {
+    insert(instance.block, parent, anchor)
+    setComponentScopeId(instance)
+  }
   if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
   instance.isMounted = true
   if (__DEV__) {

@@ -1,5 +1,31 @@
-export let insertionParent: ParentNode | undefined
-export let insertionAnchor: Node | 0 | undefined
+import { isHydrating } from './dom/hydration'
+export type ChildItem = ChildNode & {
+  // logical index, used during hydration to locate the node
+  $idx: number
+  // last inserted node
+  $lin?: Node | null
+}
+
+export type InsertionParent = ParentNode & {
+  // cache the first child for potential consecutive prepends
+  $fc?: Node | null
+
+  // last located logical child
+  $llc?: Node | null
+  // last prepend node
+  $lpn?: Node | null
+  // last append node
+  $lan?: Node | null
+  // the logical index of current hydration node
+  $curIdx?: number
+}
+export let insertionParent: InsertionParent | undefined
+export let insertionAnchor: Node | 0 | undefined | null
+
+// indicates whether the insertion is the last one in the parent.
+// if true, means no more nodes need to be hydrated after this insertion,
+// advancing current hydration node to parent nextSibling
+export let isLastInsertion: boolean | undefined
 
 /**
  * This function is called before a block type that requires insertion
@@ -7,21 +33,30 @@ export let insertionAnchor: Node | 0 | undefined
  * insertion on client-side render, and used for node adoption during hydration.
  */
 export function setInsertionState(
-  parent: ParentNode & { $anchor?: Node | null },
-  anchor?: Node | 0,
+  parent: ParentNode & { $fc?: Node | null },
+  anchor?: Node | 0 | null | number,
+  last?: boolean,
 ): void {
-  // When setInsertionState(n3, 0) is called consecutively, the first prepend operation
-  // uses parent.firstChild as the anchor. However, after insertion, parent.firstChild
-  // changes and cannot serve as the anchor for subsequent prepends. Therefore, we cache
-  // the original parent.firstChild on the first call for subsequent prepend operations.
-  if (anchor === 0 && !parent.$anchor) {
-    parent.$anchor = parent.firstChild
-  }
-
   insertionParent = parent
-  insertionAnchor = anchor
+  isLastInsertion = last
+
+  if (anchor !== undefined) {
+    if (isHydrating) {
+      insertionAnchor = anchor as Node
+    } else {
+      // special handling append anchor value to null
+      insertionAnchor =
+        typeof anchor === 'number' && anchor > 0 ? null : (anchor as Node)
+
+      if (anchor === 0 && !parent.$fc) {
+        parent.$fc = parent.firstChild
+      }
+    }
+  } else {
+    insertionAnchor = undefined
+  }
 }
 
 export function resetInsertionState(): void {
-  insertionParent = insertionAnchor = undefined
+  insertionParent = insertionAnchor = isLastInsertion = undefined
 }
