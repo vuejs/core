@@ -312,7 +312,7 @@ export function createHydrationFunctions(
 
           // hydrate vapor component
           if ((vnode.type as ConcreteComponent).__vapor) {
-            nextNode = getVaporInterface(parentComponent, vnode).hydrate(
+            getVaporInterface(parentComponent, vnode).hydrate(
               vnode,
               node,
               container,
@@ -658,17 +658,6 @@ export function createHydrationFunctions(
           slotScopeIds,
         )
       }
-    }
-
-    // the server output does not contain blank text nodes. It appears here that
-    // it is a dynamically inserted anchor, and needs to be skipped.
-    // e.g. vaporInteropImpl.mount() > selfAnchor
-    if (
-      node &&
-      node.nodeType === DOMNodeTypes.TEXT &&
-      !(node as Text).data.trim()
-    ) {
-      node = nextSibling(node)
     }
     return node
   }

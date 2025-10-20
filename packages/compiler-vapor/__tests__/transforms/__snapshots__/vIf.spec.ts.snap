@@ -149,7 +149,7 @@ export function render(_ctx) {
     const n2 = t0()
     return n2
   })
-  _setInsertionState(n8, null)
+  _setInsertionState(n8, null, true)
   const n3 = _createIf(() => (_ctx.bar), () => {
     const n5 = t1()
     return n5

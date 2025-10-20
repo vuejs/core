@@ -3,6 +3,7 @@ import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import { renderEffect } from './renderEffect'
@@ -15,6 +16,7 @@ export function createIf(
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
 
   let frag: Block
@@ -29,13 +31,7 @@ export function createIf(
   if (!isHydrating) {
     if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
   } else {
-    // After block node hydration is completed, advance currentHydrationNode to
-    // _insertionParent's next sibling if _insertionAnchor has a value
-    // _insertionAnchor values:
-    // 1. insert: _insertionAnchor is a static node, no hydration needed
-    // 2. append: block node is appended, potentially without next sibling
-    // 3. prepend: next sibling of current block node is static, no hydration needed
-    if (_insertionAnchor !== undefined) {
+    if (_isLastInsertion) {
       advanceHydrationNode(_insertionParent!)
     }
   }

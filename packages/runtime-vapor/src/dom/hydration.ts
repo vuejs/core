@@ -1,7 +1,6 @@
 import { MismatchTypes, isMismatchAllowed, warn } from '@vue/runtime-dom'
 import {
   type ChildItem,
-  incrementIndexOffset,
   insertionAnchor,
   insertionParent,
   resetInsertionState,
@@ -10,11 +9,11 @@ import {
 import {
   _child,
   _next,
-  child,
   createElement,
   createTextNode,
-  disableHydrationNodeHelper,
-  enableHydrationNodeHelper,
+  disableHydrationNodeLookup,
+  enableHydrationNodeLookup,
+  locateChildByLogicalIndex,
   parentNode,
 } from './node'
 import { remove } from '../block'
@@ -22,6 +21,24 @@ import { remove } from '../block'
 const isHydratingStack = [] as boolean[]
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
+
+function pushIsHydrating(value: boolean): void {
+  isHydratingStack.push((isHydrating = value))
+}
+
+function popIsHydrating(): void {
+  isHydratingStack.pop()
+  isHydrating = isHydratingStack[isHydratingStack.length - 1] || false
+}
+
+export function runWithoutHydration(fn: () => any): any {
+  try {
+    pushIsHydrating(false)
+    return fn()
+  } finally {
+    popIsHydrating()
+  }
+}
 
 let isOptimized = false
 
@@ -36,25 +53,23 @@ function performHydration<T>(
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
     ;(Node.prototype as any).$pns = undefined
-    ;(Node.prototype as any).$uc = undefined
     ;(Node.prototype as any).$idx = undefined
-    ;(Node.prototype as any).$children = undefined
-    ;(Node.prototype as any).$idxMap = undefined
-    ;(Node.prototype as any).$prevDynamicCount = undefined
-    ;(Node.prototype as any).$anchorCount = undefined
-    ;(Node.prototype as any).$appendIndex = undefined
-    ;(Node.prototype as any).$indexOffset = undefined
+    ;(Node.prototype as any).$llc = undefined
+    ;(Node.prototype as any).$lpn = undefined
+    ;(Node.prototype as any).$lan = undefined
+    ;(Node.prototype as any).$lin = undefined
+    ;(Node.prototype as any).$curIdx = undefined
+
     isOptimized = true
   }
-  enableHydrationNodeHelper()
-  isHydratingStack.push((isHydrating = true))
+  enableHydrationNodeLookup()
+  pushIsHydrating(true)
   setup()
   const res = fn()
   cleanup()
   currentHydrationNode = null
-  isHydratingStack.pop()
-  isHydrating = isHydratingStack[isHydratingStack.length - 1] || false
-  if (!isHydrating) disableHydrationNodeHelper()
+  popIsHydrating()
+  if (!isHydrating) disableHydrationNodeLookup()
   return res
 }
 
@@ -96,7 +111,7 @@ export function advanceHydrationNode(
 ): void {
   // if no next sibling, find the next node in the parent chain
   const ret =
-    _next(node) ||
+    node.nextSibling ||
     // pns is short for "parent next sibling"
     node.$pns ||
     (node.$pns = locateNextSiblingOfParent(node))
@@ -110,7 +125,7 @@ export function advanceHydrationNode(
 function adoptTemplateImpl(node: Node, template: string): Node | null {
   if (!(template[0] === '<' && template[1] === '!')) {
     while (node.nodeType === 8) {
-      node = _next(node)
+      node = node.nextSibling!
 
       // empty text node in slot
       if (
@@ -118,9 +133,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
         isComment(node, ']') &&
         isComment(node.previousSibling!, '[')
       ) {
-        const parent = parentNode(node)!
-        node = parent.insertBefore(createTextNode(), node)
-        incrementIndexOffset(parent)
+        node.before((node = createTextNode()))
         break
       }
     }
@@ -137,71 +150,47 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
     node = handleMismatch(node, template)
   }
 
-  advanceHydrationNode(node)
+  currentHydrationNode = node.nextSibling
   return node
+}
+
+export function locateNextNode(node: Node): Node | null {
+  return isComment(node, '[')
+    ? _next(locateEndAnchor(node)!)
+    : isComment(node, 'teleport start')
+      ? _next(locateEndAnchor(node, 'teleport start', 'teleport end')!)
+      : _next(node)
 }
 
 function locateHydrationNodeImpl(): void {
   let node: Node | null
-  let idxMap: number[] | undefined
-  if (insertionAnchor !== undefined && (idxMap = insertionParent!.$idxMap)) {
-    const {
-      $prevDynamicCount: prevDynamicCount = 0,
-      $appendIndex: appendIndex,
-      $indexOffset: indexOffset = 0,
-      $anchorCount: anchorCount = 0,
-    } = insertionParent!
+  if (insertionAnchor !== undefined) {
+    const { $lpn: lastPrepend, $lan: lastAppend, firstChild } = insertionParent!
     // prepend
     if (insertionAnchor === 0) {
-      // use prevDynamicCount as logical index to locate the hydration node
-      const realIndex = idxMap![prevDynamicCount] + indexOffset
-      node = insertionParent!.childNodes[realIndex]
+      node = insertionParent!.$lpn = lastPrepend
+        ? locateNextNode(lastPrepend)
+        : firstChild
     }
     // insert
     else if (insertionAnchor instanceof Node) {
-      // handling insertion anchors:
-      // 1. first encounter: use insertionAnchor itself as the hydration node
-      // 2. subsequent: use node following the insertionAnchor as the hydration node
-      // used count tracks how many times insertionAnchor has been used, ensuring
-      // consecutive insert operations locate the correct hydration node.
-      let { $idx, $uc: usedCount } = insertionAnchor as ChildItem
-      if (usedCount !== undefined) {
-        const realIndex = idxMap![$idx + usedCount + 1] + indexOffset
-        node = insertionParent!.childNodes[realIndex]
-        usedCount++
-      } else {
-        node = insertionAnchor
-        // first use of this anchor: it doesn't consume the next child
-        // so we track unique anchor appearances for later offset correction
-        insertionParent!.$anchorCount = anchorCount + 1
-        usedCount = 0
-      }
-      ;(insertionAnchor as ChildItem).$uc = usedCount
+      const { $lin: lastInsertedNode } = insertionAnchor as ChildItem
+      node = (insertionAnchor as ChildItem).$lin = lastInsertedNode
+        ? locateNextNode(lastInsertedNode)
+        : insertionAnchor
     }
     // append
     else {
-      let realIndex: number
-      if (appendIndex !== null && appendIndex !== undefined) {
-        realIndex = idxMap![appendIndex + 1] + indexOffset
-        node = insertionParent!.childNodes[realIndex]
-      } else {
-        if (insertionAnchor === null) {
-          // insertionAnchor is null, indicates no previous static nodes
-          // use the first child as hydration node
-          realIndex = idxMap![0] + indexOffset
-          node = insertionParent!.childNodes[realIndex]
-        } else {
-          // insertionAnchor is a number > 0
-          // indicates how many static nodes precede the node to append
-          // use it as index to locate the hydration node
-          realIndex = idxMap![prevDynamicCount + insertionAnchor] + indexOffset
-          node = insertionParent!.childNodes[realIndex]
-        }
-      }
-      insertionParent!.$appendIndex = (node as ChildItem).$idx
+      node = insertionParent!.$lan = lastAppend
+        ? locateNextNode(lastAppend)
+        : insertionAnchor === null
+          ? firstChild
+          : locateChildByLogicalIndex(insertionParent!, insertionAnchor)!
     }
 
-    insertionParent!.$prevDynamicCount = prevDynamicCount + 1
+    insertionParent!.$llc = node
+    ;(node as ChildItem).$idx = insertionParent!.$curIdx =
+      insertionParent!.$curIdx === undefined ? 0 : insertionParent!.$curIdx + 1
   } else {
     node = currentHydrationNode
     if (insertionParent && (!node || node.parentNode !== insertionParent)) {
@@ -210,8 +199,10 @@ function locateHydrationNodeImpl(): void {
   }
 
   if (__DEV__ && !node) {
-    // TODO more info
-    warn('Hydration mismatch in ', insertionParent)
+    throw new Error(
+      `No current hydration node was found.\n` +
+        `this is likely a Vue internal bug.`,
+    )
   }
 
   resetInsertionState()
@@ -229,7 +220,7 @@ export function locateEndAnchor(
   }
 
   const stack: Anchor[] = [node]
-  while ((node = _next(node) as Anchor) && stack.length > 0) {
+  while ((node = node.nextSibling as Anchor) && stack.length > 0) {
     if (node.nodeType === 8) {
       if (node.data === open) {
         stack.push(node)
@@ -243,7 +234,6 @@ export function locateEndAnchor(
 
   return null
 }
-
 export function locateFragmentEndAnchor(label: string = ']'): Comment | null {
   let node = currentHydrationNode!
   while (node) {
@@ -272,15 +262,7 @@ function handleMismatch(node: Node, template: string): Node {
 
   // fragment
   if (isComment(node, '[')) {
-    const end = locateEndAnchor(node as Anchor)
-    while (true) {
-      const next = _next(node)
-      if (next && next !== end) {
-        remove(next, parentNode(node)!)
-      } else {
-        break
-      }
-    }
+    removeFragmentNodes(node)
   }
 
   const next = _next(node)
@@ -295,7 +277,7 @@ function handleMismatch(node: Node, template: string): Node {
   // element node
   const t = createElement('template') as HTMLTemplateElement
   t.innerHTML = template
-  const newNode = child(t.content).cloneNode(true) as Element
+  const newNode = _child(t.content).cloneNode(true) as Element
   newNode.innerHTML = (node as Element).innerHTML
   Array.from((node as Element).attributes).forEach(attr => {
     newNode.setAttribute(attr.name, attr.value)
@@ -312,4 +294,16 @@ export const logMismatchError = (): void => {
   // this error should show up in production
   console.error('Hydration completed but contains mismatches.')
   hasLoggedMismatchError = true
+}
+
+export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
+  const end = endAnchor || locateEndAnchor(node as Anchor)
+  while (true) {
+    const next = _next(node)
+    if (next && next !== end) {
+      remove(next, parentNode(node)!)
+    } else {
+      break
+    }
+  }
 }

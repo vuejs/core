@@ -13,6 +13,7 @@ import { renderEffect } from './renderEffect'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import {
@@ -108,6 +109,7 @@ export function createSlot(
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
 
   const instance = currentInstance as VaporComponentInstance
@@ -166,7 +168,7 @@ export function createSlot(
     if (fragment.insert) {
       ;(fragment as VaporFragment).hydrate!()
     }
-    if (_insertionAnchor !== undefined) {
+    if (_isLastInsertion) {
       advanceHydrationNode(_insertionParent!)
     }
   }

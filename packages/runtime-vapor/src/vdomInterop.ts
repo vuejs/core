@@ -20,6 +20,7 @@ import {
   isRef,
   isVNode,
   onScopeDispose,
+  queuePostFlushCb,
   renderSlot,
   shallowReactive,
   shallowRef,
@@ -47,7 +48,6 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
-  locateFragmentEndAnchor,
   locateHydrationNode,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
@@ -62,7 +62,12 @@ const vaporInteropImpl: Omit<
 > = {
   mount(vnode, container, anchor, parentComponent) {
     let selfAnchor = (vnode.el = vnode.anchor = createTextNode())
-    container.insertBefore(selfAnchor, anchor)
+    if (isHydrating) {
+      // avoid vdom hydration children mismatch by the selfAnchor, delay its insertion
+      queuePostFlushCb(() => container.insertBefore(selfAnchor, anchor))
+    } else {
+      container.insertBefore(selfAnchor, anchor)
+    }
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
@@ -153,8 +158,7 @@ const vaporInteropImpl: Omit<
     const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
     vaporHydrateNode(node, () => {
       vnode.vb = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
-      vnode.el = currentHydrationNode!
-      vnode.anchor = locateFragmentEndAnchor()
+      vnode.anchor = vnode.el = currentHydrationNode!
 
       if (__DEV__ && !vnode.anchor) {
         throw new Error(`Failed to locate slot anchor`)
@@ -238,7 +242,7 @@ function createVDOMComponent(
     hydrateVNode(vnode, parentInstance as any)
     onScopeDispose(unmount, true)
     isMounted = true
-    frag.nodes = [vnode.el as Node]
+    frag.nodes = vnode.el as Node
   }
 
   frag.insert = (parentNode, anchor) => {
@@ -267,7 +271,7 @@ function createVDOMComponent(
       )
     }
 
-    frag.nodes = [vnode.el as Node]
+    frag.nodes = vnode.el as Node
   }
 
   frag.remove = unmount
@@ -332,6 +336,8 @@ function renderVDOMSlot(
           // renderSlot
           if (isVNode(vnode)) {
             hydrateVNode(vnode!, parentComponent as any)
+            oldVNode = vnode
+            frag.nodes = vnode.el as Node
           }
         } else {
           if (fallbackNodes) {
@@ -346,14 +352,16 @@ function renderVDOMSlot(
             parentComponent as any,
           )
           oldVNode = vnode
+          frag.nodes = vnode.el as Node
         }
       } else {
         if (fallback && !fallbackNodes) {
           fallbackNodes = fallback(internals, parentComponent)
           if (isHydrating) {
             // hydrate fallback
-            if (isVNode(vnode)) {
-              hydrateVNode(fallbackNodes as any, parentComponent as any)
+            if (isVNode(fallbackNodes)) {
+              hydrateVNode(fallbackNodes, parentComponent as any)
+              frag.nodes = fallbackNodes.el as Node
             }
           } else {
             // mount fallback
@@ -361,6 +369,7 @@ function renderVDOMSlot(
               internals.um(oldVNode, parentComponent as any, null, true)
             }
             insert(fallbackNodes, parentNode!, anchor)
+            frag.nodes = fallbackNodes
           }
         }
         oldVNode = null

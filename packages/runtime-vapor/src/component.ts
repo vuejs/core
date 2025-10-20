@@ -62,11 +62,13 @@ import {
   currentHydrationNode,
   isHydrating,
   locateHydrationNode,
+  locateNextNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import { createElement } from './dom/node'
@@ -150,6 +152,7 @@ export function createComponent(
 ): VaporComponentInstance {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (isHydrating) {
     locateHydrationNode()
   } else {
@@ -186,7 +189,7 @@ export function createComponent(
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
       frag.hydrate()
-      if (_insertionAnchor !== undefined) {
+      if (_isLastInsertion) {
         advanceHydrationNode(_insertionParent!)
       }
     }
@@ -279,7 +282,7 @@ export function createComponent(
   }
 
   setActiveSub(prevSub)
-  setCurrentInstance.apply(null, prevInstance)
+  setCurrentInstance(...prevInstance)
 
   if (__DEV__) {
     popWarningContext()
@@ -292,7 +295,7 @@ export function createComponent(
     mountComponent(instance, _insertionParent, _insertionAnchor)
   }
 
-  if (isHydrating && _insertionAnchor !== undefined) {
+  if (isHydrating && _isLastInsertion) {
     advanceHydrationNode(_insertionParent!)
   }
 
@@ -510,6 +513,7 @@ export function createComponentWithFallback(
 
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (isHydrating) {
     locateHydrationNode()
   } else {
@@ -523,9 +527,9 @@ export function createComponentWithFallback(
   ;(el as any).$root = isSingleRoot
 
   if (rawSlots) {
-    let prev: Node
+    let nextNode: Node | null = null
     if (isHydrating) {
-      prev = currentHydrationNode!
+      nextNode = locateNextNode(el)
       setCurrentHydrationNode(el.firstChild)
     }
     if (rawSlots.$) {
@@ -534,14 +538,14 @@ export function createComponentWithFallback(
       insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
     }
     if (isHydrating) {
-      setCurrentHydrationNode(prev!)
+      setCurrentHydrationNode(nextNode)
     }
   }
 
   if (!isHydrating) {
     if (_insertionParent) insert(el, _insertionParent, _insertionAnchor)
   } else {
-    if (_insertionAnchor !== undefined) {
+    if (_isLastInsertion) {
       advanceHydrationNode(_insertionParent!)
     }
   }

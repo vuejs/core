@@ -37,7 +37,7 @@ export function injectHook(
         try {
           return callWithAsyncErrorHandling(hook, target, type, args)
         } finally {
-          setCurrentInstance.apply(null, prev)
+          setCurrentInstance(...prev)
           setActiveSub(prevSub)
         }
       })

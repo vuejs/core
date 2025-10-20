@@ -18,7 +18,7 @@ let removeComponentInstance = NOOP
 beforeEach(() => {
   const instance = new VaporComponentInstance({}, {}, null)
   const prev = setCurrentInstance(instance)
-  removeComponentInstance = () => setCurrentInstance.apply(null, prev)
+  removeComponentInstance = () => setCurrentInstance(...prev)
 })
 afterEach(() => {
   removeComponentInstance()
@@ -298,6 +298,17 @@ describe('patchProp', () => {
       expect(
         `Failed setting prop "someProp" on <div>: value foo is invalid.`,
       ).toHaveBeenWarnedLast()
+    })
+
+    test('checkbox with indeterminate', () => {
+      const el = document.createElement('input')
+      el.type = 'checkbox'
+      setProp(el, 'indeterminate', true)
+      expect(el.indeterminate).toBe(true)
+      setProp(el, 'indeterminate', false)
+      expect(el.indeterminate).toBe(false)
+      setProp(el, 'indeterminate', '')
+      expect(el.indeterminate).toBe(true)
     })
   })
 

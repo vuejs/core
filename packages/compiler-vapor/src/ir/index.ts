@@ -77,6 +77,7 @@ export interface IfIRNode extends BaseIRNode {
   parent?: number
   anchor?: number
   append?: boolean
+  last?: boolean
 }
 
 export interface IRFor {
@@ -97,6 +98,7 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   parent?: number
   anchor?: number
   append?: boolean
+  last?: boolean
 }
 
 export interface SetPropIRNode extends BaseIRNode {
@@ -198,6 +200,7 @@ export interface CreateComponentIRNode extends BaseIRNode {
   parent?: number
   anchor?: number
   append?: boolean
+  last?: boolean
 }
 
 export interface DeclareOldRefIRNode extends BaseIRNode {
@@ -214,6 +217,7 @@ export interface SlotOutletIRNode extends BaseIRNode {
   parent?: number
   anchor?: number
   append?: boolean
+  last?: boolean
 }
 
 export interface GetTextChildIRNode extends BaseIRNode {
@@ -264,6 +268,7 @@ export interface IRDynamicInfo {
   template?: number
   hasDynamicChild?: boolean
   operation?: OperationNode
+  ifBranch?: boolean
 }
 
 export interface IREffect {

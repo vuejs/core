@@ -292,7 +292,7 @@ export function instanceWatch(
   }
   const prev = setCurrentInstance(this)
   const res = doWatch(getter, cb.bind(publicThis), options)
-  setCurrentInstance.apply(null, prev)
+  setCurrentInstance(...prev)
   return res
 }
 

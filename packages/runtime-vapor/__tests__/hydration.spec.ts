@@ -5,6 +5,7 @@ import * as runtimeVapor from '../src'
 import * as runtimeDom from '@vue/runtime-dom'
 import * as VueServerRenderer from '@vue/server-renderer'
 import { isString } from '@vue/shared'
+import type { VaporComponentInstance } from '../src/component'
 
 const formatHtml = (raw: string) => {
   return raw
@@ -77,22 +78,37 @@ async function testWithVDOMApp(
   })
 }
 
+function compileVaporComponent(
+  code: string,
+  data: runtimeDom.Ref<any> = ref({}),
+  components?: Record<string, any>,
+  ssr = false,
+) {
+  if (!code.includes(`<script`)) {
+    code = `<template>${code}</template>`
+  }
+  return compile(code, data, components, {
+    vapor: true,
+    ssr,
+  })
+}
+
 async function mountWithHydration(
   html: string,
   code: string,
-  data: runtimeDom.Ref<any>,
+  data: runtimeDom.Ref<any> = ref({}),
+  components?: Record<string, any>,
 ) {
   const container = document.createElement('div')
   container.innerHTML = html
+  document.body.appendChild(container)
 
-  const clientComp = compile(`<template>${code}</template>`, data, undefined, {
-    vapor: true,
-    ssr: false,
-  })
+  const clientComp = compileVaporComponent(code, data, components)
   const app = createVaporSSRApp(clientComp)
   app.mount(container)
 
   return {
+    block: (app._instance! as VaporComponentInstance).block,
     container,
   }
 }
@@ -298,7 +314,7 @@ describe('Vapor Mode hydration', () => {
       <template><!----></template>
     `)
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
-      expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
+      expect(`mismatch in <div>`).not.toHaveBeenWarned()
     })
 
     test('root with mixed element and text', async () => {
@@ -331,7 +347,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `"<div></div>"`,
       )
-      expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
+      expect(`mismatch in <div>`).not.toHaveBeenWarned()
     })
 
     test('element with binding and text children', async () => {
@@ -1431,8 +1447,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><div>true</div>-true-<!--if--><!--]-->
-        </div>"
+        <!--[--><div>true</div>-true-<!--]-->
+        <!--if--></div>"
       `,
       )
 
@@ -1441,8 +1457,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><!--if--><!--]-->
-        </div>"
+        <!--[--><!--]-->
+        <!--if--></div>"
       `,
       )
 
@@ -1451,8 +1467,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><div>true</div>-true-<!--if--><!--]-->
-        </div>"
+        <!--[--><!--]-->
+        <div>true</div>-true-<!--if--></div>"
       `,
       )
     })
@@ -1475,8 +1491,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><div>true</div>-true-<!--if--><!--]-->
-        <span></span></div>"
+        <!--[--><div>true</div>-true-<!--]-->
+        <!--if--><span></span></div>"
       `,
       )
 
@@ -1485,8 +1501,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><!--if--><!--]-->
-        <span></span></div>"
+        <!--[--><!--]-->
+        <!--if--><span></span></div>"
       `,
       )
 
@@ -1494,8 +1510,8 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "<div><span></span>
-        <!--[--><div>true</div>-true-<!--if--><!--]-->
-        <span></span></div>"
+        <!--[--><!--]-->
+        <div>true</div>-true-<!--if--><span></span></div>"
       `)
     })
 
@@ -1518,9 +1534,10 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><div>true</div>-true-<!--if--><!--]-->
-        <!--[--><div>true</div>-true-<!--if--><!--]-->
-        <span></span></div>"
+        <!--[--><div>true</div>-true-<!--]-->
+        <!--if-->
+        <!--[--><div>true</div>-true-<!--]-->
+        <!--if--><span></span></div>"
       `,
       )
 
@@ -1529,9 +1546,10 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><!--if--><!--]-->
-        <!--[--><!--if--><!--]-->
-        <span></span></div>"
+        <!--[--><!--]-->
+        <!--if-->
+        <!--[--><!--]-->
+        <!--if--><span></span></div>"
       `,
       )
 
@@ -1539,9 +1557,10 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "<div><span></span>
-        <!--[--><div>true</div>-true-<!--if--><!--]-->
-        <!--[--><div>true</div>-true-<!--if--><!--]-->
-        <span></span></div>"
+        <!--[--><!--]-->
+        <div>true</div>-true-<!--if-->
+        <!--[--><!--]-->
+        <div>true</div>-true-<!--if--><span></span></div>"
       `)
     })
 
@@ -1588,7 +1607,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><span>a</span><span>b</span><span>c</span><!--for-->"
+        <!--[--><span>a</span><span>b</span><span>c</span><!--]-->
+        "
       `,
       )
 
@@ -1597,7 +1617,35 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--for-->"
+        <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('empty v-for', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <span v-for="item in data" :key="item">{{ item }}</span>
+        </template>`,
+        undefined,
+        ref([]),
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><!--]-->
+        "
+      `,
+      )
+
+      data.value.push('a')
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>a</span><!--]-->
+        "
       `,
       )
     })
@@ -1619,7 +1667,8 @@ describe('Vapor Mode hydration', () => {
         `
         "
         <!--[--><div>
-        <!--[--><span>a</span><span>b</span><span>c</span><!--for--></div><div>3</div><!--]-->
+        <!--[--><span>a</span><span>b</span><span>c</span><!--]-->
+        </div><div>3</div><!--]-->
         "
       `,
       )
@@ -1630,7 +1679,8 @@ describe('Vapor Mode hydration', () => {
         `
         "
         <!--[--><div>
-        <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--for--></div><div>4</div><!--]-->
+        <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--]-->
+        </div><div>4</div><!--]-->
         "
       `,
       )
@@ -1651,7 +1701,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><span>a</span><span>b</span><span>c</span><!--for--><span></span></div>"
+        <!--[--><span>a</span><span>b</span><span>c</span><!--]-->
+        <span></span></div>"
       `,
       )
 
@@ -1660,7 +1711,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--for--><span></span></div>"
+        <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--]-->
+        <span></span></div>"
       `,
       )
 
@@ -1669,7 +1721,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><span>b</span><span>c</span><span>d</span><!--for--><span></span></div>"
+        <!--[--><span>b</span><span>c</span><span>d</span><!--]-->
+        <span></span></div>"
       `,
       )
     })
@@ -1690,8 +1743,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><span>a</span><span>b</span><span>c</span><!--for-->
-        <!--[--><span>a</span><span>b</span><span>c</span><!--for--><span></span></div>"
+        <!--[--><span>a</span><span>b</span><span>c</span><!--]-->
+        <!--[--><span>a</span><span>b</span><span>c</span><!--]-->
+        <span></span></div>"
       `,
       )
 
@@ -1700,8 +1754,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--for-->
-        <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--for--><span></span></div>"
+        <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--]-->
+        <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--]-->
+        <span></span></div>"
       `,
       )
 
@@ -1710,8 +1765,9 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div><span></span>
-        <!--[--><span>c</span><span>d</span><!--for-->
-        <!--[--><span>c</span><span>d</span><!--for--><span></span></div>"
+        <!--[--><span>c</span><span>d</span><!--]-->
+        <!--[--><span>c</span><span>d</span><!--]-->
+        <span></span></div>"
       `,
       )
     })
@@ -1732,7 +1788,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><div>comp</div><div>comp</div><div>comp</div><!--for--></div>"
+        <!--[--><div>comp</div><div>comp</div><div>comp</div><!--]-->
+        </div>"
       `,
       )
 
@@ -1741,7 +1798,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><div>comp</div><div>comp</div><div>comp</div><div>comp</div><!--for--></div>"
+        <!--[--><div>comp</div><div>comp</div><div>comp</div><div>comp</div><!--]-->
+        </div>"
       `,
       )
     })
@@ -1767,7 +1825,8 @@ describe('Vapor Mode hydration', () => {
         <!--[--><span>a</span><!--]-->
         <!--[--><span>b</span><!--]-->
         <!--[--><span>c</span><!--]-->
-        <!--for--></div>"
+        <!--]-->
+        </div>"
       `,
       )
 
@@ -1780,7 +1839,8 @@ describe('Vapor Mode hydration', () => {
         <!--[--><span>a</span><!--]-->
         <!--[--><span>b</span><!--]-->
         <!--[--><span>c</span><!--]-->
-        <span>d</span><!--slot--><!--for--></div>"
+        <span>d</span><!--slot--><!--]-->
+        </div>"
       `,
       )
     })
@@ -1803,7 +1863,8 @@ describe('Vapor Mode hydration', () => {
         <!--[-->
         <!--[--><div>foo</div>-bar-<!--]-->
         <!--[--><div>foo</div>-bar-<!--]-->
-        <!--[--><div>foo</div>-bar-<!--for--><!--]-->
+        <!--[--><div>foo</div>-bar-<!--]-->
+        <!--]-->
         </div>"
       `,
       )
@@ -1816,7 +1877,8 @@ describe('Vapor Mode hydration', () => {
         <!--[-->
         <!--[--><div>foo</div>-bar-<!--]-->
         <!--[--><div>foo</div>-bar-<!--]-->
-        <!--[--><div>foo</div>-bar-<div>foo</div>-bar-<!--for--><!--]-->
+        <!--[--><div>foo</div>-bar-<!--]-->
+        <div>foo</div>-bar-<!--]-->
         </div>"
       `,
       )
@@ -1845,7 +1907,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><div><div><div>foo</div><!--if--></div><span>non-hydration node</span></div><div><div><div>foo</div><!--if--></div><span>non-hydration node</span></div><!--for--></div>"
+        <!--[--><div><div><div>foo</div><!--if--></div><span>non-hydration node</span></div><div><div><div>foo</div><!--if--></div><span>non-hydration node</span></div><!--]-->
+        </div>"
       `,
       )
 
@@ -1854,7 +1917,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><!--for--></div>"
+        <!--[--><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><!--]-->
+        </div>"
       `,
       )
 
@@ -1862,14 +1926,67 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "<div>
-        <!--[--><div><div><!--if--></div><span>non-hydration node</span></div><div><div><!--if--></div><span>non-hydration node</span></div><!--for--></div>"
+        <!--[--><div><div><!--if--></div><span>non-hydration node</span></div><div><div><!--if--></div><span>non-hydration node</span></div><!--]-->
+        </div>"
       `)
 
       data.value.show = true
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "<div>
-        <!--[--><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><!--for--></div>"
+        <!--[--><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><!--]-->
+        </div>"
+      `)
+    })
+
+    test('with non-hydration node', async () => {
+      const data = ref({ show: true, msg: 'foo' })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <div v-for="item in 2">
+              <div>
+                <div v-if="data.show">{{ data.msg }}</div>
+              </div>
+              <span>non-hydration node</span>
+            </div>
+          </div>
+        </template>`,
+        {},
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><div><div><div>foo</div><!--if--></div><span>non-hydration node</span></div><div><div><div>foo</div><!--if--></div><span>non-hydration node</span></div><!--]-->
+        </div>"
+      `,
+      )
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><!--]-->
+        </div>"
+      `,
+      )
+
+      data.value.show = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div>
+        <!--[--><div><div><!--if--></div><span>non-hydration node</span></div><div><div><!--if--></div><span>non-hydration node</span></div><!--]-->
+        </div>"
+      `)
+
+      data.value.show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "<div>
+        <!--[--><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><!--]-->
+        </div>"
       `)
     })
   })
@@ -2005,7 +2122,8 @@ describe('Vapor Mode hydration', () => {
         `
         "
         <!--[-->
-        <!--[--><span>a</span><span>b</span><span>c</span><!--for--><!--]-->
+        <!--[--><span>a</span><span>b</span><span>c</span><!--]-->
+        <!--]-->
         "
       `,
       )
@@ -2437,9 +2555,10 @@ describe('Vapor Mode hydration', () => {
         `
         "
         <!--[-->
-        <!--[--><div>a</div><div>b</div><div>c</div><!--for-->
+        <!--[--><div>a</div><div>b</div><div>c</div><!--]-->
         <!--[--><span>foo</span><!--]-->
-        <!--[--><div>a</div><div>b</div><div>c</div><!--for--><!--]-->
+        <!--[--><div>a</div><div>b</div><div>c</div><!--]-->
+        <!--]-->
         "
       `,
       )
@@ -2450,9 +2569,10 @@ describe('Vapor Mode hydration', () => {
         `
         "
         <!--[-->
-        <!--[--><div>a</div><div>b</div><div>c</div><div>d</div><!--for-->
+        <!--[--><div>a</div><div>b</div><div>c</div><div>d</div><!--]-->
         <!--[--><span>foo</span><!--]-->
-        <!--[--><div>a</div><div>b</div><div>c</div><div>d</div><!--for--><!--]-->
+        <!--[--><div>a</div><div>b</div><div>c</div><div>d</div><!--]-->
+        <!--]-->
         "
       `,
       )
@@ -2684,8 +2804,8 @@ describe('Vapor Mode hydration', () => {
       `,
       )
     })
-
     // required https://github.com/vuejs/core/pull/13408 get merged
+
     test.todo('forwarded slot with fallback', async () => {
       const data = reactive({
         foo: 'foo',
@@ -2719,7 +2839,6 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
-    // required https://github.com/vuejs/core/pull/13408 get merged
     test.todo('forwarded slot with empty content', async () => {
       const data = reactive({
         foo: 'foo',
@@ -2781,48 +2900,161 @@ describe('Vapor Mode hydration', () => {
   })
 
   describe.todo('transition', async () => {
-    test('transition appear', async () => {})
+    test('transition appear', async () => {
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <div>foo</div>
+          </transition>
+        </template>`,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div style="" class="v-enter-from v-enter-active">foo</div>"`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
 
-    test('transition appear with v-if', async () => {})
+    test('transition appear work with pre-existing class', async () => {
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <div class="foo">foo</div>
+          </transition>
+        </template>`,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div class="foo v-enter-from v-enter-active" style="">foo</div>"`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
 
-    test('transition appear with v-show', async () => {})
+    test('transition appear work with empty content', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <slot v-if="data"></slot>
+            <span v-else>foo</span>
+          </transition>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--slot--><!--if-->"`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
 
-    test('transition appear w/ event listener', async () => {})
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<span class="v-enter-from v-enter-active">foo</span><!--if-->"`,
+      )
+    })
+
+    test('transition appear with v-if', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <div v-if="data">foo</div>
+          </transition>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<!--if-->"`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('transition appear with v-show', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <div v-show="data">foo</div>
+          </transition>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div style="display:none;" class="v-enter-from v-enter-active v-leave-from v-leave-active">foo</div>"`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('transition appear w/ event listener', async () => {
+      const { container } = await testHydration(
+        `<script setup>
+          import { ref } from 'vue'
+          const count = ref(0)
+        </script>
+        <template>
+          <transition appear>
+            <button @click="count++">{{ count }}</button>
+          </transition>
+        </template>`,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<button style="" class="v-enter-from v-enter-active">0</button>"`,
+      )
+
+      triggerEvent('click', container.querySelector('button')!)
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<button style="" class="v-enter-from v-enter-active">1</button>"`,
+      )
+    })
   })
 
-  describe.todo('async component', async () => {
-    test('async component', async () => {})
+  describe('force hydrate prop', async () => {
+    test('force hydrate prop with `.prop` modifier', async () => {
+      const { container } = await mountWithHydration(
+        '<input type="checkbox">',
+        `<input type="checkbox" .indeterminate="true"/>`,
+      )
+      expect((container.firstChild! as any).indeterminate).toBe(true)
+    })
 
-    test('update async wrapper before resolve', async () => {})
+    test('force hydrate input v-model with non-string value bindings', async () => {
+      const { container } = await mountWithHydration(
+        '<input type="checkbox" value="true">',
+        `<input type="checkbox" :true-value="true"/>`,
+      )
+      expect((container.firstChild as any)._trueValue).toBe(true)
+    })
 
-    test('hydrate safely when property used by async setup changed before render', async () => {})
+    test('force hydrate checkbox with indeterminate', async () => {
+      const { container } = await mountWithHydration(
+        '<input type="checkbox" indeterminate/>',
+        `<input type="checkbox" :indeterminate="true"/>`,
+      )
+      expect((container.firstChild! as any).indeterminate).toBe(true)
+    })
 
-    test('unmount async wrapper before load', async () => {})
+    test('force hydrate select option with non-string value bindings', async () => {
+      const { container } = await mountWithHydration(
+        '<select><option value="true">ok</option></select>',
+        `<select><option :value="true">ok</option></select>`,
+      )
+      expect((container.firstChild!.firstChild as any)._value).toBe(true)
+    })
 
-    test('nested async wrapper', async () => {})
+    test('force hydrate v-bind with .prop modifiers', async () => {
+      const { container } = await mountWithHydration(
+        '<div .foo="true"/>',
+        `<div v-bind="data"/>`,
+        ref({ '.foo': true }),
+      )
+      expect((container.firstChild! as any).foo).toBe(true)
+    })
 
-    test('unmount async wrapper before load (fragment)', async () => {})
-  })
-
-  describe.todo('force hydrate prop', async () => {
-    test.todo('force hydrate prop with `.prop` modifier', () => {})
-
-    test.todo(
-      'force hydrate input v-model with non-string value bindings',
-      () => {},
-    )
-
-    test.todo('force hydrate checkbox with indeterminate', () => {})
-
-    test.todo(
-      'force hydrate select option with non-string value bindings',
-      () => {},
-    )
-
+    // vapor custom element not implemented yet
     test.todo('force hydrate custom element with dynamic props', () => {})
   })
-
-  describe.todo('Teleport')
 
   describe.todo('Suspense')
 })

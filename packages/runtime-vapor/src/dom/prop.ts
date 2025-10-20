@@ -1,6 +1,7 @@
 import {
   type NormalizedStyle,
   canSetValueDirectly,
+  includeBooleanAttr,
   isOn,
   isString,
   normalizeClass,
@@ -88,7 +89,12 @@ export function setAttr(el: any, key: string, value: any): void {
   }
 }
 
-export function setDOMProp(el: any, key: string, value: any): void {
+export function setDOMProp(
+  el: any,
+  key: string,
+  value: any,
+  forceHydrate: boolean = false,
+): void {
   if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey(key)) {
     return
   }
@@ -96,7 +102,9 @@ export function setDOMProp(el: any, key: string, value: any): void {
   if (
     (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
     isHydrating &&
-    !attributeHasMismatch(el, key, value)
+    !attributeHasMismatch(el, key, value) &&
+    !shouldForceHydrate(el, key) &&
+    !forceHydrate
   ) {
     return
   }
@@ -109,7 +117,9 @@ export function setDOMProp(el: any, key: string, value: any): void {
   let needRemove = false
   if (value === '' || value == null) {
     const type = typeof prev
-    if (value == null && type === 'string') {
+    if (type === 'boolean') {
+      value = includeBooleanAttr(value)
+    } else if (value == null && type === 'string') {
       // e.g. <div :id="null">
       value = ''
       needRemove = true
@@ -221,7 +231,11 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
   patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
 }
 
-export function setValue(el: TargetElement, value: any): void {
+export function setValue(
+  el: TargetElement,
+  value: any,
+  forceHydrate: boolean = false,
+): void {
   if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey('value')) {
     return
   }
@@ -233,7 +247,9 @@ export function setValue(el: TargetElement, value: any): void {
   if (
     (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
     isHydrating &&
-    !attributeHasMismatch(el, 'value', getClientText(el, value))
+    !attributeHasMismatch(el, 'value', getClientText(el, value)) &&
+    !shouldForceHydrate(el, 'value') &&
+    !forceHydrate
   ) {
     return
   }
@@ -312,7 +328,6 @@ export function setElementText(
 
 export function setHtml(el: TargetElement, value: any): void {
   value = value == null ? '' : value
-
   if (el.$html !== value) {
     el.innerHTML = el.$html = value
   }
@@ -346,6 +361,7 @@ export function setDynamicProp(
 ): void {
   // TODO
   const isSVG = false
+  let forceHydrate = false
   if (key === 'class') {
     setClass(el, value)
   } else if (key === 'style') {
@@ -353,7 +369,8 @@ export function setDynamicProp(
   } else if (isOn(key)) {
     on(el, key[2].toLowerCase() + key.slice(3), value, { effect: true })
   } else if (
-    key[0] === '.'
+    // force hydrate v-bind with .prop modifiers
+    (forceHydrate = key[0] === '.')
       ? ((key = key.slice(1)), true)
       : key[0] === '^'
         ? ((key = key.slice(1)), false)
@@ -364,12 +381,11 @@ export function setDynamicProp(
     } else if (key === 'textContent') {
       setElementText(el, value)
     } else if (key === 'value' && canSetValueDirectly(el.tagName)) {
-      setValue(el, value)
+      setValue(el, value, forceHydrate)
     } else {
-      setDOMProp(el, key, value)
+      setDOMProp(el, key, value, forceHydrate)
     }
   } else {
-    // TODO special case for <input v-model type="checkbox">
     setAttr(el, key, value)
   }
   return value
@@ -384,9 +400,9 @@ export function optimizePropertyLookup(): void {
   if (isOptimized) return
   isOptimized = true
   const proto = Element.prototype as any
-  proto.$evtclick = undefined
-  proto.$children = undefined
-  proto.$idx = undefined
+  proto.$transition = undefined
+  proto.$key = undefined
+  proto.$fc = proto.$evtclick = undefined
   proto.$root = false
   proto.$html =
     proto.$txt =
@@ -485,4 +501,14 @@ function getClientText(el: Node, value: string): string {
     value = value.slice(1)
   }
   return value
+}
+
+function shouldForceHydrate(el: Element, key: string): boolean {
+  const { tagName } = el
+  return (
+    ((tagName === 'INPUT' || tagName === 'OPTION') &&
+      (key.endsWith('value') || key === 'indeterminate')) ||
+    // force hydrate custom element dynamic props
+    tagName.includes('-')
+  )
 }

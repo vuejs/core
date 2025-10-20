@@ -12,11 +12,15 @@ import {
   watch,
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
-import { createComment, createTextNode } from './dom/node'
+import {
+  createComment,
+  createTextNode,
+  updateLastLogicalChild,
+} from './dom/node'
 import {
   type Block,
   VaporFragment,
-  findLastChild,
+  findBlockNode,
   insert,
   remove as removeBlock,
 } from './block'
@@ -27,14 +31,16 @@ import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import {
   advanceHydrationNode,
+  currentHydrationNode,
+  isComment,
   isHydrating,
-  locateFragmentEndAnchor,
   locateHydrationNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 
@@ -87,6 +93,7 @@ export const createFor = (
 ): VaporFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (isHydrating) {
     locateHydrationNode()
   } else {
@@ -128,26 +135,23 @@ export const createFor = (
     if (!isMounted) {
       isMounted = true
       for (let i = 0; i < newLength; i++) {
-        if (isHydrating && isComponent && i > 0) {
-          setCurrentHydrationNode(
-            findLastChild(newBlocks[i - 1].nodes)!.nextSibling,
-          )
+        const nodes = mount(source, i).nodes
+        if (isHydrating) {
+          setCurrentHydrationNode(findBlockNode(nodes!).nextNode)
         }
-        mount(source, i)
       }
 
       if (isHydrating) {
-        if (isComponent) {
-          setCurrentHydrationNode(
-            findLastChild(newBlocks[newLength - 1].nodes)!.nextSibling,
-          )
+        parentAnchor =
+          newLength === 0
+            ? currentHydrationNode!.nextSibling!
+            : currentHydrationNode!
+        if (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']'))) {
+          throw new Error(`v-for fragment anchor node was not found.`)
         }
-        parentAnchor = locateFragmentEndAnchor()!
-        if (__DEV__) {
-          if (!parentAnchor) {
-            throw new Error(`v-for fragment anchor node was not found.`)
-          }
-          ;(parentAnchor as Comment).data = 'for'
+
+        if (_insertionParent) {
+          updateLastLogicalChild(_insertionParent!, parentAnchor)
         }
       }
     } else {
@@ -463,9 +467,7 @@ export const createFor = (
   if (!isHydrating) {
     if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
   } else {
-    advanceHydrationNode(
-      _insertionAnchor !== undefined ? _insertionParent! : parentAnchor!,
-    )
+    advanceHydrationNode(_isLastInsertion ? _insertionParent! : parentAnchor!)
   }
 
   return frag
