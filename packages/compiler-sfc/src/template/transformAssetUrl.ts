@@ -9,6 +9,7 @@ import {
   type TransformContext,
   createSimpleExpression,
 } from '@vue/compiler-core'
+import { isVapor } from './utils'
 import {
   isDataUrl,
   isExternalUrl,
@@ -32,7 +33,6 @@ export interface AssetURLOptions {
    */
   includeAbsolute?: boolean
   tags?: AssetURLTagConfig
-  vapor?: boolean
 }
 
 export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
@@ -45,7 +45,6 @@ export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
     image: ['xlink:href', 'href'],
     use: ['xlink:href', 'href'],
   },
-  vapor: false,
 }
 
 export const normalizeOptions = (
@@ -141,7 +140,7 @@ export const transformAssetUrl: NodeTransform = (
         url.hash,
         attr.loc,
         context,
-        options.vapor,
+        isVapor(context),
       )
       node.props[index] = {
         type: NodeTypes.DIRECTIVE,

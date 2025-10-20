@@ -187,8 +187,6 @@ function doCompileTemplate({
       ? normalizeOptions(transformAssetUrls)
       : defaultAssetUrlOptions
 
-    assetOptions.vapor = vapor
-
     nodeTransforms = [
       createAssetUrlTransformWithOptions(assetOptions),
       createSrcsetTransformWithOptions(assetOptions),
@@ -254,6 +252,7 @@ function doCompileTemplate({
       sourceMap: true,
       ...compilerOptions,
       hmr: !isProd,
+      vapor,
       nodeTransforms: nodeTransforms.concat(
         compilerOptions.nodeTransforms || [],
       ),

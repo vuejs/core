@@ -19,6 +19,7 @@ import {
   type AssetURLOptions,
   defaultAssetUrlOptions,
 } from './transformAssetUrl'
+import { isVapor } from './utils'
 
 const srcsetTags = ['img', 'source']
 
@@ -62,13 +63,14 @@ export const transformSrcset: NodeTransform = (
 ) => {
   if (node.type === NodeTypes.ELEMENT) {
     if (srcsetTags.includes(node.tag) && node.props.length) {
+      const vapor = isVapor(context)
       node.props.forEach((attr, index) => {
         if (attr.name === 'srcset' && attr.type === NodeTypes.ATTRIBUTE) {
           if (!attr.value) return
           const value = attr.value.content
           if (!value) {
             // Handle empty srcset
-            if (options.vapor) {
+            if (vapor) {
               node.props[index] = {
                 type: NodeTypes.DIRECTIVE,
                 name: 'bind',
@@ -189,7 +191,7 @@ export const transformSrcset: NodeTransform = (
           })
 
           let exp: ExpressionNode
-          if (options.vapor) {
+          if (vapor) {
             exp = createSimpleExpression(
               flattenCompoundExpression(compoundExpression),
               false,

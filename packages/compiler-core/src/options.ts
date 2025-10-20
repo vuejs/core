@@ -300,6 +300,10 @@ export interface TransformOptions
    * correctly, e.g. #6938, #7138
    */
   hmr?: boolean
+  /**
+   * Indicates whether the template is a vapor component.
+   */
+  vapor?: boolean
 }
 
 export interface CodegenOptions extends SharedTransformCodegenOptions {
