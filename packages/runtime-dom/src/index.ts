@@ -351,4 +351,25 @@ export {
 /**
  * @internal
  */
+export {
+  resolveTransitionProps,
+  TransitionPropsValidators,
+  forceReflow,
+  addTransitionClass,
+  removeTransitionClass,
+  type ElementWithTransition,
+} from './components/Transition'
+/**
+ * @internal
+ */
+export {
+  hasCSSTransform,
+  callPendingCbs,
+  moveCbKey,
+  handleMovedChildren,
+  baseApplyTranslation,
+} from './components/TransitionGroup'
+/**
+ * @internal
+ */
 export { unsafeToTrustedHTML } from './nodeOps'

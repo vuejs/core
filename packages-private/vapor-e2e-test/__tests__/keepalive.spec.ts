@@ -9,7 +9,7 @@ const { page, html, click, value, enterValue } = setupPuppeteer()
 
 describe('vapor keepalive', () => {
   let server: any
-  const port = '8196'
+  const port = '8197'
   beforeAll(() => {
     server = connect()
       .use(sirv(path.resolve(import.meta.dirname, '../dist')))

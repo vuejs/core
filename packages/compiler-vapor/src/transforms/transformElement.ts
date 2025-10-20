@@ -1,4 +1,3 @@
-import { isValidHTMLNesting } from '@vue/compiler-dom'
 import {
   type AttributeNode,
   type ComponentNode,
@@ -11,6 +10,7 @@ import {
   createCompilerError,
   createSimpleExpression,
   isStaticArgOf,
+  isValidHTMLNesting,
 } from '@vue/compiler-dom'
 import {
   camelize,
@@ -443,7 +443,9 @@ function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
     }
     const name = prop.key.content
     const existing = knownProps.get(name)
-    if (existing) {
+    // prop names and event handler names can be the same but serve different purposes
+    // e.g. `:appear="true"` is a prop while `@appear="handler"` is an event handler
+    if (existing && existing.handler === prop.handler) {
       if (name === 'style' || name === 'class') {
         mergePropValues(existing, prop)
       }

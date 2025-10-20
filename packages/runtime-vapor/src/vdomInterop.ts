@@ -7,6 +7,7 @@ import {
   type RendererInternals,
   type ShallowRef,
   type Slots,
+  type TransitionHooks,
   type VNode,
   type VaporInteropInterface,
   createInternalObject,
@@ -17,6 +18,7 @@ import {
   isKeepAlive,
   onScopeDispose,
   renderSlot,
+  setTransitionHooks as setVNodeTransitionHooks,
   shallowReactive,
   shallowRef,
   simpleSetCurrentInstance,
@@ -32,7 +34,13 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { type Block, VaporFragment, insert, remove } from './block'
+import {
+  type Block,
+  VaporFragment,
+  type VaporTransitionHooks,
+  insert,
+  remove,
+} from './block'
 import {
   EMPTY_OBJ,
   ShapeFlags,
@@ -45,6 +53,7 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
 import {
   type KeepAliveInstance,
   activate,
@@ -93,8 +102,16 @@ const vaporInteropImpl: Omit<
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
+
     // copy the shape flag from the vdom component if inside a keep-alive
     if (isKeepAlive(parentComponent)) instance.shapeFlag = vnode.shapeFlag
+
+    if (vnode.transition) {
+      setVaporTransitionHooks(
+        instance,
+        vnode.transition as VaporTransitionHooks,
+      )
+    }
     mountComponent(instance, container, selfAnchor)
     simpleSetCurrentInstance(prev)
     return instance
@@ -147,6 +164,10 @@ const vaporInteropImpl: Omit<
   move(vnode, container, anchor) {
     insert(vnode.vb || (vnode.component as any), container, anchor)
     insert(vnode.anchor as any, container, anchor)
+  },
+
+  setTransitionHooks(component, hooks) {
+    setVaporTransitionHooks(component as any, hooks as VaporTransitionHooks)
   },
 
   activate(vnode, container, anchor, parentComponent) {
@@ -231,7 +252,8 @@ function createVDOMComponent(
 
   let isMounted = false
   const parentInstance = currentInstance as VaporComponentInstance
-  const unmount = (parentNode?: ParentNode) => {
+  const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
+    if (transition) setVNodeTransitionHooks(vnode, transition)
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       vdomDeactivate(
         vnode,
@@ -245,7 +267,7 @@ function createVDOMComponent(
     internals.umt(vnode.component!, null, !!parentNode)
   }
 
-  frag.insert = (parentNode, anchor) => {
+  frag.insert = (parentNode, anchor, transition) => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
       vdomActivate(
         vnode,
@@ -259,7 +281,11 @@ function createVDOMComponent(
       )
       return
     }
+
+    const prev = currentInstance
+    simpleSetCurrentInstance(parentInstance)
     if (!isMounted) {
+      if (transition) setVNodeTransitionHooks(vnode, transition)
       internals.mt(
         vnode,
         parentNode,
@@ -283,6 +309,7 @@ function createVDOMComponent(
     }
 
     frag.nodes = vnode.el as Block
+    simpleSetCurrentInstance(prev)
   }
 
   frag.remove = unmount
