@@ -15,6 +15,7 @@ import {
   mergeProps,
   patchStyle,
   shouldSetAsProp,
+  unsafeToTrustedHTML,
   warn,
 } from '@vue/runtime-dom'
 import {
@@ -240,7 +241,7 @@ function setTextToBlock(block: Block, value: any): void {
 }
 
 export function setHtml(el: TargetElement, value: any): void {
-  value = value == null ? '' : value
+  value = value == null ? '' : unsafeToTrustedHTML(value)
   if (el.$html !== value) {
     el.innerHTML = el.$html = value
   }

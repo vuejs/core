@@ -48,4 +48,10 @@ describe('compiler: text transform', () => {
     expect(ir.block.operation).toMatchObject([])
     expect(ir.block.effect.length).toBe(1)
   })
+
+  it('escapes raw static text when generating the template string', () => {
+    const { ir } = compileWithTextTransform('<code>&lt;script&gt;</code>')
+    expect(ir.template).toContain('<code>&lt;script&gt;</code>')
+    expect(ir.template).not.toContain('<code><script></code>')
+  })
 })
