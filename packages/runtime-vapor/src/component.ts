@@ -15,6 +15,7 @@ import {
   currentInstance,
   endMeasure,
   expose,
+  isKeepAlive,
   nextUid,
   popWarningContext,
   pushWarningContext,
@@ -34,7 +35,13 @@ import {
   setActiveSub,
   unref,
 } from '@vue/reactivity'
-import { EMPTY_OBJ, invokeArrayFns, isFunction, isString } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  ShapeFlags,
+  invokeArrayFns,
+  isFunction,
+  isString,
+} from '@vue/shared'
 import {
   type DynamicPropsSource,
   type RawProps,
@@ -57,7 +64,9 @@ import {
   getSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
+import { createElement } from './dom/node'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
+import type { KeepAliveInstance } from './components/KeepAlive'
 import {
   insertionAnchor,
   insertionParent,
@@ -149,19 +158,6 @@ export function createComponent(
     resetInsertionState()
   }
 
-  // vdom interop enabled and component is not an explicit vapor component
-  if (appContext.vapor && !component.__vapor) {
-    const frag = appContext.vapor.vdomMount(
-      component as any,
-      rawProps,
-      rawSlots,
-    )
-    if (!isHydrating && _insertionParent) {
-      insert(frag, _insertionParent, _insertionAnchor)
-    }
-    return frag
-  }
-
   if (
     isSingleRoot &&
     component.inheritAttrs !== false &&
@@ -178,6 +174,32 @@ export function createComponent(
     } else {
       rawProps = { $: [() => attrs] } as RawProps
     }
+  }
+
+  // keep-alive
+  if (
+    currentInstance &&
+    currentInstance.vapor &&
+    isKeepAlive(currentInstance)
+  ) {
+    const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
+      component,
+    )
+    // @ts-expect-error cached may be a fragment
+    if (cached) return cached
+  }
+
+  // vdom interop enabled and component is not an explicit vapor component
+  if (appContext.vapor && !component.__vapor) {
+    const frag = appContext.vapor.vdomMount(
+      component as any,
+      rawProps,
+      rawSlots,
+    )
+    if (!isHydrating && _insertionParent) {
+      insert(frag, _insertionParent, _insertionAnchor)
+    }
+    return frag
   }
 
   const instance = new VaporComponentInstance(
@@ -257,11 +279,7 @@ export function createComponent(
   ) {
     const el = getRootElement(instance)
     if (el) {
-      renderEffect(() => {
-        isApplyingFallthroughProps = true
-        setDynamicProps(el, [instance.attrs])
-        isApplyingFallthroughProps = false
-      })
+      renderEffect(() => applyFallthroughProps(el, instance.attrs))
     }
   }
 
@@ -283,6 +301,15 @@ export function createComponent(
 }
 
 export let isApplyingFallthroughProps = false
+
+export function applyFallthroughProps(
+  block: Block,
+  attrs: Record<string, any>,
+): void {
+  isApplyingFallthroughProps = true
+  setDynamicProps(block as Element, [attrs])
+  isApplyingFallthroughProps = false
+}
 
 /**
  * dev only
@@ -318,7 +345,7 @@ export function devRender(instance: VaporComponentInstance): void {
         )) || []
 }
 
-const emptyContext: GenericAppContext = {
+export const emptyContext: GenericAppContext = {
   app: null as any,
   config: {},
   provides: /*@__PURE__*/ Object.create(null),
@@ -395,6 +422,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
+  shapeFlag?: number
 
   constructor(
     comp: VaporComponent,
@@ -486,11 +514,13 @@ export function createComponentWithFallback(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {
-    return createComponent(comp, rawProps, rawSlots, isSingleRoot)
+    return createComponent(comp, rawProps, rawSlots, isSingleRoot, appContext)
   }
 
+  const el = createElement(comp)
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (isHydrating) {
@@ -499,7 +529,6 @@ export function createComponentWithFallback(
     resetInsertionState()
   }
 
-  const el = document.createElement(comp)
   // mark single root
   ;(el as any).$root = isSingleRoot
 
@@ -529,12 +558,23 @@ export function mountComponent(
   parent: ParentNode,
   anchor?: Node | null | 0,
 ): void {
+  if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+    ;(instance.parent as KeepAliveInstance).activate(instance, parent, anchor)
+    return
+  }
+
   if (__DEV__) {
     startMeasure(instance, `mount`)
   }
   if (instance.bm) invokeArrayFns(instance.bm)
   insert(instance.block, parent, anchor)
-  if (instance.m) queuePostFlushCb(() => invokeArrayFns(instance.m!))
+  if (instance.m) queuePostFlushCb(instance.m!)
+  if (
+    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
+    instance.a
+  ) {
+    queuePostFlushCb(instance.a!)
+  }
   instance.isMounted = true
   if (__DEV__) {
     endMeasure(instance, `mount`)
@@ -545,6 +585,16 @@ export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
 ): void {
+  if (
+    parentNode &&
+    instance.parent &&
+    instance.parent.vapor &&
+    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+  ) {
+    ;(instance.parent as KeepAliveInstance).deactivate(instance)
+    return
+  }
+
   if (instance.isMounted && !instance.isUnmounted) {
     if (__DEV__ && instance.type.__hmrId) {
       unregisterHMR(instance)
@@ -556,7 +606,7 @@ export function unmountComponent(
     instance.scope.stop()
 
     if (instance.um) {
-      queuePostFlushCb(() => invokeArrayFns(instance.um!))
+      queuePostFlushCb(instance.um!)
     }
     instance.isUnmounted = true
   }

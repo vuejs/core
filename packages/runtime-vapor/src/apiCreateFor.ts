@@ -26,6 +26,7 @@ import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
+import { applyTransitionHooks } from './components/Transition'
 import { isHydrating, locateHydrationNode } from './dom/hydration'
 import {
   insertionAnchor,
@@ -36,6 +37,9 @@ import {
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
   key: any
+  prev?: ForBlock
+  next?: ForBlock
+  prevAnchor?: ForBlock
 
   itemRef: ShallowRef<any>
   keyRef: ShallowRef<any> | undefined
@@ -92,7 +96,7 @@ export const createFor = (
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
-  // useSelector only
+  // createSelector only
   let currentKey: any
   // TODO handle this in hydration
   const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
@@ -167,172 +171,187 @@ export const createFor = (
           unmount(oldBlocks[i])
         }
       } else {
-        const sharedBlockCount = Math.min(oldLength, newLength)
-        const previousKeyIndexPairs: [any, number][] = new Array(oldLength)
+        if (__DEV__) {
+          const keyToIndexMap: Map<any, number> = new Map()
+          for (let i = 0; i < newLength; i++) {
+            const item = getItem(source, i)
+            const key = getKey(...item)
+            if (key != null) {
+              if (keyToIndexMap.has(key)) {
+                warn(
+                  `Duplicate keys found during update:`,
+                  JSON.stringify(key),
+                  `Make sure keys are unique.`,
+                )
+              }
+              keyToIndexMap.set(key, i)
+            }
+          }
+        }
+
+        const commonLength = Math.min(oldLength, newLength)
+        const oldKeyIndexPairs: [any, number][] = new Array(oldLength)
         const queuedBlocks: [
-          blockIndex: number,
-          blockItem: ReturnType<typeof getItem>,
-          blockKey: any,
+          index: number,
+          item: ReturnType<typeof getItem>,
+          key: any,
         ][] = new Array(newLength)
 
-        let anchorFallback: Node = parentAnchor
         let endOffset = 0
-        let startOffset = 0
-        let queuedBlocksInsertIndex = 0
-        let previousKeyIndexInsertIndex = 0
+        let queuedBlocksLength = 0
+        let oldKeyIndexPairsLength = 0
 
-        while (endOffset < sharedBlockCount) {
-          const currentIndex = newLength - endOffset - 1
-          const currentItem = getItem(source, currentIndex)
-          const currentKey = getKey(...currentItem)
+        while (endOffset < commonLength) {
+          const index = newLength - endOffset - 1
+          const item = getItem(source, index)
+          const key = getKey(...item)
           const existingBlock = oldBlocks[oldLength - endOffset - 1]
-          if (existingBlock.key === currentKey) {
-            update(existingBlock, ...currentItem)
-            newBlocks[currentIndex] = existingBlock
-            endOffset++
-            continue
-          }
-          if (endOffset !== 0) {
-            anchorFallback = normalizeAnchor(newBlocks[currentIndex + 1].nodes)
-          }
-          break
+          if (existingBlock.key !== key) break
+          update(existingBlock, ...item)
+          newBlocks[index] = existingBlock
+          endOffset++
         }
 
-        while (startOffset < sharedBlockCount - endOffset) {
-          const currentItem = getItem(source, startOffset)
+        const e1 = commonLength - endOffset
+        const e2 = oldLength - endOffset
+        const e3 = newLength - endOffset
+
+        for (let i = 0; i < e1; i++) {
+          const currentItem = getItem(source, i)
           const currentKey = getKey(...currentItem)
-          const previousBlock = oldBlocks[startOffset]
-          const previousKey = previousBlock.key
-          if (previousKey === currentKey) {
-            update((newBlocks[startOffset] = previousBlock), currentItem[0])
+          const oldBlock = oldBlocks[i]
+          const oldKey = oldBlock.key
+          if (oldKey === currentKey) {
+            update((newBlocks[i] = oldBlock), currentItem[0])
           } else {
-            queuedBlocks[queuedBlocksInsertIndex++] = [
-              startOffset,
-              currentItem,
-              currentKey,
-            ]
-            previousKeyIndexPairs[previousKeyIndexInsertIndex++] = [
-              previousKey,
-              startOffset,
-            ]
+            queuedBlocks[queuedBlocksLength++] = [i, currentItem, currentKey]
+            oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldKey, i]
           }
-          startOffset++
         }
 
-        for (let i = startOffset; i < oldLength - endOffset; i++) {
-          previousKeyIndexPairs[previousKeyIndexInsertIndex++] = [
-            oldBlocks[i].key,
-            i,
-          ]
+        for (let i = e1; i < e2; i++) {
+          oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldBlocks[i].key, i]
         }
 
-        const preparationBlockCount = Math.min(
-          newLength - endOffset,
-          sharedBlockCount,
-        )
-        for (let i = startOffset; i < preparationBlockCount; i++) {
+        for (let i = e1; i < e3; i++) {
           const blockItem = getItem(source, i)
           const blockKey = getKey(...blockItem)
-          queuedBlocks[queuedBlocksInsertIndex++] = [i, blockItem, blockKey]
+          queuedBlocks[queuedBlocksLength++] = [i, blockItem, blockKey]
         }
 
-        if (!queuedBlocksInsertIndex && !previousKeyIndexInsertIndex) {
-          for (let i = preparationBlockCount; i < newLength - endOffset; i++) {
-            const blockItem = getItem(source, i)
-            const blockKey = getKey(...blockItem)
-            mount(source, i, anchorFallback, blockItem, blockKey)
+        queuedBlocks.length = queuedBlocksLength
+        oldKeyIndexPairs.length = oldKeyIndexPairsLength
+
+        interface MountOper {
+          source: ResolvedSource
+          index: number
+          item: ReturnType<typeof getItem>
+          key: any
+        }
+        interface MoveOper {
+          index: number
+          block: ForBlock
+        }
+
+        const oldKeyIndexMap = new Map(oldKeyIndexPairs)
+        const opers: (MountOper | MoveOper)[] = new Array(queuedBlocks.length)
+
+        let mountCounter = 0
+        let opersLength = 0
+
+        for (let i = queuedBlocks.length - 1; i >= 0; i--) {
+          const [index, item, key] = queuedBlocks[i]
+          const oldIndex = oldKeyIndexMap.get(key)
+          if (oldIndex !== undefined) {
+            oldKeyIndexMap.delete(key)
+            const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
+            update(reusedBlock, ...item)
+            opers[opersLength++] = { index, block: reusedBlock }
+          } else {
+            mountCounter++
+            opers[opersLength++] = { source, index, item, key }
           }
-        } else {
-          queuedBlocks.length = queuedBlocksInsertIndex
-          previousKeyIndexPairs.length = previousKeyIndexInsertIndex
+        }
 
-          const previousKeyIndexMap = new Map(previousKeyIndexPairs)
-          const blocksToMount: [
-            blockIndex: number,
-            blockItem: ReturnType<typeof getItem>,
-            blockKey: any,
-            anchorOffset: number,
-          ][] = []
+        const useFastRemove = mountCounter === newLength
 
-          const relocateOrMountBlock = (
-            blockIndex: number,
-            blockItem: ReturnType<typeof getItem>,
-            blockKey: any,
-            anchorOffset: number,
-          ) => {
-            const previousIndex = previousKeyIndexMap.get(blockKey)
-            if (previousIndex !== undefined) {
-              const reusedBlock = (newBlocks[blockIndex] =
-                oldBlocks[previousIndex])
-              update(reusedBlock, ...blockItem)
-              insert(
-                reusedBlock,
-                parent!,
-                anchorOffset === -1
-                  ? anchorFallback
-                  : normalizeAnchor(newBlocks[anchorOffset].nodes),
-              )
-              previousKeyIndexMap.delete(blockKey)
-            } else {
-              blocksToMount.push([
-                blockIndex,
-                blockItem,
-                blockKey,
-                anchorOffset,
-              ])
-            }
+        for (const leftoverIndex of oldKeyIndexMap.values()) {
+          unmount(
+            oldBlocks[leftoverIndex],
+            !(useFastRemove && canUseFastRemove),
+            !useFastRemove,
+          )
+        }
+        if (useFastRemove) {
+          for (const selector of selectors) {
+            selector.cleanup()
           }
-
-          for (let i = queuedBlocks.length - 1; i >= 0; i--) {
-            const [blockIndex, blockItem, blockKey] = queuedBlocks[i]
-            relocateOrMountBlock(
-              blockIndex,
-              blockItem,
-              blockKey,
-              blockIndex < preparationBlockCount - 1 ? blockIndex + 1 : -1,
-            )
+          if (canUseFastRemove) {
+            parent!.textContent = ''
+            parent!.appendChild(parentAnchor)
           }
+        }
 
-          for (let i = preparationBlockCount; i < newLength - endOffset; i++) {
-            const blockItem = getItem(source, i)
-            const blockKey = getKey(...blockItem)
-            relocateOrMountBlock(i, blockItem, blockKey, -1)
-          }
-
-          const useFastRemove = blocksToMount.length === newLength
-
-          for (const leftoverIndex of previousKeyIndexMap.values()) {
-            unmount(
-              oldBlocks[leftoverIndex],
-              !(useFastRemove && canUseFastRemove),
-              !useFastRemove,
-            )
-          }
-          if (useFastRemove) {
-            for (const selector of selectors) {
-              selector.cleanup()
-            }
-            if (canUseFastRemove) {
-              parent!.textContent = ''
-              parent!.appendChild(parentAnchor)
-            }
-          }
-
-          for (const [
-            blockIndex,
-            blockItem,
-            blockKey,
-            anchorOffset,
-          ] of blocksToMount) {
+        if (opers.length === mountCounter) {
+          for (const { source, index, item, key } of opers as MountOper[]) {
             mount(
               source,
-              blockIndex,
-              anchorOffset === -1
-                ? anchorFallback
-                : normalizeAnchor(newBlocks[anchorOffset].nodes),
-              blockItem,
-              blockKey,
+              index,
+              index < newLength - 1
+                ? normalizeAnchor(newBlocks[index + 1].nodes)
+                : parentAnchor,
+              item,
+              key,
             )
+          }
+        } else if (opers.length) {
+          let anchor = oldBlocks[0]
+          let blocksTail: ForBlock | undefined
+          for (let i = 0; i < oldLength; i++) {
+            const block = oldBlocks[i]
+            if (oldKeyIndexMap.has(block.key)) {
+              continue
+            }
+            block.prevAnchor = anchor
+            anchor = oldBlocks[i + 1]
+            if (blocksTail !== undefined) {
+              blocksTail.next = block
+              block.prev = blocksTail
+            }
+            blocksTail = block
+          }
+          for (const action of opers) {
+            const { index } = action
+            if (index < newLength - 1) {
+              const nextBlock = newBlocks[index + 1]
+              let anchorNode = normalizeAnchor(nextBlock.prevAnchor!.nodes)
+              if (!anchorNode.parentNode)
+                anchorNode = normalizeAnchor(nextBlock.nodes)
+              if ('source' in action) {
+                const { item, key } = action
+                const block = mount(source, index, anchorNode, item, key)
+                moveLink(block, nextBlock.prev, nextBlock)
+              } else if (action.block.next !== nextBlock) {
+                insert(action.block, parent!, anchorNode)
+                moveLink(action.block, nextBlock.prev, nextBlock)
+              }
+            } else if ('source' in action) {
+              const { item, key } = action
+              const block = mount(source, index, parentAnchor, item, key)
+              moveLink(block, blocksTail)
+              blocksTail = block
+            } else if (action.block.next !== undefined) {
+              let anchorNode = anchor
+                ? normalizeAnchor(anchor.nodes)
+                : parentAnchor
+              if (!anchorNode.parentNode) anchorNode = parentAnchor
+              insert(action.block, parent!, anchorNode)
+              moveLink(action.block, blocksTail)
+              blocksTail = action.block
+            }
+          }
+          for (const block of newBlocks) {
+            block.prevAnchor = block.next = block.prev = undefined
           }
         }
       }
@@ -383,6 +402,11 @@ export const createFor = (
       indexRef,
       key2,
     ))
+
+    // apply transition for new nodes
+    if (frag.$transition) {
+      applyTransitionHooks(block.nodes, frag.$transition, false)
+    }
 
     if (parent) insert(block.nodes, parent, anchor)
 
@@ -486,6 +510,22 @@ export const createFor = (
   }
 }
 
+function moveLink(block: ForBlock, newPrev?: ForBlock, newNext?: ForBlock) {
+  const { prev: oldPrev, next: oldNext } = block
+  if (oldPrev) oldPrev.next = oldNext
+  if (oldNext) {
+    oldNext.prev = oldPrev
+    if (block.prevAnchor !== block) {
+      oldNext.prevAnchor = block.prevAnchor
+    }
+  }
+  if (newPrev) newPrev.next = block
+  if (newNext) newNext.prev = block
+  block.prev = newPrev
+  block.next = newNext
+  block.prevAnchor = block
+}
+
 export function createForSlots(
   rawSource: Source,
   getSlot: (item: any, key: any, index?: number) => DynamicSlot,
@@ -576,4 +616,8 @@ export function getRestElement(val: any, keys: string[]): any {
 
 export function getDefaultValue(val: any, defaultVal: any): any {
   return val === undefined ? defaultVal : val
+}
+
+export function isForBlock(block: Block): block is ForBlock {
+  return block instanceof ForBlock
 }

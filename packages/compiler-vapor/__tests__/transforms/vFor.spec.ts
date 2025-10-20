@@ -368,4 +368,24 @@ describe('compiler: v-for', () => {
       index: undefined,
     })
   })
+
+  test('v-for on component', () => {
+    const { code, ir } = compileWithVFor(
+      `<Comp v-for="item in list">{{item}}</Comp>`,
+    )
+    expect(code).matchSnapshot()
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).component,
+    ).toBe(true)
+  })
+
+  test('v-for on template with single component child', () => {
+    const { code, ir } = compileWithVFor(
+      `<template v-for="item in list"><Comp>{{item}}</Comp></template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).component,
+    ).toBe(true)
+  })
 })

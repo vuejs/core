@@ -118,6 +118,7 @@ export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'
 export {
   BaseTransition,
   BaseTransitionPropsValidators,
+  checkTransitionMode,
   type BaseTransitionProps,
 } from './components/BaseTransition'
 // For using custom directives
@@ -150,8 +151,10 @@ export { registerRuntimeCompiler, isRuntimeOnly } from './component'
 export {
   useTransitionState,
   resolveTransitionHooks,
+  baseResolveTransitionHooks,
   setTransitionHooks,
   getTransitionRawChildren,
+  leaveCbKey,
 } from './components/BaseTransition'
 export { initCustomFormatter } from './customFormatter'
 
@@ -335,6 +338,8 @@ export type { SuspenseBoundary } from './components/Suspense'
 export type {
   TransitionState,
   TransitionHooks,
+  TransitionHooksContext,
+  TransitionElement,
 } from './components/BaseTransition'
 export type {
   AsyncComponentOptions,
@@ -505,7 +510,7 @@ export { type VaporInteropInterface } from './apiCreateApp'
 /**
  * @internal
  */
-export { type RendererInternals, MoveType } from './renderer'
+export { type RendererInternals, MoveType, invalidateMount } from './renderer'
 /**
  * @internal
  */
@@ -565,4 +570,30 @@ export { ensureVaporSlotFallback } from './helpers/renderSlot'
 /**
  * @internal
  */
+export { getComponentName } from './component'
+/**
+ * @internal
+ */
+export {
+  matches,
+  isKeepAlive,
+  resetShapeFlag,
+  activate,
+  deactivate,
+} from './components/KeepAlive'
+/**
+ * @internal
+ */
+export { devtoolsComponentAdded } from './devtools'
+/**
+ * @internal
+ */
+export { performTransitionEnter, performTransitionLeave } from './renderer'
+/**
+ * @internal
+ */
 export { createInternalObject } from './internalObject'
+/**
+ * @internal
+ */
+export { createCanSetSetupRefChecker } from './rendererTemplateRef'

@@ -79,13 +79,13 @@ export const DELIMITERS_ARRAY: CodeFragmentDelimiters = ['[', ']', ', ']
 export const DELIMITERS_ARRAY_NEWLINE: CodeFragmentDelimiters = [
   ['[', INDENT_START, NEWLINE],
   [INDENT_END, NEWLINE, ']'],
-  [', ', NEWLINE],
+  [',', NEWLINE],
 ]
 export const DELIMITERS_OBJECT: CodeFragmentDelimiters = ['{ ', ' }', ', ']
 export const DELIMITERS_OBJECT_NEWLINE: CodeFragmentDelimiters = [
   ['{', INDENT_START, NEWLINE],
   [INDENT_END, NEWLINE, '}'],
-  [', ', NEWLINE],
+  [',', NEWLINE],
 ]
 
 export function genCall(

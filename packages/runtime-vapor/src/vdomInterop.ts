@@ -9,6 +9,7 @@ import {
   type RendererNode,
   type ShallowRef,
   type Slots,
+  type TransitionHooks,
   type VNode,
   type VaporInteropInterface,
   createInternalObject,
@@ -17,12 +18,16 @@ import {
   ensureRenderer,
   ensureVaporSlotFallback,
   isEmitListener,
+  isKeepAlive,
   isVNode,
   onScopeDispose,
   renderSlot,
+  setTransitionHooks as setVNodeTransitionHooks,
   shallowReactive,
   shallowRef,
   simpleSetCurrentInstance,
+  activate as vdomActivate,
+  deactivate as vdomDeactivate,
 } from '@vue/runtime-dom'
 import {
   type LooseRawProps,
@@ -36,17 +41,32 @@ import {
 import {
   type Block,
   VaporFragment,
+  type VaporTransitionHooks,
   insert,
   isFragment,
   remove,
   setFragmentFallback,
 } from './block'
-import { EMPTY_OBJ, extend, isArray, isFunction } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  ShapeFlags,
+  extend,
+  isArray,
+  isFunction,
+  isReservedProp,
+} from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
+import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
+import {
+  type KeepAliveInstance,
+  activate,
+  deactivate,
+} from './components/KeepAlive'
+import type { KeepAliveContext } from 'packages/runtime-core/src/components/KeepAlive'
 
 export const interopKey: unique symbol = Symbol(`interop`)
 
@@ -61,7 +81,15 @@ const vaporInteropImpl: Omit<
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
-    const propsRef = shallowRef(vnode.props)
+    // filter out reserved props
+    const props: VNode['props'] = {}
+    for (const key in vnode.props) {
+      if (!isReservedProp(key)) {
+        props[key] = vnode.props[key]
+      }
+    }
+
+    const propsRef = shallowRef(props)
     const slotsRef = shallowRef(vnode.children)
 
     const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
@@ -81,6 +109,16 @@ const vaporInteropImpl: Omit<
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
+
+    // copy the shape flag from the vdom component if inside a keep-alive
+    if (isKeepAlive(parentComponent)) instance.shapeFlag = vnode.shapeFlag
+
+    if (vnode.transition) {
+      setVaporTransitionHooks(
+        instance,
+        vnode.transition as VaporTransitionHooks,
+      )
+    }
     mountComponent(instance, container, selfAnchor)
     simpleSetCurrentInstance(prev)
     return instance
@@ -137,6 +175,27 @@ const vaporInteropImpl: Omit<
     insert(vnode.vb || (vnode.component as any), container, anchor)
     insert(vnode.anchor as any, container, anchor)
   },
+
+  setTransitionHooks(component, hooks) {
+    setVaporTransitionHooks(component as any, hooks as VaporTransitionHooks)
+  },
+
+  activate(vnode, container, anchor, parentComponent) {
+    const cached = (parentComponent.ctx as KeepAliveContext).getCachedComponent(
+      vnode,
+    )
+
+    vnode.el = cached.el
+    vnode.component = cached.component
+    vnode.anchor = cached.anchor
+    activate(vnode.component as any, container, anchor)
+    insert(vnode.anchor as any, container, anchor)
+  },
+
+  deactivate(vnode, container) {
+    deactivate(vnode.component as any, container)
+    insert(vnode.anchor as any, container)
+  },
 }
 
 const vaporSlotPropsProxyHandler: ProxyHandler<
@@ -173,10 +232,10 @@ function createVDOMComponent(
   rawSlots?: LooseRawSlots | null,
 ): VaporFragment {
   const frag = new VaporFragment([])
-  const vnode = createVNode(
+  const vnode = (frag.vnode = createVNode(
     component,
     rawProps && new Proxy(rawProps, rawPropsProxyHandlers),
-  )
+  ))
   const wrapper = new VaporComponentInstance(
     { props: component.props },
     rawProps as RawProps,
@@ -203,12 +262,40 @@ function createVDOMComponent(
 
   let isMounted = false
   const parentInstance = currentInstance as VaporComponentInstance
-  const unmount = (parentNode?: ParentNode) => {
+  const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
+    if (transition) setVNodeTransitionHooks(vnode, transition)
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      vdomDeactivate(
+        vnode,
+        (parentInstance as KeepAliveInstance).getStorageContainer(),
+        internals,
+        parentInstance as any,
+        null,
+      )
+      return
+    }
     internals.umt(vnode.component!, null, !!parentNode)
   }
 
-  frag.insert = (parentNode, anchor) => {
+  frag.insert = (parentNode, anchor, transition) => {
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      vdomActivate(
+        vnode,
+        parentNode,
+        anchor,
+        internals,
+        parentInstance as any,
+        null,
+        undefined,
+        false,
+      )
+      return
+    }
+
+    const prev = currentInstance
+    simpleSetCurrentInstance(parentInstance)
     if (!isMounted) {
+      if (transition) setVNodeTransitionHooks(vnode, transition)
       internals.mt(
         vnode,
         parentNode,
@@ -230,6 +317,9 @@ function createVDOMComponent(
         parentInstance as any,
       )
     }
+
+    frag.nodes = vnode.el as any
+    simpleSetCurrentInstance(prev)
   }
 
   frag.remove = unmount

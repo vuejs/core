@@ -9,6 +9,7 @@ import {
   ErrorCodes,
   type SchedulerJob,
   callWithErrorHandling,
+  createCanSetSetupRefChecker,
   queuePostFlushCb,
   warn,
 } from '@vue/runtime-dom'
@@ -51,10 +52,10 @@ export function setRef(
 
   const setupState: any = __DEV__ ? instance.setupState || {} : null
   const refValue = getRefValue(el)
-
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
 
+  const canSetSetupRef = createCanSetSetupRefChecker(setupState)
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
@@ -87,7 +88,7 @@ export function setRef(
       const doSet: SchedulerJob = () => {
         if (refFor) {
           existing = _isString
-            ? __DEV__ && hasOwn(setupState, ref)
+            ? __DEV__ && canSetSetupRef(ref)
               ? setupState[ref]
               : refs[ref]
             : ref.value
@@ -96,7 +97,7 @@ export function setRef(
             existing = [refValue]
             if (_isString) {
               refs[ref] = existing
-              if (__DEV__ && hasOwn(setupState, ref)) {
+              if (__DEV__ && canSetSetupRef(ref)) {
                 setupState[ref] = refs[ref]
                 // if setupState[ref] is a reactivity ref,
                 // the existing will also become reactivity too
@@ -111,7 +112,7 @@ export function setRef(
           }
         } else if (_isString) {
           refs[ref] = refValue
-          if (__DEV__ && hasOwn(setupState, ref)) {
+          if (__DEV__ && canSetSetupRef(ref)) {
             setupState[ref] = refValue
           }
         } else if (_isRef) {
@@ -129,7 +130,7 @@ export function setRef(
             remove(existing, refValue)
           } else if (_isString) {
             refs[ref] = null
-            if (__DEV__ && hasOwn(setupState, ref)) {
+            if (__DEV__ && canSetSetupRef(ref)) {
               setupState[ref] = null
             }
           } else if (_isRef) {
