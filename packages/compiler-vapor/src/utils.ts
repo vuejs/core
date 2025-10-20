@@ -115,8 +115,15 @@ export function isTransitionGroupTag(tag: string): boolean {
   return tag === 'transitiongroup' || tag === 'vaportransitiongroup'
 }
 
+export function isKeepAliveTag(tag: string): boolean {
+  tag = tag.toLowerCase()
+  return tag === 'keepalive' || tag === 'vaporkeepalive'
+}
+
 export function isBuiltInComponent(tag: string): string | undefined {
-  if (isTransitionTag(tag)) {
+  if (isKeepAliveTag(tag)) {
+    return 'VaporKeepAlive'
+  } else if (isTransitionTag(tag)) {
     return 'VaporTransition'
   } else if (isTransitionGroupTag(tag)) {
     return 'VaporTransitionGroup'

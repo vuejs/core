@@ -1181,12 +1181,21 @@ function baseCreateRenderer(
 
     if ((n2.type as ConcreteComponent).__vapor) {
       if (n1 == null) {
-        getVaporInterface(parentComponent, n2).mount(
-          n2,
-          container,
-          anchor,
-          parentComponent,
-        )
+        if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+          getVaporInterface(parentComponent, n2).activate(
+            n2,
+            container,
+            anchor,
+            parentComponent!,
+          )
+        } else {
+          getVaporInterface(parentComponent, n2).mount(
+            n2,
+            container,
+            anchor,
+            parentComponent,
+          )
+        }
       } else {
         getVaporInterface(parentComponent, n2).update(
           n1,
@@ -2264,7 +2273,14 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+      if ((vnode.type as ConcreteComponent).__vapor) {
+        getVaporInterface(parentComponent!, vnode).deactivate(
+          vnode,
+          (parentComponent!.ctx as KeepAliveContext).getStorageContainer(),
+        )
+      } else {
+        ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+      }
       return
     }
 
@@ -2694,7 +2710,7 @@ export function traverseStaticChildren(
 }
 
 function locateNonHydratedAsyncRoot(
-  instance: ComponentInternalInstance,
+  instance: GenericComponentInstance,
 ): ComponentInternalInstance | undefined {
   const subComponent = instance.subTree && instance.subTree.component
   if (subComponent) {

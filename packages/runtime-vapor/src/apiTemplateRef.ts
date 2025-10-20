@@ -52,7 +52,6 @@ export function setRef(
 
   const setupState: any = __DEV__ ? instance.setupState || {} : null
   const refValue = getRefValue(el)
-
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
 

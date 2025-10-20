@@ -1,6 +1,7 @@
 import { isArray } from '@vue/shared'
 import {
   type VaporComponentInstance,
+  currentInstance,
   isVaporComponent,
   mountComponent,
   unmountComponent,
@@ -12,6 +13,8 @@ import {
   type TransitionHooks,
   type TransitionProps,
   type TransitionState,
+  type VNode,
+  isKeepAlive,
   performTransitionEnter,
   performTransitionLeave,
 } from '@vue/runtime-dom'
@@ -19,6 +22,7 @@ import {
   applyTransitionHooks,
   applyTransitionLeaveHooks,
 } from './components/Transition'
+import type { KeepAliveInstance } from './components/KeepAlive'
 
 export interface TransitionOptions {
   $key?: any
@@ -47,6 +51,7 @@ export class VaporFragment implements TransitionOptions {
   $key?: any
   $transition?: VaporTransitionHooks | undefined
   nodes: Block
+  vnode?: VNode | null = null
   anchor?: Node
   insert?: (
     parent: ParentNode,
@@ -85,6 +90,9 @@ export class DynamicFragment extends VaporFragment {
       if (render) {
         this.scope = new EffectScope()
         this.nodes = this.scope.run(render) || []
+        if (isKeepAlive(instance)) {
+          ;(instance as KeepAliveInstance).process(this.nodes)
+        }
         if (transition) {
           this.$transition = applyTransitionHooks(this.nodes, transition)
         }
@@ -94,10 +102,14 @@ export class DynamicFragment extends VaporFragment {
         this.nodes = []
       }
     }
-
+    const instance = currentInstance!
     // teardown previous branch
     if (this.scope) {
-      this.scope.stop()
+      if (isKeepAlive(instance)) {
+        ;(instance as KeepAliveInstance).process(this.nodes)
+      } else {
+        this.scope.stop()
+      }
       const mode = transition && transition.mode
       if (mode) {
         applyTransitionLeaveHooks(this.nodes, transition, renderBranch)
@@ -177,7 +189,7 @@ export function insert(
       }
     }
   } else if (isVaporComponent(block)) {
-    if (block.isMounted) {
+    if (block.isMounted && !block.isDeactivated) {
       insert(block.block!, parent, anchor)
     } else {
       mountComponent(block, parent, anchor)

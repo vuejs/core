@@ -3,6 +3,7 @@ export { createVaporApp, createVaporSSRApp } from './apiCreateApp'
 export { defineVaporComponent } from './apiDefineComponent'
 export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
+export { VaporKeepAliveImpl as VaporKeepAlive } from './components/KeepAlive'
 
 // compiler-use only
 export { insert, prepend, remove, isFragment, VaporFragment } from './block'
