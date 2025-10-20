@@ -739,20 +739,21 @@ function baseCreateRenderer(
     }
     // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
     // #1689 For inside suspense + suspense resolved case, just call it
-    const needCallTransitionHooks = needTransition(parentSuspense, transition)
-    if (needCallTransitionHooks) {
-      transition!.beforeEnter(el)
+    if (transition) {
+      performTransitionEnter(
+        el,
+        transition,
+        () => hostInsert(el, container, anchor),
+        parentSuspense,
+      )
+    } else {
+      hostInsert(el, container, anchor)
     }
-    hostInsert(el, container, anchor)
-    if (
-      (vnodeHook = props && props.onVnodeMounted) ||
-      needCallTransitionHooks ||
-      dirs
-    ) {
+
+    if ((vnodeHook = props && props.onVnodeMounted) || dirs) {
       queuePostRenderEffect(
         () => {
           vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-          needCallTransitionHooks && transition!.enter(el)
           dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
         },
         undefined,
@@ -1181,12 +1182,21 @@ function baseCreateRenderer(
 
     if ((n2.type as ConcreteComponent).__vapor) {
       if (n1 == null) {
-        getVaporInterface(parentComponent, n2).mount(
-          n2,
-          container,
-          anchor,
-          parentComponent,
-        )
+        if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+          getVaporInterface(parentComponent, n2).activate(
+            n2,
+            container,
+            anchor,
+            parentComponent!,
+          )
+        } else {
+          getVaporInterface(parentComponent, n2).mount(
+            n2,
+            container,
+            anchor,
+            parentComponent,
+          )
+        }
       } else {
         getVaporInterface(parentComponent, n2).update(
           n1,
@@ -2189,12 +2199,12 @@ function baseCreateRenderer(
       transition
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
-        transition!.beforeEnter(el!)
-        hostInsert(el!, container, anchor)
-        queuePostRenderEffect(
-          () => transition!.enter(el!),
-          undefined,
+        performTransitionEnter(
+          el!,
+          transition,
+          () => hostInsert(el!, container, anchor),
           parentSuspense,
+          true,
         )
       } else {
         const { leave, delayLeave, afterLeave } = transition!
@@ -2264,7 +2274,14 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+      if ((vnode.type as ConcreteComponent).__vapor) {
+        getVaporInterface(parentComponent!, vnode).deactivate(
+          vnode,
+          (parentComponent!.ctx as KeepAliveContext).getStorageContainer(),
+        )
+      } else {
+        ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+      }
       return
     }
 
@@ -2388,27 +2405,15 @@ function baseCreateRenderer(
       return
     }
 
-    const performRemove = () => {
-      hostRemove(el!)
-      if (transition && !transition.persisted && transition.afterLeave) {
-        transition.afterLeave()
-      }
-    }
-
-    if (
-      vnode.shapeFlag & ShapeFlags.ELEMENT &&
-      transition &&
-      !transition.persisted
-    ) {
-      const { leave, delayLeave } = transition
-      const performLeave = () => leave(el!, performRemove)
-      if (delayLeave) {
-        delayLeave(vnode.el!, performRemove, performLeave)
-      } else {
-        performLeave()
-      }
+    if (transition) {
+      performTransitionLeave(
+        el!,
+        transition,
+        () => hostRemove(el!),
+        !!(vnode.shapeFlag & ShapeFlags.ELEMENT),
+      )
     } else {
-      performRemove()
+      hostRemove(el!)
     }
   }
 
@@ -2707,9 +2712,9 @@ export function traverseStaticChildren(
 }
 
 function locateNonHydratedAsyncRoot(
-  instance: ComponentInternalInstance,
+  instance: GenericComponentInstance,
 ): ComponentInternalInstance | undefined {
-  const subComponent = instance.vapor ? null : instance.subTree.component
+  const subComponent = instance.subTree && instance.subTree.component
   if (subComponent) {
     if (subComponent.asyncDep && !subComponent.asyncResolved) {
       return subComponent
@@ -2726,9 +2731,50 @@ export function invalidateMount(hooks: LifecycleHook | undefined): void {
   }
 }
 
-/**
- * @internal
- */
+// shared between vdom and vapor
+export function performTransitionEnter(
+  el: RendererElement,
+  transition: TransitionHooks,
+  insert: () => void,
+  parentSuspense: SuspenseBoundary | null,
+  force: boolean = false,
+): void {
+  if (force || needTransition(parentSuspense, transition)) {
+    transition.beforeEnter(el)
+    insert()
+    queuePostRenderEffect(() => transition.enter(el), undefined, parentSuspense)
+  } else {
+    insert()
+  }
+}
+
+// shared between vdom and vapor
+export function performTransitionLeave(
+  el: RendererElement,
+  transition: TransitionHooks,
+  remove: () => void,
+  isElement: boolean = true,
+): void {
+  const performRemove = () => {
+    remove()
+    if (transition && !transition.persisted && transition.afterLeave) {
+      transition.afterLeave()
+    }
+  }
+
+  if (isElement && transition && !transition.persisted) {
+    const { leave, delayLeave } = transition
+    const performLeave = () => leave(el, performRemove)
+    if (delayLeave) {
+      delayLeave(el, performRemove, performLeave)
+    } else {
+      performLeave()
+    }
+  } else {
+    performRemove()
+  }
+}
+
 export function getVaporInterface(
   instance: ComponentInternalInstance | null,
   vnode: VNode,

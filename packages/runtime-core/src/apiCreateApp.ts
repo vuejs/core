@@ -27,7 +27,7 @@ import { warn } from './warning'
 import type { VNode } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
-import { version } from '.'
+import { type TransitionHooks, version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
@@ -175,7 +175,6 @@ export interface AppConfig extends GenericAppConfig {
 
 /**
  * The vapor in vdom implementation is in runtime-vapor/src/vdomInterop.ts
- * @internal
  */
 export interface VaporInteropInterface {
   mount(
@@ -196,6 +195,18 @@ export interface VaporInteropInterface {
     parentComponent: ComponentInternalInstance | null,
   ): Node
   hydrateSlot(vnode: VNode, node: any): Node
+  activate(
+    vnode: VNode,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance,
+  ): void
+  deactivate(vnode: VNode, container: any): void
+  setTransitionHooks(
+    component: ComponentInternalInstance,
+    transition: TransitionHooks,
+  ): void
+
   vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
   vdomUnmount: UnmountComponentFn
   vdomSlot: (

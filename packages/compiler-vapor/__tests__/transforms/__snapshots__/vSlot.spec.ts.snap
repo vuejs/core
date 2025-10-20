@@ -9,7 +9,7 @@ export function render(_ctx) {
   const n2 = _createComponentWithFallback(_component_Comp, null, {
     $: [
       () => ({
-        name: _ctx.name, 
+        name: _ctx.name,
         fn: () => {
           const n0 = t0()
           return n0
@@ -30,7 +30,7 @@ export function render(_ctx) {
   const n2 = _createComponentWithFallback(_component_Comp, null, {
     $: [
       () => (_createForSlots(_ctx.list, (item) => ({
-        name: item, 
+        name: item,
         fn: (_slotProps0) => {
           const n0 = t0()
           _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["bar"])))
@@ -52,7 +52,7 @@ export function render(_ctx) {
   const n2 = _createComponentWithFallback(_component_Comp, null, {
     $: [
       () => (_createForSlots(_ctx.list, (_, __, index) => ({
-        name: index, 
+        name: index,
         fn: () => {
           const n0 = t0()
           return n0
@@ -76,7 +76,7 @@ export function render(_ctx) {
     $: [
       () => (_ctx.condition
         ? {
-          name: "condition", 
+          name: "condition",
           fn: () => {
             const n0 = t0()
             return n0
@@ -84,14 +84,14 @@ export function render(_ctx) {
         }
         : _ctx.anotherCondition
           ? {
-            name: "condition", 
+            name: "condition",
             fn: (_slotProps0) => {
               const n2 = t1()
               return n2
             }
           }
           : {
-            name: "condition", 
+            name: "condition",
             fn: () => {
               const n4 = t2()
               return n4
@@ -100,6 +100,97 @@ export function render(_ctx) {
     ]
   }, true)
   return n6
+}"
+`;
+
+exports[`compiler: transform slot > forwarded slots > <slot w/ nested component> 1`] = `
+"import { forwardedSlotCreator as _forwardedSlotCreator, resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _createForwardedSlot = _forwardedSlotCreator()
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": () => {
+      const n1 = _createComponentWithFallback(_component_Comp, null, {
+        "default": () => {
+          const n0 = _createForwardedSlot("default", null)
+          return n0
+        }
+      })
+      return n1
+    }
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > forwarded slots > <slot> tag only 1`] = `
+"import { forwardedSlotCreator as _forwardedSlotCreator, resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _createForwardedSlot = _forwardedSlotCreator()
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponentWithFallback(_component_Comp, null, {
+    "default": () => {
+      const n0 = _createForwardedSlot("default", null)
+      return n0
+    }
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > forwarded slots > <slot> tag w/ template 1`] = `
+"import { forwardedSlotCreator as _forwardedSlotCreator, resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _createForwardedSlot = _forwardedSlotCreator()
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": () => {
+      const n0 = _createForwardedSlot("default", null)
+      return n0
+    }
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-for 1`] = `
+"import { forwardedSlotCreator as _forwardedSlotCreator, resolveComponent as _resolveComponent, createFor as _createFor, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _createForwardedSlot = _forwardedSlotCreator()
+  const _component_Comp = _resolveComponent("Comp")
+  const n3 = _createComponentWithFallback(_component_Comp, null, {
+    "default": () => {
+      const n0 = _createFor(() => (_ctx.b), (_for_item0) => {
+        const n2 = _createForwardedSlot("default", null)
+        return n2
+      })
+      return n0
+    }
+  }, true)
+  return n3
+}"
+`;
+
+exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-if 1`] = `
+"import { forwardedSlotCreator as _forwardedSlotCreator, resolveComponent as _resolveComponent, createIf as _createIf, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _createForwardedSlot = _forwardedSlotCreator()
+  const _component_Comp = _resolveComponent("Comp")
+  const n3 = _createComponentWithFallback(_component_Comp, null, {
+    "default": () => {
+      const n0 = _createIf(() => (_ctx.ok), () => {
+        const n2 = _createForwardedSlot("default", null)
+        return n2
+      })
+      return n0
+    }
+  }, true)
+  return n3
 }"
 `;
 
@@ -131,7 +222,7 @@ export function render(_ctx) {
     "one": () => {
       const n0 = t0()
       return n0
-    }, 
+    },
     "default": () => {
       const n2 = t1()
       const n3 = t2()
@@ -192,7 +283,7 @@ export function render(_ctx) {
   const n1 = _createComponentWithFallback(_component_Comp, null, {
     $: [
       () => ({
-        name: _ctx.named, 
+        name: _ctx.named,
         fn: (_slotProps0) => {
           const n0 = t0()
           _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
@@ -287,7 +378,7 @@ export function render(_ctx) {
     "header": () => {
       const n0 = t0()
       return n0
-    }, 
+    },
     "default": () => {
       const n2 = t1()
       const n3 = t2()
@@ -309,7 +400,7 @@ export function render(_ctx) {
     "header": () => {
       const n0 = t0()
       return n0
-    }, 
+    },
     "default": () => {
       const n3 = t1()
       return n3
@@ -330,7 +421,7 @@ export function render(_ctx) {
     "header": () => {
       const n0 = t0()
       return n0
-    }, 
+    },
     "footer": () => {
       const n3 = t1()
       return n3

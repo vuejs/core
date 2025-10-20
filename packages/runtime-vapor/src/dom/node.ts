@@ -1,8 +1,7 @@
-/* @__NO_SIDE_EFFECTS__ */
-
 import type { ChildItem, InsertionParent } from '../insertionState'
 import { isComment, locateEndAnchor } from './hydration'
 
+/* @__NO_SIDE_EFFECTS__ */
 export function createElement(tagName: string): HTMLElement {
   return document.createElement(tagName)
 }

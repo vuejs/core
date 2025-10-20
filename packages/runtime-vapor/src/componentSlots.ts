@@ -1,11 +1,5 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import {
-  type Block,
-  type BlockFn,
-  DynamicFragment,
-  type VaporFragment,
-  insert,
-} from './block'
+import { type Block, type BlockFn, insert } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
@@ -21,6 +15,7 @@ import {
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
+import { DynamicFragment, type VaporFragment } from './fragment'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -102,17 +97,28 @@ export function getSlot(
   }
 }
 
+export function forwardedSlotCreator(): (
+  name: string | (() => string),
+  rawProps?: LooseRawProps | null,
+  fallback?: VaporSlot,
+) => Block {
+  const instance = currentInstance as VaporComponentInstance
+  return (name, rawProps, fallback) =>
+    createSlot(name, rawProps, fallback, instance)
+}
+
 export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
+  i?: VaporComponentInstance,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
 
-  const instance = currentInstance as VaporComponentInstance
+  const instance = i || (currentInstance as VaporComponentInstance)
   const rawSlots = instance.rawSlots
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)
@@ -137,18 +143,10 @@ export function createSlot(
     const renderSlot = () => {
       const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
       if (slot) {
+        fragment.fallback = fallback
         // create and cache bound version of the slot to make it stable
         // so that we avoid unnecessary updates if it resolves to the same slot
-        fragment.update(
-          slot._bound ||
-            (slot._bound = () => {
-              const slotContent = slot(slotProps)
-              if (slotContent instanceof DynamicFragment) {
-                slotContent.fallback = fallback
-              }
-              return slotContent
-            }),
-        )
+        fragment.update(slot._bound || (slot._bound = () => slot(slotProps)))
       } else {
         fragment.update(fallback)
       }

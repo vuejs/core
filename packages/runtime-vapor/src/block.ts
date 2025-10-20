@@ -5,148 +5,43 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { _child, createComment, createTextNode } from './dom/node'
-import { EffectScope, setActiveSub } from '@vue/reactivity'
+import { _child } from './dom/node'
+import { isComment, isHydrating } from './dom/hydration'
 import {
-  currentHydrationNode,
-  isComment,
-  isHydrating,
-  locateFragmentEndAnchor,
-  locateHydrationNode,
-} from './dom/hydration'
-import { queuePostFlushCb } from '@vue/runtime-dom'
+  type TransitionHooks,
+  type TransitionProps,
+  type TransitionState,
+  performTransitionEnter,
+  performTransitionLeave,
+} from '@vue/runtime-dom'
+import {
+  type DynamicFragment,
+  type VaporFragment,
+  isFragment,
+} from './fragment'
+import { TeleportFragment } from './components/Teleport'
 
-export type Block =
-  | Node
-  | VaporFragment
-  | DynamicFragment
-  | VaporComponentInstance
-  | Block[]
+export interface VaporTransitionHooks extends TransitionHooks {
+  state: TransitionState
+  props: TransitionProps
+  instance: VaporComponentInstance
+  // mark transition hooks as disabled so that it skips during
+  // inserting
+  disabled?: boolean
+}
 
+export interface TransitionOptions {
+  $key?: any
+  $transition?: VaporTransitionHooks
+}
+
+export type TransitionBlock =
+  | (Node & TransitionOptions)
+  | (VaporFragment & TransitionOptions)
+  | (DynamicFragment & TransitionOptions)
+
+export type Block = TransitionBlock | VaporComponentInstance | Block[]
 export type BlockFn = (...args: any[]) => Block
-
-export class VaporFragment {
-  nodes: Block
-  anchor?: Node
-  insert?: (parent: ParentNode, anchor: Node | null) => void
-  remove?: (parent?: ParentNode) => void
-  hydrate?: (...args: any[]) => any
-
-  constructor(nodes: Block) {
-    this.nodes = nodes
-  }
-}
-
-export class DynamicFragment extends VaporFragment {
-  anchor!: Node
-  scope: EffectScope | undefined
-  current?: BlockFn
-  fallback?: BlockFn
-  anchorLabel?: string
-
-  constructor(anchorLabel?: string) {
-    super([])
-    if (isHydrating) {
-      this.anchorLabel = anchorLabel
-      locateHydrationNode()
-    } else {
-      this.anchor =
-        __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
-    }
-  }
-
-  update(render?: BlockFn, key: any = render): void {
-    if (key === this.current) {
-      if (isHydrating) this.hydrate(true)
-      return
-    }
-    this.current = key
-
-    const prevSub = setActiveSub()
-    const parent = isHydrating ? null : this.anchor.parentNode
-
-    // teardown previous branch
-    if (this.scope) {
-      this.scope.stop()
-      parent && remove(this.nodes, parent)
-    }
-
-    if (render) {
-      this.scope = new EffectScope()
-      this.nodes = this.scope.run(render) || []
-      if (parent) insert(this.nodes, parent, this.anchor)
-    } else {
-      this.scope = undefined
-      this.nodes = []
-    }
-
-    if (this.fallback && !isValidBlock(this.nodes)) {
-      parent && remove(this.nodes, parent)
-      this.nodes =
-        (this.scope || (this.scope = new EffectScope())).run(this.fallback) ||
-        []
-      parent && insert(this.nodes, parent, this.anchor)
-    }
-
-    setActiveSub(prevSub)
-
-    if (isHydrating) this.hydrate()
-  }
-
-  hydrate = (isEmpty = false): void => {
-    // avoid repeated hydration during fallback rendering
-    if (this.anchor) return
-
-    if (this.anchorLabel === 'if') {
-      // reuse the empty comment node as the anchor for empty if
-      // e.g. `<div v-if="false"></div>` -> `<!---->`
-      if (isEmpty) {
-        this.anchor = locateFragmentEndAnchor('')!
-        if (!this.anchor) {
-          throw new Error('Failed to locate if anchor')
-        } else {
-          if (__DEV__) {
-            ;(this.anchor as Comment).data = this.anchorLabel
-          }
-          return
-        }
-      }
-    } else if (this.anchorLabel === 'slot') {
-      // reuse the empty comment node for empty slot
-      // e.g. `<slot v-if="false"></slot>`
-      if (isEmpty && isComment(currentHydrationNode!, '')) {
-        this.anchor = currentHydrationNode!
-        if (__DEV__) {
-          ;(this.anchor as Comment).data = this.anchorLabel!
-        }
-        return
-      }
-
-      // reuse the vdom fragment end anchor
-      this.anchor = locateFragmentEndAnchor()!
-      if (!this.anchor) {
-        throw new Error('Failed to locate slot anchor')
-      } else {
-        return
-      }
-    }
-
-    const { parentNode, nextNode } = findBlockNode(this.nodes)!
-    // create an anchor
-    queuePostFlushCb(() => {
-      parentNode!.insertBefore(
-        (this.anchor = __DEV__
-          ? createComment(this.anchorLabel!)
-          : createTextNode()),
-        nextNode,
-      )
-    })
-  }
-}
-
-export function isFragment(val: NonNullable<unknown>): val is VaporFragment {
-  return val instanceof VaporFragment
-}
 
 export function isBlock(val: NonNullable<unknown>): val is Block {
   return (
@@ -174,14 +69,29 @@ export function insert(
   block: Block,
   parent: ParentNode & { $fc?: Node | null },
   anchor: Node | null | 0 = null, // 0 means prepend
+  parentSuspense?: any, // TODO Suspense
 ): void {
   anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
   if (block instanceof Node) {
     if (!isHydrating) {
-      parent.insertBefore(block, anchor)
+      // only apply transition on Element nodes
+      if (
+        block instanceof Element &&
+        (block as TransitionBlock).$transition &&
+        !(block as TransitionBlock).$transition!.disabled
+      ) {
+        performTransitionEnter(
+          block,
+          (block as TransitionBlock).$transition as TransitionHooks,
+          () => parent.insertBefore(block, anchor as Node),
+          parentSuspense,
+        )
+      } else {
+        parent.insertBefore(block, anchor)
+      }
     }
   } else if (isVaporComponent(block)) {
-    if (block.isMounted) {
+    if (block.isMounted && !block.isDeactivated) {
       insert(block.block!, parent, anchor)
     } else {
       mountComponent(block, parent, anchor)
@@ -191,13 +101,16 @@ export function insert(
       insert(b, parent, anchor)
     }
   } else {
+    if (block.anchor) {
+      insert(block.anchor, parent, anchor)
+      anchor = block.anchor
+    }
     // fragment
     if (block.insert) {
-      block.insert(parent, anchor)
+      block.insert(parent, anchor, (block as TransitionBlock).$transition)
     } else {
-      insert(block.nodes, parent, anchor)
+      insert(block.nodes, parent, anchor, parentSuspense)
     }
-    if (block.anchor) insert(block.anchor, parent, anchor)
   }
 }
 
@@ -210,7 +123,15 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
 
 export function remove(block: Block, parent?: ParentNode): void {
   if (block instanceof Node) {
-    parent && parent.removeChild(block)
+    if ((block as TransitionBlock).$transition && block instanceof Element) {
+      performTransitionLeave(
+        block,
+        (block as TransitionBlock).$transition as TransitionHooks,
+        () => parent && parent.removeChild(block),
+      )
+    } else {
+      parent && parent.removeChild(block)
+    }
   } else if (isVaporComponent(block)) {
     unmountComponent(block, parent)
   } else if (isArray(block)) {
@@ -220,7 +141,7 @@ export function remove(block: Block, parent?: ParentNode): void {
   } else {
     // fragment
     if (block.remove) {
-      block.remove(parent)
+      block.remove(parent, (block as TransitionBlock).$transition)
     } else {
       remove(block.nodes, parent)
     }
@@ -248,8 +169,12 @@ export function normalizeBlock(block: Block): Node[] {
   } else if (isVaporComponent(block)) {
     nodes.push(...normalizeBlock(block.block!))
   } else {
-    nodes.push(...normalizeBlock(block.nodes))
-    block.anchor && nodes.push(block.anchor)
+    if (block instanceof TeleportFragment) {
+      nodes.push(block.placeholder!, block.anchor!)
+    } else {
+      nodes.push(...normalizeBlock(block.nodes))
+      block.anchor && nodes.push(block.anchor)
+    }
   }
   return nodes
 }

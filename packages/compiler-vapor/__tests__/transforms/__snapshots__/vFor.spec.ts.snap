@@ -235,6 +235,38 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-for > v-for on component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n3 = _createComponentWithFallback(_component_Comp)
+    const n2 = _child(n3, 0)
+    _renderEffect(() => _setText(n2, _toDisplayString(_for_item0.value)))
+    return [n2, n3]
+  }, undefined, 2)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on template with single component child 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n3 = _createComponentWithFallback(_component_Comp)
+    const n2 = _child(n3, 0)
+    _renderEffect(() => _setText(n2, _toDisplayString(_for_item0.value)))
+    return [n2, n3]
+  }, undefined, 2)
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > w/o value 1`] = `
 "import { createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div>item</div>", true)

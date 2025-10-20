@@ -2760,8 +2760,7 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
-    // required https://github.com/vuejs/core/pull/13408 get merged
-    test.todo('forwarded slot', async () => {
+    test('forwarded slot', async () => {
       const data = reactive({
         foo: 'foo',
         bar: 'bar',
@@ -2804,9 +2803,8 @@ describe('Vapor Mode hydration', () => {
       `,
       )
     })
-    // required https://github.com/vuejs/core/pull/13408 get merged
 
-    test.todo('forwarded slot with fallback', async () => {
+    test('forwarded slot with fallback', async () => {
       const data = reactive({
         foo: 'foo',
       })
@@ -2839,7 +2837,7 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
-    test.todo('forwarded slot with empty content', async () => {
+    test('forwarded slot with empty content', async () => {
       const data = reactive({
         foo: 'foo',
       })

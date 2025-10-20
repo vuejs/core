@@ -27,7 +27,8 @@ const slotProp = ref('slot prop')
         change slot prop
       </button>
       <div class="vdom-slot-in-vapor-default">
-        #default: <slot :foo="slotProp" />
+        #default:
+        <slot :foo="slotProp" />
       </div>
       <div class="vdom-slot-in-vapor-test">
         #test: <slot name="test">fallback content</slot>

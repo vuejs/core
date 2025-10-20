@@ -16,6 +16,7 @@ import {
   isConstantExpression,
   isStaticExpression,
 } from '../utils'
+import { escapeHtml } from '@vue/shared'
 
 type TextLike = TextNode | InterpolationNode
 const seen = new WeakMap<
@@ -82,7 +83,7 @@ export const transformText: NodeTransform = (node, context) => {
   } else if (node.type === NodeTypes.INTERPOLATION) {
     processInterpolation(context as TransformContext<InterpolationNode>)
   } else if (node.type === NodeTypes.TEXT) {
-    context.template += node.content
+    context.template += escapeHtml(node.content)
   }
 }
 
@@ -143,7 +144,7 @@ function processTextContainer(
   const literals = values.map(getLiteralExpressionValue)
 
   if (literals.every(l => l != null)) {
-    context.childrenTemplate = literals.map(l => String(l))
+    context.childrenTemplate = literals.map(l => escapeHtml(String(l)))
   } else {
     context.childrenTemplate = [' ']
     context.registerOperation({

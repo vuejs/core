@@ -1,4 +1,4 @@
-import { type Block, type BlockFn, DynamicFragment, insert } from './block'
+import { type Block, type BlockFn, insert } from './block'
 import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import {
   insertionAnchor,
@@ -7,6 +7,7 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { renderEffect } from './renderEffect'
+import { DynamicFragment } from './fragment'
 
 export function createIf(
   condition: () => any,

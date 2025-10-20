@@ -2,6 +2,7 @@ import {
   type NormalizedStyle,
   canSetValueDirectly,
   includeBooleanAttr,
+  isArray,
   isOn,
   isString,
   normalizeClass,
@@ -24,6 +25,7 @@ import {
   shouldSetAsProp,
   toClassSet,
   toStyleMap,
+  unsafeToTrustedHTML,
   vShowHidden,
   warn,
   warnPropMismatch,
@@ -31,8 +33,10 @@ import {
 import {
   type VaporComponentInstance,
   isApplyingFallthroughProps,
+  isVaporComponent,
 } from '../component'
 import { isHydrating, logMismatchError } from './hydration'
+import type { Block } from '../block'
 
 type TargetElement = Element & {
   $root?: true
@@ -326,10 +330,78 @@ export function setElementText(
   }
 }
 
-export function setHtml(el: TargetElement, value: any): void {
+export function setBlockText(
+  block: Block & { $txt?: string },
+  value: unknown,
+): void {
   value = value == null ? '' : value
+  if (block.$txt !== value) {
+    setTextToBlock(block, (block.$txt = value as string))
+  }
+}
+
+/**
+ * dev only
+ */
+function warnCannotSetProp(prop: string): void {
+  warn(
+    `Extraneous non-props attributes (` +
+      `${prop}) ` +
+      `were passed to component but could not be automatically inherited ` +
+      `because component renders text or multiple root nodes.`,
+  )
+}
+
+function setTextToBlock(block: Block, value: any): void {
+  if (block instanceof Node) {
+    if (block instanceof Element) {
+      block.textContent = value
+    } else if (__DEV__) {
+      warnCannotSetProp('textContent')
+    }
+  } else if (isVaporComponent(block)) {
+    setTextToBlock(block.block, value)
+  } else if (isArray(block)) {
+    if (__DEV__) {
+      warnCannotSetProp('textContent')
+    }
+  } else {
+    setTextToBlock(block.nodes, value)
+  }
+}
+
+export function setHtml(el: TargetElement, value: any): void {
+  value = value == null ? '' : unsafeToTrustedHTML(value)
   if (el.$html !== value) {
     el.innerHTML = el.$html = value
+  }
+}
+
+export function setBlockHtml(
+  block: Block & { $html?: string },
+  value: any,
+): void {
+  value = value == null ? '' : value
+  if (block.$html !== value) {
+    setHtmlToBlock(block, (block.$html = value))
+  }
+}
+
+function setHtmlToBlock(block: Block, value: any): void {
+  if (block instanceof Node) {
+    if (block instanceof Element) {
+      block.innerHTML = value
+    } else if (__DEV__) {
+      warnCannotSetProp('innerHTML')
+    }
+  } else if (isVaporComponent(block)) {
+    setHtmlToBlock(block.block, value)
+  } else if (isArray(block)) {
+    if (__DEV__) {
+      warnCannotSetProp('innerHTML')
+    }
+  } else {
+    setHtmlToBlock(block.nodes, value)
   }
 }
 
