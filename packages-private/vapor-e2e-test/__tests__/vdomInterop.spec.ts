@@ -41,12 +41,6 @@ const buffer = process.env.CI ? 50 : 20
 const transitionFinish = (time = duration) => timeout(time + buffer)
 
 describe('vdom / vapor interop', () => {
-  beforeEach(async () => {
-    const baseUrl = `http://localhost:${port}/interop/`
-    await page().goto(baseUrl)
-    await page().waitForSelector('#app')
-  })
-
   test(
     'should work',
     async () => {
@@ -103,6 +97,21 @@ describe('vdom / vapor interop', () => {
     },
     E2E_TIMEOUT,
   )
+
+  describe('async component', () => {
+    const container = '.async-component-interop'
+    test(
+      'with-vdom-inner-component',
+      async () => {
+        const testContainer = `${container} .with-vdom-component`
+        expect(await html(testContainer)).toBe('<span>loading...</span>')
+
+        await timeout(duration)
+        expect(await html(testContainer)).toBe('<div>foo</div>')
+      },
+      E2E_TIMEOUT,
+    )
+  })
 
   describe('keepalive', () => {
     test(

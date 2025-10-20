@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, shallowRef } from 'vue'
-import VaporComp from './VaporComp.vue'
+import { ref, defineVaporAsyncComponent, h, shallowRef } from 'vue'
+import VaporComp from './components/VaporComp.vue'
+import VdomFoo from './components/VdomFoo.vue'
 import SimpleVaporComp from './components/SimpleVaporComp.vue'
 import VaporCompA from '../transition/components/VaporCompA.vue'
 import VdomComp from '../transition/components/VdomComp.vue'
@@ -9,6 +10,18 @@ import VaporSlot from '../transition/components/VaporSlot.vue'
 const msg = ref('hello')
 const passSlot = ref(true)
 
+const duration = typeof process !== 'undefined' && process.env.CI ? 200 : 50
+
+const AsyncVDomFoo = defineVaporAsyncComponent({
+  loader: () => {
+    return new Promise(r => {
+      setTimeout(() => {
+        r(VdomFoo as any)
+      }, duration)
+    })
+  },
+  loadingComponent: () => h('span', 'loading...'),
+})
 ;(window as any).calls = []
 ;(window as any).getCalls = () => {
   const ret = (window as any).calls.slice()
@@ -43,6 +56,13 @@ const enterClick = () => items.value.push('d', 'e')
     <template #test v-if="passSlot">A test slot</template>
   </VaporComp>
 
+  <!-- async component  -->
+  <div class="async-component-interop">
+    <div class="with-vdom-component">
+      <AsyncVDomFoo />
+    </div>
+  </div>
+  <!-- async component end -->
   <!-- keepalive -->
   <div class="render-vapor-component">
     <button class="btn-show" @click="show = !show">show</button>
