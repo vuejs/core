@@ -201,10 +201,10 @@ function createVDOMComponent(
   rawSlots?: LooseRawSlots | null,
 ): VaporFragment {
   const frag = new VaporFragment([])
-  const vnode = createVNode(
+  const vnode = (frag.vnode = createVNode(
     component,
     rawProps && new Proxy(rawProps, rawPropsProxyHandlers),
-  )
+  ))
   const wrapper = new VaporComponentInstance(
     { props: component.props },
     rawProps as RawProps,
@@ -281,10 +281,11 @@ function createVDOMComponent(
         parentInstance as any,
       )
     }
+
+    frag.nodes = vnode.el as Block
   }
 
   frag.remove = unmount
-  frag.nodes = vnode as any
 
   return frag
 }

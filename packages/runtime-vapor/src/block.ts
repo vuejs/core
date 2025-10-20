@@ -9,7 +9,7 @@ import {
 import { createComment, createTextNode } from './dom/node'
 import { EffectScope, setActiveSub } from '@vue/reactivity'
 import { isHydrating } from './dom/hydration'
-import { isKeepAlive } from 'vue'
+import { type VNode, isKeepAlive } from 'vue'
 import type { KeepAliveInstance } from './components/KeepAlive'
 
 export type Block =
@@ -23,6 +23,7 @@ export type BlockFn = (...args: any[]) => Block
 
 export class VaporFragment {
   nodes: Block
+  vnode?: VNode | null = null
   anchor?: Node
   insert?: (parent: ParentNode, anchor: Node | null) => void
   remove?: (parent?: ParentNode) => void
@@ -116,10 +117,10 @@ export function isValidBlock(block: Block): boolean {
 
 export function insert(
   block: Block,
-  parent: ParentNode,
+  parent: ParentNode & { $anchor?: Node | null },
   anchor: Node | null | 0 = null, // 0 means prepend
 ): void {
-  anchor = anchor === 0 ? parent.firstChild : anchor
+  anchor = anchor === 0 ? parent.$anchor || parent.firstChild : anchor
   if (block instanceof Node) {
     if (!isHydrating) {
       parent.insertBefore(block, anchor)

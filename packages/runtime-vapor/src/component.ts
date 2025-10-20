@@ -157,6 +157,24 @@ export function createComponent(
     resetInsertionState()
   }
 
+  if (
+    isSingleRoot &&
+    component.inheritAttrs !== false &&
+    isVaporComponent(currentInstance) &&
+    currentInstance.hasFallthrough
+  ) {
+    // check if we are the single root of the parent
+    // if yes, inject parent attrs as dynamic props source
+    const attrs = currentInstance.attrs
+    if (rawProps) {
+      ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
+        () => attrs,
+      )
+    } else {
+      rawProps = { $: [() => attrs] } as RawProps
+    }
+  }
+
   // keep-alive
   if (
     currentInstance &&
@@ -177,29 +195,10 @@ export function createComponent(
       rawProps,
       rawSlots,
     )
-
     if (!isHydrating && _insertionParent) {
       insert(frag, _insertionParent, _insertionAnchor)
     }
     return frag
-  }
-
-  if (
-    isSingleRoot &&
-    component.inheritAttrs !== false &&
-    isVaporComponent(currentInstance) &&
-    currentInstance.hasFallthrough
-  ) {
-    // check if we are the single root of the parent
-    // if yes, inject parent attrs as dynamic props source
-    const attrs = currentInstance.attrs
-    if (rawProps) {
-      ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
-        () => attrs,
-      )
-    } else {
-      rawProps = { $: [() => attrs] } as RawProps
-    }
   }
 
   const instance = new VaporComponentInstance(

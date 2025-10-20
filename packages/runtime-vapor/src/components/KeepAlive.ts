@@ -213,7 +213,7 @@ function getInnerBlock(block: Block): VaporComponentInstance | undefined {
     return block
   }
   if (isVdomInteropFragment(block)) {
-    return block.nodes as any
+    return block.vnode as any
   }
   if (isFragment(block)) {
     return getInnerBlock(block.nodes)
@@ -225,7 +225,7 @@ function getInnerComponent(block: Block): VaporComponentInstance | undefined {
     return block
   } else if (isVdomInteropFragment(block)) {
     // vdom interop
-    return block.nodes as any
+    return block.vnode as any
   }
 }
 
