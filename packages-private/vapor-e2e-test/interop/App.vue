@@ -9,12 +9,12 @@ import VaporSlot from '../transition/components/VaporSlot.vue'
 const msg = ref('hello')
 const passSlot = ref(true)
 
-  ; (window as any).calls = []
-  ; (window as any).getCalls = () => {
-    const ret = (window as any).calls.slice()
-      ; (window as any).calls = []
-    return ret
-  }
+;(window as any).calls = []
+;(window as any).getCalls = () => {
+  const ret = (window as any).calls.slice()
+  ;(window as any).calls = []
+  return ret
+}
 
 const show = ref(true)
 const toggle = ref(true)
