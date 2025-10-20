@@ -222,7 +222,7 @@ function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
       ? genEventHandler(
           context,
           prop.values[0],
-          undefined,
+          prop.handlerModifiers,
           true /* wrap handlers passed to components */,
         )
       : isStatic
