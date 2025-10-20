@@ -198,6 +198,10 @@ export interface ComponentInternalOptions {
    */
   __vapor?: boolean
   /**
+   * indicates keep-alive component
+   */
+  __isKeepAlive?: boolean
+  /**
    * @internal
    */
   __scopeId?: string

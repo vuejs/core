@@ -11,7 +11,7 @@ import {
 import { type VaporComponentInstance, isVaporComponent } from './component'
 import { invokeArrayFns } from '@vue/shared'
 
-class RenderEffect extends ReactiveEffect {
+export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
   job: SchedulerJob
   updateJob: SchedulerJob
@@ -71,6 +71,11 @@ class RenderEffect extends ReactiveEffect {
     setCurrentInstance(...prev)
     if (__DEV__ && instance) {
       startMeasure(instance, `renderEffect`)
+
+      if (instance.renderEffects) {
+        instance.renderEffects.forEach(e => e.stop())
+        instance.renderEffects = []
+      }
     }
   }
 

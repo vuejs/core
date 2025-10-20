@@ -415,7 +415,7 @@ describe('v-on', () => {
     ])
     expect(code).contains(
       `_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop","prevent"]), {
-    capture: true, 
+    capture: true,
     once: true
   })`,
     )
