@@ -548,15 +548,11 @@ export function createComponentWithFallback(
 
 export function mountComponent(
   instance: VaporComponentInstance,
-  parentNode: ParentNode,
+  parent: ParentNode,
   anchor?: Node | null | 0,
 ): void {
   if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-    ;(instance.parent as KeepAliveInstance).activate(
-      instance,
-      parentNode,
-      anchor,
-    )
+    ;(instance.parent as KeepAliveInstance).activate(instance, parent, anchor)
     return
   }
 
@@ -564,7 +560,7 @@ export function mountComponent(
     startMeasure(instance, `mount`)
   }
   if (instance.bm) invokeArrayFns(instance.bm)
-  insert(instance.block, parentNode, anchor)
+  insert(instance.block, parent, anchor)
   if (instance.m) queuePostFlushCb(instance.m!)
   if (
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
