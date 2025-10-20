@@ -92,10 +92,21 @@ export function getSlot(
   }
 }
 
+export function forwardedSlotCreator(): (
+  name: string | (() => string),
+  rawProps?: LooseRawProps | null,
+  fallback?: VaporSlot,
+) => Block {
+  const instance = currentInstance as VaporComponentInstance
+  return (name, rawProps, fallback) =>
+    createSlot(name, rawProps, fallback, instance)
+}
+
 export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
+  i?: VaporComponentInstance,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -105,7 +116,7 @@ export function createSlot(
     resetInsertionState()
   }
 
-  const instance = currentInstance as VaporComponentInstance
+  const instance = i || (currentInstance as VaporComponentInstance)
   const rawSlots = instance.rawSlots
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)
@@ -127,18 +138,10 @@ export function createSlot(
     const renderSlot = () => {
       const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
       if (slot) {
+        fragment.fallback = fallback
         // create and cache bound version of the slot to make it stable
         // so that we avoid unnecessary updates if it resolves to the same slot
-        fragment.update(
-          slot._bound ||
-            (slot._bound = () => {
-              const slotContent = slot(slotProps)
-              if (slotContent instanceof DynamicFragment) {
-                slotContent.fallback = fallback
-              }
-              return slotContent
-            }),
-        )
+        fragment.update(slot._bound || (slot._bound = () => slot(slotProps)))
       } else {
         fragment.update(fallback)
       }
