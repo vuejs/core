@@ -194,7 +194,7 @@ describe('compiler: element transform', () => {
 
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"), 
+    id: () => ("foo"),
     class: () => ("bar")
   }`)
 
@@ -262,7 +262,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
       () => (_ctx.obj)
     ]
@@ -286,7 +286,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`[
-    () => (_ctx.obj), 
+    () => (_ctx.obj),
     { id: () => ("foo") }
   ]`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -308,9 +308,9 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
-      () => (_ctx.obj), 
+      () => (_ctx.obj),
       { class: () => ("bar") }
     ]
   }`)

@@ -21,7 +21,7 @@ jobs:
     environment: Release
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -36,12 +36,13 @@ jobs:
       - name: Install deps
         run: pnpm install
 
+      - name: Update npm
+        run: npm i -g npm@latest
+
       - name: Build and publish
         id: publish
         run: |
           pnpm release --publishOnly
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub release
         id: release_tag
