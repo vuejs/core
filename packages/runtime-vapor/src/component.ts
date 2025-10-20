@@ -45,7 +45,7 @@ import {
   resolveDynamicProps,
   setupPropsValidation,
 } from './componentProps'
-import { renderEffect } from './renderEffect'
+import { type RenderEffect, renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
 import { setDynamicProps } from './dom/prop'
 import {
@@ -406,6 +406,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void
+  renderEffects?: RenderEffect[]
   parentTeleport?: TeleportFragment | null
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null

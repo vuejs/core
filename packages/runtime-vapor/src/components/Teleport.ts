@@ -2,7 +2,6 @@ import {
   type TeleportProps,
   isTeleportDeferred,
   isTeleportDisabled,
-  onScopeDispose,
   queuePostFlushCb,
   resolveTeleportTarget,
   warn,
@@ -25,73 +24,70 @@ export const VaporTeleportImpl = {
   __vapor: true,
 
   process(props: LooseRawProps, slots: LooseRawSlots): TeleportFragment {
-    const frag = new TeleportFragment()
-    renderEffect(() =>
-      frag.updateChildren(slots.default && (slots.default as BlockFn)()),
-    )
-
-    renderEffect(() => {
-      // access the props to trigger tracking
-      frag.props = extend(
-        {},
-        new Proxy(props, rawPropsProxyHandlers) as any as TeleportProps,
-      )
-      frag.update()
-    })
-
-    if (__DEV__) {
-      onScopeDispose(frag.remove)
-      // used in `normalizeBlock` to get nodes of TeleportFragment during
-      // HMR updates. returns empty array if content is mounted in target
-      // container to prevent incorrect parent node lookup.
-      frag.getNodes = () => {
-        return frag.parent !== frag.currentParent ? [] : frag.nodes
-      }
-
-      const nodes = frag.nodes
-      if (isVaporComponent(nodes)) {
-        nodes.parentTeleport = frag
-      } else if (isArray(nodes)) {
-        nodes.forEach(
-          node => isVaporComponent(node) && (node.parentTeleport = frag),
-        )
-      }
-    }
-
-    return frag
+    return new TeleportFragment(props, slots)
   },
 }
 
 export class TeleportFragment extends VaporFragment {
+  anchor?: Node
+  private rawProps?: LooseRawProps
+  private resolvedProps?: TeleportProps
+  private rawSlots?: LooseRawSlots
+
   target?: ParentNode | null
   targetAnchor?: Node | null
-  anchor: Node
-  props?: TeleportProps
+  targetStart?: Node | null
 
-  private targetStart?: Node
-  private mainAnchor?: Node
-  private placeholder?: Node
-  private mountContainer?: ParentNode | null
-  private mountAnchor?: Node | null
+  placeholder?: Node
+  mountContainer?: ParentNode | null
+  mountAnchor?: Node | null
 
-  constructor() {
+  constructor(props: LooseRawProps, slots: LooseRawSlots) {
     super([])
-    this.anchor = createTextNode()
-  }
+    this.rawProps = props
+    this.rawSlots = slots
+    this.anchor = __DEV__ ? createComment('teleport end') : createTextNode()
 
-  get currentParent(): ParentNode {
-    return (this.mountContainer || this.parent)!
-  }
+    renderEffect(() => {
+      // access the props to trigger tracking
+      this.resolvedProps = extend(
+        {},
+        new Proxy(
+          this.rawProps!,
+          rawPropsProxyHandlers,
+        ) as any as TeleportProps,
+      )
+      this.handlePropsUpdate()
+    })
 
-  get currentAnchor(): Node | null {
-    return this.mountAnchor || this.anchor
+    this.initChildren()
   }
 
   get parent(): ParentNode | null {
-    return this.anchor && this.anchor.parentNode
+    return this.anchor ? this.anchor.parentNode : null
   }
 
-  updateChildren(children: Block): void {
+  private initChildren(): void {
+    renderEffect(() => {
+      this.handleChildrenUpdate(
+        this.rawSlots!.default && (this.rawSlots!.default as BlockFn)(),
+      )
+    })
+
+    // for hmr
+    if (__DEV__) {
+      const nodes = this.nodes
+      if (isVaporComponent(nodes)) {
+        nodes.parentTeleport = this
+      } else if (isArray(nodes)) {
+        nodes.forEach(
+          node => isVaporComponent(node) && (node.parentTeleport = this),
+        )
+      }
+    }
+  }
+
+  private handleChildrenUpdate(children: Block): void {
     // not mounted yet
     if (!this.parent) {
       this.nodes = children
@@ -99,12 +95,12 @@ export class TeleportFragment extends VaporFragment {
     }
 
     // teardown previous nodes
-    remove(this.nodes, this.currentParent)
+    remove(this.nodes, this.mountContainer!)
     // mount new nodes
-    insert((this.nodes = children), this.currentParent, this.currentAnchor)
+    insert((this.nodes = children), this.mountContainer!, this.mountAnchor!)
   }
 
-  update(): void {
+  private handlePropsUpdate(): void {
     // not mounted yet
     if (!this.parent) return
 
@@ -118,7 +114,7 @@ export class TeleportFragment extends VaporFragment {
 
     const mountToTarget = () => {
       const target = (this.target = resolveTeleportTarget(
-        this.props!,
+        this.resolvedProps!,
         querySelector,
       ))
       if (target) {
@@ -143,12 +139,12 @@ export class TeleportFragment extends VaporFragment {
     }
 
     // mount into main container
-    if (isTeleportDisabled(this.props!)) {
-      mount(this.parent, this.mainAnchor!)
+    if (isTeleportDisabled(this.resolvedProps!)) {
+      mount(this.parent, this.anchor!)
     }
     // mount into target container
     else {
-      if (isTeleportDeferred(this.props!)) {
+      if (isTeleportDeferred(this.resolvedProps!)) {
         queuePostFlushCb(mountToTarget)
       } else {
         mountToTarget()
@@ -161,16 +157,15 @@ export class TeleportFragment extends VaporFragment {
     this.placeholder = __DEV__
       ? createComment('teleport start')
       : createTextNode()
-    this.mainAnchor = __DEV__ ? createComment('teleport end') : createTextNode()
     insert(this.placeholder, container, anchor)
-    insert(this.mainAnchor, container, anchor)
-    this.update()
+    insert(this.anchor!, container, anchor)
+    this.handlePropsUpdate()
   }
 
   remove = (parent: ParentNode | undefined = this.parent!): void => {
     // remove nodes
     if (this.nodes) {
-      remove(this.nodes, this.currentParent)
+      remove(this.nodes, this.mountContainer!)
       this.nodes = []
     }
 
@@ -182,19 +177,22 @@ export class TeleportFragment extends VaporFragment {
       this.targetAnchor = undefined
     }
 
+    if (this.anchor) {
+      remove(this.anchor, this.anchor.parentNode!)
+      this.anchor = undefined
+    }
+
     if (this.placeholder) {
       remove(this.placeholder!, parent)
       this.placeholder = undefined
-      remove(this.mainAnchor!, parent)
-      this.mainAnchor = undefined
     }
 
     this.mountContainer = undefined
     this.mountAnchor = undefined
   }
 
-  hydrate(): void {
-    // TODO
+  hydrate = (): void => {
+    //TODO
   }
 }
 

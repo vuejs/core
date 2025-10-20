@@ -20,6 +20,10 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   const anchor = normalized[normalized.length - 1].nextSibling
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
+  if (instance.renderEffects) {
+    instance.renderEffects.forEach(e => e.stop())
+    instance.renderEffects = []
+  }
   pushWarningContext(instance)
   devRender(instance)
   popWarningContext()
