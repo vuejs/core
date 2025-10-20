@@ -18,7 +18,9 @@ export { template } from './dom/template'
 export { createTextNode, child, nthChild, next } from './dom/node'
 export {
   setText,
+  setBlockText,
   setHtml,
+  setBlockHtml,
   setClass,
   setStyle,
   setAttr,
@@ -26,6 +28,7 @@ export {
   setProp,
   setDOMProp,
   setDynamicProps,
+  setElementText,
 } from './dom/prop'
 export { on, delegate, delegateEvents, setDynamicEvents } from './dom/event'
 export { createIf } from './apiCreateIf'

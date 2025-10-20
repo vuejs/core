@@ -126,6 +126,7 @@ export interface SetTextIRNode extends BaseIRNode {
   values: SimpleExpressionNode[]
   generated?: boolean // whether this is a generated empty text node by `processTextLikeContainer`
   jsx?: boolean
+  isComponent?: boolean
 }
 
 export type KeyOverride = [find: string, replacement: string]
@@ -152,6 +153,7 @@ export interface SetHtmlIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_HTML
   element: number
   value: SimpleExpressionNode
+  isComponent?: boolean
 }
 
 export interface SetTemplateRefIRNode extends BaseIRNode {
