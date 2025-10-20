@@ -1500,6 +1500,7 @@ export function inferRuntimeType(
   node: Node & MaybeWithScope,
   scope: TypeScope = node._ownerScope || ctxToScope(ctx),
   isKeyOf = false,
+  typeParameters?: Record<string, Node>,
 ): string[] {
   try {
     switch (node.type) {
@@ -1588,19 +1589,43 @@ export function inferRuntimeType(
       case 'TSTypeReference': {
         const resolved = resolveTypeReference(ctx, node, scope)
         if (resolved) {
-          // #13240
-          // Special case for function type aliases to ensure correct runtime behavior
-          // other type aliases still fallback to unknown as before
-          if (
-            resolved.type === 'TSTypeAliasDeclaration' &&
-            resolved.typeAnnotation.type === 'TSFunctionType'
-          ) {
-            return ['Function']
+          if (resolved.type === 'TSTypeAliasDeclaration') {
+            // #13240
+            // Special case for function type aliases to ensure correct runtime behavior
+            // other type aliases still fallback to unknown as before
+            if (resolved.typeAnnotation.type === 'TSFunctionType') {
+              return ['Function']
+            }
+
+            if (node.typeParameters) {
+              const typeParams: Record<string, Node> = Object.create(null)
+              if (resolved.typeParameters) {
+                resolved.typeParameters.params.forEach((p, i) => {
+                  typeParams![p.name] = node.typeParameters!.params[i]
+                })
+              }
+              return inferRuntimeType(
+                ctx,
+                resolved.typeAnnotation,
+                resolved._ownerScope,
+                isKeyOf,
+                typeParams,
+              )
+            }
           }
+
           return inferRuntimeType(ctx, resolved, resolved._ownerScope, isKeyOf)
         }
-
         if (node.typeName.type === 'Identifier') {
+          if (typeParameters && typeParameters[node.typeName.name]) {
+            return inferRuntimeType(
+              ctx,
+              typeParameters[node.typeName.name],
+              scope,
+              isKeyOf,
+              typeParameters,
+            )
+          }
           if (isKeyOf) {
             switch (node.typeName.name) {
               case 'String':
@@ -1733,11 +1758,15 @@ export function inferRuntimeType(
         return inferRuntimeType(ctx, node.typeAnnotation, scope)
 
       case 'TSUnionType':
-        return flattenTypes(ctx, node.types, scope, isKeyOf)
+        return flattenTypes(ctx, node.types, scope, isKeyOf, typeParameters)
       case 'TSIntersectionType': {
-        return flattenTypes(ctx, node.types, scope, isKeyOf).filter(
-          t => t !== UNKNOWN_TYPE,
-        )
+        return flattenTypes(
+          ctx,
+          node.types,
+          scope,
+          isKeyOf,
+          typeParameters,
+        ).filter(t => t !== UNKNOWN_TYPE)
       }
 
       case 'TSEnumDeclaration':
@@ -1808,14 +1837,17 @@ function flattenTypes(
   types: TSType[],
   scope: TypeScope,
   isKeyOf: boolean = false,
+  typeParameters: Record<string, Node> | undefined = undefined,
 ): string[] {
   if (types.length === 1) {
-    return inferRuntimeType(ctx, types[0], scope, isKeyOf)
+    return inferRuntimeType(ctx, types[0], scope, isKeyOf, typeParameters)
   }
   return [
     ...new Set(
       ([] as string[]).concat(
-        ...types.map(t => inferRuntimeType(ctx, t, scope, isKeyOf)),
+        ...types.map(t =>
+          inferRuntimeType(ctx, t, scope, isKeyOf, typeParameters),
+        ),
       ),
     ),
   ]

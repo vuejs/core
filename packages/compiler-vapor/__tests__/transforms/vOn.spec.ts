@@ -415,7 +415,7 @@ describe('v-on', () => {
     ])
     expect(code).contains(
       `_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop","prevent"]), {
-    capture: true, 
+    capture: true,
     once: true
   })`,
     )
@@ -694,5 +694,17 @@ describe('v-on', () => {
     )
     expect(code).matchSnapshot()
     expect(code).include('n0.$evtclick = e => _ctx.handleClick(e)')
+  })
+
+  test('component event with special characters', () => {
+    const { code } = compileWithVOn(
+      `<Foo @update:model="() => {}" @update-model="() => {}" />`,
+    )
+
+    expect(code).matchSnapshot()
+    expect(code).contains('const _on_update_model = () => {}')
+    expect(code).contains('const _on_update_model1 = () => {}')
+    expect(code).contains('"onUpdate:model": () => _on_update_model')
+    expect(code).contains('"onUpdate-model": () => _on_update_model1')
   })
 })

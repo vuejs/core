@@ -6,6 +6,7 @@ import {
   nodeOps,
   ref,
   render,
+  serializeInner,
   useSlots,
 } from '@vue/runtime-test'
 import { createBlock, normalizeVNode } from '../src/vnode'
@@ -55,14 +56,10 @@ describe('component: slots', () => {
         expect(Object.getOwnPropertyDescriptor(slots, '_')!.enumerable).toBe(
           false,
         )
-        expect(slots).toHaveProperty('__')
-        expect(Object.getOwnPropertyDescriptor(slots, '__')!.enumerable).toBe(
-          false,
-        )
         return h('div')
       },
     }
-    const slots = { foo: () => {}, _: 1, __: [1] }
+    const slots = { foo: () => {}, _: 1 }
     render(createBlock(Comp, null, slots), nodeOps.createElement('div'))
   })
 
@@ -75,6 +72,10 @@ describe('component: slots', () => {
     })
 
     expect(
+      '[Vue warn]: Non-function value encountered for slot "_inner". Prefer function slots for better performance.',
+    ).toHaveBeenWarned()
+
+    expect(
       '[Vue warn]: Non-function value encountered for slot "header". Prefer function slots for better performance.',
     ).toHaveBeenWarned()
 
@@ -82,8 +83,8 @@ describe('component: slots', () => {
       '[Vue warn]: Non-function value encountered for slot "footer". Prefer function slots for better performance.',
     ).toHaveBeenWarned()
 
-    expect(slots).not.toHaveProperty('_inner')
     expect(slots).not.toHaveProperty('foo')
+    expect(slots._inner()).toMatchObject([normalizeVNode('_inner')])
     expect(slots.header()).toMatchObject([normalizeVNode('header')])
     expect(slots.footer()).toMatchObject([
       normalizeVNode('f1'),
@@ -441,5 +442,23 @@ describe('component: slots', () => {
     expect(
       'Slot "default" invoked outside of the render function',
     ).toHaveBeenWarned()
+  })
+
+  test('slot name starts with underscore', () => {
+    const Comp = {
+      setup(_: any, { slots }: any) {
+        return () => slots._foo()
+      },
+    }
+
+    const App = {
+      setup() {
+        return () => h(Comp, null, { _foo: () => 'foo' })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    createApp(App).mount(root)
+    expect(serializeInner(root)).toBe('foo')
   })
 })

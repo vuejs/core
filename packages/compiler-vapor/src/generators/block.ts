@@ -13,6 +13,7 @@ import type { CodegenContext } from '../generate'
 import { genEffects, genOperations } from './operation'
 import { genChildren, genSelf } from './template'
 import { toValidAssetId } from '@vue/compiler-dom'
+import { genExpression } from './expression'
 
 export function genBlock(
   oper: BlockIRNode,
@@ -39,8 +40,12 @@ export function genBlockContent(
   genEffectsExtraFrag?: () => CodeFragment[],
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
-  const { dynamic, effect, operation, returns } = block
+  const { dynamic, effect, operation, returns, key } = block
   const resetBlock = context.enterBlock(block)
+
+  if (block.hasDeferredVShow) {
+    push(NEWLINE, `const deferredApplyVShows = []`)
+  }
 
   if (root) {
     for (let name of context.ir.component) {
@@ -65,11 +70,26 @@ export function genBlockContent(
     push(...genSelf(child, context))
   }
   for (const child of dynamic.children) {
-    push(...genChildren(child, context, push, `n${child.id!}`))
+    if (!child.hasDynamicChild) {
+      push(...genChildren(child, context, push, `n${child.id!}`))
+    }
   }
 
   push(...genOperations(operation, context))
   push(...genEffects(effect, context, genEffectsExtraFrag))
+
+  if (block.hasDeferredVShow) {
+    push(NEWLINE, `deferredApplyVShows.forEach(fn => fn())`)
+  }
+
+  if (dynamic.needsKey) {
+    for (const child of dynamic.children) {
+      const keyValue = key
+        ? genExpression(key, context)
+        : JSON.stringify(child.id)
+      push(NEWLINE, `n${child.id}.$key = `, ...keyValue)
+    }
+  }
 
   push(NEWLINE, `return `)
 
