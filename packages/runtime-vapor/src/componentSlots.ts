@@ -36,11 +36,14 @@ export function setCurrentSlotScopeIds(
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
+  _ctx?: VaporComponentInstance | null // slot definition context
 }
 
 export type StaticSlots = Record<string, VaporSlot>
 
-export type VaporSlot = BlockFn
+export type VaporSlot = BlockFn & {
+  _ctx?: VaporComponentInstance | null // slot definition context
+}
 export type DynamicSlot = { name: string; fn: VaporSlot }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 export type DynamicSlotSource = StaticSlots | DynamicSlotFn
@@ -98,10 +101,22 @@ export function getSlot(
         if (slot) {
           if (isArray(slot)) {
             for (const s of slot) {
-              if (String(s.name) === key) return s.fn
+              if (String(s.name) === key) {
+                // Attach context to dynamic slot if not already attached
+                const fn = s.fn
+                if (!fn._ctx && target._ctx) {
+                  fn._ctx = target._ctx
+                }
+                return fn
+              }
             }
           } else if (String(slot.name) === key) {
-            return slot.fn
+            // Attach context to dynamic slot if not already attached
+            const fn = slot.fn
+            if (!fn._ctx && target._ctx) {
+              fn._ctx = target._ctx
+            }
+            return fn
           }
         }
       } else if (hasOwn(source, key)) {
@@ -158,30 +173,33 @@ export function createSlot(
         ? new DynamicFragment('slot')
         : new DynamicFragment()
     const isDynamicName = isFunction(name)
+
+    // Calculate slotScopeIds once (for vdom interop)
+    const slotScopeIds: string[] = []
+    if (!noSlotted) {
+      const scopeId = instance!.type.__scopeId
+      if (scopeId) {
+        slotScopeIds.push(`${scopeId}-s`)
+      }
+    }
+
     const renderSlot = () => {
       const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
       if (slot) {
         fragment.fallback = fallback
-        // create and cache bound version of the slot to make it stable
+        // Create and cache bound version of the slot to make it stable
         // so that we avoid unnecessary updates if it resolves to the same slot
-        // Note: slot content should be rendered in the context where it was defined (parent),
-        // not the slot owner (current instance), so the components inside don't inherit
-        // the slot owner's scopeId
-        const slotContext = instance.parent
-
-        // Calculate slotScopeIds for vdom interop
-        const slotScopeIds: string[] = []
-        if (!noSlotted) {
-          const scopeId = instance!.type.__scopeId
-          if (scopeId) {
-            slotScopeIds.push(`${scopeId}-s`)
-          }
-        }
 
         fragment.update(
           slot._bound ||
             (slot._bound = () => {
-              // Temporarily switch to parent context for slot content
+              // Temporarily switch currentInstance to the slot's definition context.
+              // This ensures components created inside the slot use the correct parent
+              // (where the slot was defined), not the slot owner.
+              // Falls back to instance.parent if slot._ctx is not set.
+              const slotContext = slot._ctx || instance.parent
+
+              // TODO: create withVaporCtx helper to simplify this
               const prev = setCurrentInstance(slotContext)
               const prevSlotScopeIds = setCurrentSlotScopeIds(
                 slotScopeIds.length > 0 ? slotScopeIds : null,
