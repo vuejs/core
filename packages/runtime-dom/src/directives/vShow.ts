@@ -46,7 +46,7 @@ export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
   },
 }
 
-if (__DEV__) {
+if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
   vShow.name = 'show'
 }
 
