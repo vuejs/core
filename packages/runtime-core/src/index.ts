@@ -579,6 +579,10 @@ export {
 /**
  * @internal
  */
+export type { TeleportTargetElement } from './components/Teleport'
+/**
+ * @internal
+ */
 export {
   createAsyncComponentContext,
   useAsyncComponentState,

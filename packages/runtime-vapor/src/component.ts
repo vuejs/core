@@ -224,10 +224,13 @@ export function createComponent(
   // teleport
   if (isVaporTeleport(component)) {
     const frag = component.process(rawProps!, rawSlots!)
-    if (!isHydrating && _insertionParent) {
-      insert(frag, _insertionParent, _insertionAnchor)
+    if (!isHydrating) {
+      if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
       frag.hydrate()
+      if (_isLastInsertion) {
+        advanceHydrationNode(_insertionParent!)
+      }
     }
 
     return frag as any
