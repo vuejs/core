@@ -61,44 +61,46 @@ function setDisplay(target: Block, value: unknown): void {
       el[vShowOriginalDisplay] =
         el.style.display === 'none' ? '' : el.style.display
     }
-    if (
-      (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      isHydrating
-    ) {
-      if (!value && el.style.display !== 'none') {
-        warnPropMismatch(
-          el,
-          'style',
-          MismatchTypes.STYLE,
-          `display: ${el.style.display}`,
-          'display: none',
-        )
-        logMismatchError()
 
-        el.style.display = 'none'
-        el[vShowOriginalDisplay] = ''
+    if ($transition) {
+      if (value) {
+        $transition.beforeEnter(target)
+        el.style.display = el[vShowOriginalDisplay]!
+        $transition.enter(target)
+      } else {
+        // during initial render, the element is not yet inserted into the
+        // DOM, and it is hidden, no need to trigger transition
+        if (target.isConnected) {
+          $transition.leave(target, () => {
+            el.style.display = 'none'
+          })
+        } else {
+          el.style.display = 'none'
+        }
       }
     } else {
-      if ($transition) {
-        if (value) {
-          $transition.beforeEnter(target)
-          el.style.display = el[vShowOriginalDisplay]!
-          $transition.enter(target)
-        } else {
-          // during initial render, the element is not yet inserted into the
-          // DOM, and it is hidden, no need to trigger transition
-          if (target.isConnected) {
-            $transition.leave(target, () => {
-              el.style.display = 'none'
-            })
-          } else {
-            el.style.display = 'none'
-          }
+      if (
+        (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+        isHydrating
+      ) {
+        if (!value && el.style.display !== 'none') {
+          warnPropMismatch(
+            el,
+            'style',
+            MismatchTypes.STYLE,
+            `display: ${el.style.display}`,
+            'display: none',
+          )
+          logMismatchError()
+
+          el.style.display = 'none'
+          el[vShowOriginalDisplay] = ''
         }
       } else {
         el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
       }
     }
+
     el[vShowHidden] = !value
   } else if (__DEV__) {
     warn(
