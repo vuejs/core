@@ -6,7 +6,9 @@ import {
   currentInstance,
   handleError,
   markAsyncBoundary,
+  performAsyncHydrate,
   useAsyncComponentState,
+  watch,
 } from '@vue/runtime-dom'
 import { defineVaporComponent } from './apiDefineComponent'
 import {
@@ -16,8 +18,18 @@ import {
 } from './component'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
+import {
+  hydrateNode,
+  isComment,
+  isHydrating,
+  locateEndAnchor,
+  removeFragmentNodes,
+} from './dom/hydration'
+import { invokeArrayFns } from '@vue/shared'
+import { insert, remove } from './block'
+import { parentNode } from './dom/node'
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
   source: AsyncComponentLoader<T> | AsyncComponentOptions<T>,
 ): T {
@@ -29,9 +41,9 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       loadingComponent,
       errorComponent,
       delay,
-      // hydrate: hydrateStrategy,
+      hydrate: hydrateStrategy,
       timeout,
-      // suspensible = true,
+      suspensible = true,
     },
   } = createAsyncComponentContext<T, VaporComponent>(source)
 
@@ -40,9 +52,57 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
 
     __asyncLoader: load,
 
-    // __asyncHydrate(el, instance, hydrate) {
-    //   // TODO async hydrate
-    // },
+    __asyncHydrate(
+      el: Element,
+      instance: VaporComponentInstance,
+      // Note: this hydrate function essentially calls the setup method of the component
+      // not the actual hydrate function
+      hydrate: () => void,
+    ) {
+      // if async component needs to be updated before hydration, hydration is no longer needed.
+      let isHydrated = false
+      watch(
+        () => instance.attrs,
+        () => {
+          // early return if already hydrated
+          if (isHydrated) return
+
+          // call the beforeUpdate hook to avoid calling hydrate in performAsyncHydrate
+          instance.bu && invokeArrayFns(instance.bu)
+
+          // mount the inner component and remove the placeholder
+          const parent = parentNode(el)!
+          load().then(() => {
+            if (instance.isUnmounted) return
+            hydrate()
+            if (isComment(el, '[')) {
+              const endAnchor = locateEndAnchor(el)!
+              removeFragmentNodes(el, endAnchor)
+              insert(instance.block, parent, endAnchor)
+            } else {
+              insert(instance.block, parent, el)
+              remove(el, parent)
+            }
+          })
+        },
+        { deep: true, once: true },
+      )
+
+      performAsyncHydrate(
+        el,
+        instance,
+        () => {
+          hydrateNode(el, () => {
+            hydrate()
+            insert(instance.block, parentNode(el)!, el)
+            isHydrated = true
+          })
+        },
+        getResolvedComp,
+        load,
+        hydrateStrategy,
+      )
+    },
 
     get __asyncResolved() {
       return getResolvedComp()
@@ -52,14 +112,15 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       const instance = currentInstance as VaporComponentInstance
       markAsyncBoundary(instance)
 
-      const frag = __DEV__
-        ? new DynamicFragment('async component')
-        : new DynamicFragment()
+      const frag =
+        __DEV__ || isHydrating
+          ? new DynamicFragment('async component')
+          : new DynamicFragment()
 
       // already resolved
       let resolvedComp = getResolvedComp()
       if (resolvedComp) {
-        frag.update(() => createInnerComp(resolvedComp!, instance))
+        frag!.update(() => createInnerComp(resolvedComp!, instance))
         return frag
       }
 
@@ -73,7 +134,9 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         )
       }
 
-      // TODO suspense-controlled or SSR.
+      // TODO suspense-controlled
+      if (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) {
+      }
 
       const { loaded, error, delayed } = useAsyncComponentState(
         delay,
@@ -103,7 +166,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         } else if (loadingComponent && !delayed.value) {
           render = () => createComponent(loadingComponent)
         }
-        frag.update(render)
+        frag!.update(render)
       })
 
       return frag
