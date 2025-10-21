@@ -381,7 +381,7 @@ export function setBlockHtml(
   block: Block & { $html?: string },
   value: any,
 ): void {
-  value = value == null ? '' : value
+  value = value == null ? '' : unsafeToTrustedHTML(value)
   if (block.$html !== value) {
     setHtmlToBlock(block, (block.$html = value))
   }
