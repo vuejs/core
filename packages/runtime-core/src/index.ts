@@ -644,3 +644,7 @@ export {
  * @internal
  */
 export { createCanSetSetupRefChecker } from './rendererTemplateRef'
+/**
+ * @internal
+ */
+export { isTemplateNode } from './hydration'

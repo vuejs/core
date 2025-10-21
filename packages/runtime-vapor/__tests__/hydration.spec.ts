@@ -2897,7 +2897,7 @@ describe('Vapor Mode hydration', () => {
     })
   })
 
-  describe.todo('transition', async () => {
+  describe('transition', async () => {
     test('transition appear', async () => {
       const { container } = await testHydration(
         `<template>
