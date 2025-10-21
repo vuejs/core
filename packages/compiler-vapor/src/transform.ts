@@ -24,6 +24,7 @@ import {
   type IRSlots,
   type OperationNode,
   type RootIRNode,
+  type SetEventIRNode,
   type VaporDirectiveNode,
 } from './ir'
 import { isConstantExpression, isStaticExpression } from './utils'
@@ -46,7 +47,7 @@ export interface DirectiveTransformResult {
   modifier?: '.' | '^'
   runtimeCamelize?: boolean
   handler?: boolean
-  handlerModifiers?: string[]
+  handlerModifiers?: SetEventIRNode['modifiers']
   model?: boolean
   modelModifiers?: string[]
 }

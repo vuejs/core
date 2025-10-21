@@ -27,10 +27,10 @@ export const TeleportEndKey: unique symbol = Symbol('_vte')
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
 
-const isTeleportDisabled = (props: VNode['props']): boolean =>
+export const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
-const isTeleportDeferred = (props: VNode['props']): boolean =>
+export const isTeleportDeferred = (props: VNode['props']): boolean =>
   props && (props.defer || props.defer === '')
 
 const isTargetSVG = (target: RendererElement): boolean =>
@@ -39,7 +39,7 @@ const isTargetSVG = (target: RendererElement): boolean =>
 const isTargetMathML = (target: RendererElement): boolean =>
   typeof MathMLElement === 'function' && target instanceof MathMLElement
 
-const resolveTarget = <T = RendererElement>(
+export const resolveTarget = <T = RendererElement>(
   props: TeleportProps | null,
   select: RendererOptions['querySelector'],
 ): T | null => {
@@ -164,30 +164,38 @@ export const TeleportImpl = {
       }
 
       if (isTeleportDeferred(n2.props)) {
-        queuePostRenderEffect(() => {
-          mountToTarget()
-          n2.el!.__isMounted = true
-        }, parentSuspense)
+        n2.el!.__isMounted = false
+        queuePostRenderEffect(
+          () => {
+            mountToTarget()
+            delete n2.el!.__isMounted
+          },
+          undefined,
+          parentSuspense,
+        )
       } else {
         mountToTarget()
       }
     } else {
-      if (isTeleportDeferred(n2.props) && !n1.el!.__isMounted) {
-        queuePostRenderEffect(() => {
-          TeleportImpl.process(
-            n1,
-            n2,
-            container,
-            anchor,
-            parentComponent,
-            parentSuspense,
-            namespace,
-            slotScopeIds,
-            optimized,
-            internals,
-          )
-          delete n1.el!.__isMounted
-        }, parentSuspense)
+      if (isTeleportDeferred(n2.props) && n1.el!.__isMounted === false) {
+        queuePostRenderEffect(
+          () => {
+            TeleportImpl.process(
+              n1,
+              n2,
+              container,
+              anchor,
+              parentComponent,
+              parentSuspense,
+              namespace,
+              slotScopeIds,
+              optimized,
+              internals,
+            )
+          },
+          undefined,
+          parentSuspense,
+        )
         return
       }
       // update content
@@ -386,7 +394,7 @@ function moveTeleport(
   }
 }
 
-interface TeleportTargetElement extends Element {
+export interface TeleportTargetElement extends Element {
   // last teleport target
   _lpa?: Node | null
 }

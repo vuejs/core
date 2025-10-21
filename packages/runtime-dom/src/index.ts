@@ -60,8 +60,8 @@ declare module '@vue/runtime-core' {
     vOn: VOnDirective
     vBind: VModelDirective
     vIf: Directive<any, boolean>
-    VOnce: Directive
-    VSlot: Directive
+    vOnce: Directive
+    vSlot: Directive
   }
 }
 
@@ -319,7 +319,7 @@ export * from './jsx'
 /**
  * @internal
  */
-export { ensureRenderer, normalizeContainer }
+export { ensureRenderer, ensureHydrationRenderer, normalizeContainer }
 /**
  * @internal
  */
@@ -348,3 +348,28 @@ export {
   vModelSelectInit,
   vModelSetSelected,
 } from './directives/vModel'
+/**
+ * @internal
+ */
+export {
+  resolveTransitionProps,
+  TransitionPropsValidators,
+  forceReflow,
+  addTransitionClass,
+  removeTransitionClass,
+  type ElementWithTransition,
+} from './components/Transition'
+/**
+ * @internal
+ */
+export {
+  hasCSSTransform,
+  callPendingCbs,
+  moveCbKey,
+  handleMovedChildren,
+  baseApplyTranslation,
+} from './components/TransitionGroup'
+/**
+ * @internal
+ */
+export { unsafeToTrustedHTML } from './nodeOps'

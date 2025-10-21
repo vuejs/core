@@ -1,7 +1,9 @@
-import { NOOP } from '@vue/shared'
+import { NOOP, toDisplayString } from '@vue/shared'
 import {
   setDynamicProp as _setDynamicProp,
   setAttr,
+  setBlockHtml,
+  setBlockText,
   setClass,
   setDynamicProps,
   setElementText,
@@ -11,25 +13,27 @@ import {
   setValue,
 } from '../../src/dom/prop'
 import { setStyle } from '../../src/dom/prop'
-import { VaporComponentInstance } from '../../src/component'
+import { VaporComponentInstance, createComponent } from '../../src/component'
+import { ref, setCurrentInstance } from '@vue/runtime-dom'
+import { makeRender } from '../_utils'
 import {
-  currentInstance,
-  ref,
-  simpleSetCurrentInstance,
-} from '@vue/runtime-dom'
+  createDynamicComponent,
+  defineVaporComponent,
+  renderEffect,
+  template,
+} from '../../src'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
   const instance = new VaporComponentInstance({}, {}, null)
-  const prev = currentInstance
-  simpleSetCurrentInstance(instance)
-  removeComponentInstance = () => {
-    simpleSetCurrentInstance(prev)
-  }
+  const prev = setCurrentInstance(instance)
+  removeComponentInstance = () => setCurrentInstance(...prev)
 })
 afterEach(() => {
   removeComponentInstance()
 })
+
+const define = makeRender()
 
 describe('patchProp', () => {
   describe('setClass', () => {
@@ -306,6 +310,17 @@ describe('patchProp', () => {
         `Failed setting prop "someProp" on <div>: value foo is invalid.`,
       ).toHaveBeenWarnedLast()
     })
+
+    test('checkbox with indeterminate', () => {
+      const el = document.createElement('input')
+      el.type = 'checkbox'
+      setProp(el, 'indeterminate', true)
+      expect(el.indeterminate).toBe(true)
+      setProp(el, 'indeterminate', false)
+      expect(el.indeterminate).toBe(false)
+      setProp(el, 'indeterminate', '')
+      expect(el.indeterminate).toBe(true)
+    })
   })
 
   describe('setDynamicProp', () => {
@@ -449,6 +464,190 @@ describe('patchProp', () => {
       expect(el.innerHTML).toBe('<p>foo</p>')
       setHtml(el, '<p>bar</p>')
       expect(el.innerHTML).toBe('<p>bar</p>')
+    })
+  })
+
+  describe('setBlockText', () => {
+    test('with dynamic component', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('<div>child</div>', true)()
+        },
+      })
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          const n1 = createDynamicComponent(() => Comp, null, null, true)
+          renderEffect(() => setBlockText(n1, toDisplayString(value)))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<div>foo</div><!--dynamic-component-->')
+    })
+
+    test('with dynamic component with fallback', async () => {
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          const n1 = createDynamicComponent(() => 'button', null, null, true)
+          renderEffect(() => setBlockText(n1, toDisplayString(value)))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<button>foo</button><!--dynamic-component-->')
+    })
+
+    test('with component', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('<div>child</div>', true)()
+        },
+      })
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockText(n1, toDisplayString(value)))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<div>foo</div>')
+    })
+
+    test('with component renders multiple roots nodes', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return [
+            template('<div>child</div>')(),
+            template('<div>child</div>')(),
+          ]
+        },
+      })
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockText(n1, toDisplayString(value)))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<div>child</div><div>child</div>')
+      expect('Extraneous non-props attributes (textContent)').toHaveBeenWarned()
+    })
+
+    test('with component renders text node', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('child')()
+        },
+      })
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockText(n1, toDisplayString(value)))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('child')
+      expect('Extraneous non-props attributes (textContent)').toHaveBeenWarned()
+    })
+  })
+
+  describe('setBlockHtml', () => {
+    test('with dynamic component', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('<div>child</div>', true)()
+        },
+      })
+      const value = ref('<p>foo</p>')
+      const { html } = define({
+        setup() {
+          const n1 = createDynamicComponent(() => Comp, null, null, true)
+          renderEffect(() => setBlockHtml(n1, value.value))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<div><p>foo</p></div><!--dynamic-component-->')
+    })
+
+    test('with dynamic component with fallback', async () => {
+      const value = ref('<p>foo</p>')
+      const { html } = define({
+        setup() {
+          const n1 = createDynamicComponent(() => 'button', null, null, true)
+          renderEffect(() => setBlockHtml(n1, value.value))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<button><p>foo</p></button><!--dynamic-component-->')
+    })
+
+    test('with component', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('<div>child</div>', true)()
+        },
+      })
+      const value = ref('<p>foo</p>')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockHtml(n1, value.value))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<div><p>foo</p></div>')
+    })
+
+    test('with component renders multiple roots', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return [
+            template('<div>child</div>')(),
+            template('<div>child</div>')(),
+          ]
+        },
+      })
+      const value = ref('<p>foo</p>')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockHtml(n1, value.value))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<div>child</div><div>child</div>')
+      expect('Extraneous non-props attributes (innerHTML)').toHaveBeenWarned()
+    })
+
+    test('with component renders text node', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('child')()
+        },
+      })
+      const value = ref('<p>foo</p>')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockHtml(n1, value.value))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('child')
+      expect('Extraneous non-props attributes (innerHTML)').toHaveBeenWarned()
     })
   })
 })

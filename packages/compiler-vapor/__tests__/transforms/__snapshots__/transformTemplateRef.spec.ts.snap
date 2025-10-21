@@ -43,7 +43,7 @@ export function render(_ctx) {
     const n2 = t0()
     _setTemplateRef(n2, "foo", void 0, true)
     return n2
-  }, null, 4)
+  }, undefined, 4)
   return n0
 }"
 `;
@@ -61,6 +61,15 @@ export function render(_ctx) {
   })
   return n0
 }"
+`;
+
+exports[`compiler: template ref transform > static ref (inline mode) 1`] = `
+"
+  const _setTemplateRef = _createTemplateRefSetter()
+  const n0 = t0()
+  _setTemplateRef(n0, foo, null, null, "foo")
+  return n0
+"
 `;
 
 exports[`compiler: template ref transform > static ref 1`] = `

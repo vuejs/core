@@ -823,6 +823,228 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > should alias __emit to $emit when defineEmits is used 1`] = `
+"import { openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  emits: ['click'],
+  setup(__props, { emit: __emit }) {
+  const $emit = __emit
+
+            const emit = __emit
+          
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: _cache[0] || (_cache[0] = $event => ($emit('click')))
+  }))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > should alias __props to $props when $props is used 1`] = `
+"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  setup(__props) {
+  const $props = __props
+/* ... */
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", null, _toDisplayString($props), 1 /* TEXT */))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > should extract all built-in properties when they are used 1`] = `
+"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  setup(__props, { emit: $emit, attrs: $attrs, slots: $slots }) {
+  const $props = __props
+/* ... */
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", null, _toDisplayString($props) + _toDisplayString($slots) + _toDisplayString($emit) + _toDisplayString($attrs), 1 /* TEXT */))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > should extract attrs when $attrs is used 1`] = `
+"import { normalizeProps as _normalizeProps, guardReactiveProps as _guardReactiveProps, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  setup(__props, { attrs: $attrs }) {
+/* ... */
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", _normalizeProps(_guardReactiveProps($attrs)), null, 16 /* FULL_PROPS */))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > should extract emit when $emit is used 1`] = `
+"import { openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  setup(__props, { emit: $emit }) {
+/* ... */
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: _cache[0] || (_cache[0] = $event => ($emit('click')))
+  }))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > should extract slots when $slots is used 1`] = `
+"import { resolveComponent as _resolveComponent, openBlock as _openBlock, createBlock as _createBlock } from "vue"
+
+
+export default {
+  setup(__props, { slots: $slots }) {
+/* ... */
+return (_ctx, _cache) => {
+  const _component_Comp = _resolveComponent("Comp")
+
+  return (_openBlock(), _createBlock(_component_Comp, {
+    foo: $slots.foo
+  }, null, 8 /* PROPS */, ["foo"]))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > should not extract built-in properties when neither is used 1`] = `
+"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  setup(__props) {
+/* ... */
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", null, _toDisplayString(_ctx.msg), 1 /* TEXT */))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > user-defined properties override > should handle mixed defineEmits and user-defined $emit 1`] = `
+"import { unref as _unref, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  emits: ['click'],
+  setup(__props, { emit: __emit }) {
+
+              const emit = __emit
+              let $emit
+            
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: _cache[0] || (_cache[0] = $event => (_unref($emit)('click')))
+  }, "click"))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > user-defined properties override > should not extract $attrs when user defines it 1`] = `
+"import { unref as _unref, normalizeProps as _normalizeProps, guardReactiveProps as _guardReactiveProps, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  setup(__props) {
+let $attrs
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", _normalizeProps(_guardReactiveProps(_unref($attrs))), null, 16 /* FULL_PROPS */))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > user-defined properties override > should not extract $emit when user defines it 1`] = `
+"import { unref as _unref, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  setup(__props) {
+let $emit
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", {
+    onClick: _cache[0] || (_cache[0] = $event => (_unref($emit)('click')))
+  }, "click"))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > user-defined properties override > should not extract $slots when user defines it 1`] = `
+"import { unref as _unref, resolveComponent as _resolveComponent, openBlock as _openBlock, createBlock as _createBlock } from "vue"
+
+
+export default {
+  setup(__props) {
+let $slots
+return (_ctx, _cache) => {
+  const _component_Comp = _resolveComponent("Comp")
+
+  return (_openBlock(), _createBlock(_component_Comp, {
+    foo: _unref($slots).foo
+  }, null, 8 /* PROPS */, ["foo"]))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > user-defined properties override > should not generate $props alias when user defines it 1`] = `
+"import { unref as _unref, toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  setup(__props) {
+let $props
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", null, _toDisplayString(_unref($props).msg), 1 /* TEXT */))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > inlineTemplate mode > destructure setup context for built-in properties > user-defined properties override > should only extract non-user-defined properties 1`] = `
+"import { unref as _unref, toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+
+export default {
+  setup(__props, { emit: $emit, slots: $slots }) {
+  const $props = __props
+let $attrs
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock("div", null, _toDisplayString(_unref($attrs)) + _toDisplayString($slots) + _toDisplayString($emit) + _toDisplayString($props), 1 /* TEXT */))
+}
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > inlineTemplate mode > referencing scope components and directives 1`] = `
 "import { unref as _unref, createElementVNode as _createElementVNode, withDirectives as _withDirectives, createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
@@ -861,7 +1083,7 @@ export default {
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
     _createElementVNode("div", null, _toDisplayString(count.value), 1 /* TEXT */),
-    _cache[0] || (_cache[0] = _createElementVNode("div", null, "static", -1 /* HOISTED */))
+    _cache[0] || (_cache[0] = _createElementVNode("div", null, "static", -1 /* CACHED */))
   ], 64 /* STABLE_FRAGMENT */))
 }
 }
@@ -884,9 +1106,9 @@ export default {
         
 return (_ctx, _push, _parent, _attrs) => {
   const _cssVars = { style: {
-  "--xxxxxxxx-count": (count.value),
-  "--xxxxxxxx-style\\\\.color": (style.color),
-  "--xxxxxxxx-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")
+  ":--xxxxxxxx-count": (count.value),
+  ":--xxxxxxxx-style\\\\.color": (style.color),
+  ":--xxxxxxxx-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")
 }}
   _push(\`<!--[--><div\${
     _ssrRenderAttrs(_cssVars)

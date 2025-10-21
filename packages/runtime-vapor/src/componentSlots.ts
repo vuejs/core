@@ -1,13 +1,5 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import {
-  type Block,
-  type BlockFn,
-  DynamicFragment,
-  type VaporFragment,
-  insert,
-  isFragment,
-  setScopeId,
-} from './block'
+import { type Block, type BlockFn, insert, setScopeId } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
@@ -15,9 +7,15 @@ import { renderEffect } from './renderEffect'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import {
+  advanceHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
+import { DynamicFragment, type VaporFragment } from './fragment'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -117,11 +115,8 @@ export function createSlot(
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  if (isHydrating) {
-    locateHydrationNode()
-  } else {
-    resetInsertionState()
-  }
+  const _isLastInsertion = isLastInsertion
+  if (!isHydrating) resetInsertionState()
 
   const instance = i || (currentInstance as VaporComponentInstance)
   const rawSlots = instance.rawSlots
@@ -130,8 +125,8 @@ export function createSlot(
     : EMPTY_OBJ
 
   let fragment: DynamicFragment
-
   if (isRef(rawSlots._)) {
+    if (isHydrating) locateHydrationNode()
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,
@@ -140,42 +135,18 @@ export function createSlot(
       fallback,
     )
   } else {
-    fragment = __DEV__ ? new DynamicFragment('slot') : new DynamicFragment()
+    fragment =
+      isHydrating || __DEV__
+        ? new DynamicFragment('slot')
+        : new DynamicFragment()
     const isDynamicName = isFunction(name)
     const renderSlot = () => {
       const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
       if (slot) {
+        fragment.fallback = fallback
         // create and cache bound version of the slot to make it stable
         // so that we avoid unnecessary updates if it resolves to the same slot
-        fragment.update(
-          slot._bound ||
-            (slot._bound = () => {
-              const slotContent = slot(slotProps)
-              if (slotContent instanceof DynamicFragment) {
-                let nodes = slotContent.nodes
-                if (
-                  (slotContent.fallback = fallback) &&
-                  isArray(nodes) &&
-                  nodes.length === 0
-                ) {
-                  // use fallback if the slot content is invalid
-                  slotContent.update(fallback)
-                } else {
-                  while (isFragment(nodes)) {
-                    ensureVaporSlotFallback(nodes, fallback)
-                    nodes = nodes.nodes
-                  }
-                }
-              }
-              // forwarded vdom slot, if there is no fallback provide, try use the fallback
-              // provided by the slot outlet.
-              else if (isFragment(slotContent)) {
-                ensureVaporSlotFallback(slotContent, fallback)
-              }
-
-              return slotContent
-            }),
-        )
+        fragment.update(slot._bound || (slot._bound = () => slot(slotProps)))
       } else {
         fragment.update(fallback)
       }
@@ -190,13 +161,20 @@ export function createSlot(
   }
 
   if (i) fragment.forwarded = true
-  if (i || !hasForwardedSlot(fragment.nodes)) {
-    const scopeId = instance!.type.__scopeId
-    if (scopeId) setScopeId(fragment, `${scopeId}-s`)
-  }
 
-  if (!isHydrating && _insertionParent) {
-    insert(fragment, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (i || !hasForwardedSlot(fragment.nodes)) {
+      const scopeId = instance!.type.__scopeId
+      if (scopeId) setScopeId(fragment, `${scopeId}-s`)
+    }
+    if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
+  } else {
+    if (fragment.insert) {
+      ;(fragment as VaporFragment).hydrate!()
+    }
+    if (_isLastInsertion) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
 
   return fragment
@@ -211,14 +189,5 @@ function hasForwardedSlot(block: Block): block is DynamicFragment {
     return block.some(isForwardedSlot)
   } else {
     return isForwardedSlot(block)
-  }
-}
-
-function ensureVaporSlotFallback(
-  block: VaporFragment,
-  fallback?: VaporSlot,
-): void {
-  if (block.insert && !block.fallback && fallback) {
-    block.fallback = fallback
   }
 }

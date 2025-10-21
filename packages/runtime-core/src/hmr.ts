@@ -1,4 +1,5 @@
 /* eslint-disable no-restricted-globals */
+import { EffectFlags } from '@vue/reactivity'
 import {
   type ClassComponent,
   type ComponentInternalInstance,
@@ -99,8 +100,11 @@ function rerender(id: string, newRender?: Function): void {
       instance.hmrRerender!()
     } else {
       const i = instance as ComponentInternalInstance
-      i.renderCache = []
-      i.update()
+      // #13771 don't update if the job is already disposed
+      if (!(i.effect.flags! & EffectFlags.STOP)) {
+        i.renderCache = []
+        i.effect.run()
+      }
     }
     nextTick(() => {
       isHmrUpdating = false
@@ -119,7 +123,7 @@ function reload(id: string, newComp: HMRComponent): void {
   // create a snapshot which avoids the set being mutated during updates
   const instances = [...record.instances]
 
-  if (newComp.vapor) {
+  if (newComp.__vapor) {
     for (const instance of instances) {
       instance.hmrReload!(newComp)
     }
@@ -160,7 +164,7 @@ function reload(id: string, newComp: HMRComponent): void {
           if (parent.vapor) {
             parent.hmrRerender!()
           } else {
-            ;(parent as ComponentInternalInstance).update()
+            ;(parent as ComponentInternalInstance).effect.run()
           }
           nextTick(() => {
             isHmrUpdating = false

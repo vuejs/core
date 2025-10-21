@@ -26,7 +26,7 @@ import {
   genCall,
   genMulti,
 } from './utils'
-import { genExpression } from './expression'
+import { genExpression, genVarName } from './expression'
 import { genPropKey, genPropValue } from './prop'
 import {
   type SimpleExpressionNode,
@@ -39,6 +39,7 @@ import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
 import { genModelHandler } from './vModel'
+import { isBuiltInComponent } from '../utils'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -53,13 +54,12 @@ export function genCreateComponent(
   const rawProps = context.withId(() => genRawProps(props, context), ids)
 
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
-    (acc, { name, value }) => {
+    (acc, { name, value }: InlineHandler) => {
       const handler = genEventHandler(context, value, undefined, false)
       return [...acc, `const ${name} = `, ...handler, NEWLINE]
     },
     [],
   )
-
   return [
     NEWLINE,
     ...inlineHandlers,
@@ -93,8 +93,15 @@ export function genCreateComponent(
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
     } else {
+      const { tag } = operation
+      const builtInTag = isBuiltInComponent(tag)
+      if (builtInTag) {
+        // @ts-expect-error
+        helper(builtInTag)
+        return `_${builtInTag}`
+      }
       return genExpression(
-        extend(createSimpleExpression(operation.tag, false), { ast: null }),
+        extend(createSimpleExpression(tag, false), { ast: null }),
         context,
       )
     }
@@ -103,6 +110,7 @@ export function genCreateComponent(
 
 function getUniqueHandlerName(context: CodegenContext, name: string): string {
   const { seenInlineHandlerNames } = context
+  name = genVarName(name)
   const count = seenInlineHandlerNames[name] || 0
   seenInlineHandlerNames[name] = count + 1
   return count === 0 ? name : `${name}${count}`
@@ -128,7 +136,10 @@ function processInlineHandlers(
         const isMemberExp = isMemberExpression(value, context.options)
         // cache inline handlers (fn expression or inline statement)
         if (!isMemberExp) {
-          const name = getUniqueHandlerName(context, `_on_${prop.key.content}`)
+          const name = getUniqueHandlerName(
+            context,
+            `_on_${prop.key.content.replace(/-/g, '_')}`,
+          )
           handlers.push({ name, value })
           ids[name] = null
           // replace the original prop value with the handler name
@@ -212,7 +223,7 @@ function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
       ? genEventHandler(
           context,
           prop.values[0],
-          undefined,
+          prop.handlerModifiers,
           true /* wrap handlers passed to components */,
         )
       : isStatic
@@ -397,7 +408,7 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
   let propsName: string | undefined
   let exitScope: (() => void) | undefined
   let depth: number | undefined
-  const { props } = oper
+  const { props, key } = oper
   const idsOfProps = new Set<string>()
 
   if (props) {
@@ -425,11 +436,28 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
         ? `${propsName}[${JSON.stringify(id)}]`
         : null),
   )
-  const blockFn = context.withId(
+  let blockFn = context.withId(
     () => genBlock(oper, context, [propsName]),
     idMap,
   )
   exitScope && exitScope()
+
+  if (key) {
+    blockFn = [
+      `() => {`,
+      INDENT_START,
+      NEWLINE,
+      `return `,
+      ...genCall(
+        context.helper('createKeyedFragment'),
+        [`() => `, ...genExpression(key, context)],
+        blockFn,
+      ),
+      INDENT_END,
+      NEWLINE,
+      `}`,
+    ]
+  }
 
   return blockFn
 }

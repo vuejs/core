@@ -1724,6 +1724,107 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #13153
+    test(
+      'move kept-alive node before v-show transition leave finishes',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, ref } = (window as any).Vue
+          const show = ref(true)
+          createApp({
+            template: `
+            <div id="container">
+              <KeepAlive :include="['Comp1', 'Comp2']">
+                <component :is="state === 1 ? 'Comp1' : 'Comp2'"/>
+              </KeepAlive>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const state = ref(1)
+              const click = () => (state.value = state.value === 1 ? 2 : 1)
+              return { state, click }
+            },
+            components: {
+              Comp1: {
+                components: {
+                  Item: {
+                    name: 'Item',
+                    setup() {
+                      return { show }
+                    },
+                    template: `
+                      <Transition name="test">
+                        <div v-show="show" >
+                          <h2>{{ show ? "I should show" : "I shouldn't show " }}</h2>
+                        </div>
+                      </Transition>
+                    `,
+                  },
+                },
+                name: 'Comp1',
+                setup() {
+                  const toggle = () => (show.value = !show.value)
+                  return { show, toggle }
+                },
+                template: `
+                  <Item />
+                  <h2>This is page1</h2>
+                  <button id="changeShowBtn" @click="toggle">{{ show }}</button>
+                `,
+              },
+              Comp2: {
+                name: 'Comp2',
+                template: `<h2>This is page2</h2>`,
+              },
+            },
+          }).mount('#app')
+        })
+
+        expect(await html('#container')).toBe(
+          `<div><h2>I should show</h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">true</button>`,
+        )
+
+        // trigger v-show transition leave
+        await click('#changeShowBtn')
+        await nextTick()
+        expect(await html('#container')).toBe(
+          `<div class="test-leave-from test-leave-active"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+
+        // switch to page2, before leave finishes
+        // expect v-show element's display to be none
+        await click('#toggleBtn')
+        await nextTick()
+        expect(await html('#container')).toBe(
+          `<div class="test-leave-from test-leave-active" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page2</h2>`,
+        )
+
+        // switch back to page1
+        // expect v-show element's display to be none
+        await click('#toggleBtn')
+        await nextTick()
+        expect(await html('#container')).toBe(
+          `<div class="test-enter-from test-enter-active" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          `<div class="" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with Suspense', () => {
@@ -3256,7 +3357,7 @@ describe('e2e: Transition', () => {
               setup: () => {
                 // Big arrays kick GC earlier
                 const test = ref([...Array(30_000_000)].map((_, i) => ({ i })))
-                // TODO: Use a diferent TypeScript env for testing
+                // TODO: Use a different TypeScript env for testing
                 // @ts-expect-error - Custom property and same lib as runtime is used
                 window.__REF__ = new WeakRef(test)
 
@@ -3311,7 +3412,7 @@ describe('e2e: Transition', () => {
               setup: () => {
                 // Big arrays kick GC earlier
                 const test = ref([...Array(30_000_000)].map((_, i) => ({ i })))
-                // TODO: Use a diferent TypeScript env for testing
+                // TODO: Use a different TypeScript env for testing
                 // @ts-expect-error - Custom property and same lib as runtime is used
                 window.__REF__ = new WeakRef(test)
 

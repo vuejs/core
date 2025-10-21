@@ -39,6 +39,7 @@ export enum IRNodeTypes {
 
 export interface BaseIRNode {
   type: IRNodeTypes
+  key?: SimpleExpressionNode | undefined
 }
 
 export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
@@ -53,6 +54,7 @@ export interface BlockIRNode extends BaseIRNode {
   effect: IREffect[]
   operation: OperationNode[]
   returns: number[]
+  hasDeferredVShow: boolean
 }
 
 export interface RootIRNode {
@@ -77,6 +79,8 @@ export interface IfIRNode extends BaseIRNode {
   once?: boolean
   parent?: number
   anchor?: number
+  append?: boolean
+  last?: boolean
 }
 
 export interface IRFor {
@@ -96,6 +100,8 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   onlyChild: boolean
   parent?: number
   anchor?: number
+  append?: boolean
+  last?: boolean
 }
 
 export interface SetPropIRNode extends BaseIRNode {
@@ -125,6 +131,7 @@ export interface SetTextIRNode extends BaseIRNode {
   values: SimpleExpressionNode[]
   generated?: boolean // whether this is a generated empty text node by `processTextLikeContainer`
   jsx?: boolean
+  isComponent?: boolean
 }
 
 export type KeyOverride = [find: string, replacement: string]
@@ -151,6 +158,7 @@ export interface SetHtmlIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_HTML
   element: number
   value: SimpleExpressionNode
+  isComponent?: boolean
 }
 
 export interface SetTemplateRefIRNode extends BaseIRNode {
@@ -182,6 +190,7 @@ export interface DirectiveIRNode extends BaseIRNode {
   builtin?: boolean
   asset?: boolean
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
+  deferred?: boolean
 }
 
 export interface CreateComponentIRNode extends BaseIRNode {
@@ -197,6 +206,8 @@ export interface CreateComponentIRNode extends BaseIRNode {
   parent?: number
   anchor?: number
   scopeId?: string | null
+  append?: boolean
+  last?: boolean
 }
 
 export interface DeclareOldRefIRNode extends BaseIRNode {
@@ -213,6 +224,8 @@ export interface SlotOutletIRNode extends BaseIRNode {
   forwarded?: boolean
   parent?: number
   anchor?: number
+  append?: boolean
+  last?: boolean
 }
 
 export interface GetTextChildIRNode extends BaseIRNode {
@@ -262,7 +275,9 @@ export interface IRDynamicInfo {
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
+  needsKey?: boolean
   operation?: OperationNode
+  ifBranch?: boolean
 }
 
 export interface IREffect {

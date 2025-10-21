@@ -1,20 +1,29 @@
 // public APIs
 export { createVaporApp, createVaporSSRApp } from './apiCreateApp'
 export { defineVaporComponent } from './apiDefineComponent'
+export { defineVaporAsyncComponent } from './apiDefineAsyncComponent'
 export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
+export { VaporTeleportImpl as VaporTeleport } from './components/Teleport'
+export { VaporKeepAliveImpl as VaporKeepAlive } from './components/KeepAlive'
 
 // compiler-use only
-export { insert, prepend, remove, isFragment, VaporFragment } from './block'
+export { insert, prepend, remove } from './block'
 export { setInsertionState } from './insertionState'
-export { createComponent, createComponentWithFallback } from './component'
+export {
+  createComponent,
+  createComponentWithFallback,
+  isVaporComponent,
+} from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot, forwardedSlotCreator } from './componentSlots'
 export { template } from './dom/template'
-export { createTextNode, child, nthChild, next } from './dom/node'
+export { createTextNode, child, nthChild, next, txt } from './dom/node'
 export {
   setText,
+  setBlockText,
   setHtml,
+  setBlockHtml,
   setClass,
   setStyle,
   setAttr,
@@ -22,9 +31,11 @@ export {
   setProp,
   setDOMProp,
   setDynamicProps,
+  setElementText,
 } from './dom/prop'
 export { on, delegate, delegateEvents, setDynamicEvents } from './dom/event'
 export { createIf } from './apiCreateIf'
+export { createKeyedFragment } from './apiCreateFragment'
 export {
   createFor,
   createForSlots,
@@ -42,3 +53,6 @@ export {
   applyDynamicModel,
 } from './directives/vModel'
 export { withVaporDirectives } from './directives/custom'
+export { isFragment, VaporFragment } from './fragment'
+export { VaporTransition } from './components/Transition'
+export { VaporTransitionGroup } from './components/TransitionGroup'

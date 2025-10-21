@@ -1,4 +1,6 @@
 import {
+  type EffectScope,
+  ReactiveEffect,
   type Ref,
   inject,
   nextTick,
@@ -6,6 +8,7 @@ import {
   onUpdated,
   provide,
   ref,
+  useAttrs,
   watch,
   watchEffect,
 } from '@vue/runtime-dom'
@@ -13,6 +16,7 @@ import {
   createComponent,
   createIf,
   createTextNode,
+  defineVaporComponent,
   renderEffect,
   setInsertionState,
   template,
@@ -305,12 +309,72 @@ describe('component', () => {
 
     const i = instance as VaporComponentInstance
     // watchEffect + renderEffect + props validation effect
-    expect(i.scope.effects.length).toBe(3)
+    expect(getEffectsCount(i.scope)).toBe(3)
     expect(host.innerHTML).toBe('<div>0</div>')
 
     app.unmount()
     expect(host.innerHTML).toBe('')
-    expect(i.scope.effects.length).toBe(0)
+    expect(getEffectsCount(i.scope)).toBe(0)
+  })
+
+  it('work with v-once + props', () => {
+    const Child = defineVaporComponent({
+      props: {
+        count: Number,
+      },
+      setup(props) {
+        const n0 = template(' ')() as any
+        renderEffect(() => setText(n0, props.count))
+        return n0
+      },
+    })
+
+    const count = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => count.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('0')
+
+    count.value++
+    expect(html()).toBe('0')
+  })
+
+  it('work with v-once + attrs', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        const attrs = useAttrs()
+        const n0 = template(' ')() as any
+        renderEffect(() => setText(n0, attrs.count as string))
+        return n0
+      },
+    })
+
+    const count = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => count.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('0')
+
+    count.value++
+    expect(html()).toBe('0')
   })
 
   test('should mount component only with template in production mode', () => {
@@ -353,3 +417,13 @@ describe('component', () => {
     ).toHaveBeenWarned()
   })
 })
+
+function getEffectsCount(scope: EffectScope): number {
+  let n = 0
+  for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
+    if (dep.dep instanceof ReactiveEffect) {
+      n++
+    }
+  }
+  return n
+}
