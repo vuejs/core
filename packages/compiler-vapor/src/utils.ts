@@ -15,7 +15,7 @@ import {
 } from '@vue/compiler-dom'
 import type { RootIRNode, VaporDirectiveNode } from './ir'
 import { EMPTY_EXPRESSION } from './transforms/utils'
-import type { TransformContext } from './transform'
+import { TransformContext } from './transform'
 
 export const findProp = _findProp as (
   node: ElementNode,
@@ -98,6 +98,8 @@ export function getAssetImports(ctx: TransformContext | RootIRNode): string[] {
   return imports.map(i =>
     typeof i === 'string' ? i : (i.exp as SimpleExpressionNode).content,
   )
+}
+
 export function isInTransition(
   context: TransformContext<ElementNode>,
 ): boolean {
