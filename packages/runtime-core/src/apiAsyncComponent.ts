@@ -3,6 +3,7 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   type ConcreteComponent,
+  type GenericComponent,
   type GenericComponentInstance,
   currentInstance,
   getComponentName,
@@ -68,37 +69,14 @@ export function defineAsyncComponent<
     __asyncLoader: load,
 
     __asyncHydrate(el, instance, hydrate) {
-      let patched = false
-      ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
-      const performHydrate = () => {
-        // skip hydration if the component has been patched
-        if (patched) {
-          if (__DEV__) {
-            const resolvedComp = getResolvedComp()!
-            warn(
-              `Skipping lazy hydration for component '${getComponentName(resolvedComp!) || resolvedComp!.__file}': ` +
-                `it was updated before lazy hydration performed.`,
-            )
-          }
-          return
-        }
-        hydrate()
-      }
-      const doHydrate = hydrateStrategy
-        ? () => {
-            const teardown = hydrateStrategy(performHydrate, cb =>
-              forEachElement(el, cb),
-            )
-            if (teardown) {
-              ;(instance.bum || (instance.bum = [])).push(teardown)
-            }
-          }
-        : performHydrate
-      if (getResolvedComp()) {
-        doHydrate()
-      } else {
-        load().then(() => !instance.isUnmounted && doHydrate())
-      }
+      performAsyncHydrate(
+        el,
+        instance,
+        hydrate,
+        getResolvedComp,
+        load,
+        hydrateStrategy,
+      )
     },
 
     get __asyncResolved() {
@@ -310,4 +288,49 @@ export const useAsyncComponentState = (
   }
 
   return { loaded, error, delayed }
+}
+
+/**
+ * shared between core and vapor
+ * @internal
+ */
+export function performAsyncHydrate(
+  el: Element,
+  instance: GenericComponentInstance,
+  hydrate: () => void,
+  getResolvedComp: () => GenericComponent | undefined,
+  load: () => Promise<GenericComponent>,
+  hydrateStrategy: HydrationStrategy | undefined,
+): void {
+  let patched = false
+  ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
+  const performHydrate = () => {
+    // skip hydration if the component has been patched
+    if (patched) {
+      if (__DEV__) {
+        const resolvedComp = getResolvedComp()! as GenericComponent
+        warn(
+          `Skipping lazy hydration for component '${getComponentName(resolvedComp) || resolvedComp.__file}': ` +
+            `it was updated before lazy hydration performed.`,
+        )
+      }
+      return
+    }
+    hydrate()
+  }
+  const doHydrate = hydrateStrategy
+    ? () => {
+        const teardown = hydrateStrategy(performHydrate, cb =>
+          forEachElement(el, cb),
+        )
+        if (teardown) {
+          ;(instance.bum || (instance.bum = [])).push(teardown)
+        }
+      }
+    : performHydrate
+  if (getResolvedComp()) {
+    doHydrate()
+  } else {
+    load().then(() => !instance.isUnmounted && doHydrate())
+  }
 }

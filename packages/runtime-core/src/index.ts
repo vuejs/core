@@ -274,6 +274,7 @@ export type {
   GlobalDirectives,
   ComponentInstance,
   ComponentCustomElementInterface,
+  AsyncComponentInternalOptions,
 } from './component'
 export type {
   DefineComponent,
@@ -587,6 +588,7 @@ export {
   createAsyncComponentContext,
   useAsyncComponentState,
   isAsyncWrapper,
+  performAsyncHydrate,
 } from './apiAsyncComponent'
 /**
  * @internal

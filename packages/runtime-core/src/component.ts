@@ -227,6 +227,27 @@ export interface ComponentInternalOptions {
   __name?: string
 }
 
+export interface AsyncComponentInternalOptions<
+  R = ConcreteComponent,
+  I = ComponentInternalInstance,
+> {
+  /**
+   * marker for AsyncComponentWrapper
+   * @internal
+   */
+  __asyncLoader?: () => Promise<R>
+  /**
+   * the inner component resolved by the AsyncComponentWrapper
+   * @internal
+   */
+  __asyncResolved?: R
+  /**
+   * Exposed for lazy hydration
+   * @internal
+   */
+  __asyncHydrate?: (el: Element, instance: I, hydrate: () => void) => void
+}
+
 export interface FunctionalComponent<
   P = {},
   E extends EmitsOptions | Record<string, any[]> = {},
