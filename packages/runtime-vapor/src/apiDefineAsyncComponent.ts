@@ -185,6 +185,7 @@ function createInnerComp(
     rawProps,
     rawSlots,
     isSingleRoot,
+    undefined,
     appContext,
   )
 

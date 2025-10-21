@@ -124,6 +124,7 @@ const vaporInteropImpl: Omit<
         _: slotsRef, // pass the slots ref
       } as any as RawSlots,
       undefined,
+      undefined,
       (parentComponent ? parentComponent.appContext : vnode.appContext) as any,
     ))
     instance.rawPropsRef = propsRef
