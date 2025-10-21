@@ -1,7 +1,7 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, insert } from './block'
+import { type Block, type BlockFn, insert, setScopeId } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
-import { currentInstance, isRef } from '@vue/runtime-dom'
+import { currentInstance, isRef, setCurrentInstance } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 import {
@@ -16,6 +16,23 @@ import {
   locateHydrationNode,
 } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
+
+/**
+ * Current slot scopeIds for vdom interop
+ * @internal
+ */
+export let currentSlotScopeIds: string[] | null = null
+
+/**
+ * @internal
+ */
+export function setCurrentSlotScopeIds(
+  scopeIds: string[] | null,
+): string[] | null {
+  const prev = currentSlotScopeIds
+  currentSlotScopeIds = scopeIds
+  return prev
+}
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -104,7 +121,7 @@ export function forwardedSlotCreator(): (
 ) => Block {
   const instance = currentInstance as VaporComponentInstance
   return (name, rawProps, fallback) =>
-    createSlot(name, rawProps, fallback, instance)
+    createSlot(name, rawProps, fallback, instance, false /* noSlotted */)
 }
 
 export function createSlot(
@@ -112,6 +129,7 @@ export function createSlot(
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
   i?: VaporComponentInstance,
+  noSlotted?: boolean,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -146,7 +164,37 @@ export function createSlot(
         fragment.fallback = fallback
         // create and cache bound version of the slot to make it stable
         // so that we avoid unnecessary updates if it resolves to the same slot
-        fragment.update(slot._bound || (slot._bound = () => slot(slotProps)))
+        // Note: slot content should be rendered in the context where it was defined (parent),
+        // not the slot owner (current instance), so the components inside don't inherit
+        // the slot owner's scopeId
+        const slotContext = instance.parent
+
+        // Calculate slotScopeIds for vdom interop
+        const slotScopeIds: string[] = []
+        if (!noSlotted) {
+          const slotOwnerForScopeId = i || instance
+          const scopeId = slotOwnerForScopeId!.type.__scopeId
+          if (scopeId) {
+            slotScopeIds.push(`${scopeId}-s`)
+          }
+        }
+
+        fragment.update(
+          slot._bound ||
+            (slot._bound = () => {
+              // Temporarily switch to parent context for slot content
+              const [prevInstance] = setCurrentInstance(slotContext as any)
+              const prevSlotScopeIds = setCurrentSlotScopeIds(
+                slotScopeIds.length > 0 ? slotScopeIds : null,
+              )
+              try {
+                return slot(slotProps)
+              } finally {
+                setCurrentInstance(prevInstance)
+                setCurrentSlotScopeIds(prevSlotScopeIds)
+              }
+            }),
+        )
       } else {
         fragment.update(fallback)
       }
@@ -161,6 +209,32 @@ export function createSlot(
   }
 
   if (!isHydrating) {
+    // Apply scopeId based on vdom slot scopeId rules:
+    // 1. Apply slotted scopeId (-s) unless noSlotted is true
+    //    - If noSlotted is true, this slot is just forwarding and should not add its own -s
+    //    - If this is a forwarded slot (i !== undefined), use i's scopeId
+    //      (the component that first receives the slot content)
+    //    - Otherwise, use instance's scopeId (the component rendering <slot/>)
+    if (!noSlotted) {
+      const slotOwnerForScopeId = i || instance
+      const scopeId = slotOwnerForScopeId!.type.__scopeId
+      if (scopeId) {
+        setScopeId(fragment, `${scopeId}-s`)
+      }
+    }
+
+    // 2. Apply parent component's scopeId
+    //    This represents the template context where slot content is defined
+    //    For forwarded slots, this should be the parent of the forwarding component (i)
+    //    Skip this if noSlotted is true (already handled by inner createSlot)
+    if (!noSlotted) {
+      const contextParent = i ? i.parent : instance.parent
+      if (contextParent && contextParent.type.__scopeId) {
+        const parentScopeId = contextParent.type.__scopeId
+        setScopeId(fragment, `${parentScopeId}`)
+      }
+    }
+
     if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
   } else {
     if (fragment.insert) {

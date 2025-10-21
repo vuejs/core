@@ -28,7 +28,14 @@ import {
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, insert, isBlock, remove } from './block'
+import {
+  type Block,
+  insert,
+  isBlock,
+  remove,
+  setComponentScopeId,
+  setScopeId,
+} from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -382,8 +389,6 @@ export function setupComponent(
     }
   }
 
-  // TODO: scopeid
-
   setActiveSub(prevSub)
   setCurrentInstance(...prevInstance)
 
@@ -640,6 +645,11 @@ export function createComponentWithFallback(
   // mark single root
   ;(el as any).$root = isSingleRoot
 
+  if (!isHydrating) {
+    const scopeId = currentInstance!.type.__scopeId
+    if (scopeId) setScopeId(el, scopeId)
+  }
+
   if (rawProps) {
     const setFn = () =>
       setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)])
@@ -690,6 +700,7 @@ export function mountComponent(
   if (instance.bm) invokeArrayFns(instance.bm)
   if (!isHydrating) {
     insert(instance.block, parent, anchor)
+    setComponentScopeId(instance)
   }
   if (instance.m) queuePostFlushCb(instance.m!)
   if (
