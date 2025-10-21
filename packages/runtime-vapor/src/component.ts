@@ -647,7 +647,7 @@ export function createComponentWithFallback(
 
   if (!isHydrating) {
     const scopeId = currentInstance!.type.__scopeId
-    if (scopeId) setScopeId(el, scopeId)
+    if (scopeId) setScopeId(el, [scopeId])
   }
 
   if (rawProps) {

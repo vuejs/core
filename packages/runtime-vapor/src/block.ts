@@ -222,28 +222,33 @@ export function isFragmentBlock(block: Block): boolean {
   return false
 }
 
-export function setScopeId(block: Block, scopeId: string): void {
+export function setScopeId(block: Block, scopeIds: string[]): void {
   if (block instanceof Element) {
-    block.setAttribute(scopeId, '')
+    for (const id of scopeIds) {
+      block.setAttribute(id, '')
+    }
   } else if (isVaporComponent(block)) {
-    setScopeId(block.block, scopeId)
+    setScopeId(block.block, scopeIds)
   } else if (isArray(block)) {
     for (const b of block) {
-      setScopeId(b, scopeId)
+      setScopeId(b, scopeIds)
     }
   } else if (isFragment(block)) {
-    setScopeId(block.nodes, scopeId)
+    setScopeId(block.nodes, scopeIds)
   }
 }
 
 export function setComponentScopeId(instance: VaporComponentInstance): void {
   const parent = instance.parent
   if (!parent) return
+  // prevent setting scopeId on multi-root fragments
   if (isArray(instance.block) && instance.block.length > 1) return
+
+  const scopeIds: string[] = []
 
   const scopeId = parent.type.__scopeId
   if (scopeId) {
-    setScopeId(instance.block, scopeId)
+    scopeIds.push(scopeId)
   }
 
   // inherit scopeId from vdom parent
@@ -252,10 +257,12 @@ export function setComponentScopeId(instance: VaporComponentInstance): void {
     (parent.subTree.component as any) === instance &&
     parent.vnode!.scopeId
   ) {
-    setScopeId(instance.block, parent.vnode!.scopeId)
-    const scopeIds = getInheritedScopeIds(parent.vnode!, parent.parent)
-    for (const id of scopeIds) {
-      setScopeId(instance.block, id)
-    }
+    scopeIds.push(parent.vnode!.scopeId)
+    const inheritedScopeIds = getInheritedScopeIds(parent.vnode!, parent.parent)
+    scopeIds.push(...inheritedScopeIds)
+  }
+
+  if (scopeIds.length > 0) {
+    setScopeId(instance.block, scopeIds)
   }
 }

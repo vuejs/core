@@ -124,7 +124,7 @@ exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slott
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("default", null, null, undefined)
+  const n0 = _createSlot("default", null)
   return n0
 }"
 `;
@@ -133,7 +133,7 @@ exports[`compiler: transform <slot> outlets > slot outlet without scopeId should
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("default", null, null, undefined)
+  const n0 = _createSlot("default", null)
   return n0
 }"
 `;

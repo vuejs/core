@@ -209,17 +209,9 @@ export function createSlot(
 
   if (!isHydrating) {
     if (!noSlotted) {
-      // apply slotted scopeId (-s)
-      const scopeId = instance!.type.__scopeId
+      const scopeId = instance.type.__scopeId
       if (scopeId) {
-        setScopeId(fragment, `${scopeId}-s`)
-      }
-
-      // apply parent component's scopeId
-      const parent = i ? i.parent : instance.parent
-      if (parent) {
-        const parentScopeId = parent.type.__scopeId
-        if (parentScopeId) setScopeId(fragment, `${parentScopeId}`)
+        setScopeId(fragment, [`${scopeId}-s`])
       }
     }
 
