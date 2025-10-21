@@ -278,6 +278,7 @@ export type {
 } from './component'
 export type {
   DefineComponent,
+  DefineComponent2,
   DefineSetupFnComponent,
   PublicProps,
 } from './apiDefineComponent'
@@ -292,6 +293,7 @@ export type {
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
+  ObjectInjectOptions,
   // deprecated
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
@@ -305,6 +307,7 @@ export type {
   EmitFn,
 } from './componentEmits'
 export type {
+  ExtractMixinProps,
   ComponentPublicInstance,
   ComponentCustomProperties,
   CreateComponentPublicInstance,
