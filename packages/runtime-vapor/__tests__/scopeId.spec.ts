@@ -343,7 +343,7 @@ describe('vdom interop', () => {
     )
   })
 
-  test('vdom parent > vapor > vdom child', () => {
+  test('vdom parent > vapor child > vdom child', () => {
     const VdomChild = {
       __scopeId: 'vdom-child',
       setup() {
@@ -379,7 +379,7 @@ describe('vdom interop', () => {
     )
   })
 
-  test('vdom parent > vapor > vapor > vdom child', () => {
+  test('vdom parent > vapor child > vapor child > vdom child', () => {
     const VdomChild = {
       __scopeId: 'vdom-child',
       setup() {
@@ -480,7 +480,7 @@ describe('vdom interop', () => {
     )
   })
 
-  test('vapor parent > vdom > vapor child', () => {
+  test('vapor parent > vdom child > vapor child', () => {
     const VaporChild = defineVaporComponent({
       __scopeId: 'vapor-child',
       setup() {
@@ -516,7 +516,7 @@ describe('vdom interop', () => {
     )
   })
 
-  test('vapor parent > vdom > vdom > vapor child', () => {
+  test('vapor parent > vdom child > vdom child > vapor child', () => {
     const VaporChild = defineVaporComponent({
       __scopeId: 'vapor-child',
       setup() {

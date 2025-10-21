@@ -172,8 +172,7 @@ export function createSlot(
         // Calculate slotScopeIds for vdom interop
         const slotScopeIds: string[] = []
         if (!noSlotted) {
-          const slotOwnerForScopeId = i || instance
-          const scopeId = slotOwnerForScopeId!.type.__scopeId
+          const scopeId = instance!.type.__scopeId
           if (scopeId) {
             slotScopeIds.push(`${scopeId}-s`)
           }
@@ -183,14 +182,14 @@ export function createSlot(
           slot._bound ||
             (slot._bound = () => {
               // Temporarily switch to parent context for slot content
-              const [prevInstance] = setCurrentInstance(slotContext as any)
+              const prev = setCurrentInstance(slotContext)
               const prevSlotScopeIds = setCurrentSlotScopeIds(
                 slotScopeIds.length > 0 ? slotScopeIds : null,
               )
               try {
                 return slot(slotProps)
               } finally {
-                setCurrentInstance(prevInstance)
+                setCurrentInstance(...prev)
                 setCurrentSlotScopeIds(prevSlotScopeIds)
               }
             }),
@@ -209,29 +208,18 @@ export function createSlot(
   }
 
   if (!isHydrating) {
-    // Apply scopeId based on vdom slot scopeId rules:
-    // 1. Apply slotted scopeId (-s) unless noSlotted is true
-    //    - If noSlotted is true, this slot is just forwarding and should not add its own -s
-    //    - If this is a forwarded slot (i !== undefined), use i's scopeId
-    //      (the component that first receives the slot content)
-    //    - Otherwise, use instance's scopeId (the component rendering <slot/>)
     if (!noSlotted) {
-      const slotOwnerForScopeId = i || instance
-      const scopeId = slotOwnerForScopeId!.type.__scopeId
+      // apply slotted scopeId (-s)
+      const scopeId = instance!.type.__scopeId
       if (scopeId) {
         setScopeId(fragment, `${scopeId}-s`)
       }
-    }
 
-    // 2. Apply parent component's scopeId
-    //    This represents the template context where slot content is defined
-    //    For forwarded slots, this should be the parent of the forwarding component (i)
-    //    Skip this if noSlotted is true (already handled by inner createSlot)
-    if (!noSlotted) {
-      const contextParent = i ? i.parent : instance.parent
-      if (contextParent && contextParent.type.__scopeId) {
-        const parentScopeId = contextParent.type.__scopeId
-        setScopeId(fragment, `${parentScopeId}`)
+      // apply parent component's scopeId
+      const parent = i ? i.parent : instance.parent
+      if (parent) {
+        const parentScopeId = parent.type.__scopeId
+        if (parentScopeId) setScopeId(fragment, `${parentScopeId}`)
       }
     }
 

@@ -111,6 +111,33 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slotted=false should generate noSlotted 1`] = `
+"import { createSlot as _createSlot } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, null, undefined, true)
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slotted=true should not generate noSlotted 1`] = `
+"import { createSlot as _createSlot } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, null, undefined)
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > slot outlet without scopeId should not generate noSlotted 1`] = `
+"import { createSlot as _createSlot } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, null, undefined)
+  return n0
+}"
+`;
+
 exports[`compiler: transform <slot> outlets > statically named slot outlet 1`] = `
 "import { createSlot as _createSlot } from 'vue';
 
