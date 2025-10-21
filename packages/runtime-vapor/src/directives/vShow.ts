@@ -1,13 +1,16 @@
 import {
+  MismatchTypes,
   type VShowElement,
   vShowHidden,
   vShowOriginalDisplay,
   warn,
+  warnPropMismatch,
 } from '@vue/runtime-dom'
 import { renderEffect } from '../renderEffect'
 import { isVaporComponent } from '../component'
 import type { Block, TransitionBlock } from '../block'
 import { isArray } from '@vue/shared'
+import { isHydrating, logMismatchError } from '../dom/hydration'
 import { DynamicFragment, VaporFragment } from '../fragment'
 
 export function applyVShow(target: Block, source: () => any): void {
@@ -58,6 +61,7 @@ function setDisplay(target: Block, value: unknown): void {
       el[vShowOriginalDisplay] =
         el.style.display === 'none' ? '' : el.style.display
     }
+
     if ($transition) {
       if (value) {
         $transition.beforeEnter(target)
@@ -75,8 +79,28 @@ function setDisplay(target: Block, value: unknown): void {
         }
       }
     } else {
-      el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
+      if (
+        (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+        isHydrating
+      ) {
+        if (!value && el.style.display !== 'none') {
+          warnPropMismatch(
+            el,
+            'style',
+            MismatchTypes.STYLE,
+            `display: ${el.style.display}`,
+            'display: none',
+          )
+          logMismatchError()
+
+          el.style.display = 'none'
+          el[vShowOriginalDisplay] = ''
+        }
+      } else {
+        el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
+      }
     }
+
     el[vShowHidden] = !value
   } else if (__DEV__) {
     warn(

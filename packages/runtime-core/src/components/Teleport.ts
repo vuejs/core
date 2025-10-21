@@ -394,7 +394,7 @@ function moveTeleport(
   }
 }
 
-interface TeleportTargetElement extends Element {
+export interface TeleportTargetElement extends Element {
   // last teleport target
   _lpa?: Node | null
 }

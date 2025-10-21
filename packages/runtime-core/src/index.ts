@@ -274,6 +274,7 @@ export type {
   GlobalDirectives,
   ComponentInstance,
   ComponentCustomElementInterface,
+  AsyncComponentInternalOptions,
 } from './component'
 export type {
   DefineComponent,
@@ -579,10 +580,15 @@ export {
 /**
  * @internal
  */
+export type { TeleportTargetElement } from './components/Teleport'
+/**
+ * @internal
+ */
 export {
   createAsyncComponentContext,
   useAsyncComponentState,
   isAsyncWrapper,
+  performAsyncHydrate,
 } from './apiAsyncComponent'
 /**
  * @internal
@@ -629,4 +635,22 @@ export { createInternalObject } from './internalObject'
 /**
  * @internal
  */
+export {
+  MismatchTypes,
+  isMismatchAllowed,
+  toClassSet,
+  isSetEqual,
+  warnPropMismatch,
+  toStyleMap,
+  isMapEqual,
+  isValidHtmlOrSvgAttribute,
+  getAttributeMismatch,
+} from './hydration'
+/**
+ * @internal
+ */
 export { createCanSetSetupRefChecker } from './rendererTemplateRef'
+/**
+ * @internal
+ */
+export { isTemplateNode } from './hydration'

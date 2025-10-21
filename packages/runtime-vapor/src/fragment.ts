@@ -5,15 +5,18 @@ import {
   type BlockFn,
   type TransitionOptions,
   type VaporTransitionHooks,
+  findBlockNode,
   insert,
   isValidBlock,
   remove,
 } from './block'
 import {
+  type GenericComponentInstance,
   type TransitionHooks,
   type VNode,
   currentInstance,
   isKeepAlive,
+  queuePostFlushCb,
 } from '@vue/runtime-dom'
 import type { VaporComponentInstance } from './component'
 import type { NodeRef } from './apiTemplateRef'
@@ -22,28 +25,36 @@ import {
   applyTransitionHooks,
   applyTransitionLeaveHooks,
 } from './components/Transition'
+import {
+  currentHydrationNode,
+  isComment,
+  isHydrating,
+  locateFragmentEndAnchor,
+  locateHydrationNode,
+} from './dom/hydration'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
 {
+  $key?: any
+  $transition?: VaporTransitionHooks | undefined
   nodes: T
   vnode?: VNode | null = null
   anchor?: Node
-  setRef?: (
-    instance: VaporComponentInstance,
-    ref: NodeRef,
-    refFor: boolean,
-    refKey: string | undefined,
-  ) => void
   fallback?: BlockFn
-  $key?: any
-  $transition?: VaporTransitionHooks | undefined
   insert?: (
     parent: ParentNode,
     anchor: Node | null,
     transitionHooks?: TransitionHooks,
   ) => void
   remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
+  hydrate?: (...args: any[]) => void
+  setRef?: (
+    instance: VaporComponentInstance,
+    ref: NodeRef,
+    refFor: boolean,
+    refKey: string | undefined,
+  ) => void
 
   constructor(nodes: T) {
     this.nodes = nodes
@@ -57,42 +68,35 @@ export class ForFragment extends VaporFragment<Block[]> {
 }
 
 export class DynamicFragment extends VaporFragment {
-  anchor: Node
+  anchor!: Node
   scope: EffectScope | undefined
   current?: BlockFn
+  fallback?: BlockFn
+  anchorLabel?: string
 
   constructor(anchorLabel?: string) {
     super([])
-    this.anchor =
-      __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    if (isHydrating) {
+      this.anchorLabel = anchorLabel
+      locateHydrationNode()
+    } else {
+      this.anchor =
+        __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    }
   }
 
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
+      if (isHydrating) this.hydrate(true)
       return
     }
     this.current = key
 
     const prevSub = setActiveSub()
-    const parent = this.anchor.parentNode
+    const parent = isHydrating ? null : this.anchor.parentNode
     const transition = this.$transition
-    const renderBranch = () => {
-      if (render) {
-        this.scope = new EffectScope()
-        this.nodes = this.scope.run(render) || []
-        if (isKeepAlive(instance)) {
-          ;(instance as KeepAliveInstance).process(this.nodes)
-        }
-        if (transition) {
-          this.$transition = applyTransitionHooks(this.nodes, transition)
-        }
-        if (parent) insert(this.nodes, parent, this.anchor)
-      } else {
-        this.scope = undefined
-        this.nodes = []
-      }
-    }
     const instance = currentInstance!
+
     // teardown previous branch
     if (this.scope) {
       if (isKeepAlive(instance)) {
@@ -102,7 +106,9 @@ export class DynamicFragment extends VaporFragment {
       }
       const mode = transition && transition.mode
       if (mode) {
-        applyTransitionLeaveHooks(this.nodes, transition, renderBranch)
+        applyTransitionLeaveHooks(this.nodes, transition, () =>
+          this.render(render, instance, transition, parent),
+        )
         parent && remove(this.nodes, parent)
         if (mode === 'out-in') {
           setActiveSub(prevSub)
@@ -113,7 +119,7 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    renderBranch()
+    this.render(render, instance, transition, parent)
 
     if (this.fallback) {
       // set fallback for nested fragments
@@ -139,6 +145,84 @@ export class DynamicFragment extends VaporFragment {
     }
 
     setActiveSub(prevSub)
+
+    if (isHydrating) this.hydrate()
+  }
+
+  private render(
+    render: BlockFn | undefined,
+    instance: GenericComponentInstance,
+    transition: VaporTransitionHooks | undefined,
+    parent: ParentNode | null,
+  ) {
+    if (render) {
+      this.scope = new EffectScope()
+      this.nodes = this.scope.run(render) || []
+      if (isKeepAlive(instance)) {
+        ;(instance as KeepAliveInstance).process(this.nodes)
+      }
+      if (transition) {
+        this.$transition = applyTransitionHooks(this.nodes, transition)
+      }
+      if (parent) insert(this.nodes, parent, this.anchor)
+    } else {
+      this.scope = undefined
+      this.nodes = []
+    }
+  }
+
+  hydrate = (isEmpty = false): void => {
+    // avoid repeated hydration during fallback rendering
+    if (this.anchor) return
+
+    if (this.anchorLabel === 'if') {
+      // reuse the empty comment node as the anchor for empty if
+      // e.g. `<div v-if="false"></div>` -> `<!---->`
+      if (isEmpty) {
+        this.anchor = locateFragmentEndAnchor('')!
+        if (__DEV__ && !this.anchor) {
+          throw new Error(
+            'Failed to locate if anchor. this is likely a Vue internal bug.',
+          )
+        } else {
+          if (__DEV__) {
+            ;(this.anchor as Comment).data = this.anchorLabel
+          }
+          return
+        }
+      }
+    } else if (this.anchorLabel === 'slot') {
+      // reuse the empty comment node for empty slot
+      // e.g. `<slot v-if="false"></slot>`
+      if (isEmpty && isComment(currentHydrationNode!, '')) {
+        this.anchor = currentHydrationNode!
+        if (__DEV__) {
+          ;(this.anchor as Comment).data = this.anchorLabel!
+        }
+        return
+      }
+
+      // reuse the vdom fragment end anchor
+      this.anchor = locateFragmentEndAnchor()!
+      if (__DEV__ && !this.anchor) {
+        throw new Error(
+          'Failed to locate slot anchor. this is likely a Vue internal bug.',
+        )
+      } else {
+        return
+      }
+    }
+
+    const { parentNode, nextNode } = findBlockNode(this.nodes)!
+    // create an anchor
+    queuePostFlushCb(() => {
+      parentNode!.insertBefore(
+        (this.anchor = __DEV__
+          ? createComment(this.anchorLabel!)
+          : createTextNode()),
+        nextNode,
+      )
+    })
   }
 }
 
