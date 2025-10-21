@@ -49,7 +49,6 @@ import {
   getPropsProxyHandlers,
   hasFallthroughAttrs,
   normalizePropsOptions,
-  resolveDynamicProps,
   setupPropsValidation,
 } from './componentProps'
 import { type RenderEffect, renderEffect } from './renderEffect'
@@ -64,13 +63,22 @@ import {
   getSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
+import {
+  adoptTemplate,
+  advanceHydrationNode,
+  currentHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+  locateNextNode,
+  setCurrentHydrationNode,
+} from './dom/hydration'
 import { createElement } from './dom/node'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
 import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import { DynamicFragment } from './fragment'
@@ -156,6 +164,7 @@ export function createComponent(
 ): VaporComponentInstance {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (isHydrating) {
     locateHydrationNode()
   } else {
@@ -200,8 +209,14 @@ export function createComponent(
       rawProps,
       rawSlots,
     )
-    if (!isHydrating && _insertionParent) {
-      insert(frag, _insertionParent, _insertionAnchor)
+
+    if (!isHydrating) {
+      if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+    } else {
+      frag.hydrate()
+      if (_isLastInsertion) {
+        advanceHydrationNode(_insertionParent!)
+      }
     }
     return frag
   }
@@ -309,8 +324,12 @@ export function createComponent(
 
   onScopeDispose(() => unmountComponent(instance), true)
 
-  if (!isHydrating && _insertionParent) {
+  if (_insertionParent) {
     mountComponent(instance, _insertionParent, _insertionAnchor)
+  }
+
+  if (isHydrating && _isLastInsertion) {
+    advanceHydrationNode(_insertionParent!)
   }
 
   return instance
@@ -538,34 +557,44 @@ export function createComponentWithFallback(
     return createComponent(comp, rawProps, rawSlots, isSingleRoot, appContext)
   }
 
-  const el = createElement(comp)
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (isHydrating) {
     locateHydrationNode()
   } else {
     resetInsertionState()
   }
 
+  const el = isHydrating
+    ? (adoptTemplate(currentHydrationNode!, `<${comp}/>`) as HTMLElement)
+    : createElement(comp)
+
   // mark single root
   ;(el as any).$root = isSingleRoot
 
-  if (rawProps) {
-    renderEffect(() => {
-      setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)])
-    })
-  }
-
   if (rawSlots) {
+    let nextNode: Node | null = null
+    if (isHydrating) {
+      nextNode = locateNextNode(el)
+      setCurrentHydrationNode(el.firstChild)
+    }
     if (rawSlots.$) {
       // TODO dynamic slot fragment
     } else {
       insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
     }
+    if (isHydrating) {
+      setCurrentHydrationNode(nextNode)
+    }
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(el, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (_insertionParent) insert(el, _insertionParent, _insertionAnchor)
+  } else {
+    if (_isLastInsertion) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
 
   return el

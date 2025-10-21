@@ -7,10 +7,15 @@ import { renderEffect } from './renderEffect'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
-import { DynamicFragment } from './fragment'
+import {
+  advanceHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
+import { DynamicFragment, type VaporFragment } from './fragment'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -110,11 +115,8 @@ export function createSlot(
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  if (isHydrating) {
-    locateHydrationNode()
-  } else {
-    resetInsertionState()
-  }
+  const _isLastInsertion = isLastInsertion
+  if (!isHydrating) resetInsertionState()
 
   const instance = i || (currentInstance as VaporComponentInstance)
   const rawSlots = instance.rawSlots
@@ -123,8 +125,8 @@ export function createSlot(
     : EMPTY_OBJ
 
   let fragment: DynamicFragment
-
   if (isRef(rawSlots._)) {
+    if (isHydrating) locateHydrationNode()
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,
@@ -133,7 +135,10 @@ export function createSlot(
       fallback,
     )
   } else {
-    fragment = __DEV__ ? new DynamicFragment('slot') : new DynamicFragment()
+    fragment =
+      isHydrating || __DEV__
+        ? new DynamicFragment('slot')
+        : new DynamicFragment()
     const isDynamicName = isFunction(name)
     const renderSlot = () => {
       const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
@@ -155,8 +160,15 @@ export function createSlot(
     }
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(fragment, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
+  } else {
+    if (fragment.insert) {
+      ;(fragment as VaporFragment).hydrate!()
+    }
+    if (_isLastInsertion) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
 
   return fragment

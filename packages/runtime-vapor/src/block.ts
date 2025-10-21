@@ -5,13 +5,8 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { isHydrating } from './dom/hydration'
-import {
-  type DynamicFragment,
-  type VaporFragment,
-  isFragment,
-} from './fragment'
-import { TeleportFragment } from './components/Teleport'
+import { _child } from './dom/node'
+import { isComment, isHydrating } from './dom/hydration'
 import {
   type TransitionHooks,
   type TransitionProps,
@@ -19,11 +14,12 @@ import {
   performTransitionEnter,
   performTransitionLeave,
 } from '@vue/runtime-dom'
-
-export interface TransitionOptions {
-  $key?: any
-  $transition?: VaporTransitionHooks
-}
+import {
+  type DynamicFragment,
+  type VaporFragment,
+  isFragment,
+} from './fragment'
+import { TeleportFragment } from './components/Teleport'
 
 export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
@@ -34,13 +30,17 @@ export interface VaporTransitionHooks extends TransitionHooks {
   disabled?: boolean
 }
 
+export interface TransitionOptions {
+  $key?: any
+  $transition?: VaporTransitionHooks
+}
+
 export type TransitionBlock =
   | (Node & TransitionOptions)
   | (VaporFragment & TransitionOptions)
   | (DynamicFragment & TransitionOptions)
 
 export type Block = TransitionBlock | VaporComponentInstance | Block[]
-
 export type BlockFn = (...args: any[]) => Block
 
 export function isBlock(val: NonNullable<unknown>): val is Block {
@@ -67,11 +67,11 @@ export function isValidBlock(block: Block): boolean {
 
 export function insert(
   block: Block,
-  parent: ParentNode & { $anchor?: Node | null },
+  parent: ParentNode & { $fc?: Node | null },
   anchor: Node | null | 0 = null, // 0 means prepend
   parentSuspense?: any, // TODO Suspense
 ): void {
-  anchor = anchor === 0 ? parent.$anchor || parent.firstChild : anchor
+  anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
   if (block instanceof Node) {
     if (!isHydrating) {
       // only apply transition on Element nodes
@@ -107,7 +107,6 @@ export function insert(
     }
     // fragment
     if (block.insert) {
-      // TODO handle hydration for vdom interop
       block.insert(parent, anchor, (block as TransitionBlock).$transition)
     } else {
       insert(block.nodes, parent, anchor, parentSuspense)
@@ -178,4 +177,46 @@ export function normalizeBlock(block: Block): Node[] {
     }
   }
   return nodes
+}
+
+export function findBlockNode(block: Block): {
+  parentNode: Node | null
+  nextNode: Node | null
+} {
+  let { parentNode, nextSibling: nextNode } = findLastChild(block)!
+
+  // if nodes render as a fragment and the current nextNode is fragment
+  // end anchor, need to move to the next node
+  if (nextNode && isComment(nextNode, ']') && isFragmentBlock(block)) {
+    nextNode = nextNode.nextSibling
+  }
+
+  return {
+    parentNode,
+    nextNode,
+  }
+}
+
+function findLastChild(node: Block): Node | undefined | null {
+  if (node && node instanceof Node) {
+    return node
+  } else if (isArray(node)) {
+    return findLastChild(node[node.length - 1])
+  } else if (isVaporComponent(node)) {
+    return findLastChild(node.block!)
+  } else {
+    if (node.anchor) return node.anchor
+    return findLastChild(node.nodes!)
+  }
+}
+
+export function isFragmentBlock(block: Block): boolean {
+  if (isArray(block)) {
+    return true
+  } else if (isVaporComponent(block)) {
+    return isFragmentBlock(block.block!)
+  } else if (isFragment(block)) {
+    return isFragmentBlock(block.nodes)
+  }
+  return false
 }

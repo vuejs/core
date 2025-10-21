@@ -629,4 +629,18 @@ export { createInternalObject } from './internalObject'
 /**
  * @internal
  */
+export {
+  MismatchTypes,
+  isMismatchAllowed,
+  toClassSet,
+  isSetEqual,
+  warnPropMismatch,
+  toStyleMap,
+  isMapEqual,
+  isValidHtmlOrSvgAttribute,
+  getAttributeMismatch,
+} from './hydration'
+/**
+ * @internal
+ */
 export { createCanSetSetupRefChecker } from './rendererTemplateRef'

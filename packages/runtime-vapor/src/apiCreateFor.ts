@@ -12,19 +12,31 @@ import {
   watch,
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
-import { createComment, createTextNode } from './dom/node'
-import { type Block, insert, remove } from './block'
+import {
+  createComment,
+  createTextNode,
+  updateLastLogicalChild,
+} from './dom/node'
+import { type Block, findBlockNode, insert, remove } from './block'
 import { warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
+import {
+  advanceHydrationNode,
+  currentHydrationNode,
+  isComment,
+  isHydrating,
+  locateHydrationNode,
+  setCurrentHydrationNode,
+} from './dom/hydration'
 import { applyTransitionHooks } from './components/Transition'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
 import { ForFragment, VaporFragment } from './fragment'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 
@@ -80,6 +92,7 @@ export const createFor = (
 ): ForFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _isLastInsertion = isLastInsertion
   if (isHydrating) {
     locateHydrationNode()
   } else {
@@ -92,8 +105,11 @@ export const createFor = (
   let parent: ParentNode | undefined | null
   // createSelector only
   let currentKey: any
-  // TODO handle this in hydration
-  const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+  let parentAnchor: Node
+  if (!isHydrating) {
+    parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+  }
+
   const frag = new ForFragment(oldBlocks)
   const instance = currentInstance!
   const canUseFastRemove = !!(flags & VaporVForFlags.FAST_REMOVE)
@@ -119,7 +135,29 @@ export const createFor = (
     if (!isMounted) {
       isMounted = true
       for (let i = 0; i < newLength; i++) {
-        mount(source, i)
+        const nodes = mount(source, i).nodes
+        if (isHydrating) {
+          setCurrentHydrationNode(findBlockNode(nodes!).nextNode)
+        }
+      }
+
+      if (isHydrating) {
+        parentAnchor =
+          newLength === 0
+            ? currentHydrationNode!.nextSibling!
+            : currentHydrationNode!
+        if (
+          __DEV__ &&
+          (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']')))
+        ) {
+          throw new Error(
+            `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
+          )
+        }
+
+        if (_insertionParent) {
+          updateLastLogicalChild(_insertionParent!, parentAnchor)
+        }
       }
     } else {
       parent = parent || parentAnchor!.parentNode
@@ -448,8 +486,10 @@ export const createFor = (
     renderEffect(renderList)
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(frag, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+  } else {
+    advanceHydrationNode(_isLastInsertion ? _insertionParent! : parentAnchor!)
   }
 
   return frag
