@@ -155,7 +155,7 @@ export function defineComponent<
   setup: (
     props: Props,
     ctx: SetupContext<E, S>,
-  ) => RenderFunction | Promise<RenderFunction> | {},
+  ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: (keyof Props)[]
     emits?: E | EE[]

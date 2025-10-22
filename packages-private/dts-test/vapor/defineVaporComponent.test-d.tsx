@@ -17,7 +17,9 @@ import {
   reactive,
   ref,
 } from 'vue'
-import { type IsAny, type IsUnion, describe, expectType } from './utils'
+import './jsx'
+import { type IsAny, type IsUnion, describe, expectType } from '../utils'
+import '../built.test-d'
 
 describe('with object props', () => {
   interface ExpectedProps {

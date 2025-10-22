@@ -6,6 +6,7 @@ import {
   EffectScope,
   type EmitFn,
   type EmitsOptions,
+  type EmitsToProps,
   ErrorCodes,
   type ExtractPropTypes,
   type GenericAppContext,
@@ -97,7 +98,10 @@ import {
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-import type { DefineVaporComponent, RenderReturn } from './apiDefineComponent'
+import type {
+  DefineVaporComponent,
+  VaporRenderResult,
+} from './apiDefineComponent'
 import { DynamicFragment } from './fragment'
 
 export { currentInstance } from '@vue/runtime-dom'
@@ -107,31 +111,27 @@ export type VaporComponent =
   | ObjectVaporComponent
   | DefineVaporComponent
 
-export type VaporSetupFn<
+export type FunctionalVaporComponent<
   Props = {},
   Emits extends EmitsOptions = {},
   Slots extends StaticSlots = StaticSlots,
   Exposed extends Record<string, any> = Record<string, any>,
-  TypeBlock extends Block = Block,
-> = (
-  props: Readonly<Props>,
+> = ((
+  props: Readonly<Props & EmitsToProps<Emits>>,
   ctx: {
     emit: EmitFn<Emits>
     slots: Slots
     attrs: Record<string, any>
     expose: <T extends Record<string, any> = Exposed>(exposed: T) => void
   },
-) => TypeBlock | Exposed | Promise<Exposed> | void
-
-export type FunctionalVaporComponent<
-  Props = {},
-  Emits extends EmitsOptions = {},
-  Slots extends StaticSlots = StaticSlots,
-  Exposed extends Record<string, any> = Record<string, any>,
-> = VaporSetupFn<Props, Emits, Slots, Exposed> &
-  Omit<ObjectVaporComponent, 'setup'> & {
+) => VaporRenderResult) &
+  Omit<
+    ObjectVaporComponent<ComponentPropsOptions<Props>, Emits, string, Slots>,
+    'setup'
+  > & {
     displayName?: string
   } & SharedInternalOptions
+
 export interface ObjectVaporComponent<
   Props = ComponentPropsOptions,
   Emits extends EmitsOptions = {},
@@ -149,14 +149,22 @@ export interface ObjectVaporComponent<
   props?: Props
   emits?: Emits | RuntimeEmitsKeys[]
   slots?: Slots
-  setup?: VaporSetupFn<InferredProps, Emits, Slots, Exposed, TypeBlock>
+  setup?: (
+    props: Readonly<InferredProps>,
+    ctx: {
+      emit: EmitFn<Emits>
+      slots: Slots
+      attrs: Record<string, any>
+      expose: <T extends Record<string, any> = Exposed>(exposed: T) => void
+    },
+  ) => TypeBlock | Exposed | Promise<Exposed> | void
   render?(
     ctx: Exposed extends Block ? undefined : ShallowUnwrapRef<Exposed>,
     props: Readonly<InferredProps>,
     emit: EmitFn<Emits>,
     attrs: any,
     slots: Slots,
-  ): RenderReturn<TypeBlock> | void
+  ): VaporRenderResult<TypeBlock> | void
 
   name?: string
   vapor?: boolean

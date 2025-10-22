@@ -396,6 +396,7 @@ describe('component', () => {
   })
 
   it('warn if functional vapor component not return a block', () => {
+    // @ts-expect-error
     define(() => {
       return () => {}
     }).render()

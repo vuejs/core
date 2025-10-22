@@ -70,7 +70,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     }
 
     const children = (slots.default && slots.default()) as any as Block
-    if (!children) return
+    if (!children) return []
 
     const instance = currentInstance! as VaporComponentInstance
     const { mode } = props

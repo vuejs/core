@@ -1,8 +1,4 @@
-import type {
-  ObjectVaporComponent,
-  VaporComponent,
-  VaporComponentInstance,
-} from './component'
+import type { ObjectVaporComponent, VaporComponentInstance } from './component'
 import {
   type IsKeyValues,
   type Prettify,
@@ -30,10 +26,7 @@ export type VaporPublicProps = ReservedProps &
   AllowedComponentProps &
   ComponentCustomProps
 
-export type RenderReturn<T extends Block = Block> =
-  | VNode
-  | T
-  | RenderReturn<T>[]
+export type VaporRenderResult<T = Block> = VNode | T | VaporRenderResult<T>[]
 
 type VaporComponentInstanceConstructor<T extends VaporComponentInstance> = {
   __isFragment?: never
@@ -114,7 +107,7 @@ export function defineVaporComponent<
       attrs: Record<string, any>
       expose: (exposed: Exposed) => void
     },
-  ) => RenderReturn<TypeBlock> | void,
+  ) => VaporRenderResult<TypeBlock> | void,
   extraOptions?: ObjectVaporComponent<
     (keyof Props)[],
     Emits,
@@ -140,7 +133,7 @@ export function defineVaporComponent<
       attrs: Record<string, any>
       expose: (exposed: Exposed) => void
     },
-  ) => RenderReturn<TypeBlock> | void,
+  ) => VaporRenderResult<TypeBlock> | void,
   extraOptions?: ObjectVaporComponent<
     ComponentObjectPropsOptions<Props>,
     Emits,
@@ -220,7 +213,7 @@ export function defineVaporComponent<
 >
 
 /*! #__NO_SIDE_EFFECTS__ */
-export function defineVaporComponent(comp: VaporComponent, extraOptions?: any) {
+export function defineVaporComponent(comp: any, extraOptions?: any) {
   if (isFunction(comp)) {
     // #8236: extend call and options.name access are considered side-effects
     // by Rollup, so we have to wrap it in a pure-annotated IIFE.
