@@ -88,6 +88,17 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     const hasCustomDir = node.props.some(
       p => p.type === NodeTypes.DIRECTIVE && !isBuiltInDirective(p.name),
     )
+
+    // v-show has a higher priority in ssr
+    const vShowPropIndex = node.props.findIndex(
+      i => i.type === NodeTypes.DIRECTIVE && i.name === 'show',
+    )
+    if (vShowPropIndex !== -1) {
+      const vShowProp = node.props[vShowPropIndex]
+      node.props.splice(vShowPropIndex, 1)
+      node.props.push(vShowProp)
+    }
+
     const needMergeProps = hasDynamicVBind || hasCustomDir
     if (needMergeProps) {
       const { props, directives } = buildProps(
