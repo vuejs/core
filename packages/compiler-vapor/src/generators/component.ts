@@ -29,6 +29,7 @@ import {
 import { genExpression, genVarName } from './expression'
 import { genPropKey, genPropValue } from './prop'
 import {
+  NodeTypes,
   type SimpleExpressionNode,
   createSimpleExpression,
   isMemberExpression,
@@ -407,7 +408,7 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
   let propsName: string | undefined
   let exitScope: (() => void) | undefined
   let depth: number | undefined
-  const { props, key } = oper
+  const { props, key, node } = oper
   const idsOfProps = new Set<string>()
 
   if (props) {
@@ -458,8 +459,10 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     ]
   }
 
-  // wrap with withVaporCtx to ensure correct currentInstance inside slot
-  blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
+  if (node.type === NodeTypes.ELEMENT && !isBuiltInComponent(node.tag)) {
+    // wrap with withVaporCtx to ensure correct currentInstance inside slot
+    blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
+  }
 
   return blockFn
 }
