@@ -11,6 +11,7 @@ import {
   type TransitionHooks,
   type TransitionProps,
   type TransitionState,
+  getInheritedScopeIds,
   performTransitionEnter,
   performTransitionLeave,
 } from '@vue/runtime-dom'
@@ -219,4 +220,49 @@ export function isFragmentBlock(block: Block): boolean {
     return isFragmentBlock(block.nodes)
   }
   return false
+}
+
+export function setScopeId(block: Block, scopeIds: string[]): void {
+  if (block instanceof Element) {
+    for (const id of scopeIds) {
+      block.setAttribute(id, '')
+    }
+  } else if (isVaporComponent(block)) {
+    setScopeId(block.block, scopeIds)
+  } else if (isArray(block)) {
+    for (const b of block) {
+      setScopeId(b, scopeIds)
+    }
+  } else if (isFragment(block)) {
+    setScopeId(block.nodes, scopeIds)
+  }
+}
+
+export function setComponentScopeId(instance: VaporComponentInstance): void {
+  const parent = instance.parent
+  if (!parent) return
+  // prevent setting scopeId on multi-root fragments
+  if (isArray(instance.block) && instance.block.length > 1) return
+
+  const scopeIds: string[] = []
+
+  const scopeId = parent.type.__scopeId
+  if (scopeId) {
+    scopeIds.push(scopeId)
+  }
+
+  // inherit scopeId from vdom parent
+  if (
+    parent.subTree &&
+    (parent.subTree.component as any) === instance &&
+    parent.vnode!.scopeId
+  ) {
+    scopeIds.push(parent.vnode!.scopeId)
+    const inheritedScopeIds = getInheritedScopeIds(parent.vnode!, parent.parent)
+    scopeIds.push(...inheritedScopeIds)
+  }
+
+  if (scopeIds.length > 0) {
+    setScopeId(instance.block, scopeIds)
+  }
 }

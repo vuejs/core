@@ -1,5 +1,5 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, insert } from './block'
+import { type Block, type BlockFn, insert, setScopeId } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
 import { currentInstance, isRef, setCurrentInstance } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
@@ -16,6 +16,23 @@ import {
   locateHydrationNode,
 } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
+
+/**
+ * Current slot scopeIds for vdom interop
+ * @internal
+ */
+export let currentSlotScopeIds: string[] | null = null
+
+/**
+ * @internal
+ */
+export function setCurrentSlotScopeIds(
+  scopeIds: string[] | null,
+): string[] | null {
+  const prev = currentSlotScopeIds
+  currentSlotScopeIds = scopeIds
+  return prev
+}
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -116,7 +133,7 @@ export function forwardedSlotCreator(): (
 ) => Block {
   const instance = currentInstance as VaporComponentInstance
   return (name, rawProps, fallback) =>
-    createSlot(name, rawProps, fallback, instance)
+    createSlot(name, rawProps, fallback, instance, false /* noSlotted */)
 }
 
 export function createSlot(
@@ -124,6 +141,7 @@ export function createSlot(
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
   i?: VaporComponentInstance,
+  noSlotted?: boolean,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -152,13 +170,36 @@ export function createSlot(
         ? new DynamicFragment('slot')
         : new DynamicFragment()
     const isDynamicName = isFunction(name)
+
+    // Calculate slotScopeIds once (for vdom interop)
+    const slotScopeIds: string[] = []
+    if (!noSlotted) {
+      const scopeId = instance!.type.__scopeId
+      if (scopeId) {
+        slotScopeIds.push(`${scopeId}-s`)
+      }
+    }
+
     const renderSlot = () => {
       const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
       if (slot) {
         fragment.fallback = fallback
-        // create and cache bound version of the slot to make it stable
+        // Create and cache bound version of the slot to make it stable
         // so that we avoid unnecessary updates if it resolves to the same slot
-        fragment.update(slot._bound || (slot._bound = () => slot(slotProps)))
+
+        fragment.update(
+          slot._bound ||
+            (slot._bound = () => {
+              const prevSlotScopeIds = setCurrentSlotScopeIds(
+                slotScopeIds.length > 0 ? slotScopeIds : null,
+              )
+              try {
+                return slot(slotProps)
+              } finally {
+                setCurrentSlotScopeIds(prevSlotScopeIds)
+              }
+            }),
+        )
       } else {
         fragment.update(fallback)
       }
@@ -173,6 +214,13 @@ export function createSlot(
   }
 
   if (!isHydrating) {
+    if (!noSlotted) {
+      const scopeId = instance.type.__scopeId
+      if (scopeId) {
+        setScopeId(fragment, [`${scopeId}-s`])
+      }
+    }
+
     if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
   } else {
     if (fragment.insert) {

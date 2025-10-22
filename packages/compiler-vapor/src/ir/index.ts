@@ -221,6 +221,7 @@ export interface SlotOutletIRNode extends BaseIRNode {
   props: IRProps[]
   fallback?: BlockIRNode
   forwarded?: boolean
+  noSlotted?: boolean
   parent?: number
   anchor?: number
   append?: boolean

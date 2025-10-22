@@ -59,6 +59,7 @@ import {
 } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
+import { currentSlotScopeIds } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { _next, createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -331,6 +332,9 @@ function createVDOMComponent(
     frag.nodes = vnode.el as any
   }
 
+  vnode.scopeId = parentInstance && parentInstance.type.__scopeId!
+  vnode.slotScopeIds = currentSlotScopeIds
+
   frag.insert = (parentNode, anchor, transition) => {
     if (isHydrating) return
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
@@ -485,6 +489,9 @@ function renderVDOMSlot(
             parentNode!,
             anchor,
             parentComponent as any,
+            null, // parentSuspense
+            undefined, // namespace
+            vnode!.slotScopeIds, // pass slotScopeIds for :slotted styles
           )
           oldVNode = vnode!
           frag.nodes = vnode!.el as any
