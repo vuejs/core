@@ -8,6 +8,7 @@ import {
   setInsertionState,
   template,
   vaporInteropPlugin,
+  withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
 
@@ -226,11 +227,11 @@ describe('scopeId', () => {
           Child,
           null,
           {
-            default: () => {
+            default: withVaporCtx(() => {
               const n0 = template('<div parent></div>')()
               const n1 = createComponent(Child2)
               return [n0, n1]
-            },
+            }) as any,
           },
           true,
         )
@@ -275,10 +276,10 @@ describe('scopeId', () => {
           Wrapper,
           null,
           {
-            default: () => {
+            default: withVaporCtx(() => {
               const n0 = _createForwardedSlot('default', null)
               return n0
-            },
+            }) as any,
           },
           true,
         )
@@ -294,9 +295,9 @@ describe('scopeId', () => {
           Slotted,
           null,
           {
-            default: () => {
+            default: withVaporCtx(() => {
               return template('<div root></div>')()
-            },
+            }) as any,
           },
           true,
         )
@@ -584,11 +585,11 @@ describe('vdom interop', () => {
           VaporSlot,
           null,
           {
-            default: () => {
+            default: withVaporCtx(() => {
               const n0 = template('<div vapor-parent></div>')()
               const n1 = createComponent(VdomChild)
               return [n0, n1]
-            },
+            }) as any,
           },
           true,
         )

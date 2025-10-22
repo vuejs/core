@@ -166,25 +166,6 @@ export type LooseRawSlots = Record<string, VaporSlot | DynamicSlotSource[]> & {
   $?: DynamicSlotSource[]
 }
 
-/**
- * Attach slot definition context to all slots
- * This allows slot content to be rendered in the correct parent context
- */
-function attachSlotContext(
-  rawSlots: LooseRawSlots,
-  ctx: VaporComponentInstance,
-): void {
-  // Attach context to static slots
-  for (const key in rawSlots) {
-    if (key === '$') continue
-    const slot = rawSlots[key]
-    if (typeof slot === 'function' && !slot._ctx) {
-      slot._ctx = ctx
-    }
-  }
-  // Dynamic slots are handled in getSlot when they are resolved
-}
-
 export function createComponent(
   component: VaporComponent,
   rawProps?: LooseRawProps | null,
@@ -267,13 +248,6 @@ export function createComponent(
     }
 
     return frag as any
-  }
-
-  // Attach slot definition context to slots
-  // This context will be used when rendering slot content to ensure
-  // components created inside slots have the correct parent
-  if (rawSlots && currentInstance && currentInstance.vapor) {
-    attachSlotContext(rawSlots, currentInstance as VaporComponentInstance)
   }
 
   const instance = new VaporComponentInstance(

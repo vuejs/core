@@ -36,14 +36,11 @@ export function setCurrentSlotScopeIds(
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
-  _ctx?: VaporComponentInstance | null // slot definition context
 }
 
 export type StaticSlots = Record<string, VaporSlot>
 
-export type VaporSlot = BlockFn & {
-  _ctx?: VaporComponentInstance | null // slot definition context
-}
+export type VaporSlot = BlockFn
 export type DynamicSlot = { name: string; fn: VaporSlot }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 export type DynamicSlotSource = StaticSlots | DynamicSlotFn
@@ -101,22 +98,10 @@ export function getSlot(
         if (slot) {
           if (isArray(slot)) {
             for (const s of slot) {
-              if (String(s.name) === key) {
-                // Attach context to dynamic slot if not already attached
-                const fn = s.fn
-                if (!fn._ctx && target._ctx) {
-                  fn._ctx = target._ctx
-                }
-                return fn
-              }
+              if (String(s.name) === key) return s.fn
             }
           } else if (String(slot.name) === key) {
-            // Attach context to dynamic slot if not already attached
-            const fn = slot.fn
-            if (!fn._ctx && target._ctx) {
-              fn._ctx = target._ctx
-            }
-            return fn
+            return slot.fn
           }
         }
       } else if (hasOwn(source, key)) {
@@ -205,21 +190,12 @@ export function createSlot(
         fragment.update(
           slot._bound ||
             (slot._bound = () => {
-              // Temporarily switch currentInstance to the slot's definition context.
-              // This ensures components created inside the slot use the correct parent
-              // (where the slot was defined), not the slot owner.
-              // Falls back to instance.parent if slot._ctx is not set.
-              const slotContext = slot._ctx || instance.parent
-
-              // TODO: create withVaporCtx helper to simplify this
-              const prev = setCurrentInstance(slotContext)
               const prevSlotScopeIds = setCurrentSlotScopeIds(
                 slotScopeIds.length > 0 ? slotScopeIds : null,
               )
               try {
                 return slot(slotProps)
               } finally {
-                setCurrentInstance(...prev)
                 setCurrentSlotScopeIds(prevSlotScopeIds)
               }
             }),
