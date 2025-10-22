@@ -129,6 +129,18 @@ export function getSlot(
   }
 }
 
+export function withVaporCtx(fn: Function): Function {
+  const instance = currentInstance as VaporComponentInstance
+  return (...args: any[]) => {
+    const prev = setCurrentInstance(instance)
+    try {
+      return fn(...args)
+    } finally {
+      setCurrentInstance(...prev)
+    }
+  }
+}
+
 export function forwardedSlotCreator(): (
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
