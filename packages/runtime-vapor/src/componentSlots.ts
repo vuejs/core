@@ -1,7 +1,7 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
 import { type Block, type BlockFn, insert } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
-import { currentInstance, isRef } from '@vue/runtime-dom'
+import { currentInstance, isRef, setCurrentInstance } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 import {
@@ -94,6 +94,18 @@ export function getSlot(
   }
   if (hasOwn(target, key)) {
     return target[key]
+  }
+}
+
+export function withVaporCtx(fn: Function): Function {
+  const instance = currentInstance as VaporComponentInstance
+  return (...args: any[]) => {
+    const prev = setCurrentInstance(instance)
+    try {
+      return fn(...args)
+    } finally {
+      setCurrentInstance(...prev)
+    }
   }
 }
 

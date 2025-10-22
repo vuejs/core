@@ -458,5 +458,8 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     ]
   }
 
+  // wrap with withVaporCtx to ensure correct currentInstance inside slot
+  blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
+
   return blockFn
 }
