@@ -9,13 +9,13 @@ import {
   createSlot,
   createVaporApp,
   defineVaporComponent,
-  forwardedSlotCreator,
   insert,
   prepend,
   renderEffect,
   setInsertionState,
   template,
   vaporInteropPlugin,
+  withVaporCtx,
 } from '../src'
 import {
   type Ref,
@@ -779,14 +779,13 @@ describe('component: slots', () => {
       })
       const Parent = defineVaporComponent({
         setup() {
-          const createForwardedSlot = forwardedSlotCreator()
           const n2 = createComponent(
             Child,
             null,
             {
-              foo: () => {
-                return createForwardedSlot('foo', null)
-              },
+              foo: withVaporCtx(() => {
+                return createSlot('foo', null)
+              }),
             },
             true,
           )
@@ -828,12 +827,11 @@ describe('component: slots', () => {
       })
       const Parent = defineVaporComponent({
         setup() {
-          const createForwardedSlot = forwardedSlotCreator()
           const n2 = createComponent(Child, null, {
-            foo: () => {
-              const n0 = createForwardedSlot('foo', null)
+            foo: withVaporCtx(() => {
+              const n0 = createSlot('foo', null)
               return n0
-            },
+            }),
           })
           const n3 = createSlot('default', null)
           return [n2, n3]
@@ -880,14 +878,13 @@ describe('component: slots', () => {
 
       const Parent = defineVaporComponent({
         setup() {
-          const createForwardedSlot = forwardedSlotCreator()
           const n2 = createComponent(Child, null, {
-            default: () => {
-              const n0 = createForwardedSlot('default', null, () => {
+            default: withVaporCtx(() => {
+              const n0 = createSlot('default', null, () => {
                 return template('<!-- <div></div> -->')()
               })
               return n0
-            },
+            }),
           })
           return n2
         },
@@ -914,10 +911,9 @@ describe('component: slots', () => {
       const show = ref(false)
       const Parent = defineVaporComponent({
         setup() {
-          const createForwardedSlot = forwardedSlotCreator()
           const n2 = createComponent(Child, null, {
-            default: () => {
-              const n0 = createForwardedSlot('default', null, () => {
+            default: withVaporCtx(() => {
+              const n0 = createSlot('default', null, () => {
                 const n2 = createIf(
                   () => show.value,
                   () => {
@@ -928,7 +924,7 @@ describe('component: slots', () => {
                 return n2
               })
               return n0
-            },
+            }),
           })
           return n2
         },
@@ -961,10 +957,9 @@ describe('component: slots', () => {
       const items = ref<number[]>([])
       const Parent = defineVaporComponent({
         setup() {
-          const createForwardedSlot = forwardedSlotCreator()
           const n2 = createComponent(Child, null, {
-            default: () => {
-              const n0 = createForwardedSlot('default', null, () => {
+            default: withVaporCtx(() => {
+              const n0 = createSlot('default', null, () => {
                 const n2 = createFor(
                   () => items.value,
                   for_item0 => {
@@ -979,7 +974,7 @@ describe('component: slots', () => {
                 return n2
               })
               return n0
-            },
+            }),
           })
           return n2
         },
@@ -1033,19 +1028,18 @@ describe('component: slots', () => {
       ) => {
         return defineVaporComponent({
           setup() {
-            const createForwardedSlot = forwardedSlotCreator()
             const n2 = createComponent(
               targetComponent,
               null,
               {
-                foo: () => {
+                foo: withVaporCtx(() => {
                   return fallbackText
-                    ? createForwardedSlot('foo', null, () => {
+                    ? createSlot('foo', null, () => {
                         const n2 = template(`<div>${fallbackText}</div>`)()
                         return n2
                       })
-                    : createForwardedSlot('foo', null)
-                },
+                    : createSlot('foo', null)
+                }),
               },
               true,
             )
