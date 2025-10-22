@@ -269,14 +269,7 @@ function createSlotBlock(
     block.dynamic.needsKey = true
   }
   const exitBlock = context.enterBlock(block)
-  context.inSlot = true
-  return [
-    block,
-    () => {
-      context.inSlot = false
-      exitBlock()
-    },
-  ]
+  return [block, exitBlock]
 }
 
 function isNonWhitespaceContent(node: TemplateChildNode): boolean {

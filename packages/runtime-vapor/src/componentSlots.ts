@@ -114,7 +114,7 @@ export function getSlot(
   }
 }
 
-export function withVaporCtx(fn: Function): Function {
+export function withVaporCtx(fn: Function): BlockFn {
   const instance = currentInstance as VaporComponentInstance
   return (...args: any[]) => {
     const prev = setCurrentInstance(instance)
@@ -126,21 +126,10 @@ export function withVaporCtx(fn: Function): Function {
   }
 }
 
-export function forwardedSlotCreator(): (
-  name: string | (() => string),
-  rawProps?: LooseRawProps | null,
-  fallback?: VaporSlot,
-) => Block {
-  const instance = currentInstance as VaporComponentInstance
-  return (name, rawProps, fallback) =>
-    createSlot(name, rawProps, fallback, instance, false /* noSlotted */)
-}
-
 export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
-  i?: VaporComponentInstance,
   noSlotted?: boolean,
 ): Block {
   const _insertionParent = insertionParent
@@ -148,7 +137,7 @@ export function createSlot(
   const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
 
-  const instance = i || (currentInstance as VaporComponentInstance)
+  const instance = currentInstance as VaporComponentInstance
   const rawSlots = instance.rawSlots
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)

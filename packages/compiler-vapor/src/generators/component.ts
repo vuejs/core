@@ -40,7 +40,7 @@ import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
 import { genModelHandler } from './vModel'
-import { isBuiltInComponent } from '../utils'
+import { isBuiltInComponent, isTransitionTag } from '../utils'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -410,7 +410,6 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
   let depth: number | undefined
   const { props, key, node } = oper
   const idsOfProps = new Set<string>()
-
   if (props) {
     rawProps = props.content
     if ((isDestructureAssignment = !!props.ast)) {
@@ -459,7 +458,10 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     ]
   }
 
-  if (node.type === NodeTypes.ELEMENT && !isBuiltInComponent(node.tag)) {
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    (!isBuiltInComponent(node.tag) || isTransitionTag(node.tag))
+  ) {
     // wrap with withVaporCtx to ensure correct currentInstance inside slot
     blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
   }
