@@ -5,12 +5,14 @@ import { genExpression } from './expression'
 import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
 import { genRawProps } from './component'
 
+export const createForwardedSlotIdent = `_createForwardedSlot`
+
 export function genSlotOutlet(
   oper: SlotOutletIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { id, name, fallback } = oper
+  const { id, name, fallback, forwarded, noSlotted } = oper
   const [frag, push] = buildCodeFragment()
 
   const nameExpr = name.isStatic
@@ -26,10 +28,12 @@ export function genSlotOutlet(
     NEWLINE,
     `const n${id} = `,
     ...genCall(
-      helper('createSlot'),
+      forwarded ? createForwardedSlotIdent : helper('createSlot'),
       nameExpr,
       genRawProps(oper.props, context) || 'null',
       fallbackArg,
+      noSlotted && 'undefined', // instance
+      noSlotted && 'true', // noSlotted
     ),
   )
 

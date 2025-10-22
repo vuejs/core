@@ -114,10 +114,15 @@ export { Fragment, Text, Comment, Static, type VNodeRef } from './vnode'
 // Built-in components
 export { Teleport, type TeleportProps } from './components/Teleport'
 export { Suspense, type SuspenseProps } from './components/Suspense'
-export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'
+export {
+  KeepAlive,
+  type KeepAliveProps,
+  type KeepAliveContext,
+} from './components/KeepAlive'
 export {
   BaseTransition,
   BaseTransitionPropsValidators,
+  checkTransitionMode,
   type BaseTransitionProps,
 } from './components/BaseTransition'
 // For using custom directives
@@ -150,8 +155,10 @@ export { registerRuntimeCompiler, isRuntimeOnly } from './component'
 export {
   useTransitionState,
   resolveTransitionHooks,
+  baseResolveTransitionHooks,
   setTransitionHooks,
   getTransitionRawChildren,
+  leaveCbKey,
 } from './components/BaseTransition'
 export { initCustomFormatter } from './customFormatter'
 
@@ -267,6 +274,7 @@ export type {
   GlobalDirectives,
   ComponentInstance,
   ComponentCustomElementInterface,
+  AsyncComponentInternalOptions,
 } from './component'
 export type {
   DefineComponent,
@@ -336,6 +344,8 @@ export type { SuspenseBoundary } from './components/Suspense'
 export type {
   TransitionState,
   TransitionHooks,
+  TransitionHooksContext,
+  TransitionElement,
 } from './components/BaseTransition'
 export type {
   AsyncComponentOptions,
@@ -346,6 +356,7 @@ export type {
   HydrationStrategyFactory,
 } from './hydrationStrategies'
 export type { HMRRuntime } from './hmr'
+export type { SchedulerJob } from './scheduler'
 
 // Internal API ----------------------------------------------------------------
 
@@ -506,7 +517,11 @@ export { type VaporInteropInterface } from './apiCreateApp'
 /**
  * @internal
  */
-export { type RendererInternals, MoveType } from './renderer'
+export {
+  type RendererInternals,
+  MoveType,
+  getInheritedScopeIds,
+} from './renderer'
 /**
  * @internal
  */
@@ -522,7 +537,7 @@ export { baseEmit, isEmitListener } from './componentEmits'
 /**
  * @internal
  */
-export { type SchedulerJob, queueJob, flushOnAppMount } from './scheduler'
+export { queueJob, flushOnAppMount } from './scheduler'
 /**
  * @internal
  */
@@ -562,8 +577,85 @@ export { initFeatureFlags } from './featureFlags'
 /**
  * @internal
  */
+export {
+  resolveTarget as resolveTeleportTarget,
+  isTeleportDisabled,
+  isTeleportDeferred,
+} from './components/Teleport'
+/**
+ * @internal
+ */
+export type { TeleportTargetElement } from './components/Teleport'
+/**
+ * @internal
+ */
+export {
+  createAsyncComponentContext,
+  useAsyncComponentState,
+  isAsyncWrapper,
+  performAsyncHydrate,
+} from './apiAsyncComponent'
+/**
+ * @internal
+ */
+export { markAsyncBoundary } from './helpers/useId'
+/**
+ * @internal
+ */
+export { setRef } from './rendererTemplateRef'
+/**
+ * @internal
+ */
+export { type VNodeNormalizedRef, normalizeRef } from './vnode'
+/**
+ * @internal
+ */
+export { ensureVaporSlotFallback } from './helpers/renderSlot'
+/**
+ * @internal
+ */
+export { getComponentName } from './component'
+/**
+ * @internal
+ */
+export {
+  matches,
+  isKeepAlive,
+  resetShapeFlag,
+  activate,
+  deactivate,
+} from './components/KeepAlive'
+/**
+ * @internal
+ */
+export { devtoolsComponentAdded } from './devtools'
+/**
+ * @internal
+ */
+export { performTransitionEnter, performTransitionLeave } from './renderer'
+/**
+ * @internal
+ */
 export { createInternalObject } from './internalObject'
 /**
  * @internal
  */
+export {
+  MismatchTypes,
+  isMismatchAllowed,
+  toClassSet,
+  isSetEqual,
+  warnPropMismatch,
+  toStyleMap,
+  isMapEqual,
+  isValidHtmlOrSvgAttribute,
+  getAttributeMismatch,
+} from './hydration'
+/**
+ * @internal
+ */
 export { createCanSetSetupRefChecker } from './rendererTemplateRef'
+/**
+ * @internal
+ */
+export { isTemplateNode } from './hydration'
