@@ -57,7 +57,13 @@ import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { DEFINE_SLOTS, processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
+import {
+  getImportedName,
+  isCallOf,
+  isJS,
+  isLiteralNode,
+  isTS,
+} from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isUsedInTemplate } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
@@ -181,6 +187,8 @@ export function compileScript(
   const vapor = sfc.vapor || options.vapor
   const ssr = options.templateOptions?.ssr
   const setupPreambleLines = [] as string[]
+  const isJSOrTS =
+    isJS(scriptLang, scriptSetupLang) || isTS(scriptLang, scriptSetupLang)
 
   if (script && scriptSetup && scriptLang !== scriptSetupLang) {
     throw new Error(
@@ -189,20 +197,27 @@ export function compileScript(
     )
   }
 
-  const ctx = new ScriptCompileContext(sfc, options)
-
   if (!scriptSetup) {
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
     }
+
     // normal <script> only
+    if (script.lang && !isJSOrTS) {
+      // do not process non js/ts script blocks
+      return script
+    }
+
+    const ctx = new ScriptCompileContext(sfc, options)
     return processNormalScript(ctx, scopeId)
   }
 
-  if (scriptSetupLang && !ctx.isJS && !ctx.isTS) {
+  if (scriptSetupLang && !isJSOrTS) {
     // do not process non js/ts script blocks
     return scriptSetup
   }
+
+  const ctx = new ScriptCompileContext(sfc, options)
 
   // metadata that needs to be returned
   // const ctx.bindingMetadata: BindingMetadata = {}
@@ -864,6 +879,8 @@ export function compileScript(
   let templateMap
   // 9. generate return statement
   let returned
+  // ensure props bindings register before compile template in inline mode
+  const propsDecl = genRuntimeProps(ctx)
   if (!inlineMode || (!sfc.template && ctx.hasDefaultExportRender)) {
     // non-inline mode, or has manual render in normal <script>
     // return bindings from script and script setup
@@ -998,7 +1015,6 @@ export function compileScript(
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
 
-  const propsDecl = genRuntimeProps(ctx)
   if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
 
   const emitsDecl = genRuntimeEmits(ctx)
@@ -1021,6 +1037,11 @@ export function compileScript(
     : ''
   // wrap setup code with function.
   if (ctx.isTS) {
+    // in SSR, always use defineComponent, so __vapor flag is required
+    if (ssr && vapor) {
+      runtimeOptions += `\n  __vapor: true,`
+    }
+
     // for TS, make sure the exported type is still valid type with
     // correct props information
     // we have to use object spread for types to be merged properly
