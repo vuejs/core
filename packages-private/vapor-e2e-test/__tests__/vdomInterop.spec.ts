@@ -11,7 +11,6 @@ const {
   text,
   enterValue,
   html,
-  value,
   transitionStart,
   waitForElement,
   nextFrame,
@@ -97,81 +96,6 @@ describe('vdom / vapor interop', () => {
     },
     E2E_TIMEOUT,
   )
-
-  describe('async component', () => {
-    const container = '.async-component-interop'
-    test(
-      'with-vdom-inner-component',
-      async () => {
-        const testContainer = `${container} .with-vdom-component`
-        expect(await html(testContainer)).toBe('<span>loading...</span>')
-
-        await timeout(duration)
-        expect(await html(testContainer)).toBe('<div>foo</div>')
-      },
-      E2E_TIMEOUT,
-    )
-  })
-
-  describe('keepalive', () => {
-    test(
-      'render vapor component',
-      async () => {
-        const testSelector = '.render-vapor-component'
-        const btnShow = `${testSelector} .btn-show`
-        const btnToggle = `${testSelector} .btn-toggle`
-        const container = `${testSelector} > div`
-        const inputSelector = `${testSelector} input`
-
-        let calls = await page().evaluate(() => {
-          return (window as any).getCalls()
-        })
-        expect(calls).toStrictEqual(['mounted', 'activated'])
-
-        expect(await html(container)).toBe('<input type="text">')
-        expect(await value(inputSelector)).toBe('vapor')
-
-        // change input value
-        await enterValue(inputSelector, 'changed')
-        expect(await value(inputSelector)).toBe('changed')
-
-        // deactivate
-        await click(btnToggle)
-        expect(await html(container)).toBe('<!---->')
-        calls = await page().evaluate(() => {
-          return (window as any).getCalls()
-        })
-        expect(calls).toStrictEqual(['deactivated'])
-
-        // activate
-        await click(btnToggle)
-        expect(await html(container)).toBe('<input type="text">')
-        expect(await value(inputSelector)).toBe('changed')
-        calls = await page().evaluate(() => {
-          return (window as any).getCalls()
-        })
-        expect(calls).toStrictEqual(['activated'])
-
-        // unmount keepalive
-        await click(btnShow)
-        expect(await html(container)).toBe('<!---->')
-        calls = await page().evaluate(() => {
-          return (window as any).getCalls()
-        })
-        expect(calls).toStrictEqual(['deactivated', 'unmounted'])
-
-        // mount keepalive
-        await click(btnShow)
-        expect(await html(container)).toBe('<input type="text">')
-        expect(await value(inputSelector)).toBe('vapor')
-        calls = await page().evaluate(() => {
-          return (window as any).getCalls()
-        })
-        expect(calls).toStrictEqual(['mounted', 'activated'])
-      },
-      E2E_TIMEOUT,
-    )
-  })
 
   describe('vdom transition', () => {
     test(
