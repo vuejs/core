@@ -1,6 +1,6 @@
 import { configDefaults, defineConfig } from 'vitest/config'
 import { entries } from './scripts/aliases.js'
-import { playwright } from '@vitest/browser/providers/playwright'
+import { playwright } from '@vitest/browser-playwright'
 
 export default defineConfig({
   define: {
