@@ -61,7 +61,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
 
     let prevChildren: TransitionBlock[]
     let children: TransitionBlock[]
-    let slottedBlock: Block
+    const slottedBlock = slots.default && slots.default()
 
     onBeforeUpdate(() => {
       prevChildren = []
@@ -88,7 +88,6 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       if (!prevChildren.length) {
         return
       }
-
       const moveClass = props.moveClass || `${props.name || 'v'}-move`
       const firstChild = getFirstConnectedChild(prevChildren)
       if (
@@ -121,8 +120,6 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       )
       prevChildren = []
     })
-
-    slottedBlock = slots.default && slots.default()
 
     // store props and state on fragment for reusing during insert new items
     setTransitionHooksOnFragment(slottedBlock, {
