@@ -114,6 +114,20 @@ export function getSlot(
   }
 }
 
+/**
+ * Wraps a slot function to execute in the parent component's context.
+ *
+ * This ensures that:
+ * 1. Reactive effects created inside the slot (e.g., `renderEffect`) bind to the
+ *    parent's instance, so the parent's lifecycle hooks fire when the slot's
+ *    reactive dependencies change.
+ * 2. Elements created in the slot inherit the parent's scopeId for proper style
+ *    scoping in scoped CSS.
+ *
+ * **Rationale**: Slots are defined in the parent's template, so the parent should
+ * own the rendering context and be aware of updates.
+ *
+ */
 export function withVaporCtx(fn: Function): BlockFn {
   const instance = currentInstance as VaporComponentInstance
   return (...args: any[]) => {
