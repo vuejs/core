@@ -1,4 +1,5 @@
 import {
+  h,
   nextTick,
   onActivated,
   onBeforeMount,
@@ -8,6 +9,8 @@ import {
   reactive,
   ref,
   shallowRef,
+  vModelText,
+  withDirectives,
 } from 'vue'
 import type { LooseRawProps, VaporComponent } from '../../src/component'
 import { makeRender } from '../_utils'
@@ -18,10 +21,12 @@ import {
   createDynamicComponent,
   createIf,
   createTemplateRefSetter,
+  createVaporApp,
   defineVaporComponent,
   renderEffect,
   setText,
   template,
+  vaporInteropPlugin,
 } from '../../src'
 
 const define = makeRender()
@@ -1185,5 +1190,108 @@ describe('VaporKeepAlive', () => {
     await nextTick()
     expect(deactivatedHome).toHaveBeenCalledTimes(0)
     expect(unmountedHome).toHaveBeenCalledTimes(1)
+  })
+
+  describe('vdom interop', () => {
+    test('render vdom component', async () => {
+      const VdomComp = {
+        setup() {
+          const msg = ref('vdom')
+          onBeforeMount(() => oneHooks.beforeMount())
+          onMounted(() => oneHooks.mounted())
+          onActivated(() => oneHooks.activated())
+          onDeactivated(() => oneHooks.deactivated())
+          onUnmounted(() => oneHooks.unmounted())
+          return () => {
+            return withDirectives(
+              h(
+                'input',
+                {
+                  type: 'text',
+                  'onUpdate:modelValue': ($event: any) => (msg.value = $event),
+                },
+                [],
+              ),
+              [[vModelText, msg.value]],
+            )
+          }
+        },
+      }
+
+      const show = ref(true)
+      const toggle = ref(true)
+
+      const App = defineVaporComponent({
+        setup() {
+          const n0 = createIf(
+            () => show.value,
+            () => {
+              const n5 = createComponent(
+                VaporKeepAlive,
+                null,
+                {
+                  default: () => {
+                    const n2 = createIf(
+                      () => toggle.value,
+                      () => {
+                        const n4 = createComponent(VdomComp)
+                        return n4
+                      },
+                    )
+                    return n2
+                  },
+                },
+                true,
+              )
+              return n5
+            },
+          )
+          return n0
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      expect(container.innerHTML).toBe(`<input type="text"><!--if--><!--if-->`)
+      assertHookCalls(oneHooks, [1, 1, 1, 0, 0])
+
+      let inputEl = container.firstChild as HTMLInputElement
+      expect(inputEl.value).toBe('vdom')
+
+      inputEl.value = 'changed'
+      inputEl.dispatchEvent(new Event('input'))
+      await nextTick()
+
+      // deactivate
+      toggle.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(`<!--if--><!--if-->`)
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+
+      // activate
+      toggle.value = true
+      await nextTick()
+      expect(container.innerHTML).toBe(`<input type="text"><!--if--><!--if-->`)
+      assertHookCalls(oneHooks, [1, 1, 2, 1, 0])
+      expect(inputEl.value).toBe('changed')
+
+      // unmount keepalive
+      show.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(`<!--if-->`)
+      assertHookCalls(oneHooks, [1, 1, 2, 2, 1])
+
+      // mount keepalive
+      show.value = true
+      await nextTick()
+      expect(container.innerHTML).toBe(`<input type="text"><!--if--><!--if-->`)
+      assertHookCalls(oneHooks, [2, 2, 3, 2, 1])
+      inputEl = container.firstChild as HTMLInputElement
+      expect(inputEl.value).toBe('vdom')
+    })
   })
 })
