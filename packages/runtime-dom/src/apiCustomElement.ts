@@ -252,9 +252,9 @@ export abstract class VueElementBase<
   protected _slots?: Record<string, Node[]>
 
   protected abstract _hasPreRendered(): boolean | undefined
-  protected abstract _mountComponent(def: Def): void
-  protected abstract _updateComponent(): void
-  protected abstract _unmountComponent(): void
+  protected abstract _mount(def: Def): void
+  protected abstract _update(): void
+  protected abstract _unmount(): void
 
   constructor(
     /**
@@ -352,7 +352,7 @@ export abstract class VueElementBase<
           this._ob.disconnect()
           this._ob = null
         }
-        this._unmountComponent()
+        this._unmount()
         if (this._teleportTargets) {
           this._teleportTargets.clear()
           this._teleportTargets = undefined
@@ -436,6 +436,45 @@ export abstract class VueElementBase<
     }
   }
 
+  private _mountComponent(def: Def): void {
+    this._mount(def)
+    this._processExposed()
+  }
+
+  protected _processExposed(): void {
+    const exposed = this._instance && this._instance.exposed
+    if (!exposed) return
+    for (const key in exposed) {
+      if (!hasOwn(this, key)) {
+        Object.defineProperty(this, key, {
+          get: () => unref(exposed[key]),
+        })
+      } else if (__DEV__) {
+        warn(`Exposed property "${key}" already exists on custom element.`)
+      }
+    }
+  }
+
+  protected _processEmit(): void {
+    const dispatch = (event: string, args: any[]) => {
+      this.dispatchEvent(
+        new CustomEvent(
+          event,
+          isPlainObject(args[0])
+            ? extend({ detail: args }, args[0])
+            : { detail: args },
+        ),
+      )
+    }
+
+    this._instance!.emit = (event: string, ...args: any[]) => {
+      dispatch(event, args)
+      if (hyphenate(event) !== event) {
+        dispatch(hyphenate(event), args)
+      }
+    }
+  }
+
   private _resolveProps(def: Def): void {
     const { props } = def
     const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
@@ -498,7 +537,7 @@ export abstract class VueElementBase<
         }
       }
       if (shouldUpdate && this._instance) {
-        this._updateComponent()
+        this._update()
       }
       // reflect
       if (shouldReflect) {
@@ -666,7 +705,7 @@ export class VueElement extends VueElementBase<
     }
   }
 
-  protected _mountComponent(def: InnerComponentDef): void {
+  protected _mount(def: InnerComponentDef): void {
     if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && !def.name) {
       // @ts-expect-error
       def.name = 'VueElement'
@@ -678,28 +717,16 @@ export class VueElement extends VueElementBase<
     }
     this._app._ceVNode = this._createVNode()
     this._app.mount(this._root)
-
-    const exposed = this._instance && this._instance.exposed
-    if (!exposed) return
-    for (const key in exposed) {
-      if (!hasOwn(this, key)) {
-        Object.defineProperty(this, key, {
-          get: () => unref(exposed[key]),
-        })
-      } else if (__DEV__) {
-        warn(`Exposed property "${key}" already exists on custom element.`)
-      }
-    }
   }
 
-  protected _updateComponent(): void {
+  protected _update(): void {
     if (!this._app) return
     const vnode = this._createVNode()
     vnode.appContext = this._app._context
     render(vnode, this._root)
   }
 
-  protected _unmountComponent(): void {
+  protected _unmount(): void {
     if (this._app) {
       this._app.unmount()
     }
@@ -729,28 +756,11 @@ export class VueElement extends VueElementBase<
             }
             this._applyStyles(newStyles)
             this._instance = null
-            this._updateComponent()
+            this._update()
           }
         }
 
-        const dispatch = (event: string, args: any[]) => {
-          this.dispatchEvent(
-            new CustomEvent(
-              event,
-              isPlainObject(args[0])
-                ? extend({ detail: args }, args[0])
-                : { detail: args },
-            ),
-          )
-        }
-
-        instance.emit = (event: string, ...args: any[]) => {
-          dispatch(event, args)
-          if (hyphenate(event) !== event) {
-            dispatch(hyphenate(event), args)
-          }
-        }
-
+        this._processEmit()
         this._setParent()
       }
     }

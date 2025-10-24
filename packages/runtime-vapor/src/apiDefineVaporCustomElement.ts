@@ -1,12 +1,18 @@
 import { extend, isPlainObject } from '@vue/shared'
-import { createVaporApp, defineVaporComponent } from '.'
+import { createComponent, createVaporApp, defineVaporComponent } from '.'
 import {
   type CreateAppFunction,
   type CustomElementOptions,
   VueElementBase,
   warn,
 } from '@vue/runtime-dom'
-import type { ObjectVaporComponent, VaporComponent } from './component'
+import {
+  type ObjectVaporComponent,
+  type VaporComponent,
+  type VaporComponentInstance,
+  mountComponent,
+  unmountComponent,
+} from './component'
 
 export type VaporElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VaporElement & P
@@ -72,13 +78,58 @@ export class VaporElement extends VueElementBase<
       return true
     }
   }
-  protected _mountComponent(def: VaporInnerComponentDef): void {
-    throw new Error('Method not implemented.')
+  protected _mount(def: VaporInnerComponentDef): void {
+    if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && !def.name) {
+      def.name = 'VaporElement'
+    }
+
+    this._app = this._createApp(this._def)
+    this._inheritParentContext()
+    if (this._def.configureApp) {
+      this._def.configureApp(this._app)
+    }
+
+    this._app._ceComponent = this._createComponent()
+    this._app!.mount(this._root)
   }
-  protected _updateComponent(): void {
-    throw new Error('Method not implemented.')
+
+  protected _update(): void {
+    if (!this._app) return
+    unmountComponent(this._instance! as VaporComponentInstance, this._root)
+    const instance = this._createComponent()
+    instance.appContext = this._app!._context
+    mountComponent(this._instance! as VaporComponentInstance, this._root)
   }
-  protected _unmountComponent(): void {
-    throw new Error('Method not implemented.')
+
+  protected _unmount(): void {
+    this._app!.unmount()
+    this._app = this._instance = null
+  }
+
+  private _createComponent() {
+    this._instance = createComponent(this._def, this._props)
+    if (!this.shadowRoot) {
+      this._instance!.m = this._instance!.u = [this._renderSlots.bind(this)]
+    }
+
+    this._instance.ce = this
+    this._instance.isCE = true
+
+    if (__DEV__) {
+      this._instance.ceReload = newStyles => {
+        if (this._styles) {
+          this._styles.forEach(s => this._root.removeChild(s))
+          this._styles.length = 0
+        }
+        this._applyStyles(newStyles)
+        this._instance = null
+        this._update()
+      }
+    }
+
+    this._processEmit()
+    this._setParent()
+
+    return this._instance
   }
 }
