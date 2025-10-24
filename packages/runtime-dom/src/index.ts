@@ -261,6 +261,7 @@ export {
   useShadowRoot,
   useHost,
   VueElement,
+  VueElementBase,
   type VueElementConstructor,
   type CustomElementOptions,
 } from './apiCustomElement'
