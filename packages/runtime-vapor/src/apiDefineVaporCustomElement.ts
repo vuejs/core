@@ -1,9 +1,10 @@
 import { extend, isPlainObject } from '@vue/shared'
-import { defineVaporComponent } from '.'
+import { createVaporApp, defineVaporComponent } from '.'
 import {
   type CreateAppFunction,
   type CustomElementOptions,
   VueElementBase,
+  warn,
 } from '@vue/runtime-dom'
 import type { ObjectVaporComponent, VaporComponent } from './component'
 
@@ -14,13 +15,13 @@ export type VaporElementConstructor<P = {}> = {
 // TODO type inference
 
 /*@__NO_SIDE_EFFECTS__*/
-export function defineCustomElement(
+export function defineVaporCustomElement(
   options: any,
   extraOptions?: Omit<ObjectVaporComponent, 'setup'>,
   /**
    * @internal
    */
-  _createApp?: CreateAppFunction<Element>,
+  _createApp?: CreateAppFunction<ParentNode, VaporComponent>,
 ): VaporElementConstructor {
   let Comp = defineVaporComponent(options, extraOptions)
   if (isPlainObject(Comp)) Comp = extend({}, Comp, extraOptions)
@@ -34,9 +35,43 @@ export function defineCustomElement(
   return VaporCustomElement
 }
 
+/*@__NO_SIDE_EFFECTS__*/
+export const defineVaporSSRCustomElement = ((
+  options: any,
+  extraOptions?: Omit<ObjectVaporComponent, 'setup'>,
+) => {
+  // @ts-expect-error
+  return defineVaporCustomElement(options, extraOptions, createVaporSSRApp)
+}) as typeof defineVaporCustomElement
+
 type VaporInnerComponentDef = VaporComponent & CustomElementOptions
 
-export class VaporElement extends VueElementBase<VaporInnerComponentDef> {
+export class VaporElement extends VueElementBase<
+  ParentNode,
+  VaporComponent,
+  VaporInnerComponentDef
+> {
+  constructor(
+    def: VaporInnerComponentDef,
+    props: Record<string, any> | undefined = {},
+    createAppFn: CreateAppFunction<ParentNode, VaporComponent> = createVaporApp,
+  ) {
+    super(def, props, createAppFn)
+  }
+
+  protected _hasPreRendered(): boolean | undefined {
+    if (this.shadowRoot && this._createApp !== createVaporApp) {
+      this._root = this.shadowRoot
+    } else {
+      if (__DEV__ && this.shadowRoot) {
+        warn(
+          `Custom element has pre-rendered declarative shadow root but is not ` +
+            `defined as hydratable. Use \`defineVaporSSRCustomElement\`.`,
+        )
+      }
+      return true
+    }
+  }
   protected _mountComponent(def: VaporInnerComponentDef): void {
     throw new Error('Method not implemented.')
   }

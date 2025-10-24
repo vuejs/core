@@ -201,6 +201,8 @@ const BaseClass = (
 type InnerComponentDef = ConcreteComponent & CustomElementOptions
 
 export abstract class VueElementBase<
+    E = Element,
+    C = Component,
     Def extends CustomElementOptions & { props?: any } = InnerComponentDef,
   >
   extends BaseClass
@@ -218,7 +220,7 @@ export abstract class VueElementBase<
   /**
    * @internal
    */
-  _root: Element | ShadowRoot
+  _root!: Element | ShadowRoot
   /**
    * @internal
    */
@@ -230,7 +232,7 @@ export abstract class VueElementBase<
 
   protected _def: Def
   protected _props: Record<string, any>
-  protected _createApp: CreateAppFunction<Element>
+  protected _createApp: CreateAppFunction<E, C>
   protected _connected = false
   protected _resolved = false
   protected _numberProps: Record<string, true> | null = null
@@ -249,29 +251,27 @@ export abstract class VueElementBase<
   protected _ob?: MutationObserver | null = null
   protected _slots?: Record<string, Node[]>
 
+  protected abstract _hasPreRendered(): boolean | undefined
+  protected abstract _mountComponent(def: Def): void
+  protected abstract _updateComponent(): void
+  protected abstract _unmountComponent(): void
+
   constructor(
     /**
      * Component def - note this may be an AsyncWrapper, and this._def will
      * be overwritten by the inner component when resolved.
      */
     def: Def,
-    props: Record<string, any> = {},
-    createAppFn: CreateAppFunction<Element> = createApp,
+    props: Record<string, any> | undefined = {},
+    createAppFn: CreateAppFunction<E, C>,
   ) {
     super()
     this._def = def
     this._props = props
     this._createApp = createAppFn
     this._nonce = def.nonce
-    if (this.shadowRoot && createAppFn !== createApp) {
-      this._root = this.shadowRoot
-    } else {
-      if (__DEV__ && this.shadowRoot) {
-        warn(
-          `Custom element has pre-rendered declarative shadow root but is not ` +
-            `defined as hydratable. Use \`defineSSRCustomElement\`.`,
-        )
-      }
+
+    if (this._hasPreRendered()) {
       if (def.shadowRoot !== false) {
         this.attachShadow(
           extend({}, def.shadowRootOptions, {
@@ -321,10 +321,6 @@ export abstract class VueElementBase<
       }
     }
   }
-
-  protected abstract _mountComponent(def: Def): void
-  protected abstract _updateComponent(): void
-  protected abstract _unmountComponent(): void
 
   protected _setParent(
     parent: VueElementBase | undefined = this._parent,
@@ -643,7 +639,33 @@ export abstract class VueElementBase<
   }
 }
 
-export class VueElement extends VueElementBase<InnerComponentDef> {
+export class VueElement extends VueElementBase<
+  Element,
+  Component,
+  InnerComponentDef
+> {
+  constructor(
+    def: InnerComponentDef,
+    props: Record<string, any> | undefined = {},
+    createAppFn: CreateAppFunction<Element, Component> = createApp,
+  ) {
+    super(def, props, createAppFn)
+  }
+
+  protected _hasPreRendered(): boolean | undefined {
+    if (this.shadowRoot && this._createApp !== createApp) {
+      this._root = this.shadowRoot
+    } else {
+      if (__DEV__ && this.shadowRoot) {
+        warn(
+          `Custom element has pre-rendered declarative shadow root but is not ` +
+            `defined as hydratable. Use \`defineSSRCustomElement\`.`,
+        )
+      }
+      return true
+    }
+  }
+
   protected _mountComponent(def: InnerComponentDef): void {
     if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && !def.name) {
       // @ts-expect-error
