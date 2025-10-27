@@ -128,8 +128,6 @@ export interface ObjectVaporComponent
   name?: string
   vapor?: boolean
   isCE?: boolean
-  __asyncLoader?: () => Promise<VaporComponent>
-  __asyncResolved?: VaporComponent
 }
 
 interface SharedInternalOptions {
