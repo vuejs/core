@@ -6,12 +6,10 @@ import {
   VueElementBase,
   warn,
 } from '@vue/runtime-dom'
-import {
-  type ObjectVaporComponent,
-  type VaporComponent,
-  type VaporComponentInstance,
-  mountComponent,
-  unmountComponent,
+import type {
+  ObjectVaporComponent,
+  VaporComponent,
+  VaporComponentInstance,
 } from './component'
 
 export type VaporElementConstructor<P = {}> = {
@@ -83,6 +81,7 @@ export class VaporElement extends VueElementBase<
       def.name = 'VaporElement'
     }
 
+    def.isCE = true
     this._app = this._createApp(this._def)
     this._inheritParentContext()
     if (this._def.configureApp) {
@@ -95,10 +94,10 @@ export class VaporElement extends VueElementBase<
 
   protected _update(): void {
     if (!this._app) return
-    unmountComponent(this._instance! as VaporComponentInstance, this._root)
-    const instance = this._createComponent()
-    instance.appContext = this._app!._context
-    mountComponent(this._instance! as VaporComponentInstance, this._root)
+    // update component by re-running all its render effects
+    const renderEffects = (this._instance! as VaporComponentInstance)
+      .renderEffects
+    if (renderEffects) renderEffects.forEach(e => e.run())
   }
 
   protected _unmount(): void {
@@ -112,22 +111,7 @@ export class VaporElement extends VueElementBase<
       this._instance!.m = this._instance!.u = [this._renderSlots.bind(this)]
     }
 
-    this._instance.ce = this
-    this._instance.isCE = true
-
-    if (__DEV__) {
-      this._instance.ceReload = newStyles => {
-        if (this._styles) {
-          this._styles.forEach(s => this._root.removeChild(s))
-          this._styles.length = 0
-        }
-        this._applyStyles(newStyles)
-        this._instance = null
-        this._update()
-      }
-    }
-
-    this._processEmit()
+    this._processInstance()
     this._setParent()
 
     return this._instance

@@ -322,6 +322,10 @@ export abstract class VueElementBase<
     }
   }
 
+  get _isVapor(): boolean {
+    return `__vapor` in this._def
+  }
+
   protected _setParent(
     parent: VueElementBase | undefined = this._parent,
   ): void {
@@ -455,7 +459,22 @@ export abstract class VueElementBase<
     }
   }
 
-  protected _processEmit(): void {
+  protected _processInstance(): void {
+    this._instance!.ce = this
+    this._instance!.isCE = true
+
+    if (__DEV__) {
+      this._instance!.ceReload = newStyles => {
+        if (this._styles) {
+          this._styles.forEach(s => this._root.removeChild(s))
+          this._styles.length = 0
+        }
+        this._applyStyles(newStyles)
+        this._instance = null
+        this._update()
+      }
+    }
+
     const dispatch = (event: string, args: any[]) => {
       this.dispatchEvent(
         new CustomEvent(
@@ -530,7 +549,7 @@ export abstract class VueElementBase<
       if (val === REMOVAL) {
         delete this._props[key]
       } else {
-        this._props[key] = val
+        this._props[key] = this._isVapor ? () => val : val
         // support set key on ceVNode
         if (key === 'key' && this._app && this._app._ceVNode) {
           this._app._ceVNode!.key = val
@@ -746,21 +765,7 @@ export class VueElement extends VueElementBase<
     if (!this._instance) {
       vnode.ce = instance => {
         this._instance = instance
-        instance.ce = this
-        instance.isCE = true
-        if (__DEV__) {
-          instance.ceReload = newStyles => {
-            if (this._styles) {
-              this._styles.forEach(s => this._root.removeChild(s))
-              this._styles.length = 0
-            }
-            this._applyStyles(newStyles)
-            this._instance = null
-            this._update()
-          }
-        }
-
-        this._processEmit()
+        this._processInstance()
         this._setParent()
       }
     }

@@ -127,6 +127,7 @@ export interface ObjectVaporComponent
 
   name?: string
   vapor?: boolean
+  isCE?: boolean
   __asyncLoader?: () => Promise<VaporComponent>
   __asyncResolved?: VaporComponent
 }
@@ -489,7 +490,14 @@ export class VaporComponentInstance implements GenericComponentInstance {
   // for suspense
   suspense: SuspenseBoundary | null
 
+  // for HMR and vapor custom element
+  // all render effects associated with this instance
+  renderEffects?: RenderEffect[]
+
   hasFallthrough: boolean
+
+  // for keep-alive
+  shapeFlag?: number
 
   // lifecycle hooks
   isMounted: boolean
@@ -517,12 +525,10 @@ export class VaporComponentInstance implements GenericComponentInstance {
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void
-  renderEffects?: RenderEffect[]
   parentTeleport?: TeleportFragment | null
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
-  shapeFlag?: number
 
   constructor(
     comp: VaporComponent,
