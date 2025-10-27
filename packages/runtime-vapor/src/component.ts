@@ -127,7 +127,10 @@ export interface ObjectVaporComponent
 
   name?: string
   vapor?: boolean
-  isCE?: boolean
+  /**
+   * @internal custom element interception hook
+   */
+  ce?: (instance: VaporComponentInstance) => void
 }
 
 interface SharedInternalOptions {
@@ -592,6 +595,11 @@ export class VaporComponentInstance implements GenericComponentInstance {
         ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
         : rawSlots
       : EMPTY_OBJ
+
+    // apply custom element special handling
+    if (comp.ce) {
+      comp.ce(this)
+    }
   }
 
   /**

@@ -43,7 +43,7 @@ export class RenderEffect extends ReactiveEffect {
           : void 0
       }
 
-      if (__DEV__ || instance.type.isCE) {
+      if (__DEV__ || instance.type.ce) {
         // register effect for stopping them during HMR rerender
         ;(instance.renderEffects || (instance.renderEffects = [])).push(this)
       }

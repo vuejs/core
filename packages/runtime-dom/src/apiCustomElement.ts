@@ -285,10 +285,6 @@ export abstract class VueElementBase<
     }
   }
 
-  get _isVapor(): boolean {
-    return `__vapor` in this._def
-  }
-
   connectedCallback(): void {
     // avoid resolving component if it's not connected
     if (!this.isConnected) return
@@ -533,7 +529,7 @@ export abstract class VueElementBase<
    * @internal
    */
   protected _getProp(key: string): any {
-    return this._isVapor ? this._props[key]() : this._props[key]
+    return this._props[key]
   }
 
   /**
@@ -549,7 +545,7 @@ export abstract class VueElementBase<
       if (val === REMOVAL) {
         delete this._props[key]
       } else {
-        this._props[key] = this._isVapor ? () => val : val
+        this._props[key] = val
         // support set key on ceVNode
         if (key === 'key' && this._app && this._app._ceVNode) {
           this._app._ceVNode!.key = val

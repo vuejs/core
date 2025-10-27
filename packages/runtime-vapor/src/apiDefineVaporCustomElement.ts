@@ -81,7 +81,6 @@ export class VaporElement extends VueElementBase<
       def.name = 'VaporElement'
     }
 
-    def.isCE = true
     this._app = this._createApp(this._def)
     this._inheritParentContext()
     if (this._def.configureApp) {
@@ -123,14 +122,17 @@ export class VaporElement extends VueElementBase<
   }
 
   private _createComponent() {
-    this._instance = createComponent(this._def, this._props)
-    if (!this.shadowRoot) {
-      this._instance!.m = this._instance!.u = [this._renderSlots.bind(this)]
+    this._def.ce = instance => {
+      this._instance = instance
+      if (!this.shadowRoot) {
+        ;(instance.m || (instance.m = [])).push(this._renderSlots.bind(this))
+        ;(instance.u || (instance.u = [])).push(this._renderSlots.bind(this))
+      }
+      this._processInstance()
+      this._setParent()
     }
 
-    this._processInstance()
-    this._setParent()
-
+    this._instance = createComponent(this._def, this._props)
     return this._instance
   }
 }

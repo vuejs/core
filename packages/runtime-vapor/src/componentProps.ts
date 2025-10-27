@@ -97,7 +97,7 @@ export function getPropsProxyHandlers(
         return resolvePropValue(
           propsOptions!,
           key,
-          rawProps[rawKey](),
+          instance.type.ce ? rawProps[rawKey] : rawProps[rawKey](),
           instance,
           resolveDefault,
         )
@@ -318,7 +318,7 @@ export function setupPropsValidation(instance: VaporComponentInstance): void {
   renderEffect(() => {
     pushWarningContext(instance)
     validateProps(
-      resolveDynamicProps(rawProps),
+      resolveDynamicProps(rawProps, !!instance.type.ce),
       instance.props,
       normalizePropsOptions(instance.type)[0]!,
     )
@@ -326,11 +326,14 @@ export function setupPropsValidation(instance: VaporComponentInstance): void {
   }, true /* noLifecycle */)
 }
 
-export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
+export function resolveDynamicProps(
+  props: RawProps,
+  isResolved: boolean = false,
+): Record<string, unknown> {
   const mergedRawProps: Record<string, any> = {}
   for (const key in props) {
     if (key !== '$') {
-      mergedRawProps[key] = props[key]()
+      mergedRawProps[key] = isResolved ? props[key] : props[key]()
     }
   }
   if (props.$) {
