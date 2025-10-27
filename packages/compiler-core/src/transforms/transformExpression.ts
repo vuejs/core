@@ -62,6 +62,7 @@ export const transformExpression: NodeTransform = (node, context) => {
       if (dir.type === NodeTypes.DIRECTIVE && dir.name !== 'for') {
         const exp = dir.exp
         const arg = dir.arg
+        const mods = dir.modifiers
         // do not process exp if this is v-on:arg - we need special handling
         // for wrapping inline statements.
         if (
@@ -85,6 +86,12 @@ export const transformExpression: NodeTransform = (node, context) => {
         }
         if (arg && arg.type === NodeTypes.SIMPLE_EXPRESSION && !arg.isStatic) {
           dir.arg = processExpression(arg, context)
+        }
+        for (let j = 0; j < mods.length; j++) {
+          const mod = mods[j]
+          if (mod.type === NodeTypes.SIMPLE_EXPRESSION && !mod.isStatic) {
+            mods[j] = processExpression(mod, context)
+          }
         }
       }
     }

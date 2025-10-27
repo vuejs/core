@@ -45,7 +45,9 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
   }
 
   // .sync is replaced by v-model:arg
-  if (modifiers.some(mod => mod.content === 'camel')) {
+  if (
+    modifiers.some(mod => (mod as SimpleExpressionNode).content === 'camel')
+  ) {
     if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
       if (arg.isStatic) {
         arg.content = camelize(arg.content)
@@ -59,10 +61,14 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
   }
 
   if (!context.inSSR) {
-    if (modifiers.some(mod => mod.content === 'prop')) {
+    if (
+      modifiers.some(mod => (mod as SimpleExpressionNode).content === 'prop')
+    ) {
       injectPrefix(arg, '.')
     }
-    if (modifiers.some(mod => mod.content === 'attr')) {
+    if (
+      modifiers.some(mod => (mod as SimpleExpressionNode).content === 'attr')
+    ) {
       injectPrefix(arg, '^')
     }
   }

@@ -210,7 +210,7 @@ export interface DirectiveNode extends Node {
   rawName?: string
   exp: ExpressionNode | undefined
   arg: ExpressionNode | undefined
-  modifiers: SimpleExpressionNode[]
+  modifiers: ExpressionNode[]
   /**
    * optional property to cache the expression parse result for v-for
    */

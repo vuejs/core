@@ -275,7 +275,44 @@ const tokenizer = new Tokenizer(stack, {
         setLocEnd(arg.loc, end)
       }
     } else {
-      const exp = createSimpleExpression(mod, true, getLoc(start, end))
+      const isStatic = mod[0] !== `[`
+      const exp = createExp(
+        isStatic ? mod : mod.slice(1, -1),
+        isStatic,
+        getLoc(start, end),
+        isStatic ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.NOT_CONSTANT,
+      )
+
+      if (!exp.ast && !exp.content.trim()) {
+        emitError(
+          isStatic ? ErrorCodes.X_MISSING_DIRECTIVE_MODIFIER_NAME : 
+            ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_MODIFIER_VALUE,
+          exp.loc.start.offset,
+        )
+        return
+      }
+
+      const invalidBabelNodeTypes = [
+        'ArrayExpression',
+        'UnaryExpression',
+        'StringLiteral',
+        'NumericLiteral',
+        'TemplateLiteral',
+      ]
+
+      const invalidSimpleValues = ['true', 'false', 'null', 'undefined']
+
+      if (
+        (exp.ast && invalidBabelNodeTypes.includes(exp.ast.type)) ||
+        (!exp.ast && invalidSimpleValues.includes(exp.content))
+      ) {
+        emitError(
+          ErrorCodes.X_INVALID_VALUE_IN_DYNAMIC_DIRECTIVE_MODIFIER,
+          exp.loc.start.offset + 1,
+        )
+        return
+      }
+
       ;(currentProp as DirectiveNode).modifiers.push(exp)
     }
   },
@@ -383,7 +420,7 @@ const tokenizer = new Tokenizer(stack, {
             __COMPAT__ &&
             currentProp.name === 'bind' &&
             (syncIndex = currentProp.modifiers.findIndex(
-              mod => mod.content === 'sync',
+              mod => (mod as SimpleExpressionNode).content === 'sync',
             )) > -1 &&
             checkCompatEnabled(
               CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,

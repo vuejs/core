@@ -121,7 +121,12 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
 
     let { key, value: handlerExp } = baseResult.props[0]
     const { keyModifiers, nonKeyModifiers, eventOptionModifiers } =
-      resolveModifiers(key, modifiers, context, dir.loc)
+      resolveModifiers(
+        key,
+        modifiers as SimpleExpressionNode[],
+        context,
+        dir.loc,
+      )
 
     // normalize click.right and click.middle since they don't actually fire
     if (nonKeyModifiers.includes('right')) {

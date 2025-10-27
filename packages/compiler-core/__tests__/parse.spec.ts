@@ -1446,6 +1446,202 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('directive with dynamic modifiers', () => {
+      const ast = baseParse('<div v-on.enter.[a]/>')
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(directive).toStrictEqual({
+        type: NodeTypes.DIRECTIVE,
+        name: 'on',
+        rawName: 'v-on.enter.[a]',
+        arg: undefined,
+        modifiers: [
+          {
+            constType: 3,
+            content: 'enter',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 16,
+                line: 1,
+                offset: 15,
+              },
+              source: 'enter',
+              start: {
+                column: 11,
+                line: 1,
+                offset: 10,
+              },
+            },
+            type: 4,
+          },
+          {
+            constType: 0,
+            content: 'a',
+            isStatic: false,
+            loc: {
+              end: {
+                column: 20,
+                line: 1,
+                offset: 19,
+              },
+              source: '[a]',
+              start: {
+                column: 17,
+                line: 1,
+                offset: 16,
+              },
+            },
+            type: 4,
+          },
+        ],
+        exp: undefined,
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { column: 20, line: 1, offset: 19 },
+          source: 'v-on.enter.[a]',
+        },
+      })
+    })
+
+    test('directive with empty modifier name', () => {
+      let errorCode = -1
+      const ast = baseParse('<div v-on./>', {
+        onError: err => {
+          errorCode = err.code as number
+        },
+      })
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(errorCode).toBe(ErrorCodes.X_MISSING_DIRECTIVE_MODIFIER_NAME)
+
+      expect(directive).toStrictEqual({
+        type: NodeTypes.DIRECTIVE,
+        name: 'on',
+        rawName: 'v-on.',
+        arg: undefined,
+        modifiers: [],
+        exp: undefined,
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { column: 11, line: 1, offset: 10 },
+          source: 'v-on.',
+        },
+      })
+    })
+
+    test('directive with empty modifier name and value', () => {
+      let errorCode = -1
+      const ast = baseParse('<div v-on.="a"/>', {
+        onError: err => {
+          errorCode = err.code as number
+        },
+      })
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(errorCode).toBe(ErrorCodes.X_MISSING_DIRECTIVE_MODIFIER_NAME)
+
+      expect(directive).toStrictEqual({
+        type: NodeTypes.DIRECTIVE,
+        name: 'on',
+        rawName: 'v-on.',
+        arg: undefined,
+        modifiers: [],
+        exp: {
+          constType: 0,
+          content: 'a',
+          isStatic: false,
+          loc: {
+            end: {
+              column: 14,
+              line: 1,
+              offset: 13,
+            },
+            source: 'a',
+            start: {
+              column: 13,
+              line: 1,
+              offset: 12,
+            },
+          },
+          type: 4,
+        },
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { column: 15, line: 1, offset: 14 },
+          source: 'v-on.="a"',
+        },
+      })
+    })
+
+    test('directive with missing dynamic modifier value', () => {
+      let errorCode = -1
+      const ast = baseParse('<div v-on.[] />', {
+        onError: err => {
+          errorCode = err.code as number
+        },
+      })
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(errorCode).toBe(
+        ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_MODIFIER_VALUE,
+      )
+
+      expect(directive).toStrictEqual({
+        type: NodeTypes.DIRECTIVE,
+        name: 'on',
+        rawName: 'v-on.[]',
+        arg: undefined,
+        modifiers: [],
+        exp: undefined,
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { column: 13, line: 1, offset: 12 },
+          source: 'v-on.[]',
+        },
+      })
+    })
+
+    test('directive with invalid dynamic modifier value', () => {
+      const possibleWrongValues = [
+        '[]',
+        'null',
+        '123',
+        '"foo"',
+        '`foo`',
+        '!false',
+      ]
+
+      possibleWrongValues.forEach(val => {
+        let errorCode = -1
+        const ast = baseParse(`<div v-on.[${val}] />`, {
+          onError: err => {
+            errorCode = err.code as number
+          },
+          prefixIdentifiers: true,
+        })
+        const directive = (ast.children[0] as ElementNode).props[0]
+
+        expect(errorCode).toBe(
+          ErrorCodes.X_INVALID_VALUE_IN_DYNAMIC_DIRECTIVE_MODIFIER,
+        )
+
+        expect(directive).toStrictEqual({
+          type: NodeTypes.DIRECTIVE,
+          name: 'on',
+          rawName: `v-on.[${val}]`,
+          arg: undefined,
+          modifiers: [],
+          exp: undefined,
+          loc: {
+            end: { column: 13 + val.length, line: 1, offset: 12 + val.length },
+            source: `v-on.[${val}]`,
+            start: { column: 6, line: 1, offset: 5 },
+          },
+        })
+      })
+    })
+
     test('directive with argument and modifiers', () => {
       const ast = baseParse('<div v-on:click.enter.exact/>')
       const directive = (ast.children[0] as ElementNode).props[0]
