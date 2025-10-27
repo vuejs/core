@@ -533,7 +533,7 @@ export abstract class VueElementBase<
    * @internal
    */
   protected _getProp(key: string): any {
-    return this._props[key]
+    return this._isVapor ? this._props[key]() : this._props[key]
   }
 
   /**

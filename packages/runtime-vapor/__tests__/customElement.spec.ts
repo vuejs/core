@@ -28,6 +28,20 @@ describe('defineVaporCustomElement', () => {
 
   delegateEvents('input')
 
+  function render(tag: string, props: any) {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    createVaporApp({
+      setup() {
+        return createComponentWithFallback(tag, props, null, true)
+      },
+    }).mount(root)
+
+    return {
+      container: root,
+    }
+  }
+
   beforeEach(() => {
     container.innerHTML = ''
   })
@@ -90,32 +104,12 @@ describe('defineVaporCustomElement', () => {
             setValue(n0, props.value)
           })
           return n0
-          // return () =>
-          //   h('input', {
-          //     type: 'number',
-          //     value: props.value,
-          //     onInput: (e: InputEvent) => {
-          //       const num = (e.target! as HTMLInputElement).valueAsNumber
-          //       emit('update', Number.isNaN(num) ? null : num)
-          //     },
-          //   })
         },
       })
       customElements.define('my-el-input', CustomInput)
       const num = ref('12')
       const containerComp = defineVaporComponent({
         setup() {
-          // return () => {
-          //   return h('div', [
-          //     h('my-el-input', {
-          //       value: num.value,
-          //       onUpdate: ($event: CustomEvent) => {
-          //         num.value = $event.detail[0]
-          //       },
-          //     }),
-          //     h('div', { id: 'move' }),
-          //   ])
-          // }
           const n1 = template('<div><div id="move"></div></div>', true)() as any
           setInsertionState(n1, 0, true)
           createComponentWithFallback('my-el-input', {
@@ -143,385 +137,402 @@ describe('defineVaporCustomElement', () => {
       expect(inputEl.value).toBe('')
     })
 
-    // test('should not unmount on move', async () => {
-    //   container.innerHTML = `<div><my-element></my-element></div>`
-    //   const e = container.childNodes[0].childNodes[0] as VaporElement
-    //   const i = e._instance
-    //   // moving from one parent to another - this will trigger both disconnect
-    //   // and connected callbacks synchronously
-    //   container.appendChild(e)
-    //   await nextTick()
-    //   // should be the same instance
-    //   expect(e._instance).toBe(i)
-    //   expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
-    // })
+    test('should not unmount on move', async () => {
+      container.innerHTML = `<div><my-element></my-element></div>`
+      const e = container.childNodes[0].childNodes[0] as VaporElement
+      const i = e._instance
+      // moving from one parent to another - this will trigger both disconnect
+      // and connected callbacks synchronously
+      container.appendChild(e)
+      await nextTick()
+      // should be the same instance
+      expect(e._instance).toBe(i)
+      expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
+    })
 
-    // test('remove then insert again', async () => {
-    //   container.innerHTML = `<my-element></my-element>`
-    //   const e = container.childNodes[0] as VaporElement
-    //   container.removeChild(e)
-    //   await nextTick()
-    //   expect(e._instance).toBe(null)
-    //   expect(e.shadowRoot!.innerHTML).toBe('')
-    //   container.appendChild(e)
-    //   expect(e._instance).toBeTruthy()
-    //   expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
-    // })
+    test('remove then insert again', async () => {
+      container.innerHTML = `<my-element></my-element>`
+      const e = container.childNodes[0] as VaporElement
+      container.removeChild(e)
+      await nextTick()
+      expect(e._instance).toBe(null)
+      expect(e.shadowRoot!.innerHTML).toBe('')
+      container.appendChild(e)
+      expect(e._instance).toBeTruthy()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
+    })
   })
 
-  // describe('props', () => {
-  //   const E = defineVaporCustomElement({
-  //     props: {
-  //       foo: [String, null],
-  //       bar: Object,
-  //       bazQux: null,
-  //       value: null,
-  //     },
-  //     render() {
-  //       return [
-  //         h('div', null, this.foo || ''),
-  //         h('div', null, this.bazQux || (this.bar && this.bar.x)),
-  //       ]
-  //     },
-  //   })
-  //   customElements.define('my-el-props', E)
+  describe('props', () => {
+    const E = defineVaporCustomElement({
+      props: {
+        foo: [String, null],
+        bar: Object,
+        bazQux: null,
+        value: null,
+      },
+      setup(props: any) {
+        const n0 = template('<div> </div>', true)() as any
+        const x0 = txt(n0) as any
+        const n1 = template('<div> </div>', true)() as any
+        const x1 = txt(n1) as any
 
-  //   test('renders custom element w/ correct object prop value', () => {
-  //     render(h('my-el-props', { value: { x: 1 } }), container)
-  //     const el = container.children[0]
-  //     expect((el as any).value).toEqual({ x: 1 })
-  //   })
+        renderEffect(() => setText(x0, props.foo || ''))
+        renderEffect(() =>
+          setText(x1, props.bazQux || (props.bar && props.bar.x)),
+        )
+        return [n0, n1]
+      },
+    })
+    customElements.define('my-el-props', E)
 
-  //   test('props via attribute', async () => {
-  //     // bazQux should map to `baz-qux` attribute
-  //     container.innerHTML = `<my-el-props foo="hello" baz-qux="bye"></my-el-props>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div><div>bye</div>')
+    test('renders custom element w/ correct object prop value', () => {
+      const { container } = render('my-el-props', {
+        value: () => ({
+          x: 1,
+        }),
+      })
 
-  //     // change attr
-  //     e.setAttribute('foo', 'changed')
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div>changed</div><div>bye</div>')
+      const el = container.children[0]
+      expect((el as any).value).toEqual({ x: 1 })
+    })
 
-  //     e.setAttribute('baz-qux', 'changed')
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe(
-  //       '<div>changed</div><div>changed</div>',
-  //     )
-  //   })
+    test('props via attribute', async () => {
+      // bazQux should map to `baz-qux` attribute
+      container.innerHTML = `<my-el-props foo="hello" baz-qux="bye"></my-el-props>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div><div>bye</div>')
 
-  //   test('props via properties', async () => {
-  //     const e = new E()
-  //     e.foo = 'one'
-  //     e.bar = { x: 'two' }
-  //     container.appendChild(e)
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div>one</div><div>two</div>')
+      // change attr
+      e.setAttribute('foo', 'changed')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>changed</div><div>bye</div>')
 
-  //     // reflect
-  //     // should reflect primitive value
-  //     expect(e.getAttribute('foo')).toBe('one')
-  //     // should not reflect rich data
-  //     expect(e.hasAttribute('bar')).toBe(false)
+      e.setAttribute('baz-qux', 'changed')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<div>changed</div><div>changed</div>',
+      )
+    })
 
-  //     e.foo = 'three'
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div>three</div><div>two</div>')
-  //     expect(e.getAttribute('foo')).toBe('three')
+    test('props via properties', async () => {
+      // TODO remove this after type inference done
+      const e = new E() as any
+      e.foo = 'one'
+      e.bar = { x: 'two' }
+      container.appendChild(e)
+      expect(e.shadowRoot!.innerHTML).toBe('<div>one</div><div>two</div>')
 
-  //     e.foo = null
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
-  //     expect(e.hasAttribute('foo')).toBe(false)
+      // reflect
+      // should reflect primitive value
+      expect(e.getAttribute('foo')).toBe('one')
+      // should not reflect rich data
+      expect(e.hasAttribute('bar')).toBe(false)
 
-  //     e.foo = undefined
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
-  //     expect(e.hasAttribute('foo')).toBe(false)
-  //     expect(e.foo).toBe(undefined)
+      e.foo = 'three'
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>three</div><div>two</div>')
+      expect(e.getAttribute('foo')).toBe('three')
 
-  //     e.bazQux = 'four'
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>four</div>')
-  //     expect(e.getAttribute('baz-qux')).toBe('four')
-  //   })
+      e.foo = null
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
+      expect(e.hasAttribute('foo')).toBe(false)
 
-  //   test('props via attributes and properties changed together', async () => {
-  //     const e = new E()
-  //     e.foo = 'foo1'
-  //     e.bar = { x: 'bar1' }
-  //     container.appendChild(e)
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div>foo1</div><div>bar1</div>')
+      e.foo = undefined
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
+      expect(e.hasAttribute('foo')).toBe(false)
+      expect(e.foo).toBe(undefined)
 
-  //     // change attr then property
-  //     e.setAttribute('foo', 'foo2')
-  //     e.bar = { x: 'bar2' }
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div>foo2</div><div>bar2</div>')
-  //     expect(e.getAttribute('foo')).toBe('foo2')
-  //     expect(e.hasAttribute('bar')).toBe(false)
+      e.bazQux = 'four'
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>four</div>')
+      expect(e.getAttribute('baz-qux')).toBe('four')
+    })
 
-  //     // change prop then attr
-  //     e.bar = { x: 'bar3' }
-  //     e.setAttribute('foo', 'foo3')
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div>foo3</div><div>bar3</div>')
-  //     expect(e.getAttribute('foo')).toBe('foo3')
-  //     expect(e.hasAttribute('bar')).toBe(false)
-  //   })
+    test('props via attributes and properties changed together', async () => {
+      // TODO remove this after type inference done
+      const e = new E() as any
+      e.foo = 'foo1'
+      e.bar = { x: 'bar1' }
+      container.appendChild(e)
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>foo1</div><div>bar1</div>')
 
-  //   test('props via hyphen property', async () => {
-  //     const Comp = defineVaporCustomElement({
-  //       props: {
-  //         fooBar: Boolean,
-  //       },
-  //       render() {
-  //         return 'Comp'
-  //       },
-  //     })
-  //     customElements.define('my-el-comp', Comp)
-  //     render(h('my-el-comp', { 'foo-bar': true }), container)
-  //     const el = container.children[0]
-  //     expect((el as any).outerHTML).toBe('<my-el-comp foo-bar=""></my-el-comp>')
-  //   })
+      // change attr then property
+      e.setAttribute('foo', 'foo2')
+      e.bar = { x: 'bar2' }
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>foo2</div><div>bar2</div>')
+      expect(e.getAttribute('foo')).toBe('foo2')
+      expect(e.hasAttribute('bar')).toBe(false)
 
-  //   test('attribute -> prop type casting', async () => {
-  //     const E = defineVaporCustomElement({
-  //       props: {
-  //         fooBar: Number, // test casting of camelCase prop names
-  //         bar: Boolean,
-  //         baz: String,
-  //       },
-  //       render() {
-  //         return [
-  //           this.fooBar,
-  //           typeof this.fooBar,
-  //           this.bar,
-  //           typeof this.bar,
-  //           this.baz,
-  //           typeof this.baz,
-  //         ].join(' ')
-  //       },
-  //     })
-  //     customElements.define('my-el-props-cast', E)
-  //     container.innerHTML = `<my-el-props-cast foo-bar="1" baz="12345"></my-el-props-cast>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     expect(e.shadowRoot!.innerHTML).toBe(
-  //       `1 number false boolean 12345 string`,
-  //     )
+      // change prop then attr
+      e.bar = { x: 'bar3' }
+      e.setAttribute('foo', 'foo3')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>foo3</div><div>bar3</div>')
+      expect(e.getAttribute('foo')).toBe('foo3')
+      expect(e.hasAttribute('bar')).toBe(false)
+    })
 
-  //     e.setAttribute('bar', '')
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe(`1 number true boolean 12345 string`)
+    test('props via hyphen property', async () => {
+      const Comp = defineVaporCustomElement({
+        props: {
+          fooBar: Boolean,
+        },
+        setup() {
+          return template('Comp')()
+        },
+      })
+      customElements.define('my-el-comp', Comp)
 
-  //     e.setAttribute('foo-bar', '2e1')
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe(
-  //       `20 number true boolean 12345 string`,
-  //     )
+      const { container } = render('my-el-comp', {
+        'foo-bar': () => true,
+      })
 
-  //     e.setAttribute('baz', '2e1')
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe(`20 number true boolean 2e1 string`)
-  //   })
+      const el = container.children[0]
+      expect((el as any).outerHTML).toBe('<my-el-comp foo-bar=""></my-el-comp>')
+    })
 
-  //   // #4772
-  //   test('attr casting w/ programmatic creation', () => {
-  //     const E = defineVaporCustomElement({
-  //       props: {
-  //         foo: Number,
-  //       },
-  //       render() {
-  //         return `foo type: ${typeof this.foo}`
-  //       },
-  //     })
-  //     customElements.define('my-element-programmatic', E)
-  //     const el = document.createElement('my-element-programmatic') as any
-  //     el.setAttribute('foo', '123')
-  //     container.appendChild(el)
-  //     expect(el.shadowRoot.innerHTML).toBe(`foo type: number`)
-  //   })
+    // test('attribute -> prop type casting', async () => {
+    //   const E = defineVaporCustomElement({
+    //     props: {
+    //       fooBar: Number, // test casting of camelCase prop names
+    //       bar: Boolean,
+    //       baz: String,
+    //     },
+    //     render() {
+    //       return [
+    //         this.fooBar,
+    //         typeof this.fooBar,
+    //         this.bar,
+    //         typeof this.bar,
+    //         this.baz,
+    //         typeof this.baz,
+    //       ].join(' ')
+    //     },
+    //   })
+    //   customElements.define('my-el-props-cast', E)
+    //   container.innerHTML = `<my-el-props-cast foo-bar="1" baz="12345"></my-el-props-cast>`
+    //   const e = container.childNodes[0] as VaporElement
+    //   expect(e.shadowRoot!.innerHTML).toBe(
+    //     `1 number false boolean 12345 string`,
+    //   )
 
-  //   test('handling properties set before upgrading', () => {
-  //     const E = defineVaporCustomElement({
-  //       props: {
-  //         foo: String,
-  //         dataAge: Number,
-  //       },
-  //       setup(props) {
-  //         expect(props.foo).toBe('hello')
-  //         expect(props.dataAge).toBe(5)
-  //       },
-  //       render() {
-  //         return h('div', `foo: ${this.foo}`)
-  //       },
-  //     })
-  //     const el = document.createElement('my-el-upgrade') as any
-  //     el.foo = 'hello'
-  //     el.dataset.age = 5
-  //     el.notProp = 1
-  //     container.appendChild(el)
-  //     customElements.define('my-el-upgrade', E)
-  //     expect(el.shadowRoot.firstChild.innerHTML).toBe(`foo: hello`)
-  //     // should not reflect if not declared as a prop
-  //     expect(el.hasAttribute('not-prop')).toBe(false)
-  //   })
+    //   e.setAttribute('bar', '')
+    //   await nextTick()
+    //   expect(e.shadowRoot!.innerHTML).toBe(`1 number true boolean 12345 string`)
 
-  //   test('handle properties set before connecting', () => {
-  //     const obj = { a: 1 }
-  //     const E = defineVaporCustomElement({
-  //       props: {
-  //         foo: String,
-  //         post: Object,
-  //       },
-  //       setup(props) {
-  //         expect(props.foo).toBe('hello')
-  //         expect(props.post).toBe(obj)
-  //       },
-  //       render() {
-  //         return JSON.stringify(this.post)
-  //       },
-  //     })
-  //     customElements.define('my-el-preconnect', E)
-  //     const el = document.createElement('my-el-preconnect') as any
-  //     el.foo = 'hello'
-  //     el.post = obj
+    //   e.setAttribute('foo-bar', '2e1')
+    //   await nextTick()
+    //   expect(e.shadowRoot!.innerHTML).toBe(
+    //     `20 number true boolean 12345 string`,
+    //   )
 
-  //     container.appendChild(el)
-  //     expect(el.shadowRoot.innerHTML).toBe(JSON.stringify(obj))
-  //   })
+    //   e.setAttribute('baz', '2e1')
+    //   await nextTick()
+    //   expect(e.shadowRoot!.innerHTML).toBe(`20 number true boolean 2e1 string`)
+    // })
 
-  //   // https://github.com/vuejs/core/issues/6163
-  //   test('handle components with no props', async () => {
-  //     const E = defineVaporCustomElement({
-  //       render() {
-  //         return h('div', 'foo')
-  //       },
-  //     })
-  //     customElements.define('my-element-noprops', E)
-  //     const el = document.createElement('my-element-noprops')
-  //     container.appendChild(el)
-  //     await nextTick()
-  //     expect(el.shadowRoot!.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
-  //   })
+    // // #4772
+    // test('attr casting w/ programmatic creation', () => {
+    //   const E = defineVaporCustomElement({
+    //     props: {
+    //       foo: Number,
+    //     },
+    //     render() {
+    //       return `foo type: ${typeof this.foo}`
+    //     },
+    //   })
+    //   customElements.define('my-element-programmatic', E)
+    //   const el = document.createElement('my-element-programmatic') as any
+    //   el.setAttribute('foo', '123')
+    //   container.appendChild(el)
+    //   expect(el.shadowRoot.innerHTML).toBe(`foo type: number`)
+    // })
 
-  //   // #5793
-  //   test('set number value in dom property', () => {
-  //     const E = defineVaporCustomElement({
-  //       props: {
-  //         'max-age': Number,
-  //       },
-  //       render() {
-  //         // @ts-expect-error
-  //         return `max age: ${this.maxAge}/type: ${typeof this.maxAge}`
-  //       },
-  //     })
-  //     customElements.define('my-element-number-property', E)
-  //     const el = document.createElement('my-element-number-property') as any
-  //     container.appendChild(el)
-  //     el.maxAge = 50
-  //     expect(el.maxAge).toBe(50)
-  //     expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
-  //   })
+    // test('handling properties set before upgrading', () => {
+    //   const E = defineVaporCustomElement({
+    //     props: {
+    //       foo: String,
+    //       dataAge: Number,
+    //     },
+    //     setup(props) {
+    //       expect(props.foo).toBe('hello')
+    //       expect(props.dataAge).toBe(5)
+    //     },
+    //     render() {
+    //       return h('div', `foo: ${this.foo}`)
+    //     },
+    //   })
+    //   const el = document.createElement('my-el-upgrade') as any
+    //   el.foo = 'hello'
+    //   el.dataset.age = 5
+    //   el.notProp = 1
+    //   container.appendChild(el)
+    //   customElements.define('my-el-upgrade', E)
+    //   expect(el.shadowRoot.firstChild.innerHTML).toBe(`foo: hello`)
+    //   // should not reflect if not declared as a prop
+    //   expect(el.hasAttribute('not-prop')).toBe(false)
+    // })
 
-  //   // #9006
-  //   test('should reflect default value', () => {
-  //     const E = defineVaporCustomElement({
-  //       props: {
-  //         value: {
-  //           type: String,
-  //           default: 'hi',
-  //         },
-  //       },
-  //       render() {
-  //         return this.value
-  //       },
-  //     })
-  //     customElements.define('my-el-default-val', E)
-  //     container.innerHTML = `<my-el-default-val></my-el-default-val>`
-  //     const e = container.childNodes[0] as any
-  //     expect(e.value).toBe('hi')
-  //   })
+    // test('handle properties set before connecting', () => {
+    //   const obj = { a: 1 }
+    //   const E = defineVaporCustomElement({
+    //     props: {
+    //       foo: String,
+    //       post: Object,
+    //     },
+    //     setup(props) {
+    //       expect(props.foo).toBe('hello')
+    //       expect(props.post).toBe(obj)
+    //     },
+    //     render() {
+    //       return JSON.stringify(this.post)
+    //     },
+    //   })
+    //   customElements.define('my-el-preconnect', E)
+    //   const el = document.createElement('my-el-preconnect') as any
+    //   el.foo = 'hello'
+    //   el.post = obj
 
-  //   // #12214
-  //   test('Boolean prop with default true', async () => {
-  //     const E = defineVaporCustomElement({
-  //       props: {
-  //         foo: {
-  //           type: Boolean,
-  //           default: true,
-  //         },
-  //       },
-  //       render() {
-  //         return String(this.foo)
-  //       },
-  //     })
-  //     customElements.define('my-el-default-true', E)
-  //     container.innerHTML = `<my-el-default-true></my-el-default-true>`
-  //     const e = container.childNodes[0] as HTMLElement & { foo: any },
-  //       shadowRoot = e.shadowRoot as ShadowRoot
-  //     expect(shadowRoot.innerHTML).toBe('true')
-  //     e.foo = undefined
-  //     await nextTick()
-  //     expect(shadowRoot.innerHTML).toBe('true')
-  //     e.foo = false
-  //     await nextTick()
-  //     expect(shadowRoot.innerHTML).toBe('false')
-  //     e.foo = null
-  //     await nextTick()
-  //     expect(shadowRoot.innerHTML).toBe('null')
-  //     e.foo = ''
-  //     await nextTick()
-  //     expect(shadowRoot.innerHTML).toBe('true')
-  //   })
+    //   container.appendChild(el)
+    //   expect(el.shadowRoot.innerHTML).toBe(JSON.stringify(obj))
+    // })
 
-  //   test('support direct setup function syntax with extra options', () => {
-  //     const E = defineVaporCustomElement(
-  //       props => {
-  //         return () => props.text
-  //       },
-  //       {
-  //         props: {
-  //           text: String,
-  //         },
-  //       },
-  //     )
-  //     customElements.define('my-el-setup-with-props', E)
-  //     container.innerHTML = `<my-el-setup-with-props text="hello"></my-el-setup-with-props>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     expect(e.shadowRoot!.innerHTML).toBe('hello')
-  //   })
+    // // https://github.com/vuejs/core/issues/6163
+    // test('handle components with no props', async () => {
+    //   const E = defineVaporCustomElement({
+    //     render() {
+    //       return h('div', 'foo')
+    //     },
+    //   })
+    //   customElements.define('my-element-noprops', E)
+    //   const el = document.createElement('my-element-noprops')
+    //   container.appendChild(el)
+    //   await nextTick()
+    //   expect(el.shadowRoot!.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
+    // })
 
-  //   test('prop types validation', async () => {
-  //     const E = defineVaporCustomElement({
-  //       props: {
-  //         num: {
-  //           type: [Number, String],
-  //         },
-  //         bool: {
-  //           type: Boolean,
-  //         },
-  //       },
-  //       render() {
-  //         return h('div', [
-  //           h('span', [`${this.num} is ${typeof this.num}`]),
-  //           h('span', [`${this.bool} is ${typeof this.bool}`]),
-  //         ])
-  //       },
-  //     })
+    // // #5793
+    // test('set number value in dom property', () => {
+    //   const E = defineVaporCustomElement({
+    //     props: {
+    //       'max-age': Number,
+    //     },
+    //     render() {
+    //       // @ts-expect-error
+    //       return `max age: ${this.maxAge}/type: ${typeof this.maxAge}`
+    //     },
+    //   })
+    //   customElements.define('my-element-number-property', E)
+    //   const el = document.createElement('my-element-number-property') as any
+    //   container.appendChild(el)
+    //   el.maxAge = 50
+    //   expect(el.maxAge).toBe(50)
+    //   expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
+    // })
 
-  //     customElements.define('my-el-with-type-props', E)
-  //     render(h('my-el-with-type-props', { num: 1, bool: true }), container)
-  //     const e = container.childNodes[0] as VaporElement
-  //     // @ts-expect-error
-  //     expect(e.num).toBe(1)
-  //     // @ts-expect-error
-  //     expect(e.bool).toBe(true)
-  //     expect(e.shadowRoot!.innerHTML).toBe(
-  //       '<div><span>1 is number</span><span>true is boolean</span></div>',
-  //     )
-  //   })
-  // })
+    // // #9006
+    // test('should reflect default value', () => {
+    //   const E = defineVaporCustomElement({
+    //     props: {
+    //       value: {
+    //         type: String,
+    //         default: 'hi',
+    //       },
+    //     },
+    //     render() {
+    //       return this.value
+    //     },
+    //   })
+    //   customElements.define('my-el-default-val', E)
+    //   container.innerHTML = `<my-el-default-val></my-el-default-val>`
+    //   const e = container.childNodes[0] as any
+    //   expect(e.value).toBe('hi')
+    // })
+
+    // // #12214
+    // test('Boolean prop with default true', async () => {
+    //   const E = defineVaporCustomElement({
+    //     props: {
+    //       foo: {
+    //         type: Boolean,
+    //         default: true,
+    //       },
+    //     },
+    //     render() {
+    //       return String(this.foo)
+    //     },
+    //   })
+    //   customElements.define('my-el-default-true', E)
+    //   container.innerHTML = `<my-el-default-true></my-el-default-true>`
+    //   const e = container.childNodes[0] as HTMLElement & { foo: any },
+    //     shadowRoot = e.shadowRoot as ShadowRoot
+    //   expect(shadowRoot.innerHTML).toBe('true')
+    //   e.foo = undefined
+    //   await nextTick()
+    //   expect(shadowRoot.innerHTML).toBe('true')
+    //   e.foo = false
+    //   await nextTick()
+    //   expect(shadowRoot.innerHTML).toBe('false')
+    //   e.foo = null
+    //   await nextTick()
+    //   expect(shadowRoot.innerHTML).toBe('null')
+    //   e.foo = ''
+    //   await nextTick()
+    //   expect(shadowRoot.innerHTML).toBe('true')
+    // })
+
+    // test('support direct setup function syntax with extra options', () => {
+    //   const E = defineVaporCustomElement(
+    //     props => {
+    //       return () => props.text
+    //     },
+    //     {
+    //       props: {
+    //         text: String,
+    //       },
+    //     },
+    //   )
+    //   customElements.define('my-el-setup-with-props', E)
+    //   container.innerHTML = `<my-el-setup-with-props text="hello"></my-el-setup-with-props>`
+    //   const e = container.childNodes[0] as VaporElement
+    //   expect(e.shadowRoot!.innerHTML).toBe('hello')
+    // })
+
+    // test('prop types validation', async () => {
+    //   const E = defineVaporCustomElement({
+    //     props: {
+    //       num: {
+    //         type: [Number, String],
+    //       },
+    //       bool: {
+    //         type: Boolean,
+    //       },
+    //     },
+    //     render() {
+    //       return h('div', [
+    //         h('span', [`${this.num} is ${typeof this.num}`]),
+    //         h('span', [`${this.bool} is ${typeof this.bool}`]),
+    //       ])
+    //     },
+    //   })
+
+    //   customElements.define('my-el-with-type-props', E)
+    //   render(h('my-el-with-type-props', { num: 1, bool: true }), container)
+    //   const e = container.childNodes[0] as VaporElement
+    //   // @ts-expect-error
+    //   expect(e.num).toBe(1)
+    //   // @ts-expect-error
+    //   expect(e.bool).toBe(true)
+    //   expect(e.shadowRoot!.innerHTML).toBe(
+    //     '<div><span>1 is number</span><span>true is boolean</span></div>',
+    //   )
+    // })
+  })
 
   // describe('attrs', () => {
   //   const E = defineVaporCustomElement({

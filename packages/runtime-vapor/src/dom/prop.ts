@@ -1,5 +1,6 @@
 import {
   type NormalizedStyle,
+  camelize,
   canSetValueDirectly,
   includeBooleanAttr,
   isArray,
@@ -37,6 +38,7 @@ import {
 } from '../component'
 import { isHydrating, logMismatchError } from './hydration'
 import type { Block } from '../block'
+import type { VaporElement } from '../apiDefineVaporCustomElement'
 
 type TargetElement = Element & {
   $root?: true
@@ -98,6 +100,7 @@ export function setDOMProp(
   key: string,
   value: any,
   forceHydrate: boolean = false,
+  attrName?: string,
 ): void {
   if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey(key)) {
     return
@@ -149,7 +152,7 @@ export function setDOMProp(
       )
     }
   }
-  needRemove && el.removeAttribute(key)
+  needRemove && el.removeAttribute(attrName || key)
 }
 
 export function setClass(el: TargetElement, value: any): void {
@@ -457,6 +460,12 @@ export function setDynamicProp(
     } else {
       setDOMProp(el, key, value, forceHydrate)
     }
+  } else if (
+    // custom elements
+    (el as VaporElement)._isVueCE &&
+    (/[A-Z]/.test(key) || !isString(value))
+  ) {
+    setDOMProp(el, camelize(key), value, forceHydrate, key)
   } else {
     setAttr(el, key, value)
   }

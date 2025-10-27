@@ -73,9 +73,11 @@ export function genCreateComponent(
     ...genCall(
       operation.dynamic && !operation.dynamic.isStatic
         ? helper('createDynamicComponent')
-        : operation.asset
+        : operation.isCustomElement
           ? helper('createComponentWithFallback')
-          : helper('createComponent'),
+          : operation.asset
+            ? helper('createComponentWithFallback')
+            : helper('createComponent'),
       tag,
       rawProps,
       rawSlots,
@@ -86,7 +88,9 @@ export function genCreateComponent(
   ]
 
   function genTag() {
-    if (operation.dynamic) {
+    if (operation.isCustomElement) {
+      return JSON.stringify(operation.tag)
+    } else if (operation.dynamic) {
       if (operation.dynamic.isStatic) {
         return genCall(
           helper('resolveDynamicComponent'),
