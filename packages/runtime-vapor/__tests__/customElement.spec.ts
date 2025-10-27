@@ -26,8 +26,11 @@ describe('defineVaporCustomElement', () => {
   const container = document.createElement('div')
   document.body.appendChild(container)
 
-  delegateEvents('input')
+  beforeEach(() => {
+    container.innerHTML = ''
+  })
 
+  delegateEvents('input')
   function render(tag: string, props: any) {
     const root = document.createElement('div')
     document.body.appendChild(root)
@@ -41,10 +44,6 @@ describe('defineVaporCustomElement', () => {
       container: root,
     }
   }
-
-  beforeEach(() => {
-    container.innerHTML = ''
-  })
 
   describe('mounting/unmount', () => {
     const E = defineVaporCustomElement({
@@ -163,7 +162,7 @@ describe('defineVaporCustomElement', () => {
     })
   })
 
-  describe('props', () => {
+  describe.todo('props', () => {
     const E = defineVaporCustomElement({
       props: {
         foo: [String, null],

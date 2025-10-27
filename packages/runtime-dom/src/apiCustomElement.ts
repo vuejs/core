@@ -285,6 +285,10 @@ export abstract class VueElementBase<
     }
   }
 
+  get _isVapor(): boolean {
+    return `__vapor` in this._def
+  }
+
   connectedCallback(): void {
     // avoid resolving component if it's not connected
     if (!this.isConnected) return
@@ -322,8 +326,21 @@ export abstract class VueElementBase<
     }
   }
 
-  get _isVapor(): boolean {
-    return `__vapor` in this._def
+  disconnectedCallback(): void {
+    this._connected = false
+    nextTick(() => {
+      if (!this._connected) {
+        if (this._ob) {
+          this._ob.disconnect()
+          this._ob = null
+        }
+        this._unmount()
+        if (this._teleportTargets) {
+          this._teleportTargets.clear()
+          this._teleportTargets = undefined
+        }
+      }
+    })
   }
 
   protected _setParent(
@@ -346,23 +363,6 @@ export abstract class VueElementBase<
         parent._instance!.provides,
       )
     }
-  }
-
-  disconnectedCallback(): void {
-    this._connected = false
-    nextTick(() => {
-      if (!this._connected) {
-        if (this._ob) {
-          this._ob.disconnect()
-          this._ob = null
-        }
-        this._unmount()
-        if (this._teleportTargets) {
-          this._teleportTargets.clear()
-          this._teleportTargets = undefined
-        }
-      }
-    })
   }
 
   private _processMutations(mutations: MutationRecord[]) {
