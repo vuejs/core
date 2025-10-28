@@ -132,6 +132,14 @@ export class VaporElement extends VueElementBase<
       }
       this._processInstance()
     }
-    createComponent(this._def, this._props)
+
+    createComponent(
+      this._def,
+      this._props,
+      undefined,
+      undefined,
+      undefined,
+      this._app!._context,
+    )
   }
 }
