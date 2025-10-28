@@ -370,7 +370,10 @@ function propsDeleteDevTrap(_: any, key: string | symbol) {
 }
 
 export const rawPropsProxyHandlers: ProxyHandler<RawProps> = {
-  get: getAttrFromRawProps,
+  get(target, key) {
+    if (key === ReactiveFlags.RAW) return target
+    return getAttrFromRawProps(target, key as string)
+  },
   has: hasAttrFromRawProps,
   ownKeys: getKeysFromRawProps,
   getOwnPropertyDescriptor(target, key: string) {
