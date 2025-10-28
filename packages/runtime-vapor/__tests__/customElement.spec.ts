@@ -13,6 +13,7 @@ import {
   child,
   createComponent,
   createComponentWithFallback,
+  createIf,
   createSlot,
   createVaporApp,
   defineVaporAsyncComponent,
@@ -1131,492 +1132,510 @@ describe('defineVaporCustomElement', () => {
     })
   })
 
-  // describe('async', () => {
-  //   test('should work', async () => {
-  //     const loaderSpy = vi.fn()
-  //     const E = defineVaporCustomElement(
-  //       defineVaporAsyncComponent(() => {
-  //         loaderSpy()
-  //         return Promise.resolve({
-  //           props: ['msg'],
-  //           styles: [`div { color: red }`],
-  //           render(this: any) {
-  //             return h('div', null, this.msg)
-  //           },
-  //         })
-  //       }),
-  //     )
-  //     customElements.define('my-el-async', E)
-  //     container.innerHTML =
-  //       `<my-el-async msg="hello"></my-el-async>` +
-  //       `<my-el-async msg="world"></my-el-async>`
+  describe('async', () => {
+    test('should work', async () => {
+      const loaderSpy = vi.fn()
+      const E = defineVaporCustomElement(
+        defineVaporAsyncComponent(() => {
+          loaderSpy()
+          return Promise.resolve({
+            props: ['msg'],
+            styles: [`div { color: red }`],
+            setup(props: any) {
+              const n0 = template('<div> </div>', true)() as any
+              const x0 = txt(n0) as any
+              renderEffect(() => setText(x0, props.msg))
+              return n0
+            },
+          })
+        }),
+      )
+      customElements.define('my-el-async', E)
+      container.innerHTML =
+        `<my-el-async msg="hello"></my-el-async>` +
+        `<my-el-async msg="world"></my-el-async>`
 
-  //     await new Promise(r => setTimeout(r))
+      await new Promise(r => setTimeout(r))
 
-  //     // loader should be called only once
-  //     expect(loaderSpy).toHaveBeenCalledTimes(1)
+      // loader should be called only once
+      expect(loaderSpy).toHaveBeenCalledTimes(1)
 
-  //     const e1 = container.childNodes[0] as VaporElement
-  //     const e2 = container.childNodes[1] as VaporElement
+      const e1 = container.childNodes[0] as VaporElement
+      const e2 = container.childNodes[1] as VaporElement
 
-  //     // should inject styles
-  //     expect(e1.shadowRoot!.innerHTML).toBe(
-  //       `<style>div { color: red }</style><div>hello</div>`,
-  //     )
-  //     expect(e2.shadowRoot!.innerHTML).toBe(
-  //       `<style>div { color: red }</style><div>world</div>`,
-  //     )
+      // should inject styles
+      expect(e1.shadowRoot!.innerHTML).toBe(
+        `<style>div { color: red }</style><div>hello</div>`,
+      )
+      expect(e2.shadowRoot!.innerHTML).toBe(
+        `<style>div { color: red }</style><div>world</div>`,
+      )
 
-  //     // attr
-  //     e1.setAttribute('msg', 'attr')
-  //     await nextTick()
-  //     expect((e1 as any).msg).toBe('attr')
-  //     expect(e1.shadowRoot!.innerHTML).toBe(
-  //       `<style>div { color: red }</style><div>attr</div>`,
-  //     )
+      // attr
+      e1.setAttribute('msg', 'attr')
+      await nextTick()
+      expect((e1 as any).msg).toBe('attr')
+      expect(e1.shadowRoot!.innerHTML).toBe(
+        `<style>div { color: red }</style><div>attr</div>`,
+      )
 
-  //     // props
-  //     expect(`msg` in e1).toBe(true)
-  //     ;(e1 as any).msg = 'prop'
-  //     expect(e1.getAttribute('msg')).toBe('prop')
-  //     expect(e1.shadowRoot!.innerHTML).toBe(
-  //       `<style>div { color: red }</style><div>prop</div>`,
-  //     )
-  //   })
+      // props
+      expect(`msg` in e1).toBe(true)
+      ;(e1 as any).msg = 'prop'
+      expect(e1.getAttribute('msg')).toBe('prop')
+      expect(e1.shadowRoot!.innerHTML).toBe(
+        `<style>div { color: red }</style><div>prop</div>`,
+      )
+    })
 
-  //   test('set DOM property before resolve', async () => {
-  //     const E = defineVaporCustomElement(
-  //       defineVaporAsyncComponent(() => {
-  //         return Promise.resolve({
-  //           props: ['msg'],
-  //           setup(props) {
-  //             expect(typeof props.msg).toBe('string')
-  //           },
-  //           render(this: any) {
-  //             return h('div', this.msg)
-  //           },
-  //         })
-  //       }),
-  //     )
-  //     customElements.define('my-el-async-2', E)
+    test('set DOM property before resolve', async () => {
+      const E = defineVaporCustomElement(
+        defineVaporAsyncComponent(() => {
+          return Promise.resolve({
+            props: ['msg'],
+            setup(props: any) {
+              expect(typeof props.msg).toBe('string')
+              const n0 = template('<div> </div>', true)() as any
+              const x0 = txt(n0) as any
+              renderEffect(() => setText(x0, props.msg))
+              return n0
+            },
+          })
+        }),
+      )
+      customElements.define('my-el-async-2', E)
 
-  //     const e1 = new E()
+      const e1 = new E() as any
 
-  //     // set property before connect
-  //     e1.msg = 'hello'
+      // set property before connect
+      e1.msg = 'hello'
 
-  //     const e2 = new E()
+      const e2 = new E() as any
 
-  //     container.appendChild(e1)
-  //     container.appendChild(e2)
+      container.appendChild(e1)
+      container.appendChild(e2)
 
-  //     // set property after connect but before resolve
-  //     e2.msg = 'world'
+      // set property after connect but before resolve
+      e2.msg = 'world'
 
-  //     await new Promise(r => setTimeout(r))
+      await new Promise(r => setTimeout(r))
 
-  //     expect(e1.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
-  //     expect(e2.shadowRoot!.innerHTML).toBe(`<div>world</div>`)
+      expect(e1.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+      expect(e2.shadowRoot!.innerHTML).toBe(`<div>world</div>`)
 
-  //     e1.msg = 'world'
-  //     expect(e1.shadowRoot!.innerHTML).toBe(`<div>world</div>`)
+      e1.msg = 'world'
+      expect(e1.shadowRoot!.innerHTML).toBe(`<div>world</div>`)
 
-  //     e2.msg = 'hello'
-  //     expect(e2.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
-  //   })
+      e2.msg = 'hello'
+      expect(e2.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+    })
 
-  //   test('Number prop casting before resolve', async () => {
-  //     const E = defineVaporCustomElement(
-  //       defineVaporAsyncComponent(() => {
-  //         return Promise.resolve({
-  //           props: { n: Number },
-  //           setup(props) {
-  //             expect(props.n).toBe(20)
-  //           },
-  //           render(this: any) {
-  //             return h('div', this.n + ',' + typeof this.n)
-  //           },
-  //         })
-  //       }),
-  //     )
-  //     customElements.define('my-el-async-3', E)
-  //     container.innerHTML = `<my-el-async-3 n="2e1"></my-el-async-3>`
+    test('Number prop casting before resolve', async () => {
+      const E = defineVaporCustomElement(
+        defineVaporAsyncComponent(() => {
+          return Promise.resolve({
+            props: { n: Number },
+            setup(props: any) {
+              expect(props.n).toBe(20)
+              const n0 = template('<div> </div>', true)() as any
+              const x0 = txt(n0) as any
+              renderEffect(() => setText(x0, `${props.n},${typeof props.n}`))
+              return n0
+            },
+          })
+        }),
+      )
+      customElements.define('my-el-async-3', E)
+      container.innerHTML = `<my-el-async-3 n="2e1"></my-el-async-3>`
 
-  //     await new Promise(r => setTimeout(r))
+      await new Promise(r => setTimeout(r))
 
-  //     const e = container.childNodes[0] as VaporElement
-  //     expect(e.shadowRoot!.innerHTML).toBe(`<div>20,number</div>`)
-  //   })
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>20,number</div>`)
+    })
 
-  //   test('with slots', async () => {
-  //     const E = defineVaporCustomElement(
-  //       defineVaporAsyncComponent(() => {
-  //         return Promise.resolve({
-  //           render(this: any) {
-  //             return [
-  //               h('div', null, [
-  //                 renderSlot(this.$slots, 'default', undefined, () => [
-  //                   h('div', 'fallback'),
-  //                 ]),
-  //               ]),
-  //               h('div', null, renderSlot(this.$slots, 'named')),
-  //             ]
-  //           },
-  //         })
-  //       }),
-  //     )
-  //     customElements.define('my-el-async-slots', E)
-  //     container.innerHTML = `<my-el-async-slots><span>hi</span></my-el-async-slots>`
+    test('with slots', async () => {
+      const E = defineVaporCustomElement(
+        defineVaporAsyncComponent(() => {
+          return Promise.resolve({
+            setup() {
+              const t0 = template('<div>fallback</div>')
+              const t1 = template('<div></div>')
+              const n3 = t1() as any
+              setInsertionState(n3, null)
+              createSlot('default', null, () => {
+                const n2 = t0()
+                return n2
+              })
+              const n5 = t1() as any
+              setInsertionState(n5, null)
+              createSlot('named', null)
+              return [n3, n5]
+            },
+          })
+        }),
+      )
+      customElements.define('my-el-async-slots', E)
+      container.innerHTML = `<my-el-async-slots><span>hi</span></my-el-async-slots>`
 
-  //     await new Promise(r => setTimeout(r))
+      await new Promise(r => setTimeout(r))
 
-  //     const e = container.childNodes[0] as VaporElement
-  //     expect(e.shadowRoot!.innerHTML).toBe(
-  //       `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
-  //     )
-  //   })
-  // })
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div>` +
+          `<slot><div>fallback</div></slot><!--slot-->` +
+          `</div><div>` +
+          `<slot name="named"></slot><!--slot-->` +
+          `</div>`,
+      )
+    })
+  })
 
-  // describe('shadowRoot: false', () => {
-  //   const E = defineVaporCustomElement({
-  //     shadowRoot: false,
-  //     props: {
-  //       msg: {
-  //         type: String,
-  //         default: 'hello',
-  //       },
-  //     },
-  //     render() {
-  //       return h('div', this.msg)
-  //     },
-  //   })
-  //   customElements.define('my-el-shadowroot-false', E)
+  describe('shadowRoot: false', () => {
+    const E = defineVaporCustomElement({
+      shadowRoot: false,
+      props: {
+        msg: {
+          type: String,
+          default: 'hello',
+        },
+      },
+      setup(props: any) {
+        const n0 = template('<div> </div>')() as any
+        const x0 = txt(n0) as any
+        renderEffect(() => setText(x0, toDisplayString(props.msg)))
+        return n0
+      },
+    })
+    customElements.define('my-el-shadowroot-false', E)
 
-  //   test('should work', async () => {
-  //     function raf() {
-  //       return new Promise(resolve => {
-  //         requestAnimationFrame(resolve)
-  //       })
-  //     }
+    test('should work', async () => {
+      function raf() {
+        return new Promise(resolve => {
+          requestAnimationFrame(resolve)
+        })
+      }
 
-  //     container.innerHTML = `<my-el-shadowroot-false></my-el-shadowroot-false>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     await raf()
-  //     expect(e).toBeInstanceOf(E)
-  //     expect(e._instance).toBeTruthy()
-  //     expect(e.innerHTML).toBe(`<div>hello</div>`)
-  //     expect(e.shadowRoot).toBe(null)
-  //   })
+      container.innerHTML = `<my-el-shadowroot-false></my-el-shadowroot-false>`
+      const e = container.childNodes[0] as VaporElement
+      await raf()
+      expect(e).toBeInstanceOf(E)
+      expect(e._instance).toBeTruthy()
+      expect(e.innerHTML).toBe(`<div>hello</div>`)
+      expect(e.shadowRoot).toBe(null)
+    })
 
-  //   const toggle = ref(true)
-  //   const ES = defineVaporCustomElement(
-  //     {
-  //       render() {
-  //         return [
-  //           renderSlot(this.$slots, 'default'),
-  //           toggle.value ? renderSlot(this.$slots, 'named') : null,
-  //           renderSlot(this.$slots, 'omitted', {}, () => [
-  //             h('div', 'fallback'),
-  //           ]),
-  //         ]
-  //       },
-  //     },
-  //     { shadowRoot: false },
-  //   )
-  //   customElements.define('my-el-shadowroot-false-slots', ES)
+    const toggle = ref(true)
+    const ES = defineVaporCustomElement(
+      {
+        setup() {
+          const n0 = createSlot('default')
+          const n1 = createIf(
+            () => toggle.value,
+            () => createSlot('named'),
+          )
+          const n2 = createSlot('omitted', null, () =>
+            template('<div>fallback</div>')(),
+          )
+          return [n0, n1, n2]
+        },
+      },
+      { shadowRoot: false } as any,
+    )
+    customElements.define('my-el-shadowroot-false-slots', ES)
 
-  //   test('should render slots', async () => {
-  //     container.innerHTML =
-  //       `<my-el-shadowroot-false-slots>` +
-  //       `<span>default</span>text` +
-  //       `<div slot="named">named</div>` +
-  //       `</my-el-shadowroot-false-slots>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     // native slots allocation does not affect innerHTML, so we just
-  //     // verify that we've rendered the correct native slots here...
-  //     expect(e.innerHTML).toBe(
-  //       `<span>default</span>text` +
-  //         `<div slot="named">named</div>` +
-  //         `<div>fallback</div>`,
-  //     )
+    test.todo('should render slots', async () => {
+      container.innerHTML =
+        `<my-el-shadowroot-false-slots>` +
+        `<span>default</span>text` +
+        `<div slot="named">named</div>` +
+        `</my-el-shadowroot-false-slots>`
+      const e = container.childNodes[0] as VaporElement
+      // native slots allocation does not affect innerHTML, so we just
+      // verify that we've rendered the correct native slots here...
+      expect(e.innerHTML).toBe(
+        `<span>default</span>text<!--slot-->` +
+          `<div slot="named">named</div><!--slot--><!--if-->` +
+          `<div>fallback</div><!--slot-->`,
+      )
 
-  //     toggle.value = false
-  //     await nextTick()
-  //     expect(e.innerHTML).toBe(
-  //       `<span>default</span>text` + `<!---->` + `<div>fallback</div>`,
-  //     )
-  //   })
+      toggle.value = false
+      await nextTick()
+      expect(e.innerHTML).toBe(
+        `<span>default</span>text` + `<!--if-->` + `<div>fallback</div>`,
+      )
+    })
 
-  //   test('render nested customElement w/ shadowRoot false', async () => {
-  //     const calls: string[] = []
+    // test('render nested customElement w/ shadowRoot false', async () => {
+    //   const calls: string[] = []
 
-  //     const Child = defineVaporCustomElement(
-  //       {
-  //         setup() {
-  //           calls.push('child rendering')
-  //           onMounted(() => {
-  //             calls.push('child mounted')
-  //           })
-  //         },
-  //         render() {
-  //           return renderSlot(this.$slots, 'default')
-  //         },
-  //       },
-  //       { shadowRoot: false },
-  //     )
-  //     customElements.define('my-child', Child)
+    //   const Child = defineVaporCustomElement(
+    //     {
+    //       setup() {
+    //         calls.push('child rendering')
+    //         onMounted(() => {
+    //           calls.push('child mounted')
+    //         })
+    //       },
+    //       render() {
+    //         return renderSlot(this.$slots, 'default')
+    //       },
+    //     },
+    //     { shadowRoot: false },
+    //   )
+    //   customElements.define('my-child', Child)
 
-  //     const Parent = defineVaporCustomElement(
-  //       {
-  //         setup() {
-  //           calls.push('parent rendering')
-  //           onMounted(() => {
-  //             calls.push('parent mounted')
-  //           })
-  //         },
-  //         render() {
-  //           return renderSlot(this.$slots, 'default')
-  //         },
-  //       },
-  //       { shadowRoot: false },
-  //     )
-  //     customElements.define('my-parent', Parent)
+    //   const Parent = defineVaporCustomElement(
+    //     {
+    //       setup() {
+    //         calls.push('parent rendering')
+    //         onMounted(() => {
+    //           calls.push('parent mounted')
+    //         })
+    //       },
+    //       render() {
+    //         return renderSlot(this.$slots, 'default')
+    //       },
+    //     },
+    //     { shadowRoot: false },
+    //   )
+    //   customElements.define('my-parent', Parent)
 
-  //     const App = {
-  //       render() {
-  //         return h('my-parent', null, {
-  //           default: () => [
-  //             h('my-child', null, {
-  //               default: () => [h('span', null, 'default')],
-  //             }),
-  //           ],
-  //         })
-  //       },
-  //     }
-  //     const app = createVaporApp(App)
-  //     app.mount(container)
-  //     await nextTick()
-  //     const e = container.childNodes[0] as VaporElement
-  //     expect(e.innerHTML).toBe(
-  //       `<my-child data-v-app=""><span>default</span></my-child>`,
-  //     )
-  //     expect(calls).toEqual([
-  //       'parent rendering',
-  //       'parent mounted',
-  //       'child rendering',
-  //       'child mounted',
-  //     ])
-  //     app.unmount()
-  //   })
+    //   const App = {
+    //     render() {
+    //       return h('my-parent', null, {
+    //         default: () => [
+    //           h('my-child', null, {
+    //             default: () => [h('span', null, 'default')],
+    //           }),
+    //         ],
+    //       })
+    //     },
+    //   }
+    //   const app = createVaporApp(App)
+    //   app.mount(container)
+    //   await nextTick()
+    //   const e = container.childNodes[0] as VaporElement
+    //   expect(e.innerHTML).toBe(
+    //     `<my-child data-v-app=""><span>default</span></my-child>`,
+    //   )
+    //   expect(calls).toEqual([
+    //     'parent rendering',
+    //     'parent mounted',
+    //     'child rendering',
+    //     'child mounted',
+    //   ])
+    //   app.unmount()
+    // })
 
-  //   test('render nested Teleport w/ shadowRoot false', async () => {
-  //     const target = document.createElement('div')
-  //     const Child = defineVaporCustomElement(
-  //       {
-  //         render() {
-  //           return h(
-  //             Teleport,
-  //             { to: target },
-  //             {
-  //               default: () => [renderSlot(this.$slots, 'default')],
-  //             },
-  //           )
-  //         },
-  //       },
-  //       { shadowRoot: false },
-  //     )
-  //     customElements.define('my-el-teleport-child', Child)
-  //     const Parent = defineVaporCustomElement(
-  //       {
-  //         render() {
-  //           return renderSlot(this.$slots, 'default')
-  //         },
-  //       },
-  //       { shadowRoot: false },
-  //     )
-  //     customElements.define('my-el-teleport-parent', Parent)
+    // test('render nested Teleport w/ shadowRoot false', async () => {
+    //   const target = document.createElement('div')
+    //   const Child = defineVaporCustomElement(
+    //     {
+    //       render() {
+    //         return h(
+    //           Teleport,
+    //           { to: target },
+    //           {
+    //             default: () => [renderSlot(this.$slots, 'default')],
+    //           },
+    //         )
+    //       },
+    //     },
+    //     { shadowRoot: false },
+    //   )
+    //   customElements.define('my-el-teleport-child', Child)
+    //   const Parent = defineVaporCustomElement(
+    //     {
+    //       render() {
+    //         return renderSlot(this.$slots, 'default')
+    //       },
+    //     },
+    //     { shadowRoot: false },
+    //   )
+    //   customElements.define('my-el-teleport-parent', Parent)
 
-  //     const App = {
-  //       render() {
-  //         return h('my-el-teleport-parent', null, {
-  //           default: () => [
-  //             h('my-el-teleport-child', null, {
-  //               default: () => [h('span', null, 'default')],
-  //             }),
-  //           ],
-  //         })
-  //       },
-  //     }
-  //     const app = createVaporApp(App)
-  //     app.mount(container)
-  //     await nextTick()
-  //     expect(target.innerHTML).toBe(`<span>default</span>`)
-  //     app.unmount()
-  //   })
+    //   const App = {
+    //     render() {
+    //       return h('my-el-teleport-parent', null, {
+    //         default: () => [
+    //           h('my-el-teleport-child', null, {
+    //             default: () => [h('span', null, 'default')],
+    //           }),
+    //         ],
+    //       })
+    //     },
+    //   }
+    //   const app = createVaporApp(App)
+    //   app.mount(container)
+    //   await nextTick()
+    //   expect(target.innerHTML).toBe(`<span>default</span>`)
+    //   app.unmount()
+    // })
 
-  //   test('render two Teleports w/ shadowRoot false', async () => {
-  //     const target1 = document.createElement('div')
-  //     const target2 = document.createElement('span')
-  //     const Child = defineVaporCustomElement(
-  //       {
-  //         render() {
-  //           return [
-  //             h(Teleport, { to: target1 }, [renderSlot(this.$slots, 'header')]),
-  //             h(Teleport, { to: target2 }, [renderSlot(this.$slots, 'body')]),
-  //           ]
-  //         },
-  //       },
-  //       { shadowRoot: false },
-  //     )
-  //     customElements.define('my-el-two-teleport-child', Child)
+    // test('render two Teleports w/ shadowRoot false', async () => {
+    //   const target1 = document.createElement('div')
+    //   const target2 = document.createElement('span')
+    //   const Child = defineVaporCustomElement(
+    //     {
+    //       render() {
+    //         return [
+    //           h(Teleport, { to: target1 }, [renderSlot(this.$slots, 'header')]),
+    //           h(Teleport, { to: target2 }, [renderSlot(this.$slots, 'body')]),
+    //         ]
+    //       },
+    //     },
+    //     { shadowRoot: false },
+    //   )
+    //   customElements.define('my-el-two-teleport-child', Child)
 
-  //     const App = {
-  //       render() {
-  //         return h('my-el-two-teleport-child', null, {
-  //           default: () => [
-  //             h('div', { slot: 'header' }, 'header'),
-  //             h('span', { slot: 'body' }, 'body'),
-  //           ],
-  //         })
-  //       },
-  //     }
-  //     const app = createVaporApp(App)
-  //     app.mount(container)
-  //     await nextTick()
-  //     expect(target1.outerHTML).toBe(
-  //       `<div><div slot="header">header</div></div>`,
-  //     )
-  //     expect(target2.outerHTML).toBe(
-  //       `<span><span slot="body">body</span></span>`,
-  //     )
-  //     app.unmount()
-  //   })
+    //   const App = {
+    //     render() {
+    //       return h('my-el-two-teleport-child', null, {
+    //         default: () => [
+    //           h('div', { slot: 'header' }, 'header'),
+    //           h('span', { slot: 'body' }, 'body'),
+    //         ],
+    //       })
+    //     },
+    //   }
+    //   const app = createVaporApp(App)
+    //   app.mount(container)
+    //   await nextTick()
+    //   expect(target1.outerHTML).toBe(
+    //     `<div><div slot="header">header</div></div>`,
+    //   )
+    //   expect(target2.outerHTML).toBe(
+    //     `<span><span slot="body">body</span></span>`,
+    //   )
+    //   app.unmount()
+    // })
 
-  //   test('render two Teleports w/ shadowRoot false (with disabled)', async () => {
-  //     const target1 = document.createElement('div')
-  //     const target2 = document.createElement('span')
-  //     const Child = defineVaporCustomElement(
-  //       {
-  //         render() {
-  //           return [
-  //             // with disabled: true
-  //             h(Teleport, { to: target1, disabled: true }, [
-  //               renderSlot(this.$slots, 'header'),
-  //             ]),
-  //             h(Teleport, { to: target2 }, [renderSlot(this.$slots, 'body')]),
-  //           ]
-  //         },
-  //       },
-  //       { shadowRoot: false },
-  //     )
-  //     customElements.define('my-el-two-teleport-child-0', Child)
+    // test('render two Teleports w/ shadowRoot false (with disabled)', async () => {
+    //   const target1 = document.createElement('div')
+    //   const target2 = document.createElement('span')
+    //   const Child = defineVaporCustomElement(
+    //     {
+    //       render() {
+    //         return [
+    //           // with disabled: true
+    //           h(Teleport, { to: target1, disabled: true }, [
+    //             renderSlot(this.$slots, 'header'),
+    //           ]),
+    //           h(Teleport, { to: target2 }, [renderSlot(this.$slots, 'body')]),
+    //         ]
+    //       },
+    //     },
+    //     { shadowRoot: false },
+    //   )
+    //   customElements.define('my-el-two-teleport-child-0', Child)
 
-  //     const App = {
-  //       render() {
-  //         return h('my-el-two-teleport-child-0', null, {
-  //           default: () => [
-  //             h('div', { slot: 'header' }, 'header'),
-  //             h('span', { slot: 'body' }, 'body'),
-  //           ],
-  //         })
-  //       },
-  //     }
-  //     const app = createVaporApp(App)
-  //     app.mount(container)
-  //     await nextTick()
-  //     expect(target1.outerHTML).toBe(`<div></div>`)
-  //     expect(target2.outerHTML).toBe(
-  //       `<span><span slot="body">body</span></span>`,
-  //     )
-  //     app.unmount()
-  //   })
+    //   const App = {
+    //     render() {
+    //       return h('my-el-two-teleport-child-0', null, {
+    //         default: () => [
+    //           h('div', { slot: 'header' }, 'header'),
+    //           h('span', { slot: 'body' }, 'body'),
+    //         ],
+    //       })
+    //     },
+    //   }
+    //   const app = createVaporApp(App)
+    //   app.mount(container)
+    //   await nextTick()
+    //   expect(target1.outerHTML).toBe(`<div></div>`)
+    //   expect(target2.outerHTML).toBe(
+    //     `<span><span slot="body">body</span></span>`,
+    //   )
+    //   app.unmount()
+    // })
 
-  //   test('toggle nested custom element with shadowRoot: false', async () => {
-  //     customElements.define(
-  //       'my-el-child-shadow-false',
-  //       defineVaporCustomElement(
-  //         {
-  //           render(ctx: any) {
-  //             return h('div', null, [renderSlot(ctx.$slots, 'default')])
-  //           },
-  //         },
-  //         { shadowRoot: false },
-  //       ),
-  //     )
-  //     const ChildWrapper = {
-  //       render() {
-  //         return h('my-el-child-shadow-false', null, 'child')
-  //       },
-  //     }
+    // test('toggle nested custom element with shadowRoot: false', async () => {
+    //   customElements.define(
+    //     'my-el-child-shadow-false',
+    //     defineVaporCustomElement(
+    //       {
+    //         render(ctx: any) {
+    //           return h('div', null, [renderSlot(ctx.$slots, 'default')])
+    //         },
+    //       },
+    //       { shadowRoot: false },
+    //     ),
+    //   )
+    //   const ChildWrapper = {
+    //     render() {
+    //       return h('my-el-child-shadow-false', null, 'child')
+    //     },
+    //   }
 
-  //     customElements.define(
-  //       'my-el-parent-shadow-false',
-  //       defineVaporCustomElement(
-  //         {
-  //           props: {
-  //             isShown: { type: Boolean, required: true },
-  //           },
-  //           render(ctx: any, _: any, $props: any) {
-  //             return $props.isShown
-  //               ? h('div', { key: 0 }, [renderSlot(ctx.$slots, 'default')])
-  //               : null
-  //           },
-  //         },
-  //         { shadowRoot: false },
-  //       ),
-  //     )
-  //     const ParentWrapper = {
-  //       props: {
-  //         isShown: { type: Boolean, required: true },
-  //       },
-  //       render(ctx: any, _: any, $props: any) {
-  //         return h('my-el-parent-shadow-false', { isShown: $props.isShown }, [
-  //           renderSlot(ctx.$slots, 'default'),
-  //         ])
-  //       },
-  //     }
+    //   customElements.define(
+    //     'my-el-parent-shadow-false',
+    //     defineVaporCustomElement(
+    //       {
+    //         props: {
+    //           isShown: { type: Boolean, required: true },
+    //         },
+    //         render(ctx: any, _: any, $props: any) {
+    //           return $props.isShown
+    //             ? h('div', { key: 0 }, [renderSlot(ctx.$slots, 'default')])
+    //             : null
+    //         },
+    //       },
+    //       { shadowRoot: false },
+    //     ),
+    //   )
+    //   const ParentWrapper = {
+    //     props: {
+    //       isShown: { type: Boolean, required: true },
+    //     },
+    //     render(ctx: any, _: any, $props: any) {
+    //       return h('my-el-parent-shadow-false', { isShown: $props.isShown }, [
+    //         renderSlot(ctx.$slots, 'default'),
+    //       ])
+    //     },
+    //   }
 
-  //     const isShown = ref(true)
-  //     const App = {
-  //       render() {
-  //         return h(ParentWrapper, { isShown: isShown.value } as any, {
-  //           default: () => [h(ChildWrapper)],
-  //         })
-  //       },
-  //     }
-  //     const container = document.createElement('div')
-  //     document.body.appendChild(container)
-  //     const app = createVaporApp(App)
-  //     app.mount(container)
-  //     expect(container.innerHTML).toBe(
-  //       `<my-el-parent-shadow-false is-shown="" data-v-app="">` +
-  //         `<div>` +
-  //         `<my-el-child-shadow-false data-v-app="">` +
-  //         `<div>child</div>` +
-  //         `</my-el-child-shadow-false>` +
-  //         `</div>` +
-  //         `</my-el-parent-shadow-false>`,
-  //     )
+    //   const isShown = ref(true)
+    //   const App = {
+    //     render() {
+    //       return h(ParentWrapper, { isShown: isShown.value } as any, {
+    //         default: () => [h(ChildWrapper)],
+    //       })
+    //     },
+    //   }
+    //   const container = document.createElement('div')
+    //   document.body.appendChild(container)
+    //   const app = createVaporApp(App)
+    //   app.mount(container)
+    //   expect(container.innerHTML).toBe(
+    //     `<my-el-parent-shadow-false is-shown="" data-v-app="">` +
+    //       `<div>` +
+    //       `<my-el-child-shadow-false data-v-app="">` +
+    //       `<div>child</div>` +
+    //       `</my-el-child-shadow-false>` +
+    //       `</div>` +
+    //       `</my-el-parent-shadow-false>`,
+    //   )
 
-  //     isShown.value = false
-  //     await nextTick()
-  //     expect(container.innerHTML).toBe(
-  //       `<my-el-parent-shadow-false data-v-app=""><!----></my-el-parent-shadow-false>`,
-  //     )
+    //   isShown.value = false
+    //   await nextTick()
+    //   expect(container.innerHTML).toBe(
+    //     `<my-el-parent-shadow-false data-v-app=""><!----></my-el-parent-shadow-false>`,
+    //   )
 
-  //     isShown.value = true
-  //     await nextTick()
-  //     expect(container.innerHTML).toBe(
-  //       `<my-el-parent-shadow-false data-v-app="" is-shown="">` +
-  //         `<div>` +
-  //         `<my-el-child-shadow-false data-v-app="">` +
-  //         `<div>child</div>` +
-  //         `</my-el-child-shadow-false>` +
-  //         `</div>` +
-  //         `</my-el-parent-shadow-false>`,
-  //     )
-  //   })
-  // })
+    //   isShown.value = true
+    //   await nextTick()
+    //   expect(container.innerHTML).toBe(
+    //     `<my-el-parent-shadow-false data-v-app="" is-shown="">` +
+    //       `<div>` +
+    //       `<my-el-child-shadow-false data-v-app="">` +
+    //       `<div>child</div>` +
+    //       `</my-el-child-shadow-false>` +
+    //       `</div>` +
+    //       `</my-el-parent-shadow-false>`,
+    //   )
+    // })
+  })
 
   // describe('helpers', () => {
   //   test('useHost', () => {
