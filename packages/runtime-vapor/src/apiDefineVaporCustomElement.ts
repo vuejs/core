@@ -1,5 +1,10 @@
 import { extend, isPlainObject } from '@vue/shared'
-import { createComponent, createVaporApp, defineVaporComponent } from '.'
+import {
+  createComponent,
+  createVaporApp,
+  defineVaporComponent,
+  isFragment,
+} from '.'
 import {
   type CreateAppFunction,
   type CustomElementOptions,
@@ -11,6 +16,7 @@ import type {
   VaporComponent,
   VaporComponentInstance,
 } from './component'
+import type { Block } from './block'
 
 export type VaporElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VaporElement & P
@@ -122,6 +128,49 @@ export class VaporElement extends VueElementBase<
       this._instance.ce = undefined
     }
     this._app = this._instance = null
+  }
+
+  /**
+   * Only called when shadowRoot is false
+   */
+  protected _updateSlotNodes(replacements: Map<Node, Node[]>): void {
+    this._updateFragmentNodes(
+      (this._instance! as VaporComponentInstance).block,
+      replacements,
+    )
+  }
+
+  /**
+   * Replace slot nodes with their replace content
+   * @internal
+   */
+  private _updateFragmentNodes(
+    block: Block,
+    replacements: Map<Node, Node[]>,
+  ): void {
+    if (Array.isArray(block)) {
+      block.forEach(item => this._updateFragmentNodes(item, replacements))
+      return
+    }
+
+    if (!isFragment(block)) return
+    const { nodes } = block
+    if (Array.isArray(nodes)) {
+      const newNodes: Block[] = []
+      for (const node of nodes) {
+        if (node instanceof HTMLSlotElement) {
+          newNodes.push(...replacements.get(node)!)
+        } else {
+          this._updateFragmentNodes(node, replacements)
+          newNodes.push(node)
+        }
+      }
+      block.nodes = newNodes
+    } else if (nodes instanceof HTMLSlotElement) {
+      block.nodes = replacements.get(nodes)!
+    } else {
+      this._updateFragmentNodes(nodes, replacements)
+    }
   }
 
   private _createComponent() {

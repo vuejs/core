@@ -255,6 +255,7 @@ export abstract class VueElementBase<
   protected abstract _mount(def: Def): void
   protected abstract _update(): void
   protected abstract _unmount(): void
+  protected abstract _updateSlotNodes(slot: Map<Node, Node[]>): void
 
   constructor(
     /**
@@ -663,58 +664,11 @@ export abstract class VueElementBase<
           replacementNodes.push(child)
         }
       }
-
+      parent.removeChild(o)
       slotReplacements.set(o, replacementNodes)
     }
 
-    // For Vapor: update fragment nodes before removing slots from DOM
-    if (slotReplacements.size > 0 && this._instance && this._instance.vapor) {
-      // @ts-expect-error TODO refactor
-      this._replaceNodesInFragments(this._instance.block, slotReplacements)
-    }
-
-    // Now safe to remove slots from DOM
-    slotReplacements.forEach((_, o) => o.parentNode!.removeChild(o))
-  }
-
-  /**
-   * Replace slot nodes with their content in fragment nodes arrays
-   * @internal
-   */
-  private _replaceNodesInFragments(
-    block: any,
-    replacements: Map<Node, Node[]>,
-  ): void {
-    if (!block) return
-
-    if (Array.isArray(block)) {
-      for (let i = 0; i < block.length; i++) {
-        this._replaceNodesInFragments(block[i], replacements)
-      }
-    } else if (block.nodes !== undefined) {
-      // This is a fragment with nodes property
-      if (Array.isArray(block.nodes)) {
-        // Replace slot nodes with their content
-        const newNodes: any[] = []
-        for (const node of block.nodes) {
-          if (node instanceof Node && replacements.has(node)) {
-            // Replace with the content nodes
-            newNodes.push(...replacements.get(node)!)
-          } else {
-            newNodes.push(node)
-            // Recursively process nested fragments
-            this._replaceNodesInFragments(node, replacements)
-          }
-        }
-        block.nodes = newNodes
-      } else if (block.nodes instanceof Node && replacements.has(block.nodes)) {
-        // Replace single node with its content
-        const replacement = replacements.get(block.nodes)!
-        block.nodes = replacement.length === 1 ? replacement[0] : replacement
-      } else {
-        this._replaceNodesInFragments(block.nodes, replacements)
-      }
-    }
+    this._updateSlotNodes(slotReplacements)
   }
 
   /**
@@ -812,6 +766,13 @@ export class VueElement extends VueElementBase<
       this._instance.ce = undefined
     }
     this._app = this._instance = null
+  }
+
+  /**
+   * Only called when shadowRoot is false
+   */
+  protected _updateSlotNodes(replacements: Map<Node, Node[]>): void {
+    // do nothing
   }
 
   private _createVNode(): VNode<any, any> {
