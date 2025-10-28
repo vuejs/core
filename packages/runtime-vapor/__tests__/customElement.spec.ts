@@ -7,11 +7,13 @@ import {
   toDisplayString,
 } from '@vue/runtime-dom'
 import {
+  child,
   createComponentWithFallback,
   createVaporApp,
   defineVaporComponent,
   defineVaporCustomElement,
   delegateEvents,
+  next,
   renderEffect,
   setInsertionState,
   setText,
@@ -467,132 +469,152 @@ describe('defineVaporCustomElement', () => {
       expect(e.value).toBe('hi')
     })
 
-    // // #12214
-    // test('Boolean prop with default true', async () => {
-    //   const E = defineVaporCustomElement({
-    //     props: {
-    //       foo: {
-    //         type: Boolean,
-    //         default: true,
-    //       },
-    //     },
-    //     render() {
-    //       return String(this.foo)
-    //     },
-    //   })
-    //   customElements.define('my-el-default-true', E)
-    //   container.innerHTML = `<my-el-default-true></my-el-default-true>`
-    //   const e = container.childNodes[0] as HTMLElement & { foo: any },
-    //     shadowRoot = e.shadowRoot as ShadowRoot
-    //   expect(shadowRoot.innerHTML).toBe('true')
-    //   e.foo = undefined
-    //   await nextTick()
-    //   expect(shadowRoot.innerHTML).toBe('true')
-    //   e.foo = false
-    //   await nextTick()
-    //   expect(shadowRoot.innerHTML).toBe('false')
-    //   e.foo = null
-    //   await nextTick()
-    //   expect(shadowRoot.innerHTML).toBe('null')
-    //   e.foo = ''
-    //   await nextTick()
-    //   expect(shadowRoot.innerHTML).toBe('true')
-    // })
+    test('Boolean prop with default true', async () => {
+      const E = defineVaporCustomElement({
+        props: {
+          foo: {
+            type: Boolean,
+            default: true,
+          },
+        },
+        setup(props: any) {
+          const n0 = template(' ')() as any
+          renderEffect(() => setText(n0, String(props.foo)))
+          return n0
+        },
+      })
+      customElements.define('my-el-default-true', E)
+      container.innerHTML = `<my-el-default-true></my-el-default-true>`
+      const e = container.childNodes[0] as HTMLElement & { foo: any },
+        shadowRoot = e.shadowRoot as ShadowRoot
+      expect(shadowRoot.innerHTML).toBe('true')
+      e.foo = undefined
+      await nextTick()
+      expect(shadowRoot.innerHTML).toBe('true')
+      e.foo = false
+      await nextTick()
+      expect(shadowRoot.innerHTML).toBe('false')
+      e.foo = null
+      await nextTick()
+      expect(shadowRoot.innerHTML).toBe('null')
+      e.foo = ''
+      await nextTick()
+      expect(shadowRoot.innerHTML).toBe('true')
+    })
 
-    // test('support direct setup function syntax with extra options', () => {
-    //   const E = defineVaporCustomElement(
-    //     props => {
-    //       return () => props.text
-    //     },
-    //     {
-    //       props: {
-    //         text: String,
-    //       },
-    //     },
-    //   )
-    //   customElements.define('my-el-setup-with-props', E)
-    //   container.innerHTML = `<my-el-setup-with-props text="hello"></my-el-setup-with-props>`
-    //   const e = container.childNodes[0] as VaporElement
-    //   expect(e.shadowRoot!.innerHTML).toBe('hello')
-    // })
+    test('support direct setup function syntax with extra options', () => {
+      const E = defineVaporCustomElement(
+        (props: any) => {
+          const n0 = template(' ')() as any
+          renderEffect(() => setText(n0, props.text))
+          return n0
+        },
+        {
+          props: {
+            text: String,
+          },
+        },
+      )
+      customElements.define('my-el-setup-with-props', E)
+      container.innerHTML = `<my-el-setup-with-props text="hello"></my-el-setup-with-props>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe('hello')
+    })
 
-    // test('prop types validation', async () => {
-    //   const E = defineVaporCustomElement({
-    //     props: {
-    //       num: {
-    //         type: [Number, String],
-    //       },
-    //       bool: {
-    //         type: Boolean,
-    //       },
-    //     },
-    //     render() {
-    //       return h('div', [
-    //         h('span', [`${this.num} is ${typeof this.num}`]),
-    //         h('span', [`${this.bool} is ${typeof this.bool}`]),
-    //       ])
-    //     },
-    //   })
+    test('prop types validation', async () => {
+      const E = defineVaporCustomElement({
+        props: {
+          num: {
+            type: [Number, String],
+          },
+          bool: {
+            type: Boolean,
+          },
+        },
+        setup(props: any) {
+          const n0 = template(
+            '<div><span> </span><span> </span></div>',
+            true,
+          )() as any
+          const n1 = child(n0) as any
+          const n2 = next(n1) as any
+          const x0 = txt(n1) as any
+          const x1 = txt(n2) as any
+          renderEffect(() => setText(x0, `${props.num} is ${typeof props.num}`))
+          renderEffect(() =>
+            setText(x1, `${props.bool} is ${typeof props.bool}`),
+          )
+          return n0
+        },
+      })
 
-    //   customElements.define('my-el-with-type-props', E)
-    //   render(h('my-el-with-type-props', { num: 1, bool: true }), container)
-    //   const e = container.childNodes[0] as VaporElement
-    //   // @ts-expect-error
-    //   expect(e.num).toBe(1)
-    //   // @ts-expect-error
-    //   expect(e.bool).toBe(true)
-    //   expect(e.shadowRoot!.innerHTML).toBe(
-    //     '<div><span>1 is number</span><span>true is boolean</span></div>',
-    //   )
-    // })
+      customElements.define('my-el-with-type-props', E)
+      const { container } = render('my-el-with-type-props', {
+        num: () => 1,
+        bool: () => true,
+      })
+      const e = container.childNodes[0] as VaporElement
+      // @ts-expect-error
+      expect(e.num).toBe(1)
+      // @ts-expect-error
+      expect(e.bool).toBe(true)
+      expect(e.shadowRoot!.innerHTML).toBe(
+        '<div><span>1 is number</span><span>true is boolean</span></div>',
+      )
+    })
   })
 
-  // describe('attrs', () => {
-  //   const E = defineVaporCustomElement({
-  //     render() {
-  //       return [h('div', null, this.$attrs.foo as string)]
-  //     },
-  //   })
-  //   customElements.define('my-el-attrs', E)
+  describe('attrs', () => {
+    const E = defineVaporCustomElement({
+      setup(_: any, { attrs }: any) {
+        const n0 = template('<div> </div>')() as any
+        const x0 = txt(n0) as any
+        renderEffect(() => setText(x0, toDisplayString(attrs.foo)))
+        return [n0]
+      },
+    })
+    customElements.define('my-el-attrs', E)
 
-  //   test('attrs via attribute', async () => {
-  //     container.innerHTML = `<my-el-attrs foo="hello"></my-el-attrs>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
+    test('attrs via attribute', async () => {
+      container.innerHTML = `<my-el-attrs foo="hello"></my-el-attrs>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
 
-  //     e.setAttribute('foo', 'changed')
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div>changed</div>')
-  //   })
+      e.setAttribute('foo', 'changed')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>changed</div>')
+    })
 
-  //   test('non-declared properties should not show up in $attrs', () => {
-  //     const e = new E()
-  //     // @ts-expect-error
-  //     e.foo = '123'
-  //     container.appendChild(e)
-  //     expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
-  //   })
+    test('non-declared properties should not show up in $attrs', () => {
+      const e = new E()
+      // @ts-expect-error
+      e.foo = '123'
+      container.appendChild(e)
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
+    })
 
-  //   // https://github.com/vuejs/core/issues/12964
-  //   // Disabled because of missing support for `delegatesFocus` in jsdom
-  //   // https://github.com/jsdom/jsdom/issues/3418
-  //   // eslint-disable-next-line vitest/no-disabled-tests
-  //   test.skip('shadowRoot should be initialized with delegatesFocus', () => {
-  //     const E = defineVaporCustomElement(
-  //       {
-  //         render() {
-  //           return [h('input', { tabindex: 1 })]
-  //         },
-  //       },
-  //       { shadowRootOptions: { delegatesFocus: true } },
-  //     )
-  //     customElements.define('my-el-with-delegate-focus', E)
+    // https://github.com/vuejs/core/issues/12964
+    // Disabled because of missing support for `delegatesFocus` in jsdom
+    // https://github.com/jsdom/jsdom/issues/3418
+    // test.skip('shadowRoot should be initialized with delegatesFocus', () => {
+    //   const E = defineVaporCustomElement(
+    //     {
+    //       // render() {
+    //       //   return [h('input', { tabindex: 1 })]
+    //       // },
+    //       setup() {
+    //         return template('<input tabindex="1">', true)()
+    //       },
+    //     },
+    //     { shadowRootOptions: { delegatesFocus: true } },
+    //   )
+    //   customElements.define('my-el-with-delegate-focus', E)
 
-  //     const e = new E()
-  //     container.appendChild(e)
-  //     expect(e.shadowRoot!.delegatesFocus).toBe(true)
-  //   })
-  // })
+    //   const e = new E()
+    //   container.appendChild(e)
+    //   expect(e.shadowRoot!.delegatesFocus).toBe(true)
+    // })
+  })
 
   // describe('emits', () => {
   //   const CompDef = defineVaporComponent({

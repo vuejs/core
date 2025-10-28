@@ -217,10 +217,11 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
     }
   }
   if (hasOwn(rawProps, key)) {
+    const value = resolveSource(rawProps[key])
     if (merged) {
-      merged.push(rawProps[key]())
+      merged.push(value)
     } else {
-      return rawProps[key]()
+      return value
     }
   }
   if (merged && merged.length) {
@@ -318,7 +319,7 @@ export function setupPropsValidation(instance: VaporComponentInstance): void {
   renderEffect(() => {
     pushWarningContext(instance)
     validateProps(
-      resolveDynamicProps(rawProps, !!instance.type.ce),
+      resolveDynamicProps(rawProps),
       instance.props,
       normalizePropsOptions(instance.type)[0]!,
     )
@@ -326,14 +327,11 @@ export function setupPropsValidation(instance: VaporComponentInstance): void {
   }, true /* noLifecycle */)
 }
 
-export function resolveDynamicProps(
-  props: RawProps,
-  isResolved: boolean = false,
-): Record<string, unknown> {
+export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
   const mergedRawProps: Record<string, any> = {}
   for (const key in props) {
     if (key !== '$') {
-      mergedRawProps[key] = isResolved ? props[key] : props[key]()
+      mergedRawProps[key] = resolveSource(props[key])
     }
   }
   if (props.$) {
