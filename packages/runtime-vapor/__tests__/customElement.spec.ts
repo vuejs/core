@@ -2,7 +2,10 @@
 import type { VaporElement } from '../src/apiDefineVaporCustomElement'
 import {
   type HMRRuntime,
+  type Ref,
+  inject,
   nextTick,
+  provide,
   ref,
   toDisplayString,
 } from '@vue/runtime-dom'
@@ -808,200 +811,208 @@ describe('defineVaporCustomElement', () => {
     })
   })
 
-  // describe('provide/inject', () => {
-  //   const Consumer = defineVaporCustomElement({
-  //     setup() {
-  //       const foo = inject<Ref>('foo')!
-  //       return () => h('div', foo.value)
-  //     },
-  //   })
-  //   customElements.define('my-consumer', Consumer)
+  describe.todo('provide/inject', () => {
+    const Consumer = defineVaporCustomElement({
+      setup() {
+        const foo = inject<Ref>('foo')!
+        // return () => h('div', foo.value)
+        const n0 = template('<div> </div>', true)() as any
+        const x0 = txt(n0) as any
+        renderEffect(() => setText(x0, toDisplayString(foo.value)))
+        return n0
+      },
+    })
+    customElements.define('my-consumer', Consumer)
 
-  //   test('over nested usage', async () => {
-  //     const foo = ref('injected!')
-  //     const Provider = defineVaporCustomElement({
-  //       provide: {
-  //         foo,
-  //       },
-  //       render() {
-  //         return h('my-consumer')
-  //       },
-  //     })
-  //     customElements.define('my-provider', Provider)
-  //     container.innerHTML = `<my-provider><my-provider>`
-  //     const provider = container.childNodes[0] as VaporElement
-  //     const consumer = provider.shadowRoot!.childNodes[0] as VaporElement
+    test('over nested usage', async () => {
+      const foo = ref('injected!')
+      const Provider = defineVaporCustomElement({
+        // provide: {
+        //   foo,
+        // },
+        // render() {
+        //   return h('my-consumer')
+        // },
+        setup() {
+          provide('foo', foo)
+          return createComponentWithFallback('my-consumer')
+        },
+      })
+      customElements.define('my-provider', Provider)
+      container.innerHTML = `<my-provider><my-provider>`
+      const provider = container.childNodes[0] as VaporElement
+      const consumer = provider.shadowRoot!.childNodes[0] as VaporElement
 
-  //     expect(consumer.shadowRoot!.innerHTML).toBe(`<div>injected!</div>`)
+      expect(consumer.shadowRoot!.innerHTML).toBe(`<div>injected!</div>`)
 
-  //     foo.value = 'changed!'
-  //     await nextTick()
-  //     expect(consumer.shadowRoot!.innerHTML).toBe(`<div>changed!</div>`)
-  //   })
+      foo.value = 'changed!'
+      await nextTick()
+      expect(consumer.shadowRoot!.innerHTML).toBe(`<div>changed!</div>`)
+    })
 
-  //   test('over slot composition', async () => {
-  //     const foo = ref('injected!')
-  //     const Provider = defineVaporCustomElement({
-  //       provide: {
-  //         foo,
-  //       },
-  //       render() {
-  //         return renderSlot(this.$slots, 'default')
-  //       },
-  //     })
-  //     customElements.define('my-provider-2', Provider)
+    // test('over slot composition', async () => {
+    //   const foo = ref('injected!')
+    //   const Provider = defineVaporCustomElement({
+    //     provide: {
+    //       foo,
+    //     },
+    //     render() {
+    //       return renderSlot(this.$slots, 'default')
+    //     },
+    //   })
+    //   customElements.define('my-provider-2', Provider)
 
-  //     container.innerHTML = `<my-provider-2><my-consumer></my-consumer><my-provider-2>`
-  //     const provider = container.childNodes[0]
-  //     const consumer = provider.childNodes[0] as VaporElement
-  //     expect(consumer.shadowRoot!.innerHTML).toBe(`<div>injected!</div>`)
+    //   container.innerHTML = `<my-provider-2><my-consumer></my-consumer><my-provider-2>`
+    //   const provider = container.childNodes[0]
+    //   const consumer = provider.childNodes[0] as VaporElement
+    //   expect(consumer.shadowRoot!.innerHTML).toBe(`<div>injected!</div>`)
 
-  //     foo.value = 'changed!'
-  //     await nextTick()
-  //     expect(consumer.shadowRoot!.innerHTML).toBe(`<div>changed!</div>`)
-  //   })
+    //   foo.value = 'changed!'
+    //   await nextTick()
+    //   expect(consumer.shadowRoot!.innerHTML).toBe(`<div>changed!</div>`)
+    // })
 
-  //   test('inherited from ancestors', async () => {
-  //     const fooA = ref('FooA!')
-  //     const fooB = ref('FooB!')
-  //     const ProviderA = defineVaporCustomElement({
-  //       provide: {
-  //         fooA,
-  //       },
-  //       render() {
-  //         return h('provider-b')
-  //       },
-  //     })
-  //     const ProviderB = defineVaporCustomElement({
-  //       provide: {
-  //         fooB,
-  //       },
-  //       render() {
-  //         return h('my-multi-consumer')
-  //       },
-  //     })
+    // test('inherited from ancestors', async () => {
+    //   const fooA = ref('FooA!')
+    //   const fooB = ref('FooB!')
+    //   const ProviderA = defineVaporCustomElement({
+    //     provide: {
+    //       fooA,
+    //     },
+    //     render() {
+    //       return h('provider-b')
+    //     },
+    //   })
+    //   const ProviderB = defineVaporCustomElement({
+    //     provide: {
+    //       fooB,
+    //     },
+    //     render() {
+    //       return h('my-multi-consumer')
+    //     },
+    //   })
 
-  //     const Consumer = defineVaporCustomElement({
-  //       setup() {
-  //         const fooA = inject<Ref>('fooA')!
-  //         const fooB = inject<Ref>('fooB')!
-  //         return () => h('div', `${fooA.value} ${fooB.value}`)
-  //       },
-  //     })
+    //   const Consumer = defineVaporCustomElement({
+    //     setup() {
+    //       const fooA = inject<Ref>('fooA')!
+    //       const fooB = inject<Ref>('fooB')!
+    //       return () => h('div', `${fooA.value} ${fooB.value}`)
+    //     },
+    //   })
 
-  //     customElements.define('provider-a', ProviderA)
-  //     customElements.define('provider-b', ProviderB)
-  //     customElements.define('my-multi-consumer', Consumer)
-  //     container.innerHTML = `<provider-a><provider-a>`
-  //     const providerA = container.childNodes[0] as VaporElement
-  //     const providerB = providerA.shadowRoot!.childNodes[0] as VaporElement
-  //     const consumer = providerB.shadowRoot!.childNodes[0] as VaporElement
+    //   customElements.define('provider-a', ProviderA)
+    //   customElements.define('provider-b', ProviderB)
+    //   customElements.define('my-multi-consumer', Consumer)
+    //   container.innerHTML = `<provider-a><provider-a>`
+    //   const providerA = container.childNodes[0] as VaporElement
+    //   const providerB = providerA.shadowRoot!.childNodes[0] as VaporElement
+    //   const consumer = providerB.shadowRoot!.childNodes[0] as VaporElement
 
-  //     expect(consumer.shadowRoot!.innerHTML).toBe(`<div>FooA! FooB!</div>`)
+    //   expect(consumer.shadowRoot!.innerHTML).toBe(`<div>FooA! FooB!</div>`)
 
-  //     fooA.value = 'changedA!'
-  //     fooB.value = 'changedB!'
-  //     await nextTick()
-  //     expect(consumer.shadowRoot!.innerHTML).toBe(
-  //       `<div>changedA! changedB!</div>`,
-  //     )
-  //   })
+    //   fooA.value = 'changedA!'
+    //   fooB.value = 'changedB!'
+    //   await nextTick()
+    //   expect(consumer.shadowRoot!.innerHTML).toBe(
+    //     `<div>changedA! changedB!</div>`,
+    //   )
+    // })
 
-  //   // #13212
-  //   test('inherited from app context within nested elements', async () => {
-  //     const outerValues: (string | undefined)[] = []
-  //     const innerValues: (string | undefined)[] = []
-  //     const innerChildValues: (string | undefined)[] = []
+    // // #13212
+    // test('inherited from app context within nested elements', async () => {
+    //   const outerValues: (string | undefined)[] = []
+    //   const innerValues: (string | undefined)[] = []
+    //   const innerChildValues: (string | undefined)[] = []
 
-  //     const Outer = defineVaporCustomElement(
-  //       {
-  //         setup() {
-  //           outerValues.push(
-  //             inject<string>('shared'),
-  //             inject<string>('outer'),
-  //             inject<string>('inner'),
-  //           )
-  //         },
-  //         render() {
-  //           return h('div', [renderSlot(this.$slots, 'default')])
-  //         },
-  //       },
-  //       {
-  //         configureApp(app) {
-  //           app.provide('shared', 'shared')
-  //           app.provide('outer', 'outer')
-  //         },
-  //       },
-  //     )
+    //   const Outer = defineVaporCustomElement(
+    //     {
+    //       setup() {
+    //         outerValues.push(
+    //           inject<string>('shared'),
+    //           inject<string>('outer'),
+    //           inject<string>('inner'),
+    //         )
+    //       },
+    //       render() {
+    //         return h('div', [renderSlot(this.$slots, 'default')])
+    //       },
+    //     },
+    //     {
+    //       configureApp(app) {
+    //         app.provide('shared', 'shared')
+    //         app.provide('outer', 'outer')
+    //       },
+    //     },
+    //   )
 
-  //     const Inner = defineVaporCustomElement(
-  //       {
-  //         setup() {
-  //           // ensure values are not self-injected
-  //           provide('inner', 'inner-child')
+    //   const Inner = defineVaporCustomElement(
+    //     {
+    //       setup() {
+    //         // ensure values are not self-injected
+    //         provide('inner', 'inner-child')
 
-  //           innerValues.push(
-  //             inject<string>('shared'),
-  //             inject<string>('outer'),
-  //             inject<string>('inner'),
-  //           )
-  //         },
-  //         render() {
-  //           return h('div', [renderSlot(this.$slots, 'default')])
-  //         },
-  //       },
-  //       {
-  //         configureApp(app) {
-  //           app.provide('outer', 'override-outer')
-  //           app.provide('inner', 'inner')
-  //         },
-  //       },
-  //     )
+    //         innerValues.push(
+    //           inject<string>('shared'),
+    //           inject<string>('outer'),
+    //           inject<string>('inner'),
+    //         )
+    //       },
+    //       render() {
+    //         return h('div', [renderSlot(this.$slots, 'default')])
+    //       },
+    //     },
+    //     {
+    //       configureApp(app) {
+    //         app.provide('outer', 'override-outer')
+    //         app.provide('inner', 'inner')
+    //       },
+    //     },
+    //   )
 
-  //     const InnerChild = defineVaporCustomElement({
-  //       setup() {
-  //         innerChildValues.push(
-  //           inject<string>('shared'),
-  //           inject<string>('outer'),
-  //           inject<string>('inner'),
-  //         )
-  //       },
-  //       render() {
-  //         return h('div')
-  //       },
-  //     })
+    //   const InnerChild = defineVaporCustomElement({
+    //     setup() {
+    //       innerChildValues.push(
+    //         inject<string>('shared'),
+    //         inject<string>('outer'),
+    //         inject<string>('inner'),
+    //       )
+    //     },
+    //     render() {
+    //       return h('div')
+    //     },
+    //   })
 
-  //     customElements.define('provide-from-app-outer', Outer)
-  //     customElements.define('provide-from-app-inner', Inner)
-  //     customElements.define('provide-from-app-inner-child', InnerChild)
+    //   customElements.define('provide-from-app-outer', Outer)
+    //   customElements.define('provide-from-app-inner', Inner)
+    //   customElements.define('provide-from-app-inner-child', InnerChild)
 
-  //     container.innerHTML =
-  //       '<provide-from-app-outer>' +
-  //       '<provide-from-app-inner>' +
-  //       '<provide-from-app-inner-child></provide-from-app-inner-child>' +
-  //       '</provide-from-app-inner>' +
-  //       '</provide-from-app-outer>'
+    //   container.innerHTML =
+    //     '<provide-from-app-outer>' +
+    //     '<provide-from-app-inner>' +
+    //     '<provide-from-app-inner-child></provide-from-app-inner-child>' +
+    //     '</provide-from-app-inner>' +
+    //     '</provide-from-app-outer>'
 
-  //     const outer = container.childNodes[0] as VaporElement
-  //     expect(outer.shadowRoot!.innerHTML).toBe('<div><slot></slot></div>')
+    //   const outer = container.childNodes[0] as VaporElement
+    //   expect(outer.shadowRoot!.innerHTML).toBe('<div><slot></slot></div>')
 
-  //     expect('[Vue warn]: injection "inner" not found.').toHaveBeenWarnedTimes(
-  //       1,
-  //     )
-  //     expect(
-  //       '[Vue warn]: App already provides property with key "outer" inherited from its parent element. ' +
-  //         'It will be overwritten with the new value.',
-  //     ).toHaveBeenWarnedTimes(1)
+    //   expect('[Vue warn]: injection "inner" not found.').toHaveBeenWarnedTimes(
+    //     1,
+    //   )
+    //   expect(
+    //     '[Vue warn]: App already provides property with key "outer" inherited from its parent element. ' +
+    //       'It will be overwritten with the new value.',
+    //   ).toHaveBeenWarnedTimes(1)
 
-  //     expect(outerValues).toEqual(['shared', 'outer', undefined])
-  //     expect(innerValues).toEqual(['shared', 'override-outer', 'inner'])
-  //     expect(innerChildValues).toEqual([
-  //       'shared',
-  //       'override-outer',
-  //       'inner-child',
-  //     ])
-  //   })
-  // })
+    //   expect(outerValues).toEqual(['shared', 'outer', undefined])
+    //   expect(innerValues).toEqual(['shared', 'override-outer', 'inner'])
+    //   expect(innerChildValues).toEqual([
+    //     'shared',
+    //     'override-outer',
+    //     'inner-child',
+    //   ])
+    // })
+  })
 
   // describe('styles', () => {
   //   function assertStyles(el: VaporElement, css: string[]) {

@@ -488,6 +488,8 @@ export abstract class VueElementBase<
         dispatch(hyphenate(event), args)
       }
     }
+
+    this._setParent()
   }
 
   private _resolveProps(def: Def): void {
@@ -762,7 +764,6 @@ export class VueElement extends VueElementBase<
       vnode.ce = instance => {
         this._instance = instance
         this._processInstance()
-        this._setParent()
       }
     }
     return vnode

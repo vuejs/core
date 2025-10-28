@@ -87,7 +87,7 @@ export class VaporElement extends VueElementBase<
       this._def.configureApp(this._app)
     }
 
-    this._app._ceComponent = this._createComponent()
+    this._createComponent()
     this._app!.mount(this._root)
   }
 
@@ -118,21 +118,20 @@ export class VaporElement extends VueElementBase<
     } else {
       this._app!.unmount()
     }
+    if (this._instance && this._instance.ce) {
+      this._instance.ce = undefined
+    }
     this._app = this._instance = null
   }
 
   private _createComponent() {
     this._def.ce = instance => {
-      this._instance = instance
+      this._app!._ceComponent = this._instance = instance
       if (!this.shadowRoot) {
-        ;(instance.m || (instance.m = [])).push(this._renderSlots.bind(this))
-        ;(instance.u || (instance.u = [])).push(this._renderSlots.bind(this))
+        this._instance!.m = this._instance!.u = [this._renderSlots.bind(this)]
       }
       this._processInstance()
-      this._setParent()
     }
-
-    this._instance = createComponent(this._def, this._props)
-    return this._instance
+    createComponent(this._def, this._props)
   }
 }
