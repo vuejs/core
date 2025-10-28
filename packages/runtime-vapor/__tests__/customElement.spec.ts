@@ -9,11 +9,14 @@ import {
 import {
   child,
   createComponentWithFallback,
+  createSlot,
   createVaporApp,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   defineVaporCustomElement,
   delegateEvents,
   next,
+  on,
   renderEffect,
   setInsertionState,
   setText,
@@ -32,7 +35,7 @@ describe('defineVaporCustomElement', () => {
     container.innerHTML = ''
   })
 
-  delegateEvents('input')
+  delegateEvents('input', 'click', 'mousedown')
   function render(tag: string, props: any) {
     const root = document.createElement('div')
     document.body.appendChild(root)
@@ -616,169 +619,194 @@ describe('defineVaporCustomElement', () => {
     // })
   })
 
-  // describe('emits', () => {
-  //   const CompDef = defineVaporComponent({
-  //     setup(_, { emit }) {
-  //       emit('created')
-  //       return () =>
-  //         h('div', {
-  //           onClick: () => {
-  //             emit('my-click', 1)
-  //           },
-  //           onMousedown: () => {
-  //             emit('myEvent', 1) // validate hyphenation
-  //           },
-  //           onWheel: () => {
-  //             emit('my-wheel', { bubbles: true }, 1)
-  //           },
-  //         })
-  //     },
-  //   })
-  //   const E = defineVaporCustomElement(CompDef)
-  //   customElements.define('my-el-emits', E)
+  describe('emits', () => {
+    const CompDef = defineVaporComponent({
+      setup(_, { emit }) {
+        emit('created')
+        const n0 = template('<div></div>', true)() as any
+        n0.$evtclick = () => {
+          emit('my-click', 1)
+        }
+        n0.$evtmousedown = () => {
+          emit('myEvent', 1) // validate hyphenation
+        }
+        on(n0, 'wheel', () => {
+          emit('my-wheel', { bubbles: true }, 1)
+        })
+        return n0
+      },
+    })
+    const E = defineVaporCustomElement(CompDef)
+    customElements.define('my-el-emits', E)
 
-  //   test('emit on connect', () => {
-  //     const e = new E()
-  //     const spy = vi.fn()
-  //     e.addEventListener('created', spy)
-  //     container.appendChild(e)
-  //     expect(spy).toHaveBeenCalled()
-  //   })
+    test('emit on connect', () => {
+      const e = new E()
+      const spy = vi.fn()
+      e.addEventListener('created', spy)
+      container.appendChild(e)
+      expect(spy).toHaveBeenCalled()
+    })
 
-  //   test('emit on interaction', () => {
-  //     container.innerHTML = `<my-el-emits></my-el-emits>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     const spy = vi.fn()
-  //     e.addEventListener('my-click', spy)
-  //     e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
-  //     expect(spy).toHaveBeenCalledTimes(1)
-  //     expect(spy.mock.calls[0][0]).toMatchObject({
-  //       detail: [1],
-  //     })
-  //   })
+    test('emit on interaction', () => {
+      container.innerHTML = `<my-el-emits></my-el-emits>`
+      const e = container.childNodes[0] as VaporElement
+      const spy = vi.fn()
+      e.addEventListener('my-click', spy)
+      // Use click() method which triggers a real click event
+      // with bubbles: true and composed: true
+      ;(e.shadowRoot!.childNodes[0] as HTMLElement).click()
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(spy.mock.calls[0][0]).toMatchObject({
+        detail: [1],
+      })
+    })
 
-  //   // #5373
-  //   test('case transform for camelCase event', () => {
-  //     container.innerHTML = `<my-el-emits></my-el-emits>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     const spy1 = vi.fn()
-  //     e.addEventListener('myEvent', spy1)
-  //     const spy2 = vi.fn()
-  //     // emitting myEvent, but listening for my-event. This happens when
-  //     // using the custom element in a Vue template
-  //     e.addEventListener('my-event', spy2)
-  //     e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('mousedown'))
-  //     expect(spy1).toHaveBeenCalledTimes(1)
-  //     expect(spy2).toHaveBeenCalledTimes(1)
-  //   })
+    test('case transform for camelCase event', () => {
+      container.innerHTML = `<my-el-emits></my-el-emits>`
+      const e = container.childNodes[0] as VaporElement
+      const spy1 = vi.fn()
+      e.addEventListener('myEvent', spy1)
+      const spy2 = vi.fn()
+      // emitting myEvent, but listening for my-event. This happens when
+      // using the custom element in a Vue template
+      e.addEventListener('my-event', spy2)
+      e.shadowRoot!.childNodes[0].dispatchEvent(
+        new CustomEvent('mousedown', {
+          bubbles: true,
+          composed: true,
+        }),
+      )
+      expect(spy1).toHaveBeenCalledTimes(1)
+      expect(spy2).toHaveBeenCalledTimes(1)
+    })
 
-  //   test('emit from within async component wrapper', async () => {
-  //     const p = new Promise<typeof CompDef>(res => res(CompDef as any))
-  //     const E = defineVaporCustomElement(defineAsyncComponent(() => p))
-  //     customElements.define('my-async-el-emits', E)
-  //     container.innerHTML = `<my-async-el-emits></my-async-el-emits>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     const spy = vi.fn()
-  //     e.addEventListener('my-click', spy)
-  //     // this feels brittle but seems necessary to reach the node in the DOM.
-  //     await customElements.whenDefined('my-async-el-emits')
-  //     await nextTick()
-  //     await nextTick()
-  //     e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
-  //     expect(spy).toHaveBeenCalled()
-  //     expect(spy.mock.calls[0][0]).toMatchObject({
-  //       detail: [1],
-  //     })
-  //   })
+    test('emit from within async component wrapper', async () => {
+      const p = new Promise<typeof CompDef>(res => res(CompDef as any))
+      const E = defineVaporCustomElement(defineVaporAsyncComponent(() => p))
+      customElements.define('my-async-el-emits', E)
+      container.innerHTML = `<my-async-el-emits></my-async-el-emits>`
+      const e = container.childNodes[0] as VaporElement
+      const spy = vi.fn()
+      e.addEventListener('my-click', spy)
+      // this feels brittle but seems necessary to reach the node in the DOM.
+      await customElements.whenDefined('my-async-el-emits')
+      await nextTick()
+      await nextTick()
+      e.shadowRoot!.childNodes[0].dispatchEvent(
+        new CustomEvent('click', {
+          bubbles: true,
+          composed: true,
+        }),
+      )
+      expect(spy).toHaveBeenCalled()
+      expect(spy.mock.calls[0][0]).toMatchObject({
+        detail: [1],
+      })
+    })
 
-  //   // #7293
-  //   test('emit in an async component wrapper with properties bound', async () => {
-  //     const E = defineVaporCustomElement(
-  //       defineAsyncComponent(
-  //         () => new Promise<typeof CompDef>(res => res(CompDef as any)),
-  //       ),
-  //     )
-  //     customElements.define('my-async-el-props-emits', E)
-  //     container.innerHTML = `<my-async-el-props-emits id="my_async_el_props_emits"></my-async-el-props-emits>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     const spy = vi.fn()
-  //     e.addEventListener('my-click', spy)
-  //     await customElements.whenDefined('my-async-el-props-emits')
-  //     await nextTick()
-  //     await nextTick()
-  //     e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
-  //     expect(spy).toHaveBeenCalled()
-  //     expect(spy.mock.calls[0][0]).toMatchObject({
-  //       detail: [1],
-  //     })
-  //   })
+    test('emit in an async component wrapper with properties bound', async () => {
+      const E = defineVaporCustomElement(
+        defineVaporAsyncComponent(
+          () => new Promise<typeof CompDef>(res => res(CompDef as any)),
+        ),
+      )
+      customElements.define('my-async-el-props-emits', E)
+      container.innerHTML = `<my-async-el-props-emits id="my_async_el_props_emits"></my-async-el-props-emits>`
+      const e = container.childNodes[0] as VaporElement
+      const spy = vi.fn()
+      e.addEventListener('my-click', spy)
+      await customElements.whenDefined('my-async-el-props-emits')
+      await nextTick()
+      await nextTick()
+      e.shadowRoot!.childNodes[0].dispatchEvent(
+        new CustomEvent('click', {
+          bubbles: true,
+          composed: true,
+        }),
+      )
+      expect(spy).toHaveBeenCalled()
+      expect(spy.mock.calls[0][0]).toMatchObject({
+        detail: [1],
+      })
+    })
 
-  //   test('emit with options', async () => {
-  //     container.innerHTML = `<my-el-emits></my-el-emits>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     const spy = vi.fn()
-  //     e.addEventListener('my-wheel', spy)
-  //     e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('wheel'))
-  //     expect(spy).toHaveBeenCalledTimes(1)
-  //     expect(spy.mock.calls[0][0]).toMatchObject({
-  //       bubbles: true,
-  //       detail: [{ bubbles: true }, 1],
-  //     })
-  //   })
-  // })
+    test('emit with options', async () => {
+      container.innerHTML = `<my-el-emits></my-el-emits>`
+      const e = container.childNodes[0] as VaporElement
+      const spy = vi.fn()
+      e.addEventListener('my-wheel', spy)
+      e.shadowRoot!.childNodes[0].dispatchEvent(
+        new CustomEvent('wheel', {
+          bubbles: true,
+          composed: true,
+        }),
+      )
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(spy.mock.calls[0][0]).toMatchObject({
+        bubbles: true,
+        detail: [{ bubbles: true }, 1],
+      })
+    })
+  })
 
-  // describe('slots', () => {
-  //   const E = defineVaporCustomElement({
-  //     render() {
-  //       return [
-  //         h('div', null, [
-  //           renderSlot(this.$slots, 'default', undefined, () => [
-  //             h('div', 'fallback'),
-  //           ]),
-  //         ]),
-  //         h('div', null, renderSlot(this.$slots, 'named')),
-  //       ]
-  //     },
-  //   })
-  //   customElements.define('my-el-slots', E)
+  describe('slots', () => {
+    const E = defineVaporCustomElement({
+      setup() {
+        const t0 = template('<div>fallback</div>')
+        const t1 = template('<div></div>')
+        const n3 = t1() as any
+        setInsertionState(n3, null, true)
+        createSlot('default', null, () => {
+          const n2 = t0()
+          return n2
+        })
+        const n5 = t1() as any
+        setInsertionState(n5, null, true)
+        createSlot('named', null)
+        return [n3, n5]
+      },
+    })
+    customElements.define('my-el-slots', E)
 
-  //   test('render slots correctly', () => {
-  //     container.innerHTML = `<my-el-slots><span>hi</span></my-el-slots>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     // native slots allocation does not affect innerHTML, so we just
-  //     // verify that we've rendered the correct native slots here...
-  //     expect(e.shadowRoot!.innerHTML).toBe(
-  //       `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
-  //     )
-  //   })
+    test('render slots correctly', () => {
+      container.innerHTML = `<my-el-slots><span>hi</span></my-el-slots>`
+      const e = container.childNodes[0] as VaporElement
+      // native slots allocation does not affect innerHTML, so we just
+      // verify that we've rendered the correct native slots here...
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div>` +
+          `<slot><div>fallback</div></slot><!--slot-->` +
+          `</div>` +
+          `<div>` +
+          `<slot name="named"></slot><!--slot-->` +
+          `</div>`,
+      )
+    })
 
-  //   test('render slot props', async () => {
-  //     const foo = ref('foo')
-  //     const E = defineVaporCustomElement({
-  //       render() {
-  //         return [
-  //           h(
-  //             'div',
-  //             null,
-  //             renderSlot(this.$slots, 'default', { class: foo.value }),
-  //           ),
-  //         ]
-  //       },
-  //     })
-  //     customElements.define('my-el-slot-props', E)
-  //     container.innerHTML = `<my-el-slot-props><span>hi</span></my-el-slot-props>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     expect(e.shadowRoot!.innerHTML).toBe(
-  //       `<div><slot class="foo"></slot></div>`,
-  //     )
+    test('render slot props', async () => {
+      const foo = ref('foo')
+      const E = defineVaporCustomElement({
+        setup() {
+          const n0 = template('<div></div>')() as any
+          setInsertionState(n0, null)
+          createSlot('default', { class: () => foo.value })
+          return [n0]
+        },
+      })
+      customElements.define('my-el-slot-props', E)
+      container.innerHTML = `<my-el-slot-props><span>hi</span></my-el-slot-props>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot class="foo"></slot><!--slot--></div>`,
+      )
 
-  //     foo.value = 'bar'
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe(
-  //       `<div><slot class="bar"></slot></div>`,
-  //     )
-  //   })
-  // })
+      foo.value = 'bar'
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot class="bar"></slot><!--slot--></div>`,
+      )
+    })
+  })
 
   // describe('provide/inject', () => {
   //   const Consumer = defineVaporCustomElement({
@@ -1102,7 +1130,7 @@ describe('defineVaporCustomElement', () => {
   //   test('should work', async () => {
   //     const loaderSpy = vi.fn()
   //     const E = defineVaporCustomElement(
-  //       defineAsyncComponent(() => {
+  //       defineVaporAsyncComponent(() => {
   //         loaderSpy()
   //         return Promise.resolve({
   //           props: ['msg'],
@@ -1153,7 +1181,7 @@ describe('defineVaporCustomElement', () => {
 
   //   test('set DOM property before resolve', async () => {
   //     const E = defineVaporCustomElement(
-  //       defineAsyncComponent(() => {
+  //       defineVaporAsyncComponent(() => {
   //         return Promise.resolve({
   //           props: ['msg'],
   //           setup(props) {
@@ -1194,7 +1222,7 @@ describe('defineVaporCustomElement', () => {
 
   //   test('Number prop casting before resolve', async () => {
   //     const E = defineVaporCustomElement(
-  //       defineAsyncComponent(() => {
+  //       defineVaporAsyncComponent(() => {
   //         return Promise.resolve({
   //           props: { n: Number },
   //           setup(props) {
@@ -1217,7 +1245,7 @@ describe('defineVaporCustomElement', () => {
 
   //   test('with slots', async () => {
   //     const E = defineVaporCustomElement(
-  //       defineAsyncComponent(() => {
+  //       defineVaporAsyncComponent(() => {
   //         return Promise.resolve({
   //           render(this: any) {
   //             return [
@@ -1709,7 +1737,7 @@ describe('defineVaporCustomElement', () => {
   // test('async & nested custom elements', async () => {
   //   let fooVal: string | undefined = ''
   //   const E = defineVaporCustomElement(
-  //     defineAsyncComponent(() => {
+  //     defineVaporAsyncComponent(() => {
   //       return Promise.resolve({
   //         setup(props) {
   //           provide('foo', 'foo')
@@ -1743,7 +1771,7 @@ describe('defineVaporCustomElement', () => {
   //   let fooVal: string | undefined = ''
   //   let barVal: string | undefined = ''
   //   const E = defineVaporCustomElement(
-  //     defineAsyncComponent(() => {
+  //     defineVaporAsyncComponent(() => {
   //       return Promise.resolve({
   //         setup(props) {
   //           provide('foo', 'foo')
@@ -1813,7 +1841,7 @@ describe('defineVaporCustomElement', () => {
 
   //   // #12448
   //   test('work with async component', async () => {
-  //     const AsyncComp = defineAsyncComponent(() => {
+  //     const AsyncComp = defineVaporAsyncComponent(() => {
   //       return Promise.resolve({
   //         render() {
   //           const msg: string | undefined = inject('msg')
@@ -1904,7 +1932,7 @@ describe('defineVaporCustomElement', () => {
   // // #11081
   // test('Props can be casted when mounting custom elements in component rendering functions', async () => {
   //   const E = defineVaporCustomElement(
-  //     defineAsyncComponent(() =>
+  //     defineVaporAsyncComponent(() =>
   //       Promise.resolve({
   //         props: ['fooValue'],
   //         setup(props) {

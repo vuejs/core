@@ -1,7 +1,13 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
 import { type Block, type BlockFn, insert, setScopeId } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
-import { currentInstance, isRef, setCurrentInstance } from '@vue/runtime-dom'
+import {
+  type GenericComponentInstance,
+  currentInstance,
+  isAsyncWrapper,
+  isRef,
+  setCurrentInstance,
+} from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 import {
@@ -16,6 +22,8 @@ import {
   locateHydrationNode,
 } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
+import { createElement } from './dom/node'
+import { setDynamicProps } from './dom/prop'
 
 /**
  * Current slot scopeIds for vdom interop
@@ -184,7 +192,30 @@ export function createSlot(
     }
 
     const renderSlot = () => {
-      const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
+      const slotName = isFunction(name) ? name() : name
+
+      // in custom element mode, render <slot/> as actual slot outlets
+      // because in shadowRoot: false mode the slot element gets
+      // replaced by injected content
+      if (
+        (instance as GenericComponentInstance).ce ||
+        (instance.parent &&
+          isAsyncWrapper(instance.parent) &&
+          instance.parent.ce)
+      ) {
+        const el = createElement('slot')
+        renderEffect(() => {
+          setDynamicProps(el, [
+            slotProps,
+            slotName !== 'default' ? { name: slotName } : {},
+          ])
+        })
+        if (fallback) insert(fallback(), el)
+        fragment.nodes = el
+        return
+      }
+
+      const slot = getSlot(rawSlots, slotName)
       if (slot) {
         fragment.fallback = fallback
         // Create and cache bound version of the slot to make it stable
