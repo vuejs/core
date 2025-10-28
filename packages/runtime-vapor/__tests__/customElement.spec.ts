@@ -1344,7 +1344,7 @@ describe('defineVaporCustomElement', () => {
     )
     customElements.define('my-el-shadowroot-false-slots', ES)
 
-    test.todo('should render slots', async () => {
+    test('should render slots', async () => {
       container.innerHTML =
         `<my-el-shadowroot-false-slots>` +
         `<span>default</span>text` +
@@ -1362,7 +1362,9 @@ describe('defineVaporCustomElement', () => {
       toggle.value = false
       await nextTick()
       expect(e.innerHTML).toBe(
-        `<span>default</span>text` + `<!--if-->` + `<div>fallback</div>`,
+        `<span>default</span>text<!--slot-->` +
+          `<!--if-->` +
+          `<div>fallback</div><!--slot-->`,
       )
     })
 
