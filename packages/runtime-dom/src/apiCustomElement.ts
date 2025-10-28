@@ -466,7 +466,9 @@ export abstract class VueElementBase<
           this._styles.length = 0
         }
         this._applyStyles(newStyles)
-        this._instance = null
+        if (!this._instance!.vapor) {
+          this._instance = null
+        }
         this._update()
       }
     }

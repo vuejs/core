@@ -94,6 +94,7 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { DynamicFragment } from './fragment'
+import type { VaporElement } from './apiDefineVaporCustomElement'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -704,6 +705,17 @@ export function mountComponent(
   if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
     ;(instance.parent as KeepAliveInstance).activate(instance, parent, anchor)
     return
+  }
+
+  // custom element style injection
+  const { root, type } = instance as GenericComponentInstance
+  if (
+    root &&
+    root.ce &&
+    // @ts-expect-error _def is private
+    (root.ce as VaporElement)._def.shadowRoot !== false
+  ) {
+    root.ce!._injectChildStyle(type)
   }
 
   if (__DEV__) {

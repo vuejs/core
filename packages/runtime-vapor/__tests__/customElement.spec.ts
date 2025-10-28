@@ -11,6 +11,7 @@ import {
 } from '@vue/runtime-dom'
 import {
   child,
+  createComponent,
   createComponentWithFallback,
   createSlot,
   createVaporApp,
@@ -1007,128 +1008,128 @@ describe('defineVaporCustomElement', () => {
     })
   })
 
-  // describe('styles', () => {
-  //   function assertStyles(el: VaporElement, css: string[]) {
-  //     const styles = el.shadowRoot?.querySelectorAll('style')!
-  //     expect(styles.length).toBe(css.length) // should not duplicate multiple copies from Bar
-  //     for (let i = 0; i < css.length; i++) {
-  //       expect(styles[i].textContent).toBe(css[i])
-  //     }
-  //   }
+  describe('styles', () => {
+    function assertStyles(el: VaporElement, css: string[]) {
+      const styles = el.shadowRoot?.querySelectorAll('style')!
+      expect(styles.length).toBe(css.length) // should not duplicate multiple copies from Bar
+      for (let i = 0; i < css.length; i++) {
+        expect(styles[i].textContent).toBe(css[i])
+      }
+    }
 
-  //   test('should attach styles to shadow dom', async () => {
-  //     const def = defineVaporComponent({
-  //       __hmrId: 'foo',
-  //       styles: [`div { color: red; }`],
-  //       render() {
-  //         return h('div', 'hello')
-  //       },
-  //     })
-  //     const Foo = defineVaporCustomElement(def)
-  //     customElements.define('my-el-with-styles', Foo)
-  //     container.innerHTML = `<my-el-with-styles></my-el-with-styles>`
-  //     const el = container.childNodes[0] as VaporElement
-  //     const style = el.shadowRoot?.querySelector('style')!
-  //     expect(style.textContent).toBe(`div { color: red; }`)
+    test('should attach styles to shadow dom', async () => {
+      const def = defineVaporComponent({
+        __hmrId: 'foo',
+        styles: [`div { color: red; }`],
+        setup() {
+          return template('<div>hello</div>', true)()
+        },
+      } as any)
+      const Foo = defineVaporCustomElement(def)
+      customElements.define('my-el-with-styles', Foo)
+      container.innerHTML = `<my-el-with-styles></my-el-with-styles>`
+      const el = container.childNodes[0] as VaporElement
+      const style = el.shadowRoot?.querySelector('style')!
+      expect(style.textContent).toBe(`div { color: red; }`)
 
-  //     // hmr
-  //     __VUE_HMR_RUNTIME__.reload('foo', {
-  //       ...def,
-  //       styles: [`div { color: blue; }`, `div { color: yellow; }`],
-  //     } as any)
+      // hmr
+      __VUE_HMR_RUNTIME__.reload('foo', {
+        ...def,
+        styles: [`div { color: blue; }`, `div { color: yellow; }`],
+      } as any)
 
-  //     await nextTick()
-  //     assertStyles(el, [`div { color: blue; }`, `div { color: yellow; }`])
-  //   })
+      await nextTick()
+      assertStyles(el, [`div { color: blue; }`, `div { color: yellow; }`])
+    })
 
-  //   test("child components should inject styles to root element's shadow root", async () => {
-  //     const Baz = () => h(Bar)
-  //     const Bar = defineVaporComponent({
-  //       __hmrId: 'bar',
-  //       styles: [`div { color: green; }`, `div { color: blue; }`],
-  //       render() {
-  //         return 'bar'
-  //       },
-  //     })
-  //     const Foo = defineVaporCustomElement({
-  //       styles: [`div { color: red; }`],
-  //       render() {
-  //         return [h(Baz), h(Baz)]
-  //       },
-  //     })
-  //     customElements.define('my-el-with-child-styles', Foo)
-  //     container.innerHTML = `<my-el-with-child-styles></my-el-with-child-styles>`
-  //     const el = container.childNodes[0] as VaporElement
+    test("child components should inject styles to root element's shadow root", async () => {
+      const Baz = () => createComponent(Bar)
+      const Bar = defineVaporComponent({
+        __hmrId: 'bar',
+        styles: [`div { color: green; }`, `div { color: blue; }`],
+        setup() {
+          return template('bar')()
+        },
+      } as any)
+      const Foo = defineVaporCustomElement({
+        styles: [`div { color: red; }`],
+        setup() {
+          return [createComponent(Baz), createComponent(Baz)]
+        },
+      })
+      customElements.define('my-el-with-child-styles', Foo)
+      container.innerHTML = `<my-el-with-child-styles></my-el-with-child-styles>`
+      const el = container.childNodes[0] as VaporElement
 
-  //     // inject order should be child -> parent
-  //     assertStyles(el, [
-  //       `div { color: green; }`,
-  //       `div { color: blue; }`,
-  //       `div { color: red; }`,
-  //     ])
+      // inject order should be child -> parent
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: red; }`,
+      ])
 
-  //     // hmr
-  //     __VUE_HMR_RUNTIME__.reload(Bar.__hmrId!, {
-  //       ...Bar,
-  //       styles: [`div { color: red; }`, `div { color: yellow; }`],
-  //     } as any)
+      // hmr
+      __VUE_HMR_RUNTIME__.reload(Bar.__hmrId!, {
+        ...Bar,
+        styles: [`div { color: red; }`, `div { color: yellow; }`],
+      } as any)
 
-  //     await nextTick()
-  //     assertStyles(el, [
-  //       `div { color: red; }`,
-  //       `div { color: yellow; }`,
-  //       `div { color: red; }`,
-  //     ])
+      await nextTick()
+      assertStyles(el, [
+        `div { color: red; }`,
+        `div { color: yellow; }`,
+        `div { color: red; }`,
+      ])
 
-  //     __VUE_HMR_RUNTIME__.reload(Bar.__hmrId!, {
-  //       ...Bar,
-  //       styles: [`div { color: blue; }`],
-  //     } as any)
-  //     await nextTick()
-  //     assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
-  //   })
+      __VUE_HMR_RUNTIME__.reload(Bar.__hmrId!, {
+        ...Bar,
+        styles: [`div { color: blue; }`],
+      } as any)
+      await nextTick()
+      assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
+    })
 
-  //   test("child components should not inject styles to root element's shadow root w/ shadowRoot false", async () => {
-  //     const Bar = defineVaporComponent({
-  //       styles: [`div { color: green; }`],
-  //       render() {
-  //         return 'bar'
-  //       },
-  //     })
-  //     const Baz = () => h(Bar)
-  //     const Foo = defineVaporCustomElement(
-  //       {
-  //         render() {
-  //           return [h(Baz)]
-  //         },
-  //       },
-  //       { shadowRoot: false },
-  //     )
+    // test("child components should not inject styles to root element's shadow root w/ shadowRoot false", async () => {
+    //   const Bar = defineVaporComponent({
+    //     styles: [`div { color: green; }`],
+    //     render() {
+    //       return 'bar'
+    //     },
+    //   })
+    //   const Baz = () => h(Bar)
+    //   const Foo = defineVaporCustomElement(
+    //     {
+    //       render() {
+    //         return [h(Baz)]
+    //       },
+    //     },
+    //     { shadowRoot: false },
+    //   )
 
-  //     customElements.define('my-foo-with-shadowroot-false', Foo)
-  //     container.innerHTML = `<my-foo-with-shadowroot-false></my-foo-with-shadowroot-false>`
-  //     const el = container.childNodes[0] as VaporElement
-  //     const style = el.shadowRoot?.querySelector('style')
-  //     expect(style).toBeUndefined()
-  //   })
+    //   customElements.define('my-foo-with-shadowroot-false', Foo)
+    //   container.innerHTML = `<my-foo-with-shadowroot-false></my-foo-with-shadowroot-false>`
+    //   const el = container.childNodes[0] as VaporElement
+    //   const style = el.shadowRoot?.querySelector('style')
+    //   expect(style).toBeUndefined()
+    // })
 
-  //   test('with nonce', () => {
-  //     const Foo = defineVaporCustomElement(
-  //       {
-  //         styles: [`div { color: red; }`],
-  //         render() {
-  //           return h('div', 'hello')
-  //         },
-  //       },
-  //       { nonce: 'xxx' },
-  //     )
-  //     customElements.define('my-el-with-nonce', Foo)
-  //     container.innerHTML = `<my-el-with-nonce></my-el-with-nonce>`
-  //     const el = container.childNodes[0] as VaporElement
-  //     const style = el.shadowRoot?.querySelector('style')!
-  //     expect(style.getAttribute('nonce')).toBe('xxx')
-  //   })
-  // })
+    // test('with nonce', () => {
+    //   const Foo = defineVaporCustomElement(
+    //     {
+    //       styles: [`div { color: red; }`],
+    //       render() {
+    //         return h('div', 'hello')
+    //       },
+    //     },
+    //     { nonce: 'xxx' },
+    //   )
+    //   customElements.define('my-el-with-nonce', Foo)
+    //   container.innerHTML = `<my-el-with-nonce></my-el-with-nonce>`
+    //   const el = container.childNodes[0] as VaporElement
+    //   const style = el.shadowRoot?.querySelector('style')!
+    //   expect(style.getAttribute('nonce')).toBe('xxx')
+    // })
+  })
 
   // describe('async', () => {
   //   test('should work', async () => {
