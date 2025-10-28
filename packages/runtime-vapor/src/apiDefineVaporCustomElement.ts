@@ -95,6 +95,12 @@ export class VaporElement extends VueElementBase<
 
     this._createComponent()
     this._app!.mount(this._root)
+
+    // Render slots immediately after mount for shadowRoot: false
+    // This ensures correct lifecycle order for nested custom elements
+    if (!this.shadowRoot) {
+      this._renderSlots()
+    }
   }
 
   protected _update(): void {
@@ -176,8 +182,11 @@ export class VaporElement extends VueElementBase<
   private _createComponent() {
     this._def.ce = instance => {
       this._app!._ceComponent = this._instance = instance
+      // For shadowRoot: false, _renderSlots is called synchronously after mount
+      // in _mount() to ensure correct lifecycle order
       if (!this.shadowRoot) {
-        this._instance!.m = this._instance!.u = [this._renderSlots.bind(this)]
+        // Still set updated hooks for subsequent updates
+        this._instance!.u = [this._renderSlots.bind(this)]
       }
       this._processInstance()
     }

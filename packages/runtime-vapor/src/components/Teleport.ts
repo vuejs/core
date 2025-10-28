@@ -1,7 +1,9 @@
 import {
+  type GenericComponentInstance,
   MismatchTypes,
   type TeleportProps,
   type TeleportTargetElement,
+  currentInstance,
   isMismatchAllowed,
   isTeleportDeferred,
   isTeleportDisabled,
@@ -53,11 +55,13 @@ export class TeleportFragment extends VaporFragment {
   placeholder?: Node
   mountContainer?: ParentNode | null
   mountAnchor?: Node | null
+  parentComponent: GenericComponentInstance
 
   constructor(props: LooseRawProps, slots: LooseRawSlots) {
     super([])
     this.rawProps = props
     this.rawSlots = slots
+    this.parentComponent = currentInstance as GenericComponentInstance
     this.anchor = isHydrating
       ? undefined
       : __DEV__
@@ -143,6 +147,14 @@ export class TeleportFragment extends VaporFragment {
         ) {
           insert((this.targetStart = createTextNode('')), target)
           insert((this.targetAnchor = createTextNode('')), target)
+        }
+
+        // track CE teleport targets
+        if (this.parentComponent && this.parentComponent.isCE) {
+          ;(
+            this.parentComponent.ce!._teleportTargets ||
+            (this.parentComponent.ce!._teleportTargets = new Set())
+          ).add(target)
         }
 
         mount(target, this.targetAnchor!)

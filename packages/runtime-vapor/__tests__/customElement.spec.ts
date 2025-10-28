@@ -5,11 +5,13 @@ import {
   type Ref,
   inject,
   nextTick,
+  onMounted,
   provide,
   ref,
   toDisplayString,
 } from '@vue/runtime-dom'
 import {
+  VaporTeleport,
   child,
   createComponent,
   createComponentWithFallback,
@@ -1368,189 +1370,209 @@ describe('defineVaporCustomElement', () => {
       )
     })
 
-    // test('render nested customElement w/ shadowRoot false', async () => {
-    //   const calls: string[] = []
+    test('render nested customElement w/ shadowRoot false', async () => {
+      const calls: string[] = []
 
-    //   const Child = defineVaporCustomElement(
-    //     {
-    //       setup() {
-    //         calls.push('child rendering')
-    //         onMounted(() => {
-    //           calls.push('child mounted')
-    //         })
-    //       },
-    //       render() {
-    //         return renderSlot(this.$slots, 'default')
-    //       },
-    //     },
-    //     { shadowRoot: false },
-    //   )
-    //   customElements.define('my-child', Child)
+      const Child = defineVaporCustomElement(
+        {
+          setup() {
+            calls.push('child rendering')
+            onMounted(() => {
+              calls.push('child mounted')
+            })
+            return createSlot('default')
+          },
+        },
+        { shadowRoot: false } as any,
+      )
+      customElements.define('my-child', Child)
 
-    //   const Parent = defineVaporCustomElement(
-    //     {
-    //       setup() {
-    //         calls.push('parent rendering')
-    //         onMounted(() => {
-    //           calls.push('parent mounted')
-    //         })
-    //       },
-    //       render() {
-    //         return renderSlot(this.$slots, 'default')
-    //       },
-    //     },
-    //     { shadowRoot: false },
-    //   )
-    //   customElements.define('my-parent', Parent)
+      const Parent = defineVaporCustomElement(
+        {
+          setup() {
+            calls.push('parent rendering')
+            onMounted(() => {
+              calls.push('parent mounted')
+            })
+            return createSlot('default')
+          },
+        },
+        { shadowRoot: false } as any,
+      )
+      customElements.define('my-parent', Parent)
 
-    //   const App = {
-    //     render() {
-    //       return h('my-parent', null, {
-    //         default: () => [
-    //           h('my-child', null, {
-    //             default: () => [h('span', null, 'default')],
-    //           }),
-    //         ],
-    //       })
-    //     },
-    //   }
-    //   const app = createVaporApp(App)
-    //   app.mount(container)
-    //   await nextTick()
-    //   const e = container.childNodes[0] as VaporElement
-    //   expect(e.innerHTML).toBe(
-    //     `<my-child data-v-app=""><span>default</span></my-child>`,
-    //   )
-    //   expect(calls).toEqual([
-    //     'parent rendering',
-    //     'parent mounted',
-    //     'child rendering',
-    //     'child mounted',
-    //   ])
-    //   app.unmount()
-    // })
+      const App = {
+        setup() {
+          return createComponentWithFallback('my-parent', null, {
+            default: () =>
+              createComponentWithFallback('my-child', null, {
+                default: () => template('<span>default</span>')(),
+              }),
+          })
+        },
+      }
+      const app = createVaporApp(App)
+      app.mount(container)
+      await nextTick()
+      const e = container.childNodes[0] as VaporElement
+      expect(e.innerHTML).toBe(
+        `<my-child><span>default</span><!--slot--></my-child><!--slot-->`,
+      )
+      expect(calls).toEqual([
+        'parent rendering',
+        'parent mounted',
+        'child rendering',
+        'child mounted',
+      ])
+      app.unmount()
+    })
 
-    // test('render nested Teleport w/ shadowRoot false', async () => {
-    //   const target = document.createElement('div')
-    //   const Child = defineVaporCustomElement(
-    //     {
-    //       render() {
-    //         return h(
-    //           Teleport,
-    //           { to: target },
-    //           {
-    //             default: () => [renderSlot(this.$slots, 'default')],
-    //           },
-    //         )
-    //       },
-    //     },
-    //     { shadowRoot: false },
-    //   )
-    //   customElements.define('my-el-teleport-child', Child)
-    //   const Parent = defineVaporCustomElement(
-    //     {
-    //       render() {
-    //         return renderSlot(this.$slots, 'default')
-    //       },
-    //     },
-    //     { shadowRoot: false },
-    //   )
-    //   customElements.define('my-el-teleport-parent', Parent)
+    test('render nested Teleport w/ shadowRoot false', async () => {
+      const target = document.createElement('div')
+      const Child = defineVaporCustomElement(
+        {
+          setup() {
+            return createComponent(
+              VaporTeleport,
+              { to: () => target },
+              {
+                default: () => createSlot('default'),
+              },
+            )
+          },
+        },
+        { shadowRoot: false } as any,
+      )
+      customElements.define('my-el-teleport-child', Child)
+      const Parent = defineVaporCustomElement(
+        {
+          setup() {
+            return createSlot('default')
+          },
+        },
+        { shadowRoot: false } as any,
+      )
+      customElements.define('my-el-teleport-parent', Parent)
 
-    //   const App = {
-    //     render() {
-    //       return h('my-el-teleport-parent', null, {
-    //         default: () => [
-    //           h('my-el-teleport-child', null, {
-    //             default: () => [h('span', null, 'default')],
-    //           }),
-    //         ],
-    //       })
-    //     },
-    //   }
-    //   const app = createVaporApp(App)
-    //   app.mount(container)
-    //   await nextTick()
-    //   expect(target.innerHTML).toBe(`<span>default</span>`)
-    //   app.unmount()
-    // })
+      const App = {
+        setup() {
+          return createComponentWithFallback('my-el-teleport-parent', null, {
+            default: () =>
+              createComponentWithFallback('my-el-teleport-child', null, {
+                default: () => template('<span>default</span>')(),
+              }),
+          })
+        },
+      }
+      const app = createVaporApp(App)
+      app.mount(container)
+      await nextTick()
+      expect(target.innerHTML).toBe(`<span>default</span><!--slot-->`)
+      app.unmount()
+    })
 
-    // test('render two Teleports w/ shadowRoot false', async () => {
-    //   const target1 = document.createElement('div')
-    //   const target2 = document.createElement('span')
-    //   const Child = defineVaporCustomElement(
-    //     {
-    //       render() {
-    //         return [
-    //           h(Teleport, { to: target1 }, [renderSlot(this.$slots, 'header')]),
-    //           h(Teleport, { to: target2 }, [renderSlot(this.$slots, 'body')]),
-    //         ]
-    //       },
-    //     },
-    //     { shadowRoot: false },
-    //   )
-    //   customElements.define('my-el-two-teleport-child', Child)
+    test('render two Teleports w/ shadowRoot false', async () => {
+      const target1 = document.createElement('div')
+      const target2 = document.createElement('span')
+      const Child = defineVaporCustomElement(
+        {
+          setup() {
+            return [
+              createComponent(
+                VaporTeleport,
+                { to: () => target1 },
+                {
+                  default: () => createSlot('header'),
+                },
+              ),
+              createComponent(
+                VaporTeleport,
+                { to: () => target2 },
+                {
+                  default: () => createSlot('body'),
+                },
+              ),
+            ]
+          },
+        },
+        { shadowRoot: false } as any,
+      )
+      customElements.define('my-el-two-teleport-child', Child)
 
-    //   const App = {
-    //     render() {
-    //       return h('my-el-two-teleport-child', null, {
-    //         default: () => [
-    //           h('div', { slot: 'header' }, 'header'),
-    //           h('span', { slot: 'body' }, 'body'),
-    //         ],
-    //       })
-    //     },
-    //   }
-    //   const app = createVaporApp(App)
-    //   app.mount(container)
-    //   await nextTick()
-    //   expect(target1.outerHTML).toBe(
-    //     `<div><div slot="header">header</div></div>`,
-    //   )
-    //   expect(target2.outerHTML).toBe(
-    //     `<span><span slot="body">body</span></span>`,
-    //   )
-    //   app.unmount()
-    // })
+      const App = {
+        setup() {
+          return createComponentWithFallback('my-el-two-teleport-child', null, {
+            default: () => [
+              template('<div slot="header">header</div>')(),
+              template('<span slot="body">body</span>')(),
+            ],
+          })
+        },
+      }
+      const app = createVaporApp(App)
+      app.mount(container)
+      await nextTick()
+      expect(target1.outerHTML).toBe(
+        `<div><div slot="header">header</div><!--slot--></div>`,
+      )
+      expect(target2.outerHTML).toBe(
+        `<span><span slot="body">body</span><!--slot--></span>`,
+      )
+      app.unmount()
+    })
 
-    // test('render two Teleports w/ shadowRoot false (with disabled)', async () => {
-    //   const target1 = document.createElement('div')
-    //   const target2 = document.createElement('span')
-    //   const Child = defineVaporCustomElement(
-    //     {
-    //       render() {
-    //         return [
-    //           // with disabled: true
-    //           h(Teleport, { to: target1, disabled: true }, [
-    //             renderSlot(this.$slots, 'header'),
-    //           ]),
-    //           h(Teleport, { to: target2 }, [renderSlot(this.$slots, 'body')]),
-    //         ]
-    //       },
-    //     },
-    //     { shadowRoot: false },
-    //   )
-    //   customElements.define('my-el-two-teleport-child-0', Child)
+    test('render two Teleports w/ shadowRoot false (with disabled)', async () => {
+      const target1 = document.createElement('div')
+      const target2 = document.createElement('span')
+      const Child = defineVaporCustomElement(
+        {
+          setup() {
+            return [
+              createComponent(
+                VaporTeleport,
+                // with disabled: true
+                { to: () => target1, disabled: () => true },
+                {
+                  default: () => createSlot('header'),
+                },
+              ),
+              createComponent(
+                VaporTeleport,
+                { to: () => target2 },
+                {
+                  default: () => createSlot('body'),
+                },
+              ),
+            ]
+          },
+        },
+        { shadowRoot: false } as any,
+      )
+      customElements.define('my-el-two-teleport-child-0', Child)
 
-    //   const App = {
-    //     render() {
-    //       return h('my-el-two-teleport-child-0', null, {
-    //         default: () => [
-    //           h('div', { slot: 'header' }, 'header'),
-    //           h('span', { slot: 'body' }, 'body'),
-    //         ],
-    //       })
-    //     },
-    //   }
-    //   const app = createVaporApp(App)
-    //   app.mount(container)
-    //   await nextTick()
-    //   expect(target1.outerHTML).toBe(`<div></div>`)
-    //   expect(target2.outerHTML).toBe(
-    //     `<span><span slot="body">body</span></span>`,
-    //   )
-    //   app.unmount()
-    // })
+      const App = {
+        setup() {
+          return createComponentWithFallback(
+            'my-el-two-teleport-child-0',
+            null,
+            {
+              default: () => [
+                template('<div slot="header">header</div>')(),
+                template('<span slot="body">body</span>')(),
+              ],
+            },
+          )
+        },
+      }
+      const app = createVaporApp(App)
+      app.mount(container)
+      await nextTick()
+      expect(target1.outerHTML).toBe(`<div></div>`)
+      expect(target2.outerHTML).toBe(
+        `<span><span slot="body">body</span><!--slot--></span>`,
+      )
+      app.unmount()
+    })
 
     // test('toggle nested custom element with shadowRoot: false', async () => {
     //   customElements.define(
