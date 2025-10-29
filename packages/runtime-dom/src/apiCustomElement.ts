@@ -27,7 +27,7 @@ import {
   type VNodeProps,
   createVNode,
   defineComponent,
-  getCurrentInstance,
+  getCurrentGenericInstance,
   nextTick,
   unref,
   warn,
@@ -793,7 +793,7 @@ export class VueElement extends VueElementBase<
 }
 
 export function useHost(caller?: string): VueElementBase | null {
-  const instance = getCurrentInstance()
+  const instance = getCurrentGenericInstance()
   const el = instance && (instance.ce as VueElementBase)
   if (el) {
     return el

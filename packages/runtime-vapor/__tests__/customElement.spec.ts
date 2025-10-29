@@ -1,4 +1,4 @@
-// import type { MockedFunction } from 'vitest'
+import type { MockedFunction } from 'vitest'
 import type { VaporElement } from '../src/apiDefineVaporCustomElement'
 import {
   type HMRRuntime,
@@ -9,6 +9,8 @@ import {
   provide,
   ref,
   toDisplayString,
+  useHost,
+  useShadowRoot,
 } from '@vue/runtime-dom'
 import {
   VaporTeleport,
@@ -606,24 +608,22 @@ describe('defineVaporCustomElement', () => {
     // https://github.com/vuejs/core/issues/12964
     // Disabled because of missing support for `delegatesFocus` in jsdom
     // https://github.com/jsdom/jsdom/issues/3418
-    // test.skip('shadowRoot should be initialized with delegatesFocus', () => {
-    //   const E = defineVaporCustomElement(
-    //     {
-    //       // render() {
-    //       //   return [h('input', { tabindex: 1 })]
-    //       // },
-    //       setup() {
-    //         return template('<input tabindex="1">', true)()
-    //       },
-    //     },
-    //     { shadowRootOptions: { delegatesFocus: true } },
-    //   )
-    //   customElements.define('my-el-with-delegate-focus', E)
+    // use vitest browser mode instead
+    test.todo('shadowRoot should be initialized with delegatesFocus', () => {
+      const E = defineVaporCustomElement(
+        {
+          setup() {
+            return template('<input tabindex="1">', true)()
+          },
+        },
+        { shadowRootOptions: { delegatesFocus: true } } as any,
+      )
+      customElements.define('my-el-with-delegate-focus', E)
 
-    //   const e = new E()
-    //   container.appendChild(e)
-    //   expect(e.shadowRoot!.delegatesFocus).toBe(true)
-    // })
+      const e = new E()
+      container.appendChild(e)
+      expect(e.shadowRoot!.delegatesFocus).toBe(true)
+    })
   })
 
   describe('emits', () => {
@@ -1680,292 +1680,301 @@ describe('defineVaporCustomElement', () => {
     })
   })
 
-  // describe('helpers', () => {
-  //   test('useHost', () => {
-  //     const Foo = defineVaporCustomElement({
-  //       setup() {
-  //         const host = useHost()!
-  //         host.setAttribute('id', 'host')
-  //         return () => h('div', 'hello')
-  //       },
-  //     })
-  //     customElements.define('my-el-use-host', Foo)
-  //     container.innerHTML = `<my-el-use-host>`
-  //     const el = container.childNodes[0] as VaporElement
-  //     expect(el.id).toBe('host')
-  //   })
+  describe('helpers', () => {
+    test('useHost', () => {
+      const Foo = defineVaporCustomElement({
+        setup() {
+          const host = useHost()!
+          host.setAttribute('id', 'host')
+          return template('<div>hello</div>')()
+        },
+      })
+      customElements.define('my-el-use-host', Foo)
+      container.innerHTML = `<my-el-use-host>`
+      const el = container.childNodes[0] as VaporElement
+      expect(el.id).toBe('host')
+    })
 
-  //   test('useShadowRoot for style injection', () => {
-  //     const Foo = defineVaporCustomElement({
-  //       setup() {
-  //         const root = useShadowRoot()!
-  //         const style = document.createElement('style')
-  //         style.innerHTML = `div { color: red; }`
-  //         root.appendChild(style)
-  //         return () => h('div', 'hello')
-  //       },
-  //     })
-  //     customElements.define('my-el-use-shadow-root', Foo)
-  //     container.innerHTML = `<my-el-use-shadow-root>`
-  //     const el = container.childNodes[0] as VaporElement
-  //     const style = el.shadowRoot?.querySelector('style')!
-  //     expect(style.textContent).toBe(`div { color: red; }`)
-  //   })
-  // })
+    test('useShadowRoot for style injection', () => {
+      const Foo = defineVaporCustomElement({
+        setup() {
+          const root = useShadowRoot()!
+          const style = document.createElement('style')
+          style.innerHTML = `div { color: red; }`
+          root.appendChild(style)
+          return template('<div>hello</div>')()
+        },
+      })
+      customElements.define('my-el-use-shadow-root', Foo)
+      container.innerHTML = `<my-el-use-shadow-root>`
+      const el = container.childNodes[0] as VaporElement
+      const style = el.shadowRoot?.querySelector('style')!
+      expect(style.textContent).toBe(`div { color: red; }`)
+    })
+  })
 
-  // describe('expose', () => {
-  //   test('expose w/ options api', async () => {
-  //     const E = defineVaporCustomElement({
-  //       data() {
-  //         return {
-  //           value: 0,
-  //         }
-  //       },
-  //       methods: {
-  //         foo() {
-  //           ;(this as any).value++
-  //         },
-  //       },
-  //       expose: ['foo'],
-  //       render(_ctx: any) {
-  //         return h('div', null, _ctx.value)
-  //       },
-  //     })
-  //     customElements.define('my-el-expose-options-api', E)
+  describe('expose', () => {
+    test('expose w/ options api', async () => {
+      const E = defineVaporCustomElement({
+        setup(_: any, { expose }: any) {
+          const value = ref(0)
+          const foo = () => {
+            value.value++
+          }
+          expose({ foo })
+          const n0 = template('<div> </div>', true)() as any
+          const x0 = txt(n0) as any
+          renderEffect(() => setText(x0, `${value.value}`))
+          return n0
+        },
+      })
+      customElements.define('my-el-expose-options-api', E)
 
-  //     container.innerHTML = `<my-el-expose-options-api></my-el-expose-options-api>`
-  //     const e = container.childNodes[0] as VaporElement & {
-  //       foo: () => void
-  //     }
-  //     expect(e.shadowRoot!.innerHTML).toBe(`<div>0</div>`)
-  //     e.foo()
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe(`<div>1</div>`)
-  //   })
-  //   test('expose attributes and callback', async () => {
-  //     type SetValue = (value: string) => void
-  //     let fn: MockedFunction<SetValue>
+      container.innerHTML = `<my-el-expose-options-api></my-el-expose-options-api>`
+      const e = container.childNodes[0] as VaporElement & {
+        foo: () => void
+      }
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>0</div>`)
+      e.foo()
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>1</div>`)
+    })
 
-  //     const E = defineVaporCustomElement({
-  //       setup(_, { expose }) {
-  //         const value = ref('hello')
+    test('expose attributes and callback', async () => {
+      type SetValue = (value: string) => void
+      let fn: MockedFunction<SetValue>
 
-  //         const setValue = (fn = vi.fn((_value: string) => {
-  //           value.value = _value
-  //         }))
+      const E = defineVaporCustomElement({
+        setup(_: any, { expose }: any) {
+          const value = ref('hello')
 
-  //         expose({
-  //           setValue,
-  //           value,
-  //         })
+          const setValue = (fn = vi.fn((_value: string) => {
+            value.value = _value
+          }))
 
-  //         return () => h('div', null, [value.value])
-  //       },
-  //     })
-  //     customElements.define('my-el-expose', E)
+          expose({
+            setValue,
+            value,
+          })
 
-  //     container.innerHTML = `<my-el-expose></my-el-expose>`
-  //     const e = container.childNodes[0] as VaporElement & {
-  //       value: string
-  //       setValue: MockedFunction<SetValue>
-  //     }
-  //     expect(e.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
-  //     expect(e.value).toBe('hello')
-  //     expect(e.setValue).toBe(fn!)
-  //     e.setValue('world')
-  //     expect(e.value).toBe('world')
-  //     await nextTick()
-  //     expect(e.shadowRoot!.innerHTML).toBe(`<div>world</div>`)
-  //   })
+          const n0 = template('<div> </div>', true)() as any
+          const x0 = txt(n0) as any
+          renderEffect(() => setText(x0, value.value))
+          return n0
+        },
+      })
+      customElements.define('my-el-expose', E)
 
-  //   test('warning when exposing an existing property', () => {
-  //     const E = defineVaporCustomElement({
-  //       props: {
-  //         value: String,
-  //       },
-  //       setup(props, { expose }) {
-  //         expose({
-  //           value: 'hello',
-  //         })
+      container.innerHTML = `<my-el-expose></my-el-expose>`
+      const e = container.childNodes[0] as VaporElement & {
+        value: string
+        setValue: MockedFunction<SetValue>
+      }
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+      expect(e.value).toBe('hello')
+      expect(e.setValue).toBe(fn!)
+      e.setValue('world')
+      expect(e.value).toBe('world')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>world</div>`)
+    })
 
-  //         return () => h('div', null, [props.value])
-  //       },
-  //     })
-  //     customElements.define('my-el-expose-two', E)
+    test('warning when exposing an existing property', () => {
+      const E = defineVaporCustomElement({
+        props: {
+          value: String,
+        },
+        setup(props: any, { expose }: any) {
+          expose({
+            value: 'hello',
+          })
 
-  //     container.innerHTML = `<my-el-expose-two value="world"></my-el-expose-two>`
+          const n0 = template('<div> </div>', true)() as any
+          const x0 = txt(n0) as any
+          renderEffect(() => setText(x0, props.value))
+          return n0
+        },
+      })
 
-  //     expect(
-  //       `[Vue warn]: Exposed property "value" already exists on custom element.`,
-  //     ).toHaveBeenWarned()
-  //   })
-  // })
+      customElements.define('my-el-expose-two', E)
+      container.innerHTML = `<my-el-expose-two value="world"></my-el-expose-two>`
 
-  // test('async & nested custom elements', async () => {
-  //   let fooVal: string | undefined = ''
-  //   const E = defineVaporCustomElement(
-  //     defineVaporAsyncComponent(() => {
-  //       return Promise.resolve({
-  //         setup(props) {
-  //           provide('foo', 'foo')
-  //         },
-  //         render(this: any) {
-  //           return h('div', null, [renderSlot(this.$slots, 'default')])
-  //         },
-  //       })
-  //     }),
-  //   )
+      expect(
+        `[Vue warn]: Exposed property "value" already exists on custom element.`,
+      ).toHaveBeenWarned()
+    })
+  })
 
-  //   const EChild = defineVaporCustomElement({
-  //     setup(props) {
-  //       fooVal = inject('foo')
-  //     },
-  //     render(this: any) {
-  //       return h('div', null, 'child')
-  //     },
-  //   })
-  //   customElements.define('my-el-async-nested-ce', E)
-  //   customElements.define('slotted-child', EChild)
-  //   container.innerHTML = `<my-el-async-nested-ce><div><slotted-child></slotted-child></div></my-el-async-nested-ce>`
+  test('async & nested custom elements', async () => {
+    let fooVal: string | undefined = ''
+    const E = defineVaporCustomElement(
+      defineVaporAsyncComponent(() => {
+        return Promise.resolve({
+          setup() {
+            provide('foo', 'foo')
+            const n0 = template('<div></div>')() as any
+            setInsertionState(n0, null)
+            createSlot('default', null)
+            return n0
+          },
+        })
+      }),
+    )
 
-  //   await new Promise(r => setTimeout(r))
-  //   const e = container.childNodes[0] as VaporElement
-  //   expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot></div>`)
-  //   expect(fooVal).toBe('foo')
-  // })
+    const EChild = defineVaporCustomElement({
+      setup() {
+        fooVal = inject('foo')
+        const n0 = template('<div>child</div>')()
+        return n0
+      },
+    })
+    customElements.define('my-el-async-nested-ce', E)
+    customElements.define('slotted-child', EChild)
+    container.innerHTML = `<my-el-async-nested-ce><div><slotted-child></slotted-child></div></my-el-async-nested-ce>`
 
-  // test('async & multiple levels of nested custom elements', async () => {
-  //   let fooVal: string | undefined = ''
-  //   let barVal: string | undefined = ''
-  //   const E = defineVaporCustomElement(
-  //     defineVaporAsyncComponent(() => {
-  //       return Promise.resolve({
-  //         setup(props) {
-  //           provide('foo', 'foo')
-  //         },
-  //         render(this: any) {
-  //           return h('div', null, [renderSlot(this.$slots, 'default')])
-  //         },
-  //       })
-  //     }),
-  //   )
+    await new Promise(r => setTimeout(r))
+    const e = container.childNodes[0] as VaporElement
+    expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot><!--slot--></div>`)
+    expect(fooVal).toBe('foo')
+  })
 
-  //   const EChild = defineVaporCustomElement({
-  //     setup(props) {
-  //       provide('bar', 'bar')
-  //     },
-  //     render(this: any) {
-  //       return h('div', null, [renderSlot(this.$slots, 'default')])
-  //     },
-  //   })
+  test('async & multiple levels of nested custom elements', async () => {
+    let fooVal: string | undefined = ''
+    let barVal: string | undefined = ''
+    const E = defineVaporCustomElement(
+      defineVaporAsyncComponent(() => {
+        return Promise.resolve({
+          setup() {
+            provide('foo', 'foo')
+            const n0 = template('<div></div>')() as any
+            setInsertionState(n0, null)
+            createSlot('default', null)
+            return n0
+          },
+        })
+      }),
+    )
 
-  //   const EChild2 = defineVaporCustomElement({
-  //     setup(props) {
-  //       fooVal = inject('foo')
-  //       barVal = inject('bar')
-  //     },
-  //     render(this: any) {
-  //       return h('div', null, 'child')
-  //     },
-  //   })
-  //   customElements.define('my-el-async-nested-m-ce', E)
-  //   customElements.define('slotted-child-m', EChild)
-  //   customElements.define('slotted-child2-m', EChild2)
-  //   container.innerHTML =
-  //     `<my-el-async-nested-m-ce>` +
-  //     `<div><slotted-child-m>` +
-  //     `<slotted-child2-m></slotted-child2-m>` +
-  //     `</slotted-child-m></div>` +
-  //     `</my-el-async-nested-m-ce>`
+    const EChild = defineVaporCustomElement({
+      setup() {
+        provide('bar', 'bar')
+        const n0 = template('<div></div>')() as any
+        setInsertionState(n0, null)
+        createSlot('default', null)
+        return n0
+      },
+    })
 
-  //   await new Promise(r => setTimeout(r))
-  //   const e = container.childNodes[0] as VaporElement
-  //   expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot></div>`)
-  //   expect(fooVal).toBe('foo')
-  //   expect(barVal).toBe('bar')
-  // })
+    const EChild2 = defineVaporCustomElement({
+      setup() {
+        fooVal = inject('foo')
+        barVal = inject('bar')
+        const n0 = template('<div>child</div>')()
+        return n0
+      },
+    })
+    customElements.define('my-el-async-nested-m-ce', E)
+    customElements.define('slotted-child-m', EChild)
+    customElements.define('slotted-child2-m', EChild2)
+    container.innerHTML =
+      `<my-el-async-nested-m-ce>` +
+      `<div><slotted-child-m>` +
+      `<slotted-child2-m></slotted-child2-m>` +
+      `</slotted-child-m></div>` +
+      `</my-el-async-nested-m-ce>`
 
-  // describe('configureApp', () => {
-  //   test('should work', () => {
-  //     const E = defineVaporCustomElement(
-  //       () => {
-  //         const msg = inject('msg')
-  //         return () => h('div', msg!)
-  //       },
-  //       {
-  //         configureApp(app) {
-  //           app.provide('msg', 'app-injected')
-  //         },
-  //       },
-  //     )
-  //     customElements.define('my-element-with-app', E)
+    await new Promise(r => setTimeout(r))
+    const e = container.childNodes[0] as VaporElement
+    expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot><!--slot--></div>`)
+    expect(fooVal).toBe('foo')
+    expect(barVal).toBe('bar')
+  })
 
-  //     container.innerHTML = `<my-element-with-app></my-element-with-app>`
-  //     const e = container.childNodes[0] as VaporElement
+  describe('configureApp', () => {
+    test('should work', () => {
+      const E = defineVaporCustomElement(
+        () => {
+          const msg = inject('msg')
+          const n0 = template('<div> </div>', true)() as any
+          const x0 = txt(n0) as any
+          renderEffect(() => setText(x0, msg as string))
+          return n0
+        },
+        {
+          configureApp(app: any) {
+            app.provide('msg', 'app-injected')
+          },
+        } as any,
+      )
+      customElements.define('my-element-with-app', E)
 
-  //     expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
-  //   })
+      container.innerHTML = `<my-element-with-app></my-element-with-app>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
+    })
 
-  //   // #12448
-  //   test('work with async component', async () => {
-  //     const AsyncComp = defineVaporAsyncComponent(() => {
-  //       return Promise.resolve({
-  //         render() {
-  //           const msg: string | undefined = inject('msg')
-  //           return h('div', {}, msg)
-  //         },
-  //       } as any)
-  //     })
-  //     const E = defineVaporCustomElement(AsyncComp, {
-  //       configureApp(app) {
-  //         app.provide('msg', 'app-injected')
-  //       },
-  //     })
-  //     customElements.define('my-async-element-with-app', E)
+    test('work with async component', async () => {
+      const AsyncComp = defineVaporAsyncComponent(() => {
+        return Promise.resolve({
+          setup() {
+            const msg = inject('msg')
+            const n0 = template('<div> </div>', true)() as any
+            const x0 = txt(n0) as any
+            renderEffect(() => setText(x0, msg as string))
+            return n0
+          },
+        } as any)
+      })
+      const E = defineVaporCustomElement(AsyncComp, {
+        configureApp(app: any) {
+          app.provide('msg', 'app-injected')
+        },
+      } as any)
+      customElements.define('my-async-element-with-app', E)
 
-  //     container.innerHTML = `<my-async-element-with-app></my-async-element-with-app>`
-  //     const e = container.childNodes[0] as VaporElement
-  //     await new Promise(r => setTimeout(r))
-  //     expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
-  //   })
+      container.innerHTML = `<my-async-element-with-app></my-async-element-with-app>`
+      const e = container.childNodes[0] as VaporElement
+      await new Promise(r => setTimeout(r))
+      expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
+    })
 
-  //   test('with hmr reload', async () => {
-  //     const __hmrId = '__hmrWithApp'
-  //     const def = defineVaporComponent({
-  //       __hmrId,
-  //       setup() {
-  //         const msg = inject('msg')
-  //         return { msg }
-  //       },
-  //       render(this: any) {
-  //         return h('div', [h('span', this.msg), h('span', this.$foo)])
-  //       },
-  //     })
-  //     const E = defineVaporCustomElement(def, {
-  //       configureApp(app) {
-  //         app.provide('msg', 'app-injected')
-  //         app.config.globalProperties.$foo = 'foo'
-  //       },
-  //     })
-  //     customElements.define('my-element-with-app-hmr', E)
+    test('with hmr reload', async () => {
+      const __hmrId = '__hmrWithApp'
+      const def = defineVaporComponent({
+        __hmrId,
+        setup() {
+          const msg = inject('msg')
+          const n0 = template('<div><span> </span></div>')() as any
+          const n1 = child(n0) as any
+          const x1 = txt(n1) as any
+          renderEffect(() => setText(x1, msg as string))
+          return n0
+        },
+      })
+      const E = defineVaporCustomElement(def, {
+        configureApp(app: any) {
+          app.provide('msg', 'app-injected')
+        },
+      } as any)
+      customElements.define('my-element-with-app-hmr', E)
 
-  //     container.innerHTML = `<my-element-with-app-hmr></my-element-with-app-hmr>`
-  //     const el = container.childNodes[0] as VaporElement
-  //     expect(el.shadowRoot?.innerHTML).toBe(
-  //       `<div><span>app-injected</span><span>foo</span></div>`,
-  //     )
+      container.innerHTML = `<my-element-with-app-hmr></my-element-with-app-hmr>`
+      const el = container.childNodes[0] as VaporElement
+      expect(el.shadowRoot?.innerHTML).toBe(
+        `<div><span>app-injected</span></div>`,
+      )
 
-  //     // hmr
-  //     __VUE_HMR_RUNTIME__.reload(__hmrId, def as any)
+      // hmr
+      __VUE_HMR_RUNTIME__.reload(__hmrId, def as any)
 
-  //     await nextTick()
-  //     expect(el.shadowRoot?.innerHTML).toBe(
-  //       `<div><span>app-injected</span><span>foo</span></div>`,
-  //     )
-  //   })
-  // })
+      await nextTick()
+      expect(el.shadowRoot?.innerHTML).toBe(
+        `<div><span>app-injected</span></div>`,
+      )
+    })
+  })
 
-  // // #9885
+  // #9885
   // test('avoid double mount when prop is set immediately after mount', () => {
   //   customElements.define(
   //     'my-input-dupe',
@@ -1981,121 +1990,125 @@ describe('defineVaporCustomElement', () => {
   //   const container = document.createElement('div')
   //   document.body.appendChild(container)
   //   createVaporApp({
-  //     render() {
-  //       return h('div', [
-  //         h('my-input-dupe', {
-  //           onVnodeMounted(vnode) {
-  //             vnode.el!.value = 'fesfes'
-  //           },
-  //         }),
-  //       ])
-  //     },
+  //     // render() {
+  //     //   return h('div', [
+  //     //     h('my-input-dupe', {
+  //     //       onVnodeMounted(vnode) {
+  //     //         vnode.el!.value = 'fesfes'
+  //     //       },
+  //     //     }),
+  //     //   ])
+  //     // },
+  //     setup() {
+  //       // const n0 = template('<div></div>')() as any
+  //     }
   //   }).mount(container)
   //   expect(container.children[0].children[0].shadowRoot?.innerHTML).toBe(
   //     'hello',
   //   )
   // })
 
-  // // #11081
-  // test('Props can be casted when mounting custom elements in component rendering functions', async () => {
-  //   const E = defineVaporCustomElement(
-  //     defineVaporAsyncComponent(() =>
-  //       Promise.resolve({
-  //         props: ['fooValue'],
-  //         setup(props) {
-  //           expect(props.fooValue).toBe('fooValue')
-  //           return () => h('div', props.fooValue)
-  //         },
-  //       }),
-  //     ),
-  //   )
-  //   customElements.define('my-el-async-4', E)
-  //   const R = defineVaporComponent({
-  //     setup() {
-  //       const fooValue = ref('fooValue')
-  //       return () => {
-  //         return h('div', null, [
-  //           h('my-el-async-4', {
-  //             fooValue: fooValue.value,
-  //           }),
-  //         ])
-  //       }
-  //     },
-  //   })
+  test('Props can be casted when mounting custom elements in component rendering functions', async () => {
+    const E = defineVaporCustomElement(
+      defineVaporAsyncComponent(() =>
+        Promise.resolve({
+          props: ['fooValue'],
+          setup(props: any) {
+            expect(props.fooValue).toBe('fooValue')
+            const n0 = template('<div> </div>', true)() as any
+            const x0 = txt(n0) as any
+            renderEffect(() => setText(x0, props.fooValue))
+            return n0
+          },
+        }),
+      ),
+    )
+    customElements.define('my-el-async-4', E)
+    const R = defineVaporComponent({
+      setup() {
+        const fooValue = ref('fooValue')
+        const n0 = template('<div></div>')() as any
+        setInsertionState(n0, null)
+        createComponentWithFallback('my-el-async-4', {
+          fooValue: () => fooValue.value,
+        })
+        return n0
+      },
+    })
 
-  //   const app = createVaporApp(R)
-  //   app.mount(container)
-  //   await new Promise(r => setTimeout(r))
-  //   const e = container.querySelector('my-el-async-4') as VaporElement
-  //   expect(e.shadowRoot!.innerHTML).toBe(`<div>fooValue</div>`)
-  //   app.unmount()
-  // })
+    const app = createVaporApp(R)
+    app.mount(container)
+    await new Promise(r => setTimeout(r))
+    const e = container.querySelector('my-el-async-4') as VaporElement
+    expect(e.shadowRoot!.innerHTML).toBe(`<div>fooValue</div>`)
+    app.unmount()
+  })
 
-  // // #11276
-  // test('delete prop on attr removal', async () => {
-  //   const E = defineVaporCustomElement({
-  //     props: {
-  //       boo: {
-  //         type: Boolean,
-  //       },
-  //     },
-  //     render() {
-  //       return this.boo + ',' + typeof this.boo
-  //     },
-  //   })
-  //   customElements.define('el-attr-removal', E)
-  //   container.innerHTML = '<el-attr-removal boo>'
-  //   const e = container.childNodes[0] as VaporElement
-  //   expect(e.shadowRoot!.innerHTML).toBe(`true,boolean`)
-  //   e.removeAttribute('boo')
-  //   await nextTick()
-  //   expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
-  // })
+  test('delete prop on attr removal', async () => {
+    const E = defineVaporCustomElement({
+      props: {
+        boo: {
+          type: Boolean,
+        },
+      },
+      setup(props: any) {
+        const n0 = template(' ')() as any
+        renderEffect(() => setText(n0, `${props.boo},${typeof props.boo}`))
+        return n0
+      },
+    })
+    customElements.define('el-attr-removal', E)
+    container.innerHTML = '<el-attr-removal boo>'
+    const e = container.childNodes[0] as VaporElement
+    expect(e.shadowRoot!.innerHTML).toBe(`true,boolean`)
+    e.removeAttribute('boo')
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
+  })
 
-  // test('hyphenated attr removal', async () => {
-  //   const E = defineVaporCustomElement({
-  //     props: {
-  //       fooBar: {
-  //         type: Boolean,
-  //       },
-  //     },
-  //     render() {
-  //       return this.fooBar
-  //     },
-  //   })
-  //   customElements.define('el-hyphenated-attr-removal', E)
-  //   const toggle = ref(true)
-  //   const Comp = {
-  //     render() {
-  //       return h('el-hyphenated-attr-removal', {
-  //         'foo-bar': toggle.value ? '' : null,
-  //       })
-  //     },
-  //   }
-  //   render(h(Comp), container)
-  //   const el = container.children[0]
-  //   expect(el.hasAttribute('foo-bar')).toBe(true)
-  //   expect((el as any).outerHTML).toBe(
-  //     `<el-hyphenated-attr-removal foo-bar=""></el-hyphenated-attr-removal>`,
-  //   )
+  test('hyphenated attr removal', async () => {
+    const E = defineVaporCustomElement({
+      props: {
+        fooBar: {
+          type: Boolean,
+        },
+      },
+      setup(props: any) {
+        const n0 = template(' ')() as any
+        renderEffect(() => setText(n0, toDisplayString(props.fooBar)))
+        return n0
+      },
+    })
+    customElements.define('el-hyphenated-attr-removal', E)
+    const toggle = ref(true)
+    const { container } = render('el-hyphenated-attr-removal', {
+      'foo-bar': () => (toggle.value ? '' : null),
+    })
+    const el = container.children[0]
+    expect(el.hasAttribute('foo-bar')).toBe(true)
+    expect((el as any).outerHTML).toBe(
+      `<el-hyphenated-attr-removal foo-bar=""></el-hyphenated-attr-removal>`,
+    )
 
-  //   toggle.value = false
-  //   await nextTick()
-  //   expect(el.hasAttribute('foo-bar')).toBe(false)
-  //   expect((el as any).outerHTML).toBe(
-  //     `<el-hyphenated-attr-removal></el-hyphenated-attr-removal>`,
-  //   )
-  // })
+    toggle.value = false
+    await nextTick()
+    expect(el.hasAttribute('foo-bar')).toBe(false)
+    expect((el as any).outerHTML).toBe(
+      `<el-hyphenated-attr-removal></el-hyphenated-attr-removal>`,
+    )
+  })
 
-  // test('no unexpected mutation of the 1st argument', () => {
-  //   const Foo = {
-  //     name: 'Foo',
-  //   }
+  test('no unexpected mutation of the 1st argument', () => {
+    const Foo = {
+      __vapor: true,
+      name: 'Foo',
+    }
 
-  //   defineVaporCustomElement(Foo, { shadowRoot: false })
+    defineVaporCustomElement(Foo, { shadowRoot: false } as any)
 
-  //   expect(Foo).toEqual({
-  //     name: 'Foo',
-  //   })
-  // })
+    expect(Foo).toEqual({
+      __vapor: true,
+      name: 'Foo',
+    })
+  })
 })
