@@ -2,6 +2,7 @@ import { extend, isPlainObject } from '@vue/shared'
 import {
   createComponent,
   createVaporApp,
+  createVaporSSRApp,
   defineVaporComponent,
   isFragment,
 } from '.'
@@ -17,6 +18,7 @@ import type {
   VaporComponentInstance,
 } from './component'
 import type { Block } from './block'
+import { withHydration } from './dom/hydration'
 
 export type VaporElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VaporElement & P
@@ -50,7 +52,6 @@ export const defineVaporSSRCustomElement = ((
   options: any,
   extraOptions?: Omit<ObjectVaporComponent, 'setup'>,
 ) => {
-  // @ts-expect-error
   return defineVaporCustomElement(options, extraOptions, createVaporSSRApp)
 }) as typeof defineVaporCustomElement
 
@@ -93,7 +94,13 @@ export class VaporElement extends VueElementBase<
       this._def.configureApp(this._app)
     }
 
-    this._createComponent()
+    // For SSR custom elements, we need to create component in hydration context
+    if (this._createApp === createVaporSSRApp) {
+      withHydration(this._root, this._createComponent.bind(this))
+    } else {
+      this._createComponent()
+    }
+
     this._app!.mount(this._root)
 
     // Render slots immediately after mount for shadowRoot: false
