@@ -1574,91 +1574,110 @@ describe('defineVaporCustomElement', () => {
       app.unmount()
     })
 
-    // test('toggle nested custom element with shadowRoot: false', async () => {
-    //   customElements.define(
-    //     'my-el-child-shadow-false',
-    //     defineVaporCustomElement(
-    //       {
-    //         render(ctx: any) {
-    //           return h('div', null, [renderSlot(ctx.$slots, 'default')])
-    //         },
-    //       },
-    //       { shadowRoot: false },
-    //     ),
-    //   )
-    //   const ChildWrapper = {
-    //     render() {
-    //       return h('my-el-child-shadow-false', null, 'child')
-    //     },
-    //   }
+    test('toggle nested custom element with shadowRoot: false', async () => {
+      customElements.define(
+        'my-el-child-shadow-false',
+        defineVaporCustomElement(
+          {
+            setup() {
+              const n0 = template('<div></div>')() as any
+              setInsertionState(n0, null)
+              createSlot('default', null)
+              return n0
+            },
+          },
+          { shadowRoot: false } as any,
+        ),
+      )
+      const ChildWrapper = {
+        setup() {
+          return createComponentWithFallback('my-el-child-shadow-false', null, {
+            default: () => template('child')(),
+          })
+        },
+      }
 
-    //   customElements.define(
-    //     'my-el-parent-shadow-false',
-    //     defineVaporCustomElement(
-    //       {
-    //         props: {
-    //           isShown: { type: Boolean, required: true },
-    //         },
-    //         render(ctx: any, _: any, $props: any) {
-    //           return $props.isShown
-    //             ? h('div', { key: 0 }, [renderSlot(ctx.$slots, 'default')])
-    //             : null
-    //         },
-    //       },
-    //       { shadowRoot: false },
-    //     ),
-    //   )
-    //   const ParentWrapper = {
-    //     props: {
-    //       isShown: { type: Boolean, required: true },
-    //     },
-    //     render(ctx: any, _: any, $props: any) {
-    //       return h('my-el-parent-shadow-false', { isShown: $props.isShown }, [
-    //         renderSlot(ctx.$slots, 'default'),
-    //       ])
-    //     },
-    //   }
+      customElements.define(
+        'my-el-parent-shadow-false',
+        defineVaporCustomElement(
+          {
+            props: {
+              isShown: { type: Boolean, required: true },
+            },
+            setup(props: any) {
+              return createIf(
+                () => props.isShown,
+                () => {
+                  const n0 = template('<div></div>')() as any
+                  setInsertionState(n0, null)
+                  createSlot('default', null)
+                  return n0
+                },
+              )
+            },
+          },
+          { shadowRoot: false } as any,
+        ),
+      )
+      const ParentWrapper = {
+        props: {
+          isShown: { type: Boolean, required: true },
+        },
+        setup(props: any) {
+          return createComponentWithFallback(
+            'my-el-parent-shadow-false',
+            { isShown: () => props.isShown },
+            {
+              default: () => createSlot('default'),
+            },
+          )
+        },
+      }
 
-    //   const isShown = ref(true)
-    //   const App = {
-    //     render() {
-    //       return h(ParentWrapper, { isShown: isShown.value } as any, {
-    //         default: () => [h(ChildWrapper)],
-    //       })
-    //     },
-    //   }
-    //   const container = document.createElement('div')
-    //   document.body.appendChild(container)
-    //   const app = createVaporApp(App)
-    //   app.mount(container)
-    //   expect(container.innerHTML).toBe(
-    //     `<my-el-parent-shadow-false is-shown="" data-v-app="">` +
-    //       `<div>` +
-    //       `<my-el-child-shadow-false data-v-app="">` +
-    //       `<div>child</div>` +
-    //       `</my-el-child-shadow-false>` +
-    //       `</div>` +
-    //       `</my-el-parent-shadow-false>`,
-    //   )
+      const isShown = ref(true)
+      const App = {
+        setup() {
+          return createComponent(
+            ParentWrapper,
+            { isShown: () => isShown.value },
+            {
+              default: () => createComponent(ChildWrapper),
+            },
+          )
+        },
+      }
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.mount(container)
+      expect(container.innerHTML).toBe(
+        `<my-el-parent-shadow-false is-shown="">` +
+          `<div>` +
+          `<my-el-child-shadow-false>` +
+          `<div>child<!--slot--></div>` +
+          `</my-el-child-shadow-false><!--slot--><!--slot-->` +
+          `</div><!--if-->` +
+          `</my-el-parent-shadow-false>`,
+      )
 
-    //   isShown.value = false
-    //   await nextTick()
-    //   expect(container.innerHTML).toBe(
-    //     `<my-el-parent-shadow-false data-v-app=""><!----></my-el-parent-shadow-false>`,
-    //   )
+      isShown.value = false
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<my-el-parent-shadow-false><!--if--></my-el-parent-shadow-false>`,
+      )
 
-    //   isShown.value = true
-    //   await nextTick()
-    //   expect(container.innerHTML).toBe(
-    //     `<my-el-parent-shadow-false data-v-app="" is-shown="">` +
-    //       `<div>` +
-    //       `<my-el-child-shadow-false data-v-app="">` +
-    //       `<div>child</div>` +
-    //       `</my-el-child-shadow-false>` +
-    //       `</div>` +
-    //       `</my-el-parent-shadow-false>`,
-    //   )
-    // })
+      isShown.value = true
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<my-el-parent-shadow-false is-shown="">` +
+          `<div>` +
+          `<my-el-child-shadow-false>` +
+          `<div>child<!--slot--></div>` +
+          `</my-el-child-shadow-false><!--slot--><!--slot-->` +
+          `</div><!--if-->` +
+          `</my-el-parent-shadow-false>`,
+      )
+    })
   })
 
   // describe('helpers', () => {
