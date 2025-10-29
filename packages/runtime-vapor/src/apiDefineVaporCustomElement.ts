@@ -70,9 +70,9 @@ export class VaporElement extends VueElementBase<
     super(def, props, createAppFn)
   }
 
-  protected _hasPreRendered(): boolean | undefined {
+  protected _needsHydration(): boolean {
     if (this.shadowRoot && this._createApp !== createVaporApp) {
-      this._root = this.shadowRoot
+      return true
     } else {
       if (__DEV__ && this.shadowRoot) {
         warn(
@@ -80,8 +80,8 @@ export class VaporElement extends VueElementBase<
             `defined as hydratable. Use \`defineVaporSSRCustomElement\`.`,
         )
       }
-      return true
     }
+    return false
   }
   protected _mount(def: VaporInnerComponentDef): void {
     if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && !def.name) {
@@ -94,8 +94,8 @@ export class VaporElement extends VueElementBase<
       this._def.configureApp(this._app)
     }
 
-    // For SSR custom elements, we need to create component in hydration context
-    if (this._createApp === createVaporSSRApp) {
+    // create component in hydration context
+    if (this.shadowRoot && this._createApp === createVaporSSRApp) {
       withHydration(this._root, this._createComponent.bind(this))
     } else {
       this._createComponent()

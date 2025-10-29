@@ -97,7 +97,7 @@ export function getPropsProxyHandlers(
         return resolvePropValue(
           propsOptions!,
           key,
-          instance.type.ce ? rawProps[rawKey] : rawProps[rawKey](),
+          resolveSource(rawProps[rawKey]),
           instance,
           resolveDefault,
         )

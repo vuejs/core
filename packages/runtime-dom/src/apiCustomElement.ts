@@ -220,7 +220,7 @@ export abstract class VueElementBase<
   /**
    * @internal
    */
-  _root!: Element | ShadowRoot
+  _root: Element | ShadowRoot
   /**
    * @internal
    */
@@ -230,15 +230,16 @@ export abstract class VueElementBase<
    */
   _teleportTargets?: Set<Element>
 
-  protected _def: Def
-  protected _props: Record<string, any>
-  protected _createApp: CreateAppFunction<E, C>
   protected _connected = false
   protected _resolved = false
   protected _numberProps: Record<string, true> | null = null
   protected _styleChildren: WeakSet<object> = new WeakSet()
   protected _pendingResolve: Promise<void> | undefined
   protected _parent: VueElementBase | undefined
+
+  protected _def: Def
+  protected _props: Record<string, any>
+  protected _createApp: CreateAppFunction<E, C>
 
   /**
    * dev only
@@ -251,7 +252,12 @@ export abstract class VueElementBase<
   protected _ob?: MutationObserver | null = null
   protected _slots?: Record<string, Node[]>
 
-  protected abstract _hasPreRendered(): boolean | undefined
+  /**
+   * Check if this custom element needs hydration.
+   * Returns true if it has a pre-rendered declarative shadow root that
+   * needs to be hydrated.
+   */
+  protected abstract _needsHydration(): boolean
   protected abstract _mount(def: Def): void
   protected abstract _update(): void
   protected abstract _unmount(): void
@@ -272,7 +278,9 @@ export abstract class VueElementBase<
     this._createApp = createAppFn
     this._nonce = def.nonce
 
-    if (this._hasPreRendered()) {
+    if (this._needsHydration()) {
+      this._root = this.shadowRoot!
+    } else {
       if (def.shadowRoot !== false) {
         this.attachShadow(
           extend({}, def.shadowRootOptions, {
@@ -439,6 +447,7 @@ export abstract class VueElementBase<
 
   private _mountComponent(def: Def): void {
     this._mount(def)
+    // apply expose after mount
     this._processExposed()
   }
 
@@ -447,7 +456,9 @@ export abstract class VueElementBase<
     if (!exposed) return
     for (const key in exposed) {
       if (!hasOwn(this, key)) {
+        // exposed properties are readonly
         Object.defineProperty(this, key, {
+          // unwrap ref to be consistent with public instance behavior
           get: () => unref(exposed[key]),
         })
       } else if (__DEV__) {
@@ -723,9 +734,9 @@ export class VueElement extends VueElementBase<
     super(def, props, createAppFn)
   }
 
-  protected _hasPreRendered(): boolean | undefined {
+  protected _needsHydration(): boolean {
     if (this.shadowRoot && this._createApp !== createApp) {
-      this._root = this.shadowRoot
+      return true
     } else {
       if (__DEV__ && this.shadowRoot) {
         warn(
@@ -733,8 +744,8 @@ export class VueElement extends VueElementBase<
             `defined as hydratable. Use \`defineSSRCustomElement\`.`,
         )
       }
-      return true
     }
+    return false
   }
 
   protected _mount(def: InnerComponentDef): void {
