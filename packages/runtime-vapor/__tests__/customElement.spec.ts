@@ -16,8 +16,8 @@ import {
   VaporTeleport,
   child,
   createComponent,
-  createComponentWithFallback,
   createIf,
+  createPlainElement,
   createSlot,
   createVaporApp,
   defineVaporAsyncComponent,
@@ -50,7 +50,7 @@ describe('defineVaporCustomElement', () => {
     document.body.appendChild(root)
     createVaporApp({
       setup() {
-        return createComponentWithFallback(tag, props, null, true)
+        return createPlainElement(tag, props, null, true)
       },
     }).mount(root)
 
@@ -125,7 +125,7 @@ describe('defineVaporCustomElement', () => {
         setup() {
           const n1 = template('<div><div id="move"></div></div>', true)() as any
           setInsertionState(n1, 0, true)
-          createComponentWithFallback('my-el-input', {
+          createPlainElement('my-el-input', {
             value: () => num.value,
             onInput: () => ($event: CustomEvent) => {
               num.value = $event.detail[0]
@@ -832,7 +832,7 @@ describe('defineVaporCustomElement', () => {
       const Provider = defineVaporCustomElement({
         setup() {
           provide('foo', foo)
-          return createComponentWithFallback('my-consumer')
+          return createPlainElement('my-consumer')
         },
       })
       customElements.define('my-provider', Provider)
@@ -873,13 +873,13 @@ describe('defineVaporCustomElement', () => {
       const ProviderA = defineVaporCustomElement({
         setup() {
           provide('fooA', fooA)
-          return createComponentWithFallback('provider-b')
+          return createPlainElement('provider-b')
         },
       })
       const ProviderB = defineVaporCustomElement({
         setup() {
           provide('fooB', fooB)
-          return createComponentWithFallback('my-multi-consumer')
+          return createPlainElement('my-multi-consumer')
         },
       })
 
@@ -1403,9 +1403,9 @@ describe('defineVaporCustomElement', () => {
 
       const App = {
         setup() {
-          return createComponentWithFallback('my-parent', null, {
+          return createPlainElement('my-parent', null, {
             default: () =>
-              createComponentWithFallback('my-child', null, {
+              createPlainElement('my-child', null, {
                 default: () => template('<span>default</span>')(),
               }),
           })
@@ -1456,9 +1456,9 @@ describe('defineVaporCustomElement', () => {
 
       const App = {
         setup() {
-          return createComponentWithFallback('my-el-teleport-parent', null, {
+          return createPlainElement('my-el-teleport-parent', null, {
             default: () =>
-              createComponentWithFallback('my-el-teleport-child', null, {
+              createPlainElement('my-el-teleport-child', null, {
                 default: () => template('<span>default</span>')(),
               }),
           })
@@ -1501,7 +1501,7 @@ describe('defineVaporCustomElement', () => {
 
       const App = {
         setup() {
-          return createComponentWithFallback('my-el-two-teleport-child', null, {
+          return createPlainElement('my-el-two-teleport-child', null, {
             default: () => [
               template('<div slot="header">header</div>')(),
               template('<span slot="body">body</span>')(),
@@ -1552,16 +1552,12 @@ describe('defineVaporCustomElement', () => {
 
       const App = {
         setup() {
-          return createComponentWithFallback(
-            'my-el-two-teleport-child-0',
-            null,
-            {
-              default: () => [
-                template('<div slot="header">header</div>')(),
-                template('<span slot="body">body</span>')(),
-              ],
-            },
-          )
+          return createPlainElement('my-el-two-teleport-child-0', null, {
+            default: () => [
+              template('<div slot="header">header</div>')(),
+              template('<span slot="body">body</span>')(),
+            ],
+          })
         },
       }
       const app = createVaporApp(App)
@@ -1591,7 +1587,7 @@ describe('defineVaporCustomElement', () => {
       )
       const ChildWrapper = {
         setup() {
-          return createComponentWithFallback('my-el-child-shadow-false', null, {
+          return createPlainElement('my-el-child-shadow-false', null, {
             default: () => template('child')(),
           })
         },
@@ -1624,7 +1620,7 @@ describe('defineVaporCustomElement', () => {
           isShown: { type: Boolean, required: true },
         },
         setup(props: any) {
-          return createComponentWithFallback(
+          return createPlainElement(
             'my-el-parent-shadow-false',
             { isShown: () => props.isShown },
             {
@@ -2029,7 +2025,7 @@ describe('defineVaporCustomElement', () => {
         const fooValue = ref('fooValue')
         const n0 = template('<div></div>')() as any
         setInsertionState(n0, null)
-        createComponentWithFallback('my-el-async-4', {
+        createPlainElement('my-el-async-4', {
           fooValue: () => fooValue.value,
         })
         return n0

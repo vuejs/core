@@ -642,6 +642,16 @@ export function createComponentWithFallback(
     )
   }
 
+  return createPlainElement(comp, rawProps, rawSlots, isSingleRoot, once)
+}
+
+export function createPlainElement(
+  comp: string,
+  rawProps?: LooseRawProps | null,
+  rawSlots?: LooseRawSlots | null,
+  isSingleRoot?: boolean,
+  once?: boolean,
+): HTMLElement {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion

@@ -1037,4 +1037,15 @@ describe('compiler: element transform', () => {
     expect(code).toMatchSnapshot()
     expect(code).contain('return null')
   })
+
+  test('custom element', () => {
+    const { code } = compileWithElementTransform(
+      '<my-custom-element></my-custom-element>',
+      {
+        isCustomElement: tag => tag === 'my-custom-element',
+      },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+  })
 })

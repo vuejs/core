@@ -17,6 +17,7 @@ export { setInsertionState } from './insertionState'
 export {
   createComponent,
   createComponentWithFallback,
+  createPlainElement,
   isVaporComponent,
 } from './component'
 export { renderEffect } from './renderEffect'

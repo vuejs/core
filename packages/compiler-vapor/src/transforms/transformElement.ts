@@ -82,9 +82,10 @@ export const transformElement: NodeTransform = (node, context) => {
       parent = parent.parent
     }
     const singleRoot =
-      context.root === parent &&
-      parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
-        .length === 1
+      (context.root === parent &&
+        parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
+          .length === 1) ||
+      isCustomElement
 
     if (isComponent) {
       transformComponentElement(

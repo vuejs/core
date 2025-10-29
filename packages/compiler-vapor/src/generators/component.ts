@@ -74,7 +74,7 @@ export function genCreateComponent(
       operation.dynamic && !operation.dynamic.isStatic
         ? helper('createDynamicComponent')
         : operation.isCustomElement
-          ? helper('createComponentWithFallback')
+          ? helper('createPlainElement')
           : operation.asset
             ? helper('createComponentWithFallback')
             : helper('createComponent'),
