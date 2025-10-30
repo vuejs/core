@@ -289,7 +289,7 @@ function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
 
     const origPosInOldMap = oldMapConsumer.originalPositionFor({
       line: m.originalLine,
-      column: m.originalColumn,
+      column: m.originalColumn!,
     })
 
     if (origPosInOldMap.source == null) {
@@ -305,7 +305,7 @@ function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
         line: origPosInOldMap.line, // map line
         // use current column, since the oldMap produced by @vue/compiler-sfc
         // does not
-        column: m.originalColumn,
+        column: m.originalColumn!,
       },
       source: origPosInOldMap.source,
       name: origPosInOldMap.name,
