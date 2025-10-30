@@ -108,7 +108,7 @@ export { getCurrentInstance } from './component'
 /**
  * @internal
  */
-export { getCurrentGenericInstance } from './component'
+export { useInstanceOption } from './component'
 
 // For raw render function users
 export { h } from './h'

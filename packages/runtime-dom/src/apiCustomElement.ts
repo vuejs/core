@@ -27,9 +27,9 @@ import {
   type VNodeProps,
   createVNode,
   defineComponent,
-  getCurrentGenericInstance,
   nextTick,
   unref,
+  useInstanceOption,
   warn,
 } from '@vue/runtime-core'
 import {
@@ -804,12 +804,12 @@ export class VueElement extends VueElementBase<
 }
 
 export function useHost(caller?: string): VueElementBase | null {
-  const instance = getCurrentGenericInstance()
-  const el = instance && (instance.ce as VueElementBase)
+  const { hasInstance, value } = useInstanceOption('ce', true)
+  const el = value as VueElementBase
   if (el) {
     return el
   } else if (__DEV__) {
-    if (!instance) {
+    if (!hasInstance) {
       warn(
         `${caller || 'useHost'} called without an active component instance.`,
       )
