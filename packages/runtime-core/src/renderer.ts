@@ -2054,7 +2054,9 @@ function baseCreateRenderer(
     const needTransition =
       moveType !== MoveType.REORDER &&
       shapeFlag & ShapeFlags.ELEMENT &&
-      transition
+      transition &&
+      // #14031 skip transition hooks if el is hidden by v-show
+      !isHiddenByVShow(vnode)
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
         transition!.beforeEnter(el!)
@@ -2564,4 +2566,10 @@ export function invalidateMount(hooks: LifecycleHook): void {
     for (let i = 0; i < hooks.length; i++)
       hooks[i].flags! |= SchedulerJobFlags.DISPOSED
   }
+}
+
+function isHiddenByVShow(vnode: VNode): boolean {
+  // @ts-expect-error vShow has this internal name
+  const vShowDir = vnode.dirs && vnode.dirs.find(dir => dir.name === 'show')
+  return !!(vShowDir && !vShowDir.value)
 }
