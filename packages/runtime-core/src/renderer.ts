@@ -2051,11 +2051,11 @@ function baseCreateRenderer(
     }
 
     // single nodes
-    const needTransition =
+    const needCallTransitionHooks =
       moveType !== MoveType.REORDER &&
       shapeFlag & ShapeFlags.ELEMENT &&
-      transition
-    if (needTransition) {
+      needTransition(parentSuspense, transition)
+    if (needCallTransitionHooks) {
       if (moveType === MoveType.ENTER) {
         transition!.beforeEnter(el!)
         hostInsert(el!, container, anchor)
