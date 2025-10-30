@@ -5,6 +5,7 @@ import {
   createAsyncComponentContext,
   currentInstance,
   handleError,
+  isKeepAlive,
   markAsyncBoundary,
   performAsyncHydrate,
   useAsyncComponentState,
@@ -28,6 +29,7 @@ import {
 import { invokeArrayFns } from '@vue/shared'
 import { insert, remove } from './block'
 import { parentNode } from './dom/node'
+import type { KeepAliveInstance } from './components/KeepAlive'
 
 /*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
@@ -120,7 +122,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // already resolved
       let resolvedComp = getResolvedComp()
       if (resolvedComp) {
-        frag!.update(() => createInnerComp(resolvedComp!, instance))
+        frag!.update(() => createInnerComp(resolvedComp!, instance, frag))
         return frag
       }
 
@@ -188,6 +190,12 @@ function createInnerComp(
     undefined,
     appContext,
   )
+
+  if (parent.parent && isKeepAlive(parent.parent)) {
+    // If there is a parent KeepAlive, let it handle the resolved async component
+    // This will process shapeFlag and cache the component
+    ;(parent.parent as KeepAliveInstance).cacheComponent(instance)
+  }
 
   // set ref
   // @ts-expect-error

@@ -22,6 +22,7 @@ import {
   createIf,
   createTemplateRefSetter,
   createVaporApp,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   renderEffect,
   setText,
@@ -30,6 +31,7 @@ import {
 } from '../../src'
 
 const define = makeRender()
+const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
 describe('VaporKeepAlive', () => {
   let one: VaporComponent
@@ -1045,7 +1047,81 @@ describe('VaporKeepAlive', () => {
     })
   })
 
-  test.todo('should work with async component', async () => {})
+  test('should work with async component', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const toggle = ref(true)
+    const instanceRef = ref<any>(null)
+    const { html } = define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => 'Foo' },
+          {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => {
+                  const n0 = createComponent(AsyncComp)
+                  setRef(n0, instanceRef)
+                  return n0
+                },
+              )
+            },
+          },
+        )
+      },
+    }).render()
+
+    expect(html()).toBe(`<!--async component--><!--if-->`)
+
+    resolve!(
+      defineVaporComponent({
+        name: 'Foo',
+        setup(_, { expose }) {
+          const count = ref(0)
+          expose({
+            inc: () => {
+              count.value++
+            },
+          })
+
+          const n0 = template(`<p> </p>`)() as any
+          const x0 = child(n0) as any
+          renderEffect(() => {
+            setText(x0, String(count.value))
+          })
+          return n0
+        },
+      }),
+    )
+
+    await timeout()
+    // resolved
+    expect(html()).toBe(`<p>0</p><!--async component--><!--if-->`)
+
+    // change state + toggle out
+    instanceRef.value.inc()
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    // toggle in, state should be maintained
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('<p>1</p><!--if-->')
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+  })
 
   test('handle error in async onActivated', async () => {
     const err = new Error('foo')

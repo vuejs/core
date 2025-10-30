@@ -76,9 +76,9 @@ import { VaporFragment, isFragment, setFragmentFallback } from './fragment'
 import type { NodeRef } from './apiTemplateRef'
 import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
 import {
-  type KeepAliveInstance,
   activate,
   deactivate,
+  findParentKeepAlive,
 } from './components/KeepAlive'
 
 export const interopKey: unique symbol = Symbol(`interop`)
@@ -315,7 +315,7 @@ function createVDOMComponent(
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       vdomDeactivate(
         vnode,
-        (parentInstance as KeepAliveInstance).getStorageContainer(),
+        findParentKeepAlive(parentInstance)!.getStorageContainer(),
         internals,
         parentInstance as any,
         null,
