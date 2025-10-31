@@ -276,6 +276,7 @@ function createVDOMComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
 ): VaporFragment {
+  const parentInstance = currentInstance as VaporComponentInstance
   const frag = new VaporFragment([])
   const vnode = (frag.vnode = createVNode(
     component,
@@ -307,7 +308,6 @@ function createVDOMComponent(
 
   let rawRef: VNodeNormalizedRef | null = null
   let isMounted = false
-  const parentInstance = currentInstance as VaporComponentInstance
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
     // unset ref
     if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)

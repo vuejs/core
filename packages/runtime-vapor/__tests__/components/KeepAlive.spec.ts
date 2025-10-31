@@ -1269,7 +1269,39 @@ describe('VaporKeepAlive', () => {
   })
 
   describe('vdom interop', () => {
-    test('render vdom component', async () => {
+    test('should work', () => {
+      const VdomComp = {
+        setup() {
+          onBeforeMount(() => oneHooks.beforeMount())
+          onMounted(() => oneHooks.mounted())
+          onActivated(() => oneHooks.activated())
+          onDeactivated(() => oneHooks.deactivated())
+          onUnmounted(() => oneHooks.unmounted())
+          return () => h('div', null, 'hi')
+        },
+      }
+
+      const App = defineVaporComponent({
+        setup() {
+          return createComponent(VaporKeepAlive, null, {
+            default: () => {
+              return createComponent(VdomComp)
+            },
+          })
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      expect(container.innerHTML).toBe(`<div>hi</div>`)
+      assertHookCalls(oneHooks, [1, 1, 1, 0, 0])
+    })
+
+    test('with v-if', async () => {
       const VdomComp = {
         setup() {
           const msg = ref('vdom')

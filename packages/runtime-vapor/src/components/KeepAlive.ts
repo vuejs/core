@@ -118,10 +118,12 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
       const key = innerBlock.type
       const blockToCache =
-        isFragment(block) && isFragment(block.nodes)
+        isFragment(block) && isVdomInteropFragment(block.nodes)
           ? // cache the fragment nodes for vdom interop
             block.nodes
-          : innerBlock
+          : isVdomInteropFragment(block)
+            ? block
+            : innerBlock
 
       innerCacheBlock(key, blockToCache)
     }
@@ -205,6 +207,9 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     // the `shapeFlag` is processed in `DynamicFragment.update`. Here only need
     // to process the `VaporComponentInstance`
     if (isVaporComponent(children)) processShapeFlag(children)
+    else if (isVdomInteropFragment(children)) {
+      children.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    }
 
     function pruneCache(filter: (name: string) => boolean) {
       cache.forEach((instance, key) => {
@@ -257,9 +262,9 @@ function getInnerBlock(block: Block): VaporComponentInstance | undefined {
 function getInnerComponent(block: Block): VaporComponentInstance | undefined {
   if (isVaporComponent(block)) {
     return block
-  } else if (isVdomInteropFragment(block)) {
+  } else if ((block as any as GenericComponentInstance).vnode) {
     // vdom interop
-    return block.vnode as any
+    return (block as any as GenericComponentInstance).vnode as any
   }
 }
 
