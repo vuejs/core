@@ -149,8 +149,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       load()
         .then(() => {
           loaded.value = true
-          // TODO parent is keep-alive, force update so the loaded component's
-          // name is taken into account
         })
         .catch(err => {
           onError(err)

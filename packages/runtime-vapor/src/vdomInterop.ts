@@ -348,39 +348,38 @@ function createVDOMComponent(
         undefined,
         false,
       )
-      return
-    }
-
-    const prev = currentInstance
-    simpleSetCurrentInstance(parentInstance)
-    if (!isMounted) {
-      if (transition) setVNodeTransitionHooks(vnode, transition)
-      internals.mt(
-        vnode,
-        parentNode,
-        anchor,
-        parentInstance as any,
-        null,
-        undefined,
-        false,
-      )
-      // set ref
-      if (rawRef) vdomSetRef(rawRef, null, null, vnode)
-      onScopeDispose(unmount, true)
-      isMounted = true
     } else {
-      // move
-      internals.m(
-        vnode,
-        parentNode,
-        anchor,
-        MoveType.REORDER,
-        parentInstance as any,
-      )
+      const prev = currentInstance
+      simpleSetCurrentInstance(parentInstance)
+      if (!isMounted) {
+        if (transition) setVNodeTransitionHooks(vnode, transition)
+        internals.mt(
+          vnode,
+          parentNode,
+          anchor,
+          parentInstance as any,
+          null,
+          undefined,
+          false,
+        )
+        // set ref
+        if (rawRef) vdomSetRef(rawRef, null, null, vnode)
+        onScopeDispose(unmount, true)
+        isMounted = true
+      } else {
+        // move
+        internals.m(
+          vnode,
+          parentNode,
+          anchor,
+          MoveType.REORDER,
+          parentInstance as any,
+        )
+      }
+      simpleSetCurrentInstance(prev)
     }
 
     frag.nodes = vnode.el as any
-    simpleSetCurrentInstance(prev)
   }
 
   frag.remove = unmount
