@@ -1116,7 +1116,7 @@ describe('VaporKeepAlive', () => {
     // toggle in, state should be maintained
     toggle.value = true
     await nextTick()
-    expect(html()).toBe('<p>1</p><!--if-->')
+    expect(html()).toBe('<p>1</p><!--async component--><!--if-->')
 
     toggle.value = false
     await nextTick()

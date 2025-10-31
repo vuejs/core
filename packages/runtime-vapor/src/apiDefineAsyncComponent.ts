@@ -193,6 +193,8 @@ function createInnerComp(
     // If there is a parent KeepAlive, let it handle the resolved async component
     // This will process shapeFlag and cache the component
     ;(parent.parent as KeepAliveInstance).cacheComponent(instance)
+    // cache the wrapper instance as well
+    ;(parent.parent as KeepAliveInstance).cacheComponent(parent)
   }
 
   // set ref
