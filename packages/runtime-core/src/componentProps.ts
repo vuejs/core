@@ -737,14 +737,19 @@ function assertType(
     valid = t === expectedType.toLowerCase()
     // for primitive wrapper objects
     if (!valid && t === 'object') {
-      valid = value instanceof (type as PropConstructor)
+      // Guard against invalid prop type definitions (e.g. 'object', {}, etc.)
+      // Only attempt instanceof when the provided type is a function/constructor.
+      valid = isFunction(type) && value instanceof (type as PropConstructor)
     }
   } else if (expectedType === 'Object') {
     valid = isObject(value)
   } else if (expectedType === 'Array') {
     valid = isArray(value)
   } else {
-    valid = value instanceof (type as PropConstructor)
+    // Fallback to constructor check only when type is a function.
+    // This avoids errors like "Right-hand side of 'instanceof' is not an object"
+    // when users mistakenly pass invalid values (e.g. strings) in prop type.
+    valid = isFunction(type) && value instanceof (type as PropConstructor)
   }
   return {
     valid,
