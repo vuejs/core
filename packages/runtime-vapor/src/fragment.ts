@@ -73,6 +73,7 @@ export class DynamicFragment extends VaporFragment {
   current?: BlockFn
   fallback?: BlockFn
   anchorLabel?: string
+  pausedScopes?: EffectScope[]
 
   constructor(anchorLabel?: string) {
     super([])
@@ -100,7 +101,10 @@ export class DynamicFragment extends VaporFragment {
     // teardown previous branch
     if (this.scope) {
       if (isKeepAlive(instance)) {
-        ;(instance as KeepAliveInstance).process(this.nodes)
+        ;(instance as KeepAliveInstance).processFragment(this)
+        // Pause the scope and store it for later cleanup
+        this.scope.pause()
+        ;(this.pausedScopes || (this.pausedScopes = [])).push(this.scope)
       } else {
         this.scope.stop()
       }
@@ -159,7 +163,7 @@ export class DynamicFragment extends VaporFragment {
       this.scope = new EffectScope()
       this.nodes = this.scope.run(render) || []
       if (isKeepAlive(instance)) {
-        ;(instance as KeepAliveInstance).process(this.nodes)
+        ;(instance as KeepAliveInstance).cacheFragment(this)
       }
       if (transition) {
         this.$transition = applyTransitionHooks(this.nodes, transition)

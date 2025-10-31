@@ -1,6 +1,7 @@
 import {
   type GenericComponentInstance,
   type KeepAliveProps,
+  type VNode,
   currentInstance,
   devtoolsComponentAdded,
   getComponentName,
@@ -25,7 +26,11 @@ import {
 import { defineVaporComponent } from '../apiDefineComponent'
 import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
 import { createElement } from '../dom/node'
-import { type VaporFragment, isFragment } from '../fragment'
+import {
+  type DynamicFragment,
+  type VaporFragment,
+  isFragment,
+} from '../fragment'
 
 export interface KeepAliveInstance extends VaporComponentInstance {
   activate: (
@@ -34,15 +39,16 @@ export interface KeepAliveInstance extends VaporComponentInstance {
     anchor?: Node | null | 0,
   ) => void
   deactivate: (instance: VaporComponentInstance) => void
-  process: (block: Block) => void
   cacheComponent: (instance: VaporComponentInstance) => void
   getCachedComponent: (
     comp: VaporComponent,
   ) => VaporComponentInstance | VaporFragment | undefined
   getStorageContainer: () => ParentNode
+  processFragment: (fragment: DynamicFragment) => void
+  cacheFragment: (fragment: DynamicFragment) => void
 }
 
-type CacheKey = VaporComponent
+type CacheKey = VaporComponent | VNode['type']
 type Cache = Map<CacheKey, VaporComponentInstance | VaporFragment>
 type Keys = Set<CacheKey>
 
@@ -116,54 +122,55 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       const innerBlock = getInnerBlock(block)!
       if (!innerBlock || !shouldCache(innerBlock)) return
 
-      const key = innerBlock.type
-      const blockToCache =
-        isFragment(block) && isVdomInteropFragment(block.nodes)
-          ? // cache the fragment nodes for vdom interop
-            block.nodes
-          : isVdomInteropFragment(block)
-            ? block
-            : innerBlock
-
-      innerCacheBlock(key, blockToCache)
+      let toCache: VaporComponentInstance | VaporFragment
+      let key: CacheKey
+      let frag: VaporFragment | undefined
+      if (isFragment(block) && (frag = findInteropFragment(block))) {
+        // vdom component: cache the fragment
+        toCache = frag
+        key = getCacheKey(frag)
+      } else {
+        // vapor component: cache the instance
+        toCache = innerBlock
+        key = innerBlock.type
+      }
+      innerCacheBlock(key, toCache)
     }
 
     onMounted(cacheBlock)
     onUpdated(cacheBlock)
 
     onBeforeUnmount(() => {
-      cache.forEach(item => {
-        const cached = getInnerComponent(item)!
-        resetShapeFlag(cached)
-        cache.delete(cached.type)
+      cache.forEach((cached, key) => {
+        const instance = getInstanceFromCache(cached)
+        if (!instance) return
+
+        resetCachedShapeFlag(cached)
+        cache.delete(key)
+
         // current instance will be unmounted as part of keep-alive's unmount
         if (current) {
-          const innerComp = getInnerComponent(current)!
-          if (innerComp.type === cached.type) {
-            const instance = cached.vapor
-              ? cached
-              : // vdom interop
-                (cached as any).component
+          const currentKey = getCacheKey(current)
+          if (currentKey === key) {
+            // call deactivated hook
             const da = instance.da
             da && queuePostFlushCb(da)
             return
           }
         }
-        remove(item, storageContainer)
+
+        remove(cached, storageContainer)
       })
     })
 
     keepAliveInstance.getStorageContainer = () => storageContainer
+
     keepAliveInstance.getCachedComponent = comp => {
       // For async components, use the resolved component type as the cache key
-      const key = (comp as any).__asyncResolved || comp
-      return cache.get(key)
+      return cache.get(comp.__asyncResolved || comp)
     }
 
-    const processShapeFlag = (keepAliveInstance.process = block => {
-      const instance = getInnerComponent(block)
-      if (!instance) return
-
+    const setShapeFlags = (instance: VaporComponentInstance) => {
       // For unresolved async wrappers, skip processing
       // Wait for resolution and re-process via createInnerComp
       if (isAsyncWrapper(instance) && !instance.type.__asyncResolved) {
@@ -177,12 +184,49 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       if (shouldCache(instance)) {
         instance.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       }
-    })
+    }
 
     keepAliveInstance.cacheComponent = (instance: VaporComponentInstance) => {
       if (!shouldCache(instance)) return
-      processShapeFlag(instance)
+      setShapeFlags(instance)
       innerCacheBlock(instance.type, instance)
+    }
+
+    keepAliveInstance.processFragment = (frag: DynamicFragment) => {
+      const innerBlock = getInnerBlock(frag.nodes)
+      if (!innerBlock) return
+
+      const fragment = findInteropFragment(frag.nodes)
+      if (fragment) {
+        setVdomShapeFlags(fragment)
+      } else {
+        setShapeFlags(innerBlock)
+      }
+    }
+
+    keepAliveInstance.cacheFragment = (fragment: DynamicFragment) => {
+      // Find the component within the fragment
+      const innerBlock = getInnerBlock(fragment.nodes)
+      if (!innerBlock || !shouldCache(innerBlock)) return
+
+      // Determine what to cache based on fragment type
+      let toCache: VaporComponentInstance | VaporFragment
+      let key: CacheKey
+
+      // find vdom interop fragment
+      const frag = findInteropFragment(fragment)
+      if (frag) {
+        // For vdom components, set shapeFlag
+        setVdomShapeFlags(frag)
+        toCache = frag
+        key = getCacheKey(frag)!
+      } else {
+        setShapeFlags(innerBlock)
+        toCache = innerBlock
+        key = innerBlock.type
+      }
+
+      innerCacheBlock(key, toCache)
     }
 
     keepAliveInstance.activate = (instance, parentNode, anchor) => {
@@ -194,6 +238,34 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       deactivate(instance, storageContainer)
     }
 
+    function setVdomShapeFlags(
+      fragment: VaporFragment,
+      shouldKeepAlive: boolean = true,
+    ) {
+      if (shouldKeepAlive) {
+        fragment.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+      }
+      const fragKey = getCacheKey(fragment)
+      if (fragKey && cache.has(fragKey)) {
+        fragment.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
+      }
+      // Also set shapeFlag on the component instance if it exists
+      const vnode = fragment.vnode as any
+      if (vnode && vnode.component) {
+        vnode.component.shapeFlag = fragment.vnode!.shapeFlag
+      }
+    }
+
+    function resetCachedShapeFlag(
+      cached: VaporComponentInstance | VaporFragment,
+    ) {
+      if (isVaporComponent(cached)) {
+        resetShapeFlag(cached)
+      } else {
+        resetShapeFlag(cached.vnode)
+      }
+    }
+
     let children = slots.default()
     if (isArray(children) && children.length > 1) {
       if (__DEV__) {
@@ -202,18 +274,18 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       return children
     }
 
-    // `children` could be either a `VaporComponentInstance` or a `DynamicFragment`
-    // (when using `v-if` or `<component is/>`). For `DynamicFragment` children,
-    // the `shapeFlag` is processed in `DynamicFragment.update`. Here only need
-    // to process the `VaporComponentInstance`
-    if (isVaporComponent(children)) processShapeFlag(children)
-    else if (isVdomInteropFragment(children)) {
-      children.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    // Process shapeFlag for vapor and vdom components
+    // DynamicFragment (v-if, <component is/>) is processed in DynamicFragment.update
+    if (isVaporComponent(children)) {
+      setShapeFlags(children)
+    } else if (isInteropFragment(children)) {
+      setVdomShapeFlags(children, true)
     }
 
     function pruneCache(filter: (name: string) => boolean) {
-      cache.forEach((instance, key) => {
-        instance = getInnerComponent(instance)!
+      cache.forEach((cached, key) => {
+        const instance = getInstanceFromCache(cached)
+        if (!instance) return
         const name = getComponentName(instance.type)
         if (name && !filter(name)) {
           pruneCacheEntry(key)
@@ -223,7 +295,9 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
     function pruneCacheEntry(key: CacheKey) {
       const cached = cache.get(key)!
-      resetShapeFlag(cached)
+
+      resetCachedShapeFlag(cached)
+
       // don't unmount if the instance is the current one
       if (cached !== current) {
         remove(cached)
@@ -251,7 +325,7 @@ function getInnerBlock(block: Block): VaporComponentInstance | undefined {
   if (isVaporComponent(block)) {
     return block
   }
-  if (isVdomInteropFragment(block)) {
+  if (isInteropFragment(block)) {
     return block.vnode as any
   }
   if (isFragment(block)) {
@@ -259,17 +333,36 @@ function getInnerBlock(block: Block): VaporComponentInstance | undefined {
   }
 }
 
-function getInnerComponent(block: Block): VaporComponentInstance | undefined {
-  if (isVaporComponent(block)) {
+function isInteropFragment(block: Block): block is VaporFragment {
+  return !!(isFragment(block) && block.vnode)
+}
+
+function findInteropFragment(block: Block): VaporFragment | undefined {
+  if (isInteropFragment(block)) {
     return block
-  } else if ((block as any as GenericComponentInstance).vnode) {
-    // vdom interop
-    return (block as any as GenericComponentInstance).vnode as any
+  }
+  if (isFragment(block)) {
+    return findInteropFragment(block.nodes)
   }
 }
 
-function isVdomInteropFragment(block: Block): block is VaporFragment {
-  return !!(isFragment(block) && block.insert)
+function getInstanceFromCache(
+  cached: VaporComponentInstance | VaporFragment,
+): GenericComponentInstance {
+  if (isVaporComponent(cached)) {
+    return cached
+  }
+  // vdom interop
+  return cached.vnode!.component as GenericComponentInstance
+}
+
+function getCacheKey(block: VaporComponentInstance | VaporFragment): CacheKey {
+  if (isVaporComponent(block)) {
+    return block.type
+  }
+
+  // vdom interop
+  return block.vnode!.type
 }
 
 export function activate(
