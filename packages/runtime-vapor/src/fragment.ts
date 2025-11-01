@@ -73,7 +73,8 @@ export class DynamicFragment extends VaporFragment {
   current?: BlockFn
   fallback?: BlockFn
   anchorLabel?: string
-  pausedScopes?: EffectScope[]
+  inKeepAlive?: boolean
+  keptAliveScopes?: Map<any, EffectScope>
 
   constructor(anchorLabel?: string) {
     super([])
@@ -97,14 +98,13 @@ export class DynamicFragment extends VaporFragment {
     const parent = isHydrating ? null : this.anchor.parentNode
     const transition = this.$transition
     const instance = currentInstance!
-
+    this.inKeepAlive = isKeepAlive(instance)
     // teardown previous branch
     if (this.scope) {
-      if (isKeepAlive(instance)) {
+      if (this.inKeepAlive) {
         ;(instance as KeepAliveInstance).processFragment(this)
-        // Pause the scope and store it for later cleanup
-        this.scope.pause()
-        ;(this.pausedScopes || (this.pausedScopes = [])).push(this.scope)
+        if (!this.keptAliveScopes) this.keptAliveScopes = new Map()
+        this.keptAliveScopes.set(this.current, this.scope)
       } else {
         this.scope.stop()
       }
@@ -160,9 +160,21 @@ export class DynamicFragment extends VaporFragment {
     parent: ParentNode | null,
   ) {
     if (render) {
-      this.scope = new EffectScope()
+      // For KeepAlive, try to reuse the keepAlive scope for this key
+      const scope =
+        this.inKeepAlive && this.keptAliveScopes
+          ? this.keptAliveScopes.get(this.current)
+          : undefined
+      if (scope) {
+        this.scope = scope
+        this.keptAliveScopes!.delete(this.current!)
+        this.scope.resume()
+      } else {
+        this.scope = new EffectScope()
+      }
+
       this.nodes = this.scope.run(render) || []
-      if (isKeepAlive(instance)) {
+      if (this.inKeepAlive) {
         ;(instance as KeepAliveInstance).cacheFragment(this)
       }
       if (transition) {

@@ -149,13 +149,10 @@ export function remove(block: Block, parent?: ParentNode): void {
     if (block.anchor) remove(block.anchor, parent)
     if ((block as DynamicFragment).scope) {
       ;(block as DynamicFragment).scope!.stop()
-
-      const pausedScopes = (block as DynamicFragment).pausedScopes
-      if (pausedScopes) {
-        for (let i = 0; i < pausedScopes.length; i++) {
-          pausedScopes[i].stop()
-        }
-        pausedScopes.length = 0
+      const scopes = (block as DynamicFragment).keptAliveScopes
+      if (scopes) {
+        scopes.forEach(scope => scope.stop())
+        scopes.clear()
       }
     }
   }
