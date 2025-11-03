@@ -306,23 +306,21 @@ export function findTransitionBlock(
     // use component id as key
     if (child && child.$key === undefined) child.$key = block.uid
   } else if (isArray(block)) {
-    child = block[0] as TransitionBlock
     let hasFound = false
     for (const c of block) {
+      if (c instanceof Comment) continue
       const item = findTransitionBlock(c)
-      if (item instanceof Element) {
-        if (__DEV__ && hasFound) {
-          // warn more than one non-comment child
-          warn(
-            '<transition> can only be used on a single element or component. ' +
-              'Use <transition-group> for lists.',
-          )
-          break
-        }
-        child = item
-        hasFound = true
-        if (!__DEV__) break
+      if (__DEV__ && hasFound) {
+        // warn more than one non-comment child
+        warn(
+          '<transition> can only be used on a single element or component. ' +
+            'Use <transition-group> for lists.',
+        )
+        break
       }
+      child = item
+      hasFound = true
+      if (!__DEV__) break
     }
   } else if ((isFrag = isFragment(block))) {
     if (block.insert) {
@@ -344,7 +342,7 @@ export function setTransitionHooksOnFragment(
   hooks: VaporTransitionHooks,
 ): void {
   if (isFragment(block)) {
-    setTransitionHooks(block, hooks)
+    block.$transition = hooks
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       setTransitionHooksOnFragment(block[i], hooks)
