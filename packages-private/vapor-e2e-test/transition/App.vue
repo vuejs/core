@@ -11,6 +11,7 @@ import {
 const show = ref(true)
 const toggle = ref(true)
 const count = ref(0)
+const hide = ref(false)
 
 const timeout = (fn, time) => setTimeout(fn, time)
 const duration = typeof process !== 'undefined' && process.env.CI ? 200 : 50
@@ -480,6 +481,21 @@ function changeViewInOut() {
       </div>
     </div>
     <!-- mode end -->
+
+    <!-- with teleport -->
+    <div class="with-teleport">
+      <div class="target"></div>
+      <div class="container">
+        <Transition>
+          <Teleport to=".target" defer>
+            <!-- comment -->
+            <VaporCompB v-if="hide" class="test"></VaporCompB>
+          </Teleport>
+        </Transition>
+      </div>
+      <button @click="hide = !hide">button</button>
+    </div>
+    <!-- with teleport end -->
 
     <!-- vdom interop -->
     <div class="vdom">
