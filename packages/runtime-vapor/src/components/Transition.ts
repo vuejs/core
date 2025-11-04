@@ -10,6 +10,7 @@ import {
   baseResolveTransitionHooks,
   checkTransitionMode,
   currentInstance,
+  isAsyncWrapper,
   isTemplateNode,
   leaveCbKey,
   queuePostFlushCb,
@@ -225,7 +226,7 @@ export function applyTransitionHooks(
     hooks => (resolvedHooks = hooks as VaporTransitionHooks),
   )
   resolvedHooks.delayedLeave = delayedLeave
-  setTransitionHooks(child, resolvedHooks)
+  child.$transition = resolvedHooks
   if (isFrag) setTransitionHooksOnFragment(block, resolvedHooks)
 
   // fallthrough attrs
@@ -253,7 +254,7 @@ export function applyTransitionLeaveHooks(
     state,
     instance,
   )
-  setTransitionHooks(leavingBlock, leavingHooks)
+  leavingBlock.$transition = leavingHooks
 
   const { mode } = props
   if (mode === 'out-in') {
@@ -302,7 +303,12 @@ export function findTransitionBlock(
     // transition can only be applied on Element child
     if (block instanceof Element) child = block
   } else if (isVaporComponent(block)) {
-    child = findTransitionBlock(block.block)
+    // should save hooks on unresolved async wrapper, so that it can be applied after resolved
+    if (isAsyncWrapper(block) && !block.type.__asyncResolved) {
+      child = block
+    } else {
+      child = findTransitionBlock(block.block)
+    }
     // use component id as key
     if (child && child.$key === undefined) child.$key = block.uid
   } else if (isArray(block)) {
@@ -344,7 +350,7 @@ export function setTransitionHooksOnFragment(
   hooks: VaporTransitionHooks,
 ): void {
   if (isFragment(block)) {
-    setTransitionHooks(block, hooks)
+    block.$transition = hooks
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       setTransitionHooksOnFragment(block[i], hooks)
@@ -353,7 +359,7 @@ export function setTransitionHooksOnFragment(
 }
 
 export function setTransitionHooks(
-  block: TransitionBlock | VaporComponentInstance,
+  block: TransitionBlock,
   hooks: VaporTransitionHooks,
 ): void {
   if (isVaporComponent(block)) {
