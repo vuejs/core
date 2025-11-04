@@ -161,7 +161,12 @@ export class TeleportFragment extends VaporFragment {
     }
     // mount into target container
     else {
-      if (isTeleportDeferred(this.resolvedProps!)) {
+      if (
+        isTeleportDeferred(this.resolvedProps!) ||
+        // force defer when the parent is not connected to the DOM,
+        // typically due to an early insertion caused by setInsertionState.
+        !this.parent!.isConnected
+      ) {
         queuePostFlushCb(mountToTarget)
       } else {
         mountToTarget()
