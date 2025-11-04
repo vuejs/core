@@ -87,7 +87,7 @@
     "jsdom": "^27.1.0",
     "lint-staged": "^16.0.0",
     "lodash": "^4.17.21",
-    "magic-string": "^0.30.19",
+    "magic-string": "^0.30.21",
     "markdown-table": "^3.0.4",
     "marked": "13.0.3",
     "npm-run-all2": "^8.0.4",
