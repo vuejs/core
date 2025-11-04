@@ -3,10 +3,10 @@ packages:
   - 'packages-private/*'
 
 catalog:
-  '@babel/parser': ^7.28.4
-  '@babel/types': ^7.28.4
+  '@babel/parser': ^7.28.5
+  '@babel/types': ^7.28.5
   'estree-walker': ^2.0.2
-  'magic-string': ^0.30.19
+  'magic-string': ^0.30.21
   'source-map-js': ^1.2.1
   'vite': ^5.4.15
   '@vitejs/plugin-vue': ^6.0.1
