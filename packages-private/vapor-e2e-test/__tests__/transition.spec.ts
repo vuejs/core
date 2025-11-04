@@ -903,7 +903,25 @@ describe('vapor transition', () => {
     )
   })
 
-  describe.todo('transition with KeepAlive', () => {})
+  describe('transition with KeepAlive', () => {
+    test('unmount innerChild (out-in mode)', async () => {
+      const btnSelector = '.keep-alive > button'
+      const containerSelector = '.keep-alive > div'
+
+      await transitionFinish()
+      expect(await html(containerSelector)).toBe('<div>0</div>')
+
+      await click(btnSelector)
+
+      await transitionFinish()
+      expect(await html(containerSelector)).toBe('')
+      const calls = await page().evaluate(() => {
+        return (window as any).getCalls('unmount')
+      })
+      expect(calls).toStrictEqual(['TrueBranch'])
+    })
+  })
+
   describe.todo('transition with Suspense', () => {})
   describe.todo('transition with Teleport', () => {})
 
