@@ -250,62 +250,40 @@ function createInstrumentations(
 
   extend(instrumentations, {
     difference(this: SetType, other: SetLikeType): SetType {
-      const raw = toRaw(this)
-      if (!readonly) {
-        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
-      }
-      // @ts-expect-error
-      return raw.difference(other)
+      const target = this[ReactiveFlags.RAW]
+      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
+      return target.difference(other)
     },
     intersection(this: SetType, other: SetLikeType): SetType {
-      const raw = toRaw(this)
-      if (!readonly) {
-        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
-      }
-      // @ts-expect-error
-      return raw.intersection(other)
+      const target = this[ReactiveFlags.RAW]
+      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
+      return target.intersection(other)
     },
     symmetricDifference(this: SetType, other: SetLikeType): SetType {
-      const raw = toRaw(this)
-      if (!readonly) {
-        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
-      }
-      // @ts-expect-error
-      return raw.symmetricDifference(other)
+      const target = this[ReactiveFlags.RAW]
+      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
+      return target.symmetricDifference(other)
     },
     union(this: SetType, other: SetLikeType): SetType {
-      const raw = toRaw(this)
-      if (!readonly) {
-        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
-      }
-      // @ts-expect-error
-      return raw.union(other)
+      const target = this[ReactiveFlags.RAW]
+      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
+      return target.union(other)
     },
 
-    // Set composition methods return boolean
     isDisjointFrom(this: SetType, other: SetLikeType): boolean {
-      const raw = toRaw(this)
-      if (!readonly) {
-        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
-      }
-      // @ts-expect-error
-      return raw.isDisjointFrom(other)
+      const target = this[ReactiveFlags.RAW]
+      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
+      return target.isDisjointFrom(other)
     },
     isSubsetOf(this: SetType, other: SetLikeType): boolean {
-      const raw = toRaw(this)
-      if (!readonly) {
-        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
-      }
-      // @ts-expect-error
-      return raw.isSubsetOf(other)
+      const target = this[ReactiveFlags.RAW]
+      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
+      return target.isSubsetOf(other)
     },
     isSupersetOf(this: SetType, other: SetLikeType): boolean {
-      const raw = toRaw(this)
-      if (!readonly) {
-        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
-      }
-      // @ts-expect-error
-      return raw.isSupersetOf(other)
+      const target = this[ReactiveFlags.RAW]
+      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
+      return target.isSupersetOf(other)
     },
   })
 
