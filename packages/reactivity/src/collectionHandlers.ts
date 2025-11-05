@@ -24,6 +24,8 @@ type IterableCollections = (Map<any, any> | Set<any>) & Target
 type WeakCollections = (WeakMap<any, any> | WeakSet<any>) & Target
 type MapTypes = (Map<any, any> | WeakMap<any, any>) & Target
 type SetTypes = (Set<any> | WeakSet<any>) & Target
+type SetType = Set<any> & Target
+type SetLikeType = Pick<Set<any>, 'size' | 'has' | 'keys'>
 
 const toShallow = <T extends unknown>(value: T): T => value
 
@@ -245,6 +247,39 @@ function createInstrumentations(
           },
         },
   )
+
+  extend(instrumentations, {
+    difference(this: SetType, other: SetLikeType): SetType {
+      // @ts-expect-error
+      return toRaw(this).difference(other)
+    },
+    intersection(this: SetType, other: SetLikeType): SetType {
+      // @ts-expect-error
+      return toRaw(this).intersection(other)
+    },
+    symmetricDifference(this: SetType, other: SetLikeType): SetType {
+      // @ts-expect-error
+      return toRaw(this).symmetricDifference(other)
+    },
+    union(this: SetType, other: SetLikeType): SetType {
+      // @ts-expect-error
+      return toRaw(this).union(other)
+    },
+
+    // Set composition methods return boolean
+    isDisjointFrom(this: SetType, other: SetLikeType): boolean {
+      // @ts-expect-error
+      return toRaw(this).isDisjointFrom(other)
+    },
+    isSubsetOf(this: SetType, other: SetLikeType): boolean {
+      // @ts-expect-error
+      return toRaw(this).isSubsetOf(other)
+    },
+    isSupersetOf(this: SetType, other: SetLikeType): boolean {
+      // @ts-expect-error
+      return toRaw(this).isSupersetOf(other)
+    },
+  })
 
   const iteratorMethods = [
     'keys',
