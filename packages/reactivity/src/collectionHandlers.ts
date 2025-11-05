@@ -93,6 +93,18 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
   }
 }
 
+function createSetCompositionMethod(method: string, readonly: boolean) {
+  return function (this: SetType, other: SetLikeType) {
+    const target = this[ReactiveFlags.RAW]
+    const rawTarget = toRaw(target)
+
+    if (!readonly) {
+      track(rawTarget, TrackOpTypes.ITERATE, ITERATE_KEY)
+    }
+    return rawTarget[method](other)
+  }
+}
+
 type Instrumentations = Record<string | symbol, Function | number>
 
 function createInstrumentations(
@@ -249,42 +261,17 @@ function createInstrumentations(
   )
 
   extend(instrumentations, {
-    difference(this: SetType, other: SetLikeType): SetType {
-      const target = this[ReactiveFlags.RAW]
-      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
-      return target.difference(other)
-    },
-    intersection(this: SetType, other: SetLikeType): SetType {
-      const target = this[ReactiveFlags.RAW]
-      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
-      return target.intersection(other)
-    },
-    symmetricDifference(this: SetType, other: SetLikeType): SetType {
-      const target = this[ReactiveFlags.RAW]
-      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
-      return target.symmetricDifference(other)
-    },
-    union(this: SetType, other: SetLikeType): SetType {
-      const target = this[ReactiveFlags.RAW]
-      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
-      return target.union(other)
-    },
+    difference: createSetCompositionMethod('difference', readonly),
+    intersection: createSetCompositionMethod('intersection', readonly),
+    symmetricDifference: createSetCompositionMethod(
+      'symmetricDifference',
+      readonly,
+    ),
+    union: createSetCompositionMethod('union', readonly),
 
-    isDisjointFrom(this: SetType, other: SetLikeType): boolean {
-      const target = this[ReactiveFlags.RAW]
-      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
-      return target.isDisjointFrom(other)
-    },
-    isSubsetOf(this: SetType, other: SetLikeType): boolean {
-      const target = this[ReactiveFlags.RAW]
-      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
-      return target.isSubsetOf(other)
-    },
-    isSupersetOf(this: SetType, other: SetLikeType): boolean {
-      const target = this[ReactiveFlags.RAW]
-      !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
-      return target.isSupersetOf(other)
-    },
+    isDisjointFrom: createSetCompositionMethod('isDisjointFrom', readonly),
+    isSubsetOf: createSetCompositionMethod('isSubsetOf', readonly),
+    isSupersetOf: createSetCompositionMethod('isSupersetOf', readonly),
   })
 
   const iteratorMethods = [
