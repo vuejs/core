@@ -12,6 +12,7 @@ import {
 } from './insertionState'
 import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
+import { isString } from '@vue/shared'
 
 export function createDynamicComponent(
   getter: () => any,
@@ -34,7 +35,7 @@ export function createDynamicComponent(
     const value = getter()
     const appContext =
       (currentInstance && currentInstance.appContext) || emptyContext
-    if (appContext.vapor) {
+    if (appContext.vapor && !isString(value)) {
       value.__vapor = true
     }
     frag.update(
