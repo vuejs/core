@@ -157,6 +157,11 @@ export function remove(block: Block, parent?: ParentNode): void {
     if (block.anchor) remove(block.anchor, parent)
     if ((block as DynamicFragment).scope) {
       ;(block as DynamicFragment).scope!.stop()
+      const scopes = (block as DynamicFragment).keptAliveScopes
+      if (scopes) {
+        scopes.forEach(scope => scope.stop())
+        scopes.clear()
+      }
     }
   }
 }

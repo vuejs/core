@@ -1,10 +1,12 @@
-import { nextTick, ref } from '@vue/runtime-dom'
+import { nextTick, onActivated, ref } from '@vue/runtime-dom'
 import { type VaporComponent, createComponent } from '../src/component'
 import { defineVaporAsyncComponent } from '../src/apiDefineAsyncComponent'
 import { makeRender } from './_utils'
 import {
+  VaporKeepAlive,
   createIf,
   createTemplateRefSetter,
+  defineVaporComponent,
   renderEffect,
   template,
 } from '@vue/runtime-vapor'
@@ -758,7 +760,102 @@ describe('api: defineAsyncComponent', () => {
 
   test.todo('suspense with error handling', async () => {})
 
-  test.todo('with KeepAlive', async () => {})
+  test('with KeepAlive', async () => {
+    const spy = vi.fn()
+    let resolve: (comp: VaporComponent) => void
 
-  test.todo('with KeepAlive + include', async () => {})
+    const Foo = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const Bar = defineVaporAsyncComponent(() =>
+      Promise.resolve(
+        defineVaporComponent({
+          setup() {
+            return template('Bar')()
+          },
+        }),
+      ),
+    )
+
+    const toggle = ref(true)
+    const { html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => createComponent(Foo),
+              () => createComponent(Bar),
+            ),
+        })
+      },
+    }).render()
+    expect(html()).toBe('<!--async component--><!--if-->')
+
+    await nextTick()
+    resolve!(
+      defineVaporComponent({
+        setup() {
+          onActivated(() => {
+            spy()
+          })
+          return template('Foo')()
+        },
+      }),
+    )
+
+    await timeout()
+    expect(html()).toBe('Foo<!--async component--><!--if-->')
+    expect(spy).toBeCalledTimes(1)
+
+    toggle.value = false
+    await timeout()
+    expect(html()).toBe('Bar<!--async component--><!--if-->')
+  })
+
+  test('with KeepAlive + include', async () => {
+    const spy = vi.fn()
+    let resolve: (comp: VaporComponent) => void
+
+    const Foo = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const { html } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => 'Foo' },
+          {
+            default: () => createComponent(Foo),
+          },
+        )
+      },
+    }).render()
+    expect(html()).toBe('<!--async component-->')
+
+    await nextTick()
+    resolve!(
+      defineVaporComponent({
+        name: 'Foo',
+        setup() {
+          onActivated(() => {
+            spy()
+          })
+          return template('Foo')()
+        },
+      }),
+    )
+
+    await timeout()
+    expect(html()).toBe('Foo<!--async component-->')
+    expect(spy).toBeCalledTimes(1)
+  })
 })

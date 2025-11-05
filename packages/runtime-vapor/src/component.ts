@@ -86,7 +86,10 @@ import {
 } from './dom/hydration'
 import { _next, createElement } from './dom/node'
 import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
-import type { KeepAliveInstance } from './components/KeepAlive'
+import {
+  type KeepAliveInstance,
+  findParentKeepAlive,
+} from './components/KeepAlive'
 import {
   insertionAnchor,
   insertionParent,
@@ -688,7 +691,7 @@ export function mountComponent(
   anchor?: Node | null | 0,
 ): void {
   if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-    ;(instance.parent as KeepAliveInstance).activate(instance, parent, anchor)
+    findParentKeepAlive(instance)!.activate(instance, parent, anchor)
     return
   }
 
@@ -723,7 +726,7 @@ export function unmountComponent(
     instance.parent.vapor &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
   ) {
-    ;(instance.parent as KeepAliveInstance).deactivate(instance)
+    findParentKeepAlive(instance)!.deactivate(instance)
     return
   }
 

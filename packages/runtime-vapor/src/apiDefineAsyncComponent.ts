@@ -5,6 +5,7 @@ import {
   createAsyncComponentContext,
   currentInstance,
   handleError,
+  isKeepAlive,
   markAsyncBoundary,
   performAsyncHydrate,
   useAsyncComponentState,
@@ -28,6 +29,7 @@ import {
 import { invokeArrayFns } from '@vue/shared'
 import { type TransitionOptions, insert, remove } from './block'
 import { parentNode } from './dom/node'
+import type { KeepAliveInstance } from './components/KeepAlive'
 import { setTransitionHooks } from './components/Transition'
 
 /*@ __NO_SIDE_EFFECTS__ */
@@ -122,7 +124,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // already resolved
       let resolvedComp = getResolvedComp()
       if (resolvedComp) {
-        frag!.update(() => createInnerComp(resolvedComp!, instance))
+        frag!.update(() => createInnerComp(resolvedComp!, instance, frag))
         return frag
       }
 
@@ -149,8 +151,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       load()
         .then(() => {
           loaded.value = true
-          // TODO parent is keep-alive, force update so the loaded component's
-          // name is taken into account
         })
         .catch(err => {
           onError(err)
@@ -192,6 +192,14 @@ function createInnerComp(
     undefined,
     appContext,
   )
+
+  if (parent.parent && isKeepAlive(parent.parent)) {
+    // If there is a parent KeepAlive, let it handle the resolved async component
+    // This will process shapeFlag and cache the component
+    ;(parent.parent as KeepAliveInstance).cacheComponent(instance)
+    // cache the wrapper instance as well
+    ;(parent.parent as KeepAliveInstance).cacheComponent(parent)
+  }
 
   // set transition hooks
   if ($transition) setTransitionHooks(instance, $transition)
