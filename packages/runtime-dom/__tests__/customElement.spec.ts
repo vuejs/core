@@ -499,6 +499,28 @@ describe('defineCustomElement', () => {
         '<div><span>1 is number</span><span>true is boolean</span></div>',
       )
     })
+
+    test('prop overrides', async () => {
+      const EBase = defineCustomElement({
+        props: {
+          value: Number,
+        },
+        render() {
+          return h('span', this.value)
+        },
+      })
+      class E extends EBase {
+        set value(newValue: number) {
+          super.value = newValue + 1
+        }
+      }
+      customElements.define('my-element-with-prop-overrides', E)
+      const el = document.createElement('my-element-with-prop-overrides') as any
+      container.appendChild(el)
+      el.value = 999
+      await nextTick()
+      expect(el.shadowRoot.firstChild.innerHTML).toBe('1000')
+    })
   })
 
   describe('attrs', () => {
