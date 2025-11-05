@@ -11,6 +11,7 @@ import {
   checkTransitionMode,
   currentInstance,
   getComponentName,
+  isAsyncWrapper,
   isTemplateNode,
   leaveCbKey,
   queuePostFlushCb,
@@ -92,7 +93,7 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
           if (child) {
             // replace existing transition hooks
             child.$transition!.props = resolvedProps
-            applyTransitionHooks(child, child.$transition!)
+            applyTransitionHooks(child, child.$transition!, undefined, true)
           }
         }
       } else {
@@ -141,7 +142,7 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
 )
 
 const getTransitionHooksContext = (
-  key: String,
+  key: string,
   props: TransitionProps,
   state: TransitionState,
   instance: GenericComponentInstance,
@@ -210,6 +211,7 @@ export function applyTransitionHooks(
   block: Block,
   hooks: VaporTransitionHooks,
   fallthroughAttrs: boolean = true,
+  isResolved: boolean = false,
 ): VaporTransitionHooks {
   // filter out comment nodes
   if (isArray(block)) {
@@ -222,7 +224,9 @@ export function applyTransitionHooks(
   }
 
   const isFrag = isFragment(block)
-  const child = findTransitionBlock(block, isFrag)
+  const child = isResolved
+    ? (block as TransitionBlock)
+    : findTransitionBlock(block, isFrag)
   if (!child) {
     // set transition hooks on fragment for reusing during it's updating
     if (isFrag) setTransitionHooksOnFragment(block, hooks)
@@ -238,7 +242,7 @@ export function applyTransitionHooks(
     hooks => (resolvedHooks = hooks as VaporTransitionHooks),
   )
   resolvedHooks.delayedLeave = delayedLeave
-  setTransitionHooks(child, resolvedHooks)
+  child.$transition = resolvedHooks
   if (isFrag) setTransitionHooksOnFragment(block, resolvedHooks)
 
   // fallthrough attrs
@@ -266,7 +270,7 @@ export function applyTransitionLeaveHooks(
     state,
     instance,
   )
-  setTransitionHooks(leavingBlock, leavingHooks)
+  leavingBlock.$transition = leavingHooks
 
   const { mode } = props
   if (mode === 'out-in') {
@@ -300,25 +304,25 @@ export function applyTransitionLeaveHooks(
   }
 }
 
-const transitionBlockCache = new WeakMap<Block, TransitionBlock>()
 export function findTransitionBlock(
   block: Block,
   inFragment: boolean = false,
 ): TransitionBlock | undefined {
-  if (transitionBlockCache.has(block)) {
-    return transitionBlockCache.get(block)
-  }
-
   let child: TransitionBlock | undefined
   if (block instanceof Node) {
     // transition can only be applied on Element child
     if (block instanceof Element) child = block
   } else if (isVaporComponent(block)) {
-    // stop searching if encountering nested Transition component
-    if (getComponentName(block.type) === displayName) return undefined
-    child = findTransitionBlock(block.block, inFragment)
-    // use component id as key
-    if (child && child.$key === undefined) child.$key = block.uid
+    // should save hooks on unresolved async wrapper, so that it can be applied after resolved
+    if (isAsyncWrapper(block) && !block.type.__asyncResolved) {
+      child = block
+    } else {
+      // stop searching if encountering nested Transition component
+      if (getComponentName(block.type) === displayName) return undefined
+      child = findTransitionBlock(block.block, inFragment)
+      // use component id as key
+      if (child && child.$key === undefined) child.$key = block.uid
+    }
   } else if (isArray(block)) {
     let hasFound = false
     for (const c of block) {
@@ -369,7 +373,7 @@ export function setTransitionHooksOnFragment(
 }
 
 export function setTransitionHooks(
-  block: TransitionBlock | VaporComponentInstance,
+  block: TransitionBlock,
   hooks: VaporTransitionHooks,
 ): void {
   if (isVaporComponent(block)) {

@@ -7,6 +7,7 @@ import {
   VaporTransition,
   createIf,
   template,
+  defineVaporAsyncComponent,
   onUnmounted,
 } from 'vue'
 const show = ref(true)
@@ -14,7 +15,7 @@ const toggle = ref(true)
 const count = ref(0)
 
 const timeout = (fn, time) => setTimeout(fn, time)
-const duration = typeof process !== 'undefined' && process.env.CI ? 200 : 50
+const duration = window.__TRANSITION_DURATION__ || 50
 
 let calls = {
   basic: [],
@@ -93,6 +94,10 @@ const viewInOut = shallowRef(SimpleOne)
 function changeViewInOut() {
   viewInOut.value = viewInOut.value === SimpleOne ? Two : SimpleOne
 }
+
+const AsyncComp = defineVaporAsyncComponent(() => {
+  return new Promise(resolve => setTimeout(() => resolve(VaporCompA), 50))
+})
 
 const TrueBranch = defineVaporComponent({
   name: 'TrueBranch',
@@ -502,6 +507,17 @@ const click = () => {
       </div>
     </div>
     <!-- mode end -->
+
+    <!-- async component -->
+    <div class="async">
+      <div id="container">
+        <transition>
+          <AsyncComp v-if="!toggle"></AsyncComp>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <!-- async component end -->
 
     <!-- with teleport -->
     <div class="with-teleport">

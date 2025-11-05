@@ -13,7 +13,6 @@ const {
   nextFrame,
   timeout,
   isVisible,
-  count,
   html,
   transitionStart,
   waitForElement,
@@ -40,6 +39,9 @@ describe('vapor transition', () => {
 
   beforeEach(async () => {
     const baseUrl = `http://localhost:${port}/transition/`
+    await page().evaluateOnNewDocument(dur => {
+      ;(window as any).__TRANSITION_DURATION__ = dur
+    }, duration)
     await page().goto(baseUrl)
     await page().waitForSelector('#app')
   })
@@ -970,6 +972,65 @@ describe('vapor transition', () => {
       },
       E2E_TIMEOUT,
     )
+  })
+
+  describe('transition with AsyncComponent', () => {
+    test('apply transition to inner component', async () => {
+      const btnSelector = '.async > button'
+      const containerSelector = '.async > div'
+
+      expect(await html(containerSelector)).toBe('')
+
+      // toggle
+      await click(btnSelector)
+      await nextTick()
+      // not yet resolved
+      expect(await html(containerSelector)).toBe('')
+
+      // wait resolving
+      await timeout(50)
+
+      // enter (resolved)
+      expect(await html(containerSelector)).toBe(
+        '<div class="v-enter-from v-enter-active">vapor compA</div>',
+      )
+      await nextFrame()
+      expect(await html(containerSelector)).toBe(
+        '<div class="v-enter-active v-enter-to">vapor compA</div>',
+      )
+      await transitionFinish()
+      expect(await html(containerSelector)).toBe(
+        '<div class="">vapor compA</div>',
+      )
+
+      // leave
+      await click(btnSelector)
+      await nextTick()
+      expect(await html(containerSelector)).toBe(
+        '<div class="v-leave-from v-leave-active">vapor compA</div>',
+      )
+      await nextFrame()
+      expect(await html(containerSelector)).toBe(
+        '<div class="v-leave-active v-leave-to">vapor compA</div>',
+      )
+      await transitionFinish()
+      expect(await html(containerSelector)).toBe('')
+
+      // enter again
+      await click(btnSelector)
+      // use the already resolved component
+      expect(await html(containerSelector)).toBe(
+        '<div class="v-enter-from v-enter-active">vapor compA</div>',
+      )
+      await nextFrame()
+      expect(await html(containerSelector)).toBe(
+        '<div class="v-enter-active v-enter-to">vapor compA</div>',
+      )
+      await transitionFinish()
+      expect(await html(containerSelector)).toBe(
+        '<div class="">vapor compA</div>',
+      )
+    })
   })
 
   describe('transition with v-show', () => {
