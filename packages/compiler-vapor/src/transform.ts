@@ -79,8 +79,6 @@ export class TransformContext<T extends AllNode = AllNode> {
 
   inVOnce: boolean = false
   inVFor: number = 0
-  inSlot: boolean = false
-
   comment: CommentNode[] = []
   component: Set<string> = this.ir.component
   directive: Set<string> = this.ir.directive
@@ -221,7 +219,6 @@ export function transform(
     directive: new Set(),
     block: newBlock(node),
     hasTemplateRef: false,
-    hasForwardedSlot: false,
   }
 
   const context = new TransformContext(ir, node, options)

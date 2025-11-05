@@ -114,7 +114,21 @@ export function getSlot(
   }
 }
 
-export function withVaporCtx(fn: Function): Function {
+/**
+ * Wraps a slot function to execute in the parent component's context.
+ *
+ * This ensures that:
+ * 1. Reactive effects created inside the slot (e.g., `renderEffect`) bind to the
+ *    parent's instance, so the parent's lifecycle hooks fire when the slot's
+ *    reactive dependencies change.
+ * 2. Elements created in the slot inherit the parent's scopeId for proper style
+ *    scoping in scoped CSS.
+ *
+ * **Rationale**: Slots are defined in the parent's template, so the parent should
+ * own the rendering context and be aware of updates.
+ *
+ */
+export function withVaporCtx(fn: Function): BlockFn {
   const instance = currentInstance as VaporComponentInstance
   return (...args: any[]) => {
     const prev = setCurrentInstance(instance)
@@ -126,21 +140,10 @@ export function withVaporCtx(fn: Function): Function {
   }
 }
 
-export function forwardedSlotCreator(): (
-  name: string | (() => string),
-  rawProps?: LooseRawProps | null,
-  fallback?: VaporSlot,
-) => Block {
-  const instance = currentInstance as VaporComponentInstance
-  return (name, rawProps, fallback) =>
-    createSlot(name, rawProps, fallback, instance, false /* noSlotted */)
-}
-
 export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
-  i?: VaporComponentInstance,
   noSlotted?: boolean,
 ): Block {
   const _insertionParent = insertionParent
@@ -148,7 +151,7 @@ export function createSlot(
   const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
 
-  const instance = i || (currentInstance as VaporComponentInstance)
+  const instance = currentInstance as VaporComponentInstance
   const rawSlots = instance.rawSlots
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)

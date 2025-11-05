@@ -76,9 +76,9 @@ import { VaporFragment, isFragment, setFragmentFallback } from './fragment'
 import type { NodeRef } from './apiTemplateRef'
 import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
 import {
-  type KeepAliveInstance,
   activate,
   deactivate,
+  findParentKeepAlive,
 } from './components/KeepAlive'
 
 export const interopKey: unique symbol = Symbol(`interop`)
@@ -276,6 +276,7 @@ function createVDOMComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
 ): VaporFragment {
+  const parentInstance = currentInstance as VaporComponentInstance
   const frag = new VaporFragment([])
   const vnode = (frag.vnode = createVNode(
     component,
@@ -307,7 +308,6 @@ function createVDOMComponent(
 
   let rawRef: VNodeNormalizedRef | null = null
   let isMounted = false
-  const parentInstance = currentInstance as VaporComponentInstance
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
     // unset ref
     if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
@@ -315,7 +315,7 @@ function createVDOMComponent(
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       vdomDeactivate(
         vnode,
-        (parentInstance as KeepAliveInstance).getStorageContainer(),
+        findParentKeepAlive(parentInstance)!.getStorageContainer(),
         internals,
         parentInstance as any,
         null,
@@ -348,39 +348,38 @@ function createVDOMComponent(
         undefined,
         false,
       )
-      return
-    }
-
-    const prev = currentInstance
-    simpleSetCurrentInstance(parentInstance)
-    if (!isMounted) {
-      if (transition) setVNodeTransitionHooks(vnode, transition)
-      internals.mt(
-        vnode,
-        parentNode,
-        anchor,
-        parentInstance as any,
-        null,
-        undefined,
-        false,
-      )
-      // set ref
-      if (rawRef) vdomSetRef(rawRef, null, null, vnode)
-      onScopeDispose(unmount, true)
-      isMounted = true
     } else {
-      // move
-      internals.m(
-        vnode,
-        parentNode,
-        anchor,
-        MoveType.REORDER,
-        parentInstance as any,
-      )
+      const prev = currentInstance
+      simpleSetCurrentInstance(parentInstance)
+      if (!isMounted) {
+        if (transition) setVNodeTransitionHooks(vnode, transition)
+        internals.mt(
+          vnode,
+          parentNode,
+          anchor,
+          parentInstance as any,
+          null,
+          undefined,
+          false,
+        )
+        // set ref
+        if (rawRef) vdomSetRef(rawRef, null, null, vnode)
+        onScopeDispose(unmount, true)
+        isMounted = true
+      } else {
+        // move
+        internals.m(
+          vnode,
+          parentNode,
+          anchor,
+          MoveType.REORDER,
+          parentInstance as any,
+        )
+      }
+      simpleSetCurrentInstance(prev)
     }
 
     frag.nodes = vnode.el as any
-    simpleSetCurrentInstance(prev)
   }
 
   frag.remove = unmount

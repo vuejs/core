@@ -40,7 +40,12 @@ import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
 import { genModelHandler } from './vModel'
-import { isBuiltInComponent } from '../utils'
+import {
+  isBuiltInComponent,
+  isKeepAliveTag,
+  isTeleportTag,
+  isTransitionGroupTag,
+} from '../utils'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -410,7 +415,6 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
   let depth: number | undefined
   const { props, key, node } = oper
   const idsOfProps = new Set<string>()
-
   if (props) {
     rawProps = props.content
     if ((isDestructureAssignment = !!props.ast)) {
@@ -459,7 +463,15 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     ]
   }
 
-  if (node.type === NodeTypes.ELEMENT && !isBuiltInComponent(node.tag)) {
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    // Not a real component
+    !isTeleportTag(node.tag) &&
+    // Needs to determine whether to activate/deactivate based on instance.parent being KeepAlive
+    !isKeepAliveTag(node.tag) &&
+    // Slot updates need to trigger TransitionGroup's onBeforeUpdate/onUpdated hook
+    !isTransitionGroupTag(node.tag)
+  ) {
     // wrap with withVaporCtx to ensure correct currentInstance inside slot
     blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
   }

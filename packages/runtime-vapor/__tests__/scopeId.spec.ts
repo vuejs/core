@@ -4,7 +4,6 @@ import {
   createDynamicComponent,
   createSlot,
   defineVaporComponent,
-  forwardedSlotCreator,
   setInsertionState,
   template,
   vaporInteropPlugin,
@@ -231,7 +230,7 @@ describe('scopeId', () => {
               const n0 = template('<div parent></div>')()
               const n1 = createComponent(Child2)
               return [n0, n1]
-            }) as any,
+            }),
           },
           true,
         )
@@ -262,7 +261,7 @@ describe('scopeId', () => {
         // <div><slot/></div>
         const n1 = template('<div wrapper></div>', true)() as any
         setInsertionState(n1)
-        createSlot('default', null, undefined, undefined, true /* noSlotted */)
+        createSlot('default', null, undefined, true /* noSlotted */)
         return n1
       },
     })
@@ -271,15 +270,14 @@ describe('scopeId', () => {
       __scopeId: 'slotted',
       setup() {
         // <Wrapper><slot/></Wrapper>
-        const _createForwardedSlot = forwardedSlotCreator()
         const n1 = createComponent(
           Wrapper,
           null,
           {
             default: withVaporCtx(() => {
-              const n0 = _createForwardedSlot('default', null)
+              const n0 = createSlot('default', null)
               return n0
-            }) as any,
+            }),
           },
           true,
         )
@@ -297,7 +295,7 @@ describe('scopeId', () => {
           {
             default: withVaporCtx(() => {
               return template('<div root></div>')()
-            }) as any,
+            }),
           },
           true,
         )
@@ -589,7 +587,7 @@ describe('vdom interop', () => {
               const n0 = template('<div vapor-parent></div>')()
               const n1 = createComponent(VdomChild)
               return [n0, n1]
-            }) as any,
+            }),
           },
           true,
         )

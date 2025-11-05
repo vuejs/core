@@ -90,12 +90,17 @@ function transformComponentSlot(
 
   let slotKey
   if (isTransitionNode(node) && nonSlotTemplateChildren.length) {
-    const keyProp = findProp(
-      nonSlotTemplateChildren[0] as ElementNode,
-      'key',
-    ) as VaporDirectiveNode
-    if (keyProp) {
-      slotKey = keyProp.exp
+    const nonCommentChild = nonSlotTemplateChildren.find(
+      n => n.type !== NodeTypes.COMMENT,
+    )
+    if (nonCommentChild) {
+      const keyProp = findProp(
+        nonCommentChild as ElementNode,
+        'key',
+      ) as VaporDirectiveNode
+      if (keyProp) {
+        slotKey = keyProp.exp
+      }
     }
   }
 
@@ -269,14 +274,7 @@ function createSlotBlock(
     block.dynamic.needsKey = true
   }
   const exitBlock = context.enterBlock(block)
-  context.inSlot = true
-  return [
-    block,
-    () => {
-      context.inSlot = false
-      exitBlock()
-    },
-  ]
+  return [block, exitBlock]
 }
 
 function isNonWhitespaceContent(node: TemplateChildNode): boolean {

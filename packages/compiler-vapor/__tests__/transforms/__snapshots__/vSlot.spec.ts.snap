@@ -104,16 +104,15 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > forwarded slots > <slot w/ nested component> 1`] = `
-"import { forwardedSlotCreator as _forwardedSlotCreator, resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
-  const _createForwardedSlot = _forwardedSlotCreator()
   const _component_Comp = _resolveComponent("Comp")
   const n2 = _createComponentWithFallback(_component_Comp, null, {
     "default": _withVaporCtx(() => {
       const n1 = _createComponentWithFallback(_component_Comp, null, {
         "default": _withVaporCtx(() => {
-          const n0 = _createForwardedSlot("default", null)
+          const n0 = _createSlot("default", null)
           return n0
         })
       })
@@ -125,14 +124,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > forwarded slots > <slot> tag only 1`] = `
-"import { forwardedSlotCreator as _forwardedSlotCreator, resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
-  const _createForwardedSlot = _forwardedSlotCreator()
   const _component_Comp = _resolveComponent("Comp")
   const n1 = _createComponentWithFallback(_component_Comp, null, {
     "default": _withVaporCtx(() => {
-      const n0 = _createForwardedSlot("default", null)
+      const n0 = _createSlot("default", null)
       return n0
     })
   }, true)
@@ -141,14 +139,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > forwarded slots > <slot> tag w/ template 1`] = `
-"import { forwardedSlotCreator as _forwardedSlotCreator, resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
-  const _createForwardedSlot = _forwardedSlotCreator()
   const _component_Comp = _resolveComponent("Comp")
   const n2 = _createComponentWithFallback(_component_Comp, null, {
     "default": _withVaporCtx(() => {
-      const n0 = _createForwardedSlot("default", null)
+      const n0 = _createSlot("default", null)
       return n0
     })
   }, true)
@@ -157,15 +154,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-for 1`] = `
-"import { forwardedSlotCreator as _forwardedSlotCreator, resolveComponent as _resolveComponent, createFor as _createFor, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, createFor as _createFor, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
-  const _createForwardedSlot = _forwardedSlotCreator()
   const _component_Comp = _resolveComponent("Comp")
   const n3 = _createComponentWithFallback(_component_Comp, null, {
     "default": _withVaporCtx(() => {
       const n0 = _createFor(() => (_ctx.b), (_for_item0) => {
-        const n2 = _createForwardedSlot("default", null)
+        const n2 = _createSlot("default", null)
         return n2
       })
       return n0
@@ -176,15 +172,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-if 1`] = `
-"import { forwardedSlotCreator as _forwardedSlotCreator, resolveComponent as _resolveComponent, createIf as _createIf, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, createIf as _createIf, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
-  const _createForwardedSlot = _forwardedSlotCreator()
   const _component_Comp = _resolveComponent("Comp")
   const n3 = _createComponentWithFallback(_component_Comp, null, {
     "default": _withVaporCtx(() => {
       const n0 = _createIf(() => (_ctx.ok), () => {
-        const n2 = _createForwardedSlot("default", null)
+        const n2 = _createSlot("default", null)
         return n2
       })
       return n0
