@@ -90,7 +90,7 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
           if (child) {
             // replace existing transition hooks
             child.$transition!.props = resolvedProps
-            applyTransitionHooks(child, child.$transition!)
+            applyTransitionHooks(child, child.$transition!, undefined, true)
           }
         }
       } else {
@@ -139,7 +139,7 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
 )
 
 const getTransitionHooksContext = (
-  key: String,
+  key: string,
   props: TransitionProps,
   state: TransitionState,
   instance: GenericComponentInstance,
@@ -208,9 +208,12 @@ export function applyTransitionHooks(
   block: Block,
   hooks: VaporTransitionHooks,
   fallthroughAttrs: boolean = true,
+  isResolved: boolean = false,
 ): VaporTransitionHooks {
   const isFrag = isFragment(block)
-  const child = findTransitionBlock(block)
+  const child = isResolved
+    ? (block as TransitionBlock)
+    : findTransitionBlock(block)
   if (!child) {
     // set transition hooks on fragment for reusing during it's updating
     if (isFrag) setTransitionHooksOnFragment(block, hooks)
@@ -288,15 +291,10 @@ export function applyTransitionLeaveHooks(
   }
 }
 
-const transitionBlockCache = new WeakMap<Block, TransitionBlock>()
 export function findTransitionBlock(
   block: Block,
   inFragment: boolean = false,
 ): TransitionBlock | undefined {
-  if (transitionBlockCache.has(block)) {
-    return transitionBlockCache.get(block)
-  }
-
   let isFrag = false
   let child: TransitionBlock | undefined
   if (block instanceof Node) {
