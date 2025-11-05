@@ -115,7 +115,7 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
   })
 }
 
-export function processTextContainer(
+function processTextContainer(
   values: SimpleExpressionNode[],
   context: TransformContext<ElementNode>,
 ): void {
