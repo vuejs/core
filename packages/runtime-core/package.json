@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-core",
-  "version": "3.5.16",
+  "version": "3.5.22",
   "description": "@vue/runtime-core",
   "main": "index.js",
   "module": "dist/runtime-core.esm-bundler.js",

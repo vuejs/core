@@ -223,6 +223,31 @@ describe('defineCustomElement', () => {
       expect(e.getAttribute('baz-qux')).toBe('four')
     })
 
+    test('props via attributes and properties changed together', async () => {
+      const e = new E()
+      e.foo = 'foo1'
+      e.bar = { x: 'bar1' }
+      container.appendChild(e)
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>foo1</div><div>bar1</div>')
+
+      // change attr then property
+      e.setAttribute('foo', 'foo2')
+      e.bar = { x: 'bar2' }
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>foo2</div><div>bar2</div>')
+      expect(e.getAttribute('foo')).toBe('foo2')
+      expect(e.hasAttribute('bar')).toBe(false)
+
+      // change prop then attr
+      e.bar = { x: 'bar3' }
+      e.setAttribute('foo', 'foo3')
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div>foo3</div><div>bar3</div>')
+      expect(e.getAttribute('foo')).toBe('foo3')
+      expect(e.hasAttribute('bar')).toBe(false)
+    })
+
     test('props via hyphen property', async () => {
       const Comp = defineCustomElement({
         props: {
@@ -501,6 +526,26 @@ describe('defineCustomElement', () => {
       container.appendChild(e)
       expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
     })
+
+    // https://github.com/vuejs/core/issues/12964
+    // Disabled because of missing support for `delegatesFocus` in jsdom
+    // https://github.com/jsdom/jsdom/issues/3418
+    // eslint-disable-next-line vitest/no-disabled-tests
+    test.skip('shadowRoot should be initialized with delegatesFocus', () => {
+      const E = defineCustomElement(
+        {
+          render() {
+            return [h('input', { tabindex: 1 })]
+          },
+        },
+        { shadowRootOptions: { delegatesFocus: true } },
+      )
+      customElements.define('my-el-with-delegate-focus', E)
+
+      const e = new E()
+      container.appendChild(e)
+      expect(e.shadowRoot!.delegatesFocus).toBe(true)
+    })
   })
 
   describe('emits', () => {
@@ -636,6 +681,33 @@ describe('defineCustomElement', () => {
       // verify that we've rendered the correct native slots here...
       expect(e.shadowRoot!.innerHTML).toBe(
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
+      )
+    })
+
+    test('render slot props', async () => {
+      const foo = ref('foo')
+      const E = defineCustomElement({
+        render() {
+          return [
+            h(
+              'div',
+              null,
+              renderSlot(this.$slots, 'default', { class: foo.value }),
+            ),
+          ]
+        },
+      })
+      customElements.define('my-el-slot-props', E)
+      container.innerHTML = `<my-el-slot-props><span>hi</span></my-el-slot-props>`
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot class="foo"></slot></div>`,
+      )
+
+      foo.value = 'bar'
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot class="bar"></slot></div>`,
       )
     })
   })
@@ -914,6 +986,30 @@ describe('defineCustomElement', () => {
       } as any)
       await nextTick()
       assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
+    })
+
+    test("child components should not inject styles to root element's shadow root w/ shadowRoot false", async () => {
+      const Bar = defineComponent({
+        styles: [`div { color: green; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const Baz = () => h(Bar)
+      const Foo = defineCustomElement(
+        {
+          render() {
+            return [h(Baz)]
+          },
+        },
+        { shadowRoot: false },
+      )
+
+      customElements.define('my-foo-with-shadowroot-false', Foo)
+      container.innerHTML = `<my-foo-with-shadowroot-false></my-foo-with-shadowroot-false>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')
+      expect(style).toBeUndefined()
     })
 
     test('with nonce', () => {
@@ -1257,6 +1353,83 @@ describe('defineCustomElement', () => {
       app.unmount()
     })
 
+    test('render two Teleports w/ shadowRoot false', async () => {
+      const target1 = document.createElement('div')
+      const target2 = document.createElement('span')
+      const Child = defineCustomElement(
+        {
+          render() {
+            return [
+              h(Teleport, { to: target1 }, [renderSlot(this.$slots, 'header')]),
+              h(Teleport, { to: target2 }, [renderSlot(this.$slots, 'body')]),
+            ]
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-two-teleport-child', Child)
+
+      const App = {
+        render() {
+          return h('my-el-two-teleport-child', null, {
+            default: () => [
+              h('div', { slot: 'header' }, 'header'),
+              h('span', { slot: 'body' }, 'body'),
+            ],
+          })
+        },
+      }
+      const app = createApp(App)
+      app.mount(container)
+      await nextTick()
+      expect(target1.outerHTML).toBe(
+        `<div><div slot="header">header</div></div>`,
+      )
+      expect(target2.outerHTML).toBe(
+        `<span><span slot="body">body</span></span>`,
+      )
+      app.unmount()
+    })
+
+    test('render two Teleports w/ shadowRoot false (with disabled)', async () => {
+      const target1 = document.createElement('div')
+      const target2 = document.createElement('span')
+      const Child = defineCustomElement(
+        {
+          render() {
+            return [
+              // with disabled: true
+              h(Teleport, { to: target1, disabled: true }, [
+                renderSlot(this.$slots, 'header'),
+              ]),
+              h(Teleport, { to: target2 }, [renderSlot(this.$slots, 'body')]),
+            ]
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-two-teleport-child-0', Child)
+
+      const App = {
+        render() {
+          return h('my-el-two-teleport-child-0', null, {
+            default: () => [
+              h('div', { slot: 'header' }, 'header'),
+              h('span', { slot: 'body' }, 'body'),
+            ],
+          })
+        },
+      }
+      const app = createApp(App)
+      app.mount(container)
+      await nextTick()
+      expect(target1.outerHTML).toBe(`<div></div>`)
+      expect(target2.outerHTML).toBe(
+        `<span><span slot="body">body</span></span>`,
+      )
+      app.unmount()
+    })
+
     test('toggle nested custom element with shadowRoot: false', async () => {
       customElements.define(
         'my-el-child-shadow-false',
@@ -1378,6 +1551,34 @@ describe('defineCustomElement', () => {
   })
 
   describe('expose', () => {
+    test('expose w/ options api', async () => {
+      const E = defineCustomElement({
+        data() {
+          return {
+            value: 0,
+          }
+        },
+        methods: {
+          foo() {
+            ;(this as any).value++
+          },
+        },
+        expose: ['foo'],
+        render(_ctx: any) {
+          return h('div', null, _ctx.value)
+        },
+      })
+      customElements.define('my-el-expose-options-api', E)
+
+      container.innerHTML = `<my-el-expose-options-api></my-el-expose-options-api>`
+      const e = container.childNodes[0] as VueElement & {
+        foo: () => void
+      }
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>0</div>`)
+      e.foo()
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(`<div>1</div>`)
+    })
     test('expose attributes and callback', async () => {
       type SetValue = (value: string) => void
       let fn: MockedFunction<SetValue>
@@ -1542,6 +1743,29 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
     })
 
+    // #12448
+    test('work with async component', async () => {
+      const AsyncComp = defineAsyncComponent(() => {
+        return Promise.resolve({
+          render() {
+            const msg: string | undefined = inject('msg')
+            return h('div', {}, msg)
+          },
+        } as any)
+      })
+      const E = defineCustomElement(AsyncComp, {
+        configureApp(app) {
+          app.provide('msg', 'app-injected')
+        },
+      })
+      customElements.define('my-async-element-with-app', E)
+
+      container.innerHTML = `<my-async-element-with-app></my-async-element-with-app>`
+      const e = container.childNodes[0] as VueElement
+      await new Promise(r => setTimeout(r))
+      expect(e.shadowRoot?.innerHTML).toBe('<div>app-injected</div>')
+    })
+
     test('with hmr reload', async () => {
       const __hmrId = '__hmrWithApp'
       const def = defineComponent({
@@ -1698,5 +1922,17 @@ describe('defineCustomElement', () => {
     expect((el as any).outerHTML).toBe(
       `<el-hyphenated-attr-removal></el-hyphenated-attr-removal>`,
     )
+  })
+
+  test('no unexpected mutation of the 1st argument', () => {
+    const Foo = {
+      name: 'Foo',
+    }
+
+    defineCustomElement(Foo, { shadowRoot: false })
+
+    expect(Foo).toEqual({
+      name: 'Foo',
+    })
   })
 })
