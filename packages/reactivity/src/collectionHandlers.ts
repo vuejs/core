@@ -250,34 +250,62 @@ function createInstrumentations(
 
   extend(instrumentations, {
     difference(this: SetType, other: SetLikeType): SetType {
+      const raw = toRaw(this)
+      if (!readonly) {
+        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
+      }
       // @ts-expect-error
-      return toRaw(this).difference(other)
+      return raw.difference(other)
     },
     intersection(this: SetType, other: SetLikeType): SetType {
+      const raw = toRaw(this)
+      if (!readonly) {
+        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
+      }
       // @ts-expect-error
-      return toRaw(this).intersection(other)
+      return raw.intersection(other)
     },
     symmetricDifference(this: SetType, other: SetLikeType): SetType {
+      const raw = toRaw(this)
+      if (!readonly) {
+        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
+      }
       // @ts-expect-error
-      return toRaw(this).symmetricDifference(other)
+      return raw.symmetricDifference(other)
     },
     union(this: SetType, other: SetLikeType): SetType {
+      const raw = toRaw(this)
+      if (!readonly) {
+        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
+      }
       // @ts-expect-error
-      return toRaw(this).union(other)
+      return raw.union(other)
     },
 
     // Set composition methods return boolean
     isDisjointFrom(this: SetType, other: SetLikeType): boolean {
+      const raw = toRaw(this)
+      if (!readonly) {
+        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
+      }
       // @ts-expect-error
-      return toRaw(this).isDisjointFrom(other)
+      return raw.isDisjointFrom(other)
     },
     isSubsetOf(this: SetType, other: SetLikeType): boolean {
+      const raw = toRaw(this)
+      if (!readonly) {
+        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
+      }
       // @ts-expect-error
-      return toRaw(this).isSubsetOf(other)
+      return raw.isSubsetOf(other)
     },
     isSupersetOf(this: SetType, other: SetLikeType): boolean {
+      const raw = toRaw(this)
+      if (!readonly) {
+        track(raw, TrackOpTypes.ITERATE, ITERATE_KEY)
+      }
       // @ts-expect-error
-      return toRaw(this).isSupersetOf(other)
+      return raw.isSupersetOf(other)
     },
   })
 
