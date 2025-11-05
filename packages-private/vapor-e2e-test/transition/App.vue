@@ -12,7 +12,6 @@ import {
 const show = ref(true)
 const toggle = ref(true)
 const count = ref(0)
-const hide = ref(false)
 
 const timeout = (fn, time) => setTimeout(fn, time)
 const duration = typeof process !== 'undefined' && process.env.CI ? 200 : 50
@@ -511,11 +510,11 @@ const click = () => {
         <Transition>
           <Teleport to=".target" defer>
             <!-- comment -->
-            <VaporCompB v-if="hide" class="test"></VaporCompB>
+            <VaporCompB v-if="!toggle" class="test"></VaporCompB>
           </Teleport>
         </Transition>
       </div>
-      <button @click="hide = !hide">button</button>
+      <button @click="toggle = !toggle">button</button>
     </div>
     <!-- with teleport end -->
 
