@@ -459,5 +459,107 @@ describe('reactivity/collections', () => {
       const result = set.add('a')
       expect(result).toBe(set)
     })
+
+    it('should suppoort Set.difference call', () => {
+      const setA = reactive(new Set([1, 2, 3, 4]))
+      const setB = new Set([3, 4, 5, 6])
+
+      if ('difference' in Set.prototype) {
+        // @ts-expect-error
+        const result = setA.difference(setB)
+
+        expect(result).toBeInstanceOf(Set)
+        expect(result.size).toBe(2)
+        expect(result.has(1)).toBe(true)
+        expect(result.has(2)).toBe(true)
+      }
+    })
+
+    it('should suppoort Set.intersection call', () => {
+      const setA = reactive(new Set([1, 2, 3, 4]))
+      const setB = new Set([3, 4, 5, 6])
+
+      if ('intersection' in Set.prototype) {
+        // @ts-expect-error
+        const result = setA.intersection(setB)
+
+        expect(result).toBeInstanceOf(Set)
+        expect(result.size).toBe(2)
+        expect(result.has(3)).toBe(true)
+        expect(result.has(4)).toBe(true)
+      }
+    })
+
+    it('should suppoort Set.symmetricDifference call', () => {
+      const setA = reactive(new Set([1, 2, 3, 4]))
+      const setB = new Set([3, 4, 5, 6])
+
+      if ('symmetricDifference' in Set.prototype) {
+        // @ts-expect-error
+        const result = setA.symmetricDifference(setB)
+
+        expect(result).toBeInstanceOf(Set)
+        expect(result.size).toBe(4)
+        expect(result.has(1)).toBe(true)
+        expect(result.has(2)).toBe(true)
+        expect(result.has(5)).toBe(true)
+        expect(result.has(6)).toBe(true)
+      }
+    })
+
+    it('should suppoort Set.union call', () => {
+      const setA = reactive(new Set([1, 2, 3, 4]))
+      const setB = new Set([3, 4, 5, 6])
+
+      if ('union' in Set.prototype) {
+        // @ts-expect-error
+        const result = setA.union(setB)
+
+        expect(result).toBeInstanceOf(Set)
+        expect(result.size).toBe(6)
+        expect(result.has(1)).toBe(true)
+        expect(result.has(2)).toBe(true)
+        expect(result.has(3)).toBe(true)
+        expect(result.has(4)).toBe(true)
+        expect(result.has(5)).toBe(true)
+        expect(result.has(6)).toBe(true)
+      }
+    })
+
+    it('should suppoort Set.isDisjointFrom call', () => {
+      const setA = reactive(new Set([1, 2, 3, 4]))
+      const setB = new Set([3, 4, 5, 6])
+
+      if ('isDisjointFrom' in Set.prototype) {
+        // @ts-expect-error
+        const result = setA.isDisjointFrom(setB)
+
+        expect(result).toBe(false)
+      }
+    })
+
+    it('should suppoort Set.isSubsetOf call', () => {
+      const setA = reactive(new Set([1, 2, 3, 4]))
+      const setB = new Set([3, 4, 5, 6])
+
+      if ('isSubsetOf' in Set.prototype) {
+        // @ts-expect-error
+        const result = setA.isSubsetOf(setB)
+
+        expect(result).toBe(false)
+      }
+    })
+
+    it('should suppoort Set.isSupersetOf call', () => {
+      const setA = reactive(new Set([1, 2, 3, 4]))
+      const setB = new Set([3, 4, 5, 6])
+
+      if ('isSupersetOf' in Set.prototype) {
+        // @ts-expect-error
+        const result = setA.isSupersetOf(setB)
+
+        expect(result).toBe(false)
+      }
+    })
   })
 })
