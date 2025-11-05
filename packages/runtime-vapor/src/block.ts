@@ -36,12 +36,20 @@ export interface TransitionOptions {
   $transition?: VaporTransitionHooks
 }
 
-export type TransitionBlock =
-  | (Node & TransitionOptions)
-  | (VaporFragment & TransitionOptions)
-  | (DynamicFragment & TransitionOptions)
+export type TransitionBlock = (
+  | Node
+  | VaporFragment
+  | DynamicFragment
+  | VaporComponentInstance
+) &
+  TransitionOptions
 
-export type Block = TransitionBlock | VaporComponentInstance | Block[]
+export type Block =
+  | Node
+  | VaporFragment
+  | DynamicFragment
+  | VaporComponentInstance
+  | Block[]
 export type BlockFn = (...args: any[]) => Block
 
 export function isBlock(val: NonNullable<unknown>): val is Block {

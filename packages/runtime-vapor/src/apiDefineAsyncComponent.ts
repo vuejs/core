@@ -27,9 +27,10 @@ import {
   removeFragmentNodes,
 } from './dom/hydration'
 import { invokeArrayFns } from '@vue/shared'
-import { insert, remove } from './block'
+import { type TransitionOptions, insert, remove } from './block'
 import { parentNode } from './dom/node'
 import type { KeepAliveInstance } from './components/KeepAlive'
+import { setTransitionHooks } from './components/Transition'
 
 /*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
@@ -111,7 +112,8 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
     },
 
     setup() {
-      const instance = currentInstance as VaporComponentInstance
+      const instance = currentInstance as VaporComponentInstance &
+        TransitionOptions
       markAsyncBoundary(instance)
 
       const frag =
@@ -166,6 +168,8 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         } else if (loadingComponent && !delayed.value) {
           render = () => createComponent(loadingComponent)
         }
+
+        if (instance.$transition) frag!.$transition = instance.$transition
         frag!.update(render)
       })
 
@@ -176,10 +180,10 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
 
 function createInnerComp(
   comp: VaporComponent,
-  parent: VaporComponentInstance,
+  parent: VaporComponentInstance & TransitionOptions,
   frag?: DynamicFragment,
 ): VaporComponentInstance {
-  const { rawProps, rawSlots, isSingleRoot, appContext } = parent
+  const { rawProps, rawSlots, isSingleRoot, appContext, $transition } = parent
   const instance = createComponent(
     comp,
     rawProps,
@@ -196,6 +200,9 @@ function createInnerComp(
     // cache the wrapper instance as well
     ;(parent.parent as KeepAliveInstance).cacheComponent(parent)
   }
+
+  // set transition hooks
+  if ($transition) setTransitionHooks(instance, $transition)
 
   // set ref
   // @ts-expect-error

@@ -228,6 +228,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     }
 
     keepAliveInstance.deactivate = instance => {
+      current = undefined
       deactivate(instance, storageContainer)
     }
 
