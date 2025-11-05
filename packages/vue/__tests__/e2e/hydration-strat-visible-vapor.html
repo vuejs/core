@@ -1,0 +1,81 @@
+<script src="../../dist/vue.global.js"></script>
+
+<div style="height: 1000px">scroll to the bottom to hydrate</div>
+<div id="app"><button>0</button></div>
+<style>
+  body {
+    margin: 0;
+  }
+</style>
+
+<script type="module">
+  import {
+    createVaporSSRApp,
+    defineVaporAsyncComponent,
+    ref,
+    onMounted,
+    hydrateOnVisible,
+    delegateEvents,
+    template,
+    createComponent,
+    child,
+    renderEffect,
+    setText,
+  } from '../../dist/vue.runtime-with-vapor.esm-browser.js'
+
+  delegateEvents('click')
+
+  const rootMargin = location.search.match(/rootMargin=(\d+)/)?.[1] ?? 0
+  const isFragment = location.search.includes('?fragment')
+  const isVIf = location.search.includes('?v-if')
+  if (isFragment) {
+    document.getElementById('app').innerHTML =
+      `<!--[--><!--[--><span>one</span><!--]--><button>0</button><span>two</span><!--]-->`
+  } else if (isVIf) {
+    document.getElementById('app').innerHTML = `<!---->`
+  }
+
+  window.isHydrated = false
+
+  const Comp = {
+    setup() {
+      const count = ref(0)
+      onMounted(() => {
+        console.log('hydrated')
+        window.isHydrated = true
+      })
+
+      if (isVIf) {
+        return template('<!--v-if-->')()
+      } else if (isFragment) {
+        const n1 = template('<span>one</span>')()
+        const n0 = template('<button> </button>', true)()
+        const x0 = child(n0)
+        n0.$evtclick = () => count.value++
+        renderEffect(() => setText(x0, count.value))
+        const n2 = template('<span>two</span>')()
+        return [n1, n0, n2]
+      } else {
+        const n0 = template('<button> </button>', true)()
+        const x0 = child(n0)
+        n0.$evtclick = () => count.value++
+        renderEffect(() => setText(x0, count.value))
+        return n0
+      }
+    },
+  }
+
+  const AsyncComp = defineVaporAsyncComponent({
+    loader: () => Promise.resolve(Comp),
+    hydrate: hydrateOnVisible({ rootMargin: rootMargin + 'px' }),
+  })
+
+  createVaporSSRApp({
+    setup() {
+      onMounted(() => {
+        window.isRootMounted = true
+      })
+      return createComponent(AsyncComp)
+    },
+  }).mount('#app')
+</script>

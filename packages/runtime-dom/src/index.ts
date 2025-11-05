@@ -40,8 +40,7 @@ import type { VModelDirective } from './directives/vModel'
  *
  * To enable proper types, add `"dom"` to `"lib"` in your `tsconfig.json`.
  */
-type DomStub = {}
-type DomType<T> = typeof globalThis extends { window: unknown } ? T : DomStub
+type DomType<T> = typeof globalThis extends { window: unknown } ? T : never
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
@@ -121,7 +120,7 @@ export const createApp = ((...args) => {
       if (__COMPAT__ && __DEV__ && container.nodeType === 1) {
         for (let i = 0; i < (container as Element).attributes.length; i++) {
           const attr = (container as Element).attributes[i]
-          if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+          if (attr.name !== 'v-cloak' && /^(?:v-|:|@)/.test(attr.name)) {
             compatUtils.warnDeprecation(
               DeprecationTypes.GLOBAL_MOUNT_CONTAINER,
               null,
@@ -319,7 +318,7 @@ export * from './jsx'
 /**
  * @internal
  */
-export { ensureRenderer, normalizeContainer }
+export { ensureRenderer, ensureHydrationRenderer, normalizeContainer }
 /**
  * @internal
  */
@@ -348,6 +347,27 @@ export {
   vModelSelectInit,
   vModelSetSelected,
 } from './directives/vModel'
+/**
+ * @internal
+ */
+export {
+  resolveTransitionProps,
+  TransitionPropsValidators,
+  forceReflow,
+  addTransitionClass,
+  removeTransitionClass,
+  type ElementWithTransition,
+} from './components/Transition'
+/**
+ * @internal
+ */
+export {
+  hasCSSTransform,
+  callPendingCbs,
+  moveCbKey,
+  handleMovedChildren,
+  baseApplyTranslation,
+} from './components/TransitionGroup'
 /**
  * @internal
  */

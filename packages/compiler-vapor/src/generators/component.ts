@@ -29,6 +29,7 @@ import {
 import { genExpression, genVarName } from './expression'
 import { genPropKey, genPropValue } from './prop'
 import {
+  NodeTypes,
   type SimpleExpressionNode,
   createSimpleExpression,
   isMemberExpression,
@@ -39,6 +40,12 @@ import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
 import { genModelHandler } from './vModel'
+import {
+  isBuiltInComponent,
+  isKeepAliveTag,
+  isTeleportTag,
+  isTransitionGroupTag,
+} from '../utils'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -53,13 +60,12 @@ export function genCreateComponent(
   const rawProps = context.withId(() => genRawProps(props, context), ids)
 
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
-    (acc, { name, value }) => {
+    (acc, { name, value }: InlineHandler) => {
       const handler = genEventHandler(context, value, undefined, false)
       return [...acc, `const ${name} = `, ...handler, NEWLINE]
     },
     [],
   )
-
   return [
     NEWLINE,
     ...inlineHandlers,
@@ -92,8 +98,15 @@ export function genCreateComponent(
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
     } else {
+      const { tag } = operation
+      const builtInTag = isBuiltInComponent(tag)
+      if (builtInTag) {
+        // @ts-expect-error
+        helper(builtInTag)
+        return `_${builtInTag}`
+      }
       return genExpression(
-        extend(createSimpleExpression(operation.tag, false), { ast: null }),
+        extend(createSimpleExpression(tag, false), { ast: null }),
         context,
       )
     }
@@ -128,7 +141,10 @@ function processInlineHandlers(
         const isMemberExp = isMemberExpression(value, context.options)
         // cache inline handlers (fn expression or inline statement)
         if (!isMemberExp) {
-          const name = getUniqueHandlerName(context, `_on_${prop.key.content}`)
+          const name = getUniqueHandlerName(
+            context,
+            `_on_${prop.key.content.replace(/-/g, '_')}`,
+          )
           handlers.push({ name, value })
           ids[name] = null
           // replace the original prop value with the handler name
@@ -212,7 +228,7 @@ function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
       ? genEventHandler(
           context,
           prop.values[0],
-          undefined,
+          prop.handlerModifiers,
           true /* wrap handlers passed to components */,
         )
       : isStatic
@@ -397,9 +413,8 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
   let propsName: string | undefined
   let exitScope: (() => void) | undefined
   let depth: number | undefined
-  const { props } = oper
+  const { props, key, node } = oper
   const idsOfProps = new Set<string>()
-
   if (props) {
     rawProps = props.content
     if ((isDestructureAssignment = !!props.ast)) {
@@ -425,11 +440,41 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
         ? `${propsName}[${JSON.stringify(id)}]`
         : null),
   )
-  const blockFn = context.withId(
+  let blockFn = context.withId(
     () => genBlock(oper, context, [propsName]),
     idMap,
   )
   exitScope && exitScope()
+
+  if (key) {
+    blockFn = [
+      `() => {`,
+      INDENT_START,
+      NEWLINE,
+      `return `,
+      ...genCall(
+        context.helper('createKeyedFragment'),
+        [`() => `, ...genExpression(key, context)],
+        blockFn,
+      ),
+      INDENT_END,
+      NEWLINE,
+      `}`,
+    ]
+  }
+
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    // Not a real component
+    !isTeleportTag(node.tag) &&
+    // Needs to determine whether to activate/deactivate based on instance.parent being KeepAlive
+    !isKeepAliveTag(node.tag) &&
+    // Slot updates need to trigger TransitionGroup's onBeforeUpdate/onUpdated hook
+    !isTransitionGroupTag(node.tag)
+  ) {
+    // wrap with withVaporCtx to ensure correct currentInstance inside slot
+    blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
+  }
 
   return blockFn
 }
