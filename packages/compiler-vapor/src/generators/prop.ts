@@ -114,9 +114,10 @@ export function genPropKey(
 ): CodeFragment[] {
   const { helper } = context
 
-  const handlerModifierPostfix = handlerModifiers
-    ? handlerModifiers.map(capitalize).join('')
-    : ''
+  const handlerModifierPostfix =
+    handlerModifiers && handlerModifiers.options
+      ? handlerModifiers.options.map(capitalize).join('')
+      : ''
   // static arg was transformed by v-bind transformer
   if (node.isStatic) {
     // only quote keys if necessary
