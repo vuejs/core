@@ -58,10 +58,10 @@
     "hash-sum": "^2.0.0",
     "lru-cache": "10.1.0",
     "merge-source-map": "^1.1.0",
-    "minimatch": "~10.0.3",
+    "minimatch": "~10.1.1",
     "postcss-modules": "^6.0.1",
     "postcss-selector-parser": "^7.1.0",
     "pug": "^3.0.3",
-    "sass": "^1.93.2"
+    "sass": "^1.93.3"
   }
 }

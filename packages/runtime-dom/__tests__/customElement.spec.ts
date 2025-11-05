@@ -499,6 +499,190 @@ describe('defineCustomElement', () => {
         '<div><span>1 is number</span><span>true is boolean</span></div>',
       )
     })
+
+    test('should patch all props together', async () => {
+      let prop1Calls = 0
+      let prop2Calls = 0
+      const E = defineCustomElement({
+        props: {
+          prop1: {
+            type: String,
+            default: 'default1',
+          },
+          prop2: {
+            type: String,
+            default: 'default2',
+          },
+        },
+        data() {
+          return {
+            data1: 'defaultData1',
+            data2: 'defaultData2',
+          }
+        },
+        watch: {
+          prop1(_) {
+            prop1Calls++
+            this.data2 = this.prop2
+          },
+          prop2(_) {
+            prop2Calls++
+            this.data1 = this.prop1
+          },
+        },
+        render() {
+          return h('div', [
+            h('h1', this.prop1),
+            h('h1', this.prop2),
+            h('h2', this.data1),
+            h('h2', this.data2),
+          ])
+        },
+      })
+      customElements.define('my-watch-element', E)
+
+      render(h('my-watch-element'), container)
+      const e = container.childNodes[0] as VueElement
+      expect(e).toBeInstanceOf(E)
+      expect(e._instance).toBeTruthy()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><h1>default1</h1><h1>default2</h1><h2>defaultData1</h2><h2>defaultData2</h2></div>`,
+      )
+      expect(prop1Calls).toBe(0)
+      expect(prop2Calls).toBe(0)
+
+      // patch props
+      render(
+        h('my-watch-element', { prop1: 'newValue1', prop2: 'newValue2' }),
+        container,
+      )
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><h1>newValue1</h1><h1>newValue2</h1><h2>newValue1</h2><h2>newValue2</h2></div>`,
+      )
+      expect(prop1Calls).toBe(1)
+      expect(prop2Calls).toBe(1)
+
+      // same prop values
+      render(
+        h('my-watch-element', { prop1: 'newValue1', prop2: 'newValue2' }),
+        container,
+      )
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><h1>newValue1</h1><h1>newValue2</h1><h2>newValue1</h2><h2>newValue2</h2></div>`,
+      )
+      expect(prop1Calls).toBe(1)
+      expect(prop2Calls).toBe(1)
+
+      // update only prop1
+      render(
+        h('my-watch-element', { prop1: 'newValue3', prop2: 'newValue2' }),
+        container,
+      )
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><h1>newValue3</h1><h1>newValue2</h1><h2>newValue1</h2><h2>newValue2</h2></div>`,
+      )
+      expect(prop1Calls).toBe(2)
+      expect(prop2Calls).toBe(1)
+    })
+
+    test('should patch all props together (async)', async () => {
+      let prop1Calls = 0
+      let prop2Calls = 0
+      const E = defineCustomElement(
+        defineAsyncComponent(() =>
+          Promise.resolve(
+            defineComponent({
+              props: {
+                prop1: {
+                  type: String,
+                  default: 'default1',
+                },
+                prop2: {
+                  type: String,
+                  default: 'default2',
+                },
+              },
+              data() {
+                return {
+                  data1: 'defaultData1',
+                  data2: 'defaultData2',
+                }
+              },
+              watch: {
+                prop1(_) {
+                  prop1Calls++
+                  this.data2 = this.prop2
+                },
+                prop2(_) {
+                  prop2Calls++
+                  this.data1 = this.prop1
+                },
+              },
+              render() {
+                return h('div', [
+                  h('h1', this.prop1),
+                  h('h1', this.prop2),
+                  h('h2', this.data1),
+                  h('h2', this.data2),
+                ])
+              },
+            }),
+          ),
+        ),
+      )
+      customElements.define('my-async-watch-element', E)
+
+      render(h('my-async-watch-element'), container)
+
+      await new Promise(r => setTimeout(r))
+      const e = container.childNodes[0] as VueElement
+      expect(e).toBeInstanceOf(E)
+      expect(e._instance).toBeTruthy()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><h1>default1</h1><h1>default2</h1><h2>defaultData1</h2><h2>defaultData2</h2></div>`,
+      )
+      expect(prop1Calls).toBe(0)
+      expect(prop2Calls).toBe(0)
+
+      // patch props
+      render(
+        h('my-async-watch-element', { prop1: 'newValue1', prop2: 'newValue2' }),
+        container,
+      )
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><h1>newValue1</h1><h1>newValue2</h1><h2>newValue1</h2><h2>newValue2</h2></div>`,
+      )
+      expect(prop1Calls).toBe(1)
+      expect(prop2Calls).toBe(1)
+
+      // same prop values
+      render(
+        h('my-async-watch-element', { prop1: 'newValue1', prop2: 'newValue2' }),
+        container,
+      )
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><h1>newValue1</h1><h1>newValue2</h1><h2>newValue1</h2><h2>newValue2</h2></div>`,
+      )
+      expect(prop1Calls).toBe(1)
+      expect(prop2Calls).toBe(1)
+
+      // update only prop1
+      render(
+        h('my-async-watch-element', { prop1: 'newValue3', prop2: 'newValue2' }),
+        container,
+      )
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><h1>newValue3</h1><h1>newValue2</h1><h2>newValue1</h2><h2>newValue2</h2></div>`,
+      )
+      expect(prop1Calls).toBe(2)
+      expect(prop2Calls).toBe(1)
+    })
   })
 
   describe('attrs', () => {
@@ -1427,6 +1611,44 @@ describe('defineCustomElement', () => {
       expect(target2.outerHTML).toBe(
         `<span><span slot="body">body</span></span>`,
       )
+      app.unmount()
+    })
+
+    test('teleport target is ancestor of custom element host', async () => {
+      const Child = defineCustomElement(
+        {
+          render() {
+            return [
+              h(Teleport, { to: '#t1' }, [renderSlot(this.$slots, 'header')]),
+            ]
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-teleport-child-target', Child)
+
+      const App = {
+        render() {
+          return h('div', { id: 't1' }, [
+            h('my-el-teleport-child-target', null, {
+              default: () => [h('div', { slot: 'header' }, 'header')],
+            }),
+          ])
+        },
+      }
+      const app = createApp(App)
+      app.mount(container)
+
+      const target1 = document.getElementById('t1')!
+      expect(target1.outerHTML).toBe(
+        `<div id="t1">` +
+          `<my-el-teleport-child-target data-v-app="">` +
+          `<!--teleport start--><!--teleport end-->` +
+          `</my-el-teleport-child-target>` +
+          `<div slot="header">header</div>` +
+          `</div>`,
+      )
+
       app.unmount()
     })
 

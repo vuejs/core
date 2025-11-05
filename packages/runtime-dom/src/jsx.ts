@@ -1440,7 +1440,7 @@ type EventHandlers<E> = {
 
 import type { VNodeRef } from '@vue/runtime-core'
 
-export type ReservedProps = {
+export interface ReservedProps {
   key?: PropertyKey | undefined
   ref?: VNodeRef | undefined
   ref_for?: boolean | undefined
