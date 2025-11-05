@@ -853,7 +853,7 @@ export function registerTS(_loadTS: () => typeof TS): void {
       ) {
         throw new Error(
           'Failed to load TypeScript, which is required for resolving imported types. ' +
-            'Please make sure "typescript" is installed as a project dependency.',
+            'Please make sure "TypeScript" is installed as a project dependency.',
         )
       } else {
         throw new Error(
@@ -951,7 +951,7 @@ function importSourceToScope(
         if (!ts) {
           return ctx.error(
             `Failed to resolve import source ${JSON.stringify(source)}. ` +
-              `typescript is required as a peer dep for vue in order ` +
+              `TypeScript is required as a peer dep for vue in order ` +
               `to support resolving types from module imports.`,
             node,
             scope,
@@ -1029,6 +1029,14 @@ function resolveWithTS(
     if (configs.length === 1) {
       matchedConfig = configs[0]
     } else {
+      const [major, minor] = ts.versionMajorMinor.split('.').map(Number)
+      const getPattern = (base: string, p: string) => {
+        // ts 5.5+ supports ${configDir} in paths
+        const supportsConfigDir = major > 5 || (major === 5 && minor >= 5)
+        return p.startsWith('${configDir}') && supportsConfigDir
+          ? normalizePath(p.replace('${configDir}', dirname(configPath!)))
+          : joinPaths(base, p)
+      }
       // resolve which config matches the current file
       for (const c of configs) {
         const base = normalizePath(
@@ -1039,11 +1047,11 @@ function resolveWithTS(
         const excluded: string[] | undefined = c.config.raw?.exclude
         if (
           (!included && (!base || containingFile.startsWith(base))) ||
-          included?.some(p => isMatch(containingFile, joinPaths(base, p)))
+          included?.some(p => isMatch(containingFile, getPattern(base, p)))
         ) {
           if (
             excluded &&
-            excluded.some(p => isMatch(containingFile, joinPaths(base, p)))
+            excluded.some(p => isMatch(containingFile, getPattern(base, p)))
           ) {
             continue
           }
@@ -1296,7 +1304,12 @@ function recordTypes(
         }
       } else if (stmt.type === 'TSModuleDeclaration' && stmt.global) {
         for (const s of (stmt.body as TSModuleBlock).body) {
-          recordType(s, types, declares)
+          if (s.type === 'ExportNamedDeclaration' && s.declaration) {
+            // Handle export declarations inside declare global
+            recordType(s.declaration, types, declares)
+          } else {
+            recordType(s, types, declares)
+          }
         }
       }
     } else {
@@ -1500,7 +1513,15 @@ export function inferRuntimeType(
   node: Node & MaybeWithScope,
   scope: TypeScope = node._ownerScope || ctxToScope(ctx),
   isKeyOf = false,
+  typeParameters?: Record<string, Node>,
 ): string[] {
+  if (
+    node.leadingComments &&
+    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
+  ) {
+    return [UNKNOWN_TYPE]
+  }
+
   try {
     switch (node.type) {
       case 'TSStringKeyword':
@@ -1588,19 +1609,43 @@ export function inferRuntimeType(
       case 'TSTypeReference': {
         const resolved = resolveTypeReference(ctx, node, scope)
         if (resolved) {
-          // #13240
-          // Special case for function type aliases to ensure correct runtime behavior
-          // other type aliases still fallback to unknown as before
-          if (
-            resolved.type === 'TSTypeAliasDeclaration' &&
-            resolved.typeAnnotation.type === 'TSFunctionType'
-          ) {
-            return ['Function']
+          if (resolved.type === 'TSTypeAliasDeclaration') {
+            // #13240
+            // Special case for function type aliases to ensure correct runtime behavior
+            // other type aliases still fallback to unknown as before
+            if (resolved.typeAnnotation.type === 'TSFunctionType') {
+              return ['Function']
+            }
+
+            if (node.typeParameters) {
+              const typeParams: Record<string, Node> = Object.create(null)
+              if (resolved.typeParameters) {
+                resolved.typeParameters.params.forEach((p, i) => {
+                  typeParams![p.name] = node.typeParameters!.params[i]
+                })
+              }
+              return inferRuntimeType(
+                ctx,
+                resolved.typeAnnotation,
+                resolved._ownerScope,
+                isKeyOf,
+                typeParams,
+              )
+            }
           }
+
           return inferRuntimeType(ctx, resolved, resolved._ownerScope, isKeyOf)
         }
-
         if (node.typeName.type === 'Identifier') {
+          if (typeParameters && typeParameters[node.typeName.name]) {
+            return inferRuntimeType(
+              ctx,
+              typeParameters[node.typeName.name],
+              scope,
+              isKeyOf,
+              typeParameters,
+            )
+          }
           if (isKeyOf) {
             switch (node.typeName.name) {
               case 'String':
@@ -1733,11 +1778,56 @@ export function inferRuntimeType(
         return inferRuntimeType(ctx, node.typeAnnotation, scope)
 
       case 'TSUnionType':
-        return flattenTypes(ctx, node.types, scope, isKeyOf)
+        return flattenTypes(ctx, node.types, scope, isKeyOf, typeParameters)
       case 'TSIntersectionType': {
-        return flattenTypes(ctx, node.types, scope, isKeyOf).filter(
-          t => t !== UNKNOWN_TYPE,
-        )
+        return flattenTypes(
+          ctx,
+          node.types,
+          scope,
+          isKeyOf,
+          typeParameters,
+        ).filter(t => t !== UNKNOWN_TYPE)
+      }
+      case 'TSMappedType': {
+        // only support { [K in keyof T]: T[K] }
+        const { typeAnnotation, typeParameter } = node
+        if (
+          typeAnnotation &&
+          typeAnnotation.type === 'TSIndexedAccessType' &&
+          typeParameter &&
+          typeParameter.constraint &&
+          typeParameters
+        ) {
+          const constraint = typeParameter.constraint
+          if (
+            constraint.type === 'TSTypeOperator' &&
+            constraint.operator === 'keyof' &&
+            constraint.typeAnnotation &&
+            constraint.typeAnnotation.type === 'TSTypeReference' &&
+            constraint.typeAnnotation.typeName.type === 'Identifier'
+          ) {
+            const typeName = constraint.typeAnnotation.typeName.name
+            const index = typeAnnotation.indexType
+            const obj = typeAnnotation.objectType
+            if (
+              obj &&
+              obj.type === 'TSTypeReference' &&
+              obj.typeName.type === 'Identifier' &&
+              obj.typeName.name === typeName &&
+              index &&
+              index.type === 'TSTypeReference' &&
+              index.typeName.type === 'Identifier' &&
+              index.typeName.name === typeParameter.name
+            ) {
+              const targetType = typeParameters[typeName]
+              if (targetType) {
+                return inferRuntimeType(ctx, targetType, scope)
+              }
+            }
+          }
+        }
+
+        return [UNKNOWN_TYPE]
       }
 
       case 'TSEnumDeclaration':
@@ -1808,14 +1898,17 @@ function flattenTypes(
   types: TSType[],
   scope: TypeScope,
   isKeyOf: boolean = false,
+  typeParameters: Record<string, Node> | undefined = undefined,
 ): string[] {
   if (types.length === 1) {
-    return inferRuntimeType(ctx, types[0], scope, isKeyOf)
+    return inferRuntimeType(ctx, types[0], scope, isKeyOf, typeParameters)
   }
   return [
     ...new Set(
       ([] as string[]).concat(
-        ...types.map(t => inferRuntimeType(ctx, t, scope, isKeyOf)),
+        ...types.map(t =>
+          inferRuntimeType(ctx, t, scope, isKeyOf, typeParameters),
+        ),
       ),
     ),
   ]

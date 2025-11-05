@@ -198,6 +198,10 @@ export interface ComponentInternalOptions {
    */
   __vapor?: boolean
   /**
+   * indicates keep-alive component
+   */
+  __isKeepAlive?: boolean
+  /**
    * @internal
    */
   __scopeId?: string
@@ -221,6 +225,27 @@ export interface ComponentInternalOptions {
    * name inferred from filename
    */
   __name?: string
+}
+
+export interface AsyncComponentInternalOptions<
+  R = ConcreteComponent,
+  I = ComponentInternalInstance,
+> {
+  /**
+   * marker for AsyncComponentWrapper
+   * @internal
+   */
+  __asyncLoader?: () => Promise<R>
+  /**
+   * the inner component resolved by the AsyncComponentWrapper
+   * @internal
+   */
+  __asyncResolved?: R
+  /**
+   * Exposed for lazy hydration
+   * @internal
+   */
+  __asyncHydrate?: (el: Element, instance: I, hydrate: () => void) => void
 }
 
 export interface FunctionalComponent<
@@ -1241,7 +1266,7 @@ export function getComponentPublicInstance(
   }
 }
 
-const classifyRE = /(?:^|[-_])(\w)/g
+const classifyRE = /(?:^|[-_])\w/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
@@ -1311,5 +1336,5 @@ export interface ComponentCustomElementInterface {
   /**
    * @internal attached by the nested Teleport when shadowRoot is false.
    */
-  _teleportTarget?: RendererElement
+  _teleportTargets?: Set<RendererElement>
 }

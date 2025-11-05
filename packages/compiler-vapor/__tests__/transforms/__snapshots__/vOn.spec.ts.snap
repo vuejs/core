@@ -20,7 +20,7 @@ export function render(_ctx) {
   const _on_update_model = () => {}
   const _on_update_model1 = () => {}
   const n0 = _createComponentWithFallback(_component_Foo, {
-    "onUpdate:model": () => _on_update_model, 
+    "onUpdate:model": () => _on_update_model,
     "onUpdate-model": () => _on_update_model1
   }, null, true)
   return n0
@@ -333,7 +333,7 @@ const t0 = _template("<div></div>", true)
 export function render(_ctx) {
   const n0 = t0()
   _on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop","prevent"]), {
-    capture: true, 
+    capture: true,
     once: true
   })
   return n0

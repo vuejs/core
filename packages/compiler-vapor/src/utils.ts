@@ -15,6 +15,7 @@ import {
 } from '@vue/compiler-dom'
 import type { VaporDirectiveNode } from './ir'
 import { EMPTY_EXPRESSION } from './transforms/utils'
+import type { TransformContext } from './transform'
 
 export const findProp = _findProp as (
   node: ElementNode,
@@ -87,4 +88,51 @@ export function getLiteralExpressionValue(
     }
   }
   return exp.isStatic ? exp.content : null
+}
+
+export function isInTransition(
+  context: TransformContext<ElementNode>,
+): boolean {
+  const parentNode = context.parent && context.parent.node
+  return !!(parentNode && isTransitionNode(parentNode as ElementNode))
+}
+
+export function isTransitionNode(node: ElementNode): boolean {
+  return node.type === NodeTypes.ELEMENT && isTransitionTag(node.tag)
+}
+
+export function isTransitionGroupNode(node: ElementNode): boolean {
+  return node.type === NodeTypes.ELEMENT && isTransitionGroupTag(node.tag)
+}
+
+export function isTransitionTag(tag: string): boolean {
+  tag = tag.toLowerCase()
+  return tag === 'transition' || tag === 'vaportransition'
+}
+
+export function isTransitionGroupTag(tag: string): boolean {
+  tag = tag.toLowerCase().replace(/-/g, '')
+  return tag === 'transitiongroup' || tag === 'vaportransitiongroup'
+}
+
+export function isKeepAliveTag(tag: string): boolean {
+  tag = tag.toLowerCase()
+  return tag === 'keepalive' || tag === 'vaporkeepalive'
+}
+
+export function isTeleportTag(tag: string): boolean {
+  tag = tag.toLowerCase()
+  return tag === 'teleport' || tag === 'vaporteleport'
+}
+
+export function isBuiltInComponent(tag: string): string | undefined {
+  if (isTeleportTag(tag)) {
+    return 'VaporTeleport'
+  } else if (isKeepAliveTag(tag)) {
+    return 'VaporKeepAlive'
+  } else if (isTransitionTag(tag)) {
+    return 'VaporTransition'
+  } else if (isTransitionGroupTag(tag)) {
+    return 'VaporTransitionGroup'
+  }
 }

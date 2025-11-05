@@ -27,7 +27,7 @@ import { PatchFlags } from '@vue/shared'
 
 const cachedChildrenArrayMatcher = (
   tags: string[],
-  needArraySpread = false,
+  needArraySpread = true,
 ) => ({
   type: NodeTypes.JS_CACHE_EXPRESSION,
   needArraySpread,
@@ -170,11 +170,6 @@ describe('compiler: cacheStatic transform', () => {
         {
           /* _ slot flag */
         },
-        {
-          type: NodeTypes.JS_PROPERTY,
-          key: { content: '__' },
-          value: { content: '[0]' },
-        },
       ],
     })
   })
@@ -201,11 +196,6 @@ describe('compiler: cacheStatic transform', () => {
         },
         {
           /* _ slot flag */
-        },
-        {
-          type: NodeTypes.JS_PROPERTY,
-          key: { content: '__' },
-          value: { content: '[0]' },
         },
       ],
     })

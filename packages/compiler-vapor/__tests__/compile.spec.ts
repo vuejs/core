@@ -221,9 +221,19 @@ describe('compile', () => {
     })
   })
 
-  describe('setInsertionState', () => {
-    test('next, child and nthChild should be above the setInsertionState', () => {
-      const code = compile(`
+  describe('execution order', () => {
+    test('basic', () => {
+      const code = compile(`<div :id="foo">{{ bar }}</div>`)
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `_setProp(n0, "id", _ctx.foo)
+    _setText(x0, _toDisplayString(_ctx.bar))`,
+      )
+    })
+
+    describe('setInsertionState', () => {
+      test('next, child and nthChild should be above the setInsertionState', () => {
+        const code = compile(`
       <div>
         <div />
         <Comp />
@@ -234,19 +244,10 @@ describe('compile', () => {
         </div>
       </div>
       `)
-      expect(code).toMatchSnapshot()
+        expect(code).toMatchSnapshot()
+      })
     })
-  })
 
-  describe('execution order', () => {
-    test('basic', () => {
-      const code = compile(`<div :id="foo">{{ bar }}</div>`)
-      expect(code).matchSnapshot()
-      expect(code).contains(
-        `_setProp(n0, "id", _ctx.foo)
-    _setText(x0, _toDisplayString(_ctx.bar))`,
-      )
-    })
     test('with v-once', () => {
       const code = compile(
         `<div>
@@ -260,6 +261,11 @@ describe('compile', () => {
         `_setText(n1, " " + _toDisplayString(_ctx.bar))
     _setText(n2, " " + _toDisplayString(_ctx.baz))`,
       )
+    })
+
+    test('with insertionState', () => {
+      const code = compile(`<div><div><slot /></div><Comp/></div>`)
+      expect(code).matchSnapshot()
     })
   })
 })
