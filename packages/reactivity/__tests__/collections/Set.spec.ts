@@ -561,5 +561,35 @@ describe('reactivity/collections', () => {
         expect(result).toBe(false)
       }
     })
+
+    it('should observe this set or other setlike when calling composition method', () => {
+      let dummy: any
+      const e1 = { val: 1 }
+      const e2 = { val: 2 }
+      const e3 = { val: 3 }
+      const e4 = { val: 4 }
+
+      const setA = reactive(new Set([e1, e2]))
+      const setB = reactive(new Set([e3, e4]))
+
+      effect(() => {
+        // @ts-expect-error
+        dummy = setA.intersection(setB)
+      })
+
+      expect(dummy.size).toBe(0)
+
+      setB.add(e1)
+      expect(dummy.size).toBe(1)
+
+      setB.add(e2)
+      expect(dummy.size).toBe(2)
+
+      setA.delete(e1)
+      expect(dummy.size).toBe(1)
+
+      setA.clear()
+      expect(dummy.size).toBe(0)
+    })
   })
 })
