@@ -14,7 +14,7 @@ const toggle = ref(true)
 const count = ref(0)
 
 const timeout = (fn, time) => setTimeout(fn, time)
-const duration = typeof process !== 'undefined' && process.env.CI ? 200 : 50
+const duration = window.__TRANSITION_DURATION__ || 50
 
 let calls = {
   basic: [],

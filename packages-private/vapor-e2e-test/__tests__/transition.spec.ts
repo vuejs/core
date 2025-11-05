@@ -39,6 +39,9 @@ describe('vapor transition', () => {
 
   beforeEach(async () => {
     const baseUrl = `http://localhost:${port}/transition/`
+    await page().evaluateOnNewDocument(dur => {
+      ;(window as any).__TRANSITION_DURATION__ = dur
+    }, duration)
     await page().goto(baseUrl)
     await page().waitForSelector('#app')
   })
