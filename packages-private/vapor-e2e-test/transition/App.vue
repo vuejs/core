@@ -503,6 +503,21 @@ const click = () => {
     </div>
     <!-- mode end -->
 
+    <!-- with teleport -->
+    <div class="with-teleport">
+      <div class="target"></div>
+      <div class="container">
+        <Transition>
+          <Teleport to=".target" defer>
+            <!-- comment -->
+            <VaporCompB v-if="!toggle" class="test"></VaporCompB>
+          </Teleport>
+        </Transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <!-- with teleport end -->
+
     <!-- with keep-alive -->
     <div class="keep-alive">
       <div>

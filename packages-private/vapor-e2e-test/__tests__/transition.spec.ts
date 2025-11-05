@@ -923,7 +923,54 @@ describe('vapor transition', () => {
   })
 
   describe.todo('transition with Suspense', () => {})
-  describe.todo('transition with Teleport', () => {})
+
+  describe('transition with Teleport', () => {
+    test(
+      'apply transition to teleport child',
+      async () => {
+        const btnSelector = '.with-teleport > button'
+        const containerSelector = '.with-teleport > .container'
+        const targetSelector = `.with-teleport > .target`
+
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe('')
+        expect(await html(targetSelector)).toBe('')
+
+        // enter
+        expect(
+          (await transitionStart(btnSelector, `${targetSelector} div`))
+            .classNames,
+        ).toStrictEqual(['test', 'v-enter-from', 'v-enter-active'])
+        await nextFrame()
+        expect(await classList(`${targetSelector} div`)).toStrictEqual([
+          'test',
+          'v-enter-active',
+          'v-enter-to',
+        ])
+        await transitionFinish()
+        expect(await html(targetSelector)).toBe(
+          '<div class="test">vapor compB</div>',
+        )
+        expect(await html(containerSelector)).toBe('')
+
+        // leave
+        expect(
+          (await transitionStart(btnSelector, `${targetSelector} div`))
+            .classNames,
+        ).toStrictEqual(['test', 'v-leave-from', 'v-leave-active'])
+        await nextFrame()
+        expect(await classList(`${targetSelector} div`)).toStrictEqual([
+          'test',
+          'v-leave-active',
+          'v-leave-to',
+        ])
+        await transitionFinish()
+        expect(await html(targetSelector)).toBe('')
+        expect(await html(containerSelector)).toBe('')
+      },
+      E2E_TIMEOUT,
+    )
+  })
 
   describe('transition with v-show', () => {
     test(

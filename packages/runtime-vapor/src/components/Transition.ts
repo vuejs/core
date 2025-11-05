@@ -10,6 +10,7 @@ import {
   baseResolveTransitionHooks,
   checkTransitionMode,
   currentInstance,
+  getComponentName,
   isTemplateNode,
   leaveCbKey,
   queuePostFlushCb,
@@ -33,8 +34,10 @@ import {
   setCurrentHydrationNode,
 } from '../dom/hydration'
 
+const displayName = 'VaporTransition'
+
 const decorate = (t: typeof VaporTransition) => {
-  t.displayName = 'VaporTransition'
+  t.displayName = displayName
   t.props = TransitionPropsValidators
   t.__vapor = true
   return t
@@ -208,8 +211,18 @@ export function applyTransitionHooks(
   hooks: VaporTransitionHooks,
   fallthroughAttrs: boolean = true,
 ): VaporTransitionHooks {
+  // filter out comment nodes
+  if (isArray(block)) {
+    block = block.filter(b => !(b instanceof Comment))
+    if (block.length === 1) {
+      block = block[0]
+    } else if (block.length === 0) {
+      return hooks
+    }
+  }
+
   const isFrag = isFragment(block)
-  const child = findTransitionBlock(block)
+  const child = findTransitionBlock(block, isFrag)
   if (!child) {
     // set transition hooks on fragment for reusing during it's updating
     if (isFrag) setTransitionHooksOnFragment(block, hooks)
@@ -296,35 +309,38 @@ export function findTransitionBlock(
     return transitionBlockCache.get(block)
   }
 
-  let isFrag = false
   let child: TransitionBlock | undefined
   if (block instanceof Node) {
     // transition can only be applied on Element child
     if (block instanceof Element) child = block
   } else if (isVaporComponent(block)) {
-    child = findTransitionBlock(block.block)
+    // stop searching if encountering nested Transition component
+    if (getComponentName(block.type) === displayName) return undefined
+    child = findTransitionBlock(block.block, inFragment)
     // use component id as key
     if (child && child.$key === undefined) child.$key = block.uid
   } else if (isArray(block)) {
-    child = block[0] as TransitionBlock
     let hasFound = false
     for (const c of block) {
-      const item = findTransitionBlock(c)
-      if (item instanceof Element) {
-        if (__DEV__ && hasFound) {
-          // warn more than one non-comment child
-          warn(
-            '<transition> can only be used on a single element or component. ' +
-              'Use <transition-group> for lists.',
-          )
-          break
-        }
-        child = item
-        hasFound = true
-        if (!__DEV__) break
+      if (c instanceof Comment) continue
+      // check if the child is a fragment to suppress warnings
+      if (isFragment(c)) inFragment = true
+      const item = findTransitionBlock(c, inFragment)
+      if (__DEV__ && hasFound) {
+        // warn more than one non-comment child
+        warn(
+          '<transition> can only be used on a single element or component. ' +
+            'Use <transition-group> for lists.',
+        )
+        break
       }
+      child = item
+      hasFound = true
+      if (!__DEV__) break
     }
-  } else if ((isFrag = isFragment(block))) {
+  } else if (isFragment(block)) {
+    // mark as in fragment to suppress warnings
+    inFragment = true
     if (block.insert) {
       child = block
     } else {
@@ -332,7 +348,7 @@ export function findTransitionBlock(
     }
   }
 
-  if (__DEV__ && !child && !inFragment && !isFrag) {
+  if (__DEV__ && !child && !inFragment) {
     warn('Transition component has no valid child element')
   }
 
@@ -344,7 +360,7 @@ export function setTransitionHooksOnFragment(
   hooks: VaporTransitionHooks,
 ): void {
   if (isFragment(block)) {
-    setTransitionHooks(block, hooks)
+    block.$transition = hooks
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       setTransitionHooksOnFragment(block[i], hooks)
