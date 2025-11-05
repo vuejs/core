@@ -381,10 +381,7 @@ export function setupComponent(
     component.inheritAttrs !== false &&
     Object.keys(instance.attrs).length
   ) {
-    const el = getRootElement(instance)
-    if (el) {
-      renderEffect(() => applyFallthroughProps(el, instance.attrs))
-    }
+    renderEffect(() => applyFallthroughProps(instance.block, instance.attrs))
   }
 
   setActiveSub(prevSub)
@@ -402,9 +399,12 @@ export function applyFallthroughProps(
   block: Block,
   attrs: Record<string, any>,
 ): void {
-  isApplyingFallthroughProps = true
-  setDynamicProps(block as Element, [attrs])
-  isApplyingFallthroughProps = false
+  const el = getRootElement(block)
+  if (el) {
+    isApplyingFallthroughProps = true
+    setDynamicProps(el, [attrs])
+    isApplyingFallthroughProps = false
+  }
 }
 
 /**
@@ -761,9 +761,7 @@ export function getExposed(
   }
 }
 
-function getRootElement({
-  block,
-}: VaporComponentInstance): Element | undefined {
+function getRootElement(block: Block): Element | undefined {
   if (block instanceof Element) {
     return block
   }

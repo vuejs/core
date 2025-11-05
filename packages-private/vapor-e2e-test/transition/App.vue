@@ -8,6 +8,7 @@ import {
   createIf,
   template,
   defineVaporAsyncComponent,
+  onUnmounted,
 } from 'vue'
 const show = ref(true)
 const toggle = ref(true)
@@ -29,6 +30,8 @@ let calls = {
   showLeaveCancel: [],
   showAppear: [],
   notEnter: [],
+
+  unmount: [],
 }
 window.getCalls = key => calls[key]
 window.resetCalls = key => (calls[key] = [])
@@ -95,6 +98,25 @@ function changeViewInOut() {
 const AsyncComp = defineVaporAsyncComponent(() => {
   return new Promise(resolve => setTimeout(() => resolve(VaporCompA), 50))
 })
+
+const TrueBranch = defineVaporComponent({
+  name: 'TrueBranch',
+  setup() {
+    onUnmounted(() => {
+      calls.unmount.push('TrueBranch')
+    })
+    return template('<div>0</div>')()
+  },
+})
+const includeRef = ref(['TrueBranch'])
+const click = () => {
+  toggle.value = !toggle.value
+  if (toggle.value) {
+    includeRef.value = ['TrueBranch']
+  } else {
+    includeRef.value = []
+  }
+}
 </script>
 
 <template>
@@ -496,6 +518,34 @@ const AsyncComp = defineVaporAsyncComponent(() => {
       <button @click="toggle = !toggle">button</button>
     </div>
     <!-- async component end -->
+
+    <!-- with teleport -->
+    <div class="with-teleport">
+      <div class="target"></div>
+      <div class="container">
+        <Transition>
+          <Teleport to=".target" defer>
+            <!-- comment -->
+            <VaporCompB v-if="!toggle" class="test"></VaporCompB>
+          </Teleport>
+        </Transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <!-- with teleport end -->
+
+    <!-- with keep-alive -->
+    <div class="keep-alive">
+      <div>
+        <transition mode="out-in">
+          <KeepAlive :include="includeRef">
+            <TrueBranch v-if="toggle"></TrueBranch>
+          </KeepAlive>
+        </transition>
+      </div>
+      <button @click="click">button</button>
+    </div>
+    <!-- with keep-alive end -->
 
     <!-- vdom interop -->
     <div class="vdom">
