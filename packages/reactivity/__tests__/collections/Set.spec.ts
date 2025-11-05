@@ -572,24 +572,26 @@ describe('reactivity/collections', () => {
       const setA = reactive(new Set([e1, e2]))
       const setB = reactive(new Set([e3, e4]))
 
-      effect(() => {
-        // @ts-expect-error
-        dummy = setA.intersection(setB)
-      })
+      if ('intersection' in Set.prototype) {
+        effect(() => {
+          // @ts-expect-error
+          dummy = setA.intersection(setB)
+        })
 
-      expect(dummy.size).toBe(0)
+        expect(dummy.size).toBe(0)
 
-      setB.add(e1)
-      expect(dummy.size).toBe(1)
+        setB.add(e1)
+        expect(dummy.size).toBe(1)
 
-      setB.add(e2)
-      expect(dummy.size).toBe(2)
+        setB.add(e2)
+        expect(dummy.size).toBe(2)
 
-      setA.delete(e1)
-      expect(dummy.size).toBe(1)
+        setA.delete(e1)
+        expect(dummy.size).toBe(1)
 
-      setA.clear()
-      expect(dummy.size).toBe(0)
+        setA.clear()
+        expect(dummy.size).toBe(0)
+      }
     })
   })
 })
