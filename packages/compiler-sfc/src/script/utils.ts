@@ -7,6 +7,8 @@ import type {
   ImportSpecifier,
   Node,
   StringLiteral,
+  TSMethodSignature,
+  TSPropertySignature,
 } from '@babel/types'
 import path from 'path'
 
@@ -77,6 +79,22 @@ export function getId(node: Expression) {
     : node.type === 'StringLiteral'
       ? node.value
       : null
+}
+
+export function getStringLiteralKey(
+  node: TSPropertySignature | TSMethodSignature,
+): string | null {
+  return node.computed
+    ? node.key.type === 'TemplateLiteral' && !node.key.expressions.length
+      ? node.key.quasis.map(q => q.value.cooked).join('')
+      : null
+    : node.key.type === 'Identifier'
+      ? node.key.name
+      : node.key.type === 'StringLiteral'
+        ? node.key.value
+        : node.key.type === 'NumericLiteral'
+          ? String(node.key.value)
+          : null
 }
 
 const identity = (str: string) => str
