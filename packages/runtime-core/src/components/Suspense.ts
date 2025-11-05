@@ -570,6 +570,10 @@ function createSuspenseBoundary(
             anchor = next(activeBranch)
           }
           unmount(activeBranch, parentComponent, suspense, true)
+          // clear el reference from fallback vnode to allow GC
+          if (suspense.isInFallback && vnode.ssFallback) {
+            vnode.ssFallback.el = null
+          }
         }
         if (!delayEnter) {
           // move content from off-dom container to actual container
