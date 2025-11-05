@@ -1,6 +1,5 @@
 import { isFunction } from '@vue/shared'
-import { currentInstance } from './component'
-import { currentRenderingInstance } from './componentRenderContext'
+import { currentInstance, getCurrentInstance } from './component'
 import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
 
@@ -51,7 +50,7 @@ export function inject(
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component
-  const instance = currentInstance || currentRenderingInstance
+  const instance = getCurrentInstance()
 
   // also support looking up from app-level provides w/ `app.runWithContext()`
   if (instance || currentApp) {
@@ -90,5 +89,5 @@ export function inject(
  * user. One example is `useRoute()` in `vue-router`.
  */
 export function hasInjectionContext(): boolean {
-  return !!(currentInstance || currentRenderingInstance || currentApp)
+  return !!(getCurrentInstance() || currentApp)
 }

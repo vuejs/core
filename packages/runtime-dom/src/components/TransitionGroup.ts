@@ -92,7 +92,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
-      forceReflow()
+      forceReflow(instance.vnode.el as Node)
 
       movedChildren.forEach(c => {
         const el = c.el as ElementWithTransition
@@ -103,7 +103,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
           if (e && e.target !== el) {
             return
           }
-          if (!e || /transform$/.test(e.propertyName)) {
+          if (!e || e.propertyName.endsWith('transform')) {
             el.removeEventListener('transitionend', cb)
             ;(el as any)[moveCbKey] = null
             removeTransitionClass(el, moveClass)

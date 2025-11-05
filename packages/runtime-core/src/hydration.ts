@@ -28,6 +28,7 @@ import {
   isReservedProp,
   isString,
   normalizeClass,
+  normalizeCssVarValue,
   normalizeStyle,
   stringifyStyle,
 } from '@vue/shared'
@@ -945,10 +946,8 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      expectedMap.set(
-        `--${getEscapedCssVarName(key, false)}`,
-        String(cssVars[key]),
-      )
+      const value = normalizeCssVarValue(cssVars[key])
+      expectedMap.set(`--${getEscapedCssVarName(key, false)}`, value)
     }
   }
   if (vnode === root && instance.parent) {
@@ -997,6 +996,6 @@ function isMismatchAllowed(
     if (allowedType === MismatchTypes.TEXT && list.includes('children')) {
       return true
     }
-    return allowedAttr.split(',').includes(MismatchTypeString[allowedType])
+    return list.includes(MismatchTypeString[allowedType])
   }
 }
