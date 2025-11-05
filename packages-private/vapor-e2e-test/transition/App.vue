@@ -7,6 +7,7 @@ import {
   VaporTransition,
   createIf,
   template,
+  onUnmounted,
 } from 'vue'
 const show = ref(true)
 const toggle = ref(true)
@@ -29,6 +30,8 @@ let calls = {
   showLeaveCancel: [],
   showAppear: [],
   notEnter: [],
+
+  unmount: [],
 }
 window.getCalls = key => calls[key]
 window.resetCalls = key => (calls[key] = [])
@@ -90,6 +93,25 @@ const SimpleOne = defineVaporComponent({
 const viewInOut = shallowRef(SimpleOne)
 function changeViewInOut() {
   viewInOut.value = viewInOut.value === SimpleOne ? Two : SimpleOne
+}
+
+const TrueBranch = defineVaporComponent({
+  name: 'TrueBranch',
+  setup() {
+    onUnmounted(() => {
+      calls.unmount.push('TrueBranch')
+    })
+    return template('<div>0</div>')()
+  },
+})
+const includeRef = ref(['TrueBranch'])
+const click = () => {
+  toggle.value = !toggle.value
+  if (toggle.value) {
+    includeRef.value = ['TrueBranch']
+  } else {
+    includeRef.value = []
+  }
 }
 </script>
 
@@ -496,6 +518,19 @@ function changeViewInOut() {
       <button @click="hide = !hide">button</button>
     </div>
     <!-- with teleport end -->
+
+    <!-- with keep-alive -->
+    <div class="keep-alive">
+      <div>
+        <transition mode="out-in">
+          <KeepAlive :include="includeRef">
+            <TrueBranch v-if="toggle"></TrueBranch>
+          </KeepAlive>
+        </transition>
+      </div>
+      <button @click="click">button</button>
+    </div>
+    <!-- with keep-alive end -->
 
     <!-- vdom interop -->
     <div class="vdom">
