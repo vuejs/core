@@ -229,6 +229,8 @@ export class VueElement
 
   private _connected = false
   private _resolved = false
+  private _patching = false
+  private _dirty = false
   private _numberProps: Record<string, true> | null = null
   private _styleChildren = new WeakSet()
   private _pendingResolve: Promise<void> | undefined
@@ -468,11 +470,11 @@ export class VueElement
     // defining getter/setters on prototype
     for (const key of declaredPropKeys.map(camelize)) {
       Object.defineProperty(this, key, {
-        get() {
+        get(this: VueElement) {
           return this._getProp(key)
         },
-        set(val) {
-          this._setProp(key, val, true, true)
+        set(this: VueElement, val) {
+          this._setProp(key, val, true, !this._patching)
         },
       })
     }
@@ -506,6 +508,7 @@ export class VueElement
     shouldUpdate = false,
   ): void {
     if (val !== this._props[key]) {
+      this._dirty = true
       if (val === REMOVAL) {
         delete this._props[key]
       } else {
@@ -695,6 +698,24 @@ export class VueElement
    */
   _injectChildStyle(comp: ConcreteComponent & CustomElementOptions): void {
     this._applyStyles(comp.styles, comp)
+  }
+
+  /**
+   * @internal
+   */
+  _beginPatch(): void {
+    this._patching = true
+    this._dirty = false
+  }
+
+  /**
+   * @internal
+   */
+  _endPatch(): void {
+    this._patching = false
+    if (this._dirty && this._instance) {
+      this._update()
+    }
   }
 
   /**
