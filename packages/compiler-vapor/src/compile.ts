@@ -26,6 +26,7 @@ import { transformVFor } from './transforms/vFor'
 import { transformComment } from './transforms/transformComment'
 import { transformSlotOutlet } from './transforms/transformSlotOutlet'
 import { transformVSlot } from './transforms/vSlot'
+import { transformTransition } from './transforms/transformTransition'
 import type { HackOptions } from './ir'
 
 export { wrapTemplate } from './transforms/utils'
@@ -54,6 +55,7 @@ export function compile(
     extend({}, resolvedOptions, {
       nodeTransforms: [
         ...nodeTransforms,
+        ...(__DEV__ ? [transformTransition] : []),
         ...(options.nodeTransforms || []), // user transforms
       ],
       directiveTransforms: extend(
@@ -81,8 +83,8 @@ export function getBaseTransformPreset(): TransformPreset {
       transformVFor,
       transformSlotOutlet,
       transformTemplateRef,
-      transformText,
       transformElement,
+      transformText,
       transformVSlot,
       transformComment,
       transformChildren,

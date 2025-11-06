@@ -16,12 +16,20 @@ import {
   isConstantExpression,
   isStaticExpression,
 } from '../utils'
+import { escapeHtml } from '@vue/shared'
 
 type TextLike = TextNode | InterpolationNode
 const seen = new WeakMap<
   TransformContext<RootNode>,
   WeakSet<TemplateChildNode | RootNode>
 >()
+
+export function markNonTemplate(
+  node: TemplateChildNode,
+  context: TransformContext,
+): void {
+  seen.get(context.root)!.add(node)
+}
 
 export const transformText: NodeTransform = (node, context) => {
   if (!seen.has(context.root)) seen.set(context.root, new WeakSet())
@@ -68,19 +76,20 @@ export const transformText: NodeTransform = (node, context) => {
           prev.type === NodeTypes.TEXT
         ) {
           // mark leading text node for skipping
-          seen.get(context.root)!.add(prev)
+          markNonTemplate(prev, context)
         }
       }
     }
   } else if (node.type === NodeTypes.INTERPOLATION) {
     processInterpolation(context as TransformContext<InterpolationNode>)
   } else if (node.type === NodeTypes.TEXT) {
-    context.template += node.content
+    context.template += escapeHtml(node.content)
   }
 }
 
 function processInterpolation(context: TransformContext<InterpolationNode>) {
-  const children = context.parent!.node.children
+  const parentNode = context.parent!.node
+  const children = parentNode.children
   const nexts = children.slice(context.index)
   const idx = nexts.findIndex(n => !isTextLike(n))
   const nodes = (idx > -1 ? nexts.slice(0, idx) : nexts) as Array<TextLike>
@@ -90,10 +99,18 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
   if (prev && prev.type === NodeTypes.TEXT) {
     nodes.unshift(prev)
   }
+  const values = processTextLikeChildren(nodes, context)
+
+  if (values.length === 0 && parentNode.type !== NodeTypes.ROOT) {
+    return
+  }
 
   context.template += ' '
   const id = context.reference()
-  const values = nodes.map(node => createTextLikeExpression(node, context))
+
+  if (values.length === 0) {
+    return
+  }
 
   const nonConstantExps = values.filter(v => !isConstantExpression(v))
   const isStatic =
@@ -122,10 +139,12 @@ function processTextContainer(
   children: TextLike[],
   context: TransformContext<ElementNode>,
 ) {
-  const values = children.map(child => createTextLikeExpression(child, context))
+  const values = processTextLikeChildren(children, context)
+
   const literals = values.map(getLiteralExpressionValue)
+
   if (literals.every(l => l != null)) {
-    context.childrenTemplate = literals.map(l => String(l))
+    context.childrenTemplate = literals.map(l => escapeHtml(String(l)))
   } else {
     context.childrenTemplate = [' ']
     context.registerOperation({
@@ -142,13 +161,22 @@ function processTextContainer(
   }
 }
 
-function createTextLikeExpression(node: TextLike, context: TransformContext) {
-  seen.get(context.root)!.add(node)
-  if (node.type === NodeTypes.TEXT) {
-    return createSimpleExpression(node.content, true, node.loc)
-  } else {
-    return node.content as SimpleExpressionNode
+function processTextLikeChildren(nodes: TextLike[], context: TransformContext) {
+  const exps: SimpleExpressionNode[] = []
+  for (const node of nodes) {
+    let exp: SimpleExpressionNode
+    markNonTemplate(node, context)
+
+    if (node.type === NodeTypes.TEXT) {
+      exp = createSimpleExpression(node.content, true, node.loc)
+    } else {
+      exp = node.content as SimpleExpressionNode
+    }
+
+    if (exp.content) exps.push(exp)
   }
+
+  return exps
 }
 
 function isTextLike(node: TemplateChildNode): node is TextLike {

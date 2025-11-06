@@ -2,7 +2,7 @@ import {
   NewlineType,
   type SimpleExpressionNode,
   isSimpleIdentifier,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
 import {
   IRDynamicPropsKind,
@@ -114,9 +114,10 @@ export function genPropKey(
 ): CodeFragment[] {
   const { helper } = context
 
-  const handlerModifierPostfix = handlerModifiers
-    ? handlerModifiers.map(capitalize).join('')
-    : ''
+  const handlerModifierPostfix =
+    handlerModifiers && handlerModifiers.options
+      ? handlerModifiers.options.map(capitalize).join('')
+      : ''
   // static arg was transformed by v-bind transformer
   if (node.isStatic) {
     // only quote keys if necessary

@@ -1,4 +1,4 @@
-import { ErrorCodes, NodeTypes } from '@vue/compiler-core'
+import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
 import {
   IRNodeTypes,
   IRSlotType,
@@ -67,7 +67,7 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`"default": (_slotProps0) =>`)
+    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
     expect(code).contains(`_slotProps0["foo"] + _ctx.bar`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -101,7 +101,7 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`"named": (_slotProps0) =>`)
+    expect(code).contains(`"named": _withVaporCtx((_slotProps0) =>`)
     expect(code).contains(`_slotProps0["foo"] + _ctx.bar`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -130,7 +130,7 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`fn: (_slotProps0) =>`)
+    expect(code).contains(`fn: _withVaporCtx((_slotProps0) =>`)
     expect(code).contains(`_slotProps0["foo"] + _ctx.bar`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -204,8 +204,8 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`"default": (_slotProps0) =>`)
-    expect(code).contains(`"default": (_slotProps1) =>`)
+    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`"default": _withVaporCtx((_slotProps1) =>`)
     expect(code).contains(`_slotProps0["foo"] + _slotProps1["bar"] + _ctx.baz`)
     expect(code).contains(`_slotProps0["foo"] + _ctx.bar + _ctx.baz`)
 
@@ -282,7 +282,7 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`fn: (_slotProps0) =>`)
+    expect(code).contains(`fn: _withVaporCtx((_slotProps0) =>`)
     expect(code).contains(`_setText(n0, _toDisplayString(_slotProps0["bar"]))`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -346,7 +346,7 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`fn: (_slotProps0) =>`)
+    expect(code).contains(`fn: _withVaporCtx((_slotProps0) =>`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -369,6 +369,17 @@ describe('compiler: transform slot', () => {
         },
       ],
     })
+  })
+
+  test('slot + v-if / v-else[-if] should not cause error', () => {
+    const { code } = compileWithSlots(
+      `<div>
+        <slot name="foo"></slot>
+        <Foo v-if="true"></Foo>
+        <Bar v-else />
+      </div>`,
+    )
+    expect(code).toMatchSnapshot()
   })
 
   test('quote slot name', () => {
@@ -406,6 +417,35 @@ describe('compiler: transform slot', () => {
           },
         },
       ],
+    })
+  })
+
+  describe('forwarded slots', () => {
+    test('<slot> tag only', () => {
+      const { code } = compileWithSlots(`<Comp><slot/></Comp>`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('<slot> tag w/ v-if', () => {
+      const { code } = compileWithSlots(`<Comp><slot v-if="ok"/></Comp>`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('<slot> tag w/ v-for', () => {
+      const { code } = compileWithSlots(`<Comp><slot v-for="a in b"/></Comp>`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('<slot> tag w/ template', () => {
+      const { code } = compileWithSlots(
+        `<Comp><template #default><slot/></template></Comp>`,
+      )
+      expect(code).toMatchSnapshot()
+    })
+
+    test('<slot w/ nested component>', () => {
+      const { code } = compileWithSlots(`<Comp><Comp><slot/></Comp></Comp>`)
+      expect(code).toMatchSnapshot()
     })
   })
 
@@ -496,6 +536,62 @@ describe('compiler: transform slot', () => {
           },
         },
       })
+    })
+  })
+
+  describe(`with whitespace: 'preserve'`, () => {
+    test('named default slot + implicit whitespace content', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <template #default> Default </template>
+      </Comp>
+      `
+      const { code } = compileWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      expect(
+        `Extraneous children found when component already has explicitly named default slot.`,
+      ).not.toHaveBeenWarned()
+      expect(code).toMatchSnapshot()
+    })
+
+    test('implicit default slot', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <p/>
+      </Comp>
+      `
+      const { code } = compileWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      expect(
+        `Extraneous children found when component already has explicitly named default slot.`,
+      ).not.toHaveBeenWarned()
+      expect(code).toMatchSnapshot()
+    })
+
+    test('should not generate whitespace only default slot', () => {
+      const source = `
+      <Comp>
+        <template #header> Header </template>
+        <template #footer> Footer </template>
+      </Comp>
+      `
+      const { code, ir } = compileWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      const slots = (ir.block.dynamic.children[0].operation as any).slots[0]
+        .slots
+      // should be: header, footer (no default)
+      expect(Object.keys(slots).length).toBe(2)
+      expect(!!slots['default']).toBe(false)
+
+      expect(code).toMatchSnapshot()
     })
   })
 })

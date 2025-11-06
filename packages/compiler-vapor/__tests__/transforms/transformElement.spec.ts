@@ -6,16 +6,22 @@ import {
   transformElement,
   transformText,
   transformVBind,
+  transformVFor,
   transformVOn,
 } from '../../src'
 import {
   type BindingMetadata,
   BindingTypes,
   NodeTypes,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 
 const compileWithElementTransform = makeCompile({
-  nodeTransforms: [transformElement, transformChildren, transformText],
+  nodeTransforms: [
+    transformVFor,
+    transformElement,
+    transformChildren,
+    transformText,
+  ],
   directiveTransforms: {
     bind: transformVBind,
     on: transformVOn,
@@ -39,11 +45,12 @@ describe('compiler: element transform', () => {
       })
     })
 
-    test.todo('resolve implicitly self-referencing component', () => {
+    test('resolve implicitly self-referencing component', () => {
       const { code, helpers } = compileWithElementTransform(`<Example/>`, {
         filename: `/foo/bar/Example.vue?vue&type=template`,
       })
       expect(code).toMatchSnapshot()
+      expect(code).toContain('_resolveComponent("Example", true)')
       expect(helpers).toContain('resolveComponent')
     })
 
@@ -169,6 +176,17 @@ describe('compiler: element transform', () => {
       expect(code).contains('_createComponent(_ctx.Comp)')
     })
 
+    test('v-for on component should not mark as single root', () => {
+      const { code } = compileWithElementTransform(
+        `<Comp v-for="item in items" :key="item"/>`,
+        {
+          bindingMetadata: { Comp: BindingTypes.SETUP_CONST },
+        },
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_createComponent(_ctx.Comp)')
+    })
+
     test('static props', () => {
       const { code, ir } = compileWithElementTransform(
         `<Foo id="foo" class="bar" />`,
@@ -176,7 +194,7 @@ describe('compiler: element transform', () => {
 
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"), 
+    id: () => ("foo"),
     class: () => ("bar")
   }`)
 
@@ -244,7 +262,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
       () => (_ctx.obj)
     ]
@@ -268,7 +286,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`[
-    () => (_ctx.obj), 
+    () => (_ctx.obj),
     { id: () => ("foo") }
   ]`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -290,9 +308,9 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
-      () => (_ctx.obj), 
+      () => (_ctx.obj),
       { class: () => ("bar") }
     ]
   }`)
@@ -563,6 +581,15 @@ describe('compiler: element transform', () => {
     expect(code).contains(JSON.stringify(template))
     expect(ir.template).toMatchObject([template])
     expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('checkbox with static indeterminate', () => {
+    const { code } = compileWithElementTransform(
+      `<input type="checkbox" indeterminate/>`,
+    )
+
+    expect(code).toContain('_setProp(n0, "indeterminate", "")')
+    expect(code).toMatchSnapshot()
   })
 
   test('props + children', () => {
@@ -874,6 +901,78 @@ describe('compiler: element transform', () => {
           key: { content: 'baz' },
           values: [{ content: 'qux' }],
         },
+      ],
+    })
+  })
+
+  test('component event with keys modifier', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @keyup.enter="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        [
+          {
+            key: { content: 'keyup' },
+            handler: true,
+            handlerModifiers: {
+              keys: ['enter'],
+              nonKeys: [],
+              options: [],
+            },
+          },
+        ],
+      ],
+    })
+  })
+
+  test('component event with nonKeys modifier', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @foo.stop.prevent="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        [
+          {
+            key: { content: 'foo' },
+            handler: true,
+            handlerModifiers: {
+              keys: [],
+              nonKeys: ['stop', 'prevent'],
+              options: [],
+            },
+          },
+        ],
+      ],
+    })
+  })
+
+  test('component event with multiple modifiers and event options', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @foo.enter.stop.prevent.capture.once="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        [
+          {
+            key: { content: 'foo' },
+            handler: true,
+            handlerModifiers: {
+              keys: ['enter'],
+              nonKeys: ['stop', 'prevent'],
+              options: ['capture', 'once'],
+            },
+          },
+        ],
       ],
     })
   })

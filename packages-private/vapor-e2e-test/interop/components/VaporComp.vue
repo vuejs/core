@@ -20,10 +20,7 @@ const slotProp = ref('slot prop')
 
     <div v-if="ok" style="border: 2px solid orange; padding: 10px">
       <h3>vdom slots in vapor component</h3>
-      <button
-        class="change-vdom-slot-in-vapor-prop"
-        @click="slotProp = 'changed'"
-      >
+      <button class="change-vdom-slot-in-vapor-prop" @click="slotProp = 'changed'">
         change slot prop
       </button>
       <div class="vdom-slot-in-vapor-default">
@@ -35,13 +32,10 @@ const slotProp = ref('slot prop')
       </div>
     </div>
 
-    <button
-      class="toggle-vapor-slot-in-vdom-default"
-      @click="passSlot = !passSlot"
-    >
+    <button class="toggle-vapor-slot-in-vdom-default" @click="passSlot = !passSlot">
       Toggle default slot to vdom
     </button>
-    <VdomComp :msg="msg" class="foo">
+    <VdomComp :msg="msg">
       <template #default="{ foo }" v-if="passSlot">
         <div>slot prop: {{ foo }}</div>
         <div>component prop: {{ msg }}</div>

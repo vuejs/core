@@ -26,8 +26,8 @@ import type { InjectionKey } from './apiInject'
 import { warn } from './warning'
 import type { VNode } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { NO, extend, isFunction, isObject } from '@vue/shared'
-import { version } from '.'
+import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
+import { type TransitionHooks, version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
@@ -35,6 +35,7 @@ import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { DefineComponent } from './apiDefineComponent'
 
 export interface App<HostElement = any> {
+  vapor?: boolean
   version: string
   config: AppConfig
 
@@ -54,7 +55,7 @@ export interface App<HostElement = any> {
     HostElement = any,
     Value = any,
     Modifiers extends string = string,
-    Arg extends string = string,
+    Arg = any,
   >(
     name: string,
   ): Directive<HostElement, Value, Modifiers, Arg> | undefined
@@ -62,7 +63,7 @@ export interface App<HostElement = any> {
     HostElement = any,
     Value = any,
     Modifiers extends string = string,
-    Arg extends string = string,
+    Arg = any,
   >(
     name: string,
     directive: Directive<HostElement, Value, Modifiers, Arg>,
@@ -174,7 +175,6 @@ export interface AppConfig extends GenericAppConfig {
 
 /**
  * The vapor in vdom implementation is in runtime-vapor/src/vdomInterop.ts
- * @internal
  */
 export interface VaporInteropInterface {
   mount(
@@ -187,6 +187,25 @@ export interface VaporInteropInterface {
   unmount(vnode: VNode, doRemove?: boolean): void
   move(vnode: VNode, container: any, anchor: any): void
   slot(n1: VNode | null, n2: VNode, container: any, anchor: any): void
+  hydrate(
+    vnode: VNode,
+    node: any,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance | null,
+  ): Node
+  hydrateSlot(vnode: VNode, node: any): Node
+  activate(
+    vnode: VNode,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance,
+  ): void
+  deactivate(vnode: VNode, container: any): void
+  setTransitionHooks(
+    component: ComponentInternalInstance,
+    transition: TransitionHooks,
+  ): void
 
   vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
   vdomUnmount: UnmountComponentFn
@@ -483,10 +502,18 @@ export function createAppAPI<HostElement, Comp = Component>(
 
       provide(key, value) {
         if (__DEV__ && (key as string | symbol) in context.provides) {
-          warn(
-            `App already provides property with key "${String(key)}". ` +
-              `It will be overwritten with the new value.`,
-          )
+          if (hasOwn(context.provides, key as string | symbol)) {
+            warn(
+              `App already provides property with key "${String(key)}". ` +
+                `It will be overwritten with the new value.`,
+            )
+          } else {
+            // #13212, context.provides can inherit the provides object from parent on custom elements
+            warn(
+              `App already provides property with key "${String(key)}" inherited from its parent element. ` +
+                `It will be overwritten with the new value.`,
+            )
+          }
         }
 
         context.provides[key as string | symbol] = value

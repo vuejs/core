@@ -1,6 +1,6 @@
 {
   "name": "@vue/server-renderer",
-  "version": "3.5.13",
+  "version": "3.6.0-alpha.2",
   "description": "@vue/server-renderer",
   "main": "index.js",
   "module": "dist/server-renderer.esm-bundler.js",

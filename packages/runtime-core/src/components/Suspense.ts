@@ -235,7 +235,7 @@ function patchSuspense(
   const { activeBranch, pendingBranch, isInFallback, isHydrating } = suspense
   if (pendingBranch) {
     suspense.pendingBranch = newBranch
-    if (isSameVNodeType(newBranch, pendingBranch)) {
+    if (isSameVNodeType(pendingBranch, newBranch)) {
       // same root type but content may have changed.
       patch(
         pendingBranch,
@@ -321,7 +321,7 @@ function patchSuspense(
           )
           setActiveBranch(suspense, newFallback)
         }
-      } else if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
+      } else if (activeBranch && isSameVNodeType(activeBranch, newBranch)) {
         // toggled "back" to current active branch
         patch(
           activeBranch,
@@ -355,7 +355,7 @@ function patchSuspense(
       }
     }
   } else {
-    if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
+    if (activeBranch && isSameVNodeType(activeBranch, newBranch)) {
       // root did not change, just normal patch
       patch(
         activeBranch,
@@ -873,6 +873,7 @@ function normalizeSuspenseSlot(s: any) {
 
 export function queueEffectWithSuspense(
   fn: Function | Function[],
+  id: number | undefined,
   suspense: SuspenseBoundary | null,
 ): void {
   if (suspense && suspense.pendingBranch) {
@@ -882,7 +883,7 @@ export function queueEffectWithSuspense(
       suspense.effects.push(fn)
     }
   } else {
-    queuePostFlushCb(fn)
+    queuePostFlushCb(fn, id)
   }
 }
 

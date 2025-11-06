@@ -41,6 +41,7 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
     app._props as RawProps,
     null,
     false,
+    false,
     app._context,
   )
   mountComponent(instance, container)
@@ -60,6 +61,7 @@ const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
       app._component,
       app._props as RawProps,
       null,
+      false,
       false,
       app._context,
     )
@@ -88,22 +90,16 @@ function prepareApp() {
 }
 
 function postPrepareApp(app: App) {
-  if (__DEV__) {
-    app.config.globalProperties = new Proxy(
-      {},
-      {
-        set() {
-          warn(`app.config.globalProperties is not supported in vapor mode.`)
-          return false
-        },
-      },
-    )
-  }
-
+  app.vapor = true
   const mount = app.mount
   app.mount = (container, ...args: any[]) => {
     container = normalizeContainer(container) as ParentNode
-    return mount(container, ...args)
+    const proxy = mount(container, ...args)
+    if (container instanceof Element) {
+      container.removeAttribute('v-cloak')
+      container.setAttribute('data-v-app', '')
+    }
+    return proxy
   }
 }
 

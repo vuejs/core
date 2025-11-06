@@ -17,6 +17,7 @@ export {
   createTransformContext,
   traverseNode,
   createStructuralDirectiveTransform,
+  getSelfName,
   type NodeTransform,
   type StructuralDirectiveTransform,
   type DirectiveTransform,
@@ -71,6 +72,7 @@ export {
   buildDirectiveArgs,
   type PropsExpression,
 } from './transforms/transformElement'
+export { transformVBindShorthand } from './transforms/transformVBindShorthand'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 export { getConstantType } from './transforms/cacheStatic'
 export { generateCodeFrame } from '@vue/shared'

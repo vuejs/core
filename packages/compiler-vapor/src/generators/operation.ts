@@ -44,7 +44,7 @@ export function genOperationWithInsertionState(
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   if (isBlockOperation(oper) && oper.parent) {
-    push(...genInsertionstate(oper, context))
+    push(...genInsertionState(oper, context))
   }
   push(...genOperation(oper, context))
   return frag
@@ -98,17 +98,18 @@ export function genOperation(
 export function genEffects(
   effects: IREffect[],
   context: CodegenContext,
+  genExtraFrag?: () => CodeFragment[],
 ): CodeFragment[] {
-  const {
-    helper,
-    block: { expressions },
-  } = context
+  const { helper } = context
+  const expressions = effects.flatMap(effect => effect.expressions)
   const [frag, push, unshift] = buildCodeFragment()
+  const shouldDeclare = genExtraFrag === undefined
   let operationsCount = 0
-  const { ids, frag: declarationFrags } = processExpressions(
-    context,
-    expressions,
-  )
+  const {
+    ids,
+    frag: declarationFrags,
+    varNames,
+  } = processExpressions(context, expressions, shouldDeclare)
   push(...declarationFrags)
   for (let i = 0; i < effects.length; i++) {
     const effect = effects[i]
@@ -125,11 +126,22 @@ export function genEffects(
   if (newLineCount > 1 || operationsCount > 1 || declarationFrags.length > 0) {
     unshift(`{`, INDENT_START, NEWLINE)
     push(INDENT_END, NEWLINE, '}')
+    if (!effects.length) {
+      unshift(NEWLINE)
+    }
   }
 
   if (effects.length) {
     unshift(NEWLINE, `${helper('renderEffect')}(() => `)
     push(`)`)
+  }
+
+  if (!shouldDeclare && varNames.length) {
+    unshift(NEWLINE, `let `, varNames.join(', '))
+  }
+
+  if (genExtraFrag) {
+    push(...context.withId(genExtraFrag, ids))
   }
 
   return frag
@@ -152,20 +164,28 @@ export function genEffect(
   return frag
 }
 
-function genInsertionstate(
+function genInsertionState(
   operation: InsertionStateTypes,
   context: CodegenContext,
 ): CodeFragment[] {
+  const { parent, anchor, append, last } = operation
   return [
     NEWLINE,
     ...genCall(
       context.helper('setInsertionState'),
-      `n${operation.parent}`,
-      operation.anchor == null
+      `n${parent}`,
+      anchor == null
         ? undefined
-        : operation.anchor === -1 // -1 indicates prepend
+        : anchor === -1 // -1 indicates prepend
           ? `0` // runtime anchor value for prepend
-          : `n${operation.anchor}`,
+          : append // -2 indicates append
+            ? // null or anchor > 0 for append
+              // anchor > 0 is the logical index of append node - used for locate node during hydration
+              anchor === 0
+              ? 'null'
+              : `${anchor}`
+            : `n${anchor}`,
+      last && 'true',
     ),
   ]
 }

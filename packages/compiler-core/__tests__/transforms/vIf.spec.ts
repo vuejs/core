@@ -17,7 +17,12 @@ import {
   type VNodeCall,
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
-import { type CompilerOptions, TO_HANDLERS, generate } from '../../src'
+import {
+  type CompilerOptions,
+  TO_HANDLERS,
+  generate,
+  transformVBindShorthand,
+} from '../../src'
 import {
   CREATE_COMMENT,
   FRAGMENT,
@@ -35,7 +40,12 @@ function parseWithIfTransform(
 ) {
   const ast = parse(template, options)
   transform(ast, {
-    nodeTransforms: [transformIf, transformSlotOutlet, transformElement],
+    nodeTransforms: [
+      transformVBindShorthand,
+      transformIf,
+      transformSlotOutlet,
+      transformElement,
+    ],
     ...options,
   })
   if (!options.onError) {
@@ -209,6 +219,16 @@ describe('compiler: v-if', () => {
         content: `_ctx.ok`,
       })
     })
+
+    //#11321
+    test('v-if + :key shorthand', () => {
+      const { node } = parseWithIfTransform(`<div v-if="ok" :key></div>`)
+      expect(node.type).toBe(NodeTypes.IF)
+      expect(node.branches[0].userKey).toMatchObject({
+        arg: { content: 'key' },
+        exp: { content: 'key' },
+      })
+    })
   })
 
   describe('errors', () => {
@@ -294,6 +314,25 @@ describe('compiler: v-if', () => {
       )
 
       expect(onError.mock.calls[3]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: branches[branches.length - 1].loc,
+        },
+      ])
+    })
+
+    test('error on adjacent v-else', () => {
+      const onError = vi.fn()
+
+      const {
+        node: { branches },
+      } = parseWithIfTransform(
+        `<div v-if="false"/><div v-else/><div v-else/>`,
+        { onError },
+        0,
+      )
+
+      expect(onError.mock.calls[0]).toMatchObject([
         {
           code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: branches[branches.length - 1].loc,

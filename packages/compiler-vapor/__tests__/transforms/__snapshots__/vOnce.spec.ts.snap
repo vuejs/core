@@ -17,8 +17,8 @@ const t0 = _template("<div> <span></span></div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n2 = t0()
-  const n0 = _child(n2)
-  const n1 = _next(n0)
+  const n0 = _child(n2, 0)
+  const n1 = _next(n0, 1)
   _setText(n0, _toDisplayString(_ctx.msg) + " ")
   _setClass(n1, _ctx.clz)
   return n2
@@ -42,7 +42,7 @@ const t0 = _template("<div></div>", true)
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = t0()
-  _setInsertionState(n1)
+  _setInsertionState(n1, null, true)
   const n0 = _createComponentWithFallback(_component_Comp, { id: () => (_ctx.foo) }, null, null, true)
   return n1
 }"
@@ -54,7 +54,7 @@ const t0 = _template("<div><div></div></div>", true)
 
 export function render(_ctx) {
   const n1 = t0()
-  const n0 = _child(n1)
+  const n0 = _child(n1, 0)
   _setProp(n0, "id", _ctx.foo)
   return n1
 }"
@@ -68,7 +68,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, null, 4)
+  }, undefined, 4)
   return n0
 }"
 `;

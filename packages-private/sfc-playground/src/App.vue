@@ -8,7 +8,7 @@ import {
   StoreState,
 } from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
-import { ref, watchEffect, onMounted, computed } from 'vue'
+import { ref, watchEffect, onMounted, computed, watch } from 'vue'
 
 const replRef = ref<InstanceType<typeof Repl>>()
 
@@ -130,6 +130,34 @@ onMounted(() => {
   // @ts-expect-error process shim for old versions of @vue/compiler-sfc dependency
   window.process = { env: {} }
 })
+
+const isVaporSupported = ref(false)
+watch(
+  () => store.vueVersion,
+  (version, oldVersion) => {
+    const [major, minor] = (version || store.compiler.version)
+      .split('.')
+      .map((v: string) => parseInt(v, 10))
+    isVaporSupported.value = major > 3 || (major === 3 && minor >= 6)
+    if (oldVersion) reloadPage()
+  },
+  { immediate: true, flush: 'pre' },
+)
+
+const previewOptions = computed(() => ({
+  customCode: {
+    importCode: `import { initCustomFormatter${isVaporSupported.value ? ', vaporInteropPlugin' : ''} } from 'vue'`,
+    useCode: `
+      ${isVaporSupported.value ? 'app.use(vaporInteropPlugin)' : ''}
+      if (window.devtoolsFormatters) {
+        const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
+        window.devtoolsFormatters.splice(index, 1)
+        initCustomFormatter()
+      } else {
+        initCustomFormatter()
+      }`,
+  },
+}))
 </script>
 
 <template>
@@ -156,22 +184,11 @@ onMounted(() => {
     :editorOptions="{ autoSaveText: false }"
     :store="store"
     :showCompileOutput="true"
+    :showSsrOutput="useSSRMode"
+    :showOpenSourceMap="true"
     :autoResize="true"
     :clearConsole="false"
-    :preview-options="{
-      customCode: {
-        importCode: `import { initCustomFormatter, vaporInteropPlugin } from 'vue'`,
-        useCode: `
-  app.use(vaporInteropPlugin)
-  if (window.devtoolsFormatters) {
-    const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
-    window.devtoolsFormatters.splice(index, 1)
-    initCustomFormatter()
-  } else {
-    initCustomFormatter()
-  }`,
-      },
-    }"
+    :preview-options="previewOptions"
   />
 </template>
 
