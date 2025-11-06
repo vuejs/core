@@ -12,6 +12,21 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`v-on > component event with special characters 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const _on_update_model = () => {}
+  const _on_update_model1 = () => {}
+  const n0 = _createComponentWithFallback(_component_Foo, {
+    "onUpdate:model": () => _on_update_model,
+    "onUpdate-model": () => _on_update_model1
+  }, null, true)
+  return n0
+}"
+`;
+
 exports[`v-on > dynamic arg 1`] = `
 "import { on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
@@ -120,6 +135,18 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   n20.$evtkeyup = _withModifiers(e => _ctx.submit(e), ["middle","self"])
   n21.$evtkeyup = _withKeys(_withModifiers(_ctx.handleEvent, ["self"]), ["enter"])
   return [n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, n17, n18, n19, n20, n21]
+}"
+`;
+
+exports[`v-on > expression with type 1`] = `
+"import { delegateEvents as _delegateEvents, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+_delegateEvents("click")
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  n0.$evtclick = e => _ctx.handleClick(e)
+  return n0
 }"
 `;
 
@@ -306,7 +333,7 @@ const t0 = _template("<div></div>", true)
 export function render(_ctx) {
   const n0 = t0()
   _on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop","prevent"]), {
-    capture: true, 
+    capture: true,
     once: true
   })
   return n0

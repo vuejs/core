@@ -16,7 +16,7 @@ import type { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
 import type { ImportBinding } from './compileScript'
-import { isImportUsed } from './script/importUsageCheck'
+import { isUsedInTemplate } from './script/importUsageCheck'
 import type { LRUCache } from 'lru-cache'
 import { genCacheKey } from '@vue/shared'
 
@@ -84,7 +84,7 @@ export interface SFCDescriptor {
    */
   slotted: boolean
 
-  vapor: boolean
+  vapor?: boolean
 
   /**
    * compare with an existing descriptor to determine whether HMR should perform
@@ -449,7 +449,7 @@ export function hmrShouldReload(
   for (const key in prevImports) {
     // if an import was previous unused, but now is used, we need to force
     // reload so that the script now includes that import.
-    if (!prevImports[key].isUsedInTemplate && isImportUsed(key, next)) {
+    if (!prevImports[key].isUsedInTemplate && isUsedInTemplate(key, next)) {
       return true
     }
   }

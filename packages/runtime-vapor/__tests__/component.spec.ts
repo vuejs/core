@@ -1,10 +1,14 @@
 import {
+  type EffectScope,
+  ReactiveEffect,
   type Ref,
   inject,
   nextTick,
+  onMounted,
   onUpdated,
   provide,
   ref,
+  useAttrs,
   watch,
   watchEffect,
 } from '@vue/runtime-dom'
@@ -12,7 +16,9 @@ import {
   createComponent,
   createIf,
   createTextNode,
+  defineVaporComponent,
   renderEffect,
+  setInsertionState,
   template,
 } from '../src'
 import { makeRender } from './_utils'
@@ -266,6 +272,29 @@ describe('component', () => {
     expect(spy).toHaveBeenCalledTimes(2)
   })
 
+  it('properly mount child component when using setInsertionState', async () => {
+    const spy = vi.fn()
+
+    const { component: Comp } = define({
+      setup() {
+        onMounted(spy)
+        return template('<h1>hi</h1>')()
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        const n2 = template('<div></div>', true)()
+        setInsertionState(n2 as any)
+        createComponent(Comp)
+        return n2
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div><h1>hi</h1></div>')
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
   it('unmount component', async () => {
     const { host, app, instance } = define(() => {
       const count = ref(0)
@@ -280,12 +309,72 @@ describe('component', () => {
 
     const i = instance as VaporComponentInstance
     // watchEffect + renderEffect + props validation effect
-    expect(i.scope.effects.length).toBe(3)
+    expect(getEffectsCount(i.scope)).toBe(3)
     expect(host.innerHTML).toBe('<div>0</div>')
 
     app.unmount()
     expect(host.innerHTML).toBe('')
-    expect(i.scope.effects.length).toBe(0)
+    expect(getEffectsCount(i.scope)).toBe(0)
+  })
+
+  it('work with v-once + props', () => {
+    const Child = defineVaporComponent({
+      props: {
+        count: Number,
+      },
+      setup(props) {
+        const n0 = template(' ')() as any
+        renderEffect(() => setText(n0, props.count))
+        return n0
+      },
+    })
+
+    const count = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => count.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('0')
+
+    count.value++
+    expect(html()).toBe('0')
+  })
+
+  it('work with v-once + attrs', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        const attrs = useAttrs()
+        const n0 = template(' ')() as any
+        renderEffect(() => setText(n0, attrs.count as string))
+        return n0
+      },
+    })
+
+    const count = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => count.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('0')
+
+    count.value++
+    expect(html()).toBe('0')
   })
 
   test('should mount component only with template in production mode', () => {
@@ -328,3 +417,13 @@ describe('component', () => {
     ).toHaveBeenWarned()
   })
 })
+
+function getEffectsCount(scope: EffectScope): number {
+  let n = 0
+  for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
+    if (dep.dep instanceof ReactiveEffect) {
+      n++
+    }
+  }
+  return n
+}

@@ -1,4 +1,3 @@
-import { isValidHTMLNesting } from '@vue/compiler-dom'
 import {
   type AttributeNode,
   type ComponentNode,
@@ -11,6 +10,7 @@ import {
   createCompilerError,
   createSimpleExpression,
   isStaticArgOf,
+  isValidHTMLNesting,
 } from '@vue/compiler-dom'
 import {
   camelize,
@@ -36,7 +36,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
-import { findProp } from '../utils'
+import { findProp, isBuiltInComponent } from '../utils'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -44,6 +44,8 @@ export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
 )
 
 export const transformElement: NodeTransform = (node, context) => {
+  let effectIndex = context.block.effect.length
+  const getEffectIndex = () => effectIndex++
   return function postTransformElement() {
     ;({ node } = context)
     if (
@@ -62,6 +64,7 @@ export const transformElement: NodeTransform = (node, context) => {
       context as TransformContext<ElementNode>,
       isComponent,
       isDynamicComponent,
+      getEffectIndex,
     )
 
     let { parent } = context
@@ -78,13 +81,23 @@ export const transformElement: NodeTransform = (node, context) => {
       parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
         .length === 1
 
-    ;(isComponent ? transformComponentElement : transformNativeElement)(
-      node as any,
-      propsResult,
-      singleRoot,
-      context as TransformContext<ElementNode>,
-      isDynamicComponent,
-    )
+    if (isComponent) {
+      transformComponentElement(
+        node as ComponentNode,
+        propsResult,
+        singleRoot,
+        context,
+        isDynamicComponent,
+      )
+    } else {
+      transformNativeElement(
+        node as PlainElementNode,
+        propsResult,
+        singleRoot,
+        context,
+        getEffectIndex,
+      )
+    }
   }
 }
 
@@ -109,6 +122,12 @@ function transformComponentElement(
       asset = false
     }
 
+    const builtInTag = isBuiltInComponent(tag)
+    if (builtInTag) {
+      tag = builtInTag
+      asset = false
+    }
+
     const dotIndex = tag.indexOf('.')
     if (dotIndex > 0) {
       const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
@@ -119,6 +138,13 @@ function transformComponentElement(
     }
 
     if (asset) {
+      // self referencing component (inferred from filename)
+      if (context.selfName && capitalize(camelize(tag)) === context.selfName) {
+        // generators/block.ts has special check for __self postfix when generating
+        // component imports, which will pass additional `maybeSelfReference` flag
+        // to `resolveComponent`.
+        tag += `__self`
+      }
       context.component.add(tag)
     }
   }
@@ -130,7 +156,7 @@ function transformComponentElement(
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
     asset,
-    root: singleRoot,
+    root: singleRoot && !context.inVFor,
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,
@@ -172,11 +198,15 @@ function resolveSetupReference(name: string, context: TransformContext) {
         : undefined
 }
 
+// keys cannot be a part of the template and need to be set dynamically
+const dynamicKeys = ['indeterminate']
+
 function transformNativeElement(
   node: PlainElementNode,
   propsResult: PropsResult,
   singleRoot: boolean,
-  context: TransformContext<ElementNode>,
+  context: TransformContext,
+  getEffectIndex: () => number,
 ) {
   const { tag } = node
   const { scopeId } = context.options
@@ -189,27 +219,40 @@ function transformNativeElement(
   const dynamicProps: string[] = []
   if (propsResult[0] /* dynamic props */) {
     const [, dynamicArgs, expressions] = propsResult
-    context.registerEffect(expressions, {
-      type: IRNodeTypes.SET_DYNAMIC_PROPS,
-      element: context.reference(),
-      props: dynamicArgs,
-      root: singleRoot,
-    })
+    context.registerEffect(
+      expressions,
+      {
+        type: IRNodeTypes.SET_DYNAMIC_PROPS,
+        element: context.reference(),
+        props: dynamicArgs,
+        root: singleRoot,
+      },
+      getEffectIndex,
+    )
   } else {
     for (const prop of propsResult[1]) {
       const { key, values } = prop
-      if (key.isStatic && values.length === 1 && values[0].isStatic) {
+      if (
+        key.isStatic &&
+        values.length === 1 &&
+        values[0].isStatic &&
+        !dynamicKeys.includes(key.content)
+      ) {
         template += ` ${key.content}`
         if (values[0].content) template += `="${values[0].content}"`
       } else {
         dynamicProps.push(key.content)
-        context.registerEffect(values, {
-          type: IRNodeTypes.SET_PROP,
-          element: context.reference(),
-          prop,
-          root: singleRoot,
-          tag,
-        })
+        context.registerEffect(
+          values,
+          {
+            type: IRNodeTypes.SET_PROP,
+            element: context.reference(),
+            prop,
+            root: singleRoot,
+            tag,
+          },
+          getEffectIndex,
+        )
       }
     }
   }
@@ -246,6 +289,7 @@ export function buildProps(
   context: TransformContext<ElementNode>,
   isComponent: boolean,
   isDynamicComponent?: boolean,
+  getEffectIndex?: () => number,
 ): PropsResult {
   const props = node.props as (VaporDirectiveNode | AttributeNode)[]
   if (props.length === 0) return [false, []]
@@ -292,12 +336,12 @@ export function buildProps(
           } else {
             context.registerEffect(
               [prop.exp],
-
               {
                 type: IRNodeTypes.SET_DYNAMIC_EVENTS,
                 element: context.reference(),
                 event: prop.exp,
               },
+              getEffectIndex,
             )
           }
         } else {
@@ -407,7 +451,9 @@ function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
     }
     const name = prop.key.content
     const existing = knownProps.get(name)
-    if (existing) {
+    // prop names and event handler names can be the same but serve different purposes
+    // e.g. `:appear="true"` is a prop while `@appear="handler"` is an event handler
+    if (existing && existing.handler === prop.handler) {
       if (name === 'style' || name === 'class') {
         mergePropValues(existing, prop)
       }

@@ -18,7 +18,7 @@ import {
 import { extend } from '@vue/shared'
 import { newBlock, wrapTemplate } from './utils'
 import { getSiblingIf } from './transformComment'
-import { isStaticExpression } from '../utils'
+import { isInTransition, isStaticExpression } from '../utils'
 
 export const transformVIf: NodeTransform = createStructuralDirectiveTransform(
   ['if', 'else', 'else-if'],
@@ -59,13 +59,20 @@ export function processIf(
   } else {
     // check the adjacent v-if
     const siblingIf = getSiblingIf(context, true)
+    context.dynamic.ifBranch = true
 
     const siblings = context.parent && context.parent.dynamic.children
     let lastIfNode
     if (siblings) {
       let i = siblings.length
       while (i--) {
-        if (siblings[i].operation) lastIfNode = siblings[i].operation
+        if (
+          siblings[i].operation &&
+          siblings[i].operation!.type === IRNodeTypes.IF
+        ) {
+          lastIfNode = siblings[i].operation
+          break
+        }
       }
     }
 
@@ -112,7 +119,9 @@ export function processIf(
         id: -1,
         condition: dir.exp!,
         positive: branch,
-        once: context.inVOnce,
+        once:
+          context.inVOnce ||
+          isStaticExpression(dir.exp!, context.options.bindingMetadata),
       }
     }
 
@@ -129,5 +138,8 @@ export function createIfBranch(
   const branch: BlockIRNode = newBlock(node)
   const exitBlock = context.enterBlock(branch)
   context.reference()
+  // generate key for branch result when it's in transition
+  // the key will be used to track node leaving at runtime
+  branch.dynamic.needsKey = isInTransition(context)
   return [branch, exitBlock]
 }

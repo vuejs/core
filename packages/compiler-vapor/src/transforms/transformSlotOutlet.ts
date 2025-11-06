@@ -9,7 +9,7 @@ import {
   createSimpleExpression,
   isStaticArgOf,
   isStaticExp,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import {
   type BlockIRNode,
@@ -106,6 +106,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       name: slotName,
       props: irProps,
       fallback,
+      noSlotted: !!(context.options.scopeId && !context.options.slotted),
     }
   }
 }

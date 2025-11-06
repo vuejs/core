@@ -1,11 +1,38 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, DynamicFragment, insert } from './block'
+import { type Block, type BlockFn, insert, setScopeId } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
-import { currentInstance, isRef } from '@vue/runtime-dom'
+import { currentInstance, isRef, setCurrentInstance } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
-import { insertionAnchor, insertionParent } from './insertionState'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import {
+  insertionAnchor,
+  insertionParent,
+  isLastInsertion,
+  resetInsertionState,
+} from './insertionState'
+import {
+  advanceHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
+import { DynamicFragment, type VaporFragment } from './fragment'
+
+/**
+ * Current slot scopeIds for vdom interop
+ * @internal
+ */
+export let currentSlotScopeIds: string[] | null = null
+
+/**
+ * @internal
+ */
+export function setCurrentSlotScopeIds(
+  scopeIds: string[] | null,
+): string[] | null {
+  const prev = currentSlotScopeIds
+  currentSlotScopeIds = scopeIds
+  return prev
+}
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -87,16 +114,42 @@ export function getSlot(
   }
 }
 
+/**
+ * Wraps a slot function to execute in the parent component's context.
+ *
+ * This ensures that:
+ * 1. Reactive effects created inside the slot (e.g., `renderEffect`) bind to the
+ *    parent's instance, so the parent's lifecycle hooks fire when the slot's
+ *    reactive dependencies change.
+ * 2. Elements created in the slot inherit the parent's scopeId for proper style
+ *    scoping in scoped CSS.
+ *
+ * **Rationale**: Slots are defined in the parent's template, so the parent should
+ * own the rendering context and be aware of updates.
+ *
+ */
+export function withVaporCtx(fn: Function): BlockFn {
+  const instance = currentInstance as VaporComponentInstance
+  return (...args: any[]) => {
+    const prev = setCurrentInstance(instance)
+    try {
+      return fn(...args)
+    } finally {
+      setCurrentInstance(...prev)
+    }
+  }
+}
+
 export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
+  noSlotted?: boolean,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  if (isHydrating) {
-    locateHydrationNode()
-  }
+  const _isLastInsertion = isLastInsertion
+  if (!isHydrating) resetInsertionState()
 
   const instance = currentInstance as VaporComponentInstance
   const rawSlots = instance.rawSlots
@@ -105,8 +158,8 @@ export function createSlot(
     : EMPTY_OBJ
 
   let fragment: DynamicFragment
-
   if (isRef(rawSlots._)) {
+    if (isHydrating) locateHydrationNode()
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,
@@ -115,21 +168,39 @@ export function createSlot(
       fallback,
     )
   } else {
-    fragment = __DEV__ ? new DynamicFragment('slot') : new DynamicFragment()
+    fragment =
+      isHydrating || __DEV__
+        ? new DynamicFragment('slot')
+        : new DynamicFragment()
     const isDynamicName = isFunction(name)
+
+    // Calculate slotScopeIds once (for vdom interop)
+    const slotScopeIds: string[] = []
+    if (!noSlotted) {
+      const scopeId = instance!.type.__scopeId
+      if (scopeId) {
+        slotScopeIds.push(`${scopeId}-s`)
+      }
+    }
+
     const renderSlot = () => {
       const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
       if (slot) {
-        // create and cache bound version of the slot to make it stable
+        fragment.fallback = fallback
+        // Create and cache bound version of the slot to make it stable
         // so that we avoid unnecessary updates if it resolves to the same slot
+
         fragment.update(
           slot._bound ||
             (slot._bound = () => {
-              const slotContent = slot(slotProps)
-              if (slotContent instanceof DynamicFragment) {
-                slotContent.fallback = fallback
+              const prevSlotScopeIds = setCurrentSlotScopeIds(
+                slotScopeIds.length > 0 ? slotScopeIds : null,
+              )
+              try {
+                return slot(slotProps)
+              } finally {
+                setCurrentSlotScopeIds(prevSlotScopeIds)
               }
-              return slotContent
             }),
         )
       } else {
@@ -145,8 +216,22 @@ export function createSlot(
     }
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(fragment, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (!noSlotted) {
+      const scopeId = instance.type.__scopeId
+      if (scopeId) {
+        setScopeId(fragment, [`${scopeId}-s`])
+      }
+    }
+
+    if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
+  } else {
+    if (fragment.insert) {
+      ;(fragment as VaporFragment).hydrate!()
+    }
+    if (_isLastInsertion) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
 
   return fragment

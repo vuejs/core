@@ -163,7 +163,12 @@ export function shouldSetAsAttr(tagName: string, key: string): boolean {
   // them as attributes.
   // Note that `contentEditable` doesn't have this problem: its DOM
   // property is also enumerated string values.
-  if (key === 'spellcheck' || key === 'draggable' || key === 'translate') {
+  if (
+    key === 'spellcheck' ||
+    key === 'draggable' ||
+    key === 'translate' ||
+    key === 'autocorrect'
+  ) {
     return true
   }
 
@@ -191,6 +196,13 @@ export function shouldSetAsAttr(tagName: string, key: string): boolean {
       tagName === 'CANVAS' ||
       tagName === 'SOURCE')
   ) {
+    return true
+  }
+
+  // #13946 iframe.sandbox should always be set as attribute since setting
+  // the property to null results in 'null' string, and setting to empty string
+  // enables the most restrictive sandbox mode instead of no sandboxing.
+  if (key === 'sandbox' && tagName === 'IFRAME') {
     return true
   }
 

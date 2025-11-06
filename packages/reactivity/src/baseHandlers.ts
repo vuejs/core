@@ -96,14 +96,19 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       }
     }
 
+    const wasRef = isRef(target)
     const res = Reflect.get(
       target,
       key,
       // if this is a proxy wrapping a ref, return methods using the raw ref
       // as receiver so that we don't have to call `toRaw` on the ref in all
       // its class methods
-      isRef(target) ? target : receiver,
+      wasRef ? target : receiver,
     )
+
+    if (wasRef && key !== 'value') {
+      return res
+    }
 
     if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
       return res
@@ -119,7 +124,8 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
 
     if (isRef(res)) {
       // ref unwrapping - skip unwrap for Array + integer key.
-      return targetIsArray && isIntegerKey(key) ? res : res.value
+      const value = targetIsArray && isIntegerKey(key) ? res : res.value
+      return isReadonly && isObject(value) ? readonly(value) : value
     }
 
     if (isObject(res)) {
@@ -153,7 +159,13 @@ class MutableReactiveHandler extends BaseReactiveHandler {
       }
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         if (isOldValueReadonly) {
-          return false
+          if (__DEV__) {
+            warn(
+              `Set operation on key "${String(key)}" failed: target is readonly.`,
+              target[key],
+            )
+          }
+          return true
         } else {
           oldValue.value = value
           return true

@@ -170,13 +170,15 @@ export function baseEmit(
   }
 
   let args = rawArgs
-  const isModelListener = event.startsWith('update:')
-
+  const isCompatModelListener =
+    __COMPAT__ && compatModelEventPrefix + event in props
+  const isModelListener = isCompatModelListener || event.startsWith('update:')
   // for v-model update:xxx events, apply modifiers on args
   // it's ok to use static get because modelModifiers can only be in the static
   // part of the props
-  const modifiers =
-    isModelListener && getModelModifiers(props, event.slice(7), getter)
+  const modifiers = isCompatModelListener
+    ? props.modelModifiers
+    : isModelListener && getModelModifiers(props, event.slice(7), getter)
   if (modifiers) {
     if (modifiers.trim) {
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
@@ -264,12 +266,14 @@ export function defaultPropGetter(
   return props[key]
 }
 
+const mixinEmitsCache = new WeakMap<ConcreteComponent, ObjectEmitsOptions>()
 export function normalizeEmitsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false,
 ): ObjectEmitsOptions | null {
-  const cache = appContext.emitsCache
+  const cache =
+    __FEATURE_OPTIONS_API__ && asMixin ? mixinEmitsCache : appContext.emitsCache
   const cached = cache.get(comp)
   if (cached !== undefined) {
     return cached

@@ -26,8 +26,8 @@ import type { InjectionKey } from './apiInject'
 import { warn } from './warning'
 import type { VNode } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { NO, extend, isFunction, isObject } from '@vue/shared'
-import { version } from '.'
+import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
+import { type TransitionHooks, version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
@@ -35,14 +35,15 @@ import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { DefineComponent } from './apiDefineComponent'
 
 export interface App<HostElement = any> {
+  vapor?: boolean
   version: string
   config: AppConfig
 
   use<Options extends unknown[]>(
     plugin: Plugin<Options>,
-    ...options: Options
+    ...options: NoInfer<Options>
   ): this
-  use<Options>(plugin: Plugin<Options>, options: Options): this
+  use<Options>(plugin: Plugin<Options>, options: NoInfer<Options>): this
 
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
@@ -54,7 +55,7 @@ export interface App<HostElement = any> {
     HostElement = any,
     Value = any,
     Modifiers extends string = string,
-    Arg extends string = string,
+    Arg = any,
   >(
     name: string,
   ): Directive<HostElement, Value, Modifiers, Arg> | undefined
@@ -62,7 +63,7 @@ export interface App<HostElement = any> {
     HostElement = any,
     Value = any,
     Modifiers extends string = string,
-    Arg extends string = string,
+    Arg = any,
   >(
     name: string,
     directive: Directive<HostElement, Value, Modifiers, Arg>,
@@ -141,12 +142,6 @@ export interface GenericAppConfig {
   ) => void
 
   /**
-   * TODO document for 3.5
-   * Enable warnings for computed getters that recursively trigger itself.
-   */
-  warnRecursiveComputed?: boolean
-
-  /**
    * Whether to throw unhandled errors in production.
    * Default is `false` to avoid crashing on any error (and only logs it)
    * But in some cases, e.g. SSR, throwing might be more desirable.
@@ -180,7 +175,6 @@ export interface AppConfig extends GenericAppConfig {
 
 /**
  * The vapor in vdom implementation is in runtime-vapor/src/vdomInterop.ts
- * @internal
  */
 export interface VaporInteropInterface {
   mount(
@@ -193,6 +187,25 @@ export interface VaporInteropInterface {
   unmount(vnode: VNode, doRemove?: boolean): void
   move(vnode: VNode, container: any, anchor: any): void
   slot(n1: VNode | null, n2: VNode, container: any, anchor: any): void
+  hydrate(
+    vnode: VNode,
+    node: any,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance | null,
+  ): Node
+  hydrateSlot(vnode: VNode, node: any): Node
+  activate(
+    vnode: VNode,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance,
+  ): void
+  deactivate(vnode: VNode, container: any): void
+  setTransitionHooks(
+    component: ComponentInternalInstance,
+    transition: TransitionHooks,
+  ): void
 
   vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
   vdomUnmount: UnmountComponentFn
@@ -266,9 +279,11 @@ export type ObjectPlugin<Options = any[]> = {
 export type FunctionPlugin<Options = any[]> = PluginInstallFunction<Options> &
   Partial<ObjectPlugin<Options>>
 
-export type Plugin<Options = any[]> =
-  | FunctionPlugin<Options>
-  | ObjectPlugin<Options>
+export type Plugin<
+  Options = any[],
+  // TODO: in next major Options extends unknown[] and remove P
+  P extends unknown[] = Options extends unknown[] ? Options : [Options],
+> = FunctionPlugin<P> | ObjectPlugin<P>
 
 export function createAppContext(): AppContext {
   return {
@@ -487,10 +502,18 @@ export function createAppAPI<HostElement, Comp = Component>(
 
       provide(key, value) {
         if (__DEV__ && (key as string | symbol) in context.provides) {
-          warn(
-            `App already provides property with key "${String(key)}". ` +
-              `It will be overwritten with the new value.`,
-          )
+          if (hasOwn(context.provides, key as string | symbol)) {
+            warn(
+              `App already provides property with key "${String(key)}". ` +
+                `It will be overwritten with the new value.`,
+            )
+          } else {
+            // #13212, context.provides can inherit the provides object from parent on custom elements
+            warn(
+              `App already provides property with key "${String(key)}" inherited from its parent element. ` +
+                `It will be overwritten with the new value.`,
+            )
+          }
         }
 
         context.provides[key as string | symbol] = value

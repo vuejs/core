@@ -76,4 +76,5 @@ export {
 } from './errors'
 export { resolveModifiers } from './transforms/vOn'
 export { isValidHTMLNesting } from './htmlNesting'
+export { postTransformTransition } from './transforms/Transition'
 export * from '@vue/compiler-core'

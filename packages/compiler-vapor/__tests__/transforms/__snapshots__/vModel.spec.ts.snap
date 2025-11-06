@@ -31,7 +31,7 @@ export function render(_ctx) {
   const n0 = _createComponentWithFallback(_component_Comp, {
     foo: () => (_ctx.foo),
     "onUpdate:foo": () => _value => (_ctx.foo = _value),
-    fooModifiers: () => ({ trim: true }), 
+    fooModifiers: () => ({ trim: true }),
     bar: () => (_ctx.bar),
     "onUpdate:bar": () => _value => (_ctx.bar = _value),
     barModifiers: () => ({ number: true })
@@ -59,7 +59,7 @@ export function render(_ctx) {
   const n0 = _createComponentWithFallback(_component_Comp, { $: [
     () => ({ [_ctx.foo]: _ctx.foo,
     ["onUpdate:" + _ctx.foo]: () => _value => (_ctx.foo = _value),
-    [_ctx.foo + "Modifiers"]: () => ({ trim: true }) }), 
+    [_ctx.foo + "Modifiers"]: () => ({ trim: true }) }),
     () => ({ [_ctx.bar]: _ctx.bar,
     ["onUpdate:" + _ctx.bar]: () => _value => (_ctx.bar = _value),
     [_ctx.bar + "Modifiers"]: () => ({ number: true }) })

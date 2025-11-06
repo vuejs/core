@@ -14,7 +14,6 @@ import {
   createSetupContext,
   getCurrentGenericInstance,
   setCurrentInstance,
-  unsetCurrentInstance,
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
@@ -320,7 +319,14 @@ type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, T[K]>
 }
 
-type NativeType = null | number | string | boolean | symbol | Function
+type NativeType =
+  | null
+  | undefined
+  | number
+  | string
+  | boolean
+  | symbol
+  | Function
 
 type InferDefault<P, T> =
   | ((props: P) => T & {})
@@ -384,17 +390,17 @@ export function withDefaults<
 
 // TODO return type for Vapor components
 export function useSlots(): SetupContext['slots'] {
-  return getContext().slots
+  return getContext('useSlots').slots
 }
 
 export function useAttrs(): SetupContext['attrs'] {
-  return getContext().attrs
+  return getContext('useAttrs').attrs
 }
 
-function getContext(): SetupContext {
+function getContext(calledFunctionName: string): SetupContext {
   const i = getCurrentGenericInstance()!
   if (__DEV__ && !i) {
-    warn(`useContext() called without active instance.`)
+    warn(`${calledFunctionName}() called without active instance.`)
   }
   if (i.vapor) {
     return i as any // vapor instance act as its own setup context
@@ -511,7 +517,7 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
     )
   }
   let awaitable = getAwaitable()
-  unsetCurrentInstance()
+  setCurrentInstance(null, undefined)
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
       setCurrentInstance(ctx)

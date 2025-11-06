@@ -1,5 +1,16 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > checkbox with static indeterminate 1`] = `
+"import { setProp as _setProp, template as _template } from 'vue';
+const t0 = _template("<input type=\\"checkbox\\">", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setProp(n0, "indeterminate", "")
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > cache v-on expression with unique handler name 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
@@ -77,6 +88,16 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
+exports[`compiler: element transform > component > resolve implicitly self-referencing component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Example__self = _resolveComponent("Example", true)
+  const n0 = _createComponentWithFallback(_component_Example__self, null, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > resolve namespaced component from props bindings (inline) 1`] = `
 "
   const n0 = _createComponent(Foo.Example, null, null, true)
@@ -115,7 +136,7 @@ exports[`compiler: element transform > component > static props 1`] = `
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+    id: () => ("foo"),
     class: () => ("bar")
   }, null, true)
   return n0
@@ -140,7 +161,7 @@ exports[`compiler: element transform > component > v-bind="obj" after static pro
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
       () => (_ctx.obj)
     ]
@@ -155,7 +176,7 @@ exports[`compiler: element transform > component > v-bind="obj" before static pr
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => (_ctx.obj), 
+    () => (_ctx.obj),
     { id: () => ("foo") }
   ] }, null, true)
   return n0
@@ -168,12 +189,24 @@ exports[`compiler: element transform > component > v-bind="obj" between static p
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
-      () => (_ctx.obj), 
+      () => (_ctx.obj),
       { class: () => ("bar") }
     ]
   }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-for on component should not mark as single root 1`] = `
+"import { createComponent as _createComponent, createFor as _createFor } from 'vue';
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = _createComponent(_ctx.Comp)
+    return n2
+  }, (item) => (item), 2)
   return n0
 }"
 `;
@@ -224,6 +257,36 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component event with keys modifier 1`] = `
+"import { resolveComponent as _resolveComponent, withKeys as _withKeys, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onKeyup: () => _withKeys(_ctx.bar, ["enter"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with multiple modifiers and event options 1`] = `
+"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, withKeys as _withKeys, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onFooCaptureOnce: () => _withKeys(_withModifiers(_ctx.bar, ["stop","prevent"]), ["enter"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with nonKeys modifier 1`] = `
+"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onFoo: () => _withModifiers(_ctx.bar, ["stop","prevent"]) }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component event with once modifier 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
@@ -240,7 +303,7 @@ exports[`compiler: element transform > component with dynamic event arguments 1`
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: () => _ctx.bar }), 
+    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: () => _ctx.bar }),
     () => ({ [_toHandlerKey(_ctx.baz)]: () => _ctx.qux })
   ] }, null, true)
   return n0
@@ -253,7 +316,7 @@ exports[`compiler: element transform > component with dynamic prop arguments 1`]
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }), 
+    () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }),
     () => ({ [_ctx.baz]: _ctx.qux })
   ] }, null, true)
   return n0
@@ -321,8 +384,8 @@ const t2 = _template("<form></form>")
 
 export function render(_ctx) {
   const n1 = t1()
-  const n3 = t2()
   const n0 = t0()
+  const n3 = t2()
   const n2 = t2()
   _insert(n0, n1)
   _insert(n2, n3)

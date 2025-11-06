@@ -10,7 +10,7 @@ import {
   transformVOnce,
   transformVText,
 } from '../../src'
-import { NodeTypes } from '@vue/compiler-core'
+import { NodeTypes } from '@vue/compiler-dom'
 
 const compileWithVIf = makeCompile({
   nodeTransforms: [
@@ -182,7 +182,7 @@ describe('compiler: v-if', () => {
 
   test('v-if + v-else-if + v-else', () => {
     const { code, ir } = compileWithVIf(
-      `<div v-if="ok"/><p v-else-if="orNot"/><template v-else>fine</template>`,
+      `<div v-if="ok"/><p v-else-if="orNot"/><p v-else-if="false"/><template v-else>fine</template>`,
     )
     expect(code).matchSnapshot()
     expect(ir.template).toEqual(['<div></div>', '<p></p>', 'fine'])
@@ -206,13 +206,27 @@ describe('compiler: v-if', () => {
           },
         },
         negative: {
-          type: IRNodeTypes.BLOCK,
-          dynamic: {
-            children: [{ template: 2 }],
+          type: IRNodeTypes.IF,
+          negative: {
+            type: IRNodeTypes.BLOCK,
+            dynamic: {
+              children: [{ template: 2 }],
+            },
           },
         },
       },
     })
+  })
+
+  test('v-if + v-if / v-else[-if]', () => {
+    const { code } = compileWithVIf(
+      `<div>
+        <span v-if="foo">foo</span>
+        <span v-if="bar">bar</span>
+        <span v-else>baz</span>
+      </div>`,
+    )
+    expect(code).toMatchSnapshot()
   })
 
   test('comment between branches', () => {
