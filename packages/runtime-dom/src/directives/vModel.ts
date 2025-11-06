@@ -74,6 +74,12 @@ export const vModelText: ModelDirective<
   },
 }
 
+function castValue(value: string, trim?: boolean, number?: boolean | null) {
+  if (trim) value = value.trim()
+  if (number) value = looseToNumber(value)
+  return value
+}
+
 /**
  * @internal
  */
@@ -86,18 +92,13 @@ export const vModelTextInit = (
 ): void => {
   addEventListener(el, lazy ? 'change' : 'input', e => {
     if ((e.target as any).composing) return
-    let domValue: string | number = el.value
-    if (trim) {
-      domValue = domValue.trim()
-    }
-    if (number || el.type === 'number') {
-      domValue = looseToNumber(domValue)
-    }
-    ;(set || (el as any)[assignKey])(domValue)
+    ;(set || (el as any)[assignKey])(
+      castValue(el.value, trim, number || el.type === 'number'),
+    )
   })
-  if (trim) {
+  if (trim || number) {
     addEventListener(el, 'change', () => {
-      el.value = el.value.trim()
+      el.value = castValue(el.value, trim, number || el.type === 'number')
     })
   }
   if (!lazy) {
