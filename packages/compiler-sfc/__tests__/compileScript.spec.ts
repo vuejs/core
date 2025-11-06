@@ -1695,4 +1695,57 @@ describe('compileScript', () => {
     )
     assertCode(content)
   })
+
+  test('should not compile unrecognized language', () => {
+    const { content, lang, scriptAst } = compile(
+      `<script lang="coffee">
+      export default
+        data: ->
+          myVal: 0
+      </script>`,
+    )
+    expect(content).toMatch(`export default
+        data: ->
+          myVal: 0`)
+    expect(lang).toBe('coffee')
+    expect(scriptAst).not.toBeDefined()
+  })
+})
+
+describe('vapor mode + ssr', () => {
+  test('rewrite defineVaporAsyncComponent import', () => {
+    const { content } = compile(
+      `
+        <script setup vapor>
+        import { defineVaporAsyncComponent } from 'vue'
+        </script>
+      `,
+      {
+        templateOptions: {
+          ssr: true,
+        },
+      },
+    )
+    expect(content).toContain(
+      `import { defineAsyncComponent as defineVaporAsyncComponent } from 'vue'`,
+    )
+  })
+
+  test('rewrite defineVaporAsyncComponent import with local name', () => {
+    const { content } = compile(
+      `
+        <script setup vapor>
+        import { defineVaporAsyncComponent as def } from 'vue'
+        </script>
+      `,
+      {
+        templateOptions: {
+          ssr: true,
+        },
+      },
+    )
+    expect(content).toContain(
+      `import { defineAsyncComponent as def } from 'vue'`,
+    )
+  })
 })

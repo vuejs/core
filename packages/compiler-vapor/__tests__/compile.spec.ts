@@ -221,9 +221,19 @@ describe('compile', () => {
     })
   })
 
-  describe('setInsertionState', () => {
-    test('next, child and nthChild should be above the setInsertionState', () => {
-      const code = compile(`
+  describe('execution order', () => {
+    test('basic', () => {
+      const code = compile(`<div :id="foo">{{ bar }}</div>`)
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `_setProp(n0, "id", _ctx.foo)
+    _setText(x0, _toDisplayString(_ctx.bar))`,
+      )
+    })
+
+    describe('setInsertionState', () => {
+      test('next, child and nthChild should be above the setInsertionState', () => {
+        const code = compile(`
       <div>
         <div />
         <Comp />
@@ -234,18 +244,8 @@ describe('compile', () => {
         </div>
       </div>
       `)
-      expect(code).toMatchSnapshot()
-    })
-  })
-
-  describe('execution order', () => {
-    test('basic', () => {
-      const code = compile(`<div :id="foo">{{ bar }}</div>`)
-      expect(code).matchSnapshot()
-      expect(code).contains(
-        `_setProp(n0, "id", _ctx.foo)
-    _setText(x0, _toDisplayString(_ctx.bar))`,
-      )
+        expect(code).toMatchSnapshot()
+      })
     })
 
     test('with v-once', () => {
@@ -273,13 +273,13 @@ describe('compile', () => {
     test('should avoid conflicts with existing variable names', () => {
       const code = compile(`<div>{{ foo }}</div>`, {
         bindingMetadata: {
-          _child: BindingTypes.LITERAL_CONST,
-          _child1: BindingTypes.SETUP_REF,
+          _txt: BindingTypes.LITERAL_CONST,
+          _txt1: BindingTypes.SETUP_REF,
         },
       })
       expect(code).matchSnapshot()
-      expect(code).contains('child as _child2')
-      expect(code).contains('const x0 = _child2(n0)')
+      expect(code).contains('txt as _txt2')
+      expect(code).contains('const x0 = _txt2(n0)')
     })
   })
 
@@ -301,8 +301,8 @@ describe('compile', () => {
       expect(code).not.contains('const x2')
       expect(code).contains('const n1 = t0()')
       expect(code).contains('const n3 = t0()')
-      expect(code).contains('const x1 = _child(n1)')
-      expect(code).contains('const x3 = _child(n3)')
+      expect(code).contains('const x1 = _txt(n1)')
+      expect(code).contains('const x3 = _txt(n3)')
     })
 
     test('should bump old ref var (r*) on conflict', () => {

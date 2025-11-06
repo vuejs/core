@@ -1,0 +1,128 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: transition > basic 1`] = `
+"import { VaporTransition as _VaporTransition, applyVShow as _applyVShow, withVaporCtx as _withVaporCtx, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<h1>foo</h1>")
+
+export function render(_ctx) {
+  const n1 = _createComponent(_VaporTransition, { persisted: () => ("") }, {
+    "default": _withVaporCtx(() => {
+      const n0 = t0()
+      _applyVShow(n0, () => (_ctx.show))
+      return n0
+    })
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transition > inject persisted when child has v-show 1`] = `
+"import { VaporTransition as _VaporTransition, applyVShow as _applyVShow, withVaporCtx as _withVaporCtx, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n1 = _createComponent(_VaporTransition, { persisted: () => ("") }, {
+    "default": _withVaporCtx(() => {
+      const n0 = t0()
+      _applyVShow(n0, () => (_ctx.ok))
+      return n0
+    })
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transition > the v-if/else-if/else branches in Transition should ignore comments 1`] = `
+"import { VaporTransition as _VaporTransition, setInsertionState as _setInsertionState, createIf as _createIf, withVaporCtx as _withVaporCtx, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<div>hey</div>")
+const t1 = _template("<p></p>")
+const t2 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n16 = _createComponent(_VaporTransition, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createIf(() => (_ctx.a), () => {
+        const n2 = t0()
+        n2.$key = 2
+        return n2
+      }, () => _createIf(() => (_ctx.b), () => {
+        const n5 = t0()
+        n5.$key = 5
+        return n5
+      }, () => {
+        const n14 = t2()
+        _setInsertionState(n14, 0, true)
+        const n9 = _createIf(() => (_ctx.c), () => {
+          const n11 = t1()
+          return n11
+        }, () => {
+          const n13 = t1()
+          return n13
+        })
+        n14.$key = 14
+        return n14
+      }))
+      return [n0, n3, n7]
+    })
+  }, true)
+  return n16
+}"
+`;
+
+exports[`compiler: transition > v-show + appear 1`] = `
+"import { VaporTransition as _VaporTransition, applyVShow as _applyVShow, withVaporCtx as _withVaporCtx, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<h1>foo</h1>")
+
+export function render(_ctx) {
+  const deferredApplyVShows = []
+  const n1 = _createComponent(_VaporTransition, {
+    appear: () => (""),
+    persisted: () => ("")
+  }, {
+    "default": _withVaporCtx(() => {
+      const n0 = t0()
+      deferredApplyVShows.push(() => _applyVShow(n0, () => (_ctx.show)))
+      return n0
+    })
+  }, true)
+  deferredApplyVShows.forEach(fn => fn())
+  return n1
+}"
+`;
+
+exports[`compiler: transition > work with dynamic keyed children 1`] = `
+"import { VaporTransition as _VaporTransition, createKeyedFragment as _createKeyedFragment, withVaporCtx as _withVaporCtx, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<h1>foo</h1>")
+
+export function render(_ctx) {
+  const n1 = _createComponent(_VaporTransition, null, {
+    "default": _withVaporCtx(() => {
+      return _createKeyedFragment(() => _ctx.key, () => {
+        const n0 = t0()
+        n0.$key = _ctx.key
+        return n0
+      })
+    })
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transition > work with v-if 1`] = `
+"import { VaporTransition as _VaporTransition, createIf as _createIf, withVaporCtx as _withVaporCtx, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<h1>foo</h1>")
+
+export function render(_ctx) {
+  const n3 = _createComponent(_VaporTransition, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createIf(() => (_ctx.show), () => {
+        const n2 = t0()
+        n2.$key = 2
+        return n2
+      })
+      return n0
+    })
+  }, true)
+  return n3
+}"
+`;

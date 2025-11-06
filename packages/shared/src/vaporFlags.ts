@@ -14,7 +14,7 @@ export enum VaporVForFlags {
    */
   IS_COMPONENT = 1 << 1,
   /**
-   * v-for inside v-ince
+   * v-for inside v-once
    */
   ONCE = 1 << 2,
 }
