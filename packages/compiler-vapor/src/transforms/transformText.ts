@@ -122,7 +122,7 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
 function processTextContainer(
   children: TextLike[],
   context: TransformContext<ElementNode>,
-): void {
+) {
   const values = processTextLikeChildren(children, context)
 
   const literals = values.map(value => getLiteralExpressionValue(value))
