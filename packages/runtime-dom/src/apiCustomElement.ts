@@ -236,6 +236,8 @@ export abstract class VueElementBase<
   protected _styleChildren: WeakSet<object> = new WeakSet()
   protected _pendingResolve: Promise<void> | undefined
   protected _parent: VueElementBase | undefined
+  protected _patching = false
+  protected _dirty = false
 
   protected _def: Def
   protected _props: Record<string, any>
@@ -520,11 +522,11 @@ export abstract class VueElementBase<
     // defining getter/setters on prototype
     for (const key of declaredPropKeys.map(camelize)) {
       Object.defineProperty(this, key, {
-        get() {
+        get(this: VueElement) {
           return this._getProp(key)
         },
-        set(val) {
-          this._setProp(key, val, true, true)
+        set(this: VueElement, val) {
+          this._setProp(key, val, true, !this._patching)
         },
       })
     }
@@ -558,6 +560,7 @@ export abstract class VueElementBase<
     shouldUpdate = false,
   ): void {
     if (val !== this._props[key]) {
+      this._dirty = true
       if (val === REMOVAL) {
         delete this._props[key]
       } else {
@@ -690,10 +693,16 @@ export abstract class VueElementBase<
     if (this._teleportTargets) {
       roots.push(...this._teleportTargets)
     }
-    return roots.reduce<HTMLSlotElement[]>((res, i) => {
-      res.push(...Array.from(i.querySelectorAll('slot')))
-      return res
-    }, [])
+
+    const slots = new Set<HTMLSlotElement>()
+    for (const root of roots) {
+      const found = root.querySelectorAll<HTMLSlotElement>('slot')
+      for (let i = 0; i < found.length; i++) {
+        slots.add(found[i])
+      }
+    }
+
+    return Array.from(slots)
   }
 
   /**
@@ -701,6 +710,24 @@ export abstract class VueElementBase<
    */
   _injectChildStyle(comp: ConcreteComponent & CustomElementOptions): void {
     this._applyStyles(comp.styles, comp)
+  }
+
+  /**
+   * @internal
+   */
+  _beginPatch(): void {
+    this._patching = true
+    this._dirty = false
+  }
+
+  /**
+   * @internal
+   */
+  _endPatch(): void {
+    this._patching = false
+    if (this._dirty && this._instance) {
+      this._update()
+    }
   }
 
   /**

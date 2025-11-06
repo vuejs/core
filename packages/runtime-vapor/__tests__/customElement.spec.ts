@@ -1416,7 +1416,7 @@ describe('defineVaporCustomElement', () => {
       await nextTick()
       const e = container.childNodes[0] as VaporElement
       expect(e.innerHTML).toBe(
-        `<my-child><span>default</span><!--slot--></my-child><!--slot-->`,
+        `<my-child data-v-app=""><span>default</span><!--slot--></my-child><!--slot-->`,
       )
       expect(calls).toEqual([
         'parent rendering',
@@ -1647,9 +1647,9 @@ describe('defineVaporCustomElement', () => {
       const app = createVaporApp(App)
       app.mount(container)
       expect(container.innerHTML).toBe(
-        `<my-el-parent-shadow-false is-shown="">` +
+        `<my-el-parent-shadow-false is-shown="" data-v-app="">` +
           `<div>` +
-          `<my-el-child-shadow-false>` +
+          `<my-el-child-shadow-false data-v-app="">` +
           `<div>child<!--slot--></div>` +
           `</my-el-child-shadow-false><!--slot--><!--slot-->` +
           `</div><!--if-->` +
@@ -1659,15 +1659,15 @@ describe('defineVaporCustomElement', () => {
       isShown.value = false
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<my-el-parent-shadow-false><!--if--></my-el-parent-shadow-false>`,
+        `<my-el-parent-shadow-false data-v-app=""><!--if--></my-el-parent-shadow-false>`,
       )
 
       isShown.value = true
       await nextTick()
       expect(container.innerHTML).toBe(
-        `<my-el-parent-shadow-false is-shown="">` +
+        `<my-el-parent-shadow-false data-v-app="" is-shown="">` +
           `<div>` +
-          `<my-el-child-shadow-false>` +
+          `<my-el-child-shadow-false data-v-app="">` +
           `<div>child<!--slot--></div>` +
           `</my-el-child-shadow-false><!--slot--><!--slot-->` +
           `</div><!--if-->` +

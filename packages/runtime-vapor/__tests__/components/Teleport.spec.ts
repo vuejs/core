@@ -192,6 +192,7 @@ describe('renderer: VaporTeleport', () => {
       expect(root.innerHTML).toBe(
         '<!--teleport start--><!--teleport end--><div>root 2</div>',
       )
+      await nextTick()
       expect(target.innerHTML).toBe('<div>teleported 2</div>')
     })
 
@@ -367,6 +368,7 @@ describe('renderer: VaporTeleport', () => {
       expect(root.innerHTML).toBe(
         '<!--teleport start--><!--teleport end--><div>root 2</div>',
       )
+      await nextTick()
       expect(target.innerHTML).toBe('<div>teleported 2</div>')
 
       // reload parent again by changing disabled
@@ -1254,5 +1256,42 @@ function runSharedTests(deferMode: boolean): void {
     const child = target.children[0]
     expect(child.outerHTML).toBe(`<div>teleported</div>`)
     expect(tRefInMounted).toBe(child)
+  })
+
+  test('with insertion state', async () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+
+    const Comp = defineVaporComponent({
+      setup() {
+        return template('content')()
+      },
+    })
+
+    const { app, mount } = define({
+      setup() {
+        const n0 = template('<div id="tt"></div>')()
+        const n4 = template('<div></div>')() as any
+        setInsertionState(n4, null, true)
+        createComponent(
+          VaporTeleport,
+          { to: () => '#tt' },
+          {
+            default: () =>
+              createComponent(Comp, null, {
+                default: () => template('content')(),
+              }),
+          },
+        )
+        return [n0, n4]
+      },
+    }).create()
+
+    mount(root)
+
+    await nextTick()
+    const target = document.querySelector('#tt')!
+    expect(target.innerHTML).toBe('content')
+    app.unmount()
   })
 }

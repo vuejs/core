@@ -1,7 +1,6 @@
 import {
   type SimpleExpressionNode,
   createSimpleExpression,
-  isStaticNode,
   walkIdentifiers,
 } from '@vue/compiler-dom'
 import { genBlockContent } from './block'
@@ -16,12 +15,7 @@ import {
   genCall,
   genMulti,
 } from './utils'
-import {
-  type Expression,
-  type Identifier,
-  type Node,
-  isNodesEquivalent,
-} from '@babel/types'
+import type { Expression, Identifier, Node } from '@babel/types'
 import { parseExpression } from '@babel/parser'
 import { VaporVForFlags } from '../../../shared/src/vaporFlags'
 import { walk } from 'estree-walker'
@@ -330,12 +324,12 @@ function matchPatterns(
 
   render.effect = render.effect.filter(effect => {
     if (keyProp !== undefined) {
-      const selector = matchSelectorPattern(effect, keyProp.ast, idMap)
+      const selector = matchSelectorPattern(effect, keyProp.content, idMap)
       if (selector) {
         selectorPatterns.push(selector)
         return false
       }
-      const keyOnly = matchKeyOnlyBindingPattern(effect, keyProp.ast)
+      const keyOnly = matchKeyOnlyBindingPattern(effect, keyProp.content)
       if (keyOnly) {
         keyOnlyBindingPatterns.push(keyOnly)
         return false
@@ -353,7 +347,7 @@ function matchPatterns(
 
 function matchKeyOnlyBindingPattern(
   effect: IREffect,
-  keyAst: any,
+  key: string,
 ):
   | {
       effect: IREffect
@@ -361,9 +355,9 @@ function matchKeyOnlyBindingPattern(
   | undefined {
   // TODO: expressions can be multiple?
   if (effect.expressions.length === 1) {
-    const ast = effect.expressions[0].ast
+    const { ast, content } = effect.expressions[0]
     if (typeof ast === 'object' && ast !== null) {
-      if (isKeyOnlyBinding(ast, keyAst)) {
+      if (isKeyOnlyBinding(ast, key, content)) {
         return { effect }
       }
     }
@@ -372,7 +366,7 @@ function matchKeyOnlyBindingPattern(
 
 function matchSelectorPattern(
   effect: IREffect,
-  keyAst: any,
+  key: string,
   idMap: Record<string, string | SimpleExpressionNode | null>,
 ):
   | {
@@ -382,7 +376,7 @@ function matchSelectorPattern(
   | undefined {
   // TODO: expressions can be multiple?
   if (effect.expressions.length === 1) {
-    const ast = effect.expressions[0].ast
+    const { ast, content } = effect.expressions[0]
     if (typeof ast === 'object' && ast) {
       const matcheds: [key: Expression, selector: Expression][] = []
 
@@ -400,10 +394,10 @@ function matchSelectorPattern(
               [left, right],
               [right, left],
             ]) {
-              const aIsKey = isKeyOnlyBinding(a, keyAst)
-              const bIsKey = isKeyOnlyBinding(b, keyAst)
+              const aIsKey = isKeyOnlyBinding(a, key, content)
+              const bIsKey = isKeyOnlyBinding(b, key, content)
               const bVars = analyzeVariableScopes(b, idMap)
-              if (aIsKey && !bIsKey && !bVars.locals.length) {
+              if (aIsKey && !bIsKey && !bVars.length) {
                 matcheds.push([a, b])
               }
             }
@@ -416,18 +410,14 @@ function matchSelectorPattern(
         const content = effect.expressions[0].content
 
         let hasExtraId = false
-        const parentStackMap = new Map<Identifier, Node[]>()
-        const parentStack: Node[] = []
         walkIdentifiers(
           ast,
           id => {
             if (id.start !== key.start && id.start !== selector.start) {
               hasExtraId = true
             }
-            parentStackMap.set(id, parentStack.slice())
           },
           false,
-          parentStack,
         )
 
         if (!hasExtraId) {
@@ -448,41 +438,6 @@ function matchSelectorPattern(
         }
       }
     }
-
-    const content = effect.expressions[0].content
-    if (
-      typeof ast === 'object' &&
-      ast &&
-      ast.type === 'ConditionalExpression' &&
-      ast.test.type === 'BinaryExpression' &&
-      ast.test.operator === '===' &&
-      ast.test.left.type !== 'PrivateName' &&
-      isStaticNode(ast.consequent) &&
-      isStaticNode(ast.alternate)
-    ) {
-      const left = ast.test.left
-      const right = ast.test.right
-      for (const [a, b] of [
-        [left, right],
-        [right, left],
-      ]) {
-        const aIsKey = isKeyOnlyBinding(a, keyAst)
-        const bIsKey = isKeyOnlyBinding(b, keyAst)
-        const bVars = analyzeVariableScopes(b, idMap)
-        if (aIsKey && !bIsKey && !bVars.locals.length) {
-          return {
-            effect,
-            // @ts-expect-error
-            selector: {
-              content: content.slice(b.start! - 1, b.end! - 1),
-              ast: b,
-              loc: b.loc as any,
-              isStatic: false,
-            },
-          }
-        }
-      }
-    }
   }
 }
 
@@ -490,20 +445,15 @@ function analyzeVariableScopes(
   ast: Node,
   idMap: Record<string, string | SimpleExpressionNode | null>,
 ) {
-  let globals: string[] = []
   let locals: string[] = []
 
   const ids: Identifier[] = []
-  const parentStackMap = new Map<Identifier, Node[]>()
-  const parentStack: Node[] = []
   walkIdentifiers(
     ast,
     id => {
       ids.push(id)
-      parentStackMap.set(id, parentStack.slice())
     },
     false,
-    parentStack,
   )
 
   for (const id of ids) {
@@ -512,19 +462,17 @@ function analyzeVariableScopes(
     }
     if (idMap[id.name]) {
       locals.push(id.name)
-    } else {
-      globals.push(id.name)
     }
   }
 
-  return { globals, locals }
+  return locals
 }
 
-function isKeyOnlyBinding(expr: Node, keyAst: any) {
+function isKeyOnlyBinding(expr: Node, key: string, source: string) {
   let only = true
   walk(expr, {
     enter(node) {
-      if (isNodesEquivalent(node, keyAst)) {
+      if (source.slice(node.start! - 1, node.end! - 1) === key) {
         this.skip()
         return
       }

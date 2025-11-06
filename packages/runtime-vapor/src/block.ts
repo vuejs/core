@@ -36,12 +36,20 @@ export interface TransitionOptions {
   $transition?: VaporTransitionHooks
 }
 
-export type TransitionBlock =
-  | (Node & TransitionOptions)
-  | (VaporFragment & TransitionOptions)
-  | (DynamicFragment & TransitionOptions)
+export type TransitionBlock = (
+  | Node
+  | VaporFragment
+  | DynamicFragment
+  | VaporComponentInstance
+) &
+  TransitionOptions
 
-export type Block = TransitionBlock | VaporComponentInstance | Block[]
+export type Block =
+  | Node
+  | VaporFragment
+  | DynamicFragment
+  | VaporComponentInstance
+  | Block[]
 export type BlockFn = (...args: any[]) => Block
 
 export function isBlock(val: NonNullable<unknown>): val is Block {
@@ -149,6 +157,11 @@ export function remove(block: Block, parent?: ParentNode): void {
     if (block.anchor) remove(block.anchor, parent)
     if ((block as DynamicFragment).scope) {
       ;(block as DynamicFragment).scope!.stop()
+      const scopes = (block as DynamicFragment).keptAliveScopes
+      if (scopes) {
+        scopes.forEach(scope => scope.stop())
+        scopes.clear()
+      }
     }
   }
 }

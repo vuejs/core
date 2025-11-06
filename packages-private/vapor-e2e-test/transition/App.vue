@@ -7,13 +7,15 @@ import {
   VaporTransition,
   createIf,
   template,
+  defineVaporAsyncComponent,
+  onUnmounted,
 } from 'vue'
 const show = ref(true)
 const toggle = ref(true)
 const count = ref(0)
 
 const timeout = (fn, time) => setTimeout(fn, time)
-const duration = typeof process !== 'undefined' && process.env.CI ? 200 : 50
+const duration = window.__TRANSITION_DURATION__ || 50
 
 let calls = {
   basic: [],
@@ -28,6 +30,8 @@ let calls = {
   showLeaveCancel: [],
   showAppear: [],
   notEnter: [],
+
+  unmount: [],
 }
 window.getCalls = key => calls[key]
 window.resetCalls = key => (calls[key] = [])
@@ -89,6 +93,29 @@ const SimpleOne = defineVaporComponent({
 const viewInOut = shallowRef(SimpleOne)
 function changeViewInOut() {
   viewInOut.value = viewInOut.value === SimpleOne ? Two : SimpleOne
+}
+
+const AsyncComp = defineVaporAsyncComponent(() => {
+  return new Promise(resolve => setTimeout(() => resolve(VaporCompA), 50))
+})
+
+const TrueBranch = defineVaporComponent({
+  name: 'TrueBranch',
+  setup() {
+    onUnmounted(() => {
+      calls.unmount.push('TrueBranch')
+    })
+    return template('<div>0</div>')()
+  },
+})
+const includeRef = ref(['TrueBranch'])
+const click = () => {
+  toggle.value = !toggle.value
+  if (toggle.value) {
+    includeRef.value = ['TrueBranch']
+  } else {
+    includeRef.value = []
+  }
 }
 </script>
 
@@ -480,6 +507,45 @@ function changeViewInOut() {
       </div>
     </div>
     <!-- mode end -->
+
+    <!-- async component -->
+    <div class="async">
+      <div id="container">
+        <transition>
+          <AsyncComp v-if="!toggle"></AsyncComp>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <!-- async component end -->
+
+    <!-- with teleport -->
+    <div class="with-teleport">
+      <div class="target"></div>
+      <div class="container">
+        <Transition>
+          <Teleport to=".target" defer>
+            <!-- comment -->
+            <VaporCompB v-if="!toggle" class="test"></VaporCompB>
+          </Teleport>
+        </Transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <!-- with teleport end -->
+
+    <!-- with keep-alive -->
+    <div class="keep-alive">
+      <div>
+        <transition mode="out-in">
+          <KeepAlive :include="includeRef">
+            <TrueBranch v-if="toggle"></TrueBranch>
+          </KeepAlive>
+        </transition>
+      </div>
+      <button @click="click">button</button>
+    </div>
+    <!-- with keep-alive end -->
 
     <!-- vdom interop -->
     <div class="vdom">
