@@ -62,6 +62,7 @@ export type StructuralDirectiveTransform = (
 ) => void | (() => void)
 
 export type TransformOptions = HackOptions<BaseTransformOptions>
+
 export class TransformContext<T extends AllNode = AllNode> {
   selfName: string | null = null
   parent: TransformContext<RootNode | ElementNode> | null = null

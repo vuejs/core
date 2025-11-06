@@ -15,10 +15,13 @@ import {
   type AssetURLOptions,
   type AssetURLTagConfig,
   createAssetUrlTransformWithOptions,
-  defaultAssetUrlOptions,
   normalizeOptions,
+  transformAssetUrl,
 } from './template/transformAssetUrl'
-import { createSrcsetTransformWithOptions } from './template/transformSrcset'
+import {
+  createSrcsetTransformWithOptions,
+  transformSrcset,
+} from './template/transformSrcset'
 import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerVapor from '@vue/compiler-vapor'
@@ -182,15 +185,14 @@ function doCompileTemplate({
   const warnings: CompilerError[] = []
 
   let nodeTransforms: NodeTransform[] = []
-  if (transformAssetUrls !== false) {
-    const assetOptions = isObject(transformAssetUrls)
-      ? normalizeOptions(transformAssetUrls)
-      : defaultAssetUrlOptions
-
+  if (isObject(transformAssetUrls)) {
+    const assetOptions = normalizeOptions(transformAssetUrls)
     nodeTransforms = [
       createAssetUrlTransformWithOptions(assetOptions),
       createSrcsetTransformWithOptions(assetOptions),
     ]
+  } else if (transformAssetUrls !== false) {
+    nodeTransforms = [transformAssetUrl, transformSrcset]
   }
 
   if (ssr && !ssrCssVars) {
