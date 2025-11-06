@@ -15,7 +15,6 @@ import {
   type AssetURLOptions,
   defaultAssetUrlOptions,
 } from './transformAssetUrl'
-import { isVapor } from './utils'
 
 const srcsetTags = ['img', 'source']
 
@@ -41,30 +40,10 @@ export const transformSrcset: NodeTransform = (
 ) => {
   if (node.type === NodeTypes.ELEMENT) {
     if (srcsetTags.includes(node.tag) && node.props.length) {
-      const vapor = isVapor(context)
       node.props.forEach((attr, index) => {
         if (attr.name === 'srcset' && attr.type === NodeTypes.ATTRIBUTE) {
           if (!attr.value) return
           const value = attr.value.content
-          if (!value) {
-            // Handle empty srcset
-            if (vapor) {
-              node.props[index] = {
-                type: NodeTypes.DIRECTIVE,
-                name: 'bind',
-                arg: createSimpleExpression('srcset', true, attr.loc),
-                exp: createSimpleExpression(
-                  `''`,
-                  true,
-                  attr.loc,
-                  ConstantTypes.CAN_STRINGIFY,
-                ),
-                modifiers: [],
-                loc: attr.loc,
-              }
-            }
-            return
-          }
           const imageCandidates: ImageCandidate[] = value.split(',').map(s => {
             // The attribute value arrives here with all whitespace, except
             // normal spaces, represented by escape sequences
