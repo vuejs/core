@@ -58,7 +58,7 @@ export const transformText: NodeTransform = (node, context) => {
     // all text like with interpolation
     if (!isFragment && isAllTextLike && hasInterp) {
       processTextContainer(
-        processTextLikeChildren(node.children as TextLike[], context),
+        node.children as TextLike[],
         context as TransformContext<ElementNode>,
       )
     } else if (hasInterp) {
@@ -120,9 +120,11 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
 }
 
 function processTextContainer(
-  values: SimpleExpressionNode[],
+  children: TextLike[],
   context: TransformContext<ElementNode>,
 ): void {
+  const values = processTextLikeChildren(children, context)
+
   const literals = values.map(value => getLiteralExpressionValue(value))
 
   if (literals.every(l => l != null)) {
