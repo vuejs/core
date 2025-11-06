@@ -356,7 +356,7 @@ export function render(_ctx) {
   }, () => {
     const n5 = _createComponentWithFallback(_component_Bar)
     return n5
-  })
+  }, true)
   return n6
 }"
 `;

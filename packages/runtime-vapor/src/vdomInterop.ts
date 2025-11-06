@@ -280,7 +280,7 @@ function createVDOMComponent(
   const frag = new VaporFragment([])
   const vnode = (frag.vnode = createVNode(
     component,
-    rawProps && new Proxy(rawProps, rawPropsProxyHandlers),
+    rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
   ))
   const wrapper = new VaporComponentInstance(
     { props: component.props },

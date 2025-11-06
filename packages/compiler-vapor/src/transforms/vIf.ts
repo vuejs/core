@@ -119,7 +119,9 @@ export function processIf(
         id: -1,
         condition: dir.exp!,
         positive: branch,
-        once: context.inVOnce,
+        once:
+          context.inVOnce ||
+          isStaticExpression(dir.exp!, context.options.bindingMetadata),
       }
     }
 

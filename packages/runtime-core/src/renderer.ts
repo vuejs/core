@@ -650,15 +650,27 @@ function baseCreateRenderer(
         optimized,
       )
     } else {
-      patchElement(
-        n1,
-        n2,
-        parentComponent,
-        parentSuspense,
-        namespace,
-        slotScopeIds,
-        optimized,
-      )
+      const customElement = !!(n1.el && (n1.el as VueElement)._isVueCE)
+        ? (n1.el as VueElement)
+        : null
+      try {
+        if (customElement) {
+          customElement._beginPatch()
+        }
+        patchElement(
+          n1,
+          n2,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        )
+      } finally {
+        if (customElement) {
+          customElement._endPatch()
+        }
+      }
     }
   }
 

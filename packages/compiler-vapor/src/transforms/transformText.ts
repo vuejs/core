@@ -104,7 +104,11 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
   context.template += ' '
   const id = context.reference()
 
-  if (values.length === 0) {
+  if (
+    values.length === 0 ||
+    (values.every(v => getLiteralExpressionValue(v) != null) &&
+      parentNode.type !== NodeTypes.ROOT)
+  ) {
     return
   }
 
@@ -119,7 +123,7 @@ function processTextContainer(
   values: SimpleExpressionNode[],
   context: TransformContext<ElementNode>,
 ): void {
-  const literals = values.map(getLiteralExpressionValue)
+  const literals = values.map(value => getLiteralExpressionValue(value))
 
   if (literals.every(l => l != null)) {
     context.childrenTemplate = literals.map(l => escapeHtml(String(l)))

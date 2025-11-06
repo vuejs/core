@@ -54,4 +54,19 @@ describe('compiler: text transform', () => {
     expect(ir.template).toContain('<code>&lt;script&gt;</code>')
     expect(ir.template).not.toContain('<code><script></code>')
   })
+
+  test('constant text', () => {
+    const { code } = compileWithTextTransform(
+      `
+        <div>
+          {{ (2) }}
+          {{ \`foo\${1}\` }}
+          {{ 1 }}
+          {{ 1n }}
+          {{ '1' }}
+        </div>`,
+    )
+    expect(code).includes(`_template("<div>2 foo1 1 1 1</div>", true)`)
+    expect(code).toMatchSnapshot()
+  })
 })

@@ -49,6 +49,28 @@ describe('vdomInterop', () => {
 
       expect(html()).toBe('foo')
     })
+
+    test('should handle class prop when vapor renders vdom component', () => {
+      const VDomChild = defineComponent({
+        setup() {
+          return () => h('div', { class: 'foo' })
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(VDomChild as any, { class: () => 'bar' })
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div class="foo bar"></div>')
+    })
   })
 
   describe('v-model', () => {
