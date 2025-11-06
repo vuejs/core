@@ -55,6 +55,12 @@ export function isStaticExpression(
   if (node.ast) {
     return isConstantNode(node.ast, bindings)
   } else if (node.ast === null) {
+    if (
+      !node.isStatic &&
+      (node.content === 'true' || node.content === 'false')
+    ) {
+      return true
+    }
     const type = bindings[node.content]
     return type === BindingTypes.LITERAL_CONST
   }
