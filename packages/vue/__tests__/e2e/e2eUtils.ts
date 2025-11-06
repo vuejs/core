@@ -50,6 +50,16 @@ interface PuppeteerUtils {
   clearValue(selector: string): Promise<any>
   timeout(time: number): Promise<any>
   nextFrame(): Promise<any>
+  transitionStart(
+    btnSelector: string,
+    containerSelector: string,
+  ): Promise<{ classNames: string[]; innerHTML: string }>
+  waitForElement(
+    selector: string,
+    text: string,
+    classNames: string[],
+    timeout?: number,
+  ): Promise<any>
 }
 
 export function setupPuppeteer(args?: string[]): PuppeteerUtils {
@@ -200,6 +210,43 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
     })
   }
 
+  const transitionStart = (btnSelector: string, containerSelector: string) =>
+    page.evaluate(
+      ([btnSel, containerSel]) => {
+        ;(document.querySelector(btnSel) as HTMLElement)!.click()
+        return Promise.resolve().then(() => {
+          const container = document.querySelector(containerSel)!
+          return {
+            classNames: container.className.split(/\s+/g),
+            innerHTML: container.innerHTML,
+          }
+        })
+      },
+      [btnSelector, containerSelector],
+    )
+
+  const waitForElement = (
+    selector: string,
+    text: string,
+    classNames: string[], // if empty, check for no classes
+    timeout = 2000,
+  ) =>
+    page.waitForFunction(
+      (sel, expectedText, expectedClasses) => {
+        const el = document.querySelector(sel)
+        const hasClasses =
+          expectedClasses.length === 0
+            ? el?.classList.length === 0
+            : expectedClasses.every(c => el?.classList.contains(c))
+        const hasText = el?.textContent?.includes(expectedText)
+        return !!el && hasClasses && hasText
+      },
+      { timeout },
+      selector,
+      text,
+      classNames,
+    )
+
   return {
     page: () => page,
     click,
@@ -219,5 +266,7 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
     clearValue,
     timeout,
     nextFrame,
+    transitionStart,
+    waitForElement,
   }
 }

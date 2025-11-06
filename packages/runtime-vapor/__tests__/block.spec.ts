@@ -1,10 +1,5 @@
-import {
-  VaporFragment,
-  insert,
-  normalizeBlock,
-  prepend,
-  remove,
-} from '../src/block'
+import { insert, normalizeBlock, prepend, remove } from '../src/block'
+import { VaporFragment } from '../src/fragment'
 
 const node1 = document.createTextNode('node1')
 const node2 = document.createTextNode('node2')
