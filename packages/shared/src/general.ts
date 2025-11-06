@@ -153,6 +153,18 @@ export const toHandlerKey: <T extends string>(
   },
 )
 
+/**
+ * #13070 When v-model and v-model:model directives are used together,
+ * they will generate the same modelModifiers prop,
+ * so a `$` suffix is added to avoid conflicts.
+ * @private
+ */
+export const getModifierPropName = (name: string): string => {
+  return `${
+    name === 'modelValue' || name === 'model-value' ? 'model' : name
+  }Modifiers${name === 'model' ? '$' : ''}`
+}
+
 // compare whether a value has changed, accounting for NaN.
 export const hasChanged = (value: any, oldValue: any): boolean =>
   !Object.is(value, oldValue)

@@ -498,9 +498,10 @@ describe('reactivity/readonly', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
-    expect(() => {
-      obj.ror = true
-    }).toThrow()
+    obj.ror = true
+    expect(
+      `Set operation on key "ror" failed: target is readonly.`,
+    ).toHaveBeenWarned()
     expect(obj.ror).toBe(false)
   })
 
@@ -520,6 +521,16 @@ describe('reactivity/readonly', () => {
     obj.r = ro
     expect(obj.r).toBe(ro)
     expect(r.value).toBe(ro)
+  })
+
+  test('should keep nested ref readonly', () => {
+    const items = ref(['one', 'two', 'three'])
+    const obj = {
+      o: readonly({
+        items,
+      }),
+    }
+    expect(isReadonly(obj.o.items)).toBe(true)
   })
 })
 
