@@ -1,4 +1,3 @@
-import type { BigIntLiteral, NumericLiteral, StringLiteral } from '@babel/types'
 import { isGloballyAllowed } from '@vue/shared'
 import {
   type AttributeNode,
@@ -64,11 +63,12 @@ export function isStaticExpression(
 
 export function resolveExpression(
   exp: SimpleExpressionNode,
+  isComponent?: boolean,
 ): SimpleExpressionNode {
   if (!exp.isStatic) {
-    const value = getLiteralExpressionValue(exp)
+    const value = getLiteralExpressionValue(exp, isComponent)
     if (value !== null) {
-      return createSimpleExpression('' + value, true, exp.loc)
+      return createSimpleExpression(value, true, exp.loc)
     }
   }
   return exp
@@ -76,15 +76,32 @@ export function resolveExpression(
 
 export function getLiteralExpressionValue(
   exp: SimpleExpressionNode,
-): number | string | boolean | null {
+  excludeNumber?: boolean,
+): string | null {
   if (exp.ast) {
     if (exp.ast.type === 'StringLiteral') {
-      return (exp.ast as StringLiteral | NumericLiteral | BigIntLiteral).value
+      return exp.ast.value
     } else if (
-      exp.ast.type === 'TemplateLiteral' &&
-      exp.ast.expressions.length === 0
+      !excludeNumber &&
+      (exp.ast.type === 'NumericLiteral' || exp.ast.type === 'BigIntLiteral')
     ) {
-      return exp.ast.quasis[0].value.cooked!
+      return String(exp.ast.value)
+    } else if (exp.ast.type === 'TemplateLiteral') {
+      let result = ''
+      for (const [index, quasi] of exp.ast.quasis.entries()) {
+        result += quasi.value.cooked!
+        if (exp.ast.expressions[index]) {
+          let expressionValue = getLiteralExpressionValue({
+            ast: exp.ast.expressions[index],
+          } as SimpleExpressionNode)
+          if (expressionValue == null) {
+            return null
+          } else {
+            result += expressionValue
+          }
+        }
+      }
+      return result
     }
   }
   return exp.isStatic ? exp.content : null
