@@ -18,7 +18,7 @@ import {
 } from '../utils'
 import { IS_REF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
-import { camelize } from '@vue/shared'
+import { camelize, getModifierPropName } from '@vue/shared'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
@@ -136,7 +136,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       .join(`, `)
     const modifiersKey = arg
       ? isStaticExp(arg)
-        ? `${arg.content}Modifiers`
+        ? getModifierPropName(arg.content)
         : createCompoundExpression([arg, ' + "Modifiers"'])
       : `modelModifiers`
     props.push(
