@@ -206,7 +206,6 @@ const defaultOptions = {
   isTS: false,
   onError: defaultOnError,
   onWarn: defaultOnWarn,
-  vapor: false,
 }
 
 // AST -> IR

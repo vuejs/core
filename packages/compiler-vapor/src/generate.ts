@@ -186,11 +186,11 @@ function genHelperImports({ helpers, helper, options }: CodegenContext) {
   return imports
 }
 
-function genAssetImports({ ir, helper, options }: CodegenContext) {
+function genAssetImports({ ir }: CodegenContext) {
   const assetImports = ir.node.imports
   let imports = ''
   for (const assetImport of assetImports) {
-    const exp = assetImport.exp as SimpleExpressionNode
+    const exp = assetImport.exp
     const name = exp.content
     imports += `import ${name} from '${assetImport.path}';\n`
   }

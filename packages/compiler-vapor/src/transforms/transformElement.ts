@@ -36,7 +36,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
-import { findProp, getAssetImports, isBuiltInComponent } from '../utils'
+import { findProp, isBuiltInComponent } from '../utils'
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
   ',key,ref,ref_for,ref_key,',
@@ -229,10 +229,13 @@ function transformNativeElement(
       getEffectIndex,
     )
   } else {
-    const imports = getAssetImports(context)
     for (const prop of propsResult[1]) {
       const { key, values } = prop
-      if (imports.some(imported => values[0].content.includes(imported))) {
+      if (
+        context.imports.some(imported =>
+          values[0].content.includes(imported.exp.content),
+        )
+      ) {
         template += ` ${key.content}="$\{${values[0].content}}$"`
       } else if (
         key.isStatic &&
@@ -241,11 +244,8 @@ function transformNativeElement(
         !dynamicKeys.includes(key.content)
       ) {
         template += ` ${key.content}`
-        if (values[0].content) {
-          const valueContent =
-            values[0].content === "''" ? '' : values[0].content
-          template += `="${valueContent}"`
-        }
+        if (values[0].content)
+          template += `="${values[0].content === "''" ? '' : values[0].content}"`
       } else {
         dynamicProps.push(key.content)
         context.registerEffect(

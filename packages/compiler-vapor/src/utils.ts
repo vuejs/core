@@ -13,9 +13,9 @@ import {
   isConstantNode,
   isLiteralWhitelisted,
 } from '@vue/compiler-dom'
-import type { RootIRNode, VaporDirectiveNode } from './ir'
+import type { VaporDirectiveNode } from './ir'
 import { EMPTY_EXPRESSION } from './transforms/utils'
-import { TransformContext } from './transform'
+import type { TransformContext } from './transform'
 
 export const findProp = _findProp as (
   node: ElementNode,
@@ -88,16 +88,6 @@ export function getLiteralExpressionValue(
     }
   }
   return exp.isStatic ? exp.content : null
-}
-
-export function getAssetImports(context: TransformContext): string[]
-export function getAssetImports(ir: RootIRNode): string[]
-export function getAssetImports(ctx: TransformContext | RootIRNode): string[] {
-  const imports =
-    ctx instanceof TransformContext ? ctx.imports : ctx.node.imports
-  return imports.map(i =>
-    typeof i === 'string' ? i : (i.exp as SimpleExpressionNode).content,
-  )
 }
 
 export function isInTransition(
