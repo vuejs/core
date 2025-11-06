@@ -145,7 +145,7 @@ _delegateEvents("click")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  n0.$evtclick = e => (<number>_ctx.handleClick as any)(e)
+  n0.$evtclick = e => (_ctx.foo[_ctx.handleClick] as any)(e)
   return n0
 }"
 `;

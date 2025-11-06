@@ -685,7 +685,7 @@ describe('v-on', () => {
 
   test('expression with type', () => {
     const { code } = compileWithVOn(
-      `<div @click="<number>handleClick as any"></div>`,
+      `<div @click="foo[handleClick] as any"></div>`,
       {
         bindingMetadata: {
           handleClick: BindingTypes.SETUP_CONST,
@@ -694,7 +694,7 @@ describe('v-on', () => {
     )
     expect(code).matchSnapshot()
     expect(code).include(
-      'n0.$evtclick = e => (<number>_ctx.handleClick as any)(e)',
+      'n0.$evtclick = e => (_ctx.foo[_ctx.handleClick] as any)(e)',
     )
   })
 
