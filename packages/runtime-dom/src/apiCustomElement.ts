@@ -244,7 +244,10 @@ export class VueElement
    */
   private _childStyles?: Map<string, HTMLStyleElement[]>
   private _ob?: MutationObserver | null = null
-  private _slots?: Record<string, Node[]>
+  _slots: Record<string, Node[]> = {}
+  // differs from `_slots` by only exposing slot values that actually have corresponding
+  // slot outlets defined by this component
+  _componentDefinedSlots: Record<string, Node[]> = {}
 
   constructor(
     /**
@@ -282,9 +285,13 @@ export class VueElement
     // avoid resolving component if it's not connected
     if (!this.isConnected) return
 
-    // avoid re-parsing slots if already resolved
-    if (!this.shadowRoot && !this._resolved) {
-      this._parseSlots()
+    if (this.shadowRoot) {
+      this._root.addEventListener('slotchange', this._slotChangeEventListener)
+    } else {
+      // avoid re-parsing slots if already resolved
+      if (!this._resolved) {
+        this._parseSlots()
+      }
     }
     this._connected = true
 
@@ -333,6 +340,18 @@ export class VueElement
     }
   }
 
+  _slotChangeEventListener = (event: Event): void => {
+    if (event.target instanceof HTMLSlotElement) {
+      const slotName = event.target.name || 'default'
+      const assignedNodes = event.target.assignedNodes()
+      if (!assignedNodes.length) {
+        delete this._componentDefinedSlots[slotName]
+      } else {
+        this._componentDefinedSlots[slotName] = assignedNodes
+      }
+    }
+  }
+
   disconnectedCallback(): void {
     this._connected = false
     nextTick(() => {
@@ -340,6 +359,12 @@ export class VueElement
         if (this._ob) {
           this._ob.disconnect()
           this._ob = null
+        }
+        if (this.shadowRoot) {
+          this._root.removeEventListener(
+            'slotchange',
+            this._slotChangeEventListener,
+          )
         }
         // unmount
         this._app && this._app.unmount()
@@ -638,7 +663,7 @@ export class VueElement
    * Only called when shadowRoot is false
    */
   private _parseSlots() {
-    const slots: VueElement['_slots'] = (this._slots = {})
+    const slots: VueElement['_slots'] = this._slots
     let n
     while ((n = this.firstChild)) {
       const slotName =
@@ -657,9 +682,10 @@ export class VueElement
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement
       const slotName = o.getAttribute('name') || 'default'
-      const content = this._slots![slotName]
+      const content = this._slots[slotName]
       const parent = o.parentNode!
       if (content) {
+        this._componentDefinedSlots[slotName] = content
         for (const n of content) {
           // for :slotted css
           if (scopeId && n.nodeType === 1) {
@@ -770,4 +796,13 @@ export function useHost(caller?: string): VueElement | null {
 export function useShadowRoot(): ShadowRoot | null {
   const el = __DEV__ ? useHost('useShadowRoot') : useHost()
   return el && el.shadowRoot
+}
+
+/**
+ * Retrieve the nodes assigned to each `<slot>` of the current custom element.
+ * Only usable in setup() of a `defineCustomElement` component.
+ */
+export function useNativeSlots(): Record<string, Node[]> | null {
+  const el = __DEV__ ? useHost('useNativeSlots') : useHost()
+  return el && el._componentDefinedSlots
 }
