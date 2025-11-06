@@ -194,7 +194,7 @@ describe('compiler: element transform', () => {
 
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"), 
+    id: () => ("foo"),
     class: () => ("bar")
   }`)
 
@@ -262,7 +262,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
       () => (_ctx.obj)
     ]
@@ -286,7 +286,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`[
-    () => (_ctx.obj), 
+    () => (_ctx.obj),
     { id: () => ("foo") }
   ]`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -308,9 +308,9 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
-      () => (_ctx.obj), 
+      () => (_ctx.obj),
       { class: () => ("bar") }
     ]
   }`)
@@ -901,6 +901,78 @@ describe('compiler: element transform', () => {
           key: { content: 'baz' },
           values: [{ content: 'qux' }],
         },
+      ],
+    })
+  })
+
+  test('component event with keys modifier', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @keyup.enter="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        [
+          {
+            key: { content: 'keyup' },
+            handler: true,
+            handlerModifiers: {
+              keys: ['enter'],
+              nonKeys: [],
+              options: [],
+            },
+          },
+        ],
+      ],
+    })
+  })
+
+  test('component event with nonKeys modifier', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @foo.stop.prevent="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        [
+          {
+            key: { content: 'foo' },
+            handler: true,
+            handlerModifiers: {
+              keys: [],
+              nonKeys: ['stop', 'prevent'],
+              options: [],
+            },
+          },
+        ],
+      ],
+    })
+  })
+
+  test('component event with multiple modifiers and event options', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @foo.enter.stop.prevent.capture.once="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        [
+          {
+            key: { content: 'foo' },
+            handler: true,
+            handlerModifiers: {
+              keys: ['enter'],
+              nonKeys: ['stop', 'prevent'],
+              options: ['capture', 'once'],
+            },
+          },
+        ],
       ],
     })
   })

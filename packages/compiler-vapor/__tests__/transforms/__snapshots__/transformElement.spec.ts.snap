@@ -136,7 +136,7 @@ exports[`compiler: element transform > component > static props 1`] = `
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+    id: () => ("foo"),
     class: () => ("bar")
   }, null, true)
   return n0
@@ -161,7 +161,7 @@ exports[`compiler: element transform > component > v-bind="obj" after static pro
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
       () => (_ctx.obj)
     ]
@@ -176,7 +176,7 @@ exports[`compiler: element transform > component > v-bind="obj" before static pr
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => (_ctx.obj), 
+    () => (_ctx.obj),
     { id: () => ("foo") }
   ] }, null, true)
   return n0
@@ -189,9 +189,9 @@ exports[`compiler: element transform > component > v-bind="obj" between static p
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
-      () => (_ctx.obj), 
+      () => (_ctx.obj),
       { class: () => ("bar") }
     ]
   }, null, true)
@@ -257,6 +257,36 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component event with keys modifier 1`] = `
+"import { resolveComponent as _resolveComponent, withKeys as _withKeys, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onKeyup: () => _withKeys(_ctx.bar, ["enter"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with multiple modifiers and event options 1`] = `
+"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, withKeys as _withKeys, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onFooCaptureOnce: () => _withKeys(_withModifiers(_ctx.bar, ["stop","prevent"]), ["enter"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with nonKeys modifier 1`] = `
+"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onFoo: () => _withModifiers(_ctx.bar, ["stop","prevent"]) }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component event with once modifier 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
@@ -273,7 +303,7 @@ exports[`compiler: element transform > component with dynamic event arguments 1`
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: () => _ctx.bar }), 
+    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: () => _ctx.bar }),
     () => ({ [_toHandlerKey(_ctx.baz)]: () => _ctx.qux })
   ] }, null, true)
   return n0
@@ -286,7 +316,7 @@ exports[`compiler: element transform > component with dynamic prop arguments 1`]
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }), 
+    () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }),
     () => ({ [_ctx.baz]: _ctx.qux })
   ] }, null, true)
   return n0
