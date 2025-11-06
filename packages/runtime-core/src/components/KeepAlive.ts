@@ -356,7 +356,7 @@ export const KeepAlive = (__COMPAT__
   ? /*@__PURE__*/ decorate(KeepAliveImpl)
   : KeepAliveImpl) as any as {
   __isKeepAlive: true
-  new (): {
+  new (props?: VNodeProps & KeepAliveProps): {
     $props: VNodeProps & KeepAliveProps
     $slots: {
       default(): VNode[]

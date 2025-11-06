@@ -114,7 +114,9 @@ export type Data = Record<string, unknown>
  * declare const instance: ComponentInstance<typeof MyComp>
  * ```
  */
-export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
+export type ComponentInstance<T> = T extends {
+  new (...args: any[]): ComponentPublicInstance
+}
   ? InstanceType<T>
   : T extends FunctionalComponent<infer Props, infer Emits>
     ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>

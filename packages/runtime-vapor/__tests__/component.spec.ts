@@ -324,7 +324,7 @@ describe('component', () => {
       },
       setup(props) {
         const n0 = template(' ')() as any
-        renderEffect(() => setText(n0, props.count))
+        renderEffect(() => setText(n0, String(props.count)))
         return n0
       },
     })
@@ -396,6 +396,7 @@ describe('component', () => {
   })
 
   it('warn if functional vapor component not return a block', () => {
+    // @ts-expect-error
     define(() => {
       return () => {}
     }).render()

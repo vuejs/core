@@ -44,8 +44,8 @@ const decorate = (t: typeof VaporTransition) => {
   return t
 }
 
-export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
-  (props, { slots, attrs }) => {
+export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
+  /*@__PURE__*/ decorate((props, { slots, attrs }) => {
     // wrapped <transition appear>
     let resetDisplay: Function | undefined
     if (
@@ -74,7 +74,7 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
     }
 
     const children = (slots.default && slots.default()) as any as Block
-    if (!children) return
+    if (!children) return []
 
     const instance = currentInstance! as VaporComponentInstance
     const { mode } = props
@@ -138,8 +138,7 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
     }
 
     return children
-  },
-)
+  })
 
 const getTransitionHooksContext = (
   key: string,

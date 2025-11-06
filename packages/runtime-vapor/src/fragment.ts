@@ -111,7 +111,7 @@ export class DynamicFragment extends VaporFragment {
       const mode = transition && transition.mode
       if (mode) {
         applyTransitionLeaveHooks(this.nodes, transition, () =>
-          this.render(render, instance, transition, parent),
+          this.renderBranch(render, instance, transition, parent),
         )
         parent && remove(this.nodes, parent)
         if (mode === 'out-in') {
@@ -123,7 +123,7 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    this.render(render, instance, transition, parent)
+    this.renderBranch(render, instance, transition, parent)
 
     if (this.fallback) {
       // set fallback for nested fragments
@@ -153,7 +153,7 @@ export class DynamicFragment extends VaporFragment {
     if (isHydrating) this.hydrate()
   }
 
-  private render(
+  private renderBranch(
     render: BlockFn | undefined,
     instance: GenericComponentInstance,
     transition: VaporTransitionHooks | undefined,

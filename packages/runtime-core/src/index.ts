@@ -300,6 +300,7 @@ export type {
   EmitsToProps,
   ShortEmitsToObject,
   EmitFn,
+  TypeEmitsToOptions,
 } from './componentEmits'
 export type {
   ComponentPublicInstance,

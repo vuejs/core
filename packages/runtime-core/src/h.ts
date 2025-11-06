@@ -73,7 +73,7 @@ interface Constructor<P = any> {
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-  new (...args: any[]): { $props: P }
+  new (props?: P): { $props: P }
 }
 
 type HTMLElementEventHandler = {
