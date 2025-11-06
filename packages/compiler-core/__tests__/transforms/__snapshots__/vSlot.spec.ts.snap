@@ -1,5 +1,31 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: transform component slots > Properly handle v-for and ref on template 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, renderList: _renderList, createSlots: _createSlots, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
+      _renderList(_ctx.list, (name) => {
+        return {
+          name: name,
+          fn: _withCtx(() => [
+            _createElementVNode("p", {
+              ref_for: true,
+              ref: "slotItems"
+            }, _toDisplayString(name), 513 /* TEXT, NEED_PATCH */)
+          ])
+        }
+      })
+    ]), 1024 /* DYNAMIC_SLOTS */))
+  }
+}"
+`;
+
 exports[`compiler: transform component slots > dynamically named slots 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
