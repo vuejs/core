@@ -1,12 +1,8 @@
 import path from 'path'
 import {
-  type CompoundExpressionNode,
   ConstantTypes,
-  type ExpressionNode,
   type NodeTransform,
   NodeTypes,
-  type SimpleExpressionNode,
-  createCompoundExpression,
   createSimpleExpression,
 } from '@vue/compiler-core'
 import {
@@ -36,24 +32,6 @@ export const createSrcsetTransformWithOptions = (
 ): NodeTransform => {
   return (node, context) =>
     (transformSrcset as Function)(node, context, options)
-}
-
-export function flattenCompoundExpression(
-  compoundExpression: CompoundExpressionNode,
-): string {
-  return compoundExpression.children
-    .map(child => {
-      if (typeof child === 'string') {
-        return child
-      } else if (typeof child === 'symbol') {
-        return child.description
-      } else if (child.type === NodeTypes.COMPOUND_EXPRESSION) {
-        return flattenCompoundExpression(child)
-      } else {
-        return child.content
-      }
-    })
-    .join('')
 }
 
 export const transformSrcset: NodeTransform = (
@@ -145,66 +123,53 @@ export const transformSrcset: NodeTransform = (
             }
           }
 
-          const compoundExpression = createCompoundExpression([], attr.loc)
+          let content = ''
           imageCandidates.forEach(({ url, descriptor }, index) => {
             if (shouldProcessUrl(url)) {
               const { path } = parseUrl(url)
-              let exp: SimpleExpressionNode
               if (path) {
+                let exp = ''
                 const existingImportsIndex = context.imports.findIndex(
                   i => i.path === path,
                 )
                 if (existingImportsIndex > -1) {
-                  exp = createSimpleExpression(
-                    `_imports_${existingImportsIndex}`,
-                    false,
-                    attr.loc,
-                    ConstantTypes.CAN_STRINGIFY,
-                  )
+                  exp = `_imports_${existingImportsIndex}`
                 } else {
-                  exp = createSimpleExpression(
-                    `_imports_${context.imports.length}`,
-                    false,
-                    attr.loc,
-                    ConstantTypes.CAN_STRINGIFY,
-                  )
-                  context.imports.push({ exp, path })
+                  exp = `_imports_${context.imports.length}`
+                  context.imports.push({
+                    exp: createSimpleExpression(
+                      exp,
+                      false,
+                      attr.loc,
+                      ConstantTypes.CAN_STRINGIFY,
+                    ),
+                    path,
+                  })
                 }
-                compoundExpression.children.push(exp)
+                content += exp
               }
             } else {
-              const exp = createSimpleExpression(
-                `"${url}"`,
-                false,
-                attr.loc,
-                ConstantTypes.CAN_STRINGIFY,
-              )
-              compoundExpression.children.push(exp)
+              content += `"${url}"`
             }
             const isNotLast = imageCandidates.length - 1 > index
-            if (descriptor && isNotLast) {
-              compoundExpression.children.push(` + ' ${descriptor}, ' + `)
-            } else if (descriptor) {
-              compoundExpression.children.push(` + ' ${descriptor}'`)
+            if (descriptor) {
+              content += ` + ' ${descriptor}${isNotLast ? ', ' : ''}'${
+                isNotLast ? ' + ' : ''
+              }`
             } else if (isNotLast) {
-              compoundExpression.children.push(` + ', ' + `)
+              content += ` + ', ' + `
             }
           })
 
-          let exp: ExpressionNode
-          if (vapor) {
-            exp = createSimpleExpression(
-              flattenCompoundExpression(compoundExpression),
-              false,
-              attr.loc,
-              ConstantTypes.CAN_STRINGIFY,
-            )
-          } else {
-            exp = compoundExpression
-            if (context.hoistStatic) {
-              exp = context.hoist(compoundExpression)
-              exp.constType = ConstantTypes.CAN_STRINGIFY
-            }
+          let exp = createSimpleExpression(
+            content,
+            false,
+            attr.loc,
+            ConstantTypes.CAN_STRINGIFY,
+          )
+          if (context.hoistStatic) {
+            exp = context.hoist(exp)
+            exp.constType = ConstantTypes.CAN_STRINGIFY
           }
 
           node.props[index] = {
