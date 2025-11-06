@@ -8,6 +8,7 @@ import {
   DynamicFlag,
   type IRDynamicInfo,
   IRNodeTypes,
+  type InsertionStateTypes,
   isBlockOperation,
 } from '../ir'
 
@@ -59,17 +60,19 @@ export const transformChildren: NodeTransform = (node, context) => {
 
 function processDynamicChildren(context: TransformContext<ElementNode>) {
   let prevDynamics: IRDynamicInfo[] = []
-  let hasStaticTemplate = false
+  let staticCount = 0
+  let dynamicCount = 0
+  let lastInsertionChild: IRDynamicInfo | undefined
   const children = context.dynamic.children
 
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.INSERT) {
-      prevDynamics.push(child)
+      prevDynamics.push((lastInsertionChild = child))
     }
 
     if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
       if (prevDynamics.length) {
-        if (hasStaticTemplate) {
+        if (staticCount) {
           context.childrenTemplate[index - prevDynamics.length] = `<!>`
           prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
           const anchor = (prevDynamics[0].anchor = context.increaseId())
@@ -77,21 +80,33 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
         } else {
           registerInsertion(prevDynamics, context, -1 /* prepend */)
         }
+        dynamicCount += prevDynamics.length
         prevDynamics = []
       }
-      hasStaticTemplate = true
+      staticCount++
     }
   }
 
   if (prevDynamics.length) {
-    registerInsertion(prevDynamics, context)
+    registerInsertion(
+      prevDynamics,
+      context,
+      // the logical index of append child
+      dynamicCount + staticCount,
+      true,
+    )
+  }
+
+  if (lastInsertionChild && lastInsertionChild.operation) {
+    ;(lastInsertionChild.operation! as InsertionStateTypes).last = true
   }
 }
 
 function registerInsertion(
   dynamics: IRDynamicInfo[],
   context: TransformContext,
-  anchor?: number,
+  anchor: number,
+  append?: boolean,
 ) {
   for (const child of dynamics) {
     if (child.template != null) {
@@ -100,12 +115,13 @@ function registerInsertion(
         type: IRNodeTypes.INSERT_NODE,
         elements: dynamics.map(child => child.id!),
         parent: context.reference(),
-        anchor,
+        anchor: append ? undefined : anchor,
       })
     } else if (child.operation && isBlockOperation(child.operation)) {
       // block types
       child.operation.parent = context.reference()
       child.operation.anchor = anchor
+      child.operation.append = append
     }
   }
 }

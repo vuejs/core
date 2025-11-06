@@ -682,12 +682,12 @@ describe('compiler v-bind', () => {
     const { code } = compileWithVBind(
       `
         <div
-          :a="void 0" 
-          :b="1 > 2" 
-          :c="1 + 2" 
-          :d="1 ? 2 : 3" 
-          :e="(2)" 
-          :f="\`foo${1}\`"
+          :a="void 0"
+          :b="1 > 2"
+          :c="1 + 2"
+          :d="1 ? 2 : 3"
+          :e="(2)"
+          :f="\`foo\${1}\`"
           :g="1"
           :h="'1'"
           :i="true"

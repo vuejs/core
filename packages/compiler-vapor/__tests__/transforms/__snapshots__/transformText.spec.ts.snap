@@ -11,6 +11,17 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: text transform > constant text 1`] = `
+"import { child as _child, template as _template } from 'vue';
+const t0 = _template("<div>2 foo1 1 1 1</div>", true)
+
+export function render(_ctx) {
+  const n1 = t0()
+  const n0 = _child(n1, 0)
+  return n1
+}"
+`;
+
 exports[`compiler: text transform > no consecutive text 1`] = `
 "import { setText as _setText, template as _template } from 'vue';
 const t0 = _template(" ")

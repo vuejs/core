@@ -507,6 +507,24 @@ describe('compiler: transform v-model', () => {
     )
   })
 
+  test('should generate modelModifiers$ for component v-model:model with arguments', () => {
+    const root = parseWithVModel('<Comp v-model:model.trim="foo" />', {
+      prefixIdentifiers: true,
+    })
+    const vnodeCall = (root.children[0] as ComponentNode)
+      .codegenNode as VNodeCall
+    expect(vnodeCall.props).toMatchObject({
+      properties: [
+        { key: { content: `model` } },
+        { key: { content: `onUpdate:model` } },
+        {
+          key: { content: 'modelModifiers$' },
+          value: { content: `{ trim: true }`, isStatic: false },
+        },
+      ],
+    })
+  })
+
   describe('errors', () => {
     test('missing expression', () => {
       const onError = vi.fn()

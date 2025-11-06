@@ -277,4 +277,64 @@ describe('compiler: transform <slot> outlets', () => {
       },
     })
   })
+
+  test('slot outlet with scopeId and slotted=false should generate noSlotted', () => {
+    const { ir, code } = compileWithSlotsOutlet(`<slot />`, {
+      scopeId: 'test-scope',
+      slotted: false,
+    })
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('true')
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.SLOT_OUTLET_NODE,
+      id: 0,
+      name: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'default',
+        isStatic: true,
+      },
+      props: [],
+      fallback: undefined,
+      noSlotted: true,
+    })
+  })
+
+  test('slot outlet with scopeId and slotted=true should not generate noSlotted', () => {
+    const { ir, code } = compileWithSlotsOutlet(`<slot />`, {
+      scopeId: 'test-scope',
+      slotted: true,
+    })
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.SLOT_OUTLET_NODE,
+      id: 0,
+      name: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'default',
+        isStatic: true,
+      },
+      props: [],
+      fallback: undefined,
+      noSlotted: false,
+    })
+  })
+
+  test('slot outlet without scopeId should not generate noSlotted', () => {
+    const { ir, code } = compileWithSlotsOutlet(`<slot />`, {
+      slotted: false,
+    })
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.SLOT_OUTLET_NODE,
+      id: 0,
+      name: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'default',
+        isStatic: true,
+      },
+      props: [],
+      fallback: undefined,
+      noSlotted: false,
+    })
+  })
 })
