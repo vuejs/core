@@ -237,7 +237,7 @@ function transformNativeElement(
       } else if (
         key.isStatic &&
         values.length === 1 &&
-        values[0].isStatic &&
+        (values[0].isStatic || values[0].content === "''") &&
         !dynamicKeys.includes(key.content)
       ) {
         template += ` ${key.content}`

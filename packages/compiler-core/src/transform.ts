@@ -153,7 +153,6 @@ export function createTransformContext(
     onError = defaultOnError,
     onWarn = defaultOnWarn,
     compatConfig,
-    vapor = false,
   }: TransformOptions,
 ): TransformContext {
   const context: TransformContext = {
@@ -181,7 +180,6 @@ export function createTransformContext(
     onError,
     onWarn,
     compatConfig,
-    vapor,
 
     // state
     root,

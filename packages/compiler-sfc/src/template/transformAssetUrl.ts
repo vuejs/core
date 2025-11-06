@@ -9,7 +9,6 @@ import {
   type TransformContext,
   createSimpleExpression,
 } from '@vue/compiler-core'
-import { isVapor } from './utils'
 import {
   isDataUrl,
   isExternalUrl,
@@ -135,13 +134,7 @@ export const transformAssetUrl: NodeTransform = (
       // otherwise, transform the url into an import.
       // this assumes a bundler will resolve the import into the correct
       // absolute url (e.g. webpack file-loader)
-      const exp = getImportsExpressionExp(
-        url.path,
-        url.hash,
-        attr.loc,
-        context,
-        isVapor(context),
-      )
+      const exp = getImportsExpressionExp(url.path, url.hash, attr.loc, context)
       node.props[index] = {
         type: NodeTypes.DIRECTIVE,
         name: 'bind',
@@ -159,7 +152,6 @@ function getImportsExpressionExp(
   hash: string | null,
   loc: SourceLocation,
   context: TransformContext,
-  vapor = false,
 ): ExpressionNode {
   if (path) {
     let name: string
@@ -219,8 +211,6 @@ function getImportsExpressionExp(
     }
     return context.hoist(finalExp)
   } else {
-    return vapor
-      ? createSimpleExpression(`''`, true, loc, ConstantTypes.CAN_STRINGIFY)
-      : createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_STRINGIFY)
+    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_STRINGIFY)
   }
 }
