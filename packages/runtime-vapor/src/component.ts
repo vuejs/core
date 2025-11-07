@@ -665,7 +665,20 @@ export function createComponentWithFallback(
       setCurrentHydrationNode(el.firstChild)
     }
     if (rawSlots.$) {
-      // TODO dynamic slot fragment
+      const frag =
+        isHydrating || __DEV__
+          ? new DynamicFragment('slot')
+          : new DynamicFragment()
+
+      renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
+
+      if (!isHydrating) {
+        const scopeId = currentInstance!.type.__scopeId
+        if (scopeId) setScopeId(frag, [`${scopeId}-s`])
+        insert(frag, el)
+      } else {
+        frag.hydrate()
+      }
     } else {
       insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
     }
