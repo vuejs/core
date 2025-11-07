@@ -115,20 +115,23 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
   : T extends FunctionalComponent<infer Props, infer Emits>
     ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>
     : T extends Component<
-          infer Props,
+          infer PropsOrInstance,
           infer RawBindings,
           infer D,
           infer C,
           infer M
         >
-      ? // NOTE we override Props/RawBindings/D to make sure is not `unknown`
-        ComponentPublicInstance<
-          unknown extends Props ? {} : Props,
-          unknown extends RawBindings ? {} : RawBindings,
-          unknown extends D ? {} : D,
-          C,
-          M
-        >
+      ? PropsOrInstance extends { $props: unknown }
+        ? // T is returned by `defineComponent()`
+          PropsOrInstance
+        : // NOTE we override Props/RawBindings/D to make sure is not `unknown`
+          ComponentPublicInstance<
+            unknown extends PropsOrInstance ? {} : PropsOrInstance,
+            unknown extends RawBindings ? {} : RawBindings,
+            unknown extends D ? {} : D,
+            C,
+            M
+          >
       : never // not a vue Component
 
 /**
@@ -259,7 +262,7 @@ export type ConcreteComponent<
  * The constructor type is an artificial type returned by defineComponent().
  */
 export type Component<
-  Props = any,
+  PropsOrInstance = any,
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
@@ -267,8 +270,8 @@ export type Component<
   E extends EmitsOptions | Record<string, any[]> = {},
   S extends Record<string, any> = any,
 > =
-  | ConcreteComponent<Props, RawBindings, D, C, M, E, S>
-  | ComponentPublicInstanceConstructor<Props>
+  | ConcreteComponent<PropsOrInstance, RawBindings, D, C, M, E, S>
+  | ComponentPublicInstanceConstructor<PropsOrInstance>
 
 export type { ComponentOptions }
 
@@ -582,13 +585,13 @@ export interface ComponentInternalInstance {
    * For updating css vars on contained teleports
    * @internal
    */
-  ut?: (vars?: Record<string, string>) => void
+  ut?: (vars?: Record<string, unknown>) => void
 
   /**
    * dev only. For style v-bind hydration mismatch checks
    * @internal
    */
-  getCssVars?: () => Record<string, string>
+  getCssVars?: () => Record<string, unknown>
 
   /**
    * v2 compat only, for caching mutated $options
@@ -806,7 +809,7 @@ export function setupComponent(
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
   initProps(instance, props, isStateful, isSSR)
-  initSlots(instance, children, optimized)
+  initSlots(instance, children, optimized || isSSR)
 
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
@@ -1200,7 +1203,7 @@ export function getComponentPublicInstance(
   }
 }
 
-const classifyRE = /(?:^|[-_])(\w)/g
+const classifyRE = /(?:^|[-_])\w/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
@@ -1268,7 +1271,15 @@ export interface ComponentCustomElementInterface {
     shouldUpdate?: boolean,
   ): void
   /**
+   * @internal
+   */
+  _beginPatch(): void
+  /**
+   * @internal
+   */
+  _endPatch(): void
+  /**
    * @internal attached by the nested Teleport when shadowRoot is false.
    */
-  _teleportTarget?: RendererElement
+  _teleportTargets?: Set<RendererElement>
 }

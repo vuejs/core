@@ -53,6 +53,7 @@ export type VueElementConstructor<P = {}> = {
 export interface CustomElementOptions {
   styles?: string[]
   shadowRoot?: boolean
+  shadowRootOptions?: Omit<ShadowRootInit, 'mode'>
   nonce?: string
   configureApp?: (app: App) => void
 }
@@ -163,7 +164,7 @@ export function defineCustomElement<
   T extends DefineComponent<infer P, any, any, any> ? P : unknown
 >
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function defineCustomElement(
   options: any,
   extraOptions?: ComponentOptions,
@@ -172,8 +173,8 @@ export function defineCustomElement(
    */
   _createApp?: CreateAppFunction<Element>,
 ): VueElementConstructor {
-  const Comp = defineComponent(options, extraOptions) as any
-  if (isPlainObject(Comp)) extend(Comp, extraOptions)
+  let Comp = defineComponent(options, extraOptions) as any
+  if (isPlainObject(Comp)) Comp = extend({}, Comp, extraOptions)
   class VueCustomElement extends VueElement {
     static def = Comp
     static formAssociated = !!options.formAssociated
@@ -186,7 +187,7 @@ export function defineCustomElement(
   return VueCustomElement
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export const defineSSRCustomElement = ((
   options: any,
   extraOptions?: ComponentOptions,
@@ -227,10 +228,12 @@ export class VueElement
   /**
    * @internal
    */
-  _teleportTarget?: HTMLElement
+  _teleportTargets?: Set<Element>
 
   private _connected = false
   private _resolved = false
+  private _patching = false
+  private _dirty = false
   private _numberProps: Record<string, true> | null = null
   private _styleChildren = new WeakSet()
   private _pendingResolve: Promise<void> | undefined
@@ -269,16 +272,15 @@ export class VueElement
         )
       }
       if (_def.shadowRoot !== false) {
-        this.attachShadow({ mode: 'open' })
+        this.attachShadow(
+          extend({}, _def.shadowRootOptions, {
+            mode: 'open',
+          }) as ShadowRootInit,
+        )
         this._root = this.shadowRoot!
       } else {
         this._root = this
       }
-    }
-
-    if (!(this._def as ComponentOptions).__asyncLoader) {
-      // for sync component defs we can immediately resolve props
-      this._resolveProps(this._def)
     }
   }
 
@@ -286,7 +288,8 @@ export class VueElement
     // avoid resolving component if it's not connected
     if (!this.isConnected) return
 
-    if (!this.shadowRoot) {
+    // avoid re-parsing slots if already resolved
+    if (!this.shadowRoot && !this._resolved) {
       this._parseSlots()
     }
     this._connected = true
@@ -304,8 +307,7 @@ export class VueElement
 
     if (!this._instance) {
       if (this._resolved) {
-        this._setParent()
-        this._update()
+        this._mount(this._def)
       } else {
         if (parent && parent._pendingResolve) {
           this._pendingResolve = parent._pendingResolve.then(() => {
@@ -322,7 +324,18 @@ export class VueElement
   private _setParent(parent = this._parent) {
     if (parent) {
       this._instance!.parent = parent._instance
-      this._instance!.provides = parent._instance!.provides
+      this._inheritParentContext(parent)
+    }
+  }
+
+  private _inheritParentContext(parent = this._parent) {
+    // #13212, the provides object of the app context must inherit the provides
+    // object from the parent element so we can inject values from both places
+    if (parent && this._app) {
+      Object.setPrototypeOf(
+        this._app._context.provides,
+        parent._instance!.provides,
+      )
     }
   }
 
@@ -338,8 +351,18 @@ export class VueElement
         this._app && this._app.unmount()
         if (this._instance) this._instance.ce = undefined
         this._app = this._instance = null
+        if (this._teleportTargets) {
+          this._teleportTargets.clear()
+          this._teleportTargets = undefined
+        }
       }
     })
+  }
+
+  private _processMutations(mutations: MutationRecord[]) {
+    for (const m of mutations) {
+      this._setAttr(m.attributeName!)
+    }
   }
 
   /**
@@ -356,11 +379,7 @@ export class VueElement
     }
 
     // watch future attr changes
-    this._ob = new MutationObserver(mutations => {
-      for (const m of mutations) {
-        this._setAttr(m.attributeName!)
-      }
-    })
+    this._ob = new MutationObserver(this._processMutations.bind(this))
 
     this._ob.observe(this, { attributes: true })
 
@@ -386,12 +405,7 @@ export class VueElement
         }
       }
       this._numberProps = numberProps
-
-      if (isAsync) {
-        // defining getter/setters on prototype
-        // for sync defs, this already happened in the constructor
-        this._resolveProps(def)
-      }
+      this._resolveProps(def)
 
       // apply CSS
       if (this.shadowRoot) {
@@ -409,9 +423,10 @@ export class VueElement
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
     if (asyncDef) {
-      this._pendingResolve = asyncDef().then(def =>
-        resolve((this._def = def), true),
-      )
+      this._pendingResolve = asyncDef().then((def: InnerComponentDef) => {
+        def.configureApp = this._def.configureApp
+        resolve((this._def = def), true)
+      })
     } else {
       resolve(this._def)
     }
@@ -423,6 +438,8 @@ export class VueElement
       def.name = 'VueElement'
     }
     this._app = this._createApp(def)
+    // inherit before configureApp to detect context overwrites
+    this._inheritParentContext()
     if (def.configureApp) {
       def.configureApp(this._app)
     }
@@ -459,11 +476,11 @@ export class VueElement
     // defining getter/setters on prototype
     for (const key of declaredPropKeys.map(camelize)) {
       Object.defineProperty(this, key, {
-        get() {
+        get(this: VueElement) {
           return this._getProp(key)
         },
-        set(val) {
-          this._setProp(key, val, true, true)
+        set(this: VueElement, val) {
+          this._setProp(key, val, true, !this._patching)
         },
       })
     }
@@ -497,6 +514,7 @@ export class VueElement
     shouldUpdate = false,
   ): void {
     if (val !== this._props[key]) {
+      this._dirty = true
       if (val === REMOVAL) {
         delete this._props[key]
       } else {
@@ -512,7 +530,10 @@ export class VueElement
       // reflect
       if (shouldReflect) {
         const ob = this._ob
-        ob && ob.disconnect()
+        if (ob) {
+          this._processMutations(ob.takeRecords())
+          ob.disconnect()
+        }
         if (val === true) {
           this.setAttribute(hyphenate(key), '')
         } else if (typeof val === 'string' || typeof val === 'number') {
@@ -526,7 +547,9 @@ export class VueElement
   }
 
   private _update() {
-    render(this._createVNode(), this._root)
+    const vnode = this._createVNode()
+    if (this._app) vnode.appContext = this._app._context
+    render(vnode, this._root)
   }
 
   private _createVNode(): VNode<any, any> {
@@ -635,7 +658,7 @@ export class VueElement
    * Only called when shadowRoot is false
    */
   private _renderSlots() {
-    const outlets = (this._teleportTarget || this).querySelectorAll('slot')
+    const outlets = this._getSlots()
     const scopeId = this._instance!.type.__scopeId
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement
@@ -666,8 +689,46 @@ export class VueElement
   /**
    * @internal
    */
+  private _getSlots(): HTMLSlotElement[] {
+    const roots: Element[] = [this]
+    if (this._teleportTargets) {
+      roots.push(...this._teleportTargets)
+    }
+
+    const slots = new Set<HTMLSlotElement>()
+    for (const root of roots) {
+      const found = root.querySelectorAll<HTMLSlotElement>('slot')
+      for (let i = 0; i < found.length; i++) {
+        slots.add(found[i])
+      }
+    }
+
+    return Array.from(slots)
+  }
+
+  /**
+   * @internal
+   */
   _injectChildStyle(comp: ConcreteComponent & CustomElementOptions): void {
     this._applyStyles(comp.styles, comp)
+  }
+
+  /**
+   * @internal
+   */
+  _beginPatch(): void {
+    this._patching = true
+    this._dirty = false
+  }
+
+  /**
+   * @internal
+   */
+  _endPatch(): void {
+    this._patching = false
+    if (this._dirty && this._instance) {
+      this._update()
+    }
   }
 
   /**

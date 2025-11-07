@@ -28,12 +28,10 @@ export function endMeasure(
   if (instance.appContext.config.performance && isSupported()) {
     const startTag = `vue-${type}-${instance.uid}`
     const endTag = startTag + `:end`
+    const measureName = `<${formatComponentName(instance, instance.type)}> ${type}`
     perf.mark(endTag)
-    perf.measure(
-      `<${formatComponentName(instance, instance.type)}> ${type}`,
-      startTag,
-      endTag,
-    )
+    perf.measure(measureName, startTag, endTag)
+    perf.clearMeasures(measureName)
     perf.clearMarks(startTag)
     perf.clearMarks(endTag)
   }
