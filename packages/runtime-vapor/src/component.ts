@@ -665,22 +665,16 @@ export function createComponentWithFallback(
       setCurrentHydrationNode(el.firstChild)
     }
     if (rawSlots.$) {
-      const frag =
-        isHydrating || __DEV__
-          ? new DynamicFragment('slot')
-          : new DynamicFragment()
-
+      // ssr output does not contain the slot anchor, use an empty string
+      // as the anchor label to avoid slot anchor search errors
+      const frag = new DynamicFragment(
+        isHydrating ? '' : __DEV__ ? 'slot' : undefined,
+      )
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
-
-      if (!isHydrating) {
-        const scopeId = currentInstance!.type.__scopeId
-        if (scopeId) setScopeId(frag, [`${scopeId}-s`])
-        insert(frag, el)
-      } else {
-        frag.hydrate()
-      }
+      if (!isHydrating) insert(frag, el)
     } else {
-      insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
+      const block = getSlot(rawSlots as RawSlots, 'default')!()
+      if (!isHydrating) insert(block, el)
     }
     if (isHydrating) {
       setCurrentHydrationNode(nextNode)
