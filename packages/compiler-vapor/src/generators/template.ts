@@ -6,7 +6,13 @@ import {
 } from '../ir'
 import { genDirectivesForElement } from './directive'
 import { genOperationWithInsertionState } from './operation'
-import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
+import {
+  type CodeFragment,
+  IMPORT_EXPR_RE,
+  NEWLINE,
+  buildCodeFragment,
+  genCall,
+} from './utils'
 
 export function genTemplates(
   templates: string[],
@@ -16,12 +22,11 @@ export function genTemplates(
   return templates
     .map(
       (template, i) =>
-        `const t${i} = ${helper('template')}(${
-          JSON.stringify(template).replace(
-            /\$\{(.*?)\}\$/g,
-            (_, expr) => `" + ${expr} + "`,
-          ) // replace asset imports with string concatenation
-        }${i === rootIndex ? ', true' : ''})\n`,
+        `const t${i} = ${helper('template')}(${JSON.stringify(template).replace(
+          // replace import expressions with string concatenation
+          IMPORT_EXPR_RE,
+          `" + $1 + "`,
+        )}${i === rootIndex ? ', true' : ''})\n`,
     )
     .join('')
 }

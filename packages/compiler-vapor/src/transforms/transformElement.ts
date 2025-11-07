@@ -37,6 +37,7 @@ import {
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
 import { findProp, isBuiltInComponent } from '../utils'
+import { IMPORT_EXP_END, IMPORT_EXP_START } from '../generators/utils'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -232,12 +233,15 @@ function transformNativeElement(
   } else {
     for (const prop of propsResult[1]) {
       const { key, values } = prop
+      // handling asset imports
       if (
         context.imports.some(imported =>
           values[0].content.includes(imported.exp.content),
         )
       ) {
-        template += ` ${key.content}="$\{${values[0].content}}$"`
+        // add start and end markers to the import expression, so it can be replaced
+        // with string concatenation in the generator, see genTemplates
+        template += ` ${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
       } else if (
         key.isStatic &&
         values.length === 1 &&
