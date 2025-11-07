@@ -4,61 +4,16 @@ import {
   delegateEvents,
 } from '../src'
 import { defineAsyncComponent, nextTick, reactive, ref } from '@vue/runtime-dom'
-import { compileScript, parse } from '@vue/compiler-sfc'
-import * as runtimeVapor from '../src'
-import * as runtimeDom from '@vue/runtime-dom'
-import * as VueServerRenderer from '@vue/server-renderer'
 import { isString } from '@vue/shared'
 import type { VaporComponentInstance } from '../src/component'
 import type { TeleportFragment } from '../src/components/Teleport'
+import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from './_utils'
 
 const formatHtml = (raw: string) => {
   return raw
     .replace(/<!--\[/g, '\n<!--[')
     .replace(/]-->/g, ']-->\n')
     .replace(/\n{2,}/g, '\n')
-}
-
-const Vue = { ...runtimeDom, ...runtimeVapor }
-
-function compile(
-  sfc: string,
-  data: runtimeDom.Ref<any>,
-  components: Record<string, any> = {},
-  { vapor = true, ssr = false } = {},
-) {
-  if (!sfc.includes(`<script`)) {
-    sfc =
-      `<script vapor>const data = _data; const components = _components;</script>` +
-      sfc
-  }
-  const descriptor = parse(sfc).descriptor
-
-  const script = compileScript(descriptor, {
-    id: 'x',
-    isProd: true,
-    inlineTemplate: true,
-    genDefaultAs: '__sfc__',
-    vapor,
-    templateOptions: {
-      ssr,
-    },
-  })
-
-  const code =
-    script.content
-      .replace(/\bimport {/g, 'const {')
-      .replace(/ as _/g, ': _')
-      .replace(/} from ['"]vue['"]/g, `} = Vue`)
-      .replace(/} from "vue\/server-renderer"/g, '} = VueServerRenderer') +
-    '\nreturn __sfc__'
-
-  return new Function('Vue', 'VueServerRenderer', '_data', '_components', code)(
-    Vue,
-    VueServerRenderer,
-    data,
-    components,
-  )
 }
 
 async function testWithVaporApp(

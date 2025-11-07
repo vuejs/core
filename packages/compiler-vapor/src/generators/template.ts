@@ -17,12 +17,14 @@ import {
 export function genTemplates(
   templates: string[],
   rootIndex: number | undefined,
-  { helper }: CodegenContext,
+  context: CodegenContext,
 ): string {
   return templates
     .map(
       (template, i) =>
-        `const t${i} = ${helper('template')}(${JSON.stringify(template).replace(
+        `const ${context.tName(i)} = ${context.helper('template')}(${JSON.stringify(
+          template,
+        ).replace(
           // replace import expressions with string concatenation
           IMPORT_EXPR_RE,
           `" + $1 + "`,
@@ -39,7 +41,7 @@ export function genSelf(
   const { id, template, operation, hasDynamicChild } = dynamic
 
   if (id !== undefined && template !== undefined) {
-    push(NEWLINE, `const n${id} = t${template}()`)
+    push(NEWLINE, `const n${id} = ${context.tName(template)}()`)
     push(...genDirectivesForElement(id, context))
   }
 
@@ -98,7 +100,8 @@ export function genChildren(
     const logicalIndex = elementIndex - ifBranchCount + prependCount
     // p for "placeholder" variables that are meant for possible reuse by
     // other access paths
-    const variable = id === undefined ? `p${context.block.tempId++}` : `n${id}`
+    const variable =
+      id === undefined ? context.pName(context.block.tempId++) : `n${id}`
     pushBlock(NEWLINE, `const ${variable} = `)
 
     if (prev) {

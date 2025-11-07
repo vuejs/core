@@ -1,4 +1,4 @@
-import { camelize, extend, isArray } from '@vue/shared'
+import { camelize, extend, getModifierPropName, isArray } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
   type CreateComponentIRNode,
@@ -29,6 +29,7 @@ import {
 import { genExpression, genVarName } from './expression'
 import { genPropKey, genPropValue } from './prop'
 import {
+  NodeTypes,
   type SimpleExpressionNode,
   createSimpleExpression,
   isMemberExpression,
@@ -39,7 +40,12 @@ import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
 import { genModelHandler } from './vModel'
-import { isBuiltInComponent } from '../utils'
+import {
+  isBuiltInComponent,
+  isKeepAliveTag,
+  isTeleportTag,
+  isTransitionGroupTag,
+} from '../utils'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -251,9 +257,7 @@ function genModelModifiers(
   if (!modelModifiers || !modelModifiers.length) return []
 
   const modifiersKey = key.isStatic
-    ? key.content === 'modelValue'
-      ? [`modelModifiers`]
-      : [`${key.content}Modifiers`]
+    ? [getModifierPropName(key.content)]
     : ['[', ...genExpression(key, context), ' + "Modifiers"]']
 
   const modifiersVal = genDirectiveModifiers(modelModifiers)
@@ -407,9 +411,8 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
   let propsName: string | undefined
   let exitScope: (() => void) | undefined
   let depth: number | undefined
-  const { props, key } = oper
+  const { props, key, node } = oper
   const idsOfProps = new Set<string>()
-
   if (props) {
     rawProps = props.content
     if ((isDestructureAssignment = !!props.ast)) {
@@ -456,6 +459,19 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
       NEWLINE,
       `}`,
     ]
+  }
+
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    // Not a real component
+    !isTeleportTag(node.tag) &&
+    // Needs to determine whether to activate/deactivate based on instance.parent being KeepAlive
+    !isKeepAliveTag(node.tag) &&
+    // Slot updates need to trigger TransitionGroup's onBeforeUpdate/onUpdated hook
+    !isTransitionGroupTag(node.tag)
+  ) {
+    // wrap with withVaporCtx to ensure correct currentInstance inside slot
+    blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
   }
 
   return blockFn

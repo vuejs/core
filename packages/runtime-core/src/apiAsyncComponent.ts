@@ -45,7 +45,7 @@ export interface AsyncComponentOptions<T = any, C = any> {
 export const isAsyncWrapper = (i: GenericComponentInstance | VNode): boolean =>
   !!(i.type as ComponentOptions).__asyncLoader
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance },
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T, Component>): T {
@@ -156,7 +156,10 @@ export function defineAsyncComponent<
             error: error.value,
           })
         } else if (loadingComponent && !delayed.value) {
-          return createVNode(loadingComponent)
+          return createInnerComp(
+            loadingComponent as ConcreteComponent,
+            instance,
+          )
         }
       }
     },

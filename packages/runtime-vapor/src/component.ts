@@ -28,7 +28,14 @@ import {
   unregisterHMR,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, insert, isBlock, remove } from './block'
+import {
+  type Block,
+  insert,
+  isBlock,
+  remove,
+  setComponentScopeId,
+  setScopeId,
+} from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -51,6 +58,7 @@ import {
   getPropsProxyHandlers,
   hasFallthroughAttrs,
   normalizePropsOptions,
+  resolveDynamicProps,
   setupPropsValidation,
 } from './componentProps'
 import { type RenderEffect, renderEffect } from './renderEffect'
@@ -78,7 +86,10 @@ import {
 } from './dom/hydration'
 import { _next, createElement } from './dom/node'
 import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
-import type { KeepAliveInstance } from './components/KeepAlive'
+import {
+  type KeepAliveInstance,
+  findParentKeepAlive,
+} from './components/KeepAlive'
 import {
   insertionAnchor,
   insertionParent,
@@ -119,8 +130,6 @@ export interface ObjectVaporComponent
 
   name?: string
   vapor?: boolean
-  __asyncLoader?: () => Promise<VaporComponent>
-  __asyncResolved?: VaporComponent
 }
 
 interface SharedInternalOptions {
@@ -163,6 +172,7 @@ export function createComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean,
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
     emptyContext,
@@ -246,6 +256,7 @@ export function createComponent(
     rawProps as RawProps,
     rawSlots as RawSlots,
     appContext,
+    once,
   )
 
   // HMR
@@ -373,13 +384,8 @@ export function setupComponent(
     component.inheritAttrs !== false &&
     Object.keys(instance.attrs).length
   ) {
-    const el = getRootElement(instance)
-    if (el) {
-      renderEffect(() => applyFallthroughProps(el, instance.attrs))
-    }
+    renderEffect(() => applyFallthroughProps(instance.block, instance.attrs))
   }
-
-  // TODO: scopeid
 
   setActiveSub(prevSub)
   setCurrentInstance(...prevInstance)
@@ -396,9 +402,12 @@ export function applyFallthroughProps(
   block: Block,
   attrs: Record<string, any>,
 ): void {
-  isApplyingFallthroughProps = true
-  setDynamicProps(block as Element, [attrs])
-  isApplyingFallthroughProps = false
+  const el = getRootElement(block)
+  if (el) {
+    isApplyingFallthroughProps = true
+    setDynamicProps(el, [attrs])
+    isApplyingFallthroughProps = false
+  }
 }
 
 /**
@@ -521,6 +530,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
     rawProps?: RawProps | null,
     rawSlots?: RawSlots | null,
     appContext?: GenericAppContext,
+    once?: boolean,
   ) {
     this.vapor = true
     this.uid = nextUid()
@@ -561,7 +571,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.rawProps = rawProps || EMPTY_OBJ
     this.hasFallthrough = hasFallthroughAttrs(comp, rawProps)
     if (rawProps || comp.props) {
-      const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp)
+      const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp, once)
       this.attrs = new Proxy(this, attrsHandlers)
       this.props = comp.props
         ? new Proxy(this, propsHandlers!)
@@ -606,10 +616,18 @@ export function createComponentWithFallback(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
+  once?: boolean,
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   if (!isString(comp)) {
-    return createComponent(comp, rawProps, rawSlots, isSingleRoot, appContext)
+    return createComponent(
+      comp,
+      rawProps,
+      rawSlots,
+      isSingleRoot,
+      once,
+      appContext,
+    )
   }
 
   const _insertionParent = insertionParent
@@ -627,6 +645,18 @@ export function createComponentWithFallback(
 
   // mark single root
   ;(el as any).$root = isSingleRoot
+
+  if (!isHydrating) {
+    const scopeId = currentInstance!.type.__scopeId
+    if (scopeId) setScopeId(el, [scopeId])
+  }
+
+  if (rawProps) {
+    const setFn = () =>
+      setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)])
+    if (once) setFn()
+    else renderEffect(setFn)
+  }
 
   if (rawSlots) {
     let nextNode: Node | null = null
@@ -661,7 +691,7 @@ export function mountComponent(
   anchor?: Node | null | 0,
 ): void {
   if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-    ;(instance.parent as KeepAliveInstance).activate(instance, parent, anchor)
+    findParentKeepAlive(instance)!.activate(instance, parent, anchor)
     return
   }
 
@@ -671,6 +701,7 @@ export function mountComponent(
   if (instance.bm) invokeArrayFns(instance.bm)
   if (!isHydrating) {
     insert(instance.block, parent, anchor)
+    setComponentScopeId(instance)
   }
   if (instance.m) queuePostFlushCb(instance.m!)
   if (
@@ -695,7 +726,7 @@ export function unmountComponent(
     instance.parent.vapor &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
   ) {
-    ;(instance.parent as KeepAliveInstance).deactivate(instance)
+    findParentKeepAlive(instance)!.deactivate(instance)
     return
   }
 
@@ -733,9 +764,7 @@ export function getExposed(
   }
 }
 
-function getRootElement({
-  block,
-}: VaporComponentInstance): Element | undefined {
+function getRootElement(block: Block): Element | undefined {
   if (block instanceof Element) {
     return block
   }

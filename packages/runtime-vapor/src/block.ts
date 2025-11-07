@@ -11,6 +11,7 @@ import {
   type TransitionHooks,
   type TransitionProps,
   type TransitionState,
+  getInheritedScopeIds,
   performTransitionEnter,
   performTransitionLeave,
 } from '@vue/runtime-dom'
@@ -35,12 +36,20 @@ export interface TransitionOptions {
   $transition?: VaporTransitionHooks
 }
 
-export type TransitionBlock =
-  | (Node & TransitionOptions)
-  | (VaporFragment & TransitionOptions)
-  | (DynamicFragment & TransitionOptions)
+export type TransitionBlock = (
+  | Node
+  | VaporFragment
+  | DynamicFragment
+  | VaporComponentInstance
+) &
+  TransitionOptions
 
-export type Block = TransitionBlock | VaporComponentInstance | Block[]
+export type Block =
+  | Node
+  | VaporFragment
+  | DynamicFragment
+  | VaporComponentInstance
+  | Block[]
 export type BlockFn = (...args: any[]) => Block
 
 export function isBlock(val: NonNullable<unknown>): val is Block {
@@ -148,6 +157,11 @@ export function remove(block: Block, parent?: ParentNode): void {
     if (block.anchor) remove(block.anchor, parent)
     if ((block as DynamicFragment).scope) {
       ;(block as DynamicFragment).scope!.stop()
+      const scopes = (block as DynamicFragment).keptAliveScopes
+      if (scopes) {
+        scopes.forEach(scope => scope.stop())
+        scopes.clear()
+      }
     }
   }
 }
@@ -219,4 +233,49 @@ export function isFragmentBlock(block: Block): boolean {
     return isFragmentBlock(block.nodes)
   }
   return false
+}
+
+export function setScopeId(block: Block, scopeIds: string[]): void {
+  if (block instanceof Element) {
+    for (const id of scopeIds) {
+      block.setAttribute(id, '')
+    }
+  } else if (isVaporComponent(block)) {
+    setScopeId(block.block, scopeIds)
+  } else if (isArray(block)) {
+    for (const b of block) {
+      setScopeId(b, scopeIds)
+    }
+  } else if (isFragment(block)) {
+    setScopeId(block.nodes, scopeIds)
+  }
+}
+
+export function setComponentScopeId(instance: VaporComponentInstance): void {
+  const parent = instance.parent
+  if (!parent) return
+  // prevent setting scopeId on multi-root fragments
+  if (isArray(instance.block) && instance.block.length > 1) return
+
+  const scopeIds: string[] = []
+
+  const scopeId = parent.type.__scopeId
+  if (scopeId) {
+    scopeIds.push(scopeId)
+  }
+
+  // inherit scopeId from vdom parent
+  if (
+    parent.subTree &&
+    (parent.subTree.component as any) === instance &&
+    parent.vnode!.scopeId
+  ) {
+    scopeIds.push(parent.vnode!.scopeId)
+    const inheritedScopeIds = getInheritedScopeIds(parent.vnode!, parent.parent)
+    scopeIds.push(...inheritedScopeIds)
+  }
+
+  if (scopeIds.length > 0) {
+    setScopeId(instance.block, scopeIds)
+  }
 }

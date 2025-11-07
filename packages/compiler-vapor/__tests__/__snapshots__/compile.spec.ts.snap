@@ -26,7 +26,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > custom directive > component 1`] = `
-"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, withVaporDirectives as _withVaporDirectives, createIf as _createIf, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, withVaporDirectives as _withVaporDirectives, createIf as _createIf, withVaporCtx as _withVaporCtx, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -35,16 +35,16 @@ export function render(_ctx) {
   const _directive_hello = _resolveDirective("hello")
   const _directive_test = _resolveDirective("test")
   const n4 = _createComponentWithFallback(_component_Comp, null, {
-    "default": () => {
+    "default": _withVaporCtx(() => {
       const n0 = _createIf(() => (true), () => {
         const n3 = t0()
         _setInsertionState(n3, null, true)
         const n2 = _createComponentWithFallback(_component_Bar)
         _withVaporDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
         return n3
-      })
+      }, null, true)
       return n0
-    }
+    })
   }, true)
   _withVaporDirectives(n4, [[_directive_test]])
   return n4
@@ -230,7 +230,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
-  })
+  }, null, true)
   _renderEffect(() => _setProp(n4, "disabled", _ctx.foo))
   return n6
 }"
@@ -300,6 +300,86 @@ export function render(_ctx) {
   const n0 = t0()
   const n1 = t1()
   const n2 = t2()
+  return [n0, n1, n2]
+}"
+`;
+
+exports[`compile > gen unique helper alias > should avoid conflicts with existing variable names 1`] = `
+"import { txt as _txt2, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> </div>", true)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  const x0 = _txt2(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.foo)))
+  return n0
+}"
+`;
+
+exports[`compile > gen unique node variables > should avoid binding conflicts for node vars (n*/x*) 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> </div>")
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n1 = t0()
+  const n3 = t0()
+  const x1 = _txt(n1)
+  const x3 = _txt(n3)
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    _setText(x1, _toDisplayString(_foo))
+    _setText(x3, _toDisplayString(_foo))
+  })
+  return [n1, n3]
+}"
+`;
+
+exports[`compile > gen unique node variables > should bump old ref var (r*) on conflict 1`] = `
+"import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const _setTemplateRef = _createTemplateRefSetter()
+  const n1 = t0()
+  const n3 = t0()
+  const n4 = t0()
+  let r1
+  let r3
+  let r4
+  _renderEffect(() => {
+    const _bar = _ctx.bar
+    r1 = _setTemplateRef(n1, _bar, r1)
+    r3 = _setTemplateRef(n3, _bar, r3)
+    r4 = _setTemplateRef(n4, _bar, r4)
+  })
+  return [n1, n3, n4]
+}"
+`;
+
+exports[`compile > gen unique node variables > should bump placeholder var (p*) on conflict 1`] = `
+"import { child as _child, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><div><div><span></span></div></div></div>", true)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n1 = t0()
+  const p1 = _child(n1, 0)
+  const p3 = _child(p1, 0)
+  const n0 = _child(p3, 0)
+  _renderEffect(() => _setProp(n0, "id", _ctx.foo))
+  return n1
+}"
+`;
+
+exports[`compile > gen unique node variables > should bump template var (t*) on conflict 1`] = `
+"import { template as _template } from 'vue';
+const t1 = _template("<div></div>")
+const t3 = _template("<span></span>")
+const t4 = _template("<p></p>")
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t1()
+  const n1 = t3()
+  const n2 = t4()
   return [n0, n1, n2]
 }"
 `;

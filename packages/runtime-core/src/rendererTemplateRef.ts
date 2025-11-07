@@ -19,6 +19,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { warn } from './warning'
 import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
+import { type SchedulerJob, SchedulerJobFlags } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
 import {
   type ComponentOptions,
@@ -27,6 +28,7 @@ import {
 } from './component'
 import { knownTemplateRefs } from './helpers/useTemplateRef'
 
+const pendingSetRefMap = new WeakMap<VNodeNormalizedRef, SchedulerJob>()
 /**
  * Function for handling a template ref
  */
@@ -91,6 +93,7 @@ export function setRef(
 
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
+    invalidatePendingSetRef(oldRawRef!)
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (canSetSetupRef(oldRef)) {
@@ -161,8 +164,14 @@ export function setRef(
         // #1789: for non-null values, set them after render
         // null values means this is unmount and it should not overwrite another
         // ref with the same key
-        queuePostRenderEffect(doSet, -1, parentSuspense)
+        const job: SchedulerJob = () => {
+          doSet()
+          pendingSetRefMap.delete(rawRef)
+        }
+        pendingSetRefMap.set(rawRef, job)
+        queuePostRenderEffect(job, -1, parentSuspense)
       } else {
+        invalidatePendingSetRef(rawRef)
         doSet()
       }
     } else if (__DEV__) {
@@ -192,4 +201,12 @@ export function createCanSetSetupRefChecker(
         }
         return hasOwn(rawSetupState, key)
       }
+}
+
+function invalidatePendingSetRef(rawRef: VNodeNormalizedRef) {
+  const pendingSetRef = pendingSetRefMap.get(rawRef)
+  if (pendingSetRef) {
+    pendingSetRef.flags! |= SchedulerJobFlags.DISPOSED
+    pendingSetRefMap.delete(rawRef)
+  }
 }

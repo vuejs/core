@@ -29,6 +29,7 @@ import {
   runWithoutHydration,
   setCurrentHydrationNode,
 } from '../dom/hydration'
+import { applyTransitionHooks } from './Transition'
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -122,6 +123,9 @@ export class TeleportFragment extends VaporFragment {
     if (!this.parent || isHydrating) return
 
     const mount = (parent: ParentNode, anchor: Node | null) => {
+      if (this.$transition) {
+        applyTransitionHooks(this.nodes, this.$transition)
+      }
       insert(
         this.nodes,
         (this.mountContainer = parent),
@@ -161,7 +165,12 @@ export class TeleportFragment extends VaporFragment {
     }
     // mount into target container
     else {
-      if (isTeleportDeferred(this.resolvedProps!)) {
+      if (
+        isTeleportDeferred(this.resolvedProps!) ||
+        // force defer when the parent is not connected to the DOM,
+        // typically due to an early insertion caused by setInsertionState.
+        !this.parent!.isConnected
+      ) {
         queuePostFlushCb(mountToTarget)
       } else {
         mountToTarget()

@@ -122,7 +122,6 @@ export {
 export {
   BaseTransition,
   BaseTransitionPropsValidators,
-  checkTransitionMode,
   type BaseTransitionProps,
 } from './components/BaseTransition'
 // For using custom directives
@@ -155,10 +154,8 @@ export { registerRuntimeCompiler, isRuntimeOnly } from './component'
 export {
   useTransitionState,
   resolveTransitionHooks,
-  baseResolveTransitionHooks,
   setTransitionHooks,
   getTransitionRawChildren,
-  leaveCbKey,
 } from './components/BaseTransition'
 export { initCustomFormatter } from './customFormatter'
 
@@ -516,7 +513,11 @@ export { type VaporInteropInterface } from './apiCreateApp'
 /**
  * @internal
  */
-export { type RendererInternals, MoveType, invalidateMount } from './renderer'
+export {
+  type RendererInternals,
+  MoveType,
+  getInheritedScopeIds,
+} from './renderer'
 /**
  * @internal
  */
@@ -654,3 +655,12 @@ export { createCanSetSetupRefChecker } from './rendererTemplateRef'
  * @internal
  */
 export { isTemplateNode } from './hydration'
+
+/**
+ * @internal
+ */
+export {
+  baseResolveTransitionHooks,
+  checkTransitionMode,
+  leaveCbKey,
+} from './components/BaseTransition'
