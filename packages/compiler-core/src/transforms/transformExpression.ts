@@ -18,7 +18,6 @@ import {
   createSimpleExpression,
 } from '../ast'
 import {
-  TS_NODE_TYPES,
   isInDestructureAssignment,
   isInNewExpression,
   isStaticProperty,
@@ -348,18 +347,15 @@ export function processExpression(
   // an ExpressionNode has the `.children` property, it will be used instead of
   // `.content`.
   const children: CompoundExpressionNode['children'] = []
-  const isTSNode = TS_NODE_TYPES.includes(ast.type)
   ids.sort((a, b) => a.start - b.start)
   ids.forEach((id, i) => {
     // range is offset by -1 due to the wrapping parens when parsed
     const start = id.start - 1
     const end = id.end - 1
     const last = ids[i - 1]
-    if (!(isTSNode && i === 0)) {
-      const leadingText = rawExp.slice(last ? last.end - 1 : 0, start)
-      if (leadingText.length || id.prefix) {
-        children.push(leadingText + (id.prefix || ``))
-      }
+    const leadingText = rawExp.slice(last ? last.end - 1 : 0, start)
+    if (leadingText.length || id.prefix) {
+      children.push(leadingText + (id.prefix || ``))
     }
     const source = rawExp.slice(start, end)
     children.push(
@@ -376,7 +372,7 @@ export function processExpression(
           : ConstantTypes.NOT_CONSTANT,
       ),
     )
-    if (i === ids.length - 1 && end < rawExp.length && !isTSNode) {
+    if (i === ids.length - 1 && end < rawExp.length) {
       children.push(rawExp.slice(end))
     }
   })
