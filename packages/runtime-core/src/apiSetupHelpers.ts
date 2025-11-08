@@ -98,10 +98,10 @@ export type DefineProps<T, BKeys extends keyof T> = Readonly<T> & {
 }
 
 type BooleanKey<T, K extends keyof T = keyof T> = K extends any
-  ? [T[K]] extends [boolean | undefined]
-    ? boolean extends T[K]
-      ? K
-      : never
+  ? T[K] extends boolean | undefined
+    ? T[K] extends never | undefined
+      ? never
+      : K
     : never
   : never
 
