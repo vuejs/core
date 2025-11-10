@@ -472,6 +472,12 @@ describe('vnode', () => {
       expect(mergeProps(props1, props3)).toMatchObject({
         onClick: clickHandler1,
       })
+
+      let props4: Data = { onNaming: 0 }
+      mergeProps(props1, props4)
+      expect(
+        `Prop with prefix 'on' is considered an event handler, avoid such naming if it is not. prop: onNaming.`,
+      ).toHaveBeenWarned()
     })
 
     test('default', () => {
