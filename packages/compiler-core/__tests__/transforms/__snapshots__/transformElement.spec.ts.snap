@@ -45,6 +45,20 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: v-for > codegen > no whitespace around (in|of) with basic v-for 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
+
+    return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList([items], (item) => {
+      return (_openBlock(), _createElementBlock("span"))
+    }), 256 /* UNKEYED_FRAGMENT */))
+  }
+}"
+`;
+
 exports[`compiler: v-for > codegen > skipped key 1`] = `
 "const _Vue = Vue
 
