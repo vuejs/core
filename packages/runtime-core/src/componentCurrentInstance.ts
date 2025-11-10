@@ -5,6 +5,7 @@ import type {
 } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
 import { type EffectScope, setCurrentScope } from '@vue/reactivity'
+import { warn } from './warning'
 
 /**
  * @internal
@@ -89,4 +90,37 @@ export const setCurrentInstance = (
   } finally {
     simpleSetCurrentInstance(instance)
   }
+}
+
+const internalOptions = ['ce', 'type'] as const
+
+/**
+ * @internal
+ */
+export const useInstanceOption = <K extends (typeof internalOptions)[number]>(
+  key: K,
+  silent = false,
+): {
+  hasInstance: boolean
+  value: GenericComponentInstance[K] | undefined
+} => {
+  const instance = getCurrentGenericInstance()
+  if (!instance) {
+    if (__DEV__ && !silent) {
+      warn(`useInstanceOption called without an active component instance.`)
+    }
+    return { hasInstance: false, value: undefined }
+  }
+
+  if (!internalOptions.includes(key)) {
+    if (__DEV__) {
+      warn(
+        `useInstanceOption only accepts ` +
+          ` ${internalOptions.map(k => `'${k}'`).join(', ')} as key, got '${key}'.`,
+      )
+    }
+    return { hasInstance: true, value: undefined }
+  }
+
+  return { hasInstance: true, value: instance[key] }
 }

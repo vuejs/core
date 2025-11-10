@@ -23,7 +23,7 @@ describe('compiler v-bind', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect(ir.template).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div></div>'])
     expect(ir.block.effect).lengthOf(1)
     expect(ir.block.effect[0].expressions).lengthOf(1)
     expect(ir.block.effect[0].operations).lengthOf(1)
@@ -241,7 +241,7 @@ describe('compiler v-bind', () => {
         end: { line: 1, column: 19 },
       },
     })
-    expect(ir.template).toEqual(['<div arg></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div arg></div>'])
 
     expect(code).matchSnapshot()
     expect(code).contains(JSON.stringify('<div arg></div>'))
@@ -656,6 +656,22 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setProp(n0, "value", _ctx.foo)')
   })
 
+  test(':class w/ svg elements', () => {
+    const { code } = compileWithVBind(`
+      <svg :class="cls"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setAttr(n0, "class", _ctx.cls, true))')
+  })
+
+  test('v-bind w/ svg elements', () => {
+    const { code } = compileWithVBind(`
+      <svg v-bind="obj"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], true, true))')
+  })
+
   test('number value', () => {
     const { code } = compileWithVBind(`<Comp :depth="0" />`)
     expect(code).matchSnapshot()
@@ -666,12 +682,12 @@ describe('compiler v-bind', () => {
     const { code } = compileWithVBind(
       `
         <div
-          :a="void 0" 
-          :b="1 > 2" 
-          :c="1 + 2" 
-          :d="1 ? 2 : 3" 
-          :e="(2)" 
-          :f="\`foo${1}\`"
+          :a="void 0"
+          :b="1 > 2"
+          :c="1 + 2"
+          :d="1 ? 2 : 3"
+          :e="(2)"
+          :f="\`foo\${1}\`"
           :g="1"
           :h="'1'"
           :i="true"

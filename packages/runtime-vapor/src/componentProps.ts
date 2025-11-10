@@ -23,6 +23,7 @@ import {
 import { ReactiveFlags } from '@vue/reactivity'
 import { normalizeEmitsOptions } from './componentEmits'
 import { renderEffect } from './renderEffect'
+import { pauseTracking, resetTracking } from '@vue/reactivity'
 import type { interopKey } from './vdomInterop'
 
 export type RawProps = Record<string, () => unknown> & {
@@ -43,6 +44,7 @@ export function resolveSource(
 
 export function getPropsProxyHandlers(
   comp: VaporComponent,
+  once?: boolean,
 ): [
   ProxyHandler<VaporComponentInstance> | null,
   ProxyHandler<VaporComponentInstance>,
@@ -95,7 +97,7 @@ export function getPropsProxyHandlers(
         return resolvePropValue(
           propsOptions!,
           key,
-          rawProps[rawKey](),
+          resolveSource(rawProps[rawKey]),
           instance,
           resolveDefault,
         )
@@ -111,9 +113,18 @@ export function getPropsProxyHandlers(
     )
   }
 
+  const getPropValue = once
+    ? (...args: Parameters<typeof getProp>) => {
+        pauseTracking()
+        const value = getProp(...args)
+        resetTracking()
+        return value
+      }
+    : getProp
+
   const propsHandlers = propsOptions
     ? ({
-        get: (target, key) => getProp(target, key),
+        get: (target, key) => getPropValue(target, key),
         has: (_, key) => isProp(key),
         ownKeys: () => Object.keys(propsOptions),
         getOwnPropertyDescriptor(target, key) {
@@ -121,7 +132,7 @@ export function getPropsProxyHandlers(
             return {
               configurable: true,
               enumerable: true,
-              get: () => getProp(target, key),
+              get: () => getPropValue(target, key),
             }
           }
         },
@@ -149,8 +160,17 @@ export function getPropsProxyHandlers(
     }
   }
 
+  const getAttrValue = once
+    ? (...args: Parameters<typeof getAttr>) => {
+        pauseTracking()
+        const value = getAttr(...args)
+        resetTracking()
+        return value
+      }
+    : getAttr
+
   const attrsHandlers = {
-    get: (target, key: string) => getAttr(target.rawProps, key),
+    get: (target, key: string) => getAttrValue(target.rawProps, key),
     has: (target, key: string) => hasAttr(target.rawProps, key),
     ownKeys: target => getKeysFromRawProps(target.rawProps).filter(isAttr),
     getOwnPropertyDescriptor(target, key: string) {
@@ -158,7 +178,7 @@ export function getPropsProxyHandlers(
         return {
           configurable: true,
           enumerable: true,
-          get: () => getAttr(target.rawProps, key),
+          get: () => getAttrValue(target.rawProps, key),
         }
       }
     },
@@ -197,10 +217,11 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
     }
   }
   if (hasOwn(rawProps, key)) {
+    const value = resolveSource(rawProps[key])
     if (merged) {
-      merged.push(rawProps[key]())
+      merged.push(value)
     } else {
-      return rawProps[key]()
+      return value
     }
   }
   if (merged && merged.length) {
@@ -310,7 +331,7 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
   const mergedRawProps: Record<string, any> = {}
   for (const key in props) {
     if (key !== '$') {
-      mergedRawProps[key] = props[key]()
+      mergedRawProps[key] = resolveSource(props[key])
     }
   }
   if (props.$) {

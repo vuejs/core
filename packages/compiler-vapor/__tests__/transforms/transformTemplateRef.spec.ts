@@ -30,7 +30,7 @@ describe('compiler: template ref transform', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect(ir.template).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div></div>'])
     expect(ir.block.operation).lengthOf(1)
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.SET_TEMPLATE_REF,
@@ -55,8 +55,8 @@ describe('compiler: template ref transform', () => {
       bindingMetadata: { foo: BindingTypes.SETUP_REF },
     })
     expect(code).matchSnapshot()
-    // pass the actual ref
-    expect(code).contains('_setTemplateRef(n0, foo)')
+    // pass the actual ref and ref key
+    expect(code).contains('_setTemplateRef(n0, foo, null, null, "foo")')
   })
 
   test('dynamic ref', () => {
@@ -66,7 +66,7 @@ describe('compiler: template ref transform', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect(ir.template).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div></div>'])
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.DECLARE_OLD_REF,
@@ -104,7 +104,7 @@ describe('compiler: template ref transform', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect(ir.template).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div></div>'])
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.DECLARE_OLD_REF,

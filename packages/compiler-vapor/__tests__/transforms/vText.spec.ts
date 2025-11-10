@@ -58,6 +58,18 @@ describe('v-text', () => {
     expect(code).matchSnapshot()
   })
 
+  test('work with dynamic component', () => {
+    const { code } = compileWithVText(`<component :is="Comp" v-text="foo"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+  })
+
+  test('work with component', () => {
+    const { code } = compileWithVText(`<Comp v-text="foo"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+  })
+
   test('should raise error and ignore children when v-text is present', () => {
     const onError = vi.fn()
     const { code, ir } = compileWithVText(`<div v-text="test">hello</div>`, {
@@ -68,7 +80,7 @@ describe('v-text', () => {
     ])
 
     // children should have been removed
-    expect(ir.template).toEqual(['<div> </div>'])
+    expect([...ir.template.keys()]).toEqual(['<div> </div>'])
 
     expect(ir.block.effect).toMatchObject([
       {

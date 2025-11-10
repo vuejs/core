@@ -27,7 +27,7 @@ import { warn } from './warning'
 import type { VNode } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
-import { version } from '.'
+import { type TransitionHooks, version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
@@ -55,7 +55,7 @@ export interface App<HostElement = any> {
     HostElement = any,
     Value = any,
     Modifiers extends string = string,
-    Arg extends string = string,
+    Arg = any,
   >(
     name: string,
   ): Directive<HostElement, Value, Modifiers, Arg> | undefined
@@ -63,7 +63,7 @@ export interface App<HostElement = any> {
     HostElement = any,
     Value = any,
     Modifiers extends string = string,
-    Arg extends string = string,
+    Arg = any,
   >(
     name: string,
     directive: Directive<HostElement, Value, Modifiers, Arg>,
@@ -110,6 +110,11 @@ export interface App<HostElement = any> {
    * @internal custom element vnode
    */
   _ceVNode?: VNode
+
+  /**
+   * @internal vapor custom element instance
+   */
+  _ceComponent?: GenericComponentInstance | null
 
   /**
    * v2 compat only
@@ -175,7 +180,6 @@ export interface AppConfig extends GenericAppConfig {
 
 /**
  * The vapor in vdom implementation is in runtime-vapor/src/vdomInterop.ts
- * @internal
  */
 export interface VaporInteropInterface {
   mount(
@@ -188,6 +192,25 @@ export interface VaporInteropInterface {
   unmount(vnode: VNode, doRemove?: boolean): void
   move(vnode: VNode, container: any, anchor: any): void
   slot(n1: VNode | null, n2: VNode, container: any, anchor: any): void
+  hydrate(
+    vnode: VNode,
+    node: any,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance | null,
+  ): Node
+  hydrateSlot(vnode: VNode, node: any): Node
+  activate(
+    vnode: VNode,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance,
+  ): void
+  deactivate(vnode: VNode, container: any): void
+  setTransitionHooks(
+    component: ComponentInternalInstance,
+    transition: TransitionHooks,
+  ): void
 
   vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
   vdomUnmount: UnmountComponentFn

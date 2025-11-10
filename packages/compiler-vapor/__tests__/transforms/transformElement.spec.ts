@@ -194,7 +194,7 @@ describe('compiler: element transform', () => {
 
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"), 
+    id: () => ("foo"),
     class: () => ("bar")
   }`)
 
@@ -262,7 +262,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
       () => (_ctx.obj)
     ]
@@ -286,7 +286,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`[
-    () => (_ctx.obj), 
+    () => (_ctx.obj),
     { id: () => ("foo") }
   ]`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -308,9 +308,9 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
-      () => (_ctx.obj), 
+      () => (_ctx.obj),
       { class: () => ("bar") }
     ]
   }`)
@@ -579,8 +579,17 @@ describe('compiler: element transform', () => {
     const template = '<div id="foo" class="bar"></div>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
-    expect(ir.template).toMatchObject([template])
+    expect([...ir.template.keys()]).toMatchObject([template])
     expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('checkbox with static indeterminate', () => {
+    const { code } = compileWithElementTransform(
+      `<input type="checkbox" indeterminate/>`,
+    )
+
+    expect(code).toContain('_setProp(n0, "indeterminate", "")')
+    expect(code).toMatchSnapshot()
   })
 
   test('props + children', () => {
@@ -591,7 +600,7 @@ describe('compiler: element transform', () => {
     const template = '<div id="foo"><span></span></div>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
-    expect(ir.template).toMatchObject([template])
+    expect([...ir.template.keys()]).toMatchObject([template])
     expect(ir.block.effect).lengthOf(0)
   })
 
@@ -896,6 +905,78 @@ describe('compiler: element transform', () => {
     })
   })
 
+  test('component event with keys modifier', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @keyup.enter="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        [
+          {
+            key: { content: 'keyup' },
+            handler: true,
+            handlerModifiers: {
+              keys: ['enter'],
+              nonKeys: [],
+              options: [],
+            },
+          },
+        ],
+      ],
+    })
+  })
+
+  test('component event with nonKeys modifier', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @foo.stop.prevent="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        [
+          {
+            key: { content: 'foo' },
+            handler: true,
+            handlerModifiers: {
+              keys: [],
+              nonKeys: ['stop', 'prevent'],
+              options: [],
+            },
+          },
+        ],
+      ],
+    })
+  })
+
+  test('component event with multiple modifiers and event options', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @foo.enter.stop.prevent.capture.once="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        [
+          {
+            key: { content: 'foo' },
+            handler: true,
+            handlerModifiers: {
+              keys: ['enter'],
+              nonKeys: ['stop', 'prevent'],
+              options: ['capture', 'once'],
+            },
+          },
+        ],
+      ],
+    })
+  })
+
   test('component with dynamic event arguments', () => {
     const { code, ir } = compileWithElementTransform(
       `<Foo @[foo-bar]="bar" @[baz]="qux" />`,
@@ -937,7 +1018,11 @@ describe('compiler: element transform', () => {
       <form><form/></form>`,
     )
     expect(code).toMatchSnapshot()
-    expect(ir.template).toEqual(['<div>123</div>', '<p></p>', '<form></form>'])
+    expect([...ir.template.keys()]).toEqual([
+      '<div>123</div>',
+      '<p></p>',
+      '<form></form>',
+    ])
     expect(ir.block.dynamic).toMatchObject({
       children: [
         { id: 1, template: 1, children: [{ id: 0, template: 0 }] },
@@ -955,5 +1040,38 @@ describe('compiler: element transform', () => {
     const { code } = compileWithElementTransform('')
     expect(code).toMatchSnapshot()
     expect(code).contain('return null')
+  })
+
+  test('custom element', () => {
+    const { code } = compileWithElementTransform(
+      '<my-custom-element></my-custom-element>',
+      {
+        isCustomElement: tag => tag === 'my-custom-element',
+      },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+  })
+
+  test('svg', () => {
+    const t = `<svg><circle r="40"></circle></svg>`
+    const { code, ir } = compileWithElementTransform(t)
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '_template("<svg><circle r=\\"40\\"></circle></svg>", true, 1)',
+    )
+    expect([...ir.template.keys()]).toMatchObject([t])
+    expect(ir.template.get(t)).toBe(1)
+  })
+
+  test('MathML', () => {
+    const t = `<math><mrow><mi>x</mi></mrow></math>`
+    const { code, ir } = compileWithElementTransform(t)
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '_template("<math><mrow><mi>x</mi></mrow></math>", true, 2)',
+    )
+    expect([...ir.template.keys()]).toMatchObject([t])
+    expect(ir.template.get(t)).toBe(2)
   })
 })

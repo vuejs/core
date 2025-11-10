@@ -1,4 +1,5 @@
 /* eslint-disable no-restricted-globals */
+import { EffectFlags } from '@vue/reactivity'
 import {
   type ClassComponent,
   type ComponentInternalInstance,
@@ -99,8 +100,11 @@ function rerender(id: string, newRender?: Function): void {
       instance.hmrRerender!()
     } else {
       const i = instance as ComponentInternalInstance
-      i.renderCache = []
-      i.effect.run()
+      // #13771 don't update if the job is already disposed
+      if (!(i.effect.flags! & EffectFlags.STOP)) {
+        i.renderCache = []
+        i.effect.run()
+      }
     }
     nextTick(() => {
       isHmrUpdating = false
@@ -119,7 +123,16 @@ function reload(id: string, newComp: HMRComponent): void {
   // create a snapshot which avoids the set being mutated during updates
   const instances = [...record.instances]
 
-  if (newComp.__vapor) {
+  if (newComp.__vapor && !instances.some(i => i.ceReload)) {
+    // For multiple instances with the same __hmrId, remove styles first before reload
+    // to avoid the second instance's style removal deleting the first instance's
+    // newly added styles (since hmrReload is synchronous)
+    for (const instance of instances) {
+      // update custom element child style
+      if (instance.root && instance.root.ce && instance !== instance.root) {
+        instance.root.ce._removeChildStyle(instance.type)
+      }
+    }
     for (const instance of instances) {
       instance.hmrReload!(newComp)
     }
@@ -156,11 +169,14 @@ function reload(id: string, newComp: HMRComponent): void {
         // don't end up forcing the same parent to re-render multiple times.
         queueJob(() => {
           isHmrUpdating = true
-          const parent = instance.parent!
+          const parent = instance.parent! as ComponentInternalInstance
           if (parent.vapor) {
             parent.hmrRerender!()
           } else {
-            ;(parent as ComponentInternalInstance).effect.run()
+            if (!(parent.effect.flags! & EffectFlags.STOP)) {
+              parent.renderCache = []
+              parent.effect.run()
+            }
           }
           nextTick(() => {
             isHmrUpdating = false

@@ -1,6 +1,7 @@
 import {
   BindingTypes,
   type SimpleExpressionNode,
+  TS_NODE_TYPES,
   isFnExpression,
   isMemberExpression,
 } from '@vue/compiler-dom'
@@ -28,7 +29,11 @@ export function genSetEvent(
   const { element, key, keyOverride, value, modifiers, delegate, effect } = oper
 
   const name = genName()
-  const handler = genEventHandler(context, value, modifiers)
+  const handler = [
+    `${context.helper('createInvoker')}(`,
+    ...genEventHandler(context, value, modifiers),
+    `)`,
+  ]
   const eventOptions = genEventOptions()
 
   if (delegate) {
@@ -126,7 +131,14 @@ export function genEventHandler(
         // non constant, wrap with invocation as `e => foo.bar(e)`
         // when passing as component handler, access is always dynamic so we
         // can skip this
-        handlerExp = [`e => `, ...handlerExp, `(e)`]
+        const isTSNode = value.ast && TS_NODE_TYPES.includes(value.ast.type)
+        handlerExp = [
+          `e => `,
+          isTSNode ? '(' : '',
+          ...handlerExp,
+          isTSNode ? ')' : '',
+          `(e)`,
+        ]
       }
     } else if (isFnExpression(value, context.options)) {
       // Fn expression: @click="e => foo(e)"
