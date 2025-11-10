@@ -6,7 +6,13 @@ import {
 } from '../ir'
 import { genDirectivesForElement } from './directive'
 import { genOperationWithInsertionState } from './operation'
-import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
+import {
+  type CodeFragment,
+  IMPORT_EXPR_RE,
+  NEWLINE,
+  buildCodeFragment,
+  genCall,
+} from './utils'
 
 export function genTemplates(
   templates: Map<string, number>,
@@ -19,6 +25,10 @@ export function genTemplates(
     result.push(
       `const ${context.tName(i)} = ${context.helper('template')}(${JSON.stringify(
         template,
+      ).replace(
+        // replace import expressions with string concatenation
+        IMPORT_EXPR_RE,
+        `" + $1 + "`,
       )}${i === rootIndex ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`,
     )
     i++
