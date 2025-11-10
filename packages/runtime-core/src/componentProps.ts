@@ -690,6 +690,11 @@ function validateProp(
   if (value == null && !required) {
     return
   }
+  // null type but required
+  if (type == null && required && value == null) {
+    warn('Missing required prop: "' + name + '"')
+    return
+  }
   // type check
   if (type != null && type !== true && !skipCheck) {
     let isValid = false
