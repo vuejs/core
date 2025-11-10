@@ -162,6 +162,7 @@ export class TeleportFragment extends VaporFragment {
         }
 
         mount(target, this.targetAnchor!)
+        updateCssVars(this, false)
       } else if (__DEV__) {
         warn(
           `Invalid Teleport target on ${this.targetAnchor ? 'update' : 'mount'}:`,
@@ -174,6 +175,7 @@ export class TeleportFragment extends VaporFragment {
     // mount into main container
     if (isTeleportDisabled(this.resolvedProps!)) {
       mount(this.parent, this.anchor!)
+      updateCssVars(this, true)
     }
     // mount into target container
     else {
@@ -329,4 +331,24 @@ function locateTeleportEndAnchor(
     node = node.nextSibling as Node
   }
   return null
+}
+
+function updateCssVars(frag: TeleportFragment, isDisabled: boolean) {
+  const ctx = currentInstance as GenericComponentInstance
+  if (ctx && ctx.ut) {
+    let node, anchor
+    if (isDisabled) {
+      node = frag.placeholder
+      anchor = frag.anchor
+    } else {
+      node = frag.targetStart
+      anchor = frag.targetAnchor
+    }
+    while (node && node !== anchor) {
+      if (node.nodeType === 1)
+        (node as Element).setAttribute('data-v-owner', String(ctx.uid))
+      node = node.nextSibling
+    }
+    ctx.ut()
+  }
 }

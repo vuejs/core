@@ -1,4 +1,5 @@
 import {
+  VaporTeleport,
   createComponent,
   createIf,
   createPlainElement,
@@ -160,13 +161,39 @@ describe('useVaporCssVars', () => {
     }
   })
 
-  test.todo('with teleport', async () => {})
+  test('with teleport', async () => {
+    const state = reactive({ color: 'red' })
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+
+    define({
+      setup() {
+        useVaporCssVars(() => state)
+        return createComponent(
+          VaporTeleport,
+          {
+            to: () => target,
+          },
+          {
+            default: () => template('<div></div>', true)(),
+          },
+        )
+      },
+    }).render()
+
+    await nextTick()
+    expect(target.innerHTML).toBe('<div style="--color: red;"></div>')
+
+    state.color = 'green'
+    await nextTick()
+    expect(target.innerHTML).toBe('<div style="--color: green;"></div>')
+  })
 
   test.todo('with teleport in child slot', async () => {})
 
-  test('with teleport(change subTree)', async () => {})
+  test.todo('with teleport(change subTree)', async () => {})
 
-  test('with teleport(disabled)', async () => {})
+  test.todo('with teleport(disabled)', async () => {})
 
   test('with string style', async () => {
     const state = reactive({ color: 'red' })
