@@ -333,6 +333,15 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > custom element 1`] = `
+"import { createPlainElement as _createPlainElement } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createPlainElement("my-custom-element", null, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > dynamic component > capitalized version w/ static binding 1`] = `
 "import { resolveDynamicComponent as _resolveDynamicComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 

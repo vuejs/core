@@ -105,6 +105,11 @@ export {
 // plugins
 export { getCurrentInstance } from './component'
 
+/**
+ * @internal
+ */
+export { useInstanceOption } from './component'
+
 // For raw render function users
 export { h } from './h'
 // Advanced render function utilities

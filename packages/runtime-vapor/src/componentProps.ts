@@ -97,7 +97,7 @@ export function getPropsProxyHandlers(
         return resolvePropValue(
           propsOptions!,
           key,
-          rawProps[rawKey](),
+          resolveSource(rawProps[rawKey]),
           instance,
           resolveDefault,
         )
@@ -217,10 +217,11 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
     }
   }
   if (hasOwn(rawProps, key)) {
+    const value = resolveSource(rawProps[key])
     if (merged) {
-      merged.push(rawProps[key]())
+      merged.push(value)
     } else {
-      return rawProps[key]()
+      return value
     }
   }
   if (merged && merged.length) {
@@ -330,7 +331,7 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
   const mergedRawProps: Record<string, any> = {}
   for (const key in props) {
     if (key !== '$') {
-      mergedRawProps[key] = props[key]()
+      mergedRawProps[key] = resolveSource(props[key])
     }
   }
   if (props.$) {

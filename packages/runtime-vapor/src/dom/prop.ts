@@ -1,5 +1,6 @@
 import {
   type NormalizedStyle,
+  camelize,
   canSetValueDirectly,
   includeBooleanAttr,
   isArray,
@@ -38,6 +39,7 @@ import {
 } from '../component'
 import { isHydrating, logMismatchError } from './hydration'
 import type { Block } from '../block'
+import type { VaporElement } from '../apiDefineVaporCustomElement'
 
 type TargetElement = Element & {
   $root?: true
@@ -112,6 +114,7 @@ export function setDOMProp(
   key: string,
   value: any,
   forceHydrate: boolean = false,
+  attrName?: string,
 ): void {
   if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey(key)) {
     return
@@ -163,7 +166,7 @@ export function setDOMProp(
       )
     }
   }
-  needRemove && el.removeAttribute(key)
+  needRemove && el.removeAttribute(attrName || key)
 }
 
 export function setClass(
@@ -484,6 +487,12 @@ export function setDynamicProp(
     } else {
       setDOMProp(el, key, value, forceHydrate)
     }
+  } else if (
+    // custom elements
+    (el as VaporElement)._isVueCE &&
+    (/[A-Z]/.test(key) || !isString(value))
+  ) {
+    setDOMProp(el, camelize(key), value, forceHydrate, key)
   } else {
     setAttr(el, key, value, isSVG)
   }
@@ -503,12 +512,12 @@ export function optimizePropertyLookup(): void {
   proto.$key = undefined
   proto.$fc = proto.$evtclick = undefined
   proto.$root = false
-  proto.$html =
-    proto.$txt =
-    proto.$cls =
-    proto.$sty =
-    (Text.prototype as any).$txt =
-      ''
+  proto.$html = proto.$cls = proto.$sty = ''
+  // Initialize $txt to undefined instead of empty string to ensure setText()
+  // properly updates the text node even when the value is empty string.
+  // This prevents issues where setText(node, '') would be skipped because
+  // $txt === '' would return true, leaving the original nodeValue unchanged.
+  ;(Text.prototype as any).$txt = undefined
 }
 
 function classHasMismatch(

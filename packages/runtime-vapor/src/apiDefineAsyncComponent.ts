@@ -208,10 +208,5 @@ function createInnerComp(
   // @ts-expect-error
   frag && frag.setRef && frag.setRef(instance)
 
-  // TODO custom element
-  // pass the custom element callback on to the inner comp
-  // and remove it from the async wrapper
-  // i.ce = ce
-  // delete parent.ce
   return instance
 }

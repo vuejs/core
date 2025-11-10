@@ -204,6 +204,7 @@ export interface CreateComponentIRNode extends BaseIRNode {
   root: boolean
   once: boolean
   dynamic?: SimpleExpressionNode
+  isCustomElement: boolean
   parent?: number
   anchor?: number
   append?: boolean

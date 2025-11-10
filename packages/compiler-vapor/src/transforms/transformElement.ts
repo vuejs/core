@@ -58,7 +58,12 @@ export const transformElement: NodeTransform = (node, context) => {
     )
       return
 
-    const isComponent = node.tagType === ElementTypes.COMPONENT
+    // treat custom elements as components because the template helper cannot
+    // resolve them properly; they require creation via createElement
+    const isCustomElement = !!context.options.isCustomElement(node.tag)
+    const isComponent =
+      node.tagType === ElementTypes.COMPONENT || isCustomElement
+
     const isDynamicComponent = isComponentTag(node.tag)
     const propsResult = buildProps(
       node,
@@ -78,9 +83,10 @@ export const transformElement: NodeTransform = (node, context) => {
       parent = parent.parent
     }
     const singleRoot =
-      context.root === parent &&
-      parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
-        .length === 1
+      (context.root === parent &&
+        parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
+          .length === 1) ||
+      isCustomElement
 
     if (isComponent) {
       transformComponentElement(
@@ -89,6 +95,7 @@ export const transformElement: NodeTransform = (node, context) => {
         singleRoot,
         context,
         isDynamicComponent,
+        isCustomElement,
       )
     } else {
       transformNativeElement(
@@ -108,6 +115,7 @@ function transformComponentElement(
   singleRoot: boolean,
   context: TransformContext,
   isDynamicComponent: boolean,
+  isCustomElement: boolean,
 ) {
   const dynamicComponent = isDynamicComponent
     ? resolveDynamicComponent(node)
@@ -116,7 +124,7 @@ function transformComponentElement(
   let { tag } = node
   let asset = true
 
-  if (!dynamicComponent) {
+  if (!dynamicComponent && !isCustomElement) {
     const fromSetup = resolveSetupReference(tag, context)
     if (fromSetup) {
       tag = fromSetup
@@ -161,6 +169,7 @@ function transformComponentElement(
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,
+    isCustomElement,
   }
   context.slots = []
 }

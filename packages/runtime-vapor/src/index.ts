@@ -6,6 +6,10 @@ export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
 export { VaporTeleportImpl as VaporTeleport } from './components/Teleport'
 export { VaporKeepAliveImpl as VaporKeepAlive } from './components/KeepAlive'
+export {
+  defineVaporCustomElement,
+  defineVaporSSRCustomElement,
+} from './apiDefineVaporCustomElement'
 
 // compiler-use only
 export { insert, prepend, remove } from './block'
@@ -13,6 +17,7 @@ export { setInsertionState } from './insertionState'
 export {
   createComponent,
   createComponentWithFallback,
+  createPlainElement,
   isVaporComponent,
 } from './component'
 export { renderEffect } from './renderEffect'

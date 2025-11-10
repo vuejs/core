@@ -97,6 +97,7 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { DynamicFragment } from './fragment'
+import type { VaporElement } from './apiDefineVaporCustomElement'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -130,6 +131,10 @@ export interface ObjectVaporComponent
 
   name?: string
   vapor?: boolean
+  /**
+   * @internal custom element interception hook
+   */
+  ce?: (instance: VaporComponentInstance) => void
 }
 
 interface SharedInternalOptions {
@@ -490,7 +495,14 @@ export class VaporComponentInstance implements GenericComponentInstance {
   // for suspense
   suspense: SuspenseBoundary | null
 
+  // for HMR and vapor custom element
+  // all render effects associated with this instance
+  renderEffects?: RenderEffect[]
+
   hasFallthrough: boolean
+
+  // for keep-alive
+  shapeFlag?: number
 
   // lifecycle hooks
   isMounted: boolean
@@ -518,12 +530,10 @@ export class VaporComponentInstance implements GenericComponentInstance {
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void
-  renderEffects?: RenderEffect[]
   parentTeleport?: TeleportFragment | null
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
-  shapeFlag?: number
 
   constructor(
     comp: VaporComponent,
@@ -589,6 +599,11 @@ export class VaporComponentInstance implements GenericComponentInstance {
         ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
         : rawSlots
       : EMPTY_OBJ
+
+    // apply custom element special handling
+    if (comp.ce) {
+      comp.ce(this)
+    }
   }
 
   /**
@@ -630,6 +645,16 @@ export function createComponentWithFallback(
     )
   }
 
+  return createPlainElement(comp, rawProps, rawSlots, isSingleRoot, once)
+}
+
+export function createPlainElement(
+  comp: string,
+  rawProps?: LooseRawProps | null,
+  rawSlots?: LooseRawSlots | null,
+  isSingleRoot?: boolean,
+  once?: boolean,
+): HTMLElement {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
@@ -700,6 +725,17 @@ export function mountComponent(
   if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
     findParentKeepAlive(instance)!.activate(instance, parent, anchor)
     return
+  }
+
+  // custom element style injection
+  const { root, type } = instance as GenericComponentInstance
+  if (
+    root &&
+    root.ce &&
+    // @ts-expect-error _def is private
+    (root.ce as VaporElement)._def.shadowRoot !== false
+  ) {
+    root.ce!._injectChildStyle(type)
   }
 
   if (__DEV__) {

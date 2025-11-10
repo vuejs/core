@@ -1042,6 +1042,17 @@ describe('compiler: element transform', () => {
     expect(code).contain('return null')
   })
 
+  test('custom element', () => {
+    const { code } = compileWithElementTransform(
+      '<my-custom-element></my-custom-element>',
+      {
+        isCustomElement: tag => tag === 'my-custom-element',
+      },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+  })
+
   test('svg', () => {
     const t = `<svg><circle r="40"></circle></svg>`
     const { code, ir } = compileWithElementTransform(t)

@@ -112,6 +112,11 @@ export interface App<HostElement = any> {
   _ceVNode?: VNode
 
   /**
+   * @internal vapor custom element instance
+   */
+  _ceComponent?: GenericComponentInstance | null
+
+  /**
    * v2 compat only
    */
   filter?(name: string): Function | undefined

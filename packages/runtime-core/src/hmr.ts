@@ -123,7 +123,16 @@ function reload(id: string, newComp: HMRComponent): void {
   // create a snapshot which avoids the set being mutated during updates
   const instances = [...record.instances]
 
-  if (newComp.__vapor) {
+  if (newComp.__vapor && !instances.some(i => i.ceReload)) {
+    // For multiple instances with the same __hmrId, remove styles first before reload
+    // to avoid the second instance's style removal deleting the first instance's
+    // newly added styles (since hmrReload is synchronous)
+    for (const instance of instances) {
+      // update custom element child style
+      if (instance.root && instance.root.ce && instance !== instance.root) {
+        instance.root.ce._removeChildStyle(instance.type)
+      }
+    }
     for (const instance of instances) {
       instance.hmrReload!(newComp)
     }
