@@ -16,19 +16,12 @@ export function provide<T, K = InjectionKey<T> | string | number>(
       warn(`provide() can only be used inside setup().`)
     }
   } else {
-    let provides = currentInstance.provides
-    // by default an instance inherits its parent's provides object
-    // but when it needs to provide values of its own, it creates its
-    // own provides object using parent provides object as prototype.
+    // by default an instance it creates its own provides object
+    // using parent provides object as prototype.
     // this way in `inject` we can simply look up injections from direct
     // parent and let the prototype chain do the work.
-    const parentProvides =
-      currentInstance.parent && currentInstance.parent.provides
-    if (parentProvides === provides) {
-      provides = currentInstance.provides = Object.create(parentProvides)
-    }
     // TS doesn't allow symbol as index type
-    provides[key as string] = value
+    currentInstance.provides[key as string] = value
   }
 }
 
