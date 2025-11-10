@@ -350,12 +350,18 @@ export {
 /**
  * @internal
  */
+export { svgNS } from './nodeOps'
+/**
+ * @internal
+ */
+export { xlinkNS } from './modules/attrs'
+/**
+ * @internal
+ */
 export {
   resolveTransitionProps,
   TransitionPropsValidators,
   forceReflow,
-  addTransitionClass,
-  removeTransitionClass,
   type ElementWithTransition,
 } from './components/Transition'
 /**
@@ -364,7 +370,6 @@ export {
 export {
   hasCSSTransform,
   callPendingCbs,
-  moveCbKey,
   handleMovedChildren,
   baseApplyTranslation,
 } from './components/TransitionGroup'

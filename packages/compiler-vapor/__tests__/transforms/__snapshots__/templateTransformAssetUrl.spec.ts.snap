@@ -43,7 +43,7 @@ export function render(_ctx) {
 exports[`compiler sfc: transform asset url > support uri fragment 1`] = `
 "import { template as _template } from 'vue';
 import _imports_0 from '@svg/file.svg';
-const t0 = _template("<use href=\\"" + _imports_0 + '#fragment' + "\\"></use>")
+const t0 = _template("<use href=\\"" + _imports_0 + '#fragment' + "\\"></use>", false, 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -54,7 +54,7 @@ export function render(_ctx) {
 
 exports[`compiler sfc: transform asset url > support uri is empty 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<use href=\\"\\"></use>", true)
+const t0 = _template("<use href=\\"\\"></use>", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()

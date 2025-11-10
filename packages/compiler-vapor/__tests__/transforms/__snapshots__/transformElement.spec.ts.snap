@@ -1,5 +1,15 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > MathML 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<math><mrow><mi>x</mi></mrow></math>", true, 2)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > checkbox with static indeterminate 1`] = `
 "import { setProp as _setProp, template as _template } from 'vue';
 const t0 = _template("<input type=\\"checkbox\\">", true)
@@ -441,6 +451,16 @@ export function render(_ctx) {
 exports[`compiler: element transform > static props 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > svg 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<svg><circle r=\\"40\\"></circle></svg>", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()

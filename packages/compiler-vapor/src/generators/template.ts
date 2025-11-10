@@ -15,22 +15,25 @@ import {
 } from './utils'
 
 export function genTemplates(
-  templates: string[],
+  templates: Map<string, number>,
   rootIndex: number | undefined,
   context: CodegenContext,
 ): string {
-  return templates
-    .map(
-      (template, i) =>
-        `const ${context.tName(i)} = ${context.helper('template')}(${JSON.stringify(
-          template,
-        ).replace(
-          // replace import expressions with string concatenation
-          IMPORT_EXPR_RE,
-          `" + $1 + "`,
-        )}${i === rootIndex ? ', true' : ''})\n`,
+  const result: string[] = []
+  let i = 0
+  templates.forEach((ns, template) => {
+    result.push(
+      `const ${context.tName(i)} = ${context.helper('template')}(${JSON.stringify(
+        template,
+      ).replace(
+        // replace import expressions with string concatenation
+        IMPORT_EXPR_RE,
+        `" + $1 + "`,
+      )}${i === rootIndex ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`,
     )
-    .join('')
+    i++
+  })
+  return result.join('')
 }
 
 export function genSelf(

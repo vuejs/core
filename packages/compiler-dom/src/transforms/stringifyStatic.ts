@@ -9,7 +9,6 @@ import {
   ElementTypes,
   type ExpressionNode,
   type HoistTransform,
-  Namespaces,
   NodeTypes,
   type PlainElementNode,
   type SimpleExpressionNode,
@@ -21,6 +20,7 @@ import {
   isStaticArgOf,
 } from '@vue/compiler-core'
 import {
+  Namespaces,
   escapeHtml,
   isArray,
   isBooleanAttr,

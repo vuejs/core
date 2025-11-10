@@ -6,6 +6,7 @@ import {
   type ElementNode,
   ElementTypes,
   NodeTypes,
+  type PlainElementNode,
   type RootNode,
   type SimpleExpressionNode,
   type TemplateChildNode,
@@ -156,12 +157,15 @@ export class TransformContext<T extends AllNode = AllNode> {
   }
 
   pushTemplate(content: string): number {
-    const existing = this.ir.template.findIndex(
-      template => template === content,
-    )
-    if (existing !== -1) return existing
-    this.ir.template.push(content)
-    return this.ir.template.length - 1
+    const existingIndex = this.ir.templateIndexMap.get(content)
+    if (existingIndex !== undefined) {
+      return existingIndex
+    }
+
+    const newIndex = this.ir.template.size
+    this.ir.template.set(content, (this.node as PlainElementNode).ns)
+    this.ir.templateIndexMap.set(content, newIndex)
+    return newIndex
   }
   registerTemplate(): number {
     if (!this.template) return -1
@@ -245,7 +249,8 @@ export function transform(
     type: IRNodeTypes.ROOT,
     node,
     source: node.source,
-    template: [],
+    template: new Map<string, number>(),
+    templateIndexMap: new Map<string, number>(),
     component: new Set(),
     directive: new Set(),
     block: newBlock(node),
