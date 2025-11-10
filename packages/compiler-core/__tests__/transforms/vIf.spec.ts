@@ -21,6 +21,7 @@ import {
   type CompilerOptions,
   TO_HANDLERS,
   generate,
+  transformBind,
   transformVBindShorthand,
 } from '../../src'
 import {
@@ -37,6 +38,7 @@ function parseWithIfTransform(
   options: CompilerOptions = {},
   returnIndex: number = 0,
   childrenLen: number = 1,
+  expectAllChildrenIfNodes: boolean = true,
 ) {
   const ast = parse(template, options)
   transform(ast, {
@@ -50,8 +52,10 @@ function parseWithIfTransform(
   })
   if (!options.onError) {
     expect(ast.children.length).toBe(childrenLen)
-    for (let i = 0; i < childrenLen; i++) {
-      expect(ast.children[i].type).toBe(NodeTypes.IF)
+    if (expectAllChildrenIfNodes) {
+      for (let i = 0; i < childrenLen; i++) {
+        expect(ast.children[i].type).toBe(NodeTypes.IF)
+      }
     }
   }
   return {
@@ -670,21 +674,120 @@ describe('compiler: v-if', () => {
       expect(branch1.props).toMatchObject(createObjectMatcher({ key: `[0]` }))
     })
 
-    // #6631
-    test('avoid duplicate keys', () => {
-      const {
-        node: { codegenNode },
-      } = parseWithIfTransform(`<div v-if="ok" key="custom_key" v-bind="obj"/>`)
-      const branch1 = codegenNode.consequent as VNodeCall
-      expect(branch1.props).toMatchObject({
-        type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: MERGE_PROPS,
-        arguments: [
-          createObjectMatcher({
-            key: 'custom_key',
-          }),
-          { content: `obj` },
-        ],
+    describe('user-defined keys', () => {
+      // #6631
+      test('avoid duplicate keys', () => {
+        const {
+          root,
+          node: { codegenNode },
+        } = parseWithIfTransform(
+          `<div v-if="ok" key="custom_key" v-bind="obj"/>`,
+        )
+        const branch1 = codegenNode.consequent as VNodeCall
+        expect(branch1.props).toMatchObject({
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: MERGE_PROPS,
+          arguments: [
+            createObjectMatcher({
+              key: 'custom_key',
+            }),
+            { content: `obj` },
+          ],
+        })
+        expect(generate(root).code).toMatchSnapshot()
+      })
+
+      test('key on v-if', () => {
+        const { root } = parseWithIfTransform(
+          `<div v-if="ok1" :key="1" v-bind="obj1"/><div v-else-if="ok2" v-bind="obj2"/><div v-else v-bind="obj3"/>`,
+          { directiveTransforms: { bind: transformBind } },
+        )
+        expect(root.hoists).toMatchObject([
+          { content: 'Symbol()' },
+          { content: 'Symbol()' },
+        ])
+
+        const code = generate(root).code
+        expect(code).toContain('_mergeProps({ key: 1 }, obj1)')
+        expect(code).toContain('_mergeProps({ key: _hoisted_1 }, obj2)')
+        expect(code).toContain('_mergeProps({ key: _hoisted_2 }, obj3)')
+        expect(code).toMatchSnapshot()
+      })
+
+      test('key on v-else-if', () => {
+        const { root } = parseWithIfTransform(
+          `<div v-if="ok1" v-bind="obj1"/><div v-else-if="ok2" :key="0" v-bind="obj2"/><div v-else v-bind="obj3"/>`,
+          { directiveTransforms: { bind: transformBind } },
+        )
+        expect(root.hoists).toMatchObject([
+          { content: 'Symbol()' },
+          { content: 'Symbol()' },
+        ])
+
+        const code = generate(root).code
+        expect(code).toContain('_mergeProps({ key: _hoisted_1 }, obj1)')
+        expect(code).toContain('_mergeProps({ key: 0 }, obj2)')
+        expect(code).toContain('_mergeProps({ key: _hoisted_2 }, obj3)')
+        expect(code).toMatchSnapshot()
+      })
+
+      test('key on v-else', () => {
+        const { root } = parseWithIfTransform(
+          `<div v-if="ok1" v-bind="obj1"/><div v-else-if="ok2" v-bind="obj2"/><div v-else :key="0" v-bind="obj3"/>`,
+          { directiveTransforms: { bind: transformBind } },
+        )
+        expect(root.hoists).toMatchObject([
+          { content: 'Symbol()' },
+          { content: 'Symbol()' },
+        ])
+
+        const code = generate(root).code
+        expect(code).toContain('_mergeProps({ key: _hoisted_1 }, obj1)')
+        expect(code).toContain('_mergeProps({ key: _hoisted_2 }, obj2)')
+        expect(code).toContain('_mergeProps({ key: 0 }, obj3)')
+        expect(code).toMatchSnapshot()
+      })
+
+      test('key on v-else with misc irrelevant nodes between', () => {
+        const { root } = parseWithIfTransform(
+          `<div v-if="ok1" v-bind="obj1"/> <!--comment1--> <div v-else-if="ok2" v-bind="obj2"/> <!--comment2--> <div v-else :key="0" v-bind="obj3"/>`,
+          { directiveTransforms: { bind: transformBind } },
+          0,
+          1,
+          false,
+        )
+        expect(root.hoists).toMatchObject([
+          { content: 'Symbol()' },
+          { content: 'Symbol()' },
+        ])
+
+        const code = generate(root).code
+        expect(code).toContain('_mergeProps({ key: _hoisted_1 }, obj1)')
+        expect(code).toContain(
+          '_createElementBlock(_Fragment, { key: _hoisted_2 }',
+        )
+        expect(code).toContain('_normalizeProps(_guardReactiveProps(obj2))')
+        expect(code).toContain('_mergeProps({ key: 0 }, obj3)')
+        expect(code).toMatchSnapshot()
+      })
+
+      test('correct key matching', () => {
+        const { root } = parseWithIfTransform(
+          `<div v-if="ok" v-bind="separate"/><div :key="123" v-bind="other1" /><div v-if="ok1" v-bind="obj1"/><div v-else :key="0" v-bind="obj2"/>`,
+          { directiveTransforms: { bind: transformBind } },
+          0,
+          3,
+          false,
+        )
+        expect(root.hoists).toMatchObject([{ content: 'Symbol()' }])
+
+        const code = generate(root).code
+        // not part of if-block with a key anywhere so expect
+        expect(code).toContain('_mergeProps({ key: 0 }, separate)')
+        expect(code).toContain('_mergeProps({ key: 123 }, other1)')
+        expect(code).toContain('_mergeProps({ key: _hoisted_1 }, obj1)')
+        expect(code).toContain('_mergeProps({ key: 0 }, obj2)')
+        expect(code).toMatchSnapshot()
       })
     })
 
