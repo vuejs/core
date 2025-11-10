@@ -31,7 +31,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > basic v-for 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { txt as _txt, createInvoker as _createInvoker, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div> </div>", true)
 _delegateEvents("click")
 
@@ -39,7 +39,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = t0()
     const x2 = _txt(n2)
-    n2.$evtclick = () => (_ctx.remove(_for_item0.value))
+    n2.$evtclick = _createInvoker(() => (_ctx.remove(_for_item0.value)))
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value)))
     return n2
   }, (item) => (item.id))
