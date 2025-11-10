@@ -71,6 +71,8 @@ import {
   type VaporSlot,
   dynamicSlotsProxyHandlers,
   getSlot,
+  getSlotConsumer,
+  getSlotScopeOwner,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
@@ -178,8 +180,10 @@ export function createComponent(
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
   once?: boolean,
-  appContext: GenericAppContext = (currentInstance &&
-    currentInstance.appContext) ||
+  appContext: GenericAppContext = (((getSlotScopeOwner() as VaporComponentInstance | null) ||
+    (currentInstance as VaporComponentInstance | null)) &&
+    ((getSlotScopeOwner() as VaporComponentInstance | null) ||
+      (currentInstance as VaporComponentInstance | null))!.appContext) ||
     emptyContext,
 ): VaporComponentInstance {
   const _insertionParent = insertionParent
@@ -191,15 +195,19 @@ export function createComponent(
     resetInsertionState()
   }
 
+  const parentInstance =
+    (getSlotConsumer() as VaporComponentInstance | null) ||
+    (currentInstance as VaporComponentInstance | null)
+
   if (
     isSingleRoot &&
     component.inheritAttrs !== false &&
-    isVaporComponent(currentInstance) &&
-    currentInstance.hasFallthrough
+    isVaporComponent(parentInstance) &&
+    parentInstance.hasFallthrough
   ) {
     // check if we are the single root of the parent
     // if yes, inject parent attrs as dynamic props source
-    const attrs = currentInstance.attrs
+    const attrs = parentInstance.attrs
     if (rawProps) {
       ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
         () => attrs,
@@ -210,12 +218,8 @@ export function createComponent(
   }
 
   // keep-alive
-  if (
-    currentInstance &&
-    currentInstance.vapor &&
-    isKeepAlive(currentInstance)
-  ) {
-    const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
+  if (parentInstance && parentInstance.vapor && isKeepAlive(parentInstance)) {
+    const cached = (parentInstance as KeepAliveInstance).getCachedComponent(
       component,
     )
     // @ts-expect-error
@@ -262,6 +266,7 @@ export function createComponent(
     rawSlots as RawSlots,
     appContext,
     once,
+    parentInstance,
   )
 
   // HMR
@@ -475,6 +480,9 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   slots: StaticSlots
 
+  // slot template owner for scope inheritance
+  slotScopeOwner: VaporComponentInstance | null
+
   // to hold vnode props / slots in vdom interop mode
   rawPropsRef?: ShallowRef<any>
   rawSlotsRef?: ShallowRef<any>
@@ -541,17 +549,18 @@ export class VaporComponentInstance implements GenericComponentInstance {
     rawSlots?: RawSlots | null,
     appContext?: GenericAppContext,
     once?: boolean,
+    parent: GenericComponentInstance | null = currentInstance,
   ) {
     this.vapor = true
     this.uid = nextUid()
     this.type = comp
-    this.parent = currentInstance
-    this.root = currentInstance ? currentInstance.root : this
+    this.parent = parent
+    this.root = parent ? parent.root : this
 
-    if (currentInstance) {
-      this.appContext = currentInstance.appContext
-      this.provides = currentInstance.provides
-      this.ids = currentInstance.ids
+    if (parent) {
+      this.appContext = parent.appContext
+      this.provides = parent.provides
+      this.ids = parent.ids
     } else {
       this.appContext = appContext || emptyContext
       this.provides = Object.create(this.appContext.provides)
@@ -599,6 +608,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
         ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
         : rawSlots
       : EMPTY_OBJ
+
+    this.slotScopeOwner = getSlotScopeOwner() as VaporComponentInstance | null
 
     // apply custom element special handling
     if (comp.ce) {
@@ -672,7 +683,8 @@ export function createPlainElement(
   ;(el as any).$root = isSingleRoot
 
   if (!isHydrating) {
-    const scopeId = currentInstance!.type.__scopeId
+    const scopeOwner = getSlotScopeOwner() || currentInstance
+    const scopeId = scopeOwner && scopeOwner.type.__scopeId
     if (scopeId) setScopeId(el, [scopeId])
   }
 

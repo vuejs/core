@@ -253,19 +253,25 @@ export function setScopeId(block: Block, scopeIds: string[]): void {
 
 export function setComponentScopeId(instance: VaporComponentInstance): void {
   const parent = instance.parent
-  if (!parent) return
+  const slotScopeOwner = instance.slotScopeOwner
+  if (!parent && !slotScopeOwner) return
   // prevent setting scopeId on multi-root fragments
   if (isArray(instance.block) && instance.block.length > 1) return
 
   const scopeIds: string[] = []
 
-  const scopeId = parent.type.__scopeId
-  if (scopeId) {
-    scopeIds.push(scopeId)
+  const slotScopeId = slotScopeOwner && slotScopeOwner.type.__scopeId
+  const parentScopeId = parent && parent.type.__scopeId
+
+  if (slotScopeId) {
+    scopeIds.push(slotScopeId)
+  } else if (parentScopeId) {
+    scopeIds.push(parentScopeId)
   }
 
   // inherit scopeId from vdom parent
   if (
+    parent &&
     parent.subTree &&
     (parent.subTree.component as any) === instance &&
     parent.vnode!.scopeId

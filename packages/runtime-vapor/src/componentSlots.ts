@@ -122,27 +122,38 @@ export function getSlot(
   }
 }
 
-/**
- * Wraps a slot function to execute in the parent component's context.
- *
- * This ensures that:
- * 1. Reactive effects created inside the slot (e.g., `renderEffect`) bind to the
- *    parent's instance, so the parent's lifecycle hooks fire when the slot's
- *    reactive dependencies change.
- * 2. Elements created in the slot inherit the parent's scopeId for proper style
- *    scoping in scoped CSS.
- *
- * **Rationale**: Slots are defined in the parent's template, so the parent should
- * own the rendering context and be aware of updates.
- *
- */
+// Tracks slot execution context: the owner that defined the slot, and the
+// consumer that is currently rendering it.
+const slotOwnerStack: (VaporComponentInstance | null)[] = []
+const slotConsumerStack: (GenericComponentInstance | null)[] = []
+
+export function getSlotScopeOwner(): GenericComponentInstance | null {
+  return slotOwnerStack.length > 0
+    ? slotOwnerStack[slotOwnerStack.length - 1]
+    : null
+}
+
+export function getSlotConsumer(): GenericComponentInstance | null {
+  return slotConsumerStack.length > 0
+    ? slotConsumerStack[slotConsumerStack.length - 1]
+    : null
+}
+
 export function withVaporCtx(fn: Function): BlockFn {
-  const instance = currentInstance as VaporComponentInstance
+  const owner =
+    (currentInstance as VaporComponentInstance | null) ||
+    (getSlotScopeOwner() as VaporComponentInstance | null)
+
+  const ownerInstance = owner!
   return (...args: any[]) => {
-    const prev = setCurrentInstance(instance)
+    const prev = setCurrentInstance(ownerInstance)
+    slotOwnerStack.push(ownerInstance)
+    slotConsumerStack.push(prev[0])
     try {
       return fn(...args)
     } finally {
+      slotConsumerStack.pop()
+      slotOwnerStack.pop()
       setCurrentInstance(...prev)
     }
   }
@@ -159,20 +170,25 @@ export function createSlot(
   const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
 
-  const instance = currentInstance as VaporComponentInstance
-  const rawSlots = instance.rawSlots
+  const slotContext =
+    (currentInstance as VaporComponentInstance | null) ||
+    (getSlotScopeOwner() as VaporComponentInstance | null)
+  const owner =
+    (getSlotScopeOwner() as VaporComponentInstance | null) || slotContext!
+  const rawSlots = slotContext!.rawSlots
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
 
   let fragment: DynamicFragment
+  const contextInstance = owner
   if (isRef(rawSlots._)) {
     if (isHydrating) locateHydrationNode()
-    fragment = instance.appContext.vapor!.vdomSlot(
+    fragment = contextInstance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,
       slotProps,
-      instance,
+      contextInstance,
       fallback,
     )
   } else {
@@ -185,7 +201,7 @@ export function createSlot(
     // Calculate slotScopeIds once (for vdom interop)
     const slotScopeIds: string[] = []
     if (!noSlotted) {
-      const scopeId = instance!.type.__scopeId
+      const scopeId = contextInstance.type.__scopeId
       if (scopeId) {
         slotScopeIds.push(`${scopeId}-s`)
       }
@@ -198,10 +214,10 @@ export function createSlot(
       // because in shadowRoot: false mode the slot element gets
       // replaced by injected content
       if (
-        (instance as GenericComponentInstance).ce ||
-        (instance.parent &&
-          isAsyncWrapper(instance.parent) &&
-          instance.parent.ce)
+        (slotContext as GenericComponentInstance).ce ||
+        (slotContext!.parent &&
+          isAsyncWrapper(slotContext!.parent) &&
+          slotContext!.parent.ce)
       ) {
         const el = createElement('slot')
         renderEffect(() => {
@@ -249,7 +265,7 @@ export function createSlot(
 
   if (!isHydrating) {
     if (!noSlotted) {
-      const scopeId = instance.type.__scopeId
+      const scopeId = owner.type.__scopeId
       if (scopeId) {
         setScopeId(fragment, [`${scopeId}-s`])
       }
