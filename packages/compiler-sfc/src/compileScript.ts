@@ -19,12 +19,17 @@ import type {
   Declaration,
   ExportSpecifier,
   Identifier,
+  LVal,
   Node,
   ObjectPattern,
   Statement,
 } from '@babel/types'
 import { walk } from 'estree-walker'
-import type { RawSourceMap } from 'source-map-js'
+import {
+  type RawSourceMap,
+  SourceMapConsumer,
+  SourceMapGenerator,
+} from 'source-map-js'
 import {
   normalScriptDefaultVar,
   processNormalScript,
@@ -52,9 +57,15 @@ import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { DEFINE_SLOTS, processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
+import {
+  getImportedName,
+  isCallOf,
+  isJS,
+  isLiteralNode,
+  isTS,
+} from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
-import { isImportUsed } from './script/importUsageCheck'
+import { isUsedInTemplate } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
 
 export interface SFCScriptCompileOptions {
@@ -168,35 +179,45 @@ export function compileScript(
     )
   }
 
-  const ctx = new ScriptCompileContext(sfc, options)
   const { script, scriptSetup, source, filename } = sfc
   const hoistStatic = options.hoistStatic !== false && !script
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
   const vapor = sfc.vapor || options.vapor
+  const ssr = options.templateOptions?.ssr
+  const setupPreambleLines = [] as string[]
+  const isJSOrTS =
+    isJS(scriptLang, scriptSetupLang) || isTS(scriptLang, scriptSetupLang)
 
-  let refBindings: string[] | undefined
-
-  if (!scriptSetup) {
-    if (!script) {
-      throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
-    }
-    // normal <script> only
-    return processNormalScript(ctx, scopeId)
-  }
-
-  if (script && scriptLang !== scriptSetupLang) {
+  if (script && scriptSetup && scriptLang !== scriptSetupLang) {
     throw new Error(
       `[@vue/compiler-sfc] <script> and <script setup> must have the same ` +
         `language type.`,
     )
   }
 
-  if (scriptSetupLang && !ctx.isJS && !ctx.isTS) {
+  if (!scriptSetup) {
+    if (!script) {
+      throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
+    }
+
+    // normal <script> only
+    if (script.lang && !isJSOrTS) {
+      // do not process non js/ts script blocks
+      return script
+    }
+
+    const ctx = new ScriptCompileContext(sfc, options)
+    return processNormalScript(ctx, scopeId)
+  }
+
+  if (scriptSetupLang && !isJSOrTS) {
     // do not process non js/ts script blocks
     return scriptSetup
   }
+
+  const ctx = new ScriptCompileContext(sfc, options)
 
   // metadata that needs to be returned
   // const ctx.bindingMetadata: BindingMetadata = {}
@@ -242,7 +263,7 @@ export function compileScript(
   ) {
     // template usage check is only needed in non-inline mode, so we can skip
     // the work if inlineTemplate is true.
-    let isUsedInTemplate = needTemplateUsageCheck
+    let isImportUsed = needTemplateUsageCheck
     if (
       needTemplateUsageCheck &&
       ctx.isTS &&
@@ -250,7 +271,7 @@ export function compileScript(
       !sfc.template.src &&
       !sfc.template.lang
     ) {
-      isUsedInTemplate = isImportUsed(local, sfc)
+      isImportUsed = isUsedInTemplate(local, sfc)
     }
 
     ctx.userImports[local] = {
@@ -259,7 +280,7 @@ export function compileScript(
       local,
       source,
       isFromSetup,
-      isUsedInTemplate,
+      isUsedInTemplate: isImportUsed,
     }
   }
 
@@ -280,8 +301,42 @@ export function compileScript(
     })
   }
 
+  function buildDestructureElements() {
+    if (!sfc.template || !sfc.template.ast) return
+
+    const builtins = {
+      $props: {
+        bindingType: BindingTypes.SETUP_REACTIVE_CONST,
+        setup: () => setupPreambleLines.push(`const $props = __props`),
+      },
+      $emit: {
+        bindingType: BindingTypes.SETUP_CONST,
+        setup: () =>
+          ctx.emitDecl
+            ? setupPreambleLines.push(`const $emit = __emit`)
+            : destructureElements.push('emit: $emit'),
+      },
+      $attrs: {
+        bindingType: BindingTypes.SETUP_REACTIVE_CONST,
+        setup: () => destructureElements.push('attrs: $attrs'),
+      },
+      $slots: {
+        bindingType: BindingTypes.SETUP_REACTIVE_CONST,
+        setup: () => destructureElements.push('slots: $slots'),
+      },
+    }
+
+    for (const [name, config] of Object.entries(builtins)) {
+      if (isUsedInTemplate(name, sfc) && !ctx.bindingMetadata[name]) {
+        config.setup()
+        ctx.bindingMetadata[name] = config.bindingType
+      }
+    }
+  }
+
   const scriptAst = ctx.scriptAst
   const scriptSetupAst = ctx.scriptSetupAst!
+  const inlineMode = options.inlineTemplate
 
   // 1.1 walk import declarations of <script>
   if (scriptAst) {
@@ -298,7 +353,7 @@ export function compileScript(
               (specifier.type === 'ImportSpecifier' &&
                 specifier.importKind === 'type'),
             false,
-            !options.inlineTemplate,
+            !inlineMode,
           )
         }
       }
@@ -333,6 +388,23 @@ export function compileScript(
         const local = specifier.local.name
         const imported = getImportedName(specifier)
         const source = node.source.value
+
+        // rewrite defineVaporAsyncComponent import to defineAsyncComponent
+        // in SSR + Vapor mode
+        if (
+          vapor &&
+          ssr &&
+          specifier.type === 'ImportSpecifier' &&
+          source === 'vue' &&
+          imported === 'defineVaporAsyncComponent'
+        ) {
+          ctx.s.overwrite(
+            specifier.start! + startOffset,
+            specifier.end! + startOffset,
+            `defineAsyncComponent as ${local}`,
+          )
+        }
+
         const existing = ctx.userImports[local]
         if (source === 'vue' && MACROS.includes(imported)) {
           if (local === imported) {
@@ -366,7 +438,7 @@ export function compileScript(
               (specifier.type === 'ImportSpecifier' &&
                 specifier.importKind === 'type'),
             true,
-            !options.inlineTemplate,
+            !inlineMode,
           )
         }
       }
@@ -544,7 +616,7 @@ export function compileScript(
           }
 
           // defineProps
-          const isDefineProps = processDefineProps(ctx, init, decl.id)
+          const isDefineProps = processDefineProps(ctx, init, decl.id as LVal)
           if (ctx.propsDestructureRestId) {
             setupBindings[ctx.propsDestructureRestId] =
               BindingTypes.SETUP_REACTIVE_CONST
@@ -552,10 +624,10 @@ export function compileScript(
 
           // defineEmits
           const isDefineEmits =
-            !isDefineProps && processDefineEmits(ctx, init, decl.id)
+            !isDefineProps && processDefineEmits(ctx, init, decl.id as LVal)
           !isDefineEmits &&
-            (processDefineSlots(ctx, init, decl.id) ||
-              processDefineModel(ctx, init, decl.id))
+            (processDefineSlots(ctx, init, decl.id as LVal) ||
+              processDefineModel(ctx, init, decl.id as LVal))
 
           if (
             isDefineProps &&
@@ -746,18 +818,12 @@ export function compileScript(
   for (const key in setupBindings) {
     ctx.bindingMetadata[key] = setupBindings[key]
   }
-  // known ref bindings
-  if (refBindings) {
-    for (const key of refBindings) {
-      ctx.bindingMetadata[key] = BindingTypes.SETUP_REF
-    }
-  }
 
   // 7. inject `useCssVars` calls
   if (
     sfc.cssVars.length &&
     // no need to do this when targeting SSR
-    !options.templateOptions?.ssr
+    !ssr
   ) {
     ctx.helperImports.add(getCssVarsHelper(vapor))
     ctx.helperImports.add('unref')
@@ -814,22 +880,26 @@ export function compileScript(
   }
 
   const destructureElements =
-    ctx.hasDefineExposeCall || !options.inlineTemplate
-      ? [`expose: __expose`]
-      : []
+    ctx.hasDefineExposeCall || !inlineMode ? [`expose: __expose`] : []
   if (ctx.emitDecl) {
     destructureElements.push(`emit: __emit`)
   }
+
+  // destructure built-in properties (e.g. $emit, $attrs, $slots)
+  if (inlineMode) {
+    buildDestructureElements()
+  }
+
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
   }
 
+  let templateMap
   // 9. generate return statement
   let returned
-  if (
-    !options.inlineTemplate ||
-    (!sfc.template && ctx.hasDefaultExportRender)
-  ) {
+  // ensure props bindings register before compile template in inline mode
+  const propsDecl = genRuntimeProps(ctx)
+  if (!inlineMode || (!sfc.template && ctx.hasDefaultExportRender)) {
     // non-inline mode, or has manual render in normal <script>
     // return bindings from script and script setup
     const allBindings: Record<string, any> = {
@@ -868,12 +938,12 @@ export function compileScript(
   } else {
     // inline mode
     if (sfc.template && !sfc.template.src) {
-      if (options.templateOptions && options.templateOptions.ssr) {
+      if (ssr) {
         hasInlinedSsrRenderFn = true
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, preamble, tips, errors, helpers } = compileTemplate({
+      const { code, preamble, tips, errors, helpers, map } = compileTemplate({
         filename,
         ast: sfc.template.ast,
         source: sfc.template.content,
@@ -883,6 +953,7 @@ export function compileScript(
         scoped: sfc.styles.some(s => s.scoped),
         isProd: options.isProd,
         ssrCssVars: sfc.cssVars,
+        vapor,
         compilerOptions: {
           ...(options.templateOptions &&
             options.templateOptions.compilerOptions),
@@ -891,6 +962,7 @@ export function compileScript(
           bindingMetadata: ctx.bindingMetadata,
         },
       })
+      templateMap = map
       if (tips.length) {
         tips.forEach(warnOnce)
       }
@@ -927,7 +999,7 @@ export function compileScript(
     }
   }
 
-  if (!options.inlineTemplate && !__TEST__) {
+  if (!inlineMode && !__TEST__) {
     // in non-inline mode, the `__isScriptSetup: true` flag is used by
     // componentPublicInstance proxy to allow properties that start with $ or _
     ctx.s.appendRight(
@@ -941,7 +1013,7 @@ export function compileScript(
     ctx.s.appendRight(
       endOffset,
       // vapor mode generates its own return when inlined
-      `\n${vapor ? `` : `return `}${returned}\n}\n\n`,
+      `\n${vapor && !ssr ? `` : `return `}${returned}\n}\n\n`,
     )
   }
 
@@ -951,9 +1023,6 @@ export function compileScript(
     : `export default`
 
   let runtimeOptions = ``
-  if (vapor) {
-    runtimeOptions += `\n  vapor: true,`
-  }
   if (!ctx.hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
     if (match) {
@@ -964,7 +1033,6 @@ export function compileScript(
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
 
-  const propsDecl = genRuntimeProps(ctx)
   if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
 
   const emitsDecl = genRuntimeEmits(ctx)
@@ -979,10 +1047,19 @@ export function compileScript(
 
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
-  const exposeCall =
-    ctx.hasDefineExposeCall || options.inlineTemplate ? `` : `  __expose();\n`
+  if (!ctx.hasDefineExposeCall && !inlineMode)
+    setupPreambleLines.push(`__expose();`)
+
+  const setupPreamble = setupPreambleLines.length
+    ? `  ${setupPreambleLines.join('\n  ')}\n`
+    : ''
   // wrap setup code with function.
   if (ctx.isTS) {
+    // in SSR, always use defineComponent, so __vapor flag is required
+    if (ssr && vapor) {
+      runtimeOptions += `\n  __vapor: true,`
+    }
+
     // for TS, make sure the exported type is still valid type with
     // correct props information
     // we have to use object spread for types to be merged properly
@@ -994,13 +1071,17 @@ export function compileScript(
     ctx.s.prependLeft(
       startOffset,
       `\n${genDefaultAs} /*@__PURE__*/${ctx.helper(
-        vapor ? `defineVaporComponent` : `defineComponent`,
+        vapor && !ssr ? `defineVaporComponent` : `defineComponent`,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
-      }setup(${args}) {\n${exposeCall}`,
+      }setup(${args}) {\n${setupPreamble}`,
     )
     ctx.s.appendRight(endOffset, `})`)
   } else {
+    // in TS, defineVaporComponent adds the option already
+    if (vapor) {
+      runtimeOptions += `\n  __vapor: true,`
+    }
     if (defaultExport || definedOptions) {
       // without TS, can't rely on rest spread, so we use Object.assign
       // export default Object.assign(__default__, { ... })
@@ -1009,14 +1090,14 @@ export function compileScript(
         `\n${genDefaultAs} /*@__PURE__*/Object.assign(${
           defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`,
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
       )
       ctx.s.appendRight(endOffset, `})`)
     } else {
       ctx.s.prependLeft(
         startOffset,
         `\n${genDefaultAs} {${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`,
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${setupPreamble}`,
       )
       ctx.s.appendRight(endOffset, `}`)
     }
@@ -1036,19 +1117,28 @@ export function compileScript(
     )
   }
 
+  const content = ctx.s.toString()
+  let map =
+    options.sourceMap !== false
+      ? (ctx.s.generateMap({
+          source: filename,
+          hires: true,
+          includeContent: true,
+        }) as unknown as RawSourceMap)
+      : undefined
+  // merge source maps of the script setup and template in inline mode
+  if (templateMap && map) {
+    const offset = content.indexOf(returned)
+    const templateLineOffset =
+      content.slice(0, offset).split(/\r?\n/).length - 1
+    map = mergeSourceMaps(map, templateMap, templateLineOffset)
+  }
   return {
     ...scriptSetup,
     bindings: ctx.bindingMetadata,
     imports: ctx.userImports,
-    content: ctx.s.toString(),
-    map:
-      options.sourceMap !== false
-        ? (ctx.s.generateMap({
-            source: filename,
-            hires: true,
-            includeContent: true,
-          }) as unknown as RawSourceMap)
-        : undefined,
+    content,
+    map,
     scriptAst: scriptAst?.body,
     scriptSetupAst: scriptSetupAst?.body,
     deps: ctx.deps ? [...ctx.deps] : undefined,
@@ -1126,6 +1216,7 @@ function walkDeclaration(
                 m === userImportAliases['shallowRef'] ||
                 m === userImportAliases['customRef'] ||
                 m === userImportAliases['toRef'] ||
+                m === userImportAliases['useTemplateRef'] ||
                 m === DEFINE_MODEL,
             )
           ) {
@@ -1267,4 +1358,43 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
       }
       return false
   }
+}
+
+export function mergeSourceMaps(
+  scriptMap: RawSourceMap,
+  templateMap: RawSourceMap,
+  templateLineOffset: number,
+): RawSourceMap {
+  const generator = new SourceMapGenerator()
+  const addMapping = (map: RawSourceMap, lineOffset = 0) => {
+    const consumer = new SourceMapConsumer(map)
+    ;(consumer as any).sources.forEach((sourceFile: string) => {
+      ;(generator as any)._sources.add(sourceFile)
+      const sourceContent = consumer.sourceContentFor(sourceFile)
+      if (sourceContent != null) {
+        generator.setSourceContent(sourceFile, sourceContent)
+      }
+    })
+    consumer.eachMapping(m => {
+      if (m.originalLine == null) return
+      generator.addMapping({
+        generated: {
+          line: m.generatedLine + lineOffset,
+          column: m.generatedColumn,
+        },
+        original: {
+          line: m.originalLine,
+          column: m.originalColumn!,
+        },
+        source: m.source,
+        name: m.name,
+      })
+    })
+  }
+
+  addMapping(scriptMap)
+  addMapping(templateMap, templateLineOffset)
+  ;(generator as any)._sourceRoot = scriptMap.sourceRoot
+  ;(generator as any)._file = scriptMap.file
+  return (generator as any).toJSON()
 }

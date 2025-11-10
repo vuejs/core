@@ -6,7 +6,14 @@ import {
   watch,
   watchEffect,
 } from '@vue/runtime-dom'
-import { createComponent, setRef, template } from '../src'
+import {
+  createComponent,
+  createInvoker,
+  createTemplateRefSetter,
+  defineVaporComponent,
+  delegateEvents,
+  template,
+} from '../src'
 import { makeRender } from './_utils'
 import type { VaporComponent } from '../src/component'
 import type { RefEl } from '../src/apiTemplateRef'
@@ -209,7 +216,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'render function')
   })
 
-  test.todo('in function ref', () => {
+  test('in function ref', () => {
     const err = new Error('foo')
     const ref = () => {
       throw err
@@ -229,6 +236,7 @@ describe('error handling', () => {
     const Child = {
       render() {
         const el = template('<div>')()
+        const setRef = createTemplateRefSetter()
         setRef(el as RefEl, ref)
         return el
       },
@@ -361,6 +369,38 @@ describe('error handling', () => {
     count.value++
     await nextTick()
     expect(fn).toHaveBeenCalledWith(err, 'watcher cleanup function')
+  })
+
+  test('in dom event handler', () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return createComponent(Child)
+      },
+    }
+
+    delegateEvents('click')
+    const Child = defineVaporComponent({
+      setup() {
+        function onClick() {
+          throw err
+        }
+        const n0 = template('<button>throw Error</button>', true)() as any
+        n0.$evtclick = createInvoker(onClick)
+        return n0
+      },
+    })
+
+    const { host } = define(Comp).render()
+    const btn = host.querySelector('button') as HTMLButtonElement
+    btn.click()
+    expect(fn).toHaveBeenCalledWith(err, 'native event handler')
   })
 
   test('in component event handler via emit', () => {

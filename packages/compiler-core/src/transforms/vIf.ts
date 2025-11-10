@@ -36,7 +36,7 @@ import { findDir, findProp, getMemoedVNodeCall, injectProp } from '../utils'
 import { PatchFlags } from '@vue/shared'
 
 export const transformIf: NodeTransform = createStructuralDirectiveTransform(
-  /^(if|else|else-if)$/,
+  /^(?:if|else|else-if)$/,
   (node, dir, context) => {
     return processIf(node, dir, context, (ifNode, branch, isRoot) => {
       // #1587: We need to dynamically increment the key based on the current
@@ -141,9 +141,9 @@ export function processIf(
       }
 
       if (sibling && sibling.type === NodeTypes.IF) {
-        // Check if v-else was followed by v-else-if
+        // Check if v-else was followed by v-else-if or there are two adjacent v-else
         if (
-          dir.name === 'else-if' &&
+          (dir.name === 'else-if' || dir.name === 'else') &&
           sibling.branches[sibling.branches.length - 1].condition === undefined
         ) {
           context.onError(

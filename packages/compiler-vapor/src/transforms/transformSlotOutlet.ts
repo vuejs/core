@@ -9,15 +9,15 @@ import {
   createSimpleExpression,
   isStaticArgOf,
   isStaticExp,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import {
   type BlockIRNode,
+  type DirectiveIRNode,
   DynamicFlag,
   IRNodeTypes,
   type IRProps,
   type VaporDirectiveNode,
-  type WithDirectiveIRNode,
 } from '../ir'
 import { camelize, extend } from '@vue/shared'
 import { newBlock } from './utils'
@@ -85,8 +85,8 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
     irProps = isDynamic ? props : [props]
 
     const runtimeDirective = context.block.operation.find(
-      (oper): oper is WithDirectiveIRNode =>
-        oper.type === IRNodeTypes.WITH_DIRECTIVE && oper.element === id,
+      (oper): oper is DirectiveIRNode =>
+        oper.type === IRNodeTypes.DIRECTIVE && oper.element === id,
     )
     if (runtimeDirective) {
       context.options.onError(
@@ -100,13 +100,14 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
 
   return () => {
     exitBlock && exitBlock()
-    context.registerOperation({
+    context.dynamic.operation = {
       type: IRNodeTypes.SLOT_OUTLET_NODE,
       id,
       name: slotName,
       props: irProps,
       fallback,
-    })
+      noSlotted: !!(context.options.scopeId && !context.options.slotted),
+    }
   }
 }
 

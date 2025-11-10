@@ -1,4 +1,3 @@
-import { isValidHTMLNesting } from '../html-nesting'
 import {
   type AttributeNode,
   type ComponentNode,
@@ -11,6 +10,7 @@ import {
   createCompilerError,
   createSimpleExpression,
   isStaticArgOf,
+  isValidHTMLNesting,
 } from '@vue/compiler-dom'
 import {
   camelize,
@@ -36,7 +36,8 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
-import { findProp } from '../utils'
+import { findProp, isBuiltInComponent } from '../utils'
+import { IMPORT_EXP_END, IMPORT_EXP_START } from '../generators/utils'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -44,6 +45,8 @@ export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
 )
 
 export const transformElement: NodeTransform = (node, context) => {
+  let effectIndex = context.block.effect.length
+  const getEffectIndex = () => effectIndex++
   return function postTransformElement() {
     ;({ node } = context)
     if (
@@ -55,13 +58,19 @@ export const transformElement: NodeTransform = (node, context) => {
     )
       return
 
-    const isComponent = node.tagType === ElementTypes.COMPONENT
+    // treat custom elements as components because the template helper cannot
+    // resolve them properly; they require creation via createElement
+    const isCustomElement = !!context.options.isCustomElement(node.tag)
+    const isComponent =
+      node.tagType === ElementTypes.COMPONENT || isCustomElement
+
     const isDynamicComponent = isComponentTag(node.tag)
     const propsResult = buildProps(
       node,
       context as TransformContext<ElementNode>,
       isComponent,
       isDynamicComponent,
+      getEffectIndex,
     )
 
     let { parent } = context
@@ -74,17 +83,29 @@ export const transformElement: NodeTransform = (node, context) => {
       parent = parent.parent
     }
     const singleRoot =
-      context.root === parent &&
-      parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
-        .length === 1
+      (context.root === parent &&
+        parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
+          .length === 1) ||
+      isCustomElement
 
-    ;(isComponent ? transformComponentElement : transformNativeElement)(
-      node as any,
-      propsResult,
-      singleRoot,
-      context as TransformContext<ElementNode>,
-      isDynamicComponent,
-    )
+    if (isComponent) {
+      transformComponentElement(
+        node as ComponentNode,
+        propsResult,
+        singleRoot,
+        context,
+        isDynamicComponent,
+        isCustomElement,
+      )
+    } else {
+      transformNativeElement(
+        node as PlainElementNode,
+        propsResult,
+        singleRoot,
+        context,
+        getEffectIndex,
+      )
+    }
   }
 }
 
@@ -94,6 +115,7 @@ function transformComponentElement(
   singleRoot: boolean,
   context: TransformContext,
   isDynamicComponent: boolean,
+  isCustomElement: boolean,
 ) {
   const dynamicComponent = isDynamicComponent
     ? resolveDynamicComponent(node)
@@ -102,10 +124,16 @@ function transformComponentElement(
   let { tag } = node
   let asset = true
 
-  if (!dynamicComponent) {
+  if (!dynamicComponent && !isCustomElement) {
     const fromSetup = resolveSetupReference(tag, context)
     if (fromSetup) {
       tag = fromSetup
+      asset = false
+    }
+
+    const builtInTag = isBuiltInComponent(tag)
+    if (builtInTag) {
+      tag = builtInTag
       asset = false
     }
 
@@ -119,22 +147,30 @@ function transformComponentElement(
     }
 
     if (asset) {
+      // self referencing component (inferred from filename)
+      if (context.selfName && capitalize(camelize(tag)) === context.selfName) {
+        // generators/block.ts has special check for __self postfix when generating
+        // component imports, which will pass additional `maybeSelfReference` flag
+        // to `resolveComponent`.
+        tag += `__self`
+      }
       context.component.add(tag)
     }
   }
 
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
-  context.registerOperation({
+  context.dynamic.operation = {
     type: IRNodeTypes.CREATE_COMPONENT_NODE,
     id: context.reference(),
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
     asset,
-    root: singleRoot,
+    root: singleRoot && !context.inVFor,
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,
-  })
+    isCustomElement,
+  }
   context.slots = []
 }
 
@@ -172,11 +208,15 @@ function resolveSetupReference(name: string, context: TransformContext) {
         : undefined
 }
 
+// keys cannot be a part of the template and need to be set dynamically
+const dynamicKeys = ['indeterminate']
+
 function transformNativeElement(
   node: PlainElementNode,
   propsResult: PropsResult,
   singleRoot: boolean,
-  context: TransformContext<ElementNode>,
+  context: TransformContext,
+  getEffectIndex: () => number,
 ) {
   const { tag } = node
   const { scopeId } = context.options
@@ -189,27 +229,51 @@ function transformNativeElement(
   const dynamicProps: string[] = []
   if (propsResult[0] /* dynamic props */) {
     const [, dynamicArgs, expressions] = propsResult
-    context.registerEffect(expressions, {
-      type: IRNodeTypes.SET_DYNAMIC_PROPS,
-      element: context.reference(),
-      props: dynamicArgs,
-      root: singleRoot,
-    })
+    context.registerEffect(
+      expressions,
+      {
+        type: IRNodeTypes.SET_DYNAMIC_PROPS,
+        element: context.reference(),
+        props: dynamicArgs,
+        root: singleRoot,
+        tag,
+      },
+      getEffectIndex,
+    )
   } else {
     for (const prop of propsResult[1]) {
       const { key, values } = prop
-      if (key.isStatic && values.length === 1 && values[0].isStatic) {
+      // handling asset imports
+      if (
+        context.imports.some(imported =>
+          values[0].content.includes(imported.exp.content),
+        )
+      ) {
+        // add start and end markers to the import expression, so it can be replaced
+        // with string concatenation in the generator, see genTemplates
+        template += ` ${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
+      } else if (
+        key.isStatic &&
+        values.length === 1 &&
+        (values[0].isStatic || values[0].content === "''") &&
+        !dynamicKeys.includes(key.content)
+      ) {
         template += ` ${key.content}`
-        if (values[0].content) template += `="${values[0].content}"`
+        if (values[0].content)
+          template += `="${values[0].content === "''" ? '' : values[0].content}"`
       } else {
         dynamicProps.push(key.content)
-        context.registerEffect(values, {
-          type: IRNodeTypes.SET_PROP,
-          element: context.reference(),
-          prop,
-          root: singleRoot,
-          tag,
-        })
+        context.registerEffect(
+          values,
+          {
+            type: IRNodeTypes.SET_PROP,
+            element: context.reference(),
+            prop,
+            root: singleRoot,
+            tag,
+          },
+          getEffectIndex,
+        )
       }
     }
   }
@@ -221,7 +285,7 @@ function transformNativeElement(
   }
 
   if (singleRoot) {
-    context.ir.rootTemplateIndex = context.ir.template.length
+    context.ir.rootTemplateIndex = context.ir.template.size
   }
 
   if (
@@ -246,6 +310,7 @@ export function buildProps(
   context: TransformContext<ElementNode>,
   isComponent: boolean,
   isDynamicComponent?: boolean,
+  getEffectIndex?: () => number,
 ): PropsResult {
   const props = node.props as (VaporDirectiveNode | AttributeNode)[]
   if (props.length === 0) return [false, []]
@@ -292,12 +357,12 @@ export function buildProps(
           } else {
             context.registerEffect(
               [prop.exp],
-
               {
                 type: IRNodeTypes.SET_DYNAMIC_EVENTS,
                 element: context.reference(),
                 event: prop.exp,
               },
+              getEffectIndex,
             )
           }
         } else {
@@ -381,7 +446,7 @@ function transformProp(
     }
 
     context.registerOperation({
-      type: IRNodeTypes.WITH_DIRECTIVE,
+      type: IRNodeTypes.DIRECTIVE,
       element: context.reference(),
       dir: prop,
       name,
@@ -407,7 +472,9 @@ function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
     }
     const name = prop.key.content
     const existing = knownProps.get(name)
-    if (existing) {
+    // prop names and event handler names can be the same but serve different purposes
+    // e.g. `:appear="true"` is a prop while `@appear="handler"` is an event handler
+    if (existing && existing.handler === prop.handler) {
       if (name === 'style' || name === 'class') {
         mergePropValues(existing, prop)
       }

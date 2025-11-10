@@ -1,6 +1,8 @@
 import {
   type ElementNode,
+  ElementTypes,
   ErrorCodes,
+  NodeTypes,
   type SimpleExpressionNode,
   createCompilerError,
 } from '@vue/compiler-dom'
@@ -15,7 +17,7 @@ import {
   IRNodeTypes,
   type VaporDirectiveNode,
 } from '../ir'
-import { findProp, propToExpression } from '../utils'
+import { findProp, isStaticExpression, propToExpression } from '../utils'
 import { newBlock, wrapTemplate } from './utils'
 
 export const transformVFor: NodeTransform = createStructuralDirectiveTransform(
@@ -27,7 +29,7 @@ export function processFor(
   node: ElementNode,
   dir: VaporDirectiveNode,
   context: TransformContext<ElementNode>,
-) {
+): (() => void) | undefined {
   if (!dir.exp) {
     context.options.onError(
       createCompilerError(ErrorCodes.X_V_FOR_NO_EXPRESSION, dir.loc),
@@ -46,6 +48,10 @@ export function processFor(
 
   const keyProp = findProp(node, 'key')
   const keyProperty = keyProp && propToExpression(keyProp)
+  const isComponent =
+    node.tagType === ElementTypes.COMPONENT ||
+    // template v-for with a single component child
+    isTemplateWithSingleComponent(node)
   context.node = node = wrapTemplate(node, ['for'])
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()
@@ -55,16 +61,17 @@ export function processFor(
 
   return (): void => {
     exitBlock()
+
     const { parent } = context
-    let container: number | undefined
-    if (
+
+    // if v-for is the only child of a parent element, it can go the fast path
+    // when the entire list is emptied
+    const isOnlyChild =
       parent &&
       parent.block.node !== parent.node &&
       parent.node.children.length === 1
-    ) {
-      container = parent.reference()
-    }
-    context.registerOperation({
+
+    context.dynamic.operation = {
       type: IRNodeTypes.FOR,
       id,
       source: source as SimpleExpressionNode,
@@ -73,8 +80,27 @@ export function processFor(
       index: index as SimpleExpressionNode | undefined,
       keyProp: keyProperty,
       render,
-      once: context.inVOnce,
-      container,
-    })
+      once:
+        context.inVOnce ||
+        isStaticExpression(
+          source as SimpleExpressionNode,
+          context.options.bindingMetadata,
+        ),
+      component: isComponent,
+      onlyChild: !!isOnlyChild,
+    }
   }
+}
+
+function isTemplateWithSingleComponent(node: ElementNode): boolean {
+  if (node.tag !== 'template') return false
+
+  const nonCommentChildren = node.children.filter(
+    c => c.type !== NodeTypes.COMMENT,
+  )
+  return (
+    nonCommentChildren.length === 1 &&
+    nonCommentChildren[0].type === NodeTypes.ELEMENT &&
+    nonCommentChildren[0].tagType === ElementTypes.COMPONENT
+  )
 }

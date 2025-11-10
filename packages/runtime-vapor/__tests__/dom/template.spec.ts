@@ -1,4 +1,5 @@
-import { children, next, template } from '../../src/dom/template'
+import { template } from '../../src/dom/template'
+import { child, next, nthChild } from '../../src/dom/node'
 
 describe('api: template', () => {
   test('create element', () => {
@@ -17,12 +18,12 @@ describe('api: template', () => {
     expect(root.$root).toBe(true)
   })
 
-  test('children', () => {
+  test('nthChild', () => {
     const t = template('<div><span><b>nested</b></span><p></p></div>')
-    const root = t()
-    const span = children(root, 0)
-    const b = children(span, 0)
-    const p = children(root, 1)
+    const root = t() as ParentNode
+    const span = nthChild(root, 0) as ParentNode
+    const b = nthChild(span, 0)
+    const p = nthChild(root, 1)
     expect(span).toBe(root.firstChild)
     expect(b).toBe(root.firstChild!.firstChild)
     expect(p).toBe(root.firstChild!.nextSibling)
@@ -30,13 +31,13 @@ describe('api: template', () => {
 
   test('next', () => {
     const t = template('<div><span></span><b></b><p></p></div>')
-    const root = t()
-    const span = children(root, 0)
-    const b = next(span, 1)
+    const root = t() as ParentNode
+    const span = child(root as ParentNode)
+    const b = next(span)
 
     expect(span).toBe(root.childNodes[0])
     expect(b).toBe(root.childNodes[1])
-    expect(next(span, 2)).toBe(root.childNodes[2])
-    expect(next(b, 1)).toBe(root.childNodes[2])
+    expect(nthChild(root, 2)).toBe(root.childNodes[2])
+    expect(next(b)).toBe(root.childNodes[2])
   })
 })

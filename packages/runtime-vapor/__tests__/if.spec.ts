@@ -1,9 +1,8 @@
 import {
-  children,
+  child,
   createIf,
   insert,
   renderEffect,
-  setText,
   template,
   // @ts-expect-error
   withDirectives,
@@ -12,6 +11,7 @@ import { nextTick, ref } from '@vue/runtime-dom'
 import type { Mock } from 'vitest'
 import { makeRender } from './_utils'
 import { unmountComponent } from '../src/component'
+import { setElementText } from '../src/dom/prop'
 
 const define = makeRender()
 
@@ -44,7 +44,7 @@ describe('createIf', () => {
           (spyIfFn ||= vi.fn(() => {
             const n2 = t1()
             renderEffect(() => {
-              setText(n2, count.value)
+              setElementText(n2, count.value)
             })
             return n2
           })),
@@ -161,23 +161,21 @@ describe('createIf', () => {
       const n1 = createIf(
         spyConditionFn1,
         () => {
-          const n2 = t0()
-          withDirectives(children(n2, 0), [
-            [vDirective, () => (update.value, '1')],
-          ])
+          const n2 = t0() as ParentNode
+          withDirectives(child(n2), [[vDirective, () => (update.value, '1')]])
           return n2
         },
         () =>
           createIf(
             spyConditionFn2,
             () => {
-              const n2 = t0()
-              withDirectives(children(n2, 0), [[vDirective, () => '2']])
+              const n2 = t0() as ParentNode
+              withDirectives(child(n2), [[vDirective, () => '2']])
               return n2
             },
             () => {
-              const n2 = t0()
-              withDirectives(children(n2, 0), [[vDirective, () => '3']])
+              const n2 = t0() as ParentNode
+              withDirectives(child(n2), [[vDirective, () => '3']])
               return n2
             },
           ),

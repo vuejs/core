@@ -11,13 +11,21 @@ import {
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import { DynamicFlag, IRNodeTypes } from '../ir'
-import { getLiteralExpressionValue, isConstantExpression } from '../utils'
+import { getLiteralExpressionValue } from '../utils'
+import { escapeHtml } from '@vue/shared'
 
 type TextLike = TextNode | InterpolationNode
 const seen = new WeakMap<
   TransformContext<RootNode>,
   WeakSet<TemplateChildNode | RootNode>
 >()
+
+export function markNonTemplate(
+  node: TemplateChildNode,
+  context: TransformContext,
+): void {
+  seen.get(context.root)!.add(node)
+}
 
 export const transformText: NodeTransform = (node, context) => {
   if (!seen.has(context.root)) seen.set(context.root, new WeakSet())
@@ -26,73 +34,133 @@ export const transformText: NodeTransform = (node, context) => {
     return
   }
 
+  const isFragment =
+    node.type === NodeTypes.ROOT ||
+    (node.type === NodeTypes.ELEMENT &&
+      (node.tagType === ElementTypes.TEMPLATE ||
+        node.tagType === ElementTypes.COMPONENT))
+
   if (
-    node.type === NodeTypes.ELEMENT &&
-    node.tagType === ElementTypes.ELEMENT &&
-    isAllTextLike(node.children)
+    (isFragment ||
+      (node.type === NodeTypes.ELEMENT &&
+        node.tagType === ElementTypes.ELEMENT)) &&
+    node.children.length
   ) {
-    processTextLikeContainer(
-      node.children,
-      context as TransformContext<ElementNode>,
-    )
+    let hasInterp = false
+    let isAllTextLike = true
+    for (const c of node.children) {
+      if (c.type === NodeTypes.INTERPOLATION) {
+        hasInterp = true
+      } else if (c.type !== NodeTypes.TEXT) {
+        isAllTextLike = false
+      }
+    }
+    // all text like with interpolation
+    if (!isFragment && isAllTextLike && hasInterp) {
+      processTextContainer(
+        node.children as TextLike[],
+        context as TransformContext<ElementNode>,
+      )
+    } else if (hasInterp) {
+      // check if there's any text before interpolation, it needs to be merged
+      for (let i = 0; i < node.children.length; i++) {
+        const c = node.children[i]
+        const prev = node.children[i - 1]
+        if (
+          c.type === NodeTypes.INTERPOLATION &&
+          prev &&
+          prev.type === NodeTypes.TEXT
+        ) {
+          // mark leading text node for skipping
+          markNonTemplate(prev, context)
+        }
+      }
+    }
   } else if (node.type === NodeTypes.INTERPOLATION) {
-    processTextLike(context as TransformContext<InterpolationNode>)
+    processInterpolation(context as TransformContext<InterpolationNode>)
   } else if (node.type === NodeTypes.TEXT) {
-    context.template += node.content
+    context.template += escapeHtml(node.content)
   }
 }
 
-function processTextLike(context: TransformContext<InterpolationNode>) {
-  const nexts = context.parent!.node.children.slice(context.index)
+function processInterpolation(context: TransformContext<InterpolationNode>) {
+  const parentNode = context.parent!.node
+  const children = parentNode.children
+  const nexts = children.slice(context.index)
   const idx = nexts.findIndex(n => !isTextLike(n))
   const nodes = (idx > -1 ? nexts.slice(0, idx) : nexts) as Array<TextLike>
 
+  // merge leading text
+  const prev = children[context.index - 1]
+  if (prev && prev.type === NodeTypes.TEXT) {
+    nodes.unshift(prev)
+  }
+  const values = processTextLikeChildren(nodes, context)
+
+  if (values.length === 0 && parentNode.type !== NodeTypes.ROOT) {
+    return
+  }
+
+  context.template += ' '
   const id = context.reference()
-  const values = nodes.map(node => createTextLikeExpression(node, context))
 
-  context.dynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
+  if (
+    values.length === 0 ||
+    (values.every(v => getLiteralExpressionValue(v) != null) &&
+      parentNode.type !== NodeTypes.ROOT)
+  ) {
+    return
+  }
 
-  context.registerOperation({
-    type: IRNodeTypes.CREATE_TEXT_NODE,
-    id,
+  context.registerEffect(values, {
+    type: IRNodeTypes.SET_TEXT,
+    element: id,
     values,
-    effect: !values.every(isConstantExpression) && !context.inVOnce,
   })
 }
 
-function processTextLikeContainer(
+function processTextContainer(
   children: TextLike[],
   context: TransformContext<ElementNode>,
 ) {
-  const values = children.map(child => createTextLikeExpression(child, context))
-  const literals = values.map(getLiteralExpressionValue)
+  const values = processTextLikeChildren(children, context)
+
+  const literals = values.map(value => getLiteralExpressionValue(value))
+
   if (literals.every(l => l != null)) {
-    context.childrenTemplate = literals.map(l => String(l))
+    context.childrenTemplate = literals.map(l => escapeHtml(String(l)))
   } else {
+    context.childrenTemplate = [' ']
+    context.registerOperation({
+      type: IRNodeTypes.GET_TEXT_CHILD,
+      parent: context.reference(),
+    })
     context.registerEffect(values, {
       type: IRNodeTypes.SET_TEXT,
       element: context.reference(),
       values,
+      // indicates this node is generated, so prefix should be "x" instead of "n"
+      generated: true,
     })
   }
 }
 
-function createTextLikeExpression(node: TextLike, context: TransformContext) {
-  seen.get(context.root)!.add(node)
-  if (node.type === NodeTypes.TEXT) {
-    return createSimpleExpression(node.content, true, node.loc)
-  } else {
-    return node.content as SimpleExpressionNode
-  }
-}
+function processTextLikeChildren(nodes: TextLike[], context: TransformContext) {
+  const exps: SimpleExpressionNode[] = []
+  for (const node of nodes) {
+    let exp: SimpleExpressionNode
+    markNonTemplate(node, context)
 
-function isAllTextLike(children: TemplateChildNode[]): children is TextLike[] {
-  return (
-    !!children.length &&
-    children.every(isTextLike) &&
-    // at least one an interpolation
-    children.some(n => n.type === NodeTypes.INTERPOLATION)
-  )
+    if (node.type === NodeTypes.TEXT) {
+      exp = createSimpleExpression(node.content, true, node.loc)
+    } else {
+      exp = node.content as SimpleExpressionNode
+    }
+
+    if (exp.content) exps.push(exp)
+  }
+
+  return exps
 }
 
 function isTextLike(node: TemplateChildNode): node is TextLike {

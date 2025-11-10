@@ -1,0 +1,22 @@
+{
+  "name": "playground",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node ./setup/vite.js",
+    "build": "vite build -c vite.prod.config.ts",
+    "prepreview": "cd ../ && pnpm run build runtime-vapor -f esm-bundler",
+    "preview": "pnpm run build && vite preview -c vite.prod.config.ts"
+  },
+  "dependencies": {
+    "@vueuse/core": "^11.1.0",
+    "vue": "workspace:*"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "catalog:",
+    "@vue/compiler-sfc": "workspace:*",
+    "vite": "catalog:",
+    "vite-hyper-config": "^0.4.0",
+    "vite-plugin-inspect": "^0.8.7"
+  }
+}

@@ -1,5 +1,6 @@
 import importX from 'eslint-plugin-import-x'
 import tseslint from 'typescript-eslint'
+import { defineConfig } from 'eslint/config'
 import vitest from '@vitest/eslint-plugin'
 import { builtinModules } from 'node:module'
 
@@ -12,7 +13,7 @@ const banConstEnum = {
     'Please use non-const enums. This project automatically inlines enums.',
 }
 
-export default tseslint.config(
+export default defineConfig(
   {
     files: ['**/*.js', '**/*.ts', '**/*.tsx'],
     extends: [tseslint.configs.base],
@@ -60,7 +61,10 @@ export default tseslint.config(
       ],
       // This rule enforces the preference for using '@ts-expect-error' comments in TypeScript
       // code to indicate intentional type errors, improving code clarity and maintainability.
-      '@typescript-eslint/prefer-ts-expect-error': 'error',
+      '@typescript-eslint/ban-ts-comment': [
+        'error',
+        { minimumDescriptionLength: 0 },
+      ],
       // Enforce the use of 'import type' for importing types
       '@typescript-eslint/consistent-type-imports': [
         'error',
@@ -106,7 +110,7 @@ export default tseslint.config(
 
   // Packages targeting DOM
   {
-    files: ['packages/{vue,vue-compat,runtime-dom}/**'],
+    files: ['packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**'],
     rules: {
       'no-restricted-globals': ['error', ...NodeGlobals],
     },
@@ -126,7 +130,7 @@ export default tseslint.config(
     files: [
       'packages-private/template-explorer/**',
       'packages-private/sfc-playground/**',
-      'playground/**',
+      'packages-private/local-playground/**',
     ],
     rules: {
       'no-restricted-globals': ['error', ...NodeGlobals],
@@ -150,10 +154,11 @@ export default tseslint.config(
       'eslint.config.js',
       'rollup*.config.js',
       'scripts/**',
-      'benchmark/*',
       './*.{js,ts}',
       'packages/*/*.js',
       'packages/vue/*/*.js',
+      'packages-private/benchmark/*',
+      'packages-private/e2e-utils/*',
     ],
     rules: {
       'no-restricted-globals': 'off',

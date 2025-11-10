@@ -50,7 +50,7 @@ const outputFormat = format.startsWith('global')
     : 'esm'
 
 const postfix =
-  format === 'vapor'
+  format === 'esm-browser-vapor'
     ? 'runtime-with-vapor.esm-browser'
     : format.endsWith('-runtime')
       ? `runtime.${format.replace(/-runtime$/, '')}`
@@ -131,7 +131,7 @@ for (const target of targets) {
   }
 
   const entry =
-    format === 'vapor'
+    format === 'esm-browser-vapor'
       ? 'runtime-with-vapor.ts'
       : format.endsWith('-runtime')
         ? 'runtime.ts'

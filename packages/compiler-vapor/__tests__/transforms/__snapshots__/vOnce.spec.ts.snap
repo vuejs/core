@@ -12,15 +12,15 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > basic 1`] = `
-"import { createTextNode as _createTextNode, setClass as _setClass, prepend as _prepend, template as _template } from 'vue';
-const t0 = _template("<div><span></span></div>", true)
+"import { child as _child, next as _next, toDisplayString as _toDisplayString, setText as _setText, setClass as _setClass, template as _template } from 'vue';
+const t0 = _template("<div> <span></span></div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n2 = t0()
-  const n1 = n2.firstChild
-  const n0 = _createTextNode([_ctx.msg, " "])
+  const n0 = _child(n2, 0)
+  const n1 = _next(n0, 1)
+  _setText(n0, _toDisplayString(_ctx.msg) + " ")
   _setClass(n1, _ctx.clz)
-  _prepend(n2, n0)
   return n2
 }"
 `;
@@ -36,25 +36,25 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > on component 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, insert as _insert, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = t0()
+  _setInsertionState(n1, null, true)
   const n0 = _createComponentWithFallback(_component_Comp, { id: () => (_ctx.foo) }, null, null, true)
-  _insert(n0, n1)
   return n1
 }"
 `;
 
 exports[`compiler: v-once > on nested plain element 1`] = `
-"import { setProp as _setProp, template as _template } from 'vue';
+"import { child as _child, setProp as _setProp, template as _template } from 'vue';
 const t0 = _template("<div><div></div></div>", true)
 
 export function render(_ctx) {
   const n1 = t0()
-  const n0 = n1.firstChild
+  const n0 = _child(n1, 0)
   _setProp(n0, "id", _ctx.foo)
   return n1
 }"
@@ -65,10 +65,10 @@ exports[`compiler: v-once > with v-for 1`] = `
 const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
-  const n0 = _createFor(() => (_ctx.list), (_ctx0) => {
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, null, null, null, true)
+  }, undefined, 4)
   return n0
 }"
 `;

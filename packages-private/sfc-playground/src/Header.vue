@@ -14,7 +14,6 @@ const props = defineProps<{
   store: ReplStore
   prod: boolean
   ssr: boolean
-  vapor: boolean
   autoSave: boolean
   theme: 'dark' | 'light'
 }>()
@@ -104,14 +103,6 @@ function toggleDark() {
         @click="$emit('toggle-prod')"
       >
         <span>{{ prod ? 'PROD' : 'DEV' }}</span>
-      </button>
-      <button
-        title="Toggle vapor mode"
-        class="toggle-vapor"
-        :class="{ enabled: vapor }"
-        @click="$emit('toggle-vapor')"
-      >
-        <span>{{ vapor ? 'VAPOR ON' : 'VAPOR OFF' }}</span>
       </button>
       <button
         title="Toggle server rendering mode"

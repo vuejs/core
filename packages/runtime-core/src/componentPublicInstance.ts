@@ -2,6 +2,7 @@ import {
   type Component,
   type ComponentInternalInstance,
   type Data,
+  type GenericComponentInstance,
   getComponentPublicInstance,
   isStatefulComponent,
 } from './component'
@@ -355,10 +356,11 @@ export type PublicPropertiesMap = Record<
  * public $parent chains, skip functional ones and go to the parent instead.
  */
 const getPublicInstance = (
-  i: ComponentInternalInstance | null,
+  i: GenericComponentInstance | null,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null => {
-  if (!i) return null
-  if (isStatefulComponent(i)) return getComponentPublicInstance(i)
+  if (!i || i.vapor) return null
+  if (isStatefulComponent(i as ComponentInternalInstance))
+    return getComponentPublicInstance(i)
   return getPublicInstance(i.parent)
 }
 
@@ -448,7 +450,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (hasSetupBinding(setupState, key)) {
         accessCache![key] = AccessTypes.SETUP
         return setupState[key]
-      } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+      } else if (
+        __FEATURE_OPTIONS_API__ &&
+        data !== EMPTY_OBJ &&
+        hasOwn(data, key)
+      ) {
         accessCache![key] = AccessTypes.DATA
         return data[key]
       } else if (
@@ -545,7 +551,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     ) {
       warn(`Cannot mutate <script setup> binding "${key}" from Options API.`)
       return false
-    } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+    } else if (
+      __FEATURE_OPTIONS_API__ &&
+      data !== EMPTY_OBJ &&
+      hasOwn(data, key)
+    ) {
       data[key] = value
       return true
     } else if (hasOwn(instance.props, key)) {
@@ -575,19 +585,23 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, setupState, accessCache, ctx, appContext, propsOptions },
+      _: { data, setupState, accessCache, ctx, appContext, propsOptions, type },
     }: ComponentRenderContext,
     key: string,
   ) {
-    let normalizedProps
-    return (
-      !!accessCache![key] ||
-      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
+    let normalizedProps, cssModules
+    return !!(
+      accessCache![key] ||
+      (__FEATURE_OPTIONS_API__ &&
+        data !== EMPTY_OBJ &&
+        key[0] !== '$' &&
+        hasOwn(data, key)) ||
       hasSetupBinding(setupState, key) ||
       ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
-      hasOwn(appContext.config.globalProperties, key)
+      hasOwn(appContext.config.globalProperties, key) ||
+      ((cssModules = type.__cssModules) && cssModules[key])
     )
   },
 

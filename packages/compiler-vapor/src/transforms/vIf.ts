@@ -18,6 +18,7 @@ import {
 import { extend } from '@vue/shared'
 import { newBlock, wrapTemplate } from './utils'
 import { getSiblingIf } from './transformComment'
+import { isInTransition, isStaticExpression } from '../utils'
 
 export const transformVIf: NodeTransform = createStructuralDirectiveTransform(
   ['if', 'else', 'else-if'],
@@ -45,20 +46,35 @@ export function processIf(
 
     return () => {
       onExit()
-      context.registerOperation({
+      context.dynamic.operation = {
         type: IRNodeTypes.IF,
         id,
         condition: dir.exp!,
         positive: branch,
-        once: context.inVOnce,
-      })
+        once:
+          context.inVOnce ||
+          isStaticExpression(dir.exp!, context.options.bindingMetadata),
+      }
     }
   } else {
     // check the adjacent v-if
     const siblingIf = getSiblingIf(context, true)
+    context.dynamic.ifBranch = true
 
-    const { operation } = context.block
-    let lastIfNode = operation[operation.length - 1]
+    const siblings = context.parent && context.parent.dynamic.children
+    let lastIfNode
+    if (siblings) {
+      let i = siblings.length
+      while (i--) {
+        if (
+          siblings[i].operation &&
+          siblings[i].operation!.type === IRNodeTypes.IF
+        ) {
+          lastIfNode = siblings[i].operation
+          break
+        }
+      }
+    }
 
     if (
       // check if v-if is the sibling node
@@ -103,7 +119,9 @@ export function processIf(
         id: -1,
         condition: dir.exp!,
         positive: branch,
-        once: context.inVOnce,
+        once:
+          context.inVOnce ||
+          isStaticExpression(dir.exp!, context.options.bindingMetadata),
       }
     }
 
@@ -120,5 +138,8 @@ export function createIfBranch(
   const branch: BlockIRNode = newBlock(node)
   const exitBlock = context.enterBlock(branch)
   context.reference()
+  // generate key for branch result when it's in transition
+  // the key will be used to track node leaving at runtime
+  branch.dynamic.needsKey = isInTransition(context)
   return [branch, exitBlock]
 }

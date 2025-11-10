@@ -7,10 +7,9 @@ import {
 } from '../directives/vShow'
 import { CSS_VAR_TEXT } from '../helpers/useCssVars'
 
-type Style = StyleValue | Record<string, StyleValue | StyleValue[]>
-type StyleValue = string | null | undefined
+type Style = string | null | undefined | Record<string, unknown>
 
-const displayRE = /(^|;)\s*display\s*:/
+const displayRE = /(?:^|;)\s*display\s*:/
 
 export function patchStyle(el: Element, prev: Style, next: Style): void {
   const style = (el as HTMLElement).style
@@ -68,15 +67,11 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
 const semicolonRE = /[^\\];\s*$/
 const importantRE = /\s*!important$/
 
-function setStyle(
-  style: CSSStyleDeclaration,
-  name: string,
-  val: StyleValue | StyleValue[],
-) {
-  if (isArray(val)) {
-    val.forEach(v => setStyle(style, name, v))
+function setStyle(style: CSSStyleDeclaration, name: string, rawVal: unknown) {
+  if (isArray(rawVal)) {
+    rawVal.forEach(v => setStyle(style, name, v))
   } else {
-    if (val == null) val = ''
+    const val = rawVal == null ? '' : String(rawVal)
     if (__DEV__) {
       if (semicolonRE.test(val)) {
         warn(

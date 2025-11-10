@@ -40,8 +40,7 @@ import type { VModelDirective } from './directives/vModel'
  *
  * To enable proper types, add `"dom"` to `"lib"` in your `tsconfig.json`.
  */
-type DomStub = {}
-type DomType<T> = typeof globalThis extends { window: unknown } ? T : DomStub
+type DomType<T> = typeof globalThis extends { window: unknown } ? T : never
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
@@ -60,8 +59,8 @@ declare module '@vue/runtime-core' {
     vOn: VOnDirective
     vBind: VModelDirective
     vIf: Directive<any, boolean>
-    VOnce: Directive
-    VSlot: Directive
+    vOnce: Directive
+    vSlot: Directive
   }
 }
 
@@ -73,7 +72,7 @@ let renderer: Renderer<Element | ShadowRoot> | HydrationRenderer
 
 let enabledHydration = false
 
-function ensureRenderer() {
+function ensureRenderer(): Renderer<Element | ShadowRoot> {
   return (
     renderer ||
     (renderer = createRenderer<Node, Element | ShadowRoot>(rendererOptions))
@@ -121,7 +120,7 @@ export const createApp = ((...args) => {
       if (__COMPAT__ && __DEV__ && container.nodeType === 1) {
         for (let i = 0; i < (container as Element).attributes.length; i++) {
           const attr = (container as Element).attributes[i]
-          if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+          if (attr.name !== 'v-cloak' && /^(?:v-|:|@)/.test(attr.name)) {
             compatUtils.warnDeprecation(
               DeprecationTypes.GLOBAL_MOUNT_CONTAINER,
               null,
@@ -230,7 +229,7 @@ function injectCompilerOptionsCheck(app: App) {
 /**
  * @internal
  */
-export function normalizeContainer<T extends ParentNode>(
+function normalizeContainer<T extends ParentNode>(
   container: T | string,
 ): T | null {
   if (isString(container)) {
@@ -262,6 +261,7 @@ export {
   useShadowRoot,
   useHost,
   VueElement,
+  VueElementBase,
   type VueElementConstructor,
   type CustomElementOptions,
 } from './apiCustomElement'
@@ -313,7 +313,13 @@ export * from '@vue/runtime-core'
 export * from './jsx'
 
 // VAPOR -----------------------------------------------------------------------
+// Everything below are exposed for vapor only and can change any time.
+// They are also trimmed from non-bundler builds.
 
+/**
+ * @internal
+ */
+export { ensureRenderer, ensureHydrationRenderer, normalizeContainer }
 /**
  * @internal
  */
@@ -326,3 +332,53 @@ export { shouldSetAsProp } from './patchProp'
  * @internal
  */
 export { baseUseCssVars, setVarsOnNode } from './helpers/useCssVars'
+/**
+ * @internal
+ */
+export {
+  vShowOriginalDisplay,
+  vShowHidden,
+  type VShowElement,
+} from './directives/vShow'
+/**
+ * @internal
+ */
+export {
+  vModelTextInit,
+  vModelTextUpdate,
+  vModelCheckboxInit,
+  vModelCheckboxUpdate,
+  getValue as vModelGetValue,
+  vModelSelectInit,
+  vModelSetSelected,
+} from './directives/vModel'
+/**
+ * @internal
+ */
+export { svgNS } from './nodeOps'
+/**
+ * @internal
+ */
+export { xlinkNS } from './modules/attrs'
+/**
+ * @internal
+ */
+export {
+  resolveTransitionProps,
+  TransitionPropsValidators,
+  forceReflow,
+  type ElementWithTransition,
+} from './components/Transition'
+/**
+ * @internal
+ */
+export {
+  hasCSSTransform,
+  callPendingCbs,
+  handleMovedChildren,
+  baseApplyTranslation,
+} from './components/TransitionGroup'
+/**
+ * @internal
+ */
+export { unsafeToTrustedHTML } from './nodeOps'

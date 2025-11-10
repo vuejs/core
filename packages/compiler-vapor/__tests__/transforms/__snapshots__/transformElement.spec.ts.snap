@@ -1,5 +1,40 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > MathML 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<math><mrow><mi>x</mi></mrow></math>", true, 2)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > checkbox with static indeterminate 1`] = `
+"import { setProp as _setProp, template as _template } from 'vue';
+const t0 = _template("<input type=\\"checkbox\\">", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setProp(n0, "indeterminate", "")
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > cache v-on expression with unique handler name 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const _component_Bar = _resolveComponent("Bar")
+  const _on_bar = $event => (_ctx.handleBar($event))
+  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar })
+  const _on_bar1 = () => _ctx.handler
+  const n1 = _createComponentWithFallback(_component_Bar, { onBar: () => _on_bar1 })
+  return [n0, n1]
+}"
+`;
+
 exports[`compiler: element transform > component > do not resolve component from non-script-setup bindings 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
@@ -15,8 +50,8 @@ exports[`compiler: element transform > component > generate multi root component
 const t0 = _template("123")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const n1 = t0()
   const n0 = _createComponent(_ctx.Comp)
+  const n1 = t0()
   return [n0, n1]
 }"
 `;
@@ -63,6 +98,16 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
+exports[`compiler: element transform > component > resolve implicitly self-referencing component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Example__self = _resolveComponent("Example", true)
+  const n0 = _createComponentWithFallback(_component_Example__self, null, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > resolve namespaced component from props bindings (inline) 1`] = `
 "
   const n0 = _createComponent(Foo.Example, null, null, true)
@@ -95,23 +140,13 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
-exports[`compiler: element transform > component > should wrap as function if v-on expression is inline statement 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
-
-export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => $event => (_ctx.handleBar($event)) }, null, true)
-  return n0
-}"
-`;
-
 exports[`compiler: element transform > component > static props 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+    id: () => ("foo"),
     class: () => ("bar")
   }, null, true)
   return n0
@@ -136,7 +171,7 @@ exports[`compiler: element transform > component > v-bind="obj" after static pro
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
       () => (_ctx.obj)
     ]
@@ -151,7 +186,7 @@ exports[`compiler: element transform > component > v-bind="obj" before static pr
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => (_ctx.obj), 
+    () => (_ctx.obj),
     { id: () => ("foo") }
   ] }, null, true)
   return n0
@@ -164,12 +199,46 @@ exports[`compiler: element transform > component > v-bind="obj" between static p
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
-      () => (_ctx.obj), 
+      () => (_ctx.obj),
       { class: () => ("bar") }
     ]
   }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-for on component should not mark as single root 1`] = `
+"import { createComponent as _createComponent, createFor as _createFor } from 'vue';
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = _createComponent(_ctx.Comp)
+    return n2
+  }, (item) => (item), 2)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-on expression is a function call 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const _on_bar = $event => (_ctx.handleBar($event))
+  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-on expression is inline statement 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const _on_bar = () => _ctx.handler
+  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar }, null, true)
   return n0
 }"
 `;
@@ -186,13 +255,65 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component dynamic event with once modifier 1`] = `
+"import { resolveComponent as _resolveComponent, toHandlerKey as _toHandlerKey, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+    () => ({ [_toHandlerKey(_ctx.foo) + "Once"]: () => _ctx.bar })
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with keys modifier 1`] = `
+"import { resolveComponent as _resolveComponent, withKeys as _withKeys, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onKeyup: () => _withKeys(_ctx.bar, ["enter"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with multiple modifiers and event options 1`] = `
+"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, withKeys as _withKeys, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onFooCaptureOnce: () => _withKeys(_withModifiers(_ctx.bar, ["stop","prevent"]), ["enter"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with nonKeys modifier 1`] = `
+"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onFoo: () => _withModifiers(_ctx.bar, ["stop","prevent"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with once modifier 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onFooOnce: () => _ctx.bar }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component with dynamic event arguments 1`] = `
 "import { resolveComponent as _resolveComponent, toHandlerKey as _toHandlerKey, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: () => _ctx.bar }), 
+    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: () => _ctx.bar }),
     () => ({ [_toHandlerKey(_ctx.baz)]: () => _ctx.qux })
   ] }, null, true)
   return n0
@@ -205,9 +326,18 @@ exports[`compiler: element transform > component with dynamic prop arguments 1`]
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }), 
+    () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }),
     () => ({ [_ctx.baz]: _ctx.qux })
   ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > custom element 1`] = `
+"import { createPlainElement as _createPlainElement } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createPlainElement("my-custom-element", null, null, true)
   return n0
 }"
 `;
@@ -222,19 +352,19 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > dynamic component > dynamic binding 1`] = `
-"import { resolveDynamicComponent as _resolveDynamicComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createComponentWithFallback(_resolveDynamicComponent(_ctx.foo), null, null, true)
+  const n0 = _createDynamicComponent(() => (_ctx.foo), null, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > dynamic component > dynamic binding shorthand 1`] = `
-"import { resolveDynamicComponent as _resolveDynamicComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createComponentWithFallback(_resolveDynamicComponent(_ctx.is), null, null, true)
+  const n0 = _createDynamicComponent(() => (_ctx.is), null, null, true)
   return n0
 }"
 `;
@@ -304,14 +434,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: event handlers 1`] = `
-"import { withKeys as _withKeys, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { createInvoker as _createInvoker, withKeys as _withKeys, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", () => _withKeys(_ctx.a, ["foo"]))
-  _delegate(n0, "click", () => _withKeys(_ctx.b, ["bar"]))
+  _delegate(n0, "click", _createInvoker(_withKeys(e => _ctx.a(e), ["foo"])))
+  _delegate(n0, "click", _createInvoker(_withKeys(e => _ctx.b(e), ["bar"])))
   return n0
 }"
 `;
@@ -330,6 +460,16 @@ export function render(_ctx) {
 exports[`compiler: element transform > static props 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > svg 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<svg><circle r=\\"40\\"></circle></svg>", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()

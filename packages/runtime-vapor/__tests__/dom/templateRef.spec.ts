@@ -1,25 +1,31 @@
 import type { NodeRef } from '../../src/apiTemplateRef'
 import {
+  child,
   createComponent,
+  createDynamicComponent,
   createFor,
   createIf,
   createSlot,
   createTemplateRefSetter,
+  defineVaporComponent,
+  delegateEvents,
   insert,
   renderEffect,
-  setText,
   template,
 } from '../../src'
-import { makeRender } from '../_utils'
+import { compile, makeRender, runtimeDom, runtimeVapor } from '../_utils'
 import {
   type ShallowRef,
   currentInstance,
   nextTick,
   reactive,
   ref,
+  shallowRef,
   useTemplateRef,
   watchEffect,
 } from '@vue/runtime-dom'
+import { setElementText, setText } from '../../src/dom/prop'
+import type { VaporComponent } from '../../src/component'
 
 const define = makeRender()
 
@@ -76,7 +82,7 @@ describe('api: template ref', () => {
     expect(fooEl.value).toBe(null)
   })
 
-  it.todo('string ref unmount', async () => {
+  it('string ref unmount', async () => {
     const t0 = template('<div></div>')
     const el = ref(null)
     const toggle = ref(true)
@@ -153,7 +159,7 @@ describe('api: template ref', () => {
     expect(fn2.mock.calls[0][0]).toBe(host.children[0])
   })
 
-  it.todo('function ref unmount', async () => {
+  it('function ref unmount', async () => {
     const fn = vi.fn()
     const toggle = ref(true)
 
@@ -204,8 +210,8 @@ describe('api: template ref', () => {
     const { render } = define({
       setup() {
         return {
-          foo: fooEl,
-          bar: barEl,
+          foo: shallowRef(fooEl),
+          bar: shallowRef(barEl),
         }
       },
       render() {
@@ -247,6 +253,7 @@ describe('api: template ref', () => {
     })
     const { host } = render()
     expect(state.refKey).toBe(host.children[0])
+    expect('Template ref "refKey" used on a non-ref value').toHaveBeenWarned()
   })
 
   test('multiple root refs', () => {
@@ -292,7 +299,7 @@ describe('api: template ref', () => {
         const n0 = t0()
         createTemplateRefSetter()(n0 as Element, el)
         renderEffect(() => {
-          setText(n0, el.value && el.value.getAttribute('id'))
+          setElementText(n0, el.value && el.value.getAttribute('id'))
         })
         return n0
       },
@@ -361,7 +368,7 @@ describe('api: template ref', () => {
   })
 
   // #1789
-  test.todo('toggle the same ref to different elements', async () => {
+  test('toggle the same ref to different elements', async () => {
     const refToggle = ref(false)
     const spy = vi.fn()
 
@@ -406,7 +413,7 @@ describe('api: template ref', () => {
   })
 
   // compiled output of v-for + template ref
-  test.todo('ref in v-for', async () => {
+  test('ref in v-for', async () => {
     const show = ref(true)
     const list = reactive([1, 2, 3])
     const listRefs = ref([])
@@ -422,7 +429,7 @@ describe('api: template ref', () => {
             const n1 = t0()
             const n2 = createFor(
               () => list,
-              state => {
+              item => {
                 const n1 = t1()
                 createTemplateRefSetter()(
                   n1 as Element,
@@ -431,8 +438,7 @@ describe('api: template ref', () => {
                   true,
                 )
                 renderEffect(() => {
-                  const [item] = state
-                  setText(n1, item)
+                  setElementText(n1, item)
                 })
                 return n1
               },
@@ -466,7 +472,7 @@ describe('api: template ref', () => {
     expect(mapRefs()).toMatchObject(['2', '3', '4'])
   })
 
-  test.todo('named ref in v-for', async () => {
+  test('named ref in v-for', async () => {
     const show = ref(true)
     const list = reactive([1, 2, 3])
     const listRefs = ref([])
@@ -485,7 +491,7 @@ describe('api: template ref', () => {
             const n1 = t0()
             const n2 = createFor(
               () => list,
-              state => {
+              item => {
                 const n1 = t1()
                 createTemplateRefSetter()(
                   n1 as Element,
@@ -494,8 +500,7 @@ describe('api: template ref', () => {
                   true,
                 )
                 renderEffect(() => {
-                  const [item] = state
-                  setText(n1, item)
+                  setElementText(n1, item)
                 })
                 return n1
               },
@@ -530,67 +535,63 @@ describe('api: template ref', () => {
   })
 
   // #6697 v-for ref behaves differently under production and development
-  test.todo(
-    'named ref in v-for , should be responsive when rendering',
-    async () => {
-      const list = ref([1, 2, 3])
-      const listRefs = ref([])
+  test('named ref in v-for , should be responsive when rendering', async () => {
+    const list = ref([1, 2, 3])
+    const listRefs = ref([])
 
-      const t0 = template('<div><div></div><ul></ul></div>')
-      const t1 = template('<li></li>')
-      const { render } = define({
-        setup() {
-          return { listRefs }
-        },
-        render() {
-          const n0 = t0()
-          const n1 = n0.firstChild
-          const n2 = n1!.nextSibling!
-          const n3 = createFor(
-            () => list.value,
-            state => {
-              const n4 = t1()
-              createTemplateRefSetter()(
-                n4 as Element,
-                'listRefs',
-                undefined,
-                true,
-              )
-              renderEffect(() => {
-                const [item] = state
-                setText(n4, item)
-              })
-              return n4
-            },
-          )
-          insert(n3, n2 as unknown as ParentNode)
-          renderEffect(() => {
-            setText(n1!, String(listRefs.value))
-          })
-          return n0
-        },
-      })
+    const t0 = template('<div><div></div><ul></ul></div>')
+    const t1 = template('<li></li>')
+    const { render } = define({
+      setup() {
+        return { listRefs }
+      },
+      render() {
+        const n0 = t0()
+        const n1 = n0.firstChild
+        const n2 = n1!.nextSibling!
+        const n3 = createFor(
+          () => list.value,
+          item => {
+            const n4 = t1()
+            createTemplateRefSetter()(
+              n4 as Element,
+              'listRefs',
+              undefined,
+              true,
+            )
+            renderEffect(() => {
+              setElementText(n4, item)
+            })
+            return n4
+          },
+        )
+        insert(n3, n2 as unknown as ParentNode)
+        renderEffect(() => {
+          setElementText(n1!, String(listRefs.value))
+        })
+        return n0
+      },
+    })
 
-      const { host } = render()
+    const { host } = render()
 
-      await nextTick()
-      expect(String(listRefs.value)).toBe(
-        '[object HTMLLIElement],[object HTMLLIElement],[object HTMLLIElement]',
-      )
-      expect(host.innerHTML).toBe(
-        '<div><div>[object HTMLLIElement],[object HTMLLIElement],[object HTMLLIElement]</div><ul><li>1</li><li>2</li><li>3</li><!--for--></ul></div>',
-      )
+    await nextTick()
+    expect(String(listRefs.value)).toBe(
+      '[object HTMLLIElement],[object HTMLLIElement],[object HTMLLIElement]',
+    )
+    expect(host.innerHTML).toBe(
+      '<div><div>[object HTMLLIElement],[object HTMLLIElement],[object HTMLLIElement]</div><ul><li>1</li><li>2</li><li>3</li><!--for--></ul></div>',
+    )
 
-      list.value.splice(0, 1)
-      await nextTick()
-      expect(String(listRefs.value)).toBe(
-        '[object HTMLLIElement],[object HTMLLIElement]',
-      )
-      expect(host.innerHTML).toBe(
-        '<div><div>[object HTMLLIElement],[object HTMLLIElement]</div><ul><li>2</li><li>3</li><!--for--></ul></div>',
-      )
-    },
-  )
+    list.value.splice(0, 1)
+    await nextTick()
+    expect(String(listRefs.value)).toBe(
+      '[object HTMLLIElement],[object HTMLLIElement]',
+    )
+    expect(host.innerHTML).toBe(
+      '<div><div>[object HTMLLIElement],[object HTMLLIElement]</div><ul><li>2</li><li>3</li><!--for--></ul></div>',
+    )
+  })
 
   test('string ref inside slots', () => {
     const { component: Child } = define({
@@ -682,6 +683,78 @@ describe('api: template ref', () => {
     expect(r!.value).toBe(n)
   })
 
+  test('work with dynamic component', async () => {
+    const Child = defineVaporComponent({
+      setup(_, { expose }) {
+        const msg = ref('one')
+        expose({ setMsg: (m: string) => (msg.value = m) })
+        const n0 = template(`<div> </div>`)() as any
+        const x0 = child(n0) as any
+        renderEffect(() => setText(x0, msg.value))
+        return n0
+      },
+    })
+
+    const views: Record<string, VaporComponent> = { child: Child }
+    const view = ref('child')
+    const refKey = ref<any>(null)
+
+    const { html } = define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        const n0 = createDynamicComponent(() => views[view.value]) as any
+        setRef(n0, refKey)
+        return n0
+      },
+    }).render()
+
+    expect(html()).toBe('<div>one</div><!--dynamic-component-->')
+    expect(refKey.value).toBeDefined()
+
+    refKey.value.setMsg('changed')
+    await nextTick()
+    expect(html()).toBe('<div>changed</div><!--dynamic-component-->')
+  })
+
+  test('should not attempt to set when variable name is same as key', () => {
+    let tRef: ShallowRef
+    const key = 'refKey'
+    define({
+      setup() {
+        tRef = useTemplateRef('_')
+        return {
+          [key]: tRef,
+        }
+      },
+      render() {
+        const n0 = template('<div></div>')() as Element
+        createTemplateRefSetter()(n0, key)
+        return n0
+      },
+    }).render()
+    expect('target is readonly').not.toHaveBeenWarned()
+    expect(tRef!.value).toBe(null)
+  })
+
+  test('should work when used as direct ref value (compiled in prod mode)', () => {
+    __DEV__ = false
+    try {
+      let foo: ShallowRef
+      const { host } = define({
+        setup() {
+          foo = useTemplateRef('foo')
+          const n0 = template('<div></div>')() as Element
+          createTemplateRefSetter()(n0, foo)
+          return n0
+        },
+      }).render()
+      expect('target is readonly').not.toHaveBeenWarned()
+      expect(foo!.value).toBe(host.children[0])
+    } finally {
+      __DEV__ = true
+    }
+  })
+
   // TODO: can not reproduce in Vapor
   // // #2078
   // test('handling multiple merged refs', async () => {
@@ -721,4 +794,228 @@ describe('api: template ref', () => {
   //   expect(elRef1.value).toBeNull()
   //   expect(elRef1.value).toBe(elRef2.value)
   // })
+})
+
+describe('interop: template ref', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  const triggerEvent = (type: string, el: Element) => {
+    const event = new Event(type, { bubbles: true })
+    el.dispatchEvent(event)
+  }
+
+  delegateEvents('click')
+
+  async function testTemplateRefInterop(
+    code: string,
+    components: Record<string, { code: string; vapor: boolean }> = {},
+    data: any = {},
+    { vapor = false } = {},
+  ) {
+    const clientComponents: any = {}
+    for (const key in components) {
+      const comp = components[key]
+      const code = comp.code
+      const isVaporComp = !!comp.vapor
+      clientComponents[key] = compile(code, data, clientComponents, {
+        vapor: isVaporComp,
+      })
+    }
+
+    const clientComp = compile(code, data, clientComponents, {
+      vapor,
+    })
+
+    const app = (vapor ? runtimeVapor.createVaporApp : runtimeDom.createApp)(
+      clientComp,
+    )
+    app.use(runtimeVapor.vaporInteropPlugin)
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    app.mount(container)
+    return { container }
+  }
+
+  test('vdom app: useTemplateRef with vapor child', async () => {
+    const { container } = await testTemplateRefInterop(
+      `<script setup>
+        import { useTemplateRef } from 'vue'
+        const components = _components;
+        const elRef = useTemplateRef('el')
+        function click() {
+          elRef.value.change()
+        }
+      </script>
+      <template>
+        <button class="btn" @click="click"></button>
+        <components.VaporChild ref="el"/>
+      </template>`,
+      {
+        VaporChild: {
+          code: `
+            <script vapor>
+              import { ref } from 'vue'
+              const msg = ref('foo')
+              function change(){
+                msg.value = 'bar'
+              }
+              defineExpose({ change })
+            </script>
+            <template><div>{{msg}}</div></template>
+          `,
+          vapor: true,
+        },
+      },
+    )
+
+    expect(container.innerHTML).toBe(
+      `<button class="btn"></button><div>foo</div>`,
+    )
+
+    const btn = container.querySelector('.btn')
+    triggerEvent('click', btn!)
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<button class="btn"></button><div>bar</div>`,
+    )
+  })
+
+  test('vdom app: static ref with vapor child', async () => {
+    const { container } = await testTemplateRefInterop(
+      `<script setup>
+        import { ref } from 'vue'
+        const components = _components;
+        const elRef = ref(null)
+        function click() {
+          elRef.value.change()
+        }
+      </script>
+      <template>
+        <button class="btn" @click="click"></button>
+        <components.VaporChild ref="elRef"/>
+      </template>`,
+      {
+        VaporChild: {
+          code: `
+            <script vapor>
+              import { ref } from 'vue'
+              const msg = ref('foo')
+              function change(){
+                msg.value = 'bar'
+              }
+              defineExpose({ change })
+            </script>
+            <template><div>{{msg}}</div></template>
+          `,
+          vapor: true,
+        },
+      },
+    )
+
+    expect(container.innerHTML).toBe(
+      `<button class="btn"></button><div>foo</div>`,
+    )
+
+    const btn = container.querySelector('.btn')
+    triggerEvent('click', btn!)
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<button class="btn"></button><div>bar</div>`,
+    )
+  })
+
+  test('vapor app: useTemplateRef with vdom child', async () => {
+    const { container } = await testTemplateRefInterop(
+      `<script vapor>
+        import { useTemplateRef } from 'vue'
+        const components = _components;
+        const elRef = useTemplateRef('el')
+        function click() {
+          elRef.value.change()
+        }
+      </script>
+      <template>
+        <button class="btn" @click="click"></button>
+        <components.VDOMChild ref="el"/>
+      </template>`,
+      {
+        VDOMChild: {
+          code: `
+            <script setup>
+              import { ref } from 'vue'
+              const msg = ref('foo')
+              function change(){
+                msg.value = 'bar'
+              }
+              defineExpose({ change })
+            </script>
+            <template><div>{{msg}}</div></template>
+          `,
+          vapor: false,
+        },
+      },
+      undefined,
+      { vapor: true },
+    )
+
+    expect(container.innerHTML).toBe(
+      `<button class="btn"></button><div>foo</div>`,
+    )
+
+    const btn = container.querySelector('.btn')
+    triggerEvent('click', btn!)
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<button class="btn"></button><div>bar</div>`,
+    )
+  })
+
+  test('vapor app: static ref with vdom child', async () => {
+    const { container } = await testTemplateRefInterop(
+      `<script vapor>
+        import { ref } from 'vue'
+        const components = _components;
+        const elRef = ref(null)
+        function click() {
+          elRef.value.change()
+        }
+      </script>
+      <template>
+        <button class="btn" @click="click"></button>
+        <components.VDomChild ref="elRef"/>
+      </template>`,
+      {
+        VDomChild: {
+          code: `
+            <script setup>
+              import { ref } from 'vue'
+              const msg = ref('foo')
+              function change(){
+                msg.value = 'bar'
+              }
+              defineExpose({ change })
+            </script>
+            <template><div>{{msg}}</div></template>
+          `,
+          vapor: false,
+        },
+      },
+      undefined,
+      { vapor: true },
+    )
+
+    expect(container.innerHTML).toBe(
+      `<button class="btn"></button><div>foo</div>`,
+    )
+
+    const btn = container.querySelector('.btn')
+    triggerEvent('click', btn!)
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<button class="btn"></button><div>bar</div>`,
+    )
+  })
 })

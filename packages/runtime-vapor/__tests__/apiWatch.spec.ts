@@ -1,4 +1,6 @@
 import {
+  type EffectScope,
+  ReactiveEffect,
   currentInstance,
   effectScope,
   nextTick,
@@ -8,43 +10,50 @@ import {
   watch,
   watchEffect,
 } from '@vue/runtime-dom'
-import { createComponent, defineVaporComponent, renderEffect } from '../src'
+import {
+  createComponent,
+  createIf,
+  createTemplateRefSetter,
+  defineVaporComponent,
+  renderEffect,
+  template,
+} from '../src'
 import { makeRender } from './_utils'
 import type { VaporComponentInstance } from '../src/component'
+import type { RefEl } from '../src/apiTemplateRef'
 
 const define = makeRender()
 
 // only need to port test cases related to in-component usage
 describe('apiWatch', () => {
   // #7030
-  it.todo(
-    // need if support
-    'should not fire on child component unmount w/ flush: pre',
-    async () => {
-      const visible = ref(true)
-      const cb = vi.fn()
-      const Parent = defineVaporComponent({
-        props: ['visible'],
-        setup() {
-          // @ts-expect-error
-          return visible.value ? h(Comp) : null
-        },
-      })
-      const Comp = {
-        setup() {
-          watch(visible, cb, { flush: 'pre' })
-          return []
-        },
-      }
-      define(Parent).render({
-        visible: () => visible.value,
-      })
-      expect(cb).not.toHaveBeenCalled()
-      visible.value = false
-      await nextTick()
-      expect(cb).not.toHaveBeenCalled()
-    },
-  )
+  it(// need if support
+  'should not fire on child component unmount w/ flush: pre', async () => {
+    const visible = ref(true)
+    const cb = vi.fn()
+    const Parent = defineVaporComponent({
+      props: ['visible'],
+      setup() {
+        return createIf(
+          () => visible.value,
+          () => createComponent(Comp),
+        )
+      },
+    })
+    const Comp = {
+      setup() {
+        watch(visible, cb, { flush: 'pre' })
+        return []
+      },
+    }
+    define(Parent).render({
+      visible: () => visible.value,
+    })
+    expect(cb).not.toHaveBeenCalled()
+    visible.value = false
+    await nextTick()
+    expect(cb).not.toHaveBeenCalled()
+  })
 
   // #7030
   it('flush: pre watcher in child component should not fire before parent update', async () => {
@@ -184,41 +193,41 @@ describe('apiWatch', () => {
   })
 
   // #1852
-  it.todo(
-    // need if + templateRef
-    'flush: post watcher should fire after template refs updated',
-    async () => {
-      const toggle = ref(false)
-      let dom: Element | null = null
+  it('flush: post watcher should fire after template refs updated', async () => {
+    const toggle = ref(false)
+    let dom: Element | null = null
 
-      const App = {
-        setup() {
-          const domRef = ref<Element | null>(null)
+    const App = {
+      setup() {
+        const domRef = ref<Element | null>(null)
 
-          watch(
-            toggle,
-            () => {
-              dom = domRef.value
-            },
-            { flush: 'post' },
-          )
+        watch(
+          toggle,
+          () => {
+            dom = domRef.value
+          },
+          { flush: 'post' },
+        )
 
-          return () => {
-            // @ts-expect-error
-            return toggle.value ? h('p', { ref: domRef }) : null
-          }
-        },
-      }
+        const setRef = createTemplateRefSetter()
+        return createIf(
+          () => toggle.value,
+          () => {
+            const n = template('<p>')()
+            setRef(n as RefEl, domRef)
+            return n
+          },
+        )
+      },
+    }
 
-      // @ts-expect-error
-      render(h(App), nodeOps.createElement('div'))
-      expect(dom).toBe(null)
+    define(App).render()
+    expect(dom).toBe(null)
 
-      toggle.value = true
-      await nextTick()
-      expect(dom!.tagName).toBe('P')
-    },
-  )
+    toggle.value = true
+    await nextTick()
+    expect(dom!.tagName).toBe('P')
+  })
 
   test('should not leak `this.proxy` to setup()', () => {
     const source = vi.fn()
@@ -290,7 +299,8 @@ describe('apiWatch', () => {
     }
     define(Comp).render()
     // should not record watcher in detached scope
-    expect(instance!.scope.effects.length).toBe(0)
+    // the 1 is the props validation effect
+    expect(getEffectsCount(instance!.scope)).toBe(1)
   })
 
   test('watchEffect should keep running if created in a detached scope', async () => {
@@ -328,3 +338,13 @@ describe('apiWatch', () => {
     expect(countW).toBe(2)
   })
 })
+
+function getEffectsCount(scope: EffectScope): number {
+  let n = 0
+  for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
+    if (dep.dep instanceof ReactiveEffect) {
+      n++
+    }
+  }
+  return n
+}

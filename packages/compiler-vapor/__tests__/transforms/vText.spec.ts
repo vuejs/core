@@ -15,7 +15,7 @@ const compileWithVText = makeCompile({
 })
 
 describe('v-text', () => {
-  test('should convert v-text to textContent', () => {
+  test('should convert v-text to setText', () => {
     const { code, ir, helpers } = compileWithVText(`<div v-text="str"></div>`, {
       bindingMetadata: {
         str: BindingTypes.SETUP_REF,
@@ -23,7 +23,12 @@ describe('v-text', () => {
     })
 
     expect(helpers).contains('setText')
-    expect(ir.block.operation).toMatchObject([])
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.GET_TEXT_CHILD,
+        parent: 0,
+      },
+    ])
 
     expect(ir.block.effect).toMatchObject([
       {
@@ -53,6 +58,18 @@ describe('v-text', () => {
     expect(code).matchSnapshot()
   })
 
+  test('work with dynamic component', () => {
+    const { code } = compileWithVText(`<component :is="Comp" v-text="foo"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+  })
+
+  test('work with component', () => {
+    const { code } = compileWithVText(`<Comp v-text="foo"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+  })
+
   test('should raise error and ignore children when v-text is present', () => {
     const onError = vi.fn()
     const { code, ir } = compileWithVText(`<div v-text="test">hello</div>`, {
@@ -63,7 +80,7 @@ describe('v-text', () => {
     ])
 
     // children should have been removed
-    expect(ir.template).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div> </div>'])
 
     expect(ir.block.effect).toMatchObject([
       {
@@ -92,7 +109,7 @@ describe('v-text', () => {
 
     expect(code).matchSnapshot()
     // children should have been removed
-    expect(code).contains('template("<div></div>", true)')
+    expect(code).contains('template("<div> </div>", true)')
   })
 
   test('should raise error if has no expression', () => {

@@ -13,10 +13,10 @@ import {
   createComponent,
   defineVaporComponent,
   renderEffect,
-  setText,
   template,
 } from '../src'
 import { makeRender } from './_utils'
+import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
 
@@ -125,6 +125,27 @@ describe('component: props', () => {
     expect(props).toEqual({ bar: 2 })
     expect(attrs).toEqual({ bar: 2 })
     expect(props).toBe(attrs)
+  })
+
+  test('functional defineVaporComponent without declaration', () => {
+    let props: any
+    let attrs: any
+
+    const { render } = define(
+      defineVaporComponent((_props: any, { attrs: _attrs }: any) => {
+        props = _props
+        attrs = _attrs
+        return []
+      }),
+    )
+
+    render({ foo: () => 1 })
+    expect(props).toEqual({})
+    expect(attrs).toEqual({ foo: 1 })
+
+    render({ bar: () => 2 })
+    expect(props).toEqual({})
+    expect(attrs).toEqual({ bar: 2 })
   })
 
   test('boolean casting', () => {
@@ -243,7 +264,7 @@ describe('component: props', () => {
       props: ['foo'],
       setup(props: any) {
         const n0 = t0()
-        renderEffect(() => setText(n0, props.foo))
+        renderEffect(() => setElementText(n0, props.foo))
         return n0
       },
     })
@@ -396,7 +417,7 @@ describe('component: props', () => {
       },
       setup(props: any) {
         const n0 = t0()
-        renderEffect(() => setText(n0, props.foo))
+        renderEffect(() => setElementText(n0, props.foo))
         return n0
       },
     }).render({
@@ -428,7 +449,7 @@ describe('component: props', () => {
         const t0 = template('<h1></h1>')
         const n0 = t0()
         renderEffect(() => {
-          setText(n0, props.foo.val, props.bar)
+          setElementText(n0, String(props.foo.val) + String(props.bar))
         })
         return n0
       },
@@ -476,6 +497,36 @@ describe('component: props', () => {
     expect(changeSpy).toHaveBeenCalledTimes(1)
   })
 
+  test('should not warn invalid watch source when directly watching props', async () => {
+    const changeSpy = vi.fn()
+    const { render, html } = define({
+      props: {
+        foo: {
+          type: String,
+        },
+      },
+      setup(props: any) {
+        watch(props, changeSpy)
+        const t0 = template('<h1></h1>')
+        const n0 = t0()
+        renderEffect(() => {
+          setElementText(n0, String(props.foo))
+        })
+        return n0
+      },
+    })
+
+    const foo = ref('foo')
+    render({ foo: () => foo.value })
+    expect(html()).toBe(`<h1>foo</h1>`)
+    expect('Invalid watch source').not.toHaveBeenWarned()
+
+    foo.value = 'bar'
+    await nextTick()
+    expect(html()).toBe(`<h1>bar</h1>`)
+    expect(changeSpy).toHaveBeenCalledTimes(1)
+  })
+
   test('support null in required + multiple-type declarations', () => {
     const { render } = define({
       props: {
@@ -503,7 +554,7 @@ describe('component: props', () => {
         const t0 = template('<div></div>')
         const n0 = t0()
         renderEffect(() =>
-          setText(n0, JSON.stringify(attrs) + Object.keys(attrs)),
+          setElementText(n0, JSON.stringify(attrs) + Object.keys(attrs)),
         )
         return n0
       },

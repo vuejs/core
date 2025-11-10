@@ -26,7 +26,7 @@ describe('v-on', () => {
     )
 
     expect(code).matchSnapshot()
-    expect(helpers).contains('delegate')
+    expect(helpers).not.contains('delegate') // optimized as direct attachment
     expect(ir.block.effect).toEqual([])
     expect(ir.block.operation).toMatchObject([
       {
@@ -151,7 +151,7 @@ describe('v-on', () => {
     const { code, ir, helpers } = compileWithVOn(`<div @click="i++"/>`)
 
     expect(code).matchSnapshot()
-    expect(helpers).contains('delegate')
+    expect(helpers).not.contains('delegate')
     expect(ir.block.effect).toEqual([])
     expect(ir.block.operation).toMatchObject([
       {
@@ -165,7 +165,7 @@ describe('v-on', () => {
         delegate: true,
       },
     ])
-    expect(code).contains(`_delegate(n0, "click", () => $event => (_ctx.i++))`)
+    expect(code).contains(`n0.$evtclick = _createInvoker(() => (_ctx.i++))`)
   })
 
   test('should wrap in unref if identifier is setup-maybe-ref w/ inline: true', () => {
@@ -183,11 +183,11 @@ describe('v-on', () => {
     expect(code).matchSnapshot()
     expect(helpers).contains('unref')
     expect(code).contains(
-      `_delegate(n0, "click", () => $event => (x.value=_unref(y)))`,
+      `n0.$evtclick = _createInvoker(() => (x.value=_unref(y)))`,
     )
-    expect(code).contains(`_delegate(n1, "click", () => $event => (x.value++))`)
+    expect(code).contains(`n1.$evtclick = _createInvoker(() => (x.value++))`)
     expect(code).contains(
-      `_delegate(n2, "click", () => $event => ({ x: x.value } = _unref(y)))`,
+      `n2.$evtclick = _createInvoker(() => ({ x: x.value } = _unref(y)))`,
     )
   })
 
@@ -205,7 +205,7 @@ describe('v-on', () => {
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
     expect(code).contains(
-      `_delegate(n0, "click", () => $event => {_ctx.foo();_ctx.bar()})`,
+      `n0.$evtclick = _createInvoker(() => {_ctx.foo();_ctx.bar()})`,
     )
   })
 
@@ -223,7 +223,7 @@ describe('v-on', () => {
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
     expect(code).contains(
-      `_delegate(n0, "click", () => $event => {\n_ctx.foo();\n_ctx.bar()\n})`,
+      `n0.$evtclick = _createInvoker(() => {\n_ctx.foo();\n_ctx.bar()\n})`,
     )
   })
 
@@ -241,7 +241,7 @@ describe('v-on', () => {
     ])
     // should NOT prefix $event
     expect(code).contains(
-      `_delegate(n0, "click", () => $event => (_ctx.foo($event)))`,
+      `n0.$evtclick = _createInvoker($event => (_ctx.foo($event)))`,
     )
   })
 
@@ -259,7 +259,7 @@ describe('v-on', () => {
     ])
     // should NOT prefix $event
     expect(code).contains(
-      `_delegate(n0, "click", () => $event => {_ctx.foo($event);_ctx.bar()})`,
+      `n0.$evtclick = _createInvoker($event => {_ctx.foo($event);_ctx.bar()})`,
     )
   })
 
@@ -274,7 +274,7 @@ describe('v-on', () => {
       },
     ])
     expect(code).contains(
-      `_delegate(n0, "click", () => $event => _ctx.foo($event))`,
+      `n0.$evtclick = _createInvoker($event => _ctx.foo($event))`,
     )
   })
 
@@ -292,7 +292,7 @@ describe('v-on', () => {
       },
     ])
     expect(code).contains(
-      `_delegate(n0, "click", () => (e: any): any => _ctx.foo(e))`,
+      `n0.$evtclick = _createInvoker((e: any): any => _ctx.foo(e))`,
     )
   })
 
@@ -358,7 +358,9 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains(`_delegate(n0, "click", () => _ctx.a['b' + _ctx.c])`)
+    expect(code).contains(
+      `n0.$evtclick = _createInvoker(e => _ctx.a['b' + _ctx.c](e))`,
+    )
   })
 
   test('function expression w/ prefixIdentifiers: true', () => {
@@ -373,7 +375,7 @@ describe('v-on', () => {
         value: { content: `e => foo(e)` },
       },
     ])
-    expect(code).contains(`_delegate(n0, "click", () => e => _ctx.foo(e))`)
+    expect(code).contains(`n0.$evtclick = _createInvoker(e => _ctx.foo(e))`)
   })
 
   test('should error if no expression AND no modifier', () => {
@@ -428,8 +430,8 @@ describe('v-on', () => {
       },
     ])
     expect(code).contains(
-      `_on(n0, "click", () => _withModifiers(_ctx.test, ["stop","prevent"]), {
-    capture: true, 
+      `_on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop","prevent"])), {
+    capture: true,
     once: true
   })`,
     )
@@ -484,8 +486,8 @@ describe('v-on', () => {
 
     expect(code).matchSnapshot()
     expect(code).contains(
-      `_delegate(n0, "click", () => _withModifiers(_ctx.test, ["stop"]))
-  _delegate(n0, "keyup", () => _withKeys(_ctx.test, ["enter"]))`,
+      `n0.$evtclick = _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"]))
+  n0.$evtkeyup = _createInvoker(_withKeys(e => _ctx.test(e), ["enter"]))`,
     )
   })
 
@@ -668,7 +670,7 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(`_delegate(n0, "click", () => _ctx.foo.bar)`)
+    expect(code).contains(`n0.$evtclick = _createInvoker(e => _ctx.foo.bar(e))`)
   })
 
   test('should delegate event', () => {
@@ -683,5 +685,46 @@ describe('v-on', () => {
         delegate: true,
       },
     ])
+  })
+
+  test('should use delegate helper when have multiple events of same name', () => {
+    const { code, helpers } = compileWithVOn(
+      `<div @click="test" @click.stop="test" />`,
+    )
+    expect(helpers).contains('delegate')
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '_delegate(n0, "click", _createInvoker(e => _ctx.test(e)))',
+    )
+    expect(code).contains(
+      '_delegate(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))',
+    )
+  })
+
+  test('expression with type', () => {
+    const { code } = compileWithVOn(
+      `<div @click="foo[handleClick] as any"></div>`,
+      {
+        bindingMetadata: {
+          handleClick: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+    expect(code).matchSnapshot()
+    expect(code).include(
+      'n0.$evtclick = _createInvoker(e => (_ctx.foo[_ctx.handleClick] as any)(e))',
+    )
+  })
+
+  test('component event with special characters', () => {
+    const { code } = compileWithVOn(
+      `<Foo @update:model="() => {}" @update-model="() => {}" />`,
+    )
+
+    expect(code).matchSnapshot()
+    expect(code).contains('const _on_update_model = () => {}')
+    expect(code).contains('const _on_update_model1 = () => {}')
+    expect(code).contains('"onUpdate:model": () => _on_update_model')
+    expect(code).contains('"onUpdate-model": () => _on_update_model1')
   })
 })

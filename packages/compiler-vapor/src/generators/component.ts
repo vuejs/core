@@ -1,4 +1,4 @@
-import { camelize, extend, isArray } from '@vue/shared'
+import { camelize, extend, getModifierPropName, isArray } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
   type CreateComponentIRNode,
@@ -26,17 +26,26 @@ import {
   genCall,
   genMulti,
 } from './utils'
-import { genExpression } from './expression'
+import { genExpression, genVarName } from './expression'
 import { genPropKey, genPropValue } from './prop'
 import {
+  NodeTypes,
+  type SimpleExpressionNode,
   createSimpleExpression,
+  isMemberExpression,
   toValidAssetId,
   walkIdentifiers,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
-import { genModelHandler } from './modelValue'
 import { genBlock } from './block'
+import { genModelHandler } from './vModel'
+import {
+  isBuiltInComponent,
+  isKeepAliveTag,
+  isTeleportTag,
+  isTransitionGroupTag,
+} from '../utils'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -46,16 +55,29 @@ export function genCreateComponent(
 
   const tag = genTag()
   const { root, props, slots, once } = operation
-  const rawProps = genRawProps(props, context)
   const rawSlots = genRawSlots(slots, context)
+  const [ids, handlers] = processInlineHandlers(props, context)
+  const rawProps = context.withId(() => genRawProps(props, context), ids)
 
+  const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
+    (acc, { name, value }: InlineHandler) => {
+      const handler = genEventHandler(context, value, undefined, false)
+      return [...acc, `const ${name} = `, ...handler, NEWLINE]
+    },
+    [],
+  )
   return [
     NEWLINE,
+    ...inlineHandlers,
     `const n${operation.id} = `,
     ...genCall(
-      operation.asset
-        ? helper('createComponentWithFallback')
-        : helper('createComponent'),
+      operation.dynamic && !operation.dynamic.isStatic
+        ? helper('createDynamicComponent')
+        : operation.isCustomElement
+          ? helper('createPlainElement')
+          : operation.asset
+            ? helper('createComponentWithFallback')
+            : helper('createComponent'),
       tag,
       rawProps,
       rawSlots,
@@ -66,20 +88,76 @@ export function genCreateComponent(
   ]
 
   function genTag() {
-    if (operation.dynamic) {
-      return genCall(
-        helper('resolveDynamicComponent'),
-        genExpression(operation.dynamic, context),
-      )
+    if (operation.isCustomElement) {
+      return JSON.stringify(operation.tag)
+    } else if (operation.dynamic) {
+      if (operation.dynamic.isStatic) {
+        return genCall(
+          helper('resolveDynamicComponent'),
+          genExpression(operation.dynamic, context),
+        )
+      } else {
+        return ['() => (', ...genExpression(operation.dynamic, context), ')']
+      }
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
     } else {
+      const { tag } = operation
+      const builtInTag = isBuiltInComponent(tag)
+      if (builtInTag) {
+        // @ts-expect-error
+        helper(builtInTag)
+        return `_${builtInTag}`
+      }
       return genExpression(
-        extend(createSimpleExpression(operation.tag, false), { ast: null }),
+        extend(createSimpleExpression(tag, false), { ast: null }),
         context,
       )
     }
   }
+}
+
+function getUniqueHandlerName(context: CodegenContext, name: string): string {
+  const { seenInlineHandlerNames } = context
+  name = genVarName(name)
+  const count = seenInlineHandlerNames[name] || 0
+  seenInlineHandlerNames[name] = count + 1
+  return count === 0 ? name : `${name}${count}`
+}
+
+type InlineHandler = {
+  name: string
+  value: SimpleExpressionNode
+}
+
+function processInlineHandlers(
+  props: IRProps[],
+  context: CodegenContext,
+): [Record<string, null>, InlineHandler[]] {
+  const ids: Record<string, null> = Object.create(null)
+  const handlers: InlineHandler[] = []
+  const staticProps = props[0]
+  if (isArray(staticProps)) {
+    for (let i = 0; i < staticProps.length; i++) {
+      const prop = staticProps[i]
+      if (!prop.handler) continue
+      prop.values.forEach((value, i) => {
+        const isMemberExp = isMemberExpression(value, context.options)
+        // cache inline handlers (fn expression or inline statement)
+        if (!isMemberExp) {
+          const name = getUniqueHandlerName(
+            context,
+            `_on_${prop.key.content.replace(/-/g, '_')}`,
+          )
+          handlers.push({ name, value })
+          ids[name] = null
+          // replace the original prop value with the handler name
+          prop.values[i] = extend({ ast: null }, createSimpleExpression(name))
+        }
+      })
+    }
+  }
+  return [ids, handlers]
 }
 
 export function genRawProps(
@@ -151,7 +229,12 @@ function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
     ...genPropKey(prop, context),
     ': ',
     ...(prop.handler
-      ? genEventHandler(context, prop.values[0])
+      ? genEventHandler(
+          context,
+          prop.values[0],
+          prop.handlerModifiers,
+          true /* wrap handlers passed to components */,
+        )
       : isStatic
         ? ['() => (', ...values, ')']
         : values),
@@ -167,7 +250,7 @@ function genModelEvent(prop: IRProp, context: CodegenContext): CodeFragment[] {
     : ['["onUpdate:" + ', ...genExpression(prop.key, context), ']']
   const handler = genModelHandler(prop.values[0], context)
 
-  return [',', NEWLINE, ...name, ': ', ...handler]
+  return [',', NEWLINE, ...name, ': () => ', ...handler]
 }
 
 function genModelModifiers(
@@ -178,9 +261,7 @@ function genModelModifiers(
   if (!modelModifiers || !modelModifiers.length) return []
 
   const modifiersKey = key.isStatic
-    ? key.content === 'modelValue'
-      ? [`modelModifiers`]
-      : [`${key.content}Modifiers`]
+    ? [getModifierPropName(key.content)]
     : ['[', ...genExpression(key, context), ' + "Modifiers"]']
 
   const modifiersVal = genDirectiveModifiers(modelModifiers)
@@ -334,9 +415,8 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
   let propsName: string | undefined
   let exitScope: (() => void) | undefined
   let depth: number | undefined
-  const { props } = oper
+  const { props, key, node } = oper
   const idsOfProps = new Set<string>()
-
   if (props) {
     rawProps = props.content
     if ((isDestructureAssignment = !!props.ast)) {
@@ -362,11 +442,41 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
         ? `${propsName}[${JSON.stringify(id)}]`
         : null),
   )
-  const blockFn = context.withId(
+  let blockFn = context.withId(
     () => genBlock(oper, context, [propsName]),
     idMap,
   )
   exitScope && exitScope()
+
+  if (key) {
+    blockFn = [
+      `() => {`,
+      INDENT_START,
+      NEWLINE,
+      `return `,
+      ...genCall(
+        context.helper('createKeyedFragment'),
+        [`() => `, ...genExpression(key, context)],
+        blockFn,
+      ),
+      INDENT_END,
+      NEWLINE,
+      `}`,
+    ]
+  }
+
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    // Not a real component
+    !isTeleportTag(node.tag) &&
+    // Needs to determine whether to activate/deactivate based on instance.parent being KeepAlive
+    !isKeepAliveTag(node.tag) &&
+    // Slot updates need to trigger TransitionGroup's onBeforeUpdate/onUpdated hook
+    !isTransitionGroupTag(node.tag)
+  ) {
+    // wrap with withVaporCtx to ensure correct currentInstance inside slot
+    blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
+  }
 
   return blockFn
 }

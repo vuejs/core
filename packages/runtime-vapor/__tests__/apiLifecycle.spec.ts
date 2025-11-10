@@ -21,14 +21,16 @@ import {
 } from '@vue/runtime-dom'
 import {
   createComponent,
-  // createIf,
+  createFor,
+  createIf,
   createTextNode,
+  insert,
   renderEffect,
-  setText,
   template,
 } from '../src'
 import { makeRender } from './_utils'
 import { ITERATE_KEY } from '@vue/reactivity'
+import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
 
@@ -71,7 +73,7 @@ describe('api: lifecycle hooks', () => {
         onBeforeUpdate(fn)
         const n0 = createTextNode()
         renderEffect(() => {
-          setText(n0, count.value)
+          setElementText(n0, count.value)
         })
         return n0
       },
@@ -97,7 +99,7 @@ describe('api: lifecycle hooks', () => {
         const n0 = createTextNode()
         renderEffect(() => {
           renderSpy()
-          setText(n0, count.value)
+          setElementText(n0, count.value)
         })
         return n0
       },
@@ -118,7 +120,7 @@ describe('api: lifecycle hooks', () => {
 
         const n0 = createTextNode()
         renderEffect(() => {
-          setText(n0, count.value)
+          setElementText(n0, count.value)
         })
         return n0
       },
@@ -130,14 +132,13 @@ describe('api: lifecycle hooks', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
-  it.todo('onBeforeUnmount', async () => {
+  it('onBeforeUnmount', async () => {
     const toggle = ref(true)
     const fn = vi.fn(() => {
-      expect(host.innerHTML).toBe('<div></div>')
+      expect(host.innerHTML).toBe('<div></div><!--if-->')
     })
     const { render, host } = define({
       setup() {
-        // @ts-expect-error
         const n0 = createIf(
           () => toggle.value,
           () => createComponent(Child),
@@ -160,18 +161,17 @@ describe('api: lifecycle hooks', () => {
 
     toggle.value = false
     await nextTick()
-    // expect(fn).toHaveBeenCalledTimes(1) // FIXME: not called
+    expect(fn).toHaveBeenCalledTimes(1)
     expect(host.innerHTML).toBe('<!--if-->')
   })
 
-  it.todo('onUnmounted', async () => {
+  it('onUnmounted', async () => {
     const toggle = ref(true)
     const fn = vi.fn(() => {
-      expect(host.innerHTML).toBe('<div></div>')
+      expect(host.innerHTML).toBe('<!--if-->')
     })
     const { render, host } = define({
       setup() {
-        // @ts-expect-error
         const n0 = createIf(
           () => toggle.value,
           () => createComponent(Child),
@@ -194,18 +194,17 @@ describe('api: lifecycle hooks', () => {
 
     toggle.value = false
     await nextTick()
-    // expect(fn).toHaveBeenCalledTimes(1) // FIXME: not called
+    expect(fn).toHaveBeenCalledTimes(1)
     expect(host.innerHTML).toBe('<!--if-->')
   })
 
-  it.todo('onBeforeUnmount in onMounted', async () => {
+  it('onBeforeUnmount in onMounted', async () => {
     const toggle = ref(true)
     const fn = vi.fn(() => {
-      expect(host.innerHTML).toBe('<div></div>')
+      expect(host.innerHTML).toBe('<div></div><!--if-->')
     })
     const { render, host } = define({
       setup() {
-        // @ts-expect-error
         const n0 = createIf(
           () => toggle.value,
           () => createComponent(Child),
@@ -230,25 +229,24 @@ describe('api: lifecycle hooks', () => {
 
     toggle.value = false
     await nextTick()
-    // expect(fn).toHaveBeenCalledTimes(1) // FIXME: not called
+    expect(fn).toHaveBeenCalledTimes(1)
     expect(host.innerHTML).toBe('<!--if-->')
   })
 
-  it.todo('lifecycle call order', async () => {
+  it('lifecycle call order', async () => {
     const count = ref(0)
     const toggle = ref(true)
     const calls: string[] = []
 
     const { render } = define({
       setup() {
-        onBeforeMount(() => calls.push('onBeforeMount'))
-        onMounted(() => calls.push('onMounted'))
-        onBeforeUpdate(() => calls.push('onBeforeUpdate'))
-        onUpdated(() => calls.push('onUpdated'))
-        onBeforeUnmount(() => calls.push('onBeforeUnmount'))
-        onUnmounted(() => calls.push('onUnmounted'))
+        onBeforeMount(() => calls.push('root onBeforeMount'))
+        onMounted(() => calls.push('root onMounted'))
+        onBeforeUpdate(() => calls.push('root onBeforeUpdate'))
+        onUpdated(() => calls.push('root onUpdated'))
+        onBeforeUnmount(() => calls.push('root onBeforeUnmount'))
+        onUnmounted(() => calls.push('root onUnmounted'))
 
-        // @ts-expect-error
         const n0 = createIf(
           () => toggle.value,
           () => createComponent(Mid, { count: () => count.value }),
@@ -284,20 +282,20 @@ describe('api: lifecycle hooks', () => {
 
         const t0 = template('<div></div>')
         const n0 = t0()
-        renderEffect(() => setText(n0, props.count))
+        renderEffect(() => setElementText(n0, props.count))
         return n0
       },
     }
 
     // mount
-    render()
+    const ctx = render()
     expect(calls).toEqual([
-      'onBeforeMount',
+      'root onBeforeMount',
       'mid onBeforeMount',
       'child onBeforeMount',
       'child onMounted',
       'mid onMounted',
-      'onMounted',
+      'root onMounted',
     ])
 
     calls.length = 0
@@ -305,29 +303,22 @@ describe('api: lifecycle hooks', () => {
     // update
     count.value++
     await nextTick()
-    // FIXME: not called
-    // expect(calls).toEqual([
-    //   'root onBeforeUpdate',
-    //   'mid onBeforeUpdate',
-    //   'child onBeforeUpdate',
-    //   'child onUpdated',
-    //   'mid onUpdated',
-    //   'root onUpdated',
-    // ])
+    // only child updated
+    expect(calls).toEqual(['child onBeforeUpdate', 'child onUpdated'])
 
     calls.length = 0
 
     // unmount
-    toggle.value = false
-    // FIXME: not called
-    // expect(calls).toEqual([
-    //   'root onBeforeUnmount',
-    //   'mid onBeforeUnmount',
-    //   'child onBeforeUnmount',
-    //   'child onUnmounted',
-    //   'mid onUnmounted',
-    //   'root onUnmounted',
-    // ])
+    ctx.app.unmount()
+    await nextTick()
+    expect(calls).toEqual([
+      'root onBeforeUnmount',
+      'mid onBeforeUnmount',
+      'child onBeforeUnmount',
+      'child onUnmounted',
+      'mid onUnmounted',
+      'root onUnmounted',
+    ])
   })
 
   it('onRenderTracked', async () => {
@@ -343,7 +334,7 @@ describe('api: lifecycle hooks', () => {
 
         const n0 = createTextNode()
         renderEffect(() => {
-          setText(n0, [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
+          setElementText(n0, [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
         })
         return n0
       },
@@ -386,7 +377,7 @@ describe('api: lifecycle hooks', () => {
 
         const n0 = createTextNode()
         renderEffect(() => {
-          setText(n0, [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
+          setElementText(n0, [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
         })
         return n0
       },
@@ -422,12 +413,11 @@ describe('api: lifecycle hooks', () => {
     })
   })
 
-  it.todo('runs shared hook fn for each instance', async () => {
+  it('runs shared hook fn for each instance', async () => {
     const fn = vi.fn()
     const toggle = ref(true)
     const { render } = define({
       setup() {
-        // @ts-expect-error
         return createIf(
           () => toggle.value,
           () => [createComponent(Child), createComponent(Child)],
@@ -446,7 +436,7 @@ describe('api: lifecycle hooks', () => {
     expect(fn).toHaveBeenCalledTimes(2)
     toggle.value = false
     await nextTick()
-    // expect(fn).toHaveBeenCalledTimes(4) // FIXME: not called unmounted hook
+    expect(fn).toHaveBeenCalledTimes(4)
   })
 
   // #136
@@ -461,7 +451,7 @@ describe('api: lifecycle hooks', () => {
         onUpdated(() => handleUpdated())
 
         const n0 = createTextNode()
-        renderEffect(() => setText(n0, count.value))
+        renderEffect(() => setElementText(n0, count.value))
         const n1 = createComponent(Child, { count: () => count.value })
         return [n0, n1]
       },
@@ -474,7 +464,7 @@ describe('api: lifecycle hooks', () => {
 
         const props = currentInstance!.props
         const n2 = createTextNode()
-        renderEffect(() => setText(n2, props.count))
+        renderEffect(() => setElementText(n2, props.count))
         return n2
       },
     }
@@ -506,7 +496,7 @@ describe('api: lifecycle hooks', () => {
         onUpdated(() => handleUpdated())
 
         const n0 = createTextNode()
-        renderEffect(() => setText(n0, count.value))
+        renderEffect(() => setElementText(n0, count.value))
         const n1 = createComponent(Child, { count: () => count.value })
         return [n0, n1]
       },
@@ -521,7 +511,7 @@ describe('api: lifecycle hooks', () => {
         update = () => count.value++
 
         const n2 = createTextNode()
-        renderEffect(() => setText(n2, count.value))
+        renderEffect(() => setElementText(n2, count.value))
         return n2
       },
     }
@@ -537,5 +527,91 @@ describe('api: lifecycle hooks', () => {
     expect(host.innerHTML).toBe('11')
     expect(handleUpdated).toHaveBeenCalledTimes(1)
     expect(handleUpdatedChild).toHaveBeenCalledTimes(1)
+  })
+
+  test('unmount hooks when nested in if block', async () => {
+    const toggle = ref(true)
+    const fn = vi.fn(() => {
+      expect(host.innerHTML).toBe('<div><span></span></div><!--if-->')
+    })
+    const fn2 = vi.fn(() => {
+      expect(host.innerHTML).toBe('<!--if-->')
+    })
+    const { render, host } = define({
+      setup() {
+        const n0 = createIf(
+          () => toggle.value,
+          () => {
+            const n1 = document.createElement('div')
+            const n2 = createComponent(Child)
+            insert(n2, n1)
+            return n1
+          },
+        )
+        return n0
+      },
+    })
+
+    const Child = {
+      setup() {
+        onBeforeUnmount(fn)
+        onUnmounted(fn2)
+
+        const t0 = template('<span></span>')
+        const n0 = t0()
+        return n0
+      },
+    }
+
+    render()
+
+    toggle.value = false
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(host.innerHTML).toBe('<!--if-->')
+  })
+
+  test('unmount hooks when nested in for blocks', async () => {
+    const list = ref([1])
+    const fn = vi.fn(() => {
+      expect(host.innerHTML).toBe('<div><span></span></div><!--for-->')
+    })
+    const fn2 = vi.fn(() => {
+      expect(host.innerHTML).toBe('<!--for-->')
+    })
+    const { render, host } = define({
+      setup() {
+        const n0 = createFor(
+          () => list.value,
+          () => {
+            const n1 = document.createElement('div')
+            const n2 = createComponent(Child)
+            insert(n2, n1)
+            return n1
+          },
+        )
+        return n0
+      },
+    })
+
+    const Child = {
+      setup() {
+        onBeforeUnmount(fn)
+        onUnmounted(fn2)
+
+        const t0 = template('<span></span>')
+        const n0 = t0()
+        return n0
+      },
+    }
+
+    render()
+
+    list.value.pop()
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(host.innerHTML).toBe('<!--for-->')
   })
 })

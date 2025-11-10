@@ -1,4 +1,5 @@
 // TODO: add tests for this transform
+import { NodeTypes } from '@vue/compiler-dom'
 import {
   IRNodeTypes,
   transformChildren,
@@ -24,19 +25,18 @@ describe('compiler: text transform', () => {
       '{{ "hello world" }}',
     )
     expect(code).toMatchSnapshot()
-    expect(helpers).contains.all.keys('createTextNode')
+    expect(helpers).contains.all.keys('setText', 'template')
     expect(ir.block.operation).toMatchObject([
       {
-        type: IRNodeTypes.CREATE_TEXT_NODE,
-        id: 0,
+        type: IRNodeTypes.SET_TEXT,
+        element: 0,
         values: [
           {
-            type: IRNodeTypes.SET_TEXT,
+            type: NodeTypes.SIMPLE_EXPRESSION,
             content: '"hello world"',
             isStatic: false,
           },
         ],
-        effect: false,
       },
     ])
   })
@@ -44,20 +44,29 @@ describe('compiler: text transform', () => {
   it('consecutive text', () => {
     const { code, ir, helpers } = compileWithTextTransform('{{ msg }}')
     expect(code).toMatchSnapshot()
-    expect(helpers).contains.all.keys('createTextNode')
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.CREATE_TEXT_NODE,
-        id: 0,
-        values: [
-          {
-            type: IRNodeTypes.SET_TEXT,
-            content: 'msg',
-            isStatic: false,
-          },
-        ],
-        effect: true,
-      },
-    ])
+    expect(helpers).contains.all.keys('setText', 'template')
+    expect(ir.block.operation).toMatchObject([])
+    expect(ir.block.effect.length).toBe(1)
+  })
+
+  it('escapes raw static text when generating the template string', () => {
+    const { ir } = compileWithTextTransform('<code>&lt;script&gt;</code>')
+    expect([...ir.template.keys()]).toContain('<code>&lt;script&gt;</code>')
+    expect([...ir.template.keys()]).not.toContain('<code><script></code>')
+  })
+
+  test('constant text', () => {
+    const { code } = compileWithTextTransform(
+      `
+        <div>
+          {{ (2) }}
+          {{ \`foo\${1}\` }}
+          {{ 1 }}
+          {{ 1n }}
+          {{ '1' }}
+        </div>`,
+    )
+    expect(code).includes(`_template("<div>2 foo1 1 1 1</div>", true)`)
+    expect(code).toMatchSnapshot()
   })
 })

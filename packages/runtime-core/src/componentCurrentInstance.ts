@@ -4,6 +4,8 @@ import type {
   GenericComponentInstance,
 } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
+import { type EffectScope, setCurrentScope } from '@vue/reactivity'
+import { warn } from './warning'
 
 /**
  * @internal
@@ -25,7 +27,10 @@ export let isInSSRComponentSetup = false
 
 export let setInSSRSetupState: (state: boolean) => void
 
-let internalSetCurrentInstance: (
+/**
+ * @internal
+ */
+export let simpleSetCurrentInstance: (
   instance: GenericComponentInstance | null,
 ) => void
 
@@ -53,7 +58,7 @@ if (__SSR__) {
       else setters[0](v)
     }
   }
-  internalSetCurrentInstance = registerGlobalSetter(
+  simpleSetCurrentInstance = registerGlobalSetter(
     `__VUE_INSTANCE_SETTERS__`,
     v => (currentInstance = v),
   )
@@ -66,7 +71,7 @@ if (__SSR__) {
     v => (isInSSRComponentSetup = v),
   )
 } else {
-  internalSetCurrentInstance = i => {
+  simpleSetCurrentInstance = i => {
     currentInstance = i
   }
   setInSSRSetupState = v => {
@@ -74,34 +79,48 @@ if (__SSR__) {
   }
 }
 
-export const setCurrentInstance = (instance: GenericComponentInstance) => {
-  const prev = currentInstance
-  internalSetCurrentInstance(instance)
-  instance.scope.on()
-  return (): void => {
-    instance.scope.off()
-    internalSetCurrentInstance(prev)
+export const setCurrentInstance = (
+  instance: GenericComponentInstance | null,
+  scope: EffectScope | undefined = instance !== null
+    ? instance.scope
+    : undefined,
+): [GenericComponentInstance | null, EffectScope | undefined] => {
+  try {
+    return [currentInstance, setCurrentScope(scope)]
+  } finally {
+    simpleSetCurrentInstance(instance)
   }
 }
 
-export const unsetCurrentInstance = (): void => {
-  currentInstance && currentInstance.scope.off()
-  internalSetCurrentInstance(null)
-}
+const internalOptions = ['ce', 'type'] as const
 
 /**
- * Exposed for vapor only. Vapor never runs during SSR so we don't want to pay
- * for the extra overhead
  * @internal
  */
-export const simpleSetCurrentInstance = (
-  i: GenericComponentInstance | null,
-  unset?: GenericComponentInstance | null,
-): void => {
-  currentInstance = i
-  if (unset) {
-    unset.scope.off()
-  } else if (i) {
-    i.scope.on()
+export const useInstanceOption = <K extends (typeof internalOptions)[number]>(
+  key: K,
+  silent = false,
+): {
+  hasInstance: boolean
+  value: GenericComponentInstance[K] | undefined
+} => {
+  const instance = getCurrentGenericInstance()
+  if (!instance) {
+    if (__DEV__ && !silent) {
+      warn(`useInstanceOption called without an active component instance.`)
+    }
+    return { hasInstance: false, value: undefined }
   }
+
+  if (!internalOptions.includes(key)) {
+    if (__DEV__) {
+      warn(
+        `useInstanceOption only accepts ` +
+          ` ${internalOptions.map(k => `'${k}'`).join(', ')} as key, got '${key}'.`,
+      )
+    }
+    return { hasInstance: true, value: undefined }
+  }
+
+  return { hasInstance: true, value: instance[key] }
 }

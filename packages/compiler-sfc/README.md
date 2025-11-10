@@ -11,7 +11,6 @@ This package contains lower level utilities that you can use if you are writing 
 The API is intentionally low-level due to the various considerations when integrating Vue SFCs in a build system:
 
 - Separate hot-module replacement (HMR) for script, template and styles
-
   - template updates should not reset component state
   - style updates should be performed without component re-render
 

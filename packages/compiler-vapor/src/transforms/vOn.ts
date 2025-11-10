@@ -39,8 +39,6 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
 
   let keyOverride: KeyOverride | undefined
   const isStaticClick = arg.isStatic && arg.content.toLowerCase() === 'click'
-  const delegate =
-    arg.isStatic && !eventOptionModifiers.length && delegatedEvents(arg.content)
 
   // normalize click.right and click.middle since they don't actually fire
   if (nonKeyModifiers.includes('middle')) {
@@ -67,8 +65,20 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
       key: arg,
       value: handler,
       handler: true,
+      handlerModifiers: {
+        keys: keyModifiers,
+        nonKeys: nonKeyModifiers,
+        options: eventOptionModifiers,
+      },
     }
   }
+
+  // Only delegate if:
+  // - no dynamic event name
+  // - no event option modifiers (passive, capture, once)
+  // - is a delegatable event
+  const delegate =
+    arg.isStatic && !eventOptionModifiers.length && delegatedEvents(arg.content)
 
   const operation: SetEventIRNode = {
     type: IRNodeTypes.SET_EVENT,

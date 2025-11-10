@@ -1,9 +1,6 @@
 import {
   type CompilerOptions as BaseCompilerOptions,
-  ErrorCodes,
   type RootNode,
-  createCompilerError,
-  defaultOnError,
   parse,
 } from '@vue/compiler-dom'
 import { extend, isString } from '@vue/shared'
@@ -29,6 +26,7 @@ import { transformVFor } from './transforms/vFor'
 import { transformComment } from './transforms/transformComment'
 import { transformSlotOutlet } from './transforms/transformSlotOutlet'
 import { transformVSlot } from './transforms/vSlot'
+import { transformTransition } from './transforms/transformTransition'
 import type { HackOptions } from './ir'
 
 export { wrapTemplate } from './transforms/utils'
@@ -38,20 +36,9 @@ export function compile(
   source: string | RootNode,
   options: CompilerOptions = {},
 ): VaporCodegenResult {
-  const onError = options.onError || defaultOnError
-  const isModuleMode = options.mode === 'module'
-  const prefixIdentifiers = options.prefixIdentifiers === true || isModuleMode
-
-  if (options.scopeId && !isModuleMode) {
-    onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
-  }
-
-  const resolvedOptions = extend({}, options, {
-    prefixIdentifiers,
-  })
+  const resolvedOptions = extend({}, options)
   const ast = isString(source) ? parse(source, resolvedOptions) : source
-  const [nodeTransforms, directiveTransforms] =
-    getBaseTransformPreset(prefixIdentifiers)
+  const [nodeTransforms, directiveTransforms] = getBaseTransformPreset()
 
   if (options.isTS) {
     const { expressionPlugins } = options
@@ -68,6 +55,7 @@ export function compile(
     extend({}, resolvedOptions, {
       nodeTransforms: [
         ...nodeTransforms,
+        ...(__DEV__ ? [transformTransition] : []),
         ...(options.nodeTransforms || []), // user transforms
       ],
       directiveTransforms: extend(
@@ -87,9 +75,7 @@ export type TransformPreset = [
   Record<string, DirectiveTransform>,
 ]
 
-export function getBaseTransformPreset(
-  prefixIdentifiers?: boolean,
-): TransformPreset {
+export function getBaseTransformPreset(): TransformPreset {
   return [
     [
       transformVOnce,
@@ -97,8 +83,8 @@ export function getBaseTransformPreset(
       transformVFor,
       transformSlotOutlet,
       transformTemplateRef,
-      transformText,
       transformElement,
+      transformText,
       transformVSlot,
       transformComment,
       transformChildren,

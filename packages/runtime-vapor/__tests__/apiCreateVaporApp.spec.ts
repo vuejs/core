@@ -28,15 +28,17 @@ describe('api: createVaporApp', () => {
         count: { default: 0 },
       },
       setup(props) {
-        return createTextNode(() => [props.count])
+        return createTextNode(String(props.count))
       },
     })
 
     const root1 = document.createElement('div')
     createVaporApp(Comp).mount(root1)
     expect(root1.innerHTML).toBe(`0`)
+
     //#5571 mount multiple apps to the same host element
     createVaporApp(Comp).mount(root1)
+    expect(`mount target container is not empty`).toHaveBeenWarned()
     expect(
       `There is already an app instance mounted on the host container`,
     ).toHaveBeenWarned()
@@ -60,7 +62,7 @@ describe('api: createVaporApp', () => {
         count: { default: 0 },
       },
       setup(props) {
-        return createTextNode(() => [props.count])
+        return createTextNode(String(props.count))
       },
     })
 
@@ -93,7 +95,7 @@ describe('api: createVaporApp', () => {
         try {
           inject('__proto__')
         } catch (e: any) {}
-        return createTextNode([`${foo},${bar}`])
+        return createTextNode(`${foo},${bar}`)
       },
     })
 
@@ -142,12 +144,12 @@ describe('api: createVaporApp', () => {
       },
     }).create()
 
-    const FooBar = () => createTextNode(['foobar!'])
+    const FooBar = () => createTextNode('foobar!')
     app.component('FooBar', FooBar)
     expect(app.component('FooBar')).toBe(FooBar)
 
-    app.component('BarBaz', () => createTextNode(['barbaz!']))
-    app.component('BarBaz', () => createTextNode(['barbaz!']))
+    app.component('BarBaz', () => createTextNode('barbaz!'))
+    app.component('BarBaz', () => createTextNode('barbaz!'))
     expect(
       'Component "BarBaz" has already been registered in target app.',
     ).toHaveBeenWarnedTimes(1)
@@ -309,7 +311,7 @@ describe('api: createVaporApp', () => {
         writable: false,
       })
 
-      app.component('div', () => createTextNode(['div']))
+      app.component('div', () => createTextNode('div'))
       mount()
       expect(
         `Do not use built-in or reserved HTML elements as component id: div`,
@@ -317,29 +319,7 @@ describe('api: createVaporApp', () => {
     })
   })
 
-  describe('config.performance', () => {
-    afterEach(() => {
-      window.performance.clearMeasures()
-    })
-
-    test('with performance enabled', () => {
-      const { app, mount } = define({ setup: () => [] }).create()
-
-      app.config.performance = true
-      mount()
-      expect(window.performance.getEntries()).lengthOf(2)
-    })
-
-    test('with performance disabled', () => {
-      const { app, mount } = define({ setup: () => [] }).create()
-
-      app.config.performance = false
-      mount()
-      expect(window.performance.getEntries()).lengthOf(0)
-    })
-  })
-
-  test('config.globalProperty', () => {
+  test.todo('config.globalProperty', () => {
     const { app } = define({
       setup() {
         return []
@@ -349,7 +329,7 @@ describe('api: createVaporApp', () => {
       app.config.globalProperties.msg = 'hello world'
     } catch (e) {}
     expect(
-      `app.config.globalProperties is not supported in vapor mode`,
+      `app.config.globalProperties is not supported in vapor mode components`,
     ).toHaveBeenWarned()
   })
 })

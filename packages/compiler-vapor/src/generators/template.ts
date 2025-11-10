@@ -1,43 +1,90 @@
 import type { CodegenContext } from '../generate'
-import { DynamicFlag, type IRDynamicInfo } from '../ir'
+import {
+  DynamicFlag,
+  type IRDynamicInfo,
+  type InsertionStateTypes,
+} from '../ir'
 import { genDirectivesForElement } from './directive'
-import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
+import { genOperationWithInsertionState } from './operation'
+import {
+  type CodeFragment,
+  IMPORT_EXPR_RE,
+  NEWLINE,
+  buildCodeFragment,
+  genCall,
+} from './utils'
 
 export function genTemplates(
-  templates: string[],
+  templates: Map<string, number>,
   rootIndex: number | undefined,
-  { helper }: CodegenContext,
+  context: CodegenContext,
 ): string {
-  return templates
-    .map(
-      (template, i) =>
-        `const t${i} = ${helper('template')}(${JSON.stringify(
-          template,
-        )}${i === rootIndex ? ', true' : ''})\n`,
+  const result: string[] = []
+  let i = 0
+  templates.forEach((ns, template) => {
+    result.push(
+      `const ${context.tName(i)} = ${context.helper('template')}(${JSON.stringify(
+        template,
+      ).replace(
+        // replace import expressions with string concatenation
+        IMPORT_EXPR_RE,
+        `" + $1 + "`,
+      )}${i === rootIndex ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`,
     )
-    .join('')
+    i++
+  })
+  return result.join('')
+}
+
+export function genSelf(
+  dynamic: IRDynamicInfo,
+  context: CodegenContext,
+): CodeFragment[] {
+  const [frag, push] = buildCodeFragment()
+  const { id, template, operation, hasDynamicChild } = dynamic
+
+  if (id !== undefined && template !== undefined) {
+    push(NEWLINE, `const n${id} = ${context.tName(template)}()`)
+    push(...genDirectivesForElement(id, context))
+  }
+
+  if (operation) {
+    push(...genOperationWithInsertionState(operation, context))
+  }
+
+  if (hasDynamicChild) {
+    push(...genChildren(dynamic, context, push, `n${id}`))
+  }
+
+  return frag
 }
 
 export function genChildren(
   dynamic: IRDynamicInfo,
   context: CodegenContext,
-  from: number,
-  paths: number[] = [],
+  pushBlock: (...items: CodeFragment[]) => number,
+  from: string = `n${dynamic.id}`,
 ): CodeFragment[] {
   const { helper } = context
   const [frag, push] = buildCodeFragment()
+  const { children } = dynamic
+
   let offset = 0
-  const { children, id, template } = dynamic
+  let prev: [variable: string, elementIndex: number] | undefined
+  let ifBranchCount = 0
+  let prependCount = 0
 
-  if (id !== undefined && template !== undefined) {
-    push(NEWLINE, `const n${id} = t${template}()`)
-    push(...genDirectivesForElement(id, context))
-  }
-
-  let prev: [id: number, elementIndex: number] | undefined
   for (const [index, child] of children.entries()) {
+    if (
+      child.operation &&
+      (child.operation as InsertionStateTypes).anchor === -1
+    ) {
+      prependCount++
+    }
     if (child.flags & DynamicFlag.NON_TEMPLATE) {
       offset--
+    } else if (child.ifBranch) {
+      ifBranchCount++
     }
 
     const id =
@@ -47,34 +94,62 @@ export function genChildren(
           : child.id
         : undefined
 
-    const elementIndex = Number(index) + offset
-    const newPaths = [...paths, elementIndex]
-
-    if (id === undefined) {
-      push(...genChildren(child, context, from, newPaths))
+    if (id === undefined && !child.hasDynamicChild) {
+      push(...genSelf(child, context))
       continue
     }
 
-    push(NEWLINE, `const n${id} = `)
+    const elementIndex = index + offset
+    const logicalIndex = elementIndex - ifBranchCount + prependCount
+    // p for "placeholder" variables that are meant for possible reuse by
+    // other access paths
+    const variable =
+      id === undefined ? context.pName(context.block.tempId++) : `n${id}`
+    pushBlock(NEWLINE, `const ${variable} = `)
+
     if (prev) {
-      const offset = elementIndex - prev[1]
-      if (offset === 1) {
-        push(`n${prev[0]}.nextSibling`)
+      if (elementIndex - prev[1] === 1) {
+        pushBlock(...genCall(helper('next'), prev[0], String(logicalIndex)))
       } else {
-        push(...genCall(helper('next'), `n${prev[0]}`, String(offset)))
-      }
-    } else {
-      if (newPaths.length === 1 && newPaths[0] === 0) {
-        push(`n${from}.firstChild`)
-      } else {
-        push(
-          ...genCall(helper('children'), `n${from}`, ...newPaths.map(String)),
+        pushBlock(
+          ...genCall(
+            helper('nthChild'),
+            from,
+            String(elementIndex),
+            String(logicalIndex),
+          ),
         )
       }
+    } else {
+      if (elementIndex === 0) {
+        pushBlock(...genCall(helper('child'), from, String(logicalIndex)))
+      } else {
+        // check if there's a node that we can reuse from
+        let init = genCall(helper('child'), from)
+        if (elementIndex === 1) {
+          init = genCall(helper('next'), init, String(logicalIndex))
+        } else if (elementIndex > 1) {
+          init = genCall(
+            helper('nthChild'),
+            from,
+            String(elementIndex),
+            String(logicalIndex),
+          )
+        }
+        pushBlock(...init)
+      }
     }
-    push(...genDirectivesForElement(id, context))
-    prev = [id, elementIndex]
-    push(...genChildren(child, context, id, []))
+
+    if (id === child.anchor && !child.hasDynamicChild) {
+      push(...genSelf(child, context))
+    }
+
+    if (id !== undefined) {
+      push(...genDirectivesForElement(id, context))
+    }
+
+    prev = [variable, elementIndex]
+    push(...genChildren(child, context, pushBlock, variable))
   }
 
   return frag

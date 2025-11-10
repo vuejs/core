@@ -64,7 +64,7 @@ export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
-export { useTemplateRef } from './helpers/useTemplateRef'
+export { useTemplateRef, type TemplateRef } from './helpers/useTemplateRef'
 export { useId } from './helpers/useId'
 export {
   hydrateOnIdle,
@@ -105,6 +105,11 @@ export {
 // plugins
 export { getCurrentInstance } from './component'
 
+/**
+ * @internal
+ */
+export { useInstanceOption } from './component'
+
 // For raw render function users
 export { h } from './h'
 // Advanced render function utilities
@@ -114,7 +119,11 @@ export { Fragment, Text, Comment, Static, type VNodeRef } from './vnode'
 // Built-in components
 export { Teleport, type TeleportProps } from './components/Teleport'
 export { Suspense, type SuspenseProps } from './components/Suspense'
-export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'
+export {
+  KeepAlive,
+  type KeepAliveProps,
+  type KeepAliveContext,
+} from './components/KeepAlive'
 export {
   BaseTransition,
   BaseTransitionPropsValidators,
@@ -267,6 +276,7 @@ export type {
   GlobalDirectives,
   ComponentInstance,
   ComponentCustomElementInterface,
+  AsyncComponentInternalOptions,
 } from './component'
 export type {
   DefineComponent,
@@ -335,6 +345,8 @@ export type { SuspenseBoundary } from './components/Suspense'
 export type {
   TransitionState,
   TransitionHooks,
+  TransitionHooksContext,
+  TransitionElement,
 } from './components/BaseTransition'
 export type {
   AsyncComponentOptions,
@@ -345,6 +357,7 @@ export type {
   HydrationStrategyFactory,
 } from './hydrationStrategies'
 export type { HMRRuntime } from './hmr'
+export type { SchedulerJob } from './scheduler'
 
 // Internal API ----------------------------------------------------------------
 
@@ -488,10 +501,32 @@ export const DeprecationTypes = (
 // change without notice between versions. User code should never rely on them.
 
 /**
+ * these types cannot be marked internal because runtime-vapor's type relies on
+ * them, but they should be considered internal
+ * @private
+ */
+export {
+  type ComponentInternalOptions,
+  type GenericComponentInstance,
+  type LifecycleHook,
+} from './component'
+export { type NormalizedPropsOptions } from './componentProps'
+/**
+ * @internal
+ */
+export { type VaporInteropInterface } from './apiCreateApp'
+/**
  * @internal
  */
 export {
-  type NormalizedPropsOptions,
+  type RendererInternals,
+  MoveType,
+  getInheritedScopeIds,
+} from './renderer'
+/**
+ * @internal
+ */
+export {
   baseNormalizePropsOptions,
   resolvePropValue,
   validateProps,
@@ -503,18 +538,11 @@ export { baseEmit, isEmitListener } from './componentEmits'
 /**
  * @internal
  */
-export { type SchedulerJob, queueJob, flushOnAppMount } from './scheduler'
+export { queueJob, flushOnAppMount } from './scheduler'
 /**
  * @internal
  */
-export {
-  type ComponentInternalOptions,
-  type GenericComponentInstance,
-  type LifecycleHook,
-  expose,
-  nextUid,
-  validateComponentName,
-} from './component'
+export { expose, nextUid, validateComponentName } from './component'
 /**
  * @internal
  */
@@ -532,6 +560,7 @@ export {
  */
 export {
   currentInstance,
+  setCurrentInstance,
   simpleSetCurrentInstance,
 } from './componentCurrentInstance'
 /**
@@ -546,3 +575,97 @@ export { startMeasure, endMeasure } from './profiling'
  * @internal
  */
 export { initFeatureFlags } from './featureFlags'
+/**
+ * @internal
+ */
+export {
+  resolveTarget as resolveTeleportTarget,
+  isTeleportDisabled,
+  isTeleportDeferred,
+} from './components/Teleport'
+/**
+ * @internal
+ */
+export type { TeleportTargetElement } from './components/Teleport'
+/**
+ * @internal
+ */
+export {
+  createAsyncComponentContext,
+  useAsyncComponentState,
+  isAsyncWrapper,
+  performAsyncHydrate,
+} from './apiAsyncComponent'
+/**
+ * @internal
+ */
+export { markAsyncBoundary } from './helpers/useId'
+/**
+ * @internal
+ */
+export { setRef } from './rendererTemplateRef'
+/**
+ * @internal
+ */
+export { type VNodeNormalizedRef, normalizeRef } from './vnode'
+/**
+ * @internal
+ */
+export { ensureVaporSlotFallback } from './helpers/renderSlot'
+/**
+ * @internal
+ */
+export { getComponentName } from './component'
+/**
+ * @internal
+ */
+export {
+  matches,
+  isKeepAlive,
+  resetShapeFlag,
+  activate,
+  deactivate,
+} from './components/KeepAlive'
+/**
+ * @internal
+ */
+export { devtoolsComponentAdded } from './devtools'
+/**
+ * @internal
+ */
+export { performTransitionEnter, performTransitionLeave } from './renderer'
+/**
+ * @internal
+ */
+export { createInternalObject } from './internalObject'
+/**
+ * @internal
+ */
+export {
+  MismatchTypes,
+  isMismatchAllowed,
+  toClassSet,
+  isSetEqual,
+  warnPropMismatch,
+  toStyleMap,
+  isMapEqual,
+  isValidHtmlOrSvgAttribute,
+  getAttributeMismatch,
+} from './hydration'
+/**
+ * @internal
+ */
+export { createCanSetSetupRefChecker } from './rendererTemplateRef'
+/**
+ * @internal
+ */
+export { isTemplateNode } from './hydration'
+
+/**
+ * @internal
+ */
+export {
+  baseResolveTransitionHooks,
+  checkTransitionMode,
+  leaveCbKey,
+} from './components/BaseTransition'

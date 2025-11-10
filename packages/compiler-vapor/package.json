@@ -1,8 +1,8 @@
 {
   "name": "@vue/compiler-vapor",
-  "version": "3.0.0-vapor",
+  "version": "3.6.0-alpha.3",
   "description": "@vue/compiler-vapor",
-  "main": "index.js",
+  "main": "dist/compiler-vapor.cjs.js",
   "module": "dist/compiler-vapor.esm-bundler.js",
   "types": "dist/compiler-vapor.d.ts",
   "files": [
@@ -20,7 +20,6 @@
     "./*": "./*"
   },
   "buildOptions": {
-    "name": "VueCompilerVapor",
     "formats": [
       "cjs",
       "esm-browser"
@@ -43,8 +42,10 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-vapor#readme",
   "dependencies": {
+    "@babel/parser": "catalog:",
     "@vue/compiler-dom": "workspace:*",
     "@vue/shared": "workspace:*",
-    "source-map-js": "^1.0.2"
+    "estree-walker": "catalog:",
+    "source-map-js": "catalog:"
   }
 }

@@ -5,13 +5,18 @@ import {
   Comment as VComment,
   type VNode,
   type VNodeHook,
+  VaporSlot,
   createTextVNode,
   createVNode,
   invokeVNodeHook,
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type { ComponentInternalInstance, ComponentOptions } from './component'
+import type {
+  ComponentInternalInstance,
+  ComponentOptions,
+  ConcreteComponent,
+} from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
@@ -28,10 +33,15 @@ import {
   isReservedProp,
   isString,
   normalizeClass,
+  normalizeCssVarValue,
   normalizeStyle,
   stringifyStyle,
 } from '@vue/shared'
-import { type RendererInternals, needTransition } from './renderer'
+import {
+  type RendererInternals,
+  getVaporInterface,
+  needTransition,
+} from './renderer'
 import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
@@ -254,6 +264,12 @@ export function createHydrationFunctions(
           )
         }
         break
+      case VaporSlot:
+        nextNode = getVaporInterface(parentComponent, vnode).hydrateSlot(
+          vnode,
+          node,
+        )
+        break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           if (
@@ -294,15 +310,26 @@ export function createHydrationFunctions(
             nextNode = nextSibling(node)
           }
 
-          mountComponent(
-            vnode,
-            container,
-            null,
-            parentComponent,
-            parentSuspense,
-            getContainerType(container),
-            optimized,
-          )
+          // hydrate vapor component
+          if ((vnode.type as ConcreteComponent).__vapor) {
+            getVaporInterface(parentComponent, vnode).hydrate(
+              vnode,
+              node,
+              container,
+              null,
+              parentComponent,
+            )
+          } else {
+            mountComponent(
+              vnode,
+              container,
+              null,
+              parentComponent,
+              parentSuspense,
+              getContainerType(container),
+              optimized,
+            )
+          }
 
           // #3787
           // if component is async, it may get moved / unmounted before its
@@ -398,9 +425,11 @@ export function createHydrationFunctions(
           parentComponent.vnode.props.appear
 
         const content = (el as HTMLTemplateElement).content
-          .firstChild as Element
+          .firstChild as Element & { $cls?: string }
 
         if (needCallTransitionHooks) {
+          const cls = content.getAttribute('class')
+          if (cls) content.$cls = cls
           transition!.beforeEnter(content)
         }
 
@@ -457,18 +486,22 @@ export function createHydrationFunctions(
         ) {
           clientText = clientText.slice(1)
         }
-        if (el.textContent !== clientText) {
+        const { textContent } = el
+        if (
+          textContent !== clientText &&
+          // innerHTML normalize \r\n or \r into a single \n in the DOM
+          textContent !== clientText.replace(/\r\n|\r/g, '\n')
+        ) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
                 `Hydration text content mismatch on`,
                 el,
-                `\n  - rendered on server: ${el.textContent}` +
-                  `\n  - expected on client: ${vnode.children as string}`,
+                `\n  - rendered on server: ${textContent}` +
+                  `\n  - expected on client: ${clientText}`,
               )
             logMismatchError()
           }
-
           el.textContent = vnode.children as string
         }
       }
@@ -537,11 +570,15 @@ export function createHydrationFunctions(
         dirs ||
         needCallTransitionHooks
       ) {
-        queueEffectWithSuspense(() => {
-          vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
-          needCallTransitionHooks && transition!.enter(el)
-          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
-        }, parentSuspense)
+        queueEffectWithSuspense(
+          () => {
+            vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
+            needCallTransitionHooks && transition!.enter(el)
+            dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+          },
+          undefined,
+          parentSuspense,
+        )
       }
     }
 
@@ -768,25 +805,25 @@ export function createHydrationFunctions(
       if (parent.vnode.el === oldNode) {
         parent.vnode.el = parent.subTree.el = newNode
       }
-      parent = parent.parent
+      parent = parent.parent as ComponentInternalInstance
     }
   }
 
-  const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
-    return (
-      node.nodeType === DOMNodeTypes.ELEMENT &&
-      (node as Element).tagName === 'TEMPLATE'
-    )
-  }
-
   return [hydrate, hydrateNode]
+}
+
+export const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
+  return (
+    node.nodeType === DOMNodeTypes.ELEMENT &&
+    (node as Element).tagName === 'TEMPLATE'
+  )
 }
 
 /**
  * Dev only
  */
 function propHasMismatch(
-  el: Element,
+  el: Element & { $cls?: string },
   key: string,
   clientValue: any,
   vnode: VNode,
@@ -799,7 +836,12 @@ function propHasMismatch(
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
-    actual = el.getAttribute('class')
+    if (el.$cls) {
+      actual = el.$cls
+      delete el.$cls
+    } else {
+      actual = el.getAttribute('class')
+    }
     expected = normalizeClass(clientValue)
     if (!isSetEqual(toClassSet(actual || ''), toClassSet(expected))) {
       mismatchType = MismatchTypes.CLASS
@@ -831,35 +873,61 @@ function propHasMismatch(
       mismatchType = MismatchTypes.STYLE
       mismatchKey = 'style'
     }
-  } else if (
-    (el instanceof SVGElement && isKnownSvgAttr(key)) ||
-    (el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key)))
-  ) {
-    if (isBooleanAttr(key)) {
-      actual = el.hasAttribute(key)
-      expected = includeBooleanAttr(clientValue)
-    } else if (clientValue == null) {
-      actual = el.hasAttribute(key)
-      expected = false
-    } else {
-      if (el.hasAttribute(key)) {
-        actual = el.getAttribute(key)
-      } else if (key === 'value' && el.tagName === 'TEXTAREA') {
-        // #10000 textarea.value can't be retrieved by `hasAttribute`
-        actual = (el as HTMLTextAreaElement).value
-      } else {
-        actual = false
-      }
-      expected = isRenderableAttrValue(clientValue)
-        ? String(clientValue)
-        : false
-    }
+  } else if (isValidHtmlOrSvgAttribute(el, key)) {
+    ;({ actual, expected } = getAttributeMismatch(el, key, clientValue))
     if (actual !== expected) {
       mismatchType = MismatchTypes.ATTRIBUTE
       mismatchKey = key
     }
   }
 
+  return warnPropMismatch(el, mismatchKey, mismatchType, actual, expected)
+}
+
+export function getAttributeMismatch(
+  el: Element,
+  key: string,
+  clientValue: any,
+): {
+  actual: string | boolean | null | undefined
+  expected: string | boolean | null | undefined
+} {
+  let actual: string | boolean | null | undefined
+  let expected: string | boolean | null | undefined
+  if (isBooleanAttr(key)) {
+    actual = el.hasAttribute(key)
+    expected = includeBooleanAttr(clientValue)
+  } else if (clientValue == null) {
+    actual = el.hasAttribute(key)
+    expected = false
+  } else {
+    if (el.hasAttribute(key)) {
+      actual = el.getAttribute(key)
+    } else if (key === 'value' && el.tagName === 'TEXTAREA') {
+      // #10000 textarea.value can't be retrieved by `hasAttribute`
+      actual = (el as HTMLTextAreaElement).value
+    } else {
+      actual = false
+    }
+    expected = isRenderableAttrValue(clientValue) ? String(clientValue) : false
+  }
+  return { actual, expected }
+}
+
+export function isValidHtmlOrSvgAttribute(el: Element, key: string): boolean {
+  return (
+    (el instanceof SVGElement && isKnownSvgAttr(key)) ||
+    (el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key)))
+  )
+}
+
+export function warnPropMismatch(
+  el: Element & { $cls?: string },
+  mismatchKey: string | undefined,
+  mismatchType: MismatchTypes | undefined,
+  actual: string | boolean | null | undefined,
+  expected: string | boolean | null | undefined,
+): boolean {
   if (mismatchType != null && !isMismatchAllowed(el, mismatchType)) {
     const format = (v: any) =>
       v === false ? `(not rendered)` : `${mismatchKey}="${v}"`
@@ -882,11 +950,11 @@ function propHasMismatch(
   return false
 }
 
-function toClassSet(str: string): Set<string> {
+export function toClassSet(str: string): Set<string> {
   return new Set(str.trim().split(/\s+/))
 }
 
-function isSetEqual(a: Set<string>, b: Set<string>): boolean {
+export function isSetEqual(a: Set<string>, b: Set<string>): boolean {
   if (a.size !== b.size) {
     return false
   }
@@ -898,7 +966,7 @@ function isSetEqual(a: Set<string>, b: Set<string>): boolean {
   return true
 }
 
-function toStyleMap(str: string): Map<string, string> {
+export function toStyleMap(str: string): Map<string, string> {
   const styleMap: Map<string, string> = new Map()
   for (const item of str.split(';')) {
     let [key, value] = item.split(':')
@@ -911,7 +979,10 @@ function toStyleMap(str: string): Map<string, string> {
   return styleMap
 }
 
-function isMapEqual(a: Map<string, string>, b: Map<string, string>): boolean {
+export function isMapEqual(
+  a: Map<string, string>,
+  b: Map<string, string>,
+): boolean {
   if (a.size !== b.size) {
     return false
   }
@@ -938,20 +1009,22 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      expectedMap.set(
-        `--${getEscapedCssVarName(key, false)}`,
-        String(cssVars[key]),
-      )
+      const value = normalizeCssVarValue(cssVars[key])
+      expectedMap.set(`--${getEscapedCssVarName(key, false)}`, value)
     }
   }
   if (vnode === root && instance.parent) {
-    resolveCssVars(instance.parent, instance.vnode, expectedMap)
+    resolveCssVars(
+      instance.parent as ComponentInternalInstance,
+      instance.vnode,
+      expectedMap,
+    )
   }
 }
 
 const allowMismatchAttr = 'data-allow-mismatch'
 
-enum MismatchTypes {
+export enum MismatchTypes {
   TEXT = 0,
   CHILDREN = 1,
   CLASS = 2,
@@ -967,7 +1040,7 @@ const MismatchTypeString: Record<MismatchTypes, string> = {
   [MismatchTypes.ATTRIBUTE]: 'attribute',
 } as const
 
-function isMismatchAllowed(
+export function isMismatchAllowed(
   el: Element | null,
   allowedType: MismatchTypes,
 ): boolean {
@@ -990,6 +1063,6 @@ function isMismatchAllowed(
     if (allowedType === MismatchTypes.TEXT && list.includes('children')) {
       return true
     }
-    return allowedAttr.split(',').includes(MismatchTypeString[allowedType])
+    return list.includes(MismatchTypeString[allowedType])
   }
 }

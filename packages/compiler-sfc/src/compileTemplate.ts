@@ -209,11 +209,10 @@ function doCompileTemplate({
   const shortId = id.replace(/^data-v-/, '')
   const longId = `data-v-${shortId}`
 
-  const defaultCompiler = vapor
-    ? // TODO ssr
-      (CompilerVapor as TemplateCompiler)
-    : ssr
-      ? (CompilerSSR as TemplateCompiler)
+  const defaultCompiler = ssr
+    ? (CompilerSSR as TemplateCompiler)
+    : vapor
+      ? (CompilerVapor as TemplateCompiler)
       : CompilerDOM
   compiler = compiler || defaultCompiler
 
@@ -315,7 +314,7 @@ function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
 
     const origPosInOldMap = oldMapConsumer.originalPositionFor({
       line: m.originalLine,
-      column: m.originalColumn,
+      column: m.originalColumn!,
     })
 
     if (origPosInOldMap.source == null) {
@@ -331,7 +330,7 @@ function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
         line: origPosInOldMap.line, // map line
         // use current column, since the oldMap produced by @vue/compiler-sfc
         // does not
-        column: m.originalColumn,
+        column: m.originalColumn!,
       },
       source: origPosInOldMap.source,
       name: origPosInOldMap.name,

@@ -1,10 +1,5 @@
-import type {
-  ElementNode,
-  Namespace,
-  Namespaces,
-  ParentNode,
-  TemplateChildNode,
-} from './ast'
+import type { ElementNode, ParentNode, TemplateChildNode } from './ast'
+import type { Namespace, Namespaces } from '@vue/shared'
 import type { CompilerError } from './errors'
 import type {
   DirectiveTransform,

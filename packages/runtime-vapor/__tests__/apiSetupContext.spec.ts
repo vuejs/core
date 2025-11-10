@@ -8,6 +8,7 @@ import {
   insert,
   renderEffect,
   setDynamicProps,
+  setText,
   template,
 } from '../src'
 import { nextTick, reactive, ref, watchEffect } from '@vue/runtime-dom'
@@ -26,7 +27,7 @@ describe('api: setup context', () => {
         }
       },
       render(ctx) {
-        return createTextNode([`${ctx.ref} ${ctx.object.msg} ${ctx.value}`])
+        return createTextNode(`${ctx.ref} ${ctx.object.msg} ${ctx.value}`)
       },
     }).render()
     expect(html()).toMatch(`foo bar baz`)
@@ -35,7 +36,7 @@ describe('api: setup context', () => {
   it('should support returning render function', () => {
     const { html } = define({
       setup() {
-        return createTextNode([`hello`])
+        return createTextNode(`hello`)
       },
     }).render()
     expect(html()).toMatch(`hello`)
@@ -51,7 +52,11 @@ describe('api: setup context', () => {
         watchEffect(() => {
           dummy = props.count
         })
-        return createTextNode(() => [props.count])
+        const n = createTextNode()
+        renderEffect(() => {
+          setText(n, props.count)
+        })
+        return n
       },
     })
 
@@ -74,10 +79,7 @@ describe('api: setup context', () => {
       inheritAttrs: false,
       setup(_props, { attrs }) {
         const el = document.createElement('div')
-        let prev: any
-        renderEffect(() => {
-          prev = setDynamicProps(el, [attrs], prev, true)
-        })
+        renderEffect(() => setDynamicProps(el, [attrs]))
         return el
       },
     })
@@ -113,10 +115,7 @@ describe('api: setup context', () => {
         const n0 = createComponent(Wrapper, null, {
           default: () => {
             const n0 = template('<div>')() as HTMLDivElement
-            let prev: any
-            renderEffect(() => {
-              prev = setDynamicProps(n0, [attrs], prev, true)
-            })
+            renderEffect(() => setDynamicProps(n0, [attrs]))
             return n0
           },
         })
@@ -154,11 +153,15 @@ describe('api: setup context', () => {
           $: [
             () => ({
               name: 'foo',
-              fn: () => createTextNode(() => [id.value]),
+              fn: () => {
+                const n = createTextNode()
+                renderEffect(() => setText(n, id.value))
+                return n
+              },
             }),
             () => ({
               name: 'bar',
-              fn: () => createTextNode(['bar']),
+              fn: () => createTextNode('bar'),
             }),
           ],
         })
@@ -184,13 +187,12 @@ describe('api: setup context', () => {
       },
       setup(props, { emit }) {
         const n0 = template('<div>')() as HTMLDivElement
-        delegate(n0, 'click', () => () => {
+        delegate(n0, 'click', () => {
           emit('inc', props.count + 1)
         })
-        insert(
-          createTextNode(() => [props.count]),
-          n0,
-        )
+        const n = createTextNode()
+        renderEffect(() => setText(n, props.count))
+        insert(n, n0)
         return n0
       },
     })

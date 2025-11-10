@@ -1,5 +1,7 @@
 import {
   escapeHtml,
+  isArray,
+  isObject,
   isRenderableAttrValue,
   isSVGTag,
   stringifyStyle,
@@ -12,6 +14,7 @@ import {
   isString,
   makeMap,
   normalizeClass,
+  normalizeCssVarValue,
   normalizeStyle,
   propsToAttrMap,
 } from '@vue/shared'
@@ -93,6 +96,22 @@ export function ssrRenderStyle(raw: unknown): string {
   if (isString(raw)) {
     return escapeHtml(raw)
   }
-  const styles = normalizeStyle(raw)
+  const styles = normalizeStyle(ssrResetCssVars(raw))
   return escapeHtml(stringifyStyle(styles))
+}
+
+function ssrResetCssVars(raw: unknown) {
+  if (!isArray(raw) && isObject(raw)) {
+    const res: Record<string, unknown> = {}
+    for (const key in raw) {
+      // `:` prefixed keys are coming from `ssrCssVars`
+      if (key.startsWith(':--')) {
+        res[key.slice(1)] = normalizeCssVarValue(raw[key])
+      } else {
+        res[key] = raw[key]
+      }
+    }
+    return res
+  }
+  return raw
 }

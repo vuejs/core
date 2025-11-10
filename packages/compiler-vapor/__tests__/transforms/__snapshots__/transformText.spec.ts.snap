@@ -1,19 +1,34 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: text transform > consecutive text 1`] = `
-"import { createTextNode as _createTextNode } from 'vue';
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n0 = _createTextNode(() => [_ctx.msg])
+  const n0 = t0()
+  _renderEffect(() => _setText(n0, _toDisplayString(_ctx.msg)))
   return n0
 }"
 `;
 
-exports[`compiler: text transform > no consecutive text 1`] = `
-"import { createTextNode as _createTextNode } from 'vue';
+exports[`compiler: text transform > constant text 1`] = `
+"import { child as _child, template as _template } from 'vue';
+const t0 = _template("<div>2 foo1 1 1 1</div>", true)
 
 export function render(_ctx) {
-  const n0 = _createTextNode(["hello world"])
+  const n1 = t0()
+  const n0 = _child(n1, 0)
+  return n1
+}"
+`;
+
+exports[`compiler: text transform > no consecutive text 1`] = `
+"import { setText as _setText, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setText(n0, "hello world")
   return n0
 }"
 `;

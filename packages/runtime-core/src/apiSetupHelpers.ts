@@ -9,11 +9,11 @@ import {
   isPromise,
 } from '@vue/shared'
 import {
+  type ComponentInternalInstance,
   type SetupContext,
   createSetupContext,
-  getCurrentInstance,
+  getCurrentGenericInstance,
   setCurrentInstance,
-  unsetCurrentInstance,
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
@@ -319,7 +319,14 @@ type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, T[K]>
 }
 
-type NativeType = null | number | string | boolean | symbol | Function
+type NativeType =
+  | null
+  | undefined
+  | number
+  | string
+  | boolean
+  | symbol
+  | Function
 
 type InferDefault<P, T> =
   | ((props: P) => T & {})
@@ -381,20 +388,26 @@ export function withDefaults<
   return null as any
 }
 
+// TODO return type for Vapor components
 export function useSlots(): SetupContext['slots'] {
-  return getContext().slots
+  return getContext('useSlots').slots
 }
 
 export function useAttrs(): SetupContext['attrs'] {
-  return getContext().attrs
+  return getContext('useAttrs').attrs
 }
 
-function getContext(): SetupContext {
-  const i = getCurrentInstance()!
+function getContext(calledFunctionName: string): SetupContext {
+  const i = getCurrentGenericInstance()!
   if (__DEV__ && !i) {
-    warn(`useContext() called without active instance.`)
+    warn(`${calledFunctionName}() called without active instance.`)
   }
-  return i.setupContext || (i.setupContext = createSetupContext(i))
+  if (i.vapor) {
+    return i as any // vapor instance act as its own setup context
+  } else {
+    const ii = i as ComponentInternalInstance
+    return ii.setupContext || (ii.setupContext = createSetupContext(ii))
+  }
 }
 
 /**
@@ -496,7 +509,7 @@ export function createPropsRestProxy(
  * @internal
  */
 export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
-  const ctx = getCurrentInstance()!
+  const ctx = getCurrentGenericInstance()!
   if (__DEV__ && !ctx) {
     warn(
       `withAsyncContext called without active current instance. ` +
@@ -504,7 +517,7 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
     )
   }
   let awaitable = getAwaitable()
-  unsetCurrentInstance()
+  setCurrentInstance(null, undefined)
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
       setCurrentInstance(ctx)

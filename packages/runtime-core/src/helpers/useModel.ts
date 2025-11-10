@@ -1,7 +1,16 @@
 import { type Ref, customRef, ref } from '@vue/reactivity'
-import { EMPTY_OBJ, camelize, hasChanged, hyphenate } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  camelize,
+  getModifierPropName,
+  hasChanged,
+  hyphenate,
+} from '@vue/shared'
 import type { DefineModelOptions, ModelRef } from '../apiSetupHelpers'
-import { getCurrentInstance } from '../component'
+import {
+  type ComponentInternalInstance,
+  getCurrentGenericInstance,
+} from '../component'
 import { warn } from '../warning'
 import type { NormalizedProps } from '../componentProps'
 import { watchSyncEffect } from '../apiWatch'
@@ -23,14 +32,14 @@ export function useModel(
   name: string,
   options: DefineModelOptions = EMPTY_OBJ,
 ): Ref {
-  const i = getCurrentInstance()!
+  const i = getCurrentGenericInstance()!
   if (__DEV__ && !i) {
     warn(`useModel() called without active instance.`)
     return ref() as any
   }
 
   const camelizedName = camelize(name)
-  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[camelizedName]) {
+  if (__DEV__ && !(i.propsOptions![0] as NormalizedProps)[camelizedName]) {
     warn(`useModel() called with prop "${name}" which is not declared.`)
     return ref() as any
   }
@@ -65,19 +74,38 @@ export function useModel(
         ) {
           return
         }
-        const rawProps = i.vnode!.props
-        if (
-          !(
-            rawProps &&
-            // check if parent has passed v-model
-            (name in rawProps ||
-              camelizedName in rawProps ||
-              hyphenatedName in rawProps) &&
-            (`onUpdate:${name}` in rawProps ||
-              `onUpdate:${camelizedName}` in rawProps ||
-              `onUpdate:${hyphenatedName}` in rawProps)
-          )
-        ) {
+
+        let rawPropKeys
+        let parentPassedModelValue = false
+        let parentPassedModelUpdater = false
+
+        if (i.rawKeys) {
+          // vapor instance
+          rawPropKeys = i.rawKeys()
+        } else {
+          const rawProps = (i as ComponentInternalInstance).vnode!.props
+          rawPropKeys = rawProps && Object.keys(rawProps)
+        }
+
+        if (rawPropKeys) {
+          for (const key of rawPropKeys) {
+            if (
+              key === name ||
+              key === camelizedName ||
+              key === hyphenatedName
+            ) {
+              parentPassedModelValue = true
+            } else if (
+              key === `onUpdate:${name}` ||
+              key === `onUpdate:${camelizedName}` ||
+              key === `onUpdate:${hyphenatedName}`
+            ) {
+              parentPassedModelUpdater = true
+            }
+          }
+        }
+
+        if (!parentPassedModelValue || !parentPassedModelUpdater) {
           // no v-model, local update
           localValue = value
           trigger()
@@ -123,9 +151,9 @@ export const getModelModifiers = (
   modelName: string,
   getter: (props: Record<string, any>, key: string) => any,
 ): Record<string, boolean> | undefined => {
-  return modelName === 'modelValue' || modelName === 'model-value'
-    ? getter(props, 'modelModifiers')
-    : getter(props, `${modelName}Modifiers`) ||
-        getter(props, `${camelize(modelName)}Modifiers`) ||
-        getter(props, `${hyphenate(modelName)}Modifiers`)
+  return (
+    getter(props, getModifierPropName(modelName)) ||
+    getter(props, `${camelize(modelName)}Modifiers`) ||
+    getter(props, `${hyphenate(modelName)}Modifiers`)
+  )
 }
