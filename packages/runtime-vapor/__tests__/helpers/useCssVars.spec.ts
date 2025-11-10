@@ -1,7 +1,9 @@
 import {
   createComponent,
   createIf,
+  createPlainElement,
   defineVaporComponent,
+  defineVaporCustomElement,
   renderEffect,
   setStyle,
   template,
@@ -237,7 +239,29 @@ describe('useVaporCssVars', () => {
     }
   })
 
-  test.todo('with custom element', async () => {})
+  test('with custom element', async () => {
+    const state = reactive({ color: 'red' })
+    const CE = defineVaporCustomElement({
+      setup() {
+        useVaporCssVars(() => state)
+        return template('<div>hello</div>', true)()
+      },
+    })
+
+    customElements.define('css-vars-ce', CE)
+
+    const { html } = define({
+      setup() {
+        return createPlainElement('css-vars-ce', null, null, true)
+      },
+    }).render()
+
+    expect(html()).toBe('<css-vars-ce style="--color: red;"></css-vars-ce>')
+
+    state.color = 'green'
+    await nextTick()
+    expect(html()).toBe('<css-vars-ce style="--color: green;"></css-vars-ce>')
+  })
 
   test('should set vars before child component onMounted hook', () => {
     const state = reactive({ color: 'red' })

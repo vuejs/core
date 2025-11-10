@@ -1,4 +1,5 @@
 import {
+  type GenericComponentInstance,
   baseUseCssVars,
   currentInstance,
   setVarsOnNode,
@@ -14,7 +15,7 @@ export function useVaporCssVars(getter: () => Record<string, string>): void {
     instance,
     () => resolveParentNode(instance.block),
     getter,
-    vars => setVarsOnBlock(instance.block, vars),
+    vars => setVars(instance, vars),
   )
 }
 
@@ -27,6 +28,17 @@ function resolveParentNode(block: Block): Node {
     return resolveParentNode(block.block!)
   } else {
     return resolveParentNode(block.nodes)
+  }
+}
+
+function setVars(
+  instance: VaporComponentInstance,
+  vars: Record<string, string>,
+): void {
+  if ((instance as GenericComponentInstance).ce) {
+    setVarsOnNode((instance as GenericComponentInstance).ce as any, vars)
+  } else {
+    setVarsOnBlock(instance.block, vars)
   }
 }
 
