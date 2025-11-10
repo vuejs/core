@@ -65,9 +65,7 @@ export function ssrRender(_ctx, _push, _parent, _attrs) {
       } else {
         return [
           _createVNode("picture", null, [
-            _createVNode("source", {
-              srcset: _imports_1
-            }),
+            _createVNode("source", { srcset: _imports_1 }),
             _createVNode("img", { src: _imports_1 })
           ])
         ]

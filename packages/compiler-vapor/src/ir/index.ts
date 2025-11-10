@@ -5,7 +5,7 @@ import type {
   SimpleExpressionNode,
   TemplateChildNode,
 } from '@vue/compiler-dom'
-import type { Prettify } from '@vue/shared'
+import type { Namespace, Prettify } from '@vue/shared'
 import type { DirectiveTransform, NodeTransform } from '../transform'
 import type { IRProp, IRProps, IRSlots } from './component'
 
@@ -61,7 +61,8 @@ export interface RootIRNode {
   type: IRNodeTypes.ROOT
   node: RootNode
   source: string
-  template: string[]
+  template: Map<string, Namespace>
+  templateIndexMap: Map<string, number>
   rootTemplateIndex?: number
   component: Set<string>
   directive: Set<string>
@@ -116,6 +117,7 @@ export interface SetDynamicPropsIRNode extends BaseIRNode {
   element: number
   props: IRProps[]
   root: boolean
+  tag: string
 }
 
 export interface SetDynamicEventsIRNode extends BaseIRNode {

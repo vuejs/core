@@ -6,21 +6,34 @@ import {
 } from '../ir'
 import { genDirectivesForElement } from './directive'
 import { genOperationWithInsertionState } from './operation'
-import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
+import {
+  type CodeFragment,
+  IMPORT_EXPR_RE,
+  NEWLINE,
+  buildCodeFragment,
+  genCall,
+} from './utils'
 
 export function genTemplates(
-  templates: string[],
+  templates: Map<string, number>,
   rootIndex: number | undefined,
   context: CodegenContext,
 ): string {
-  return templates
-    .map(
-      (template, i) =>
-        `const ${context.tName(i)} = ${context.helper('template')}(${JSON.stringify(
-          template,
-        )}${i === rootIndex ? ', true' : ''})\n`,
+  const result: string[] = []
+  let i = 0
+  templates.forEach((ns, template) => {
+    result.push(
+      `const ${context.tName(i)} = ${context.helper('template')}(${JSON.stringify(
+        template,
+      ).replace(
+        // replace import expressions with string concatenation
+        IMPORT_EXPR_RE,
+        `" + $1 + "`,
+      )}${i === rootIndex ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`,
     )
-    .join('')
+    i++
+  })
+  return result.join('')
 }
 
 export function genSelf(

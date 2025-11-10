@@ -5,7 +5,6 @@ import {
   type ElementNode,
   ElementTypes,
   type ForParseResult,
-  Namespaces,
   NodeTypes,
   type RootNode,
   type SimpleExpressionNode,
@@ -14,6 +13,7 @@ import {
   createRoot,
   createSimpleExpression,
 } from './ast'
+import { Namespaces } from '@vue/shared'
 import type { ParserOptions } from './options'
 import Tokenizer, {
   CharCodes,

@@ -1,5 +1,15 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > MathML 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<math><mrow><mi>x</mi></mrow></math>", true, 2)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > checkbox with static indeterminate 1`] = `
 "import { setProp as _setProp, template as _template } from 'vue';
 const t0 = _template("<input type=\\"checkbox\\">", true)
@@ -424,14 +434,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: event handlers 1`] = `
-"import { withKeys as _withKeys, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { createInvoker as _createInvoker, withKeys as _withKeys, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", _withKeys(e => _ctx.a(e), ["foo"]))
-  _delegate(n0, "click", _withKeys(e => _ctx.b(e), ["bar"]))
+  _delegate(n0, "click", _createInvoker(_withKeys(e => _ctx.a(e), ["foo"])))
+  _delegate(n0, "click", _createInvoker(_withKeys(e => _ctx.b(e), ["bar"])))
   return n0
 }"
 `;
@@ -450,6 +460,16 @@ export function render(_ctx) {
 exports[`compiler: element transform > static props 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > svg 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<svg><circle r=\\"40\\"></circle></svg>", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()

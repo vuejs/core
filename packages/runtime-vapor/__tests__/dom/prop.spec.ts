@@ -14,7 +14,7 @@ import {
 } from '../../src/dom/prop'
 import { setStyle } from '../../src/dom/prop'
 import { VaporComponentInstance, createComponent } from '../../src/component'
-import { ref, setCurrentInstance } from '@vue/runtime-dom'
+import { ref, setCurrentInstance, svgNS, xlinkNS } from '@vue/runtime-dom'
 import { makeRender } from '../_utils'
 import {
   createDynamicComponent,
@@ -329,8 +329,9 @@ describe('patchProp', () => {
       key: string,
       value: any,
       el = element.cloneNode(true) as HTMLElement,
+      isSVG: boolean = false,
     ) {
-      _setDynamicProp(el, key, value)
+      _setDynamicProp(el, key, value, isSVG)
       return el
     }
 
@@ -381,7 +382,40 @@ describe('patchProp', () => {
       expect(res.textContent).toBe('foo')
     })
 
-    test.todo('should be able to set something on SVG')
+    test('set class w/ SVG', () => {
+      const el = document.createElementNS(svgNS, 'svg') as any
+      setDynamicProp('class', 'foo', el, true)
+      expect(el.getAttribute('class')).toBe('foo')
+    })
+
+    test('set class incremental w/ SVG', () => {
+      const el = document.createElementNS(svgNS, 'svg') as any
+      el.setAttribute('class', 'bar')
+      el.$root = true
+      setDynamicProp('class', 'foo', el, true)
+      expect(el.getAttribute('class')).toBe('bar foo')
+    })
+
+    test('set xlink attributes w/ SVG', () => {
+      const el = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'use',
+      ) as any
+      setDynamicProp('xlink:href', 'a', el, true)
+      expect(el.getAttributeNS(xlinkNS, 'href')).toBe('a')
+      setDynamicProp('xlink:href', null, el, true)
+      expect(el.getAttributeNS(xlinkNS, 'href')).toBe(null)
+    })
+
+    test('set textContent attributes w/ SVG', () => {
+      const el = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'use',
+      ) as any
+      setDynamicProp('textContent', 'foo', el, true)
+      expect(el.attributes.length).toBe(0)
+      expect(el.innerHTML).toBe('foo')
+    })
   })
 
   describe('setDynamicProps', () => {
