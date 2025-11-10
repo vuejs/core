@@ -1065,6 +1065,34 @@ describe('Vapor Mode hydration', () => {
       `,
       )
     })
+
+    test('dynamic component fallback with dynamic slots', async () => {
+      const data = ref({
+        name: 'default',
+        msg: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <component :is="'div'">
+            <template v-slot:[data.name]>
+              <span>{{ data.msg }}</span>
+            </template>
+          </component>
+        </template>`,
+        {},
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>foo</span><!----></div><!--dynamic-component-->"`,
+      )
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>bar</span><!----></div><!--dynamic-component-->"`,
+      )
+    })
   })
 
   describe('if', () => {

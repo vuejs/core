@@ -37,7 +37,7 @@ interface Position {
 
 const positionMap = new WeakMap<VNode, Position>()
 const newPositionMap = new WeakMap<VNode, Position>()
-export const moveCbKey: unique symbol = Symbol('_moveCb')
+const moveCbKey: unique symbol = Symbol('_moveCb')
 const enterCbKey = Symbol('_enterCb')
 
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {

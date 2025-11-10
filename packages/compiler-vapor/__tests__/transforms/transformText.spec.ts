@@ -51,8 +51,8 @@ describe('compiler: text transform', () => {
 
   it('escapes raw static text when generating the template string', () => {
     const { ir } = compileWithTextTransform('<code>&lt;script&gt;</code>')
-    expect(ir.template).toContain('<code>&lt;script&gt;</code>')
-    expect(ir.template).not.toContain('<code><script></code>')
+    expect([...ir.template.keys()]).toContain('<code>&lt;script&gt;</code>')
+    expect([...ir.template.keys()]).not.toContain('<code><script></code>')
   })
 
   test('constant text', () => {

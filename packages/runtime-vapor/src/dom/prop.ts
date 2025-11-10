@@ -29,6 +29,7 @@ import {
   vShowHidden,
   warn,
   warnPropMismatch,
+  xlinkNS,
 } from '@vue/runtime-dom'
 import {
   type VaporComponentInstance,
@@ -59,7 +60,12 @@ export function setProp(el: any, key: string, value: any): void {
   }
 }
 
-export function setAttr(el: any, key: string, value: any): void {
+export function setAttr(
+  el: any,
+  key: string,
+  value: any,
+  isSVG: boolean = false,
+): void {
   if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey(key)) {
     return
   }
@@ -85,10 +91,18 @@ export function setAttr(el: any, key: string, value: any): void {
 
   if (value !== el[`$${key}`]) {
     el[`$${key}`] = value
-    if (value != null) {
-      el.setAttribute(key, value)
+    if (isSVG && key.startsWith('xlink:')) {
+      if (value != null) {
+        el.setAttributeNS(xlinkNS, key, value)
+      } else {
+        el.removeAttributeNS(xlinkNS, key.slice(6, key.length))
+      }
     } else {
-      el.removeAttribute(key)
+      if (value != null) {
+        el.setAttribute(key, value)
+      } else {
+        el.removeAttribute(key)
+      }
     }
   }
 }
@@ -152,7 +166,11 @@ export function setDOMProp(
   needRemove && el.removeAttribute(key)
 }
 
-export function setClass(el: TargetElement, value: any): void {
+export function setClass(
+  el: TargetElement,
+  value: any,
+  isSVG: boolean = false,
+): void {
   if (el.$root) {
     setClassIncremental(el, value)
   } else {
@@ -167,7 +185,11 @@ export function setClass(el: TargetElement, value: any): void {
     }
 
     if (value !== el.$cls) {
-      el.className = el.$cls = value
+      if (isSVG) {
+        el.setAttribute('class', (el.$cls = value))
+      } else {
+        el.className = el.$cls = value
+      }
     }
   }
 }
@@ -405,21 +427,27 @@ function setHtmlToBlock(block: Block, value: any): void {
   }
 }
 
-export function setDynamicProps(el: any, args: any[]): void {
+export function setDynamicProps(
+  el: any,
+  args: any[],
+  root?: boolean,
+  isSVG?: boolean,
+): void {
   const props = args.length > 1 ? mergeProps(...args) : args[0]
   const cacheKey = `$dprops${isApplyingFallthroughProps ? '$' : ''}`
   const prevKeys = el[cacheKey] as string[]
+  if (root) el.$root = root
 
   if (prevKeys) {
     for (const key of prevKeys) {
       if (!(key in props)) {
-        setDynamicProp(el, key, null)
+        setDynamicProp(el, key, null, isSVG)
       }
     }
   }
 
   for (const key of (el[cacheKey] = Object.keys(props))) {
-    setDynamicProp(el, key, props[key])
+    setDynamicProp(el, key, props[key], isSVG)
   }
 }
 
@@ -430,12 +458,11 @@ export function setDynamicProp(
   el: TargetElement,
   key: string,
   value: any,
+  isSVG: boolean = false,
 ): void {
-  // TODO
-  const isSVG = false
   let forceHydrate = false
   if (key === 'class') {
-    setClass(el, value)
+    setClass(el, value, isSVG)
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
@@ -458,7 +485,7 @@ export function setDynamicProp(
       setDOMProp(el, key, value, forceHydrate)
     }
   } else {
-    setAttr(el, key, value)
+    setAttr(el, key, value, isSVG)
   }
   return value
 }
