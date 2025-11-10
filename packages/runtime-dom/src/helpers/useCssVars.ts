@@ -71,6 +71,10 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
   }
 }
 
+/**
+ * @internal
+ * shared between vdom and vapor
+ */
 export function baseUseCssVars(
   instance: GenericComponentInstance | null,
   getParentNode: () => Node,
@@ -86,7 +90,7 @@ export function baseUseCssVars(
   /* v8 ignore stop */
 
   if (__DEV__) {
-    instance.getCssVars = () => getVars()
+    instance.getCssVars = getVars
   }
 
   const updateTeleports = (instance.ut = (vars = getVars()) => {
@@ -116,6 +120,10 @@ export function baseUseCssVars(
   })
 }
 
+/**
+ * @internal
+ * shared between vdom and vapor
+ */
 export function setVarsOnNode(el: Node, vars: Record<string, string>): void {
   if (el.nodeType === 1) {
     const style = (el as HTMLElement).style

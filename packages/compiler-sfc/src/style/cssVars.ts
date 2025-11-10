@@ -10,12 +10,12 @@ import {
 import type { SFCDescriptor } from '../parse'
 import type { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
-import { capitalize, getEscapedCssVarName } from '@vue/shared'
+import { getEscapedCssVarName } from '@vue/shared'
 
 export const CSS_VARS_HELPER = `useCssVars`
 
 export function getCssVarsHelper(vapor: boolean | undefined): string {
-  return vapor ? `vapor${capitalize(CSS_VARS_HELPER)}` : CSS_VARS_HELPER
+  return vapor ? `useVaporCssVars` : CSS_VARS_HELPER
 }
 
 export function genCssVarsFromList(

@@ -54,7 +54,7 @@ export {
   getDefaultValue,
 } from './apiCreateFor'
 export { createTemplateRefSetter } from './apiTemplateRef'
-export { vaporUseCssVars } from './helpers/useCssVars'
+export { useVaporCssVars } from './helpers/useCssVars'
 export { createDynamicComponent } from './apiCreateDynamicComponent'
 export { applyVShow } from './directives/vShow'
 export {

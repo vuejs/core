@@ -7,14 +7,13 @@ import { type VaporComponentInstance, isVaporComponent } from '../component'
 import { isArray } from '@vue/shared'
 import type { Block } from '../block'
 
-export function vaporUseCssVars(getter: () => Record<string, string>): void {
+export function useVaporCssVars(getter: () => Record<string, string>): void {
   if (!__BROWSER__ && !__TEST__) return
-
   const instance = currentInstance as VaporComponentInstance
   baseUseCssVars(
     instance,
     () => resolveParentNode(instance.block),
-    () => getter(),
+    getter,
     vars => setVarsOnBlock(instance.block, vars),
   )
 }

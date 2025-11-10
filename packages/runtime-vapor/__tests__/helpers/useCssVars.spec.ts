@@ -5,7 +5,7 @@ import {
   renderEffect,
   setStyle,
   template,
-  vaporUseCssVars,
+  useVaporCssVars,
 } from '@vue/runtime-vapor'
 import { nextTick, onMounted, reactive, ref } from '@vue/runtime-core'
 import { makeRender } from '../_utils'
@@ -13,7 +13,7 @@ import type { VaporComponent } from '../../src/component'
 
 const define = makeRender()
 
-describe('vaporUseCssVars', () => {
+describe('useVaporCssVars', () => {
   async function assertCssVars(getApp: (state: any) => VaporComponent) {
     const state = reactive({ color: 'red' })
     const App = getApp(state)
@@ -35,7 +35,7 @@ describe('vaporUseCssVars', () => {
     const t0 = template('<div></div>')
     await assertCssVars(state => ({
       setup() {
-        vaporUseCssVars(() => state)
+        useVaporCssVars(() => state)
         const n0 = t0()
         return n0
       },
@@ -46,7 +46,7 @@ describe('vaporUseCssVars', () => {
     const t0 = template('<div></div>')
     await assertCssVars(state => ({
       setup() {
-        vaporUseCssVars(() => state)
+        useVaporCssVars(() => state)
         const n0 = t0()
         const n1 = t0()
         return [n0, n1]
@@ -64,7 +64,7 @@ describe('vaporUseCssVars', () => {
     })
     await assertCssVars(state => ({
       setup() {
-        vaporUseCssVars(() => state)
+        useVaporCssVars(() => state)
         return createComponent(Child)
       },
     }))
@@ -82,7 +82,7 @@ describe('vaporUseCssVars', () => {
 
     define({
       setup() {
-        vaporUseCssVars(() => state)
+        useVaporCssVars(() => state)
         const n0 = createIf(
           () => value.value,
           () => {
@@ -125,7 +125,7 @@ describe('vaporUseCssVars', () => {
     const t0 = template('<div></div>')
     define({
       setup() {
-        vaporUseCssVars(() => state)
+        useVaporCssVars(() => state)
         return createComponent(Child, null, {
           default: () => {
             return createIf(
@@ -174,7 +174,7 @@ describe('vaporUseCssVars', () => {
 
     define({
       setup() {
-        vaporUseCssVars(() => state)
+        useVaporCssVars(() => state)
         const n0 = t0() as any
         renderEffect(() =>
           setStyle(n0, state.color ? 'pointer-events: none' : undefined),
@@ -214,7 +214,7 @@ describe('vaporUseCssVars', () => {
 
     define({
       setup() {
-        vaporUseCssVars(() => state)
+        useVaporCssVars(() => state)
         return createIf(
           () => value.value,
           () => createComponent(Child),
@@ -246,7 +246,7 @@ describe('vaporUseCssVars', () => {
 
     define({
       setup() {
-        vaporUseCssVars(() => state)
+        useVaporCssVars(() => state)
         onMounted(() => {
           colorInOnMount = (
             root.children[0] as HTMLElement
