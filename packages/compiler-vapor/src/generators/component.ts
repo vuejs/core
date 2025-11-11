@@ -462,11 +462,7 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
 
   if (
     node.type === NodeTypes.ELEMENT &&
-    // // Not a real component
-    // !isTeleportTag(node.tag) &&
-    // // Needs to determine whether to activate/deactivate based on instance.parent being KeepAlive
-    // !isKeepAliveTag(node.tag) &&
-    // // Slot updates need to trigger TransitionGroup's onBeforeUpdate/onUpdated hook
+    // Slot updates need to trigger TransitionGroup's onBeforeUpdate/onUpdated hook
     !isTransitionGroupTag(node.tag)
   ) {
     // wrap with withVaporCtx to ensure correct currentInstance inside slot

@@ -72,7 +72,7 @@ import {
   dynamicSlotsProxyHandlers,
   getSlot,
   getSlotConsumer,
-  getSlotScopeOwner,
+  getSlotOwner,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
@@ -180,10 +180,8 @@ export function createComponent(
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
   once?: boolean,
-  appContext: GenericAppContext = (((getSlotScopeOwner() as VaporComponentInstance | null) ||
-    (currentInstance as VaporComponentInstance | null)) &&
-    ((getSlotScopeOwner() as VaporComponentInstance | null) ||
-      (currentInstance as VaporComponentInstance | null))!.appContext) ||
+  appContext: GenericAppContext = (currentInstance &&
+    currentInstance.appContext) ||
     emptyContext,
 ): VaporComponentInstance {
   const _insertionParent = insertionParent
@@ -196,8 +194,7 @@ export function createComponent(
   }
 
   const parentInstance =
-    (getSlotConsumer() as VaporComponentInstance | null) ||
-    (currentInstance as VaporComponentInstance | null)
+    getSlotConsumer() || (currentInstance as VaporComponentInstance | null)
 
   if (
     isSingleRoot &&
@@ -480,8 +477,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   slots: StaticSlots
 
-  // slot template owner for scope inheritance
-  slotScopeOwner: VaporComponentInstance | null
+  // slot owner for scopeId inheritance
+  slotOwner?: VaporComponentInstance | null
 
   // to hold vnode props / slots in vdom interop mode
   rawPropsRef?: ShallowRef<any>
@@ -609,7 +606,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
         : rawSlots
       : EMPTY_OBJ
 
-    this.slotScopeOwner = getSlotScopeOwner() as VaporComponentInstance | null
+    this.slotOwner = getSlotOwner()
 
     // apply custom element special handling
     if (comp.ce) {
@@ -683,7 +680,7 @@ export function createPlainElement(
   ;(el as any).$root = isSingleRoot
 
   if (!isHydrating) {
-    const scopeOwner = getSlotScopeOwner() || currentInstance
+    const scopeOwner = getSlotOwner() || currentInstance
     const scopeId = scopeOwner && scopeOwner.type.__scopeId
     if (scopeId) setScopeId(el, [scopeId])
   }
