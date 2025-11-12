@@ -1,6 +1,7 @@
 <script setup vapor>
 import { ref } from 'vue'
 import VdomComp from './components/VdomComp.vue'
+import MyTransitionGroup from './components/MyTransitionGroup.vue'
 
 const items = ref(['a', 'b', 'c'])
 const enterClick = () => items.value.push('d', 'e')
@@ -106,6 +107,14 @@ const interopClick = () => (items.value = ['b', 'c', 'd'])
         >
           <div v-for="item in items" :key="item" class="test">{{ item }}</div>
         </transition-group>
+      </div>
+    </div>
+    <div class="reusable-transition-group">
+      <button @click="moveClick">reusable button</button>
+      <div>
+        <MyTransitionGroup name="group">
+          <div v-for="item in items" :key="item" class="test">{{ item }}</div>
+        </MyTransitionGroup>
       </div>
     </div>
     <div class="interop">

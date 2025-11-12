@@ -29,6 +29,9 @@ export interface VaporTransitionHooks extends TransitionHooks {
   // mark transition hooks as disabled so that it skips during
   // inserting
   disabled?: boolean
+  // mark transition hooks as group so that it triggers TransitionGroup update hooks
+  // in vFor renderList function
+  group?: boolean
 }
 
 export interface TransitionOptions {
