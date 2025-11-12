@@ -44,6 +44,9 @@ export { invalidateTypeCache, registerTS } from './script/resolveType'
 export { extractRuntimeProps } from './script/defineProps'
 export { extractRuntimeEmits } from './script/defineEmits'
 
+// Internals for cache control
+export { configureCacheOptions } from './cache'
+
 // Types
 export type {
   SFCParseOptions,
