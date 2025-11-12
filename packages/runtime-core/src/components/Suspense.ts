@@ -577,12 +577,9 @@ function createSuspenseBoundary(
           }
           unmount(activeBranch, parentComponent, suspense, true)
           // clear el reference from fallback vnode to allow GC
-          // only clear immediately if there's no delayed transition
-          queuePostRenderEffect(() => {
-            if (!delayEnter && isInFallback && vnode.ssFallback) {
-              vnode.ssFallback.el = null
-            }
-          }, suspense)
+          if (!delayEnter && isInFallback && vnode.ssFallback) {
+            queuePostRenderEffect(() => (vnode.ssFallback!.el = null), suspense)
+          }
         }
         if (!delayEnter) {
           // move content from off-dom container to actual container
