@@ -20,6 +20,7 @@ import {
   type RendererInternals,
   type RendererNode,
   type SetupRenderEffectFn,
+  queuePostRenderEffect,
 } from '../renderer'
 import { queuePostFlushCb } from '../scheduler'
 import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
@@ -553,9 +554,11 @@ function createSuspenseBoundary(
               )
               queuePostFlushCb(effects)
               // clear el reference from fallback vnode to allow GC after transition
-              if (isInFallback && vnode.ssFallback) {
-                vnode.ssFallback.el = null
-              }
+              queuePostRenderEffect(() => {
+                if (isInFallback && vnode.ssFallback) {
+                  vnode.ssFallback.el = null
+                }
+              }, suspense)
             }
           }
         }
@@ -577,9 +580,11 @@ function createSuspenseBoundary(
           unmount(activeBranch, parentComponent, suspense, true)
           // clear el reference from fallback vnode to allow GC
           // only clear immediately if there's no delayed transition
-          if (!delayEnter && isInFallback && vnode.ssFallback) {
-            vnode.ssFallback.el = null
-          }
+          queuePostRenderEffect(() => {
+            if (!delayEnter && isInFallback && vnode.ssFallback) {
+              vnode.ssFallback.el = null
+            }
+          }, suspense)
         }
         if (!delayEnter) {
           // move content from off-dom container to actual container
