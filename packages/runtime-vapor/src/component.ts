@@ -69,10 +69,10 @@ import {
   type RawSlots,
   type StaticSlots,
   type VaporSlot,
+  currentSlotConsumer,
+  currentSlotOwner,
   dynamicSlotsProxyHandlers,
   getSlot,
-  getSlotConsumer,
-  getSlotOwner,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
@@ -193,8 +193,9 @@ export function createComponent(
     resetInsertionState()
   }
 
-  const parentInstance =
-    getSlotConsumer() || (currentInstance as VaporComponentInstance | null)
+  // when rendering components in slot, currentInstance is changed in withVaporCtx
+  // should use currentSlotConsumer as parent
+  const parentInstance = currentSlotConsumer || currentInstance
 
   if (
     isSingleRoot &&
@@ -477,8 +478,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   slots: StaticSlots
 
-  // slot owner for scopeId inheritance
-  slotOwner?: VaporComponentInstance | null
+  slotOwnerScopeId?: string | null
 
   // to hold vnode props / slots in vdom interop mode
   rawPropsRef?: ShallowRef<any>
@@ -606,7 +606,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
         : rawSlots
       : EMPTY_OBJ
 
-    this.slotOwner = getSlotOwner()
+    this.slotOwnerScopeId = currentSlotOwner && currentSlotOwner.type.__scopeId
 
     // apply custom element special handling
     if (comp.ce) {
@@ -680,7 +680,7 @@ export function createPlainElement(
   ;(el as any).$root = isSingleRoot
 
   if (!isHydrating) {
-    const scopeOwner = getSlotOwner() || currentInstance
+    const scopeOwner = currentSlotOwner || currentInstance
     const scopeId = scopeOwner && scopeOwner.type.__scopeId
     if (scopeId) setScopeId(el, [scopeId])
   }

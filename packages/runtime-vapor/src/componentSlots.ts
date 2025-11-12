@@ -122,34 +122,41 @@ export function getSlot(
   }
 }
 
-// Tracks slot execution context: the owner that defined the slot, and the
-// consumer that is currently rendering it.
-const slotOwnerStack: (VaporComponentInstance | null)[] = []
-const slotConsumerStack: (VaporComponentInstance | null)[] = []
+export let currentSlotOwner: GenericComponentInstance | null = null
+export let currentSlotConsumer: GenericComponentInstance | null = null
 
-export function getSlotOwner(): VaporComponentInstance | null {
-  return slotOwnerStack.length > 0
-    ? slotOwnerStack[slotOwnerStack.length - 1]
-    : null
+function setCurrentSlotOwner(owner: GenericComponentInstance | null) {
+  try {
+    return currentSlotOwner
+  } finally {
+    currentSlotOwner = owner
+  }
 }
 
-export function getSlotConsumer(): VaporComponentInstance | null {
-  return slotConsumerStack.length > 0
-    ? slotConsumerStack[slotConsumerStack.length - 1]
-    : null
+function setCurrentSlotConsumer(consumer: GenericComponentInstance | null) {
+  try {
+    return currentSlotConsumer
+  } finally {
+    currentSlotConsumer = consumer
+  }
 }
 
+/**
+ * Wrap a slot function to memoize currentInstance
+ * 1. ensure correct currentInstance in forwarded slots
+ * 2. elements created in the slot inherit the slot owner's scopeId
+ */
 export function withVaporCtx(fn: Function): BlockFn {
-  const ownerInstance = currentInstance as VaporComponentInstance | null
+  const owner = currentInstance
   return (...args: any[]) => {
-    const prev = setCurrentInstance(ownerInstance)
-    slotOwnerStack.push(ownerInstance)
-    slotConsumerStack.push(prev[0] as VaporComponentInstance | null)
+    const prev = setCurrentInstance(owner)
+    const prevOwner = setCurrentSlotOwner(owner)
+    const prevConsumer = setCurrentSlotConsumer(prev[0])
     try {
       return fn(...args)
     } finally {
-      slotConsumerStack.pop()
-      slotOwnerStack.pop()
+      setCurrentSlotConsumer(prevConsumer)
+      setCurrentSlotOwner(prevOwner)
       setCurrentInstance(...prev)
     }
   }
@@ -166,9 +173,8 @@ export function createSlot(
   const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
 
-  const consumer = currentInstance as VaporComponentInstance
-  const owner = getSlotOwner() || consumer
-  const rawSlots = consumer!.rawSlots
+  const instance = currentInstance as VaporComponentInstance
+  const rawSlots = instance.rawSlots
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
@@ -176,11 +182,11 @@ export function createSlot(
   let fragment: DynamicFragment
   if (isRef(rawSlots._)) {
     if (isHydrating) locateHydrationNode()
-    fragment = owner.appContext.vapor!.vdomSlot(
+    fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,
       slotProps,
-      owner,
+      instance,
       fallback,
     )
   } else {
@@ -190,9 +196,10 @@ export function createSlot(
         : new DynamicFragment()
     const isDynamicName = isFunction(name)
 
+    // Calculate slotScopeIds once (for vdom interop)
     const slotScopeIds: string[] = []
     if (!noSlotted) {
-      const scopeId = owner.type.__scopeId
+      const scopeId = instance.type.__scopeId
       if (scopeId) {
         slotScopeIds.push(`${scopeId}-s`)
       }
@@ -201,11 +208,14 @@ export function createSlot(
     const renderSlot = () => {
       const slotName = isFunction(name) ? name() : name
 
+      // in custom element mode, render <slot/> as actual slot outlets
+      // because in shadowRoot: false mode the slot element gets
+      // replaced by injected content
       if (
-        (consumer as GenericComponentInstance).ce ||
-        (consumer.parent &&
-          isAsyncWrapper(consumer.parent) &&
-          consumer.parent.ce)
+        (instance as GenericComponentInstance).ce ||
+        (instance.parent &&
+          isAsyncWrapper(instance.parent) &&
+          instance.parent.ce)
       ) {
         const el = createElement('slot')
         renderEffect(() => {
@@ -224,7 +234,6 @@ export function createSlot(
         fragment.fallback = fallback
         // Create and cache bound version of the slot to make it stable
         // so that we avoid unnecessary updates if it resolves to the same slot
-
         fragment.update(
           slot._bound ||
             (slot._bound = () => {
@@ -253,7 +262,7 @@ export function createSlot(
 
   if (!isHydrating) {
     if (!noSlotted) {
-      const scopeId = owner.type.__scopeId
+      const scopeId = instance.type.__scopeId
       if (scopeId) {
         setScopeId(fragment, [`${scopeId}-s`])
       }

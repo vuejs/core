@@ -59,7 +59,11 @@ import {
 } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
-import { currentSlotScopeIds, getSlotOwner } from './componentSlots'
+import {
+  currentSlotConsumer,
+  currentSlotOwner,
+  currentSlotScopeIds,
+} from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { _next, createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -276,7 +280,8 @@ function createVDOMComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
 ): VaporFragment {
-  const parentInstance = currentInstance as VaporComponentInstance
+  const parentInstance = (currentSlotConsumer ||
+    currentInstance) as VaporComponentInstance
   const frag = new VaporFragment([])
   const vnode = (frag.vnode = createVNode(
     component,
@@ -335,11 +340,8 @@ function createVDOMComponent(
     frag.nodes = vnode.el as any
   }
 
-  const scopeOwner =
-    getSlotOwner() ||
-    (parentInstance && parentInstance.slotOwner) ||
-    parentInstance
-  vnode.scopeId = scopeOwner && scopeOwner.type.__scopeId!
+  const scopeOwner = currentSlotOwner || parentInstance
+  vnode.scopeId = (scopeOwner && scopeOwner.type.__scopeId) || null
   vnode.slotScopeIds = currentSlotScopeIds
 
   frag.insert = (parentNode, anchor, transition) => {
