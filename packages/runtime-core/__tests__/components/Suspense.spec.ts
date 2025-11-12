@@ -24,6 +24,7 @@ import {
   shallowRef,
   watch,
   watchEffect,
+  withDirectives,
 } from '@vue/runtime-test'
 import { computed, createApp, defineComponent, inject, provide } from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
@@ -2357,6 +2358,41 @@ describe('Suspense', () => {
       expect(serializeInner(root)).toBe(
         `<div>444</div><div>555</div><div>666</div>`,
       )
+    })
+
+    test('should call unmounted directive once when fallback is replaced by resolved async component', async () => {
+      const Comp = {
+        render() {
+          return h('div', null, 'comp')
+        },
+      }
+      const Foo = defineAsyncComponent({
+        render() {
+          return h(Comp)
+        },
+      })
+      const unmounted = vi.fn(el => {
+        el.foo = null
+      })
+      const vDir = {
+        unmounted,
+      }
+      const App = {
+        setup() {
+          return () => {
+            return h(Suspense, null, {
+              fallback: () => withDirectives(h('div'), [[vDir, true]]),
+              default: () => h(Foo),
+            })
+          }
+        },
+      }
+      const root = nodeOps.createElement('div')
+      render(h(App), root)
+
+      await Promise.all(deps)
+      await nextTick()
+      expect(unmounted).toHaveBeenCalledTimes(1)
     })
   })
 })

@@ -554,11 +554,9 @@ function createSuspenseBoundary(
               )
               queuePostFlushCb(effects)
               // clear el reference from fallback vnode to allow GC after transition
-              queuePostRenderEffect(() => {
-                if (isInFallback && vnode.ssFallback) {
-                  vnode.ssFallback.el = null
-                }
-              }, suspense)
+              if (isInFallback && vnode.ssFallback) {
+                vnode.ssFallback.el = null
+              }
             }
           }
         }
