@@ -40,7 +40,7 @@ import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
 import { genModelHandler } from './vModel'
-import { isBuiltInComponent, isTransitionGroupTag } from '../utils'
+import { isBuiltInComponent } from '../utils'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -460,11 +460,7 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     ]
   }
 
-  if (
-    node.type === NodeTypes.ELEMENT &&
-    // Slot updates need to trigger TransitionGroup's onBeforeUpdate/onUpdated hook
-    !isTransitionGroupTag(node.tag)
-  ) {
+  if (node.type === NodeTypes.ELEMENT) {
     // wrap with withVaporCtx to ensure correct currentInstance inside slot
     blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
   }
