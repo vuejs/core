@@ -69,11 +69,10 @@ import {
   type RawSlots,
   type StaticSlots,
   type VaporSlot,
-  currentSlotOwner,
   dynamicSlotsProxyHandlers,
   getParentInstance,
   getSlot,
-  setUseSlotConsumer,
+  setCurrentSlotConsumer,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
@@ -225,12 +224,14 @@ export function createComponent(
 
   // vdom interop enabled and component is not an explicit vapor component
   if (appContext.vapor && !component.__vapor) {
+    const prevSlotConsumer = setCurrentSlotConsumer(null)
     const frag = appContext.vapor.vdomMount(
       component as any,
+      parentInstance as any,
       rawProps,
       rawSlots,
     )
-
+    setCurrentSlotConsumer(prevSlotConsumer)
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
@@ -265,6 +266,9 @@ export function createComponent(
     once,
     parentInstance,
   )
+
+  // set currentSlotConsumer to null to avoid affecting the child components
+  const prevSlotConsumer = setCurrentSlotConsumer(null)
 
   // HMR
   if (__DEV__ && component.__hmrId) {
@@ -324,6 +328,8 @@ export function createComponent(
     setupComponent(instance, component)
   }
 
+  // restore currentSlotConsumer to previous value after setupFn is called
+  setCurrentSlotConsumer(prevSlotConsumer)
   onScopeDispose(() => unmountComponent(instance), true)
 
   if (_insertionParent || isHydrating) {
@@ -333,6 +339,7 @@ export function createComponent(
   if (isHydrating && _insertionAnchor !== undefined) {
     advanceHydrationNode(_insertionParent!)
   }
+
   return instance
 }
 
@@ -477,7 +484,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   slots: StaticSlots
 
-  slotOwnerScopeId?: string | null
+  scopeId?: string | null
 
   // to hold vnode props / slots in vdom interop mode
   rawPropsRef?: ShallowRef<any>
@@ -605,14 +612,12 @@ export class VaporComponentInstance implements GenericComponentInstance {
         : rawSlots
       : EMPTY_OBJ
 
-    this.slotOwnerScopeId = currentSlotOwner && currentSlotOwner.type.__scopeId
+    this.scopeId = currentInstance && currentInstance.type.__scopeId
 
     // apply custom element special handling
     if (comp.ce) {
       comp.ce(this)
     }
-
-    setUseSlotConsumer(false)
   }
 
   /**
@@ -681,8 +686,7 @@ export function createPlainElement(
   ;(el as any).$root = isSingleRoot
 
   if (!isHydrating) {
-    const scopeOwner = currentSlotOwner || currentInstance
-    const scopeId = scopeOwner && scopeOwner.type.__scopeId
+    const scopeId = currentInstance!.type.__scopeId
     if (scopeId) setScopeId(el, [scopeId])
   }
 

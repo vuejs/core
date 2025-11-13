@@ -27,19 +27,15 @@ import { setDynamicProps } from './dom/prop'
 
 /**
  * Current slot scopeIds for vdom interop
- * @internal
  */
 export let currentSlotScopeIds: string[] | null = null
 
-/**
- * @internal
- */
-export function setCurrentSlotScopeIds(
-  scopeIds: string[] | null,
-): string[] | null {
-  const prev = currentSlotScopeIds
-  currentSlotScopeIds = scopeIds
-  return prev
+function setCurrentSlotScopeIds(scopeIds: string[] | null): string[] | null {
+  try {
+    return currentSlotScopeIds
+  } finally {
+    currentSlotScopeIds = scopeIds
+  }
 }
 
 export type RawSlots = Record<string, VaporSlot> & {
@@ -122,18 +118,11 @@ export function getSlot(
   }
 }
 
-export let currentSlotOwner: GenericComponentInstance | null = null
 export let currentSlotConsumer: GenericComponentInstance | null = null
 
-function setCurrentSlotOwner(owner: GenericComponentInstance | null) {
-  try {
-    return currentSlotOwner
-  } finally {
-    currentSlotOwner = owner
-  }
-}
-
-function setCurrentSlotConsumer(consumer: GenericComponentInstance | null) {
+export function setCurrentSlotConsumer(
+  consumer: GenericComponentInstance | null,
+): GenericComponentInstance | null {
   try {
     return currentSlotConsumer
   } finally {
@@ -141,15 +130,13 @@ function setCurrentSlotConsumer(consumer: GenericComponentInstance | null) {
   }
 }
 
-export let useSlotConsumer = false
-export function setUseSlotConsumer(value: boolean): void {
-  useSlotConsumer = value
-}
-
+/**
+ * use currentSlotConsumer as parent, the currentSlotConsumer will be reset to null
+ * before setupFn call to avoid affecting children and restore to previous value
+ * after setupFn is called
+ */
 export function getParentInstance(): GenericComponentInstance | null {
-  // when rendering components in slot, currentInstance is changed in withVaporCtx
-  // should use currentSlotConsumer as parent until new instance is created
-  return useSlotConsumer ? currentSlotConsumer : currentInstance
+  return currentSlotConsumer || currentInstance
 }
 
 /**
@@ -160,17 +147,13 @@ export function getParentInstance(): GenericComponentInstance | null {
 export function withVaporCtx(fn: Function): BlockFn {
   const owner = currentInstance
   return (...args: any[]) => {
-    useSlotConsumer = true
     const prev = setCurrentInstance(owner)
-    const prevOwner = setCurrentSlotOwner(owner)
     const prevConsumer = setCurrentSlotConsumer(prev[0])
     try {
       return fn(...args)
     } finally {
-      setCurrentSlotConsumer(prevConsumer)
-      setCurrentSlotOwner(prevOwner)
       setCurrentInstance(...prev)
-      useSlotConsumer = false
+      setCurrentSlotConsumer(prevConsumer)
     }
   }
 }
