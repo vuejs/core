@@ -2,11 +2,13 @@ import {
   type NormalizedStyle,
   camelize,
   canSetValueDirectly,
+  getEscapedCssVarName,
   includeBooleanAttr,
   isArray,
   isOn,
   isString,
   normalizeClass,
+  normalizeCssVarValue,
   normalizeStyle,
   parseStringStyle,
   stringifyStyle,
@@ -14,6 +16,7 @@ import {
 } from '@vue/shared'
 import { on } from './event'
 import {
+  type GenericComponentInstance,
   MismatchTypes,
   currentInstance,
   getAttributeMismatch,
@@ -23,6 +26,7 @@ import {
   isValidHtmlOrSvgAttribute,
   mergeProps,
   patchStyle,
+  queuePostFlushCb,
   shouldSetAsProp,
   toClassSet,
   toStyleMap,
@@ -38,7 +42,7 @@ import {
   isVaporComponent,
 } from '../component'
 import { isHydrating, logMismatchError } from './hydration'
-import type { Block } from '../block'
+import { type Block, normalizeBlock } from '../block'
 import type { VaporElement } from '../apiDefineVaporCustomElement'
 
 type TargetElement = Element & {
@@ -224,6 +228,21 @@ function setClassIncremental(el: any, value: any): void {
   }
 }
 
+/**
+ * dev only
+ * if a component uses style v-bind, or an el's style contains style vars (potentially
+ * fallthrough from parent components), then style matching checks must be deferred until
+ * after hydration (when instance.block is set). At this point, it can be confirmed
+ * whether the el is at the root level of the component.
+ */
+function shouldDeferCheckStyleMismatch(el: TargetElement): boolean {
+  return (
+    __DEV__ &&
+    (!!currentInstance!.getCssVars ||
+      Object.values((el as HTMLElement).style).some(v => v.startsWith('--')))
+  )
+}
+
 export function setStyle(el: TargetElement, value: any): void {
   if (el.$root) {
     setStyleIncremental(el, value)
@@ -231,11 +250,22 @@ export function setStyle(el: TargetElement, value: any): void {
     const normalizedValue = normalizeStyle(value)
     if (
       (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      isHydrating &&
-      !styleHasMismatch(el, value, normalizedValue, false)
+      isHydrating
     ) {
-      el.$sty = normalizedValue
-      return
+      if (shouldDeferCheckStyleMismatch(el)) {
+        const instance = currentInstance as VaporComponentInstance
+        queuePostFlushCb(() => {
+          if (!styleHasMismatch(el, value, normalizedValue, false, instance)) {
+            el.$sty = normalizedValue
+            return
+          }
+          patchStyle(el, el.$sty, (el.$sty = normalizedValue))
+        })
+        return
+      } else if (!styleHasMismatch(el, value, normalizedValue, false)) {
+        el.$sty = normalizedValue
+        return
+      }
     }
 
     patchStyle(el, el.$sty, (el.$sty = normalizedValue))
@@ -248,13 +278,21 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
     ? parseStringStyle(value)
     : (normalizeStyle(value) as NormalizedStyle | undefined)
 
-  if (
-    (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-    isHydrating &&
-    !styleHasMismatch(el, value, normalizedValue, true)
-  ) {
-    el[cacheKey] = normalizedValue
-    return
+  if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
+    if (shouldDeferCheckStyleMismatch(el)) {
+      const instance = currentInstance as VaporComponentInstance
+      queuePostFlushCb(() => {
+        if (!styleHasMismatch(el, value, normalizedValue, true, instance)) {
+          el[cacheKey] = normalizedValue
+          return
+        }
+        patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
+      })
+      return
+    } else if (!styleHasMismatch(el, value, normalizedValue, true)) {
+      el[cacheKey] = normalizedValue
+      return
+    }
   }
 
   patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
@@ -554,6 +592,7 @@ function styleHasMismatch(
   value: any,
   normalizedValue: string | NormalizedStyle | undefined,
   isIncremental: boolean,
+  instance = currentInstance,
 ): boolean {
   const actual = el.getAttribute('style')
   const actualStyleMap = toStyleMap(actual || '')
@@ -565,7 +604,10 @@ function styleHasMismatch(
     expectedStyleMap.set('display', 'none')
   }
 
-  // TODO: handle css vars
+  // handle css vars
+  if (instance) {
+    resolveCssVars(instance as VaporComponentInstance, el, expectedStyleMap)
+  }
 
   let hasMismatch: boolean = false
   if (isIncremental) {
@@ -586,6 +628,44 @@ function styleHasMismatch(
   }
 
   return false
+}
+
+/**
+ * dev only
+ */
+function resolveCssVars(
+  instance: VaporComponentInstance,
+  block: Block,
+  expectedMap: Map<string, string>,
+): void {
+  if (__DEV__ && !instance.isMounted) {
+    throw new Error(
+      'resolveCssVars should NOT be called before component is mounted',
+    )
+  }
+
+  const rootBlocks = normalizeBlock(instance)
+  if (
+    (instance as GenericComponentInstance).getCssVars &&
+    normalizeBlock(block).every(b => rootBlocks.includes(b))
+  ) {
+    const cssVars = (instance as GenericComponentInstance).getCssVars!()
+    for (const key in cssVars) {
+      const value = normalizeCssVarValue(cssVars[key])
+      expectedMap.set(`--${getEscapedCssVarName(key, false)}`, value)
+    }
+  }
+
+  if (
+    normalizeBlock(block).every(b => rootBlocks.includes(b)) &&
+    instance.parent
+  ) {
+    resolveCssVars(
+      instance.parent as VaporComponentInstance,
+      instance.block,
+      expectedMap,
+    )
+  }
 }
 
 function attributeHasMismatch(el: any, key: string, value: any): boolean {
