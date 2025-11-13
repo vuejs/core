@@ -334,7 +334,7 @@ function locateTeleportEndAnchor(
 }
 
 function updateCssVars(frag: TeleportFragment, isDisabled: boolean) {
-  const ctx = currentInstance as GenericComponentInstance
+  const ctx = frag.parentComponent as GenericComponentInstance
   if (ctx && ctx.ut) {
     let node, anchor
     if (isDisabled) {

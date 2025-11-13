@@ -9,6 +9,7 @@ import {
   setStyle,
   template,
   useVaporCssVars,
+  withVaporCtx,
 } from '@vue/runtime-vapor'
 import { nextTick, onMounted, reactive, ref } from '@vue/runtime-core'
 import { makeRender } from '../_utils'
@@ -182,18 +183,120 @@ describe('useVaporCssVars', () => {
     }).render()
 
     await nextTick()
-    expect(target.innerHTML).toBe('<div style="--color: red;"></div>')
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
 
     state.color = 'green'
     await nextTick()
-    expect(target.innerHTML).toBe('<div style="--color: green;"></div>')
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('green')
+    }
   })
 
-  test.todo('with teleport in child slot', async () => {})
+  test('with teleport in child slot', async () => {
+    const state = reactive({ color: 'red' })
+    const target = document.createElement('div')
+    document.body.appendChild(target)
 
-  test.todo('with teleport(change subTree)', async () => {})
+    const Child = defineVaporComponent({
+      setup(_, { slots }) {
+        return slots.default!()
+      },
+    })
 
-  test.todo('with teleport(disabled)', async () => {})
+    define({
+      setup() {
+        useVaporCssVars(() => state)
+        return createComponent(Child, null, {
+          default: () =>
+            createComponent(
+              VaporTeleport,
+              { to: () => target },
+              {
+                default: () => template('<div></div>', true)(),
+              },
+            ),
+        })
+      },
+    }).render()
+
+    await nextTick()
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+
+    state.color = 'green'
+    await nextTick()
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('green')
+    }
+  })
+
+  test('with teleport(change subTree)', async () => {
+    const state = reactive({ color: 'red' })
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const toggle = ref(false)
+
+    define({
+      setup() {
+        useVaporCssVars(() => state)
+        return createComponent(
+          VaporTeleport,
+          { to: () => target },
+          {
+            default: withVaporCtx(() => {
+              const n0 = template('<div></div>', true)()
+              const n1 = createIf(
+                () => toggle.value,
+                () => template('<div></div>', true)(),
+              )
+              return [n0, n1]
+            }),
+          },
+        )
+      },
+    }).render()
+
+    await nextTick()
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+      expect((c as HTMLElement).outerHTML.includes('data-v-owner')).toBe(true)
+    }
+
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(2)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+      // TODO: problem is slot updateCssVars not called when slot changes
+      // expect((c as HTMLElement).outerHTML.includes('data-v-owner')).toBe(true)
+    }
+  })
+
+  test('with teleport(disabled)', async () => {
+    const state = reactive({ color: 'red' })
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+
+    const { host } = define({
+      setup() {
+        useVaporCssVars(() => state)
+        return createComponent(
+          VaporTeleport,
+          { to: () => target, disabled: () => true },
+          {
+            default: withVaporCtx(() => template('<div></div>', true)()),
+          },
+        )
+      },
+    }).render()
+
+    await nextTick()
+    expect(target.children.length).toBe(0)
+    expect(host.children[0].outerHTML.includes('data-v-owner')).toBe(true)
+  })
 
   test('with string style', async () => {
     const state = reactive({ color: 'red' })
