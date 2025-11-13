@@ -141,6 +141,17 @@ function setCurrentSlotConsumer(consumer: GenericComponentInstance | null) {
   }
 }
 
+export let useSlotConsumer = false
+export function setUseSlotConsumer(value: boolean): void {
+  useSlotConsumer = value
+}
+
+export function getParentInstance(): GenericComponentInstance | null {
+  // when rendering components in slot, currentInstance is changed in withVaporCtx
+  // should use currentSlotConsumer as parent until new instance is created
+  return useSlotConsumer ? currentSlotConsumer : currentInstance
+}
+
 /**
  * Wrap a slot function to memoize currentInstance
  * 1. ensure correct currentInstance in forwarded slots
@@ -149,6 +160,7 @@ function setCurrentSlotConsumer(consumer: GenericComponentInstance | null) {
 export function withVaporCtx(fn: Function): BlockFn {
   const owner = currentInstance
   return (...args: any[]) => {
+    useSlotConsumer = true
     const prev = setCurrentInstance(owner)
     const prevOwner = setCurrentSlotOwner(owner)
     const prevConsumer = setCurrentSlotConsumer(prev[0])
@@ -158,6 +170,7 @@ export function withVaporCtx(fn: Function): BlockFn {
       setCurrentSlotConsumer(prevConsumer)
       setCurrentSlotOwner(prevOwner)
       setCurrentInstance(...prev)
+      useSlotConsumer = false
     }
   }
 }

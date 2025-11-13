@@ -60,9 +60,9 @@ import {
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import {
-  currentSlotConsumer,
   currentSlotOwner,
   currentSlotScopeIds,
+  getParentInstance,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { _next, createTextNode } from './dom/node'
@@ -280,8 +280,7 @@ function createVDOMComponent(
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
 ): VaporFragment {
-  const parentInstance = (currentSlotConsumer ||
-    currentInstance) as VaporComponentInstance
+  const parentInstance = getParentInstance() as VaporComponentInstance | null
   const frag = new VaporFragment([])
   const vnode = (frag.vnode = createVNode(
     component,
@@ -323,7 +322,7 @@ function createVDOMComponent(
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       vdomDeactivate(
         vnode,
-        findParentKeepAlive(parentInstance)!.getStorageContainer(),
+        findParentKeepAlive(parentInstance!)!.getStorageContainer(),
         internals,
         parentInstance as any,
         null,

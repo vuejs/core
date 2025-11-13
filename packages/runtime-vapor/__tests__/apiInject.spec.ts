@@ -17,6 +17,7 @@ import {
   createVaporApp,
   defineVaporComponent,
   renderEffect,
+  withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
 import { setElementText } from '../src/dom/prop'
@@ -388,7 +389,7 @@ describe('api: provide/inject', () => {
     const { host } = define({
       setup() {
         return createComponent(Parent, null, {
-          default: () => createComponent(Child),
+          default: withVaporCtx(() => createComponent(Child)),
         })
       },
     }).render()

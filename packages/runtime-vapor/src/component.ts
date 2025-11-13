@@ -69,10 +69,11 @@ import {
   type RawSlots,
   type StaticSlots,
   type VaporSlot,
-  currentSlotConsumer,
   currentSlotOwner,
   dynamicSlotsProxyHandlers,
+  getParentInstance,
   getSlot,
+  setUseSlotConsumer,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
@@ -193,9 +194,7 @@ export function createComponent(
     resetInsertionState()
   }
 
-  // when rendering components in slot, currentInstance is changed in withVaporCtx
-  // should use currentSlotConsumer as parent
-  const parentInstance = currentSlotConsumer || currentInstance
+  const parentInstance = getParentInstance()
 
   if (
     isSingleRoot &&
@@ -612,6 +611,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
     if (comp.ce) {
       comp.ce(this)
     }
+
+    setUseSlotConsumer(false)
   }
 
   /**
