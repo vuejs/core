@@ -638,12 +638,7 @@ function resolveCssVars(
   block: Block,
   expectedMap: Map<string, string>,
 ): void {
-  if (__DEV__ && !instance.isMounted) {
-    throw new Error(
-      'resolveCssVars should NOT be called before component is mounted',
-    )
-  }
-
+  if (!instance.isMounted) return
   const rootBlocks = normalizeBlock(instance)
   if (
     (instance as GenericComponentInstance).getCssVars &&
