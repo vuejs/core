@@ -56,6 +56,9 @@ export class VaporFragment<T extends Block = Block>
     refKey: string | undefined,
   ) => void
 
+  // effects to run after fragment render
+  effects?: (() => void)[]
+
   constructor(nodes: T) {
     this.nodes = nodes
   }
@@ -185,6 +188,7 @@ export class DynamicFragment extends VaporFragment {
       this.scope = undefined
       this.nodes = []
     }
+    if (this.effects) this.effects.forEach(effect => effect())
   }
 
   hydrate = (isEmpty = false): void => {

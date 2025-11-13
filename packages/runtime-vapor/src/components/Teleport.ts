@@ -21,7 +21,7 @@ import {
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend, isArray } from '@vue/shared'
-import { VaporFragment } from '../fragment'
+import { VaporFragment, isFragment } from '../fragment'
 import {
   advanceHydrationNode,
   currentHydrationNode,
@@ -48,6 +48,7 @@ export class TeleportFragment extends VaporFragment {
   private rawProps?: LooseRawProps
   private resolvedProps?: TeleportProps
   private rawSlots?: LooseRawSlots
+  isDisabled?: boolean
 
   target?: ParentNode | null
   targetAnchor?: Node | null
@@ -78,6 +79,7 @@ export class TeleportFragment extends VaporFragment {
           rawPropsProxyHandlers,
         ) as any as TeleportProps,
       )
+      this.isDisabled = isTeleportDisabled(this.resolvedProps!)
       this.handlePropsUpdate()
     })
 
@@ -97,8 +99,24 @@ export class TeleportFragment extends VaporFragment {
       )
     })
 
+    const nodes = this.nodes
+    // register updateCssVars to sub fragments's effects so that
+    // updateCssVars will be called when subtree changed
+    if (this.parentComponent && this.parentComponent.ut) {
+      if (isFragment(nodes)) {
+        ;(nodes.effects || (nodes.effects = [])).push(() => updateCssVars(this))
+      } else if (isArray(nodes)) {
+        nodes.forEach(node => {
+          if (isFragment(node)) {
+            ;(node.effects || (node.effects = [])).push(() =>
+              updateCssVars(this),
+            )
+          }
+        })
+      }
+    }
+
     if (__DEV__) {
-      const nodes = this.nodes
       if (isVaporComponent(nodes)) {
         nodes.parentTeleport = this
       } else if (isArray(nodes)) {
@@ -162,7 +180,7 @@ export class TeleportFragment extends VaporFragment {
         }
 
         mount(target, this.targetAnchor!)
-        updateCssVars(this, false)
+        updateCssVars(this)
       } else if (__DEV__) {
         warn(
           `Invalid Teleport target on ${this.targetAnchor ? 'update' : 'mount'}:`,
@@ -173,9 +191,9 @@ export class TeleportFragment extends VaporFragment {
     }
 
     // mount into main container
-    if (isTeleportDisabled(this.resolvedProps!)) {
+    if (this.isDisabled) {
       mount(this.parent, this.anchor!)
-      updateCssVars(this, true)
+      updateCssVars(this)
     }
     // mount into target container
     else {
@@ -333,11 +351,11 @@ function locateTeleportEndAnchor(
   return null
 }
 
-function updateCssVars(frag: TeleportFragment, isDisabled: boolean) {
+function updateCssVars(frag: TeleportFragment) {
   const ctx = frag.parentComponent as GenericComponentInstance
   if (ctx && ctx.ut) {
     let node, anchor
-    if (isDisabled) {
+    if (frag.isDisabled) {
       node = frag.placeholder
       anchor = frag.anchor
     } else {

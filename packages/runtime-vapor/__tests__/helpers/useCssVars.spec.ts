@@ -270,8 +270,7 @@ describe('useVaporCssVars', () => {
     expect(target.children.length).toBe(2)
     for (const c of [].slice.call(target.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
-      // TODO: problem is slot updateCssVars not called when slot changes
-      // expect((c as HTMLElement).outerHTML.includes('data-v-owner')).toBe(true)
+      expect((c as HTMLElement).outerHTML.includes('data-v-owner')).toBe(true)
     }
   })
 

@@ -402,6 +402,7 @@ export const createFor = (
     } else {
       oldBlocks = []
     }
+    if (frag.effects) frag.effects.forEach(effect => effect())
     setActiveSub(prevSub)
   }
 

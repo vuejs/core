@@ -380,6 +380,7 @@ function createVDOMComponent(
     }
 
     frag.nodes = vnode.el as any
+    if (frag.effects) frag.effects.forEach(effect => effect())
   }
 
   frag.remove = unmount
@@ -445,6 +446,8 @@ function renderVDOMSlot(
         internals.um(oldVNode, parentComponent as any, null)
       }
     }
+
+    if (frag.effects) frag.effects.forEach(effect => effect())
   }
 
   const render = (parentNode?: ParentNode, anchor?: Node | null) => {
