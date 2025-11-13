@@ -547,7 +547,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   checked?: Booleanish | any[] | Set<any> | undefined // for IDE v-model multi-checkbox support
   crossorigin?: string | undefined
   disabled?: Booleanish | undefined
-  enterKeyHint?:
+  enterkeyhint?:
     | 'enter'
     | 'done'
     | 'go'
@@ -556,6 +556,10 @@ export interface InputHTMLAttributes extends HTMLAttributes {
     | 'search'
     | 'send'
     | undefined
+  /**
+   * @deprecated Use `enterkeyhint` instead.
+   */
+  enterKeyHint?: InputHTMLAttributes['enterkeyhint']
   form?: string | undefined
   formaction?: string | undefined
   formenctype?: string | undefined
