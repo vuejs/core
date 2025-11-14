@@ -332,6 +332,10 @@ export { shouldSetAsProp } from './patchProp'
 /**
  * @internal
  */
+export { baseUseCssVars, setVarsOnNode } from './helpers/useCssVars'
+/**
+ * @internal
+ */
 export {
   vShowOriginalDisplay,
   vShowHidden,
