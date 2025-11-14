@@ -19,6 +19,7 @@ import {
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
+export { nodeOps, patchProp }
 // Importing from the compiler, will be tree-shaken in prod
 import {
   NOOP,
