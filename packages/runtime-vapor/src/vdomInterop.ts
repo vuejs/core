@@ -273,10 +273,10 @@ let vdomHydrateNode: HydrationRenderer['hydrateNode'] | undefined
 function createVDOMComponent(
   internals: RendererInternals,
   component: ConcreteComponent,
+  parentComponent: VaporComponentInstance | null,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
 ): VaporFragment {
-  const parentInstance = currentInstance as VaporComponentInstance
   const frag = new VaporFragment([])
   const vnode = (frag.vnode = createVNode(
     component,
@@ -286,6 +286,9 @@ function createVDOMComponent(
     { props: component.props },
     rawProps as RawProps,
     rawSlots as RawSlots,
+    parentComponent ? parentComponent.appContext : undefined,
+    undefined,
+    parentComponent,
   )
 
   // overwrite how the vdom instance handles props
@@ -315,9 +318,9 @@ function createVDOMComponent(
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       vdomDeactivate(
         vnode,
-        findParentKeepAlive(parentInstance)!.getStorageContainer(),
+        findParentKeepAlive(parentComponent!)!.getStorageContainer(),
         internals,
-        parentInstance as any,
+        parentComponent as any,
         null,
       )
       return
@@ -326,13 +329,13 @@ function createVDOMComponent(
   }
 
   frag.hydrate = () => {
-    hydrateVNode(vnode, parentInstance as any)
+    hydrateVNode(vnode, parentComponent as any)
     onScopeDispose(unmount, true)
     isMounted = true
     frag.nodes = vnode.el as any
   }
 
-  vnode.scopeId = parentInstance && parentInstance.type.__scopeId!
+  vnode.scopeId = (currentInstance && currentInstance.type.__scopeId) || null
   vnode.slotScopeIds = currentSlotScopeIds
 
   frag.insert = (parentNode, anchor, transition) => {
@@ -343,21 +346,21 @@ function createVDOMComponent(
         parentNode,
         anchor,
         internals,
-        parentInstance as any,
+        parentComponent as any,
         null,
         undefined,
         false,
       )
     } else {
       const prev = currentInstance
-      simpleSetCurrentInstance(parentInstance)
+      simpleSetCurrentInstance(parentComponent)
       if (!isMounted) {
         if (transition) setVNodeTransitionHooks(vnode, transition)
         internals.mt(
           vnode,
           parentNode,
           anchor,
-          parentInstance as any,
+          parentComponent as any,
           null,
           undefined,
           false,
@@ -373,7 +376,7 @@ function createVDOMComponent(
           parentNode,
           anchor,
           MoveType.REORDER,
-          parentInstance as any,
+          parentComponent as any,
         )
       }
       simpleSetCurrentInstance(prev)

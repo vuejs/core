@@ -32,6 +32,7 @@ import {
   setValue,
   template,
   txt,
+  withVaporCtx,
 } from '../src'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
@@ -1404,10 +1405,11 @@ describe('defineVaporCustomElement', () => {
       const App = {
         setup() {
           return createPlainElement('my-parent', null, {
-            default: () =>
+            default: withVaporCtx(() =>
               createPlainElement('my-child', null, {
-                default: () => template('<span>default</span>')(),
+                default: withVaporCtx(() => template('<span>default</span>')()),
               }),
+            ),
           })
         },
       }
@@ -1436,7 +1438,7 @@ describe('defineVaporCustomElement', () => {
               VaporTeleport,
               { to: () => target },
               {
-                default: () => createSlot('default'),
+                default: withVaporCtx(() => createSlot('default')),
               },
             )
           },
@@ -1457,10 +1459,11 @@ describe('defineVaporCustomElement', () => {
       const App = {
         setup() {
           return createPlainElement('my-el-teleport-parent', null, {
-            default: () =>
+            default: withVaporCtx(() =>
               createPlainElement('my-el-teleport-child', null, {
-                default: () => template('<span>default</span>')(),
+                default: withVaporCtx(() => template('<span>default</span>')()),
               }),
+            ),
           })
         },
       }
@@ -1482,14 +1485,14 @@ describe('defineVaporCustomElement', () => {
                 VaporTeleport,
                 { to: () => target1 },
                 {
-                  default: () => createSlot('header'),
+                  default: withVaporCtx(() => createSlot('header')),
                 },
               ),
               createComponent(
                 VaporTeleport,
                 { to: () => target2 },
                 {
-                  default: () => createSlot('body'),
+                  default: withVaporCtx(() => createSlot('body')),
                 },
               ),
             ]
@@ -1502,10 +1505,10 @@ describe('defineVaporCustomElement', () => {
       const App = {
         setup() {
           return createPlainElement('my-el-two-teleport-child', null, {
-            default: () => [
+            default: withVaporCtx(() => [
               template('<div slot="header">header</div>')(),
               template('<span slot="body">body</span>')(),
-            ],
+            ]),
           })
         },
       }
@@ -1533,14 +1536,14 @@ describe('defineVaporCustomElement', () => {
                 // with disabled: true
                 { to: () => target1, disabled: () => true },
                 {
-                  default: () => createSlot('header'),
+                  default: withVaporCtx(() => createSlot('header')),
                 },
               ),
               createComponent(
                 VaporTeleport,
                 { to: () => target2 },
                 {
-                  default: () => createSlot('body'),
+                  default: withVaporCtx(() => createSlot('body')),
                 },
               ),
             ]
@@ -1553,10 +1556,10 @@ describe('defineVaporCustomElement', () => {
       const App = {
         setup() {
           return createPlainElement('my-el-two-teleport-child-0', null, {
-            default: () => [
+            default: withVaporCtx(() => [
               template('<div slot="header">header</div>')(),
               template('<span slot="body">body</span>')(),
-            ],
+            ]),
           })
         },
       }
@@ -1588,7 +1591,7 @@ describe('defineVaporCustomElement', () => {
       const ChildWrapper = {
         setup() {
           return createPlainElement('my-el-child-shadow-false', null, {
-            default: () => template('child')(),
+            default: withVaporCtx(() => template('child')()),
           })
         },
       }
@@ -1624,7 +1627,7 @@ describe('defineVaporCustomElement', () => {
             'my-el-parent-shadow-false',
             { isShown: () => props.isShown },
             {
-              default: () => createSlot('default'),
+              default: withVaporCtx(() => createSlot('default')),
             },
           )
         },
@@ -1637,7 +1640,7 @@ describe('defineVaporCustomElement', () => {
             ParentWrapper,
             { isShown: () => isShown.value },
             {
-              default: () => createComponent(ChildWrapper),
+              default: withVaporCtx(() => createComponent(ChildWrapper)),
             },
           )
         },
