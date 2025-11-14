@@ -12,9 +12,12 @@ import {
 } from '@vue/runtime-dom'
 import {
   createComponent,
+  createSlot,
   createTextNode,
   createVaporApp,
+  defineVaporComponent,
   renderEffect,
+  withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
 import { setElementText } from '../src/dom/prop'
@@ -366,6 +369,32 @@ describe('api: provide/inject', () => {
       },
     }).render()
     expect(host.innerHTML).toBe('')
+  })
+
+  it('should work with slots', () => {
+    const Parent = defineVaporComponent({
+      setup() {
+        provide('test', 'hello')
+        return createSlot('default', null)
+      },
+    })
+
+    const Child = defineVaporComponent({
+      setup() {
+        const test = inject('test')
+        return createTextNode(toDisplayString(test))
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        return createComponent(Parent, null, {
+          default: withVaporCtx(() => createComponent(Child)),
+        })
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('hello<!--slot-->')
   })
 
   describe('hasInjectionContext', () => {

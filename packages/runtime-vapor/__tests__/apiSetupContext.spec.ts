@@ -10,6 +10,7 @@ import {
   setDynamicProps,
   setText,
   template,
+  withVaporCtx,
 } from '../src'
 import { nextTick, reactive, ref, watchEffect } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
@@ -113,11 +114,11 @@ describe('api: setup context', () => {
       inheritAttrs: false,
       setup(_: any, { attrs }: any) {
         const n0 = createComponent(Wrapper, null, {
-          default: () => {
+          default: withVaporCtx(() => {
             const n0 = template('<div>')() as HTMLDivElement
             renderEffect(() => setDynamicProps(n0, [attrs]))
             return n0
-          },
+          }),
         })
         return n0
       },

@@ -12,6 +12,7 @@ import {
   insert,
   renderEffect,
   template,
+  withVaporCtx,
 } from '../../src'
 import { compile, makeRender, runtimeDom, runtimeVapor } from '../_utils'
 import {
@@ -612,11 +613,11 @@ describe('api: template ref', () => {
       render() {
         const setRef = createTemplateRefSetter()
         const n0 = createComponent(Child, null, {
-          default: () => {
+          default: withVaporCtx(() => {
             n = document.createElement('div')
             setRef(n, 'foo')
             return n
-          },
+          }),
         })
         return n0
       },
@@ -640,11 +641,11 @@ describe('api: template ref', () => {
       setup() {
         const setRef = createTemplateRefSetter()
         const n0 = createComponent(Child, null, {
-          default: () => {
+          default: withVaporCtx(() => {
             n = document.createElement('div')
             setRef(n, r)
             return n
-          },
+          }),
         })
         return n0
       },
@@ -669,11 +670,11 @@ describe('api: template ref', () => {
         r = useTemplateRef('foo')
         const setRef = createTemplateRefSetter()
         const n0 = createComponent(Child, null, {
-          default: () => {
+          default: withVaporCtx(() => {
             n = document.createElement('div')
             setRef(n, 'foo')
             return n
-          },
+          }),
         })
         return n0
       },

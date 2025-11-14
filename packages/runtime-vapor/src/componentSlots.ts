@@ -27,19 +27,15 @@ import { setDynamicProps } from './dom/prop'
 
 /**
  * Current slot scopeIds for vdom interop
- * @internal
  */
 export let currentSlotScopeIds: string[] | null = null
 
-/**
- * @internal
- */
-export function setCurrentSlotScopeIds(
-  scopeIds: string[] | null,
-): string[] | null {
-  const prev = currentSlotScopeIds
-  currentSlotScopeIds = scopeIds
-  return prev
+function setCurrentSlotScopeIds(scopeIds: string[] | null): string[] | null {
+  try {
+    return currentSlotScopeIds
+  } finally {
+    currentSlotScopeIds = scopeIds
+  }
 }
 
 export type RawSlots = Record<string, VaporSlot> & {
@@ -122,28 +118,42 @@ export function getSlot(
   }
 }
 
+export let currentSlotConsumer: GenericComponentInstance | null = null
+
+export function setCurrentSlotConsumer(
+  consumer: GenericComponentInstance | null,
+): GenericComponentInstance | null {
+  try {
+    return currentSlotConsumer
+  } finally {
+    currentSlotConsumer = consumer
+  }
+}
+
 /**
- * Wraps a slot function to execute in the parent component's context.
- *
- * This ensures that:
- * 1. Reactive effects created inside the slot (e.g., `renderEffect`) bind to the
- *    parent's instance, so the parent's lifecycle hooks fire when the slot's
- *    reactive dependencies change.
- * 2. Elements created in the slot inherit the parent's scopeId for proper style
- *    scoping in scoped CSS.
- *
- * **Rationale**: Slots are defined in the parent's template, so the parent should
- * own the rendering context and be aware of updates.
- *
+ * use currentSlotConsumer as parent, the currentSlotConsumer will be reset to null
+ * before setupFn call to avoid affecting children and restore to previous value
+ * after setupFn is called
+ */
+export function getParentInstance(): GenericComponentInstance | null {
+  return currentSlotConsumer || currentInstance
+}
+
+/**
+ * Wrap a slot function to memoize currentInstance
+ * 1. ensure correct currentInstance in forwarded slots
+ * 2. elements created in the slot inherit the slot owner's scopeId
  */
 export function withVaporCtx(fn: Function): BlockFn {
-  const instance = currentInstance as VaporComponentInstance
+  const owner = currentInstance
   return (...args: any[]) => {
-    const prev = setCurrentInstance(instance)
+    const prev = setCurrentInstance(owner)
+    const prevConsumer = setCurrentSlotConsumer(prev[0])
     try {
       return fn(...args)
     } finally {
       setCurrentInstance(...prev)
+      setCurrentSlotConsumer(prevConsumer)
     }
   }
 }
@@ -185,7 +195,7 @@ export function createSlot(
     // Calculate slotScopeIds once (for vdom interop)
     const slotScopeIds: string[] = []
     if (!noSlotted) {
-      const scopeId = instance!.type.__scopeId
+      const scopeId = instance.type.__scopeId
       if (scopeId) {
         slotScopeIds.push(`${scopeId}-s`)
       }
@@ -220,7 +230,6 @@ export function createSlot(
         fragment.fallback = fallback
         // Create and cache bound version of the slot to make it stable
         // so that we avoid unnecessary updates if it resolves to the same slot
-
         fragment.update(
           slot._bound ||
             (slot._bound = () => {
