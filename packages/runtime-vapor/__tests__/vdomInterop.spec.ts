@@ -20,6 +20,7 @@ import {
   applyVShow,
   child,
   createComponent,
+  createDynamicComponent,
   defineVaporAsyncComponent,
   defineVaporComponent,
   renderEffect,
@@ -27,7 +28,7 @@ import {
   template,
 } from '../src'
 
-const define = makeInteropRender()
+const { define, defineVapor } = makeInteropRender()
 
 describe('vdomInterop', () => {
   describe('props', () => {
@@ -240,7 +241,23 @@ describe('vdomInterop', () => {
 
   describe.todo('template ref', () => {})
 
-  describe.todo('dynamic component', () => {})
+  describe('dynamic component', () => {
+    it('should not render to Virtual DOM', () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createDynamicComponent(
+            () => () => document.createTextNode('foo'),
+          )
+        },
+      })
+
+      const { host } = defineVapor(VaporChild).render()
+
+      expect(host.innerHTML).toMatchInlineSnapshot(
+        `"foo<!--dynamic-component-->"`,
+      )
+    })
+  })
 
   describe('attribute fallthrough', () => {
     it('should fallthrough attrs to vdom child', () => {
