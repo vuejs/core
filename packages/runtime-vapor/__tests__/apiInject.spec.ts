@@ -1,6 +1,7 @@
 import {
   type InjectionKey,
   type Ref,
+  h,
   hasInjectionContext,
   inject,
   nextTick,
@@ -17,6 +18,7 @@ import {
   createVaporApp,
   defineVaporComponent,
   renderEffect,
+  vaporInteropPlugin,
   withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
@@ -420,5 +422,36 @@ describe('api: provide/inject', () => {
         expect(hasInjectionContext()).toBe(true)
       })
     })
+  })
+})
+
+describe('vdom interop', () => {
+  test('should inject value from vapor parent', async () => {
+    const VdomChild = {
+      setup() {
+        const foo = inject('foo')
+        return () => h('div', null, [toDisplayString(foo)])
+      },
+    }
+
+    const value = ref('foo')
+    const App = defineVaporComponent({
+      setup() {
+        provide('foo', value)
+        return createComponent(VdomChild as any)
+      },
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const app = createVaporApp(App)
+    app.use(vaporInteropPlugin)
+    app.mount(root)
+
+    expect(root.innerHTML).toBe('<div>foo</div>')
+
+    value.value = 'bar'
+    await nextTick()
+    expect(root.innerHTML).toBe('<div>bar</div>')
   })
 })
