@@ -327,8 +327,10 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
       continue
     }
 
+    const seenParents = new Set<Node>()
     walkIdentifiers(exp.ast, (currentNode, parent, parentStack) => {
-      if (parent && isMemberExpression(parent)) {
+      if (parent && isMemberExpression(parent) && !seenParents.has(parent)) {
+        seenParents.add(parent)
         const memberExp = extractMemberExpression(parent, id => {
           registerVariable(id.name, exp, true, {
             start: id.start!,
