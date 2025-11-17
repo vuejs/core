@@ -3,12 +3,14 @@ import {
   createVNode,
   defineComponent,
   h,
+  inject,
   nextTick,
   onActivated,
   onBeforeMount,
   onDeactivated,
   onMounted,
   onUnmounted,
+  provide,
   ref,
   renderSlot,
   toDisplayString,
@@ -234,9 +236,32 @@ describe('vdomInterop', () => {
     })
   })
 
-  describe.todo('provide', () => {})
+  describe('provide / inject', () => {
+    it('should inject value from vdom parent', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          const foo = inject('foo')
+          const n0 = template(' ')() as any
+          renderEffect(() => setText(n0, toDisplayString(foo)))
+          return n0
+        },
+      })
 
-  describe.todo('inject', () => {})
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          provide('foo', value)
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('foo')
+
+      value.value = 'bar'
+      await nextTick()
+      expect(html()).toBe('bar')
+    })
+  })
 
   describe.todo('template ref', () => {})
 
