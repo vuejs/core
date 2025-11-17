@@ -4,6 +4,7 @@ import {
   createComponent as createComp,
   createComponent,
 } from '../../src/component'
+import { withVaporCtx } from '../../src'
 import {
   type VaporDirective,
   VaporTeleport,
@@ -704,7 +705,42 @@ function runSharedTests(deferMode: boolean): void {
     expect(target.innerHTML).toBe('<div>teleported</div>')
   })
 
-  test.todo('should work with SVG', async () => {})
+  test('should work with SVG', async () => {
+    const svg = ref()
+    const circle = ref()
+    const { host } = define({
+      setup() {
+        const _setTemplateRef = createTemplateRefSetter()
+        const n0 = template('<svg></svg>', false, 1)() as any
+        const n1 = createIf(
+          () => svg.value,
+          () => {
+            const n4 = createComponent(
+              VaporTeleport,
+              { to: () => svg.value },
+              {
+                default: withVaporCtx(() => {
+                  const n3 = template('<circle></circle>', false, 1)() as any
+                  _setTemplateRef(n3, circle, undefined, undefined, 'circle')
+                  return n3
+                }),
+              },
+            )
+            return n4
+          },
+        )
+        _setTemplateRef(n0, svg, undefined, undefined, 'svg')
+        return [n0, n1]
+      },
+    }).render()
+
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<svg><circle></circle></svg><!--teleport start--><!--teleport end--><!--if-->',
+    )
+    expect(svg.value.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    expect(circle.value.namespaceURI).toBe('http://www.w3.org/2000/svg')
+  })
 
   test('should update target', async () => {
     const targetA = document.createElement('div')
