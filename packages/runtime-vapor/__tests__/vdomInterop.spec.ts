@@ -1,5 +1,6 @@
 import {
   KeepAlive,
+  type ShallowRef,
   createVNode,
   defineComponent,
   h,
@@ -13,8 +14,10 @@ import {
   provide,
   ref,
   renderSlot,
+  shallowRef,
   toDisplayString,
   useModel,
+  useTemplateRef,
 } from '@vue/runtime-dom'
 import { makeInteropRender } from './_utils'
 import {
@@ -263,7 +266,62 @@ describe('vdomInterop', () => {
     })
   })
 
-  describe.todo('template ref', () => {})
+  describe('template ref', () => {
+    it('useTemplateRef with vapor child', async () => {
+      const VaporChild = defineVaporComponent({
+        setup(_, { expose }) {
+          const foo = ref('foo')
+          expose({ foo })
+          const n0 = template(' ')() as any
+          renderEffect(() => setText(n0, toDisplayString(foo)))
+          return n0
+        },
+      })
+
+      let elRef: ShallowRef
+      const { html } = define({
+        setup() {
+          elRef = useTemplateRef('el')
+          return () => h(VaporChild as any, { ref: 'el' })
+        },
+      }).render()
+
+      expect(html()).toBe('foo')
+
+      elRef!.value.foo = 'bar'
+      await nextTick()
+      expect(html()).toBe('bar')
+    })
+
+    it('static ref with vapor child', async () => {
+      const VaporChild = defineVaporComponent({
+        setup(_, { expose }) {
+          const foo = ref('foo')
+          expose({ foo })
+          const n0 = template(' ')() as any
+          renderEffect(() => setText(n0, toDisplayString(foo)))
+          return n0
+        },
+      })
+
+      let elRef: ShallowRef
+      const { html } = define({
+        setup() {
+          elRef = shallowRef()
+          return { elRef }
+        },
+        render() {
+          return h(VaporChild as any, { ref: 'elRef' })
+        },
+      }).render()
+
+      expect(html()).toBe('foo')
+
+      elRef!.value.foo = 'bar'
+      await nextTick()
+      expect(html()).toBe('bar')
+    })
+  })
 
   describe.todo('dynamic component', () => {})
 
