@@ -14,6 +14,7 @@ import {
   provide,
   ref,
   renderSlot,
+  resolveDynamicComponent,
   shallowRef,
   toDisplayString,
   useModel,
@@ -323,7 +324,38 @@ describe('vdomInterop', () => {
     })
   })
 
-  describe.todo('dynamic component', () => {})
+  describe('dynamic component', () => {
+    it('dynamic component with vapor child', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor child</div>')() as any
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('div', 'vdom child')
+        },
+      })
+
+      const view = shallowRef<any>(VaporChild)
+      const { html } = define({
+        setup() {
+          return () => h(resolveDynamicComponent(view.value) as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>vapor child</div>')
+
+      view.value = VdomChild
+      await nextTick()
+      expect(html()).toBe('<div>vdom child</div>')
+
+      view.value = VaporChild
+      await nextTick()
+      expect(html()).toBe('<div>vapor child</div>')
+    })
+  })
 
   describe('attribute fallthrough', () => {
     it('should fallthrough attrs to vdom child', () => {
