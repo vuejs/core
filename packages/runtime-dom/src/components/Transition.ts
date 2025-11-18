@@ -371,6 +371,7 @@ function whenTransitionEnds(
   let ended = 0
   const end = () => {
     el.removeEventListener(endEvent, onEnd)
+    cancelFeedback()
     resolveIfNotStale()
   }
   const onEnd = (e: Event) => {
@@ -381,7 +382,12 @@ function whenTransitionEnds(
 
   const fallbackTimeout = () => {
     let loopStart: number | null = null
+    let rafId: number
     const loop = (timeStamp: number) => {
+      if (id !== el._endId) {
+        return
+      }
+
       if (!loopStart) {
         loopStart = timeStamp
       }
@@ -390,17 +396,19 @@ function whenTransitionEnds(
       if (elapsed >= timeout + 1) {
         if (ended < propCount) {
           end()
-          return
         }
+        return
       }
 
-      requestAnimationFrame(loop)
+      rafId = requestAnimationFrame(loop)
     }
 
-    requestAnimationFrame(loop)
+    rafId = requestAnimationFrame(loop)
+
+    return () => cancelAnimationFrame(rafId)
   }
 
-  fallbackTimeout()
+  const cancelFeedback = fallbackTimeout()
 
   el.addEventListener(endEvent, onEnd)
 }
