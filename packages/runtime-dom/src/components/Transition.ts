@@ -378,11 +378,6 @@ function whenTransitionEnds(
       end()
     }
   }
-  // setTimeout(() => {
-  //   if (ended < propCount) {
-  //     end()
-  //   }
-  // }, timeout + 1)
 
   const fallbackTimeout = () => {
     let loopStart: number | null = null
