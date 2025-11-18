@@ -286,6 +286,19 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   contextmenu?: string | undefined
   dir?: string | undefined
   draggable?: Booleanish | undefined
+  enterkeyhint?:
+    | 'enter'
+    | 'done'
+    | 'go'
+    | 'next'
+    | 'previous'
+    | 'search'
+    | 'send'
+    | undefined
+  /**
+   * @deprecated Use `enterkeyhint` instead.
+   */
+  enterKeyHint?: HTMLAttributes['enterkeyhint']
   hidden?: Booleanish | '' | 'hidden' | 'until-found' | undefined
   id?: string | undefined
   inert?: Booleanish | undefined
@@ -346,6 +359,14 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
    * @see https://html.spec.whatwg.org/multipage/custom-elements.html#attr-is
    */
   is?: string | undefined
+  /**
+   * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/exportparts
+   */
+  exportparts?: string
+  /**
+   * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/part
+   */
+  part?: string
 }
 
 type HTMLAttributeReferrerPolicy =
@@ -498,6 +519,7 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   alt?: string | undefined
   crossorigin?: 'anonymous' | 'use-credentials' | '' | undefined
   decoding?: 'async' | 'auto' | 'sync' | undefined
+  fetchpriority?: 'high' | 'low' | 'auto' | undefined
   height?: Numberish | undefined
   loading?: 'eager' | 'lazy' | undefined
   referrerpolicy?: HTMLAttributeReferrerPolicy | undefined
@@ -547,19 +569,6 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   checked?: Booleanish | any[] | Set<any> | undefined // for IDE v-model multi-checkbox support
   crossorigin?: string | undefined
   disabled?: Booleanish | undefined
-  enterkeyhint?:
-    | 'enter'
-    | 'done'
-    | 'go'
-    | 'next'
-    | 'previous'
-    | 'search'
-    | 'send'
-    | undefined
-  /**
-   * @deprecated Use `enterkeyhint` instead.
-   */
-  enterKeyHint?: InputHTMLAttributes['enterkeyhint']
   form?: string | undefined
   formaction?: string | undefined
   formenctype?: string | undefined
@@ -1292,6 +1301,7 @@ export interface IntrinsicElementAttributes {
   polyline: SVGAttributes
   radialGradient: SVGAttributes
   rect: SVGAttributes
+  set: SVGAttributes
   stop: SVGAttributes
   switch: SVGAttributes
   symbol: SVGAttributes
