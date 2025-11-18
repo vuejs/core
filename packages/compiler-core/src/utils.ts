@@ -569,18 +569,20 @@ export function getMemoedVNodeCall(
   }
 }
 
-export function filterCommentChildren(node: ParentNode): TemplateChildNode[] {
+export function filterNonCommentChildren(
+  node: ParentNode,
+): TemplateChildNode[] {
   return node.children.filter(n => n.type !== NodeTypes.COMMENT)
 }
 
 export function hasSingleChild(node: ParentNode): boolean {
-  return filterCommentChildren(node).length === 1
+  return filterNonCommentChildren(node).length === 1
 }
 
 export function isSingleIfBlock(parent: ParentNode): boolean {
   // detect cases where the parent v-if is not the only root level node
   let hasEncounteredIf = false
-  for (const c of filterCommentChildren(parent)) {
+  for (const c of filterNonCommentChildren(parent)) {
     if (
       c.type === NodeTypes.IF ||
       (c.type === NodeTypes.ELEMENT && findDir(c, 'if'))

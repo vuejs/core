@@ -5,7 +5,7 @@ import {
   type RootNode,
   type TemplateChildNode,
   createSimpleExpression,
-  filterCommentChildren,
+  filterNonCommentChildren,
   findDir,
   hasSingleChild,
   isSingleIfBlock,
@@ -28,7 +28,7 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
       node.tag === 'KeepAlive' ||
       node.tag === 'keep-alive')
   ) {
-    const rootChildren = filterCommentChildren(context.root)
+    const rootChildren = filterNonCommentChildren(context.root)
     if (rootChildren.length === 1 && rootChildren[0] === node) {
       if (hasSingleChild(node)) {
         injectFallthroughAttrs(node.children[0])
