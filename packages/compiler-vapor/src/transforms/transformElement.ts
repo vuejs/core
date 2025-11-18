@@ -6,9 +6,13 @@ import {
   ErrorCodes,
   NodeTypes,
   type PlainElementNode,
+  type RootNode,
   type SimpleExpressionNode,
+  type TemplateChildNode,
   createCompilerError,
   createSimpleExpression,
+  hasSingleChild,
+  isSingleIfBlock,
   isStaticArgOf,
   isValidHTMLNesting,
 } from '@vue/compiler-dom'
@@ -73,21 +77,7 @@ export const transformElement: NodeTransform = (node, context) => {
       getEffectIndex,
     )
 
-    let { parent } = context
-    while (
-      parent &&
-      parent.parent &&
-      parent.node.type === NodeTypes.ELEMENT &&
-      parent.node.tagType === ElementTypes.TEMPLATE
-    ) {
-      parent = parent.parent
-    }
-    const singleRoot =
-      (context.root === parent &&
-        parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
-          .length === 1) ||
-      isCustomElement
-
+    const singleRoot = isSingleRoot(context)
     if (isComponent) {
       transformComponentElement(
         node as ComponentNode,
@@ -107,6 +97,35 @@ export const transformElement: NodeTransform = (node, context) => {
       )
     }
   }
+}
+
+function isSingleRoot(
+  context: TransformContext<RootNode | TemplateChildNode>,
+): boolean {
+  if (context.inVFor) {
+    return false
+  }
+
+  let { parent } = context
+  if (
+    parent &&
+    !(hasSingleChild(parent.node) || isSingleIfBlock(parent.node))
+  ) {
+    return false
+  }
+  while (
+    parent &&
+    parent.parent &&
+    parent.node.type === NodeTypes.ELEMENT &&
+    parent.node.tagType === ElementTypes.TEMPLATE
+  ) {
+    parent = parent.parent
+    if (!(hasSingleChild(parent.node) || isSingleIfBlock(parent.node))) {
+      return false
+    }
+  }
+
+  return context.root === parent
 }
 
 function transformComponentElement(
@@ -165,7 +184,7 @@ function transformComponentElement(
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
     asset,
-    root: singleRoot && !context.inVFor,
+    root: singleRoot,
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,
@@ -235,7 +254,6 @@ function transformNativeElement(
         type: IRNodeTypes.SET_DYNAMIC_PROPS,
         element: context.reference(),
         props: dynamicArgs,
-        root: singleRoot,
         tag,
       },
       getEffectIndex,
@@ -269,7 +287,6 @@ function transformNativeElement(
             type: IRNodeTypes.SET_PROP,
             element: context.reference(),
             prop,
-            root: singleRoot,
             tag,
           },
           getEffectIndex,
@@ -285,7 +302,7 @@ function transformNativeElement(
   }
 
   if (singleRoot) {
-    context.ir.rootTemplateIndex = context.ir.template.size
+    context.ir.rootTemplateIndexes.add(context.ir.template.size)
   }
 
   if (

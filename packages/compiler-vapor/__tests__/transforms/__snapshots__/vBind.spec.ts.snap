@@ -37,7 +37,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     const _key = _ctx.key
-    _setDynamicProps(n0, [{ [_key+1]: _ctx.foo[_key+1]() }], true)
+    _setDynamicProps(n0, [{ [_key+1]: _ctx.foo[_key+1]() }])
   })
   return n0
 }"
@@ -109,7 +109,7 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ foo: bar => _ctx.foo = bar }], true))
+  _renderEffect(() => _setDynamicProps(n0, [{ foo: bar => _ctx.foo = bar }]))
   return n0
 }"
 `;
@@ -335,7 +335,7 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }], true))
+  _renderEffect(() => _setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }]))
   return n0
 }"
 `;
@@ -434,7 +434,7 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }], true))
+  _renderEffect(() => _setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }]))
   return n0
 }"
 `;
@@ -609,7 +609,7 @@ export function render(_ctx) {
   _renderEffect(() => {
     const _id = _ctx.id
     const _title = _ctx.title
-    _setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }], true)
+    _setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }])
   })
   return n0
 }"
@@ -623,7 +623,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     const _id = _ctx.id
-    _setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }], true)
+    _setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }])
   })
   return n0
 }"
@@ -677,7 +677,7 @@ const t0 = _template("<svg></svg>", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true, true))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true))
   return n0
 }"
 `;

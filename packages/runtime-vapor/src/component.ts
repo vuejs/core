@@ -48,6 +48,7 @@ import {
   EMPTY_OBJ,
   ShapeFlags,
   invokeArrayFns,
+  isArray,
   isFunction,
   isString,
 } from '@vue/shared'
@@ -831,5 +832,26 @@ function getRootElement(block: Block): Element | undefined {
     if (nodes instanceof Element && (nodes as any).$root) {
       return nodes
     }
+  }
+
+  // The root node contains comments. It is necessary to filter out
+  // the comment nodes and return a single root node.
+  // align with vdom behavior
+  if (isArray(block)) {
+    let singleRoot: Element | undefined
+    let hasComment = false
+    for (const b of block) {
+      if (b instanceof Comment) {
+        hasComment = true
+        continue
+      }
+      const thisRoot = getRootElement(b)
+      // only return root if there is exactly one eligible root in the array
+      if (!thisRoot || singleRoot) {
+        return
+      }
+      singleRoot = thisRoot
+    }
+    return hasComment ? singleRoot : undefined
   }
 }

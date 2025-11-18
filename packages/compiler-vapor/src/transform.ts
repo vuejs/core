@@ -251,6 +251,7 @@ export function transform(
     source: node.source,
     template: new Map<string, number>(),
     templateIndexMap: new Map<string, number>(),
+    rootTemplateIndexes: new Set(),
     component: new Set(),
     directive: new Set(),
     block: newBlock(node),

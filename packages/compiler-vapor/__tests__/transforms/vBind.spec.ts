@@ -171,7 +171,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }], true)',
+      '_setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }])',
     )
   })
 
@@ -224,7 +224,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }], true)',
+      '_setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }])',
     )
   })
 
@@ -341,7 +341,7 @@ describe('compiler v-bind', () => {
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }], true)`,
+      `_setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }])`,
     )
   })
 
@@ -422,7 +422,7 @@ describe('compiler v-bind', () => {
     })
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }], true)`,
+      `_setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }])`,
     )
   })
 
@@ -669,7 +669,7 @@ describe('compiler v-bind', () => {
       <svg v-bind="obj"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], true, true))')
+    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], true))')
   })
 
   test('number value', () => {
