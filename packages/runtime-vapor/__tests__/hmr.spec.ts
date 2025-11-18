@@ -1,28 +1,6 @@
-// TODO: port tests from packages/runtime-core/__tests__/hmr.spec.ts
-
-import {
-  type HMRRuntime,
-  nextTick,
-  ref,
-  toDisplayString,
-} from '@vue/runtime-dom'
-import { makeRender } from './_utils'
-import {
-  child,
-  createComponent,
-  createComponentWithFallback,
-  createInvoker,
-  createSlot,
-  defineVaporComponent,
-  delegateEvents,
-  next,
-  renderEffect,
-  setInsertionState,
-  setText,
-  template,
-  txt,
-  withVaporCtx,
-} from '@vue/runtime-vapor'
+import { type HMRRuntime, nextTick, ref } from '@vue/runtime-dom'
+import { compileToVaporRender as compileToFunction, makeRender } from './_utils'
+import { defineVaporComponent, delegateEvents } from '@vue/runtime-vapor'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
@@ -60,40 +38,24 @@ describe('hot module replacement', () => {
 
     const Child = defineVaporComponent({
       __hmrId: childId,
-      render() {
-        const n1 = template('<div></div>', true)() as any
-        setInsertionState(n1, null, true)
-        createSlot('default', null)
-        return n1
-      },
+      render: compileToFunction('<div><slot/></div>'),
     })
     createRecord(childId, Child as any)
 
     const Parent = defineVaporComponent({
       __hmrId: parentId,
+      // @ts-expect-error ObjectVaporComponent doesn't have components
+      components: { Child },
       setup() {
         const count = ref(0)
         return { count }
       },
-      render(ctx) {
-        const n3 = template('<div> </div>', true)() as any
-        const n0 = child(n3) as any
-        setInsertionState(n3, 1, true)
-        createComponent(Child, null, {
-          default: withVaporCtx(() => {
-            const n1 = template(' ')() as any
-            renderEffect(() => setText(n1, toDisplayString(ctx.count)))
-            return n1
-          }),
-        })
-        n3.$evtclick = createInvoker(() => ctx.count++)
-        renderEffect(() => setText(n0, toDisplayString(ctx.count)))
-        return n3
-      },
+      render: compileToFunction(
+        `<div @click="count++">{{ count }}<Child>{{ count }}</Child></div>`,
+      ),
     })
     createRecord(parentId, Parent as any)
 
-    // render(h(Parent), root)
     const { mount } = define(Parent).create()
     mount(root)
     expect(root.innerHTML).toBe(`<div>0<div>0<!--slot--></div></div>`)
@@ -106,82 +68,45 @@ describe('hot module replacement', () => {
     expect(root.innerHTML).toBe(`<div>1<div>1<!--slot--></div></div>`)
 
     // Update text while preserving state
-    rerender(parentId, (ctx: any) => {
-      const n3 = template('<div> </div>', true)() as any
-      const n0 = child(n3) as any
-      setInsertionState(n3, 1, true)
-      createComponent(Child, null, {
-        default: withVaporCtx(() => {
-          const n1 = template(' ')() as any
-          renderEffect(() => setText(n1, toDisplayString(ctx.count)))
-          return n1
-        }),
-      })
-      n3.$evtclick = createInvoker(() => ctx.count++)
-      renderEffect(() => setText(n0, toDisplayString(ctx.count) + '!'))
-      return n3
-    })
+    rerender(
+      parentId,
+      compileToFunction(
+        `<div @click="count++">{{ count }}!<Child>{{ count }}</Child></div>`,
+      ),
+    )
     expect(root.innerHTML).toBe(`<div>1!<div>1<!--slot--></div></div>`)
 
     // Should force child update on slot content change
-    rerender(parentId, (ctx: any) => {
-      const n3 = template('<div> </div>', true)() as any
-      const n0 = child(n3) as any
-      setInsertionState(n3, 1, true)
-      createComponent(Child, null, {
-        default: withVaporCtx(() => {
-          const n1 = template(' ')() as any
-          renderEffect(() => setText(n1, toDisplayString(ctx.count) + '!'))
-          return n1
-        }),
-      })
-      n3.$evtclick = createInvoker(() => ctx.count++)
-      renderEffect(() => setText(n0, toDisplayString(ctx.count) + '!'))
-      return n3
-    })
+    rerender(
+      parentId,
+      compileToFunction(
+        `<div @click="count++">{{ count }}!<Child>{{ count }}!</Child></div>`,
+      ),
+    )
     expect(root.innerHTML).toBe(`<div>1!<div>1!<!--slot--></div></div>`)
 
     // Should force update element children despite block optimization
-    rerender(parentId, (ctx: any) => {
-      const n5 = template('<div> <span> </span></div>', true)() as any
-      const n0 = child(n5) as any
-      const n1 = next(n0) as any
-      setInsertionState(n5, 2, true)
-      createComponentWithFallback(Child, null, {
-        default: withVaporCtx(() => {
-          const n2 = template(' ')() as any
-          renderEffect(() => setText(n2, toDisplayString(ctx.count) + '!'))
-          return n2
-        }),
-      })
-      const x1 = txt(n1) as any
-      n5.$evtclick = createInvoker(() => ctx.count++)
-      renderEffect(() => {
-        const count = ctx.count
-        setText(n0, toDisplayString(count))
-        setText(x1, toDisplayString(count))
-      })
-      return n5
-    })
+    rerender(
+      parentId,
+      compileToFunction(
+        `<div @click="count++">{{ count }}<span>{{ count }}</span>
+      <Child>{{ count }}!</Child>
+    </div>`,
+      ),
+    )
     expect(root.innerHTML).toBe(
       `<div>1<span>1</span><div>1!<!--slot--></div></div>`,
     )
 
     // Should force update child slot elements
-    rerender(parentId, (ctx: any) => {
-      const n2 = template('<div></div>', true)() as any
-      setInsertionState(n2, null, true)
-      createComponentWithFallback(Child, null, {
-        default: withVaporCtx(() => {
-          const n0 = template('<span> </span>')() as any
-          const x0 = txt(n0) as any
-          renderEffect(() => setText(x0, toDisplayString(ctx.count)))
-          return n0
-        }),
-      })
-      n2.$evtclick = createInvoker(() => ctx.count++)
-      return n2
-    })
+    rerender(
+      parentId,
+      compileToFunction(
+        `<div @click="count++">
+      <Child><span>{{ count }}</span></Child>
+    </div>`,
+      ),
+    )
     expect(root.innerHTML).toBe(
       `<div><div><span>1</span><!--slot--></div></div>`,
     )
@@ -231,28 +156,19 @@ describe('hot module replacement', () => {
         const msg = ref('child')
         return { msg }
       },
-      render(ctx) {
-        const n0 = template(`<div> </div>`)()
-        const x0 = child(n0 as any)
-        renderEffect(() => setText(x0 as any, ctx.msg))
-        return [n0]
-      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
     })
     createRecord(childId, Child as any)
 
     const { mount, component: Parent } = define({
       __hmrId: parentId,
+      // @ts-expect-error
+      components: { Child },
       setup() {
         const msg = ref('root')
         return { msg }
       },
-      render(ctx) {
-        const n0 = createComponent(Child)
-        const n1 = template(`<div> </div>`)()
-        const x0 = child(n1 as any)
-        renderEffect(() => setText(x0 as any, ctx.msg))
-        return [n0, n1]
-      },
+      render: compileToFunction(`<Child/><div>{{ msg }}</div>`),
     }).create()
     createRecord(parentId, Parent as any)
     mount(root)
@@ -269,12 +185,7 @@ describe('hot module replacement', () => {
         const msg = ref('child changed')
         return { msg }
       },
-      render(ctx: any) {
-        const n0 = template(`<div> </div>`)()
-        const x0 = child(n0 as any)
-        renderEffect(() => setText(x0 as any, ctx.msg))
-        return [n0]
-      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
     })
     expect(root.innerHTML).toMatchInlineSnapshot(
       `"<div>child changed</div><div>root</div>"`,
@@ -288,12 +199,7 @@ describe('hot module replacement', () => {
         const msg = ref('child changed2')
         return { msg }
       },
-      render(ctx: any) {
-        const n0 = template(`<div> </div>`)()
-        const x0 = child(n0 as any)
-        renderEffect(() => setText(x0 as any, ctx.msg))
-        return [n0]
-      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
     })
     expect(root.innerHTML).toMatchInlineSnapshot(
       `"<div>child changed2</div><div>root</div>"`,
@@ -303,17 +209,13 @@ describe('hot module replacement', () => {
     reload(parentId, {
       __hmrId: parentId,
       __vapor: true,
+      // @ts-expect-error
+      components: { Child },
       setup() {
         const msg = ref('root changed')
         return { msg }
       },
-      render(ctx: any) {
-        const n0 = createComponent(Child)
-        const n1 = template(`<div> </div>`)()
-        const x0 = child(n1 as any)
-        renderEffect(() => setText(x0 as any, ctx.msg))
-        return [n0, n1]
-      },
+      render: compileToFunction(`<Child/><div>{{ msg }}</div>`),
     })
     expect(root.innerHTML).toMatchInlineSnapshot(
       `"<div>child changed2</div><div>root changed</div>"`,

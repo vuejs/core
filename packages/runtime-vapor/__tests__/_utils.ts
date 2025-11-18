@@ -1,11 +1,16 @@
 import { createVaporApp, vaporInteropPlugin } from '../src'
 import { type App, type Component, createApp } from '@vue/runtime-dom'
-import type { VaporComponent, VaporComponentInstance } from '../src/component'
+import type {
+  ObjectVaporComponent,
+  VaporComponent,
+  VaporComponentInstance,
+} from '../src/component'
 import type { RawProps } from '../src/componentProps'
 import { compileScript, parse } from '@vue/compiler-sfc'
 import * as runtimeVapor from '../src'
 import * as runtimeDom from '@vue/runtime-dom'
 import * as VueServerRenderer from '@vue/server-renderer'
+import { compile as compileVapor } from '@vue/compiler-vapor'
 
 export interface RenderContext {
   component: VaporComponent
@@ -185,6 +190,27 @@ export function compile(
     data,
     components,
   )
+}
+
+export function compileToVaporRender(
+  template: string,
+): ObjectVaporComponent['render'] {
+  let { code } = compileVapor(template, {
+    mode: 'module',
+    prefixIdentifiers: true,
+    hmr: true,
+  })
+
+  const transformed = code
+    .replace(/\bimport {/g, 'const {')
+    .replace(/ as _/g, ': _')
+    .replace(/} from ['"]vue['"];/g, '} = Vue;')
+    .replace(/export function render/, 'function render')
+
+  return new Function('Vue', `${transformed}\nreturn render`)({
+    ...runtimeDom,
+    ...runtimeVapor,
+  })
 }
 
 export function shuffle(array: Array<any>): any[] {
