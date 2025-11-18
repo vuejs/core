@@ -801,6 +801,16 @@ describe('cache multiple access', () => {
     expect(code).contains('_setProp(n0, "id", _obj[1][_ctx.baz] + _obj.bar)')
   })
 
+  test('dynamic property access with parentheses', () => {
+    const { code } = compileWithVBind(`
+        <div :x="(foo[bar]).x" :bar="(foo[bar])"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _foo_bar = _ctx.foo[_ctx.bar]')
+    expect(code).contains('_setProp(n0, "x", (_foo_bar).x)')
+    expect(code).contains('_setProp(n0, "bar", (_foo_bar))')
+  })
+
   test('variable name substring edge cases', () => {
     const { code } = compileWithVBind(
       `<div :id="title + titles + title"></div>`,
