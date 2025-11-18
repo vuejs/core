@@ -18,6 +18,7 @@ import {
   type MemoExpression,
   NodeTypes,
   type SimpleExpressionNode,
+  type TemplateChildNode,
   convertToBlock,
   createCallExpression,
   createConditionalExpression,
@@ -59,6 +60,7 @@ export const transformIf: NodeTransform = createStructuralDirectiveTransform(
           ifNode.codegenNode = createCodegenNodeForBranch(
             branch,
             key,
+            !!ifNode.anyBranchesHaveUserDefinedKey,
             context,
           ) as IfConditionalExpression
         } else {
@@ -67,6 +69,7 @@ export const transformIf: NodeTransform = createStructuralDirectiveTransform(
           parentCondition.alternate = createCodegenNodeForBranch(
             branch,
             key + ifNode.branches.length - 1,
+            !!ifNode.anyBranchesHaveUserDefinedKey,
             context,
           )
         }
@@ -109,10 +112,37 @@ export function processIf(
 
   if (dir.name === 'if') {
     const branch = createIfBranch(node, dir)
+    const siblings = context.parent!.children
+    let anyBranchesHaveUserDefinedKey = !!branch.userKey
+    for (
+      let i = siblings.indexOf(node) + 1;
+      !anyBranchesHaveUserDefinedKey && i < siblings.length;
+      i++
+    ) {
+      const sibling = siblings[i]
+      if (
+        !sibling ||
+        sibling.type === NodeTypes.COMMENT ||
+        isEmptyTextNode(sibling)
+      ) {
+        continue
+      }
+
+      if (
+        sibling.type !== NodeTypes.ELEMENT ||
+        !(findDir(sibling, 'else-if') || findDir(sibling, 'else', true))
+      ) {
+        break
+      }
+
+      anyBranchesHaveUserDefinedKey = !!findProp(sibling, 'key')
+    }
+
     const ifNode: IfNode = {
       type: NodeTypes.IF,
       loc: cloneLoc(node.loc),
       branches: [branch],
+      anyBranchesHaveUserDefinedKey,
     }
     context.replaceNode(ifNode)
     if (processCodegen) {
@@ -131,11 +161,7 @@ export function processIf(
         continue
       }
 
-      if (
-        sibling &&
-        sibling.type === NodeTypes.TEXT &&
-        !sibling.content.trim().length
-      ) {
+      if (sibling && isEmptyTextNode(sibling)) {
         context.removeNode(sibling)
         continue
       }
@@ -220,12 +246,18 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
 function createCodegenNodeForBranch(
   branch: IfBranchNode,
   keyIndex: number,
+  hasAnyUserDefinedKeys: boolean,
   context: TransformContext,
 ): IfConditionalExpression | BlockCodegenNode | MemoExpression {
   if (branch.condition) {
     return createConditionalExpression(
       branch.condition,
-      createChildrenCodegenNode(branch, keyIndex, context),
+      createChildrenCodegenNode(
+        branch,
+        keyIndex,
+        hasAnyUserDefinedKeys,
+        context,
+      ),
       // make sure to pass in asBlock: true so that the comment node call
       // closes the current block.
       createCallExpression(context.helper(CREATE_COMMENT), [
@@ -234,25 +266,35 @@ function createCodegenNodeForBranch(
       ]),
     ) as IfConditionalExpression
   } else {
-    return createChildrenCodegenNode(branch, keyIndex, context)
+    return createChildrenCodegenNode(
+      branch,
+      keyIndex,
+      hasAnyUserDefinedKeys,
+      context,
+    )
   }
 }
 
 function createChildrenCodegenNode(
   branch: IfBranchNode,
   keyIndex: number,
+  hasAnyUserDefinedKeys: boolean,
   context: TransformContext,
 ): BlockCodegenNode | MemoExpression {
   const { helper } = context
-  const keyProperty = createObjectProperty(
-    `key`,
-    createSimpleExpression(
-      `${keyIndex}`,
-      false,
-      locStub,
-      ConstantTypes.CAN_CACHE,
-    ),
-  )
+  const keyExp = branch.userKey
+    ? branch.userKey.type === NodeTypes.ATTRIBUTE
+      ? createSimpleExpression(branch.userKey.value!.content, true)
+      : branch.userKey.exp!
+    : hasAnyUserDefinedKeys
+      ? context.hoist('Symbol()')
+      : createSimpleExpression(
+          `${keyIndex}`,
+          false,
+          locStub,
+          ConstantTypes.CAN_CACHE,
+        )
+  const keyProperty = createObjectProperty(`key`, keyExp)
   const { children } = branch
   const firstChild = children[0]
   const needFragmentWrapper =
@@ -347,4 +389,8 @@ function getParentCondition(
       node = node.value as IfConditionalExpression
     }
   }
+}
+
+function isEmptyTextNode(node: TemplateChildNode): boolean {
+  return node.type === NodeTypes.TEXT && !node.content.trim().length
 }

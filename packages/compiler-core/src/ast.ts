@@ -280,6 +280,7 @@ export interface IfNode extends Node {
   type: NodeTypes.IF
   branches: IfBranchNode[]
   codegenNode?: IfConditionalExpression | CacheExpression // <div v-if v-once>
+  anyBranchesHaveUserDefinedKey?: boolean
 }
 
 export interface IfBranchNode extends Node {
