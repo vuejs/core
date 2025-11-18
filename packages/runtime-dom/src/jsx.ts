@@ -519,7 +519,7 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   alt?: string | undefined
   crossorigin?: 'anonymous' | 'use-credentials' | '' | undefined
   decoding?: 'async' | 'auto' | 'sync' | undefined
-  fetchpriority?: 'high' | 'low' | 'auto'
+  fetchpriority?: 'high' | 'low' | 'auto' | undefined
   height?: Numberish | undefined
   loading?: 'eager' | 'lazy' | undefined
   referrerpolicy?: HTMLAttributeReferrerPolicy | undefined
