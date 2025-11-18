@@ -53,7 +53,7 @@ export const DOMErrorMessages: Record<DOMErrorCodes, string> = {
   [DOMErrorCodes.X_V_HTML_WITH_CHILDREN]: `v-html will override element children.`,
   [DOMErrorCodes.X_V_TEXT_NO_EXPRESSION]: `v-text is missing expression.`,
   [DOMErrorCodes.X_V_TEXT_WITH_CHILDREN]: `v-text will override element children.`,
-  [DOMErrorCodes.X_V_MODEL_ON_INVALID_ELEMENT]: `v-model can only be used on <input>, <textarea> and <select> elements.`,
+  [DOMErrorCodes.X_V_MODEL_ON_INVALID_ELEMENT]: `v-model can only be used on <input>, <textarea>, <select> and <details> elements.`,
   [DOMErrorCodes.X_V_MODEL_ARG_ON_ELEMENT]: `v-model argument is not supported on plain elements.`,
   [DOMErrorCodes.X_V_MODEL_ON_FILE_INPUT_ELEMENT]: `v-model cannot be used on file inputs since they are read-only. Use a v-on:change listener instead.`,
   [DOMErrorCodes.X_V_MODEL_UNNECESSARY_VALUE]: `Unnecessary value binding used alongside v-model. It will interfere with v-model's behavior.`,

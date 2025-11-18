@@ -8,6 +8,9 @@ export const V_MODEL_TEXT: unique symbol = Symbol(__DEV__ ? `vModelText` : ``)
 export const V_MODEL_SELECT: unique symbol = Symbol(
   __DEV__ ? `vModelSelect` : ``,
 )
+export const V_MODEL_DETAILS: unique symbol = Symbol(
+  __DEV__ ? `vModelDetails` : ``,
+)
 export const V_MODEL_DYNAMIC: unique symbol = Symbol(
   __DEV__ ? `vModelDynamic` : ``,
 )

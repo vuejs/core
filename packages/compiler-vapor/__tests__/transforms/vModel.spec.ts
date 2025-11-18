@@ -77,6 +77,12 @@ describe('compiler: vModel transform', () => {
     expect(root2.helpers).toContain('applyDynamicModel')
   })
 
+  test.todo('should support details', () => {
+    const { code, helpers } = compileWithVModel('<details v-model="model" />')
+    expect(code).toMatchSnapshot()
+    expect(helpers).toContain('applyDetailsModel')
+  })
+
   describe('errors', () => {
     test('invalid element', () => {
       const onError = vi.fn()

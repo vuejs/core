@@ -174,6 +174,8 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       node.children = [createInterpolation(model, model.loc)]
     } else if (node.tag === 'select') {
       processSelectChildren(node.children)
+    } else if (node.tag === 'details') {
+      // TODO
     } else {
       context.onError(
         createDOMCompilerError(

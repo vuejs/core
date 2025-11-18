@@ -51,6 +51,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     tag === 'input' ||
     tag === 'textarea' ||
     tag === 'select' ||
+    tag === 'details' ||
     isCustomElement
   ) {
     let directiveToUse = V_MODEL_TEXT

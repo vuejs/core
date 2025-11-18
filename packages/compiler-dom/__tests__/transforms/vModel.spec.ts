@@ -10,6 +10,7 @@ import { transformElement } from '../../../compiler-core/src/transforms/transfor
 import { DOMErrorCodes } from '../../src/errors'
 import {
   V_MODEL_CHECKBOX,
+  V_MODEL_DETAILS,
   V_MODEL_DYNAMIC,
   V_MODEL_RADIO,
   V_MODEL_SELECT,
@@ -96,6 +97,12 @@ describe('compiler: transform v-model', () => {
     const root = transformWithModel('<textarea v-model="model" />')
 
     expect(root.helpers).toContain(V_MODEL_TEXT)
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('simple expression for details', () => {
+    const root = transformWithModel('<details v-model="model" />')
+    expect(root.helpers).toContain(V_MODEL_DETAILS)
     expect(generate(root).code).toMatchSnapshot()
   })
 
