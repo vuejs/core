@@ -1,6 +1,16 @@
-import { type HMRRuntime, nextTick, ref } from '@vue/runtime-dom'
+import {
+  type HMRRuntime,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+} from '@vue/runtime-dom'
 import { compileToVaporRender as compileToFunction, makeRender } from './_utils'
-import { defineVaporComponent, delegateEvents } from '@vue/runtime-vapor'
+import {
+  createComponent,
+  defineVaporComponent,
+  delegateEvents,
+} from '@vue/runtime-vapor'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
@@ -113,36 +123,42 @@ describe('hot module replacement', () => {
   })
 
   test('reload', async () => {
-    // const root = nodeOps.createElement('div')
-    // const childId = 'test3-child'
-    // const unmountSpy = vi.fn()
-    // const mountSpy = vi.fn()
-    // const Child: ComponentOptions = {
-    //   __hmrId: childId,
-    //   data() {
-    //     return { count: 0 }
-    //   },
-    //   unmounted: unmountSpy,
-    //   render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
-    // }
-    // createRecord(childId, Child)
-    // const Parent: ComponentOptions = {
-    //   render: () => h(Child),
-    // }
-    // render(h(Parent), root)
-    // expect(serializeInner(root)).toBe(`<div>0</div>`)
-    // reload(childId, {
-    //   __hmrId: childId,
-    //   data() {
-    //     return { count: 1 }
-    //   },
-    //   mounted: mountSpy,
-    //   render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
-    // })
-    // await nextTick()
-    // expect(serializeInner(root)).toBe(`<div>1</div>`)
-    // expect(unmountSpy).toHaveBeenCalledTimes(1)
-    // expect(mountSpy).toHaveBeenCalledTimes(1)
+    const root = document.createElement('div')
+    const childId = 'test3-child'
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      setup() {
+        onUnmounted(unmountSpy)
+        const count = ref(0)
+        return { count }
+      },
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      __hmrId: 'parentId',
+      render: () => createComponent(Child),
+    })
+
+    define(Parent).create().mount(root)
+    expect(root.innerHTML).toBe(`<div>0</div>`)
+
+    reload(childId, {
+      __hmrId: childId,
+      setup() {
+        onMounted(mountSpy)
+        const count = ref(1)
+        return { count }
+      },
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>1</div>`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 
   test('child reload + parent reload', async () => {
