@@ -40,8 +40,8 @@ exports[`compiler: transform <slot> outlets > default slot outlet with props 1`]
 
 export function render(_ctx) {
   const n0 = _createSlot("default", {
-    foo: () => ("bar"), 
-    baz: () => (_ctx.qux), 
+    foo: () => ("bar"),
+    baz: () => (_ctx.qux),
     fooBar: () => (_ctx.foo-_ctx.bar)
   })
   return n0
@@ -111,6 +111,33 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slotted=false should generate noSlotted 1`] = `
+"import { createSlot as _createSlot } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slotted=true should not generate noSlotted 1`] = `
+"import { createSlot as _createSlot } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null)
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > slot outlet without scopeId should not generate noSlotted 1`] = `
+"import { createSlot as _createSlot } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null)
+  return n0
+}"
+`;
+
 exports[`compiler: transform <slot> outlets > statically named slot outlet 1`] = `
 "import { createSlot as _createSlot } from 'vue';
 
@@ -125,7 +152,7 @@ exports[`compiler: transform <slot> outlets > statically named slot outlet with 
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", {
-    foo: () => ("bar"), 
+    foo: () => ("bar"),
     baz: () => (_ctx.qux)
   })
   return n0
@@ -137,9 +164,9 @@ exports[`compiler: transform <slot> outlets > statically named slot outlet with 
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", {
-    foo: () => ("bar"), 
+    foo: () => ("bar"),
     $: [
-      () => (_ctx.obj), 
+      () => (_ctx.obj),
       { baz: () => (_ctx.qux) }
     ]
   })
@@ -152,9 +179,9 @@ exports[`compiler: transform <slot> outlets > statically named slot outlet with 
 
 export function render(_ctx) {
   const n0 = _createSlot("default", {
-    onClick: () => _ctx.foo, 
+    onClick: () => _ctx.foo,
     $: [
-      () => (_toHandlers(_ctx.bar)), 
+      () => (_toHandlers(_ctx.bar)),
       { baz: () => (_ctx.qux) }
     ]
   })

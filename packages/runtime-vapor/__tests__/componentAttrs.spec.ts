@@ -11,6 +11,7 @@ import {
   setProp,
   setStyle,
   template,
+  withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
 import { stringifyStyle } from '@vue/shared'
@@ -140,43 +141,6 @@ describe('attribute fallthrough', () => {
       },
     }).render()
     expect(host.innerHTML).toBe('<div id="a">foo</div><!--if-->')
-  })
-
-  it('should allow attrs to fallthrough on component with single-element array root', async () => {
-    const t0 = template('<div>')
-    const { component: Child } = define({
-      props: ['foo'],
-      setup(props: any) {
-        const n0 = t0()
-        renderEffect(() => setElementText(n0, props.foo))
-        return [n0]
-      },
-    })
-
-    const foo = ref(1)
-    const id = ref('a')
-    const { host } = define({
-      setup() {
-        return createComponent(
-          Child,
-          {
-            foo: () => foo.value,
-            id: () => id.value,
-          },
-          null,
-          true,
-        )
-      },
-    }).render()
-    expect(host.innerHTML).toBe('<div id="a">1</div>')
-
-    foo.value++
-    await nextTick()
-    expect(host.innerHTML).toBe('<div id="a">2</div>')
-
-    id.value = 'b'
-    await nextTick()
-    expect(host.innerHTML).toBe('<div id="b">2</div>')
   })
 
   it('should not allow attrs to fallthrough on component with multiple roots', async () => {
@@ -457,10 +421,10 @@ describe('attribute fallthrough', () => {
           () => 'button',
           null,
           {
-            default: () => {
+            default: withVaporCtx(() => {
               const n0 = createSlot('default', null)
               return n0
-            },
+            }),
           },
           true,
         )

@@ -6,6 +6,7 @@ import {
   type ElementNode,
   ElementTypes,
   NodeTypes,
+  type PlainElementNode,
   type RootNode,
   type SimpleExpressionNode,
   type TemplateChildNode,
@@ -24,10 +25,12 @@ import {
   type IRSlots,
   type OperationNode,
   type RootIRNode,
+  type SetEventIRNode,
   type VaporDirectiveNode,
 } from './ir'
 import { isConstantExpression, isStaticExpression } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
+import type { ImportItem } from '@vue/compiler-core'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -46,7 +49,7 @@ export interface DirectiveTransformResult {
   modifier?: '.' | '^'
   runtimeCamelize?: boolean
   handler?: boolean
-  handlerModifiers?: string[]
+  handlerModifiers?: SetEventIRNode['modifiers']
   model?: boolean
   modelModifiers?: string[]
 }
@@ -60,6 +63,8 @@ export type StructuralDirectiveTransform = (
 ) => void | (() => void)
 
 export type TransformOptions = HackOptions<BaseTransformOptions>
+
+const generatedVarRE = /^[nxr](\d+)$/
 
 export class TransformContext<T extends AllNode = AllNode> {
   selfName: string | null = null
@@ -75,10 +80,10 @@ export class TransformContext<T extends AllNode = AllNode> {
   template: string = ''
   childrenTemplate: (string | null)[] = []
   dynamic: IRDynamicInfo = this.ir.block.dynamic
+  imports: ImportItem[] = []
 
   inVOnce: boolean = false
   inVFor: number = 0
-
   comment: CommentNode[] = []
   component: Set<string> = this.ir.component
   directive: Set<string> = this.ir.directive
@@ -86,6 +91,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   slots: IRSlots[] = []
 
   private globalId = 0
+  private nextIdMap: Map<number, number> | null = null
 
   constructor(
     public ir: RootIRNode,
@@ -95,6 +101,7 @@ export class TransformContext<T extends AllNode = AllNode> {
     this.options = extend({}, defaultOptions, options)
     this.root = this as TransformContext<RootNode>
     if (options.filename) this.selfName = getSelfName(options.filename)
+    this.initNextIdMap()
   }
 
   enterBlock(ir: BlockIRNode, isVFor: boolean = false): () => void {
@@ -117,7 +124,32 @@ export class TransformContext<T extends AllNode = AllNode> {
     }
   }
 
-  increaseId = (): number => this.globalId++
+  increaseId = (): number => {
+    // allocate an id that won't conflict with user-defined bindings when used
+    // as generated identifiers with n/x/r prefixes (e.g., n1, x1, r1).
+    const id = getNextId(this.nextIdMap, this.globalId)
+    // advance next
+    this.globalId = getNextId(this.nextIdMap, id + 1)
+    return id
+  }
+
+  private initNextIdMap(): void {
+    const binding = this.root.options.bindingMetadata
+    if (!binding) return
+
+    const keys = Object.keys(binding)
+    if (keys.length === 0) return
+
+    // extract numbers for specific literal prefixes
+    const numbers = new Set<number>()
+    for (const name of keys) {
+      const m = generatedVarRE.exec(name)
+      if (m) numbers.add(Number(m[1]))
+    }
+    if (numbers.size === 0) return
+
+    this.globalId = getNextId((this.nextIdMap = buildNextIdMap(numbers)), 0)
+  }
   reference(): number {
     if (this.dynamic.id !== undefined) return this.dynamic.id
     this.dynamic.flags |= DynamicFlag.REFERENCED
@@ -125,12 +157,15 @@ export class TransformContext<T extends AllNode = AllNode> {
   }
 
   pushTemplate(content: string): number {
-    const existing = this.ir.template.findIndex(
-      template => template === content,
-    )
-    if (existing !== -1) return existing
-    this.ir.template.push(content)
-    return this.ir.template.length - 1
+    const existingIndex = this.ir.templateIndexMap.get(content)
+    if (existingIndex !== undefined) {
+      return existingIndex
+    }
+
+    const newIndex = this.ir.template.size
+    this.ir.template.set(content, (this.node as PlainElementNode).ns)
+    this.ir.templateIndexMap.set(content, newIndex)
+    return newIndex
   }
   registerTemplate(): number {
     if (!this.template) return -1
@@ -214,7 +249,8 @@ export function transform(
     type: IRNodeTypes.ROOT,
     node,
     source: node.source,
-    template: [],
+    template: new Map<string, number>(),
+    templateIndexMap: new Map<string, number>(),
     rootTemplateIndexes: new Set(),
     component: new Set(),
     directive: new Set(),
@@ -225,6 +261,8 @@ export function transform(
   const context = new TransformContext(ir, node, options)
 
   transformNode(context)
+
+  ir.node.imports = context.imports
 
   return ir
 }
@@ -296,4 +334,39 @@ export function createStructuralDirectiveTransform(
       return exitFns
     }
   }
+}
+
+/**
+ * Build a "next-id" map from an occupied number set.
+ * For each consecutive range [start..end], map every v in the range to end + 1.
+ * Example: input [0, 1, 2, 4] => { 0: 3, 1: 3, 2: 3, 4: 5 }.
+ */
+export function buildNextIdMap(nums: Iterable<number>): Map<number, number> {
+  const map: Map<number, number> = new Map()
+  const arr = Array.from(new Set(nums)).sort((a, b) => a - b)
+  if (arr.length === 0) return map
+
+  for (let i = 0; i < arr.length; i++) {
+    let start = arr[i]
+    let end = start
+    while (i + 1 < arr.length && arr[i + 1] === end + 1) {
+      i++
+      end = arr[i]
+    }
+    for (let v = start; v <= end; v++) map.set(v, end + 1)
+  }
+  return map
+}
+
+/**
+ * Return the available id for n using a map built by buildNextIdMap:
+ * - If n is not occupied, return n.
+ * - If n is occupied, return the mapped value
+ */
+export function getNextId(
+  map: Map<number, number> | null | undefined,
+  n: number,
+): number {
+  if (map && map.has(n)) return map.get(n)!
+  return n
 }

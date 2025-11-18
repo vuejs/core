@@ -1,5 +1,19 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`cache multiple access > TSNonNullExpression 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _obj = _ctx.obj
+    _setProp(n0, "id", _obj.foo + _obj.bar)
+  })
+  return n0
+}"
+`;
+
 exports[`cache multiple access > cache variable used in both property shorthand and normal binding 1`] = `
 "import { setStyle as _setStyle, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
@@ -38,6 +52,21 @@ export function render(_ctx) {
   _renderEffect(() => {
     const _obj = _ctx.obj
     _setProp(n0, "id", _obj[1][_ctx.baz] + _obj.bar)
+  })
+  return n0
+}"
+`;
+
+exports[`cache multiple access > dynamic property access with parentheses 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _foo_bar = _ctx.foo[_ctx.bar]
+    _setProp(n0, "x", (_foo_bar).x)
+    _setProp(n0, "bar", (_foo_bar))
   })
   return n0
 }"
@@ -465,6 +494,17 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > :class w/ svg elements 1`] = `
+"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<svg></svg>", true, 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setAttr(n0, "class", _ctx.cls, true))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > :innerHTML 1`] = `
 "import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
@@ -631,9 +671,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > v-bind w/ svg elements 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<svg></svg>", true, 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > with constant value 1`] = `
 "import { setProp as _setProp, template as _template } from 'vue';
-const t0 = _template("<div f=\\"foo1\\" h=\\"1\\"></div>", true)
+const t0 = _template("<div e=\\"2\\" f=\\"foo1\\" g=\\"1\\" h=\\"1\\"></div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -641,8 +692,6 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   _setProp(n0, "b", 1 > 2)
   _setProp(n0, "c", 1 + 2)
   _setProp(n0, "d", 1 ? 2 : 3)
-  _setProp(n0, "e", (2))
-  _setProp(n0, "g", 1)
   _setProp(n0, "i", true)
   _setProp(n0, "j", null)
   _setProp(n0, "k", _ctx.x)

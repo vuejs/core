@@ -11,7 +11,7 @@ import {
 import { type VaporComponentInstance, isVaporComponent } from './component'
 import { invokeArrayFns } from '@vue/shared'
 
-class RenderEffect extends ReactiveEffect {
+export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
   job: SchedulerJob
   updateJob: SchedulerJob
@@ -41,6 +41,11 @@ class RenderEffect extends ReactiveEffect {
         this.onTrigger = instance.rtg
           ? e => invokeArrayFns(instance.rtg!, e)
           : void 0
+      }
+
+      if (__DEV__ || instance.type.ce) {
+        // register effect for stopping them during HMR rerender
+        ;(instance.renderEffects || (instance.renderEffects = [])).push(this)
       }
       job.i = instance
     }

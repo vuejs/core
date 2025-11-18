@@ -19,6 +19,7 @@ import {
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
+export { nodeOps, patchProp }
 // Importing from the compiler, will be tree-shaken in prod
 import {
   NOOP,
@@ -40,8 +41,7 @@ import type { VModelDirective } from './directives/vModel'
  *
  * To enable proper types, add `"dom"` to `"lib"` in your `tsconfig.json`.
  */
-type DomStub = {}
-type DomType<T> = typeof globalThis extends { window: unknown } ? T : DomStub
+type DomType<T> = typeof globalThis extends { window: unknown } ? T : never
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
@@ -121,7 +121,7 @@ export const createApp = ((...args) => {
       if (__COMPAT__ && __DEV__ && container.nodeType === 1) {
         for (let i = 0; i < (container as Element).attributes.length; i++) {
           const attr = (container as Element).attributes[i]
-          if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+          if (attr.name !== 'v-cloak' && /^(?:v-|:|@)/.test(attr.name)) {
             compatUtils.warnDeprecation(
               DeprecationTypes.GLOBAL_MOUNT_CONTAINER,
               null,
@@ -262,6 +262,7 @@ export {
   useShadowRoot,
   useHost,
   VueElement,
+  VueElementBase,
   type VueElementConstructor,
   type CustomElementOptions,
 } from './apiCustomElement'
@@ -319,7 +320,7 @@ export * from './jsx'
 /**
  * @internal
  */
-export { ensureRenderer, normalizeContainer }
+export { ensureRenderer, ensureHydrationRenderer, normalizeContainer }
 /**
  * @internal
  */
@@ -348,6 +349,32 @@ export {
   vModelSelectInit,
   vModelSetSelected,
 } from './directives/vModel'
+/**
+ * @internal
+ */
+export { svgNS } from './nodeOps'
+/**
+ * @internal
+ */
+export { xlinkNS } from './modules/attrs'
+/**
+ * @internal
+ */
+export {
+  resolveTransitionProps,
+  TransitionPropsValidators,
+  forceReflow,
+  type ElementWithTransition,
+} from './components/Transition'
+/**
+ * @internal
+ */
+export {
+  hasCSSTransform,
+  callPendingCbs,
+  handleMovedChildren,
+  baseApplyTranslation,
+} from './components/TransitionGroup'
 /**
  * @internal
  */

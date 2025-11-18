@@ -7,7 +7,6 @@ import {
   type ElementNode,
   ElementTypes,
   type InterpolationNode,
-  Namespaces,
   NodeTypes,
   type Position,
   type TextNode,
@@ -15,6 +14,7 @@ import {
 
 import { baseParse } from '../src/parser'
 import type { Program } from '@babel/types'
+import { Namespaces } from '@vue/shared'
 
 describe('compiler: parse', () => {
   describe('Text', () => {

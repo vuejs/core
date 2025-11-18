@@ -1,5 +1,26 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > MathML 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<math><mrow><mi>x</mi></mrow></math>", true, 2)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > checkbox with static indeterminate 1`] = `
+"import { setProp as _setProp, template as _template } from 'vue';
+const t0 = _template("<input type=\\"checkbox\\">", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setProp(n0, "indeterminate", "")
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > cache v-on expression with unique handler name 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
@@ -125,7 +146,7 @@ exports[`compiler: element transform > component > static props 1`] = `
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+    id: () => ("foo"),
     class: () => ("bar")
   }, null, true)
   return n0
@@ -150,7 +171,7 @@ exports[`compiler: element transform > component > v-bind="obj" after static pro
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
       () => (_ctx.obj)
     ]
@@ -165,7 +186,7 @@ exports[`compiler: element transform > component > v-bind="obj" before static pr
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => (_ctx.obj), 
+    () => (_ctx.obj),
     { id: () => ("foo") }
   ] }, null, true)
   return n0
@@ -178,9 +199,9 @@ exports[`compiler: element transform > component > v-bind="obj" between static p
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+    id: () => ("foo"),
     $: [
-      () => (_ctx.obj), 
+      () => (_ctx.obj),
       { class: () => ("bar") }
     ]
   }, null, true)
@@ -246,6 +267,36 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component event with keys modifier 1`] = `
+"import { resolveComponent as _resolveComponent, withKeys as _withKeys, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onKeyup: () => _withKeys(_ctx.bar, ["enter"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with multiple modifiers and event options 1`] = `
+"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, withKeys as _withKeys, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onFooCaptureOnce: () => _withKeys(_withModifiers(_ctx.bar, ["stop","prevent"]), ["enter"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with nonKeys modifier 1`] = `
+"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onFoo: () => _withModifiers(_ctx.bar, ["stop","prevent"]) }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component event with once modifier 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
@@ -262,7 +313,7 @@ exports[`compiler: element transform > component with dynamic event arguments 1`
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: () => _ctx.bar }), 
+    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: () => _ctx.bar }),
     () => ({ [_toHandlerKey(_ctx.baz)]: () => _ctx.qux })
   ] }, null, true)
   return n0
@@ -275,9 +326,18 @@ exports[`compiler: element transform > component with dynamic prop arguments 1`]
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }), 
+    () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }),
     () => ({ [_ctx.baz]: _ctx.qux })
   ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > custom element 1`] = `
+"import { createPlainElement as _createPlainElement } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createPlainElement("my-custom-element", null, null, true)
   return n0
 }"
 `;
@@ -374,14 +434,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: event handlers 1`] = `
-"import { withKeys as _withKeys, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { createInvoker as _createInvoker, withKeys as _withKeys, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", _withKeys(e => _ctx.a(e), ["foo"]))
-  _delegate(n0, "click", _withKeys(e => _ctx.b(e), ["bar"]))
+  _delegate(n0, "click", _createInvoker(_withKeys(e => _ctx.a(e), ["foo"])))
+  _delegate(n0, "click", _createInvoker(_withKeys(e => _ctx.b(e), ["bar"])))
   return n0
 }"
 `;
@@ -400,6 +460,16 @@ export function render(_ctx) {
 exports[`compiler: element transform > static props 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > svg 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<svg><circle r=\\"40\\"></circle></svg>", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()

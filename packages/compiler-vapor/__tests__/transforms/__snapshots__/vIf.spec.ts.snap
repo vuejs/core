@@ -1,13 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-if > basic v-if 1`] = `
-"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div> </div>", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
-    const x2 = _child(n2)
+    const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_ctx.msg)))
     return n2
   })
@@ -16,7 +16,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > comment between branches 1`] = `
-"import { createIf as _createIf, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { createIf as _createIf, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 const t1 = _template("<!--foo-->")
 const t2 = _template("<p></p>")
@@ -38,7 +38,7 @@ export function render(_ctx) {
     return [n10, n11]
   }))
   const n13 = t5()
-  const x13 = _child(n13)
+  const x13 = _txt(n13)
   _renderEffect(() => _setText(x13, _toDisplayString(_ctx.text)))
   return [n0, n13]
 }"
@@ -160,7 +160,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > template v-if 1`] = `
-"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 const t1 = _template("hello")
 const t2 = _template("<p> </p>")
@@ -170,7 +170,7 @@ export function render(_ctx) {
     const n2 = t0()
     const n3 = t1()
     const n4 = t2()
-    const x4 = _child(n4)
+    const x4 = _txt(n4)
     _renderEffect(() => _setText(x4, _toDisplayString(_ctx.msg)))
     return [n2, n3, n4]
   })
@@ -199,7 +199,7 @@ exports[`compiler: v-if > v-if + v-else-if + v-else 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 const t1 = _template("<p></p>", true)
-const t2 = _template("fine")
+const t2 = _template("fine", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
@@ -208,10 +208,13 @@ export function render(_ctx) {
   }, () => _createIf(() => (_ctx.orNot), () => {
     const n4 = t1()
     return n4
-  }, () => {
-    const n7 = t2()
+  }, () => _createIf(() => (false), () => {
+    const n7 = t1()
     return n7
-  }))
+  }, () => {
+    const n10 = t2()
+    return n10
+  }, true)))
   return n0
 }"
 `;
@@ -242,12 +245,12 @@ const t3 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n8 = t3()
-  _setInsertionState(n8)
+  _setInsertionState(n8, null)
   const n0 = _createIf(() => (_ctx.foo), () => {
     const n2 = t0()
     return n2
   })
-  _setInsertionState(n8)
+  _setInsertionState(n8, null, true)
   const n3 = _createIf(() => (_ctx.bar), () => {
     const n5 = t1()
     return n5

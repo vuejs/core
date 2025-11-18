@@ -10,7 +10,6 @@ import {
   NewlineType,
   type SimpleExpressionNode,
   type SourceLocation,
-  TS_NODE_TYPES,
   advancePositionWithClone,
   createSimpleExpression,
   isInDestructureAssignment,
@@ -64,7 +63,6 @@ export function genExpression(
   let hasMemberExpression = false
   if (ids.length) {
     const [frag, push] = buildCodeFragment()
-    const isTSNode = ast && TS_NODE_TYPES.includes(ast.type)
     ids
       .sort((a, b) => a.start! - b.start!)
       .forEach((id, i) => {
@@ -73,11 +71,8 @@ export function genExpression(
         const end = id.end! - 1
         const last = ids[i - 1]
 
-        if (!(isTSNode && i === 0)) {
-          const leadingText = content.slice(last ? last.end! - 1 : 0, start)
-          if (leadingText.length) push([leadingText, NewlineType.Unknown])
-        }
-
+        const leadingText = content.slice(last ? last.end! - 1 : 0, start)
+        if (leadingText.length) push([leadingText, NewlineType.Unknown])
         const source = content.slice(start, end)
         const parentStack = parentStackMap.get(id)!
         const parent = parentStack[parentStack.length - 1]
@@ -103,7 +98,7 @@ export function genExpression(
           ),
         )
 
-        if (i === ids.length - 1 && end < content.length && !isTSNode) {
+        if (i === ids.length - 1 && end < content.length) {
           push([content.slice(end), NewlineType.Unknown])
         }
       })
@@ -332,8 +327,10 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
       continue
     }
 
+    const seenParents = new Set<Node>()
     walkIdentifiers(exp.ast, (currentNode, parent, parentStack) => {
-      if (parent && isMemberExpression(parent)) {
+      if (parent && isMemberExpression(parent) && !seenParents.has(parent)) {
+        seenParents.add(parent)
         const memberExp = extractMemberExpression(parent, id => {
           registerVariable(id.name, exp, true, {
             start: id.start!,
@@ -518,7 +515,10 @@ function processRepeatedExpressions(
   const declarations: DeclarationValue[] = []
   const seenExp = expressions.reduce(
     (acc, exp) => {
-      const variables = expToVariableMap.get(exp)!.map(v => v.name)
+      const vars = expToVariableMap.get(exp)
+      if (!vars) return acc
+
+      const variables = vars.map(v => v.name)
       // only handle expressions that are not identifiers
       if (
         exp.ast &&
@@ -678,6 +678,8 @@ function extractMemberExpression(
         ? `[${extractMemberExpression(exp.property, onIdentifier)}]`
         : `.${extractMemberExpression(exp.property, NOOP)}`
       return `${object}${prop}`
+    case 'TSNonNullExpression': // foo!.bar
+      return `${extractMemberExpression(exp.expression, onIdentifier)}!`
     default:
       return ''
   }
@@ -685,6 +687,8 @@ function extractMemberExpression(
 
 const isMemberExpression = (node: Node) => {
   return (
-    node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression'
+    node.type === 'MemberExpression' ||
+    node.type === 'OptionalMemberExpression' ||
+    node.type === 'TSNonNullExpression'
   )
 }

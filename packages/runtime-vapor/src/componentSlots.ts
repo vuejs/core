@@ -1,15 +1,42 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, DynamicFragment, insert } from './block'
+import { type Block, type BlockFn, insert, setScopeId } from './block'
 import { rawPropsProxyHandlers } from './componentProps'
-import { currentInstance, isRef } from '@vue/runtime-dom'
+import {
+  type GenericComponentInstance,
+  currentInstance,
+  isAsyncWrapper,
+  isRef,
+  setCurrentInstance,
+} from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import {
+  advanceHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
+import { DynamicFragment, type VaporFragment } from './fragment'
+import { createElement } from './dom/node'
+import { setDynamicProps } from './dom/prop'
+
+/**
+ * Current slot scopeIds for vdom interop
+ */
+export let currentSlotScopeIds: string[] | null = null
+
+function setCurrentSlotScopeIds(scopeIds: string[] | null): string[] | null {
+  try {
+    return currentSlotScopeIds
+  } finally {
+    currentSlotScopeIds = scopeIds
+  }
+}
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -91,18 +118,56 @@ export function getSlot(
   }
 }
 
+export let currentSlotConsumer: GenericComponentInstance | null = null
+
+export function setCurrentSlotConsumer(
+  consumer: GenericComponentInstance | null,
+): GenericComponentInstance | null {
+  try {
+    return currentSlotConsumer
+  } finally {
+    currentSlotConsumer = consumer
+  }
+}
+
+/**
+ * use currentSlotConsumer as parent, the currentSlotConsumer will be reset to null
+ * before setupFn call to avoid affecting children and restore to previous value
+ * after setupFn is called
+ */
+export function getParentInstance(): GenericComponentInstance | null {
+  return currentSlotConsumer || currentInstance
+}
+
+/**
+ * Wrap a slot function to memoize currentInstance
+ * 1. ensure correct currentInstance in forwarded slots
+ * 2. elements created in the slot inherit the slot owner's scopeId
+ */
+export function withVaporCtx(fn: Function): BlockFn {
+  const owner = currentInstance
+  return (...args: any[]) => {
+    const prev = setCurrentInstance(owner)
+    const prevConsumer = setCurrentSlotConsumer(prev[0])
+    try {
+      return fn(...args)
+    } finally {
+      setCurrentInstance(...prev)
+      setCurrentSlotConsumer(prevConsumer)
+    }
+  }
+}
+
 export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
+  noSlotted?: boolean,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  if (isHydrating) {
-    locateHydrationNode()
-  } else {
-    resetInsertionState()
-  }
+  const _isLastInsertion = isLastInsertion
+  if (!isHydrating) resetInsertionState()
 
   const instance = currentInstance as VaporComponentInstance
   const rawSlots = instance.rawSlots
@@ -111,8 +176,8 @@ export function createSlot(
     : EMPTY_OBJ
 
   let fragment: DynamicFragment
-
   if (isRef(rawSlots._)) {
+    if (isHydrating) locateHydrationNode()
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,
@@ -121,21 +186,61 @@ export function createSlot(
       fallback,
     )
   } else {
-    fragment = __DEV__ ? new DynamicFragment('slot') : new DynamicFragment()
+    fragment =
+      isHydrating || __DEV__
+        ? new DynamicFragment('slot')
+        : new DynamicFragment()
     const isDynamicName = isFunction(name)
+
+    // Calculate slotScopeIds once (for vdom interop)
+    const slotScopeIds: string[] = []
+    if (!noSlotted) {
+      const scopeId = instance.type.__scopeId
+      if (scopeId) {
+        slotScopeIds.push(`${scopeId}-s`)
+      }
+    }
+
     const renderSlot = () => {
-      const slot = getSlot(rawSlots, isFunction(name) ? name() : name)
+      const slotName = isFunction(name) ? name() : name
+
+      // in custom element mode, render <slot/> as actual slot outlets
+      // because in shadowRoot: false mode the slot element gets
+      // replaced by injected content
+      if (
+        (instance as GenericComponentInstance).ce ||
+        (instance.parent &&
+          isAsyncWrapper(instance.parent) &&
+          instance.parent.ce)
+      ) {
+        const el = createElement('slot')
+        renderEffect(() => {
+          setDynamicProps(el, [
+            slotProps,
+            slotName !== 'default' ? { name: slotName } : {},
+          ])
+        })
+        if (fallback) insert(fallback(), el)
+        fragment.nodes = el
+        return
+      }
+
+      const slot = getSlot(rawSlots, slotName)
       if (slot) {
-        // create and cache bound version of the slot to make it stable
+        fragment.fallback = fallback
+        // Create and cache bound version of the slot to make it stable
         // so that we avoid unnecessary updates if it resolves to the same slot
         fragment.update(
           slot._bound ||
             (slot._bound = () => {
-              const slotContent = slot(slotProps)
-              if (slotContent instanceof DynamicFragment) {
-                slotContent.fallback = fallback
+              const prevSlotScopeIds = setCurrentSlotScopeIds(
+                slotScopeIds.length > 0 ? slotScopeIds : null,
+              )
+              try {
+                return slot(slotProps)
+              } finally {
+                setCurrentSlotScopeIds(prevSlotScopeIds)
               }
-              return slotContent
             }),
         )
       } else {
@@ -151,8 +256,22 @@ export function createSlot(
     }
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(fragment, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (!noSlotted) {
+      const scopeId = instance.type.__scopeId
+      if (scopeId) {
+        setScopeId(fragment, [`${scopeId}-s`])
+      }
+    }
+
+    if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
+  } else {
+    if (fragment.insert) {
+      ;(fragment as VaporFragment).hydrate!()
+    }
+    if (_isLastInsertion) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
 
   return fragment

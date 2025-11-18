@@ -10,6 +10,13 @@ import {
 import { isArray, isString } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 
+export const IMPORT_EXP_START = '__IMPORT_EXP_START__'
+export const IMPORT_EXP_END = '__IMPORT_EXP_END__'
+export const IMPORT_EXPR_RE: RegExp = new RegExp(
+  `${IMPORT_EXP_START}(.*?)${IMPORT_EXP_END}`,
+  'g',
+)
+
 export const NEWLINE: unique symbol = Symbol(__DEV__ ? `newline` : ``)
 /** increase offset but don't push actual code */
 export const LF: unique symbol = Symbol(__DEV__ ? `line feed` : ``)
@@ -79,13 +86,13 @@ export const DELIMITERS_ARRAY: CodeFragmentDelimiters = ['[', ']', ', ']
 export const DELIMITERS_ARRAY_NEWLINE: CodeFragmentDelimiters = [
   ['[', INDENT_START, NEWLINE],
   [INDENT_END, NEWLINE, ']'],
-  [', ', NEWLINE],
+  [',', NEWLINE],
 ]
 export const DELIMITERS_OBJECT: CodeFragmentDelimiters = ['{ ', ' }', ', ']
 export const DELIMITERS_OBJECT_NEWLINE: CodeFragmentDelimiters = [
   ['{', INDENT_START, NEWLINE],
   [INDENT_END, NEWLINE, '}'],
-  [', ', NEWLINE],
+  [',', NEWLINE],
 ]
 
 export function genCall(

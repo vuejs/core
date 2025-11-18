@@ -5,7 +5,7 @@ import type {
   SimpleExpressionNode,
   TemplateChildNode,
 } from '@vue/compiler-dom'
-import type { Prettify } from '@vue/shared'
+import type { Namespace, Prettify } from '@vue/shared'
 import type { DirectiveTransform, NodeTransform } from '../transform'
 import type { IRProp, IRProps, IRSlots } from './component'
 
@@ -39,6 +39,7 @@ export enum IRNodeTypes {
 
 export interface BaseIRNode {
   type: IRNodeTypes
+  key?: SimpleExpressionNode | undefined
 }
 
 export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
@@ -53,13 +54,15 @@ export interface BlockIRNode extends BaseIRNode {
   effect: IREffect[]
   operation: OperationNode[]
   returns: number[]
+  hasDeferredVShow: boolean
 }
 
 export interface RootIRNode {
   type: IRNodeTypes.ROOT
   node: RootNode
   source: string
-  template: string[]
+  template: Map<string, Namespace>
+  templateIndexMap: Map<string, number>
   rootTemplateIndexes: Set<number>
   component: Set<string>
   directive: Set<string>
@@ -76,6 +79,8 @@ export interface IfIRNode extends BaseIRNode {
   once?: boolean
   parent?: number
   anchor?: number
+  append?: boolean
+  last?: boolean
 }
 
 export interface IRFor {
@@ -95,6 +100,8 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   onlyChild: boolean
   parent?: number
   anchor?: number
+  append?: boolean
+  last?: boolean
 }
 
 export interface SetPropIRNode extends BaseIRNode {
@@ -108,6 +115,7 @@ export interface SetDynamicPropsIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_DYNAMIC_PROPS
   element: number
   props: IRProps[]
+  tag: string
 }
 
 export interface SetDynamicEventsIRNode extends BaseIRNode {
@@ -122,6 +130,7 @@ export interface SetTextIRNode extends BaseIRNode {
   values: SimpleExpressionNode[]
   generated?: boolean // whether this is a generated empty text node by `processTextLikeContainer`
   jsx?: boolean
+  isComponent?: boolean
 }
 
 export type KeyOverride = [find: string, replacement: string]
@@ -148,6 +157,7 @@ export interface SetHtmlIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_HTML
   element: number
   value: SimpleExpressionNode
+  isComponent?: boolean
 }
 
 export interface SetTemplateRefIRNode extends BaseIRNode {
@@ -179,6 +189,7 @@ export interface DirectiveIRNode extends BaseIRNode {
   builtin?: boolean
   asset?: boolean
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
+  deferred?: boolean
 }
 
 export interface CreateComponentIRNode extends BaseIRNode {
@@ -191,8 +202,11 @@ export interface CreateComponentIRNode extends BaseIRNode {
   root: boolean
   once: boolean
   dynamic?: SimpleExpressionNode
+  isCustomElement: boolean
   parent?: number
   anchor?: number
+  append?: boolean
+  last?: boolean
 }
 
 export interface DeclareOldRefIRNode extends BaseIRNode {
@@ -206,8 +220,11 @@ export interface SlotOutletIRNode extends BaseIRNode {
   name: SimpleExpressionNode
   props: IRProps[]
   fallback?: BlockIRNode
+  noSlotted?: boolean
   parent?: number
   anchor?: number
+  append?: boolean
+  last?: boolean
 }
 
 export interface GetTextChildIRNode extends BaseIRNode {
@@ -257,7 +274,9 @@ export interface IRDynamicInfo {
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
+  needsKey?: boolean
   operation?: OperationNode
+  ifBranch?: boolean
 }
 
 export interface IREffect {

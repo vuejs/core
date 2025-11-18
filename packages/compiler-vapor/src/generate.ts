@@ -18,17 +18,35 @@ import {
   genCall,
 } from './generators/utils'
 import { setTemplateRefIdent } from './generators/templateRef'
+import { buildNextIdMap, getNextId } from './transform'
 
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
+
+const idWithTrailingDigitsRE = /^([A-Za-z_$][\w$]*)(\d+)$/
 
 export class CodegenContext {
   options: Required<CodegenOptions>
 
-  helpers: Set<string> = new Set<string>([])
+  bindingNames: Set<string> = new Set<string>()
 
-  helper = (name: CoreHelper | VaporHelper) => {
-    this.helpers.add(name)
-    return `_${name}`
+  helpers: Map<string, string> = new Map()
+
+  helper = (name: CoreHelper | VaporHelper): string => {
+    if (this.helpers.has(name)) {
+      return this.helpers.get(name)!
+    }
+
+    const base = `_${name}`
+    if (this.bindingNames.size === 0 || !this.bindingNames.has(base)) {
+      this.helpers.set(name, base)
+      return base
+    }
+
+    const map = this.nextIdMap.get(base)
+    // start from 1 because "base" (no suffix) is already taken.
+    const alias = `${base}${getNextId(map, 1)}`
+    this.helpers.set(name, alias)
+    return alias
   }
 
   delegates: Set<string> = new Set<string>()
@@ -68,6 +86,55 @@ export class CodegenContext {
     return [this.scopeLevel++, () => this.scopeLevel--] as const
   }
 
+  private templateVars: Map<number, string> = new Map()
+  private nextIdMap: Map<string, Map<number, number>> = new Map()
+  private lastIdMap: Map<string, number> = new Map()
+  private lastTIndex: number = -1
+  private initNextIdMap(): void {
+    if (this.bindingNames.size === 0) return
+
+    // build a map of binding names to their occupied ids
+    const map = new Map<string, Set<number>>()
+    for (const name of this.bindingNames) {
+      const m = idWithTrailingDigitsRE.exec(name)
+      if (!m) continue
+
+      const prefix = m[1]
+      const num = Number(m[2])
+      let set = map.get(prefix)
+      if (!set) map.set(prefix, (set = new Set<number>()))
+      set.add(num)
+    }
+
+    for (const [prefix, nums] of map) {
+      this.nextIdMap.set(prefix, buildNextIdMap(nums))
+    }
+  }
+
+  tName(i: number): string {
+    let name = this.templateVars.get(i)
+    if (name) return name
+
+    const map = this.nextIdMap.get('t')
+    let lastId = this.lastIdMap.get('t') || -1
+    for (let j = this.lastTIndex + 1; j <= i; j++) {
+      this.templateVars.set(
+        j,
+        (name = `t${(lastId = getNextId(map, Math.max(j, lastId + 1)))}`),
+      )
+    }
+    this.lastIdMap.set('t', lastId)
+    this.lastTIndex = i
+    return name!
+  }
+
+  pName(i: number): string {
+    const map = this.nextIdMap.get('p')
+    let lastId = this.lastIdMap.get('p') || -1
+    this.lastIdMap.set('p', (lastId = getNextId(map, Math.max(i, lastId + 1))))
+    return `p${lastId}`
+  }
+
   constructor(
     public ir: RootIRNode,
     options: CodegenOptions,
@@ -90,6 +157,12 @@ export class CodegenContext {
     }
     this.options = extend(defaultOptions, options)
     this.block = ir.block
+    this.bindingNames = new Set<string>(
+      this.options.bindingMetadata
+        ? Object.keys(this.options.bindingMetadata)
+        : [],
+    )
+    this.initNextIdMap()
   }
 }
 
@@ -105,7 +178,6 @@ export function generate(
 ): VaporCodegenResult {
   const [frag, push] = buildCodeFragment()
   const context = new CodegenContext(ir, options)
-  const { helpers } = context
   const { inline, bindingMetadata } = options
   const functionName = 'render'
 
@@ -138,7 +210,7 @@ export function generate(
 
   const delegates = genDelegates(context)
   const templates = genTemplates(ir.template, ir.rootTemplateIndexes, context)
-  const imports = genHelperImports(context)
+  const imports = genHelperImports(context) + genAssetImports(context)
   const preamble = imports + templates + delegates
 
   const newlineCount = [...preamble].filter(c => c === '\n').length
@@ -156,7 +228,7 @@ export function generate(
     ast: ir,
     preamble,
     map: map && map.toJSON(),
-    helpers,
+    helpers: new Set<string>(Array.from(context.helpers.keys())),
   }
 }
 
@@ -169,12 +241,23 @@ function genDelegates({ delegates, helper }: CodegenContext) {
     : ''
 }
 
-function genHelperImports({ helpers, helper, options }: CodegenContext) {
+function genHelperImports({ helpers, options }: CodegenContext) {
   let imports = ''
   if (helpers.size) {
-    imports += `import { ${[...helpers]
-      .map(h => `${h} as _${h}`)
+    imports += `import { ${Array.from(helpers)
+      .map(([h, alias]) => `${h} as ${alias}`)
       .join(', ')} } from '${options.runtimeModuleName}';\n`
+  }
+  return imports
+}
+
+function genAssetImports({ ir }: CodegenContext) {
+  const assetImports = ir.node.imports
+  let imports = ''
+  for (const assetImport of assetImports) {
+    const exp = assetImport.exp
+    const name = exp.content
+    imports += `import ${name} from '${assetImport.path}';\n`
   }
   return imports
 }

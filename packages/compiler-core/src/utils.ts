@@ -75,7 +75,7 @@ enum MemberExpLexState {
   inString,
 }
 
-const validFirstIdentCharRE = /[A-Za-z_$\xA0-\uFFFF]/
+export const validFirstIdentCharRE: RegExp = /[A-Za-z_$\xA0-\uFFFF]/
 const validIdentCharRE = /[\.\?\w$\xA0-\uFFFF]/
 const whitespaceRE = /\s+[.[]\s*|\s*[.[]\s+/g
 
@@ -190,7 +190,7 @@ export const isMemberExpression: (
 ) => boolean = __BROWSER__ ? isMemberExpressionBrowser : isMemberExpressionNode
 
 const fnExpRE =
-  /^\s*(async\s*)?(\([^)]*?\)|[\w$_]+)\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/
+  /^\s*(?:async\s*)?(?:\([^)]*?\)|[\w$_]+)\s*(?::[^=]+)?=>|^\s*(?:async\s+)?function(?:\s+[\w$]+)?\s*\(/
 
 export const isFnExpressionBrowser: (exp: ExpressionNode) => boolean = exp =>
   fnExpRE.test(getExpSource(exp))

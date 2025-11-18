@@ -5,7 +5,6 @@ import {
   type ElementNode,
   ElementTypes,
   type ForParseResult,
-  Namespaces,
   NodeTypes,
   type RootNode,
   type SimpleExpressionNode,
@@ -14,6 +13,7 @@ import {
   createRoot,
   createSimpleExpression,
 } from './ast'
+import { Namespaces } from '@vue/shared'
 import type { ParserOptions } from './options'
 import Tokenizer, {
   CharCodes,
@@ -1054,7 +1054,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
         `[@vue/compiler-core] decodeEntities option is passed but will be ` +
           `ignored in non-browser builds.`,
       )
-    } else if (__BROWSER__ && !currentOptions.decodeEntities) {
+    } else if (__BROWSER__ && !__TEST__ && !currentOptions.decodeEntities) {
       throw new Error(
         `[@vue/compiler-core] decodeEntities option is required in browser builds.`,
       )

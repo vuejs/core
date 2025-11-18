@@ -1,22 +1,39 @@
 import type { CodegenContext } from '../generate'
-import { DynamicFlag, type IRDynamicInfo } from '../ir'
+import {
+  DynamicFlag,
+  type IRDynamicInfo,
+  type InsertionStateTypes,
+} from '../ir'
 import { genDirectivesForElement } from './directive'
 import { genOperationWithInsertionState } from './operation'
-import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
+import {
+  type CodeFragment,
+  IMPORT_EXPR_RE,
+  NEWLINE,
+  buildCodeFragment,
+  genCall,
+} from './utils'
 
 export function genTemplates(
-  templates: string[],
+  templates: Map<string, number>,
   rootIndexes: Set<number>,
-  { helper }: CodegenContext,
+  context: CodegenContext,
 ): string {
-  return templates
-    .map(
-      (template, i) =>
-        `const t${i} = ${helper('template')}(${JSON.stringify(
-          template,
-        )}${rootIndexes.has(i) ? ', true' : ''})\n`,
+  const result: string[] = []
+  let i = 0
+  templates.forEach((ns, template) => {
+    result.push(
+      `const ${context.tName(i)} = ${context.helper('template')}(${JSON.stringify(
+        template,
+      ).replace(
+        // replace import expressions with string concatenation
+        IMPORT_EXPR_RE,
+        `" + $1 + "`,
+      )}${rootIndexes.has(i) ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`,
     )
-    .join('')
+    i++
+  })
+  return result.join('')
 }
 
 export function genSelf(
@@ -27,7 +44,7 @@ export function genSelf(
   const { id, template, operation, hasDynamicChild } = dynamic
 
   if (id !== undefined && template !== undefined) {
-    push(NEWLINE, `const n${id} = t${template}()`)
+    push(NEWLINE, `const n${id} = ${context.tName(template)}()`)
     push(...genDirectivesForElement(id, context))
   }
 
@@ -54,10 +71,20 @@ export function genChildren(
 
   let offset = 0
   let prev: [variable: string, elementIndex: number] | undefined
+  let ifBranchCount = 0
+  let prependCount = 0
 
   for (const [index, child] of children.entries()) {
+    if (
+      child.operation &&
+      (child.operation as InsertionStateTypes).anchor === -1
+    ) {
+      prependCount++
+    }
     if (child.flags & DynamicFlag.NON_TEMPLATE) {
       offset--
+    } else if (child.ifBranch) {
+      ifBranchCount++
     }
 
     const id =
@@ -72,28 +99,42 @@ export function genChildren(
       continue
     }
 
-    const elementIndex = Number(index) + offset
+    const elementIndex = index + offset
+    const logicalIndex = elementIndex - ifBranchCount + prependCount
     // p for "placeholder" variables that are meant for possible reuse by
     // other access paths
-    const variable = id === undefined ? `p${context.block.tempId++}` : `n${id}`
+    const variable =
+      id === undefined ? context.pName(context.block.tempId++) : `n${id}`
     pushBlock(NEWLINE, `const ${variable} = `)
 
     if (prev) {
       if (elementIndex - prev[1] === 1) {
-        pushBlock(...genCall(helper('next'), prev[0]))
+        pushBlock(...genCall(helper('next'), prev[0], String(logicalIndex)))
       } else {
-        pushBlock(...genCall(helper('nthChild'), from, String(elementIndex)))
+        pushBlock(
+          ...genCall(
+            helper('nthChild'),
+            from,
+            String(elementIndex),
+            String(logicalIndex),
+          ),
+        )
       }
     } else {
       if (elementIndex === 0) {
-        pushBlock(...genCall(helper('child'), from))
+        pushBlock(...genCall(helper('child'), from, String(logicalIndex)))
       } else {
         // check if there's a node that we can reuse from
         let init = genCall(helper('child'), from)
         if (elementIndex === 1) {
-          init = genCall(helper('next'), init)
+          init = genCall(helper('next'), init, String(logicalIndex))
         } else if (elementIndex > 1) {
-          init = genCall(helper('nthChild'), from, String(elementIndex))
+          init = genCall(
+            helper('nthChild'),
+            from,
+            String(elementIndex),
+            String(logicalIndex),
+          )
         }
         pushBlock(...init)
       }

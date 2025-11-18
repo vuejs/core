@@ -10,6 +10,7 @@ import {
   type SchedulerJob,
   callWithErrorHandling,
   createCanSetSetupRefChecker,
+  isAsyncWrapper,
   queuePostFlushCb,
   warn,
 } from '@vue/runtime-dom'
@@ -21,9 +22,12 @@ import {
   isString,
   remove,
 } from '@vue/shared'
-import { DynamicFragment } from './block'
+import { DynamicFragment, isFragment } from './fragment'
 
-export type NodeRef = string | Ref | ((ref: Element) => void)
+export type NodeRef =
+  | string
+  | Ref
+  | ((ref: Element | VaporComponentInstance, refs: Record<string, any>) => void)
 export type RefEl = Element | VaporComponentInstance
 
 export type setRefFn = (
@@ -31,6 +35,7 @@ export type setRefFn = (
   ref: NodeRef,
   oldRef?: NodeRef,
   refFor?: boolean,
+  refKey?: string,
 ) => NodeRef | undefined
 
 export function createTemplateRefSetter(): setRefFn {
@@ -47,12 +52,32 @@ export function setRef(
   ref: NodeRef,
   oldRef?: NodeRef,
   refFor = false,
+  refKey?: string,
 ): NodeRef | undefined {
   if (!instance || instance.isUnmounted) return
 
+  // vdom interop
+  if (isFragment(el) && el.setRef) {
+    el.setRef(instance, ref, refFor, refKey)
+    return
+  }
+
+  const isVaporComp = isVaporComponent(el)
+  if (isVaporComp && isAsyncWrapper(el as VaporComponentInstance)) {
+    const i = el as VaporComponentInstance
+    const frag = i.block as DynamicFragment
+    // async component not resolved yet
+    if (!i.type.__asyncResolved) {
+      frag.setRef = i => setRef(instance, i, ref, oldRef, refFor)
+      return
+    }
+
+    // set ref to the inner component instead
+    el = frag.nodes as VaporComponentInstance
+  }
+
   const setupState: any = __DEV__ ? instance.setupState || {} : null
   const refValue = getRefValue(el)
-
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
 
@@ -107,6 +132,7 @@ export function setRef(
               }
             } else {
               ref.value = existing
+              if (refKey) refs[refKey] = existing
             }
           } else if (!existing.includes(refValue)) {
             existing.push(refValue)
@@ -118,6 +144,7 @@ export function setRef(
           }
         } else if (_isRef) {
           ref.value = refValue
+          if (refKey) refs[refKey] = refValue
         } else if (__DEV__) {
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
         }
@@ -136,6 +163,7 @@ export function setRef(
             }
           } else if (_isRef) {
             ref.value = null
+            if (refKey) refs[refKey] = null
           }
         })
       })

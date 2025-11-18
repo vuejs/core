@@ -34,7 +34,7 @@ describe('compiler: v-if', () => {
 
     expect(helpers).contains('createIf')
 
-    expect(ir.template).toEqual(['<div> </div>'])
+    expect([...ir.template.keys()]).toEqual(['<div> </div>'])
 
     const op = ir.block.dynamic.children[0].operation
     expect(op).toMatchObject({
@@ -73,7 +73,7 @@ describe('compiler: v-if', () => {
     expect(code).contains(`_template("<div>foo</div>")`)
     expect(code).contains(`_template("<div>bar</div>")`)
     expect(code).contains(`_template("<div>baz</div>")`)
-    expect(ir.template).toMatchObject([
+    expect([...ir.template.keys()]).toMatchObject([
       '<div>foo</div>',
       '<div>bar</div>',
       '<div>baz</div>',
@@ -89,7 +89,7 @@ describe('compiler: v-if', () => {
     expect(code).contains(`_template("<div>foo</div>")`)
     expect(code).contains(`_template("<div>bar</div>")`)
     expect(code).contains(`_template("<div>baz</div>")`)
-    expect(ir.template).toMatchObject([
+    expect([...ir.template.keys()]).toMatchObject([
       '<div>foo</div>',
       '<div>bar</div>',
       '<div>baz</div>',
@@ -102,7 +102,11 @@ describe('compiler: v-if', () => {
     )
     expect(code).matchSnapshot()
 
-    expect(ir.template).toEqual(['<div></div>', 'hello', '<p> </p>'])
+    expect([...ir.template.keys()]).toEqual([
+      '<div></div>',
+      'hello',
+      '<p> </p>',
+    ])
     expect(ir.block.effect).toEqual([])
     const op = ir.block.dynamic.children[0].operation as IfIRNode
     expect(op.positive.effect).toMatchObject([
@@ -137,7 +141,7 @@ describe('compiler: v-if', () => {
 
     expect(code).toMatchSnapshot()
     expect(code).toContain('_template("hello")')
-    expect(ir.template).toMatchObject(['hello'])
+    expect([...ir.template.keys()]).toMatchObject(['hello'])
   })
 
   test('template v-if (single element)', () => {
@@ -148,7 +152,7 @@ describe('compiler: v-if', () => {
 
     expect(code).toMatchSnapshot()
     expect(code).toContain('_template("<div>hi</div>", true)')
-    expect(ir.template).toMatchObject(['<div>hi</div>'])
+    expect([...ir.template.keys()]).toMatchObject(['<div>hi</div>'])
   })
 
   test('template v-if (multiple element)', () => {
@@ -159,7 +163,10 @@ describe('compiler: v-if', () => {
     expect(code).toMatchSnapshot()
     expect(code).toContain('_template("<div>hi</div>")')
     expect(code).toContain('_template("<div>ho</div>")')
-    expect(ir.template).toMatchObject(['<div>hi</div>', '<div>ho</div>'])
+    expect([...ir.template.keys()]).toMatchObject([
+      '<div>hi</div>',
+      '<div>ho</div>',
+    ])
   })
 
   test('template v-if (with v-for inside)', () => {
@@ -169,7 +176,7 @@ describe('compiler: v-if', () => {
 
     expect(code).toMatchSnapshot()
     expect(code).toContain('_template("<div></div>")')
-    expect(ir.template).toMatchObject(['<div></div>'])
+    expect([...ir.template.keys()]).toMatchObject(['<div></div>'])
   })
 
   test('template v-if + normal v-else', () => {
@@ -181,7 +188,7 @@ describe('compiler: v-if', () => {
     expect(code).toContain('_template("<div>hi</div>")')
     expect(code).toContain('_template("<div>ho</div>")')
     expect(code).toContain('_template("<div></div>", true)')
-    expect(ir.template).toMatchObject([
+    expect([...ir.template.keys()]).toMatchObject([
       '<div>hi</div>',
       '<div>ho</div>',
       '<div></div>',
@@ -193,7 +200,7 @@ describe('compiler: v-if', () => {
       `<div v-if="ok">hello</div><div v-if="ok">hello</div>`,
     )
     expect(code).matchSnapshot()
-    expect(ir.template).toEqual(['<div>hello</div>'])
+    expect([...ir.template.keys()]).toEqual(['<div>hello</div>'])
     expect(ir.block.returns).toEqual([0, 3])
   })
 
@@ -203,7 +210,7 @@ describe('compiler: v-if', () => {
   test('v-if + v-else', () => {
     const { code, ir, helpers } = compileWithVIf(`<div v-if="ok"/><p v-else/>`)
     expect(code).matchSnapshot()
-    expect(ir.template).toEqual(['<div></div>', '<p></p>'])
+    expect([...ir.template.keys()]).toEqual(['<div></div>', '<p></p>'])
 
     expect(helpers).contains('createIf')
     expect(ir.block.effect).lengthOf(0)
@@ -236,7 +243,7 @@ describe('compiler: v-if', () => {
       `<div v-if="ok"/><p v-else-if="orNot"/>`,
     )
     expect(code).matchSnapshot()
-    expect(ir.template).toEqual(['<div></div>', '<p></p>'])
+    expect([...ir.template.keys()]).toEqual(['<div></div>', '<p></p>'])
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.IF,
@@ -272,10 +279,10 @@ describe('compiler: v-if', () => {
 
   test('v-if + v-else-if + v-else', () => {
     const { code, ir } = compileWithVIf(
-      `<div v-if="ok"/><p v-else-if="orNot"/><template v-else>fine</template>`,
+      `<div v-if="ok"/><p v-else-if="orNot"/><p v-else-if="false"/><template v-else>fine</template>`,
     )
     expect(code).matchSnapshot()
-    expect(ir.template).toEqual(['<div></div>', '<p></p>', 'fine'])
+    expect([...ir.template.keys()]).toEqual(['<div></div>', '<p></p>', 'fine'])
 
     expect(ir.block.returns).toEqual([0])
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -296,9 +303,12 @@ describe('compiler: v-if', () => {
           },
         },
         negative: {
-          type: IRNodeTypes.BLOCK,
-          dynamic: {
-            children: [{ template: 2 }],
+          type: IRNodeTypes.IF,
+          negative: {
+            type: IRNodeTypes.BLOCK,
+            dynamic: {
+              children: [{ template: 2 }],
+            },
           },
         },
       },
@@ -326,7 +336,7 @@ describe('compiler: v-if', () => {
       <div v-text="text" />
     `)
     expect(code).matchSnapshot()
-    expect(ir.template).toEqual([
+    expect([...ir.template.keys()]).toEqual([
       '<div></div>',
       '<!--foo-->',
       '<p></p>',

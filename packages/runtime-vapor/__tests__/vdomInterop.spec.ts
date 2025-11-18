@@ -1,12 +1,24 @@
 import {
+  KeepAlive,
+  type ShallowRef,
   createVNode,
   defineComponent,
   h,
+  inject,
   nextTick,
+  onActivated,
+  onBeforeMount,
+  onDeactivated,
+  onMounted,
+  onUnmounted,
+  provide,
   ref,
   renderSlot,
+  resolveDynamicComponent,
+  shallowRef,
   toDisplayString,
   useModel,
+  useTemplateRef,
 } from '@vue/runtime-dom'
 import { makeInteropRender } from './_utils'
 import {
@@ -14,6 +26,7 @@ import {
   applyVShow,
   child,
   createComponent,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   renderEffect,
   setText,
@@ -41,6 +54,28 @@ describe('vdomInterop', () => {
       }).render()
 
       expect(html()).toBe('foo')
+    })
+
+    test('should handle class prop when vapor renders vdom component', () => {
+      const VDomChild = defineComponent({
+        setup() {
+          return () => h('div', { class: 'foo' })
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(VDomChild as any, { class: () => 'bar' })
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div class="foo bar"></div>')
     })
   })
 
@@ -205,13 +240,122 @@ describe('vdomInterop', () => {
     })
   })
 
-  describe.todo('provide', () => {})
+  describe('provide / inject', () => {
+    it('should inject value from vdom parent', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          const foo = inject('foo')
+          const n0 = template(' ')() as any
+          renderEffect(() => setText(n0, toDisplayString(foo)))
+          return n0
+        },
+      })
 
-  describe.todo('inject', () => {})
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          provide('foo', value)
+          return () => h(VaporChild as any)
+        },
+      }).render()
 
-  describe.todo('template ref', () => {})
+      expect(html()).toBe('foo')
 
-  describe.todo('dynamic component', () => {})
+      value.value = 'bar'
+      await nextTick()
+      expect(html()).toBe('bar')
+    })
+  })
+
+  describe('template ref', () => {
+    it('useTemplateRef with vapor child', async () => {
+      const VaporChild = defineVaporComponent({
+        setup(_, { expose }) {
+          const foo = ref('foo')
+          expose({ foo })
+          const n0 = template(' ')() as any
+          renderEffect(() => setText(n0, toDisplayString(foo)))
+          return n0
+        },
+      })
+
+      let elRef: ShallowRef
+      const { html } = define({
+        setup() {
+          elRef = useTemplateRef('el')
+          return () => h(VaporChild as any, { ref: 'el' })
+        },
+      }).render()
+
+      expect(html()).toBe('foo')
+
+      elRef!.value.foo = 'bar'
+      await nextTick()
+      expect(html()).toBe('bar')
+    })
+
+    it('static ref with vapor child', async () => {
+      const VaporChild = defineVaporComponent({
+        setup(_, { expose }) {
+          const foo = ref('foo')
+          expose({ foo })
+          const n0 = template(' ')() as any
+          renderEffect(() => setText(n0, toDisplayString(foo)))
+          return n0
+        },
+      })
+
+      let elRef: ShallowRef
+      const { html } = define({
+        setup() {
+          elRef = shallowRef()
+          return { elRef }
+        },
+        render() {
+          return h(VaporChild as any, { ref: 'elRef' })
+        },
+      }).render()
+
+      expect(html()).toBe('foo')
+
+      elRef!.value.foo = 'bar'
+      await nextTick()
+      expect(html()).toBe('bar')
+    })
+  })
+
+  describe('dynamic component', () => {
+    it('dynamic component with vapor child', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor child</div>')() as any
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('div', 'vdom child')
+        },
+      })
+
+      const view = shallowRef<any>(VaporChild)
+      const { html } = define({
+        setup() {
+          return () => h(resolveDynamicComponent(view.value) as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>vapor child</div>')
+
+      view.value = VdomChild
+      await nextTick()
+      expect(html()).toBe('<div>vdom child</div>')
+
+      view.value = VaporChild
+      await nextTick()
+      expect(html()).toBe('<div>vapor child</div>')
+    })
+  })
 
   describe('attribute fallthrough', () => {
     it('should fallthrough attrs to vdom child', () => {
@@ -273,6 +417,142 @@ describe('vdomInterop', () => {
 
       // fn should be called once
       expect(fn).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('async component', () => {
+    const duration = 5
+    test('render vapor async component', async () => {
+      const VdomChild = {
+        setup() {
+          return () => h('div', 'foo')
+        },
+      }
+      const VaporAsyncChild = defineVaporAsyncComponent({
+        loader: () => {
+          return new Promise(r => {
+            setTimeout(() => {
+              r(VdomChild as any)
+            }, duration)
+          })
+        },
+        loadingComponent: () => h('span', 'loading...'),
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporAsyncChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>loading...</span><!--async component-->')
+
+      await new Promise(r => setTimeout(r, duration))
+      await nextTick()
+      expect(html()).toBe('<div>foo</div><!--async component-->')
+    })
+  })
+
+  describe('keepalive', () => {
+    function assertHookCalls(
+      hooks: {
+        beforeMount: any
+        mounted: any
+        activated: any
+        deactivated: any
+        unmounted: any
+      },
+      callCounts: number[],
+    ) {
+      expect([
+        hooks.beforeMount.mock.calls.length,
+        hooks.mounted.mock.calls.length,
+        hooks.activated.mock.calls.length,
+        hooks.deactivated.mock.calls.length,
+        hooks.unmounted.mock.calls.length,
+      ]).toEqual(callCounts)
+    }
+
+    let hooks: any
+    beforeEach(() => {
+      hooks = {
+        beforeMount: vi.fn(),
+        mounted: vi.fn(),
+        activated: vi.fn(),
+        deactivated: vi.fn(),
+        unmounted: vi.fn(),
+      }
+    })
+
+    test('render vapor component', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          const msg = ref('vapor')
+          onBeforeMount(() => hooks.beforeMount())
+          onMounted(() => hooks.mounted())
+          onActivated(() => hooks.activated())
+          onDeactivated(() => hooks.deactivated())
+          onUnmounted(() => hooks.unmounted())
+
+          const n0 = template('<input type="text">', true)() as any
+          applyTextModel(
+            n0,
+            () => msg.value,
+            _value => (msg.value = _value),
+          )
+          return n0
+        },
+      })
+
+      const show = ref(true)
+      const toggle = ref(true)
+      const { html, host } = define({
+        setup() {
+          return () =>
+            show.value
+              ? h(KeepAlive, null, {
+                  default: () => (toggle.value ? h(VaporChild as any) : null),
+                })
+              : null
+        },
+      }).render()
+
+      expect(html()).toBe('<input type="text">')
+      let inputEl = host.firstChild as HTMLInputElement
+      expect(inputEl.value).toBe('vapor')
+      assertHookCalls(hooks, [1, 1, 1, 0, 0])
+
+      // change input value
+      inputEl.value = 'changed'
+      inputEl.dispatchEvent(new Event('input'))
+      await nextTick()
+
+      // deactivate
+      toggle.value = false
+      await nextTick()
+      expect(html()).toBe('<!---->')
+      assertHookCalls(hooks, [1, 1, 1, 1, 0])
+
+      // activate
+      toggle.value = true
+      await nextTick()
+      expect(html()).toBe('<input type="text">')
+      inputEl = host.firstChild as HTMLInputElement
+      expect(inputEl.value).toBe('changed')
+      assertHookCalls(hooks, [1, 1, 2, 1, 0])
+
+      // unmount keepalive
+      show.value = false
+      await nextTick()
+      expect(html()).toBe('<!---->')
+      assertHookCalls(hooks, [1, 1, 2, 2, 1])
+
+      // mount keepalive
+      show.value = true
+      await nextTick()
+      inputEl = host.firstChild as HTMLInputElement
+      expect(inputEl.value).toBe('vapor')
+      assertHookCalls(hooks, [2, 2, 3, 2, 1])
     })
   })
 })
