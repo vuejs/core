@@ -370,6 +370,22 @@ function getCheckboxValue(
   return checked
 }
 
+export const vModelDetails: ModelDirective<HTMLDetailsElement> = {
+  created(el, { value }, vnode) {
+    el.open = looseEqual(value, vnode.props!.value)
+    el[assignKey] = getModelAssigner(vnode)
+    addEventListener(el, 'toggle', () => {
+      el[assignKey](el.open)
+    })
+  },
+  beforeUpdate(el, { value, oldValue }, vnode) {
+    el[assignKey] = getModelAssigner(vnode)
+    if (value !== oldValue) {
+      el.open = looseEqual(value, vnode.props!.value)
+    }
+  },
+}
+
 export const vModelDynamic: ObjectDirective<
   HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 > = {
@@ -393,6 +409,8 @@ function resolveDynamicModel(tagName: string, type: string | undefined) {
       return vModelSelect
     case 'TEXTAREA':
       return vModelText
+    case 'DETAILS':
+      return vModelDetails
     default:
       switch (type) {
         case 'checkbox':
@@ -465,4 +483,5 @@ export type VModelDirective =
   | typeof vModelCheckbox
   | typeof vModelSelect
   | typeof vModelRadio
+  | typeof vModelDetails
   | typeof vModelDynamic

@@ -1496,4 +1496,35 @@ describe('vModel', () => {
     await nextTick()
     expect(foo.checked).toEqual(false)
   })
+
+  it('should work with details', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('details', {
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const details: HTMLDetailsElement = root.querySelector('details')
+    const data = root._vnode.component.data
+
+    details.open = true
+    triggerEvent('toggle', details)
+    await nextTick()
+    expect(data.value).toEqual(true)
+
+    data.value = false
+    await nextTick()
+    expect(details.open).toEqual(false)
+  })
 })
