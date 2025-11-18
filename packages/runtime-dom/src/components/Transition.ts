@@ -378,11 +378,35 @@ function whenTransitionEnds(
       end()
     }
   }
-  setTimeout(() => {
-    if (ended < propCount) {
-      end()
+  // setTimeout(() => {
+  //   if (ended < propCount) {
+  //     end()
+  //   }
+  // }, timeout + 1)
+
+  const fallbackTimeout = () => {
+    let loopStart: number | null = null
+    const loop = (timeStamp: number) => {
+      if (!loopStart) {
+        loopStart = timeStamp
+      }
+
+      const elapsed = timeStamp - loopStart
+      if (elapsed >= timeout + 1) {
+        if (ended < propCount) {
+          end()
+          return
+        }
+      }
+
+      requestAnimationFrame(loop)
     }
-  }, timeout + 1)
+
+    requestAnimationFrame(loop)
+  }
+
+  fallbackTimeout()
+
   el.addEventListener(endEvent, onEnd)
 }
 
