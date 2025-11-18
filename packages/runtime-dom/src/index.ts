@@ -284,6 +284,7 @@ export {
   vModelCheckbox,
   vModelRadio,
   vModelSelect,
+  vModelDetails,
   vModelDynamic,
 } from './directives/vModel'
 export { withModifiers, withKeys } from './directives/vOn'

@@ -34,6 +34,7 @@ registerRuntimeHelpers({
   [V_MODEL_CHECKBOX]: `vModelCheckbox`,
   [V_MODEL_TEXT]: `vModelText`,
   [V_MODEL_SELECT]: `vModelSelect`,
+  [V_MODEL_DETAILS]: `vModelDetails`,
   [V_MODEL_DYNAMIC]: `vModelDynamic`,
   [V_ON_WITH_MODIFIERS]: `withModifiers`,
   [V_ON_WITH_KEYS]: `withKeys`,

@@ -11,6 +11,7 @@ import {
 import { DOMErrorCodes, createDOMCompilerError } from '../errors'
 import {
   V_MODEL_CHECKBOX,
+  V_MODEL_DETAILS,
   V_MODEL_DYNAMIC,
   V_MODEL_RADIO,
   V_MODEL_SELECT,
@@ -95,6 +96,8 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       }
     } else if (tag === 'select') {
       directiveToUse = V_MODEL_SELECT
+    } else if (tag === 'details') {
+      directiveToUse = V_MODEL_DETAILS
     } else {
       // textarea
       __DEV__ && checkDuplicatedValue()
