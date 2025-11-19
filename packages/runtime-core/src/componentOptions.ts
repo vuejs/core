@@ -1194,7 +1194,7 @@ export type ComponentOptionsWithoutProps<
       S,
       LC,
       Directives,
-      Exposed
+      string
     >
   >
 
@@ -1256,7 +1256,7 @@ export type ComponentOptionsWithArrayProps<
       S,
       LC,
       Directives,
-      Exposed
+      string
     >
   >
 
