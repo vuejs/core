@@ -2107,3 +2107,38 @@ defineComponent({
     expectType<string>(this.$props)
   },
 })
+
+// expose should not break other instance properties
+defineComponent({
+  setup() {
+    const setup1 = ref('setup1')
+    const setup2 = ref('setup2')
+    return { setup1, setup2 }
+  },
+  data() {
+    return {
+      data1: 1,
+    }
+  },
+  props: {
+    props1: {
+      type: String,
+    },
+  },
+  methods: {
+    methods1() {
+      return `methods1`
+    },
+  },
+  computed: {
+    computed1() {
+      this.setup1
+      this.setup2
+      this.data1
+      this.props1
+      this.methods1()
+      return `computed1`
+    },
+  },
+  expose: ['setup1'],
+})
