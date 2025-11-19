@@ -53,10 +53,15 @@ let currentFlushPromise: Promise<void> | null = null
 const RECURSION_LIMIT = 100
 type CountMap = Map<SchedulerJob, number>
 
-export function nextTick<T = void, R = void>(
+export function nextTick(): Promise<void>
+export function nextTick<T, R>(
   this: T,
-  fn?: (this: T) => R,
-): Promise<Awaited<R>> {
+  fn: (this: T) => R | Promise<R>,
+): Promise<R>
+export function nextTick<T, R>(
+  this: T,
+  fn?: (this: T) => R | Promise<R>,
+): Promise<void | R> {
   const p = currentFlushPromise || resolvedPromise
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
