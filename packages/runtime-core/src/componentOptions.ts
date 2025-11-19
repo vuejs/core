@@ -444,8 +444,8 @@ interface LegacyOptions<
    * #3468
    *
    * type-only, used to assist Mixin's type inference,
-   * typescript will try to simplify the inferred `Mixin` type,
-   * with the `__differentiator`, typescript won't be able to combine different mixins,
+   * TypeScript will try to simplify the inferred `Mixin` type,
+   * with the `__differentiator`, TypeScript won't be able to combine different mixins,
    * because the `__differentiator` will be different
    */
   __differentiator?: keyof D | keyof C | keyof M
@@ -756,6 +756,7 @@ export function applyOptions(instance: ComponentInternalInstance): void {
         Object.defineProperty(exposed, key, {
           get: () => publicThis[key],
           set: val => (publicThis[key] = val),
+          enumerable: true,
         })
       })
     } else if (!instance.exposed) {
@@ -851,7 +852,7 @@ export function createWatcher(
 ): void {
   let getter = key.includes('.')
     ? createPathGetter(publicThis, key)
-    : () => (publicThis as any)[key]
+    : () => publicThis[key as keyof typeof publicThis]
 
   const options: WatchOptions = {}
   if (__COMPAT__) {

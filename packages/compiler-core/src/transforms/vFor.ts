@@ -49,7 +49,6 @@ import {
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { PatchFlags } from '@vue/shared'
-import { transformBindShorthand } from './vBind'
 
 export const transformFor: NodeTransform = createStructuralDirectiveTransform(
   'for',
@@ -65,10 +64,6 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
       const memo = findDir(node, 'memo')
       const keyProp = findProp(node, `key`, false, true)
       const isDirKey = keyProp && keyProp.type === NodeTypes.DIRECTIVE
-      if (isDirKey && !keyProp.exp) {
-        // resolve :key shorthand #10882
-        transformBindShorthand(keyProp, context)
-      }
       let keyExp =
         keyProp &&
         (keyProp.type === NodeTypes.ATTRIBUTE
@@ -266,7 +261,7 @@ export function processFor(
   dir: DirectiveNode,
   context: TransformContext,
   processCodegen?: (forNode: ForNode) => (() => void) | undefined,
-) {
+): (() => void) | undefined {
   if (!dir.exp) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_FOR_NO_EXPRESSION, dir.loc),

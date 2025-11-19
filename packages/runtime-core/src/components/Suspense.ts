@@ -235,7 +235,7 @@ function patchSuspense(
   const { activeBranch, pendingBranch, isInFallback, isHydrating } = suspense
   if (pendingBranch) {
     suspense.pendingBranch = newBranch
-    if (isSameVNodeType(newBranch, pendingBranch)) {
+    if (isSameVNodeType(pendingBranch, newBranch)) {
       // same root type but content may have changed.
       patch(
         pendingBranch,
@@ -321,7 +321,7 @@ function patchSuspense(
           )
           setActiveBranch(suspense, newFallback)
         }
-      } else if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
+      } else if (activeBranch && isSameVNodeType(activeBranch, newBranch)) {
         // toggled "back" to current active branch
         patch(
           activeBranch,
@@ -355,7 +355,7 @@ function patchSuspense(
       }
     }
   } else {
-    if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
+    if (activeBranch && isSameVNodeType(activeBranch, newBranch)) {
       // root did not change, just normal patch
       patch(
         activeBranch,
@@ -530,6 +530,7 @@ function createSuspenseBoundary(
         effects,
         parentComponent,
         container,
+        isInFallback,
       } = suspense
 
       // if there's a transition happening we need to wait it to finish.
@@ -551,6 +552,10 @@ function createSuspenseBoundary(
                 MoveType.ENTER,
               )
               queuePostFlushCb(effects)
+              // clear el reference from fallback vnode to allow GC after transition
+              if (isInFallback && vnode.ssFallback) {
+                vnode.ssFallback.el = null
+              }
             }
           }
         }
@@ -570,6 +575,11 @@ function createSuspenseBoundary(
             anchor = next(activeBranch)
           }
           unmount(activeBranch, parentComponent, suspense, true)
+          // clear el reference from fallback vnode to allow GC
+          // only clear immediately if there's no delayed transition
+          if (!delayEnter && isInFallback && vnode.ssFallback) {
+            vnode.ssFallback.el = null
+          }
         }
         if (!delayEnter) {
           // move content from off-dom container to actual container
@@ -728,6 +738,8 @@ function createSuspenseBoundary(
             optimized,
           )
           if (placeholder) {
+            // clean up placeholder reference
+            vnode.placeholder = null
             remove(placeholder)
           }
           updateHOCHostEl(instance, vnode.el)
