@@ -2108,7 +2108,7 @@ defineComponent({
   },
 })
 
-// expose should not break other instance properties
+// #14117
 defineComponent({
   setup() {
     const setup1 = ref('setup1')
