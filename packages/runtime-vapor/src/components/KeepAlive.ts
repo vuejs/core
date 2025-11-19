@@ -29,8 +29,10 @@ import { createElement } from '../dom/node'
 import {
   type DynamicFragment,
   type VaporFragment,
+  isDynamicFragment,
   isFragment,
 } from '../fragment'
+import type { EffectScope } from '@vue/reactivity'
 
 export interface KeepAliveInstance extends VaporComponentInstance {
   activate: (
@@ -44,8 +46,6 @@ export interface KeepAliveInstance extends VaporComponentInstance {
     comp: VaporComponent,
   ) => VaporComponentInstance | VaporFragment | undefined
   getStorageContainer: () => ParentNode
-  processFragment: (fragment: DynamicFragment) => void
-  cacheFragment: (fragment: DynamicFragment) => void
 }
 
 type CacheKey = VaporComponent | VNode['type']
@@ -69,6 +69,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     const cache: Cache = new Map()
     const keys: Keys = new Set()
     const storageContainer = createElement('div')
+    const keptAliveScopes = new Map<any, EffectScope>()
     let current: VaporComponentInstance | VaporFragment | undefined
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -163,6 +164,8 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
         remove(cached, storageContainer)
       })
+      keptAliveScopes.forEach(scope => scope.stop())
+      keptAliveScopes.clear()
     })
 
     keepAliveInstance.getStorageContainer = () => storageContainer
@@ -177,7 +180,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       innerCacheBlock(instance.type, instance)
     }
 
-    keepAliveInstance.processFragment = (frag: DynamicFragment) => {
+    const processFragment = (frag: DynamicFragment) => {
       const innerBlock = getInnerBlock(frag.nodes)
       if (!innerBlock) return
 
@@ -199,7 +202,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       }
     }
 
-    keepAliveInstance.cacheFragment = (fragment: DynamicFragment) => {
+    const cacheFragment = (fragment: DynamicFragment) => {
       const innerBlock = getInnerBlock(fragment.nodes)
       if (!innerBlock || !shouldCache(innerBlock)) return
 
@@ -208,7 +211,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       let key: CacheKey
 
       // find vdom interop fragment
-      const frag = findInteropFragment(fragment)
+      const frag = findInteropFragment(fragment.nodes)
       if (frag) {
         frag.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
         toCache = frag
@@ -256,6 +259,27 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       children.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
     } else if (isInteropFragment(children)) {
       children.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    } else if (isDynamicFragment(children)) {
+      children.hooks = {
+        beforeUpdate(oldKey, newKey) {
+          processFragment(children)
+          const scope = children.scope
+          if (scope) {
+            keptAliveScopes.set(oldKey, scope)
+          }
+        },
+        afterUpdate(newKey, nodes, scope) {
+          cacheFragment(children)
+        },
+        getScope(key) {
+          const scope = keptAliveScopes.get(key)
+          if (scope) {
+            keptAliveScopes.delete(key)
+            return scope
+          }
+        },
+      }
+      cacheFragment(children)
     }
 
     function pruneCache(filter: (name: string) => boolean) {
