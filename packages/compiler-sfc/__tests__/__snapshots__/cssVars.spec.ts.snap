@@ -60,7 +60,7 @@ _useCssVars(_ctx => ({
   "xxxxxxxx-width": (width)
 }))
 
-return { color, width }
+return { get color() { return color }, set color(v) { throw new Error('Assignment to constant variable.') }, get width() { return width }, set width(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -101,7 +101,7 @@ _useCssVars(_ctx => ({
   "xxxxxxxx-color": (color)
 }))
 
-return { color }
+return { get color() { return color }, set color(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -120,7 +120,7 @@ _useCssVars(_ctx => ({
 }))
 
         
-return { color }
+return { get color() { return color }, set color(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -164,7 +164,7 @@ _useCssVars(_ctx => ({
         const size = ref('10px')
         
         
-return { color, size, ref }
+return { get color() { return color }, set color(v) { throw new Error('Assignment to constant variable.') }, size, get ref() { return ref }, set ref(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
