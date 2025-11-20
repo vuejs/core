@@ -191,7 +191,8 @@ export class DynamicFragment extends VaporFragment {
 
       if (parent) {
         insert(this.nodes, parent, this.anchor)
-        if (this.updated) {
+        // anchor isConnected indicates the this render is updated
+        if (this.anchor.isConnected && this.updated) {
           this.updated.forEach(hook => hook(this.nodes))
         }
       }
