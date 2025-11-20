@@ -225,11 +225,14 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     })
 
     let children = slots.default()
-    if (isArray(children) && children.length > 1) {
-      if (__DEV__) {
-        warn(`KeepAlive should contain exactly one component child.`)
+    if (isArray(children)) {
+      children = children.filter(child => !(child instanceof Comment))
+      if (children.length > 1) {
+        if (__DEV__) {
+          warn(`KeepAlive should contain exactly one component child.`)
+        }
+        return children
       }
-      return children
     }
 
     // inject hooks to DynamicFragment to cache components during updates
