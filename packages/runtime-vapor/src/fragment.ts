@@ -52,6 +52,9 @@ export class VaporFragment<T extends Block = Block>
     refKey: string | undefined,
   ) => void
 
+  // hooks
+  updated?: ((nodes?: Block) => void)[]
+
   constructor(nodes: T) {
     this.nodes = nodes
   }
@@ -80,7 +83,6 @@ export class DynamicFragment extends VaporFragment {
     scope: EffectScope,
   ) => boolean)[]
   beforeMount?: ((newKey: any, nodes: Block, scope: EffectScope) => void)[]
-  mounted?: ((nodes: Block, scope: EffectScope) => void)[]
 
   constructor(anchorLabel?: string) {
     super([])
@@ -189,8 +191,8 @@ export class DynamicFragment extends VaporFragment {
 
       if (parent) {
         insert(this.nodes, parent, this.anchor)
-        if (this.mounted) {
-          this.mounted.forEach(hook => hook(this.nodes, this.scope!))
+        if (this.updated) {
+          this.updated.forEach(hook => hook(this.nodes))
         }
       }
     } else {
