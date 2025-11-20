@@ -230,10 +230,9 @@ function setClassIncremental(el: any, value: any): void {
 
 /**
  * dev only
- * if a component uses style v-bind, or an el's style contains style vars (potentially
- * fallthrough from parent components), then style matching checks must be deferred until
- * after hydration (when instance.block is set). At this point, it can be confirmed
- * whether the el is at the root level of the component.
+ * defer style matching checks until hydration completes (instance.block is set) if
+ * the component uses style v-bind or the element contains CSS variables, to correctly
+ * verify if the element is the component root.
  */
 function shouldDeferCheckStyleMismatch(el: TargetElement): boolean {
   return (

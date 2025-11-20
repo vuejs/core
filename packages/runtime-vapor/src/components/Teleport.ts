@@ -100,8 +100,8 @@ export class TeleportFragment extends VaporFragment {
     })
 
     const nodes = this.nodes
-    // register updateCssVars to sub fragments's effects so that
-    // updateCssVars will be called when subtree changed
+    // register updateCssVars to root fragments's update hooks so that
+    // it will be called when root fragment changed
     if (this.parentComponent && this.parentComponent.ut) {
       if (isFragment(nodes)) {
         ;(nodes.updated || (nodes.updated = [])).push(() => updateCssVars(this))
