@@ -43,7 +43,6 @@ export interface KeepAliveInstance extends VaporComponentInstance {
     anchor?: Node | null | 0,
   ) => void
   deactivate: (instance: VaporComponentInstance) => void
-  cacheComponent: (instance: VaporComponentInstance) => void
   getCachedComponent: (
     comp: VaporComponent,
   ) => VaporComponentInstance | VaporFragment | undefined
@@ -81,14 +80,6 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     keepAliveInstance.getStorageContainer = () => storageContainer
 
     keepAliveInstance.getCachedComponent = comp => cache.get(comp)
-
-    keepAliveInstance.cacheComponent = (instance: VaporComponentInstance) => {
-      if (!shouldCache(instance as GenericComponentInstance, props)) {
-        return
-      }
-      instance.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-      innerCacheBlock(instance.type, instance)
-    }
 
     keepAliveInstance.activate = (instance, parentNode, anchor) => {
       current = instance
@@ -241,33 +232,39 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       return children
     }
 
-    // process shapeFlag
-    if (isVaporComponent(children)) {
-      children.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    } else if (isInteropFragment(children)) {
-      children.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    } else if (isDynamicFragment(children)) {
-      processFragment(children)
-
-      // re-process fragment when fragment updates
-      ;(children.beforeTeardown || (children.beforeTeardown = [])).push(
+    const injectKeepAliveHooks = (frag: DynamicFragment) => {
+      ;(frag.beforeTeardown || (frag.beforeTeardown = [])).push(
         (oldKey, nodes, scope) => {
-          processFragment(children)
+          processFragment(frag)
           keptAliveScopes.set(oldKey, scope)
           return true
         },
       )
-      ;(children.beforeMount || (children.beforeMount = [])).push(() =>
-        cacheFragment(children),
+      ;(frag.beforeMount || (frag.beforeMount = [])).push(() =>
+        cacheFragment(frag),
       )
-
-      // get scope for fragment
-      children.getScope = key => {
+      frag.getScope = key => {
         const scope = keptAliveScopes.get(key)
         if (scope) {
           keptAliveScopes.delete(key)
           return scope
         }
+      }
+    }
+
+    // process shapeFlag
+    if (isVaporComponent(children)) {
+      children.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+      if (isAsyncWrapper(children)) {
+        injectKeepAliveHooks(children.block as DynamicFragment)
+      }
+    } else if (isInteropFragment(children)) {
+      children.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    } else if (isDynamicFragment(children)) {
+      processFragment(children)
+      injectKeepAliveHooks(children)
+      if (isVaporComponent(children.nodes) && isAsyncWrapper(children.nodes)) {
+        injectKeepAliveHooks(children.nodes.block as DynamicFragment)
       }
     }
 
@@ -287,10 +284,9 @@ const shouldCache = (
       : (block as GenericComponentInstance).type
   ) as GenericComponent & AsyncComponentInternalOptions
 
-  // For unresolved async wrappers, skip caching
-  // Wait for resolution and re-process in createInnerComp
+  // always cache unresolved async components
   if (isAsync && !type.__asyncResolved) {
-    return false
+    return true
   }
 
   const { include, exclude } = props
