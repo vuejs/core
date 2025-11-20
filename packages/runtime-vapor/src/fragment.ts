@@ -70,7 +70,7 @@ export class DynamicFragment extends VaporFragment {
   fallback?: BlockFn
   anchorLabel?: string
 
-  // get the scope for the current key when used in keep-alive
+  // get the kept-alive scope when used in keep-alive
   getScope?: (key: any) => EffectScope | undefined
 
   // hooks

@@ -232,6 +232,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       return children
     }
 
+    // inject hooks to DynamicFragment to cache components during updates
     const injectKeepAliveHooks = (frag: DynamicFragment) => {
       ;(frag.beforeTeardown || (frag.beforeTeardown = [])).push(
         (oldKey, nodes, scope) => {
@@ -284,7 +285,7 @@ const shouldCache = (
       : (block as GenericComponentInstance).type
   ) as GenericComponent & AsyncComponentInternalOptions
 
-  // always cache unresolved async components
+  // return true to ensure hooks are injected into its block (DynamicFragment)
   if (isAsync && !type.__asyncResolved) {
     return true
   }
