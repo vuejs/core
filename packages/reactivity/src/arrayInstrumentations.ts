@@ -1,6 +1,14 @@
 import { TrackOpTypes } from './constants'
 import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
-import { isProxy, isShallow, toRaw, toReactive } from './reactive'
+import {
+  isProxy,
+  isReactive,
+  isReadonly,
+  isShallow,
+  toRaw,
+  toReactive,
+  toReadonly,
+} from './reactive'
 import { ARRAY_ITERATE_KEY, track } from './dep'
 import { isArray } from '@vue/shared'
 
@@ -24,11 +32,18 @@ export function shallowReadArray<T>(arr: T[]): T[] {
   return arr
 }
 
+function toWrapped(target: unknown, item: unknown) {
+  if (isReadonly(target)) {
+    return isReactive(target) ? toReadonly(toReactive(item)) : toReadonly(item)
+  }
+  return toReactive(item)
+}
+
 export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   __proto__: null,
 
   [Symbol.iterator]() {
-    return iterator(this, Symbol.iterator, toReactive)
+    return iterator(this, Symbol.iterator, item => toWrapped(this, item))
   },
 
   concat(...args: unknown[]) {
@@ -39,7 +54,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 
   entries() {
     return iterator(this, 'entries', (value: [number, unknown]) => {
-      value[1] = toReactive(value[1])
+      value[1] = toWrapped(this, value[1])
       return value
     })
   },
@@ -55,14 +70,28 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return apply(this, 'filter', fn, thisArg, v => v.map(toReactive), arguments)
+    return apply(
+      this,
+      'filter',
+      fn,
+      thisArg,
+      v => v.map((item: unknown) => toWrapped(this, item)),
+      arguments,
+    )
   },
 
   find(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return apply(this, 'find', fn, thisArg, toReactive, arguments)
+    return apply(
+      this,
+      'find',
+      fn,
+      thisArg,
+      item => toWrapped(this, item),
+      arguments,
+    )
   },
 
   findIndex(
@@ -76,7 +105,14 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return apply(this, 'findLast', fn, thisArg, toReactive, arguments)
+    return apply(
+      this,
+      'findLast',
+      fn,
+      thisArg,
+      item => toWrapped(this, item),
+      arguments,
+    )
   },
 
   findLastIndex(
@@ -189,7 +225,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   values() {
-    return iterator(this, 'values', toReactive)
+    return iterator(this, 'values', item => toWrapped(this, item))
   },
 }
 
@@ -257,7 +293,7 @@ function apply(
   if (arr !== self) {
     if (needsWrap) {
       wrappedFn = function (this: unknown, item, index) {
-        return fn.call(this, toReactive(item), index, self)
+        return fn.call(this, toWrapped(self, item), index, self)
       }
     } else if (fn.length > 2) {
       wrappedFn = function (this: unknown, item, index) {
@@ -281,7 +317,7 @@ function reduce(
   if (arr !== self) {
     if (!isShallow(self)) {
       wrappedFn = function (this: unknown, acc, item, index) {
-        return fn.call(this, acc, toReactive(item), index, self)
+        return fn.call(this, acc, toWrapped(self, item), index, self)
       }
     } else if (fn.length > 3) {
       wrappedFn = function (this: unknown, acc, item, index) {
