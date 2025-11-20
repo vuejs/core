@@ -133,7 +133,7 @@ export const createFor = (
 
     // trigger TransitionGroup update hooks
     const transitionHooks = frag.$transition
-    if (transitionHooks && transitionHooks.group) {
+    if (transitionHooks && transitionHooks.group && isMounted) {
       triggerTransitionGroupUpdate(transitionHooks)
     }
 
