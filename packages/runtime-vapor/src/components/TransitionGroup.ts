@@ -36,7 +36,7 @@ import {
 import { isForBlock } from '../apiCreateFor'
 import { renderEffect } from '../renderEffect'
 import { createElement } from '../dom/node'
-import { DynamicFragment, isFragment } from '../fragment'
+import { isFragment } from '../fragment'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -160,11 +160,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       }
       return container
     } else {
-      const frag = __DEV__
-        ? new DynamicFragment('transition-group')
-        : new DynamicFragment()
-      renderEffect(() => frag.update(() => slottedBlock))
-      return frag
+      return slottedBlock
     }
   },
 })
