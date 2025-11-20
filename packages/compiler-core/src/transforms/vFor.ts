@@ -42,6 +42,7 @@ import {
 import {
   FRAGMENT,
   IS_MEMO_SAME,
+  KEEP_ALIVE,
   OPEN_BLOCK,
   RENDER_LIST,
 } from '../runtimeHelpers'
@@ -203,7 +204,9 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
               )
             }
           }
-          childBlock.isBlock = !isStableFragment
+          // track KeepAlive child as block
+          childBlock.isBlock =
+            childBlock.tag === KEEP_ALIVE || !isStableFragment
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
             helper(getVNodeBlockHelper(context.inSSR, childBlock.isComponent))
