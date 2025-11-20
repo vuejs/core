@@ -48,6 +48,7 @@ import {
   EMPTY_OBJ,
   ShapeFlags,
   invokeArrayFns,
+  isArray,
   isFunction,
   isString,
 } from '@vue/shared'
@@ -70,7 +71,9 @@ import {
   type StaticSlots,
   type VaporSlot,
   dynamicSlotsProxyHandlers,
+  getParentInstance,
   getSlot,
+  setCurrentSlotConsumer,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
@@ -191,15 +194,17 @@ export function createComponent(
     resetInsertionState()
   }
 
+  const parentInstance = getParentInstance()
+
   if (
     isSingleRoot &&
     component.inheritAttrs !== false &&
-    isVaporComponent(currentInstance) &&
-    currentInstance.hasFallthrough
+    isVaporComponent(parentInstance) &&
+    parentInstance.hasFallthrough
   ) {
     // check if we are the single root of the parent
     // if yes, inject parent attrs as dynamic props source
-    const attrs = currentInstance.attrs
+    const attrs = parentInstance.attrs
     if (rawProps) {
       ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
         () => attrs,
@@ -210,12 +215,8 @@ export function createComponent(
   }
 
   // keep-alive
-  if (
-    currentInstance &&
-    currentInstance.vapor &&
-    isKeepAlive(currentInstance)
-  ) {
-    const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
+  if (parentInstance && parentInstance.vapor && isKeepAlive(parentInstance)) {
+    const cached = (parentInstance as KeepAliveInstance).getCachedComponent(
       component,
     )
     // @ts-expect-error
@@ -224,12 +225,14 @@ export function createComponent(
 
   // vdom interop enabled and component is not an explicit vapor component
   if (appContext.vapor && !component.__vapor) {
+    const prevSlotConsumer = setCurrentSlotConsumer(null)
     const frag = appContext.vapor.vdomMount(
       component as any,
+      parentInstance as any,
       rawProps,
       rawSlots,
     )
-
+    setCurrentSlotConsumer(prevSlotConsumer)
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
@@ -262,7 +265,11 @@ export function createComponent(
     rawSlots as RawSlots,
     appContext,
     once,
+    parentInstance,
   )
+
+  // set currentSlotConsumer to null to avoid affecting the child components
+  const prevSlotConsumer = setCurrentSlotConsumer(null)
 
   // HMR
   if (__DEV__ && component.__hmrId) {
@@ -322,6 +329,8 @@ export function createComponent(
     setupComponent(instance, component)
   }
 
+  // restore currentSlotConsumer to previous value after setupFn is called
+  setCurrentSlotConsumer(prevSlotConsumer)
   onScopeDispose(() => unmountComponent(instance), true)
 
   if (_insertionParent || isHydrating) {
@@ -331,6 +340,7 @@ export function createComponent(
   if (isHydrating && _insertionAnchor !== undefined) {
     advanceHydrationNode(_insertionParent!)
   }
+
   return instance
 }
 
@@ -475,6 +485,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   slots: StaticSlots
 
+  scopeId?: string | null
+
   // to hold vnode props / slots in vdom interop mode
   rawPropsRef?: ShallowRef<any>
   rawSlotsRef?: ShallowRef<any>
@@ -541,17 +553,18 @@ export class VaporComponentInstance implements GenericComponentInstance {
     rawSlots?: RawSlots | null,
     appContext?: GenericAppContext,
     once?: boolean,
+    parent: GenericComponentInstance | null = currentInstance,
   ) {
     this.vapor = true
     this.uid = nextUid()
     this.type = comp
-    this.parent = currentInstance
-    this.root = currentInstance ? currentInstance.root : this
+    this.parent = parent
+    this.root = parent ? parent.root : this
 
-    if (currentInstance) {
-      this.appContext = currentInstance.appContext
-      this.provides = currentInstance.provides
-      this.ids = currentInstance.ids
+    if (parent) {
+      this.appContext = parent.appContext
+      this.provides = parent.provides
+      this.ids = parent.ids
     } else {
       this.appContext = appContext || emptyContext
       this.provides = Object.create(this.appContext.provides)
@@ -599,6 +612,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
         ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
         : rawSlots
       : EMPTY_OBJ
+
+    this.scopeId = currentInstance && currentInstance.type.__scopeId
 
     // apply custom element special handling
     if (comp.ce) {
@@ -817,5 +832,26 @@ function getRootElement(block: Block): Element | undefined {
     if (nodes instanceof Element && (nodes as any).$root) {
       return nodes
     }
+  }
+
+  // The root node contains comments. It is necessary to filter out
+  // the comment nodes and return a single root node.
+  // align with vdom behavior
+  if (isArray(block)) {
+    let singleRoot: Element | undefined
+    let hasComment = false
+    for (const b of block) {
+      if (b instanceof Comment) {
+        hasComment = true
+        continue
+      }
+      const thisRoot = getRootElement(b)
+      // only return root if there is exactly one eligible root in the array
+      if (!thisRoot || singleRoot) {
+        return
+      }
+      singleRoot = thisRoot
+    }
+    return hasComment ? singleRoot : undefined
   }
 }

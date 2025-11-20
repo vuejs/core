@@ -1,3 +1,12 @@
+## [3.5.24](https://github.com/vuejs/core/compare/v3.5.23...v3.5.24) (2025-11-07)
+
+
+### Reverts
+
+* Revert "fix(compiler-core): correctly handle ts type assertions in expression…" (#14062) ([11ec51a](https://github.com/vuejs/core/commit/11ec51aa5a7914745fee10ed2b9f9464fab4d02c)), closes [#14062](https://github.com/vuejs/core/issues/14062) [#14060](https://github.com/vuejs/core/issues/14060)
+
+
+
 ## [3.5.23](https://github.com/vuejs/core/compare/v3.5.22...v3.5.23) (2025-11-06)
 
 

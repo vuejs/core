@@ -6,6 +6,7 @@ import {
   transformComment,
   transformElement,
   transformText,
+  transformVFor,
   transformVIf,
   transformVOnce,
   transformVText,
@@ -16,6 +17,7 @@ const compileWithVIf = makeCompile({
   nodeTransforms: [
     transformVOnce,
     transformVIf,
+    transformVFor,
     transformText,
     transformElement,
     transformComment,
@@ -62,6 +64,38 @@ describe('compiler: v-if', () => {
     expect(code).matchSnapshot()
   })
 
+  test('multiple v-if at root', () => {
+    const { code, ir } = compileWithVIf(
+      `<div v-if="foo">foo</div><div v-else-if="bar">bar</div><div v-if="baz">baz</div>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`_template("<div>foo</div>")`)
+    expect(code).contains(`_template("<div>bar</div>")`)
+    expect(code).contains(`_template("<div>baz</div>")`)
+    expect([...ir.template.keys()]).toMatchObject([
+      '<div>foo</div>',
+      '<div>bar</div>',
+      '<div>baz</div>',
+    ])
+  })
+
+  test('v-if and extra at root', () => {
+    const { code, ir } = compileWithVIf(
+      `<div v-if="foo">foo</div><div v-else-if="bar">bar</div><div>baz</div>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`_template("<div>foo</div>")`)
+    expect(code).contains(`_template("<div>bar</div>")`)
+    expect(code).contains(`_template("<div>baz</div>")`)
+    expect([...ir.template.keys()]).toMatchObject([
+      '<div>foo</div>',
+      '<div>bar</div>',
+      '<div>baz</div>',
+    ])
+  })
+
   test('template v-if', () => {
     const { code, ir } = compileWithVIf(
       `<template v-if="ok"><div/>hello<p v-text="msg"/></template>`,
@@ -100,6 +134,65 @@ describe('compiler: v-if', () => {
         },
       },
     })
+  })
+
+  test('template v-if (text)', () => {
+    const { code, ir } = compileWithVIf(`<template v-if="foo">hello</template>`)
+
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_template("hello")')
+    expect([...ir.template.keys()]).toMatchObject(['hello'])
+  })
+
+  test('template v-if (single element)', () => {
+    // single element should not wrap with fragment
+    const { code, ir } = compileWithVIf(
+      `<template v-if="foo"><div>hi</div></template>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_template("<div>hi</div>", true)')
+    expect([...ir.template.keys()]).toMatchObject(['<div>hi</div>'])
+  })
+
+  test('template v-if (multiple element)', () => {
+    const { code, ir } = compileWithVIf(
+      `<template v-if="foo"><div>hi</div><div>ho</div></template>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_template("<div>hi</div>")')
+    expect(code).toContain('_template("<div>ho</div>")')
+    expect([...ir.template.keys()]).toMatchObject([
+      '<div>hi</div>',
+      '<div>ho</div>',
+    ])
+  })
+
+  test('template v-if (with v-for inside)', () => {
+    const { code, ir } = compileWithVIf(
+      `<template v-if="foo"><div v-for="i in list"/></template>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_template("<div></div>")')
+    expect([...ir.template.keys()]).toMatchObject(['<div></div>'])
+  })
+
+  test('template v-if + normal v-else', () => {
+    const { code, ir } = compileWithVIf(
+      `<template v-if="foo"><div>hi</div><div>ho</div></template><div v-else/>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_template("<div>hi</div>")')
+    expect(code).toContain('_template("<div>ho</div>")')
+    expect(code).toContain('_template("<div></div>", true)')
+    expect([...ir.template.keys()]).toMatchObject([
+      '<div>hi</div>',
+      '<div>ho</div>',
+      '<div></div>',
+    ])
   })
 
   test('dedupe same template', () => {

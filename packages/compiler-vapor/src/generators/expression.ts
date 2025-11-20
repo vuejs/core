@@ -327,8 +327,10 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
       continue
     }
 
+    const seenParents = new Set<Node>()
     walkIdentifiers(exp.ast, (currentNode, parent, parentStack) => {
-      if (parent && isMemberExpression(parent)) {
+      if (parent && isMemberExpression(parent) && !seenParents.has(parent)) {
+        seenParents.add(parent)
         const memberExp = extractMemberExpression(parent, id => {
           registerVariable(id.name, exp, true, {
             start: id.start!,
@@ -513,7 +515,10 @@ function processRepeatedExpressions(
   const declarations: DeclarationValue[] = []
   const seenExp = expressions.reduce(
     (acc, exp) => {
-      const variables = expToVariableMap.get(exp)!.map(v => v.name)
+      const vars = expToVariableMap.get(exp)
+      if (!vars) return acc
+
+      const variables = vars.map(v => v.name)
       // only handle expressions that are not identifiers
       if (
         exp.ast &&
@@ -673,6 +678,8 @@ function extractMemberExpression(
         ? `[${extractMemberExpression(exp.property, onIdentifier)}]`
         : `.${extractMemberExpression(exp.property, NOOP)}`
       return `${object}${prop}`
+    case 'TSNonNullExpression': // foo!.bar
+      return `${extractMemberExpression(exp.expression, onIdentifier)}!`
     default:
       return ''
   }
@@ -680,6 +687,8 @@ function extractMemberExpression(
 
 const isMemberExpression = (node: Node) => {
   return (
-    node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression'
+    node.type === 'MemberExpression' ||
+    node.type === 'OptionalMemberExpression' ||
+    node.type === 'TSNonNullExpression'
   )
 }

@@ -11,16 +11,12 @@ import {
   remove,
 } from './block'
 import {
-  type GenericComponentInstance,
   type TransitionHooks,
   type VNode,
-  currentInstance,
-  isKeepAlive,
   queuePostFlushCb,
 } from '@vue/runtime-dom'
 import type { VaporComponentInstance } from './component'
 import type { NodeRef } from './apiTemplateRef'
-import type { KeepAliveInstance } from './components/KeepAlive'
 import {
   applyTransitionHooks,
   applyTransitionLeaveHooks,
@@ -76,8 +72,18 @@ export class DynamicFragment extends VaporFragment {
   current?: BlockFn
   fallback?: BlockFn
   anchorLabel?: string
-  inKeepAlive?: boolean
-  keptAliveScopes?: Map<any, EffectScope>
+
+  // get the kept-alive scope when used in keep-alive
+  getScope?: (key: any) => EffectScope | undefined
+
+  // hooks
+  beforeTeardown?: ((
+    oldKey: any,
+    nodes: Block,
+    scope: EffectScope,
+  ) => boolean)[]
+  beforeMount?: ((newKey: any, nodes: Block, scope: EffectScope) => void)[]
+  mounted?: ((nodes: Block, scope: EffectScope) => void)[]
 
   constructor(anchorLabel?: string) {
     super([])
@@ -100,21 +106,23 @@ export class DynamicFragment extends VaporFragment {
     const prevSub = setActiveSub()
     const parent = isHydrating ? null : this.anchor.parentNode
     const transition = this.$transition
-    const instance = currentInstance!
-    this.inKeepAlive = isKeepAlive(instance)
     // teardown previous branch
     if (this.scope) {
-      if (this.inKeepAlive) {
-        ;(instance as KeepAliveInstance).processFragment(this)
-        if (!this.keptAliveScopes) this.keptAliveScopes = new Map()
-        this.keptAliveScopes.set(this.current, this.scope)
-      } else {
+      let preserveScope = false
+      // if any of the hooks returns true the scope will be preserved
+      // for kept-alive component
+      if (this.beforeTeardown) {
+        preserveScope = this.beforeTeardown.some(hook =>
+          hook(this.current, this.nodes, this.scope!),
+        )
+      }
+      if (!preserveScope) {
         this.scope.stop()
       }
       const mode = transition && transition.mode
       if (mode) {
         applyTransitionLeaveHooks(this.nodes, transition, () =>
-          this.render(render, instance, transition, parent),
+          this.render(render, transition, parent),
         )
         parent && remove(this.nodes, parent)
         if (mode === 'out-in') {
@@ -126,7 +134,7 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    this.render(render, instance, transition, parent)
+    this.render(render, transition, parent)
 
     if (this.fallback) {
       // set fallback for nested fragments
@@ -158,32 +166,36 @@ export class DynamicFragment extends VaporFragment {
 
   private render(
     render: BlockFn | undefined,
-    instance: GenericComponentInstance,
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,
   ) {
     if (render) {
-      // For KeepAlive, try to reuse the keepAlive scope for this key
-      const scope =
-        this.inKeepAlive && this.keptAliveScopes
-          ? this.keptAliveScopes.get(this.current)
-          : undefined
+      // try to reuse the kept-alive scope
+      const scope = this.getScope && this.getScope(this.current)
       if (scope) {
         this.scope = scope
-        this.keptAliveScopes!.delete(this.current!)
-        this.scope.resume()
       } else {
         this.scope = new EffectScope()
       }
 
       this.nodes = this.scope.run(render) || []
-      if (this.inKeepAlive) {
-        ;(instance as KeepAliveInstance).cacheFragment(this)
-      }
+
       if (transition) {
         this.$transition = applyTransitionHooks(this.nodes, transition)
       }
-      if (parent) insert(this.nodes, parent, this.anchor)
+
+      if (this.beforeMount) {
+        this.beforeMount.forEach(hook =>
+          hook(this.current, this.nodes, this.scope!),
+        )
+      }
+
+      if (parent) {
+        insert(this.nodes, parent, this.anchor)
+        if (this.mounted) {
+          this.mounted.forEach(hook => hook(this.nodes, this.scope!))
+        }
+      }
     } else {
       this.scope = undefined
       this.nodes = []
@@ -290,4 +302,10 @@ function findInvalidFragment(fragment: VaporFragment): VaporFragment | null {
 
 export function isFragment(val: NonNullable<unknown>): val is VaporFragment {
   return val instanceof VaporFragment
+}
+
+export function isDynamicFragment(
+  val: NonNullable<unknown>,
+): val is DynamicFragment {
+  return val instanceof DynamicFragment
 }

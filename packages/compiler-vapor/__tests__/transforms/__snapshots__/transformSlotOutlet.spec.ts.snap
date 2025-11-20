@@ -115,7 +115,7 @@ exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slott
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("default", null, null, undefined, true)
+  const n0 = _createSlot("default", null, null, true)
   return n0
 }"
 `;

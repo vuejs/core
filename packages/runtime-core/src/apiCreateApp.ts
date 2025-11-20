@@ -212,7 +212,12 @@ export interface VaporInteropInterface {
     transition: TransitionHooks,
   ): void
 
-  vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
+  vdomMount: (
+    component: ConcreteComponent,
+    parentComponent: any,
+    props?: any,
+    slots?: any,
+  ) => any
   vdomUnmount: UnmountComponentFn
   vdomSlot: (
     slots: any,

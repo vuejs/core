@@ -171,7 +171,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }], true)',
+      '_setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }])',
     )
   })
 
@@ -224,7 +224,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }], true)',
+      '_setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }])',
     )
   })
 
@@ -341,7 +341,7 @@ describe('compiler v-bind', () => {
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }], true)`,
+      `_setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }])`,
     )
   })
 
@@ -422,7 +422,7 @@ describe('compiler v-bind', () => {
     })
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }], true)`,
+      `_setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }])`,
     )
   })
 
@@ -669,7 +669,7 @@ describe('compiler v-bind', () => {
       <svg v-bind="obj"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], true, true))')
+    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], true))')
   })
 
   test('number value', () => {
@@ -801,6 +801,16 @@ describe('cache multiple access', () => {
     expect(code).contains('_setProp(n0, "id", _obj[1][_ctx.baz] + _obj.bar)')
   })
 
+  test('dynamic property access with parentheses', () => {
+    const { code } = compileWithVBind(`
+        <div :x="(foo[bar]).x" :bar="(foo[bar])"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _foo_bar = _ctx.foo[_ctx.bar]')
+    expect(code).contains('_setProp(n0, "x", (_foo_bar).x)')
+    expect(code).contains('_setProp(n0, "bar", (_foo_bar))')
+  })
+
   test('variable name substring edge cases', () => {
     const { code } = compileWithVBind(
       `<div :id="title + titles + title"></div>`,
@@ -834,6 +844,13 @@ describe('cache multiple access', () => {
     expect(code).matchSnapshot()
     expect(code).contains('const _obj = _ctx.obj')
     expect(code).contains('_setProp(n0, "id", _obj?.foo + _obj?.bar)')
+  })
+
+  test('TSNonNullExpression', () => {
+    const { code } = compileWithVBind(`<div :id="obj!.foo + obj!.bar"></div>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _obj = _ctx.obj')
+    expect(code).contains('_setProp(n0, "id", _obj.foo + _obj.bar)')
   })
 
   test('not cache variable only used in property shorthand', () => {

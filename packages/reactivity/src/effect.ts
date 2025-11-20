@@ -169,11 +169,6 @@ if (__DEV__) {
   setupOnTrigger(ReactiveEffect)
 }
 
-export interface ReactiveEffectRunner<T = any> {
-  (): T
-  effect: ReactiveEffect
-}
-
 export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions,

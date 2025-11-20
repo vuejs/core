@@ -284,7 +284,7 @@ exports[`compile > expression parsing > v-bind 1`] = `
   const n0 = t0()
   _renderEffect(() => {
     const _key = key.value
-    _setDynamicProps(n0, [{ [_key+1]: _unref(foo)[_key+1]() }], true)
+    _setDynamicProps(n0, [{ [_key+1]: _unref(foo)[_key+1]() }])
   })
   return n0
 "

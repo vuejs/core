@@ -63,7 +63,7 @@ export interface RootIRNode {
   source: string
   template: Map<string, Namespace>
   templateIndexMap: Map<string, number>
-  rootTemplateIndex?: number
+  rootTemplateIndexes: Set<number>
   component: Set<string>
   directive: Set<string>
   block: BlockIRNode
@@ -108,7 +108,6 @@ export interface SetPropIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_PROP
   element: number
   prop: IRProp
-  root: boolean
   tag: string
 }
 
@@ -116,7 +115,6 @@ export interface SetDynamicPropsIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_DYNAMIC_PROPS
   element: number
   props: IRProps[]
-  root: boolean
   tag: string
 }
 

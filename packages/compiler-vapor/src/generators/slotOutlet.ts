@@ -30,7 +30,6 @@ export function genSlotOutlet(
       nameExpr,
       genRawProps(oper.props, context) || 'null',
       fallbackArg,
-      noSlotted && 'undefined', // instance
       noSlotted && 'true', // noSlotted
     ),
   )

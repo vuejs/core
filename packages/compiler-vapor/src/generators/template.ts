@@ -16,7 +16,7 @@ import {
 
 export function genTemplates(
   templates: Map<string, number>,
-  rootIndex: number | undefined,
+  rootIndexes: Set<number>,
   context: CodegenContext,
 ): string {
   const result: string[] = []
@@ -29,7 +29,7 @@ export function genTemplates(
         // replace import expressions with string concatenation
         IMPORT_EXPR_RE,
         `" + $1 + "`,
-      )}${i === rootIndex ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`,
+      )}${rootIndexes.has(i) ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`,
     )
     i++
   })

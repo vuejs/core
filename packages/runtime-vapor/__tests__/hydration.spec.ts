@@ -1,6 +1,7 @@
 import {
   child,
   createComponent,
+  createPlainElement,
   createVaporSSRApp,
   defineVaporAsyncComponent,
   defineVaporComponent,
@@ -4038,8 +4039,26 @@ describe('Vapor Mode hydration', () => {
       expect((container.firstChild! as any).foo).toBe(true)
     })
 
-    // vapor custom element not implemented yet
-    test.todo('force hydrate custom element with dynamic props', () => {})
+    test('force hydrate custom element with dynamic props', () => {
+      class MyElement extends HTMLElement {
+        foo = ''
+        constructor() {
+          super()
+        }
+      }
+      customElements.define('my-element-7203', MyElement)
+
+      const msg = ref('bar')
+      const container = document.createElement('div')
+      container.innerHTML = '<my-element-7203></my-element-7203>'
+      const app = createVaporSSRApp({
+        setup() {
+          return createPlainElement('my-element-7203', { foo: () => msg.value })
+        },
+      })
+      app.mount(container)
+      expect((container.firstChild as any).foo).toBe(msg.value)
+    })
   })
 })
 

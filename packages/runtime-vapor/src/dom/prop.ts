@@ -468,16 +468,10 @@ function setHtmlToBlock(block: Block, value: any): void {
   }
 }
 
-export function setDynamicProps(
-  el: any,
-  args: any[],
-  root?: boolean,
-  isSVG?: boolean,
-): void {
+export function setDynamicProps(el: any, args: any[], isSVG?: boolean): void {
   const props = args.length > 1 ? mergeProps(...args) : args[0]
   const cacheKey = `$dprops${isApplyingFallthroughProps ? '$' : ''}`
   const prevKeys = el[cacheKey] as string[]
-  if (root) el.$root = root
 
   if (prevKeys) {
     for (const key of prevKeys) {

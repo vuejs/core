@@ -1,3 +1,28 @@
+# [3.6.0-alpha.4](https://github.com/vuejs/core/compare/v3.5.24...v3.6.0-alpha.4) (2025-11-14)
+
+
+### Bug Fixes
+
+* **compiler-vapor:** handle boolean as constant node ([#13994](https://github.com/vuejs/core/issues/13994)) ([c1f2289](https://github.com/vuejs/core/commit/c1f228913b5849ea8a548313c9c0603ccf07d6af))
+* **compiler-vapor:** handle numbers as static text ([#13957](https://github.com/vuejs/core/issues/13957)) ([4b9399a](https://github.com/vuejs/core/commit/4b9399ae8243abda99cd73dfdb178887284c69d6))
+* **compiler-vapor:** wrap event handler in parentheses for TSExpression ([#14061](https://github.com/vuejs/core/issues/14061)) ([0f4edb4](https://github.com/vuejs/core/commit/0f4edb47cbab64c304d79b7565985c02dec877b6))
+* **runtime-dom:** useCssModule vapor support ([#13711](https://github.com/vuejs/core/issues/13711)) ([abe8fc2](https://github.com/vuejs/core/commit/abe8fc29e493e1e5f7bd92df4c26b5ca835526be))
+* **runtime-vapor:** force defer mount when teleport has insertion state ([#14049](https://github.com/vuejs/core/issues/14049)) ([b005811](https://github.com/vuejs/core/commit/b005811f65016b199b5bc426e67cd9d8b825a3f7))
+* **runtime-vapor:** preserve correct parent instance for slotted content ([#14095](https://github.com/vuejs/core/issues/14095)) ([fe3a998](https://github.com/vuejs/core/commit/fe3a998b4182ef5712c8dddd0ba9459d86ce818c))
+* **transition-group:** support reusable transition group ([#14077](https://github.com/vuejs/core/issues/14077)) ([171f3f5](https://github.com/vuejs/core/commit/171f3f56947d668072e6a811b4b1f1c045f6ea1d))
+* **vapor:** v-model and v-model:model co-usage ([#13070](https://github.com/vuejs/core/issues/13070)) ([bf2d2b2](https://github.com/vuejs/core/commit/bf2d2b2fde3315c575628a7462a0397c8b49d076))
+
+
+### Features
+
+* **compiler-vapor:** handle asset imports  ([#13630](https://github.com/vuejs/core/issues/13630)) ([7d4ab91](https://github.com/vuejs/core/commit/7d4ab91e9cac5dc177f1a55ac1137246fee9407c))
+* **vapor:** implement defineVaporCustomElement ([#14017](https://github.com/vuejs/core/issues/14017)) ([615db5e](https://github.com/vuejs/core/commit/615db5e95986c6fedfa7936c3c3bb71dc87bf1e6))
+* **runtime-vapor:** dynamic component fallback work with dynamic slots ([#14064](https://github.com/vuejs/core/issues/14064)) ([f4b3613](https://github.com/vuejs/core/commit/f4b3613f66d4604186e3008231a44b68196a45c7))
+* **vapor:** support svg and MathML ([#13703](https://github.com/vuejs/core/issues/13703)) ([f0d0cfd](https://github.com/vuejs/core/commit/f0d0cfd1d48a61ea5f5e094f6546272a758363c9))
+* **vapor:** dom event error handling ([#13769](https://github.com/vuejs/core/issues/13769)) ([d2eebe4](https://github.com/vuejs/core/commit/d2eebe45a87e8af2c19f4e2792d8aff0fb0fff24))
+
+
+
 # [3.6.0-alpha.3](https://github.com/vuejs/core/compare/v3.5.23...v3.6.0-alpha.3) (2025-11-06)
 
 
