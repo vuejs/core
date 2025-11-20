@@ -104,11 +104,11 @@ export class TeleportFragment extends VaporFragment {
     // updateCssVars will be called when subtree changed
     if (this.parentComponent && this.parentComponent.ut) {
       if (isFragment(nodes)) {
-        ;(nodes.effects || (nodes.effects = [])).push(() => updateCssVars(this))
+        ;(nodes.updated || (nodes.updated = [])).push(() => updateCssVars(this))
       } else if (isArray(nodes)) {
         nodes.forEach(node => {
           if (isFragment(node)) {
-            ;(node.effects || (node.effects = [])).push(() =>
+            ;(node.updated || (node.updated = [])).push(() =>
               updateCssVars(this),
             )
           }
