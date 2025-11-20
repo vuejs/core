@@ -448,7 +448,10 @@ export function hmrShouldReload(
   for (const key in prevImports) {
     // if an import was previous unused, but now is used, we need to force
     // reload so that the script now includes that import.
-    if (!prevImports[key].isUsedInTemplate && isImportUsed(key, next)) {
+    if (
+      !prevImports[key].isUsedInTemplate &&
+      isImportUsed(key, next.template!.content!, next.template!.ast!)
+    ) {
       return true
     }
   }
