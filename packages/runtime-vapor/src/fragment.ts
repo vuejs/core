@@ -58,6 +58,9 @@ export class VaporFragment<T extends Block = Block>
     refKey: string | undefined,
   ) => void
 
+  // hooks
+  updated?: ((nodes?: Block) => void)[]
+
   constructor(nodes: T) {
     this.nodes = nodes
   }
@@ -75,7 +78,17 @@ export class DynamicFragment extends VaporFragment {
   current?: BlockFn
   fallback?: BlockFn
   anchorLabel?: string
-  hooks?: FragmentHooks
+
+  // get the kept-alive scope when used in keep-alive
+  getScope?: (key: any) => EffectScope | undefined
+
+  // hooks
+  beforeTeardown?: ((
+    oldKey: any,
+    nodes: Block,
+    scope: EffectScope,
+  ) => boolean)[]
+  beforeMount?: ((newKey: any, nodes: Block, scope: EffectScope) => void)[]
 
   constructor(anchorLabel?: string) {
     super([])
@@ -100,9 +113,15 @@ export class DynamicFragment extends VaporFragment {
     const transition = this.$transition
     // teardown previous branch
     if (this.scope) {
-      if (this.hooks) {
-        this.hooks.beforeUpdate(this.current, key)
-      } else {
+      let preserveScope = false
+      // if any of the hooks returns true the scope will be preserved
+      // for kept-alive component
+      if (this.beforeTeardown) {
+        preserveScope = this.beforeTeardown.some(hook =>
+          hook(this.current, this.nodes, this.scope!),
+        )
+      }
+      if (!preserveScope) {
         this.scope.stop()
       }
       const mode = transition && transition.mode
@@ -156,8 +175,8 @@ export class DynamicFragment extends VaporFragment {
     parent: ParentNode | null,
   ) {
     if (render) {
-      // For KeepAlive, try to reuse the keepAlive scope for this key
-      const scope = this.hooks && this.hooks.getScope(this.current)
+      // try to reuse the kept-alive scope
+      const scope = this.getScope && this.getScope(this.current)
       if (scope) {
         this.scope = scope
       } else {
@@ -166,13 +185,23 @@ export class DynamicFragment extends VaporFragment {
 
       this.nodes = this.scope.run(render) || []
 
-      if (this.hooks) {
-        this.hooks.afterUpdate(this.current, this.nodes, this.scope)
-      }
       if (transition) {
         this.$transition = applyTransitionHooks(this.nodes, transition)
       }
-      if (parent) insert(this.nodes, parent, this.anchor)
+
+      if (this.beforeMount) {
+        this.beforeMount.forEach(hook =>
+          hook(this.current, this.nodes, this.scope!),
+        )
+      }
+
+      if (parent) {
+        insert(this.nodes, parent, this.anchor)
+        // anchor isConnected indicates the this render is updated
+        if (this.anchor.isConnected && this.updated) {
+          this.updated.forEach(hook => hook(this.nodes))
+        }
+      }
     } else {
       this.scope = undefined
       this.nodes = []

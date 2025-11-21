@@ -669,3 +669,8 @@ export {
   checkTransitionMode,
   leaveCbKey,
 } from './components/BaseTransition'
+
+/**
+ * @internal
+ */
+export type { GenericComponent } from './component'

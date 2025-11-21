@@ -34,7 +34,7 @@ import {
   normalScriptDefaultVar,
   processNormalScript,
 } from './script/normalScript'
-import { CSS_VARS_HELPER, genCssVarsCode } from './style/cssVars'
+import { genCssVarsCode, getCssVarsHelper } from './style/cssVars'
 import {
   type SFCTemplateCompileOptions,
   compileTemplate,
@@ -825,7 +825,7 @@ export function compileScript(
     // no need to do this when targeting SSR
     !ssr
   ) {
-    ctx.helperImports.add(CSS_VARS_HELPER)
+    ctx.helperImports.add(getCssVarsHelper(vapor))
     ctx.helperImports.add('unref')
     ctx.s.prependLeft(
       startOffset,
@@ -834,6 +834,7 @@ export function compileScript(
         ctx.bindingMetadata,
         scopeId,
         !!options.isProd,
+        vapor,
       )}\n`,
     )
   }
