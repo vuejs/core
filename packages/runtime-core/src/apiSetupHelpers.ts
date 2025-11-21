@@ -283,7 +283,7 @@ export type DefineModelOptions<T = any, G = T, S = T> = {
  * ```
  */
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
-  options: ({ default: any } | { required: true }) &
+  options: ({ default: unknown } | { required: true }) &
     PropOptions<T> &
     DefineModelOptions<T, G, S>,
 ): ModelRef<T, M, G, S>
@@ -294,7 +294,7 @@ export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options: ({ default: any } | { required: true }) &
+  options: ({ default: unknown } | { required: true }) &
     PropOptions<T> &
     DefineModelOptions<T, G, S>,
 ): ModelRef<T, M, G, S>
