@@ -1,4 +1,5 @@
 import {
+  isKeepAlive,
   popWarningContext,
   pushWarningContext,
   setCurrentInstance,
@@ -35,6 +36,11 @@ export function hmrReload(
   instance: VaporComponentInstance,
   newComp: VaporComponent,
 ): void {
+  // if parent is KeepAlive, we need to rerender it
+  if (instance.parent && isKeepAlive(instance.parent)) {
+    instance.parent.hmrRerender!()
+    return
+  }
   const normalized = normalizeBlock(instance.block)
   const parent = normalized[0].parentNode!
   const anchor = normalized[normalized.length - 1].nextSibling

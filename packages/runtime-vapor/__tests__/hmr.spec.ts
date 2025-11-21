@@ -163,8 +163,9 @@ describe('hot module replacement', () => {
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 
-  test.todo('reload KeepAlive slot', async () => {
+  test('reload KeepAlive slot', async () => {
     const root = document.createElement('div')
+    document.body.appendChild(root)
     const childId = 'test-child-keep-alive'
     const unmountSpy = vi.fn()
     const mountSpy = vi.fn()
@@ -201,6 +202,7 @@ describe('hot module replacement', () => {
 
     reload(childId, {
       __hmrId: childId,
+      __vapor: true,
       setup() {
         onMounted(mountSpy)
         onUnmounted(unmountSpy)
@@ -219,7 +221,7 @@ describe('hot module replacement', () => {
     expect(deactivatedSpy).toHaveBeenCalledTimes(0)
 
     // should not unmount when toggling
-    triggerEvent('click', root.children[1] as Element)
+    triggerEvent('click', root.children[0] as Element)
     await nextTick()
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
@@ -227,7 +229,7 @@ describe('hot module replacement', () => {
     expect(deactivatedSpy).toHaveBeenCalledTimes(1)
 
     // should not mount when toggling
-    triggerEvent('click', root.children[1] as Element)
+    triggerEvent('click', root.children[0] as Element)
     await nextTick()
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
