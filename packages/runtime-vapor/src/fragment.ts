@@ -29,12 +29,6 @@ import {
   locateHydrationNode,
 } from './dom/hydration'
 
-export interface FragmentHooks {
-  getScope(key: any): EffectScope | undefined
-  beforeUpdate(oldKey: any, newKey: any): void
-  afterUpdate(newKey: any, nodes: Block, scope: EffectScope): void
-}
-
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
 {
