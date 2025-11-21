@@ -237,158 +237,167 @@ describe('hot module replacement', () => {
     expect(deactivatedSpy).toHaveBeenCalledTimes(1)
   })
 
-  // // #7121
-  // test('reload KeepAlive slot in Transition', async () => {
-  //   const root = nodeOps.createElement('div')
-  //   const childId = 'test-transition-keep-alive-reload'
-  //   const unmountSpy = vi.fn()
-  //   const mountSpy = vi.fn()
-  //   const activeSpy = vi.fn()
-  //   const deactiveSpy = vi.fn()
+  test('reload KeepAlive slot in Transition', async () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const childId = 'test-transition-keep-alive-reload'
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
+    const activeSpy = vi.fn()
+    const deactivatedSpy = vi.fn()
 
-  //   const Child: ComponentOptions = {
-  //     __hmrId: childId,
-  //     data() {
-  //       return { count: 0 }
-  //     },
-  //     unmounted: unmountSpy,
-  //     render: compileToFunction(`<div>{{ count }}</div>`),
-  //   }
-  //   createRecord(childId, Child)
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      setup() {
+        onUnmounted(unmountSpy)
+        const count = ref(0)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    createRecord(childId, Child as any)
 
-  //   const Parent: ComponentOptions = {
-  //     components: { Child },
-  //     data() {
-  //       return { toggle: true }
-  //     },
-  //     render: compileToFunction(
-  //       `<button @click="toggle = !toggle" />
-  //       <BaseTransition>
-  //         <KeepAlive><Child v-if="toggle" /></KeepAlive>
-  //       </BaseTransition>`,
-  //     ),
-  //   }
+    const Parent = defineVaporComponent({
+      __hmrId: 'parentId',
+      // @ts-expect-error
+      components: { Child },
+      setup() {
+        const toggle = ref(true)
+        return { toggle }
+      },
+      render: compileToFunction(
+        `<button @click="toggle = !toggle" />
+        <Transition>
+          <KeepAlive><Child v-if="toggle" /></KeepAlive>
+        </Transition>`,
+      ),
+    })
 
-  //   render(h(Parent), root)
-  //   expect(serializeInner(root)).toBe(`<button></button><div>0</div>`)
+    define(Parent).create().mount(root)
+    expect(root.innerHTML).toBe(`<button></button><div>0</div><!--if-->`)
 
-  //   reload(childId, {
-  //     __hmrId: childId,
-  //     data() {
-  //       return { count: 1 }
-  //     },
-  //     mounted: mountSpy,
-  //     unmounted: unmountSpy,
-  //     activated: activeSpy,
-  //     deactivated: deactiveSpy,
-  //     render: compileToFunction(`<div>{{ count }}</div>`),
-  //   })
-  //   await nextTick()
-  //   expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
-  //   expect(unmountSpy).toHaveBeenCalledTimes(1)
-  //   expect(mountSpy).toHaveBeenCalledTimes(1)
-  //   expect(activeSpy).toHaveBeenCalledTimes(1)
-  //   expect(deactiveSpy).toHaveBeenCalledTimes(0)
+    reload(childId, {
+      __hmrId: childId,
+      __vapor: true,
+      setup() {
+        onMounted(mountSpy)
+        onUnmounted(unmountSpy)
+        onActivated(activeSpy)
+        onDeactivated(deactivatedSpy)
+        const count = ref(1)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(1)
+    expect(deactivatedSpy).toHaveBeenCalledTimes(0)
 
-  //   // should not unmount when toggling
-  //   triggerEvent(root.children[1] as TestElement, 'click')
-  //   await nextTick()
-  //   expect(serializeInner(root)).toBe(`<button></button><!--v-if-->`)
-  //   expect(unmountSpy).toHaveBeenCalledTimes(1)
-  //   expect(mountSpy).toHaveBeenCalledTimes(1)
-  //   expect(activeSpy).toHaveBeenCalledTimes(1)
-  //   expect(deactiveSpy).toHaveBeenCalledTimes(1)
+    // should not unmount when toggling
+    triggerEvent('click', root.children[0] as Element)
+    await nextTick()
+    expect(root.innerHTML).toBe(`<button></button><!--if-->`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(1)
+    expect(deactivatedSpy).toHaveBeenCalledTimes(1)
 
-  //   // should not mount when toggling
-  //   triggerEvent(root.children[1] as TestElement, 'click')
-  //   await nextTick()
-  //   expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
-  //   expect(unmountSpy).toHaveBeenCalledTimes(1)
-  //   expect(mountSpy).toHaveBeenCalledTimes(1)
-  //   expect(activeSpy).toHaveBeenCalledTimes(2)
-  //   expect(deactiveSpy).toHaveBeenCalledTimes(1)
-  // })
+    // should not mount when toggling
+    triggerEvent('click', root.children[0] as Element)
+    await nextTick()
+    expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(2)
+    expect(deactivatedSpy).toHaveBeenCalledTimes(1)
+  })
 
-  // test('reload KeepAlive slot in Transition with out-in', async () => {
-  //   const root = nodeOps.createElement('div')
-  //   const childId = 'test-transition-keep-alive-reload-with-out-in'
-  //   const unmountSpy = vi.fn()
-  //   const mountSpy = vi.fn()
-  //   const activeSpy = vi.fn()
-  //   const deactiveSpy = vi.fn()
+  test('reload KeepAlive slot in Transition with out-in', async () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const childId = 'test-transition-keep-alive-reload-with-out-in'
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
+    const activeSpy = vi.fn()
+    const deactivatedSpy = vi.fn()
 
-  //   const Child: ComponentOptions = {
-  //     __hmrId: childId,
-  //     name: 'original',
-  //     data() {
-  //       return { count: 0 }
-  //     },
-  //     unmounted: unmountSpy,
-  //     render: compileToFunction(`<div>{{ count }}</div>`),
-  //   }
-  //   createRecord(childId, Child)
+    const Child = defineVaporComponent({
+      name: 'original',
+      __hmrId: childId,
+      setup() {
+        onUnmounted(unmountSpy)
+        const count = ref(0)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    createRecord(childId, Child as any)
 
-  //   const Parent: ComponentOptions = {
-  //     components: { Child },
-  //     data() {
-  //       return { toggle: true }
-  //     },
-  //     methods: {
-  //       // @ts-expect-error
-  //       onLeave(_, done) {
-  //         setTimeout(done, 0)
-  //       },
-  //     },
-  //     render: compileToFunction(
-  //       `<button @click="toggle = !toggle" />
-  //       <BaseTransition mode="out-in" @leave="onLeave">
-  //         <KeepAlive><Child v-if="toggle" /></KeepAlive>
-  //       </BaseTransition>`,
-  //     ),
-  //   }
+    const Parent = defineVaporComponent({
+      // @ts-expect-error
+      components: { Child },
+      setup() {
+        function onLeave(_: any, done: Function) {
+          setTimeout(done, 0)
+        }
+        const toggle = ref(true)
+        return { toggle, onLeave }
+      },
+      render: compileToFunction(
+        `<button @click="toggle = !toggle" />
+        <Transition mode="out-in" @leave="onLeave">
+          <KeepAlive><Child v-if="toggle" /></KeepAlive>
+        </Transition>`,
+      ),
+    })
 
-  //   render(h(Parent), root)
-  //   expect(serializeInner(root)).toBe(`<button></button><div>0</div>`)
+    define(Parent).create().mount(root)
+    expect(root.innerHTML).toBe(`<button></button><div>0</div><!--if-->`)
 
-  //   reload(childId, {
-  //     __hmrId: childId,
-  //     name: 'updated',
-  //     data() {
-  //       return { count: 1 }
-  //     },
-  //     mounted: mountSpy,
-  //     unmounted: unmountSpy,
-  //     activated: activeSpy,
-  //     deactivated: deactiveSpy,
-  //     render: compileToFunction(`<div>{{ count }}</div>`),
-  //   })
-  //   await nextTick()
-  //   await new Promise(r => setTimeout(r, 0))
-  //   expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
-  //   expect(unmountSpy).toHaveBeenCalledTimes(1)
-  //   expect(mountSpy).toHaveBeenCalledTimes(1)
-  //   expect(activeSpy).toHaveBeenCalledTimes(1)
-  //   expect(deactiveSpy).toHaveBeenCalledTimes(0)
+    reload(childId, {
+      name: 'updated',
+      __hmrId: childId,
+      __vapor: true,
+      setup() {
+        onMounted(mountSpy)
+        onUnmounted(unmountSpy)
+        onActivated(activeSpy)
+        onDeactivated(deactivatedSpy)
+        const count = ref(1)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    await nextTick()
+    await new Promise(r => setTimeout(r, 0))
+    expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(1)
+    expect(deactivatedSpy).toHaveBeenCalledTimes(0)
 
-  //   // should not unmount when toggling
-  //   triggerEvent(root.children[1] as TestElement, 'click')
-  //   await nextTick()
-  //   await new Promise(r => setTimeout(r, 0))
-  //   expect(serializeInner(root)).toBe(`<button></button><!--v-if-->`)
-  //   expect(unmountSpy).toHaveBeenCalledTimes(1)
-  //   expect(mountSpy).toHaveBeenCalledTimes(1)
-  //   expect(activeSpy).toHaveBeenCalledTimes(1)
-  //   expect(deactiveSpy).toHaveBeenCalledTimes(1)
+    // should not unmount when toggling
+    triggerEvent('click', root.children[0] as Element)
+    await nextTick()
+    await new Promise(r => setTimeout(r, 0))
+    expect(root.innerHTML).toBe(`<button></button><!--if-->`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(1)
+    expect(deactivatedSpy).toHaveBeenCalledTimes(1)
 
-  //   // should not mount when toggling
-  //   triggerEvent(root.children[1] as TestElement, 'click')
-  //   await nextTick()
-  //   expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
-  //   expect(unmountSpy).toHaveBeenCalledTimes(1)
-  //   expect(mountSpy).toHaveBeenCalledTimes(1)
-  //   expect(activeSpy).toHaveBeenCalledTimes(2)
-  //   expect(deactiveSpy).toHaveBeenCalledTimes(1)
-  // })
+    // should not mount when toggling
+    triggerEvent('click', root.children[0] as Element)
+    await nextTick()
+    expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(2)
+    expect(deactivatedSpy).toHaveBeenCalledTimes(1)
+  })
 
   // test('reload class component', async () => {
   //   const root = nodeOps.createElement('div')
