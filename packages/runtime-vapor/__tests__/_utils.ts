@@ -10,7 +10,10 @@ import { compileScript, parse } from '@vue/compiler-sfc'
 import * as runtimeVapor from '../src'
 import * as runtimeDom from '@vue/runtime-dom'
 import * as VueServerRenderer from '@vue/server-renderer'
-import { compile as compileVapor } from '@vue/compiler-vapor'
+import {
+  type CompilerOptions,
+  compile as compileVapor,
+} from '@vue/compiler-vapor'
 
 export interface RenderContext {
   component: VaporComponent
@@ -194,11 +197,13 @@ export function compile(
 
 export function compileToVaporRender(
   template: string,
+  options?: CompilerOptions,
 ): ObjectVaporComponent['render'] {
   let { code } = compileVapor(template, {
     mode: 'module',
     prefixIdentifiers: true,
     hmr: true,
+    ...options,
   })
 
   const transformed = code

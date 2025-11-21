@@ -1,18 +1,26 @@
 import {
   type HMRRuntime,
+  computed,
   nextTick,
   onActivated,
   onDeactivated,
   onMounted,
   onUnmounted,
   ref,
+  toDisplayString,
 } from '@vue/runtime-dom'
 import { compileToVaporRender as compileToFunction, makeRender } from './_utils'
 import {
   createComponent,
+  createTemplateRefSetter,
   defineVaporComponent,
   delegateEvents,
+  renderEffect,
+  setText,
+  template,
 } from '@vue/runtime-vapor'
+import { BindingTypes } from '@vue/compiler-core'
+import type { VaporComponent } from '../src/component'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
@@ -399,443 +407,336 @@ describe('hot module replacement', () => {
     expect(deactivatedSpy).toHaveBeenCalledTimes(1)
   })
 
-  // test('reload class component', async () => {
-  //   const root = nodeOps.createElement('div')
-  //   const childId = 'test4-child'
-  //   const unmountSpy = vi.fn()
-  //   const mountSpy = vi.fn()
+  // TODO: renderEffect not re-run after child reload
+  // it requires parent rerender to align with vdom
+  test.todo('reload: avoid infinite recursion', async () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const childId = 'test-child-6930'
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
 
-  //   class Child {
-  //     static __vccOpts: ComponentOptions = {
-  //       __hmrId: childId,
-  //       data() {
-  //         return { count: 0 }
-  //       },
-  //       unmounted: unmountSpy,
-  //       render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
-  //     }
-  //   }
-  //   createRecord(childId, Child)
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      setup(_, { expose }) {
+        const count = ref(0)
+        expose({
+          count,
+        })
+        onUnmounted(unmountSpy)
+        return { count }
+      },
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
+    })
+    createRecord(childId, Child as any)
 
-  //   const Parent: ComponentOptions = {
-  //     render: () => h(Child),
-  //   }
+    const Parent = defineVaporComponent({
+      setup() {
+        const com1 = ref()
+        const changeRef1 = (value: any) => (com1.value = value)
+        const com2 = ref()
+        const changeRef2 = (value: any) => (com2.value = value)
+        const setRef = createTemplateRefSetter()
+        const n0 = createComponent(Child)
+        setRef(n0, changeRef1)
+        const n1 = createComponent(Child)
+        setRef(n1, changeRef2)
+        const n2 = template(' ')() as any
+        renderEffect(() => {
+          setText(n2, toDisplayString(com1.value.count))
+        })
+        return [n0, n1, n2]
+      },
+    })
 
-  //   render(h(Parent), root)
-  //   expect(serializeInner(root)).toBe(`<div>0</div>`)
+    define(Parent).create().mount(root)
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>0</div><div>0</div>0`)
 
-  //   class UpdatedChild {
-  //     static __vccOpts: ComponentOptions = {
-  //       __hmrId: childId,
-  //       data() {
-  //         return { count: 1 }
-  //       },
-  //       mounted: mountSpy,
-  //       render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
-  //     }
-  //   }
+    reload(childId, {
+      __hmrId: childId,
+      __vapor: true,
+      setup() {
+        onMounted(mountSpy)
+        const count = ref(1)
+        return { count }
+      },
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>1</div><div>1</div>1`)
+    expect(unmountSpy).toHaveBeenCalledTimes(2)
+    expect(mountSpy).toHaveBeenCalledTimes(2)
+  })
 
-  //   reload(childId, UpdatedChild)
-  //   await nextTick()
-  //   expect(serializeInner(root)).toBe(`<div>1</div>`)
-  //   expect(unmountSpy).toHaveBeenCalledTimes(1)
-  //   expect(mountSpy).toHaveBeenCalledTimes(1)
-  // })
+  test('static el reference', async () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const id = 'test-static-el'
 
-  // // #6930
-  // test('reload: avoid infinite recursion', async () => {
-  //   const root = nodeOps.createElement('div')
-  //   const childId = 'test-child-6930'
-  //   const unmountSpy = vi.fn()
-  //   const mountSpy = vi.fn()
+    const template = `<div>
+    <div>{{ count }}</div>
+    <button @click="count++">++</button>
+  </div>`
 
-  //   const Child: ComponentOptions = {
-  //     __hmrId: childId,
-  //     data() {
-  //       return { count: 0 }
-  //     },
-  //     expose: ['count'],
-  //     unmounted: unmountSpy,
-  //     render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
-  //   }
-  //   createRecord(childId, Child)
+    const Comp = defineVaporComponent({
+      __hmrId: id,
+      setup() {
+        const count = ref(0)
+        return { count }
+      },
+      render: compileToFunction(template),
+    })
+    createRecord(id, Comp as any)
 
-  //   const Parent: ComponentOptions = {
-  //     setup() {
-  //       const com1 = ref()
-  //       const changeRef1 = (value: any) => (com1.value = value)
+    define(Comp).create().mount(root)
+    expect(root.innerHTML).toBe(`<div><div>0</div><button>++</button></div>`)
 
-  //       const com2 = ref()
-  //       const changeRef2 = (value: any) => (com2.value = value)
+    // 1. click to trigger update
+    triggerEvent('click', root.children[0].children[1] as Element)
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div><div>1</div><button>++</button></div>`)
 
-  //       return () => [
-  //         h(Child, { ref: changeRef1 }),
-  //         h(Child, { ref: changeRef2 }),
-  //         com1.value?.count,
-  //       ]
-  //     },
-  //   }
+    // 2. trigger HMR
+    rerender(
+      id,
+      compileToFunction(template.replace(`<button`, `<button class="foo"`)),
+    )
+    expect(root.innerHTML).toBe(
+      `<div><div>1</div><button class="foo">++</button></div>`,
+    )
+  })
 
-  //   render(h(Parent), root)
-  //   await nextTick()
-  //   expect(serializeInner(root)).toBe(`<div>0</div><div>0</div>0`)
+  test('force update child component w/ static props', () => {
+    const root = document.createElement('div')
+    const parentId = 'test-force-props-parent'
+    const childId = 'test-force-props-child'
 
-  //   reload(childId, {
-  //     __hmrId: childId,
-  //     data() {
-  //       return { count: 1 }
-  //     },
-  //     mounted: mountSpy,
-  //     render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
-  //   })
-  //   await nextTick()
-  //   expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>1`)
-  //   expect(unmountSpy).toHaveBeenCalledTimes(2)
-  //   expect(mountSpy).toHaveBeenCalledTimes(2)
-  // })
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      props: {
+        msg: String,
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`, {
+        bindingMetadata: {
+          msg: BindingTypes.PROPS,
+        },
+      }),
+    })
+    createRecord(childId, Child as any)
 
-  // // #1156 - static nodes should retain DOM element reference across updates
-  // // when HMR is active
-  // test('static el reference', async () => {
-  //   const root = nodeOps.createElement('div')
-  //   const id = 'test-static-el'
+    const Parent = defineVaporComponent({
+      __hmrId: parentId,
+      // @ts-expect-error
+      components: { Child },
+      render: compileToFunction(`<Child msg="foo" />`),
+    })
+    createRecord(parentId, Parent as any)
 
-  //   const template = `<div>
-  //   <div>{{ count }}</div>
-  //   <button @click="count++">++</button>
-  // </div>`
+    define(Parent).create().mount(root)
+    expect(root.innerHTML).toBe(`<div>foo</div>`)
 
-  //   const Comp: ComponentOptions = {
-  //     __hmrId: id,
-  //     data() {
-  //       return { count: 0 }
-  //     },
-  //     render: compileToFunction(template),
-  //   }
-  //   createRecord(id, Comp)
+    rerender(parentId, compileToFunction(`<Child msg="bar" />`))
+    expect(root.innerHTML).toBe(`<div>bar</div>`)
+  })
 
-  //   render(h(Comp), root)
-  //   expect(serializeInner(root)).toBe(
-  //     `<div><div>0</div><button>++</button></div>`,
-  //   )
+  test('remove static class from parent', () => {
+    const root = document.createElement('div')
+    const parentId = 'test-force-class-parent'
+    const childId = 'test-force-class-child'
 
-  //   // 1. click to trigger update
-  //   triggerEvent((root as any).children[0].children[1], 'click')
-  //   await nextTick()
-  //   expect(serializeInner(root)).toBe(
-  //     `<div><div>1</div><button>++</button></div>`,
-  //   )
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<div>child</div>`),
+    })
+    createRecord(childId, Child as any)
 
-  //   // 2. trigger HMR
-  //   rerender(
-  //     id,
-  //     compileToFunction(template.replace(`<button`, `<button class="foo"`)),
-  //   )
-  //   expect(serializeInner(root)).toBe(
-  //     `<div><div>1</div><button class="foo">++</button></div>`,
-  //   )
-  // })
+    const Parent = defineVaporComponent({
+      __hmrId: parentId,
+      // @ts-expect-error
+      components: { Child },
+      render: compileToFunction(`<Child class="test" />`),
+    })
+    createRecord(parentId, Parent as any)
 
-  // // #1157 - component should force full props update when HMR is active
-  // test('force update child component w/ static props', () => {
-  //   const root = nodeOps.createElement('div')
-  //   const parentId = 'test-force-props-parent'
-  //   const childId = 'test-force-props-child'
+    define(Parent).create().mount(root)
+    expect(root.innerHTML).toBe(`<div class="test">child</div>`)
 
-  //   const Child: ComponentOptions = {
-  //     __hmrId: childId,
-  //     props: {
-  //       msg: String,
-  //     },
-  //     render: compileToFunction(`<div>{{ msg }}</div>`),
-  //   }
-  //   createRecord(childId, Child)
+    rerender(parentId, compileToFunction(`<Child/>`))
+    expect(root.innerHTML).toBe(`<div>child</div>`)
+  })
 
-  //   const Parent: ComponentOptions = {
-  //     __hmrId: parentId,
-  //     components: { Child },
-  //     render: compileToFunction(`<Child msg="foo" />`),
-  //   }
-  //   createRecord(parentId, Parent)
+  test('rerender if any parent in the parent chain', () => {
+    const root = document.createElement('div')
+    const parent = 'test-force-props-parent-'
+    const childId = 'test-force-props-child'
 
-  //   render(h(Parent), root)
-  //   expect(serializeInner(root)).toBe(`<div>foo</div>`)
+    const numberOfParents = 5
 
-  //   rerender(parentId, compileToFunction(`<Child msg="bar" />`))
-  //   expect(serializeInner(root)).toBe(`<div>bar</div>`)
-  // })
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<div>child</div>`),
+    })
+    createRecord(childId, Child as any)
 
-  // // #1305 - component should remove class
-  // test('remove static class from parent', () => {
-  //   const root = nodeOps.createElement('div')
-  //   const parentId = 'test-force-class-parent'
-  //   const childId = 'test-force-class-child'
+    const components: VaporComponent[] = []
 
-  //   const Child: ComponentOptions = {
-  //     __hmrId: childId,
-  //     render: compileToFunction(`<div>child</div>`),
-  //   }
-  //   createRecord(childId, Child)
+    for (let i = 0; i < numberOfParents; i++) {
+      const parentId = `${parent}${i}`
+      const parentComp: VaporComponent = {
+        __vapor: true,
+        __hmrId: parentId,
+      }
+      components.push(parentComp)
+      if (i === 0) {
+        parentComp.render = compileToFunction(`<Child />`)
+        // @ts-expect-error
+        parentComp.components = {
+          Child,
+        }
+      } else {
+        parentComp.render = compileToFunction(`<Parent />`)
+        // @ts-expect-error
+        parentComp.components = {
+          Parent: components[i - 1],
+        }
+      }
 
-  //   const Parent: ComponentOptions = {
-  //     __hmrId: parentId,
-  //     components: { Child },
-  //     render: compileToFunction(`<Child class="test" />`),
-  //   }
-  //   createRecord(parentId, Parent)
+      createRecord(parentId, parentComp as any)
+    }
 
-  //   render(h(Parent), root)
-  //   expect(serializeInner(root)).toBe(`<div class="test">child</div>`)
+    const last = components[components.length - 1]
 
-  //   rerender(parentId, compileToFunction(`<Child/>`))
-  //   expect(serializeInner(root)).toBe(`<div>child</div>`)
-  // })
+    define(last).create().mount(root)
+    expect(root.innerHTML).toBe(`<div>child</div>`)
 
-  // test('rerender if any parent in the parent chain', () => {
-  //   const root = nodeOps.createElement('div')
-  //   const parent = 'test-force-props-parent-'
-  //   const childId = 'test-force-props-child'
+    rerender(last.__hmrId!, compileToFunction(`<Parent class="test"/>`))
+    expect(root.innerHTML).toBe(`<div class="test">child</div>`)
+  })
 
-  //   const numberOfParents = 5
+  test('rerender with Teleport', () => {
+    const root = document.createElement('div')
+    const target = document.createElement('div')
+    document.body.appendChild(root)
+    document.body.appendChild(target)
+    const parentId = 'parent-teleport'
 
-  //   const Child: ComponentOptions = {
-  //     __hmrId: childId,
-  //     render: compileToFunction(`<div>child</div>`),
-  //   }
-  //   createRecord(childId, Child)
+    const Child = defineVaporComponent({
+      setup() {
+        return { target }
+      },
+      render: compileToFunction(`
+        <teleport :to="target">
+          <div :style="style">
+            <slot/>
+          </div>
+        </teleport>
+      `),
+    })
 
-  //   const components: ComponentOptions[] = []
+    const Parent = {
+      __vapor: true,
+      __hmrId: parentId,
+      components: { Child },
+      render: compileToFunction(`
+        <Child>
+          <template #default>
+            <div>1</div>
+          </template>
+        </Child>
+      `),
+    }
+    createRecord(parentId, Parent as any)
 
-  //   for (let i = 0; i < numberOfParents; i++) {
-  //     const parentId = `${parent}${i}`
-  //     const parentComp: ComponentOptions = {
-  //       __hmrId: parentId,
-  //     }
-  //     components.push(parentComp)
-  //     if (i === 0) {
-  //       parentComp.render = compileToFunction(`<Child />`)
-  //       parentComp.components = {
-  //         Child,
-  //       }
-  //     } else {
-  //       parentComp.render = compileToFunction(`<Parent />`)
-  //       parentComp.components = {
-  //         Parent: components[i - 1],
-  //       }
-  //     }
+    define(Parent).create().mount(root)
+    expect(root.innerHTML).toBe(`<!--teleport start--><!--teleport end-->`)
+    expect(target.innerHTML).toBe(`<div><div>1</div><!--slot--></div>`)
 
-  //     createRecord(parentId, parentComp)
-  //   }
+    rerender(
+      parentId,
+      compileToFunction(`
+      <Child>
+        <template #default>
+          <div>1</div>
+          <div>2</div>
+        </template>
+      </Child>
+    `),
+    )
+    expect(root.innerHTML).toBe(`<!--teleport start--><!--teleport end-->`)
+    expect(target.innerHTML).toBe(
+      `<div><div>1</div><div>2</div><!--slot--></div>`,
+    )
+  })
 
-  //   const last = components[components.length - 1]
+  test('rerender for component that has no active instance yet', () => {
+    const id = 'no-active-instance-rerender'
+    const Foo = {
+      __vapor: true,
+      __hmrId: id,
+      render: () => template('foo')(),
+    }
 
-  //   render(h(last), root)
-  //   expect(serializeInner(root)).toBe(`<div>child</div>`)
+    createRecord(id, Foo)
+    rerender(id, () => template('bar')())
 
-  //   rerender(last.__hmrId!, compileToFunction(`<Parent class="test"/>`))
-  //   expect(serializeInner(root)).toBe(`<div class="test">child</div>`)
-  // })
+    const root = document.createElement('div')
+    define(Foo).create().mount(root)
+    expect(root.innerHTML).toBe('bar')
+  })
 
-  // // #3302
-  // test('rerender with Teleport', () => {
-  //   const root = nodeOps.createElement('div')
-  //   const target = nodeOps.createElement('div')
-  //   const parentId = 'parent-teleport'
+  test('reload for component that has no active instance yet', () => {
+    const id = 'no-active-instance-reload'
+    const Foo = {
+      __vapor: true,
+      __hmrId: id,
+      render: () => template('foo')(),
+    }
 
-  //   const Child: ComponentOptions = {
-  //     data() {
-  //       return {
-  //         // style is used to ensure that the div tag will be tracked by Teleport
-  //         style: {},
-  //         target,
-  //       }
-  //     },
-  //     render: compileToFunction(`
-  //       <teleport :to="target">
-  //         <div :style="style">
-  //           <slot/>
-  //         </div>
-  //       </teleport>
-  //     `),
-  //   }
+    createRecord(id, Foo)
+    reload(id, {
+      __hmrId: id,
+      render: () => template('bar')(),
+    })
 
-  //   const Parent: ComponentOptions = {
-  //     __hmrId: parentId,
-  //     components: { Child },
-  //     render: compileToFunction(`
-  //       <Child>
-  //         <template #default>
-  //           <div>1</div>
-  //         </template>
-  //       </Child>
-  //     `),
-  //   }
-  //   createRecord(parentId, Parent)
+    const root = document.createElement('div')
+    define(Foo).render({}, root)
+    expect(root.innerHTML).toBe('bar')
+  })
 
-  //   render(h(Parent), root)
-  //   expect(serializeInner(root)).toBe(
-  //     `<!--teleport start--><!--teleport end-->`,
-  //   )
-  //   expect(serializeInner(target)).toBe(`<div style={}><div>1</div></div>`)
+  test('force update slot content change', () => {
+    const root = document.createElement('div')
+    const parentId = 'test-force-computed-parent'
+    const childId = 'test-force-computed-child'
 
-  //   rerender(
-  //     parentId,
-  //     compileToFunction(`
-  //     <Child>
-  //       <template #default>
-  //         <div>1</div>
-  //         <div>2</div>
-  //       </template>
-  //     </Child>
-  //   `),
-  //   )
-  //   expect(serializeInner(root)).toBe(
-  //     `<!--teleport start--><!--teleport end-->`,
-  //   )
-  //   expect(serializeInner(target)).toBe(
-  //     `<div style={}><div>1</div><div>2</div></div>`,
-  //   )
-  // })
+    const Child = {
+      __vapor: true,
+      __hmrId: childId,
+      setup(_: any, { slots }: any) {
+        const slotContent = computed(() => {
+          return slots.default?.()
+        })
+        return { slotContent }
+      },
+      render: compileToFunction(`<component :is="() => slotContent" />`),
+    }
+    createRecord(childId, Child)
 
-  // // #4174
-  // test('with global mixins', async () => {
-  //   const childId = 'hmr-global-mixin'
-  //   const createSpy1 = vi.fn()
-  //   const createSpy2 = vi.fn()
+    const Parent = {
+      __vapor: true,
+      __hmrId: parentId,
+      components: { Child },
+      render: compileToFunction(`<Child>1</Child>`),
+    }
+    createRecord(parentId, Parent)
 
-  //   const Child: ComponentOptions = {
-  //     __hmrId: childId,
-  //     created: createSpy1,
-  //     render() {
-  //       return h('div')
-  //     },
-  //   }
-  //   createRecord(childId, Child)
+    // render(h(Parent), root)
+    define(Parent).render({}, root)
+    expect(root.innerHTML).toBe(`1<!--dynamic-component-->`)
 
-  //   const Parent: ComponentOptions = {
-  //     render: () => h(Child),
-  //   }
-
-  //   const app = createApp(Parent)
-  //   app.mixin({})
-
-  //   const root = nodeOps.createElement('div')
-  //   app.mount(root)
-  //   expect(createSpy1).toHaveBeenCalledTimes(1)
-  //   expect(createSpy2).toHaveBeenCalledTimes(0)
-
-  //   reload(childId, {
-  //     __hmrId: childId,
-  //     created: createSpy2,
-  //     render() {
-  //       return h('div')
-  //     },
-  //   })
-  //   await nextTick()
-  //   expect(createSpy1).toHaveBeenCalledTimes(1)
-  //   expect(createSpy2).toHaveBeenCalledTimes(1)
-  // })
-
-  // // #4757
-  // test('rerender for component that has no active instance yet', () => {
-  //   const id = 'no-active-instance-rerender'
-  //   const Foo: ComponentOptions = {
-  //     __hmrId: id,
-  //     render: () => 'foo',
-  //   }
-
-  //   createRecord(id, Foo)
-  //   rerender(id, () => 'bar')
-
-  //   const root = nodeOps.createElement('div')
-  //   render(h(Foo), root)
-  //   expect(serializeInner(root)).toBe('bar')
-  // })
-
-  // test('reload for component that has no active instance yet', () => {
-  //   const id = 'no-active-instance-reload'
-  //   const Foo: ComponentOptions = {
-  //     __hmrId: id,
-  //     render: () => 'foo',
-  //   }
-
-  //   createRecord(id, Foo)
-  //   reload(id, {
-  //     __hmrId: id,
-  //     render: () => 'bar',
-  //   })
-
-  //   const root = nodeOps.createElement('div')
-  //   render(h(Foo), root)
-  //   expect(serializeInner(root)).toBe('bar')
-  // })
-
-  // // #7155 - force HMR on slots content update
-  // test('force update slot content change', () => {
-  //   const root = nodeOps.createElement('div')
-  //   const parentId = 'test-force-computed-parent'
-  //   const childId = 'test-force-computed-child'
-
-  //   const Child: ComponentOptions = {
-  //     __hmrId: childId,
-  //     computed: {
-  //       slotContent() {
-  //         return this.$slots.default?.()
-  //       },
-  //     },
-  //     render: compileToFunction(`<component :is="() => slotContent" />`),
-  //   }
-  //   createRecord(childId, Child)
-
-  //   const Parent: ComponentOptions = {
-  //     __hmrId: parentId,
-  //     components: { Child },
-  //     render: compileToFunction(`<Child>1</Child>`),
-  //   }
-  //   createRecord(parentId, Parent)
-
-  //   render(h(Parent), root)
-  //   expect(serializeInner(root)).toBe(`1`)
-
-  //   rerender(parentId, compileToFunction(`<Child>2</Child>`))
-  //   expect(serializeInner(root)).toBe(`2`)
-  // })
-
-  // // #6978, #7138, #7114
-  // test('hoisted children array inside v-for', () => {
-  //   const root = nodeOps.createElement('div')
-  //   const appId = 'test-app-id'
-  //   const App: ComponentOptions = {
-  //     __hmrId: appId,
-  //     render: compileToFunction(
-  //       `<div v-for="item of 2">
-  //         <div>1</div>
-  //       </div>
-  //       <p>2</p>
-  //       <p>3</p>`,
-  //     ),
-  //   }
-  //   createRecord(appId, App)
-
-  //   render(h(App), root)
-  //   expect(serializeInner(root)).toBe(
-  //     `<div><div>1</div></div><div><div>1</div></div><p>2</p><p>3</p>`,
-  //   )
-
-  //   // move the <p>3</p> into the <div>1</div>
-  //   rerender(
-  //     appId,
-  //     compileToFunction(
-  //       `<div v-for="item of 2">
-  //         <div>1<p>3</p></div>
-  //       </div>
-  //       <p>2</p>`,
-  //     ),
-  //   )
-  //   expect(serializeInner(root)).toBe(
-  //     `<div><div>1<p>3</p></div></div><div><div>1<p>3</p></div></div><p>2</p>`,
-  //   )
-  // })
+    rerender(parentId, compileToFunction(`<Child>2</Child>`))
+    expect(root.innerHTML).toBe(`2<!--dynamic-component-->`)
+  })
 
   // // #11248
   // test('reload async component with multiple instances', async () => {
