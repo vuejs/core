@@ -97,7 +97,7 @@ function rerender(id: string, newRender?: Function): void {
     // this flag forces child components with slot content to update
     isHmrUpdating = true
     if (instance.vapor) {
-      instance.hmrRerender!()
+      if (!instance.isUnmounted) instance.hmrRerender!()
     } else {
       const i = instance as ComponentInternalInstance
       // #13771 don't update if the job is already disposed

@@ -181,12 +181,14 @@ function createInnerComp(
   parent: VaporComponentInstance & TransitionOptions,
   frag?: DynamicFragment,
 ): VaporComponentInstance {
-  const { rawProps, rawSlots, isSingleRoot, appContext, $transition } = parent
+  const { rawProps, rawSlots, appContext, $transition } = parent
   const instance = createComponent(
     comp,
     rawProps,
     rawSlots,
-    isSingleRoot,
+    // rawProps is shared and already contains fallthrough attrs.
+    // so isSingleRoot should be undefined
+    undefined,
     undefined,
     appContext,
   )

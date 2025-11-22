@@ -272,14 +272,12 @@ export function createComponent(
   const prevSlotConsumer = setCurrentSlotConsumer(null)
 
   // HMR
-  if (__DEV__ && component.__hmrId) {
+  if (__DEV__) {
     registerHMR(instance)
     instance.isSingleRoot = isSingleRoot
     instance.hmrRerender = hmrRerender.bind(null, instance)
     instance.hmrReload = hmrReload.bind(null, instance)
-  }
 
-  if (__DEV__) {
     pushWarningContext(instance)
     startMeasure(instance, `init`)
 
