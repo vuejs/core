@@ -41,7 +41,7 @@ export function applyVShow(target: Block, source: () => any): void {
 
 function setDisplay(target: Block, value: unknown): void {
   if (isVaporComponent(target)) {
-    return setDisplay(target, value)
+    return setDisplay(target.block, value)
   }
   if (isArray(target)) {
     if (target.length === 0) return
