@@ -42,6 +42,7 @@ import type { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import type { Expression, Node } from '@babel/types'
 import { unwrapTSNode } from './babelUtils'
+import { isWhitespace } from './tokenizer'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -568,3 +569,23 @@ export function getMemoedVNodeCall(
 }
 
 export const forAliasRE: RegExp = /([\s\S]*?)\s+(?:in|of)\s+(\S[\s\S]*)/
+
+export function isAllWhitespace(str: string): boolean {
+  for (let i = 0; i < str.length; i++) {
+    if (!isWhitespace(str.charCodeAt(i))) {
+      return false
+    }
+  }
+  return true
+}
+
+export function isWhitespaceText(node: TemplateChildNode): boolean {
+  return (
+    (node.type === NodeTypes.TEXT && isAllWhitespace(node.content)) ||
+    (node.type === NodeTypes.TEXT_CALL && isWhitespaceText(node.content))
+  )
+}
+
+export function isCommentOrWhitespace(node: TemplateChildNode): boolean {
+  return node.type === NodeTypes.COMMENT || isWhitespaceText(node)
+}
