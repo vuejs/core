@@ -894,4 +894,150 @@ describe('hot module replacement', () => {
     await timeout()
     expect(serializeInner(root)).toBe('<div>bar</div>')
   })
+
+  test('multi reload child wrapped in Suspense + KeepAlive', async () => {
+    const id = 'test-child-reload-3'
+    const Child: ComponentOptions = {
+      __hmrId: id,
+      setup() {
+        const count = ref(0)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    }
+    createRecord(id, Child)
+
+    const appId = 'test-app-id'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      components: { Child },
+      render: compileToFunction(`
+        <KeepAlive>
+          <Suspense>
+            <Child />
+          </Suspense>
+        </KeepAlive>
+      `),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div>0</div>')
+    await timeout()
+    reload(id, {
+      __hmrId: id,
+      setup() {
+        const count = ref(1)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>1</div>')
+
+    reload(id, {
+      __hmrId: id,
+      setup() {
+        const count = ref(2)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>2</div>')
+  })
+
+  test('rerender for nested component', () => {
+    const id = 'child-nested-rerender'
+    const Foo: ComponentOptions = {
+      __hmrId: id,
+      render() {
+        return this.$slots.default()
+      },
+    }
+    createRecord(id, Foo)
+
+    const parentId = 'parent-nested-rerender'
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      render() {
+        return h(Foo, null, {
+          default: () => this.$slots.default(),
+          _: 3 /* FORWARDED */,
+        })
+      },
+    }
+
+    const appId = 'app-nested-rerender'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      render: () =>
+        h(Parent, null, {
+          default: () => [
+            h(Foo, null, {
+              default: () => ['foo'],
+            }),
+          ],
+        }),
+    }
+    createRecord(parentId, App)
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('foo')
+
+    rerender(id, () => 'bar')
+    expect(serializeInner(root)).toBe('bar')
+  })
+
+  // https://github.com/vitejs/vite-plugin-vue/issues/599
+  // Both Outer and Inner are reloaded when './server.js' changes
+  test('reload nested components from single update', async () => {
+    const innerId = 'nested-reload-inner'
+    const outerId = 'nested-reload-outer'
+
+    let Inner = {
+      __hmrId: innerId,
+      render() {
+        return h('div', 'foo')
+      },
+    }
+    let Outer = {
+      __hmrId: outerId,
+      render() {
+        return h(Inner)
+      },
+    }
+
+    createRecord(innerId, Inner)
+    createRecord(outerId, Outer)
+
+    const App = {
+      render: () => h(Outer),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div>foo</div>')
+
+    Inner = {
+      __hmrId: innerId,
+      render() {
+        return h('div', 'bar')
+      },
+    }
+    Outer = {
+      __hmrId: outerId,
+      render() {
+        return h(Inner)
+      },
+    }
+
+    // trigger reload for both Outer and Inner
+    reload(outerId, Outer)
+    reload(innerId, Inner)
+    await nextTick()
+
+    expect(serializeInner(root)).toBe('<div>bar</div>')
+  })
 })

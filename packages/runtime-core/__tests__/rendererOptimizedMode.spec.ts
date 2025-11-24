@@ -861,6 +861,114 @@ describe('renderer: optimized mode', () => {
     expect(inner(root)).toBe('<div><div>true</div></div>')
   })
 
+  // #13305
+  test('patch Suspense nested in list nodes in optimized mode', async () => {
+    const deps: Promise<any>[] = []
+
+    const Item = {
+      props: {
+        someId: { type: Number, required: true },
+      },
+      async setup(props: any) {
+        const p = new Promise(resolve => setTimeout(resolve, 1))
+        deps.push(p)
+
+        await p
+        return () => (
+          openBlock(),
+          createElementBlock('li', null, [
+            createElementVNode(
+              'p',
+              null,
+              String(props.someId),
+              PatchFlags.TEXT,
+            ),
+          ])
+        )
+      },
+    }
+
+    const list = ref([1, 2, 3])
+    const App = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [
+              createElementVNode(
+                'p',
+                null,
+                JSON.stringify(list.value),
+                PatchFlags.TEXT,
+              ),
+              createElementVNode('ol', null, [
+                (openBlock(),
+                createBlock(SuspenseImpl, null, {
+                  fallback: withCtx(() => [
+                    createElementVNode('li', null, 'Loading…'),
+                  ]),
+                  default: withCtx(() => [
+                    (openBlock(true),
+                    createElementBlock(
+                      Fragment,
+                      null,
+                      renderList(list.value, id => {
+                        return (
+                          openBlock(),
+                          createBlock(
+                            Item,
+                            {
+                              key: id,
+                              'some-id': id,
+                            },
+                            null,
+                            PatchFlags.PROPS,
+                            ['some-id'],
+                          )
+                        )
+                      }),
+                      PatchFlags.KEYED_FRAGMENT,
+                    )),
+                  ]),
+                  _: 1 /* STABLE */,
+                })),
+              ]),
+            ],
+            PatchFlags.STABLE_FRAGMENT,
+          )
+        )
+      },
+    }
+
+    const app = createApp(App)
+    app.mount(root)
+    expect(inner(root)).toBe(`<p>[1,2,3]</p>` + `<ol><li>Loading…</li></ol>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(inner(root)).toBe(
+      `<p>[1,2,3]</p>` +
+        `<ol>` +
+        `<li><p>1</p></li>` +
+        `<li><p>2</p></li>` +
+        `<li><p>3</p></li>` +
+        `</ol>`,
+    )
+
+    list.value = [3, 1, 2]
+    await nextTick()
+    expect(inner(root)).toBe(
+      `<p>[3,1,2]</p>` +
+        `<ol>` +
+        `<li><p>3</p></li>` +
+        `<li><p>1</p></li>` +
+        `<li><p>2</p></li>` +
+        `</ol>`,
+    )
+  })
+
   // #4183
   test('should not take unmount children fast path /w Suspense', async () => {
     const show = ref(true)
