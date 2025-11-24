@@ -345,10 +345,10 @@ describe('reactivity/ref', () => {
     expect(a[1]).toBe('c')
 
     a[1] = ref('d')
-    expect(isRef(a[1]))
+    expect(isRef(a[1])).toBe(true)
     expect(r.value).toBe('d')
     r.value = 'e'
-    expect(isRef(a[1]))
+    expect(isRef(a[1])).toBe(true)
     expect(a[1].value).toBe('e')
 
     const s = toRef(a, 2, 'def')
