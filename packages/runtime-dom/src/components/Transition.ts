@@ -260,11 +260,11 @@ export function resolveTransitionProps(
       // the css will not get the final state (#10677)
       if (!el._enterCancelled) {
         // force reflow so *-leave-from classes immediately take effect (#2593)
-        forceReflow()
+        forceReflow(el)
         addTransitionClass(el, leaveActiveClass)
       } else {
         addTransitionClass(el, leaveActiveClass)
-        forceReflow()
+        forceReflow(el)
       }
       nextFrame(() => {
         if (!el._isLeaving) {
@@ -447,7 +447,7 @@ export function getTransitionInfo(
   }
   const hasTransform =
     type === TRANSITION &&
-    /\b(transform|all)(,|$)/.test(
+    /\b(?:transform|all)(?:,|$)/.test(
       getStyleProperties(`${TRANSITION}Property`).toString(),
     )
   return {
@@ -476,6 +476,7 @@ function toMs(s: string): number {
 }
 
 // synchronously force layout to put elements into a certain state
-export function forceReflow(): number {
-  return document.body.offsetHeight
+export function forceReflow(el?: Node): number {
+  const targetDocument = el ? el.ownerDocument! : document
+  return targetDocument.body.offsetHeight
 }
