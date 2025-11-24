@@ -40,7 +40,7 @@ import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
 import { genModelHandler } from './vModel'
-import { isBuiltInComponent } from '../utils'
+import { isBuiltInComponent, isKeepAliveTag } from '../utils'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -460,7 +460,7 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     ]
   }
 
-  if (node.type === NodeTypes.ELEMENT) {
+  if (node.type === NodeTypes.ELEMENT && !isKeepAliveTag(node.tag)) {
     // wrap with withVaporCtx to ensure correct currentInstance inside slot
     blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
   }
