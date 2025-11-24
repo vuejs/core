@@ -12,7 +12,7 @@ export default {
 
 const props = __props
 
-return { props, bar }
+return { props, get bar() { return bar }, set bar(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 }"
@@ -34,7 +34,7 @@ export default /*@__PURE__*/_defineComponent({
 
       const props = __props;
       
-return { props }
+return { get props() { return props }, set props(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -435,7 +435,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const props = __props
     
-return { props, get defaults() { return defaults } }
+return { get props() { return props }, set props(v) { throw new Error('Assignment to constant variable.') }, get defaults() { return defaults } }
 }
 
 })"
@@ -457,7 +457,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const props = __props
     
-return { props, get defaults() { return defaults } }
+return { get props() { return props }, set props(v) { throw new Error('Assignment to constant variable.') }, get defaults() { return defaults } }
 }
 
 })"
@@ -478,7 +478,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const props = __props
     
-return { props, get defaults() { return defaults } }
+return { get props() { return props }, set props(v) { throw new Error('Assignment to constant variable.') }, get defaults() { return defaults } }
 }
 
 })"
@@ -500,7 +500,7 @@ export default /*@__PURE__*/_defineComponent({
 
       const props = __props;
     
-return { props }
+return { get props() { return props }, set props(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -524,7 +524,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const props = __props
     
-return { props }
+return { get props() { return props }, set props(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -545,7 +545,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const props = __props
     
-return { props }
+return { get props() { return props }, set props(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
@@ -565,7 +565,7 @@ export default /*@__PURE__*/_defineComponent({
 
     const props = __props
     
-return { props }
+return { get props() { return props }, set props(v) { throw new Error('Assignment to constant variable.') } }
 }
 
 })"
