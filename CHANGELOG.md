@@ -1,3 +1,17 @@
+## [3.5.25](https://github.com/vuejs/core/compare/v3.5.24...v3.5.25) (2025-11-24)
+
+
+### Bug Fixes
+
+* **compiler:** share logic for comments and whitespace ([#13550](https://github.com/vuejs/core/issues/13550)) ([2214f7a](https://github.com/vuejs/core/commit/2214f7ab2940bcb751cd20130c020d895db6c042))
+* **provide:** warn when using `provide` after mounting ([#13954](https://github.com/vuejs/core/issues/13954)) ([247b2c2](https://github.com/vuejs/core/commit/247b2c2067afc4dee52f9f7bc194f3aab347ac55)), closes [#13921](https://github.com/vuejs/core/issues/13921) [#13924](https://github.com/vuejs/core/issues/13924)
+* **reactivity:** correctly wrap iterated array items to preserve their readonly status ([#14120](https://github.com/vuejs/core/issues/14120)) ([301020b](https://github.com/vuejs/core/commit/301020b481e85d03b0c96000f3221372063c41c6))
+* **reactivity:** toRef edge cases for ref unwrapping ([#12420](https://github.com/vuejs/core/issues/12420)) ([0d2357e](https://github.com/vuejs/core/commit/0d2357e6974678d5484751c869f429dc6ea85582))
+* **runtime-core:** keep options API typing intact when expose is used ([#14118](https://github.com/vuejs/core/issues/14118)) ([8f82f23](https://github.com/vuejs/core/commit/8f82f238463160284e504d1751d61b72dabb395e)), closes [#14117](https://github.com/vuejs/core/issues/14117) [vuejs/language-tools#5069](https://github.com/vuejs/language-tools/issues/5069)
+* **suspense:** defer clearing fallback vnode el in case it has dirs ([#14080](https://github.com/vuejs/core/issues/14080)) ([c0f63dd](https://github.com/vuejs/core/commit/c0f63ddbfa8fa221d66b683b5c26e471851c2b50)), closes [#14078](https://github.com/vuejs/core/issues/14078)
+
+
+
 ## [3.5.24](https://github.com/vuejs/core/compare/v3.5.23...v3.5.24) (2025-11-07)
 
 
