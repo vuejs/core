@@ -850,7 +850,29 @@ describe('cache multiple access', () => {
     const { code } = compileWithVBind(`<div :id="obj!.foo + obj!.bar"></div>`)
     expect(code).matchSnapshot()
     expect(code).contains('const _obj = _ctx.obj')
-    expect(code).contains('_setProp(n0, "id", _obj.foo + _obj.bar)')
+    expect(code).contains('_setProp(n0, "id", _obj!.foo + _obj!.bar)')
+  })
+
+  test('shared member root', () => {
+    const { code } = compileWithVBind(`
+        <div :id="foo.bar"></div>
+        <div :id="foo.baz"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _foo = _ctx.foo')
+    expect(code).contains('_setProp(n0, "id", _foo.bar)')
+    expect(code).contains('_setProp(n1, "id", _foo.baz)')
+  })
+
+  test('shared member root with TSNonNullExpression', () => {
+    const { code } = compileWithVBind(`
+        <div :id="foo!.bar"></div>
+        <div :id="foo!.baz"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _foo = _ctx.foo')
+    expect(code).contains('_setProp(n0, "id", _foo!.bar)')
+    expect(code).contains('_setProp(n1, "id", _foo!.baz)')
   })
 
   test('not cache variable only used in property shorthand', () => {
