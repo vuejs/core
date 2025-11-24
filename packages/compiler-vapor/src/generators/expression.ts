@@ -492,10 +492,10 @@ function shouldDeclareVariable(
     }
     return true
   }
-  // if arrays share common elements, no declaration needed
-  // because they will be treat as repeated expressions
+  // if arrays are identical, no declaration needed
+  // because they will be treated as repeated expressions
   // e.g., [[foo,bar],[foo,bar]] -> const foo_bar = _ctx.foo + _ctx.bar
-  if (vars.some(v => v.some(e => first.includes(e)))) {
+  if (vars.every(v => v.every((e, idx) => e === first[idx]))) {
     return false
   }
 

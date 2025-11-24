@@ -853,6 +853,17 @@ describe('cache multiple access', () => {
     expect(code).contains('_setProp(n0, "id", _obj.foo + _obj.bar)')
   })
 
+  test('shared member root', () => {
+    const { code } = compileWithVBind(`
+        <div :id="foo.bar"></div>
+        <div :id="foo.baz"></div>
+      `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _foo = _ctx.foo')
+    expect(code).contains('_setProp(n0, "id", _foo.bar)')
+    expect(code).contains('_setProp(n1, "id", _foo.baz)')
+  })
+
   test('not cache variable only used in property shorthand', () => {
     const { code } = compileWithVBind(`
         <div :style="{color}" />

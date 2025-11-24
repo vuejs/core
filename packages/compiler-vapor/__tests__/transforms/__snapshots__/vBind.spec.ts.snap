@@ -238,6 +238,22 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`cache multiple access > shared member root 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    _setProp(n0, "id", _foo.bar)
+    _setProp(n1, "id", _foo.baz)
+  })
+  return [n0, n1]
+}"
+`;
+
 exports[`cache multiple access > variable name substring edge cases 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
