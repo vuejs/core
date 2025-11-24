@@ -11,7 +11,7 @@ import {
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type { ComponentInternalInstance } from './component'
+import type { ComponentInternalInstance, ComponentOptions } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
@@ -28,6 +28,7 @@ import {
   isReservedProp,
   isString,
   normalizeClass,
+  normalizeCssVarValue,
   normalizeStyle,
   stringifyStyle,
 } from '@vue/shared'
@@ -41,6 +42,7 @@ import {
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isReactive } from '@vue/reactivity'
+import { updateHOCHostEl } from './componentRenderUtils'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -307,7 +309,10 @@ export function createHydrationFunctions(
           // if component is async, it may get moved / unmounted before its
           // inner component is loaded, so we need to give it a placeholder
           // vnode that matches its adopted DOM.
-          if (isAsyncWrapper(vnode)) {
+          if (
+            isAsyncWrapper(vnode) &&
+            !(vnode.type as ComponentOptions).__asyncResolved
+          ) {
             let subTree
             if (isFragmentStart) {
               subTree = createVNode(Fragment)
@@ -394,9 +399,11 @@ export function createHydrationFunctions(
           parentComponent.vnode.props.appear
 
         const content = (el as HTMLTemplateElement).content
-          .firstChild as Element
+          .firstChild as Element & { $cls?: string }
 
         if (needCallTransitionHooks) {
+          const cls = content.getAttribute('class')
+          if (cls) content.$cls = cls
           transition!.beforeEnter(content)
         }
 
@@ -453,18 +460,22 @@ export function createHydrationFunctions(
         ) {
           clientText = clientText.slice(1)
         }
-        if (el.textContent !== clientText) {
+        const { textContent } = el
+        if (
+          textContent !== clientText &&
+          // innerHTML normalize \r\n or \r into a single \n in the DOM
+          textContent !== clientText.replace(/\r\n|\r/g, '\n')
+        ) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
                 `Hydration text content mismatch on`,
                 el,
-                `\n  - rendered on server: ${el.textContent}` +
-                  `\n  - expected on client: ${vnode.children as string}`,
+                `\n  - rendered on server: ${textContent}` +
+                  `\n  - expected on client: ${clientText}`,
               )
             logMismatchError()
           }
-
           el.textContent = vnode.children as string
         }
       }
@@ -716,6 +727,11 @@ export function createHydrationFunctions(
       getContainerType(container),
       slotScopeIds,
     )
+    // the component vnode's el should be updated when a mismatch occurs.
+    if (parentComponent) {
+      parentComponent.vnode.el = vnode.el
+      updateHOCHostEl(parentComponent, vnode.el)
+    }
     return next
   }
 
@@ -777,7 +793,7 @@ export function createHydrationFunctions(
  * Dev only
  */
 function propHasMismatch(
-  el: Element,
+  el: Element & { $cls?: string },
   key: string,
   clientValue: any,
   vnode: VNode,
@@ -790,7 +806,12 @@ function propHasMismatch(
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
-    actual = el.getAttribute('class')
+    if (el.$cls) {
+      actual = el.$cls
+      delete el.$cls
+    } else {
+      actual = el.getAttribute('class')
+    }
     expected = normalizeClass(clientValue)
     if (!isSetEqual(toClassSet(actual || ''), toClassSet(expected))) {
       mismatchType = MismatchTypes.CLASS
@@ -929,10 +950,8 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      expectedMap.set(
-        `--${getEscapedCssVarName(key, false)}`,
-        String(cssVars[key]),
-      )
+      const value = normalizeCssVarValue(cssVars[key])
+      expectedMap.set(`--${getEscapedCssVarName(key, false)}`, value)
     }
   }
   if (vnode === root && instance.parent) {
@@ -981,6 +1000,6 @@ function isMismatchAllowed(
     if (allowedType === MismatchTypes.TEXT && list.includes('children')) {
       return true
     }
-    return allowedAttr.split(',').includes(MismatchTypeString[allowedType])
+    return list.includes(MismatchTypeString[allowedType])
   }
 }

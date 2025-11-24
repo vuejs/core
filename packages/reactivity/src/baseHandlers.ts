@@ -53,6 +53,8 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
   ) {}
 
   get(target: Target, key: string | symbol, receiver: object): any {
+    if (key === ReactiveFlags.SKIP) return target[ReactiveFlags.SKIP]
+
     const isReadonly = this._isReadonly,
       isShallow = this._isShallow
     if (key === ReactiveFlags.IS_REACTIVE) {
@@ -117,7 +119,8 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
 
     if (isRef(res)) {
       // ref unwrapping - skip unwrap for Array + integer key.
-      return targetIsArray && isIntegerKey(key) ? res : res.value
+      const value = targetIsArray && isIntegerKey(key) ? res : res.value
+      return isReadonly && isObject(value) ? readonly(value) : value
     }
 
     if (isObject(res)) {
@@ -151,7 +154,13 @@ class MutableReactiveHandler extends BaseReactiveHandler {
       }
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         if (isOldValueReadonly) {
-          return false
+          if (__DEV__) {
+            warn(
+              `Set operation on key "${String(key)}" failed: target is readonly.`,
+              target[key],
+            )
+          }
+          return true
         } else {
           oldValue.value = value
           return true
