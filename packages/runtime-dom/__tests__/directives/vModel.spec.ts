@@ -5,6 +5,7 @@ import {
   nextTick,
   ref,
   render,
+  vModelCheckbox,
   vModelDynamic,
   withDirectives,
 } from '@vue/runtime-dom'
@@ -344,6 +345,9 @@ describe('vModel', () => {
     triggerEvent('input', number)
     await nextTick()
     expect(data.number).toEqual(1.2)
+    triggerEvent('change', number)
+    await nextTick()
+    expect(number.value).toEqual('1.2')
 
     trim.value = '    hello, world    '
     triggerEvent('input', trim)
@@ -727,6 +731,120 @@ describe('vModel', () => {
     await nextTick()
     expect(foo.checked).toEqual(false)
     expect(bar.checked).toEqual(false)
+  })
+
+  it('should not update DOM unnecessarily', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: true }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'checkbox',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('input')
+    const data = root._vnode.component.data
+
+    const setCheckedSpy = vi.spyOn(input, 'checked', 'set')
+
+    // Trigger a change event without actually changing the value
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual(true)
+    expect(setCheckedSpy).not.toHaveBeenCalled()
+
+    // Change the value and trigger a change event
+    input.checked = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual(false)
+    expect(setCheckedSpy).toHaveBeenCalledTimes(1)
+
+    setCheckedSpy.mockClear()
+
+    data.value = false
+    await nextTick()
+    expect(input.checked).toEqual(false)
+    expect(setCheckedSpy).not.toHaveBeenCalled()
+
+    data.value = true
+    await nextTick()
+    expect(input.checked).toEqual(true)
+    expect(setCheckedSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('should handle array values correctly without unnecessary updates', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: ['foo'] }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'checkbox',
+              value: 'foo',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            this.value,
+          ),
+          withVModel(
+            h('input', {
+              type: 'checkbox',
+              value: 'bar',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const [foo, bar] = root.querySelectorAll('input')
+    const data = root._vnode.component.data
+
+    const setCheckedSpyFoo = vi.spyOn(foo, 'checked', 'set')
+    const setCheckedSpyBar = vi.spyOn(bar, 'checked', 'set')
+
+    expect(foo.checked).toEqual(true)
+    expect(bar.checked).toEqual(false)
+
+    triggerEvent('change', foo)
+    await nextTick()
+    expect(data.value).toEqual(['foo'])
+    expect(setCheckedSpyFoo).not.toHaveBeenCalled()
+
+    bar.checked = true
+    triggerEvent('change', bar)
+    await nextTick()
+    expect(data.value).toEqual(['foo', 'bar'])
+    expect(setCheckedSpyBar).toHaveBeenCalledTimes(1)
+
+    setCheckedSpyFoo.mockClear()
+    setCheckedSpyBar.mockClear()
+
+    data.value = ['foo', 'bar']
+    await nextTick()
+    expect(setCheckedSpyFoo).not.toHaveBeenCalled()
+    expect(setCheckedSpyBar).not.toHaveBeenCalled()
+
+    data.value = ['bar']
+    await nextTick()
+    expect(setCheckedSpyFoo).toHaveBeenCalledTimes(1)
+    expect(setCheckedSpyBar).not.toHaveBeenCalled()
+    expect(foo.checked).toEqual(false)
+    expect(bar.checked).toEqual(true)
   })
 
   it('should work with radio', async () => {
@@ -1330,5 +1448,52 @@ describe('vModel', () => {
     expect(data.num).toBe(1)
 
     expect(inputNum1.value).toBe('1')
+  })
+
+  it(`should support mutating an array or set value for a checkbox`, async () => {
+    const component = defineComponent({
+      data() {
+        return { value: [] }
+      },
+      render() {
+        return [
+          withDirectives(
+            h('input', {
+              type: 'checkbox',
+              class: 'foo',
+              value: 'foo',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            [[vModelCheckbox, this.value]],
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const foo = root.querySelector('.foo')
+    const data = root._vnode.component.data
+
+    expect(foo.checked).toEqual(false)
+
+    data.value.push('foo')
+    await nextTick()
+    expect(foo.checked).toEqual(true)
+
+    data.value[0] = 'bar'
+    await nextTick()
+    expect(foo.checked).toEqual(false)
+
+    data.value = new Set()
+    await nextTick()
+    expect(foo.checked).toEqual(false)
+
+    data.value.add('foo')
+    await nextTick()
+    expect(foo.checked).toEqual(true)
+
+    data.value.delete('foo')
+    await nextTick()
+    expect(foo.checked).toEqual(false)
   })
 })

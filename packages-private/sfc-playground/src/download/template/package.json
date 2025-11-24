@@ -8,10 +8,10 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.4.0"
+    "vue": "latest"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.1.2",
-    "vite": "^5.4.1"
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vite": "^7.1.12"
   }
 }

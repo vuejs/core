@@ -187,6 +187,11 @@ const KeepAliveImpl: ComponentOptions = {
         // Update components tree
         devtoolsComponentAdded(instance)
       }
+
+      // for e2e test
+      if (__DEV__ && __BROWSER__) {
+        ;(instance as any).__keepAliveStorageContainer = storageContainer
+      }
     }
 
     function unmount(vnode: VNode) {
@@ -267,7 +272,7 @@ const KeepAliveImpl: ComponentOptions = {
       pendingCacheKey = null
 
       if (!slots.default) {
-        return null
+        return (current = null)
       }
 
       const children = slots.default()
@@ -310,6 +315,8 @@ const KeepAliveImpl: ComponentOptions = {
         (include && (!name || !matches(include, name))) ||
         (exclude && name && matches(exclude, name))
       ) {
+        // #11717
+        vnode.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
         current = vnode
         return rawVNode
       }
@@ -348,7 +355,7 @@ const KeepAliveImpl: ComponentOptions = {
         keys.add(key)
         // prune oldest entry
         if (max && keys.size > parseInt(max as string, 10)) {
-          pruneCacheEntry(keys.values().next().value)
+          pruneCacheEntry(keys.values().next().value!)
         }
       }
       // avoid vnode being unmounted
@@ -360,13 +367,16 @@ const KeepAliveImpl: ComponentOptions = {
   },
 }
 
-if (__COMPAT__) {
-  KeepAliveImpl.__isBuildIn = true
+const decorate = (t: typeof KeepAliveImpl) => {
+  t.__isBuiltIn = true
+  return t
 }
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const KeepAlive = KeepAliveImpl as any as {
+export const KeepAlive = (__COMPAT__
+  ? /*@__PURE__*/ decorate(KeepAliveImpl)
+  : KeepAliveImpl) as any as {
   __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps
@@ -385,7 +395,7 @@ function matches(pattern: MatchPattern, name: string): boolean {
     pattern.lastIndex = 0
     return pattern.test(name)
   }
-  /* istanbul ignore next */
+  /* v8 ignore next */
   return false
 }
 

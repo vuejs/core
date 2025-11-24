@@ -99,7 +99,7 @@ interface MappingItem {
   name: string | null
 }
 
-const PURE_ANNOTATION = `/*#__PURE__*/`
+const PURE_ANNOTATION = `/*@__PURE__*/`
 
 const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
 
@@ -188,7 +188,9 @@ function createCodegenContext(
               name = content
             }
           }
-          addMapping(node.loc.start, name)
+          if (node.loc.source) {
+            addMapping(node.loc.start, name)
+          }
         }
         if (newlineIndex === NewlineType.Unknown) {
           // multiple newlines, full iteration
@@ -225,7 +227,7 @@ function createCodegenContext(
             context.column = code.length - newlineIndex
           }
         }
-        if (node && node.loc !== locStub) {
+        if (node && node.loc !== locStub && node.loc.source) {
           addMapping(node.loc.end)
         }
       }
@@ -725,7 +727,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       !__BROWSER__ && genReturnStatement(node, context)
       break
 
-    /* istanbul ignore next */
+    /* v8 ignore start */
     case NodeTypes.IF_BRANCH:
       // noop
       break
@@ -736,6 +738,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
         const exhaustiveCheck: never = node
         return exhaustiveCheck
       }
+    /* v8 ignore stop */
   }
 }
 
@@ -1016,7 +1019,9 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
   push(`_cache[${node.index}] || (`)
   if (needPauseTracking) {
     indent()
-    push(`${helper(SET_BLOCK_TRACKING)}(-1),`)
+    push(`${helper(SET_BLOCK_TRACKING)}(-1`)
+    if (node.inVOnce) push(`, true`)
+    push(`),`)
     newline()
     push(`(`)
   }

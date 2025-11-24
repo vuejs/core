@@ -34,14 +34,17 @@ export enum WatchErrorCodes {
   WATCH_CLEANUP,
 }
 
-type WatchEffect = (onCleanup: OnCleanup) => void
-type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
-type WatchCallback<V = any, OV = any> = (
+export type WatchEffect = (onCleanup: OnCleanup) => void
+
+export type WatchSource<T = any> = Ref<T, any> | ComputedRef<T> | (() => T)
+
+export type WatchCallback<V = any, OV = any> = (
   value: V,
   oldValue: OV,
   onCleanup: OnCleanup,
 ) => any
-type OnCleanup = (cleanupFn: () => void) => void
+
+export type OnCleanup = (cleanupFn: () => void) => void
 
 export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
   immediate?: Immediate
@@ -92,6 +95,10 @@ export function getCurrentWatcher(): ReactiveEffect<any> | undefined {
  * associated effect re-runs.
  *
  * @param cleanupFn - The callback function to attach to the effect's cleanup.
+ * @param failSilently - if `true`, will not throw warning when called without
+ * an active effect.
+ * @param owner - The effect that this cleanup function should be attached to.
+ * By default, the current active effect.
  */
 export function onWatcherCleanup(
   cleanupFn: () => void,
@@ -203,19 +210,19 @@ export function watch(
     getter = () => traverse(baseGetter(), depth)
   }
 
-  if (once) {
-    if (cb) {
-      const _cb = cb
-      cb = (...args) => {
-        _cb(...args)
-        effect.stop()
-      }
-    } else {
-      const _getter = getter
-      getter = () => {
-        _getter()
-        effect.stop()
-      }
+  const scope = getCurrentScope()
+  const watchHandle: WatchHandle = () => {
+    effect.stop()
+    if (scope && scope.active) {
+      remove(scope.effects, effect)
+    }
+  }
+
+  if (once && cb) {
+    const _cb = cb
+    cb = (...args) => {
+      _cb(...args)
+      watchHandle()
     }
   }
 
@@ -257,11 +264,11 @@ export function watch(
                 : oldValue,
             boundCleanup,
           ]
+          oldValue = newValue
           call
             ? call(cb!, WatchErrorCodes.WATCH_CALLBACK, args)
             : // @ts-expect-error
               cb!(...args)
-          oldValue = newValue
         } finally {
           activeWatcher = currentWatcher
         }
@@ -314,14 +321,6 @@ export function watch(
     effect.run()
   }
 
-  const scope = getCurrentScope()
-  const watchHandle: WatchHandle = () => {
-    effect.stop()
-    if (scope) {
-      remove(scope.effects, effect)
-    }
-  }
-
   watchHandle.pause = effect.pause.bind(effect)
   watchHandle.resume = effect.resume.bind(effect)
   watchHandle.stop = watchHandle
@@ -332,17 +331,17 @@ export function watch(
 export function traverse(
   value: unknown,
   depth: number = Infinity,
-  seen?: Set<unknown>,
+  seen?: Map<unknown, number>,
 ): unknown {
   if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }
 
-  seen = seen || new Set()
-  if (seen.has(value)) {
+  seen = seen || new Map()
+  if ((seen.get(value) || 0) >= depth) {
     return value
   }
-  seen.add(value)
+  seen.set(value, depth)
   depth--
   if (isRef(value)) {
     traverse(value.value, depth, seen)

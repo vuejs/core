@@ -149,9 +149,7 @@ export function defineEmits() {
   return null as any
 }
 
-export type ComponentTypeEmits =
-  | ((...args: any[]) => any)
-  | Record<string, any[]>
+export type ComponentTypeEmits = ((...args: any[]) => any) | Record<string, any>
 
 type RecordToUnion<T extends Record<string, any>> = T[keyof T]
 
@@ -240,12 +238,15 @@ export function defineSlots<
   return null as any
 }
 
-export type ModelRef<T, M extends PropertyKey = string> = Ref<T> &
-  [ModelRef<T, M>, Record<M, true | undefined>]
+export type ModelRef<T, M extends PropertyKey = string, G = T, S = T> = Ref<
+  G,
+  S
+> &
+  [ModelRef<T, M, G, S>, Record<M, true | undefined>]
 
-export type DefineModelOptions<T = any> = {
-  get?: (v: T) => any
-  set?: (v: T) => any
+export type DefineModelOptions<T = any, G = T, S = T> = {
+  get?: (v: T) => G
+  set?: (v: S) => any
 }
 
 /**
@@ -281,27 +282,28 @@ export type DefineModelOptions<T = any> = {
  * const count = defineModel<number>('count', { default: 0 })
  * ```
  */
-export function defineModel<T, M extends PropertyKey = string>(
-  options: { required: true } & PropOptions<T> & DefineModelOptions<T>,
-): ModelRef<T, M>
-export function defineModel<T, M extends PropertyKey = string>(
-  options: { default: any } & PropOptions<T> & DefineModelOptions<T>,
-): ModelRef<T, M>
-export function defineModel<T, M extends PropertyKey = string>(
-  options?: PropOptions<T> & DefineModelOptions<T>,
-): ModelRef<T | undefined, M>
-export function defineModel<T, M extends PropertyKey = string>(
+export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
+  options: ({ default: any } | { required: true }) &
+    PropOptions<T> &
+    DefineModelOptions<T, G, S>,
+): ModelRef<T, M, G, S>
+
+export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
+  options?: PropOptions<T> & DefineModelOptions<T, G, S>,
+): ModelRef<T | undefined, M, G | undefined, S | undefined>
+
+export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options: { required: true } & PropOptions<T> & DefineModelOptions<T>,
-): ModelRef<T, M>
-export function defineModel<T, M extends PropertyKey = string>(
+  options: ({ default: any } | { required: true }) &
+    PropOptions<T> &
+    DefineModelOptions<T, G, S>,
+): ModelRef<T, M, G, S>
+
+export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options: { default: any } & PropOptions<T> & DefineModelOptions<T>,
-): ModelRef<T, M>
-export function defineModel<T, M extends PropertyKey = string>(
-  name: string,
-  options?: PropOptions<T> & DefineModelOptions<T>,
-): ModelRef<T | undefined, M>
+  options?: PropOptions<T> & DefineModelOptions<T, G, S>,
+): ModelRef<T | undefined, M, G | undefined, S | undefined>
+
 export function defineModel(): any {
   if (__DEV__) {
     warnRuntimeUsage('defineModel')
@@ -317,7 +319,14 @@ type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, T[K]>
 }
 
-type NativeType = null | number | string | boolean | symbol | Function
+type NativeType =
+  | null
+  | undefined
+  | number
+  | string
+  | boolean
+  | symbol
+  | Function
 
 type InferDefault<P, T> =
   | ((props: P) => T & {})
@@ -327,21 +336,23 @@ type PropsWithDefaults<
   T,
   Defaults extends InferDefaults<T>,
   BKeys extends keyof T,
-> = Readonly<MappedOmit<T, keyof Defaults>> & {
-  readonly [K in keyof Defaults as K extends keyof T
-    ? K
-    : never]-?: K extends keyof T
-    ? Defaults[K] extends undefined
-      ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
-      : NotUndefined<T[K]>
-    : never
-} & {
-  readonly [K in BKeys]-?: K extends keyof Defaults
-    ? Defaults[K] extends undefined
-      ? boolean | undefined
-      : boolean
-    : boolean
-}
+> = T extends unknown
+  ? Readonly<MappedOmit<T, keyof Defaults>> & {
+      readonly [K in keyof Defaults as K extends keyof T
+        ? K
+        : never]-?: K extends keyof T
+        ? Defaults[K] extends undefined
+          ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
+          : NotUndefined<T[K]>
+        : never
+    } & {
+      readonly [K in BKeys]-?: K extends keyof Defaults
+        ? Defaults[K] extends undefined
+          ? boolean | undefined
+          : boolean
+        : boolean
+    }
+  : never
 
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
@@ -378,17 +389,17 @@ export function withDefaults<
 }
 
 export function useSlots(): SetupContext['slots'] {
-  return getContext().slots
+  return getContext('useSlots').slots
 }
 
 export function useAttrs(): SetupContext['attrs'] {
-  return getContext().attrs
+  return getContext('useAttrs').attrs
 }
 
-function getContext(): SetupContext {
+function getContext(calledFunctionName: string): SetupContext {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
-    warn(`useContext() called without active instance.`)
+    warn(`${calledFunctionName}() called without active instance.`)
   }
   return i.setupContext || (i.setupContext = createSetupContext(i))
 }

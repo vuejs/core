@@ -25,7 +25,7 @@
   - For use with bundlers like `webpack`, `rollup` and `parcel`.
   - Leaves prod/dev branches with `process.env.NODE_ENV` guards (must be replaced by bundler)
   - Does not ship minified builds (to be done together with the rest of the code after bundling)
-  - Imports dependencies (e.g. `@vue/runtime-core`, `@vue/runtime-compiler`)
+  - Imports dependencies (e.g. `@vue/runtime-core`, `@vue/compiler-core`)
     - Imported dependencies are also `esm-bundler` builds and will in turn import their dependencies (e.g. `@vue/runtime-core` imports `@vue/reactivity`)
     - This means you **can** install/import these deps individually without ending up with different instances of these dependencies, but you must make sure they all resolve to the same version.
   - In-browser template compilation:

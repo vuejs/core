@@ -30,12 +30,19 @@ import {
 import { ErrorCodes, createCompilerError } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
+import { cloneLoc } from '../parser'
 import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
-import { findDir, findProp, getMemoedVNodeCall, injectProp } from '../utils'
-import { PatchFlagNames, PatchFlags } from '@vue/shared'
+import {
+  findDir,
+  findProp,
+  getMemoedVNodeCall,
+  injectProp,
+  isCommentOrWhitespace,
+} from '../utils'
+import { PatchFlags } from '@vue/shared'
 
 export const transformIf: NodeTransform = createStructuralDirectiveTransform(
-  /^(if|else|else-if)$/,
+  /^(?:if|else|else-if)$/,
   (node, dir, context) => {
     return processIf(node, dir, context, (ifNode, branch, isRoot) => {
       // #1587: We need to dynamically increment the key based on the current
@@ -110,7 +117,7 @@ export function processIf(
     const branch = createIfBranch(node, dir)
     const ifNode: IfNode = {
       type: NodeTypes.IF,
-      loc: node.loc,
+      loc: cloneLoc(node.loc),
       branches: [branch],
     }
     context.replaceNode(ifNode)
@@ -124,25 +131,18 @@ export function processIf(
     let i = siblings.indexOf(node)
     while (i-- >= -1) {
       const sibling = siblings[i]
-      if (sibling && sibling.type === NodeTypes.COMMENT) {
+      if (sibling && isCommentOrWhitespace(sibling)) {
         context.removeNode(sibling)
-        __DEV__ && comments.unshift(sibling)
-        continue
-      }
-
-      if (
-        sibling &&
-        sibling.type === NodeTypes.TEXT &&
-        !sibling.content.trim().length
-      ) {
-        context.removeNode(sibling)
+        if (__DEV__ && sibling.type === NodeTypes.COMMENT) {
+          comments.unshift(sibling)
+        }
         continue
       }
 
       if (sibling && sibling.type === NodeTypes.IF) {
-        // Check if v-else was followed by v-else-if
+        // Check if v-else was followed by v-else-if or there are two adjacent v-else
         if (
-          dir.name === 'else-if' &&
+          (dir.name === 'else-if' || dir.name === 'else') &&
           sibling.branches[sibling.branches.length - 1].condition === undefined
         ) {
           context.onError(
@@ -264,7 +264,6 @@ function createChildrenCodegenNode(
       return vnodeCall
     } else {
       let patchFlag = PatchFlags.STABLE_FRAGMENT
-      let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
       // check if the fragment actually contains a single valid child with
       // the rest being comments
       if (
@@ -273,7 +272,6 @@ function createChildrenCodegenNode(
         children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
       ) {
         patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
-        patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
       }
 
       return createVNodeCall(

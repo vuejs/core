@@ -1,5 +1,12 @@
 import type { VNode, VNodeChild } from '../vnode'
-import { isReactive, shallowReadArray, toReactive } from '@vue/reactivity'
+import {
+  isReactive,
+  isReadonly,
+  isShallow,
+  shallowReadArray,
+  toReactive,
+  toReadonly,
+} from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import { warn } from '../warning'
 
@@ -63,13 +70,21 @@ export function renderList(
 
   if (sourceIsArray || isString(source)) {
     const sourceIsReactiveArray = sourceIsArray && isReactive(source)
+    let needsWrap = false
+    let isReadonlySource = false
     if (sourceIsReactiveArray) {
+      needsWrap = !isShallow(source)
+      isReadonlySource = isReadonly(source)
       source = shallowReadArray(source)
     }
     ret = new Array(source.length)
     for (let i = 0, l = source.length; i < l; i++) {
       ret[i] = renderItem(
-        sourceIsReactiveArray ? toReactive(source[i]) : source[i],
+        needsWrap
+          ? isReadonlySource
+            ? toReadonly(toReactive(source[i]))
+            : toReactive(source[i])
+          : source[i],
         i,
         undefined,
         cached && cached[i],
