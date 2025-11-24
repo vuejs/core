@@ -196,6 +196,7 @@ export interface VNode<
 
   // DOM
   el: HostNode | null
+  placeholder: HostNode | null // async component el placeholder
   anchor: HostNode | null // fragment anchor
   target: HostElement | null // teleport target
   targetStart: HostNode | null // teleport target start anchor
@@ -711,6 +712,8 @@ export function cloneVNode<T, U>(
     suspense: vnode.suspense,
     ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
     ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
+    placeholder: vnode.placeholder,
+
     el: vnode.el,
     anchor: vnode.anchor,
     ctx: vnode.ctx,

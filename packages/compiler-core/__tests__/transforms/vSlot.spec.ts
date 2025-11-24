@@ -517,7 +517,10 @@ describe('compiler: transform component slots', () => {
   })
 
   test('should only force dynamic slots when actually using scope vars w/ prefixIdentifiers: true', () => {
-    function assertDynamicSlots(template: string, shouldForce: boolean) {
+    function assertDynamicSlots(
+      template: string,
+      expectedPatchFlag?: PatchFlags,
+    ) {
       const { root } = parseWithSlots(template, { prefixIdentifiers: true })
       let flag: any
       if (root.children[0].type === NodeTypes.FOR) {
@@ -530,8 +533,8 @@ describe('compiler: transform component slots', () => {
           .children[0] as ComponentNode
         flag = (innerComp.codegenNode as VNodeCall).patchFlag
       }
-      if (shouldForce) {
-        expect(flag).toBe(PatchFlags.DYNAMIC_SLOTS)
+      if (expectedPatchFlag) {
+        expect(flag).toBe(expectedPatchFlag)
       } else {
         expect(flag).toBeUndefined()
       }
@@ -541,14 +544,13 @@ describe('compiler: transform component slots', () => {
       `<div v-for="i in list">
         <Comp v-slot="bar">foo</Comp>
       </div>`,
-      false,
     )
 
     assertDynamicSlots(
       `<div v-for="i in list">
         <Comp v-slot="bar">{{ i }}</Comp>
       </div>`,
-      true,
+      PatchFlags.DYNAMIC_SLOTS,
     )
 
     // reference the component's own slot variable should not force dynamic slots
@@ -556,14 +558,13 @@ describe('compiler: transform component slots', () => {
       `<Comp v-slot="foo">
         <Comp v-slot="bar">{{ bar }}</Comp>
       </Comp>`,
-      false,
     )
 
     assertDynamicSlots(
       `<Comp v-slot="foo">
         <Comp v-slot="bar">{{ foo }}</Comp>
       </Comp>`,
-      true,
+      PatchFlags.DYNAMIC_SLOTS,
     )
 
     // #2564
@@ -571,14 +572,35 @@ describe('compiler: transform component slots', () => {
       `<div v-for="i in list">
         <Comp v-slot="bar"><button @click="fn(i)" /></Comp>
       </div>`,
-      true,
+      PatchFlags.DYNAMIC_SLOTS,
     )
 
     assertDynamicSlots(
       `<div v-for="i in list">
         <Comp v-slot="bar"><button @click="fn()" /></Comp>
       </div>`,
-      false,
+    )
+
+    // #9380
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp :i="i">foo</Comp>
+      </div>`,
+      PatchFlags.PROPS,
+    )
+
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot="{ value = i }"><button @click="fn()" /></Comp>
+      </div>`,
+      PatchFlags.DYNAMIC_SLOTS,
+    )
+
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot:[i]><button @click="fn()" /></Comp>
+      </div>`,
+      PatchFlags.DYNAMIC_SLOTS,
     )
   })
 
