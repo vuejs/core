@@ -272,7 +272,7 @@ export function defineComponent<
         Slots,
         LocalComponents,
         Directives,
-        Exposed
+        string
       >
     >,
 ): DefineComponent<
