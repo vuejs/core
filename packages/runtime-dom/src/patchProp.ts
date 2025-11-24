@@ -3,8 +3,15 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isFunction, isModelListener, isOn, isString } from '@vue/shared'
+import {
+  camelize,
+  isFunction,
+  isModelListener,
+  isOn,
+  isString,
+} from '@vue/shared'
 import type { RendererOptions } from '@vue/runtime-core'
+import type { VueElement } from './apiCustomElement'
 
 const isNativeOn = (key: string) =>
   key.charCodeAt(0) === 111 /* o */ &&
@@ -21,10 +28,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   prevValue,
   nextValue,
   namespace,
-  prevChildren,
   parentComponent,
-  parentSuspense,
-  unmountChildren,
 ) => {
   const isSVG = namespace === 'svg'
   if (key === 'class') {
@@ -43,15 +47,22 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
         ? ((key = key.slice(1)), false)
         : shouldSetAsProp(el, key, nextValue, isSVG)
   ) {
-    patchDOMProp(
-      el,
-      key,
-      nextValue,
-      prevChildren,
-      parentComponent,
-      parentSuspense,
-      unmountChildren,
-    )
+    patchDOMProp(el, key, nextValue, parentComponent)
+    // #6007 also set form state as attributes so they work with
+    // <input type="reset"> or libs / extensions that expect attributes
+    // #11163 custom elements may use value as an prop and set it as object
+    if (
+      !el.tagName.includes('-') &&
+      (key === 'value' || key === 'checked' || key === 'selected')
+    ) {
+      patchAttr(el, key, nextValue, isSVG, parentComponent, key !== 'value')
+    }
+  } else if (
+    // #11081 force set props for possible async custom element
+    (el as VueElement)._isVueCE &&
+    (/[A-Z]/.test(key) || !isString(nextValue))
+  ) {
+    patchDOMProp(el, camelize(key), nextValue, parentComponent, key)
   } else {
     // special case for <input v-model type="checkbox"> with
     // :true-value & :false-value
@@ -91,7 +102,19 @@ function shouldSetAsProp(
   // them as attributes.
   // Note that `contentEditable` doesn't have this problem: its DOM
   // property is also enumerated string values.
-  if (key === 'spellcheck' || key === 'draggable' || key === 'translate') {
+  if (
+    key === 'spellcheck' ||
+    key === 'draggable' ||
+    key === 'translate' ||
+    key === 'autocorrect'
+  ) {
+    return false
+  }
+
+  // #13946 iframe.sandbox should always be set as attribute since setting
+  // the property to null results in 'null' string, and setting to empty string
+  // enables the most restrictive sandbox mode instead of no sandboxing.
+  if (key === 'sandbox' && el.tagName === 'IFRAME') {
     return false
   }
 

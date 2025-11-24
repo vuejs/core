@@ -7,10 +7,11 @@ import {
   type VNodeProps,
   createVNode,
   isVNode,
+  setBlockTracking,
 } from './vnode'
 import type { Teleport, TeleportProps } from './components/Teleport'
 import type { Suspense, SuspenseProps } from './components/Suspense'
-import { isArray, isObject } from '@vue/shared'
+import { type IfAny, isArray, isObject } from '@vue/shared'
 import type { RawSlots } from './componentSlots'
 import type {
   Component,
@@ -140,11 +141,11 @@ export function h(
 export function h<
   P,
   E extends EmitsOptions = {},
-  S extends Record<string, any> = {},
+  S extends Record<string, any> = any,
 >(
-  type: FunctionalComponent<P, E, S>,
+  type: FunctionalComponent<P, any, S, any>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots,
+  children?: RawChildren | IfAny<S, RawSlots, S>,
 ): VNode
 
 // catch-all for generic component types
@@ -201,25 +202,31 @@ export function h<P>(
 
 // Actual implementation
 export function h(type: any, propsOrChildren?: any, children?: any): VNode {
-  const l = arguments.length
-  if (l === 2) {
-    if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
-      // single vnode without props
-      if (isVNode(propsOrChildren)) {
-        return createVNode(type, null, [propsOrChildren])
+  try {
+    // #6913 disable tracking block in h function
+    setBlockTracking(-1)
+    const l = arguments.length
+    if (l === 2) {
+      if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
+        // single vnode without props
+        if (isVNode(propsOrChildren)) {
+          return createVNode(type, null, [propsOrChildren])
+        }
+        // props without children
+        return createVNode(type, propsOrChildren)
+      } else {
+        // omit props
+        return createVNode(type, null, propsOrChildren)
       }
-      // props without children
-      return createVNode(type, propsOrChildren)
     } else {
-      // omit props
-      return createVNode(type, null, propsOrChildren)
+      if (l > 3) {
+        children = Array.prototype.slice.call(arguments, 2)
+      } else if (l === 3 && isVNode(children)) {
+        children = [children]
+      }
+      return createVNode(type, propsOrChildren, children)
     }
-  } else {
-    if (l > 3) {
-      children = Array.prototype.slice.call(arguments, 2)
-    } else if (l === 3 && isVNode(children)) {
-      children = [children]
-    }
-    return createVNode(type, propsOrChildren, children)
+  } finally {
+    setBlockTracking(1)
   }
 }

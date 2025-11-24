@@ -158,4 +158,13 @@ describe(`runtime-dom: style patching`, () => {
     )
     expect(el.style.display).toBe('flex')
   })
+
+  it('should clear previous css string value', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'style', {}, 'color:red')
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
+
+    patchProp(el, 'style', 'color:red', { fontSize: '12px' })
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('font-size:12px;')
+  })
 })

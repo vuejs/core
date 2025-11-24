@@ -1,4 +1,4 @@
-import { def, isObject, toRawType } from '@vue/shared'
+import { def, hasOwn, isObject, toRawType } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
@@ -13,6 +13,7 @@ import {
 } from './collectionHandlers'
 import type { RawSymbol, Ref, UnwrapRefSimple } from './ref'
 import { ReactiveFlags } from './constants'
+import { warn } from './warning'
 
 export interface Target {
   [ReactiveFlags.SKIP]?: boolean
@@ -22,10 +23,16 @@ export interface Target {
   [ReactiveFlags.RAW]?: any
 }
 
-export const reactiveMap = new WeakMap<Target, any>()
-export const shallowReactiveMap = new WeakMap<Target, any>()
-export const readonlyMap = new WeakMap<Target, any>()
-export const shallowReadonlyMap = new WeakMap<Target, any>()
+export const reactiveMap: WeakMap<Target, any> = new WeakMap<Target, any>()
+export const shallowReactiveMap: WeakMap<Target, any> = new WeakMap<
+  Target,
+  any
+>()
+export const readonlyMap: WeakMap<Target, any> = new WeakMap<Target, any>()
+export const shallowReadonlyMap: WeakMap<Target, any> = new WeakMap<
+  Target,
+  any
+>()
 
 enum TargetType {
   INVALID = 0,
@@ -57,6 +64,15 @@ function getTargetType(value: Target) {
 // only unwrap nested ref
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
+declare const ReactiveMarkerSymbol: unique symbol
+
+export interface ReactiveMarker {
+  [ReactiveMarkerSymbol]?: void
+}
+
+export type Reactive<T> = UnwrapNestedRefs<T> &
+  (T extends readonly any[] ? ReactiveMarker : {})
+
 /**
  * Returns a reactive proxy of the object.
  *
@@ -72,7 +88,7 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
  * @param target - The source object.
  * @see {@link https://vuejs.org/api/reactivity-core.html#reactive}
  */
-export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
+export function reactive<T extends object>(target: T): Reactive<T>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
   if (isReadonly(target)) {
@@ -92,9 +108,9 @@ export declare const ShallowReactiveMarker: unique symbol
 export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
 
 /**
- * Shallow version of {@link reactive()}.
+ * Shallow version of {@link reactive}.
  *
- * Unlike {@link reactive()}, there is no deep conversion: only root-level
+ * Unlike {@link reactive}, there is no deep conversion: only root-level
  * properties are reactive for a shallow reactive object. Property values are
  * stored and exposed as-is - this also means properties with ref values will
  * not be automatically unwrapped.
@@ -134,7 +150,7 @@ export function shallowReactive<T extends object>(
 }
 
 type Primitive = string | number | boolean | bigint | symbol | undefined | null
-type Builtin = Primitive | Function | Date | Error | RegExp
+export type Builtin = Primitive | Function | Date | Error | RegExp
 export type DeepReadonly<T> = T extends Builtin
   ? T
   : T extends Map<infer K, infer V>
@@ -151,7 +167,7 @@ export type DeepReadonly<T> = T extends Builtin
               ? WeakSet<DeepReadonly<U>>
               : T extends Promise<infer U>
                 ? Promise<DeepReadonly<U>>
-                : T extends Ref<infer U>
+                : T extends Ref<infer U, unknown>
                   ? Readonly<Ref<DeepReadonly<U>>>
                   : T extends {}
                     ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
@@ -162,7 +178,7 @@ export type DeepReadonly<T> = T extends Builtin
  * the original.
  *
  * A readonly proxy is deep: any nested property accessed will be readonly as
- * well. It also has the same ref-unwrapping behavior as {@link reactive()},
+ * well. It also has the same ref-unwrapping behavior as {@link reactive},
  * except the unwrapped values will also be made readonly.
  *
  * @example
@@ -199,9 +215,9 @@ export function readonly<T extends object>(
 }
 
 /**
- * Shallow version of {@link readonly()}.
+ * Shallow version of {@link readonly}.
  *
- * Unlike {@link readonly()}, there is no deep conversion: only root-level
+ * Unlike {@link readonly}, there is no deep conversion: only root-level
  * properties are made readonly. Property values are stored and exposed as-is -
  * this also means properties with ref values will not be automatically
  * unwrapped.
@@ -247,7 +263,11 @@ function createReactiveObject(
 ) {
   if (!isObject(target)) {
     if (__DEV__) {
-      console.warn(`value cannot be made reactive: ${String(target)}`)
+      warn(
+        `value cannot be made ${isReadonly ? 'readonly' : 'reactive'}: ${String(
+          target,
+        )}`,
+      )
     }
     return target
   }
@@ -259,15 +279,15 @@ function createReactiveObject(
   ) {
     return target
   }
-  // target already has corresponding Proxy
-  const existingProxy = proxyMap.get(target)
-  if (existingProxy) {
-    return existingProxy
-  }
   // only specific value types can be observed.
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
     return target
+  }
+  // target already has corresponding Proxy
+  const existingProxy = proxyMap.get(target)
+  if (existingProxy) {
+    return existingProxy
   }
   const proxy = new Proxy(
     target,
@@ -278,8 +298,8 @@ function createReactiveObject(
 }
 
 /**
- * Checks if an object is a proxy created by {@link reactive()} or
- * {@link shallowReactive()} (or {@link ref()} in some cases).
+ * Checks if an object is a proxy created by {@link reactive} or
+ * {@link shallowReactive} (or {@link ref} in some cases).
  *
  * @example
  * ```js
@@ -307,7 +327,7 @@ export function isReactive(value: unknown): boolean {
  * readonly object can change, but they can't be assigned directly via the
  * passed object.
  *
- * The proxies created by {@link readonly()} and {@link shallowReadonly()} are
+ * The proxies created by {@link readonly} and {@link shallowReadonly} are
  * both considered readonly, as is a computed ref without a set function.
  *
  * @param value - The value to check.
@@ -323,21 +343,21 @@ export function isShallow(value: unknown): boolean {
 
 /**
  * Checks if an object is a proxy created by {@link reactive},
- * {@link readonly}, {@link shallowReactive} or {@link shallowReadonly()}.
+ * {@link readonly}, {@link shallowReactive} or {@link shallowReadonly}.
  *
  * @param value - The value to check.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isproxy}
  */
-export function isProxy(value: unknown): boolean {
-  return isReactive(value) || isReadonly(value)
+export function isProxy(value: any): boolean {
+  return value ? !!value[ReactiveFlags.RAW] : false
 }
 
 /**
  * Returns the raw, original object of a Vue-created proxy.
  *
  * `toRaw()` can return the original object from proxies created by
- * {@link reactive()}, {@link readonly()}, {@link shallowReactive()} or
- * {@link shallowReadonly()}.
+ * {@link reactive}, {@link readonly}, {@link shallowReactive} or
+ * {@link shallowReadonly}.
  *
  * This is an escape hatch that can be used to temporarily read without
  * incurring proxy access / tracking overhead or write without triggering
@@ -377,7 +397,7 @@ export type Raw<T> = T & { [RawSymbol]?: true }
  * ```
  *
  * **Warning:** `markRaw()` together with the shallow APIs such as
- * {@link shallowReactive()} allow you to selectively opt-out of the default
+ * {@link shallowReactive} allow you to selectively opt-out of the default
  * deep reactive/readonly conversion and embed raw, non-proxied objects in your
  * state graph.
  *
@@ -385,7 +405,9 @@ export type Raw<T> = T & { [RawSymbol]?: true }
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#markraw}
  */
 export function markRaw<T extends object>(value: T): Raw<T> {
-  def(value, ReactiveFlags.SKIP, true)
+  if (!hasOwn(value, ReactiveFlags.SKIP) && Object.isExtensible(value)) {
+    def(value, ReactiveFlags.SKIP, true)
+  }
   return value
 }
 
@@ -406,5 +428,5 @@ export const toReactive = <T extends unknown>(value: T): T =>
  *
  * @param value - The value for which a readonly proxy shall be created.
  */
-export const toReadonly = <T extends unknown>(value: T): T =>
-  isObject(value) ? readonly(value) : value
+export const toReadonly = <T extends unknown>(value: T): DeepReadonly<T> =>
+  isObject(value) ? readonly(value) : (value as DeepReadonly<T>)

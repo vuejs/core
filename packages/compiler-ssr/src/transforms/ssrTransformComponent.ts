@@ -55,7 +55,7 @@ import {
   ssrProcessTransitionGroup,
   ssrTransformTransitionGroup,
 } from './ssrTransformTransitionGroup'
-import { extend, isArray, isObject, isSymbol } from '@vue/shared'
+import { extend, isArray, isObject, isPlainObject, isSymbol } from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
 import {
   ssrProcessTransition,
@@ -205,7 +205,7 @@ export function ssrProcessComponent(
   node: ComponentNode,
   context: SSRTransformContext,
   parent: { children: TemplateChildNode[] },
-) {
+): void {
   const component = componentTypeMap.get(node)!
   if (!node.ssrCodegenNode) {
     // this is a built-in component that fell-through.
@@ -268,7 +268,10 @@ export function ssrProcessComponent(
   }
 }
 
-export const rawOptionsMap = new WeakMap<RootNode, CompilerOptions>()
+export const rawOptionsMap: WeakMap<RootNode, CompilerOptions> = new WeakMap<
+  RootNode,
+  CompilerOptions
+>()
 
 const [baseNodeTransforms, baseDirectiveTransforms] =
   getBaseTransformPreset(true)
@@ -371,10 +374,10 @@ function subTransform(
 function clone(v: any): any {
   if (isArray(v)) {
     return v.map(clone)
-  } else if (isObject(v)) {
+  } else if (isPlainObject(v)) {
     const res: any = {}
     for (const key in v) {
-      res[key] = clone(v[key])
+      res[key] = clone(v[key as keyof typeof v])
     }
     return res
   } else {

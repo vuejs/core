@@ -508,4 +508,248 @@ describe('e2e: TransitionGroup', () => {
 
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
   })
+
+  test('not warn unkeyed text children w/ whitespace preserve', () => {
+    const app = createApp({
+      template: `
+        <transition-group name="test">
+          <p key="1">1</p>
+          <p key="2" v-if="false">2</p>
+        </transition-group>
+        `,
+    })
+
+    app.config.compilerOptions.whitespace = 'preserve'
+    app.mount(document.createElement('div'))
+    expect(`<TransitionGroup> children must be keyed`).not.toHaveBeenWarned()
+  })
+
+  // #5168, #7898, #9067
+  test(
+    'avoid set transition hooks for comment node',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, h, createCommentVNode } = (window as any).Vue
+
+        const show = ref(false)
+        createApp({
+          template: `
+            <div id="container">
+              <transition-group name="test">
+                <div v-for="item in items" :key="item" class="test">{{item}}</div>
+                <Child key="child"/>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          components: {
+            Child: {
+              setup() {
+                return () =>
+                  show.value
+                    ? h('div', { class: 'test' }, 'child')
+                    : createCommentVNode('v-if', true)
+              },
+            },
+          },
+          setup: () => {
+            const items = ref([])
+            const click = () => {
+              items.value = ['a', 'b', 'c']
+              setTimeout(() => {
+                show.value = true
+              }, duration)
+            }
+            return { click, items }
+          },
+        }).mount('#app')
+      }, duration)
+
+      expect(await html('#container')).toBe(`<!--v-if-->`)
+
+      expect(await htmlWhenTransitionStart()).toBe(
+        `<div class="test test-enter-from test-enter-active">a</div>` +
+          `<div class="test test-enter-from test-enter-active">b</div>` +
+          `<div class="test test-enter-from test-enter-active">c</div>` +
+          `<!--v-if-->`,
+      )
+
+      await transitionFinish(duration)
+      await nextFrame()
+      expect(await html('#container')).toBe(
+        `<div class="test">a</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test">c</div>` +
+          `<div class="test test-enter-active test-enter-to">child</div>`,
+      )
+
+      await transitionFinish(duration)
+      expect(await html('#container')).toBe(
+        `<div class="test">a</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test">c</div>` +
+          `<div class="test">child</div>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  // #4621, #4622, #5153
+  test(
+    'avoid set transition hooks for text node',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref } = (window as any).Vue
+        const app = createApp({
+          template: `
+            <div id="container">
+              <transition-group name="test">
+                <div class="test">foo</div>
+                <div class="test" v-if="show">bar</div>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const show = ref(false)
+            const click = () => {
+              show.value = true
+            }
+            return { show, click }
+          },
+        })
+
+        app.config.compilerOptions.whitespace = 'preserve'
+        app.mount('#app')
+      })
+
+      expect(await html('#container')).toBe(`<div class="test">foo</div>` + ` `)
+
+      expect(await htmlWhenTransitionStart()).toBe(
+        `<div class="test">foo</div>` +
+          ` ` +
+          `<div class="test test-enter-from test-enter-active">bar</div>`,
+      )
+
+      await nextFrame()
+      expect(await html('#container')).toBe(
+        `<div class="test">foo</div>` +
+          ` ` +
+          `<div class="test test-enter-active test-enter-to">bar</div>`,
+      )
+
+      await transitionFinish(duration)
+      expect(await html('#container')).toBe(
+        `<div class="test">foo</div>` + ` ` + `<div class="test">bar</div>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  // #6105
+  test(
+    'with scale',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+            <div id="container">
+              <div class="scale" style="transform: scale(2) translateX(50%) translateY(50%)">
+                <transition-group tag="ul">
+                  <li v-for="item in items" :key="item">{{item}}</li>
+                </transition-group>
+                <button id="toggleBtn" @click="click">button</button>
+              </div>
+            </div>
+          `,
+          setup: () => {
+            const items = ref(['a', 'b', 'c'])
+            const click = () => {
+              items.value.reverse()
+            }
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.innerHTML = `.v-move {
+                transition: transform 0.5s ease;
+              }`
+              document.body.appendChild(styleNode)
+            })
+
+            return { items, click }
+          },
+        }).mount('#app')
+      })
+
+      const original_top = await page().$eval('ul li:nth-child(1)', node => {
+        return node.getBoundingClientRect().top
+      })
+      const new_top = await page().evaluate(() => {
+        const el = document.querySelector('ul li:nth-child(1)')
+        const p = new Promise(resolve => {
+          el!.addEventListener('transitionstart', () => {
+            const new_top = el!.getBoundingClientRect().top
+            resolve(new_top)
+          })
+        })
+        ;(document.querySelector('#toggleBtn') as any)!.click()
+        return p
+      })
+
+      expect(original_top).toBeLessThan(new_top as number)
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
+    'not leaking after children unmounted',
+    async () => {
+      const client = await page().createCDPSession()
+      await page().evaluate(async () => {
+        const { createApp, ref, nextTick } = (window as any).Vue
+        const show = ref(true)
+
+        createApp({
+          components: {
+            Child: {
+              setup: () => {
+                // Big arrays kick GC earlier
+                const test = ref([...Array(3000)].map((_, i) => ({ i })))
+                // @ts-expect-error - Custom property and same lib as runtime is used
+                window.__REF__ = new WeakRef(test)
+
+                return { test }
+              },
+              template: `
+              <p>{{ test.length }}</p>
+            `,
+            },
+          },
+          template: `
+          <transition-group>
+            <Child v-if="show" />
+          </transition-group>
+        `,
+          setup() {
+            return { show }
+          },
+        }).mount('#app')
+
+        show.value = false
+        await nextTick()
+      })
+
+      const isCollected = async () =>
+        // @ts-expect-error - Custom property
+        await page().evaluate(() => window.__REF__.deref() === undefined)
+
+      while ((await isCollected()) === false) {
+        await client.send('HeapProfiler.collectGarbage')
+      }
+
+      expect(await isCollected()).toBe(true)
+    },
+    E2E_TIMEOUT,
+  )
 })

@@ -5,7 +5,7 @@ export function triggerEvent(
   el: TestElement,
   event: string,
   payload: any[] = [],
-) {
+): void {
   const { eventListeners } = el
   if (eventListeners) {
     const listener = eventListeners[event]

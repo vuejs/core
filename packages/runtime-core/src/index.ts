@@ -1,6 +1,6 @@
 // Core API ------------------------------------------------------------------
 
-export const version = __VERSION__
+export const version: string = __VERSION__
 export {
   // core
   reactive,
@@ -28,6 +28,8 @@ export {
   // effect
   effect,
   stop,
+  getCurrentWatcher,
+  onWatcherCleanup,
   ReactiveEffect,
   // effect scope
   effectScope,
@@ -61,6 +63,15 @@ export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
+export { useModel } from './helpers/useModel'
+export { useTemplateRef, type TemplateRef } from './helpers/useTemplateRef'
+export { useId } from './helpers/useId'
+export {
+  hydrateOnIdle,
+  hydrateOnVisible,
+  hydrateOnMediaQuery,
+  hydrateOnInteraction,
+} from './hydrationStrategies'
 
 // <script setup> API ----------------------------------------------------------
 
@@ -73,9 +84,9 @@ export {
   defineSlots,
   defineModel,
   withDefaults,
-  useModel,
   type DefineProps,
   type ModelRef,
+  type ComponentTypeEmits,
 } from './apiSetupHelpers'
 
 /**
@@ -150,7 +161,7 @@ import { ErrorTypeStrings as _ErrorTypeStrings } from './errorHandling'
  * @internal
  */
 export const ErrorTypeStrings = (
-  __ESM_BUNDLER__ || __NODE_JS__ || __DEV__ ? _ErrorTypeStrings : null
+  __ESM_BUNDLER__ || __CJS__ || __DEV__ ? _ErrorTypeStrings : null
 ) as typeof _ErrorTypeStrings
 
 // For devtools
@@ -161,13 +172,13 @@ import {
 } from './devtools'
 
 export const devtools = (
-  __DEV__ || __FEATURE_PROD_DEVTOOLS__ ? _devtools : undefined
+  __DEV__ || __ESM_BUNDLER__ ? _devtools : undefined
 ) as DevtoolsHook
 export const setDevtoolsHook = (
-  __DEV__ || __FEATURE_PROD_DEVTOOLS__ ? _setDevtoolsHook : NOOP
+  __DEV__ || __ESM_BUNDLER__ ? _setDevtoolsHook : NOOP
 ) as typeof _setDevtoolsHook
 
-// Types -------------------------------------------------------------------------
+// Types -----------------------------------------------------------------------
 
 import type { VNode } from './vnode'
 import type { ComponentInternalInstance } from './component'
@@ -212,13 +223,16 @@ export type {
   DebuggerEvent,
   DebuggerEventExtraInfo,
   Raw,
+  Reactive,
 } from '@vue/reactivity'
 export type {
+  MultiWatchSources,
   WatchEffect,
   WatchOptions,
-  WatchOptionsBase,
+  WatchEffectOptions as WatchOptionsBase,
   WatchCallback,
   WatchSource,
+  WatchHandle,
   WatchStopHandle,
 } from './apiWatch'
 export type { InjectionKey } from './apiInject'
@@ -248,15 +262,19 @@ export type {
   SetupContext,
   ComponentCustomProps,
   AllowedComponentProps,
+  GlobalComponents,
+  GlobalDirectives,
   ComponentInstance,
+  ComponentCustomElementInterface,
 } from './component'
-export type { DefineComponent, PublicProps } from './apiDefineComponent'
+export type {
+  DefineComponent,
+  DefineSetupFnComponent,
+  PublicProps,
+} from './apiDefineComponent'
 export type {
   ComponentOptions,
   ComponentOptionsMixin,
-  ComponentOptionsWithoutProps,
-  ComponentOptionsWithObjectProps,
-  ComponentOptionsWithArrayProps,
   ComponentCustomOptions,
   ComponentOptionsBase,
   ComponentProvideOptions,
@@ -265,12 +283,23 @@ export type {
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
+  // deprecated
+  ComponentOptionsWithoutProps,
+  ComponentOptionsWithArrayProps,
+  ComponentOptionsWithObjectProps,
 } from './componentOptions'
-export type { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
+export type {
+  EmitsOptions,
+  ObjectEmitsOptions,
+  EmitsToProps,
+  ShortEmitsToObject,
+  EmitFn,
+} from './componentEmits'
 export type {
   ComponentPublicInstance,
   ComponentCustomProperties,
   CreateComponentPublicInstance,
+  CreateComponentPublicInstanceWithMixins,
 } from './componentPublicInstance'
 export type {
   Renderer,
@@ -309,6 +338,10 @@ export type {
   AsyncComponentOptions,
   AsyncComponentLoader,
 } from './apiAsyncComponent'
+export type {
+  HydrationStrategy,
+  HydrationStrategyFactory,
+} from './hydrationStrategies'
 export type { HMRRuntime } from './hmr'
 
 // Internal API ----------------------------------------------------------------
@@ -358,18 +391,39 @@ export { transformVNodeArgs } from './vnode'
 // **IMPORTANT** These APIs are exposed solely for @vue/server-renderer and may
 // change without notice between versions. User code should never rely on them.
 
-import { createComponentInstance, setupComponent } from './component'
+import {
+  createComponentInstance,
+  getComponentPublicInstance,
+  setupComponent,
+} from './component'
 import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
+import { ensureValidVNode } from './helpers/renderSlot'
+import { popWarningContext, pushWarningContext } from './warning'
 
-const _ssrUtils = {
+const _ssrUtils: {
+  createComponentInstance: typeof createComponentInstance
+  setupComponent: typeof setupComponent
+  renderComponentRoot: typeof renderComponentRoot
+  setCurrentRenderingInstance: typeof setCurrentRenderingInstance
+  isVNode: typeof isVNode
+  normalizeVNode: typeof normalizeVNode
+  getComponentPublicInstance: typeof getComponentPublicInstance
+  ensureValidVNode: typeof ensureValidVNode
+  pushWarningContext: typeof pushWarningContext
+  popWarningContext: typeof popWarningContext
+} = {
   createComponentInstance,
   setupComponent,
   renderComponentRoot,
   setCurrentRenderingInstance,
   isVNode,
   normalizeVNode,
+  getComponentPublicInstance,
+  ensureValidVNode,
+  pushWarningContext,
+  popWarningContext,
 }
 
 /**
@@ -397,9 +451,17 @@ import { NOOP } from '@vue/shared'
 /**
  * @internal only exposed in compat builds
  */
-export const resolveFilter = __COMPAT__ ? _resolveFilter : null
+export const resolveFilter: typeof _resolveFilter | null = __COMPAT__
+  ? _resolveFilter
+  : null
 
-const _compatUtils = {
+const _compatUtils: {
+  warnDeprecation: typeof warnDeprecation
+  createCompatVue: typeof createCompatVue
+  isCompatEnabled: typeof isCompatEnabled
+  checkCompatEnabled: typeof checkCompatEnabled
+  softAssertCompatEnabled: typeof softAssertCompatEnabled
+} = {
   warnDeprecation,
   createCompatVue,
   isCompatEnabled,

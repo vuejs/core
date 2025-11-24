@@ -20,7 +20,7 @@ describe('DOM parser', () => {
       )
       const element = ast.children[0] as ElementNode
       const text = element.children[0] as TextNode
-
+      expect(element.children.length).toBe(1)
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some<div>text</div>and<!--comment-->',
@@ -30,6 +30,36 @@ describe('DOM parser', () => {
           source: 'some<div>text</div>and<!--comment-->',
         },
       })
+    })
+
+    test('<textarea> should remove leading newline', () => {
+      const ast = parse('<textarea>\nhello</textarea>', parserOptions)
+      const element = ast.children[0] as ElementNode
+      const text = element.children[0] as TextNode
+      expect(element.children.length).toBe(1)
+      expect(text).toStrictEqual({
+        type: NodeTypes.TEXT,
+        content: 'hello',
+        loc: {
+          start: { offset: 10, line: 1, column: 11 },
+          end: { offset: 16, line: 2, column: 6 },
+          source: '\nhello',
+        },
+      })
+    })
+
+    test('should not treat Uppercase component as special tag', () => {
+      const ast = parse(
+        '<TextArea>some<div>text</div>and<!--comment--></TextArea>',
+        parserOptions,
+      )
+      const element = ast.children[0] as ElementNode
+      expect(element.children.map(n => n.type)).toMatchObject([
+        NodeTypes.TEXT,
+        NodeTypes.ELEMENT,
+        NodeTypes.TEXT,
+        NodeTypes.COMMENT,
+      ])
     })
 
     test('textarea handles entities', () => {

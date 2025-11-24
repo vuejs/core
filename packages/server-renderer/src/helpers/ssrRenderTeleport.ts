@@ -12,7 +12,7 @@ export function ssrRenderTeleport(
   target: string,
   disabled: boolean,
   parentComponent: ComponentInternalInstance,
-) {
+): void {
   parentPush('<!--teleport start-->')
 
   const context = parentComponent.appContext.provides[
@@ -29,9 +29,10 @@ export function ssrRenderTeleport(
 
   if (disabled) {
     contentRenderFn(parentPush)
-    teleportContent = `<!--teleport anchor-->`
+    teleportContent = `<!--teleport start anchor--><!--teleport anchor-->`
   } else {
     const { getBuffer, push } = createBuffer()
+    push(`<!--teleport start anchor-->`)
     contentRenderFn(push)
     push(`<!--teleport anchor-->`)
     teleportContent = getBuffer()

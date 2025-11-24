@@ -1,6 +1,6 @@
 import { initCustomFormatter } from '@vue/runtime-dom'
 
-export function initDev() {
+export function initDev(): void {
   if (__BROWSER__) {
     if (!__ESM_BUNDLER__) {
       console.info(

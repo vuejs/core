@@ -7,6 +7,7 @@ import {
   type RendererInternals,
   type RendererNode,
   type RendererOptions,
+  queuePostRenderEffect,
   traverseStaticChildren,
 } from '../renderer'
 import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
@@ -19,12 +20,18 @@ export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
 export interface TeleportProps {
   to: string | RendererElement | null | undefined
   disabled?: boolean
+  defer?: boolean
 }
+
+export const TeleportEndKey: unique symbol = Symbol('_vte')
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
 
 const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
+
+const isTeleportDeferred = (props: VNode['props']): boolean =>
+  props && (props.defer || props.defer === '')
 
 const isTargetSVG = (target: RendererElement): boolean =>
   typeof SVGElement !== 'undefined' && target instanceof SVGElement
@@ -47,14 +54,13 @@ const resolveTarget = <T = RendererElement>(
       return null
     } else {
       const target = select(targetSelector)
-      if (!target) {
-        __DEV__ &&
-          warn(
-            `Failed to locate Teleport target with selector "${targetSelector}". ` +
-              `Note the target element must exist before the component is mounted - ` +
-              `i.e. the target cannot be rendered by the component itself, and ` +
-              `ideally should be outside of the entire Vue component tree.`,
-          )
+      if (__DEV__ && !target && !isTeleportDisabled(props)) {
+        warn(
+          `Failed to locate Teleport target with selector "${targetSelector}". ` +
+            `Note the target element must exist before the component is mounted - ` +
+            `i.e. the target cannot be rendered by the component itself, and ` +
+            `ideally should be outside of the entire Vue component tree.`,
+        )
       }
       return target as T
     }
@@ -80,7 +86,7 @@ export const TeleportImpl = {
     slotScopeIds: string[] | null,
     optimized: boolean,
     internals: RendererInternals,
-  ) {
+  ): void {
     const {
       mc: mountChildren,
       pc: patchChildren,
@@ -108,19 +114,6 @@ export const TeleportImpl = {
         : createText(''))
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
-      const target = (n2.target = resolveTarget(n2.props, querySelector))
-      const targetAnchor = (n2.targetAnchor = createText(''))
-      if (target) {
-        insert(targetAnchor, target)
-        // #2652 we could be teleporting from a non-SVG tree into an SVG tree
-        if (namespace === 'svg' || isTargetSVG(target)) {
-          namespace = 'svg'
-        } else if (namespace === 'mathml' || isTargetMathML(target)) {
-          namespace = 'mathml'
-        }
-      } else if (__DEV__ && !disabled) {
-        warn('Invalid Teleport target on mount:', target, `(${typeof target})`)
-      }
 
       const mount = (container: RendererElement, anchor: RendererNode) => {
         // Teleport *always* has Array children. This is enforced in both the
@@ -139,14 +132,73 @@ export const TeleportImpl = {
         }
       }
 
+      const mountToTarget = () => {
+        const target = (n2.target = resolveTarget(n2.props, querySelector))
+        const targetAnchor = prepareAnchor(target, n2, createText, insert)
+        if (target) {
+          // #2652 we could be teleporting from a non-SVG tree into an SVG tree
+          if (namespace !== 'svg' && isTargetSVG(target)) {
+            namespace = 'svg'
+          } else if (namespace !== 'mathml' && isTargetMathML(target)) {
+            namespace = 'mathml'
+          }
+
+          // track CE teleport targets
+          if (parentComponent && parentComponent.isCE) {
+            ;(
+              parentComponent.ce!._teleportTargets ||
+              (parentComponent.ce!._teleportTargets = new Set())
+            ).add(target)
+          }
+
+          if (!disabled) {
+            mount(target, targetAnchor)
+            updateCssVars(n2, false)
+          }
+        } else if (__DEV__ && !disabled) {
+          warn(
+            'Invalid Teleport target on mount:',
+            target,
+            `(${typeof target})`,
+          )
+        }
+      }
+
       if (disabled) {
         mount(container, mainAnchor)
-      } else if (target) {
-        mount(target, targetAnchor)
+        updateCssVars(n2, true)
+      }
+
+      if (isTeleportDeferred(n2.props)) {
+        n2.el!.__isMounted = false
+        queuePostRenderEffect(() => {
+          mountToTarget()
+          delete n2.el!.__isMounted
+        }, parentSuspense)
+      } else {
+        mountToTarget()
       }
     } else {
+      if (isTeleportDeferred(n2.props) && n1.el!.__isMounted === false) {
+        queuePostRenderEffect(() => {
+          TeleportImpl.process(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+            internals,
+          )
+        }, parentSuspense)
+        return
+      }
       // update content
       n2.el = n1.el
+      n2.targetStart = n1.targetStart
       const mainAnchor = (n2.anchor = n1.anchor)!
       const target = (n2.target = n1.target)!
       const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
@@ -174,7 +226,8 @@ export const TeleportImpl = {
         // even in block tree mode we need to make sure all root-level nodes
         // in the teleport inherit previous DOM references so that they can
         // be moved in future patches.
-        traverseStaticChildren(n1, n2, true)
+        // in dev mode, deep traversal is necessary for HMR
+        traverseStaticChildren(n1, n2, !__DEV__)
       } else if (!optimized) {
         patchChildren(
           n1,
@@ -242,22 +295,29 @@ export const TeleportImpl = {
           )
         }
       }
+      updateCssVars(n2, disabled)
     }
-
-    updateCssVars(n2)
   },
 
   remove(
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    optimized: boolean,
     { um: unmount, o: { remove: hostRemove } }: RendererInternals,
     doRemove: boolean,
-  ) {
-    const { shapeFlag, children, anchor, targetAnchor, target, props } = vnode
+  ): void {
+    const {
+      shapeFlag,
+      children,
+      anchor,
+      targetStart,
+      targetAnchor,
+      target,
+      props,
+    } = vnode
 
     if (target) {
+      hostRemove(targetStart!)
       hostRemove(targetAnchor!)
     }
 
@@ -278,8 +338,8 @@ export const TeleportImpl = {
     }
   },
 
-  move: moveTeleport,
-  hydrate: hydrateTeleport,
+  move: moveTeleport as typeof moveTeleport,
+  hydrate: hydrateTeleport as typeof hydrateTeleport,
 }
 
 export enum TeleportMoveTypes {
@@ -294,7 +354,7 @@ function moveTeleport(
   parentAnchor: RendererNode | null,
   { o: { insert }, m: move }: RendererInternals,
   moveType: TeleportMoveTypes = TeleportMoveTypes.REORDER,
-) {
+): void {
   // move target anchor if this is a target change.
   if (moveType === TeleportMoveTypes.TARGET_CHANGE) {
     insert(vnode.targetAnchor!, container, parentAnchor)
@@ -340,7 +400,7 @@ function hydrateTeleport(
   slotScopeIds: string[] | null,
   optimized: boolean,
   {
-    o: { nextSibling, parentNode, querySelector },
+    o: { nextSibling, parentNode, querySelector, insert, createText },
   }: RendererInternals<Node, Element>,
   hydrateChildren: (
     node: Node | null,
@@ -352,27 +412,43 @@ function hydrateTeleport(
     optimized: boolean,
   ) => Node | null,
 ): Node | null {
+  function hydrateDisabledTeleport(
+    node: Node,
+    vnode: VNode,
+    targetStart: Node | null,
+    targetAnchor: Node | null,
+  ) {
+    vnode.anchor = hydrateChildren(
+      nextSibling(node),
+      vnode,
+      parentNode(node)!,
+      parentComponent,
+      parentSuspense,
+      slotScopeIds,
+      optimized,
+    )
+    vnode.targetStart = targetStart
+    vnode.targetAnchor = targetAnchor
+  }
+
   const target = (vnode.target = resolveTarget<Element>(
     vnode.props,
     querySelector,
   ))
+  const disabled = isTeleportDisabled(vnode.props)
   if (target) {
     // if multiple teleports rendered to the same target element, we need to
     // pick up from where the last teleport finished instead of the first node
     const targetNode =
       (target as TeleportTargetElement)._lpa || target.firstChild
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      if (isTeleportDisabled(vnode.props)) {
-        vnode.anchor = hydrateChildren(
-          nextSibling(node),
+      if (disabled) {
+        hydrateDisabledTeleport(
+          node,
           vnode,
-          parentNode(node)!,
-          parentComponent,
-          parentSuspense,
-          slotScopeIds,
-          optimized,
+          targetNode,
+          targetNode && nextSibling(targetNode),
         )
-        vnode.targetAnchor = targetNode
       } else {
         vnode.anchor = nextSibling(node)
 
@@ -381,21 +457,29 @@ function hydrateTeleport(
         // could be nested teleports
         let targetAnchor = targetNode
         while (targetAnchor) {
-          targetAnchor = nextSibling(targetAnchor)
-          if (
-            targetAnchor &&
-            targetAnchor.nodeType === 8 &&
-            (targetAnchor as Comment).data === 'teleport anchor'
-          ) {
-            vnode.targetAnchor = targetAnchor
-            ;(target as TeleportTargetElement)._lpa =
-              vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
-            break
+          if (targetAnchor && targetAnchor.nodeType === 8) {
+            if ((targetAnchor as Comment).data === 'teleport start anchor') {
+              vnode.targetStart = targetAnchor
+            } else if ((targetAnchor as Comment).data === 'teleport anchor') {
+              vnode.targetAnchor = targetAnchor
+              ;(target as TeleportTargetElement)._lpa =
+                vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
+              break
+            }
           }
+          targetAnchor = nextSibling(targetAnchor)
+        }
+
+        // #11400 if the HTML corresponding to Teleport is not embedded in the
+        // correct position on the final page during SSR. the targetAnchor will
+        // always be null, we need to manually add targetAnchor to ensure
+        // Teleport it can properly unmount or move
+        if (!vnode.targetAnchor) {
+          prepareAnchor(target, vnode, createText, insert)
         }
 
         hydrateChildren(
-          targetNode,
+          targetNode && nextSibling(targetNode),
           vnode,
           target,
           parentComponent,
@@ -405,7 +489,11 @@ function hydrateTeleport(
         )
       }
     }
-    updateCssVars(vnode)
+    updateCssVars(vnode, disabled)
+  } else if (disabled) {
+    if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      hydrateDisabledTeleport(node, vnode, node, nextSibling(node))
+    }
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
@@ -421,16 +509,44 @@ export const Teleport = TeleportImpl as unknown as {
   }
 }
 
-function updateCssVars(vnode: VNode) {
+function updateCssVars(vnode: VNode, isDisabled: boolean) {
   // presence of .ut method indicates owner component uses css vars.
   // code path here can assume browser environment.
   const ctx = vnode.ctx
   if (ctx && ctx.ut) {
-    let node = (vnode.children as VNode[])[0].el!
-    while (node && node !== vnode.targetAnchor) {
+    let node, anchor
+    if (isDisabled) {
+      node = vnode.el
+      anchor = vnode.anchor
+    } else {
+      node = vnode.targetStart
+      anchor = vnode.targetAnchor
+    }
+    while (node && node !== anchor) {
       if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
       node = node.nextSibling
     }
     ctx.ut()
   }
+}
+
+function prepareAnchor(
+  target: RendererElement | null,
+  vnode: TeleportVNode,
+  createText: RendererOptions['createText'],
+  insert: RendererOptions['insert'],
+) {
+  const targetStart = (vnode.targetStart = createText(''))
+  const targetAnchor = (vnode.targetAnchor = createText(''))
+
+  // attach a special property, so we can skip teleported content in
+  // renderer's nextSibling search
+  targetStart[TeleportEndKey] = targetAnchor
+
+  if (target) {
+    insert(targetStart, target)
+    insert(targetAnchor, target)
+  }
+
+  return targetAnchor
 }

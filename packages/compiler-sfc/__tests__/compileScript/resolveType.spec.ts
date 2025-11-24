@@ -9,8 +9,9 @@ import {
   registerTS,
   resolveTypeElements,
 } from '../../src/script/resolveType'
-
+import { UNKNOWN_TYPE } from '../../src/script/utils'
 import ts from 'typescript'
+
 registerTS(() => ts)
 
 describe('resolveType', () => {
@@ -19,6 +20,8 @@ describe('resolveType', () => {
       foo: number // property
       bar(): void // method
       'baz': string // string literal key
+      [\`qux\`]: boolean // template literal key
+      123: symbol // numeric literal key
       (e: 'foo'): void // call signature
       (e: 'bar'): void
     }>()`)
@@ -26,6 +29,8 @@ describe('resolveType', () => {
       foo: ['Number'],
       bar: ['Function'],
       baz: ['String'],
+      qux: ['Boolean'],
+      123: ['Symbol'],
     })
     expect(calls?.length).toBe(2)
   })
@@ -128,11 +133,34 @@ describe('resolveType', () => {
     defineProps<{ self: any } & Foo & Bar & Baz>()
     `).props,
     ).toStrictEqual({
-      self: ['Unknown'],
+      self: [UNKNOWN_TYPE],
       foo: ['Number'],
       // both Bar & Baz has 'bar', but Baz['bar] is wider so it should be
       // preferred
       bar: ['String', 'Boolean'],
+    })
+  })
+
+  test('intersection type with ignore', () => {
+    expect(
+      resolve(`
+    type Foo = { foo: number }
+    type Bar = { bar: string }
+    defineProps<Foo & /* @vue-ignore */ Bar>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Number'],
+    })
+  })
+
+  test('TSPropertySignature with ignore', () => {
+    expect(
+      resolve(`
+      type Foo = string
+      defineProps<{ foo: /* @vue-ignore */ Foo }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Unknown'],
     })
   })
 
@@ -171,7 +199,7 @@ describe('resolveType', () => {
     type T = 'foo' | 'bar'
     type S = 'x' | 'y'
     defineProps<{
-      [\`_\${T}_\${S}_\`]: string
+      [K in \`_\${T}_\${S}_\`]: string
     }>()
     `).props,
     ).toStrictEqual({
@@ -262,6 +290,44 @@ describe('resolveType', () => {
     `).props,
     ).toStrictEqual({
       baz: ['Boolean'],
+    })
+  })
+
+  test('utility type: mapped type with Omit and Pick', () => {
+    expect(
+      resolve(`
+      type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
+      interface Test {
+        foo: string;
+        bar?: string;
+      }
+      type OptionalTest = Optional<Test, 'foo'>
+      defineProps<OptionalTest>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['String'],
+    })
+  })
+
+  test('utility type: ReadonlyArray', () => {
+    expect(
+      resolve(`
+    defineProps<{ foo: ReadonlyArray<string> }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Array'],
+    })
+  })
+
+  test('utility type: ReadonlyMap & Readonly Set', () => {
+    expect(
+      resolve(`
+    defineProps<{ foo: ReadonlyMap<string, unknown>, bar: ReadonlySet<string> }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Map'],
+      bar: ['Set'],
     })
   })
 
@@ -416,6 +482,211 @@ describe('resolveType', () => {
     })
   })
 
+  test('readonly', () => {
+    expect(
+      resolve(`
+    defineProps<{ foo: readonly unknown[] }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Array'],
+    })
+  })
+
+  test('keyof', () => {
+    const files = {
+      '/foo.ts': `export type IMP = { ${1}: 1 };`,
+    }
+
+    const { props } = resolve(
+      `
+      import { IMP } from './foo'
+      interface Foo { foo: 1, ${1}: 1 }
+      type Bar = { bar: 1 }
+      declare const obj: Bar
+      declare const set: Set<any>
+      declare const arr: Array<any>
+
+      defineProps<{
+        imp: keyof IMP,
+        foo: keyof Foo,
+        bar: keyof Bar,
+        obj: keyof typeof obj,
+        set: keyof typeof set,
+        arr: keyof typeof arr
+      }>()
+      `,
+      files,
+    )
+
+    expect(props).toStrictEqual({
+      imp: ['Number'],
+      foo: ['String', 'Number'],
+      bar: ['String'],
+      obj: ['String'],
+      set: ['String'],
+      arr: ['String', 'Number'],
+    })
+  })
+
+  test('keyof: index signature', () => {
+    const { props } = resolve(
+      `
+      declare const num: number;
+      interface Foo {
+        [key: symbol]: 1
+        [key: string]: 1
+        [key: typeof num]: 1,
+      }
+
+      type Test<T> = T
+      type Bar = {
+        [key: string]: 1
+        [key: Test<number>]: 1
+      }
+
+      defineProps<{
+        foo: keyof Foo 
+        bar: keyof Bar
+      }>()
+      `,
+    )
+
+    expect(props).toStrictEqual({
+      foo: ['Symbol', 'String', 'Number'],
+      bar: ['String', 'Number'],
+    })
+  })
+
+  // #11129
+  test('keyof: intersection type', () => {
+    const { props } = resolve(`
+    type A = { name: string }
+    type B = A & { [key: number]: string }
+    defineProps<{
+      foo: keyof B
+    }>()`)
+    expect(props).toStrictEqual({
+      foo: ['String', 'Number'],
+    })
+  })
+
+  test('keyof: union type', () => {
+    const { props } = resolve(`
+    type A = { name: string }
+    type B = A | { [key: number]: string }
+    defineProps<{
+      foo: keyof B
+    }>()`)
+    expect(props).toStrictEqual({
+      foo: ['String', 'Number'],
+    })
+  })
+
+  test('keyof: utility type', () => {
+    const { props } = resolve(
+      `
+      type Foo = Record<symbol | string, any>
+      type Bar = { [key: string]: any }
+      type AnyRecord = Record<keyof any, any>
+      type Baz = { a: 1, ${1}: 2, b: 3}
+
+      defineProps<{
+        record: keyof Foo,
+        anyRecord: keyof AnyRecord 
+        partial: keyof Partial<Bar>,
+        required: keyof Required<Bar>,
+        readonly: keyof Readonly<Bar>,
+        pick: keyof Pick<Baz, 'a' | 1>
+        extract: keyof Extract<keyof Baz, 'a' | 1>
+      }>()
+      `,
+    )
+
+    expect(props).toStrictEqual({
+      record: ['Symbol', 'String'],
+      anyRecord: ['String', 'Number', 'Symbol'],
+      partial: ['String'],
+      required: ['String'],
+      readonly: ['String'],
+      pick: ['String', 'Number'],
+      extract: ['String', 'Number'],
+    })
+  })
+
+  test('keyof: fallback to Unknown', () => {
+    const { props } = resolve(
+      `
+      interface Barr {}
+      interface Bar extends Barr {}
+      type Foo = keyof Bar
+      defineProps<{ foo: Foo }>()
+      `,
+    )
+
+    expect(props).toStrictEqual({
+      foo: [UNKNOWN_TYPE],
+    })
+  })
+
+  test('keyof: nested object with number', () => {
+    const { props } = resolve(
+      `
+      interface Type {
+        deep: {
+          1: any
+        }
+      }
+
+      defineProps<{
+        route: keyof Type['deep']
+      }>()`,
+    )
+
+    expect(props).toStrictEqual({
+      route: ['Number'],
+    })
+  })
+
+  test('keyof: nested object with string', () => {
+    const { props } = resolve(
+      `
+      interface Type {
+        deep: {
+          foo: any
+        }
+      }
+
+      defineProps<{
+        route: keyof Type['deep']
+      }>()`,
+    )
+
+    expect(props).toStrictEqual({
+      route: ['String'],
+    })
+  })
+
+  test('keyof: nested object with intermediate', () => {
+    const { props } = resolve(
+      `
+      interface Type {
+        deep: {
+          foo: any
+        }
+      }
+
+      type Foo = Type['deep']
+
+      defineProps<{
+        route: keyof Foo
+      }>()`,
+    )
+
+    expect(props).toStrictEqual({
+      route: ['String'],
+    })
+  })
+
   test('ExtractPropTypes (element-plus)', () => {
     const { props, raw } = resolve(
       `
@@ -452,6 +723,85 @@ describe('resolveType', () => {
     expect(props).toStrictEqual({
       foo: ['String'],
       bar: ['Boolean'],
+    })
+  })
+
+  // #11266
+  test('correctly parse type annotation for declared function', () => {
+    const { props } = resolve(`
+    import { ExtractPropTypes } from 'vue'
+    interface UploadFile<T = any> {
+      xhr?: T
+    }
+    declare function uploadProps<T = any>(): {
+      fileList: {
+        type: PropType<UploadFile<T>[]>
+        default: UploadFile<T>[]
+      }
+    }
+    type UploadProps = ExtractPropTypes<ReturnType<typeof uploadProps>>
+    defineProps<UploadProps>()`)
+    expect(props).toStrictEqual({
+      fileList: ['Array'],
+    })
+  })
+
+  test('TSMappedType with indexed access', () => {
+    const { props } = resolve(
+      `
+      type Prettify<T> = { [K in keyof T]: T[K] } & {}
+      type Side = 'top' | 'right' | 'bottom' | 'left'
+      type AlignedPlacement = \`\${Side}-\${Alignment}\`
+      type Alignment = 'start' | 'end'
+      type Placement = Prettify<Side | AlignedPlacement>
+      defineProps<{placement?: Placement}>()
+    `,
+    )
+    expect(props).toStrictEqual({
+      placement: ['String', 'Object'],
+    })
+  })
+
+  describe('type alias declaration', () => {
+    // #13240
+    test('function type', () => {
+      expect(
+        resolve(`
+      type FunFoo<O> = (item: O) => boolean;
+      type FunBar = FunFoo<number>;
+      defineProps<{
+        foo?: FunFoo<number>;
+        bar?: FunBar;
+      }>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Function'],
+        bar: ['Function'],
+      })
+    })
+
+    test('with intersection type', () => {
+      expect(
+        resolve(`
+      type Brand<T> = T & {};
+      defineProps<{
+        foo: Brand<string>;
+      }>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['String', 'Object'],
+      })
+    })
+
+    test('with union type', () => {
+      expect(
+        resolve(`
+        type Wrapped<T> = T | symbol | number
+        defineProps<{foo?: Wrapped<boolean>}>()
+      `).props,
+      ).toStrictEqual({
+        foo: ['Boolean', 'Symbol', 'Number'],
+      })
     })
   })
 
@@ -552,6 +902,27 @@ describe('resolveType', () => {
         import { Y as PP } from './bar'
         defineProps<P & PP>()
       `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    // #10635
+    test('relative tsx', () => {
+      const files = {
+        '/foo.tsx': 'export type P = { foo: number }',
+        '/bar/index.tsx': 'export type PP = { bar: string }',
+      }
+      const { props, deps } = resolve(
+        `
+        import { P } from './foo'
+        import { PP } from './bar'
+        defineProps<P & PP>()
+        `,
         files,
       )
       expect(props).toStrictEqual({
@@ -858,6 +1229,135 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(['/user.ts'])
     })
 
+    // #13484
+    test('ts module resolve w/ project reference & extends & ${configDir}', () => {
+      const files = {
+        '/tsconfig.json': JSON.stringify({
+          files: [],
+          references: [{ path: './tsconfig.app.json' }],
+        }),
+        '/tsconfig.app.json': JSON.stringify({
+          extends: ['./tsconfigs/base.json'],
+        }),
+        '/tsconfigs/base.json': JSON.stringify({
+          compilerOptions: {
+            paths: {
+              '@/*': ['${configDir}/src/*'],
+            },
+          },
+          include: ['${configDir}/src/**/*.ts', '${configDir}/src/**/*.vue'],
+        }),
+        '/src/types.ts':
+          'export type BaseProps = { foo?: string, bar?: string }',
+      }
+
+      const { props, deps } = resolve(
+        `
+        import { BaseProps } from '@/types.ts';
+        defineProps<BaseProps>()
+        `,
+        files,
+        {},
+        '/src/components/Foo.vue',
+      )
+
+      expect(props).toStrictEqual({
+        foo: ['String'],
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(['/src/types.ts'])
+    })
+
+    test('ts module resolve w/ project reference folder', () => {
+      const files = {
+        '/tsconfig.json': JSON.stringify({
+          references: [
+            {
+              path: './web',
+            },
+            {
+              path: './empty',
+            },
+            {
+              path: './noexists-should-ignore',
+            },
+          ],
+        }),
+        '/web/tsconfig.json': JSON.stringify({
+          include: ['../**/*.ts', '../**/*.vue'],
+          compilerOptions: {
+            composite: true,
+            paths: {
+              bar: ['../user.ts'],
+            },
+          },
+        }),
+        // tsconfig with no include / paths defined, should match nothing
+        '/empty/tsconfig.json': JSON.stringify({
+          compilerOptions: {
+            composite: true,
+          },
+        }),
+        '/user.ts': 'export type User = { bar: string }',
+      }
+
+      const { props, deps } = resolve(
+        `
+        import { User } from 'bar'
+        defineProps<User>() 
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(['/user.ts'])
+    })
+
+    // #11382
+    test('ts module resolve circular project reference', () => {
+      const files = {
+        '/tsconfig.json': JSON.stringify({
+          exclude: ['**/*.ts', '**/*.vue'],
+          references: [
+            {
+              path: './tsconfig.web.json',
+            },
+          ],
+        }),
+        '/tsconfig.web.json': JSON.stringify({
+          include: ['**/*.ts', '**/*.vue'],
+          compilerOptions: {
+            composite: true,
+            paths: {
+              user: ['./user.ts'],
+            },
+          },
+          references: [
+            {
+              // circular reference
+              path: './tsconfig.json',
+            },
+          ],
+        }),
+        '/user.ts': 'export type User = { bar: string }',
+      }
+
+      const { props, deps } = resolve(
+        `
+        import { User } from 'user'
+        defineProps<User>() 
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(['/user.ts'])
+    })
+
     test('ts module resolve w/ path aliased vue file', () => {
       const files = {
         '/tsconfig.json': JSON.stringify({
@@ -910,6 +1410,33 @@ describe('resolveType', () => {
         bar: ['String'],
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('global types with named exports', () => {
+      const files = {
+        '/global.d.ts': `
+          declare global {
+            export interface ExportedInterface { foo: number }
+            export type ExportedType = { bar: boolean }
+          }
+          export {}
+        `,
+      }
+
+      const globalTypeFiles = { globalTypeFiles: Object.keys(files) }
+
+      expect(
+        resolve(`defineProps<ExportedInterface>()`, files, globalTypeFiles)
+          .props,
+      ).toStrictEqual({
+        foo: ['Number'],
+      })
+
+      expect(
+        resolve(`defineProps<ExportedType>()`, files, globalTypeFiles).props,
+      ).toStrictEqual({
+        bar: ['Boolean'],
+      })
     })
 
     test('global types with ambient references', () => {
@@ -1031,6 +1558,60 @@ describe('resolveType', () => {
 
       expect(res.props).toStrictEqual({
         foo: ['String'],
+      })
+    })
+  })
+
+  describe('template literals', () => {
+    test('mapped types with string type', () => {
+      expect(
+        resolve(`
+      type X = 'a' | 'b'
+      defineProps<{[K in X as \`\${K}_foo\`]: string}>()
+      `).props,
+      ).toStrictEqual({
+        a_foo: ['String'],
+        b_foo: ['String'],
+      })
+    })
+
+    // #10962
+    test('mapped types with generic parameters', () => {
+      const { props } = resolve(`
+      type Breakpoints = 'sm' | 'md' | 'lg'
+      type BreakpointFactory<T extends string, V> = {
+        [K in Breakpoints as \`\${T}\${Capitalize<K>}\`]: V
+      }
+      type ColsBreakpoints = BreakpointFactory<'cols', number>
+      defineProps<ColsBreakpoints>()
+      `)
+      expect(props).toStrictEqual({
+        colsSm: ['Number'],
+        colsMd: ['Number'],
+        colsLg: ['Number'],
+      })
+    })
+
+    test('allowArbitraryExtensions', () => {
+      const files = {
+        '/foo.d.vue.ts': 'export type Foo = number;',
+        '/foo.vue': '<template><div /></template>',
+        '/bar.d.css.ts': 'export type Bar = string;',
+        '/bar.css': ':root { --color: red; }',
+      }
+
+      const { props } = resolve(
+        `
+        import { Foo } from './foo.vue'
+        import { Bar } from './bar.css'
+        defineProps<{ foo: Foo; bar: Bar }>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String'],
       })
     })
   })

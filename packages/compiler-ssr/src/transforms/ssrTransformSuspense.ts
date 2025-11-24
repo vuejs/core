@@ -29,7 +29,7 @@ export function ssrTransformSuspense(
   node: ComponentNode,
   context: TransformContext,
 ) {
-  return () => {
+  return (): void => {
     if (node.children.length) {
       const wipEntry: WIPEntry = {
         slotsExp: null!, // to be immediately set
@@ -62,7 +62,7 @@ export function ssrTransformSuspense(
 export function ssrProcessSuspense(
   node: ComponentNode,
   context: SSRTransformContext,
-) {
+): void {
   // complete wip slots with ssr code
   const wipEntry = wipMap.get(node)
   if (!wipEntry) {

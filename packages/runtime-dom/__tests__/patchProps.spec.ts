@@ -1,5 +1,12 @@
 import { patchProp } from '../src/patchProp'
-import { h, render } from '../src'
+import {
+  h,
+  nextTick,
+  ref,
+  render,
+  vModelCheckbox,
+  withDirectives,
+} from '../src'
 
 describe('runtime-dom: props patching', () => {
   test('basic', () => {
@@ -133,6 +140,31 @@ describe('runtime-dom: props patching', () => {
     expect(fn).toHaveBeenCalled()
   })
 
+  test('patch innerHTML porp', async () => {
+    const root = document.createElement('div')
+    const state = ref(false)
+    const Comp = {
+      render: () => {
+        if (state.value) {
+          return h('div', [h('del', null, 'baz')])
+        } else {
+          return h('div', { innerHTML: 'baz' })
+        }
+      },
+    }
+    render(h(Comp), root)
+    expect(root.innerHTML).toBe(`<div>baz</div>`)
+    state.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div><del>baz</del></div>`)
+  })
+
+  test('patch innerHTML porp w/ undefined value', async () => {
+    const root = document.createElement('div')
+    render(h('div', { innerHTML: undefined }), root)
+    expect(root.innerHTML).toBe(`<div></div>`)
+  })
+
   test('textContent unmount prev children', () => {
     const fn = vi.fn()
     const comp = {
@@ -156,10 +188,11 @@ describe('runtime-dom: props patching', () => {
     // anyway, here we just want to make sure Vue doesn't set non-string props
     // to an empty string on nullish values - it should reset to its default
     // value.
+    el.srcObject = null
     const initialValue = el.srcObject
     const fakeObject = {}
     patchProp(el, 'srcObject', null, fakeObject)
-    expect(el.srcObject).not.toBe(fakeObject)
+    expect(el.srcObject).toBe(fakeObject)
     patchProp(el, 'srcObject', null, null)
     expect(el.srcObject).toBe(initialValue)
   })
@@ -291,6 +324,18 @@ describe('runtime-dom: props patching', () => {
     expect(el.value).toBe('baz')
   })
 
+  test('init empty value for option', () => {
+    const root = document.createElement('div')
+    render(
+      h('select', { value: 'foo' }, [h('option', { value: '' }, 'foo')]),
+      root,
+    )
+    const select = root.children[0] as HTMLSelectElement
+    const option = select.children[0] as HTMLOptionElement
+    expect(select.value).toBe('')
+    expect(option.value).toBe('')
+  })
+
   // #8780
   test('embedded tag with width and height', () => {
     // Width and height of some embedded element such as img、video、source、canvas
@@ -312,5 +357,41 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'translate', null, 'no')
     expect(el.translate).toBeFalsy()
     expect(el.getAttribute('translate')).toBe('no')
+  })
+
+  // #11647
+  test('should not trigger input mutation when `value` is `undefined`', async () => {
+    const fn = vi.fn()
+    const comp = {
+      setup() {
+        const checked = ref()
+        return () =>
+          withDirectives(
+            h('input', {
+              type: 'checkbox',
+              value: undefined,
+              'onUpdate:modelValue': (value: any) => {
+                checked.value = value
+              },
+            }),
+            [[vModelCheckbox, checked.value]],
+          )
+      },
+    }
+
+    const root = document.createElement('div')
+    render(h(comp), root)
+    document.body.append(root)
+
+    const el = root.children[0] as HTMLInputElement
+    const observer = new MutationObserver(fn)
+    observer.observe(el, {
+      attributes: true,
+    })
+
+    el.click()
+    await nextTick()
+
+    expect(fn).toBeCalledTimes(0)
   })
 })

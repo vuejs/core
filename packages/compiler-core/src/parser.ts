@@ -40,9 +40,11 @@ import {
 } from './errors'
 import {
   forAliasRE,
+  isAllWhitespace,
   isCoreComponent,
   isSimpleIdentifier,
   isStaticArgOf,
+  isVPre,
 } from './utils'
 import { decodeHTML } from 'entities/lib/decode.js'
 import {
@@ -72,6 +74,7 @@ export const defaultParserOptions: MergedParserOptions = {
   getNamespace: () => Namespaces.HTML,
   isVoidTag: NO,
   isPreTag: NO,
+  isIgnoreNewlineTag: NO,
   isCustomElement: NO,
   onError: defaultOnError,
   onWarn: defaultOnWarn,
@@ -179,7 +182,7 @@ const tokenizer = new Tokenizer(stack, {
     const name = currentOpenTag!.tag
     currentOpenTag!.isSelfClosing = true
     endOpenTag(end)
-    if (stack[0]?.tag === name) {
+    if (stack[0] && stack[0].tag === name) {
       onCloseTag(stack.shift()!, end)
     }
   },
@@ -225,7 +228,7 @@ const tokenizer = new Tokenizer(stack, {
         rawName: raw,
         exp: undefined,
         arg: undefined,
-        modifiers: raw === '.' ? ['prop'] : [],
+        modifiers: raw === '.' ? [createSimpleExpression('prop')] : [],
         loc: getLoc(start),
       }
       if (name === 'pre') {
@@ -245,7 +248,7 @@ const tokenizer = new Tokenizer(stack, {
   ondirarg(start, end) {
     if (start === end) return
     const arg = getSlice(start, end)
-    if (inVPre) {
+    if (inVPre && !isVPre(currentProp!)) {
       ;(currentProp as AttributeNode).name += arg
       setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else {
@@ -272,7 +275,7 @@ const tokenizer = new Tokenizer(stack, {
 
   ondirmodifier(start, end) {
     const mod = getSlice(start, end)
-    if (inVPre) {
+    if (inVPre && !isVPre(currentProp!)) {
       ;(currentProp as AttributeNode).name += '.' + mod
       setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else if ((currentProp as DirectiveNode).name === 'slot') {
@@ -284,7 +287,8 @@ const tokenizer = new Tokenizer(stack, {
         setLocEnd(arg.loc, end)
       }
     } else {
-      ;(currentProp as DirectiveNode).modifiers.push(mod)
+      const exp = createSimpleExpression(mod, true, getLoc(start, end))
+      ;(currentProp as DirectiveNode).modifiers.push(exp)
     }
   },
 
@@ -390,12 +394,14 @@ const tokenizer = new Tokenizer(stack, {
           if (
             __COMPAT__ &&
             currentProp.name === 'bind' &&
-            (syncIndex = currentProp.modifiers.indexOf('sync')) > -1 &&
+            (syncIndex = currentProp.modifiers.findIndex(
+              mod => mod.content === 'sync',
+            )) > -1 &&
             checkCompatEnabled(
               CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
               currentOptions,
               currentProp.loc,
-              currentProp.rawName,
+              currentProp.arg!.loc.source,
             )
           ) {
             currentProp.name = 'model'
@@ -598,14 +604,14 @@ function endOpenTag(end: number) {
 
 function onText(content: string, start: number, end: number) {
   if (__BROWSER__) {
-    const tag = stack[0]?.tag
+    const tag = stack[0] && stack[0].tag
     if (tag !== 'script' && tag !== 'style' && content.includes('&')) {
       content = currentOptions.decodeEntities!(content, false)
     }
   }
   const parent = stack[0] || currentRoot
   const lastNode = parent.children[parent.children.length - 1]
-  if (lastNode?.type === NodeTypes.TEXT) {
+  if (lastNode && lastNode.type === NodeTypes.TEXT) {
     // merge
     lastNode.content += content
     setLocEnd(lastNode.loc, end)
@@ -624,7 +630,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     // implied close, end should be backtracked to close
     setLocEnd(el.loc, backTrack(end, CharCodes.Lt))
   } else {
-    setLocEnd(el.loc, end + 1)
+    setLocEnd(el.loc, lookAhead(end, CharCodes.Gt) + 1)
   }
 
   if (tokenizer.inSFCRoot) {
@@ -641,7 +647,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
   }
 
   // refine element type
-  const { tag, ns } = el
+  const { tag, ns, children } = el
   if (!inVPre) {
     if (tag === 'slot') {
       el.tagType = ElementTypes.SLOT
@@ -654,8 +660,18 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
 
   // whitespace management
   if (!tokenizer.inRCDATA) {
-    el.children = condenseWhitespace(el.children, el.tag)
+    el.children = condenseWhitespace(children)
   }
+
+  if (ns === Namespaces.HTML && currentOptions.isIgnoreNewlineTag(tag)) {
+    // remove leading newline for <textarea> and <pre> per html spec
+    // https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inbody
+    const first = children[0]
+    if (first && first.type === NodeTypes.TEXT) {
+      first.content = first.content.replace(/^\r?\n/, '')
+    }
+  }
+
   if (ns === Namespaces.HTML && currentOptions.isPreTag(tag)) {
     inPre--
   }
@@ -703,6 +719,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     }
 
     if (
+      !tokenizer.inSFCRoot &&
       isCompatEnabled(
         CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
         currentOptions,
@@ -746,6 +763,12 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
   }
 }
 
+function lookAhead(index: number, c: number) {
+  let i = index
+  while (currentInput.charCodeAt(i) !== c && i < currentInput.length - 1) i++
+  return i
+}
+
 function backTrack(index: number, c: number) {
   let i = index
   while (currentInput.charCodeAt(i) !== c && i >= 0) i--
@@ -775,7 +798,8 @@ function isComponent({ tag, props }: ElementNode): boolean {
     tag === 'component' ||
     isUpperCase(tag.charCodeAt(0)) ||
     isCoreComponent(tag) ||
-    currentOptions.isBuiltInComponent?.(tag) ||
+    (currentOptions.isBuiltInComponent &&
+      currentOptions.isBuiltInComponent(tag)) ||
     (currentOptions.isNativeTag && !currentOptions.isNativeTag(tag))
   ) {
     return true
@@ -821,10 +845,7 @@ function isUpperCase(c: number) {
 }
 
 const windowsNewlineRE = /\r\n/g
-function condenseWhitespace(
-  nodes: TemplateChildNode[],
-  tag?: string,
-): TemplateChildNode[] {
+function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
   const shouldCondense = currentOptions.whitespace !== 'preserve'
   let removedWhitespace = false
   for (let i = 0; i < nodes.length; i++) {
@@ -832,8 +853,8 @@ function condenseWhitespace(
     if (node.type === NodeTypes.TEXT) {
       if (!inPre) {
         if (isAllWhitespace(node.content)) {
-          const prev = nodes[i - 1]?.type
-          const next = nodes[i + 1]?.type
+          const prev = nodes[i - 1] && nodes[i - 1].type
+          const next = nodes[i + 1] && nodes[i + 1].type
           // Remove if:
           // - the whitespace is the first or last node, or:
           // - (condense mode) the whitespace is between two comments, or:
@@ -869,24 +890,7 @@ function condenseWhitespace(
       }
     }
   }
-  if (inPre && tag && currentOptions.isPreTag(tag)) {
-    // remove leading newline per html spec
-    // https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element
-    const first = nodes[0]
-    if (first && first.type === NodeTypes.TEXT) {
-      first.content = first.content.replace(/^\r?\n/, '')
-    }
-  }
   return removedWhitespace ? nodes.filter(Boolean) : nodes
-}
-
-function isAllWhitespace(str: string) {
-  for (let i = 0; i < str.length; i++) {
-    if (!isWhitespace(str.charCodeAt(i))) {
-      return false
-    }
-  }
-  return true
 }
 
 function hasNewlineChar(str: string) {
@@ -928,6 +932,10 @@ function getLoc(start: number, end?: number): SourceLocation {
     // @ts-expect-error allow late attachment
     source: end == null ? end : getSlice(start, end),
   }
+}
+
+export function cloneLoc(loc: SourceLocation): SourceLocation {
+  return getLoc(loc.start.offset, loc.end.offset)
 }
 
 function setLocEnd(loc: SourceLocation, end: number) {
@@ -1055,7 +1063,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
         `[@vue/compiler-core] decodeEntities option is passed but will be ` +
           `ignored in non-browser builds.`,
       )
-    } else if (__BROWSER__ && !currentOptions.decodeEntities) {
+    } else if (__BROWSER__ && !__TEST__ && !currentOptions.decodeEntities) {
       throw new Error(
         `[@vue/compiler-core] decodeEntities option is required in browser builds.`,
       )
@@ -1073,7 +1081,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
     currentOptions.ns === Namespaces.SVG ||
     currentOptions.ns === Namespaces.MATH_ML
 
-  const delimiters = options?.delimiters
+  const delimiters = options && options.delimiters
   if (delimiters) {
     tokenizer.delimiterOpen = toCharCodes(delimiters[0])
     tokenizer.delimiterClose = toCharCodes(delimiters[1])

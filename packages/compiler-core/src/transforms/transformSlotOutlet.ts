@@ -6,12 +6,14 @@ import {
   type SlotOutletNode,
   createCallExpression,
   createFunctionExpression,
+  createSimpleExpression,
 } from '../ast'
 import { isSlotOutlet, isStaticArgOf, isStaticExp } from '../utils'
 import { type PropsExpression, buildProps } from './transformElement'
 import { ErrorCodes, createCompilerError } from '../errors'
 import { RENDER_SLOT } from '../runtimeHelpers'
 import { camelize } from '@vue/shared'
+import { processExpression } from './transformExpression'
 
 export const transformSlotOutlet: NodeTransform = (node, context) => {
   if (isSlotOutlet(node)) {
@@ -76,7 +78,15 @@ export function processSlotOutlet(
       }
     } else {
       if (p.name === 'bind' && isStaticArgOf(p.arg, 'name')) {
-        if (p.exp) slotName = p.exp
+        if (p.exp) {
+          slotName = p.exp
+        } else if (p.arg && p.arg.type === NodeTypes.SIMPLE_EXPRESSION) {
+          const name = camelize(p.arg.content)
+          slotName = p.exp = createSimpleExpression(name, false, p.arg.loc)
+          if (!__BROWSER__) {
+            slotName = p.exp = processExpression(p.exp, context)
+          }
+        }
       } else {
         if (p.name === 'bind' && p.arg && isStaticExp(p.arg)) {
           p.arg.content = camelize(p.arg.content)

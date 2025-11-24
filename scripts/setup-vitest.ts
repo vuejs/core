@@ -1,12 +1,23 @@
 import type { MockInstance } from 'vitest'
 
+declare module 'vitest' {
+  interface Assertion<T = any> extends CustomMatchers<T> {}
+  interface AsymmetricMatchersContaining extends CustomMatchers {}
+}
+
+interface CustomMatchers<R = unknown> {
+  toHaveBeenWarned(): R
+  toHaveBeenWarnedLast(): R
+  toHaveBeenWarnedTimes(n: number): R
+}
+
 vi.stubGlobal('MathMLElement', class MathMLElement {})
 
 expect.extend({
   toHaveBeenWarned(received: string) {
-    asserted.add(received)
     const passed = warn.mock.calls.some(args => args[0].includes(received))
     if (passed) {
+      asserted.add(received)
       return {
         pass: true,
         message: () => `expected "${received}" not to have been warned.`,
@@ -25,10 +36,10 @@ expect.extend({
   },
 
   toHaveBeenWarnedLast(received: string) {
-    asserted.add(received)
     const passed =
       warn.mock.calls[warn.mock.calls.length - 1][0].includes(received)
     if (passed) {
+      asserted.add(received)
       return {
         pass: true,
         message: () => `expected "${received}" not to have been warned last.`,
@@ -44,7 +55,6 @@ expect.extend({
   },
 
   toHaveBeenWarnedTimes(received: string, n: number) {
-    asserted.add(received)
     let found = 0
     warn.mock.calls.forEach(args => {
       if (args[0].includes(received)) {
@@ -53,6 +63,7 @@ expect.extend({
     })
 
     if (found === n) {
+      asserted.add(received)
       return {
         pass: true,
         message: () => `expected "${received}" to have been warned ${n} times.`,

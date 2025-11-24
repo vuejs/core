@@ -1,4 +1,6 @@
 import {
+  type VNode,
+  computed,
   createApp,
   defineComponent,
   h,
@@ -11,6 +13,7 @@ import {
   watch,
   watchEffect,
 } from '@vue/runtime-test'
+import { ErrorCodes, ErrorTypeStrings } from '../src/errorHandling'
 
 describe('error handling', () => {
   test('propagation', () => {
@@ -581,6 +584,127 @@ describe('error handling', () => {
     expect(handler).toHaveBeenCalledWith(error3, {}, 'watcher callback')
     expect(handler).toHaveBeenCalledWith(error4, {}, 'watcher callback')
     expect(handler).toHaveBeenCalledTimes(4)
+  })
+
+  // #9574
+  test('should pause tracking in error handler', async () => {
+    const error = new Error('error')
+    const x = ref(Math.random())
+
+    const handler = vi.fn(() => {
+      x.value
+      x.value = Math.random()
+    })
+
+    const app = createApp({
+      setup() {
+        return () => {
+          throw error
+        }
+      },
+    })
+
+    app.config.errorHandler = handler
+    app.mount(nodeOps.createElement('div'))
+
+    await nextTick()
+    expect(handler).toHaveBeenCalledWith(error, {}, 'render function')
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('errors in scheduler job with owner instance should be caught', async () => {
+    let vnode: VNode
+    const x = ref(0)
+    const app = createApp({
+      render() {
+        return (vnode = vnode || h('div', x.value))
+      },
+    })
+
+    app.config.errorHandler = vi.fn()
+    app.mount(nodeOps.createElement('div'))
+
+    const error = new Error('error')
+    Object.defineProperty(vnode!, 'el', {
+      get() {
+        throw error
+      },
+    })
+
+    x.value++
+    await nextTick()
+    expect(app.config.errorHandler).toHaveBeenCalledWith(
+      error,
+      {},
+      ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
+    )
+  })
+
+  // #11286
+  test('handle error in computed', async () => {
+    const err = new Error()
+    const handler = vi.fn()
+
+    const count = ref(1)
+    const x = computed(() => {
+      if (count.value === 2) throw err
+      return count.value + 1
+    })
+
+    const app = createApp({
+      setup() {
+        return () => x.value
+      },
+    })
+
+    app.config.errorHandler = handler
+    app.mount(nodeOps.createElement('div'))
+
+    count.value = 2
+
+    await nextTick()
+    expect(handler).toHaveBeenCalledWith(
+      err,
+      {},
+      ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
+    )
+  })
+
+  // #11624
+  test('in computed that is used as key for watch', async () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+    const trigger = ref(false)
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return () => h(Child)
+      },
+    }
+
+    const Child = {
+      setup() {
+        const foo = computed(() => {
+          if (trigger.value) throw err
+          return 1
+        })
+        watch(foo, () => {})
+        return () => null
+      },
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    trigger.value = true
+    await nextTick()
+    expect(fn).toHaveBeenCalledWith(
+      err,
+      ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
+    )
   })
 
   // native event handler handling should be tested in respective renderers

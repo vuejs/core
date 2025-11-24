@@ -23,7 +23,6 @@ import {
   createVNodeCall,
 } from '../ast'
 import {
-  PatchFlagNames,
   PatchFlags,
   camelize,
   capitalize,
@@ -57,13 +56,14 @@ import {
   toValidAssetId,
 } from '../utils'
 import { buildSlots } from './vSlot'
-import { getConstantType } from './hoistStatic'
+import { getConstantType } from './cacheStatic'
 import { BindingTypes } from '../options'
 import {
   CompilerDeprecationTypes,
   checkCompatEnabled,
   isCompatEnabled,
 } from '../compat/compatConfig'
+import { processExpression } from './transformExpression'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
@@ -100,8 +100,7 @@ export const transformElement: NodeTransform = (node, context) => {
 
     let vnodeProps: VNodeCall['props']
     let vnodeChildren: VNodeCall['children']
-    let vnodePatchFlag: VNodeCall['patchFlag']
-    let patchFlag: number = 0
+    let patchFlag: VNodeCall['patchFlag'] | 0 = 0
     let vnodeDynamicProps: VNodeCall['dynamicProps']
     let dynamicPropNames: string[] | undefined
     let vnodeDirectives: VNodeCall['directives']
@@ -116,7 +115,7 @@ export const transformElement: NodeTransform = (node, context) => {
         // updates inside get proper isSVG flag at runtime. (#639, #643)
         // This is technically web-specific, but splitting the logic out of core
         // leads to too much unnecessary complexity.
-        (tag === 'svg' || tag === 'foreignObject'))
+        (tag === 'svg' || tag === 'foreignObject' || tag === 'math'))
 
     // props
     if (props.length > 0) {
@@ -205,27 +204,8 @@ export const transformElement: NodeTransform = (node, context) => {
     }
 
     // patchFlag & dynamicPropNames
-    if (patchFlag !== 0) {
-      if (__DEV__) {
-        if (patchFlag < 0) {
-          // special flags (negative and mutually exclusive)
-          vnodePatchFlag =
-            patchFlag + ` /* ${PatchFlagNames[patchFlag as PatchFlags]} */`
-        } else {
-          // bitwise flags
-          const flagNames = Object.keys(PatchFlagNames)
-            .map(Number)
-            .filter(n => n > 0 && patchFlag & n)
-            .map(n => PatchFlagNames[n as PatchFlags])
-            .join(`, `)
-          vnodePatchFlag = patchFlag + ` /* ${flagNames} */`
-        }
-      } else {
-        vnodePatchFlag = String(patchFlag)
-      }
-      if (dynamicPropNames && dynamicPropNames.length) {
-        vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)
-      }
+    if (dynamicPropNames && dynamicPropNames.length) {
+      vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)
     }
 
     node.codegenNode = createVNodeCall(
@@ -233,7 +213,7 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeTag,
       vnodeProps,
       vnodeChildren,
-      vnodePatchFlag,
+      patchFlag === 0 ? undefined : patchFlag,
       vnodeDynamicProps,
       vnodeDirectives,
       !!shouldUseBlock,
@@ -248,12 +228,12 @@ export function resolveComponentType(
   node: ComponentNode,
   context: TransformContext,
   ssr = false,
-) {
+): string | symbol | CallExpression {
   let { tag } = node
 
   // 1. dynamic component
   const isExplicitDynamic = isComponentTag(tag)
-  const isProp = findProp(node, 'is')
+  const isProp = findProp(node, 'is', false, true /* allow empty */)
   if (isProp) {
     if (
       isExplicitDynamic ||
@@ -263,10 +243,19 @@ export function resolveComponentType(
           context,
         ))
     ) {
-      const exp =
-        isProp.type === NodeTypes.ATTRIBUTE
-          ? isProp.value && createSimpleExpression(isProp.value.content, true)
-          : isProp.exp
+      let exp: ExpressionNode | undefined
+      if (isProp.type === NodeTypes.ATTRIBUTE) {
+        exp = isProp.value && createSimpleExpression(isProp.value.content, true)
+      } else {
+        exp = isProp.exp
+        if (!exp) {
+          // #10469 handle :is shorthand
+          exp = createSimpleExpression(`is`, false, isProp.arg!.loc)
+          if (!__BROWSER__) {
+            exp = isProp.exp = processExpression(exp, context)
+          }
+        }
+      }
       if (exp) {
         return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
           exp,
@@ -385,7 +374,7 @@ export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
 export function buildProps(
   node: ElementNode,
   context: TransformContext,
-  props: ElementNode['props'] = node.props,
+  props: ElementNode['props'] | undefined = node.props,
   isComponent: boolean,
   isDynamicComponent: boolean,
   ssr = false,
@@ -421,6 +410,18 @@ export function buildProps(
       properties = []
     }
     if (arg) mergeArgs.push(arg)
+  }
+
+  // mark template ref on v-for
+  const pushRefVForMarker = () => {
+    if (context.scopes.vFor > 0) {
+      properties.push(
+        createObjectProperty(
+          createSimpleExpression('ref_for', true),
+          createSimpleExpression('true'),
+        ),
+      )
+    }
   }
 
   const analyzePatchFlag = ({ key, value }: Property) => {
@@ -492,14 +493,7 @@ export function buildProps(
       let isStatic = true
       if (name === 'ref') {
         hasRef = true
-        if (context.scopes.vFor > 0) {
-          properties.push(
-            createObjectProperty(
-              createSimpleExpression('ref_for', true),
-              createSimpleExpression('true'),
-            ),
-          )
-        }
+        pushRefVForMarker()
         // in inline mode there is no setupState object, so we can't use string
         // keys to set the ref. Instead, we need to transform it to pass the
         // actual ref instead.
@@ -591,13 +585,8 @@ export function buildProps(
         shouldUseBlock = true
       }
 
-      if (isVBind && isStaticArgOf(arg, 'ref') && context.scopes.vFor > 0) {
-        properties.push(
-          createObjectProperty(
-            createSimpleExpression('ref_for', true),
-            createSimpleExpression('true'),
-          ),
-        )
+      if (isVBind && isStaticArgOf(arg, 'ref')) {
+        pushRefVForMarker()
       }
 
       // special case for v-bind and v-on with no argument
@@ -605,9 +594,9 @@ export function buildProps(
         hasDynamicKeys = true
         if (exp) {
           if (isVBind) {
-            // have to merge early for compat build check
-            pushMergeArg()
             if (__COMPAT__) {
+              // have to merge early for compat build check
+              pushMergeArg()
               // 2.x v-bind object order compat
               if (__DEV__) {
                 const hasOverridableKeys = mergeArgs.some(arg => {
@@ -650,6 +639,9 @@ export function buildProps(
               }
             }
 
+            // #10696 in case a v-bind object contains ref
+            pushRefVForMarker()
+            pushMergeArg()
             mergeArgs.push(exp)
           } else {
             // v-on="obj" -> toHandlers(obj)
@@ -674,7 +666,7 @@ export function buildProps(
       }
 
       // force hydration for v-bind with .prop modifier
-      if (isVBind && modifiers.includes('prop')) {
+      if (isVBind && modifiers.some(mod => mod.content === 'prop')) {
         patchFlag |= PatchFlags.NEED_HYDRATION
       }
 

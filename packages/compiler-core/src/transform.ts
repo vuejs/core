@@ -23,7 +23,6 @@ import {
 import {
   EMPTY_OBJ,
   NOOP,
-  PatchFlagNames,
   PatchFlags,
   camelize,
   capitalize,
@@ -38,7 +37,7 @@ import {
   helperNameMap,
 } from './runtimeHelpers'
 import { isVSlot } from './utils'
-import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
+import { cacheStatic, getSingleElementRoot } from './transforms/cacheStatic'
 import type { CompilerCompatOptions } from './compat/compatConfig'
 
 // There are two types of transforms:
@@ -93,7 +92,7 @@ export interface TransformContext
   hoists: (JSChildNode | null)[]
   imports: ImportItem[]
   temps: number
-  cached: number
+  cached: (CacheExpression | null)[]
   identifiers: { [name: string]: number | undefined }
   scopes: {
     vFor: number
@@ -102,6 +101,9 @@ export interface TransformContext
     vOnce: number
   }
   parent: ParentNode | null
+  // we could use a stack but in practice we've only ever needed two layers up
+  // so this is more efficient
+  grandParent: ParentNode | null
   childIndex: number
   currentNode: RootNode | TemplateChildNode | null
   inVOnce: boolean
@@ -114,7 +116,7 @@ export interface TransformContext
   addIdentifiers(exp: ExpressionNode | string): void
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
-  cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
+  cache(exp: JSChildNode, isVNode?: boolean, inVOnce?: boolean): CacheExpression
   constantCache: WeakMap<TemplateChildNode, ConstantTypes>
 
   // 2.x Compat only
@@ -182,9 +184,9 @@ export function createTransformContext(
     directives: new Set(),
     hoists: [],
     imports: [],
+    cached: [],
     constantCache: new WeakMap(),
     temps: 0,
-    cached: 0,
     identifiers: Object.create(null),
     scopes: {
       vFor: 0,
@@ -193,6 +195,7 @@ export function createTransformContext(
       vOnce: 0,
     },
     parent: null,
+    grandParent: null,
     currentNode: root,
     childIndex: 0,
     inVOnce: false,
@@ -218,7 +221,7 @@ export function createTransformContext(
       return `_${helperNameMap[context.helper(name)]}`
     },
     replaceNode(node) {
-      /* istanbul ignore if */
+      /* v8 ignore start */
       if (__DEV__) {
         if (!context.currentNode) {
           throw new Error(`Node being replaced is already removed.`)
@@ -227,9 +230,11 @@ export function createTransformContext(
           throw new Error(`Cannot replace root node.`)
         }
       }
+      /* v8 ignore stop */
       context.parent!.children[context.childIndex] = context.currentNode = node
     },
     removeNode(node) {
+      /* v8 ignore next 3 */
       if (__DEV__ && !context.parent) {
         throw new Error(`Cannot remove root node.`)
       }
@@ -239,7 +244,7 @@ export function createTransformContext(
         : context.currentNode
           ? context.childIndex
           : -1
-      /* istanbul ignore if */
+      /* v8 ignore next 3 */
       if (__DEV__ && removalIndex < 0) {
         throw new Error(`node being removed is not a child of current parent`)
       }
@@ -256,7 +261,7 @@ export function createTransformContext(
       }
       context.parent!.children.splice(removalIndex, 1)
     },
-    onNodeRemoved: () => {},
+    onNodeRemoved: NOOP,
     addIdentifiers(exp) {
       // identifier tracking only happens in non-browser builds.
       if (!__BROWSER__) {
@@ -287,13 +292,20 @@ export function createTransformContext(
         `_hoisted_${context.hoists.length}`,
         false,
         exp.loc,
-        ConstantTypes.CAN_HOIST,
+        ConstantTypes.CAN_CACHE,
       )
       identifier.hoisted = exp
       return identifier
     },
-    cache(exp, isVNode = false) {
-      return createCacheExpression(context.cached++, exp, isVNode)
+    cache(exp, isVNode = false, inVOnce = false) {
+      const cacheExp = createCacheExpression(
+        context.cached.length,
+        exp,
+        isVNode,
+        inVOnce,
+      )
+      context.cached.push(cacheExp)
+      return cacheExp
     },
   }
 
@@ -316,11 +328,11 @@ export function createTransformContext(
   return context
 }
 
-export function transform(root: RootNode, options: TransformOptions) {
+export function transform(root: RootNode, options: TransformOptions): void {
   const context = createTransformContext(root, options)
   traverseNode(root, context)
   if (options.hoistStatic) {
-    hoistStatic(root, context)
+    cacheStatic(root, context)
   }
   if (!options.ssr) {
     createRootCodegen(root, context)
@@ -344,12 +356,12 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
   const { helper } = context
   const { children } = root
   if (children.length === 1) {
-    const child = children[0]
+    const singleElementRootChild = getSingleElementRoot(root)
     // if the single child is an element, turn it into a block.
-    if (isSingleElementRoot(root, child) && child.codegenNode) {
+    if (singleElementRootChild && singleElementRootChild.codegenNode) {
       // single element root is never hoisted so codegenNode will never be
       // SimpleExpressionNode
-      const codegenNode = child.codegenNode
+      const codegenNode = singleElementRootChild.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
         convertToBlock(codegenNode, context)
       }
@@ -358,12 +370,11 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       // - single <slot/>, IfNode, ForNode: already blocks.
       // - single text node: always patched.
       // root codegen falls through via genNode()
-      root.codegenNode = child
+      root.codegenNode = children[0]
     }
   } else if (children.length > 1) {
     // root has multiple nodes - return a fragment block.
     let patchFlag = PatchFlags.STABLE_FRAGMENT
-    let patchFlagText = PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
     // check if the fragment actually contains a single valid child with
     // the rest being comments
     if (
@@ -371,14 +382,13 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       children.filter(c => c.type !== NodeTypes.COMMENT).length === 1
     ) {
       patchFlag |= PatchFlags.DEV_ROOT_FRAGMENT
-      patchFlagText += `, ${PatchFlagNames[PatchFlags.DEV_ROOT_FRAGMENT]}`
     }
     root.codegenNode = createVNodeCall(
       context,
       helper(FRAGMENT),
       undefined,
       root.children,
-      patchFlag + (__DEV__ ? ` /* ${patchFlagText} */` : ``),
+      patchFlag,
       undefined,
       undefined,
       true,
@@ -393,7 +403,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
 export function traverseChildren(
   parent: ParentNode,
   context: TransformContext,
-) {
+): void {
   let i = 0
   const nodeRemoved = () => {
     i--
@@ -401,6 +411,7 @@ export function traverseChildren(
   for (; i < parent.children.length; i++) {
     const child = parent.children[i]
     if (isString(child)) continue
+    context.grandParent = context.parent
     context.parent = parent
     context.childIndex = i
     context.onNodeRemoved = nodeRemoved
@@ -411,7 +422,7 @@ export function traverseChildren(
 export function traverseNode(
   node: RootNode | TemplateChildNode,
   context: TransformContext,
-) {
+): void {
   context.currentNode = node
   // apply transform plugins
   const { nodeTransforms } = context

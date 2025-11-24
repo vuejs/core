@@ -18,6 +18,15 @@ export function convertLegacyComponent(
 
   // 2.x constructor
   if (isFunction(comp) && comp.cid) {
+    // #7766
+    if (comp.render) {
+      // only necessary when compiled from SFC
+      comp.options.render = comp.render
+    }
+    // copy over internal properties set by the SFC compiler
+    comp.options.__file = comp.__file
+    comp.options.__hmrId = comp.__hmrId
+    comp.options.__scopeId = comp.__scopeId
     comp = comp.options
   }
 

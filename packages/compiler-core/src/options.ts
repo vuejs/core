@@ -53,6 +53,11 @@ export interface ParserOptions
    */
   isPreTag?: (tag: string) => boolean
   /**
+   * Elements that should ignore the first newline token per parinsg spec
+   * e.g. `<textarea>` and `<pre>`
+   */
+  isIgnoreNewlineTag?: (tag: string) => boolean
+  /**
    * Platform-specific built-in components e.g. `<Transition>`
    */
   isBuiltInComponent?: (tag: string) => symbol | void
@@ -74,6 +79,7 @@ export interface ParserOptions
   delimiters?: [string, string]
   /**
    * Whitespace handling strategy
+   * @default 'condense'
    */
   whitespace?: 'preserve' | 'condense'
   /**
@@ -249,7 +255,7 @@ export interface TransformOptions
    */
   prefixIdentifiers?: boolean
   /**
-   * Hoist static VNodes and props objects to `_hoisted_x` constants
+   * Cache static VNodes and props objects to `_hoisted_x` constants
    * @default false
    */
   hoistStatic?: boolean

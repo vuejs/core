@@ -23,7 +23,9 @@ const normalizedAsyncComponentMap = new WeakMap<
   Component
 >()
 
-export function convertLegacyAsyncComponent(comp: LegacyAsyncComponent) {
+export function convertLegacyAsyncComponent(
+  comp: LegacyAsyncComponent,
+): Component {
   if (normalizedAsyncComponentMap.has(comp)) {
     return normalizedAsyncComponentMap.get(comp)!
   }

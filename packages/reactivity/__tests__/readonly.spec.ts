@@ -8,7 +8,9 @@ import {
   reactive,
   readonly,
   ref,
+  shallowRef,
   toRaw,
+  triggerRef,
 } from '../src'
 
 /**
@@ -409,7 +411,7 @@ describe('reactivity/readonly', () => {
     const eff = effect(() => {
       roArr.includes(2)
     })
-    expect(eff.effect.deps.length).toBe(0)
+    expect(eff.effect.deps).toBeUndefined()
   })
 
   test('readonly should track and trigger if wrapping reactive original (collection)', () => {
@@ -450,7 +452,7 @@ describe('reactivity/readonly', () => {
       bar: markRaw({ b: 2 }),
     })
     expect(isReadonly(obj.foo)).toBe(true)
-    expect(isReactive(obj.bar)).toBe(false)
+    expect(isReadonly(obj.bar)).toBe(false)
   })
 
   test('should make ref readonly', () => {
@@ -496,9 +498,10 @@ describe('reactivity/readonly', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
-    expect(() => {
-      obj.ror = true
-    }).toThrow()
+    obj.ror = true
+    expect(
+      `Set operation on key "ror" failed: target is readonly.`,
+    ).toHaveBeenWarned()
     expect(obj.ror).toBe(false)
   })
 
@@ -519,4 +522,27 @@ describe('reactivity/readonly', () => {
     expect(obj.r).toBe(ro)
     expect(r.value).toBe(ro)
   })
+
+  test('should keep nested ref readonly', () => {
+    const items = ref(['one', 'two', 'three'])
+    const obj = {
+      o: readonly({
+        items,
+      }),
+    }
+    expect(isReadonly(obj.o.items)).toBe(true)
+  })
+})
+
+test('should be able to trigger with triggerRef', () => {
+  const r = shallowRef({ a: 1 })
+  const ror = readonly(r)
+  let dummy
+  effect(() => {
+    dummy = ror.value.a
+  })
+  r.value.a = 2
+  expect(dummy).toBe(1)
+  triggerRef(ror)
+  expect(dummy).toBe(2)
 })
