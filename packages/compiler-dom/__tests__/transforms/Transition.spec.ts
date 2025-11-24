@@ -135,6 +135,18 @@ describe('Transition multi children warnings', () => {
       false,
     )
   })
+
+  test('non-breaking spaces are treated as normal text', () => {
+    checkWarning(
+      `
+      <transition>
+        \u00a0
+        <div>foo</div>
+      </transition>
+      `,
+      true,
+    )
+  })
 })
 
 test('inject persisted when child has v-show', () => {
@@ -162,5 +174,21 @@ test('the v-if/else-if/else branches in Transition should ignore comments', () =
       </div>
     </transition>
     `).code,
+  ).toMatchSnapshot()
+})
+
+test('comments and preserved whitespace are ignored', () => {
+  expect(
+    compile(
+      `
+      <transition>
+        <!-- foo --> <!-- bar -->
+        <div>foo bar</div>
+      </transition>
+      `,
+      {
+        whitespace: 'preserve',
+      },
+    ).code,
   ).toMatchSnapshot()
 })

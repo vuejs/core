@@ -69,7 +69,7 @@ export type ShallowRef<T = any, S = T> = Ref<T, S> & {
 }
 
 /**
- * Shallow version of {@link ref()}.
+ * Shallow version of {@link ref}.
  *
  * @example
  * ```js
@@ -231,7 +231,7 @@ export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
 
 /**
  * Normalizes values / refs / getters to values.
- * This is similar to {@link unref()}, except that it also normalizes getters.
+ * This is similar to {@link unref}, except that it also normalizes getters.
  * If the argument is a getter, it will be invoked and its return value will
  * be returned.
  *
@@ -277,7 +277,7 @@ export function proxyRefs<T extends object>(
   objectWithRefs: T,
 ): ShallowUnwrapRef<T> {
   return isReactive(objectWithRefs)
-    ? objectWithRefs
+    ? (objectWithRefs as ShallowUnwrapRef<T>)
     : new Proxy(objectWithRefs, shallowUnwrapHandlers)
 }
 
@@ -333,7 +333,7 @@ export type ToRefs<T = any> = {
 /**
  * Converts a reactive object to a plain object where each property of the
  * resulting object is a ref pointing to the corresponding property of the
- * original object. Each individual ref is created using {@link toRef()}.
+ * original object. Each individual ref is created using {@link toRef}.
  *
  * @param object - Reactive object to be made into an object of linked refs.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#torefs}
