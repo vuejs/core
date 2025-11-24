@@ -447,7 +447,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (hasSetupBinding(setupState, key)) {
         accessCache![key] = AccessTypes.SETUP
         return setupState[key]
-      } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+      } else if (
+        __FEATURE_OPTIONS_API__ &&
+        data !== EMPTY_OBJ &&
+        hasOwn(data, key)
+      ) {
         accessCache![key] = AccessTypes.DATA
         return data[key]
       } else if (hasOwn(props, key)) {
@@ -539,7 +543,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     ) {
       warn(`Cannot mutate <script setup> binding "${key}" from Options API.`)
       return false
-    } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+    } else if (
+      __FEATURE_OPTIONS_API__ &&
+      data !== EMPTY_OBJ &&
+      hasOwn(data, key)
+    ) {
       data[key] = value
       return true
     } else if (hasOwn(instance.props, key)) {
@@ -569,18 +577,23 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, setupState, accessCache, ctx, appContext, props },
+      _: { data, setupState, accessCache, ctx, appContext, props, type },
     }: ComponentRenderContext,
     key: string,
   ) {
-    return (
-      !!accessCache![key] ||
-      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
+    let cssModules
+    return !!(
+      accessCache![key] ||
+      (__FEATURE_OPTIONS_API__ &&
+        data !== EMPTY_OBJ &&
+        key[0] !== '$' &&
+        hasOwn(data, key)) ||
       hasSetupBinding(setupState, key) ||
       hasOwn(props, key) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
-      hasOwn(appContext.config.globalProperties, key)
+      hasOwn(appContext.config.globalProperties, key) ||
+      ((cssModules = type.__cssModules) && cssModules[key])
     )
   },
 

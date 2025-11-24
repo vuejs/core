@@ -9,7 +9,7 @@ import { CSS_VAR_TEXT } from '../helpers/useCssVars'
 
 type Style = string | Record<string, string | string[]> | null
 
-const displayRE = /(^|;)\s*display\s*:/
+const displayRE = /(?:^|;)\s*display\s*:/
 
 export function patchStyle(el: Element, prev: Style, next: Style): void {
   const style = (el as HTMLElement).style

@@ -40,9 +40,11 @@ import {
 } from './errors'
 import {
   forAliasRE,
+  isAllWhitespace,
   isCoreComponent,
   isSimpleIdentifier,
   isStaticArgOf,
+  isVPre,
 } from './utils'
 import { decodeHTML } from 'entities/lib/decode.js'
 import {
@@ -246,7 +248,7 @@ const tokenizer = new Tokenizer(stack, {
   ondirarg(start, end) {
     if (start === end) return
     const arg = getSlice(start, end)
-    if (inVPre) {
+    if (inVPre && !isVPre(currentProp!)) {
       ;(currentProp as AttributeNode).name += arg
       setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else {
@@ -262,7 +264,7 @@ const tokenizer = new Tokenizer(stack, {
 
   ondirmodifier(start, end) {
     const mod = getSlice(start, end)
-    if (inVPre) {
+    if (inVPre && !isVPre(currentProp!)) {
       ;(currentProp as AttributeNode).name += '.' + mod
       setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else if ((currentProp as DirectiveNode).name === 'slot') {
@@ -880,15 +882,6 @@ function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
   return removedWhitespace ? nodes.filter(Boolean) : nodes
 }
 
-function isAllWhitespace(str: string) {
-  for (let i = 0; i < str.length; i++) {
-    if (!isWhitespace(str.charCodeAt(i))) {
-      return false
-    }
-  }
-  return true
-}
-
 function hasNewlineChar(str: string) {
   for (let i = 0; i < str.length; i++) {
     const c = str.charCodeAt(i)
@@ -1053,7 +1046,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
         `[@vue/compiler-core] decodeEntities option is passed but will be ` +
           `ignored in non-browser builds.`,
       )
-    } else if (__BROWSER__ && !currentOptions.decodeEntities) {
+    } else if (__BROWSER__ && !__TEST__ && !currentOptions.decodeEntities) {
       throw new Error(
         `[@vue/compiler-core] decodeEntities option is required in browser builds.`,
       )
