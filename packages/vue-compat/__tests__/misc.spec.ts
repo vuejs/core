@@ -276,16 +276,23 @@ test('ATTR_ENUMERATED_COERCION', () => {
   ).toHaveBeenWarned()
 })
 
-test('ATTR_ENUMERATED_COERCION: true', () => {
+test('ATTR_ENUMERATED_COERCION, coercing "false"', () => {
   const vm = new Vue({
-    compatConfig: { ATTR_ENUMERATED_COERCION: true },
-    template: `<div><div draggable="false">hello</div></div>`,
+    template: `<div><div draggable="false" :spellcheck="false">hello</div></div>`,
   }).$mount()
-  expect(vm.$el.innerHTML).toBe(`<div draggable="false">hello</div>`)
+  expect(vm.$el.innerHTML).toBe(
+    `<div draggable="false" spellcheck="false">hello</div>`,
+  )
   expect(
     (
       deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
         .message as Function
     )('draggable', 'false', 'false'),
+  ).toHaveBeenWarned()
+  expect(
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('spellcheck', 'false', 'false'),
   ).toHaveBeenWarned()
 })
