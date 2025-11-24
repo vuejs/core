@@ -444,8 +444,8 @@ interface LegacyOptions<
    * #3468
    *
    * type-only, used to assist Mixin's type inference,
-   * typescript will try to simplify the inferred `Mixin` type,
-   * with the `__differentiator`, typescript won't be able to combine different mixins,
+   * TypeScript will try to simplify the inferred `Mixin` type,
+   * with the `__differentiator`, TypeScript won't be able to combine different mixins,
    * because the `__differentiator` will be different
    */
   __differentiator?: keyof D | keyof C | keyof M
@@ -1194,7 +1194,7 @@ export type ComponentOptionsWithoutProps<
       S,
       LC,
       Directives,
-      Exposed
+      string
     >
   >
 
@@ -1256,7 +1256,7 @@ export type ComponentOptionsWithArrayProps<
       S,
       LC,
       Directives,
-      Exposed
+      string
     >
   >
 
