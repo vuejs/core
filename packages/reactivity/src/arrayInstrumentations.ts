@@ -280,7 +280,12 @@ function reduce(
   let wrappedFn = fn
   if (arr !== self) {
     if (!isShallow(self)) {
+      let needReactive = args.length === 0
       wrappedFn = function (this: unknown, acc, item, index) {
+        if (needReactive) {
+          needReactive = false
+          acc = toReactive(acc)
+        }
         return fn.call(this, acc, toReactive(item), index, self)
       }
     } else if (fn.length > 3) {
