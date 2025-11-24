@@ -41,7 +41,10 @@ import {
   invalidateMount,
   queuePostRenderEffect,
 } from '../renderer'
-import { setTransitionHooks } from './BaseTransition'
+import {
+  locateFirstNonCommentChild,
+  setTransitionHooks,
+} from './BaseTransition'
 import type { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
@@ -277,15 +280,11 @@ const KeepAliveImpl: ComponentOptions = {
       const children = slots.default()
       let rawVNode = children[0]
       if (children.length > 1) {
-        let hasFound = false
-        // locate first non-comment child
-        for (const c of children) {
-          if (c.type !== Comment) {
-            rawVNode = c
-            hasFound = true
-            break
-          }
-        }
+        const { child, hasFound } = locateFirstNonCommentChild(
+          children,
+          `KeepAlive should contain exactly one component child.`,
+        )
+        rawVNode = child
         if (!hasFound) {
           current = null
           return children

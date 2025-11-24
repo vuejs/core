@@ -270,28 +270,38 @@ if (__COMPAT__) {
   BaseTransitionImpl.__isBuiltIn = true
 }
 
-function findNonCommentChild(children: VNode[]): VNode {
-  let child: VNode = children[0]
-  if (children.length > 1) {
-    let hasFound = false
-    // locate first non-comment child
-    for (const c of children) {
-      if (c.type !== Comment) {
-        if (__DEV__ && hasFound) {
-          // warn more than one non-comment child
-          warn(
-            '<transition> can only be used on a single element or component. ' +
-              'Use <transition-group> for lists.',
-          )
-          break
-        }
-        child = c
-        hasFound = true
-        if (!__DEV__) break
+export function locateFirstNonCommentChild(
+  children: VNode[],
+  warnMessage: string,
+): { child: VNode; hasFound: boolean } {
+  let child = children[0]
+  let hasFound = false
+  // locate first non-comment child
+  for (const c of children) {
+    if (c.type !== Comment) {
+      if (__DEV__ && hasFound) {
+        warn(warnMessage)
+        break
       }
+      child = c
+      hasFound = true
+      if (!__DEV__) break
     }
   }
-  return child
+  return {
+    child,
+    hasFound,
+  }
+}
+
+function findNonCommentChild(children: VNode[]): VNode {
+  return children.length > 1
+    ? locateFirstNonCommentChild(
+        children,
+        '<transition> can only be used on a single element or component. ' +
+          'Use <transition-group> for lists.',
+      ).child
+    : children[0]
 }
 
 // export the public type for h/tsx inference
