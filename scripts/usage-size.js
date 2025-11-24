@@ -22,12 +22,12 @@ const {
 })
 
 const sizeDir = path.resolve('temp/size')
-const entry = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
+const vuePath = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
 
 /**
  * @typedef {Object} Preset
  * @property {string} name - The name of the preset
- * @property {string[]} imports - The imports that are part of this preset
+ * @property {'*' | string[]} imports - The imports that are part of this preset
  * @property {Record<string, string>} [replace]
  */
 
@@ -39,6 +39,11 @@ const presets = [
     replace: { __VUE_OPTIONS_API__: 'false' },
   },
   { name: 'createApp', imports: ['createApp'] },
+  {
+    name: 'createApp + vaporInteropPlugin',
+    imports: ['createApp', 'vaporInteropPlugin'],
+  },
+  { name: 'createVaporApp', imports: ['createVaporApp'] },
   { name: 'createSSRApp', imports: ['createSSRApp'] },
   { name: 'defineCustomElement', imports: ['defineCustomElement'] },
   {
@@ -93,8 +98,11 @@ async function main() {
  */
 async function generateBundle(preset) {
   const id = 'virtual:entry'
-  const content = `export { ${preset.imports.join(', ')} } from '${entry}'`
-
+  const exportSpecifiers =
+    preset.imports === '*'
+      ? `* as ${preset.name}`
+      : `{ ${preset.imports.join(', ')} }`
+  const content = `export ${exportSpecifiers} from '${vuePath}'`
   const result = await rollup({
     input: id,
     plugins: [

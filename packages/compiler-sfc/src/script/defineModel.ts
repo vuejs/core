@@ -3,6 +3,7 @@ import type { ScriptCompileContext } from './context'
 import { inferRuntimeType } from './resolveType'
 import { UNKNOWN_TYPE, isCallOf, toRuntimeTypeString } from './utils'
 import { BindingTypes, unwrapTSNode } from '@vue/compiler-dom'
+import { getModifierPropName } from '@vue/shared'
 
 export const DEFINE_MODEL = 'defineModel'
 
@@ -20,13 +21,6 @@ export function processDefineModel(
 ): boolean {
   if (!isCallOf(node, DEFINE_MODEL)) {
     return false
-  }
-
-  if (!declId) {
-    ctx.error(
-      'defineModel() must be assigned to a variable. For example: const model = defineModel()',
-      node,
-    )
   }
 
   ctx.hasDefineModelCall = true
@@ -121,7 +115,7 @@ export function processDefineModel(
   return true
 }
 
-export function genModelProps(ctx: ScriptCompileContext) {
+export function genModelProps(ctx: ScriptCompileContext): string | undefined {
   if (!ctx.hasDefineModelCall) return
 
   const isProd = !!ctx.options.isProd
@@ -174,9 +168,7 @@ export function genModelProps(ctx: ScriptCompileContext) {
     modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
 
     // also generate modifiers prop
-    const modifierPropName = JSON.stringify(
-      name === 'modelValue' ? `modelModifiers` : `${name}Modifiers`,
-    )
+    const modifierPropName = JSON.stringify(getModifierPropName(name))
     modelPropsDecl += `\n    ${modifierPropName}: {},`
   }
   return `{${modelPropsDecl}\n  }`

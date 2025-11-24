@@ -1,0 +1,102 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: expression > basic 1`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setText(n0, _toDisplayString(_ctx.a)))
+  return n0
+}"
+`;
+
+exports[`compiler: expression > empty interpolation 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: expression > empty interpolation 2`] = `
+"import { template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: expression > empty interpolation 3`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: expression > empty interpolation 4`] = `
+"import { child as _child, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> </div>", true)
+
+export function render(_ctx) {
+  const n1 = t0()
+  const n0 = _child(n1, 0)
+  const x1 = _txt(n1)
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    _setText(n0, _toDisplayString(_foo))
+    _setText(x1, _toDisplayString(_foo))
+  })
+  return n1
+}"
+`;
+
+exports[`compiler: expression > props 1`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  _renderEffect(() => _setText(n0, _toDisplayString($props.foo)))
+  return n0
+}"
+`;
+
+exports[`compiler: expression > props aliased 1`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  _renderEffect(() => _setText(n0, _toDisplayString($props['bar'])))
+  return n0
+}"
+`;
+
+exports[`compiler: expression > update expression 1`] = `
+"import { child as _child, txt as _txt, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> </div>", true)
+
+export function render(_ctx) {
+  const n1 = t0()
+  const n0 = _child(n1, 0)
+  const x1 = _txt(n1)
+  _renderEffect(() => {
+    const _String = String
+    const _foo = _ctx.foo
+    _setProp(n1, "id", _String(_foo.id++))
+    _setProp(n1, "foo", _foo)
+    _setProp(n1, "bar", _ctx.bar++)
+    _setText(n0, _toDisplayString(_String(_foo.id++)) + " " + _toDisplayString(_foo) + " " + _toDisplayString(_ctx.bar))
+    _setText(x1, _toDisplayString(_String(_foo.id++)) + " " + _toDisplayString(_foo) + " " + _toDisplayString(_ctx.bar))
+  })
+  return n1
+}"
+`;

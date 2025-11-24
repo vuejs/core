@@ -1,0 +1,427 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: transform slot > dynamic slots name 1`] = `
+"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("foo")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    $: [
+      () => ({
+        name: _ctx.name,
+        fn: _withVaporCtx(() => {
+          const n0 = t0()
+          return n0
+        })
+      })
+    ]
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > dynamic slots name w/ v-for 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    $: [
+      () => (_createForSlots(_ctx.list, (item) => ({
+        name: item,
+        fn: _withVaporCtx((_slotProps0) => {
+          const n0 = t0()
+          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["bar"])))
+          return n0
+        })
+      })))
+    ]
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > dynamic slots name w/ v-for and provide absent key 1`] = `
+"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("foo")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    $: [
+      () => (_createForSlots(_ctx.list, (_, __, index) => ({
+        name: index,
+        fn: _withVaporCtx(() => {
+          const n0 = t0()
+          return n0
+        })
+      })))
+    ]
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > dynamic slots name w/ v-if / v-else[-if] 1`] = `
+"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("condition slot")
+const t1 = _template("another condition")
+const t2 = _template("else condition")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n6 = _createComponentWithFallback(_component_Comp, null, {
+    $: [
+      () => (_ctx.condition
+        ? {
+          name: "condition",
+          fn: _withVaporCtx(() => {
+            const n0 = t0()
+            return n0
+          })
+        }
+        : _ctx.anotherCondition
+          ? {
+            name: "condition",
+            fn: _withVaporCtx((_slotProps0) => {
+              const n2 = t1()
+              return n2
+            })
+          }
+          : {
+            name: "condition",
+            fn: _withVaporCtx(() => {
+              const n4 = t2()
+              return n4
+            })
+          })
+    ]
+  }, true)
+  return n6
+}"
+`;
+
+exports[`compiler: transform slot > forwarded slots > <slot w/ nested component> 1`] = `
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n1 = _createComponentWithFallback(_component_Comp, null, {
+        "default": _withVaporCtx(() => {
+          const n0 = _createSlot("default", null)
+          return n0
+        })
+      })
+      return n1
+    })
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > forwarded slots > <slot> tag only 1`] = `
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createSlot("default", null)
+      return n0
+    })
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > forwarded slots > <slot> tag w/ template 1`] = `
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createSlot("default", null)
+      return n0
+    })
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-for 1`] = `
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, createFor as _createFor, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n3 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createFor(() => (_ctx.b), (_for_item0) => {
+        const n2 = _createSlot("default", null)
+        return n2
+      })
+      return n0
+    })
+  }, true)
+  return n3
+}"
+`;
+
+exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-if 1`] = `
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, createIf as _createIf, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n3 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createIf(() => (_ctx.ok), () => {
+        const n2 = _createSlot("default", null)
+        return n2
+      })
+      return n0
+    })
+  }, true)
+  return n3
+}"
+`;
+
+exports[`compiler: transform slot > implicit default slot 1`] = `
+"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = t0()
+      return n0
+    })
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > named slots w/ implicit default slot 1`] = `
+"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("foo")
+const t1 = _template("bar")
+const t2 = _template("<span></span>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n4 = _createComponentWithFallback(_component_Comp, null, {
+    "one": _withVaporCtx(() => {
+      const n0 = t0()
+      return n0
+    }),
+    "default": _withVaporCtx(() => {
+      const n2 = t1()
+      const n3 = t2()
+      return [n2, n3]
+    })
+  }, true)
+  return n4
+}"
+`;
+
+exports[`compiler: transform slot > nested component slot 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, withVaporCtx as _withVaporCtx } from 'vue';
+
+export function render(_ctx) {
+  const _component_B = _resolveComponent("B")
+  const _component_A = _resolveComponent("A")
+  const n1 = _createComponentWithFallback(_component_A, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createComponentWithFallback(_component_B)
+      return n0
+    })
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > nested slots scoping 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Inner = _resolveComponent("Inner")
+  const _component_Comp = _resolveComponent("Comp")
+  const n5 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx((_slotProps0) => {
+      const n1 = _createComponentWithFallback(_component_Inner, null, {
+        "default": _withVaporCtx((_slotProps1) => {
+          const n0 = t0()
+          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _slotProps1["bar"] + _ctx.baz)))
+          return n0
+        })
+      })
+      const n3 = t0()
+      _renderEffect(() => _setText(n3, " " + _toDisplayString(_slotProps0["foo"] + _ctx.bar + _ctx.baz)))
+      return [n1, n3]
+    })
+  }, true)
+  return n5
+}"
+`;
+
+exports[`compiler: transform slot > on component dynamically named slot 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponentWithFallback(_component_Comp, null, {
+    $: [
+      () => ({
+        name: _ctx.named,
+        fn: _withVaporCtx((_slotProps0) => {
+          const n0 = t0()
+          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
+          return n0
+        })
+      })
+    ]
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > on component named slot 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponentWithFallback(_component_Comp, null, {
+    "named": _withVaporCtx((_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
+      return n0
+    })
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > on-component default slot 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx((_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
+      return n0
+    })
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > quote slot name 1`] = `
+"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponentWithFallback(_component_Comp, null, {
+    "nav-bar-title-before": _withVaporCtx(() => {
+      return null
+    })
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > slot + v-if / v-else[-if] should not cause error 1`] = `
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createSlot as _createSlot, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const _component_Bar = _resolveComponent("Bar")
+  const n6 = t0()
+  _setInsertionState(n6, null)
+  const n0 = _createSlot("foo", null)
+  _setInsertionState(n6, null, true)
+  const n1 = _createIf(() => (true), () => {
+    const n3 = _createComponentWithFallback(_component_Foo)
+    return n3
+  }, () => {
+    const n5 = _createComponentWithFallback(_component_Bar)
+    return n5
+  }, true)
+  return n6
+}"
+`;
+
+exports[`compiler: transform slot > with whitespace: 'preserve' > implicit default slot 1`] = `
+"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" Header ")
+const t1 = _template(" ")
+const t2 = _template("<p></p>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n4 = _createComponentWithFallback(_component_Comp, null, {
+    "header": _withVaporCtx(() => {
+      const n0 = t0()
+      return n0
+    }),
+    "default": _withVaporCtx(() => {
+      const n2 = t1()
+      const n3 = t2()
+      return [n2, n3]
+    })
+  }, true)
+  return n4
+}"
+`;
+
+exports[`compiler: transform slot > with whitespace: 'preserve' > named default slot + implicit whitespace content 1`] = `
+"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" Header ")
+const t1 = _template(" Default ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n5 = _createComponentWithFallback(_component_Comp, null, {
+    "header": _withVaporCtx(() => {
+      const n0 = t0()
+      return n0
+    }),
+    "default": _withVaporCtx(() => {
+      const n3 = t1()
+      return n3
+    })
+  }, true)
+  return n5
+}"
+`;
+
+exports[`compiler: transform slot > with whitespace: 'preserve' > should not generate whitespace only default slot 1`] = `
+"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" Header ")
+const t1 = _template(" Footer ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n5 = _createComponentWithFallback(_component_Comp, null, {
+    "header": _withVaporCtx(() => {
+      const n0 = t0()
+      return n0
+    }),
+    "footer": _withVaporCtx(() => {
+      const n3 = t1()
+      return n3
+    })
+  }, true)
+  return n5
+}"
+`;

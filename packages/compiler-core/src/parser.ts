@@ -5,7 +5,6 @@ import {
   type ElementNode,
   ElementTypes,
   type ForParseResult,
-  Namespaces,
   NodeTypes,
   type RootNode,
   type SimpleExpressionNode,
@@ -14,6 +13,7 @@ import {
   createRoot,
   createSimpleExpression,
 } from './ast'
+import { Namespaces } from '@vue/shared'
 import type { ParserOptions } from './options'
 import Tokenizer, {
   CharCodes,
@@ -43,6 +43,7 @@ import {
   isCoreComponent,
   isSimpleIdentifier,
   isStaticArgOf,
+  isVPre,
 } from './utils'
 import { decodeHTML } from 'entities/lib/decode.js'
 import {
@@ -246,7 +247,7 @@ const tokenizer = new Tokenizer(stack, {
   ondirarg(start, end) {
     if (start === end) return
     const arg = getSlice(start, end)
-    if (inVPre) {
+    if (inVPre && !isVPre(currentProp!)) {
       ;(currentProp as AttributeNode).name += arg
       setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else {
@@ -262,7 +263,7 @@ const tokenizer = new Tokenizer(stack, {
 
   ondirmodifier(start, end) {
     const mod = getSlice(start, end)
-    if (inVPre) {
+    if (inVPre && !isVPre(currentProp!)) {
       ;(currentProp as AttributeNode).name += '.' + mod
       setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else if ((currentProp as DirectiveNode).name === 'slot') {
@@ -647,7 +648,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
 
   // whitespace management
   if (!tokenizer.inRCDATA) {
-    el.children = condenseWhitespace(children, tag)
+    el.children = condenseWhitespace(children)
   }
 
   if (ns === Namespaces.HTML && currentOptions.isIgnoreNewlineTag(tag)) {
@@ -832,10 +833,7 @@ function isUpperCase(c: number) {
 }
 
 const windowsNewlineRE = /\r\n/g
-function condenseWhitespace(
-  nodes: TemplateChildNode[],
-  tag?: string,
-): TemplateChildNode[] {
+function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
   const shouldCondense = currentOptions.whitespace !== 'preserve'
   let removedWhitespace = false
   for (let i = 0; i < nodes.length; i++) {
@@ -1056,7 +1054,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
         `[@vue/compiler-core] decodeEntities option is passed but will be ` +
           `ignored in non-browser builds.`,
       )
-    } else if (__BROWSER__ && !currentOptions.decodeEntities) {
+    } else if (__BROWSER__ && !__TEST__ && !currentOptions.decodeEntities) {
       throw new Error(
         `[@vue/compiler-core] decodeEntities option is required in browser builds.`,
       )

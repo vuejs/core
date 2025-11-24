@@ -5,9 +5,8 @@ import {
   TrackOpTypes,
   isRef,
   markRaw,
-  pauseTracking,
   proxyRefs,
-  resetTracking,
+  setActiveSub,
   shallowReadonly,
   track,
 } from '@vue/reactivity'
@@ -39,6 +38,7 @@ import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import {
   type AppConfig,
   type AppContext,
+  type GenericAppContext,
   createAppContext,
 } from './apiCreateApp'
 import { type Directive, validateDirectiveName } from './directives'
@@ -65,17 +65,15 @@ import {
   NOOP,
   ShapeFlags,
   extend,
-  getGlobalThis,
   isArray,
+  isBuiltInTag,
   isFunction,
   isObject,
   isPromise,
-  makeMap,
 } from '@vue/shared'
 import type { SuspenseBoundary } from './components/Suspense'
 import type { CompilerOptions } from '@vue/compiler-core'
 import { markAttrsAccessed } from './componentRenderUtils'
-import { currentRenderingInstance } from './componentRenderContext'
 import { endMeasure, startMeasure } from './profiling'
 import { convertLegacyRenderFn } from './compat/renderFn'
 import {
@@ -95,6 +93,12 @@ import type { DefineComponent } from './apiDefineComponent'
 import { markAsyncBoundary } from './helpers/useId'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import type { RendererElement } from './renderer'
+import {
+  setCurrentInstance,
+  setInSSRSetupState,
+} from './componentCurrentInstance'
+
+export * from './componentCurrentInstance'
 
 export type Data = Record<string, unknown>
 
@@ -190,6 +194,14 @@ export interface AllowedComponentProps {
 // extend it.
 export interface ComponentInternalOptions {
   /**
+   * indicates vapor component
+   */
+  __vapor?: boolean
+  /**
+   * indicates keep-alive component
+   */
+  __isKeepAlive?: boolean
+  /**
    * @internal
    */
   __scopeId?: string
@@ -215,6 +227,27 @@ export interface ComponentInternalOptions {
   __name?: string
 }
 
+export interface AsyncComponentInternalOptions<
+  R = ConcreteComponent,
+  I = ComponentInternalInstance,
+> {
+  /**
+   * marker for AsyncComponentWrapper
+   * @internal
+   */
+  __asyncLoader?: () => Promise<R>
+  /**
+   * the inner component resolved by the AsyncComponentWrapper
+   * @internal
+   */
+  __asyncResolved?: R
+  /**
+   * Exposed for lazy hydration
+   * @internal
+   */
+  __asyncHydrate?: (el: Element, instance: I, hydrate: () => void) => void
+}
+
 export interface FunctionalComponent<
   P = {},
   E extends EmitsOptions | Record<string, any[]> = {},
@@ -238,6 +271,17 @@ export interface ClassComponent {
   new (...args: any[]): ComponentPublicInstance<any, any, any, any, any>
   __vccOpts: ComponentOptions
 }
+
+/**
+ * Type used where a function accepts both vdom and vapor components.
+ */
+export type GenericComponent = (
+  | {
+      name?: string
+    }
+  | ((() => any) & { displayName?: string })
+) &
+  ComponentInternalOptions
 
 /**
  * Concrete component type matches its actual value: it's either an options
@@ -313,14 +357,219 @@ export type InternalRenderFunction = {
 }
 
 /**
+ * Base component instance interface that is shared between vdom mode and vapor
+ * mode, so that we can have a mixed instance tree and reuse core logic that
+ * operate on both.
+ */
+export interface GenericComponentInstance {
+  vapor?: boolean
+  uid: number
+  type: GenericComponent
+  root: GenericComponentInstance | null
+  parent: GenericComponentInstance | null
+  appContext: GenericAppContext
+  /**
+   * Object containing values this component provides for its descendants
+   * @internal
+   */
+  provides: Data
+  /**
+   * Tracking reactive effects (e.g. watchers) associated with this component
+   * so that they can be automatically stopped on component unmount
+   * @internal
+   */
+  scope: EffectScope
+  /**
+   * render function will have different types between vdom and vapor
+   */
+  render?: Function | null
+  /**
+   * SSR render function
+   * (they are the same between vdom and vapor components.)
+   * @internal
+   */
+  ssrRender?: Function | null
+
+  // state
+  props: Data
+  attrs: Data
+  refs: Data
+  emit: EmitFn
+  /**
+   * used for keeping track of .once event handlers on components
+   * @internal
+   */
+  emitted: Record<string, boolean> | null
+  /**
+   * used for caching the value returned from props default factory functions to
+   * avoid unnecessary watcher trigger
+   * @internal
+   */
+  propsDefaults: Data | null
+  /**
+   * used for getting the keys of a component's raw props, vapor only
+   * @internal
+   */
+  rawKeys?: () => string[]
+
+  // exposed properties via expose()
+  exposed: Record<string, any> | null
+  exposeProxy: Record<string, any> | null
+
+  /**
+   * setup related
+   * @internal
+   */
+  setupState?: Data
+  /**
+   * devtools access to additional info
+   * @internal
+   */
+  devtoolsRawSetupState?: any
+
+  // lifecycle
+  isMounted: boolean
+  isUnmounted: boolean
+  isDeactivated: boolean
+
+  /**
+   * for tracking useId()
+   * first element is the current boundary prefix
+   * second number is the index of the useId call within that boundary
+   * @internal
+   */
+  ids: [string, number, number]
+
+  // for vapor the following two are dev only
+  /**
+   * resolved props options
+   * @internal
+   */
+  propsOptions?: NormalizedPropsOptions
+  /**
+   * resolved emits options
+   * @internal
+   */
+  emitsOptions?: ObjectEmitsOptions | null
+
+  /**
+   * Public instance proxy, vdom only
+   */
+  proxy?: any
+  /**
+   * suspense related
+   * @internal
+   */
+  suspense: SuspenseBoundary | null
+  /**
+   * `updateTeleportCssVars`
+   * For updating css vars on contained teleports
+   * @internal
+   */
+  ut?: (vars?: Record<string, string>) => void
+  /**
+   * dev only. For style v-bind hydration mismatch checks
+   * @internal
+   */
+  getCssVars?: () => Record<string, string>
+
+  // lifecycle
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_CREATE]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.CREATED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_MOUNT]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.MOUNTED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_UPDATE]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.UPDATED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_UNMOUNT]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.UNMOUNTED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.RENDER_TRACKED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.RENDER_TRIGGERED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.ACTIVATED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.DEACTIVATED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.ERROR_CAPTURED]?: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.SERVER_PREFETCH]?: LifecycleHook<() => Promise<unknown>>
+  /**
+   * @internal vapor only
+   */
+  hmrRerender?: () => void
+  /**
+   * @internal vapor only
+   */
+  hmrReload?: (newComp: any) => void
+
+  // these only exist on vdom instances
+  vnode?: VNode
+  subTree?: VNode
+
+  /**
+   * Custom Element instance (if component is created by defineCustomElement)
+   * @internal
+   */
+  ce?: ComponentCustomElementInterface
+  /**
+   * is custom element? (kept only for compatibility)
+   * @internal
+   */
+  isCE?: boolean
+  /**
+   * custom element specific HMR method
+   * @internal
+   */
+  ceReload?: (newStyles?: string[]) => void
+}
+
+/**
  * We expose a subset of properties on the internal instance as they are
  * useful for advanced external libraries and tools.
  */
-export interface ComponentInternalInstance {
+export interface ComponentInternalInstance extends GenericComponentInstance {
+  vapor?: never
   uid: number
   type: ConcreteComponent
-  parent: ComponentInternalInstance | null
-  root: ComponentInternalInstance
+  parent: GenericComponentInstance | null
+  root: GenericComponentInstance
   appContext: AppContext
   /**
    * Vnode representing this component in its parent's vdom tree
@@ -352,29 +601,6 @@ export interface ComponentInternalInstance {
    * @internal
    */
   render: InternalRenderFunction | null
-  /**
-   * SSR render function
-   * @internal
-   */
-  ssrRender?: Function | null
-  /**
-   * Object containing values this component provides for its descendants
-   * @internal
-   */
-  provides: Data
-  /**
-   * for tracking useId()
-   * first element is the current boundary prefix
-   * second number is the index of the useId call within that boundary
-   * @internal
-   */
-  ids: [string, number, number]
-  /**
-   * Tracking reactive effects (e.g. watchers) associated with this component
-   * so that they can be automatically stopped on component unmount
-   * @internal
-   */
-  scope: EffectScope
   /**
    * cache for proxy access type to avoid hasOwnProperty calls
    * @internal
@@ -417,29 +643,25 @@ export interface ComponentInternalInstance {
    * @internal
    */
   inheritAttrs?: boolean
-  /**
-   * Custom Element instance (if component is created by defineCustomElement)
-   * @internal
-   */
-  ce?: ComponentCustomElementInterface
-  /**
-   * is custom element? (kept only for compatibility)
-   * @internal
-   */
-  isCE?: boolean
-  /**
-   * custom element specific HMR method
-   * @internal
-   */
-  ceReload?: (newStyles?: string[]) => void
 
   // the rest are only for stateful components ---------------------------------
+  /**
+   * setup related
+   * @internal
+   */
+  setupState: Data
+  /**
+   * @internal
+   */
+  setupContext?: SetupContext | null
 
   // main proxy that serves as the public instance (`this`)
   proxy: ComponentPublicInstance | null
 
-  // exposed properties via expose()
-  exposed: Record<string, any> | null
+  data: Data // options API only
+  emit: EmitFn
+  slots: InternalSlots
+
   exposeProxy: Record<string, any> | null
 
   /**
@@ -455,46 +677,6 @@ export interface ComponentInternalInstance {
    * @internal
    */
   ctx: Data
-
-  // state
-  data: Data
-  props: Data
-  attrs: Data
-  slots: InternalSlots
-  refs: Data
-  emit: EmitFn
-
-  /**
-   * used for keeping track of .once event handlers on components
-   * @internal
-   */
-  emitted: Record<string, boolean> | null
-  /**
-   * used for caching the value returned from props default factory functions to
-   * avoid unnecessary watcher trigger
-   * @internal
-   */
-  propsDefaults: Data
-  /**
-   * setup related
-   * @internal
-   */
-  setupState: Data
-  /**
-   * devtools access to additional info
-   * @internal
-   */
-  devtoolsRawSetupState?: any
-  /**
-   * @internal
-   */
-  setupContext: SetupContext | null
-
-  /**
-   * suspense related
-   * @internal
-   */
-  suspense: SuspenseBoundary | null
   /**
    * suspense pending batch id
    * @internal
@@ -509,67 +691,6 @@ export interface ComponentInternalInstance {
    */
   asyncResolved: boolean
 
-  // lifecycle
-  isMounted: boolean
-  isUnmounted: boolean
-  isDeactivated: boolean
-  /**
-   * @internal
-   */
-  [LifecycleHooks.BEFORE_CREATE]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.CREATED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.BEFORE_MOUNT]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.MOUNTED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.BEFORE_UPDATE]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.UPDATED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.BEFORE_UNMOUNT]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.UNMOUNTED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.RENDER_TRACKED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.RENDER_TRIGGERED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.ACTIVATED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.DEACTIVATED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.SERVER_PREFETCH]: LifecycleHook<() => Promise<unknown>>
-
   /**
    * For caching bound $forceUpdate on public proxy access
    * @internal
@@ -580,18 +701,6 @@ export interface ComponentInternalInstance {
    * @internal
    */
   n?: () => Promise<void>
-  /**
-   * `updateTeleportCssVars`
-   * For updating css vars on contained teleports
-   * @internal
-   */
-  ut?: (vars?: Record<string, string>) => void
-
-  /**
-   * dev only. For style v-bind hydration mismatch checks
-   * @internal
-   */
-  getCssVars?: () => Record<string, string>
 
   /**
    * v2 compat only, for caching mutated $options
@@ -603,6 +712,13 @@ export interface ComponentInternalInstance {
 const emptyAppContext = createAppContext()
 
 let uid = 0
+
+/**
+ * @internal for vapor
+ */
+export function nextUid(): number {
+  return uid++
+}
 
 export function createComponentInstance(
   vnode: VNode,
@@ -651,7 +767,7 @@ export function createComponentInstance(
     emitted: null,
 
     // props default value
-    propsDefaults: EMPTY_OBJ,
+    propsDefaults: null,
 
     // inheritAttrs
     inheritAttrs: type.inheritAttrs,
@@ -708,78 +824,9 @@ export function createComponentInstance(
   return instance
 }
 
-export let currentInstance: ComponentInternalInstance | null = null
-
-export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
-  currentInstance || currentRenderingInstance
-
-let internalSetCurrentInstance: (
-  instance: ComponentInternalInstance | null,
-) => void
-let setInSSRSetupState: (state: boolean) => void
-
 /**
- * The following makes getCurrentInstance() usage across multiple copies of Vue
- * work. Some cases of how this can happen are summarized in #7590. In principle
- * the duplication should be avoided, but in practice there are often cases
- * where the user is unable to resolve on their own, especially in complicated
- * SSR setups.
- *
- * Note this fix is technically incomplete, as we still rely on other singletons
- * for effectScope and global reactive dependency maps. However, it does make
- * some of the most common cases work. It also warns if the duplication is
- * found during browser execution.
+ * @internal
  */
-if (__SSR__) {
-  type Setter = (v: any) => void
-  const g = getGlobalThis()
-  const registerGlobalSetter = (key: string, setter: Setter) => {
-    let setters: Setter[]
-    if (!(setters = g[key])) setters = g[key] = []
-    setters.push(setter)
-    return (v: any) => {
-      if (setters.length > 1) setters.forEach(set => set(v))
-      else setters[0](v)
-    }
-  }
-  internalSetCurrentInstance = registerGlobalSetter(
-    `__VUE_INSTANCE_SETTERS__`,
-    v => (currentInstance = v),
-  )
-  // also make `isInSSRComponentSetup` sharable across copies of Vue.
-  // this is needed in the SFC playground when SSRing async components, since
-  // we have to load both the runtime and the server-renderer from CDNs, they
-  // contain duplicated copies of Vue runtime code.
-  setInSSRSetupState = registerGlobalSetter(
-    `__VUE_SSR_SETTERS__`,
-    v => (isInSSRComponentSetup = v),
-  )
-} else {
-  internalSetCurrentInstance = i => {
-    currentInstance = i
-  }
-  setInSSRSetupState = v => {
-    isInSSRComponentSetup = v
-  }
-}
-
-export const setCurrentInstance = (instance: ComponentInternalInstance) => {
-  const prev = currentInstance
-  internalSetCurrentInstance(instance)
-  instance.scope.on()
-  return (): void => {
-    instance.scope.off()
-    internalSetCurrentInstance(prev)
-  }
-}
-
-export const unsetCurrentInstance = (): void => {
-  currentInstance && currentInstance.scope.off()
-  internalSetCurrentInstance(null)
-}
-
-const isBuiltInTag = /*@__PURE__*/ makeMap('slot,component')
-
 export function validateComponentName(
   name: string,
   { isNativeTag }: AppConfig,
@@ -797,8 +844,6 @@ export function isStatefulComponent(
   return instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
 }
 
-export let isInSSRComponentSetup = false
-
 export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false,
@@ -806,10 +851,16 @@ export function setupComponent(
 ): Promise<void> | undefined {
   isSSR && setInSSRSetupState(isSSR)
 
-  const { props, children } = instance.vnode
+  const { props, children, vi } = instance.vnode
   const isStateful = isStatefulComponent(instance)
-  initProps(instance, props, isStateful, isSSR)
-  initSlots(instance, children, optimized || isSSR)
+
+  if (vi) {
+    // Vapor interop override - use Vapor props/attrs proxy
+    vi(instance)
+  } else {
+    initProps(instance, props, isStateful, isSSR)
+    initSlots(instance, children, optimized || isSSR)
+  }
 
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
@@ -859,10 +910,10 @@ function setupStatefulComponent(
   // 2. call setup()
   const { setup } = Component
   if (setup) {
-    pauseTracking()
+    const prevSub = setActiveSub()
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
-    const reset = setCurrentInstance(instance)
+    const prev = setCurrentInstance(instance)
     const setupResult = callWithErrorHandling(
       setup,
       instance,
@@ -873,8 +924,8 @@ function setupStatefulComponent(
       ],
     )
     const isAsyncSetup = isPromise(setupResult)
-    resetTracking()
-    reset()
+    setActiveSub(prevSub)
+    setCurrentInstance(...prev)
 
     if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
       // async setup / serverPrefetch, mark as async boundary for useId()
@@ -882,6 +933,9 @@ function setupStatefulComponent(
     }
 
     if (isAsyncSetup) {
+      const unsetCurrentInstance = (): void => {
+        setCurrentInstance(null, undefined)
+      }
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
@@ -1054,13 +1108,13 @@ export function finishComponentSetup(
 
   // support for 2.x options
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
-    const reset = setCurrentInstance(instance)
-    pauseTracking()
+    const prevInstance = setCurrentInstance(instance)
+    const prevSub = setActiveSub()
     try {
       applyOptions(instance)
     } finally {
-      resetTracking()
-      reset()
+      setActiveSub(prevSub)
+      setCurrentInstance(...prevInstance)
     }
   }
 
@@ -1125,30 +1179,6 @@ function getSlotsProxy(instance: ComponentInternalInstance): Slots {
 export function createSetupContext(
   instance: ComponentInternalInstance,
 ): SetupContext {
-  const expose: SetupContext['expose'] = exposed => {
-    if (__DEV__) {
-      if (instance.exposed) {
-        warn(`expose() should be called only once per setup().`)
-      }
-      if (exposed != null) {
-        let exposedType: string = typeof exposed
-        if (exposedType === 'object') {
-          if (isArray(exposed)) {
-            exposedType = 'array'
-          } else if (isRef(exposed)) {
-            exposedType = 'ref'
-          }
-        }
-        if (exposedType !== 'object') {
-          warn(
-            `expose() should be passed a plain object, received ${exposedType}.`,
-          )
-        }
-      }
-    }
-    instance.exposed = exposed || {}
-  }
-
   if (__DEV__) {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
@@ -1167,20 +1197,50 @@ export function createSetupContext(
       get emit() {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
       },
-      expose,
+      expose: exposed => expose(instance, exposed as any),
     })
   } else {
     return {
       attrs: new Proxy(instance.attrs, attrsProxyHandlers),
       slots: instance.slots,
       emit: instance.emit,
-      expose,
+      expose: exposed => expose(instance, exposed as any),
     }
   }
 }
 
+/**
+ * @internal
+ */
+export function expose(
+  instance: GenericComponentInstance,
+  exposed: Record<string, any>,
+): void {
+  if (__DEV__) {
+    if (instance.exposed) {
+      warn(`expose() should be called only once per setup().`)
+    }
+    if (exposed != null) {
+      let exposedType: string = typeof exposed
+      if (exposedType === 'object') {
+        if (isArray(exposed)) {
+          exposedType = 'array'
+        } else if (isRef(exposed)) {
+          exposedType = 'ref'
+        }
+      }
+      if (exposedType !== 'object') {
+        warn(
+          `expose() should be passed a plain object, received ${exposedType}.`,
+        )
+      }
+    }
+  }
+  instance.exposed = exposed || {}
+}
+
 export function getComponentPublicInstance(
-  instance: ComponentInternalInstance,
+  instance: GenericComponentInstance,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null {
   if (instance.exposed) {
     return (
@@ -1190,7 +1250,9 @@ export function getComponentPublicInstance(
           if (key in target) {
             return target[key]
           } else if (key in publicPropertiesMap) {
-            return publicPropertiesMap[key](instance)
+            return publicPropertiesMap[key](
+              instance as ComponentInternalInstance,
+            )
           }
         },
         has(target, key: string) {
@@ -1203,12 +1265,12 @@ export function getComponentPublicInstance(
   }
 }
 
-const classifyRE = /(?:^|[-_])(\w)/g
+const classifyRE = /(?:^|[-_])\w/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
 export function getComponentName(
-  Component: ConcreteComponent,
+  Component: GenericComponent,
   includeInferred = true,
 ): string | false | undefined {
   return isFunction(Component)
@@ -1217,8 +1279,8 @@ export function getComponentName(
 }
 
 export function formatComponentName(
-  instance: ComponentInternalInstance | null,
-  Component: ConcreteComponent,
+  instance: GenericComponentInstance | null,
+  Component: GenericComponent,
   isRoot = false,
 ): string {
   let name = getComponentName(Component)
@@ -1240,7 +1302,7 @@ export function formatComponentName(
     }
     name =
       inferFromRegistry(
-        instance.components ||
+        (instance as ComponentInternalInstance).components ||
           (instance.parent.type as ComponentOptions).components,
       ) || inferFromRegistry(instance.appContext.components)
   }
@@ -1271,7 +1333,15 @@ export interface ComponentCustomElementInterface {
     shouldUpdate?: boolean,
   ): void
   /**
+   * @internal
+   */
+  _beginPatch(): void
+  /**
+   * @internal
+   */
+  _endPatch(): void
+  /**
    * @internal attached by the nested Teleport when shadowRoot is false.
    */
-  _teleportTarget?: RendererElement
+  _teleportTargets?: Set<RendererElement>
 }

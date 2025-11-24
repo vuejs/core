@@ -27,10 +27,10 @@ export const TeleportEndKey: unique symbol = Symbol('_vte')
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
 
-const isTeleportDisabled = (props: VNode['props']): boolean =>
+export const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
-const isTeleportDeferred = (props: VNode['props']): boolean =>
+export const isTeleportDeferred = (props: VNode['props']): boolean =>
   props && (props.defer || props.defer === '')
 
 const isTargetSVG = (target: RendererElement): boolean =>
@@ -39,7 +39,7 @@ const isTargetSVG = (target: RendererElement): boolean =>
 const isTargetMathML = (target: RendererElement): boolean =>
   typeof MathMLElement === 'function' && target instanceof MathMLElement
 
-const resolveTarget = <T = RendererElement>(
+export const resolveTarget = <T = RendererElement>(
   props: TeleportProps | null,
   select: RendererOptions['querySelector'],
 ): T | null => {
@@ -119,9 +119,6 @@ export const TeleportImpl = {
         // Teleport *always* has Array children. This is enforced in both the
         // compiler and vnode children normalization.
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-          if (parentComponent && parentComponent.isCE) {
-            parentComponent.ce!._teleportTarget = container
-          }
           mountChildren(
             children as VNodeArrayChildren,
             container,
@@ -145,6 +142,15 @@ export const TeleportImpl = {
           } else if (namespace !== 'mathml' && isTargetMathML(target)) {
             namespace = 'mathml'
           }
+
+          // track CE teleport targets
+          if (parentComponent && parentComponent.isCE) {
+            ;(
+              parentComponent.ce!._teleportTargets ||
+              (parentComponent.ce!._teleportTargets = new Set())
+            ).add(target)
+          }
+
           if (!disabled) {
             mount(target, targetAnchor)
             updateCssVars(n2, false)
@@ -165,29 +171,37 @@ export const TeleportImpl = {
 
       if (isTeleportDeferred(n2.props)) {
         n2.el!.__isMounted = false
-        queuePostRenderEffect(() => {
-          mountToTarget()
-          delete n2.el!.__isMounted
-        }, parentSuspense)
+        queuePostRenderEffect(
+          () => {
+            mountToTarget()
+            delete n2.el!.__isMounted
+          },
+          undefined,
+          parentSuspense,
+        )
       } else {
         mountToTarget()
       }
     } else {
       if (isTeleportDeferred(n2.props) && n1.el!.__isMounted === false) {
-        queuePostRenderEffect(() => {
-          TeleportImpl.process(
-            n1,
-            n2,
-            container,
-            anchor,
-            parentComponent,
-            parentSuspense,
-            namespace,
-            slotScopeIds,
-            optimized,
-            internals,
-          )
-        }, parentSuspense)
+        queuePostRenderEffect(
+          () => {
+            TeleportImpl.process(
+              n1,
+              n2,
+              container,
+              anchor,
+              parentComponent,
+              parentSuspense,
+              namespace,
+              slotScopeIds,
+              optimized,
+              internals,
+            )
+          },
+          undefined,
+          parentSuspense,
+        )
         return
       }
       // update content
@@ -245,6 +259,7 @@ export const TeleportImpl = {
             container,
             mainAnchor,
             internals,
+            parentComponent,
             TeleportMoveTypes.TOGGLE,
           )
         } else {
@@ -268,6 +283,7 @@ export const TeleportImpl = {
               nextTarget,
               null,
               internals,
+              parentComponent,
               TeleportMoveTypes.TARGET_CHANGE,
             )
           } else if (__DEV__) {
@@ -285,6 +301,7 @@ export const TeleportImpl = {
             target,
             targetAnchor,
             internals,
+            parentComponent,
             TeleportMoveTypes.TOGGLE,
           )
         }
@@ -347,6 +364,7 @@ function moveTeleport(
   container: RendererElement,
   parentAnchor: RendererNode | null,
   { o: { insert }, m: move }: RendererInternals,
+  parentComponent: ComponentInternalInstance | null,
   moveType: TeleportMoveTypes = TeleportMoveTypes.REORDER,
 ): void {
   // move target anchor if this is a target change.
@@ -371,6 +389,7 @@ function moveTeleport(
           container,
           parentAnchor,
           MoveType.REORDER,
+          parentComponent,
         )
       }
     }
@@ -381,7 +400,7 @@ function moveTeleport(
   }
 }
 
-interface TeleportTargetElement extends Element {
+export interface TeleportTargetElement extends Element {
   // last teleport target
   _lpa?: Node | null
 }
@@ -406,29 +425,43 @@ function hydrateTeleport(
     optimized: boolean,
   ) => Node | null,
 ): Node | null {
+  function hydrateDisabledTeleport(
+    node: Node,
+    vnode: VNode,
+    targetStart: Node | null,
+    targetAnchor: Node | null,
+  ) {
+    vnode.anchor = hydrateChildren(
+      nextSibling(node),
+      vnode,
+      parentNode(node)!,
+      parentComponent,
+      parentSuspense,
+      slotScopeIds,
+      optimized,
+    )
+    vnode.targetStart = targetStart
+    vnode.targetAnchor = targetAnchor
+  }
+
   const target = (vnode.target = resolveTarget<Element>(
     vnode.props,
     querySelector,
   ))
+  const disabled = isTeleportDisabled(vnode.props)
   if (target) {
-    const disabled = isTeleportDisabled(vnode.props)
     // if multiple teleports rendered to the same target element, we need to
     // pick up from where the last teleport finished instead of the first node
     const targetNode =
       (target as TeleportTargetElement)._lpa || target.firstChild
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       if (disabled) {
-        vnode.anchor = hydrateChildren(
-          nextSibling(node),
+        hydrateDisabledTeleport(
+          node,
           vnode,
-          parentNode(node)!,
-          parentComponent,
-          parentSuspense,
-          slotScopeIds,
-          optimized,
+          targetNode,
+          targetNode && nextSibling(targetNode),
         )
-        vnode.targetStart = targetNode
-        vnode.targetAnchor = targetNode && nextSibling(targetNode)
       } else {
         vnode.anchor = nextSibling(node)
 
@@ -470,6 +503,10 @@ function hydrateTeleport(
       }
     }
     updateCssVars(vnode, disabled)
+  } else if (disabled) {
+    if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      hydrateDisabledTeleport(node, vnode, node, nextSibling(node))
+    }
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }

@@ -652,10 +652,10 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`return (_ctx, _push`)
       expect(content).toMatch(`ssrInterpolate`)
       expect(content).not.toMatch(`useCssVars`)
-      expect(content).toMatch(`"--${mockId}-count": (count.value)`)
-      expect(content).toMatch(`"--${mockId}-style\\\\.color": (style.color)`)
+      expect(content).toMatch(`":--${mockId}-count": (count.value)`)
+      expect(content).toMatch(`":--${mockId}-style\\\\.color": (style.color)`)
       expect(content).toMatch(
-        `"--${mockId}-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")`,
+        `":--${mockId}-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")`,
       )
       assertCode(content)
     })
@@ -716,6 +716,151 @@ describe('SFC compile <script setup>', () => {
       expect(
         consumer.originalPositionFor(getPositionInCode(content, 'Error')),
       ).toMatchObject(getPositionInCode(source, `Error`))
+    })
+
+    describe('destructure setup context for built-in properties', () => {
+      const theCompile = (template: string, setup = '/* ... */') =>
+        compile(
+          `<script setup>${setup}</script>\n<template>${template}</template>`,
+          { inlineTemplate: true },
+        )
+
+      test('should extract attrs when $attrs is used', () => {
+        let { content } = theCompile('<div v-bind="$attrs"></div>')
+        expect(content).toMatch('setup(__props, { attrs: $attrs })')
+        expect(content).not.toMatch('slots: $slots')
+        expect(content).not.toMatch('emit: $emit')
+        expect(content).not.toMatch('const $props = __props')
+        assertCode(content)
+      })
+
+      test('should extract slots when $slots is used', () => {
+        let { content } = theCompile('<Comp :foo="$slots.foo"></Comp>')
+        expect(content).toMatch('setup(__props, { slots: $slots })')
+        assertCode(content)
+      })
+
+      test('should alias __props to $props when $props is used', () => {
+        let { content } = theCompile('<div>{{ $props }}</div>')
+        expect(content).toMatch('setup(__props)')
+        expect(content).toMatch('const $props = __props')
+        assertCode(content)
+      })
+
+      test('should extract emit when $emit is used', () => {
+        let { content } = theCompile(`<div @click="$emit('click')"></div>`)
+        expect(content).toMatch('setup(__props, { emit: $emit })')
+        expect(content).not.toMatch('const $emit = __emit')
+        assertCode(content)
+      })
+
+      test('should alias __emit to $emit when defineEmits is used', () => {
+        let { content } = compile(
+          `
+          <script setup>
+            const emit = defineEmits(['click'])
+          </script>
+          <template>
+            <div @click="$emit('click')"></div>
+          </template>
+        `,
+          { inlineTemplate: true },
+        )
+        expect(content).toMatch('setup(__props, { emit: __emit })')
+        expect(content).toMatch('const $emit = __emit')
+        expect(content).toMatch('const emit = __emit')
+        assertCode(content)
+      })
+
+      test('should extract all built-in properties when they are used', () => {
+        let { content } = theCompile(
+          '<div>{{ $props }}{{ $slots }}{{ $emit }}{{ $attrs }}</div>',
+        )
+        expect(content).toMatch(
+          'setup(__props, { emit: $emit, attrs: $attrs, slots: $slots })',
+        )
+        expect(content).toMatch('const $props = __props')
+        assertCode(content)
+      })
+
+      test('should not extract built-in properties when neither is used', () => {
+        let { content } = theCompile('<div>{{ msg }}</div>')
+        expect(content).toMatch('setup(__props)')
+        expect(content).not.toMatch('attrs: $attrs')
+        expect(content).not.toMatch('slots: $slots')
+        expect(content).not.toMatch('emit: $emit')
+        expect(content).not.toMatch('props: $props')
+        assertCode(content)
+      })
+
+      describe('user-defined properties override', () => {
+        test('should not extract $attrs when user defines it', () => {
+          let { content } = theCompile(
+            '<div v-bind="$attrs"></div>',
+            'let $attrs',
+          )
+          expect(content).toMatch('setup(__props)')
+          expect(content).not.toMatch('attrs: $attrs')
+          assertCode(content)
+        })
+
+        test('should not extract $slots when user defines it', () => {
+          let { content } = theCompile(
+            '<Comp :foo="$slots.foo"></Comp>',
+            'let $slots',
+          )
+          expect(content).toMatch('setup(__props)')
+          expect(content).not.toMatch('slots: $slots')
+          assertCode(content)
+        })
+
+        test('should not extract $emit when user defines it', () => {
+          let { content } = theCompile(
+            `<div @click="$emit('click')">click</div>`,
+            'let $emit',
+          )
+          expect(content).toMatch('setup(__props)')
+          expect(content).not.toMatch('emit: $emit')
+          assertCode(content)
+        })
+
+        test('should not generate $props alias when user defines it', () => {
+          let { content } = theCompile(
+            '<div>{{ $props.msg }}</div>',
+            'let $props',
+          )
+          expect(content).toMatch('setup(__props)')
+          expect(content).not.toMatch('const $props = __props')
+          assertCode(content)
+        })
+
+        test('should only extract non-user-defined properties', () => {
+          let { content } = theCompile(
+            '<div>{{ $attrs }}{{ $slots }}{{ $emit }}{{ $props }}</div>',
+            'let $attrs',
+          )
+          expect(content).toMatch(
+            'setup(__props, { emit: $emit, slots: $slots })',
+          )
+          expect(content).not.toMatch('attrs: $attrs')
+          expect(content).toMatch('const $props = __props')
+          assertCode(content)
+        })
+
+        test('should handle mixed defineEmits and user-defined $emit', () => {
+          let { content } = theCompile(
+            `<div @click="$emit('click')">click</div>`,
+            `
+              const emit = defineEmits(['click'])
+              let $emit
+            `,
+          )
+          expect(content).toMatch('setup(__props, { emit: __emit })')
+          expect(content).toMatch('const emit = __emit')
+          expect(content).not.toMatch('const $emit = __emit')
+          assertCode(content)
+        })
+      })
     })
   })
 
@@ -913,6 +1058,13 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script>foo()</script><script setup lang="ts">bar()</script>`),
       ).toThrow(`<script> and <script setup> must have the same language type`)
+
+      // #13193 must check lang before parsing with babel
+      expect(() =>
+        compile(
+          `<script lang="ts">const a = 1</script><script setup lang="tsx">const Comp = () => <p>test</p></script>`,
+        ),
+      ).toThrow(`<script> and <script setup> must have the same language type`)
     })
 
     const moduleErrorMsg = `cannot contain ES module exports`
@@ -1007,7 +1159,7 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script setup>
         let bar = 1
-        const model = defineModel({
+        defineModel({
           default: () => bar
         })
         </script>`),
@@ -1017,7 +1169,7 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script setup>
         const bar = 1
-        const model = defineModel({
+        defineModel({
           default: () => bar
         })
         </script>`),
@@ -1027,7 +1179,7 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script setup>
         let bar = 1
-        const model = defineModel({
+        defineModel({
           get: () => bar,
           set: () => bar
         })
@@ -1542,5 +1694,58 @@ describe('compileScript', () => {
       `import { withAsyncContext as _withAsyncContext } from "npm:vue"\n`,
     )
     assertCode(content)
+  })
+
+  test('should not compile unrecognized language', () => {
+    const { content, lang, scriptAst } = compile(
+      `<script lang="coffee">
+      export default
+        data: ->
+          myVal: 0
+      </script>`,
+    )
+    expect(content).toMatch(`export default
+        data: ->
+          myVal: 0`)
+    expect(lang).toBe('coffee')
+    expect(scriptAst).not.toBeDefined()
+  })
+})
+
+describe('vapor mode + ssr', () => {
+  test('rewrite defineVaporAsyncComponent import', () => {
+    const { content } = compile(
+      `
+        <script setup vapor>
+        import { defineVaporAsyncComponent } from 'vue'
+        </script>
+      `,
+      {
+        templateOptions: {
+          ssr: true,
+        },
+      },
+    )
+    expect(content).toContain(
+      `import { defineAsyncComponent as defineVaporAsyncComponent } from 'vue'`,
+    )
+  })
+
+  test('rewrite defineVaporAsyncComponent import with local name', () => {
+    const { content } = compile(
+      `
+        <script setup vapor>
+        import { defineVaporAsyncComponent as def } from 'vue'
+        </script>
+      `,
+      {
+        templateOptions: {
+          ssr: true,
+        },
+      },
+    )
+    expect(content).toContain(
+      `import { defineAsyncComponent as def } from 'vue'`,
+    )
   })
 })

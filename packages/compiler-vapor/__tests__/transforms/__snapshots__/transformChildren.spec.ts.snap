@@ -1,0 +1,76 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: children transform > anchor insertion in middle 1`] = `
+"import { child as _child, next as _next, setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+const t1 = _template("<div><div></div><!><div></div></div>", true)
+
+export function render(_ctx) {
+  const n4 = t1()
+  const n3 = _next(_child(n4), 1)
+  _setInsertionState(n4, n3, true)
+  const n0 = _createIf(() => (1), () => {
+    const n2 = t0()
+    return n2
+  }, null, true)
+  return n4
+}"
+`;
+
+exports[`compiler: children transform > children & sibling references 1`] = `
+"import { child as _child, next as _next, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><p> </p> <p> </p></div>", true)
+
+export function render(_ctx) {
+  const n3 = t0()
+  const n0 = _child(n3, 0)
+  const n1 = _next(n0, 1)
+  const n2 = _next(n1, 2)
+  const x0 = _txt(n0)
+  const x2 = _txt(n2)
+  _renderEffect(() => {
+    _setText(x0, _toDisplayString(_ctx.first))
+    _setText(n1, " " + _toDisplayString(_ctx.second) + " " + _toDisplayString(_ctx.third) + " ")
+    _setText(x2, _toDisplayString(_ctx.forth))
+  })
+  return n3
+}"
+`;
+
+exports[`compiler: children transform > efficient find 1`] = `
+"import { child as _child, nthChild as _nthChild, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><div>x</div><div>x</div><div> </div></div>", true)
+
+export function render(_ctx) {
+  const n1 = t0()
+  const n0 = _nthChild(n1, 2, 2)
+  const x0 = _txt(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
+  return n1
+}"
+`;
+
+exports[`compiler: children transform > efficient traversal 1`] = `
+"import { child as _child, next as _next, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><div>x</div><div><span> </span></div><div><span> </span></div><div><span> </span></div></div>", true)
+
+export function render(_ctx) {
+  const n3 = t0()
+  const p0 = _next(_child(n3), 1)
+  const n0 = _child(p0, 0)
+  const p1 = _next(p0, 2)
+  const n1 = _child(p1, 0)
+  const p2 = _next(p1, 3)
+  const n2 = _child(p2, 0)
+  const x0 = _txt(n0)
+  const x1 = _txt(n1)
+  const x2 = _txt(n2)
+  _renderEffect(() => {
+    const _msg = _ctx.msg
+    _setText(x0, _toDisplayString(_msg))
+    _setText(x1, _toDisplayString(_msg))
+    _setText(x2, _toDisplayString(_msg))
+  })
+  return n3
+}"
+`;

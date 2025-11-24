@@ -7,7 +7,6 @@ import {
   type ElementNode,
   ElementTypes,
   type InterpolationNode,
-  Namespaces,
   NodeTypes,
   type Position,
   type TextNode,
@@ -15,6 +14,7 @@ import {
 
 import { baseParse } from '../src/parser'
 import type { Program } from '@babel/types'
+import { Namespaces } from '@vue/shared'
 
 describe('compiler: parse', () => {
   describe('Text', () => {
@@ -2270,6 +2270,11 @@ describe('compiler: parse', () => {
       expect(span.loc.source).toBe('<span></span\n      \n      >')
       expect(span.loc.start.offset).toBe(0)
       expect(span.loc.end.offset).toBe(27)
+    })
+
+    test('correct loc when a line in attribute value ends with &', () => {
+      const [span] = baseParse(`<span v-if="foo &&\nbar"></span>`).children
+      expect(span.loc.end.line).toBe(2)
     })
   })
 

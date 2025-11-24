@@ -18,12 +18,14 @@ import {
   type ComponentInternalInstance,
   type ConcreteComponent,
   type Data,
+  type GenericComponentInstance,
   isClassComponent,
 } from './component'
 import type { RawSlots } from './componentSlots'
 import {
   type ReactiveFlags,
   type Ref,
+  type ShallowRef,
   isProxy,
   isRef,
   toRaw,
@@ -69,6 +71,7 @@ export const Fragment = Symbol.for('v-fgt') as any as {
 export const Text: unique symbol = Symbol.for('v-txt')
 export const Comment: unique symbol = Symbol.for('v-cmt')
 export const Static: unique symbol = Symbol.for('v-stc')
+export const VaporSlot: unique symbol = Symbol.for('v-vps')
 
 export type VNodeTypes =
   | string
@@ -82,6 +85,7 @@ export type VNodeTypes =
   | typeof TeleportImpl
   | typeof Suspense
   | typeof SuspenseImpl
+  | typeof VaporSlot
 
 export type VNodeRef =
   | string
@@ -196,6 +200,7 @@ export interface VNode<
 
   // DOM
   el: HostNode | null
+  placeholder: HostNode | null // async component el placeholder
   anchor: HostNode | null // fragment anchor
   target: HostElement | null // teleport target
   targetStart: HostNode | null // teleport target start anchor
@@ -253,6 +258,22 @@ export interface VNode<
    * @internal custom element interception hook
    */
   ce?: (instance: ComponentInternalInstance) => void
+  /**
+   * @internal VDOM in Vapor interop hook
+   */
+  vi?: (instance: ComponentInternalInstance) => void
+  /**
+   * @internal Vapor slot in VDOM metadata
+   */
+  vs?: {
+    slot: (props: any) => any
+    fallback: (() => VNodeArrayChildren) | undefined
+    ref?: ShallowRef<any>
+  }
+  /**
+   * @internal Vapor slot Block
+   */
+  vb?: any
 }
 
 // Since v-if and v-for are the two possible ways node structure can dynamically
@@ -434,18 +455,17 @@ const createVNodeWithArgsTransform = (
 const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
   key != null ? key : null
 
-const normalizeRef = ({
-  ref,
-  ref_key,
-  ref_for,
-}: VNodeProps): VNodeNormalizedRefAtom | null => {
+export const normalizeRef = (
+  { ref, ref_key, ref_for }: VNodeProps,
+  i: ComponentInternalInstance = currentRenderingInstance!,
+): VNodeNormalizedRefAtom | null => {
   if (typeof ref === 'number') {
     ref = '' + ref
   }
   return (
     ref != null
       ? isString(ref) || isRef(ref) || isFunction(ref)
-        ? { i: currentRenderingInstance, r: ref, k: ref_key, f: !!ref_for }
+        ? { i, r: ref, k: ref_key, f: !!ref_for }
         : ref
       : null
   ) as any
@@ -711,6 +731,8 @@ export function cloneVNode<T, U>(
     suspense: vnode.suspense,
     ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
     ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
+    placeholder: vnode.placeholder,
+
     el: vnode.el,
     anchor: vnode.anchor,
     ctx: vnode.ctx,
@@ -899,7 +921,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]): Data {
 
 export function invokeVNodeHook(
   hook: VNodeHook,
-  instance: ComponentInternalInstance | null,
+  instance: GenericComponentInstance | null,
   vnode: VNode,
   prevVNode: VNode | null = null,
 ): void {

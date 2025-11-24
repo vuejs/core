@@ -1,8 +1,8 @@
-import { TrackOpTypes } from './constants'
-import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
-import { isProxy, isShallow, toRaw, toReactive } from './reactive'
-import { ARRAY_ITERATE_KEY, track } from './dep'
 import { isArray } from '@vue/shared'
+import { TrackOpTypes } from './constants'
+import { ARRAY_ITERATE_KEY, track } from './dep'
+import { isProxy, isShallow, toRaw, toReactive } from './reactive'
+import { endBatch, setActiveSub, startBatch } from './system'
 
 /**
  * Track array iteration and return:
@@ -107,7 +107,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     return reactiveReadArray(this).join(separator)
   },
 
-  // keys() iterator only reads `length`, no optimisation required
+  // keys() iterator only reads `length`, no optimization required
 
   lastIndexOf(...args: unknown[]) {
     return searchProxy(this, 'lastIndexOf', args)
@@ -200,7 +200,7 @@ function iterator(
   wrapValue: (value: any) => unknown,
 ) {
   // note that taking ARRAY_ITERATE dependency here is not strictly equivalent
-  // to calling iterate on the proxified array.
+  // to calling iterate on the proxied array.
   // creating the iterator does not access any array property:
   // it is only when .next() is called that length and indexes are accessed.
   // pushed to the extreme, an iterator could be created in one effect scope,
@@ -215,7 +215,7 @@ function iterator(
     iter._next = iter.next
     iter.next = () => {
       const result = iter._next()
-      if (result.value) {
+      if (!result.done) {
         result.value = wrapValue(result.value)
       }
       return result
@@ -319,10 +319,10 @@ function noTracking(
   method: keyof Array<any>,
   args: unknown[] = [],
 ) {
-  pauseTracking()
   startBatch()
+  const prevSub = setActiveSub()
   const res = (toRaw(self) as any)[method].apply(self, args)
+  setActiveSub(prevSub)
   endBatch()
-  resetTracking()
   return res
 }

@@ -462,7 +462,7 @@ function installCompatMount(
    * function simulates that behavior.
    */
   app._createRoot = options => {
-    const component = app._component
+    const component = app._component as Component
     const vnode = createVNode(component, options.propsData || null)
     vnode.appContext = context
 
@@ -536,7 +536,7 @@ function installCompatMount(
         if (__DEV__) {
           for (let i = 0; i < container.attributes.length; i++) {
             const attr = container.attributes[i]
-            if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+            if (attr.name !== 'v-cloak' && /^(?:v-|:|@)/.test(attr.name)) {
               warnDeprecation(DeprecationTypes.GLOBAL_MOUNT_CONTAINER, null)
               break
             }

@@ -1,0 +1,56 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`v-text > should convert v-text to setText 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> </div>", true)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.str)))
+  return n0
+}"
+`;
+
+exports[`v-text > should raise error and ignore children when v-text is present 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> </div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.test)))
+  return n0
+}"
+`;
+
+exports[`v-text > should raise error if has no expression 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`v-text > work with component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, toDisplayString as _toDisplayString, setBlockText as _setBlockText, renderEffect as _renderEffect } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponentWithFallback(_component_Comp, null, null, true)
+  _renderEffect(() => _setBlockText(n0, _toDisplayString(_ctx.foo)))
+  return n0
+}"
+`;
+
+exports[`v-text > work with dynamic component 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, toDisplayString as _toDisplayString, setBlockText as _setBlockText, renderEffect as _renderEffect } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createDynamicComponent(() => (_ctx.Comp), null, null, true)
+  _renderEffect(() => _setBlockText(n0, _toDisplayString(_ctx.foo)))
+  return n0
+}"
+`;

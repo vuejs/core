@@ -1,0 +1,55 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`v-html > should convert v-html to innerHTML 1`] = `
+"import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  _renderEffect(() => _setHtml(n0, _ctx.code))
+  return n0
+}"
+`;
+
+exports[`v-html > should raise error and ignore children when v-html is present 1`] = `
+"import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setHtml(n0, _ctx.test))
+  return n0
+}"
+`;
+
+exports[`v-html > should raise error if has no expression 1`] = `
+"import { setHtml as _setHtml, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setHtml(n0, "")
+  return n0
+}"
+`;
+
+exports[`v-html > work with component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, setBlockHtml as _setBlockHtml, renderEffect as _renderEffect } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponentWithFallback(_component_Comp, null, null, true)
+  _renderEffect(() => _setBlockHtml(n0, _ctx.foo))
+  return n0
+}"
+`;
+
+exports[`v-html > work with dynamic component 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, setBlockHtml as _setBlockHtml, renderEffect as _renderEffect } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createDynamicComponent(() => (_ctx.Comp), null, null, true)
+  _renderEffect(() => _setBlockHtml(n0, _ctx.foo))
+  return n0
+}"
+`;

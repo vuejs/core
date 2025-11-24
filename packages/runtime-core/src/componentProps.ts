@@ -30,6 +30,7 @@ import {
   type ComponentOptions,
   type ConcreteComponent,
   type Data,
+  type GenericComponentInstance,
   setCurrentInstance,
 } from './component'
 import { isEmitListener } from './componentEmits'
@@ -185,9 +186,12 @@ type NormalizedProp = PropOptions & {
   [BooleanFlags.shouldCastTrue]?: boolean
 }
 
-// normalized value is a tuple of the actual normalized options
-// and an array of prop keys that need value casting (booleans and defaults)
+/**
+ * normalized value is a tuple of the actual normalized options
+ * and an array of prop keys that need value casting (booleans and defaults)
+ */
 export type NormalizedProps = Record<string, NormalizedProp>
+
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 
 export function initProps(
@@ -196,7 +200,7 @@ export function initProps(
   isStateful: number, // result of bitwise flag comparison
   isSSR = false,
 ): void {
-  const props: Data = {}
+  const props: Data = (instance.props = {})
   const attrs: Data = createInternalObject()
 
   instance.propsDefaults = Object.create(null)
@@ -212,7 +216,7 @@ export function initProps(
 
   // validation
   if (__DEV__) {
-    validateProps(rawProps || {}, props, instance)
+    validateProps(rawProps || {}, props, instance.propsOptions[0]!)
   }
 
   if (isStateful) {
@@ -230,7 +234,7 @@ export function initProps(
   instance.attrs = attrs
 }
 
-function isInHmrContext(instance: ComponentInternalInstance | null) {
+function isInHmrContext(instance: GenericComponentInstance | null) {
   while (instance) {
     if (instance.type.__hmrId) return true
     instance = instance.parent
@@ -284,11 +288,10 @@ export function updateProps(
             const camelizedKey = camelize(key)
             props[camelizedKey] = resolvePropValue(
               options,
-              rawCurrentProps,
               camelizedKey,
               value,
               instance,
-              false /* isAbsent */,
+              baseResolveDefault,
             )
           }
         } else {
@@ -333,10 +336,10 @@ export function updateProps(
           ) {
             props[key] = resolvePropValue(
               options,
-              rawCurrentProps,
               key,
               undefined,
               instance,
+              baseResolveDefault,
               true /* isAbsent */,
             )
           }
@@ -367,7 +370,7 @@ export function updateProps(
   }
 
   if (__DEV__) {
-    validateProps(rawProps || {}, props, instance)
+    validateProps(rawProps || {}, props, instance.propsOptions[0]!)
   }
 }
 
@@ -430,16 +433,15 @@ function setFullProps(
   }
 
   if (needCastKeys) {
-    const rawCurrentProps = toRaw(props)
     const castValues = rawCastValues || EMPTY_OBJ
     for (let i = 0; i < needCastKeys.length; i++) {
       const key = needCastKeys[i]
       props[key] = resolvePropValue(
         options!,
-        rawCurrentProps,
         key,
         castValues[key],
         instance,
+        baseResolveDefault,
         !hasOwn(castValues, key),
       )
     }
@@ -448,14 +450,26 @@ function setFullProps(
   return hasAttrsChanged
 }
 
-function resolvePropValue(
+/**
+ * @internal for runtime-vapor
+ */
+export function resolvePropValue<
+  T extends GenericComponentInstance & Pick<ComponentInternalInstance, 'ce'>,
+>(
   options: NormalizedProps,
-  props: Data,
   key: string,
   value: unknown,
-  instance: ComponentInternalInstance,
-  isAbsent: boolean,
-) {
+  instance: T,
+  /**
+   * Allow runtime-specific default resolution logic
+   */
+  resolveDefault: (
+    factory: (props: Data) => unknown,
+    instance: T,
+    key: string,
+  ) => unknown,
+  isAbsent = false,
+): unknown {
   const opt = options[key]
   if (opt != null) {
     const hasDefault = hasOwn(opt, 'default')
@@ -467,19 +481,16 @@ function resolvePropValue(
         !opt.skipFactory &&
         isFunction(defaultValue)
       ) {
-        const { propsDefaults } = instance
-        if (key in propsDefaults) {
-          value = propsDefaults[key]
+        const cachedDefaults =
+          instance.propsDefaults || (instance.propsDefaults = {})
+        if (hasOwn(cachedDefaults, key)) {
+          value = cachedDefaults[key]
         } else {
-          const reset = setCurrentInstance(instance)
-          value = propsDefaults[key] = defaultValue.call(
-            __COMPAT__ &&
-              isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
-              ? createPropsDefaultThis(instance, props, key)
-              : null,
-            props,
+          value = cachedDefaults[key] = resolveDefault(
+            defaultValue,
+            instance,
+            key,
           )
-          reset()
         }
       } else {
         value = defaultValue
@@ -501,6 +512,27 @@ function resolvePropValue(
       }
     }
   }
+  return value
+}
+
+/**
+ * runtime-dom-specific default resolving logic
+ */
+function baseResolveDefault(
+  factory: (props: Data) => unknown,
+  instance: ComponentInternalInstance,
+  key: string,
+) {
+  let value
+  const prev = setCurrentInstance(instance)
+  const props = toRaw(instance.props)
+  value = factory.call(
+    __COMPAT__ && isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
+      ? createPropsDefaultThis(instance, props, key)
+      : null,
+    props,
+  )
+  setCurrentInstance(...prev)
   return value
 }
 
@@ -552,6 +584,22 @@ export function normalizePropsOptions(
     return EMPTY_ARR as any
   }
 
+  baseNormalizePropsOptions(raw, normalized, needCastKeys)
+  const res: NormalizedPropsOptions = [normalized, needCastKeys]
+  if (isObject(comp)) {
+    cache.set(comp, res)
+  }
+  return res
+}
+
+/**
+ * @internal for runtime-vapor only
+ */
+export function baseNormalizePropsOptions(
+  raw: ComponentPropsOptions | undefined,
+  normalized: NonNullable<NormalizedPropsOptions[0]>,
+  needCastKeys: NonNullable<NormalizedPropsOptions[1]>,
+): void {
   if (isArray(raw)) {
     for (let i = 0; i < raw.length; i++) {
       if (__DEV__ && !isString(raw[i])) {
@@ -606,12 +654,6 @@ export function normalizePropsOptions(
       }
     }
   }
-
-  const res: NormalizedPropsOptions = [normalized, needCastKeys]
-  if (isObject(comp)) {
-    cache.set(comp, res)
-  }
-  return res
 }
 
 function validatePropName(key: string) {
@@ -648,25 +690,26 @@ function getType(ctor: Prop<any> | null): string {
 
 /**
  * dev only
+ * @internal
  */
-function validateProps(
+export function validateProps(
   rawProps: Data,
-  props: Data,
-  instance: ComponentInternalInstance,
-) {
-  const resolvedValues = toRaw(props)
-  const options = instance.propsOptions[0]
+  resolvedProps: Data,
+  options: NormalizedProps,
+): void {
+  resolvedProps = toRaw(resolvedProps)
   const camelizePropsKey = Object.keys(rawProps).map(key => camelize(key))
   for (const key in options) {
-    let opt = options[key]
-    if (opt == null) continue
-    validateProp(
-      key,
-      resolvedValues[key],
-      opt,
-      __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
-      !camelizePropsKey.includes(key),
-    )
+    const opt = options[key]
+    if (opt != null) {
+      validateProp(
+        key,
+        resolvedProps[key],
+        opt,
+        resolvedProps,
+        !camelizePropsKey.includes(key),
+      )
+    }
   }
 }
 
@@ -674,16 +717,16 @@ function validateProps(
  * dev only
  */
 function validateProp(
-  name: string,
+  key: string,
   value: unknown,
-  prop: PropOptions,
-  props: Data,
+  propOptions: PropOptions,
+  resolvedProps: Data,
   isAbsent: boolean,
 ) {
-  const { type, required, validator, skipCheck } = prop
+  const { type, required, validator, skipCheck } = propOptions
   // required!
   if (required && isAbsent) {
-    warn('Missing required prop: "' + name + '"')
+    warn('Missing required prop: "' + key + '"')
     return
   }
   // missing but optional
@@ -702,13 +745,16 @@ function validateProp(
       isValid = valid
     }
     if (!isValid) {
-      warn(getInvalidTypeMessage(name, value, expectedTypes))
+      warn(getInvalidTypeMessage(key, value, expectedTypes))
       return
     }
   }
   // custom validator
-  if (validator && !validator(value, props)) {
-    warn('Invalid prop: custom validator check failed for prop "' + name + '".')
+  if (
+    validator &&
+    !validator(value, __DEV__ ? shallowReadonly(resolvedProps) : resolvedProps)
+  ) {
+    warn('Invalid prop: custom validator check failed for prop "' + key + '".')
   }
 }
 
