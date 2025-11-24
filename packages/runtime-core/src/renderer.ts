@@ -498,8 +498,14 @@ function baseCreateRenderer(
         anchor,
       )
     } else {
-      const el = (n2.el = n1.el!)
+      let el = (n2.el = n1.el!)
       if (n2.children !== n1.children) {
+        // we don't inherit text node for cached text nodes in `traverseStaticChildren`
+        // but it maybe changed during HMR updates, so we need to handle this case by
+        // creating a new text node.
+        if (__DEV__ && isHmrUpdating && n2.patchFlag === PatchFlags.CACHED) {
+          el = hostCreateText(n2.children as string)
+        }
         hostSetText(el, n2.children as string)
       }
     }
