@@ -1,20 +1,22 @@
 import {
-  Component,
-  ConcreteComponent,
+  type Component,
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  type ConcreteComponent,
   currentInstance,
-  ComponentInternalInstance,
+  getComponentName,
   isInSSRComponentSetup,
-  ComponentOptions
 } from './component'
 import { isFunction, isObject } from '@vue/shared'
-import { ComponentPublicInstance } from './componentPublicInstance'
-import { createVNode, VNode } from './vnode'
+import type { ComponentPublicInstance } from './componentPublicInstance'
+import { type VNode, createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
 import { warn } from './warning'
 import { ref } from '@vue/reactivity'
-import { handleError, ErrorCodes } from './errorHandling'
+import { ErrorCodes, handleError } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
-import { queueJob } from './scheduler'
+import { markAsyncBoundary } from './helpers/useId'
+import { type HydrationStrategy, forEachElement } from './hydrationStrategies'
 
 export type AsyncComponentResolveResult<T = Component> = T | { default: T } // es modules
 
@@ -29,19 +31,21 @@ export interface AsyncComponentOptions<T = any> {
   delay?: number
   timeout?: number
   suspensible?: boolean
+  hydrate?: HydrationStrategy
   onError?: (
     error: Error,
     retry: () => void,
     fail: () => void,
-    attempts: number
+    attempts: number,
   ) => any
 }
 
 export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
   !!(i.type as ComponentOptions).__asyncLoader
 
+/*@__NO_SIDE_EFFECTS__*/
 export function defineAsyncComponent<
-  T extends Component = { new (): ComponentPublicInstance }
+  T extends Component = { new (): ComponentPublicInstance },
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
   if (isFunction(source)) {
     source = { loader: source }
@@ -52,9 +56,10 @@ export function defineAsyncComponent<
     loadingComponent,
     errorComponent,
     delay = 200,
+    hydrate: hydrateStrategy,
     timeout, // undefined = never times out
     suspensible = true,
-    onError: userOnError
+    onError: userOnError,
   } = source
 
   let pendingRequest: Promise<ConcreteComponent> | null = null
@@ -92,7 +97,7 @@ export function defineAsyncComponent<
             if (__DEV__ && !comp) {
               warn(
                 `Async component loader resolved to undefined. ` +
-                  `If you are using retry(), make sure to return its return value.`
+                  `If you are using retry(), make sure to return its return value.`,
               )
             }
             // interop module default
@@ -116,12 +121,46 @@ export function defineAsyncComponent<
 
     __asyncLoader: load,
 
+    __asyncHydrate(el, instance, hydrate) {
+      let patched = false
+      ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
+      const performHydrate = () => {
+        // skip hydration if the component has been patched
+        if (patched) {
+          if (__DEV__) {
+            warn(
+              `Skipping lazy hydration for component '${getComponentName(resolvedComp!) || resolvedComp!.__file}': ` +
+                `it was updated before lazy hydration performed.`,
+            )
+          }
+          return
+        }
+        hydrate()
+      }
+      const doHydrate = hydrateStrategy
+        ? () => {
+            const teardown = hydrateStrategy(performHydrate, cb =>
+              forEachElement(el, cb),
+            )
+            if (teardown) {
+              ;(instance.bum || (instance.bum = [])).push(teardown)
+            }
+          }
+        : performHydrate
+      if (resolvedComp) {
+        doHydrate()
+      } else {
+        load().then(() => !instance.isUnmounted && doHydrate())
+      }
+    },
+
     get __asyncResolved() {
       return resolvedComp
     },
 
     setup() {
       const instance = currentInstance!
+      markAsyncBoundary(instance)
 
       // already resolved
       if (resolvedComp) {
@@ -134,7 +173,7 @@ export function defineAsyncComponent<
           err,
           instance,
           ErrorCodes.ASYNC_COMPONENT_LOADER,
-          !errorComponent /* do not throw in dev if user provided error component */
+          !errorComponent /* do not throw in dev if user provided error component */,
         )
       }
 
@@ -152,7 +191,7 @@ export function defineAsyncComponent<
             return () =>
               errorComponent
                 ? createVNode(errorComponent as ConcreteComponent, {
-                    error: err
+                    error: err,
                   })
                 : null
           })
@@ -172,7 +211,7 @@ export function defineAsyncComponent<
         setTimeout(() => {
           if (!loaded.value && !error.value) {
             const err = new Error(
-              `Async component timed out after ${timeout}ms.`
+              `Async component timed out after ${timeout}ms.`,
             )
             onError(err)
             error.value = err
@@ -186,7 +225,7 @@ export function defineAsyncComponent<
           if (instance.parent && isKeepAlive(instance.parent.vnode)) {
             // parent is keep-alive, force update so the loaded component's
             // name is taken into account
-            queueJob(instance.parent.update)
+            instance.parent.update()
           }
         })
         .catch(err => {
@@ -198,26 +237,32 @@ export function defineAsyncComponent<
         if (loaded.value && resolvedComp) {
           return createInnerComp(resolvedComp, instance)
         } else if (error.value && errorComponent) {
-          return createVNode(errorComponent as ConcreteComponent, {
-            error: error.value
+          return createVNode(errorComponent, {
+            error: error.value,
           })
         } else if (loadingComponent && !delayed.value) {
-          return createVNode(loadingComponent as ConcreteComponent)
+          return createInnerComp(
+            loadingComponent as ConcreteComponent,
+            instance,
+          )
         }
       }
-    }
+    },
   }) as T
 }
 
 function createInnerComp(
   comp: ConcreteComponent,
-  {
-    vnode: { ref, props, children, shapeFlag },
-    parent
-  }: ComponentInternalInstance
+  parent: ComponentInternalInstance,
 ) {
+  const { ref, props, children, ce } = parent.vnode
   const vnode = createVNode(comp, props, children)
   // ensure inner component inherits the async wrapper's ref owner
   vnode.ref = ref
+  // pass the custom element callback on to the inner comp
+  // and remove it from the async wrapper
+  vnode.ce = ce
+  delete parent.vnode.ce
+
   return vnode
 }

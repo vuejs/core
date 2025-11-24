@@ -1,36 +1,36 @@
 import {
+  type InjectionKey,
+  type Ref,
+  defineComponent,
   h,
-  provide,
+  hasInjectionContext,
   inject,
-  InjectionKey,
-  ref,
   nextTick,
-  Ref,
-  readonly,
+  provide,
   reactive,
-  defineComponent
+  readonly,
+  ref,
 } from '../src/index'
-import { render, nodeOps, serialize } from '@vue/runtime-test'
+import { createApp, nodeOps, render, serialize } from '@vue/runtime-test'
 
-// reference: https://vue-composition-api-rfc.netlify.com/api.html#provide-inject
 describe('api: provide/inject', () => {
   it('string keys', () => {
     const Provider = {
       setup() {
         provide('foo', 1)
         return () => h(Middle)
-      }
+      },
     }
 
     const Middle = {
-      render: () => h(Consumer)
+      render: () => h(Consumer),
     }
 
     const Consumer = {
       setup() {
         const foo = inject('foo')
         return () => foo
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -46,18 +46,18 @@ describe('api: provide/inject', () => {
       setup() {
         provide(key, 1)
         return () => h(Middle)
-      }
+      },
     }
 
     const Middle = {
-      render: () => h(Consumer)
+      render: () => h(Consumer),
     }
 
     const Consumer = {
       setup() {
         const foo = inject(key) || 1
         return () => foo + 1
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -70,11 +70,11 @@ describe('api: provide/inject', () => {
       setup() {
         provide('foo', 'foo')
         return () => h(Middle)
-      }
+      },
     }
 
     const Middle = {
-      render: () => h(Consumer)
+      render: () => h(Consumer),
     }
 
     const Consumer = {
@@ -84,7 +84,7 @@ describe('api: provide/inject', () => {
         // default value should be used if value is not provided
         const bar = inject('bar', 'bar')
         return () => foo + bar
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -96,7 +96,7 @@ describe('api: provide/inject', () => {
     const Provider = {
       setup() {
         return () => h(Consumer)
-      }
+      },
     }
 
     const Consumer = defineComponent({
@@ -106,13 +106,12 @@ describe('api: provide/inject', () => {
           from: 'foo',
           default() {
             return this!.$options.name
-          }
-        }
+          },
+        },
       },
       render() {
-        // @ts-ignore
         return this.foo
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
@@ -126,7 +125,7 @@ describe('api: provide/inject', () => {
         provide('foo', 'foo')
         provide('bar', 'bar')
         return () => h(ProviderTwo)
-      }
+      },
     }
 
     const ProviderTwo = {
@@ -135,7 +134,7 @@ describe('api: provide/inject', () => {
         provide('foo', 'fooOverride')
         provide('baz', 'baz')
         return () => h(Consumer)
-      }
+      },
     }
 
     const Consumer = {
@@ -144,7 +143,7 @@ describe('api: provide/inject', () => {
         const bar = inject('bar')
         const baz = inject('baz')
         return () => [foo, bar, baz].join(',')
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -159,18 +158,18 @@ describe('api: provide/inject', () => {
       setup() {
         provide('count', count)
         return () => h(Middle)
-      }
+      },
     }
 
     const Middle = {
-      render: () => h(Consumer)
+      render: () => h(Consumer),
     }
 
     const Consumer = {
       setup() {
         const count = inject<Ref<number>>('count')!
         return () => count.value
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -189,11 +188,11 @@ describe('api: provide/inject', () => {
       setup() {
         provide('count', readonly(count))
         return () => h(Middle)
-      }
+      },
     }
 
     const Middle = {
-      render: () => h(Consumer)
+      render: () => h(Consumer),
     }
 
     const Consumer = {
@@ -202,7 +201,7 @@ describe('api: provide/inject', () => {
         // should not work
         count.value++
         return () => count.value
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -210,7 +209,7 @@ describe('api: provide/inject', () => {
     expect(serialize(root)).toBe(`<div>1</div>`)
 
     expect(
-      `Set operation on key "value" failed: target is readonly`
+      `Set operation on key "value" failed: target is readonly`,
     ).toHaveBeenWarned()
 
     // source mutation should still work
@@ -226,18 +225,18 @@ describe('api: provide/inject', () => {
       setup() {
         provide('state', rootState)
         return () => h(Middle)
-      }
+      },
     }
 
     const Middle = {
-      render: () => h(Consumer)
+      render: () => h(Consumer),
     }
 
     const Consumer = {
       setup() {
         const state = inject<typeof rootState>('state')!
         return () => state.count
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -256,11 +255,11 @@ describe('api: provide/inject', () => {
       setup() {
         provide('state', readonly(rootState))
         return () => h(Middle)
-      }
+      },
     }
 
     const Middle = {
-      render: () => h(Consumer)
+      render: () => h(Consumer),
     }
 
     const Consumer = {
@@ -269,7 +268,7 @@ describe('api: provide/inject', () => {
         // should not work
         state.count++
         return () => state.count
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -277,7 +276,7 @@ describe('api: provide/inject', () => {
     expect(serialize(root)).toBe(`<div>1</div>`)
 
     expect(
-      `Set operation on key "count" failed: target is readonly`
+      `Set operation on key "count" failed: target is readonly`,
     ).toHaveBeenWarned()
 
     rootState.count++
@@ -289,11 +288,11 @@ describe('api: provide/inject', () => {
     const Provider = {
       setup() {
         return () => h(Middle)
-      }
+      },
     }
 
     const Middle = {
-      render: () => h(Consumer)
+      render: () => h(Consumer),
     }
 
     const Consumer = {
@@ -301,7 +300,7 @@ describe('api: provide/inject', () => {
         const foo = inject('foo')
         expect(foo).toBeUndefined()
         return () => foo
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -314,18 +313,18 @@ describe('api: provide/inject', () => {
     const Provider = {
       setup() {
         return () => h(Middle)
-      }
+      },
     }
 
     const Middle = {
-      render: () => h(Consumer)
+      render: () => h(Consumer),
     }
 
     const Consumer = {
       setup() {
         const foo = inject('foo', undefined)
         return () => foo
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -340,11 +339,37 @@ describe('api: provide/inject', () => {
         provide('foo', 'foo')
         const injection = inject('foo', null)
         return () => injection
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serialize(root)).toBe(`<div><!----></div>`)
+  })
+
+  describe('hasInjectionContext', () => {
+    it('should be false outside of setup', () => {
+      expect(hasInjectionContext()).toBe(false)
+    })
+
+    it('should be true within setup', () => {
+      expect.assertions(1)
+      const Comp = {
+        setup() {
+          expect(hasInjectionContext()).toBe(true)
+          return () => null
+        },
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+    })
+
+    it('should be true within app.runWithContext()', () => {
+      expect.assertions(1)
+      createApp({}).runWithContext(() => {
+        expect(hasInjectionContext()).toBe(true)
+      })
+    })
   })
 })

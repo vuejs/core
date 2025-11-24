@@ -3,7 +3,7 @@ import { createApp } from 'vue'
 describe('config.compilerOptions', () => {
   test('isCustomElement', () => {
     const app = createApp({
-      template: `<foo/>`
+      template: `<foo/>`,
     })
     app.config.compilerOptions.isCustomElement = (tag: string) => tag === 'foo'
     const root = document.createElement('div')
@@ -13,7 +13,7 @@ describe('config.compilerOptions', () => {
 
   test('comments', () => {
     const app = createApp({
-      template: `<div/><!--test--><div/>`
+      template: `<div/><!--test--><div/>`,
     })
     app.config.compilerOptions.comments = true
     // the comments option is only relevant in production mode
@@ -26,7 +26,7 @@ describe('config.compilerOptions', () => {
 
   test('whitespace', () => {
     const app = createApp({
-      template: `<div><span/>\n  <span/></div>`
+      template: `<div><span/>\n  <span/></div>`,
     })
     app.config.compilerOptions.whitespace = 'preserve'
     const root = document.createElement('div')
@@ -38,7 +38,7 @@ describe('config.compilerOptions', () => {
   test('delimiters', () => {
     const app = createApp({
       data: () => ({ foo: 'hi' }),
-      template: `[[ foo ]]`
+      template: `[[ foo ]]`,
     })
     app.config.compilerOptions.delimiters = [`[[`, `]]`]
     const root = document.createElement('div')
@@ -52,8 +52,8 @@ describe('per-component compilerOptions', () => {
     const app = createApp({
       template: `<foo/>`,
       compilerOptions: {
-        isCustomElement: (tag: string) => tag === 'foo'
-      }
+        isCustomElement: (tag: string) => tag === 'foo',
+      },
     })
     const root = document.createElement('div')
     app.mount(root)
@@ -64,8 +64,8 @@ describe('per-component compilerOptions', () => {
     const app = createApp({
       template: `<div/><!--test--><div/>`,
       compilerOptions: {
-        comments: true
-      }
+        comments: true,
+      },
     })
     app.config.compilerOptions.comments = false
     // the comments option is only relevant in production mode
@@ -80,8 +80,8 @@ describe('per-component compilerOptions', () => {
     const app = createApp({
       template: `<div><span/>\n  <span/></div>`,
       compilerOptions: {
-        whitespace: 'preserve'
-      }
+        whitespace: 'preserve',
+      },
     })
     const root = document.createElement('div')
     app.mount(root)
@@ -94,8 +94,8 @@ describe('per-component compilerOptions', () => {
       data: () => ({ foo: 'hi' }),
       template: `[[ foo ]]`,
       compilerOptions: {
-        delimiters: [`[[`, `]]`]
-      }
+        delimiters: [`[[`, `]]`],
+      },
     })
     const root = document.createElement('div')
     app.mount(root)

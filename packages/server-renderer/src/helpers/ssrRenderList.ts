@@ -1,10 +1,10 @@
-import { isArray, isString, isObject } from '@vue/shared'
+import { isArray, isObject, isString } from '@vue/shared'
 import { warn } from '@vue/runtime-core'
 
 export function ssrRenderList(
   source: unknown,
-  renderItem: (value: unknown, key: string | number, index?: number) => void
-) {
+  renderItem: (value: unknown, key: string | number, index?: number) => void,
+): void {
   if (isArray(source) || isString(source)) {
     for (let i = 0, l = source.length; i < l; i++) {
       renderItem(source[i], i)

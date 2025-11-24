@@ -1,46 +1,69 @@
 import {
-  TransitionProps,
-  addTransitionClass,
-  removeTransitionClass,
-  ElementWithTransition,
-  getTransitionInfo,
-  resolveTransitionProps,
+  type ElementWithTransition,
+  type TransitionProps,
   TransitionPropsValidators,
-  forceReflow
+  addTransitionClass,
+  forceReflow,
+  getTransitionInfo,
+  removeTransitionClass,
+  resolveTransitionProps,
+  vtcKey,
 } from './Transition'
 import {
-  Fragment,
-  VNode,
-  warn,
-  resolveTransitionHooks,
-  useTransitionState,
-  getTransitionRawChildren,
-  getCurrentInstance,
-  setTransitionHooks,
-  createVNode,
-  onUpdated,
-  SetupContext,
-  toRaw,
-  compatUtils,
+  type ComponentOptions,
   DeprecationTypes,
-  ComponentOptions
+  Fragment,
+  type SetupContext,
+  Text,
+  type VNode,
+  compatUtils,
+  createVNode,
+  getCurrentInstance,
+  getTransitionRawChildren,
+  onUpdated,
+  resolveTransitionHooks,
+  setTransitionHooks,
+  toRaw,
+  useTransitionState,
+  warn,
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
-const positionMap = new WeakMap<VNode, DOMRect>()
-const newPositionMap = new WeakMap<VNode, DOMRect>()
+interface Position {
+  top: number
+  left: number
+}
+
+const positionMap = new WeakMap<VNode, Position>()
+const newPositionMap = new WeakMap<VNode, Position>()
+const moveCbKey = Symbol('_moveCb')
+const enterCbKey = Symbol('_enterCb')
 
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
   moveClass?: string
 }
 
-const TransitionGroupImpl: ComponentOptions = {
+/**
+ * Wrap logic that modifies TransitionGroup properties in a function
+ * so that it can be annotated as pure
+ */
+const decorate = (t: typeof TransitionGroupImpl) => {
+  // TransitionGroup does not support "mode" so we need to remove it from the
+  // props declarations, but direct delete operation is considered a side effect
+  delete t.props.mode
+  if (__COMPAT__) {
+    t.__isBuiltIn = true
+  }
+  return t
+}
+
+const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
   name: 'TransitionGroup',
 
-  props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
+  props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
     tag: String,
-    moveClass: String
+    moveClass: String,
   }),
 
   setup(props: TransitionGroupProps, { slots }: SetupContext) {
@@ -60,9 +83,10 @@ const TransitionGroupImpl: ComponentOptions = {
         !hasCSSTransform(
           prevChildren[0].el as ElementWithTransition,
           instance.vnode.el as Node,
-          moveClass
+          moveClass,
         )
       ) {
+        prevChildren = []
         return
       }
 
@@ -73,25 +97,26 @@ const TransitionGroupImpl: ComponentOptions = {
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
-      forceReflow()
+      forceReflow(instance.vnode.el as Node)
 
       movedChildren.forEach(c => {
         const el = c.el as ElementWithTransition
         const style = el.style
         addTransitionClass(el, moveClass)
         style.transform = style.webkitTransform = style.transitionDuration = ''
-        const cb = ((el as any)._moveCb = (e: TransitionEvent) => {
+        const cb = ((el as any)[moveCbKey] = (e: TransitionEvent) => {
           if (e && e.target !== el) {
             return
           }
-          if (!e || /transform$/.test(e.propertyName)) {
+          if (!e || e.propertyName.endsWith('transform')) {
             el.removeEventListener('transitionend', cb)
-            ;(el as any)._moveCb = null
+            ;(el as any)[moveCbKey] = null
             removeTransitionClass(el, moveClass)
           }
         })
         el.addEventListener('transitionend', cb)
       })
+      prevChildren = []
     })
 
     return () => {
@@ -104,13 +129,35 @@ const TransitionGroupImpl: ComponentOptions = {
         !rawProps.tag &&
         compatUtils.checkCompatEnabled(
           DeprecationTypes.TRANSITION_GROUP_ROOT,
-          instance.parent
+          instance.parent,
         )
       ) {
         tag = 'span'
       }
 
-      prevChildren = children
+      prevChildren = []
+      if (children) {
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i]
+          if (child.el && child.el instanceof Element) {
+            prevChildren.push(child)
+            setTransitionHooks(
+              child,
+              resolveTransitionHooks(
+                child,
+                cssTransitionProps,
+                state,
+                instance,
+              ),
+            )
+            positionMap.set(child, {
+              left: (child.el as HTMLElement).offsetLeft,
+              top: (child.el as HTMLElement).offsetTop,
+            })
+          }
+        }
+      }
+
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
@@ -118,41 +165,17 @@ const TransitionGroupImpl: ComponentOptions = {
         if (child.key != null) {
           setTransitionHooks(
             child,
-            resolveTransitionHooks(child, cssTransitionProps, state, instance)
+            resolveTransitionHooks(child, cssTransitionProps, state, instance),
           )
-        } else if (__DEV__) {
+        } else if (__DEV__ && child.type !== Text) {
           warn(`<TransitionGroup> children must be keyed.`)
-        }
-      }
-
-      if (prevChildren) {
-        for (let i = 0; i < prevChildren.length; i++) {
-          const child = prevChildren[i]
-          setTransitionHooks(
-            child,
-            resolveTransitionHooks(child, cssTransitionProps, state, instance)
-          )
-          positionMap.set(child, (child.el as Element).getBoundingClientRect())
         }
       }
 
       return createVNode(tag, null, children)
     }
-  }
-}
-
-if (__COMPAT__) {
-  TransitionGroupImpl.__isBuiltIn = true
-}
-
-/**
- * TransitionGroup does not support "mode" so we need to remove it from the
- * props declarations, but direct delete operation is considered a side effect
- * and will make the entire transition feature non-tree-shakeable, so we do it
- * in a function and mark the function's invocation as pure.
- */
-const removeMode = (props: any) => delete props.mode
-/*#__PURE__*/ removeMode(TransitionGroupImpl.props)
+  },
+})
 
 export const TransitionGroup = TransitionGroupImpl as unknown as {
   new (): {
@@ -162,16 +185,19 @@ export const TransitionGroup = TransitionGroupImpl as unknown as {
 
 function callPendingCbs(c: VNode) {
   const el = c.el as any
-  if (el._moveCb) {
-    el._moveCb()
+  if (el[moveCbKey]) {
+    el[moveCbKey]()
   }
-  if (el._enterCb) {
-    el._enterCb()
+  if (el[enterCbKey]) {
+    el[enterCbKey]()
   }
 }
 
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, (c.el as Element).getBoundingClientRect())
+  newPositionMap.set(c, {
+    left: (c.el as HTMLElement).offsetLeft,
+    top: (c.el as HTMLElement).offsetTop,
+  })
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
@@ -190,7 +216,7 @@ function applyTranslation(c: VNode): VNode | undefined {
 function hasCSSTransform(
   el: ElementWithTransition,
   root: Node,
-  moveClass: string
+  moveClass: string,
 ): boolean {
   // Detect whether an element with the move class applied has
   // CSS transitions. Since the element may be inside an entering
@@ -198,8 +224,9 @@ function hasCSSTransform(
   // all other transition classes applied to ensure only the move class
   // is applied.
   const clone = el.cloneNode() as HTMLElement
-  if (el._vtc) {
-    el._vtc.forEach(cls => {
+  const _vtc = el[vtcKey]
+  if (_vtc) {
+    _vtc.forEach(cls => {
       cls.split(/\s+/).forEach(c => c && clone.classList.remove(c))
     })
   }

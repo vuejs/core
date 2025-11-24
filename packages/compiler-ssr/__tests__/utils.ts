@@ -6,7 +6,7 @@ export function getCompiledString(src: string): string {
   // but also means this util can only be used for non-root cases.
   const { code } = compile(`<div>${src}</div>`)
   const match = code.match(
-    /_push\(\`<div\${\s*_ssrRenderAttrs\(_attrs\)\s*}>([^]*)<\/div>\`\)/
+    /_push\(\`<div\${\s*_ssrRenderAttrs\(_attrs\)\s*}>([^]*)<\/div>\`\)/,
   )
 
   if (!match) {

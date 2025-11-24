@@ -1,12 +1,13 @@
 import {
-  NodeTransform,
-  NodeTypes,
+  type ComponentNode,
   ElementTypes,
-  ComponentNode,
-  IfBranchNode
+  type IfBranchNode,
+  type NodeTransform,
+  NodeTypes,
+  isCommentOrWhitespace,
 } from '@vue/compiler-core'
 import { TRANSITION } from '../runtimeHelpers'
-import { createDOMCompilerError, DOMErrorCodes } from '../errors'
+import { DOMErrorCodes, createDOMCompilerError } from '../errors'
 
 export const transformTransition: NodeTransform = (node, context) => {
   if (
@@ -28,9 +29,9 @@ export const transformTransition: NodeTransform = (node, context) => {
               {
                 start: node.children[0].loc.start,
                 end: node.children[node.children.length - 1].loc.end,
-                source: ''
-              }
-            )
+                source: '',
+              },
+            ),
           )
         }
 
@@ -43,8 +44,9 @@ export const transformTransition: NodeTransform = (node, context) => {
               node.props.push({
                 type: NodeTypes.ATTRIBUTE,
                 name: 'persisted',
+                nameLoc: node.loc,
                 value: undefined,
-                loc: node.loc
+                loc: node.loc,
               })
             }
           }
@@ -55,11 +57,9 @@ export const transformTransition: NodeTransform = (node, context) => {
 }
 
 function hasMultipleChildren(node: ComponentNode | IfBranchNode): boolean {
-  // #1352 filter out potential comment nodes.
+  // filter out potential comment nodes (#1352) and whitespace (#4637)
   const children = (node.children = node.children.filter(
-    c =>
-      c.type !== NodeTypes.COMMENT &&
-      !(c.type === NodeTypes.TEXT && !c.content.trim())
+    c => !isCommentOrWhitespace(c),
   ))
   const child = children[0]
   return (

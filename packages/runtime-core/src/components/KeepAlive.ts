@@ -1,48 +1,52 @@
 import {
-  ConcreteComponent,
-  getCurrentInstance,
-  SetupContext,
-  ComponentInternalInstance,
-  LifecycleHooks,
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  type ConcreteComponent,
+  type SetupContext,
   currentInstance,
   getComponentName,
-  ComponentOptions
+  getCurrentInstance,
 } from '../component'
 import {
-  VNode,
+  Comment,
+  type VNode,
+  type VNodeProps,
   cloneVNode,
-  isVNode,
-  VNodeProps,
   invokeVNodeHook,
-  Comment
+  isSameVNodeType,
+  isVNode,
 } from '../vnode'
 import {
-  onBeforeUnmount,
   injectHook,
-  onUnmounted,
+  onBeforeUnmount,
   onMounted,
-  onUpdated
+  onUnmounted,
+  onUpdated,
 } from '../apiLifecycle'
 import {
-  isString,
-  isArray,
   ShapeFlags,
+  invokeArrayFns,
+  isArray,
+  isRegExp,
+  isString,
   remove,
-  invokeArrayFns
 } from '@vue/shared'
 import { watch } from '../apiWatch'
 import {
-  RendererInternals,
-  queuePostRenderEffect,
+  type ElementNamespace,
   MoveType,
-  RendererElement,
-  RendererNode
+  type RendererElement,
+  type RendererInternals,
+  type RendererNode,
+  invalidateMount,
+  queuePostRenderEffect,
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
-import { ComponentRenderContext } from '../componentPublicInstance'
+import type { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
+import { LifecycleHooks } from '../enums'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -52,7 +56,7 @@ export interface KeepAliveProps {
   max?: number | string
 }
 
-type CacheKey = string | number | symbol | ConcreteComponent
+type CacheKey = PropertyKey | ConcreteComponent
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
@@ -62,8 +66,8 @@ export interface KeepAliveContext extends ComponentRenderContext {
     vnode: VNode,
     container: RendererElement,
     anchor: RendererNode | null,
-    isSVG: boolean,
-    optimized: boolean
+    namespace: ElementNamespace,
+    optimized: boolean,
   ) => void
   deactivate: (vnode: VNode) => void
 }
@@ -82,7 +86,7 @@ const KeepAliveImpl: ComponentOptions = {
   props: {
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],
-    max: [String, Number]
+    max: [String, Number],
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
@@ -118,12 +122,18 @@ const KeepAliveImpl: ComponentOptions = {
         p: patch,
         m: move,
         um: _unmount,
-        o: { createElement }
-      }
+        o: { createElement },
+      },
     } = sharedContext
     const storageContainer = createElement('div')
 
-    sharedContext.activate = (vnode, container, anchor, isSVG, optimized) => {
+    sharedContext.activate = (
+      vnode,
+      container,
+      anchor,
+      namespace,
+      optimized,
+    ) => {
       const instance = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
@@ -134,9 +144,9 @@ const KeepAliveImpl: ComponentOptions = {
         anchor,
         instance,
         parentSuspense,
-        isSVG,
+        namespace,
         vnode.slotScopeIds,
-        optimized
+        optimized,
       )
       queuePostRenderEffect(() => {
         instance.isDeactivated = false
@@ -157,6 +167,9 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+      invalidateMount(instance.m)
+      invalidateMount(instance.a)
+
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         if (instance.da) {
@@ -173,6 +186,11 @@ const KeepAliveImpl: ComponentOptions = {
         // Update components tree
         devtoolsComponentAdded(instance)
       }
+
+      // for e2e test
+      if (__DEV__ && __BROWSER__) {
+        ;(instance as any).__keepAliveStorageContainer = storageContainer
+      }
     }
 
     function unmount(vnode: VNode) {
@@ -181,10 +199,10 @@ const KeepAliveImpl: ComponentOptions = {
       _unmount(vnode, instance, parentSuspense, true)
     }
 
-    function pruneCache(filter?: (name: string) => boolean) {
+    function pruneCache(filter: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
         const name = getComponentName(vnode.type as ConcreteComponent)
-        if (name && (!filter || !filter(name))) {
+        if (name && !filter(name)) {
           pruneCacheEntry(key)
         }
       })
@@ -192,7 +210,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     function pruneCacheEntry(key: CacheKey) {
       const cached = cache.get(key) as VNode
-      if (!current || cached.type !== current.type) {
+      if (cached && (!current || !isSameVNodeType(cached, current))) {
         unmount(cached)
       } else if (current) {
         // current active instance should no longer be kept-alive.
@@ -211,7 +229,7 @@ const KeepAliveImpl: ComponentOptions = {
         exclude && pruneCache(name => !matches(exclude, name))
       },
       // prune post-render after `current` has been updated
-      { flush: 'post', deep: true }
+      { flush: 'post', deep: true },
     )
 
     // cache sub tree after render
@@ -219,7 +237,15 @@ const KeepAliveImpl: ComponentOptions = {
     const cacheSubtree = () => {
       // fix #1621, the pendingCacheKey could be 0
       if (pendingCacheKey != null) {
-        cache.set(pendingCacheKey, getInnerChild(instance.subTree))
+        // if KeepAlive child is a Suspense, it needs to be cached after Suspense resolves
+        // avoid caching vnode that not been mounted
+        if (isSuspense(instance.subTree.type)) {
+          queuePostRenderEffect(() => {
+            cache.set(pendingCacheKey!, getInnerChild(instance.subTree))
+          }, instance.subTree.suspense)
+        } else {
+          cache.set(pendingCacheKey, getInnerChild(instance.subTree))
+        }
       }
     }
     onMounted(cacheSubtree)
@@ -229,7 +255,7 @@ const KeepAliveImpl: ComponentOptions = {
       cache.forEach(cached => {
         const { subTree, suspense } = instance
         const vnode = getInnerChild(subTree)
-        if (cached.type === vnode.type) {
+        if (cached.type === vnode.type && cached.key === vnode.key) {
           // current instance will be unmounted as part of keep-alive's unmount
           resetShapeFlag(vnode)
           // but invoke its deactivated hook here
@@ -245,7 +271,7 @@ const KeepAliveImpl: ComponentOptions = {
       pendingCacheKey = null
 
       if (!slots.default) {
-        return null
+        return (current = null)
       }
 
       const children = slots.default()
@@ -260,7 +286,7 @@ const KeepAliveImpl: ComponentOptions = {
             break
           }
         }
-        if(!hasFound){
+        if (!hasFound) {
           current = null
           return children
         }
@@ -274,6 +300,12 @@ const KeepAliveImpl: ComponentOptions = {
       }
 
       let vnode = getInnerChild(rawVNode)
+      // #6028 Suspense ssContent maybe a comment VNode, should avoid caching it
+      if (vnode.type === Comment) {
+        current = null
+        return vnode
+      }
+
       const comp = vnode.type as ConcreteComponent
 
       // for async components, name check should be based in its loaded
@@ -281,7 +313,7 @@ const KeepAliveImpl: ComponentOptions = {
       const name = getComponentName(
         isAsyncWrapper(vnode)
           ? (vnode.type as ComponentOptions).__asyncResolved || {}
-          : comp
+          : comp,
       )
 
       const { include, exclude, max } = props
@@ -290,6 +322,8 @@ const KeepAliveImpl: ComponentOptions = {
         (include && (!name || !matches(include, name))) ||
         (exclude && name && matches(exclude, name))
       ) {
+        // #11717
+        vnode.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
         current = vnode
         return rawVNode
       }
@@ -304,11 +338,11 @@ const KeepAliveImpl: ComponentOptions = {
           rawVNode.ssContent = vnode
         }
       }
-      // #1513 it's possible for the returned vnode to be cloned due to attr
+      // #1511 it's possible for the returned vnode to be cloned due to attr
       // fallthrough or scopeId, so the vnode here may not be the final vnode
       // that is mounted. Instead of caching it directly, we store the pending
       // key and cache `instance.subTree` (the normalized vnode) in
-      // beforeMount/beforeUpdate hooks.
+      // mounted/updated hooks.
       pendingCacheKey = key
 
       if (cachedVNode) {
@@ -328,7 +362,7 @@ const KeepAliveImpl: ComponentOptions = {
         keys.add(key)
         // prune oldest entry
         if (max && keys.size > parseInt(max as string, 10)) {
-          pruneCacheEntry(keys.values().next().value)
+          pruneCacheEntry(keys.values().next().value!)
         }
       }
       // avoid vnode being unmounted
@@ -337,19 +371,25 @@ const KeepAliveImpl: ComponentOptions = {
       current = vnode
       return isSuspense(rawVNode.type) ? rawVNode : vnode
     }
-  }
+  },
 }
 
-if (__COMPAT__) {
-  KeepAliveImpl.__isBuildIn = true
+const decorate = (t: typeof KeepAliveImpl) => {
+  t.__isBuiltIn = true
+  return t
 }
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const KeepAlive = KeepAliveImpl as any as {
+export const KeepAlive = (__COMPAT__
+  ? /*@__PURE__*/ decorate(KeepAliveImpl)
+  : KeepAliveImpl) as any as {
   __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps
+    $slots: {
+      default(): VNode[]
+    }
   }
 }
 
@@ -358,31 +398,32 @@ function matches(pattern: MatchPattern, name: string): boolean {
     return pattern.some((p: string | RegExp) => matches(p, name))
   } else if (isString(pattern)) {
     return pattern.split(',').includes(name)
-  } else if (pattern.test) {
+  } else if (isRegExp(pattern)) {
+    pattern.lastIndex = 0
     return pattern.test(name)
   }
-  /* istanbul ignore next */
+  /* v8 ignore next */
   return false
 }
 
 export function onActivated(
   hook: Function,
-  target?: ComponentInternalInstance | null
-) {
+  target?: ComponentInternalInstance | null,
+): void {
   registerKeepAliveHook(hook, LifecycleHooks.ACTIVATED, target)
 }
 
 export function onDeactivated(
   hook: Function,
-  target?: ComponentInternalInstance | null
-) {
+  target?: ComponentInternalInstance | null,
+): void {
   registerKeepAliveHook(hook, LifecycleHooks.DEACTIVATED, target)
 }
 
 function registerKeepAliveHook(
   hook: Function & { __wdc?: Function },
   type: LifecycleHooks,
-  target: ComponentInternalInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance,
 ) {
   // cache the deactivate branch check wrapper for injected hooks so the same
   // hook can be properly deduped by the scheduler. "__wdc" stands for "with
@@ -421,7 +462,7 @@ function injectToKeepAliveRoot(
   hook: Function & { __weh?: Function },
   type: LifecycleHooks,
   target: ComponentInternalInstance,
-  keepAliveRoot: ComponentInternalInstance
+  keepAliveRoot: ComponentInternalInstance,
 ) {
   // injectHook wraps the original for error handling, so make sure to remove
   // the wrapped version.
@@ -432,14 +473,9 @@ function injectToKeepAliveRoot(
 }
 
 function resetShapeFlag(vnode: VNode) {
-  let shapeFlag = vnode.shapeFlag
-  if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-    shapeFlag -= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-  }
-  if (shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-    shapeFlag -= ShapeFlags.COMPONENT_KEPT_ALIVE
-  }
-  vnode.shapeFlag = shapeFlag
+  // bitwise operations to remove keep alive flags
+  vnode.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+  vnode.shapeFlag &= ~ShapeFlags.COMPONENT_KEPT_ALIVE
 }
 
 function getInnerChild(vnode: VNode) {

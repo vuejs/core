@@ -1,16 +1,17 @@
 import {
-  ref,
-  nodeOps,
-  h,
-  render,
-  nextTick,
+  KeepAlive,
+  defineAsyncComponent,
   defineComponent,
+  h,
+  nextTick,
+  nodeOps,
   reactive,
+  ref,
+  render,
   serializeInner,
-  shallowRef
+  shallowRef,
+  watch,
 } from '@vue/runtime-test'
-
-// reference: https://vue-composition-api-rfc.netlify.com/api.html#template-refs
 
 describe('api: template refs', () => {
   it('string ref mount', () => {
@@ -20,12 +21,12 @@ describe('api: template refs', () => {
     const Comp = {
       setup() {
         return {
-          refKey: el
+          refKey: el,
         }
       },
       render() {
         return h('div', { ref: 'refKey' })
-      }
+      },
     }
     render(h(Comp), root)
     expect(el.value).toBe(root.children[0])
@@ -41,12 +42,12 @@ describe('api: template refs', () => {
       setup() {
         return {
           foo: fooEl,
-          bar: barEl
+          bar: barEl,
         }
       },
       render() {
         return h('div', { ref: refKey.value })
-      }
+      },
     }
     render(h(Comp), root)
     expect(fooEl.value).toBe(root.children[0])
@@ -66,12 +67,12 @@ describe('api: template refs', () => {
     const Comp = {
       setup() {
         return {
-          refKey: el
+          refKey: el,
         }
       },
       render() {
         return toggle.value ? h('div', { ref: 'refKey' }) : null
-      }
+      },
     }
     render(h(Comp), root)
     expect(el.value).toBe(root.children[0])
@@ -83,7 +84,7 @@ describe('api: template refs', () => {
 
   it('function ref mount', () => {
     const root = nodeOps.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = defineComponent(() => () => h('div', { ref: fn }))
     render(h(Comp), root)
@@ -92,8 +93,8 @@ describe('api: template refs', () => {
 
   it('function ref update', async () => {
     const root = nodeOps.createElement('div')
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
     const fn = ref(fn1)
 
     const Comp = defineComponent(() => () => h('div', { ref: fn.value }))
@@ -112,11 +113,11 @@ describe('api: template refs', () => {
 
   it('function ref unmount', async () => {
     const root = nodeOps.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
     const toggle = ref(true)
 
     const Comp = defineComponent(
-      () => () => toggle.value ? h('div', { ref: fn }) : null
+      () => () => (toggle.value ? h('div', { ref: fn }) : null),
     )
     render(h(Comp), root)
     expect(fn.mock.calls[0][0]).toBe(root.children[0])
@@ -132,7 +133,7 @@ describe('api: template refs', () => {
     const Comp = {
       setup() {
         return () => h('div', { ref: el })
-      }
+      },
     }
     render(h(Comp), root)
     expect(el.value).toBe(root.children[0])
@@ -142,14 +143,14 @@ describe('api: template refs', () => {
     const root = nodeOps.createElement('div')
     const refs = {
       foo: ref(null),
-      bar: ref(null)
+      bar: ref(null),
     }
     const refKey = ref<keyof typeof refs>('foo')
 
     const Comp = {
       setup() {
         return () => h('div', { ref: refs[refKey.value] })
-      }
+      },
     }
     render(h(Comp), root)
     expect(refs.foo.value).toBe(root.children[0])
@@ -169,7 +170,7 @@ describe('api: template refs', () => {
     const Comp = {
       setup() {
         return () => (toggle.value ? h('div', { ref: el }) : null)
-      }
+      },
     }
     render(h(Comp), root)
     expect(el.value).toBe(root.children[0])
@@ -179,13 +180,127 @@ describe('api: template refs', () => {
     expect(el.value).toBe(null)
   })
 
+  // #12639
+  it('update and unmount child in the same tick', async () => {
+    const root = nodeOps.createElement('div')
+    const el = ref(null)
+    const toggle = ref(true)
+    const show = ref(true)
+
+    const Comp = defineComponent({
+      emits: ['change'],
+      props: ['show'],
+      setup(props, { emit }) {
+        watch(
+          () => props.show,
+          () => {
+            emit('change')
+          },
+        )
+        return () => h('div', 'hi')
+      },
+    })
+
+    const App = {
+      setup() {
+        return {
+          refKey: el,
+        }
+      },
+      render() {
+        return toggle.value
+          ? h(Comp, {
+              ref: 'refKey',
+              show: show.value,
+              onChange: () => (toggle.value = false),
+            })
+          : null
+      },
+    }
+    render(h(App), root)
+    expect(el.value).not.toBe(null)
+
+    show.value = false
+    await nextTick()
+    expect(el.value).toBe(null)
+  })
+
+  it('set and change ref in the same tick', async () => {
+    const root = nodeOps.createElement('div')
+    const show = ref(false)
+    const refName = ref('a')
+
+    const Child = defineComponent({
+      setup() {
+        refName.value = 'b'
+        return () => {}
+      },
+    })
+
+    const Comp = {
+      render() {
+        return h(Child, {
+          ref: refName.value,
+        })
+      },
+      updated(this: any) {
+        expect(this.$refs.a).toBe(null)
+        expect(this.$refs.b).not.toBe(null)
+      },
+    }
+
+    const App = {
+      render() {
+        return show.value ? h(Comp) : null
+      },
+    }
+
+    render(h(App), root)
+    expect(refName.value).toBe('a')
+
+    show.value = true
+    await nextTick()
+    expect(refName.value).toBe('b')
+  })
+
+  it('unset old ref when new ref is absent', async () => {
+    const root1 = nodeOps.createElement('div')
+    const root2 = nodeOps.createElement('div')
+    const el1 = ref(null)
+    const el2 = ref(null)
+    const toggle = ref(true)
+
+    const Comp1 = {
+      setup() {
+        return () => (toggle.value ? h('div', { ref: el1 }) : h('div'))
+      },
+    }
+
+    const Comp2 = {
+      setup() {
+        return () => h('div', { ref: toggle.value ? el2 : undefined })
+      },
+    }
+
+    render(h(Comp1), root1)
+    render(h(Comp2), root2)
+
+    expect(el1.value).toBe(root1.children[0])
+    expect(el2.value).toBe(root2.children[0])
+
+    toggle.value = false
+    await nextTick()
+    expect(el1.value).toBe(null)
+    expect(el2.value).toBe(null)
+  })
+
   test('string ref inside slots', async () => {
     const root = nodeOps.createElement('div')
-    const spy = jest.fn()
+    const spy = vi.fn()
     const Child = {
       render(this: any) {
         return this.$slots.default()
-      }
+      },
     }
 
     const Comp = {
@@ -196,7 +311,7 @@ describe('api: template refs', () => {
       },
       mounted(this: any) {
         spy(this.$refs.foo.tag)
-      }
+      },
     }
     render(h(Comp), root)
 
@@ -206,7 +321,7 @@ describe('api: template refs', () => {
   it('should work with direct reactive property', () => {
     const root = nodeOps.createElement('div')
     const state = reactive({
-      refKey: null
+      refKey: null,
     })
 
     const Comp = {
@@ -215,10 +330,11 @@ describe('api: template refs', () => {
       },
       render() {
         return h('div', { ref: 'refKey' })
-      }
+      },
     }
     render(h(Comp), root)
     expect(state.refKey).toBe(root.children[0])
+    expect('Template ref "refKey" used on a non-ref value').toHaveBeenWarned()
   })
 
   test('multiple root refs', () => {
@@ -232,16 +348,16 @@ describe('api: template refs', () => {
         return {
           refKey1,
           refKey2,
-          refKey3
+          refKey3,
         }
       },
       render() {
         return [
           h('div', { ref: 'refKey1' }),
           h('div', { ref: 'refKey2' }),
-          h('div', { ref: 'refKey3' })
+          h('div', { ref: 'refKey3' }),
         ]
-      }
+      },
     }
     render(h(Comp), root)
     expect(refKey1.value).toBe(root.children[1])
@@ -258,7 +374,7 @@ describe('api: template refs', () => {
       },
       render(this: any) {
         return h('div', { id: 'foo', ref: 'el' }, this.el && this.el.props.id)
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -273,13 +389,13 @@ describe('api: template refs', () => {
   // #1834
   test('exchange refs', async () => {
     const refToggle = ref(false)
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     const Comp = {
       render(this: any) {
         return [
           h('p', { ref: refToggle.value ? 'foo' : 'bar' }),
-          h('i', { ref: refToggle.value ? 'bar' : 'foo' })
+          h('i', { ref: refToggle.value ? 'bar' : 'foo' }),
         ]
       },
       mounted(this: any) {
@@ -287,7 +403,7 @@ describe('api: template refs', () => {
       },
       updated(this: any) {
         spy(this.$refs.foo.tag, this.$refs.bar.tag)
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -304,7 +420,7 @@ describe('api: template refs', () => {
   // #1789
   test('toggle the same ref to different elements', async () => {
     const refToggle = ref(false)
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     const Comp = {
       render(this: any) {
@@ -315,7 +431,7 @@ describe('api: template refs', () => {
       },
       updated(this: any) {
         spy(this.$refs.foo.tag)
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -330,10 +446,10 @@ describe('api: template refs', () => {
   // #2078
   test('handling multiple merged refs', async () => {
     const Foo = {
-      render: () => h('div', 'foo')
+      render: () => h('div', 'foo'),
     }
     const Bar = {
-      render: () => h('div', 'bar')
+      render: () => h('div', 'bar'),
     }
 
     const viewRef = shallowRef<any>(Foo)
@@ -347,7 +463,7 @@ describe('api: template refs', () => {
         }
         const view = h(viewRef.value, { ref: elRef1 })
         return h(view, { ref: elRef2 })
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
@@ -381,11 +497,11 @@ describe('api: template refs', () => {
           'div',
           {
             ref: el,
-            ref_key: 'el'
+            ref_key: 'el',
           },
-          'hello'
+          'hello',
         )
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
@@ -411,14 +527,14 @@ describe('api: template refs', () => {
                   'li',
                   {
                     ref: listRefs,
-                    ref_for: true
+                    ref_for: true,
                   },
-                  i
-                )
-              )
+                  i,
+                ),
+              ),
             )
           : null
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
@@ -462,14 +578,14 @@ describe('api: template refs', () => {
                   'li',
                   {
                     ref: 'listRefs',
-                    ref_for: true
+                    ref_for: true,
                   },
-                  i
-                )
-              )
+                  i,
+                ),
+              ),
             )
           : null
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
@@ -492,5 +608,115 @@ describe('api: template refs', () => {
     show.value = !show.value
     await nextTick()
     expect(mapRefs()).toMatchObject(['2', '3', '4'])
+  })
+
+  // #6697 v-for ref behaves differently under production and development
+  test('named ref in v-for , should be responsive when rendering', async () => {
+    const list = ref([1, 2, 3])
+    const listRefs = ref([])
+    const App = {
+      setup() {
+        return { listRefs }
+      },
+      render() {
+        return h('div', null, [
+          h('div', null, String(listRefs.value)),
+          h(
+            'ul',
+            list.value.map(i =>
+              h(
+                'li',
+                {
+                  ref: 'listRefs',
+                  ref_for: true,
+                },
+                i,
+              ),
+            ),
+          ),
+        ])
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    await nextTick()
+    expect(String(listRefs.value)).toBe(
+      '[object Object],[object Object],[object Object]',
+    )
+    expect(serializeInner(root)).toBe(
+      '<div><div>[object Object],[object Object],[object Object]</div><ul><li>1</li><li>2</li><li>3</li></ul></div>',
+    )
+
+    list.value.splice(0, 1)
+    await nextTick()
+    expect(String(listRefs.value)).toBe('[object Object],[object Object]')
+    expect(serializeInner(root)).toBe(
+      '<div><div>[object Object],[object Object]</div><ul><li>2</li><li>3</li></ul></div>',
+    )
+  })
+
+  test('with async component which nested in KeepAlive', async () => {
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(resolve =>
+          setTimeout(() =>
+            resolve(
+              defineComponent({
+                setup(_, { expose }) {
+                  expose({
+                    name: 'AsyncComp',
+                  })
+                  return () => h('div')
+                },
+              }) as any,
+            ),
+          ),
+        ),
+    )
+
+    const Comp = defineComponent({
+      setup(_, { expose }) {
+        expose({
+          name: 'Comp',
+        })
+        return () => h('div')
+      },
+    })
+
+    const toggle = ref(false)
+    const instanceRef = ref<any>(null)
+
+    const App = {
+      render: () => {
+        return h(KeepAlive, () =>
+          toggle.value
+            ? h(AsyncComp, { ref: instanceRef })
+            : h(Comp, { ref: instanceRef }),
+        )
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(instanceRef.value.name).toBe('Comp')
+
+    // switch to async component
+    toggle.value = true
+    await nextTick()
+    expect(instanceRef.value).toBe(null)
+
+    await new Promise(r => setTimeout(r))
+    expect(instanceRef.value.name).toBe('AsyncComp')
+
+    // switch back to normal component
+    toggle.value = false
+    await nextTick()
+    expect(instanceRef.value.name).toBe('Comp')
+
+    // switch to async component again
+    toggle.value = true
+    await nextTick()
+    expect(instanceRef.value.name).toBe('AsyncComp')
   })
 })

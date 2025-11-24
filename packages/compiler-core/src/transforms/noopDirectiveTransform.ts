@@ -1,3 +1,3 @@
-import { DirectiveTransform } from '../transform'
+import type { DirectiveTransform } from '../transform'
 
 export const noopDirectiveTransform: DirectiveTransform = () => ({ props: [] })

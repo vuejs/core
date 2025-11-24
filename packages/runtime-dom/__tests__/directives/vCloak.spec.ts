@@ -5,7 +5,7 @@ describe('vCloak', () => {
     const root = document.createElement('div')
     root.setAttribute('v-cloak', '')
     createApp({
-      render() {}
+      render() {},
     }).mount(root)
     expect(root.hasAttribute('v-cloak')).toBe(false)
   })

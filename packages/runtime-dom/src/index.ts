@@ -1,37 +1,69 @@
 import {
-  createRenderer,
-  createHydrationRenderer,
-  warn,
-  RootRenderFunction,
-  CreateAppFunction,
-  Renderer,
-  HydrationRenderer,
-  App,
-  RootHydrateFunction,
-  isRuntimeOnly,
+  type App,
+  type CreateAppFunction,
+  type DefineComponent,
   DeprecationTypes,
-  compatUtils
+  type Directive,
+  type ElementNamespace,
+  type HydrationRenderer,
+  type Renderer,
+  type RootHydrateFunction,
+  type RootRenderFunction,
+  compatUtils,
+  createHydrationRenderer,
+  createRenderer,
+  isRuntimeOnly,
+  warn,
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
+export { nodeOps, patchProp }
 // Importing from the compiler, will be tree-shaken in prod
 import {
-  isFunction,
-  isString,
-  isHTMLTag,
-  isSVGTag,
+  NOOP,
   extend,
-  NOOP
+  isFunction,
+  isHTMLTag,
+  isMathMLTag,
+  isSVGTag,
+  isString,
 } from '@vue/shared'
+import type { TransitionProps } from './components/Transition'
+import type { TransitionGroupProps } from './components/TransitionGroup'
+import type { vShow } from './directives/vShow'
+import type { VOnDirective } from './directives/vOn'
+import type { VModelDirective } from './directives/vModel'
+
+/**
+ * This is a stub implementation to prevent the need to use dom types.
+ *
+ * To enable proper types, add `"dom"` to `"lib"` in your `tsconfig.json`.
+ */
+type DomType<T> = typeof globalThis extends { window: unknown } ? T : never
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
-    // Note: if updating this, also update `types/refBail.d.ts`.
-    runtimeDOMBailTypes: Node | Window
+    runtimeDOMBailTypes: DomType<Node | Window>
   }
 }
 
-const rendererOptions = /*#__PURE__*/ extend({ patchProp }, nodeOps)
+declare module '@vue/runtime-core' {
+  interface GlobalComponents {
+    Transition: DefineComponent<TransitionProps>
+    TransitionGroup: DefineComponent<TransitionGroupProps>
+  }
+
+  interface GlobalDirectives {
+    vShow: typeof vShow
+    vOn: VOnDirective
+    vBind: VModelDirective
+    vIf: Directive<any, boolean>
+    vOnce: Directive
+    vSlot: Directive
+  }
+}
+
+const rendererOptions = /*@__PURE__*/ extend({ patchProp }, nodeOps)
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.
@@ -84,13 +116,13 @@ export const createApp = ((...args) => {
       // rendered by the server, the template should not contain any user data.
       component.template = container.innerHTML
       // 2.x compat check
-      if (__COMPAT__ && __DEV__) {
-        for (let i = 0; i < container.attributes.length; i++) {
-          const attr = container.attributes[i]
-          if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+      if (__COMPAT__ && __DEV__ && container.nodeType === 1) {
+        for (let i = 0; i < (container as Element).attributes.length; i++) {
+          const attr = (container as Element).attributes[i]
+          if (attr.name !== 'v-cloak' && /^(?:v-|:|@)/.test(attr.name)) {
             compatUtils.warnDeprecation(
               DeprecationTypes.GLOBAL_MOUNT_CONTAINER,
-              null
+              null,
             )
             break
           }
@@ -99,8 +131,10 @@ export const createApp = ((...args) => {
     }
 
     // clear content before mounting
-    container.innerHTML = ''
-    const proxy = mount(container, false, container instanceof SVGElement)
+    if (container.nodeType === 1) {
+      container.textContent = ''
+    }
+    const proxy = mount(container, false, resolveRootNamespace(container))
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
       container.setAttribute('data-v-app', '')
@@ -123,19 +157,33 @@ export const createSSRApp = ((...args) => {
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (container) {
-      return mount(container, true, container instanceof SVGElement)
+      return mount(container, true, resolveRootNamespace(container))
     }
   }
 
   return app
 }) as CreateAppFunction<Element>
 
+function resolveRootNamespace(
+  container: Element | ShadowRoot,
+): ElementNamespace {
+  if (container instanceof SVGElement) {
+    return 'svg'
+  }
+  if (
+    typeof MathMLElement === 'function' &&
+    container instanceof MathMLElement
+  ) {
+    return 'mathml'
+  }
+}
+
 function injectNativeTagCheck(app: App) {
   // Inject `isNativeTag`
   // this is used for component name validation (dev only)
   Object.defineProperty(app.config, 'isNativeTag', {
-    value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag),
-    writable: false
+    value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag) || isMathMLTag(tag),
+    writable: false,
   })
 }
 
@@ -150,9 +198,9 @@ function injectCompilerOptionsCheck(app: App) {
       set() {
         warn(
           `The \`isCustomElement\` config option is deprecated. Use ` +
-            `\`compilerOptions.isCustomElement\` instead.`
+            `\`compilerOptions.isCustomElement\` instead.`,
         )
-      }
+      },
     })
 
     const compilerOptions = app.config.compilerOptions
@@ -163,7 +211,7 @@ function injectCompilerOptionsCheck(app: App) {
       `must be passed to \`@vue/compiler-dom\` in the build setup instead.\n` +
       `- For vue-loader: pass it via vue-loader's \`compilerOptions\` loader option.\n` +
       `- For vue-cli: see https://cli.vuejs.org/guide/webpack.html#modifying-options-of-a-loader\n` +
-      `- For vite: pass it via @vitejs/plugin-vue options. See https://github.com/vitejs/vite/tree/main/packages/plugin-vue#example-for-passing-options-to-vuecompiler-dom`
+      `- For vite: pass it via @vitejs/plugin-vue options. See https://github.com/vitejs/vite-plugin-vue/tree/main/packages/plugin-vue#example-for-passing-options-to-vuecompiler-sfc`
 
     Object.defineProperty(app.config, 'compilerOptions', {
       get() {
@@ -172,19 +220,19 @@ function injectCompilerOptionsCheck(app: App) {
       },
       set() {
         warn(msg)
-      }
+      },
     })
   }
 }
 
 function normalizeContainer(
-  container: Element | ShadowRoot | string
-): Element | null {
+  container: Element | ShadowRoot | string,
+): Element | ShadowRoot | null {
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
       warn(
-        `Failed to mount app: mount target selector "${container}" returned null.`
+        `Failed to mount app: mount target selector "${container}" returned null.`,
       )
     }
     return res
@@ -196,7 +244,7 @@ function normalizeContainer(
     container.mode === 'closed'
   ) {
     warn(
-      `mounting on a ShadowRoot with \`{mode: "closed"}\` may lead to unpredictable bugs`
+      `mounting on a ShadowRoot with \`{mode: "closed"}\` may lead to unpredictable bugs`,
     )
   }
   return container as any
@@ -206,8 +254,11 @@ function normalizeContainer(
 export {
   defineCustomElement,
   defineSSRCustomElement,
+  useShadowRoot,
+  useHost,
   VueElement,
-  VueElementConstructor
+  type VueElementConstructor,
+  type CustomElementOptions,
 } from './apiCustomElement'
 
 // SFC CSS utilities
@@ -215,10 +266,10 @@ export { useCssModule } from './helpers/useCssModule'
 export { useCssVars } from './helpers/useCssVars'
 
 // DOM-only components
-export { Transition, TransitionProps } from './components/Transition'
+export { Transition, type TransitionProps } from './components/Transition'
 export {
   TransitionGroup,
-  TransitionGroupProps
+  type TransitionGroupProps,
 } from './components/TransitionGroup'
 
 // **Internal** DOM-only runtime directive helpers
@@ -227,7 +278,7 @@ export {
   vModelCheckbox,
   vModelRadio,
   vModelSelect,
-  vModelDynamic
+  vModelDynamic,
 } from './directives/vModel'
 export { withModifiers, withKeys } from './directives/vOn'
 export { vShow } from './directives/vShow'
@@ -240,7 +291,7 @@ let ssrDirectiveInitialized = false
 /**
  * @internal
  */
-export const initDirectivesForSSR = __SSR__
+export const initDirectivesForSSR: () => void = __SSR__
   ? () => {
       if (!ssrDirectiveInitialized) {
         ssrDirectiveInitialized = true
@@ -253,3 +304,5 @@ export const initDirectivesForSSR = __SSR__
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types
 export * from '@vue/runtime-core'
+
+export * from './jsx'

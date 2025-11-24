@@ -1,17 +1,17 @@
 import {
-  DirectiveTransform,
   DOMErrorCodes,
+  type DirectiveTransform,
+  createConditionalExpression,
+  createDOMCompilerError,
+  createObjectExpression,
   createObjectProperty,
   createSimpleExpression,
-  createConditionalExpression,
-  createObjectExpression,
-  createDOMCompilerError
 } from '@vue/compiler-dom'
 
 export const ssrTransformShow: DirectiveTransform = (dir, node, context) => {
   if (!dir.exp) {
     context.onError(
-      createDOMCompilerError(DOMErrorCodes.X_V_SHOW_NO_EXPRESSION)
+      createDOMCompilerError(DOMErrorCodes.X_V_SHOW_NO_EXPRESSION),
     )
   }
   return {
@@ -24,12 +24,12 @@ export const ssrTransformShow: DirectiveTransform = (dir, node, context) => {
           createObjectExpression([
             createObjectProperty(
               `display`,
-              createSimpleExpression(`none`, true)
-            )
+              createSimpleExpression(`none`, true),
+            ),
           ]),
-          false /* no newline */
-        )
-      )
-    ]
+          false /* no newline */,
+        ),
+      ),
+    ],
   }
 }

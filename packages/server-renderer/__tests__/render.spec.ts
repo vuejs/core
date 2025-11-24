@@ -1,33 +1,33 @@
-/**
- * @jest-environment node
- */
-
 import {
-  createApp,
-  h,
-  createCommentVNode,
-  resolveComponent,
-  ComponentOptions,
-  ref,
-  defineComponent,
-  createTextVNode,
-  createStaticVNode,
-  withCtx,
+  type ComponentOptions,
   KeepAlive,
   Transition,
-  watchEffect,
+  computed,
+  createApp,
+  createCommentVNode,
+  createSSRApp,
+  createStaticVNode,
+  createTextVNode,
   createVNode,
-  resolveDynamicComponent,
-  renderSlot,
+  defineComponent,
+  getCurrentInstance,
+  h,
   onErrorCaptured,
-  onServerPrefetch
+  onServerPrefetch,
+  reactive,
+  ref,
+  renderSlot,
+  resolveComponent,
+  resolveDynamicComponent,
+  watchEffect,
+  withCtx,
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
-import { renderToNodeStream, pipeToNodeWritable } from '../src/renderToStream'
-import { ssrRenderSlot, SSRSlot } from '../src/helpers/ssrRenderSlot'
+import { pipeToNodeWritable, renderToNodeStream } from '../src/renderToStream'
+import { type SSRSlot, ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
-import { Readable, Transform } from 'stream'
+import { type Readable, Transform } from 'node:stream'
 import { ssrRenderVNode } from '../src'
 
 const promisifyStream = (stream: Readable) => {
@@ -54,7 +54,7 @@ const pipeToWritable = (app: any, context?: any) => {
     transform(data, _encoding, cb) {
       this.push(data)
       cb()
-    }
+    },
   })
   pipeToNodeWritable(app, context, stream)
   return promisifyStream(stream)
@@ -72,13 +72,25 @@ function testRender(type: string, render: typeof renderToString) {
         render() {
           const Foo = resolveComponent('foo') as ComponentOptions
           return h(Foo)
-        }
+        },
       })
       app.component('foo', {
-        render: () => h('div', 'foo')
+        render: () => h('div', 'foo'),
       })
       const html = await render(app)
       expect(html).toBe(`<div>foo</div>`)
+    })
+
+    test('warnings should be suppressed by app.config.warnHandler', async () => {
+      const app = createApp({
+        render() {
+          return h('div', this.foo)
+        },
+      })
+      app.config.warnHandler = vi.fn()
+      await render(app)
+      expect('not defined on instance').not.toHaveBeenWarned()
+      expect(app.config.warnHandler).toHaveBeenCalledTimes(1)
     })
 
     describe('components', () => {
@@ -91,9 +103,9 @@ function testRender(type: string, render: typeof renderToString) {
               },
               render(this: any) {
                 return h('div', this.msg)
-              }
-            })
-          )
+              },
+            }),
+          ),
         ).toBe(`<div>hello</div>`)
       })
 
@@ -104,9 +116,9 @@ function testRender(type: string, render: typeof renderToString) {
               setup() {
                 const msg = ref('hello')
                 return () => h('div', msg.value)
-              }
-            })
-          )
+              },
+            }),
+          ),
         ).toBe(`<div>hello</div>`)
       })
 
@@ -117,9 +129,9 @@ function testRender(type: string, render: typeof renderToString) {
               defineComponent(() => {
                 const msg = ref('hello')
                 return () => h('div', msg.value)
-              })
-            )
-          )
+              }),
+            ),
+          ),
         ).toBe(`<div>hello</div>`)
       })
 
@@ -128,17 +140,17 @@ function testRender(type: string, render: typeof renderToString) {
           await render(
             createApp(
               defineComponent({
-                extends: {
+                extends: defineComponent({
                   data() {
                     return { msg: 'hello' }
                   },
-                  render(this: any) {
+                  render() {
                     return h('div', this.msg)
-                  }
-                }
-              })
-            )
-          )
+                  },
+                }),
+              }),
+            ),
+          ),
         ).toBe(`<div>hello</div>`)
       })
 
@@ -148,18 +160,18 @@ function testRender(type: string, render: typeof renderToString) {
             createApp(
               defineComponent({
                 mixins: [
-                  {
+                  defineComponent({
                     data() {
                       return { msg: 'hello' }
                     },
-                    render(this: any) {
+                    render() {
                       return h('div', this.msg)
-                    }
-                  }
-                ]
-              })
-            )
-          )
+                    },
+                  }),
+                ],
+              }),
+            ),
+          ),
         ).toBe(`<div>hello</div>`)
       })
 
@@ -172,9 +184,9 @@ function testRender(type: string, render: typeof renderToString) {
               },
               ssrRender(ctx, push) {
                 push(`<div>${ctx.msg}</div>`)
-              }
-            })
-          )
+              },
+            }),
+          ),
         ).toBe(`<div>hello</div>`)
       })
 
@@ -183,7 +195,7 @@ function testRender(type: string, render: typeof renderToString) {
           props: ['msg'],
           render(this: any) {
             return h('div', this.msg)
-          }
+          },
         }
 
         expect(
@@ -191,9 +203,9 @@ function testRender(type: string, render: typeof renderToString) {
             createApp({
               render() {
                 return h('div', ['parent', h(Child, { msg: 'hello' })])
-              }
-            })
-          )
+              },
+            }),
+          ),
         ).toBe(`<div>parent<div>hello</div></div>`)
       })
 
@@ -202,7 +214,7 @@ function testRender(type: string, render: typeof renderToString) {
           props: ['msg'],
           ssrRender(ctx: any, push: any) {
             push(`<div>${ctx.msg}</div>`)
-          }
+          },
         }
 
         expect(
@@ -212,19 +224,19 @@ function testRender(type: string, render: typeof renderToString) {
                 push(`<div>parent`)
                 push(ssrRenderComponent(Child, { msg: 'hello' }, null, parent))
                 push(`</div>`)
-              }
-            })
-          )
+              },
+            }),
+          ),
         ).toBe(`<div>parent<div>hello</div></div>`)
       })
 
       test('nested template components', async () => {
         const Child = {
           props: ['msg'],
-          template: `<div>{{ msg }}</div>`
+          template: `<div>{{ msg }}</div>`,
         }
         const app = createApp({
-          template: `<div>parent<Child msg="hello" /></div>`
+          template: `<div>parent<Child msg="hello" /></div>`,
         })
         app.component('Child', Child)
 
@@ -233,19 +245,19 @@ function testRender(type: string, render: typeof renderToString) {
 
       test('template components with dynamic class attribute after static', async () => {
         const app = createApp({
-          template: `<div><div class="child" :class="'dynamic'"></div></div>`
+          template: `<div><div class="child" :class="'dynamic'"></div></div>`,
         })
         expect(await render(app)).toBe(
-          `<div><div class="dynamic child"></div></div>`
+          `<div><div class="dynamic child"></div></div>`,
         )
       })
 
       test('template components with dynamic class attribute before static', async () => {
         const app = createApp({
-          template: `<div><div :class="'dynamic'" class="child"></div></div>`
+          template: `<div><div :class="'dynamic'" class="child"></div></div>`,
         })
         expect(await render(app)).toBe(
-          `<div><div class="dynamic child"></div></div>`
+          `<div><div class="dynamic child"></div></div>`,
         )
       })
 
@@ -254,19 +266,19 @@ function testRender(type: string, render: typeof renderToString) {
           props: ['msg'],
           ssrRender(ctx: any, push: any) {
             push(`<div>${ctx.msg}</div>`)
-          }
+          },
         }
 
         const VNodeChild = {
           props: ['msg'],
           render(this: any) {
             return h('div', this.msg)
-          }
+          },
         }
 
         const TemplateChild = {
           props: ['msg'],
-          template: `<div>{{ msg }}</div>`
+          template: `<div>{{ msg }}</div>`,
         }
 
         expect(
@@ -279,26 +291,31 @@ function testRender(type: string, render: typeof renderToString) {
                     OptimizedChild,
                     { msg: 'opt' },
                     null,
-                    parent
-                  )
+                    parent,
+                  ),
                 )
                 push(
-                  ssrRenderComponent(VNodeChild, { msg: 'vnode' }, null, parent)
+                  ssrRenderComponent(
+                    VNodeChild,
+                    { msg: 'vnode' },
+                    null,
+                    parent,
+                  ),
                 )
                 push(
                   ssrRenderComponent(
                     TemplateChild,
                     { msg: 'template' },
                     null,
-                    parent
-                  )
+                    parent,
+                  ),
                 )
                 push(`</div>`)
-              }
-            })
-          )
+              },
+            }),
+          ),
         ).toBe(
-          `<div>parent<div>opt</div><div>vnode</div><div>template</div></div>`
+          `<div>parent<div>opt</div><div>vnode</div><div>template</div></div>`,
         )
       })
 
@@ -307,12 +324,12 @@ function testRender(type: string, render: typeof renderToString) {
           // should wait for resolved render context from setup()
           async setup() {
             return {
-              msg: 'hello'
+              msg: 'hello',
             }
           },
           ssrRender(ctx: any, push: any) {
             push(`<div>${ctx.msg}</div>`)
-          }
+          },
         }
 
         expect(
@@ -322,9 +339,9 @@ function testRender(type: string, render: typeof renderToString) {
                 push(`<div>parent`)
                 push(ssrRenderComponent(Child, null, null, parent))
                 push(`</div>`)
-              }
-            })
-          )
+              },
+            }),
+          ),
         ).toBe(`<div>parent<div>hello</div></div>`)
       })
 
@@ -333,24 +350,24 @@ function testRender(type: string, render: typeof renderToString) {
           props: ['msg'],
           async setup(props: any) {
             return {
-              localMsg: props.msg + '!'
+              localMsg: props.msg + '!',
             }
           },
           ssrRender(ctx: any, push: any) {
             push(`<div>${ctx.localMsg}</div>`)
-          }
+          },
         }
 
         const VNodeChild = {
           props: ['msg'],
           async setup(props: any) {
             return {
-              localMsg: props.msg + '!'
+              localMsg: props.msg + '!',
             }
           },
           render(this: any) {
             return h('div', this.localMsg)
-          }
+          },
         }
 
         expect(
@@ -363,16 +380,21 @@ function testRender(type: string, render: typeof renderToString) {
                     OptimizedChild,
                     { msg: 'opt' },
                     null,
-                    parent
-                  )
+                    parent,
+                  ),
                 )
                 push(
-                  ssrRenderComponent(VNodeChild, { msg: 'vnode' }, null, parent)
+                  ssrRenderComponent(
+                    VNodeChild,
+                    { msg: 'vnode' },
+                    null,
+                    parent,
+                  ),
                 )
                 push(`</div>`)
-              }
-            })
-          )
+              },
+            }),
+          ),
         ).toBe(`<div>parent<div>opt!</div><div>vnode!</div></div>`)
       })
     })
@@ -391,10 +413,10 @@ function testRender(type: string, render: typeof renderToString) {
                 push(`fallback`)
               },
               push,
-              parent
+              parent,
             )
             push(`</div>`)
-          }
+          },
         }
 
         expect(
@@ -412,19 +434,19 @@ function testRender(type: string, render: typeof renderToString) {
                         push(`<span>${msg}</span>`)
                       }) as SSRSlot,
                       // important to avoid slots being normalized
-                      _: 1 as any
+                      _: 1 as any,
                     },
-                    parent
-                  )
+                    parent,
+                  ),
                 )
                 push(`</div>`)
-              }
-            })
-          )
+              },
+            }),
+          ),
         ).toBe(
           `<div>parent<div class="child">` +
             `<!--[--><span>from slot</span><!--]-->` +
-            `</div></div>`
+            `</div></div>`,
         )
 
         // test fallback
@@ -435,11 +457,11 @@ function testRender(type: string, render: typeof renderToString) {
                 push(`<div>parent`)
                 push(ssrRenderComponent(Child, { msg: 'hello' }, null, parent))
                 push(`</div>`)
-              }
-            })
-          )
+              },
+            }),
+          ),
         ).toBe(
-          `<div>parent<div class="child"><!--[-->fallback<!--]--></div></div>`
+          `<div>parent<div class="child"><!--[-->fallback<!--]--></div></div>`,
         )
       })
 
@@ -454,10 +476,10 @@ function testRender(type: string, render: typeof renderToString) {
               { msg: 'from slot' },
               null,
               push,
-              parent
+              parent,
             )
             push(`</div>`)
-          }
+          },
         }
 
         expect(
@@ -473,37 +495,37 @@ function testRender(type: string, render: typeof renderToString) {
                       // bailed slots returning raw vnodes
                       default: ({ msg }: any) => {
                         return h('span', msg)
-                      }
+                      },
                     },
-                    parent
-                  )
+                    parent,
+                  ),
                 )
                 push(`</div>`)
-              }
-            })
-          )
+              },
+            }),
+          ),
         ).toBe(
           `<div>parent<div class="child">` +
             `<!--[--><span>from slot</span><!--]-->` +
-            `</div></div>`
+            `</div></div>`,
         )
       })
 
       test('nested components with template slots', async () => {
         const Child = {
           props: ['msg'],
-          template: `<div class="child"><slot msg="from slot"></slot></div>`
+          template: `<div class="child"><slot msg="from slot"></slot></div>`,
         }
 
         const app = createApp({
           components: { Child },
-          template: `<div>parent<Child v-slot="{ msg }"><span>{{ msg }}</span></Child></div>`
+          template: `<div>parent<Child v-slot="{ msg }"><span>{{ msg }}</span></Child></div>`,
         })
 
         expect(await render(app)).toBe(
           `<div>parent<div class="child">` +
             `<!--[--><span>from slot</span><!--]-->` +
-            `</div></div>`
+            `</div></div>`,
         )
       })
 
@@ -514,15 +536,15 @@ function testRender(type: string, render: typeof renderToString) {
             return h(
               'div',
               {
-                class: 'child'
+                class: 'child',
               },
-              this.$slots.default({ msg: 'from slot' })
+              this.$slots.default({ msg: 'from slot' }),
             )
-          }
+          },
         }
 
         const app = createApp({
-          template: `<div>parent<Child v-slot="{ msg }"><span>{{ msg }}</span></Child></div>`
+          template: `<div>parent<Child v-slot="{ msg }"><span>{{ msg }}</span></Child></div>`,
         })
         app.component('Child', Child)
 
@@ -530,69 +552,69 @@ function testRender(type: string, render: typeof renderToString) {
           `<div>parent<div class="child">` +
             // no comment anchors because slot is used directly as element children
             `<span>from slot</span>` +
-            `</div></div>`
+            `</div></div>`,
         )
       })
 
       test('template slots forwarding', async () => {
         const Child = {
-          template: `<div><slot/></div>`
+          template: `<div><slot/></div>`,
         }
 
         const Parent = {
           components: { Child },
-          template: `<Child><slot/></Child>`
+          template: `<Child><slot/></Child>`,
         }
 
         const app = createApp({
           components: { Parent },
-          template: `<Parent>hello</Parent>`
+          template: `<Parent>hello</Parent>`,
         })
 
         expect(await render(app)).toBe(
-          `<div><!--[--><!--[-->hello<!--]--><!--]--></div>`
+          `<div><!--[--><!--[-->hello<!--]--><!--]--></div>`,
         )
       })
 
       test('template slots forwarding, empty slot', async () => {
         const Child = {
-          template: `<div><slot/></div>`
+          template: `<div><slot/></div>`,
         }
 
         const Parent = {
           components: { Child },
-          template: `<Child><slot/></Child>`
+          template: `<Child><slot/></Child>`,
         }
 
         const app = createApp({
           components: { Parent },
-          template: `<Parent></Parent>`
+          template: `<Parent></Parent>`,
         })
 
         expect(await render(app)).toBe(
           // should only have a single fragment
-          `<div><!--[--><!--]--></div>`
+          `<div><!--[--><!--]--></div>`,
         )
       })
 
       test('template slots forwarding, empty slot w/ fallback', async () => {
         const Child = {
-          template: `<div><slot>fallback</slot></div>`
+          template: `<div><slot>fallback</slot></div>`,
         }
 
         const Parent = {
           components: { Child },
-          template: `<Child><slot/></Child>`
+          template: `<Child><slot/></Child>`,
         }
 
         const app = createApp({
           components: { Parent },
-          template: `<Parent></Parent>`
+          template: `<Parent></Parent>`,
         })
 
         expect(await render(app)).toBe(
           // should only have a single fragment
-          `<div><!--[-->fallback<!--]--></div>`
+          `<div><!--[-->fallback<!--]--></div>`,
         )
       })
     })
@@ -600,7 +622,9 @@ function testRender(type: string, render: typeof renderToString) {
     describe('vnode element', () => {
       test('props', async () => {
         expect(
-          await render(h('div', { id: 'foo&', class: ['bar', 'baz'] }, 'hello'))
+          await render(
+            h('div', { id: 'foo&', class: ['bar', 'baz'] }, 'hello'),
+          ),
         ).toBe(`<div id="foo&amp;" class="bar baz">hello</div>`)
       })
 
@@ -615,11 +639,11 @@ function testRender(type: string, render: typeof renderToString) {
               'foo',
               h('span', 'bar'),
               [h('span', 'baz')],
-              createCommentVNode('qux')
-            ])
-          )
+              createCommentVNode('qux'),
+            ]),
+          ),
         ).toBe(
-          `<div>foo<span>bar</span><!--[--><span>baz</span><!--]--><!--qux--></div>`
+          `<div>foo<span>bar</span><!--[--><span>baz</span><!--]--><!--qux--></div>`,
         )
       })
 
@@ -633,11 +657,11 @@ function testRender(type: string, render: typeof renderToString) {
             h(
               'div',
               {
-                innerHTML: `<span>hello</span>`
+                innerHTML: `<span>hello</span>`,
               },
-              'ignored'
-            )
-          )
+              'ignored',
+            ),
+          ),
         ).toBe(`<div><span>hello</span></div>`)
       })
 
@@ -647,11 +671,11 @@ function testRender(type: string, render: typeof renderToString) {
             h(
               'div',
               {
-                textContent: `<span>hello</span>`
+                textContent: `<span>hello</span>`,
               },
-              'ignored'
-            )
-          )
+              'ignored',
+            ),
+          ),
         ).toBe(`<div>${escapeHtml(`<span>hello</span>`)}</div>`)
       })
 
@@ -661,11 +685,11 @@ function testRender(type: string, render: typeof renderToString) {
             h(
               'textarea',
               {
-                value: `<span>hello</span>`
+                value: `<span>hello</span>`,
               },
-              'ignored'
-            )
-          )
+              'ignored',
+            ),
+          ),
         ).toBe(`<textarea>${escapeHtml(`<span>hello</span>`)}</textarea>`)
       })
     })
@@ -673,19 +697,17 @@ function testRender(type: string, render: typeof renderToString) {
     describe('vnode component', () => {
       test('KeepAlive', async () => {
         const MyComp = {
-          render: () => h('p', 'hello')
+          render: () => h('p', 'hello'),
         }
-        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(
-          `<p>hello</p>`
-        )
+        expect(await render(h(KeepAlive, () => h(MyComp)))).toBe(`<p>hello</p>`)
       })
 
       test('Transition', async () => {
         const MyComp = {
-          render: () => h('p', 'hello')
+          render: () => h('p', 'hello'),
         }
         expect(await render(h(Transition, () => h(MyComp)))).toBe(
-          `<p>hello</p>`
+          `<p>hello</p>`,
         )
       })
     })
@@ -693,7 +715,7 @@ function testRender(type: string, render: typeof renderToString) {
     describe('raw vnode types', () => {
       test('Text', async () => {
         expect(await render(createTextVNode('hello <div>'))).toBe(
-          `hello &lt;div&gt;`
+          `hello &lt;div&gt;`,
         )
       })
 
@@ -705,9 +727,9 @@ function testRender(type: string, render: typeof renderToString) {
               createCommentVNode('>foo'),
               createCommentVNode('->foo'),
               createCommentVNode('<!--foo-->'),
-              createCommentVNode('--!>foo<!-')
-            ])
-          )
+              createCommentVNode('--!>foo<!-'),
+            ]),
+          ),
         ).toBe(`<div><!--foo--><!--foo--><!--foo--><!--foo--></div>`)
       })
 
@@ -726,7 +748,7 @@ function testRender(type: string, render: typeof renderToString) {
           __scopeId: 'data-v-test',
           render() {
             return h('div')
-          }
+          },
         }
         expect(await render(h(Foo))).toBe(`<div data-v-test></div>`)
       })
@@ -736,22 +758,22 @@ function testRender(type: string, render: typeof renderToString) {
           __scopeId: 'data-v-child',
           render: function (this: any) {
             return h('div', null, [renderSlot(this.$slots, 'default')])
-          }
+          },
         }
 
         const Parent = {
           __scopeId: 'data-v-test',
           render: () => {
             return h(Child, null, {
-              default: withCtx(() => [h('span', 'slot')])
+              default: withCtx(() => [h('span', 'slot')]),
             })
-          }
+          },
         }
 
         expect(await render(h(Parent))).toBe(
           `<div data-v-child data-v-test>` +
             `<!--[--><span data-v-test data-v-child-s>slot</span><!--]-->` +
-            `</div>`
+            `</div>`,
         )
       })
     })
@@ -764,23 +786,84 @@ function testRender(type: string, render: typeof renderToString) {
               data() {
                 return { msg: 'hello' }
               },
-              template: `<div>{{ msg }}</div>`
-            })
-          )
+              template: `<div>{{ msg }}</div>`,
+            }),
+          ),
         ).toBe(`<div>hello</div>`)
       })
 
       test('handle compiler errors', async () => {
         await render(
           // render different content since compilation is cached
-          createApp({ template: `<div>${type}</` })
+          createApp({ template: `<div>${type}</` }),
         )
 
         expect(
-          `Template compilation error: Unexpected EOF in tag.`
+          `Template compilation error: Unexpected EOF in tag.`,
         ).toHaveBeenWarned()
         expect(`Element is missing end tag`).toHaveBeenWarned()
       })
+
+      // #6110
+      test('reset current instance after rendering error', async () => {
+        const prev = getCurrentInstance()
+        expect(prev).toBe(null)
+        try {
+          await render(
+            createApp({
+              data() {
+                return { msg: null }
+              },
+              template: `<div>{{ msg.text }}</div>`,
+            }),
+          )
+        } catch {}
+        expect(getCurrentInstance()).toBe(prev)
+      })
+
+      // #7733
+      test('reset current instance after error in data', async () => {
+        const prev = getCurrentInstance()
+        expect(prev).toBe(null)
+        try {
+          await render(
+            createApp({
+              data() {
+                throw new Error()
+              },
+              template: `<div>hello</div>`,
+            }),
+          )
+        } catch {}
+        expect(getCurrentInstance()).toBe(null)
+      })
+    })
+
+    // #7733
+    test('reset current instance after error in errorCaptured', async () => {
+      const prev = getCurrentInstance()
+
+      expect(prev).toBe(null)
+
+      const Child = {
+        created() {
+          throw new Error()
+        },
+      }
+      try {
+        await render(
+          createApp({
+            errorCaptured() {
+              throw new Error()
+            },
+            render: () => h(Child),
+          }),
+        )
+      } catch {}
+      expect(
+        'Unhandled error during execution of errorCaptured hook',
+      ).toHaveBeenWarned()
+      expect(getCurrentInstance()).toBe(null)
     })
 
     test('serverPrefetch', async () => {
@@ -788,7 +871,7 @@ function testRender(type: string, render: typeof renderToString) {
       const app = createApp({
         data() {
           return {
-            msg: ''
+            msg: '',
           }
         },
         async serverPrefetch() {
@@ -796,7 +879,27 @@ function testRender(type: string, render: typeof renderToString) {
         },
         render() {
           return h('div', this.msg)
-        }
+        },
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div>hello</div>`)
+    })
+
+    test('serverPrefetch w/ async setup', async () => {
+      const msg = Promise.resolve('hello')
+      const app = createApp({
+        data() {
+          return {
+            msg: '',
+          }
+        },
+        async serverPrefetch() {
+          this.msg = await msg
+        },
+        render() {
+          return h('div', this.msg)
+        },
+        async setup() {},
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello</div>`)
@@ -804,24 +907,24 @@ function testRender(type: string, render: typeof renderToString) {
 
     // #2763
     test('error handling w/ async setup', async () => {
-      const fn = jest.fn()
-      const fn2 = jest.fn()
+      const fn = vi.fn()
+      const fn2 = vi.fn()
 
       const asyncChildren = defineComponent({
         async setup() {
           return Promise.reject('async child error')
         },
-        template: `<div>asyncChildren</div>`
+        template: `<div>asyncChildren</div>`,
       })
       const app = createApp({
         name: 'App',
         components: {
-          asyncChildren
+          asyncChildren,
         },
         template: `<div class="app"><async-children /></div>`,
         errorCaptured(error) {
           fn(error)
-        }
+        },
       })
 
       app.config.errorHandler = error => {
@@ -845,7 +948,7 @@ function testRender(type: string, render: typeof renderToString) {
         setup: () => {
           watchEffect(onInvalidate => onInvalidate(noop))
         },
-        render: noop
+        render: noop,
       })
       expect(await render(app)).toBe('<!---->')
     })
@@ -859,11 +962,11 @@ function testRender(type: string, render: typeof renderToString) {
               A: {
                 ssrRender(_ctx, _push) {
                   _push(`<div>A</div>`)
-                }
+                },
               },
               B: {
-                render: () => h('div', 'B')
-              }
+                render: () => h('div', 'B'),
+              },
             },
             ssrRender(_ctx, _push, _parent) {
               const A: any = resolveComponent('A')
@@ -871,11 +974,11 @@ function testRender(type: string, render: typeof renderToString) {
               ssrRenderVNode(
                 _push,
                 createVNode(resolveDynamicComponent('B'), null, null),
-                _parent
+                _parent,
               )
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<div>A</div><div>B</div>`)
     })
 
@@ -888,12 +991,12 @@ function testRender(type: string, render: typeof renderToString) {
             message.value = await msg
           })
           return {
-            message
+            message,
           }
         },
         render() {
           return h('div', this.message)
-        }
+        },
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello</div>`)
@@ -920,20 +1023,20 @@ function testRender(type: string, render: typeof renderToString) {
           return {
             message,
             message2,
-            message3
+            message3,
           }
         },
         render() {
           return h('div', `${this.message} ${this.message2} ${this.message3}`)
-        }
+        },
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello hi bonjour</div>`)
     })
 
     test('onServerPrefetch are run in parallel', async () => {
-      const first = jest.fn(() => Promise.resolve())
-      const second = jest.fn(() => Promise.resolve())
+      const first = vi.fn(() => Promise.resolve())
+      const second = vi.fn(() => Promise.resolve())
       let checkOther = [false, false]
       let done = [false, false]
       const app = createApp({
@@ -951,7 +1054,7 @@ function testRender(type: string, render: typeof renderToString) {
         },
         render() {
           return h('div', '')
-        }
+        },
       })
       await render(app)
       expect(first).toHaveBeenCalled()
@@ -966,7 +1069,7 @@ function testRender(type: string, render: typeof renderToString) {
       const app = createApp({
         data() {
           return {
-            message: ''
+            message: '',
           }
         },
 
@@ -980,12 +1083,12 @@ function testRender(type: string, render: typeof renderToString) {
             message2.value = await msg2
           })
           return {
-            message2
+            message2,
           }
         },
         render() {
           return h('div', `${this.message} ${this.message2}`)
-        }
+        },
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello hi</div>`)
@@ -996,19 +1099,19 @@ function testRender(type: string, render: typeof renderToString) {
       const app = createApp({
         data() {
           return {
-            msg: ''
+            msg: '',
           }
         },
         mixins: [
           {
             async serverPrefetch() {
               this.msg = await msg
-            }
-          }
+            },
+          },
         ],
         render() {
           return h('div', this.msg)
-        }
+        },
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello</div>`)
@@ -1023,27 +1126,27 @@ function testRender(type: string, render: typeof renderToString) {
           return {
             foo: '',
             bar: '',
-            baz: ''
+            baz: '',
           }
         },
         mixins: [
           {
             async serverPrefetch() {
               this.foo = await foo
-            }
+            },
           },
           {
             async serverPrefetch() {
               this.bar = await bar
-            }
-          }
+            },
+          },
         ],
         async serverPrefetch() {
           this.baz = await baz
         },
         render() {
           return h('div', `${this.foo}${this.bar}${this.baz}`)
-        }
+        },
       })
       const html = await render(app)
       expect(html).toBe(`<div>foobarbaz</div>`)
@@ -1061,7 +1164,7 @@ function testRender(type: string, render: typeof renderToString) {
         },
         render() {
           return h('span')
-        }
+        },
       }
 
       const app = createApp({
@@ -1073,7 +1176,7 @@ function testRender(type: string, render: typeof renderToString) {
         },
         render() {
           return h('div', h(Child))
-        }
+        },
       })
 
       try {
@@ -1083,6 +1186,48 @@ function testRender(type: string, render: typeof renderToString) {
       }
       expect(renderError).toBe(null)
       expect((capturedError as unknown as Error).message).toBe('An error')
+    })
+
+    test('computed reactivity during SSR with onServerPrefetch', async () => {
+      const store = {
+        // initial state could be hydrated
+        state: reactive({ items: null as null | string[] }),
+
+        // pretend to fetch some data from an api
+        async fetchData() {
+          this.state.items = ['hello', 'world']
+        },
+      }
+
+      const getterSpy = vi.fn()
+
+      const App = defineComponent(() => {
+        const msg = computed(() => {
+          getterSpy()
+          return store.state.items?.join(' ')
+        })
+
+        // If msg value is falsy then we are either in ssr context or on the client
+        // and the initial state was not modified/hydrated.
+        // In both cases we need to fetch data.
+        onServerPrefetch(() => store.fetchData())
+
+        // simulate the read from a composable (e.g. filtering a list of results)
+        msg.value
+
+        return () => h('div', null, msg.value)
+      })
+
+      const app = createSSRApp(App)
+
+      // in real world serve this html and append store state for hydration on client
+      const html = await renderToString(app)
+
+      expect(html).toMatch('hello world')
+
+      // should only be called twice since access should be cached
+      // during the render phase
+      expect(getterSpy).toHaveBeenCalledTimes(2)
     })
   })
 }

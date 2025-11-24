@@ -1,17 +1,18 @@
 import {
-  CompilerOptions,
+  type CompilerOptions,
+  type ComponentNode,
+  type ElementNode,
+  ErrorCodes,
+  type ForNode,
+  NodeTypes,
+  type ObjectExpression,
+  type RenderSlotCall,
+  type SimpleExpressionNode,
+  type SlotsExpression,
+  type VNodeCall,
+  generate,
   baseParse as parse,
   transform,
-  generate,
-  ElementNode,
-  NodeTypes,
-  ErrorCodes,
-  ForNode,
-  ComponentNode,
-  VNodeCall,
-  SlotsExpression,
-  ObjectExpression,
-  SimpleExpressionNode
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
@@ -20,17 +21,21 @@ import { transformExpression } from '../../src/transforms/transformExpression'
 import { transformSlotOutlet } from '../../src/transforms/transformSlotOutlet'
 import {
   trackSlotScopes,
-  trackVForSlotScopes
+  trackVForSlotScopes,
 } from '../../src/transforms/vSlot'
 import { CREATE_SLOTS, RENDER_LIST } from '../../src/runtimeHelpers'
-import { createObjectMatcher, genFlagText } from '../testUtils'
+import { createObjectMatcher } from '../testUtils'
 import { PatchFlags } from '@vue/shared'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
+import { transformText } from '../../src/transforms/transformText'
 
-function parseWithSlots(template: string, options: CompilerOptions = {}) {
+function parseWithSlots(
+  template: string,
+  options: CompilerOptions & { transformText?: boolean } = {},
+) {
   const ast = parse(template, {
-    whitespace: options.whitespace
+    whitespace: options.whitespace,
   })
   transform(ast, {
     nodeTransforms: [
@@ -41,13 +46,14 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
         : []),
       transformSlotOutlet,
       transformElement,
-      trackSlotScopes
+      trackSlotScopes,
+      ...(options.transformText ? [transformText] : []),
     ],
     directiveTransforms: {
       on: transformOn,
-      bind: transformBind
+      bind: transformBind,
     },
-    ...options
+    ...options,
   })
   return {
     root: ast,
@@ -55,7 +61,7 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
       ast.children[0].type === NodeTypes.ELEMENT
         ? ((ast.children[0].codegenNode as VNodeCall)
             .children as SlotsExpression)
-        : null
+        : null,
   }
 }
 
@@ -69,25 +75,25 @@ function createSlotMatcher(obj: Record<string, any>, isDynamic = false) {
           key: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             isStatic: !/^\[/.test(key),
-            content: key.replace(/^\[|\]$/g, '')
+            content: key.replace(/^\[|\]$/g, ''),
           },
-          value: obj[key]
+          value: obj[key],
         } as any
       })
       .concat({
         key: { content: `_` },
         value: {
           content: isDynamic ? `2 /* DYNAMIC */` : `1 /* STABLE */`,
-          isStatic: false
-        }
-      })
+          isStatic: false,
+        },
+      }),
   }
 }
 
 describe('compiler: transform component slots', () => {
   test('implicit default slot', () => {
     const { root, slots } = parseWithSlots(`<Comp><div/></Comp>`, {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     expect(slots).toMatchObject(
       createSlotMatcher({
@@ -97,11 +103,11 @@ describe('compiler: transform component slots', () => {
           returns: [
             {
               type: NodeTypes.ELEMENT,
-              tag: `div`
-            }
-          ]
-        }
-      })
+              tag: `div`,
+            },
+          ],
+        },
+      }),
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -109,7 +115,7 @@ describe('compiler: transform component slots', () => {
   test('on-component default slot', () => {
     const { root, slots } = parseWithSlots(
       `<Comp v-slot="{ foo }">{{ foo }}{{ bar }}</Comp>`,
-      { prefixIdentifiers: true }
+      { prefixIdentifiers: true },
     )
     expect(slots).toMatchObject(
       createSlotMatcher({
@@ -117,24 +123,24 @@ describe('compiler: transform component slots', () => {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`{ `, { content: `foo` }, ` }`]
+            children: [`{ `, { content: `foo` }, ` }`],
           },
           returns: [
             {
               type: NodeTypes.INTERPOLATION,
               content: {
-                content: `foo`
-              }
+                content: `foo`,
+              },
             },
             {
               type: NodeTypes.INTERPOLATION,
               content: {
-                content: `_ctx.bar`
-              }
-            }
-          ]
-        }
-      })
+                content: `_ctx.bar`,
+              },
+            },
+          ],
+        },
+      }),
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -142,7 +148,7 @@ describe('compiler: transform component slots', () => {
   test('on component named slot', () => {
     const { root, slots } = parseWithSlots(
       `<Comp v-slot:named="{ foo }">{{ foo }}{{ bar }}</Comp>`,
-      { prefixIdentifiers: true }
+      { prefixIdentifiers: true },
     )
     expect(slots).toMatchObject(
       createSlotMatcher({
@@ -150,24 +156,24 @@ describe('compiler: transform component slots', () => {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`{ `, { content: `foo` }, ` }`]
+            children: [`{ `, { content: `foo` }, ` }`],
           },
           returns: [
             {
               type: NodeTypes.INTERPOLATION,
               content: {
-                content: `foo`
-              }
+                content: `foo`,
+              },
             },
             {
               type: NodeTypes.INTERPOLATION,
               content: {
-                content: `_ctx.bar`
-              }
-            }
-          ]
-        }
-      })
+                content: `_ctx.bar`,
+              },
+            },
+          ],
+        },
+      }),
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -182,7 +188,7 @@ describe('compiler: transform component slots', () => {
           {{ foo }}{{ bar }}
         </template>
       </Comp>`,
-      { prefixIdentifiers: true }
+      { prefixIdentifiers: true },
     )
     expect(slots).toMatchObject(
       createSlotMatcher({
@@ -190,45 +196,45 @@ describe('compiler: transform component slots', () => {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`{ `, { content: `foo` }, ` }`]
+            children: [`{ `, { content: `foo` }, ` }`],
           },
           returns: [
             {
               type: NodeTypes.INTERPOLATION,
               content: {
-                content: `foo`
-              }
+                content: `foo`,
+              },
             },
             {
               type: NodeTypes.INTERPOLATION,
               content: {
-                content: `_ctx.bar`
-              }
-            }
-          ]
+                content: `_ctx.bar`,
+              },
+            },
+          ],
         },
         two: {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`{ `, { content: `bar` }, ` }`]
+            children: [`{ `, { content: `bar` }, ` }`],
           },
           returns: [
             {
               type: NodeTypes.INTERPOLATION,
               content: {
-                content: `_ctx.foo`
-              }
+                content: `_ctx.foo`,
+              },
             },
             {
               type: NodeTypes.INTERPOLATION,
               content: {
-                content: `bar`
-              }
-            }
-          ]
-        }
-      })
+                content: `bar`,
+              },
+            },
+          ],
+        },
+      }),
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -236,7 +242,7 @@ describe('compiler: transform component slots', () => {
   test('on component dynamically named slot', () => {
     const { root, slots } = parseWithSlots(
       `<Comp v-slot:[named]="{ foo }">{{ foo }}{{ bar }}</Comp>`,
-      { prefixIdentifiers: true }
+      { prefixIdentifiers: true },
     )
     expect(slots).toMatchObject(
       createSlotMatcher(
@@ -245,26 +251,26 @@ describe('compiler: transform component slots', () => {
             type: NodeTypes.JS_FUNCTION_EXPRESSION,
             params: {
               type: NodeTypes.COMPOUND_EXPRESSION,
-              children: [`{ `, { content: `foo` }, ` }`]
+              children: [`{ `, { content: `foo` }, ` }`],
             },
             returns: [
               {
                 type: NodeTypes.INTERPOLATION,
                 content: {
-                  content: `foo`
-                }
+                  content: `foo`,
+                },
               },
               {
                 type: NodeTypes.INTERPOLATION,
                 content: {
-                  content: `_ctx.bar`
-                }
-              }
-            ]
-          }
+                  content: `_ctx.bar`,
+                },
+              },
+            ],
+          },
         },
-        true
-      )
+        true,
+      ),
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -273,7 +279,7 @@ describe('compiler: transform component slots', () => {
     const { root, slots } = parseWithSlots(
       `<Comp>
         <template #one>foo</template>bar<span/>
-      </Comp>`
+      </Comp>`,
     )
     expect(slots).toMatchObject(
       createSlotMatcher({
@@ -283,9 +289,9 @@ describe('compiler: transform component slots', () => {
           returns: [
             {
               type: NodeTypes.TEXT,
-              content: `foo`
-            }
-          ]
+              content: `foo`,
+            },
+          ],
         },
         default: {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
@@ -293,15 +299,49 @@ describe('compiler: transform component slots', () => {
           returns: [
             {
               type: NodeTypes.TEXT,
-              content: `bar`
+              content: `bar`,
             },
             {
               type: NodeTypes.ELEMENT,
-              tag: `span`
-            }
-          ]
-        }
-      })
+              tag: `span`,
+            },
+          ],
+        },
+      }),
+    )
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('named slots w/ implicit default slot containing non-breaking space', () => {
+    const { root, slots } = parseWithSlots(
+      `<Comp>
+        \u00a0
+        <template #one>foo</template>
+      </Comp>`,
+    )
+    expect(slots).toMatchObject(
+      createSlotMatcher({
+        one: {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: undefined,
+          returns: [
+            {
+              type: NodeTypes.TEXT,
+              content: `foo`,
+            },
+          ],
+        },
+        default: {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: undefined,
+          returns: [
+            {
+              type: NodeTypes.TEXT,
+              content: ` \u00a0 `,
+            },
+          ],
+        },
+      }),
     )
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -316,7 +356,7 @@ describe('compiler: transform component slots', () => {
           {{ foo }}{{ bar }}
         </template>
       </Comp>`,
-      { prefixIdentifiers: true }
+      { prefixIdentifiers: true },
     )
     expect(slots).toMatchObject(
       createSlotMatcher(
@@ -325,47 +365,47 @@ describe('compiler: transform component slots', () => {
             type: NodeTypes.JS_FUNCTION_EXPRESSION,
             params: {
               type: NodeTypes.COMPOUND_EXPRESSION,
-              children: [`{ `, { content: `foo` }, ` }`]
+              children: [`{ `, { content: `foo` }, ` }`],
             },
             returns: [
               {
                 type: NodeTypes.INTERPOLATION,
                 content: {
-                  content: `foo`
-                }
+                  content: `foo`,
+                },
               },
               {
                 type: NodeTypes.INTERPOLATION,
                 content: {
-                  content: `_ctx.bar`
-                }
-              }
-            ]
+                  content: `_ctx.bar`,
+                },
+              },
+            ],
           },
           '[_ctx.two]': {
             type: NodeTypes.JS_FUNCTION_EXPRESSION,
             params: {
               type: NodeTypes.COMPOUND_EXPRESSION,
-              children: [`{ `, { content: `bar` }, ` }`]
+              children: [`{ `, { content: `bar` }, ` }`],
             },
             returns: [
               {
                 type: NodeTypes.INTERPOLATION,
                 content: {
-                  content: `_ctx.foo`
-                }
+                  content: `_ctx.foo`,
+                },
               },
               {
                 type: NodeTypes.INTERPOLATION,
                 content: {
-                  content: `bar`
-                }
-              }
-            ]
-          }
+                  content: `bar`,
+                },
+              },
+            ],
+          },
         },
-        true
-      )
+        true,
+      ),
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -380,7 +420,7 @@ describe('compiler: transform component slots', () => {
           {{ foo }}{{ bar }}{{ baz }}
         </template>
       </Comp>`,
-      { prefixIdentifiers: true }
+      { prefixIdentifiers: true },
     )
     expect(slots).toMatchObject(
       createSlotMatcher({
@@ -388,7 +428,7 @@ describe('compiler: transform component slots', () => {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`{ `, { content: `foo` }, ` }`]
+            children: [`{ `, { content: `foo` }, ` }`],
           },
           returns: [
             {
@@ -403,63 +443,63 @@ describe('compiler: transform component slots', () => {
                       type: NodeTypes.JS_FUNCTION_EXPRESSION,
                       params: {
                         type: NodeTypes.COMPOUND_EXPRESSION,
-                        children: [`{ `, { content: `bar` }, ` }`]
+                        children: [`{ `, { content: `bar` }, ` }`],
                       },
                       returns: [
                         {
                           type: NodeTypes.INTERPOLATION,
                           content: {
-                            content: `foo`
-                          }
+                            content: `foo`,
+                          },
                         },
                         {
                           type: NodeTypes.INTERPOLATION,
                           content: {
-                            content: `bar`
-                          }
+                            content: `bar`,
+                          },
                         },
                         {
                           type: NodeTypes.INTERPOLATION,
                           content: {
-                            content: `_ctx.baz`
-                          }
-                        }
-                      ]
-                    }
+                            content: `_ctx.baz`,
+                          },
+                        },
+                      ],
+                    },
                   },
-                  true
+                  true,
                 ),
                 // nested slot should be forced dynamic, since scope variables
                 // are not tracked as dependencies of the slot.
-                patchFlag: genFlagText(PatchFlags.DYNAMIC_SLOTS)
-              }
+                patchFlag: PatchFlags.DYNAMIC_SLOTS,
+              },
             },
             // test scope
             {
               type: NodeTypes.TEXT,
-              content: ` `
+              content: ` `,
             },
             {
               type: NodeTypes.INTERPOLATION,
               content: {
-                content: `foo`
-              }
+                content: `foo`,
+              },
             },
             {
               type: NodeTypes.INTERPOLATION,
               content: {
-                content: `_ctx.bar`
-              }
+                content: `_ctx.bar`,
+              },
             },
             {
               type: NodeTypes.INTERPOLATION,
               content: {
-                content: `_ctx.baz`
-              }
-            }
-          ]
-        }
-      })
+                content: `_ctx.baz`,
+              },
+            },
+          ],
+        },
+      }),
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -468,18 +508,19 @@ describe('compiler: transform component slots', () => {
     const { root } = parseWithSlots(
       `<div v-for="i in list">
         <Comp v-slot="bar">foo</Comp>
-      </div>`
+      </div>`,
     )
     const div = ((root.children[0] as ForNode).children[0] as ElementNode)
       .codegenNode as any
     const comp = div.children[0]
-    expect(comp.codegenNode.patchFlag).toBe(
-      genFlagText(PatchFlags.DYNAMIC_SLOTS)
-    )
+    expect(comp.codegenNode.patchFlag).toBe(PatchFlags.DYNAMIC_SLOTS)
   })
 
   test('should only force dynamic slots when actually using scope vars w/ prefixIdentifiers: true', () => {
-    function assertDynamicSlots(template: string, shouldForce: boolean) {
+    function assertDynamicSlots(
+      template: string,
+      expectedPatchFlag?: PatchFlags,
+    ) {
       const { root } = parseWithSlots(template, { prefixIdentifiers: true })
       let flag: any
       if (root.children[0].type === NodeTypes.FOR) {
@@ -492,8 +533,8 @@ describe('compiler: transform component slots', () => {
           .children[0] as ComponentNode
         flag = (innerComp.codegenNode as VNodeCall).patchFlag
       }
-      if (shouldForce) {
-        expect(flag).toBe(genFlagText(PatchFlags.DYNAMIC_SLOTS))
+      if (expectedPatchFlag) {
+        expect(flag).toBe(expectedPatchFlag)
       } else {
         expect(flag).toBeUndefined()
       }
@@ -503,14 +544,13 @@ describe('compiler: transform component slots', () => {
       `<div v-for="i in list">
         <Comp v-slot="bar">foo</Comp>
       </div>`,
-      false
     )
 
     assertDynamicSlots(
       `<div v-for="i in list">
         <Comp v-slot="bar">{{ i }}</Comp>
       </div>`,
-      true
+      PatchFlags.DYNAMIC_SLOTS,
     )
 
     // reference the component's own slot variable should not force dynamic slots
@@ -518,14 +558,13 @@ describe('compiler: transform component slots', () => {
       `<Comp v-slot="foo">
         <Comp v-slot="bar">{{ bar }}</Comp>
       </Comp>`,
-      false
     )
 
     assertDynamicSlots(
       `<Comp v-slot="foo">
         <Comp v-slot="bar">{{ foo }}</Comp>
       </Comp>`,
-      true
+      PatchFlags.DYNAMIC_SLOTS,
     )
 
     // #2564
@@ -533,14 +572,35 @@ describe('compiler: transform component slots', () => {
       `<div v-for="i in list">
         <Comp v-slot="bar"><button @click="fn(i)" /></Comp>
       </div>`,
-      true
+      PatchFlags.DYNAMIC_SLOTS,
     )
 
     assertDynamicSlots(
       `<div v-for="i in list">
         <Comp v-slot="bar"><button @click="fn()" /></Comp>
       </div>`,
-      false
+    )
+
+    // #9380
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp :i="i">foo</Comp>
+      </div>`,
+      PatchFlags.PROPS,
+    )
+
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot="{ value = i }"><button @click="fn()" /></Comp>
+      </div>`,
+      PatchFlags.DYNAMIC_SLOTS,
+    )
+
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot:[i]><button @click="fn()" /></Comp>
+      </div>`,
+      PatchFlags.DYNAMIC_SLOTS,
     )
   })
 
@@ -548,14 +608,14 @@ describe('compiler: transform component slots', () => {
     const { root, slots } = parseWithSlots(
       `<Comp>
         <template #one v-if="ok">hello</template>
-      </Comp>`
+      </Comp>`,
     )
     expect(slots).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _: `[2 /* DYNAMIC */]`
+          _: `[2 /* DYNAMIC */]`,
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -567,20 +627,21 @@ describe('compiler: transform component slots', () => {
                 name: `one`,
                 fn: {
                   type: NodeTypes.JS_FUNCTION_EXPRESSION,
-                  returns: [{ type: NodeTypes.TEXT, content: `hello` }]
-                }
+                  returns: [{ type: NodeTypes.TEXT, content: `hello` }],
+                },
+                key: `0`,
               }),
               alternate: {
                 content: `undefined`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
+                isStatic: false,
+              },
+            },
+          ],
+        },
+      ],
     })
-    expect((root as any).children[0].codegenNode.patchFlag).toMatch(
-      PatchFlags.DYNAMIC_SLOTS + ''
+    expect((root as any).children[0].codegenNode.patchFlag).toBe(
+      PatchFlags.DYNAMIC_SLOTS,
     )
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -590,14 +651,14 @@ describe('compiler: transform component slots', () => {
       `<Comp>
         <template #one="props" v-if="ok">{{ props }}</template>
       </Comp>`,
-      { prefixIdentifiers: true }
+      { prefixIdentifiers: true },
     )
     expect(slots).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _: `[2 /* DYNAMIC */]`
+          _: `[2 /* DYNAMIC */]`,
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -613,22 +674,23 @@ describe('compiler: transform component slots', () => {
                   returns: [
                     {
                       type: NodeTypes.INTERPOLATION,
-                      content: { content: `props` }
-                    }
-                  ]
-                }
+                      content: { content: `props` },
+                    },
+                  ],
+                },
+                key: `0`,
               }),
               alternate: {
                 content: `undefined`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
+                isStatic: false,
+              },
+            },
+          ],
+        },
+      ],
     })
-    expect((root as any).children[0].codegenNode.patchFlag).toMatch(
-      PatchFlags.DYNAMIC_SLOTS + ''
+    expect((root as any).children[0].codegenNode.patchFlag).toBe(
+      PatchFlags.DYNAMIC_SLOTS,
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -639,14 +701,14 @@ describe('compiler: transform component slots', () => {
         <template #one v-if="ok">foo</template>
         <template #two="props" v-else-if="orNot">bar</template>
         <template #one v-else>baz</template>
-      </Comp>`
+      </Comp>`,
     )
     expect(slots).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _: `[2 /* DYNAMIC */]`
+          _: `[2 /* DYNAMIC */]`,
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -659,8 +721,9 @@ describe('compiler: transform component slots', () => {
                 fn: {
                   type: NodeTypes.JS_FUNCTION_EXPRESSION,
                   params: undefined,
-                  returns: [{ type: NodeTypes.TEXT, content: `foo` }]
-                }
+                  returns: [{ type: NodeTypes.TEXT, content: `foo` }],
+                },
+                key: `0`,
               }),
               alternate: {
                 type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
@@ -670,26 +733,29 @@ describe('compiler: transform component slots', () => {
                   fn: {
                     type: NodeTypes.JS_FUNCTION_EXPRESSION,
                     params: { content: `props` },
-                    returns: [{ type: NodeTypes.TEXT, content: `bar` }]
-                  }
+                    returns: [{ type: NodeTypes.TEXT, content: `bar` }],
+                  },
+                  key: `1`,
                 }),
                 alternate: createObjectMatcher({
                   name: `one`,
                   fn: {
                     type: NodeTypes.JS_FUNCTION_EXPRESSION,
                     params: undefined,
-                    returns: [{ type: NodeTypes.TEXT, content: `baz` }]
-                  }
-                })
-              }
-            }
-          ]
-        }
-      ]
+                    returns: [{ type: NodeTypes.TEXT, content: `baz` }],
+                  },
+                  key: `2`,
+                }),
+              },
+            },
+          ],
+        },
+      ],
     })
-    expect((root as any).children[0].codegenNode.patchFlag).toMatch(
-      PatchFlags.DYNAMIC_SLOTS + ''
+    expect((root as any).children[0].codegenNode.patchFlag).toBe(
+      PatchFlags.DYNAMIC_SLOTS,
     )
+    expect((root as any).children[0].children.length).toBe(3)
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -698,14 +764,14 @@ describe('compiler: transform component slots', () => {
       `<Comp>
         <template v-for="name in list" #[name]>{{ name }}</template>
       </Comp>`,
-      { prefixIdentifiers: true }
+      { prefixIdentifiers: true },
     )
     expect(slots).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _: `[2 /* DYNAMIC */]`
+          _: `[2 /* DYNAMIC */]`,
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -725,20 +791,20 @@ describe('compiler: transform component slots', () => {
                       returns: [
                         {
                           type: NodeTypes.INTERPOLATION,
-                          content: { content: `name`, isStatic: false }
-                        }
-                      ]
-                    }
-                  })
-                }
-              ]
-            }
-          ]
-        }
-      ]
+                          content: { content: `name`, isStatic: false },
+                        },
+                      ],
+                    },
+                  }),
+                },
+              ],
+            },
+          ],
+        },
+      ],
     })
-    expect((root as any).children[0].codegenNode.patchFlag).toMatch(
-      PatchFlags.DYNAMIC_SLOTS + ''
+    expect((root as any).children[0].codegenNode.patchFlag).toBe(
+      PatchFlags.DYNAMIC_SLOTS,
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -749,13 +815,13 @@ describe('compiler: transform component slots', () => {
       properties: [
         {
           key: { content: `default` },
-          value: { type: NodeTypes.JS_FUNCTION_EXPRESSION }
+          value: { type: NodeTypes.JS_FUNCTION_EXPRESSION },
         },
         {
           key: { content: `_` },
-          value: { content: `3 /* FORWARDED */` }
-        }
-      ]
+          value: { content: `3 /* FORWARDED */` },
+        },
+      ],
     }
     test('<slot> tag only', () => {
       const { slots } = parseWithSlots(`<Comp><slot/></Comp>`)
@@ -774,7 +840,7 @@ describe('compiler: transform component slots', () => {
 
     test('<slot> tag w/ template', () => {
       const { slots } = parseWithSlots(
-        `<Comp><template #default><slot/></template></Comp>`
+        `<Comp><template #default><slot/></template></Comp>`,
       )
       expect(slots).toMatchObject(toMatch)
     })
@@ -783,98 +849,144 @@ describe('compiler: transform component slots', () => {
       const { slots } = parseWithSlots(`<Comp><Comp><slot/></Comp></Comp>`)
       expect(slots).toMatchObject(toMatch)
     })
+
+    // # fix: #6900
+    test('consistent behavior of @xxx:modelValue and @xxx:model-value', () => {
+      const { root: rootUpper } = parseWithSlots(
+        `<div><slot @foo:modelValue="handler" /></div>`,
+      )
+      const slotNodeUpper = (rootUpper.codegenNode! as VNodeCall)
+        .children as ElementNode[]
+      const propertiesObjUpper = (
+        slotNodeUpper[0].codegenNode! as RenderSlotCall
+      ).arguments[2]
+      expect(propertiesObjUpper).toMatchObject({
+        properties: [
+          {
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'onFoo:modelValue',
+            },
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `handler`,
+              isStatic: false,
+            },
+          },
+        ],
+      })
+
+      const { root } = parseWithSlots(
+        `<div><slot @foo:model-Value="handler" /></div>`,
+      )
+      const slotNode = (root.codegenNode! as VNodeCall)
+        .children as ElementNode[]
+      const propertiesObj = (slotNode[0].codegenNode! as RenderSlotCall)
+        .arguments[2]
+      expect(propertiesObj).toMatchObject({
+        properties: [
+          {
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'onFoo:modelValue',
+            },
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `handler`,
+              isStatic: false,
+            },
+          },
+        ],
+      })
+    })
   })
 
   describe('errors', () => {
     test('error on extraneous children w/ named default slot', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const source = `<Comp><template #default>foo</template>bar</Comp>`
       parseWithSlots(source, { onError })
       const index = source.indexOf('bar')
       expect(onError.mock.calls[0][0]).toMatchObject({
         code: ErrorCodes.X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN,
         loc: {
-          source: `bar`,
           start: {
             offset: index,
             line: 1,
-            column: index + 1
+            column: index + 1,
           },
           end: {
             offset: index + 3,
             line: 1,
-            column: index + 4
-          }
-        }
+            column: index + 4,
+          },
+        },
       })
     })
 
     test('error on duplicated slot names', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const source = `<Comp><template #foo></template><template #foo></template></Comp>`
       parseWithSlots(source, { onError })
       const index = source.lastIndexOf('#foo')
       expect(onError.mock.calls[0][0]).toMatchObject({
         code: ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES,
         loc: {
-          source: `#foo`,
           start: {
             offset: index,
             line: 1,
-            column: index + 1
+            column: index + 1,
           },
           end: {
             offset: index + 4,
             line: 1,
-            column: index + 5
-          }
-        }
+            column: index + 5,
+          },
+        },
       })
     })
 
     test('error on invalid mixed slot usage', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const source = `<Comp v-slot="foo"><template #foo></template></Comp>`
       parseWithSlots(source, { onError })
       const index = source.lastIndexOf('#foo')
       expect(onError.mock.calls[0][0]).toMatchObject({
         code: ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE,
         loc: {
-          source: `#foo`,
           start: {
             offset: index,
             line: 1,
-            column: index + 1
+            column: index + 1,
           },
           end: {
             offset: index + 4,
             line: 1,
-            column: index + 5
-          }
-        }
+            column: index + 5,
+          },
+        },
       })
     })
 
     test('error on v-slot usage on plain elements', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const source = `<div v-slot/>`
       parseWithSlots(source, { onError })
       const index = source.indexOf('v-slot')
       expect(onError.mock.calls[0][0]).toMatchObject({
         code: ErrorCodes.X_V_SLOT_MISPLACED,
         loc: {
-          source: `v-slot`,
           start: {
             offset: index,
             line: 1,
-            column: index + 1
+            column: index + 1,
           },
           end: {
             offset: index + 6,
             line: 1,
-            column: index + 7
-          }
-        }
+            column: index + 7,
+          },
+        },
       })
     })
   })
@@ -888,11 +1000,11 @@ describe('compiler: transform component slots', () => {
       </Comp>
       `
       const { root } = parseWithSlots(source, {
-        whitespace: 'preserve'
+        whitespace: 'preserve',
       })
 
       expect(
-        `Extraneous children found when component already has explicitly named default slot.`
+        `Extraneous children found when component already has explicitly named default slot.`,
       ).not.toHaveBeenWarned()
       expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })
@@ -905,11 +1017,11 @@ describe('compiler: transform component slots', () => {
       </Comp>
       `
       const { root } = parseWithSlots(source, {
-        whitespace: 'preserve'
+        whitespace: 'preserve',
       })
 
       expect(
-        `Extraneous children found when component already has explicitly named default slot.`
+        `Extraneous children found when component already has explicitly named default slot.`,
       ).not.toHaveBeenWarned()
       expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })
@@ -922,7 +1034,7 @@ describe('compiler: transform component slots', () => {
       </Comp>
       `
       const { root } = parseWithSlots(source, {
-        whitespace: 'preserve'
+        whitespace: 'preserve',
       })
 
       // slots is vnodeCall's children as an ObjectExpression
@@ -932,8 +1044,61 @@ describe('compiler: transform component slots', () => {
       // should be: header, footer, _ (no default)
       expect(slots.length).toBe(3)
       expect(
-        slots.some(p => (p.key as SimpleExpressionNode).content === 'default')
+        slots.some(p => (p.key as SimpleExpressionNode).content === 'default'),
       ).toBe(false)
+
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('implicit default slot with non-breaking space', () => {
+      const source = `
+      <Comp>
+        &nbsp;
+        <template #header> Header </template>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      const slots = (root as any).children[0].codegenNode.children
+        .properties as ObjectExpression['properties']
+
+      expect(
+        slots.some(p => (p.key as SimpleExpressionNode).content === 'default'),
+      ).toBe(true)
+
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('named slot with v-if + v-else', () => {
+      const source = `
+        <Comp>
+          <template #one v-if="ok">foo</template>
+          <template #two v-else>baz</template>
+        </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('named slot with v-if + v-else and comments', () => {
+      const source = `
+        <Comp>
+          <template #one v-if="ok">foo</template>
+          <!-- start -->
+
+          <!-- end -->
+          <template #two v-else>baz</template>
+        </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        transformText: true,
+        whitespace: 'preserve',
+      })
 
       expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })

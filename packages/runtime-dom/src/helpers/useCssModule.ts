@@ -1,8 +1,7 @@
-import { warn, getCurrentInstance } from '@vue/runtime-core'
+import { getCurrentInstance, warn } from '@vue/runtime-core'
 import { EMPTY_OBJ } from '@vue/shared'
 
 export function useCssModule(name = '$style'): Record<string, string> {
-  /* istanbul ignore else */
   if (!__GLOBAL__) {
     const instance = getCurrentInstance()!
     if (!instance) {
@@ -22,9 +21,11 @@ export function useCssModule(name = '$style'): Record<string, string> {
     }
     return mod as Record<string, string>
   } else {
+    /* v8 ignore start */
     if (__DEV__) {
       warn(`useCssModule() is not supported in the global build.`)
     }
     return EMPTY_OBJ
+    /* v8 ignore stop */
   }
 }

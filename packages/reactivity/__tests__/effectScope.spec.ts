@@ -1,33 +1,42 @@
 import { nextTick, watch, watchEffect } from '@vue/runtime-core'
 import {
-  reactive,
-  effect,
+  type ComputedRef,
   EffectScope,
-  onScopeDispose,
   computed,
+  effect,
+  effectScope,
+  getCurrentScope,
+  onScopeDispose,
+  reactive,
   ref,
-  ComputedRef,
-  getCurrentScope
 } from '../src'
 
 describe('reactivity/effect/scope', () => {
   it('should run', () => {
-    const fnSpy = jest.fn(() => {})
-    new EffectScope().run(fnSpy)
+    const fnSpy = vi.fn(() => {})
+    effectScope().run(fnSpy)
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
 
   it('should accept zero argument', () => {
-    const scope = new EffectScope()
+    const scope = effectScope()
     expect(scope.effects.length).toBe(0)
   })
 
   it('should return run value', () => {
-    expect(new EffectScope().run(() => 1)).toBe(1)
+    expect(effectScope().run(() => 1)).toBe(1)
+  })
+
+  it('should work w/ active property', () => {
+    const scope = effectScope()
+    scope.run(() => 1)
+    expect(scope.active).toBe(true)
+    scope.stop()
+    expect(scope.active).toBe(false)
   })
 
   it('should collect the effects', () => {
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       let dummy
       const counter = reactive({ num: 0 })
@@ -45,7 +54,7 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       effect(() => (dummy = counter.num))
       effect(() => (doubled = counter.num * 2))
@@ -69,11 +78,11 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       effect(() => (dummy = counter.num))
       // nested scope
-      new EffectScope().run(() => {
+      effectScope().run(() => {
         effect(() => (doubled = counter.num * 2))
       })
     })
@@ -99,11 +108,11 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       effect(() => (dummy = counter.num))
       // nested scope
-      new EffectScope(true).run(() => {
+      effectScope(true).run(() => {
         effect(() => (doubled = counter.num * 2))
       })
     })
@@ -128,7 +137,7 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       effect(() => (dummy = counter.num))
     })
@@ -152,7 +161,7 @@ describe('reactivity/effect/scope', () => {
     let dummy, doubled
     const counter = reactive({ num: 0 })
 
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       effect(() => (dummy = counter.num))
     })
@@ -167,7 +176,7 @@ describe('reactivity/effect/scope', () => {
 
     expect('[Vue warn] cannot run an inactive effect scope.').toHaveBeenWarned()
 
-    expect(scope.effects.length).toBe(1)
+    expect(scope.effects.length).toBe(0)
 
     counter.num = 7
     expect(dummy).toBe(0)
@@ -177,7 +186,7 @@ describe('reactivity/effect/scope', () => {
   it('should fire onScopeDispose hook', () => {
     let dummy = 0
 
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       onScopeDispose(() => (dummy += 1))
       onScopeDispose(() => (dummy += 2))
@@ -194,8 +203,8 @@ describe('reactivity/effect/scope', () => {
   })
 
   it('should warn onScopeDispose() is called when there is no active effect scope', () => {
-    const spy = jest.fn()
-    const scope = new EffectScope()
+    const spy = vi.fn()
+    const scope = effectScope()
     scope.run(() => {
       onScopeDispose(spy)
     })
@@ -205,7 +214,7 @@ describe('reactivity/effect/scope', () => {
     onScopeDispose(spy)
 
     expect(
-      '[Vue warn] onScopeDispose() is called when there is no active effect scope to be associated with.'
+      '[Vue warn] onScopeDispose() is called when there is no active effect scope to be associated with.',
     ).toHaveBeenWarned()
 
     scope.stop()
@@ -213,8 +222,8 @@ describe('reactivity/effect/scope', () => {
   })
 
   it('should dereference child scope from parent scope after stopping child scope (no memleaks)', () => {
-    const parent = new EffectScope()
-    const child = parent.run(() => new EffectScope())!
+    const parent = effectScope()
+    const child = parent.run(() => effectScope())!
     expect(parent.scopes!.includes(child)).toBe(true)
     child.stop()
     expect(parent.scopes!.includes(child)).toBe(false)
@@ -223,12 +232,12 @@ describe('reactivity/effect/scope', () => {
   it('test with higher level APIs', async () => {
     const r = ref(1)
 
-    const computedSpy = jest.fn()
-    const watchSpy = jest.fn()
-    const watchEffectSpy = jest.fn()
+    const computedSpy = vi.fn()
+    const watchSpy = vi.fn()
+    const watchEffectSpy = vi.fn()
 
     let c: ComputedRef
-    const scope = new EffectScope()
+    const scope = effectScope()
     scope.run(() => {
       c = computed(() => {
         computedSpy()
@@ -239,16 +248,15 @@ describe('reactivity/effect/scope', () => {
       watchEffect(() => {
         watchEffectSpy()
         r.value
+        c.value
       })
     })
 
-    c!.value // computed is lazy so trigger collection
     expect(computedSpy).toHaveBeenCalledTimes(1)
     expect(watchSpy).toHaveBeenCalledTimes(0)
     expect(watchEffectSpy).toHaveBeenCalledTimes(1)
 
     r.value++
-    c!.value
     await nextTick()
     expect(computedSpy).toHaveBeenCalledTimes(2)
     expect(watchSpy).toHaveBeenCalledTimes(1)
@@ -257,7 +265,6 @@ describe('reactivity/effect/scope', () => {
     scope.stop()
 
     r.value++
-    c!.value
     await nextTick()
     // should not trigger anymore
     expect(computedSpy).toHaveBeenCalledTimes(2)
@@ -266,15 +273,93 @@ describe('reactivity/effect/scope', () => {
   })
 
   it('getCurrentScope() stays valid when running a detached nested EffectScope', () => {
-    const parentScope = new EffectScope()
+    const parentScope = effectScope()
 
     parentScope.run(() => {
       const currentScope = getCurrentScope()
       expect(currentScope).toBeDefined()
-      const detachedScope = new EffectScope(true)
+      const detachedScope = effectScope(true)
       detachedScope.run(() => {})
 
       expect(getCurrentScope()).toBe(currentScope)
     })
+  })
+
+  it('calling .off() of a detached scope inside an active scope should not break currentScope', () => {
+    const parentScope = effectScope()
+
+    parentScope.run(() => {
+      const childScope = effectScope(true)
+      childScope.on()
+      childScope.off()
+      expect(getCurrentScope()).toBe(parentScope)
+    })
+  })
+
+  it('should pause/resume EffectScope', async () => {
+    const counter = reactive({ num: 0 })
+    const fnSpy = vi.fn(() => counter.num)
+    const scope = new EffectScope()
+    scope.run(() => {
+      effect(fnSpy)
+    })
+
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+
+    counter.num++
+    await nextTick()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+
+    scope.pause()
+    counter.num++
+    await nextTick()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+
+    counter.num++
+    await nextTick()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+
+    scope.resume()
+    expect(fnSpy).toHaveBeenCalledTimes(3)
+  })
+
+  test('removing a watcher while stopping its effectScope', async () => {
+    const count = ref(0)
+    const scope = effectScope()
+    let watcherCalls = 0
+    let cleanupCalls = 0
+
+    scope.run(() => {
+      const stop1 = watch(count, () => {
+        watcherCalls++
+      })
+      watch(count, (val, old, onCleanup) => {
+        watcherCalls++
+        onCleanup(() => {
+          cleanupCalls++
+          stop1()
+        })
+      })
+      watch(count, () => {
+        watcherCalls++
+      })
+    })
+
+    expect(watcherCalls).toBe(0)
+    expect(cleanupCalls).toBe(0)
+
+    count.value++
+    await nextTick()
+    expect(watcherCalls).toBe(3)
+    expect(cleanupCalls).toBe(0)
+
+    scope.stop()
+    count.value++
+    await nextTick()
+    expect(watcherCalls).toBe(3)
+    expect(cleanupCalls).toBe(1)
+
+    expect(scope.effects.length).toBe(0)
+    expect(scope.cleanups.length).toBe(0)
   })
 })

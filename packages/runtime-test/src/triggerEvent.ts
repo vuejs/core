@@ -1,11 +1,11 @@
 import { isArray } from '@vue/shared'
-import { TestElement } from './nodeOps'
+import type { TestElement } from './nodeOps'
 
 export function triggerEvent(
   el: TestElement,
   event: string,
-  payload: any[] = []
-) {
+  payload: any[] = [],
+): void {
   const { eventListeners } = el
   if (eventListeners) {
     const listener = eventListeners[event]

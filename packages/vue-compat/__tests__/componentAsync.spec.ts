@@ -2,14 +2,14 @@ import Vue from '@vue/compat'
 import {
   DeprecationTypes,
   deprecationData,
-  toggleDeprecationWarning
+  toggleDeprecationWarning,
 } from '../../runtime-core/src/compat/compatConfig'
 
 beforeEach(() => {
   toggleDeprecationWarning(true)
   Vue.configureCompat({
     MODE: 2,
-    GLOBAL_MOUNT: 'suppress-warning'
+    GLOBAL_MOUNT: 'suppress-warning',
   })
 })
 
@@ -28,8 +28,10 @@ describe('COMPONENT_ASYNC', () => {
     }
     const vm = new Vue({
       template: `<div><comp/></div>`,
-      components: { comp }
+      components: { comp },
     }).$mount()
+
+    expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.innerHTML).toBe(`<!---->`)
 
     resolve({ template: 'foo' })
@@ -38,8 +40,8 @@ describe('COMPONENT_ASYNC', () => {
 
     expect(
       (deprecationData[DeprecationTypes.COMPONENT_ASYNC].message as Function)(
-        comp
-      )
+        comp,
+      ),
     ).toHaveBeenWarned()
   })
 
@@ -47,36 +49,39 @@ describe('COMPONENT_ASYNC', () => {
     const comp = () => Promise.resolve({ template: 'foo' })
     const vm = new Vue({
       template: `<div><comp/></div>`,
-      components: { comp }
+      components: { comp },
     }).$mount()
+    expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.innerHTML).toBe(`<!---->`)
     await timeout(0)
     expect(vm.$el.innerHTML).toBe(`foo`)
 
     expect(
       (deprecationData[DeprecationTypes.COMPONENT_ASYNC].message as Function)(
-        comp
-      )
+        comp,
+      ),
     ).toHaveBeenWarned()
   })
 
   test('object syntax', async () => {
     const comp = () => ({
-      component: Promise.resolve({ template: 'foo' })
+      component: Promise.resolve({ template: 'foo' }),
     })
 
     const vm = new Vue({
       template: `<div><comp/></div>`,
-      components: { comp }
+      components: { comp },
     }).$mount()
+
+    expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.innerHTML).toBe(`<!---->`)
     await timeout(0)
     expect(vm.$el.innerHTML).toBe(`foo`)
 
     expect(
       (deprecationData[DeprecationTypes.COMPONENT_ASYNC].message as Function)(
-        comp
-      )
+        comp,
+      ),
     ).toHaveBeenWarned()
   })
 })

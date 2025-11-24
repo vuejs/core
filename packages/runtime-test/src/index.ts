@@ -1,23 +1,23 @@
 import {
+  type CreateAppFunction,
+  type RootRenderFunction,
+  type VNode,
   createRenderer,
-  VNode,
-  RootRenderFunction,
-  CreateAppFunction
 } from '@vue/runtime-core'
-import { nodeOps, TestElement } from './nodeOps'
+import { type TestElement, nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
 import { serializeInner } from './serialize'
 import { extend } from '@vue/shared'
 
 const { render: baseRender, createApp: baseCreateApp } = createRenderer(
-  extend({ patchProp }, nodeOps)
+  extend({ patchProp }, nodeOps),
 )
 
 export const render = baseRender as RootRenderFunction<TestElement>
 export const createApp = baseCreateApp as CreateAppFunction<TestElement>
 
 // convenience for one-off render validations
-export function renderToString(vnode: VNode) {
+export function renderToString(vnode: VNode): string {
   const root = nodeOps.createElement('div')
   render(vnode, root)
   return serializeInner(root)

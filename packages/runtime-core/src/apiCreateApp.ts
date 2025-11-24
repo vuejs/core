@@ -1,46 +1,97 @@
 import {
-  ConcreteComponent,
-  Data,
+  type Component,
+  type ComponentInternalInstance,
+  type ConcreteComponent,
+  type Data,
+  getComponentPublicInstance,
   validateComponentName,
-  Component,
-  ComponentInternalInstance,
-  getExposeProxy
 } from './component'
-import {
+import type {
   ComponentOptions,
   MergedComponentOptions,
-  RuntimeCompilerOptions
+  RuntimeCompilerOptions,
 } from './componentOptions'
-import { ComponentPublicInstance } from './componentPublicInstance'
-import { Directive, validateDirectiveName } from './directives'
-import { RootRenderFunction } from './renderer'
-import { InjectionKey } from './apiInject'
+import type {
+  ComponentCustomProperties,
+  ComponentPublicInstance,
+} from './componentPublicInstance'
+import { type Directive, validateDirectiveName } from './directives'
+import type { ElementNamespace, RootRenderFunction } from './renderer'
+import type { InjectionKey } from './apiInject'
 import { warn } from './warning'
-import { createVNode, cloneVNode, VNode } from './vnode'
-import { RootHydrateFunction } from './hydration'
+import { type VNode, cloneVNode, createVNode } from './vnode'
+import type { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { isFunction, NO, isObject } from '@vue/shared'
+import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
-import { NormalizedPropsOptions } from './componentProps'
-import { ObjectEmitsOptions } from './componentEmits'
+import type { NormalizedPropsOptions } from './componentProps'
+import type { ObjectEmitsOptions } from './componentEmits'
+import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
+import type { DefineComponent } from './apiDefineComponent'
 
 export interface App<HostElement = any> {
   version: string
   config: AppConfig
-  use(plugin: Plugin, ...options: any[]): this
+
+  use<Options extends unknown[]>(
+    plugin: Plugin<Options>,
+    ...options: NoInfer<Options>
+  ): this
+  use<Options>(plugin: Plugin<Options>, options: NoInfer<Options>): this
+
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
-  component(name: string, component: Component): this
-  directive(name: string): Directive | undefined
-  directive(name: string, directive: Directive): this
+  component<T extends Component | DefineComponent>(
+    name: string,
+    component: T,
+  ): this
+  directive<
+    HostElement = any,
+    Value = any,
+    Modifiers extends string = string,
+    Arg = any,
+  >(
+    name: string,
+  ): Directive<HostElement, Value, Modifiers, Arg> | undefined
+  directive<
+    HostElement = any,
+    Value = any,
+    Modifiers extends string = string,
+    Arg = any,
+  >(
+    name: string,
+    directive: Directive<HostElement, Value, Modifiers, Arg>,
+  ): this
   mount(
     rootContainer: HostElement | string,
+    /**
+     * @internal
+     */
     isHydrate?: boolean,
-    isSVG?: boolean
+    /**
+     * @internal
+     */
+    namespace?: boolean | ElementNamespace,
+    /**
+     * @internal
+     */
+    vnode?: VNode,
   ): ComponentPublicInstance
   unmount(): void
-  provide<T>(key: InjectionKey<T> | string, value: T): this
+  onUnmount(cb: () => void): void
+  provide<T, K = InjectionKey<T> | string | number>(
+    key: K,
+    value: K extends InjectionKey<infer V> ? V : T,
+  ): this
+
+  /**
+   * Runs a function with the app as active instance. This allows using of `inject()` within the function to get access
+   * to variables provided via `app.provide()`.
+   *
+   * @param fn - function to run with the app as active instance
+   */
+  runWithContext<T>(fn: () => T): T
 
   // internal, but we need to expose these for the server-renderer and devtools
   _uid: number
@@ -49,6 +100,11 @@ export interface App<HostElement = any> {
   _container: HostElement | null
   _context: AppContext
   _instance: ComponentInternalInstance | null
+
+  /**
+   * @internal custom element vnode
+   */
+  _ceVNode?: VNode
 
   /**
    * v2 compat only
@@ -66,20 +122,20 @@ export type OptionMergeFunction = (to: unknown, from: unknown) => any
 
 export interface AppConfig {
   // @private
-  readonly isNativeTag?: (tag: string) => boolean
+  readonly isNativeTag: (tag: string) => boolean
 
   performance: boolean
   optionMergeStrategies: Record<string, OptionMergeFunction>
-  globalProperties: Record<string, any>
+  globalProperties: ComponentCustomProperties & Record<string, any>
   errorHandler?: (
     err: unknown,
     instance: ComponentPublicInstance | null,
-    info: string
+    info: string,
   ) => void
   warnHandler?: (
     msg: string,
     instance: ComponentPublicInstance | null,
-    trace: string
+    trace: string,
   ) => void
 
   /**
@@ -94,10 +150,22 @@ export interface AppConfig {
   isCustomElement?: (tag: string) => boolean
 
   /**
-   * Temporary config for opt-in to unwrap injected refs.
-   * TODO deprecate in 3.3
+   * TODO document for 3.5
+   * Enable warnings for computed getters that recursively trigger itself.
    */
-  unwrapInjectedRef?: boolean
+  warnRecursiveComputed?: boolean
+
+  /**
+   * Whether to throw unhandled errors in production.
+   * Default is `false` to avoid crashing on any error (and only logs it)
+   * But in some cases, e.g. SSR, throwing might be more desirable.
+   */
+  throwUnhandledErrorInProduction?: boolean
+
+  /**
+   * Prefix for all useId() calls within this app
+   */
+  idPrefix?: string
 }
 
 export interface AppContext {
@@ -137,13 +205,21 @@ export interface AppContext {
   filters?: Record<string, Function>
 }
 
-type PluginInstallFunction = (app: App, ...options: any[]) => any
+type PluginInstallFunction<Options = any[]> = Options extends unknown[]
+  ? (app: App, ...options: Options) => any
+  : (app: App, options: Options) => any
 
-export type Plugin =
-  | (PluginInstallFunction & { install?: PluginInstallFunction })
-  | {
-      install: PluginInstallFunction
-    }
+export type ObjectPlugin<Options = any[]> = {
+  install: PluginInstallFunction<Options>
+}
+export type FunctionPlugin<Options = any[]> = PluginInstallFunction<Options> &
+  Partial<ObjectPlugin<Options>>
+
+export type Plugin<
+  Options = any[],
+  // TODO: in next major Options extends unknown[] and remove P
+  P extends unknown[] = Options extends unknown[] ? Options : [Options],
+> = FunctionPlugin<P> | ObjectPlugin<P>
 
 export function createAppContext(): AppContext {
   return {
@@ -155,7 +231,7 @@ export function createAppContext(): AppContext {
       optionMergeStrategies: {},
       errorHandler: undefined,
       warnHandler: undefined,
-      compilerOptions: {}
+      compilerOptions: {},
     },
     mixins: [],
     components: {},
@@ -163,24 +239,24 @@ export function createAppContext(): AppContext {
     provides: Object.create(null),
     optionsCache: new WeakMap(),
     propsCache: new WeakMap(),
-    emitsCache: new WeakMap()
+    emitsCache: new WeakMap(),
   }
 }
 
 export type CreateAppFunction<HostElement> = (
   rootComponent: Component,
-  rootProps?: Data | null
+  rootProps?: Data | null,
 ) => App<HostElement>
 
 let uid = 0
 
 export function createAppAPI<HostElement>(
-  render: RootRenderFunction,
-  hydrate?: RootHydrateFunction
+  render: RootRenderFunction<HostElement>,
+  hydrate?: RootHydrateFunction,
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
     if (!isFunction(rootComponent)) {
-      rootComponent = { ...rootComponent }
+      rootComponent = extend({}, rootComponent)
     }
 
     if (rootProps != null && !isObject(rootProps)) {
@@ -189,7 +265,8 @@ export function createAppAPI<HostElement>(
     }
 
     const context = createAppContext()
-    const installedPlugins = new Set()
+    const installedPlugins = new WeakSet()
+    const pluginCleanupFns: Array<() => any> = []
 
     let isMounted = false
 
@@ -210,7 +287,7 @@ export function createAppAPI<HostElement>(
       set config(v) {
         if (__DEV__) {
           warn(
-            `app.config cannot be replaced. Modify individual options instead.`
+            `app.config cannot be replaced. Modify individual options instead.`,
           )
         }
       },
@@ -227,7 +304,7 @@ export function createAppAPI<HostElement>(
         } else if (__DEV__) {
           warn(
             `A plugin must either be a function or an object with an "install" ` +
-              `function.`
+              `function.`,
           )
         }
         return app
@@ -240,7 +317,7 @@ export function createAppAPI<HostElement>(
           } else if (__DEV__) {
             warn(
               'Mixin has already been applied to target app' +
-                (mixin.name ? `: ${mixin.name}` : '')
+                (mixin.name ? `: ${mixin.name}` : ''),
             )
           }
         } else if (__DEV__) {
@@ -281,7 +358,7 @@ export function createAppAPI<HostElement>(
       mount(
         rootContainer: HostElement,
         isHydrate?: boolean,
-        isSVG?: boolean
+        namespace?: boolean | ElementNamespace,
       ): any {
         if (!isMounted) {
           // #5571
@@ -289,28 +366,36 @@ export function createAppAPI<HostElement>(
             warn(
               `There is already an app instance mounted on the host container.\n` +
                 ` If you want to mount another app on the same host container,` +
-                ` you need to unmount the previous app by calling \`app.unmount()\` first.`
+                ` you need to unmount the previous app by calling \`app.unmount()\` first.`,
             )
           }
-          const vnode = createVNode(
-            rootComponent as ConcreteComponent,
-            rootProps
-          )
+          const vnode = app._ceVNode || createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
 
+          if (namespace === true) {
+            namespace = 'svg'
+          } else if (namespace === false) {
+            namespace = undefined
+          }
+
           // HMR root reload
           if (__DEV__) {
             context.reload = () => {
-              render(cloneVNode(vnode), rootContainer, isSVG)
+              const cloned = cloneVNode(vnode)
+              // avoid hydration for hmr updating
+              cloned.el = null
+              // casting to ElementNamespace because TS doesn't guarantee type narrowing
+              // over function boundaries
+              render(cloned, rootContainer, namespace as ElementNamespace)
             }
           }
 
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
-            render(vnode, rootContainer, isSVG)
+            render(vnode, rootContainer, namespace)
           }
           isMounted = true
           app._container = rootContainer
@@ -322,19 +407,34 @@ export function createAppAPI<HostElement>(
             devtoolsInitApp(app, version)
           }
 
-          return getExposeProxy(vnode.component!) || vnode.component!.proxy
+          return getComponentPublicInstance(vnode.component!)
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +
               `If you want to remount the same app, move your app creation logic ` +
               `into a factory function and create fresh app instances for each ` +
-              `mount - e.g. \`const createMyApp = () => createApp(App)\``
+              `mount - e.g. \`const createMyApp = () => createApp(App)\``,
           )
         }
       },
 
+      onUnmount(cleanupFn: () => void) {
+        if (__DEV__ && typeof cleanupFn !== 'function') {
+          warn(
+            `Expected function as first argument to app.onUnmount(), ` +
+              `but got ${typeof cleanupFn}`,
+          )
+        }
+        pluginCleanupFns.push(cleanupFn)
+      },
+
       unmount() {
         if (isMounted) {
+          callWithAsyncErrorHandling(
+            pluginCleanupFns,
+            app._instance,
+            ErrorCodes.APP_UNMOUNT_CLEANUP,
+          )
           render(null, app._container)
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
@@ -348,16 +448,34 @@ export function createAppAPI<HostElement>(
 
       provide(key, value) {
         if (__DEV__ && (key as string | symbol) in context.provides) {
-          warn(
-            `App already provides property with key "${String(key)}". ` +
-              `It will be overwritten with the new value.`
-          )
+          if (hasOwn(context.provides, key as string | symbol)) {
+            warn(
+              `App already provides property with key "${String(key)}". ` +
+                `It will be overwritten with the new value.`,
+            )
+          } else {
+            // #13212, context.provides can inherit the provides object from parent on custom elements
+            warn(
+              `App already provides property with key "${String(key)}" inherited from its parent element. ` +
+                `It will be overwritten with the new value.`,
+            )
+          }
         }
 
         context.provides[key as string | symbol] = value
 
         return app
-      }
+      },
+
+      runWithContext(fn) {
+        const lastApp = currentApp
+        currentApp = app
+        try {
+          return fn()
+        } finally {
+          currentApp = lastApp
+        }
+      },
     })
 
     if (__COMPAT__) {
@@ -367,3 +485,9 @@ export function createAppAPI<HostElement>(
     return app
   }
 }
+
+/**
+ * @internal Used to identify the current app when using `inject()` within
+ * `app.runWithContext()`.
+ */
+export let currentApp: App<unknown> | null = null

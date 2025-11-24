@@ -1,4 +1,4 @@
-import { render, h, nodeOps, reactive, isReactive } from '@vue/runtime-test'
+import { h, isReactive, nodeOps, reactive, render } from '@vue/runtime-test'
 
 describe('misc', () => {
   test('component public instance should not be observable', () => {
@@ -7,7 +7,7 @@ describe('misc', () => {
       render() {},
       mounted() {
         instance = this
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(instance).toBeDefined()

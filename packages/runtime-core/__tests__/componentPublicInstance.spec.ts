@@ -1,12 +1,16 @@
 import {
-  h,
-  render,
-  getCurrentInstance,
-  nodeOps,
   createApp,
-  shallowReadonly
+  defineComponent,
+  getCurrentInstance,
+  h,
+  nodeOps,
+  render,
+  shallowReadonly,
 } from '@vue/runtime-test'
-import { ComponentInternalInstance, ComponentOptions } from '../src/component'
+import type {
+  ComponentInternalInstance,
+  ComponentOptions,
+} from '../src/component'
 
 describe('component: proxy', () => {
   test('data', () => {
@@ -15,7 +19,7 @@ describe('component: proxy', () => {
     const Comp = {
       data() {
         return {
-          foo: 1
+          foo: 1,
         }
       },
       mounted() {
@@ -24,7 +28,7 @@ describe('component: proxy', () => {
       },
       render() {
         return null
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(instanceProxy.foo).toBe(1)
@@ -38,7 +42,7 @@ describe('component: proxy', () => {
     const Comp = {
       setup() {
         return {
-          foo: 1
+          foo: 1,
         }
       },
       mounted() {
@@ -47,7 +51,7 @@ describe('component: proxy', () => {
       },
       render() {
         return null
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(instanceProxy.foo).toBe(1)
@@ -63,7 +67,7 @@ describe('component: proxy', () => {
       },
       mounted() {
         instanceProxy = this
-      }
+      },
     }
     render(h(Comp, { count: 1 }), nodeOps.createElement('div'))
     expect('count' in instanceProxy).toBe(false)
@@ -79,7 +83,7 @@ describe('component: proxy', () => {
       mounted() {
         instance = getCurrentInstance()!
         instanceProxy = this
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(instanceProxy.$data).toBe(instance!.data)
@@ -88,7 +92,7 @@ describe('component: proxy', () => {
     expect(instanceProxy.$slots).toBe(shallowReadonly(instance!.slots))
     expect(instanceProxy.$refs).toBe(shallowReadonly(instance!.refs))
     expect(instanceProxy.$parent).toBe(
-      instance!.parent && instance!.parent.proxy
+      instance!.parent && instance!.parent.proxy,
     )
     expect(instanceProxy.$root).toBe(instance!.root.proxy)
     expect(instanceProxy.$emit).toBe(instance!.emit)
@@ -113,7 +117,7 @@ describe('component: proxy', () => {
       mounted() {
         instance = getCurrentInstance()!
         instanceProxy = this
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     instanceProxy.foo = 1
@@ -136,7 +140,7 @@ describe('component: proxy', () => {
       mounted() {
         instance = getCurrentInstance()!
         instanceProxy = this
-      }
+      },
     }
 
     const app = createApp(Comp)
@@ -158,25 +162,39 @@ describe('component: proxy', () => {
     const Comp = {
       render() {},
       props: {
-        msg: String
+        msg: String,
       },
       data() {
         return {
-          foo: 0
+          foo: 0,
+          $foo: 0,
         }
+      },
+      computed: {
+        cmp: () => {
+          throw new Error('value of cmp should not be accessed')
+        },
+        $cmp: () => {
+          throw new Error('value of $cmp should not be read')
+        },
       },
       setup() {
         return {
-          bar: 1
+          bar: 1,
         }
+      },
+      __cssModules: {
+        $style: {},
+        cssStyles: {},
       },
       mounted() {
         instanceProxy = this
-      }
+      },
     }
 
     const app = createApp(Comp, { msg: 'hello' })
     app.config.globalProperties.global = 1
+    app.config.globalProperties.$global = 1
 
     app.mount(nodeOps.createElement('div'))
 
@@ -184,12 +202,20 @@ describe('component: proxy', () => {
     expect('msg' in instanceProxy).toBe(true)
     // data
     expect('foo' in instanceProxy).toBe(true)
-    // ctx
+    expect('$foo' in instanceProxy).toBe(false)
+    // setupState
     expect('bar' in instanceProxy).toBe(true)
+    // ctx
+    expect('cmp' in instanceProxy).toBe(true)
+    expect('$cmp' in instanceProxy).toBe(true)
     // public properties
     expect('$el' in instanceProxy).toBe(true)
+    // CSS modules
+    expect('$style' in instanceProxy).toBe(true)
+    expect('cssStyles' in instanceProxy).toBe(true)
     // global properties
     expect('global' in instanceProxy).toBe(true)
+    expect('$global' in instanceProxy).toBe(true)
 
     // non-existent
     expect('$foobar' in instanceProxy).toBe(false)
@@ -198,11 +224,15 @@ describe('component: proxy', () => {
     // #4962 triggering getter should not cause non-existent property to
     // pass the has check
     instanceProxy.baz
+    instanceProxy.$baz
     expect('baz' in instanceProxy).toBe(false)
+    expect('$baz' in instanceProxy).toBe(false)
 
     // set non-existent (goes into proxyTarget sink)
     instanceProxy.baz = 1
     expect('baz' in instanceProxy).toBe(true)
+    instanceProxy.$baz = 1
+    expect('$baz' in instanceProxy).toBe(true)
 
     // dev mode ownKeys check for console inspection
     // should only expose own keys
@@ -210,7 +240,10 @@ describe('component: proxy', () => {
       'msg',
       'bar',
       'foo',
-      'baz'
+      'cmp',
+      '$cmp',
+      'baz',
+      '$baz',
     ])
   })
 
@@ -220,12 +253,12 @@ describe('component: proxy', () => {
       render() {},
       setup() {
         return {
-          isDisplayed: true
+          isDisplayed: true,
         }
       },
       mounted() {
         instanceProxy = this
-      }
+      },
     }
 
     const app = createApp(Comp)
@@ -243,7 +276,7 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'isDisplayed', {
       get() {
         return false
-      }
+      },
     })
 
     expect(instanceProxy.isDisplayed).toBe(false)
@@ -251,13 +284,13 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'isDisplayed', {
       get() {
         return true
-      }
+      },
     })
 
     expect(instanceProxy.isDisplayed).toBe(true)
   })
 
-  test('allow jest spying on proxy methods with Object.defineProperty', () => {
+  test('allow test runner spying on proxy methods with Object.defineProperty', () => {
     // #5417
     let instanceProxy: any
     const Comp = {
@@ -266,12 +299,12 @@ describe('component: proxy', () => {
         return {
           toggle() {
             return 'a'
-          }
+          },
         }
       },
       mounted() {
         instanceProxy = this
-      }
+      },
     }
 
     const app = createApp(Comp)
@@ -288,7 +321,7 @@ describe('component: proxy', () => {
       get() {
         getCalledTimes++
         return () => 'b'
-      }
+      },
     })
 
     // getter should not be evaluated on initial definition
@@ -303,16 +336,16 @@ describe('component: proxy', () => {
     instanceProxy.toggle()
     expect(getCalledTimes).toEqual(2)
 
-    // attaching jest spy, triggers the getter once, cache it and override the property.
+    // attaching spy, triggers the getter once, and override the property.
     // also uses Object.defineProperty
-    const spy = jest.spyOn(instanceProxy, 'toggle')
+    const spy = vi.spyOn(instanceProxy, 'toggle')
     expect(getCalledTimes).toEqual(3)
 
-    // expect getter to not evaluate the jest spy caches its value
+    // vitest does not cache the spy like jest do
     const v3 = instanceProxy.toggle()
     expect(v3).toEqual('b')
     expect(spy).toHaveBeenCalled()
-    expect(getCalledTimes).toEqual(3)
+    expect(getCalledTimes).toEqual(4)
   })
 
   test('defineProperty on proxy property with value descriptor', () => {
@@ -322,12 +355,12 @@ describe('component: proxy', () => {
       render() {},
       setup() {
         return {
-          toggle: 'a'
+          toggle: 'a',
         }
       },
       mounted() {
         instanceProxy = this
-      }
+      },
     }
 
     const app = createApp(Comp)
@@ -338,14 +371,14 @@ describe('component: proxy', () => {
     expect(v1).toEqual('a')
 
     Object.defineProperty(instanceProxy, 'toggle', {
-      value: 'b'
+      value: 'b',
     })
     const v2 = instanceProxy.toggle
     expect(v2).toEqual('b')
 
     // expect null to be a settable value
     Object.defineProperty(instanceProxy, 'toggle', {
-      value: null
+      value: null,
     })
     const v3 = instanceProxy.toggle
     expect(v3).toBeNull()
@@ -362,21 +395,21 @@ describe('component: proxy', () => {
       computed: {
         greet() {
           return 'Hi ' + (this as any).name
-        }
+        },
       },
       render() {},
       setup() {
         return {
-          fromSetup: true
+          fromSetup: true,
         }
       },
       mounted() {
         instanceProxy = this
-      }
+      },
     }
 
     const app = createApp(Comp, {
-      fromProp: true
+      fromProp: true,
     })
 
     app.mount(nodeOps.createElement('div'))
@@ -386,7 +419,7 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'name', {
       get() {
         return 'getter.name'
-      }
+      },
     })
 
     // computed is same still cached
@@ -402,7 +435,7 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'greet', {
       get() {
         return 'Hi greet.getter.computed'
-      }
+      },
     })
     expect(instanceProxy.greet).toEqual('Hi greet.getter.computed')
 
@@ -411,7 +444,7 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'fromSetup', {
       get() {
         return false
-      }
+      },
     })
     expect(instanceProxy.fromSetup).toBe(false)
 
@@ -420,7 +453,7 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'fromProp', {
       get() {
         return false
-      }
+      },
     })
     expect(instanceProxy.fromProp).toBe(false)
   })
@@ -431,11 +464,11 @@ describe('component: proxy', () => {
       props: ['test'],
       render(this: any) {
         return this.test
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(
-      `was accessed during render but is not defined`
+      `was accessed during render but is not defined`,
     ).not.toHaveBeenWarned()
   })
 
@@ -446,7 +479,7 @@ describe('component: proxy', () => {
           return '1'
         }
         return '2'
-      }
+      },
     }
 
     const app = createApp(Comp)
@@ -454,8 +487,28 @@ describe('component: proxy', () => {
 
     expect(
       `Property ${JSON.stringify(
-        Symbol.unscopables
-      )} was accessed during render ` + `but is not defined on instance.`
+        Symbol.unscopables,
+      )} was accessed during render ` + `but is not defined on instance.`,
     ).toHaveBeenWarned()
+  })
+
+  test('should prevent mutating script setup bindings', () => {
+    const Comp = defineComponent({
+      render() {},
+      setup() {
+        return {
+          __isScriptSetup: true,
+          foo: 1,
+        }
+      },
+      mounted() {
+        expect('foo' in this).toBe(false)
+        try {
+          this.foo = 123
+        } catch (e) {}
+      },
+    })
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(`Cannot mutate <script setup> binding "foo"`).toHaveBeenWarned()
   })
 })

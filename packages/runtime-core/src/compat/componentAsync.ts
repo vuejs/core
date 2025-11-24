@@ -1,6 +1,6 @@
 import { isArray, isObject, isPromise } from '@vue/shared'
 import { defineAsyncComponent } from '../apiAsyncComponent'
-import { Component } from '../component'
+import type { Component } from '../component'
 import { isVNode } from '../vnode'
 
 interface LegacyAsyncOptions {
@@ -15,12 +15,17 @@ type LegacyAsyncReturnValue = Promise<Component> | LegacyAsyncOptions
 
 type LegacyAsyncComponent = (
   resolve?: (res: LegacyAsyncReturnValue) => void,
-  reject?: (reason?: any) => void
+  reject?: (reason?: any) => void,
 ) => LegacyAsyncReturnValue | undefined
 
-const normalizedAsyncComponentMap = new Map<LegacyAsyncComponent, Component>()
+const normalizedAsyncComponentMap = new WeakMap<
+  LegacyAsyncComponent,
+  Component
+>()
 
-export function convertLegacyAsyncComponent(comp: LegacyAsyncComponent) {
+export function convertLegacyAsyncComponent(
+  comp: LegacyAsyncComponent,
+): Component {
   if (normalizedAsyncComponentMap.has(comp)) {
     return normalizedAsyncComponentMap.get(comp)!
   }
@@ -44,7 +49,7 @@ export function convertLegacyAsyncComponent(comp: LegacyAsyncComponent) {
       loadingComponent: res.loading,
       errorComponent: res.error,
       delay: res.delay,
-      timeout: res.timeout
+      timeout: res.timeout,
     })
   } else if (res == null) {
     converted = defineAsyncComponent(() => fallbackPromise)

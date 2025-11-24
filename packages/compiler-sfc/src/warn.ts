@@ -1,6 +1,6 @@
 const hasWarned: Record<string, boolean> = {}
 
-export function warnOnce(msg: string) {
+export function warnOnce(msg: string): void {
   const isNodeProd =
     typeof process !== 'undefined' && process.env.NODE_ENV === 'production'
   if (!isNodeProd && !__TEST__ && !hasWarned[msg]) {
@@ -9,8 +9,8 @@ export function warnOnce(msg: string) {
   }
 }
 
-export function warn(msg: string) {
+export function warn(msg: string): void {
   console.warn(
-    `\x1b[1m\x1b[33m[@vue/compiler-sfc]\x1b[0m\x1b[33m ${msg}\x1b[0m\n`
+    `\x1b[1m\x1b[33m[@vue/compiler-sfc]\x1b[0m\x1b[33m ${msg}\x1b[0m\n`,
   )
 }

@@ -1,11 +1,11 @@
 import {
+  type TestElement,
+  TestNodeTypes,
+  type VNode,
+  type VNodeProps,
   h,
-  render,
   nodeOps,
-  VNodeProps,
-  TestElement,
-  NodeTypes,
-  VNode
+  render,
 } from '@vue/runtime-test'
 
 describe('renderer: vnode hooks', () => {
@@ -40,22 +40,22 @@ describe('renderer: vnode hooks', () => {
 
   test('should work on element', () => {
     const hooks: VNodeProps = {
-      onVnodeBeforeMount: jest.fn(),
-      onVnodeMounted: jest.fn(),
-      onVnodeBeforeUpdate: jest.fn(vnode => {
+      onVnodeBeforeMount: vi.fn(),
+      onVnodeMounted: vi.fn(),
+      onVnodeBeforeUpdate: vi.fn(vnode => {
         expect((vnode.el as TestElement).children[0]).toMatchObject({
-          type: NodeTypes.TEXT,
-          text: 'foo'
+          type: TestNodeTypes.TEXT,
+          text: 'foo',
         })
       }),
-      onVnodeUpdated: jest.fn(vnode => {
+      onVnodeUpdated: vi.fn(vnode => {
         expect((vnode.el as TestElement).children[0]).toMatchObject({
-          type: NodeTypes.TEXT,
-          text: 'bar'
+          type: TestNodeTypes.TEXT,
+          text: 'bar',
         })
       }),
-      onVnodeBeforeUnmount: jest.fn(),
-      onVnodeUnmounted: jest.fn()
+      onVnodeBeforeUnmount: vi.fn(),
+      onVnodeUnmounted: vi.fn(),
     }
 
     assertHooks(hooks, h('div', hooks, 'foo'), h('div', hooks, 'bar'))
@@ -65,34 +65,34 @@ describe('renderer: vnode hooks', () => {
     const Comp = (props: { msg: string }) => props.msg
 
     const hooks: VNodeProps = {
-      onVnodeBeforeMount: jest.fn(),
-      onVnodeMounted: jest.fn(),
-      onVnodeBeforeUpdate: jest.fn(vnode => {
+      onVnodeBeforeMount: vi.fn(),
+      onVnodeMounted: vi.fn(),
+      onVnodeBeforeUpdate: vi.fn(vnode => {
         expect(vnode.el as TestElement).toMatchObject({
-          type: NodeTypes.TEXT,
-          text: 'foo'
+          type: TestNodeTypes.TEXT,
+          text: 'foo',
         })
       }),
-      onVnodeUpdated: jest.fn(vnode => {
+      onVnodeUpdated: vi.fn(vnode => {
         expect(vnode.el as TestElement).toMatchObject({
-          type: NodeTypes.TEXT,
-          text: 'bar'
+          type: TestNodeTypes.TEXT,
+          text: 'bar',
         })
       }),
-      onVnodeBeforeUnmount: jest.fn(),
-      onVnodeUnmounted: jest.fn()
+      onVnodeBeforeUnmount: vi.fn(),
+      onVnodeUnmounted: vi.fn(),
     }
 
     assertHooks(
       hooks,
       h(Comp, {
         ...hooks,
-        msg: 'foo'
+        msg: 'foo',
       }),
       h(Comp, {
         ...hooks,
-        msg: 'bar'
-      })
+        msg: 'bar',
+      }),
     )
   })
 })
