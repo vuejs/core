@@ -679,7 +679,7 @@ function extractMemberExpression(
         : `.${extractMemberExpression(exp.property, NOOP)}`
       return `${object}${prop}`
     case 'TSNonNullExpression': // foo!.bar
-      return `${extractMemberExpression(exp.expression, onIdentifier)}!`
+      return `${extractMemberExpression(exp.expression, onIdentifier)}`
     default:
       return ''
   }
