@@ -50,6 +50,7 @@ import {
 } from '../runtimeHelpers'
 import {
   findProp,
+  isCommentOrWhitespace,
   isCoreComponent,
   isStaticArgOf,
   isStaticExp,
@@ -144,7 +145,6 @@ export const transformElement: NodeTransform = (node, context) => {
 
     // children
     if (node.children.length > 0) {
-      let children = node.children
       if (vnodeTag === KEEP_ALIVE) {
         // Although a built-in component, we compile KeepAlive with raw children
         // instead of slot functions so that it can be used inside Transition
@@ -155,8 +155,8 @@ export const transformElement: NodeTransform = (node, context) => {
         shouldUseBlock = true
         // 2. Force keep-alive to always be updated, since it uses raw children.
         patchFlag |= PatchFlags.DYNAMIC_SLOTS
-        //filter out potential comment nodes
-        children = children.filter(c => c.type !== NodeTypes.COMMENT)
+        // filter out potential comment nodes
+        const children = node.children.filter(c => !isCommentOrWhitespace(c))
         // warn if <KeepAlive> has multiple children
         if (__DEV__ && children.length > 1) {
           context.onError(
@@ -182,8 +182,8 @@ export const transformElement: NodeTransform = (node, context) => {
         if (hasDynamicSlots) {
           patchFlag |= PatchFlags.DYNAMIC_SLOTS
         }
-      } else if (children.length === 1 && vnodeTag !== TELEPORT) {
-        const child = children[0]
+      } else if (node.children.length === 1 && vnodeTag !== TELEPORT) {
+        const child = node.children[0]
         const type = child.type
         // check for dynamic text children
         const hasDynamicTextChild =
