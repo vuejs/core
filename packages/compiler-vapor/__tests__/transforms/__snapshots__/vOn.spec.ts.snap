@@ -122,7 +122,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   n7.$evtcontextmenu = _createInvoker(_withModifiers(_ctx.handleEvent, ["right"]))
   n8.$evtclick = _createInvoker(_withModifiers(_ctx.handleEvent, ["left"]))
   n9.$evtmouseup = _createInvoker(_withModifiers(_ctx.handleEvent, ["middle"]))
-  n10.$evtcontextmenu = _createInvoker(_withKeys(_withModifiers(_ctx.handleEvent, ["right"]), ["enter"]))
+  n10.$evtcontextmenu = _createInvoker(_withModifiers(_ctx.handleEvent, ["right"]))
   n11.$evtkeyup = _createInvoker(_withKeys(_ctx.handleEvent, ["enter"]))
   n12.$evtkeyup = _createInvoker(_withKeys(_ctx.handleEvent, ["tab"]))
   n13.$evtkeyup = _createInvoker(_withKeys(_ctx.handleEvent, ["delete"]))

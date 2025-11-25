@@ -74,7 +74,7 @@ export {
   DOMErrorCodes,
   DOMErrorMessages,
 } from './errors'
-export { resolveModifiers } from './transforms/vOn'
+export { resolveModifiers, isKeyboardEvent } from './transforms/vOn'
 export { isValidHTMLNesting } from './htmlNesting'
 export { postTransformTransition } from './transforms/Transition'
 export * from '@vue/compiler-core'
