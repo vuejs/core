@@ -500,20 +500,22 @@ function baseCreateRenderer(
     } else {
       const el = (n2.el = n1.el!)
       if (n2.children !== n1.children) {
-        // we don't inherit text node for cached text nodes in `traverseStaticChildren`
-        // but it maybe changed during HMR updates, so we need to handle this case by
-        // replacing the text node.
+        // We don't inherit el for cached text nodes in `traverseStaticChildren`
+        // to avoid retaining detached DOM nodes. However, the text node may be
+        // changed during HMR. In this case we need to replace the old text node
+        // with the new one.
         if (
           __DEV__ &&
           isHmrUpdating &&
           n2.patchFlag === PatchFlags.CACHED &&
           '__elIndex' in n1
         ) {
+          const childNodes = __TEST__
+            ? container.children
+            : container.childNodes
           const newChild = hostCreateText(n2.children as string)
           const oldChild =
-            container.childNodes[
-              ((n2 as any).__elIndex = (n1 as any).__elIndex)
-            ]
+            childNodes[((n2 as any).__elIndex = (n1 as any).__elIndex)]
           hostInsert(newChild, container, oldChild)
           hostRemove(oldChild)
         } else {
@@ -2520,7 +2522,10 @@ export function traverseStaticChildren(
           c2.el = c1.el
         } else {
           // cache the child index for HMR updates
-          ;(c2 as any).__elIndex = i + (n1.type === Fragment ? 1 : 0)
+          ;(c2 as any).__elIndex =
+            i +
+            // take fragment start anchor into account
+            (n1.type === Fragment ? 1 : 0)
         }
       }
       // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
