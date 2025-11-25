@@ -75,6 +75,16 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component > props merging: class 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { class: () => (["foo", { bar: _ctx.isBar }]) }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > props merging: event handlers 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
@@ -93,6 +103,16 @@ export function render(_ctx) {
   const _on_click = e => _ctx.a(e)
   const _on_click1 = e => _ctx.b(e)
   const n0 = _createComponentWithFallback(_component_Foo, { onClick: () => [_on_click, _on_click1] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > props merging: style 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { style: () => (["color: green", { color: 'red' }]) }, null, true)
   return n0
 }"
 `;

@@ -346,14 +346,14 @@ describe('compiler: element transform', () => {
       expect(code).contains('onClick: () => [_on_click, _on_click1]')
     })
 
-    test.todo('props merging: style', () => {
+    test('props merging: style', () => {
       const { code } = compileWithElementTransform(
         `<Foo style="color: green" :style="{ color: 'red' }" />`,
       )
       expect(code).toMatchSnapshot()
     })
 
-    test.todo('props merging: class', () => {
+    test('props merging: class', () => {
       const { code } = compileWithElementTransform(
         `<Foo class="foo" :class="{ bar: isBar }" />`,
       )
