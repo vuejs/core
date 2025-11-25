@@ -378,6 +378,35 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   }
   computed.globalVersion = globalVersion
 
+  // In development mode, perform enhanced dependency tracking to prevent
+  // unnecessary recomputations while preserving correct reactivity behavior
+  if (__DEV__ && computed.flags & EffectFlags.EVALUATED && computed.deps) {
+    let hasActualChanges = false
+    let link: Link | undefined = computed.deps
+
+    while (link) {
+      // Always refresh nested computed dependencies first
+      if (link.dep.computed && link.dep.computed !== computed) {
+        refreshComputed(link.dep.computed)
+      }
+
+      // Check if this dependency actually changed
+      // Only skip recomputation if ALL dependencies are unchanged
+      if (link.dep.version !== link.version) {
+        hasActualChanges = true
+        break
+      }
+
+      link = link.nextDep
+    }
+
+    // If no dependencies actually changed, we can safely skip recomputation
+    // This prevents the dev mode lag issue while preserving correctness
+    if (!hasActualChanges) {
+      return
+    }
+  }
+
   // In SSR there will be no render effect, so the computed has no subscriber
   // and therefore tracks no deps, thus we cannot rely on the dirty check.
   // Instead, computed always re-evaluate and relies on the globalVersion
