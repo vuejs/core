@@ -341,11 +341,40 @@ describe('compiler v-bind', () => {
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }])`,
+      `_setDynamicProps(n0, [{ [_camelize(_ctx.foo || "")]: _ctx.id }])`,
     )
   })
 
-  test.todo('.camel modifier w/ dynamic arg + prefixIdentifiers')
+  test('.camel modifier w/ dynamic arg + prefixIdentifiers', () => {
+    const { ir, code } = compileWithVBind(
+      `<div v-bind:[foo(bar)].camel="id"/>`,
+      {
+        prefixIdentifiers: true,
+      },
+    )
+    expect(code).matchSnapshot()
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
+      type: IRNodeTypes.SET_DYNAMIC_PROPS,
+      props: [
+        [
+          {
+            key: {
+              content: `foo(bar)`,
+              isStatic: false,
+            },
+            values: [
+              {
+                content: `id`,
+                isStatic: false,
+              },
+            ],
+            runtimeCamelize: true,
+            modifier: undefined,
+          },
+        ],
+      ],
+    })
+  })
 
   test('.prop modifier', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:fooBar.prop="id"/>`)

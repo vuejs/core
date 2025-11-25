@@ -138,6 +138,7 @@ export function genPropKey(
 
   let key = genExpression(node, context)
   if (runtimeCamelize) {
+    key.push(' || ""')
     key = genCall(helper('camelize'), key)
   }
   if (handler) {
