@@ -293,3 +293,18 @@ export function render(_ctx) {
   return [n0, n6]
 }"
 `;
+
+exports[`compiler: v-if > v-if with v-once 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div> </div>", true)
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    const x2 = _txt(n2)
+    _setText(x2, _toDisplayString(_ctx.msg))
+    return n2
+  }, null, true)
+  return n0
+}"
+`;

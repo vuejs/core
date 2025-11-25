@@ -204,7 +204,14 @@ describe('compiler: v-if', () => {
     expect(ir.block.returns).toEqual([0, 3])
   })
 
-  test.todo('v-if with v-once')
+  test('v-if with v-once', () => {
+    const { code, ir, helpers } = compileWithVIf(
+      `<div v-if="ok" v-once>{{ msg }}</div>`,
+    )
+    expect(code).matchSnapshot()
+    expect(helpers).contains('createIf')
+    expect([...ir.template.keys()]).toEqual(['<div> </div>'])
+  })
 
   test('component v-if', () => {
     const { code, ir, helpers } = compileWithVIf(
