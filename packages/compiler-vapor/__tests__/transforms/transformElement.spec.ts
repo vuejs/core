@@ -963,7 +963,7 @@ describe('compiler: element transform', () => {
             key: { content: 'foo' },
             handler: true,
             handlerModifiers: {
-              keys: ['enter'],
+              keys: [],
               nonKeys: ['stop', 'prevent'],
               options: ['capture', 'once'],
             },
