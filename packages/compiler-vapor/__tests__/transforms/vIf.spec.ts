@@ -205,7 +205,33 @@ describe('compiler: v-if', () => {
   })
 
   test.todo('v-if with v-once')
-  test.todo('component v-if')
+
+  test('component v-if', () => {
+    const { code, ir, helpers } = compileWithVIf(
+      `<Component v-if="ok"></Component>`,
+    )
+    expect(code).matchSnapshot()
+    expect(helpers).contains('createIf')
+    expect(ir.block.effect).lengthOf(0)
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.IF,
+      id: 0,
+      condition: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'ok',
+        isStatic: false,
+      },
+      positive: {
+        type: IRNodeTypes.BLOCK,
+        dynamic: {
+          children: [
+            { operation: { asset: true, tag: 'Component', type: 11 } },
+          ],
+        },
+      },
+    })
+    expect(ir.block.returns).toEqual([0])
+  })
 
   test('v-if + v-else', () => {
     const { code, ir, helpers } = compileWithVIf(`<div v-if="ok"/><p v-else/>`)

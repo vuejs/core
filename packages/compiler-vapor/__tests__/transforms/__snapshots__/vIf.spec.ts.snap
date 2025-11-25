@@ -44,6 +44,19 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-if > component v-if 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf } from 'vue';
+
+export function render(_ctx) {
+  const _component_Component = _resolveComponent("Component")
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = _createComponentWithFallback(_component_Component, null, null, true)
+    return n2
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: v-if > dedupe same template 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div>hello</div>")
