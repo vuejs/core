@@ -328,26 +328,22 @@ describe('compiler: element transform', () => {
       })
     })
 
-    test.todo('props merging: event handlers', () => {
-      const { code, ir } = compileWithElementTransform(
+    test('props merging: event handlers', () => {
+      const { code } = compileWithElementTransform(
         `<Foo @click.foo="a" @click.bar="b" />`,
       )
       expect(code).toMatchSnapshot()
       expect(code).contains('onClick: () => [_ctx.a, _ctx.b]')
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Foo',
-          props: [
-            [
-              {
-                key: { content: 'onClick', isStatic: true },
-                values: [{ content: 'a' }, { content: 'b' }],
-              },
-            ],
-          ],
-        },
-      ])
+    })
+
+    test('props merging: inline event handlers', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo @click.foo="e => a(e)" @click.bar="e => b(e)" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains('const _on_click = e => _ctx.a(e)')
+      expect(code).contains('const _on_click1 = e => _ctx.b(e)')
+      expect(code).contains('onClick: () => [_on_click, _on_click1]')
     })
 
     test.todo('props merging: style', () => {

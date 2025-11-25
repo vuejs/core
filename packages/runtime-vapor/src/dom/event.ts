@@ -15,14 +15,18 @@ export function addEventListener(
 export function on(
   el: Element,
   event: string,
-  handler: (e: Event) => any,
+  handler: (e: Event) => any | ((e: Event) => any)[],
   options: AddEventListenerOptions & { effect?: boolean } = {},
 ): void {
-  addEventListener(el, event, handler, options)
-  if (options.effect) {
-    onEffectCleanup(() => {
-      el.removeEventListener(event, handler, options)
-    })
+  if (isArray(handler)) {
+    handler.forEach(fn => on(el, event, fn, options))
+  } else {
+    addEventListener(el, event, handler, options)
+    if (options.effect) {
+      onEffectCleanup(() => {
+        el.removeEventListener(event, handler, options)
+      })
+    }
   }
 }
 

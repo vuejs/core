@@ -56,7 +56,7 @@ export function genCreateComponent(
 
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
     (acc, { name, value }: InlineHandler) => {
-      const handler = genEventHandler(context, value, undefined, false)
+      const handler = genEventHandler(context, [value], undefined, false)
       return [...acc, `const ${name} = `, ...handler, NEWLINE]
     },
     [],
@@ -226,7 +226,7 @@ function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
     ...(prop.handler
       ? genEventHandler(
           context,
-          prop.values[0],
+          prop.values,
           prop.handlerModifiers,
           true /* wrap handlers passed to components */,
         )

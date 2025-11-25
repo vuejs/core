@@ -492,7 +492,7 @@ function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
     // prop names and event handler names can be the same but serve different purposes
     // e.g. `:appear="true"` is a prop while `@appear="handler"` is an event handler
     if (existing && existing.handler === prop.handler) {
-      if (name === 'style' || name === 'class') {
+      if (name === 'style' || name === 'class' || prop.handler) {
         mergePropValues(existing, prop)
       }
       // unexpected duplicate, should have emitted error during parse
