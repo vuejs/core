@@ -361,13 +361,24 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > .camel modifier w/ dynamic arg + prefixIdentifiers 1`] = `
+"import { camelize as _camelize, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ [_camelize(_ctx.foo(_ctx.bar) || "")]: _ctx.id }]))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > .camel modifier w/ dynamic arg 1`] = `
 "import { camelize as _camelize, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }]))
+  _renderEffect(() => _setDynamicProps(n0, [{ [_camelize(_ctx.foo || "")]: _ctx.id }]))
   return n0
 }"
 `;
