@@ -455,7 +455,34 @@ describe('compiler v-bind', () => {
     )
   })
 
-  test.todo('.prop modifier w/ dynamic arg + prefixIdentifiers')
+  test('.prop modifier w/ dynamic arg + prefixIdentifiers', () => {
+    const { ir, code } = compileWithVBind(
+      `<div v-bind:[foo(bar)].prop="id"/>`,
+      { prefixIdentifiers: true },
+    )
+    expect(code).matchSnapshot()
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
+      type: IRNodeTypes.SET_DYNAMIC_PROPS,
+      props: [
+        [
+          {
+            key: {
+              content: `foo(bar)`,
+              isStatic: false,
+            },
+            values: [
+              {
+                content: `id`,
+                isStatic: false,
+              },
+            ],
+            runtimeCamelize: false,
+            modifier: '.',
+          },
+        ],
+      ],
+    })
+  })
 
   test('.prop modifier (shorthand)', () => {
     const { ir, code } = compileWithVBind(`<div .fooBar="id"/>`)
