@@ -1,10 +1,6 @@
 import { BindingTypes, type RootNode } from '@vue/compiler-dom'
 import { type CompilerOptions, compile as _compile } from '../src'
 
-// TODO This is a temporary test case for initial implementation.
-// Remove it once we have more comprehensive tests.
-// DO NOT ADD MORE TESTS HERE.
-
 function compile(template: string | RootNode, options: CompilerOptions = {}) {
   let { code } = _compile(template, {
     ...options,
