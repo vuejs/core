@@ -34,8 +34,6 @@ export function genBuiltinDirective(
 
 /**
  * user directives via `withVaporDirectives`
- * TODO the compiler side is implemented but no runtime support yet
- * it was removed due to perf issues
  */
 export function genDirectivesForElement(
   id: number,

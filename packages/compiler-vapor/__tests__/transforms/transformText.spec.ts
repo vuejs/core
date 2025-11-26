@@ -1,4 +1,3 @@
-// TODO: add tests for this transform
 import { NodeTypes } from '@vue/compiler-dom'
 import {
   IRNodeTypes,
