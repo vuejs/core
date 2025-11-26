@@ -9,6 +9,7 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import { type VaporComponentInstance, isVaporComponent } from './component'
+import { inOnceSlot } from './componentSlots'
 import { invokeArrayFns } from '@vue/shared'
 
 export class RenderEffect extends ReactiveEffect {
@@ -88,6 +89,9 @@ export class RenderEffect extends ReactiveEffect {
 }
 
 export function renderEffect(fn: () => void, noLifecycle = false): void {
+  // in once slot, just run the function directly
+  if (inOnceSlot) return fn()
+
   const effect = new RenderEffect(fn)
   if (noLifecycle) {
     effect.fn = fn

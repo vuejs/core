@@ -26,6 +26,12 @@ import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
 
 /**
+ * Flag to indicate if we are executing a once slot.
+ * When true, renderEffect should skip creating reactive effect.
+ */
+export let inOnceSlot = false
+
+/**
  * Current slot scopeIds for vdom interop
  */
 export let currentSlotScopeIds: string[] | null = null
@@ -163,6 +169,7 @@ export function createSlot(
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
   noSlotted?: boolean,
+  once?: boolean,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -236,9 +243,12 @@ export function createSlot(
               const prevSlotScopeIds = setCurrentSlotScopeIds(
                 slotScopeIds.length > 0 ? slotScopeIds : null,
               )
+              const prev = inOnceSlot
               try {
+                if (once) inOnceSlot = true
                 return slot(slotProps)
               } finally {
+                inOnceSlot = prev
                 setCurrentSlotScopeIds(prevSlotScopeIds)
               }
             }),
@@ -249,7 +259,7 @@ export function createSlot(
     }
 
     // dynamic slot name or has dynamicSlots
-    if (isDynamicName || rawSlots.$) {
+    if (!once && (isDynamicName || rawSlots.$)) {
       renderEffect(renderSlot)
     } else {
       renderSlot()
