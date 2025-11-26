@@ -11,7 +11,7 @@ import { isVaporComponent } from '../component'
 import type { Block, TransitionBlock } from '../block'
 import { isArray } from '@vue/shared'
 import { isHydrating, logMismatchError } from '../dom/hydration'
-import { DynamicFragment, VaporFragment } from '../fragment'
+import { DynamicFragment, VaporFragment, isFragment } from '../fragment'
 
 export function applyVShow(target: Block, source: () => any): void {
   if (isVaporComponent(target)) {
@@ -47,14 +47,10 @@ function setDisplay(target: Block, value: unknown): void {
     if (target.length === 0) return
     if (target.length === 1) return setDisplay(target[0], value)
   }
-  if (target instanceof DynamicFragment) {
-    return setDisplay(target.nodes, value)
-  }
-  if (target instanceof VaporFragment && target.insert) {
+  if (isFragment(target)) {
     return setDisplay(target.nodes, value)
   }
 
-  const { $transition } = target as TransitionBlock
   if (target instanceof Element) {
     const el = target as VShowElement
     if (!(vShowOriginalDisplay in el)) {
@@ -62,6 +58,7 @@ function setDisplay(target: Block, value: unknown): void {
         el.style.display === 'none' ? '' : el.style.display
     }
 
+    const { $transition } = target as TransitionBlock
     if ($transition) {
       if (value) {
         $transition.beforeEnter(target)
