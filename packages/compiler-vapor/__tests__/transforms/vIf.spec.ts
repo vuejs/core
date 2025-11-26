@@ -11,7 +11,7 @@ import {
   transformVOnce,
   transformVText,
 } from '../../src'
-import { NodeTypes } from '@vue/compiler-dom'
+import { ErrorCodes, NodeTypes, type RootNode } from '@vue/compiler-dom'
 
 const compileWithVIf = makeCompile({
   nodeTransforms: [
@@ -380,7 +380,181 @@ describe('compiler: v-if', () => {
     ])
   })
 
-  describe.todo('errors')
-  describe.todo('codegen')
-  test.todo('v-on with v-if')
+  test('v-on with v-if', () => {
+    const { code, ir } = compileWithVIf(
+      `<button v-on="{ click: clickEvent }" v-if="true">w/ v-if</button>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect([...ir.template.keys()]).toEqual(['<button>w/ v-if</button>'])
+
+    expect(ir.block.returns).toEqual([0])
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.IF,
+      condition: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'true',
+        isStatic: false,
+      },
+      positive: {
+        type: IRNodeTypes.BLOCK,
+        dynamic: {
+          children: [{ template: 0 }],
+        },
+      },
+    })
+  })
+
+  describe('errors', () => {
+    test('error on v-else missing adjacent v-if', () => {
+      const onError = vi.fn()
+
+      {
+        const { ir } = compileWithVIf(`<div v-else/>`, { onError })
+        expect(onError.mock.calls[0]).toMatchObject([
+          {
+            code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+            loc: ir.node.loc,
+          },
+        ])
+      }
+
+      {
+        const { ir } = compileWithVIf(`<div/><div v-else/>`, {
+          onError,
+        })
+        expect(onError.mock.calls[1]).toMatchObject([
+          {
+            code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+            loc: (ir.block.node as RootNode).children[1].loc,
+          },
+        ])
+      }
+
+      {
+        const { ir } = compileWithVIf(`<div/>foo<div v-else/>`, { onError })
+        expect(onError.mock.calls[2]).toMatchObject([
+          {
+            code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+            loc: (ir.block.node as RootNode).children[2].loc,
+          },
+        ])
+      }
+
+      {
+        const { ir } = compileWithVIf(`<div v-if="bar"/>foo<div v-else/>`, {
+          onError,
+        })
+        expect(onError.mock.calls[3]).toMatchObject([
+          {
+            code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+            loc: (ir.block.node as RootNode).children[2].loc,
+          },
+        ])
+      }
+
+      // Non-breaking space
+      {
+        const { ir } = compileWithVIf(`<div v-if="bar"/>\u00a0<div v-else/>`, {
+          onError,
+        })
+        expect(onError.mock.calls[4]).toMatchObject([
+          {
+            code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+            loc: (ir.block.node as RootNode).children[2].loc,
+          },
+        ])
+      }
+    })
+
+    test('error on v-else-if missing adjacent v-if or v-else-if', () => {
+      const onError = vi.fn()
+      {
+        const { ir } = compileWithVIf(`<div v-else-if="foo"/>`, {
+          onError,
+        })
+        expect(onError.mock.calls[0]).toMatchObject([
+          {
+            code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+            loc: ir.node.loc,
+          },
+        ])
+      }
+      {
+        const { ir } = compileWithVIf(`<div/><div v-else-if="foo"/>`, {
+          onError,
+        })
+        expect(onError.mock.calls[1]).toMatchObject([
+          {
+            code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+            loc: (ir.block.node as RootNode).children[1].loc,
+          },
+        ])
+      }
+      {
+        const { ir } = compileWithVIf(`<div/>foo<div v-else-if="foo"/>`, {
+          onError,
+        })
+        expect(onError.mock.calls[2]).toMatchObject([
+          {
+            code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+            loc: (ir.block.node as RootNode).children[2].loc,
+          },
+        ])
+      }
+      {
+        const { ir } = compileWithVIf(
+          `<div v-if="bar"/>foo<div v-else-if="foo"/>`,
+          { onError },
+        )
+        expect(onError.mock.calls[3]).toMatchObject([
+          {
+            code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+            loc: (ir.block.node as RootNode).children[2].loc,
+          },
+        ])
+      }
+      {
+        // Non-breaking space
+        const { ir } = compileWithVIf(
+          `<div v-if="bar"/>\u00a0<div v-else-if="foo"/>`,
+          { onError },
+        )
+        expect(onError.mock.calls[4]).toMatchObject([
+          {
+            code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+            loc: (ir.block.node as RootNode).children[2].loc,
+          },
+        ])
+      }
+
+      {
+        const { ir } = compileWithVIf(
+          `<div v-if="notOk"/><div v-else/><div v-else-if="ok"/>`,
+          { onError },
+        )
+        expect(onError.mock.calls[5]).toMatchObject([
+          {
+            code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+            loc: (ir.block.node as RootNode).children[2].loc,
+          },
+        ])
+      }
+    })
+
+    test('error on adjacent v-else', () => {
+      const onError = vi.fn()
+
+      const { ir } = compileWithVIf(
+        `<div v-if="false"/><div v-else/><div v-else/>`,
+        { onError },
+      )
+
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: (ir.block.node as RootNode).children[2].loc,
+        },
+      ])
+    })
+  })
 })
