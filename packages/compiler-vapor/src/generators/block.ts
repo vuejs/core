@@ -43,10 +43,6 @@ export function genBlockContent(
   const { dynamic, effect, operation, returns, key } = block
   const resetBlock = context.enterBlock(block)
 
-  if (block.hasDeferredVShow) {
-    push(NEWLINE, `const deferredApplyVShows = []`)
-  }
-
   if (root) {
     for (let name of context.ir.component) {
       const id = toValidAssetId(name, 'component')
@@ -78,7 +74,7 @@ export function genBlockContent(
   push(...genOperations(operation, context))
   push(...genEffects(effect, context, genEffectsExtraFrag))
 
-  if (block.hasDeferredVShow) {
+  if (root && context.ir.hasDeferredVShow) {
     push(NEWLINE, `deferredApplyVShows.forEach(fn => fn())`)
   }
 

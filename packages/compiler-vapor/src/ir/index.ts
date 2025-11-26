@@ -54,7 +54,6 @@ export interface BlockIRNode extends BaseIRNode {
   effect: IREffect[]
   operation: OperationNode[]
   returns: number[]
-  hasDeferredVShow: boolean
 }
 
 export interface RootIRNode {
@@ -68,6 +67,7 @@ export interface RootIRNode {
   directive: Set<string>
   block: BlockIRNode
   hasTemplateRef: boolean
+  hasDeferredVShow: boolean
 }
 
 export interface IfIRNode extends BaseIRNode {

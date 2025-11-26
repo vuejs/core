@@ -256,6 +256,7 @@ export function transform(
     directive: new Set(),
     block: newBlock(node),
     hasTemplateRef: false,
+    hasDeferredVShow: false,
   }
 
   const context = new TransformContext(ir, node, options)

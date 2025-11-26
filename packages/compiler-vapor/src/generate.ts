@@ -201,6 +201,9 @@ export function generate(
       `const ${setTemplateRefIdent} = ${context.helper('createTemplateRefSetter')}()`,
     )
   }
+  if (ir.hasDeferredVShow) {
+    push(NEWLINE, `const deferredApplyVShows = []`)
+  }
   push(...genBlockContent(ir.block, context, true))
   push(INDENT_END, NEWLINE)
 
