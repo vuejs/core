@@ -102,8 +102,7 @@ describe('compiler: vModel transform', () => {
       )
     })
 
-    // TODO: component
-    test.todo('should allow usage on custom element', () => {
+    test('should allow usage on custom element', () => {
       const onError = vi.fn()
       const root = compileWithVModel('<my-input v-model="model" />', {
         onError,
