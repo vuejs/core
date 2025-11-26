@@ -152,8 +152,6 @@ describe('compiler: v-once', () => {
     expect(ir.block.operation).lengthOf(0)
   })
 
-  test.todo('with hoistStatic: true')
-
   test('with v-if', () => {
     const { ir, code } = compileWithOnce(`<div v-if="expr" v-once />`)
     expect(code).toMatchSnapshot()
