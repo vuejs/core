@@ -380,6 +380,30 @@ describe('compiler: v-if', () => {
     ])
   })
 
+  test('v-on with v-if', () => {
+    const { code, ir } = compileWithVIf(
+      `<button v-on="{ click: clickEvent }" v-if="true">w/ v-if</button>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect([...ir.template.keys()]).toEqual(['<button>w/ v-if</button>'])
+
+    expect(ir.block.returns).toEqual([0])
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.IF,
+      condition: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: 'true',
+        isStatic: false,
+      },
+      positive: {
+        type: IRNodeTypes.BLOCK,
+        dynamic: {
+          children: [{ template: 0 }],
+        },
+      },
+    })
+  })
+
   describe('errors', () => {
     test('error on v-else missing adjacent v-if', () => {
       const onError = vi.fn()
