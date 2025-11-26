@@ -14,6 +14,7 @@ import {
   renderEffect,
   setInsertionState,
   template,
+  txt,
   vaporInteropPlugin,
   withVaporCtx,
 } from '../src'
@@ -773,6 +774,42 @@ describe('component: slots', () => {
       items.value.push(2)
       await nextTick()
       expect(html()).toBe('<span>2</span><!--for--><!--slot-->')
+    })
+
+    test('work with v-once', async () => {
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            undefined,
+            undefined,
+            true /* once */,
+          )
+        },
+      })
+
+      const count = ref(0)
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: withVaporCtx(() => {
+              const n3 = template('<div> </div>')() as any
+              const x3 = txt(n3) as any
+              renderEffect(() => setText(x3, toDisplayString(count.value)))
+              return n3
+            }),
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('<div>0</div><!--slot-->')
+
+      // expect no changes due to v-once
+      count.value++
+      await nextTick()
+      expect(html()).toBe('<div>0</div><!--slot-->')
     })
   })
 
