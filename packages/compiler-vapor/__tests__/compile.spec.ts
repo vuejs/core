@@ -85,7 +85,6 @@ describe('compile', () => {
         )
 
         expect(code).toMatchSnapshot()
-        // Waiting for TODO, There should be more here.
       })
     })
 
@@ -196,7 +195,26 @@ describe('compile', () => {
       )
     })
 
-    // TODO: add more test for expression parsing (v-on, v-slot, v-for)
+    test('v-on multi statements', () => {
+      const code = compile(`<div @click="a++;b++" />`, {
+        prefixIdentifiers: true,
+      })
+      expect(code).matchSnapshot()
+    })
+
+    test('v-slot', () => {
+      const code = compile(`<Comp #foo="{ a, b }">{{ a + b }}</Comp>`, {
+        prefixIdentifiers: true,
+      })
+      expect(code).matchSnapshot()
+    })
+
+    test('v-for', () => {
+      const code = compile(`<div v-for="({ a, b }, key, index) of a.b" />`, {
+        prefixIdentifiers: true,
+      })
+      expect(code).matchSnapshot()
+    })
   })
 
   describe('custom directive', () => {
