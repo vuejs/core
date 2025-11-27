@@ -47,12 +47,12 @@ describe('createIf', () => {
               setElementText(n2, count.value)
             })
             return n2
-          })),
+          })) as any,
           // v-else
           (spyElseFn ||= vi.fn(() => {
             const n4 = t2()
             return n4
-          })),
+          })) as any,
         ),
         n0 as any as ParentNode,
       )
