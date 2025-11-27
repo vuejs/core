@@ -9,6 +9,7 @@ import {
   OPEN_BLOCK,
   type RENDER_LIST,
   type RENDER_SLOT,
+  RESOLVE_LATE_ADDED_TAG,
   WITH_DIRECTIVES,
   type WITH_MEMO,
 } from './runtimeHelpers'
@@ -863,6 +864,10 @@ export function getVNodeBlockHelper(
   isComponent: boolean,
 ): typeof CREATE_BLOCK | typeof CREATE_ELEMENT_BLOCK {
   return ssr || isComponent ? CREATE_BLOCK : CREATE_ELEMENT_BLOCK
+}
+
+export function getResolveLateAddedTagHelper(): typeof RESOLVE_LATE_ADDED_TAG {
+  return RESOLVE_LATE_ADDED_TAG
 }
 
 export function convertToBlock(
