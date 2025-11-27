@@ -14,6 +14,7 @@ import {
   renderEffect,
   setInsertionState,
   template,
+  txt,
   vaporInteropPlugin,
   withVaporCtx,
 } from '../src'
@@ -177,7 +178,7 @@ describe('component: slots', () => {
 
       const { host } = define(() => {
         return createComponent(Comp, null, {
-          header: () => template('header')(),
+          header: withVaporCtx(() => template('header')()),
         })
       }).render()
 
@@ -224,7 +225,7 @@ describe('component: slots', () => {
       )
       define(() =>
         createComponent(Comp, null, {
-          default: _props => ((props = _props), []),
+          default: withVaporCtx((_props: any) => ((props = _props), [])),
         }),
       ).render()
 
@@ -252,7 +253,7 @@ describe('component: slots', () => {
       )
       define(() =>
         createComponent(Comp, null, {
-          default: _props => ((props = _props), []),
+          default: withVaporCtx((_props: any) => ((props = _props), [])),
         }),
       ).render()
 
@@ -285,13 +286,13 @@ describe('component: slots', () => {
           $: [
             () => ({
               name: 'header',
-              fn: (props: any) => {
+              fn: withVaporCtx((props: any) => {
                 const el = template('<h1></h1>')()
                 renderEffect(() => {
                   setElementText(el, props.title)
                 })
                 return el
-              },
+              }),
             }),
           ],
         })
@@ -320,8 +321,8 @@ describe('component: slots', () => {
 
       const { host } = define(() => {
         return createComponent(Comp, null, {
-          header: () => template('header')(),
-          footer: () => template('footer')(),
+          header: withVaporCtx(() => template('header')()),
+          footer: withVaporCtx(() => template('footer')()),
         })
       }).render()
 
@@ -368,8 +369,14 @@ describe('component: slots', () => {
           $: [
             () =>
               flag1.value
-                ? { name: 'one', fn: () => template('one content')() }
-                : { name: 'two', fn: () => template('two content')() },
+                ? {
+                    name: 'one',
+                    fn: withVaporCtx(() => template('one content')()),
+                  }
+                : {
+                    name: 'two',
+                    fn: withVaporCtx(() => template('two content')()),
+                  },
           ],
         })
       }).render()
@@ -413,8 +420,8 @@ describe('component: slots', () => {
           Child,
           {},
           {
-            one: () => template('one content')(),
-            two: () => template('two content')(),
+            one: withVaporCtx(() => template('one content')()),
+            two: withVaporCtx(() => template('two content')()),
           },
         )
       }).render()
@@ -461,14 +468,14 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: withVaporCtx(() => {
               return createIf(
                 () => toggle.value,
                 () => {
                   return document.createTextNode('content')
                 },
               )
-            },
+            }),
           })
         },
       }).render()
@@ -498,14 +505,14 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: withVaporCtx(() => {
               return createIf(
                 () => toggle.value,
                 () => {
                   return document.createTextNode('content')
                 },
               )
-            },
+            }),
           })
         },
       }).render()
@@ -539,9 +546,9 @@ describe('component: slots', () => {
               (toggle.value
                 ? {
                     name: val.value,
-                    fn: () => {
+                    fn: withVaporCtx(() => {
                       return template('<h1></h1>')()
-                    },
+                    }),
                   }
                 : void 0) as DynamicSlot,
           ],
@@ -567,9 +574,9 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: withVaporCtx(() => {
               return template('<!--comment-->')()
-            },
+            }),
           })
         },
       }).render()
@@ -591,14 +598,14 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: withVaporCtx(() => {
               return createIf(
                 () => toggle.value,
                 () => {
                   return document.createTextNode('content')
                 },
               )
-            },
+            }),
           })
         },
       }).render()
@@ -629,7 +636,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: withVaporCtx(() => {
               return createIf(
                 () => outerShow.value,
                 () => {
@@ -641,7 +648,7 @@ describe('component: slots', () => {
                   )
                 },
               )
-            },
+            }),
           })
         },
       }).render()
@@ -686,7 +693,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: withVaporCtx(() => {
               const n2 = createFor(
                 () => items.value,
                 for_item0 => {
@@ -699,7 +706,7 @@ describe('component: slots', () => {
                 },
               )
               return n2
-            },
+            }),
           })
         },
       }).render()
@@ -732,7 +739,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: withVaporCtx(() => {
               const n2 = createFor(
                 () => items.value,
                 for_item0 => {
@@ -745,7 +752,7 @@ describe('component: slots', () => {
                 },
               )
               return n2
-            },
+            }),
           })
         },
       }).render()
@@ -767,6 +774,42 @@ describe('component: slots', () => {
       items.value.push(2)
       await nextTick()
       expect(html()).toBe('<span>2</span><!--for--><!--slot-->')
+    })
+
+    test('work with v-once', async () => {
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            undefined,
+            undefined,
+            true /* once */,
+          )
+        },
+      })
+
+      const count = ref(0)
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: withVaporCtx(() => {
+              const n3 = template('<div> </div>')() as any
+              const x3 = txt(n3) as any
+              renderEffect(() => setText(x3, toDisplayString(count.value)))
+              return n3
+            }),
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('<div>0</div><!--slot-->')
+
+      // expect no changes due to v-once
+      count.value++
+      await nextTick()
+      expect(html()).toBe('<div>0</div><!--slot-->')
     })
   })
 
@@ -800,11 +843,11 @@ describe('component: slots', () => {
             Parent,
             null,
             {
-              foo: () => {
+              foo: withVaporCtx(() => {
                 const n0 = template(' ')() as any
                 renderEffect(() => setText(n0, foo.value))
                 return n0
-              },
+              }),
             },
             true,
           )
@@ -845,16 +888,16 @@ describe('component: slots', () => {
             Parent,
             null,
             {
-              foo: () => {
+              foo: withVaporCtx(() => {
                 const n0 = template(' ')() as any
                 renderEffect(() => setText(n0, foo.value))
                 return n0
-              },
-              default: () => {
+              }),
+              default: withVaporCtx(() => {
                 const n3 = template(' ')() as any
                 renderEffect(() => setText(n3, foo.value))
                 return n3
-              },
+              }),
             },
             true,
           )
@@ -893,7 +936,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Parent, null, {
-            default: () => template('<!-- <div>App</div> -->')(),
+            default: withVaporCtx(() => template('<!-- <div>App</div> -->')()),
           })
         },
       }).render()
@@ -933,7 +976,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Parent, null, {
-            default: () => template('<!-- <div>App</div> -->')(),
+            default: withVaporCtx(() => template('<!-- <div>App</div> -->')()),
           })
         },
       }).render()
@@ -997,6 +1040,36 @@ describe('component: slots', () => {
       items.value.pop()
       await nextTick()
       expect(html()).toBe('child fallback<!--for--><!--slot--><!--slot-->')
+    })
+
+    test('consecutive slots with insertion state', async () => {
+      const { component: Child } = define({
+        setup() {
+          const n2 = template('<div><div>baz</div></div>', true)() as any
+          setInsertionState(n2, 0)
+          createSlot('default', null)
+          setInsertionState(n2, 0)
+          createSlot('foo', null)
+          return n2
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: withVaporCtx(() => template('default')()),
+            foo: withVaporCtx(() => template('foo')()),
+          })
+        },
+      }).render()
+
+      expect(html()).toBe(
+        `<div>` +
+          `default<!--slot-->` +
+          `foo<!--slot-->` +
+          `<div>baz</div>` +
+          `</div>`,
+      )
     })
 
     describe('vdom interop', () => {
@@ -1861,36 +1934,6 @@ describe('component: slots', () => {
         await nextTick()
         expect(root.innerHTML).toBe('<span>bar</span>')
       })
-    })
-
-    test('consecutive slots with insertion state', async () => {
-      const { component: Child } = define({
-        setup() {
-          const n2 = template('<div><div>baz</div></div>', true)() as any
-          setInsertionState(n2, 0)
-          createSlot('default', null)
-          setInsertionState(n2, 0)
-          createSlot('foo', null)
-          return n2
-        },
-      })
-
-      const { html } = define({
-        setup() {
-          return createComponent(Child, null, {
-            default: () => template('default')(),
-            foo: () => template('foo')(),
-          })
-        },
-      }).render()
-
-      expect(html()).toBe(
-        `<div>` +
-          `default<!--slot-->` +
-          `foo<!--slot-->` +
-          `<div>baz</div>` +
-          `</div>`,
-      )
     })
   })
 })

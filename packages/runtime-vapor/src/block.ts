@@ -26,9 +26,10 @@ export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
   props: TransitionProps
   instance: VaporComponentInstance
-  // mark transition hooks as disabled so that it skips during
-  // inserting
+  // mark transition hooks as disabled
   disabled?: boolean
+  // indicates a group transition
+  group?: boolean
 }
 
 export interface TransitionOptions {
@@ -36,12 +37,20 @@ export interface TransitionOptions {
   $transition?: VaporTransitionHooks
 }
 
-export type TransitionBlock =
-  | (Node & TransitionOptions)
-  | (VaporFragment & TransitionOptions)
-  | (DynamicFragment & TransitionOptions)
+export type TransitionBlock = (
+  | Node
+  | VaporFragment
+  | DynamicFragment
+  | VaporComponentInstance
+) &
+  TransitionOptions
 
-export type Block = TransitionBlock | VaporComponentInstance | Block[]
+export type Block =
+  | Node
+  | VaporFragment
+  | DynamicFragment
+  | VaporComponentInstance
+  | Block[]
 export type BlockFn = (...args: any[]) => Block
 
 export function isBlock(val: NonNullable<unknown>): val is Block {
@@ -114,8 +123,6 @@ export function insert(
     }
   }
 }
-
-export type InsertFn = typeof insert
 
 export function prepend(parent: ParentNode, ...blocks: Block[]): void {
   let i = blocks.length
@@ -239,16 +246,21 @@ export function setScopeId(block: Block, scopeIds: string[]): void {
 }
 
 export function setComponentScopeId(instance: VaporComponentInstance): void {
-  const parent = instance.parent
-  if (!parent) return
+  const { parent, scopeId } = instance
+  if (!parent || !scopeId) return
+
   // prevent setting scopeId on multi-root fragments
   if (isArray(instance.block) && instance.block.length > 1) return
 
   const scopeIds: string[] = []
-
-  const scopeId = parent.type.__scopeId
-  if (scopeId) {
+  const parentScopeId = parent && parent.type.__scopeId
+  // if parent scopeId is different from scopeId, this means scopeId
+  // is inherited from slot owner, so we need to set it to the component
+  // scopeIds. the `parentScopeId-s` is handled in createSlot
+  if (parentScopeId !== scopeId) {
     scopeIds.push(scopeId)
+  } else {
+    if (parentScopeId) scopeIds.push(parentScopeId)
   }
 
   // inherit scopeId from vdom parent

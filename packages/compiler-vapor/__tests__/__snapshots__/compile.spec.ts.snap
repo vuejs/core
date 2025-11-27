@@ -42,7 +42,7 @@ export function render(_ctx) {
         const n2 = _createComponentWithFallback(_component_Bar)
         _withVaporDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
         return n3
-      })
+      }, null, true)
       return n0
     })
   }, true)
@@ -180,14 +180,14 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { txt as _txt, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { txt as _txt, createInvoker as _createInvoker, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<button> </button>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
   const x0 = _txt(n0)
-  n0.$evtclick = e => _ctx.handleClick(e)
+  n0.$evtclick = _createInvoker(e => _ctx.handleClick(e))
   _renderEffect(() => {
     const _count = _ctx.count
     _setProp(n0, "id", _count)
@@ -230,7 +230,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
-  })
+  }, null, true)
   _renderEffect(() => _setProp(n4, "disabled", _ctx.foo))
   return n6
 }"
@@ -284,10 +284,52 @@ exports[`compile > expression parsing > v-bind 1`] = `
   const n0 = t0()
   _renderEffect(() => {
     const _key = key.value
-    _setDynamicProps(n0, [{ [_key+1]: _unref(foo)[_key+1]() }], true)
+    _setDynamicProps(n0, [{ [_key+1]: _unref(foo)[_key+1]() }])
   })
   return n0
 "
+`;
+
+exports[`compile > expression parsing > v-for 1`] = `
+"import { createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.a.b), (_for_item0, _for_key0, _for_index0) => {
+    const n2 = t0()
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compile > expression parsing > v-on multi statements 1`] = `
+"import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+_delegateEvents("click")
+
+export function render(_ctx) {
+  const n0 = t0()
+  n0.$evtclick = _createInvoker(() => {_ctx.a++;_ctx.b++})
+  return n0
+}"
+`;
+
+exports[`compile > expression parsing > v-slot 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponentWithFallback(_component_Comp, null, {
+    "foo": _withVaporCtx((_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["a"] + _slotProps0["b"])))
+      return n0
+    })
+  }, true)
+  return n1
+}"
 `;
 
 exports[`compile > fragment 1`] = `
@@ -300,6 +342,86 @@ export function render(_ctx) {
   const n0 = t0()
   const n1 = t1()
   const n2 = t2()
+  return [n0, n1, n2]
+}"
+`;
+
+exports[`compile > gen unique helper alias > should avoid conflicts with existing variable names 1`] = `
+"import { txt as _txt2, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> </div>", true)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  const x0 = _txt2(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.foo)))
+  return n0
+}"
+`;
+
+exports[`compile > gen unique node variables > should avoid binding conflicts for node vars (n*/x*) 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> </div>")
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n1 = t0()
+  const n3 = t0()
+  const x1 = _txt(n1)
+  const x3 = _txt(n3)
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    _setText(x1, _toDisplayString(_foo))
+    _setText(x3, _toDisplayString(_foo))
+  })
+  return [n1, n3]
+}"
+`;
+
+exports[`compile > gen unique node variables > should bump old ref var (r*) on conflict 1`] = `
+"import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const _setTemplateRef = _createTemplateRefSetter()
+  const n1 = t0()
+  const n3 = t0()
+  const n4 = t0()
+  let r1
+  let r3
+  let r4
+  _renderEffect(() => {
+    const _bar = _ctx.bar
+    r1 = _setTemplateRef(n1, _bar, r1)
+    r3 = _setTemplateRef(n3, _bar, r3)
+    r4 = _setTemplateRef(n4, _bar, r4)
+  })
+  return [n1, n3, n4]
+}"
+`;
+
+exports[`compile > gen unique node variables > should bump placeholder var (p*) on conflict 1`] = `
+"import { child as _child, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><div><div><span></span></div></div></div>", true)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n1 = t0()
+  const p1 = _child(n1, 0)
+  const p3 = _child(p1, 0)
+  const n0 = _child(p3, 0)
+  _renderEffect(() => _setProp(n0, "id", _ctx.foo))
+  return n1
+}"
+`;
+
+exports[`compile > gen unique node variables > should bump template var (t*) on conflict 1`] = `
+"import { template as _template } from 'vue';
+const t1 = _template("<div></div>")
+const t3 = _template("<span></span>")
+const t4 = _template("<p></p>")
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t1()
+  const n1 = t3()
+  const n2 = t4()
   return [n0, n1, n2]
 }"
 `;

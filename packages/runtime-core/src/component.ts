@@ -461,6 +461,17 @@ export interface GenericComponentInstance {
    * @internal
    */
   suspense: SuspenseBoundary | null
+  /**
+   * `updateTeleportCssVars`
+   * For updating css vars on contained teleports
+   * @internal
+   */
+  ut?: (vars?: Record<string, string>) => void
+  /**
+   * dev only. For style v-bind hydration mismatch checks
+   * @internal
+   */
+  getCssVars?: () => Record<string, string>
 
   // lifecycle
   /**
@@ -690,18 +701,6 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    * @internal
    */
   n?: () => Promise<void>
-  /**
-   * `updateTeleportCssVars`
-   * For updating css vars on contained teleports
-   * @internal
-   */
-  ut?: (vars?: Record<string, unknown>) => void
-
-  /**
-   * dev only. For style v-bind hydration mismatch checks
-   * @internal
-   */
-  getCssVars?: () => Record<string, unknown>
 
   /**
    * v2 compat only, for caching mutated $options
@@ -952,7 +951,7 @@ function setupStatefulComponent(
         // bail here and wait for re-entry.
         instance.asyncDep = setupResult
         if (__DEV__ && !instance.suspense) {
-          const name = Component.name ?? 'Anonymous'
+          const name = formatComponentName(instance, Component)
           warn(
             `Component <${name}>: setup function returned a promise, but no ` +
               `<Suspense> boundary was found in the parent component tree. ` +
@@ -1292,9 +1291,11 @@ export function formatComponentName(
     }
   }
 
-  if (!name && instance && instance.parent) {
+  if (!name && instance) {
     // try to infer the name based on reverse resolution
-    const inferFromRegistry = (registry: Record<string, any> | undefined) => {
+    const inferFromRegistry = (
+      registry: Record<string, any> | undefined | null,
+    ) => {
       for (const key in registry) {
         if (registry[key] === Component) {
           return key
@@ -1302,10 +1303,12 @@ export function formatComponentName(
       }
     }
     name =
-      inferFromRegistry(
-        (instance as ComponentInternalInstance).components ||
+      inferFromRegistry((instance as ComponentInternalInstance).components) ||
+      (instance.parent &&
+        inferFromRegistry(
           (instance.parent.type as ComponentOptions).components,
-      ) || inferFromRegistry(instance.appContext.components)
+        )) ||
+      inferFromRegistry(instance.appContext.components)
   }
 
   return name ? classify(name) : isRoot ? `App` : `Anonymous`
@@ -1333,6 +1336,14 @@ export interface ComponentCustomElementInterface {
     shouldReflect?: boolean,
     shouldUpdate?: boolean,
   ): void
+  /**
+   * @internal
+   */
+  _beginPatch(): void
+  /**
+   * @internal
+   */
+  _endPatch(): void
   /**
    * @internal attached by the nested Teleport when shadowRoot is false.
    */

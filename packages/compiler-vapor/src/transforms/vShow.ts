@@ -39,7 +39,7 @@ export const transformVShow: DirectiveTransform = (dir, node, context) => {
     )
 
     if (shouldDeferred) {
-      context.parent!.parent!.block.hasDeferredVShow = true
+      context.ir.hasDeferredVShow = true
     }
   }
 

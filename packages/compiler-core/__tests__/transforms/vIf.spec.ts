@@ -266,6 +266,31 @@ describe('compiler: v-if', () => {
           loc: node3.loc,
         },
       ])
+
+      const { node: node4 } = parseWithIfTransform(
+        `<div v-if="bar"/>foo<div v-else/>`,
+        { onError },
+        2,
+      )
+      expect(onError.mock.calls[3]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: node4.loc,
+        },
+      ])
+
+      // Non-breaking space
+      const { node: node5 } = parseWithIfTransform(
+        `<div v-if="bar"/>\u00a0<div v-else/>`,
+        { onError },
+        2,
+      )
+      expect(onError.mock.calls[4]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: node5.loc,
+        },
+      ])
     })
 
     test('error on v-else-if missing adjacent v-if or v-else-if', () => {
@@ -305,6 +330,31 @@ describe('compiler: v-if', () => {
         },
       ])
 
+      const { node: node4 } = parseWithIfTransform(
+        `<div v-if="bar"/>foo<div v-else-if="foo"/>`,
+        { onError },
+        2,
+      )
+      expect(onError.mock.calls[3]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: node4.loc,
+        },
+      ])
+
+      // Non-breaking space
+      const { node: node5 } = parseWithIfTransform(
+        `<div v-if="bar"/>\u00a0<div v-else-if="foo"/>`,
+        { onError },
+        2,
+      )
+      expect(onError.mock.calls[4]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+          loc: node5.loc,
+        },
+      ])
+
       const {
         node: { branches },
       } = parseWithIfTransform(
@@ -313,7 +363,7 @@ describe('compiler: v-if', () => {
         0,
       )
 
-      expect(onError.mock.calls[3]).toMatchObject([
+      expect(onError.mock.calls[5]).toMatchObject([
         {
           code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: branches[branches.length - 1].loc,

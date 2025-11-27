@@ -1,7 +1,15 @@
 import {
+  child,
+  createComponent,
+  createPlainElement,
   createVaporSSRApp,
   defineVaporAsyncComponent,
+  defineVaporComponent,
   delegateEvents,
+  renderEffect,
+  setStyle,
+  template,
+  useVaporCssVars,
 } from '../src'
 import { defineAsyncComponent, nextTick, reactive, ref } from '@vue/runtime-dom'
 import { isString } from '@vue/shared'
@@ -1063,6 +1071,34 @@ describe('Vapor Mode hydration', () => {
         <!--[--><span>bar</span><!--]-->
         </div><!--dynamic-component-->"
       `,
+      )
+    })
+
+    test('dynamic component fallback with dynamic slots', async () => {
+      const data = ref({
+        name: 'default',
+        msg: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <component :is="'div'">
+            <template v-slot:[data.name]>
+              <span>{{ data.msg }}</span>
+            </template>
+          </component>
+        </template>`,
+        {},
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>foo</span><!----></div><!--dynamic-component-->"`,
+      )
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>bar</span><!----></div><!--dynamic-component-->"`,
       )
     })
   })
@@ -4003,8 +4039,26 @@ describe('Vapor Mode hydration', () => {
       expect((container.firstChild! as any).foo).toBe(true)
     })
 
-    // vapor custom element not implemented yet
-    test.todo('force hydrate custom element with dynamic props', () => {})
+    test('force hydrate custom element with dynamic props', () => {
+      class MyElement extends HTMLElement {
+        foo = ''
+        constructor() {
+          super()
+        }
+      }
+      customElements.define('my-element-7203', MyElement)
+
+      const msg = ref('bar')
+      const container = document.createElement('div')
+      container.innerHTML = '<my-element-7203></my-element-7203>'
+      const app = createVaporSSRApp({
+        setup() {
+          return createPlainElement('my-element-7203', { foo: () => msg.value })
+        },
+      })
+      app.mount(container)
+      expect((container.firstChild as any).foo).toBe(msg.value)
+    })
   })
 })
 
@@ -4409,58 +4463,55 @@ describe('mismatch handling', () => {
     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
   })
 
-  test.todo('should not warn css v-bind', () => {
-    // const container = document.createElement('div')
-    // container.innerHTML = `<div style="--foo:red;color:var(--foo);" />`
-    // const app = createSSRApp({
-    //   setup() {
-    //     useCssVars(() => ({
-    //       foo: 'red',
-    //     }))
-    //     return () => h('div', { style: { color: 'var(--foo)' } })
-    //   },
-    // })
-    // app.mount(container)
-    // expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+  test('should not warn css v-bind', async () => {
+    const container = document.createElement('div')
+    container.innerHTML = `<div style="--foo:red;color:var(--foo);" />`
+    const app = createVaporSSRApp({
+      setup() {
+        useVaporCssVars(() => ({ foo: 'red' }))
+        const n0 = template('<div></div>', true)() as any
+        renderEffect(() => setStyle(n0, { color: 'var(--foo)' }))
+        return n0
+      },
+    })
+    app.mount(container)
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
   })
 
-  test.todo(
-    'css vars should only be added to expected on component root dom',
-    () => {
-      // const container = document.createElement('div')
-      // container.innerHTML = `<div style="--foo:red;"><div style="color:var(--foo);" /></div>`
-      // const app = createSSRApp({
-      //   setup() {
-      //     useCssVars(() => ({
-      //       foo: 'red',
-      //     }))
-      //     return () =>
-      //       h('div', null, [h('div', { style: { color: 'var(--foo)' } })])
-      //   },
-      // })
-      // app.mount(container)
-      // expect(`Hydration style mismatch`).not.toHaveBeenWarned()
-    },
-  )
+  test('css vars should only be added to expected on component root dom', () => {
+    const container = document.createElement('div')
+    container.innerHTML = `<div style="--foo:red;"><div style="color:var(--foo);" /></div>`
+    const app = createVaporSSRApp({
+      setup() {
+        useVaporCssVars(() => ({ foo: 'red' }))
+        const n0 = template('<div><div></div></div>', true)() as any
+        const n1 = child(n0) as any
+        renderEffect(() => setStyle(n1, { color: 'var(--foo)' }))
+        return n0
+      },
+    })
+    app.mount(container)
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+  })
 
-  test.todo('css vars support fallthrough', () => {
-    // const container = document.createElement('div')
-    // container.innerHTML = `<div style="padding: 4px;--foo:red;"></div>`
-    // const app = createSSRApp({
-    //   setup() {
-    //     useCssVars(() => ({
-    //       foo: 'red',
-    //     }))
-    //     return () => h(Child)
-    //   },
-    // })
-    // const Child = {
-    //   setup() {
-    //     return () => h('div', { style: 'padding: 4px' })
-    //   },
-    // }
-    // app.mount(container)
-    // expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+  test('css vars support fallthrough', () => {
+    const container = document.createElement('div')
+    container.innerHTML = `<div style="padding: 4px;--foo:red;"></div>`
+    const app = createVaporSSRApp({
+      setup() {
+        useVaporCssVars(() => ({ foo: 'red' }))
+        return createComponent(Child)
+      },
+    })
+    const Child = defineVaporComponent({
+      setup() {
+        const n0 = template('<div></div>', true)() as any
+        renderEffect(() => setStyle(n0, { padding: '4px' }))
+        return n0
+      },
+    })
+    app.mount(container)
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
   })
 
   // vapor directive does not have a created hook
@@ -4482,24 +4533,24 @@ describe('mismatch handling', () => {
     // expect(`Hydration style mismatch`).not.toHaveBeenWarned()
   })
 
-  test.todo('escape css var name', () => {
-    // const container = document.createElement('div')
-    // container.innerHTML = `<div style="padding: 4px;--foo\\.bar:red;"></div>`
-    // const app = createSSRApp({
-    //   setup() {
-    //     useCssVars(() => ({
-    //       'foo.bar': 'red',
-    //     }))
-    //     return () => h(Child)
-    //   },
-    // })
-    // const Child = {
-    //   setup() {
-    //     return () => h('div', { style: 'padding: 4px' })
-    //   },
-    // }
-    // app.mount(container)
-    // expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+  test('escape css var name', () => {
+    const container = document.createElement('div')
+    container.innerHTML = `<div style="padding: 4px;--foo\\.bar:red;"></div>`
+    const app = createVaporSSRApp({
+      setup() {
+        useVaporCssVars(() => ({ 'foo.bar': 'red' }))
+        return createComponent(Child)
+      },
+    })
+    const Child = defineVaporComponent({
+      setup() {
+        const n0 = template('<div></div>', true)() as any
+        renderEffect(() => setStyle(n0, { padding: '4px' }))
+        return n0
+      },
+    })
+    app.mount(container)
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
   })
 })
 

@@ -5,6 +5,7 @@ import {
   type IfBranchNode,
   type NodeTransform,
   NodeTypes,
+  isCommentOrWhitespace,
 } from '@vue/compiler-core'
 import { TRANSITION } from '../runtimeHelpers'
 import { DOMErrorCodes, createDOMCompilerError } from '../errors'
@@ -65,11 +66,9 @@ export function postTransformTransition(
 function defaultHasMultipleChildren(
   node: ComponentNode | IfBranchNode,
 ): boolean {
-  // #1352 filter out potential comment nodes.
+  // filter out potential comment nodes (#1352) and whitespace (#4637)
   const children = (node.children = node.children.filter(
-    c =>
-      c.type !== NodeTypes.COMMENT &&
-      !(c.type === NodeTypes.TEXT && !c.content.trim()),
+    c => !isCommentOrWhitespace(c),
   ))
   const child = children[0]
   return (

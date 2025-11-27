@@ -10,11 +10,12 @@ import {
   hasCSSTransform,
   onBeforeUpdate,
   onUpdated,
+  queuePostFlushCb,
   resolveTransitionProps,
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
-import { extend, isArray } from '@vue/shared'
+import { extend, invokeArrayFns, isArray } from '@vue/shared'
 import {
   type Block,
   type TransitionBlock,
@@ -35,7 +36,7 @@ import {
 import { isForBlock } from '../apiCreateFor'
 import { renderEffect } from '../renderEffect'
 import { createElement } from '../dom/node'
-import { DynamicFragment, isFragment } from '../fragment'
+import { isFragment } from '../fragment'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -126,6 +127,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       props: cssTransitionProps,
       state,
       instance,
+      group: true,
     } as VaporTransitionHooks)
 
     children = getTransitionBlocks(slottedBlock)
@@ -133,10 +135,14 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       const child = children[i]
       if (isValidTransitionBlock(child)) {
         if (child.$key != null) {
-          setTransitionHooks(
+          const hooks = resolveTransitionHooks(
             child,
-            resolveTransitionHooks(child, cssTransitionProps, state, instance!),
+            cssTransitionProps,
+            state,
+            instance!,
           )
+          hooks.group = true
+          setTransitionHooks(child, hooks)
         } else if (__DEV__ && child.$key == null) {
           warn(`<transition-group> children must be keyed`)
         }
@@ -154,11 +160,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       }
       return container
     } else {
-      const frag = __DEV__
-        ? new DynamicFragment('transition-group')
-        : new DynamicFragment()
-      renderEffect(() => frag.update(() => slottedBlock))
-      return frag
+      return slottedBlock
     }
   },
 })
@@ -219,5 +221,25 @@ function getFirstConnectedChild(
     const child = children[i]
     const el = getTransitionElement(child)
     if (el.isConnected) return el
+  }
+}
+
+/**
+ * The implementation of TransitionGroup relies on the onBeforeUpdate and onUpdated hooks.
+ * However, when the slot content of TransitionGroup updates, it does not trigger the
+ * onBeforeUpdate and onUpdated hooks. Therefore, it is necessary to manually trigger
+ * the TransitionGroup update hooks to ensure its proper work.
+ */
+export function triggerTransitionGroupUpdate(
+  transition: VaporTransitionHooks,
+): void {
+  const { instance } = transition
+  if (!instance.isUpdating) {
+    instance.isUpdating = true
+    if (instance.bu) invokeArrayFns(instance.bu)
+    queuePostFlushCb(() => {
+      instance.isUpdating = false
+      if (instance.u) invokeArrayFns(instance.u)
+    })
   }
 }

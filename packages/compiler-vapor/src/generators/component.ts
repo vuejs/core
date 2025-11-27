@@ -1,4 +1,4 @@
-import { camelize, extend, isArray } from '@vue/shared'
+import { camelize, extend, getModifierPropName, isArray } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
   type CreateComponentIRNode,
@@ -40,12 +40,7 @@ import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
 import { genModelHandler } from './vModel'
-import {
-  isBuiltInComponent,
-  isKeepAliveTag,
-  isTeleportTag,
-  isTransitionGroupTag,
-} from '../utils'
+import { isBuiltInComponent, isKeepAliveTag } from '../utils'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -61,7 +56,7 @@ export function genCreateComponent(
 
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
     (acc, { name, value }: InlineHandler) => {
-      const handler = genEventHandler(context, value, undefined, false)
+      const handler = genEventHandler(context, [value], undefined, false)
       return [...acc, `const ${name} = `, ...handler, NEWLINE]
     },
     [],
@@ -73,9 +68,11 @@ export function genCreateComponent(
     ...genCall(
       operation.dynamic && !operation.dynamic.isStatic
         ? helper('createDynamicComponent')
-        : operation.asset
-          ? helper('createComponentWithFallback')
-          : helper('createComponent'),
+        : operation.isCustomElement
+          ? helper('createPlainElement')
+          : operation.asset
+            ? helper('createComponentWithFallback')
+            : helper('createComponent'),
       tag,
       rawProps,
       rawSlots,
@@ -86,7 +83,9 @@ export function genCreateComponent(
   ]
 
   function genTag() {
-    if (operation.dynamic) {
+    if (operation.isCustomElement) {
+      return JSON.stringify(operation.tag)
+    } else if (operation.dynamic) {
       if (operation.dynamic.isStatic) {
         return genCall(
           helper('resolveDynamicComponent'),
@@ -227,7 +226,7 @@ function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
     ...(prop.handler
       ? genEventHandler(
           context,
-          prop.values[0],
+          prop.values,
           prop.handlerModifiers,
           true /* wrap handlers passed to components */,
         )
@@ -257,9 +256,7 @@ function genModelModifiers(
   if (!modelModifiers || !modelModifiers.length) return []
 
   const modifiersKey = key.isStatic
-    ? key.content === 'modelValue'
-      ? [`modelModifiers`]
-      : [`${key.content}Modifiers`]
+    ? [getModifierPropName(key.content)]
     : ['[', ...genExpression(key, context), ' + "Modifiers"]']
 
   const modifiersVal = genDirectiveModifiers(modelModifiers)
@@ -463,15 +460,7 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     ]
   }
 
-  if (
-    node.type === NodeTypes.ELEMENT &&
-    // Not a real component
-    !isTeleportTag(node.tag) &&
-    // Needs to determine whether to activate/deactivate based on instance.parent being KeepAlive
-    !isKeepAliveTag(node.tag) &&
-    // Slot updates need to trigger TransitionGroup's onBeforeUpdate/onUpdated hook
-    !isTransitionGroupTag(node.tag)
-  ) {
+  if (node.type === NodeTypes.ELEMENT && !isKeepAliveTag(node.tag)) {
     // wrap with withVaporCtx to ensure correct currentInstance inside slot
     blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
   }

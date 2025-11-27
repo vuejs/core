@@ -48,6 +48,7 @@ import {
   EMPTY_OBJ,
   ShapeFlags,
   invokeArrayFns,
+  isArray,
   isFunction,
   isString,
 } from '@vue/shared'
@@ -70,7 +71,9 @@ import {
   type StaticSlots,
   type VaporSlot,
   dynamicSlotsProxyHandlers,
+  getParentInstance,
   getSlot,
+  setCurrentSlotConsumer,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
@@ -86,14 +89,18 @@ import {
 } from './dom/hydration'
 import { _next, createElement } from './dom/node'
 import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
-import type { KeepAliveInstance } from './components/KeepAlive'
+import {
+  type KeepAliveInstance,
+  findParentKeepAlive,
+} from './components/KeepAlive'
 import {
   insertionAnchor,
   insertionParent,
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-import { DynamicFragment } from './fragment'
+import { DynamicFragment, isFragment } from './fragment'
+import type { VaporElement } from './apiDefineVaporCustomElement'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -127,8 +134,10 @@ export interface ObjectVaporComponent
 
   name?: string
   vapor?: boolean
-  __asyncLoader?: () => Promise<VaporComponent>
-  __asyncResolved?: VaporComponent
+  /**
+   * @internal custom element interception hook
+   */
+  ce?: (instance: VaporComponentInstance) => void
 }
 
 interface SharedInternalOptions {
@@ -185,15 +194,17 @@ export function createComponent(
     resetInsertionState()
   }
 
+  const parentInstance = getParentInstance()
+
   if (
     isSingleRoot &&
     component.inheritAttrs !== false &&
-    isVaporComponent(currentInstance) &&
-    currentInstance.hasFallthrough
+    isVaporComponent(parentInstance) &&
+    parentInstance.hasFallthrough
   ) {
     // check if we are the single root of the parent
     // if yes, inject parent attrs as dynamic props source
-    const attrs = currentInstance.attrs
+    const attrs = parentInstance.attrs
     if (rawProps) {
       ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
         () => attrs,
@@ -204,12 +215,8 @@ export function createComponent(
   }
 
   // keep-alive
-  if (
-    currentInstance &&
-    currentInstance.vapor &&
-    isKeepAlive(currentInstance)
-  ) {
-    const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
+  if (parentInstance && parentInstance.vapor && isKeepAlive(parentInstance)) {
+    const cached = (parentInstance as KeepAliveInstance).getCachedComponent(
       component,
     )
     // @ts-expect-error
@@ -218,12 +225,14 @@ export function createComponent(
 
   // vdom interop enabled and component is not an explicit vapor component
   if (appContext.vapor && !component.__vapor) {
+    const prevSlotConsumer = setCurrentSlotConsumer(null)
     const frag = appContext.vapor.vdomMount(
       component as any,
+      parentInstance as any,
       rawProps,
       rawSlots,
     )
-
+    setCurrentSlotConsumer(prevSlotConsumer)
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
@@ -256,17 +265,19 @@ export function createComponent(
     rawSlots as RawSlots,
     appContext,
     once,
+    parentInstance,
   )
 
+  // set currentSlotConsumer to null to avoid affecting the child components
+  const prevSlotConsumer = setCurrentSlotConsumer(null)
+
   // HMR
-  if (__DEV__ && component.__hmrId) {
+  if (__DEV__) {
     registerHMR(instance)
     instance.isSingleRoot = isSingleRoot
     instance.hmrRerender = hmrRerender.bind(null, instance)
     instance.hmrReload = hmrReload.bind(null, instance)
-  }
 
-  if (__DEV__) {
     pushWarningContext(instance)
     startMeasure(instance, `init`)
 
@@ -316,6 +327,8 @@ export function createComponent(
     setupComponent(instance, component)
   }
 
+  // restore currentSlotConsumer to previous value after setupFn is called
+  setCurrentSlotConsumer(prevSlotConsumer)
   onScopeDispose(() => unmountComponent(instance), true)
 
   if (_insertionParent || isHydrating) {
@@ -325,6 +338,7 @@ export function createComponent(
   if (isHydrating && _insertionAnchor !== undefined) {
     advanceHydrationNode(_insertionParent!)
   }
+
   return instance
 }
 
@@ -383,10 +397,7 @@ export function setupComponent(
     component.inheritAttrs !== false &&
     Object.keys(instance.attrs).length
   ) {
-    const el = getRootElement(instance)
-    if (el) {
-      renderEffect(() => applyFallthroughProps(el, instance.attrs))
-    }
+    renderEffect(() => applyFallthroughProps(instance.block, instance.attrs))
   }
 
   setActiveSub(prevSub)
@@ -404,9 +415,12 @@ export function applyFallthroughProps(
   block: Block,
   attrs: Record<string, any>,
 ): void {
-  isApplyingFallthroughProps = true
-  setDynamicProps(block as Element, [attrs])
-  isApplyingFallthroughProps = false
+  const el = getRootElement(block, false)
+  if (el) {
+    isApplyingFallthroughProps = true
+    setDynamicProps(el, [attrs])
+    isApplyingFallthroughProps = false
+  }
 }
 
 /**
@@ -469,6 +483,8 @@ export class VaporComponentInstance implements GenericComponentInstance {
 
   slots: StaticSlots
 
+  scopeId?: string | null
+
   // to hold vnode props / slots in vdom interop mode
   rawPropsRef?: ShallowRef<any>
   rawSlotsRef?: ShallowRef<any>
@@ -489,7 +505,14 @@ export class VaporComponentInstance implements GenericComponentInstance {
   // for suspense
   suspense: SuspenseBoundary | null
 
+  // for HMR and vapor custom element
+  // all render effects associated with this instance
+  renderEffects?: RenderEffect[]
+
   hasFallthrough: boolean
+
+  // for keep-alive
+  shapeFlag?: number
 
   // lifecycle hooks
   isMounted: boolean
@@ -517,12 +540,10 @@ export class VaporComponentInstance implements GenericComponentInstance {
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void
-  renderEffects?: RenderEffect[]
   parentTeleport?: TeleportFragment | null
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
-  shapeFlag?: number
 
   constructor(
     comp: VaporComponent,
@@ -530,17 +551,18 @@ export class VaporComponentInstance implements GenericComponentInstance {
     rawSlots?: RawSlots | null,
     appContext?: GenericAppContext,
     once?: boolean,
+    parent: GenericComponentInstance | null = currentInstance,
   ) {
     this.vapor = true
     this.uid = nextUid()
     this.type = comp
-    this.parent = currentInstance
-    this.root = currentInstance ? currentInstance.root : this
+    this.parent = parent
+    this.root = parent ? parent.root : this
 
-    if (currentInstance) {
-      this.appContext = currentInstance.appContext
-      this.provides = currentInstance.provides
-      this.ids = currentInstance.ids
+    if (parent) {
+      this.appContext = parent.appContext
+      this.provides = parent.provides
+      this.ids = parent.ids
     } else {
       this.appContext = appContext || emptyContext
       this.provides = Object.create(this.appContext.provides)
@@ -588,6 +610,13 @@ export class VaporComponentInstance implements GenericComponentInstance {
         ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
         : rawSlots
       : EMPTY_OBJ
+
+    this.scopeId = currentInstance && currentInstance.type.__scopeId
+
+    // apply custom element special handling
+    if (comp.ce) {
+      comp.ce(this)
+    }
   }
 
   /**
@@ -629,6 +658,16 @@ export function createComponentWithFallback(
     )
   }
 
+  return createPlainElement(comp, rawProps, rawSlots, isSingleRoot, once)
+}
+
+export function createPlainElement(
+  comp: string,
+  rawProps?: LooseRawProps | null,
+  rawSlots?: LooseRawSlots | null,
+  isSingleRoot?: boolean,
+  once?: boolean,
+): HTMLElement {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
@@ -664,9 +703,16 @@ export function createComponentWithFallback(
       setCurrentHydrationNode(el.firstChild)
     }
     if (rawSlots.$) {
-      // TODO dynamic slot fragment
+      // ssr output does not contain the slot anchor, use an empty string
+      // as the anchor label to avoid slot anchor search errors
+      const frag = new DynamicFragment(
+        isHydrating ? '' : __DEV__ ? 'slot' : undefined,
+      )
+      renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
+      if (!isHydrating) insert(frag, el)
     } else {
-      insert(getSlot(rawSlots as RawSlots, 'default')!(), el)
+      const block = getSlot(rawSlots as RawSlots, 'default')!()
+      if (!isHydrating) insert(block, el)
     }
     if (isHydrating) {
       setCurrentHydrationNode(nextNode)
@@ -690,8 +736,19 @@ export function mountComponent(
   anchor?: Node | null | 0,
 ): void {
   if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-    ;(instance.parent as KeepAliveInstance).activate(instance, parent, anchor)
+    findParentKeepAlive(instance)!.activate(instance, parent, anchor)
     return
+  }
+
+  // custom element style injection
+  const { root, type } = instance as GenericComponentInstance
+  if (
+    root &&
+    root.ce &&
+    // @ts-expect-error _def is private
+    (root.ce as VaporElement)._def.shadowRoot !== false
+  ) {
+    root.ce!._injectChildStyle(type)
   }
 
   if (__DEV__) {
@@ -725,7 +782,7 @@ export function unmountComponent(
     instance.parent.vapor &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
   ) {
-    ;(instance.parent as KeepAliveInstance).deactivate(instance)
+    findParentKeepAlive(instance)!.deactivate(instance)
     return
   }
 
@@ -763,17 +820,44 @@ export function getExposed(
   }
 }
 
-function getRootElement({
-  block,
-}: VaporComponentInstance): Element | undefined {
+export function getRootElement(
+  block: Block,
+  recurse: boolean = true,
+): Element | undefined {
   if (block instanceof Element) {
     return block
   }
 
-  if (block instanceof DynamicFragment) {
+  if (recurse && isVaporComponent(block)) {
+    return getRootElement(block.block, recurse)
+  }
+
+  if (isFragment(block)) {
     const { nodes } = block
     if (nodes instanceof Element && (nodes as any).$root) {
       return nodes
     }
+    return getRootElement(nodes, recurse)
+  }
+
+  // The root node contains comments. It is necessary to filter out
+  // the comment nodes and return a single root node.
+  // align with vdom behavior
+  if (isArray(block)) {
+    let singleRoot: Element | undefined
+    let hasComment = false
+    for (const b of block) {
+      if (b instanceof Comment) {
+        hasComment = true
+        continue
+      }
+      const thisRoot = getRootElement(b, recurse)
+      // only return root if there is exactly one eligible root in the array
+      if (!thisRoot || singleRoot) {
+        return
+      }
+      singleRoot = thisRoot
+    }
+    return hasComment ? singleRoot : undefined
   }
 }

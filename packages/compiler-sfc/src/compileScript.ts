@@ -34,7 +34,7 @@ import {
   normalScriptDefaultVar,
   processNormalScript,
 } from './script/normalScript'
-import { CSS_VARS_HELPER, genCssVarsCode } from './style/cssVars'
+import { genCssVarsCode, getCssVarsHelper } from './style/cssVars'
 import {
   type SFCTemplateCompileOptions,
   compileTemplate,
@@ -388,6 +388,23 @@ export function compileScript(
         const local = specifier.local.name
         const imported = getImportedName(specifier)
         const source = node.source.value
+
+        // rewrite defineVaporAsyncComponent import to defineAsyncComponent
+        // in SSR + Vapor mode
+        if (
+          vapor &&
+          ssr &&
+          specifier.type === 'ImportSpecifier' &&
+          source === 'vue' &&
+          imported === 'defineVaporAsyncComponent'
+        ) {
+          ctx.s.overwrite(
+            specifier.start! + startOffset,
+            specifier.end! + startOffset,
+            `defineAsyncComponent as ${local}`,
+          )
+        }
+
         const existing = ctx.userImports[local]
         if (source === 'vue' && MACROS.includes(imported)) {
           if (local === imported) {
@@ -808,7 +825,7 @@ export function compileScript(
     // no need to do this when targeting SSR
     !ssr
   ) {
-    ctx.helperImports.add(CSS_VARS_HELPER)
+    ctx.helperImports.add(getCssVarsHelper(vapor))
     ctx.helperImports.add('unref')
     ctx.s.prependLeft(
       startOffset,
@@ -817,6 +834,7 @@ export function compileScript(
         ctx.bindingMetadata,
         scopeId,
         !!options.isProd,
+        vapor,
       )}\n`,
     )
   }

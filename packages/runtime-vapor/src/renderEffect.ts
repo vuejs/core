@@ -9,6 +9,7 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import { type VaporComponentInstance, isVaporComponent } from './component'
+import { inOnceSlot } from './componentSlots'
 import { invokeArrayFns } from '@vue/shared'
 
 export class RenderEffect extends ReactiveEffect {
@@ -42,6 +43,11 @@ export class RenderEffect extends ReactiveEffect {
           ? e => invokeArrayFns(instance.rtg!, e)
           : void 0
       }
+
+      if (__DEV__ || instance.type.ce) {
+        // register effect for stopping them during HMR rerender
+        ;(instance.renderEffects || (instance.renderEffects = [])).push(this)
+      }
       job.i = instance
     }
 
@@ -71,11 +77,6 @@ export class RenderEffect extends ReactiveEffect {
     setCurrentInstance(...prev)
     if (__DEV__ && instance) {
       startMeasure(instance, `renderEffect`)
-
-      if (instance.renderEffects) {
-        instance.renderEffects.forEach(e => e.stop())
-        instance.renderEffects = []
-      }
     }
   }
 
@@ -88,6 +89,9 @@ export class RenderEffect extends ReactiveEffect {
 }
 
 export function renderEffect(fn: () => void, noLifecycle = false): void {
+  // in once slot, just run the function directly
+  if (inOnceSlot) return fn()
+
   const effect = new RenderEffect(fn)
   if (noLifecycle) {
     effect.fn = fn

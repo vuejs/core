@@ -5,7 +5,7 @@ import type {
   SimpleExpressionNode,
   TemplateChildNode,
 } from '@vue/compiler-dom'
-import type { Prettify } from '@vue/shared'
+import type { Namespace, Prettify } from '@vue/shared'
 import type { DirectiveTransform, NodeTransform } from '../transform'
 import type { IRProp, IRProps, IRSlots } from './component'
 
@@ -54,19 +54,20 @@ export interface BlockIRNode extends BaseIRNode {
   effect: IREffect[]
   operation: OperationNode[]
   returns: number[]
-  hasDeferredVShow: boolean
 }
 
 export interface RootIRNode {
   type: IRNodeTypes.ROOT
   node: RootNode
   source: string
-  template: string[]
-  rootTemplateIndex?: number
+  template: Map<string, Namespace>
+  templateIndexMap: Map<string, number>
+  rootTemplateIndexes: Set<number>
   component: Set<string>
   directive: Set<string>
   block: BlockIRNode
   hasTemplateRef: boolean
+  hasDeferredVShow: boolean
 }
 
 export interface IfIRNode extends BaseIRNode {
@@ -107,7 +108,6 @@ export interface SetPropIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_PROP
   element: number
   prop: IRProp
-  root: boolean
   tag: string
 }
 
@@ -115,7 +115,7 @@ export interface SetDynamicPropsIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_DYNAMIC_PROPS
   element: number
   props: IRProps[]
-  root: boolean
+  tag: string
 }
 
 export interface SetDynamicEventsIRNode extends BaseIRNode {
@@ -202,6 +202,7 @@ export interface CreateComponentIRNode extends BaseIRNode {
   root: boolean
   once: boolean
   dynamic?: SimpleExpressionNode
+  isCustomElement: boolean
   parent?: number
   anchor?: number
   append?: boolean
@@ -220,6 +221,7 @@ export interface SlotOutletIRNode extends BaseIRNode {
   props: IRProps[]
   fallback?: BlockIRNode
   noSlotted?: boolean
+  once?: boolean
   parent?: number
   anchor?: number
   append?: boolean

@@ -60,9 +60,21 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-once > on slot outlet 1`] = `
+"import { setInsertionState as _setInsertionState, createSlot as _createSlot, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n1 = t0()
+  _setInsertionState(n1, null, true)
+  const n0 = _createSlot("default", null, null, null, true)
+  return n1
+}"
+`;
+
 exports[`compiler: v-once > with v-for 1`] = `
 "import { createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
@@ -88,8 +100,8 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > with v-if/else 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-const t1 = _template("<p></p>")
+const t0 = _template("<div></div>", true)
+const t1 = _template("<p></p>", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.expr), () => {

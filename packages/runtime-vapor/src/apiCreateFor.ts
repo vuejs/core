@@ -39,6 +39,7 @@ import {
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
+import { triggerTransitionGroupUpdate } from './components/TransitionGroup'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
@@ -129,6 +130,12 @@ export const createFor = (
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
     let isFallback = false
+
+    // trigger TransitionGroup update hooks
+    const transitionHooks = frag.$transition
+    if (transitionHooks && transitionHooks.group && isMounted) {
+      triggerTransitionGroupUpdate(transitionHooks)
+    }
 
     const prevSub = setActiveSub()
 
@@ -395,6 +402,8 @@ export const createFor = (
     } else {
       oldBlocks = []
     }
+
+    if (isMounted && frag.updated) frag.updated.forEach(m => m())
     setActiveSub(prevSub)
   }
 

@@ -1,18 +1,24 @@
 import {
   KeepAlive,
+  type ShallowRef,
   createVNode,
   defineComponent,
   h,
+  inject,
   nextTick,
   onActivated,
   onBeforeMount,
   onDeactivated,
   onMounted,
   onUnmounted,
+  provide,
   ref,
   renderSlot,
+  resolveDynamicComponent,
+  shallowRef,
   toDisplayString,
   useModel,
+  useTemplateRef,
 } from '@vue/runtime-dom'
 import { makeInteropRender } from './_utils'
 import {
@@ -48,6 +54,28 @@ describe('vdomInterop', () => {
       }).render()
 
       expect(html()).toBe('foo')
+    })
+
+    test('should handle class prop when vapor renders vdom component', () => {
+      const VDomChild = defineComponent({
+        setup() {
+          return () => h('div', { class: 'foo' })
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(VDomChild as any, { class: () => 'bar' })
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div class="foo bar"></div>')
     })
   })
 
@@ -212,13 +240,122 @@ describe('vdomInterop', () => {
     })
   })
 
-  describe.todo('provide', () => {})
+  describe('provide / inject', () => {
+    it('should inject value from vdom parent', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          const foo = inject('foo')
+          const n0 = template(' ')() as any
+          renderEffect(() => setText(n0, toDisplayString(foo)))
+          return n0
+        },
+      })
 
-  describe.todo('inject', () => {})
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          provide('foo', value)
+          return () => h(VaporChild as any)
+        },
+      }).render()
 
-  describe.todo('template ref', () => {})
+      expect(html()).toBe('foo')
 
-  describe.todo('dynamic component', () => {})
+      value.value = 'bar'
+      await nextTick()
+      expect(html()).toBe('bar')
+    })
+  })
+
+  describe('template ref', () => {
+    it('useTemplateRef with vapor child', async () => {
+      const VaporChild = defineVaporComponent({
+        setup(_, { expose }) {
+          const foo = ref('foo')
+          expose({ foo })
+          const n0 = template(' ')() as any
+          renderEffect(() => setText(n0, toDisplayString(foo)))
+          return n0
+        },
+      })
+
+      let elRef: ShallowRef
+      const { html } = define({
+        setup() {
+          elRef = useTemplateRef('el')
+          return () => h(VaporChild as any, { ref: 'el' })
+        },
+      }).render()
+
+      expect(html()).toBe('foo')
+
+      elRef!.value.foo = 'bar'
+      await nextTick()
+      expect(html()).toBe('bar')
+    })
+
+    it('static ref with vapor child', async () => {
+      const VaporChild = defineVaporComponent({
+        setup(_, { expose }) {
+          const foo = ref('foo')
+          expose({ foo })
+          const n0 = template(' ')() as any
+          renderEffect(() => setText(n0, toDisplayString(foo)))
+          return n0
+        },
+      })
+
+      let elRef: ShallowRef
+      const { html } = define({
+        setup() {
+          elRef = shallowRef()
+          return { elRef }
+        },
+        render() {
+          return h(VaporChild as any, { ref: 'elRef' })
+        },
+      }).render()
+
+      expect(html()).toBe('foo')
+
+      elRef!.value.foo = 'bar'
+      await nextTick()
+      expect(html()).toBe('bar')
+    })
+  })
+
+  describe('dynamic component', () => {
+    it('dynamic component with vapor child', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor child</div>')() as any
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('div', 'vdom child')
+        },
+      })
+
+      const view = shallowRef<any>(VaporChild)
+      const { html } = define({
+        setup() {
+          return () => h(resolveDynamicComponent(view.value) as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>vapor child</div>')
+
+      view.value = VdomChild
+      await nextTick()
+      expect(html()).toBe('<div>vdom child</div>')
+
+      view.value = VaporChild
+      await nextTick()
+      expect(html()).toBe('<div>vapor child</div>')
+    })
+  })
 
   describe('attribute fallthrough', () => {
     it('should fallthrough attrs to vdom child', () => {

@@ -1,10 +1,11 @@
 import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
-import { _child, createElement, createTextNode } from './node'
+import { type Namespace, Namespaces } from '@vue/shared'
+import { _child, createTextNode } from './node'
 
 let t: HTMLTemplateElement
 
 /*! #__NO_SIDE_EFFECTS__ */
-export function template(html: string, root?: boolean) {
+export function template(html: string, root?: boolean, ns?: Namespace) {
   let node: Node
   return (): Node & { $root?: true } => {
     if (isHydrating) {
@@ -20,9 +21,15 @@ export function template(html: string, root?: boolean) {
       return createTextNode(html)
     }
     if (!node) {
-      t = t || createElement('template')
-      t.innerHTML = html
-      node = _child(t.content)
+      t = t || document.createElement('template')
+      if (ns) {
+        const tag = ns === Namespaces.SVG ? 'svg' : 'math'
+        t.innerHTML = `<${tag}>${html}</${tag}>`
+        node = _child(_child(t.content) as ParentNode)
+      } else {
+        t.innerHTML = html
+        node = _child(t.content)
+      }
     }
     const ret = node.cloneNode(true)
     if (root) (ret as any).$root = true

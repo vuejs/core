@@ -23,6 +23,7 @@ import {
 import {
   canSetValueDirectly,
   capitalize,
+  extend,
   isSVGTag,
   shouldSetAsAttr,
   toHandlerKey,
@@ -31,6 +32,7 @@ import {
 export type HelperConfig = {
   name: VaporHelper
   needKey?: boolean
+  isSVG?: boolean
   acceptRoot?: boolean
 }
 
@@ -44,7 +46,6 @@ const helpers = {
   setAttr: { name: 'setAttr', needKey: true },
   setProp: { name: 'setProp', needKey: true },
   setDOMProp: { name: 'setDOMProp', needKey: true },
-  setDynamicProps: { name: 'setDynamicProps' },
 } as const satisfies Partial<Record<VaporHelper, HelperConfig>>
 
 // only the static key prop will reach here
@@ -66,6 +67,7 @@ export function genSetProp(
       `n${oper.element}`,
       resolvedHelper.needKey ? genExpression(key, context) : false,
       propValue,
+      resolvedHelper.isSVG && 'true',
     ),
   ]
 }
@@ -76,6 +78,7 @@ export function genDynamicProps(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
+  const isSVG = isSVGTag(oper.tag)
   const values = oper.props.map(props =>
     Array.isArray(props)
       ? genLiteralObjectProps(props, context) // static and dynamic arg props
@@ -89,7 +92,7 @@ export function genDynamicProps(
       helper('setDynamicProps'),
       `n${oper.element}`,
       genMulti(DELIMITERS_ARRAY, ...values),
-      oper.root && 'true',
+      isSVG && 'true',
     ),
   ]
 }
@@ -135,6 +138,7 @@ export function genPropKey(
 
   let key = genExpression(node, context)
   if (runtimeCamelize) {
+    key.push(' || ""')
     key = genCall(helper('camelize'), key)
   }
   if (handler) {
@@ -170,6 +174,13 @@ function getRuntimeHelper(
   modifier: '.' | '^' | undefined,
 ): HelperConfig {
   const tagName = tag.toUpperCase()
+  const isSVG = isSVGTag(tag)
+
+  // 1. SVG: always attribute
+  if (isSVG) {
+    return extend({ isSVG: true }, helpers.setAttr)
+  }
+
   if (modifier) {
     if (modifier === '.') {
       return getSpecialHelper(key, tagName) || helpers.setDOMProp
@@ -178,22 +189,16 @@ function getRuntimeHelper(
     }
   }
 
-  // 1. special handling for value / style / class / textContent /  innerHTML
+  // 2. special handling for value / style / class / textContent /  innerHTML
   const helper = getSpecialHelper(key, tagName)
   if (helper) {
     return helper
   }
 
-  // 2. Aria DOM properties shared between all Elements in
+  // 3. Aria DOM properties shared between all Elements in
   //    https://developer.mozilla.org/en-US/docs/Web/API/Element
   if (/aria[A-Z]/.test(key)) {
     return helpers.setDOMProp
-  }
-
-  // 3. SVG: always attribute
-  if (isSVGTag(tag)) {
-    // TODO pass svg flag
-    return helpers.setAttr
   }
 
   // 4. respect shouldSetAsAttr used in vdom and setDynamicProp for consistency

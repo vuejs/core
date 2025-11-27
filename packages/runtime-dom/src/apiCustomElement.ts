@@ -3,7 +3,6 @@ import {
   type Component,
   type ComponentCustomElementInterface,
   type ComponentInjectOptions,
-  type ComponentInternalInstance,
   type ComponentObjectPropsOptions,
   type ComponentOptions,
   type ComponentOptionsBase,
@@ -19,6 +18,7 @@ import {
   type EmitsOptions,
   type EmitsToProps,
   type ExtractPropTypes,
+  type GenericComponentInstance,
   type MethodOptions,
   type RenderFunction,
   type SetupContext,
@@ -27,9 +27,9 @@ import {
   type VNodeProps,
   createVNode,
   defineComponent,
-  getCurrentInstance,
   nextTick,
   unref,
+  useInstanceOption,
   warn,
 } from '@vue/runtime-core'
 import {
@@ -200,7 +200,11 @@ const BaseClass = (
 
 type InnerComponentDef = ConcreteComponent & CustomElementOptions
 
-export class VueElement
+export abstract class VueElementBase<
+    E = Element,
+    C = Component,
+    Def extends CustomElementOptions & { props?: any } = InnerComponentDef,
+  >
   extends BaseClass
   implements ComponentCustomElementInterface
 {
@@ -208,7 +212,7 @@ export class VueElement
   /**
    * @internal
    */
-  _instance: ComponentInternalInstance | null = null
+  _instance: GenericComponentInstance | null = null
   /**
    * @internal
    */
@@ -220,52 +224,68 @@ export class VueElement
   /**
    * @internal
    */
-  _nonce: string | undefined = this._def.nonce
-
+  _nonce: string | undefined
   /**
    * @internal
    */
   _teleportTargets?: Set<Element>
 
-  private _connected = false
-  private _resolved = false
-  private _numberProps: Record<string, true> | null = null
-  private _styleChildren = new WeakSet()
-  private _pendingResolve: Promise<void> | undefined
-  private _parent: VueElement | undefined
+  protected _connected = false
+  protected _resolved = false
+  protected _numberProps: Record<string, true> | null = null
+  protected _styleChildren: WeakSet<object> = new WeakSet()
+  protected _pendingResolve: Promise<void> | undefined
+  protected _parent: VueElementBase | undefined
+  protected _patching = false
+  protected _dirty = false
+
+  protected _def: Def
+  protected _props: Record<string, any>
+  protected _createApp: CreateAppFunction<E, C>
+
   /**
    * dev only
    */
-  private _styles?: HTMLStyleElement[]
+  protected _styles?: HTMLStyleElement[]
   /**
    * dev only
    */
-  private _childStyles?: Map<string, HTMLStyleElement[]>
-  private _ob?: MutationObserver | null = null
-  private _slots?: Record<string, Node[]>
+  protected _childStyles?: Map<string, HTMLStyleElement[]>
+  protected _ob?: MutationObserver | null = null
+  protected _slots?: Record<string, Node[]>
+
+  /**
+   * Check if this custom element needs hydration.
+   * Returns true if it has a pre-rendered declarative shadow root that
+   * needs to be hydrated.
+   */
+  protected abstract _needsHydration(): boolean
+  protected abstract _mount(def: Def): void
+  protected abstract _update(): void
+  protected abstract _unmount(): void
+  protected abstract _updateSlotNodes(slot: Map<Node, Node[]>): void
 
   constructor(
     /**
      * Component def - note this may be an AsyncWrapper, and this._def will
      * be overwritten by the inner component when resolved.
      */
-    private _def: InnerComponentDef,
-    private _props: Record<string, any> = {},
-    private _createApp: CreateAppFunction<Element> = createApp,
+    def: Def,
+    props: Record<string, any> | undefined = {},
+    createAppFn: CreateAppFunction<E, C>,
   ) {
     super()
-    if (this.shadowRoot && _createApp !== createApp) {
-      this._root = this.shadowRoot
+    this._def = def
+    this._props = props
+    this._createApp = createAppFn
+    this._nonce = def.nonce
+
+    if (this._needsHydration()) {
+      this._root = this.shadowRoot!
     } else {
-      if (__DEV__ && this.shadowRoot) {
-        warn(
-          `Custom element has pre-rendered declarative shadow root but is not ` +
-            `defined as hydratable. Use \`defineSSRCustomElement\`.`,
-        )
-      }
-      if (_def.shadowRoot !== false) {
+      if (def.shadowRoot !== false) {
         this.attachShadow(
-          extend({}, _def.shadowRootOptions, {
+          extend({}, def.shadowRootOptions, {
             mode: 'open',
           }) as ShadowRootInit,
         )
@@ -291,7 +311,7 @@ export class VueElement
     while (
       (parent = parent && (parent.parentNode || (parent as ShadowRoot).host))
     ) {
-      if (parent instanceof VueElement) {
+      if (parent instanceof VueElementBase) {
         this._parent = parent
         break
       }
@@ -299,7 +319,7 @@ export class VueElement
 
     if (!this._instance) {
       if (this._resolved) {
-        this._mount(this._def)
+        this._mountComponent(this._def)
       } else {
         if (parent && parent._pendingResolve) {
           this._pendingResolve = parent._pendingResolve.then(() => {
@@ -313,24 +333,6 @@ export class VueElement
     }
   }
 
-  private _setParent(parent = this._parent) {
-    if (parent) {
-      this._instance!.parent = parent._instance
-      this._inheritParentContext(parent)
-    }
-  }
-
-  private _inheritParentContext(parent = this._parent) {
-    // #13212, the provides object of the app context must inherit the provides
-    // object from the parent element so we can inject values from both places
-    if (parent && this._app) {
-      Object.setPrototypeOf(
-        this._app._context.provides,
-        parent._instance!.provides,
-      )
-    }
-  }
-
   disconnectedCallback(): void {
     this._connected = false
     nextTick(() => {
@@ -339,16 +341,35 @@ export class VueElement
           this._ob.disconnect()
           this._ob = null
         }
-        // unmount
-        this._app && this._app.unmount()
-        if (this._instance) this._instance.ce = undefined
-        this._app = this._instance = null
+        this._unmount()
         if (this._teleportTargets) {
           this._teleportTargets.clear()
           this._teleportTargets = undefined
         }
       }
     })
+  }
+
+  protected _setParent(
+    parent: VueElementBase | undefined = this._parent,
+  ): void {
+    if (parent && this._instance) {
+      this._instance.parent = parent._instance
+      this._inheritParentContext(parent)
+    }
+  }
+
+  protected _inheritParentContext(
+    parent: VueElementBase | undefined = this._parent,
+  ): void {
+    // #13212, the provides object of the app context must inherit the provides
+    // object from the parent element so we can inject values from both places
+    if (parent && this._app) {
+      Object.setPrototypeOf(
+        this._app._context.provides,
+        parent._instance!.provides,
+      )
+    }
   }
 
   private _processMutations(mutations: MutationRecord[]) {
@@ -375,7 +396,7 @@ export class VueElement
 
     this._ob.observe(this, { attributes: true })
 
-    const resolve = (def: InnerComponentDef, isAsync = false) => {
+    const resolve = (def: Def) => {
       this._resolved = true
       this._pendingResolve = undefined
 
@@ -410,35 +431,29 @@ export class VueElement
       }
 
       // initial mount
-      this._mount(def)
+      this._mountComponent(def)
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
     if (asyncDef) {
-      this._pendingResolve = asyncDef().then((def: InnerComponentDef) => {
-        def.configureApp = this._def.configureApp
-        resolve((this._def = def), true)
+      const { configureApp } = this._def
+      this._pendingResolve = asyncDef().then((def: any) => {
+        def.configureApp = configureApp
+        this._def = def
+        resolve(def)
       })
     } else {
       resolve(this._def)
     }
   }
 
-  private _mount(def: InnerComponentDef) {
-    if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && !def.name) {
-      // @ts-expect-error
-      def.name = 'VueElement'
-    }
-    this._app = this._createApp(def)
-    // inherit before configureApp to detect context overwrites
-    this._inheritParentContext()
-    if (def.configureApp) {
-      def.configureApp(this._app)
-    }
-    this._app._ceVNode = this._createVNode()
-    this._app.mount(this._root)
-
+  private _mountComponent(def: Def): void {
+    this._mount(def)
     // apply expose after mount
+    this._processExposed()
+  }
+
+  protected _processExposed(): void {
     const exposed = this._instance && this._instance.exposed
     if (!exposed) return
     for (const key in exposed) {
@@ -454,7 +469,46 @@ export class VueElement
     }
   }
 
-  private _resolveProps(def: InnerComponentDef) {
+  protected _processInstance(): void {
+    this._instance!.ce = this
+    this._instance!.isCE = true
+
+    if (__DEV__) {
+      this._instance!.ceReload = newStyles => {
+        if (this._styles) {
+          this._styles.forEach(s => this._root.removeChild(s))
+          this._styles.length = 0
+        }
+        this._applyStyles(newStyles)
+        if (!this._instance!.vapor) {
+          this._instance = null
+        }
+        this._update()
+      }
+    }
+
+    const dispatch = (event: string, args: any[]) => {
+      this.dispatchEvent(
+        new CustomEvent(
+          event,
+          isPlainObject(args[0])
+            ? extend({ detail: args }, args[0])
+            : { detail: args },
+        ),
+      )
+    }
+
+    this._instance!.emit = (event: string, ...args: any[]) => {
+      dispatch(event, args)
+      if (hyphenate(event) !== event) {
+        dispatch(hyphenate(event), args)
+      }
+    }
+
+    this._setParent()
+  }
+
+  private _resolveProps(def: Def): void {
     const { props } = def
     const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
 
@@ -468,17 +522,17 @@ export class VueElement
     // defining getter/setters on prototype
     for (const key of declaredPropKeys.map(camelize)) {
       Object.defineProperty(this, key, {
-        get() {
+        get(this: VueElement) {
           return this._getProp(key)
         },
-        set(val) {
-          this._setProp(key, val, true, true)
+        set(this: VueElement, val) {
+          this._setProp(key, val, true, !this._patching)
         },
       })
     }
   }
 
-  protected _setAttr(key: string): void {
+  private _setAttr(key: string): void {
     if (key.startsWith('data-v-')) return
     const has = this.hasAttribute(key)
     let value = has ? this.getAttribute(key) : REMOVAL
@@ -506,12 +560,13 @@ export class VueElement
     shouldUpdate = false,
   ): void {
     if (val !== this._props[key]) {
+      this._dirty = true
       if (val === REMOVAL) {
         delete this._props[key]
       } else {
         this._props[key] = val
         // support set key on ceVNode
-        if (key === 'key' && this._app) {
+        if (key === 'key' && this._app && this._app._ceVNode) {
           this._app._ceVNode!.key = val
         }
       }
@@ -537,69 +592,10 @@ export class VueElement
     }
   }
 
-  private _update() {
-    const vnode = this._createVNode()
-    if (this._app) vnode.appContext = this._app._context
-    render(vnode, this._root)
-  }
-
-  private _createVNode(): VNode<any, any> {
-    const baseProps: VNodeProps = {}
-    if (!this.shadowRoot) {
-      baseProps.onVnodeMounted = baseProps.onVnodeUpdated =
-        this._renderSlots.bind(this)
-    }
-    const vnode = createVNode(this._def, extend(baseProps, this._props))
-    if (!this._instance) {
-      vnode.ce = instance => {
-        this._instance = instance
-        instance.ce = this
-        instance.isCE = true // for vue-i18n backwards compat
-        // HMR
-        if (__DEV__) {
-          instance.ceReload = newStyles => {
-            // always reset styles
-            if (this._styles) {
-              this._styles.forEach(s => this._root.removeChild(s))
-              this._styles.length = 0
-            }
-            this._applyStyles(newStyles)
-            this._instance = null
-            this._update()
-          }
-        }
-
-        const dispatch = (event: string, args: any[]) => {
-          this.dispatchEvent(
-            new CustomEvent(
-              event,
-              isPlainObject(args[0])
-                ? extend({ detail: args }, args[0])
-                : { detail: args },
-            ),
-          )
-        }
-
-        // intercept emit
-        instance.emit = (event: string, ...args: any[]) => {
-          // dispatch both the raw and hyphenated versions of an event
-          // to match Vue behavior
-          dispatch(event, args)
-          if (hyphenate(event) !== event) {
-            dispatch(hyphenate(event), args)
-          }
-        }
-
-        this._setParent()
-      }
-    }
-    return vnode
-  }
-
-  private _applyStyles(
+  protected _applyStyles(
     styles: string[] | undefined,
     owner?: ConcreteComponent,
-  ) {
+  ): void {
     if (!styles) return
     if (owner) {
       if (owner === this._def || this._styleChildren.has(owner)) {
@@ -635,7 +631,7 @@ export class VueElement
    * Only called when shadowRoot is false
    */
   private _parseSlots() {
-    const slots: VueElement['_slots'] = (this._slots = {})
+    const slots: VueElementBase['_slots'] = (this._slots = {})
     let n
     while ((n = this.firstChild)) {
       const slotName =
@@ -648,14 +644,18 @@ export class VueElement
   /**
    * Only called when shadowRoot is false
    */
-  private _renderSlots() {
+  protected _renderSlots(): void {
     const outlets = this._getSlots()
     const scopeId = this._instance!.type.__scopeId
+    const slotReplacements: Map<Node, Node[]> = new Map()
+
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement
       const slotName = o.getAttribute('name') || 'default'
       const content = this._slots![slotName]
       const parent = o.parentNode!
+      const replacementNodes: Node[] = []
+
       if (content) {
         for (const n of content) {
           // for :slotted css
@@ -669,12 +669,20 @@ export class VueElement
             }
           }
           parent.insertBefore(n, o)
+          replacementNodes.push(n)
         }
       } else {
-        while (o.firstChild) parent.insertBefore(o.firstChild, o)
+        while (o.firstChild) {
+          const child = o.firstChild
+          parent.insertBefore(child, o)
+          replacementNodes.push(child)
+        }
       }
       parent.removeChild(o)
+      slotReplacements.set(o, replacementNodes)
     }
+
+    this._updateSlotNodes(slotReplacements)
   }
 
   /**
@@ -685,16 +693,41 @@ export class VueElement
     if (this._teleportTargets) {
       roots.push(...this._teleportTargets)
     }
-    return roots.reduce<HTMLSlotElement[]>((res, i) => {
-      res.push(...Array.from(i.querySelectorAll('slot')))
-      return res
-    }, [])
+
+    const slots = new Set<HTMLSlotElement>()
+    for (const root of roots) {
+      const found = root.querySelectorAll<HTMLSlotElement>('slot')
+      for (let i = 0; i < found.length; i++) {
+        slots.add(found[i])
+      }
+    }
+
+    return Array.from(slots)
   }
+
   /**
    * @internal
    */
   _injectChildStyle(comp: ConcreteComponent & CustomElementOptions): void {
     this._applyStyles(comp.styles, comp)
+  }
+
+  /**
+   * @internal
+   */
+  _beginPatch(): void {
+    this._patching = true
+    this._dirty = false
+  }
+
+  /**
+   * @internal
+   */
+  _endPatch(): void {
+    this._patching = false
+    if (this._dirty && this._instance) {
+      this._update()
+    }
   }
 
   /**
@@ -715,13 +748,95 @@ export class VueElement
   }
 }
 
-export function useHost(caller?: string): VueElement | null {
-  const instance = getCurrentInstance()
-  const el = instance && (instance.ce as VueElement)
+export class VueElement extends VueElementBase<
+  Element,
+  Component,
+  InnerComponentDef
+> {
+  constructor(
+    def: InnerComponentDef,
+    props: Record<string, any> | undefined = {},
+    createAppFn: CreateAppFunction<Element, Component> = createApp,
+  ) {
+    super(def, props, createAppFn)
+  }
+
+  protected _needsHydration(): boolean {
+    if (this.shadowRoot && this._createApp !== createApp) {
+      return true
+    } else {
+      if (__DEV__ && this.shadowRoot) {
+        warn(
+          `Custom element has pre-rendered declarative shadow root but is not ` +
+            `defined as hydratable. Use \`defineSSRCustomElement\`.`,
+        )
+      }
+    }
+    return false
+  }
+
+  protected _mount(def: InnerComponentDef): void {
+    if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && !def.name) {
+      // @ts-expect-error
+      def.name = 'VueElement'
+    }
+    this._app = this._createApp(def)
+    this._inheritParentContext()
+    if (def.configureApp) {
+      def.configureApp(this._app)
+    }
+    this._app._ceVNode = this._createVNode()
+    this._app.mount(this._root)
+  }
+
+  protected _update(): void {
+    if (!this._app) return
+    const vnode = this._createVNode()
+    vnode.appContext = this._app._context
+    render(vnode, this._root)
+  }
+
+  protected _unmount(): void {
+    if (this._app) {
+      this._app.unmount()
+    }
+    if (this._instance && this._instance.ce) {
+      this._instance.ce = undefined
+    }
+    this._app = this._instance = null
+  }
+
+  /**
+   * Only called when shadowRoot is false
+   */
+  protected _updateSlotNodes(replacements: Map<Node, Node[]>): void {
+    // do nothing
+  }
+
+  private _createVNode(): VNode<any, any> {
+    const baseProps: VNodeProps = {}
+    if (!this.shadowRoot) {
+      baseProps.onVnodeMounted = baseProps.onVnodeUpdated =
+        this._renderSlots.bind(this)
+    }
+    const vnode = createVNode(this._def, extend(baseProps, this._props))
+    if (!this._instance) {
+      vnode.ce = instance => {
+        this._instance = instance
+        this._processInstance()
+      }
+    }
+    return vnode
+  }
+}
+
+export function useHost(caller?: string): VueElementBase | null {
+  const { hasInstance, value } = useInstanceOption('ce', true)
+  const el = value as VueElementBase
   if (el) {
     return el
   } else if (__DEV__) {
-    if (!instance) {
+    if (!hasInstance) {
       warn(
         `${caller || 'useHost'} called without an active component instance.`,
       )

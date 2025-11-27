@@ -35,6 +35,7 @@ export type setRefFn = (
   ref: NodeRef,
   oldRef?: NodeRef,
   refFor?: boolean,
+  refKey?: string,
 ) => NodeRef | undefined
 
 export function createTemplateRefSetter(): setRefFn {

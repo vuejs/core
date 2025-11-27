@@ -1711,3 +1711,41 @@ describe('compileScript', () => {
     expect(scriptAst).not.toBeDefined()
   })
 })
+
+describe('vapor mode + ssr', () => {
+  test('rewrite defineVaporAsyncComponent import', () => {
+    const { content } = compile(
+      `
+        <script setup vapor>
+        import { defineVaporAsyncComponent } from 'vue'
+        </script>
+      `,
+      {
+        templateOptions: {
+          ssr: true,
+        },
+      },
+    )
+    expect(content).toContain(
+      `import { defineAsyncComponent as defineVaporAsyncComponent } from 'vue'`,
+    )
+  })
+
+  test('rewrite defineVaporAsyncComponent import with local name', () => {
+    const { content } = compile(
+      `
+        <script setup vapor>
+        import { defineVaporAsyncComponent as def } from 'vue'
+        </script>
+      `,
+      {
+        templateOptions: {
+          ssr: true,
+        },
+      },
+    )
+    expect(content).toContain(
+      `import { defineAsyncComponent as def } from 'vue'`,
+    )
+  })
+})

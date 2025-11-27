@@ -77,7 +77,7 @@ export type StructuralDirectiveTransform = (
 ) => void | (() => void)
 
 export interface ImportItem {
-  exp: string | ExpressionNode
+  exp: SimpleExpressionNode
   path: string
 }
 
