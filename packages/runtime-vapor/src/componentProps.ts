@@ -152,7 +152,7 @@ export function getPropsProxyHandlers(
   }
 
   const getAttr = (target: RawProps, key: string) => {
-    if (isAttr(key)) {
+    if (!isProp(key) && !isEmitListener(emitsOptions, key)) {
       return getAttrFromRawProps(target, key)
     }
   }

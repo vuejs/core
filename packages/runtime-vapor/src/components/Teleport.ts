@@ -43,7 +43,7 @@ export const VaporTeleportImpl = {
   },
 }
 
-export class TeleportFragment extends VaporFragment {
+export class TeleportFragment extends VaporFragment<Block[]> {
   anchor?: Node
   private rawProps?: LooseRawProps
   private resolvedProps?: TeleportProps
@@ -99,7 +99,7 @@ export class TeleportFragment extends VaporFragment {
       )
     })
 
-    const nodes = this.nodes
+    const nodes = this.nodes[0]
     // register updateCssVars to root fragments's update hooks so that
     // it will be called when root fragment changed
     if (this.parentComponent && this.parentComponent.ut) {
@@ -130,14 +130,16 @@ export class TeleportFragment extends VaporFragment {
   private handleChildrenUpdate(children: Block): void {
     // not mounted yet
     if (!this.parent || isHydrating) {
-      this.nodes = children
+      // Teleport nodes are always an array, preventing attrs fallthrough
+      // consistent with VDOM Teleport behavior.
+      this.nodes = [children]
       return
     }
 
     // teardown previous nodes
     remove(this.nodes, this.mountContainer!)
     // mount new nodes
-    insert((this.nodes = children), this.mountContainer!, this.mountAnchor!)
+    insert((this.nodes = [children]), this.mountContainer!, this.mountAnchor!)
   }
 
   private handlePropsUpdate(): void {

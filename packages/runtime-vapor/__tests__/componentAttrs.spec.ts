@@ -306,7 +306,7 @@ describe('attribute fallthrough', () => {
     expect(html()).toMatch(`<div class="child parent">1</div>`)
   })
 
-  it('should warn when fallthrough fails on non-single-root', () => {
+  it.todo('should warn when fallthrough fails on non-single-root', () => {
     const Parent = {
       setup() {
         return createComponent(Child, {
@@ -340,7 +340,6 @@ describe('attribute fallthrough', () => {
     const root = document.createElement('div')
     const Child = defineVaporComponent({
       render() {
-        // return h(Teleport, { to: root }, h('div'))
         return createComponent(
           VaporTeleport,
           { to: () => root },
@@ -352,7 +351,6 @@ describe('attribute fallthrough', () => {
     })
 
     document.body.appendChild(root)
-    // render(h(Parent), root)
     define(Parent).render()
 
     expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()

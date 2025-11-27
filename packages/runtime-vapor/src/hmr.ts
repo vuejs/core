@@ -99,12 +99,13 @@ export function updateParentTeleportOnHmrReload(
   const teleport = instance.parentTeleport
   if (teleport) {
     newInstance.parentTeleport = teleport
-    if (teleport.nodes === instance) {
-      teleport.nodes = newInstance
-    } else if (isArray(teleport.nodes)) {
-      for (let i = 0; i < teleport.nodes.length; i++) {
-        if (teleport.nodes[i] === instance) {
-          teleport.nodes[i] = newInstance
+    const block = teleport.nodes[0]
+    if (block === instance) {
+      teleport.nodes[0] = newInstance
+    } else if (isArray(block)) {
+      for (let i = 0; i < block.length; i++) {
+        if (block[i] === instance) {
+          block[i] = newInstance
           break
         }
       }

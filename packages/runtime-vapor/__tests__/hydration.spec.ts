@@ -3034,12 +3034,9 @@ describe('Vapor Mode hydration', () => {
       expect(teleport.anchor).toBe(container.lastChild)
       expect(teleport.target).toBe(teleportContainer)
       expect(teleport.targetStart).toBe(teleportContainer.childNodes[0])
-      expect((teleport.nodes as Node[])[0]).toBe(
-        teleportContainer.childNodes[1],
-      )
-      expect((teleport.nodes as Node[])[1]).toBe(
-        teleportContainer.childNodes[2],
-      )
+      const children = teleport.nodes[0] as Node[]
+      expect(children[0]).toBe(teleportContainer.childNodes[1])
+      expect(children[1]).toBe(teleportContainer.childNodes[2])
       expect(teleport.targetAnchor).toBe(teleportContainer.childNodes[3])
 
       expect(container.innerHTML).toMatchInlineSnapshot(
@@ -3152,16 +3149,14 @@ describe('Vapor Mode hydration', () => {
 
       expect(teleport1.target).toBe(teleportContainer)
       expect(teleport1.targetStart).toBe(teleportContainer.childNodes[0])
-      expect((teleport1.nodes as Node[])[0]).toBe(
-        teleportContainer.childNodes[1],
-      )
+      const children1 = teleport1.nodes[0] as Node[]
+      expect(children1[0]).toBe(teleportContainer.childNodes[1])
       expect(teleport1.targetAnchor).toBe(teleportContainer.childNodes[3])
 
       expect(teleport2.target).toBe(teleportContainer)
       expect(teleport2.targetStart).toBe(teleportContainer.childNodes[4])
-      expect((teleport2.nodes as Node[])[0]).toBe(
-        teleportContainer.childNodes[5],
-      )
+      const children2 = teleport2.nodes[0] as Node[]
+      expect(children2[0]).toBe(teleportContainer.childNodes[5])
       expect(teleport2.targetAnchor).toBe(teleportContainer.childNodes[7])
 
       expect(container.innerHTML).toBe(
@@ -3245,8 +3240,9 @@ describe('Vapor Mode hydration', () => {
       expect(blocks[0]).toBe(container.childNodes[1])
 
       const teleport = blocks[1] as TeleportFragment
-      expect((teleport.nodes as Node[])[0]).toBe(container.childNodes[3])
-      expect((teleport.nodes as Node[])[1]).toBe(container.childNodes[4])
+      const children = teleport.nodes[0] as Node[]
+      expect(children[0]).toBe(container.childNodes[3])
+      expect(children[1]).toBe(container.childNodes[4])
       expect(teleport.anchor).toBe(container.childNodes[5])
       expect(teleport.target).toBe(teleportContainer)
       expect(teleport.targetStart).toBe(teleportContainer.childNodes[0])
@@ -3331,7 +3327,7 @@ describe('Vapor Mode hydration', () => {
       expect(teleport.anchor).toBe(container.childNodes[1])
       expect(teleport.target).toBe(teleportContainer)
       expect(teleport.targetStart).toBe(teleportContainer.childNodes[0])
-      expect(teleport.nodes).toBe(teleportContainer.childNodes[1])
+      expect(teleport.nodes[0]).toBe(teleportContainer.childNodes[1])
       expect(teleport.targetAnchor).toBe(teleportContainer.childNodes[2])
     })
 
@@ -3359,11 +3355,11 @@ describe('Vapor Mode hydration', () => {
       expect(teleport.targetStart).toBe(teleportContainer.childNodes[0])
       expect(teleport.targetAnchor).toBe(teleportContainer.childNodes[3])
 
-      const childTeleport = teleport.nodes as TeleportFragment
+      const childTeleport = teleport.nodes[0] as TeleportFragment
       expect(childTeleport.anchor).toBe(teleportContainer.childNodes[2])
       expect(childTeleport.targetStart).toBe(teleportContainer.childNodes[4])
       expect(childTeleport.targetAnchor).toBe(teleportContainer.childNodes[6])
-      expect(childTeleport.nodes).toBe(teleportContainer.childNodes[5])
+      expect(childTeleport.nodes[0]).toBe(teleportContainer.childNodes[5])
     })
 
     test('unmount (full integration)', async () => {
