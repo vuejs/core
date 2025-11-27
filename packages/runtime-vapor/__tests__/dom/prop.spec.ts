@@ -188,9 +188,92 @@ describe('patchProp', () => {
     })
   })
 
-  describe.todo('setClassIncremental', () => {})
+  describe('setClassIncremental', () => {
+    test('should set class', () => {
+      const el = document.createElement('div')
+      // mark as root
+      ;(el as any).$root = true
+      setClass(el, 'foo')
+      expect(el.className).toBe('foo')
 
-  describe.todo('setStyleIncremental', () => {})
+      // Should replace previous class set by setClass
+      setClass(el, 'bar')
+      expect(el.className).toBe('bar')
+    })
+
+    test('should coexist with existing classes', () => {
+      const el = document.createElement('div')
+      el.className = 'existing'
+      ;(el as any).$root = true
+
+      setClass(el, 'foo')
+      expect(el.className).toBe('existing foo')
+
+      setClass(el, 'bar')
+      expect(el.className).toBe('existing bar')
+
+      setClass(el, '')
+      expect(el.className).toBe('existing')
+    })
+
+    test('should handle multiple classes', () => {
+      const el = document.createElement('div')
+      ;(el as any).$root = true
+
+      setClass(el, 'foo bar')
+      expect(el.className).toBe('foo bar')
+
+      setClass(el, 'baz')
+      expect(el.className).toBe('baz')
+    })
+  })
+
+  describe('setStyleIncremental', () => {
+    test('should set style', () => {
+      const el = document.createElement('div')
+      ;(el as any).$root = true
+      setStyle(el, 'color: red')
+      expect(el.style.cssText).toBe('color: red;')
+
+      setStyle(el, 'font-size: 12px')
+      expect(el.style.cssText).toBe('font-size: 12px;')
+    })
+
+    test('should coexist with existing styles', () => {
+      const el = document.createElement('div')
+      el.style.display = 'block'
+      ;(el as any).$root = true
+
+      setStyle(el, 'color: red')
+      expect(el.style.display).toBe('block')
+      expect(el.style.color).toBe('red')
+
+      setStyle(el, 'font-size: 12px')
+      expect(el.style.display).toBe('block')
+      expect(el.style.fontSize).toBe('12px')
+      expect(el.style.color).toBe('')
+    })
+
+    test('should set style with object', () => {
+      const el = document.createElement('div')
+      ;(el as any).$root = true
+      setStyle(el, { color: 'red' })
+      expect(el.style.cssText).toBe('color: red;')
+
+      setStyle(el, { fontSize: '12px' })
+      expect(el.style.cssText).toBe('font-size: 12px;')
+    })
+
+    test('should remove style', () => {
+      const el = document.createElement('div')
+      ;(el as any).$root = true
+      setStyle(el, 'color: red')
+      expect(el.style.cssText).toBe('color: red;')
+
+      setStyle(el, '')
+      expect(el.style.cssText).toBe('')
+    })
+  })
 
   describe('setAttr', () => {
     test('should set attribute', () => {
