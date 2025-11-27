@@ -210,7 +210,7 @@ export function createComponent(
     // check if we are the single root of the parent
     // if yes, inject parent attrs as dynamic props source
     const attrs = parentInstance.attrs
-    if (rawProps) {
+    if (rawProps && rawProps !== EMPTY_OBJ) {
       ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
         () => attrs,
       )

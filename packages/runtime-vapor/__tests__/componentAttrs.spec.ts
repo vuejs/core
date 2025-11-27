@@ -1,4 +1,4 @@
-import { type Ref, nextTick, ref } from '@vue/runtime-dom'
+import { type Ref, nextTick, onUpdated, ref } from '@vue/runtime-dom'
 import {
   createComponent,
   createDynamicComponent,
@@ -71,20 +71,15 @@ describe('attribute fallthrough', () => {
     }
 
     const Hello = () =>
-      createComponent(
-        Child,
-        {
-          foo: () => count.value + 1,
-          id: () => 'test',
-          class: () => 'c' + count.value,
-          style: () => ({
-            color: count.value ? 'red' : 'green',
-          }),
-          onClick: () => inc,
-        },
-        null,
-        true,
-      )
+      createComponent(Child, {
+        foo: () => count.value + 1,
+        id: () => 'test',
+        class: () => 'c' + count.value,
+        style: () => ({
+          color: count.value ? 'red' : 'green',
+        }),
+        onClick: () => inc,
+      })
 
     const Child = defineVaporComponent((props: any) => {
       childUpdated()
@@ -123,144 +118,143 @@ describe('attribute fallthrough', () => {
     expect(node.style.fontWeight).toBe('bold')
   })
 
-  // it('should allow all attrs on functional component with declared props', async () => {
-  //   const click = vi.fn()
-  //   const childUpdated = vi.fn()
+  it('should allow all attrs on functional component with declared props', async () => {
+    const click = vi.fn()
+    const childUpdated = vi.fn()
 
-  //   const count = ref(0)
+    const count = ref(0)
 
-  //   function inc() {
-  //     count.value++
-  //     click()
-  //   }
+    function inc() {
+      count.value++
+      click()
+    }
 
-  //   const Hello = () =>
-  //     h(Child, {
-  //       foo: count.value + 1,
-  //       id: 'test',
-  //       class: 'c' + count.value,
-  //       style: { color: count.value ? 'red' : 'green' },
-  //       onClick: inc,
-  //     })
+    const Hello = () =>
+      createComponent(Child, {
+        foo: () => count.value + 1,
+        id: () => 'test',
+        class: () => 'c' + count.value,
+        style: () => ({ color: count.value ? 'red' : 'green' }),
+        onClick: () => inc,
+      })
 
-  //   const Child = (props: { foo: number }) => {
-  //     childUpdated()
-  //     return h(
-  //       'div',
-  //       {
-  //         class: 'c2',
-  //         style: { fontWeight: 'bold' },
-  //       },
-  //       props.foo,
-  //     )
-  //   }
-  //   Child.props = ['foo']
+    const Child = defineVaporComponent((props: any) => {
+      childUpdated()
+      const n0 = template(
+        '<div class="c2" style="font-weight: bold"></div>',
+        true,
+      )() as Element
+      renderEffect(() => setElementText(n0, props.foo))
+      return n0
+    })
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Hello), root)
+    Child.props = ['foo']
 
-  //   const node = root.children[0] as HTMLElement
+    const { host: root } = define(Hello).render()
+    const node = root.children[0] as HTMLElement
 
-  //   expect(node.getAttribute('id')).toBe('test')
-  //   expect(node.getAttribute('foo')).toBe(null) // declared as prop
-  //   expect(node.getAttribute('class')).toBe('c2 c0')
-  //   expect(node.style.color).toBe('green')
-  //   expect(node.style.fontWeight).toBe('bold')
-  //   node.dispatchEvent(new CustomEvent('click'))
-  //   expect(click).toHaveBeenCalled()
+    expect(node.getAttribute('id')).toBe('test')
+    expect(node.getAttribute('foo')).toBe(null) // declared as prop
+    expect(node.getAttribute('class')).toBe('c2 c0')
+    expect(node.style.color).toBe('green')
+    expect(node.style.fontWeight).toBe('bold')
+    node.dispatchEvent(new CustomEvent('click'))
+    expect(click).toHaveBeenCalled()
 
-  //   await nextTick()
-  //   expect(childUpdated).toHaveBeenCalled()
-  //   expect(node.getAttribute('id')).toBe('test')
-  //   expect(node.getAttribute('foo')).toBe(null)
-  //   expect(node.getAttribute('class')).toBe('c2 c1')
-  //   expect(node.style.color).toBe('red')
-  //   expect(node.style.fontWeight).toBe('bold')
-  // })
+    await nextTick()
+    expect(childUpdated).toHaveBeenCalled()
+    expect(node.getAttribute('id')).toBe('test')
+    expect(node.getAttribute('foo')).toBe(null)
+    expect(node.getAttribute('class')).toBe('c2 c1')
+    expect(node.style.color).toBe('red')
+    expect(node.style.fontWeight).toBe('bold')
+  })
 
-  // it('should fallthrough for nested components', async () => {
-  //   const click = vi.fn()
-  //   const childUpdated = vi.fn()
-  //   const grandChildUpdated = vi.fn()
+  it('should fallthrough for nested components', async () => {
+    const click = vi.fn()
+    const childUpdated = vi.fn()
+    const grandChildUpdated = vi.fn()
 
-  //   const Hello = {
-  //     setup() {
-  //       const count = ref(0)
+    const Hello = {
+      setup() {
+        const count = ref(0)
 
-  //       function inc() {
-  //         count.value++
-  //         click()
-  //       }
+        function inc() {
+          count.value++
+          click()
+        }
 
-  //       return () =>
-  //         h(Child, {
-  //           foo: 1,
-  //           id: 'test',
-  //           class: 'c' + count.value,
-  //           style: { color: count.value ? 'red' : 'green' },
-  //           onClick: inc,
-  //         })
-  //     },
-  //   }
+        return createComponent(Child, {
+          foo: () => count.value + 1,
+          id: () => 'test',
+          class: () => 'c' + count.value,
+          style: () => ({
+            color: count.value ? 'red' : 'green',
+          }),
+          onClick: () => inc,
+        })
+      },
+    }
 
-  //   const Child = {
-  //     setup(props: any) {
-  //       onUpdated(childUpdated)
-  //       // HOC simply passing props down.
-  //       // this will result in merging the same attrs, but should be deduped by
-  //       // `mergeProps`.
-  //       return () => h(GrandChild, props)
-  //     },
-  //   }
+    const Child = defineVaporComponent({
+      setup(props: any) {
+        onUpdated(childUpdated)
+        // HOC simply passing props down.
+        // this will result in merging the same attrs, but should be deduped by
+        // `mergeProps`.
+        return createComponent(GrandChild, props, null, true)
+      },
+    })
 
-  //   const GrandChild = defineComponent({
-  //     props: {
-  //       id: String,
-  //       foo: Number,
-  //     },
-  //     setup(props) {
-  //       onUpdated(grandChildUpdated)
-  //       return () =>
-  //         h(
-  //           'div',
-  //           {
-  //             id: props.id,
-  //             class: 'c2',
-  //             style: { fontWeight: 'bold' },
-  //           },
-  //           props.foo,
-  //         )
-  //     },
-  //   })
+    const GrandChild = defineVaporComponent({
+      props: {
+        id: String,
+        foo: Number,
+      },
+      setup(props) {
+        onUpdated(grandChildUpdated)
+        const n0 = template(
+          '<div class="c2" style="font-weight: bold"></div>',
+          true,
+        )() as Element
+        renderEffect(() => {
+          setProp(n0, 'id', props.id)
+          setElementText(n0, props.foo)
+        })
+        return n0
+      },
+    })
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Hello), root)
+    const { host: root } = define(Hello).render()
+    expect(root.innerHTML).toBe(
+      '<div class="c2 c0" style="font-weight: bold; color: green;" id="test">1</div>',
+    )
 
-  //   const node = root.children[0] as HTMLElement
+    const node = root.children[0] as HTMLElement
 
-  //   // with declared props, any parent attr that isn't a prop falls through
-  //   expect(node.getAttribute('id')).toBe('test')
-  //   expect(node.getAttribute('class')).toBe('c2 c0')
-  //   expect(node.style.color).toBe('green')
-  //   expect(node.style.fontWeight).toBe('bold')
-  //   node.dispatchEvent(new CustomEvent('click'))
-  //   expect(click).toHaveBeenCalled()
+    // with declared props, any parent attr that isn't a prop falls through
+    expect(node.getAttribute('id')).toBe('test')
+    expect(node.getAttribute('class')).toBe('c2 c0')
+    expect(node.style.color).toBe('green')
+    expect(node.style.fontWeight).toBe('bold')
+    node.dispatchEvent(new CustomEvent('click'))
+    expect(click).toHaveBeenCalled()
 
-  //   // ...while declared ones remain props
-  //   expect(node.hasAttribute('foo')).toBe(false)
+    // ...while declared ones remain props
+    expect(node.hasAttribute('foo')).toBe(false)
 
-  //   await nextTick()
-  //   expect(childUpdated).toHaveBeenCalled()
-  //   expect(grandChildUpdated).toHaveBeenCalled()
-  //   expect(node.getAttribute('id')).toBe('test')
-  //   expect(node.getAttribute('class')).toBe('c2 c1')
-  //   expect(node.style.color).toBe('red')
-  //   expect(node.style.fontWeight).toBe('bold')
+    await nextTick()
+    // child should not update, due to it not accessing props
+    // this is a optimization in vapor mode
+    expect(childUpdated).not.toHaveBeenCalled()
+    expect(grandChildUpdated).toHaveBeenCalled()
+    expect(node.getAttribute('id')).toBe('test')
+    expect(node.getAttribute('class')).toBe('c2 c1')
+    expect(node.style.color).toBe('red')
+    expect(node.style.fontWeight).toBe('bold')
 
-  //   expect(node.hasAttribute('foo')).toBe(false)
-  // })
+    expect(node.hasAttribute('foo')).toBe(false)
+  })
 
   // it('should not fallthrough with inheritAttrs: false', () => {
   //   const Parent = {
@@ -269,7 +263,7 @@ describe('attribute fallthrough', () => {
   //     },
   //   }
 
-  //   const Child = defineComponent({
+  //   const Child = defineVaporComponent({
   //     props: ['foo'],
   //     inheritAttrs: false,
   //     render() {
@@ -297,7 +291,7 @@ describe('attribute fallthrough', () => {
   //     inheritAttrs: false,
   //   }
 
-  //   const Child = defineComponent({
+  //   const Child = defineVaporComponent({
   //     mixins: [mixin],
   //     props: ['foo'],
   //     render() {
@@ -320,7 +314,7 @@ describe('attribute fallthrough', () => {
   //     },
   //   }
 
-  //   const Child = defineComponent({
+  //   const Child = defineVaporComponent({
   //     props: ['foo'],
   //     inheritAttrs: false,
   //     render() {
@@ -352,7 +346,7 @@ describe('attribute fallthrough', () => {
   //     },
   //   }
 
-  //   const Child = defineComponent({
+  //   const Child = defineVaporComponent({
   //     props: ['foo'],
   //     render() {
   //       return [h('div'), h('div')]
@@ -375,7 +369,7 @@ describe('attribute fallthrough', () => {
   //   }
   //   const root = document.createElement('div')
 
-  //   const Child = defineComponent({
+  //   const Child = defineVaporComponent({
   //     render() {
   //       return h(Teleport, { to: root }, h('div'))
   //     },
@@ -402,7 +396,7 @@ describe('attribute fallthrough', () => {
   //     },
   //   }
 
-  //   const Child = defineComponent({
+  //   const Child = defineVaporComponent({
   //     render() {
   //       return h(
   //         'div',
@@ -433,7 +427,7 @@ describe('attribute fallthrough', () => {
   //     },
   //   }
 
-  //   const Child = defineComponent({
+  //   const Child = defineVaporComponent({
   //     props: ['foo'],
   //     render() {
   //       return [h('div'), h('div', this.$attrs)]
@@ -457,7 +451,7 @@ describe('attribute fallthrough', () => {
   //     },
   //   }
 
-  //   const Child = defineComponent({
+  //   const Child = defineVaporComponent({
   //     props: ['foo'],
   //     setup(_props, { attrs }) {
   //       return () => [h('div'), h('div', attrs)]
@@ -568,7 +562,7 @@ describe('attribute fallthrough', () => {
   // })
 
   // it('should not let listener fallthrough when declared in emits (stateful)', () => {
-  //   const Child = defineComponent({
+  //   const Child = defineVaporComponent({
   //     emits: ['click'],
   //     render() {
   //       return h(
@@ -730,7 +724,7 @@ describe('attribute fallthrough', () => {
   //   let textBar = ''
   //   const click = vi.fn()
 
-  //   const App = defineComponent({
+  //   const App = defineVaporComponent({
   //     setup() {
   //       return () =>
   //         h(Child, {
@@ -742,7 +736,7 @@ describe('attribute fallthrough', () => {
   //     },
   //   })
 
-  //   const Child = defineComponent({
+  //   const Child = defineVaporComponent({
   //     props: ['modelValue'],
   //     setup(_props, { emit }) {
   //       return () =>
@@ -756,7 +750,7 @@ describe('attribute fallthrough', () => {
   //     },
   //   })
 
-  //   const GrandChild = defineComponent({
+  //   const GrandChild = defineVaporComponent({
   //     props: ['modelValue'],
   //     setup(_props, { emit }) {
   //       return () =>
