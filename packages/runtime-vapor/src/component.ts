@@ -99,7 +99,7 @@ import {
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-import { DynamicFragment } from './fragment'
+import { DynamicFragment, isFragment } from './fragment'
 import type { VaporElement } from './apiDefineVaporCustomElement'
 
 export { currentInstance } from '@vue/runtime-dom'
@@ -415,7 +415,7 @@ export function applyFallthroughProps(
   block: Block,
   attrs: Record<string, any>,
 ): void {
-  const el = getRootElement(block)
+  const el = getRootElement(block, false)
   if (el) {
     isApplyingFallthroughProps = true
     setDynamicProps(el, [attrs])
@@ -820,16 +820,24 @@ export function getExposed(
   }
 }
 
-function getRootElement(block: Block): Element | undefined {
+export function getRootElement(
+  block: Block,
+  recurse: boolean = true,
+): Element | undefined {
   if (block instanceof Element) {
     return block
   }
 
-  if (block instanceof DynamicFragment) {
+  if (recurse && isVaporComponent(block)) {
+    return getRootElement(block.block, recurse)
+  }
+
+  if (isFragment(block)) {
     const { nodes } = block
     if (nodes instanceof Element && (nodes as any).$root) {
       return nodes
     }
+    return getRootElement(nodes, recurse)
   }
 
   // The root node contains comments. It is necessary to filter out
@@ -843,7 +851,7 @@ function getRootElement(block: Block): Element | undefined {
         hasComment = true
         continue
       }
-      const thisRoot = getRootElement(b)
+      const thisRoot = getRootElement(b, recurse)
       // only return root if there is exactly one eligible root in the array
       if (!thisRoot || singleRoot) {
         return
