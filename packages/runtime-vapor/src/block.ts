@@ -26,11 +26,9 @@ export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
   props: TransitionProps
   instance: VaporComponentInstance
-  // mark transition hooks as disabled so that it skips during
-  // inserting
+  // mark transition hooks as disabled
   disabled?: boolean
-  // mark transition hooks as group so that it triggers TransitionGroup update hooks
-  // in vFor renderList function
+  // indicates a group transition
   group?: boolean
 }
 
@@ -125,8 +123,6 @@ export function insert(
     }
   }
 }
-
-export type InsertFn = typeof insert
 
 export function prepend(parent: ParentNode, ...blocks: Block[]): void {
   let i = blocks.length
