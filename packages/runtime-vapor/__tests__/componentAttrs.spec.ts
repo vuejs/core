@@ -1,5 +1,6 @@
 import { type Ref, nextTick, onUpdated, ref } from '@vue/runtime-dom'
 import {
+  VaporTeleport,
   createComponent,
   createDynamicComponent,
   createIf,
@@ -256,130 +257,106 @@ describe('attribute fallthrough', () => {
     expect(node.hasAttribute('foo')).toBe(false)
   })
 
-  // it('should not fallthrough with inheritAttrs: false', () => {
-  //   const Parent = {
-  //     render() {
-  //       return h(Child, { foo: 1, class: 'parent' })
-  //     },
-  //   }
+  it('should not fallthrough with inheritAttrs: false', () => {
+    const Parent = defineVaporComponent({
+      setup() {
+        return createComponent(Child, { foo: () => 1, class: () => 'parent' })
+      },
+    })
 
-  //   const Child = defineVaporComponent({
-  //     props: ['foo'],
-  //     inheritAttrs: false,
-  //     render() {
-  //       return h('div', this.foo)
-  //     },
-  //   })
+    const Child = defineVaporComponent({
+      props: ['foo'],
+      inheritAttrs: false,
+      setup(props) {
+        const n0 = template('<div></div>', true)() as Element
+        renderEffect(() => setElementText(n0, props.foo))
+        return n0
+      },
+    })
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Parent), root)
+    const { html } = define(Parent).render()
 
-  //   // should not contain class
-  //   expect(root.innerHTML).toMatch(`<div>1</div>`)
-  // })
+    // should not contain class
+    expect(html()).toMatch(`<div>1</div>`)
+  })
 
-  // // #3741
-  // it('should not fallthrough with inheritAttrs: false from mixins', () => {
-  //   const Parent = {
-  //     render() {
-  //       return h(Child, { foo: 1, class: 'parent' })
-  //     },
-  //   }
+  it('explicit spreading with inheritAttrs: false', () => {
+    const Parent = defineVaporComponent({
+      setup() {
+        return createComponent(Child, { foo: () => 1, class: () => 'parent' })
+      },
+    })
 
-  //   const mixin = {
-  //     inheritAttrs: false,
-  //   }
+    const Child = defineVaporComponent({
+      props: ['foo'],
+      inheritAttrs: false,
+      setup(props, { attrs }) {
+        const n0 = template('<div>', true)() as Element
+        renderEffect(() => {
+          setElementText(n0, props.foo)
+          setDynamicProps(n0, [{ class: 'child' }, attrs])
+        })
+        return n0
+      },
+    })
 
-  //   const Child = defineVaporComponent({
-  //     mixins: [mixin],
-  //     props: ['foo'],
-  //     render() {
-  //       return h('div', this.foo)
-  //     },
-  //   })
+    const { html } = define(Parent).render()
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Parent), root)
+    // should merge parent/child classes
+    expect(html()).toMatch(`<div class="child parent">1</div>`)
+  })
 
-  //   // should not contain class
-  //   expect(root.innerHTML).toMatch(`<div>1</div>`)
-  // })
+  it('should warn when fallthrough fails on non-single-root', () => {
+    const Parent = {
+      setup() {
+        return createComponent(Child, {
+          foo: () => 1,
+          class: () => 'parent',
+          onBar: () => () => {},
+        })
+      },
+    }
 
-  // it('explicit spreading with inheritAttrs: false', () => {
-  //   const Parent = {
-  //     render() {
-  //       return h(Child, { foo: 1, class: 'parent' })
-  //     },
-  //   }
+    const Child = defineVaporComponent({
+      props: ['foo'],
+      render() {
+        return [template('<div></div>')(), template('<div></div>')()]
+      },
+    })
 
-  //   const Child = defineVaporComponent({
-  //     props: ['foo'],
-  //     inheritAttrs: false,
-  //     render() {
-  //       return h(
-  //         'div',
-  //         mergeProps(
-  //           {
-  //             class: 'child',
-  //           },
-  //           this.$attrs,
-  //         ),
-  //         this.foo,
-  //       )
-  //     },
-  //   })
+    define(Parent).render()
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Parent), root)
+    expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
+    expect(`Extraneous non-emits event listeners`).toHaveBeenWarned()
+  })
 
-  //   // should merge parent/child classes
-  //   expect(root.innerHTML).toMatch(`<div class="child parent">1</div>`)
-  // })
+  it.todo('should warn when fallthrough fails on teleport root node', () => {
+    const Parent = {
+      render() {
+        return createComponent(Child, { class: () => 'parent' })
+      },
+    }
 
-  // it('should warn when fallthrough fails on non-single-root', () => {
-  //   const Parent = {
-  //     render() {
-  //       return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
-  //     },
-  //   }
+    const root = document.createElement('div')
+    const Child = defineVaporComponent({
+      render() {
+        // return h(Teleport, { to: root }, h('div'))
+        return createComponent(
+          VaporTeleport,
+          { to: () => root },
+          {
+            default: () => template('<div></div>')(),
+          },
+        )
+      },
+    })
 
-  //   const Child = defineVaporComponent({
-  //     props: ['foo'],
-  //     render() {
-  //       return [h('div'), h('div')]
-  //     },
-  //   })
+    document.body.appendChild(root)
+    // render(h(Parent), root)
+    define(Parent).render()
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Parent), root)
-
-  //   expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
-  //   expect(`Extraneous non-emits event listeners`).toHaveBeenWarned()
-  // })
-
-  // it('should warn when fallthrough fails on teleport root node', () => {
-  //   const Parent = {
-  //     render() {
-  //       return h(Child, { class: 'parent' })
-  //     },
-  //   }
-  //   const root = document.createElement('div')
-
-  //   const Child = defineVaporComponent({
-  //     render() {
-  //       return h(Teleport, { to: root }, h('div'))
-  //     },
-  //   })
-
-  //   document.body.appendChild(root)
-  //   render(h(Parent), root)
-
-  //   expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
-  // })
+    expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
+  })
 
   // it('should dedupe same listeners when $attrs is used during render', () => {
   //   const click = vi.fn()

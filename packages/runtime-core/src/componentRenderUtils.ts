@@ -169,40 +169,7 @@ export function renderComponentRoot(
         }
         root = cloneVNode(root, fallthroughAttrs, false, true)
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
-        const allAttrs = Object.keys(attrs)
-        const eventAttrs: string[] = []
-        const extraAttrs: string[] = []
-        for (let i = 0, l = allAttrs.length; i < l; i++) {
-          const key = allAttrs[i]
-          if (isOn(key)) {
-            // ignore v-model handlers when they fail to fallthrough
-            if (!isModelListener(key)) {
-              // remove `on`, lowercase first letter to reflect event casing
-              // accurately
-              eventAttrs.push(key[2].toLowerCase() + key.slice(3))
-            }
-          } else {
-            extraAttrs.push(key)
-          }
-        }
-        if (extraAttrs.length) {
-          warn(
-            `Extraneous non-props attributes (` +
-              `${extraAttrs.join(', ')}) ` +
-              `were passed to component but could not be automatically inherited ` +
-              `because component renders fragment or text or teleport root nodes.`,
-          )
-        }
-        if (eventAttrs.length) {
-          warn(
-            `Extraneous non-emits event listeners (` +
-              `${eventAttrs.join(', ')}) ` +
-              `were passed to component but could not be automatically inherited ` +
-              `because component renders fragment or text root nodes. ` +
-              `If the listener is intended to be a component custom event listener only, ` +
-              `declare it using the "emits" option.`,
-          )
-        }
+        warnExtraneousAttributes(attrs)
       }
     }
   }
@@ -300,6 +267,46 @@ const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
     }
   }
   return [normalizeVNode(childRoot), setRoot]
+}
+
+/**
+ * Dev only
+ */
+export function warnExtraneousAttributes(attrs: Record<string, any>): void {
+  const allAttrs = Object.keys(attrs)
+  const eventAttrs: string[] = []
+  const extraAttrs: string[] = []
+  for (let i = 0, l = allAttrs.length; i < l; i++) {
+    const key = allAttrs[i]
+    if (isOn(key)) {
+      // ignore v-model handlers when they fail to fallthrough
+      if (!isModelListener(key)) {
+        // remove `on`, lowercase first letter to reflect event casing
+        // accurately
+        eventAttrs.push(key[2].toLowerCase() + key.slice(3))
+      }
+    } else {
+      extraAttrs.push(key)
+    }
+  }
+  if (extraAttrs.length) {
+    warn(
+      `Extraneous non-props attributes (` +
+        `${extraAttrs.join(', ')}) ` +
+        `were passed to component but could not be automatically inherited ` +
+        `because component renders fragment or text or teleport root nodes.`,
+    )
+  }
+  if (eventAttrs.length) {
+    warn(
+      `Extraneous non-emits event listeners (` +
+        `${eventAttrs.join(', ')}) ` +
+        `were passed to component but could not be automatically inherited ` +
+        `because component renders fragment or text root nodes. ` +
+        `If the listener is intended to be a component custom event listener only, ` +
+        `declare it using the "emits" option.`,
+    )
+  }
 }
 
 export function filterSingleRoot(

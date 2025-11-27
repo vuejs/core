@@ -27,6 +27,7 @@ import {
   startMeasure,
   unregisterHMR,
   warn,
+  warnExtraneousAttributes,
 } from '@vue/runtime-dom'
 import {
   type Block,
@@ -425,6 +426,8 @@ export function applyFallthroughProps(
     isApplyingFallthroughProps = true
     setDynamicProps(el, [attrs])
     isApplyingFallthroughProps = false
+  } else if (__DEV__) {
+    warnExtraneousAttributes(attrs)
   }
 }
 
