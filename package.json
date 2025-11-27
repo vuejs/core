@@ -113,6 +113,6 @@
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.32.1",
     "vite": "catalog:",
-    "vitest": "^4.0.1"
+    "vitest": "^4.0.14"
   }
 }
