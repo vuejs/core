@@ -155,6 +155,11 @@ interface SharedInternalOptions {
    * Cached normalized emits options.
    */
   __emitsOptions?: ObjectEmitsOptions
+
+  /**
+   * indicates functional vapor component
+   */
+  __functional?: true
 }
 
 // In TypeScript, it is actually impossible to have a record type with only

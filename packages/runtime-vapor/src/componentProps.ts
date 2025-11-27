@@ -6,6 +6,7 @@ import {
   hasOwn,
   isArray,
   isFunction,
+  isOn,
   isString,
 } from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
@@ -63,7 +64,11 @@ export function getPropsProxyHandlers(
   const isAttr = propsOptions
     ? (key: string) =>
         key !== '$' && !isProp(key) && !isEmitListener(emitsOptions, key)
-    : YES
+    : // treat class/style/onX as attrs for function components
+      comp.__functional
+      ? (key: string | symbol) =>
+          key === 'class' || key === 'style' || (isString(key) && isOn(key))
+      : YES
 
   const getProp = (instance: VaporComponentInstance, key: string | symbol) => {
     // this enables direct watching of props and prevents `Invalid watch source` DEV warnings.
@@ -147,7 +152,7 @@ export function getPropsProxyHandlers(
   }
 
   const getAttr = (target: RawProps, key: string) => {
-    if (!isProp(key) && !isEmitListener(emitsOptions, key)) {
+    if (isAttr(key)) {
       return getAttrFromRawProps(target, key)
     }
   }
