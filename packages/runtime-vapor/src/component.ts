@@ -410,7 +410,12 @@ export function setupComponent(
     const root = filterSingleRootElement(instance.block)
     if (root) {
       renderEffect(() => applyFallthroughProps(root, instance.attrs))
-    } else if (__DEV__ && isArray(instance.block) && instance.block.length) {
+    } else if (
+      __DEV__ &&
+      !instance.accessedAttrs &&
+      isArray(instance.block) &&
+      instance.block.length
+    ) {
       warnExtraneousAttributes(instance.attrs)
     }
   }
@@ -557,6 +562,13 @@ export class VaporComponentInstance implements GenericComponentInstance {
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
 
+  /**
+   * dev only flag to track whether $attrs was used during render.
+   * If $attrs was used during render then the warning for failed attrs
+   * fallthrough can be suppressed.
+   */
+  accessedAttrs: boolean = false
+
   constructor(
     comp: VaporComponent,
     rawProps?: RawProps | null,
@@ -628,6 +640,22 @@ export class VaporComponentInstance implements GenericComponentInstance {
     // apply custom element special handling
     if (comp.ce) {
       comp.ce(this)
+    }
+
+    if (__DEV__) {
+      // in dev, mark attrs accessed if optional props (attrs === props)
+      if (this.props === this.attrs) {
+        this.accessedAttrs = true
+      } else {
+        const attrs = this.attrs
+        const instance = this
+        this.attrs = new Proxy(attrs, {
+          get(target, key, receiver) {
+            instance.accessedAttrs = true
+            return Reflect.get(target, key, receiver)
+          },
+        })
+      }
     }
   }
 

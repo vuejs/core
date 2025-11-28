@@ -1,4 +1,10 @@
-import { type Ref, nextTick, onUpdated, ref } from '@vue/runtime-dom'
+import {
+  type Ref,
+  nextTick,
+  onUpdated,
+  ref,
+  withModifiers,
+} from '@vue/runtime-dom'
 import {
   VaporTeleport,
   createComponent,
@@ -356,133 +362,128 @@ describe('attribute fallthrough', () => {
     expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
   })
 
-  // it('should dedupe same listeners when $attrs is used during render', () => {
-  //   const click = vi.fn()
-  //   const count = ref(0)
+  it('should dedupe same listeners when $attrs is used during render', () => {
+    const click = vi.fn()
+    const count = ref(0)
 
-  //   function inc() {
-  //     count.value++
-  //     click()
-  //   }
+    function inc() {
+      count.value++
+      click()
+    }
 
-  //   const Parent = {
-  //     render() {
-  //       return h(Child, { onClick: inc })
-  //     },
-  //   }
+    const Parent = {
+      render() {
+        return createComponent(Child, { onClick: () => inc })
+      },
+    }
 
-  //   const Child = defineVaporComponent({
-  //     render() {
-  //       return h(
-  //         'div',
-  //         mergeProps(
-  //           {
-  //             onClick: withModifiers(() => {}, ['prevent', 'stop']),
-  //           },
-  //           this.$attrs,
-  //         ),
-  //       )
-  //     },
-  //   })
+    const Child = defineVaporComponent({
+      setup(_, { attrs }) {
+        const n0 = template('<div></div>', true)() as any
+        n0.$evtclick = withModifiers(() => {}, ['prevent', 'stop'])
+        renderEffect(() => setDynamicProps(n0, [attrs]))
+        return n0
+      },
+    })
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Parent), root)
+    const { host } = define(Parent).render()
+    const node = host.children[0] as HTMLElement
+    node.dispatchEvent(new CustomEvent('click'))
+    expect(click).toHaveBeenCalledTimes(1)
+    expect(count.value).toBe(1)
+  })
 
-  //   const node = root.children[0] as HTMLElement
-  //   node.dispatchEvent(new CustomEvent('click'))
-  //   expect(click).toHaveBeenCalledTimes(1)
-  //   expect(count.value).toBe(1)
-  // })
+  it('should not warn when context.attrs is used during render', () => {
+    const Parent = {
+      render() {
+        return createComponent(Child, {
+          foo: () => 1,
+          class: () => 'parent',
+          onBar: () => () => {},
+        })
+      },
+    }
 
-  // it('should not warn when $attrs is used during render', () => {
-  //   const Parent = {
-  //     render() {
-  //       return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
-  //     },
-  //   }
+    const Child = defineVaporComponent({
+      props: ['foo'],
+      render(_ctx, $props, $emit, $attrs, $slots) {
+        const n0 = template('<div></div>')() as Element
+        const n1 = template('<div></div>')() as Element
+        renderEffect(() => {
+          setDynamicProps(n1, [$attrs])
+        })
+        return [n0, n1]
+      },
+    })
 
-  //   const Child = defineVaporComponent({
-  //     props: ['foo'],
-  //     render() {
-  //       return [h('div'), h('div', this.$attrs)]
-  //     },
-  //   })
+    const { html } = define(Parent).render()
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Parent), root)
+    expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+    expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
 
-  //   expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
-  //   expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
+    expect(html()).toBe(`<div></div><div class="parent"></div>`)
+  })
 
-  //   expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
-  // })
+  it('should not warn when context.attrs is used during render (functional)', () => {
+    const Parent = {
+      render() {
+        return createComponent(Child, {
+          foo: () => 1,
+          class: () => 'parent',
+          onBar: () => () => {},
+        })
+      },
+    }
 
-  // it('should not warn when context.attrs is used during render', () => {
-  //   const Parent = {
-  //     render() {
-  //       return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
-  //     },
-  //   }
+    const Child = defineVaporComponent((_, { attrs }) => {
+      const n0 = template('<div></div>')() as Element
+      const n1 = template('<div></div>')() as Element
+      renderEffect(() => {
+        setDynamicProps(n1, [attrs])
+      })
+      return [n0, n1]
+    })
 
-  //   const Child = defineVaporComponent({
-  //     props: ['foo'],
-  //     setup(_props, { attrs }) {
-  //       return () => [h('div'), h('div', attrs)]
-  //     },
-  //   })
+    Child.props = ['foo']
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Parent), root)
+    const { html } = define(Parent).render()
 
-  //   expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
-  //   expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
+    expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+    expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
+    expect(html()).toBe(`<div></div><div class="parent"></div>`)
+  })
 
-  //   expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
-  // })
+  it.todo(
+    'should not warn when functional component has optional props',
+    () => {
+      const Parent = {
+        render() {
+          return createComponent(Child, {
+            foo: () => 1,
+            class: () => 'parent',
+            onBar: () => () => {},
+          })
+        },
+      }
 
-  // it('should not warn when context.attrs is used during render (functional)', () => {
-  //   const Parent = {
-  //     render() {
-  //       return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
-  //     },
-  //   }
+      const Child = defineVaporComponent((props: any) => {
+        const n0 = template('<div></div>')() as Element
+        const n1 = template('<div></div>')() as Element
+        renderEffect(() => {
+          setClass(n1, 'class', props.class)
+        })
+        return [n0, n1]
+      })
 
-  //   const Child: FunctionalComponent = (_, { attrs }) => [
-  //     h('div'),
-  //     h('div', attrs),
-  //   ]
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const { html } = define(Parent).render()
 
-  //   Child.props = ['foo']
-
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Parent), root)
-
-  //   expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
-  //   expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
-  //   expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
-  // })
-
-  // it('should not warn when functional component has optional props', () => {
-  //   const Parent = {
-  //     render() {
-  //       return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
-  //     },
-  //   }
-
-  //   const Child = (props: any) => [h('div'), h('div', { class: props.class })]
-
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Parent), root)
-
-  //   expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
-  //   expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
-  //   expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
-  // })
+      expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+      expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
+      expect(html()).toBe(`<div></div><div class="parent"></div>`)
+    },
+  )
 
   // it('should warn when functional component has props and does not use attrs', () => {
   //   const Parent = {
