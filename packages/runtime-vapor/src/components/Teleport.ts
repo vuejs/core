@@ -3,7 +3,6 @@ import {
   MismatchTypes,
   type TeleportProps,
   type TeleportTargetElement,
-  currentInstance,
   isMismatchAllowed,
   isTeleportDeferred,
   isTeleportDisabled,
@@ -16,6 +15,8 @@ import { createComment, createTextNode, querySelector } from '../dom/node'
 import {
   type LooseRawProps,
   type LooseRawSlots,
+  type VaporComponentInstance,
+  applyFallthroughProps,
   isVaporComponent,
 } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
@@ -32,6 +33,7 @@ import {
   setCurrentHydrationNode,
 } from '../dom/hydration'
 import { applyTransitionHooks } from './Transition'
+import { getParentInstance } from '../componentSlots'
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -57,13 +59,12 @@ export class TeleportFragment extends VaporFragment<Block[]> {
   placeholder?: Node
   mountContainer?: ParentNode | null
   mountAnchor?: Node | null
-  parentComponent: GenericComponentInstance
 
   constructor(props: LooseRawProps, slots: LooseRawSlots) {
     super([])
     this.rawProps = props
     this.rawSlots = slots
-    this.parentComponent = currentInstance as GenericComponentInstance
+    this.parentComponent = getParentInstance()
     this.anchor = isHydrating
       ? undefined
       : __DEV__
@@ -144,8 +145,19 @@ export class TeleportFragment extends VaporFragment<Block[]> {
 
   private mount(parent: ParentNode, anchor: Node | null): void {
     if (this.$transition) {
-      applyTransitionHooks(this.nodes, this.$transition)
+      this.$transition = applyTransitionHooks(this.nodes, this.$transition)
     }
+
+    // fallthrough attrs
+    const instance = this.parentComponent as VaporComponentInstance
+    if (
+      instance.hasFallthrough &&
+      Object.keys(instance.attrs).length &&
+      this.nodes instanceof Element
+    ) {
+      applyFallthroughProps(this.nodes, instance.attrs)
+    }
+
     insert(
       this.nodes,
       (this.mountContainer = parent),

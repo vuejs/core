@@ -26,7 +26,7 @@ import {
   applyFallthroughProps,
   isVaporComponent,
 } from '../component'
-import { extend, isArray } from '@vue/shared'
+import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import { isFragment } from '../fragment'
 import {
@@ -85,7 +85,7 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
     renderEffect(() => {
       resolvedProps = resolveTransitionProps(props)
       if (isMounted) {
-        // only update props for Fragment block, for later reusing
+        // only update props for Fragment transition, for later reusing
         if (isFragment(children)) {
           children.$transition!.props = resolvedProps
         } else {
@@ -93,7 +93,7 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
           if (child) {
             // replace existing transition hooks
             child.$transition!.props = resolvedProps
-            applyTransitionHooks(child, child.$transition!, undefined, true)
+            applyTransitionHooks(child, child.$transition!, true)
           }
         }
       } else {
@@ -102,33 +102,19 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
     })
 
     // fallthrough attrs
-    let fallthroughAttrs = true
-    if (instance.hasFallthrough) {
-      renderEffect(() => {
-        // attrs are accessed in advance
-        const resolvedAttrs = extend({}, attrs)
-        const child = findTransitionBlock(children)
-        if (child) {
-          // mark single root
-          ;(child as any).$root = true
-
-          applyFallthroughProps(child, resolvedAttrs)
-          // ensure fallthrough attrs are not happened again in
-          // applyTransitionHooks
-          fallthroughAttrs = false
-        }
-      })
+    if (
+      instance.hasFallthrough &&
+      Object.keys(attrs).length &&
+      children instanceof Element
+    ) {
+      renderEffect(() => applyFallthroughProps(children, attrs))
     }
 
-    const hooks = applyTransitionHooks(
-      children,
-      {
-        state: useTransitionState(),
-        props: resolvedProps!,
-        instance: instance,
-      } as VaporTransitionHooks,
-      fallthroughAttrs,
-    )
+    const hooks = applyTransitionHooks(children, {
+      state: useTransitionState(),
+      props: resolvedProps!,
+      instance: instance,
+    } as VaporTransitionHooks)
 
     if (resetDisplay && resolvedProps!.appear) {
       const child = findTransitionBlock(children)!
@@ -210,7 +196,6 @@ export function resolveTransitionHooks(
 export function applyTransitionHooks(
   block: Block,
   hooks: VaporTransitionHooks,
-  fallthroughAttrs: boolean = true,
   isResolved: boolean = false,
 ): VaporTransitionHooks {
   // filter out comment nodes
@@ -245,13 +230,6 @@ export function applyTransitionHooks(
   resolvedHooks.group = group
   child.$transition = resolvedHooks
   if (isFrag) setTransitionHooksOnFragment(block, resolvedHooks)
-
-  // fallthrough attrs
-  if (fallthroughAttrs && instance.hasFallthrough) {
-    // mark single root
-    ;(child as any).$root = true
-    applyFallthroughProps(child, instance.attrs)
-  }
 
   return resolvedHooks
 }

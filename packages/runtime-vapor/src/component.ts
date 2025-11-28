@@ -16,6 +16,7 @@ import {
   currentInstance,
   endMeasure,
   expose,
+  getComponentName,
   isAsyncWrapper,
   isKeepAlive,
   nextUid,
@@ -27,7 +28,6 @@ import {
   startMeasure,
   unregisterHMR,
   warn,
-  // warnExtraneousAttributes,
 } from '@vue/runtime-dom'
 import {
   type Block,
@@ -203,7 +203,10 @@ export function createComponent(
   const parentInstance = getParentInstance()
 
   if (
-    isSingleRoot &&
+    (isSingleRoot ||
+      // transition has attrs fallthrough
+      (parentInstance &&
+        getComponentName(parentInstance!.type) === 'VaporTransition')) &&
     component.inheritAttrs !== false &&
     isVaporComponent(parentInstance) &&
     parentInstance.hasFallthrough
@@ -403,7 +406,12 @@ export function setupComponent(
     component.inheritAttrs !== false &&
     Object.keys(instance.attrs).length
   ) {
-    renderEffect(() => applyFallthroughProps(instance.block, instance.attrs))
+    const root = filterSingleRootElement(instance.block)
+    if (root) {
+      renderEffect(() => applyFallthroughProps(root, instance.attrs))
+    } else if (__DEV__ && isArray(instance.block)) {
+      // TODO warn extraneous attributes
+    }
   }
 
   setActiveSub(prevSub)
@@ -418,17 +426,12 @@ export function setupComponent(
 export let isApplyingFallthroughProps = false
 
 export function applyFallthroughProps(
-  block: Block,
+  el: Element,
   attrs: Record<string, any>,
 ): void {
-  const el = getRootElement(block, false)
-  if (el) {
-    isApplyingFallthroughProps = true
-    setDynamicProps(el, [attrs])
-    isApplyingFallthroughProps = false
-  } else if (__DEV__) {
-    // warnExtraneousAttributes(attrs)
-  }
+  isApplyingFallthroughProps = true
+  setDynamicProps(el, [attrs])
+  isApplyingFallthroughProps = false
 }
 
 /**
@@ -868,4 +871,23 @@ export function getRootElement(
     }
     return hasComment ? singleRoot : undefined
   }
+}
+
+export function filterSingleRootElement(block: Block): Element | undefined {
+  let singleRoot
+  if (block instanceof Element) {
+    singleRoot = block
+  } else if (isArray(block)) {
+    for (const b of block) {
+      if (b instanceof Element) {
+        if (singleRoot) {
+          // has more than 1 non-comment child
+          return
+        } else {
+          singleRoot = b
+        }
+      }
+    }
+  }
+  return singleRoot
 }

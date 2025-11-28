@@ -11,11 +11,14 @@ import {
   remove,
 } from './block'
 import {
+  type GenericComponentInstance,
   type TransitionHooks,
   type VNode,
   queuePostFlushCb,
+  setCurrentInstance,
+  warnExtraneousAttributes,
 } from '@vue/runtime-dom'
-import type { VaporComponentInstance } from './component'
+import { type VaporComponentInstance, applyFallthroughProps } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
   applyTransitionHooks,
@@ -28,6 +31,7 @@ import {
   locateFragmentEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
+import { getParentInstance } from './componentSlots'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -37,6 +41,7 @@ export class VaporFragment<T extends Block = Block>
   nodes: T
   vnode?: VNode | null = null
   anchor?: Node
+  parentComponent?: GenericComponentInstance | null
   fallback?: BlockFn
   insert?: (
     parent: ParentNode,
@@ -86,12 +91,14 @@ export class DynamicFragment extends VaporFragment {
 
   constructor(anchorLabel?: string) {
     super([])
+    this.parentComponent = getParentInstance()
     if (isHydrating) {
       this.anchorLabel = anchorLabel
       locateHydrationNode()
     } else {
       this.anchor =
         __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+      if (__DEV__) this.anchorLabel = anchorLabel
     }
   }
 
@@ -168,6 +175,8 @@ export class DynamicFragment extends VaporFragment {
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,
   ) {
+    // anchor isConnected indicates the this is an update render
+    const isUpdate = !!(this.anchor && this.anchor.isConnected)
     if (render) {
       // try to reuse the kept-alive scope
       const scope = this.getScope && this.getScope(this.current)
@@ -177,10 +186,28 @@ export class DynamicFragment extends VaporFragment {
         this.scope = new EffectScope()
       }
 
+      // switch current instance to parent instance during update
+      let prev
+      if (this.parentComponent && isUpdate)
+        prev = setCurrentInstance(this.parentComponent)
       this.nodes = this.scope.run(render) || []
+      if (this.parentComponent && isUpdate) setCurrentInstance(...prev!)
 
       if (transition) {
         this.$transition = applyTransitionHooks(this.nodes, transition)
+      }
+
+      // fallthrough attrs
+      if (
+        this.parentComponent &&
+        (this.parentComponent as VaporComponentInstance)!.hasFallthrough &&
+        Object.keys(this.parentComponent!.attrs).length
+      ) {
+        if (this.nodes instanceof Element) {
+          applyFallthroughProps(this.nodes, this.parentComponent!.attrs)
+        } else if (__DEV__ && this.anchorLabel === 'slot') {
+          warnExtraneousAttributes(this.parentComponent!.attrs)
+        }
       }
 
       if (this.beforeMount) {
@@ -191,8 +218,7 @@ export class DynamicFragment extends VaporFragment {
 
       if (parent) {
         insert(this.nodes, parent, this.anchor)
-        // anchor isConnected indicates the this render is updated
-        if (this.anchor.isConnected && this.updated) {
+        if (isUpdate && this.updated) {
           this.updated.forEach(hook => hook(this.nodes))
         }
       }
