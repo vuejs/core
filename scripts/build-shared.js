@@ -115,7 +115,7 @@ export function resolveCJSIgnores(target) {
  * @param {Object} options
  * @param {any} options.pkg - Package.json object
  * @param {string} options.format - Build format
- * @param {string} options.target - Target package name
+ * @param {string | undefined} options.target - Target package name
  * @param {boolean} options.prod - Whether this is a production build
  * @param {string} [options.version] - Version override
  * @param {string} [options.commit] - Commit hash
@@ -124,7 +124,7 @@ export function resolveCJSIgnores(target) {
 export function resolveDefines({
   pkg,
   format,
-  target,
+  target = '',
   prod,
   version,
   commit = 'dev',
