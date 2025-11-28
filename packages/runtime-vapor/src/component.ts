@@ -100,7 +100,7 @@ import {
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-import { DynamicFragment, isFragment } from './fragment'
+import { DynamicFragment } from './fragment'
 import type { VaporElement } from './apiDefineVaporCustomElement'
 
 export { currentInstance } from '@vue/runtime-dom'
@@ -828,48 +828,6 @@ export function getExposed(
         get: (target, key) => unref(target[key as any]),
       }))
     )
-  }
-}
-
-export function getRootElement(
-  block: Block,
-  recurse: boolean = true,
-): Element | undefined {
-  if (block instanceof Element) {
-    return block
-  }
-
-  if (recurse && isVaporComponent(block)) {
-    return getRootElement(block.block, recurse)
-  }
-
-  if (isFragment(block)) {
-    const { nodes } = block
-    if (nodes instanceof Element && (nodes as any).$root) {
-      return nodes
-    }
-    return getRootElement(nodes, recurse)
-  }
-
-  // The root node contains comments. It is necessary to filter out
-  // the comment nodes and return a single root node.
-  // align with vdom behavior
-  if (isArray(block)) {
-    let singleRoot: Element | undefined
-    let hasComment = false
-    for (const b of block) {
-      if (b instanceof Comment) {
-        hasComment = true
-        continue
-      }
-      const thisRoot = getRootElement(b, recurse)
-      // only return root if there is exactly one eligible root in the array
-      if (!thisRoot || singleRoot) {
-        return
-      }
-      singleRoot = thisRoot
-    }
-    return hasComment ? singleRoot : undefined
   }
 }
 

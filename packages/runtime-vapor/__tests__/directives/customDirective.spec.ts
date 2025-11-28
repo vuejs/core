@@ -3,6 +3,7 @@ import {
   type VaporDirective,
   createComponent,
   defineVaporComponent,
+  template,
   withVaporDirectives,
 } from '../../src'
 import { nextTick, watchEffect } from '@vue/runtime-dom'
@@ -58,8 +59,7 @@ describe('custom directive', () => {
     // Child component with single root
     const Child = defineVaporComponent({
       render() {
-        const el = document.createElement('div')
-        return el
+        return template('<div></div>', true)()
       },
     })
 
@@ -92,7 +92,7 @@ describe('custom directive', () => {
     // Child component with multiple roots
     const Child = defineVaporComponent({
       render() {
-        return [document.createElement('div'), document.createElement('span')]
+        return [template('<div></div>')(), template('<span></span>')()]
       },
     })
 
