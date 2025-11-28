@@ -306,7 +306,7 @@ describe('attribute fallthrough', () => {
     expect(html()).toMatch(`<div class="child parent">1</div>`)
   })
 
-  it.todo('should warn when fallthrough fails on non-single-root', () => {
+  it('should warn when fallthrough fails on non-single-root', () => {
     const Parent = {
       setup() {
         return createComponent(Child, {
@@ -330,7 +330,7 @@ describe('attribute fallthrough', () => {
     expect(`Extraneous non-emits event listeners`).toHaveBeenWarned()
   })
 
-  it.todo('should warn when fallthrough fails on teleport root node', () => {
+  it('should warn when fallthrough fails on teleport root node', () => {
     const Parent = {
       render() {
         return createComponent(Child, { class: () => 'parent' })
@@ -890,6 +890,7 @@ describe('attribute fallthrough', () => {
       },
     }).render()
     expect(host.innerHTML).toBe('<span></span><div>1</div>')
+    expect(`Extraneous non-props attributes (id)`).toHaveBeenWarned()
   })
 
   it('should not allow attrs to fallthrough on component with single comment root', async () => {
@@ -908,6 +909,7 @@ describe('attribute fallthrough', () => {
       },
     }).render()
     expect(host.innerHTML).toBe('<!--comment-->')
+    expect(`Extraneous non-props attributes (id)`).toHaveBeenWarned()
   })
 
   it('should not fallthrough if explicitly pass inheritAttrs: false', async () => {

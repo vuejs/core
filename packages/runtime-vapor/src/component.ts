@@ -28,6 +28,7 @@ import {
   startMeasure,
   unregisterHMR,
   warn,
+  warnExtraneousAttributes,
 } from '@vue/runtime-dom'
 import {
   type Block,
@@ -410,7 +411,7 @@ export function setupComponent(
     if (root) {
       renderEffect(() => applyFallthroughProps(root, instance.attrs))
     } else if (__DEV__ && isArray(instance.block)) {
-      // TODO warn extraneous attributes
+      warnExtraneousAttributes(instance.attrs)
     }
   }
 
