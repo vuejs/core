@@ -7,7 +7,7 @@ const require = createRequire(import.meta.url)
  * @param {Object} options
  * @param {any} options.pkg - Package.json object
  * @param {string} options.format - Build format
- * @param {string} options.target - Target package name
+ * @param {string|undefined} options.target - Target package name
  * @param {boolean} options.isGlobalBuild - Whether this is a global build
  * @param {boolean} options.isBrowserESMBuild - Whether this is a browser ESM build
  * @param {boolean} options.isCompatPackage - Whether this is the compat package
@@ -17,7 +17,7 @@ const require = createRequire(import.meta.url)
 export function resolveExternal({
   pkg,
   format,
-  target,
+  target = '',
   isGlobalBuild = false,
   isBrowserESMBuild = false,
   isCompatPackage = false,
@@ -91,7 +91,7 @@ export function getConsolidateDeps() {
 
 /**
  * Resolve compiler ignore list for CommonJS
- * @param {string} target - Target package name
+ * @param {string|undefined} target - Target package name
  * @returns {string[]}
  */
 export function resolveCJSIgnores(target) {
