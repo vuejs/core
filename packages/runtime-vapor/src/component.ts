@@ -410,7 +410,7 @@ export function setupComponent(
     const root = filterSingleRootElement(instance.block)
     if (root) {
       renderEffect(() => applyFallthroughProps(root, instance.attrs))
-    } else if (__DEV__ && isArray(instance.block)) {
+    } else if (__DEV__ && isArray(instance.block) && instance.block.length) {
       warnExtraneousAttributes(instance.attrs)
     }
   }
