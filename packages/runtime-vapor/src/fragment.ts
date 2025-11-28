@@ -206,6 +206,8 @@ export class DynamicFragment extends VaporFragment {
         if (this.nodes instanceof Element) {
           applyFallthroughProps(this.nodes, this.parentComponent!.attrs)
         } else if (__DEV__ && this.anchorLabel === 'slot') {
+          // preventing attrs fallthrough
+          // consistent with VDOM Teleport behavior
           warnExtraneousAttributes(this.parentComponent!.attrs)
         }
       }
