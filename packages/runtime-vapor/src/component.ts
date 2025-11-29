@@ -875,7 +875,7 @@ export function getRootElement(
     return getRootElement(block.block, recurse)
   }
 
-  if (isFragment(block)) {
+  if (isFragment(block) && !(block instanceof TeleportFragment)) {
     if (block instanceof DynamicFragment) block.root = true
     const { nodes } = block
     if (nodes instanceof Element && (nodes as any).$root) {
