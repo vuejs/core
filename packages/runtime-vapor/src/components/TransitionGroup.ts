@@ -30,11 +30,9 @@ import {
 import {
   type ObjectVaporComponent,
   type VaporComponentInstance,
-  applyFallthroughProps,
   isVaporComponent,
 } from '../component'
 import { isForBlock } from '../apiCreateFor'
-import { renderEffect } from '../renderEffect'
 import { createElement } from '../dom/node'
 import { isFragment } from '../fragment'
 
@@ -153,11 +151,6 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
     if (tag) {
       const container = createElement(tag)
       insert(slottedBlock, container)
-      // fallthrough attrs
-      if (instance!.hasFallthrough) {
-        ;(container as any).$root = true
-        renderEffect(() => applyFallthroughProps(container, instance!.attrs))
-      }
       return container
     } else {
       return slottedBlock
