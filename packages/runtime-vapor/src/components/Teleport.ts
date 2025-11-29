@@ -151,7 +151,12 @@ export class TeleportFragment extends VaporFragment<Block[]> {
     // preventing attrs fallthrough
     // consistent with VDOM Teleport behavior
     const instance = this.parentComponent as VaporComponentInstance
-    if (instance.hasFallthrough && Object.keys(instance.attrs).length) {
+    // TODO: check if component root
+    if (
+      __DEV__ &&
+      instance.hasFallthrough &&
+      Object.keys(instance.attrs).length
+    ) {
       warnExtraneousAttributes(instance.attrs)
     }
 
