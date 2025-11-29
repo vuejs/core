@@ -90,7 +90,7 @@ import {
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { _next, createElement } from './dom/node'
-import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
+import { TeleportFragment, isVaporTeleport } from './components/Teleport'
 import {
   type KeepAliveInstance,
   findParentKeepAlive,
@@ -407,14 +407,17 @@ export function setupComponent(
     component.inheritAttrs !== false &&
     Object.keys(instance.attrs).length
   ) {
-    const root = filterSingleRootElement(instance.block)
+    const root = getRootElement(instance.block, false)
     if (root) {
       renderEffect(() => applyFallthroughProps(root, instance.attrs))
     } else if (
       __DEV__ &&
-      !instance.accessedAttrs &&
-      isArray(instance.block) &&
-      instance.block.length
+      ((!instance.accessedAttrs &&
+        isArray(instance.block) &&
+        instance.block.length) ||
+        // preventing attrs fallthrough on Teleport
+        // consistent with VDOM Teleport behavior
+        instance.block instanceof TeleportFragment)
     ) {
       warnExtraneousAttributes(instance.attrs)
     }
@@ -873,6 +876,7 @@ export function getRootElement(
   }
 
   if (isFragment(block)) {
+    if (block instanceof DynamicFragment) block.root = true
     const { nodes } = block
     if (nodes instanceof Element && (nodes as any).$root) {
       return nodes
@@ -900,23 +904,4 @@ export function getRootElement(
     }
     return hasComment ? singleRoot : undefined
   }
-}
-
-export function filterSingleRootElement(block: Block): Element | undefined {
-  let singleRoot
-  if (block instanceof Element) {
-    singleRoot = block
-  } else if (isArray(block)) {
-    for (const b of block) {
-      if (b instanceof Element) {
-        if (singleRoot) {
-          // has more than 1 non-comment child
-          return
-        } else {
-          singleRoot = b
-        }
-      }
-    }
-  }
-  return singleRoot
 }

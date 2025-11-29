@@ -9,14 +9,12 @@ import {
   queuePostFlushCb,
   resolveTeleportTarget,
   warn,
-  warnExtraneousAttributes,
 } from '@vue/runtime-dom'
 import { type Block, type BlockFn, insert, remove } from '../block'
 import { createComment, createTextNode, querySelector } from '../dom/node'
 import {
   type LooseRawProps,
   type LooseRawSlots,
-  type VaporComponentInstance,
   isVaporComponent,
 } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
@@ -146,18 +144,6 @@ export class TeleportFragment extends VaporFragment<Block[]> {
   private mount(parent: ParentNode, anchor: Node | null): void {
     if (this.$transition) {
       this.$transition = applyTransitionHooks(this.nodes, this.$transition)
-    }
-
-    // preventing attrs fallthrough
-    // consistent with VDOM Teleport behavior
-    const instance = this.parentComponent as VaporComponentInstance
-    // TODO: check if component root
-    if (
-      __DEV__ &&
-      instance.hasFallthrough &&
-      Object.keys(instance.attrs).length
-    ) {
-      warnExtraneousAttributes(instance.attrs)
     }
 
     insert(

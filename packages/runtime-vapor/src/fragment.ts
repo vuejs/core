@@ -77,6 +77,7 @@ export class DynamicFragment extends VaporFragment {
   current?: BlockFn
   fallback?: BlockFn
   anchorLabel?: string
+  root?: boolean
 
   // get the kept-alive scope when used in keep-alive
   getScope?: (key: any) => EffectScope | undefined
@@ -195,22 +196,6 @@ export class DynamicFragment extends VaporFragment {
         this.$transition = applyTransitionHooks(this.nodes, transition)
       }
 
-      // fallthrough attrs
-      // TODO: check if component root
-      if (
-        this.parentComponent &&
-        (this.parentComponent as VaporComponentInstance)!.hasFallthrough &&
-        Object.keys(this.parentComponent!.attrs).length
-      ) {
-        if (this.nodes instanceof Element) {
-          applyFallthroughProps(this.nodes, this.parentComponent!.attrs)
-        } else if (__DEV__ && this.anchorLabel === 'slot') {
-          // preventing attrs fallthrough
-          // consistent with VDOM Teleport behavior
-          warnExtraneousAttributes(this.parentComponent!.attrs)
-        }
-      }
-
       if (this.beforeMount) {
         this.beforeMount.forEach(hook =>
           hook(this.current, this.nodes, this.scope!),
@@ -218,6 +203,25 @@ export class DynamicFragment extends VaporFragment {
       }
 
       if (parent) {
+        // fallthrough attrs
+        if (
+          this.root &&
+          this.parentComponent &&
+          (this.parentComponent as VaporComponentInstance)!.hasFallthrough &&
+          Object.keys(this.parentComponent!.attrs).length
+        ) {
+          if (this.nodes instanceof Element) {
+            applyFallthroughProps(this.nodes, this.parentComponent!.attrs)
+          } else if (
+            __DEV__ &&
+            // preventing attrs fallthrough on slots
+            // consistent with VDOM slots behavior
+            this.anchorLabel === 'slot'
+          ) {
+            warnExtraneousAttributes(this.parentComponent!.attrs)
+          }
+        }
+
         insert(this.nodes, parent, this.anchor)
         if (this.updated) {
           this.updated.forEach(hook => hook(this.nodes))
