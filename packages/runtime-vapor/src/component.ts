@@ -411,9 +411,10 @@ export function setupComponent(
     )
     if (root) {
       renderEffect(() => {
-        const attrs = isFunction(component)
-          ? getFunctionalFallthrough(instance.attrs)
-          : instance.attrs
+        const attrs =
+          isFunction(component) && component.displayName !== 'VaporTransition'
+            ? getFunctionalFallthrough(instance.attrs)
+            : instance.attrs
         if (attrs) applyFallthroughProps(root, attrs)
       })
     } else if (
