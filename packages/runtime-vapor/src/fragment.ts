@@ -33,6 +33,7 @@ import {
 } from './dom/hydration'
 import { getParentInstance } from './componentSlots'
 import { isArray } from '@vue/shared'
+import { renderEffect } from './renderEffect'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -209,7 +210,9 @@ export class DynamicFragment extends VaporFragment {
         // fallthrough attrs
         if (this.attrs) {
           if (this.nodes instanceof Element) {
-            applyFallthroughProps(this.nodes, this.attrs)
+            renderEffect(() =>
+              applyFallthroughProps(this.nodes as Element, this.attrs!),
+            )
           } else if (
             __DEV__ &&
             // preventing attrs fallthrough on slots

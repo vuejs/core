@@ -405,7 +405,7 @@ export function setupComponent(
   ) {
     const root = getRootElement(
       instance.block,
-      // attach attrs to dynamic fragments for applying during each update
+      // attach attrs to root dynamic fragments for applying during each update
       frag => (frag.attrs = instance.attrs),
       false,
     )
