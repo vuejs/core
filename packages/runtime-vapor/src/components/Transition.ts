@@ -23,7 +23,6 @@ import type { Block, TransitionBlock, VaporTransitionHooks } from '../block'
 import {
   type FunctionalVaporComponent,
   type VaporComponentInstance,
-  applyFallthroughProps,
   isVaporComponent,
 } from '../component'
 import { isArray } from '@vue/shared'
@@ -100,15 +99,6 @@ export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
         isMounted = true
       }
     })
-
-    // fallthrough attrs
-    if (
-      instance.hasFallthrough &&
-      Object.keys(attrs).length &&
-      children instanceof Element
-    ) {
-      renderEffect(() => applyFallthroughProps(children, attrs))
-    }
 
     const hooks = applyTransitionHooks(children, {
       state: useTransitionState(),
