@@ -77,7 +77,9 @@ export class DynamicFragment extends VaporFragment {
   current?: BlockFn
   fallback?: BlockFn
   anchorLabel?: string
-  root?: boolean
+
+  // fallthrough attrs
+  attrs?: Record<string, any>
 
   // get the kept-alive scope when used in keep-alive
   getScope?: (key: any) => EffectScope | undefined
@@ -204,21 +206,16 @@ export class DynamicFragment extends VaporFragment {
 
       if (parent) {
         // fallthrough attrs
-        if (
-          this.root &&
-          this.parentComponent &&
-          (this.parentComponent as VaporComponentInstance)!.hasFallthrough &&
-          Object.keys(this.parentComponent!.attrs).length
-        ) {
+        if (this.attrs) {
           if (this.nodes instanceof Element) {
-            applyFallthroughProps(this.nodes, this.parentComponent!.attrs)
+            applyFallthroughProps(this.nodes, this.attrs)
           } else if (
             __DEV__ &&
             // preventing attrs fallthrough on slots
             // consistent with VDOM slots behavior
             this.anchorLabel === 'slot'
           ) {
-            warnExtraneousAttributes(this.parentComponent!.attrs)
+            warnExtraneousAttributes(this.attrs)
           }
         }
 

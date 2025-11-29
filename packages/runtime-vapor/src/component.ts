@@ -407,7 +407,12 @@ export function setupComponent(
     component.inheritAttrs !== false &&
     Object.keys(instance.attrs).length
   ) {
-    const root = getRootElement(instance.block, false)
+    const root = getRootElement(
+      instance.block,
+      // attach attrs to dynamic fragments for applying during each update
+      frag => (frag.attrs = instance.attrs),
+      false,
+    )
     if (root) {
       renderEffect(() => applyFallthroughProps(root, instance.attrs))
     } else if (
@@ -865,6 +870,7 @@ export function getExposed(
 
 export function getRootElement(
   block: Block,
+  onDynamicFragment?: (frag: DynamicFragment) => void,
   recurse: boolean = true,
 ): Element | undefined {
   if (block instanceof Element) {
@@ -872,16 +878,18 @@ export function getRootElement(
   }
 
   if (recurse && isVaporComponent(block)) {
-    return getRootElement(block.block, recurse)
+    return getRootElement(block.block, onDynamicFragment, recurse)
   }
 
   if (isFragment(block) && !(block instanceof TeleportFragment)) {
-    if (block instanceof DynamicFragment) block.root = true
+    if (block instanceof DynamicFragment && onDynamicFragment) {
+      onDynamicFragment(block)
+    }
     const { nodes } = block
     if (nodes instanceof Element && (nodes as any).$root) {
       return nodes
     }
-    return getRootElement(nodes, recurse)
+    return getRootElement(nodes, onDynamicFragment, recurse)
   }
 
   // The root node contains comments. It is necessary to filter out
@@ -895,7 +903,7 @@ export function getRootElement(
         hasComment = true
         continue
       }
-      const thisRoot = getRootElement(b, recurse)
+      const thisRoot = getRootElement(b, onDynamicFragment, recurse)
       // only return root if there is exactly one eligible root in the array
       if (!thisRoot || singleRoot) {
         return
