@@ -175,8 +175,6 @@ export class DynamicFragment extends VaporFragment {
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,
   ) {
-    // anchor isConnected indicates the this is an update render
-    const isUpdate = !!(this.anchor && this.anchor.isConnected)
     if (render) {
       // try to reuse the kept-alive scope
       const scope = this.getScope && this.getScope(this.current)
@@ -188,16 +186,17 @@ export class DynamicFragment extends VaporFragment {
 
       // switch current instance to parent instance during update
       let prev
-      if (this.parentComponent && isUpdate)
+      if (this.parentComponent && parent)
         prev = setCurrentInstance(this.parentComponent)
       this.nodes = this.scope.run(render) || []
-      if (this.parentComponent && isUpdate) setCurrentInstance(...prev!)
+      if (this.parentComponent && parent) setCurrentInstance(...prev!)
 
       if (transition) {
         this.$transition = applyTransitionHooks(this.nodes, transition)
       }
 
       // fallthrough attrs
+      // TODO: check if component root
       if (
         this.parentComponent &&
         (this.parentComponent as VaporComponentInstance)!.hasFallthrough &&
@@ -220,7 +219,7 @@ export class DynamicFragment extends VaporFragment {
 
       if (parent) {
         insert(this.nodes, parent, this.anchor)
-        if (isUpdate && this.updated) {
+        if (this.updated) {
           this.updated.forEach(hook => hook(this.nodes))
         }
       }
