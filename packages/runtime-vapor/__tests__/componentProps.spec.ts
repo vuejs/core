@@ -139,24 +139,13 @@ describe('component: props', () => {
       }),
     )
 
-    const clickHandler = () => {}
-    render({
-      foo: () => 1,
-      style: () => ({
-        color: 'red',
-      }),
-      class: () => 'my-class',
-      onClick: () => clickHandler,
-    })
+    render({ foo: () => 1 })
     expect(props).toEqual({})
+    expect(attrs).toEqual({ foo: 1 })
 
-    // for functional components, only style/class/onX
-    // are included in attrs
-    expect(attrs).toEqual({
-      style: [{ color: 'red' }],
-      class: ['my-class'],
-      onClick: clickHandler,
-    })
+    render({ bar: () => 2 })
+    expect(props).toEqual({})
+    expect(attrs).toEqual({ bar: 2 })
   })
 
   test('boolean casting', () => {

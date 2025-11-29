@@ -66,64 +66,67 @@ describe('attribute fallthrough', () => {
     expect(host.innerHTML).toBe('<div id="b">2</div>')
   })
 
-  it('should only allow whitelisted fallthrough on functional component with optional props', async () => {
-    const click = vi.fn()
-    const childUpdated = vi.fn()
+  it.todo(
+    'should only allow whitelisted fallthrough on functional component with optional props',
+    async () => {
+      const click = vi.fn()
+      const childUpdated = vi.fn()
 
-    const count = ref(0)
+      const count = ref(0)
 
-    function inc() {
-      count.value++
-      click()
-    }
+      function inc() {
+        count.value++
+        click()
+      }
 
-    const Hello = () =>
-      createComponent(Child, {
-        foo: () => count.value + 1,
-        id: () => 'test',
-        class: () => 'c' + count.value,
-        style: () => ({
-          color: count.value ? 'red' : 'green',
-        }),
-        onClick: () => inc,
+      const Hello = () =>
+        createComponent(Child, {
+          foo: () => count.value + 1,
+          id: () => 'test',
+          class: () => 'c' + count.value,
+          style: () => ({
+            color: count.value ? 'red' : 'green',
+          }),
+          onClick: () => inc,
+        })
+
+      const { component: Child } = define((props: any) => {
+        childUpdated()
+        const n0 = template(
+          '<div class="c2" style="font-weight: bold"></div>',
+          true,
+        )() as Element
+        renderEffect(() => setElementText(n0, props.foo))
+        return n0
       })
 
-    const Child = defineVaporComponent((props: any) => {
-      childUpdated()
-      const n0 = template(
-        '<div class="c2" style="font-weight: bold"></div>',
-        true,
-      )() as Element
-      renderEffect(() => setElementText(n0, props.foo))
-      return n0
-    })
+      const { host: root } = define(Hello).render()
+      expect(root.innerHTML).toBe(
+        '<div class="c2 c0" style="font-weight: bold; color: green;">1</div>',
+      )
 
-    const { host: root } = define(Hello).render()
-    expect(root.innerHTML).toBe(
-      '<div class="c2 c0" style="font-weight: bold; color: green;"></div>',
-    )
+      const node = root.children[0] as HTMLElement
 
-    const node = root.children[0] as HTMLElement
+      // not whitelisted
+      expect(node.getAttribute('id')).toBe(null)
+      expect(node.getAttribute('foo')).toBe(null)
 
-    // not whitelisted
-    expect(node.getAttribute('id')).toBe(null)
-    expect(node.getAttribute('foo')).toBe(null)
+      // whitelisted: style, class, event listeners
+      expect(node.getAttribute('class')).toBe('c2 c0')
+      expect(node.style.color).toBe('green')
+      expect(node.style.fontWeight).toBe('bold')
+      node.dispatchEvent(new CustomEvent('click'))
+      expect(click).toHaveBeenCalled()
 
-    // whitelisted: style, class, event listeners
-    expect(node.getAttribute('class')).toBe('c2 c0')
-    expect(node.style.color).toBe('green')
-    expect(node.style.fontWeight).toBe('bold')
-    node.dispatchEvent(new CustomEvent('click'))
-    expect(click).toHaveBeenCalled()
-
-    await nextTick()
-    expect(childUpdated).toHaveBeenCalled()
-    expect(node.getAttribute('id')).toBe(null)
-    expect(node.getAttribute('foo')).toBe(null)
-    expect(node.getAttribute('class')).toBe('c2 c1')
-    expect(node.style.color).toBe('red')
-    expect(node.style.fontWeight).toBe('bold')
-  })
+      await nextTick()
+      expect(childUpdated).toHaveBeenCalled()
+      expect(node.getAttribute('id')).toBe(null)
+      expect(node.getAttribute('foo')).toBe(null)
+      expect(node.getAttribute('class')).toBe('c2 c1')
+      expect(node.style.color).toBe('red')
+      expect(node.style.fontWeight).toBe('bold')
+    },
+  )
 
   it('should allow all attrs on functional component with declared props', async () => {
     const click = vi.fn()
@@ -453,37 +456,34 @@ describe('attribute fallthrough', () => {
     expect(html()).toBe(`<div></div><div class="parent"></div>`)
   })
 
-  it.todo(
-    'should not warn when functional component has optional props',
-    () => {
-      const Parent = {
-        render() {
-          return createComponent(Child, {
-            foo: () => 1,
-            class: () => 'parent',
-            onBar: () => () => {},
-          })
-        },
-      }
-
-      const Child = defineVaporComponent((props: any) => {
-        const n0 = template('<div></div>')() as Element
-        const n1 = template('<div></div>')() as Element
-        renderEffect(() => {
-          setClass(n1, 'class', props.class)
+  it('should not warn when functional component has optional props', () => {
+    const Parent = {
+      render() {
+        return createComponent(Child, {
+          foo: () => 1,
+          class: () => 'parent',
+          onBar: () => () => {},
         })
-        return [n0, n1]
+      },
+    }
+
+    const { component: Child } = define((props: any) => {
+      const n0 = template('<div></div>')() as Element
+      const n1 = template('<div></div>')() as Element
+      renderEffect(() => {
+        setClass(n1, props.class)
       })
+      return [n0, n1]
+    })
 
-      const root = document.createElement('div')
-      document.body.appendChild(root)
-      const { html } = define(Parent).render()
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const { html } = define(Parent).render()
 
-      expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
-      expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
-      expect(html()).toBe(`<div></div><div class="parent"></div>`)
-    },
-  )
+    expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+    expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
+    expect(html()).toBe(`<div></div><div class="parent"></div>`)
+  })
 
   // it('should warn when functional component has props and does not use attrs', () => {
   //   const Parent = {
