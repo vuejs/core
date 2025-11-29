@@ -678,4 +678,7 @@ export type { GenericComponent } from './component'
 /**
  * @internal
  */
-export { warnExtraneousAttributes } from './componentRenderUtils'
+export {
+  warnExtraneousAttributes,
+  getFunctionalFallthrough,
+} from './componentRenderUtils'

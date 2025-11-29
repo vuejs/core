@@ -32,6 +32,7 @@ import {
   locateHydrationNode,
 } from './dom/hydration'
 import { getParentInstance } from './componentSlots'
+import { isArray } from '@vue/shared'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -213,7 +214,8 @@ export class DynamicFragment extends VaporFragment {
             __DEV__ &&
             // preventing attrs fallthrough on slots
             // consistent with VDOM slots behavior
-            this.anchorLabel === 'slot'
+            (this.anchorLabel === 'slot' ||
+              (isArray(this.nodes) && this.nodes.length))
           ) {
             warnExtraneousAttributes(this.attrs)
           }

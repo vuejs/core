@@ -66,67 +66,64 @@ describe('attribute fallthrough', () => {
     expect(host.innerHTML).toBe('<div id="b">2</div>')
   })
 
-  it.todo(
-    'should only allow whitelisted fallthrough on functional component with optional props',
-    async () => {
-      const click = vi.fn()
-      const childUpdated = vi.fn()
+  it('should only allow whitelisted fallthrough on functional component with optional props', async () => {
+    const click = vi.fn()
+    const childUpdated = vi.fn()
 
-      const count = ref(0)
+    const count = ref(0)
 
-      function inc() {
-        count.value++
-        click()
-      }
+    function inc() {
+      count.value++
+      click()
+    }
 
-      const Hello = () =>
-        createComponent(Child, {
-          foo: () => count.value + 1,
-          id: () => 'test',
-          class: () => 'c' + count.value,
-          style: () => ({
-            color: count.value ? 'red' : 'green',
-          }),
-          onClick: () => inc,
-        })
-
-      const { component: Child } = define((props: any) => {
-        childUpdated()
-        const n0 = template(
-          '<div class="c2" style="font-weight: bold"></div>',
-          true,
-        )() as Element
-        renderEffect(() => setElementText(n0, props.foo))
-        return n0
+    const Hello = () =>
+      createComponent(Child, {
+        foo: () => count.value + 1,
+        id: () => 'test',
+        class: () => 'c' + count.value,
+        style: () => ({
+          color: count.value ? 'red' : 'green',
+        }),
+        onClick: () => inc,
       })
 
-      const { host: root } = define(Hello).render()
-      expect(root.innerHTML).toBe(
-        '<div class="c2 c0" style="font-weight: bold; color: green;">1</div>',
-      )
+    const { component: Child } = define((props: any) => {
+      childUpdated()
+      const n0 = template(
+        '<div class="c2" style="font-weight: bold"></div>',
+        true,
+      )() as Element
+      renderEffect(() => setElementText(n0, props.foo))
+      return n0
+    })
 
-      const node = root.children[0] as HTMLElement
+    const { host: root } = define(Hello).render()
+    expect(root.innerHTML).toBe(
+      '<div class="c2 c0" style="font-weight: bold; color: green;">1</div>',
+    )
 
-      // not whitelisted
-      expect(node.getAttribute('id')).toBe(null)
-      expect(node.getAttribute('foo')).toBe(null)
+    const node = root.children[0] as HTMLElement
 
-      // whitelisted: style, class, event listeners
-      expect(node.getAttribute('class')).toBe('c2 c0')
-      expect(node.style.color).toBe('green')
-      expect(node.style.fontWeight).toBe('bold')
-      node.dispatchEvent(new CustomEvent('click'))
-      expect(click).toHaveBeenCalled()
+    // not whitelisted
+    expect(node.getAttribute('id')).toBe(null)
+    expect(node.getAttribute('foo')).toBe(null)
 
-      await nextTick()
-      expect(childUpdated).toHaveBeenCalled()
-      expect(node.getAttribute('id')).toBe(null)
-      expect(node.getAttribute('foo')).toBe(null)
-      expect(node.getAttribute('class')).toBe('c2 c1')
-      expect(node.style.color).toBe('red')
-      expect(node.style.fontWeight).toBe('bold')
-    },
-  )
+    // whitelisted: style, class, event listeners
+    expect(node.getAttribute('class')).toBe('c2 c0')
+    expect(node.style.color).toBe('green')
+    expect(node.style.fontWeight).toBe('bold')
+    node.dispatchEvent(new CustomEvent('click'))
+    expect(click).toHaveBeenCalled()
+
+    await nextTick()
+    expect(childUpdated).toHaveBeenCalled()
+    expect(node.getAttribute('id')).toBe(null)
+    expect(node.getAttribute('foo')).toBe(null)
+    expect(node.getAttribute('class')).toBe('c2 c1')
+    expect(node.style.color).toBe('red')
+    expect(node.style.fontWeight).toBe('bold')
+  })
 
   it('should allow all attrs on functional component with declared props', async () => {
     const click = vi.fn()
@@ -438,7 +435,7 @@ describe('attribute fallthrough', () => {
       },
     }
 
-    const Child = defineVaporComponent((_, { attrs }) => {
+    const { component: Child } = define((_: any, { attrs }: any) => {
       const n0 = template('<div></div>')() as Element
       const n1 = template('<div></div>')() as Element
       renderEffect(() => {

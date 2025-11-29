@@ -341,7 +341,7 @@ export function filterSingleRoot(
   return singleRoot
 }
 
-const getFunctionalFallthrough = (attrs: Data): Data | undefined => {
+export const getFunctionalFallthrough = (attrs: Data): Data | undefined => {
   let res: Data | undefined
   for (const key in attrs) {
     if (key === 'class' || key === 'style' || isOn(key)) {

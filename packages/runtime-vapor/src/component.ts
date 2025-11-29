@@ -17,6 +17,7 @@ import {
   endMeasure,
   expose,
   getComponentName,
+  getFunctionalFallthrough,
   isAsyncWrapper,
   isKeepAlive,
   nextUid,
@@ -409,7 +410,12 @@ export function setupComponent(
       false,
     )
     if (root) {
-      renderEffect(() => applyFallthroughProps(root, instance.attrs))
+      renderEffect(() => {
+        const attrs = isFunction(component)
+          ? getFunctionalFallthrough(instance.attrs)
+          : instance.attrs
+        if (attrs) applyFallthroughProps(root, attrs)
+      })
     } else if (
       __DEV__ &&
       ((!instance.accessedAttrs &&
