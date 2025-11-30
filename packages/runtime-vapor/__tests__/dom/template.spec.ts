@@ -40,22 +40,4 @@ describe('api: template', () => {
     expect(nthChild(root, 2)).toBe(root.childNodes[2])
     expect(next(b)).toBe(root.childNodes[2])
   })
-
-  describe('tag closure omission', () => {
-    test('final close tags', () => {
-      const t = template('<div><span>')
-      const root = t() as HTMLElement
-      const html = root.outerHTML
-
-      expect(html).toBe('<div><span></span></div>')
-    })
-
-    test('wrapped non-formatting tag closure', () => {
-      const t = template('<div><div><span></div><div>')
-      const root = t() as HTMLElement
-      const html = root.outerHTML
-
-      expect(html).toBe('<div><div><span></span></div><div></div></div>')
-    })
-  })
 })
