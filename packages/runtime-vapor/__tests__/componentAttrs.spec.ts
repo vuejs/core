@@ -482,162 +482,124 @@ describe('attribute fallthrough', () => {
     expect(html()).toBe(`<div></div><div class="parent"></div>`)
   })
 
-  // it('should warn when functional component has props and does not use attrs', () => {
-  //   const Parent = {
-  //     render() {
-  //       return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
-  //     },
-  //   }
+  it('should warn when functional component has props and does not use attrs', () => {
+    const Parent = {
+      render() {
+        return createComponent(Child, {
+          foo: () => 1,
+          class: () => 'parent',
+          onBar: () => () => {},
+        })
+      },
+    }
 
-  //   const Child: FunctionalComponent = () => [h('div'), h('div')]
+    const { component: Child } = define(() => [
+      template('<div></div>')(),
+      template('<div></div>')(),
+    ])
 
-  //   Child.props = ['foo']
+    Child.props = ['foo']
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Parent), root)
+    const { html } = define(Parent).render()
 
-  //   expect(`Extraneous non-props attributes`).toHaveBeenWarned()
-  //   expect(`Extraneous non-emits event listeners`).toHaveBeenWarned()
-  //   expect(root.innerHTML).toBe(`<div></div><div></div>`)
-  // })
+    expect(`Extraneous non-props attributes`).toHaveBeenWarned()
+    expect(`Extraneous non-emits event listeners`).toHaveBeenWarned()
+    expect(html()).toBe(`<div></div><div></div>`)
+  })
 
-  // // #677
-  // it('should update merged dynamic attrs on optimized child root', async () => {
-  //   const aria = ref('true')
-  //   const cls = ref('bar')
-  //   const Parent = {
-  //     render() {
-  //       return h(Child, { 'aria-hidden': aria.value, class: cls.value })
-  //     },
-  //   }
+  it('should not let listener fallthrough when declared in emits (stateful)', () => {
+    const Child = defineVaporComponent({
+      emits: ['click'],
+      render(_ctx, $props, $emit, $attrs, $slots) {
+        const n0 = template('<button>hello</button>')() as any
+        n0.$evtclick = () => {
+          // @ts-expect-error
+          $emit('click', 'custom')
+        }
+        return n0
+      },
+    })
 
-  //   const Child = {
-  //     props: [],
-  //     render() {
-  //       return (openBlock(), createBlock('div'))
-  //     },
-  //   }
+    const onClick = vi.fn()
+    const App = defineVaporComponent({
+      render() {
+        return createComponent(
+          Child,
+          {
+            onClick: () => onClick,
+          },
+          null,
+          true,
+        )
+      },
+    })
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Parent), root)
+    const { host: root } = define(App).render()
+    const node = root.children[0] as HTMLElement
+    node.click()
+    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(onClick).toHaveBeenCalledWith('custom')
+  })
 
-  //   expect(root.innerHTML).toBe(`<div aria-hidden="true" class="bar"></div>`)
+  it('should not let listener fallthrough when declared in emits (functional)', () => {
+    const { component: Child } = define((_: any, { emit }: any) => {
+      // should not be in props
+      expect((_ as any).onClick).toBeUndefined()
+      const n0 = template('<button></button>')() as any
+      n0.$evtclick = () => {
+        emit('click', 'custom')
+      }
+      return n0
+    })
+    Child.emits = ['click']
 
-  //   aria.value = 'false'
-  //   await nextTick()
-  //   expect(root.innerHTML).toBe(`<div aria-hidden="false" class="bar"></div>`)
+    const onClick = vi.fn()
+    const App = defineVaporComponent({
+      render() {
+        return createComponent(Child, {
+          onClick: () => onClick,
+        })
+      },
+    })
 
-  //   cls.value = 'barr'
-  //   await nextTick()
-  //   expect(root.innerHTML).toBe(`<div aria-hidden="false" class="barr"></div>`)
-  // })
+    const { host: root } = define(App).render()
+    const node = root.children[0] as HTMLElement
+    node.click()
+    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(onClick).toHaveBeenCalledWith('custom')
+  })
 
-  // it('should not let listener fallthrough when declared in emits (stateful)', () => {
-  //   const Child = defineVaporComponent({
-  //     emits: ['click'],
-  //     render() {
-  //       return h(
-  //         'button',
-  //         {
-  //           onClick: () => {
-  //             this.$emit('click', 'custom')
-  //           },
-  //         },
-  //         'hello',
-  //       )
-  //     },
-  //   })
+  it('should support fallthrough for single element + comments', () => {
+    const click = vi.fn()
 
-  //   const onClick = vi.fn()
-  //   const App = {
-  //     render() {
-  //       return h(Child, {
-  //         onClick,
-  //       })
-  //     },
-  //   }
+    const Hello = defineVaporComponent({
+      render() {
+        return createComponent(Child, {
+          class: () => 'foo',
+          onClick: () => click,
+        })
+      },
+    })
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(App), root)
+    const Child = defineVaporComponent({
+      render() {
+        return [
+          template('<!--hello-->')(),
+          template('<button></button>')(),
+          template('<!--world-->')(),
+        ]
+      },
+    })
 
-  //   const node = root.children[0] as HTMLElement
-  //   node.dispatchEvent(new CustomEvent('click'))
-  //   expect(onClick).toHaveBeenCalledTimes(1)
-  //   expect(onClick).toHaveBeenCalledWith('custom')
-  // })
+    const { host: root } = define(Hello).render()
 
-  // it('should not let listener fallthrough when declared in emits (functional)', () => {
-  //   const Child: FunctionalComponent<{}, { click: any }> = (_, { emit }) => {
-  //     // should not be in props
-  //     expect((_ as any).onClick).toBeUndefined()
-  //     return h('button', {
-  //       onClick: () => {
-  //         emit('click', 'custom')
-  //       },
-  //     })
-  //   }
-  //   Child.emits = ['click']
-
-  //   const onClick = vi.fn()
-  //   const App = {
-  //     render() {
-  //       return h(Child, {
-  //         onClick,
-  //       })
-  //     },
-  //   }
-
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(App), root)
-
-  //   const node = root.children[0] as HTMLElement
-  //   node.dispatchEvent(new CustomEvent('click'))
-  //   expect(onClick).toHaveBeenCalledTimes(1)
-  //   expect(onClick).toHaveBeenCalledWith('custom')
-  // })
-
-  // it('should support fallthrough for fragments with single element + comments', () => {
-  //   const click = vi.fn()
-
-  //   const Hello = {
-  //     setup() {
-  //       return () => h(Child, { class: 'foo', onClick: click })
-  //     },
-  //   }
-
-  //   const Child = {
-  //     setup() {
-  //       return () => (
-  //         openBlock(),
-  //         createBlock(
-  //           Fragment,
-  //           null,
-  //           [
-  //             createCommentVNode('hello'),
-  //             h('button'),
-  //             createCommentVNode('world'),
-  //           ],
-  //           PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
-  //         )
-  //       )
-  //     },
-  //   }
-
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Hello), root)
-
-  //   expect(root.innerHTML).toBe(
-  //     `<!--hello--><button class="foo"></button><!--world-->`,
-  //   )
-  //   const button = root.children[0] as HTMLElement
-  //   button.dispatchEvent(new CustomEvent('click'))
-  //   expect(click).toHaveBeenCalled()
-  // })
+    expect(root.innerHTML).toBe(
+      `<!--hello--><button class="foo"></button><!--world-->`,
+    )
+    const button = root.children[0] as HTMLElement
+    button.dispatchEvent(new CustomEvent('click'))
+    expect(click).toHaveBeenCalled()
+  })
 
   // it('should support fallthrough for nested dev root fragments', async () => {
   //   const toggle = ref(false)
