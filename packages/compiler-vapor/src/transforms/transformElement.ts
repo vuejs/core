@@ -81,12 +81,17 @@ export const transformElement: NodeTransform = (node, context) => {
     let { index, parent, block } = context
     let isLastChild = true
     const checkIsLastChild = () => {
+      // If all children after the element are components, then we can consider it "last"
+      // Components won't appear in the html template, so there's no need for closing tags
       isLastChild &&=
         !!parent &&
         (block !== parent.block ||
-          parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
-            .length ===
-            index + 1)
+          parent.node.children.every(
+            (c, i) =>
+              i <= index ||
+              (c.type === NodeTypes.ELEMENT &&
+                c.tagType === ElementTypes.COMPONENT),
+          ))
     }
 
     checkIsLastChild()
@@ -115,6 +120,15 @@ export const transformElement: NodeTransform = (node, context) => {
       }
     }
 
+    while (
+      parent &&
+      parent.parent &&
+      parent.node.type === NodeTypes.ELEMENT &&
+      parent.node.tagType === ElementTypes.TEMPLATE
+    ) {
+      parent = parent.parent
+    }
+
     if (isComponent) {
       transformComponentElement(
         node as ComponentNode,
@@ -130,7 +144,7 @@ export const transformElement: NodeTransform = (node, context) => {
         propsResult,
         singleRoot,
         // Multi-root always generates dedicated templates for each root
-        isLastChild || singleRoot,
+        isLastChild || context.root === parent,
         context,
         getEffectIndex,
       )

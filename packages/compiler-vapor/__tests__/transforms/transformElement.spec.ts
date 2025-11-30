@@ -609,7 +609,7 @@ describe('compiler: element transform', () => {
       '<div id="foo"><span><b></b></span><main><b></b><div><div><span></span><span>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
-    expect(ir.template).toMatchObject([template])
+    expect([...ir.template.keys()]).toMatchObject([template])
     expect(ir.block.effect).lengthOf(0)
   })
 
@@ -621,7 +621,7 @@ describe('compiler: element transform', () => {
     const template = '<div><div><span></div><div>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
-    expect(ir.template).toMatchObject([template])
+    expect([...ir.template.keys()]).toMatchObject([template])
     expect(ir.block.effect).lengthOf(0)
   })
 
@@ -633,7 +633,7 @@ describe('compiler: element transform', () => {
     const template = '<div><div><b></b></div><div>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
-    expect(ir.template).toMatchObject([template])
+    expect([...ir.template.keys()]).toMatchObject([template])
     expect(ir.block.effect).lengthOf(0)
   })
 
@@ -1071,11 +1071,7 @@ describe('compiler: element transform', () => {
       <form><form/></form>`,
     )
     expect(code).toMatchSnapshot()
-    expect([...ir.template.keys()]).toEqual([
-      '<div>123',
-      '<p>',
-      '<form>',
-    ])
+    expect([...ir.template.keys()]).toEqual(['<div>123', '<p>', '<form>'])
     expect(ir.block.dynamic).toMatchObject({
       children: [
         { id: 1, template: 1, children: [{ id: 0, template: 0 }] },
@@ -1110,21 +1106,17 @@ describe('compiler: element transform', () => {
     const t = `<svg><circle r="40"></circle></svg>`
     const { code, ir } = compileWithElementTransform(t)
     expect(code).toMatchSnapshot()
-    expect(code).contains(
-      '_template("<svg><circle r=\\"40\\"></circle></svg>", true, 1)',
-    )
-    expect([...ir.template.keys()]).toMatchObject([t])
-    expect(ir.template.get(t)).toBe(1)
+    expect(code).contains('_template("<svg><circle r=\\"40\\">", true, 1)')
+    expect([...ir.template.keys()]).toMatchObject(['<svg><circle r="40">'])
+    expect(ir.template.get('<svg><circle r="40">')).toBe(1)
   })
 
   test('MathML', () => {
     const t = `<math><mrow><mi>x</mi></mrow></math>`
     const { code, ir } = compileWithElementTransform(t)
     expect(code).toMatchSnapshot()
-    expect(code).contains(
-      '_template("<math><mrow><mi>x</mi></mrow></math>", true, 2)',
-    )
-    expect([...ir.template.keys()]).toMatchObject([t])
-    expect(ir.template.get(t)).toBe(2)
+    expect(code).contains('_template("<math><mrow><mi>x", true, 2)')
+    expect([...ir.template.keys()]).toMatchObject(['<math><mrow><mi>x'])
+    expect(ir.template.get('<math><mrow><mi>x')).toBe(2)
   })
 })

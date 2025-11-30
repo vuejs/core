@@ -62,7 +62,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > on slot outlet 1`] = `
 "import { setInsertionState as _setInsertionState, createSlot as _createSlot, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n1 = t0()

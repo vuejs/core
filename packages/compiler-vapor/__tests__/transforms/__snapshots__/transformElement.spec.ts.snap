@@ -1,8 +1,8 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: element transform > b in nested divs 1`] = `
+exports[`compiler: element transform > MathML 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div><div><b></b></div><div>", true)
+const t0 = _template("<math><mrow><mi>x", true, 2)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -10,9 +10,9 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: element transform > MathML 1`] = `
+exports[`compiler: element transform > b in nested divs 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<math><mrow><mi>x</mi></mrow></math>", true, 2)
+const t0 = _template("<div><div><b></b></div><div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -562,7 +562,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > svg 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<svg><circle r=\\"40\\"></circle></svg>", true, 1)
+const t0 = _template("<svg><circle r=\\"40\\">", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()

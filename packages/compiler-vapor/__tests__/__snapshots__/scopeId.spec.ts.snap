@@ -2,7 +2,7 @@
 
 exports[`scopeId compiler support > should wrap default slot 1`] = `
 "import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _component_Child = _resolveComponent("Child")
@@ -18,7 +18,7 @@ export function render(_ctx) {
 
 exports[`scopeId compiler support > should wrap dynamic slots 1`] = `
 "import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div test></div>")
+const t0 = _template("<div test>")
 
 export function render(_ctx) {
   const _component_Child = _resolveComponent("Child")
@@ -49,7 +49,7 @@ export function render(_ctx) {
 exports[`scopeId compiler support > should wrap named slots 1`] = `
 "import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template(" ")
-const t1 = _template("<div test></div>")
+const t1 = _template("<div test>")
 
 export function render(_ctx) {
   const _component_Child = _resolveComponent("Child")

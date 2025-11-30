@@ -43,7 +43,7 @@ export function render(_ctx) {
 exports[`compiler sfc: transform asset url > support uri fragment 1`] = `
 "import { template as _template } from 'vue';
 import _imports_0 from '@svg/file.svg';
-const t0 = _template("<use href=\\"" + _imports_0 + '#fragment' + "\\"></use>", false, 1)
+const t0 = _template("<use href=\\"" + _imports_0 + '#fragment' + "\\">", false, 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -54,7 +54,7 @@ export function render(_ctx) {
 
 exports[`compiler sfc: transform asset url > support uri is empty 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<use href=\\"\\"></use>", true, 1)
+const t0 = _template("<use href=\\"\\">", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -90,7 +90,7 @@ exports[`compiler sfc: transform asset url > transform with stringify 1`] = `
 "import { template as _template } from 'vue';
 import _imports_0 from './bar.png';
 import _imports_1 from '/bar.png';
-const t0 = _template("<div><img src=\\"" + _imports_0 + "\\"><img src=\\"" + _imports_1 + "\\"><img src=\\"https://foo.bar/baz.png\\"><img src=\\"//foo.bar/baz.png\\"><img src=\\"" + _imports_0 + "\\"></div>", true)
+const t0 = _template("<div><img src=\\"" + _imports_0 + "\\"><img src=\\"" + _imports_1 + "\\"><img src=\\"https://foo.bar/baz.png\\"><img src=\\"//foo.bar/baz.png\\"><img src=\\"" + _imports_0 + "\\">", true)
 
 export function render(_ctx) {
   const n0 = t0()
