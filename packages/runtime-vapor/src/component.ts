@@ -332,6 +332,11 @@ export function createComponent(
     setupComponent(instance, component)
   }
 
+  if (__DEV__) {
+    popWarningContext()
+    endMeasure(instance, 'init')
+  }
+
   // restore currentSlotConsumer to previous value after setupFn is called
   setCurrentSlotConsumer(prevSlotConsumer)
   onScopeDispose(() => unmountComponent(instance), true)
@@ -431,11 +436,6 @@ export function setupComponent(
 
   setActiveSub(prevSub)
   setCurrentInstance(...prevInstance)
-
-  if (__DEV__) {
-    popWarningContext()
-    endMeasure(instance, 'init')
-  }
 }
 
 export let isApplyingFallthroughProps = false
