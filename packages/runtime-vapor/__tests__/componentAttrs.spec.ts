@@ -16,6 +16,7 @@ import {
   renderEffect,
   setClass,
   setDynamicProps,
+  setInsertionState,
   setProp,
   setStyle,
   template,
@@ -98,12 +99,12 @@ describe('attribute fallthrough', () => {
       return n0
     })
 
-    const { host: root } = define(Hello).render()
-    expect(root.innerHTML).toBe(
+    const { host } = define(Hello).render()
+    expect(host.innerHTML).toBe(
       '<div class="c2 c0" style="font-weight: bold; color: green;">1</div>',
     )
 
-    const node = root.children[0] as HTMLElement
+    const node = host.children[0] as HTMLElement
 
     // not whitelisted
     expect(node.getAttribute('id')).toBe(null)
@@ -128,7 +129,6 @@ describe('attribute fallthrough', () => {
   it('should allow all attrs on functional component with declared props', async () => {
     const click = vi.fn()
     const childUpdated = vi.fn()
-
     const count = ref(0)
 
     function inc() {
@@ -157,8 +157,8 @@ describe('attribute fallthrough', () => {
 
     Child.props = ['foo']
 
-    const { host: root } = define(Hello).render()
-    const node = root.children[0] as HTMLElement
+    const { host } = define(Hello).render()
+    const node = host.children[0] as HTMLElement
 
     expect(node.getAttribute('id')).toBe('test')
     expect(node.getAttribute('foo')).toBe(null) // declared as prop
@@ -232,12 +232,12 @@ describe('attribute fallthrough', () => {
       },
     })
 
-    const { host: root } = define(Hello).render()
-    expect(root.innerHTML).toBe(
+    const { host } = define(Hello).render()
+    expect(host.innerHTML).toBe(
       '<div class="c2 c0" style="font-weight: bold; color: green;" id="test">1</div>',
     )
 
-    const node = root.children[0] as HTMLElement
+    const node = host.children[0] as HTMLElement
 
     // with declared props, any parent attr that isn't a prop falls through
     expect(node.getAttribute('id')).toBe('test')
@@ -343,12 +343,12 @@ describe('attribute fallthrough', () => {
       },
     }
 
-    const root = document.createElement('div')
+    const target = document.createElement('div')
     const Child = defineVaporComponent({
       render() {
         return createComponent(
           VaporTeleport,
-          { to: () => root },
+          { to: () => target },
           {
             default: () => template('<div></div>')(),
           },
@@ -356,7 +356,7 @@ describe('attribute fallthrough', () => {
       },
     })
 
-    document.body.appendChild(root)
+    document.body.appendChild(target)
     define(Parent).render()
 
     expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
@@ -473,8 +473,6 @@ describe('attribute fallthrough', () => {
       return [n0, n1]
     })
 
-    const root = document.createElement('div')
-    document.body.appendChild(root)
     const { html } = define(Parent).render()
 
     expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
@@ -534,8 +532,8 @@ describe('attribute fallthrough', () => {
       },
     })
 
-    const { host: root } = define(App).render()
-    const node = root.children[0] as HTMLElement
+    const { host } = define(App).render()
+    const node = host.children[0] as HTMLElement
     node.click()
     expect(onClick).toHaveBeenCalledTimes(1)
     expect(onClick).toHaveBeenCalledWith('custom')
@@ -562,8 +560,8 @@ describe('attribute fallthrough', () => {
       },
     })
 
-    const { host: root } = define(App).render()
-    const node = root.children[0] as HTMLElement
+    const { host } = define(App).render()
+    const node = host.children[0] as HTMLElement
     node.click()
     expect(onClick).toHaveBeenCalledTimes(1)
     expect(onClick).toHaveBeenCalledWith('custom')
@@ -591,151 +589,139 @@ describe('attribute fallthrough', () => {
       },
     })
 
-    const { host: root } = define(Hello).render()
+    const { host } = define(Hello).render()
 
-    expect(root.innerHTML).toBe(
+    expect(host.innerHTML).toBe(
       `<!--hello--><button class="foo"></button><!--world-->`,
     )
-    const button = root.children[0] as HTMLElement
+    const button = host.children[0] as HTMLElement
     button.dispatchEvent(new CustomEvent('click'))
     expect(click).toHaveBeenCalled()
   })
 
-  // it('should support fallthrough for nested dev root fragments', async () => {
-  //   const toggle = ref(false)
+  it('should support fallthrough for nested element + comments', async () => {
+    const toggle = ref(false)
+    const Child = defineVaporComponent({
+      setup() {
+        const n0 = template('<!-- comment A -->')() as any
+        const n1 = createIf(
+          () => toggle.value,
+          () => template('<span>Foo</span>')(),
+          () => {
+            const n2 = template('<!-- comment B -->')() as any
+            const n3 = template('<div>Bar</div>')() as any
+            return [n2, n3]
+          },
+        )
+        return [n0, n1]
+      },
+    })
 
-  //   const Child = {
-  //     setup() {
-  //       return () => (
-  //         openBlock(),
-  //         createElementBlock(
-  //           Fragment,
-  //           null,
-  //           [
-  //             createCommentVNode(' comment A '),
-  //             toggle.value
-  //               ? (openBlock(), createElementBlock('span', { key: 0 }, 'Foo'))
-  //               : (openBlock(),
-  //                 createElementBlock(
-  //                   Fragment,
-  //                   { key: 1 },
-  //                   [
-  //                     createCommentVNode(' comment B '),
-  //                     createElementVNode('div', null, 'Bar'),
-  //                   ],
-  //                   PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
-  //                 )),
-  //           ],
-  //           PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
-  //         )
-  //       )
-  //     },
-  //   }
+    const Root = defineVaporComponent({
+      setup() {
+        return createComponent(Child, { class: () => 'red' })
+      },
+    })
 
-  //   const Root = {
-  //     setup() {
-  //       return () => (openBlock(), createBlock(Child, { class: 'red' }))
-  //     },
-  //   }
+    const { host } = define(Root).render()
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(Root), root)
+    expect(host.innerHTML).toBe(
+      `<!-- comment A --><!-- comment B --><div class="red">Bar</div><!--if-->`,
+    )
 
-  //   expect(root.innerHTML).toBe(
-  //     `<!-- comment A --><!-- comment B --><div class="red">Bar</div>`,
-  //   )
+    toggle.value = true
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      `<!-- comment A --><span class=\"red\">Foo</span><!--if-->`,
+    )
+  })
 
-  //   toggle.value = true
-  //   await nextTick()
-  //   expect(root.innerHTML).toBe(
-  //     `<!-- comment A --><span class=\"red\">Foo</span>`,
-  //   )
-  // })
+  it('should not fallthrough v-model listeners with corresponding declared prop', () => {
+    let textFoo = ''
+    let textBar = ''
+    const click = vi.fn()
 
-  // // #1989
-  // it('should not fallthrough v-model listeners with corresponding declared prop', () => {
-  //   let textFoo = ''
-  //   let textBar = ''
-  //   const click = vi.fn()
+    const App = defineVaporComponent({
+      render() {
+        return createComponent(Child, {
+          modelValue: () => textFoo,
+          'onUpdate:modelValue': () => (val: string) => {
+            textFoo = val
+          },
+        })
+      },
+    })
 
-  //   const App = defineVaporComponent({
-  //     setup() {
-  //       return () =>
-  //         h(Child, {
-  //           modelValue: textFoo,
-  //           'onUpdate:modelValue': (val: string) => {
-  //             textFoo = val
-  //           },
-  //         })
-  //     },
-  //   })
+    const Child = defineVaporComponent({
+      props: ['modelValue'],
+      setup(_props, { emit }) {
+        return createComponent(GrandChild, {
+          modelValue: () => textBar,
+          'onUpdate:modelValue': () => (val: string) => {
+            textBar = val
+            emit('update:modelValue', 'from Child')
+          },
+        })
+      },
+    })
 
-  //   const Child = defineVaporComponent({
-  //     props: ['modelValue'],
-  //     setup(_props, { emit }) {
-  //       return () =>
-  //         h(GrandChild, {
-  //           modelValue: textBar,
-  //           'onUpdate:modelValue': (val: string) => {
-  //             textBar = val
-  //             emit('update:modelValue', 'from Child')
-  //           },
-  //         })
-  //     },
-  //   })
+    const GrandChild = defineVaporComponent({
+      props: ['modelValue'],
+      setup(_props, { emit }) {
+        const n0 = template('<button></button>')() as any
+        n0.$evtclick = () => {
+          click()
+          emit('update:modelValue', 'from GrandChild')
+        }
+        return n0
+      },
+    })
 
-  //   const GrandChild = defineVaporComponent({
-  //     props: ['modelValue'],
-  //     setup(_props, { emit }) {
-  //       return () =>
-  //         h('button', {
-  //           onClick() {
-  //             click()
-  //             emit('update:modelValue', 'from GrandChild')
-  //           },
-  //         })
-  //     },
-  //   })
+    const { host } = define(App).render()
+    const node = host.children[0] as HTMLElement
+    node.click()
+    expect(click).toHaveBeenCalled()
+    expect(textBar).toBe('from GrandChild')
+    expect(textFoo).toBe('from Child')
+  })
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   render(h(App), root)
+  it('should track this.$attrs access in slots', async () => {
+    const GrandChild = defineVaporComponent({
+      render() {
+        return createSlot('default')
+      },
+    })
+    const Child = defineVaporComponent({
+      // @ts-expect-error
+      components: { GrandChild },
+      render(_ctx, $props, $emit, $attrs, $slots) {
+        const n0 = template('<div></div>')() as any
+        setInsertionState(n0)
+        createComponent(GrandChild, null, {
+          default: () => {
+            const n1 = template(' ')()
+            renderEffect(() => setElementText(n1, $attrs.foo))
+            return n1
+          },
+        })
+        return n0
+      },
+    })
 
-  //   const node = root.children[0] as HTMLElement
+    const obj = ref(1)
+    const App = defineVaporComponent({
+      render() {
+        return createComponent(Child, { foo: () => obj.value })
+      },
+    })
 
-  //   node.dispatchEvent(new CustomEvent('click'))
-  //   expect(click).toHaveBeenCalled()
-  //   expect(textBar).toBe('from GrandChild')
-  //   expect(textFoo).toBe('from Child')
-  // })
+    const { html } = define(App).render()
+    expect(html()).toBe('<div foo="1">1<!--slot--></div>')
 
-  // // covers uncaught regression #10710
-  // it('should track this.$attrs access in slots', async () => {
-  //   const GrandChild = {
-  //     template: `<slot/>`,
-  //   }
-  //   const Child = {
-  //     components: { GrandChild },
-  //     template: `<div><GrandChild>{{ $attrs.foo }}</GrandChild></div>`,
-  //   }
-
-  //   const obj = ref(1)
-  //   const App = {
-  //     render() {
-  //       return h(Child, { foo: obj.value })
-  //     },
-  //   }
-
-  //   const root = document.createElement('div')
-  //   createApp(App).mount(root)
-
-  //   expect(root.innerHTML).toBe('<div foo="1">1</div>')
-
-  //   obj.value = 2
-  //   await nextTick()
-  //   expect(root.innerHTML).toBe('<div foo="2">2</div>')
-  // })
+    obj.value = 2
+    await nextTick()
+    expect(html()).toBe('<div foo="2">2<!--slot--></div>')
+  })
 
   it('should allow attrs to fallthrough on component with comment at root', async () => {
     const t0 = template('<!--comment-->')
