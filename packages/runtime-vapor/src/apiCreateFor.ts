@@ -446,7 +446,7 @@ export const createFor = (
 
     // apply transition for new nodes
     if (frag.$transition) {
-      applyTransitionHooks(block.nodes, frag.$transition, false)
+      applyTransitionHooks(block.nodes, frag.$transition)
     }
 
     if (parent) insert(block.nodes, parent, anchor)

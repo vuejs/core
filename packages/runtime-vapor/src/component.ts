@@ -16,6 +16,8 @@ import {
   currentInstance,
   endMeasure,
   expose,
+  getComponentName,
+  getFunctionalFallthrough,
   isAsyncWrapper,
   isKeepAlive,
   nextUid,
@@ -27,6 +29,7 @@ import {
   startMeasure,
   unregisterHMR,
   warn,
+  warnExtraneousAttributes,
 } from '@vue/runtime-dom'
 import {
   type Block,
@@ -88,7 +91,7 @@ import {
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { _next, createElement } from './dom/node'
-import { type TeleportFragment, isVaporTeleport } from './components/Teleport'
+import { TeleportFragment, isVaporTeleport } from './components/Teleport'
 import {
   type KeepAliveInstance,
   findParentKeepAlive,
@@ -197,7 +200,9 @@ export function createComponent(
   const parentInstance = getParentInstance()
 
   if (
-    isSingleRoot &&
+    (isSingleRoot ||
+      // transition has attrs fallthrough
+      (parentInstance && isVaporTransition(parentInstance!.type))) &&
     component.inheritAttrs !== false &&
     isVaporComponent(parentInstance) &&
     parentInstance.hasFallthrough
@@ -205,7 +210,7 @@ export function createComponent(
     // check if we are the single root of the parent
     // if yes, inject parent attrs as dynamic props source
     const attrs = parentInstance.attrs
-    if (rawProps) {
+    if (rawProps && rawProps !== EMPTY_OBJ) {
       ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
         () => attrs,
       )
@@ -397,7 +402,31 @@ export function setupComponent(
     component.inheritAttrs !== false &&
     Object.keys(instance.attrs).length
   ) {
-    renderEffect(() => applyFallthroughProps(instance.block, instance.attrs))
+    const root = getRootElement(
+      instance.block,
+      // attach attrs to root dynamic fragments for applying during each update
+      frag => (frag.attrs = instance.attrs),
+      false,
+    )
+    if (root) {
+      renderEffect(() => {
+        const attrs =
+          isFunction(component) && !isVaporTransition(component)
+            ? getFunctionalFallthrough(instance.attrs)
+            : instance.attrs
+        if (attrs) applyFallthroughProps(root, attrs)
+      })
+    } else if (
+      __DEV__ &&
+      ((!instance.accessedAttrs &&
+        isArray(instance.block) &&
+        instance.block.length) ||
+        // preventing attrs fallthrough on Teleport
+        // consistent with VDOM Teleport behavior
+        instance.block instanceof TeleportFragment)
+    ) {
+      warnExtraneousAttributes(instance.attrs)
+    }
   }
 
   setActiveSub(prevSub)
@@ -412,15 +441,12 @@ export function setupComponent(
 export let isApplyingFallthroughProps = false
 
 export function applyFallthroughProps(
-  block: Block,
+  el: Element,
   attrs: Record<string, any>,
 ): void {
-  const el = getRootElement(block, false)
-  if (el) {
-    isApplyingFallthroughProps = true
-    setDynamicProps(el, [attrs])
-    isApplyingFallthroughProps = false
-  }
+  isApplyingFallthroughProps = true
+  setDynamicProps(el, [attrs])
+  isApplyingFallthroughProps = false
 }
 
 /**
@@ -545,6 +571,13 @@ export class VaporComponentInstance implements GenericComponentInstance {
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
 
+  /**
+   * dev only flag to track whether $attrs was used during render.
+   * If $attrs was used during render then the warning for failed attrs
+   * fallthrough can be suppressed.
+   */
+  accessedAttrs: boolean = false
+
   constructor(
     comp: VaporComponent,
     rawProps?: RawProps | null,
@@ -616,6 +649,22 @@ export class VaporComponentInstance implements GenericComponentInstance {
     // apply custom element special handling
     if (comp.ce) {
       comp.ce(this)
+    }
+
+    if (__DEV__) {
+      // in dev, mark attrs accessed if optional props (attrs === props)
+      if (this.props === this.attrs) {
+        this.accessedAttrs = true
+      } else {
+        const attrs = this.attrs
+        const instance = this
+        this.attrs = new Proxy(attrs, {
+          get(target, key, receiver) {
+            instance.accessedAttrs = true
+            return Reflect.get(target, key, receiver)
+          },
+        })
+      }
     }
   }
 
@@ -822,6 +871,7 @@ export function getExposed(
 
 export function getRootElement(
   block: Block,
+  onDynamicFragment?: (frag: DynamicFragment) => void,
   recurse: boolean = true,
 ): Element | undefined {
   if (block instanceof Element) {
@@ -829,15 +879,18 @@ export function getRootElement(
   }
 
   if (recurse && isVaporComponent(block)) {
-    return getRootElement(block.block, recurse)
+    return getRootElement(block.block, onDynamicFragment, recurse)
   }
 
-  if (isFragment(block)) {
+  if (isFragment(block) && !(block instanceof TeleportFragment)) {
+    if (block instanceof DynamicFragment && onDynamicFragment) {
+      onDynamicFragment(block)
+    }
     const { nodes } = block
     if (nodes instanceof Element && (nodes as any).$root) {
       return nodes
     }
-    return getRootElement(nodes, recurse)
+    return getRootElement(nodes, onDynamicFragment, recurse)
   }
 
   // The root node contains comments. It is necessary to filter out
@@ -851,7 +904,7 @@ export function getRootElement(
         hasComment = true
         continue
       }
-      const thisRoot = getRootElement(b, recurse)
+      const thisRoot = getRootElement(b, onDynamicFragment, recurse)
       // only return root if there is exactly one eligible root in the array
       if (!thisRoot || singleRoot) {
         return
@@ -860,4 +913,8 @@ export function getRootElement(
     }
     return hasComment ? singleRoot : undefined
   }
+}
+
+function isVaporTransition(component: VaporComponent): boolean {
+  return getComponentName(component) === 'VaporTransition'
 }
