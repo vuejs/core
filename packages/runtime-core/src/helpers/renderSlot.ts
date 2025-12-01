@@ -130,7 +130,7 @@ export function ensureValidVNode(
     : null
 }
 
-export function ensureVaporSlotFallback(
+function ensureVaporSlotFallback(
   vnodes: VNodeArrayChildren | null | undefined,
   fallback?: () => VNodeArrayChildren,
 ): void {

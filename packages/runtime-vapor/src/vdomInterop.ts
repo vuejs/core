@@ -21,7 +21,6 @@ import {
   currentInstance,
   ensureHydrationRenderer,
   ensureRenderer,
-  ensureVaporSlotFallback,
   isEmitListener,
   isKeepAlive,
   isRef,
@@ -464,12 +463,10 @@ function renderVDOMSlot(
           slotsRef.value,
           isFunction(name) ? name() : name,
           props,
+          fallback as any,
         )
 
         let children = vnode.children as any[]
-        // handle forwarded vapor slot without its own fallback
-        // use the fallback provided by the slot outlet
-        ensureVaporSlotFallback(children, fallback as any)
         isValidSlot = children.length > 0
       }
 

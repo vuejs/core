@@ -611,10 +611,6 @@ export { type VNodeNormalizedRef, normalizeRef } from './vnode'
 /**
  * @internal
  */
-export { ensureVaporSlotFallback } from './helpers/renderSlot'
-/**
- * @internal
- */
 export { getComponentName } from './component'
 /**
  * @internal
