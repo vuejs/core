@@ -62,13 +62,12 @@ export function setRef(
     return
   }
 
-  const isVaporComp = isVaporComponent(el)
-  if (isVaporComp && isAsyncWrapper(el as VaporComponentInstance)) {
-    const i = el as VaporComponentInstance
-    const frag = i.block as DynamicFragment
-    // async component not resolved yet
-    if (!i.type.__asyncResolved) {
-      frag.setRef = i => setRef(instance, i, ref, oldRef, refFor)
+  if (isVaporComponent(el) && isAsyncWrapper(el)) {
+    const frag = el.block as DynamicFragment
+    // async component not resolved yet, register ref setter
+    // it will be called when the async component is resolved
+    if (!el.type.__asyncResolved) {
+      frag.setAsyncRef = i => setRef(instance, i, ref, oldRef, refFor)
       return
     }
 

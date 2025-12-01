@@ -197,8 +197,7 @@ function createInnerComp(
   if ($transition) setTransitionHooks(instance, $transition)
 
   // set ref
-  // @ts-expect-error
-  frag && frag.setRef && frag.setRef(instance)
+  frag && frag.setAsyncRef && frag.setAsyncRef(instance)
 
   return instance
 }
