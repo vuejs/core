@@ -202,8 +202,7 @@ export function createComponent(
   if (
     (isSingleRoot ||
       // transition has attrs fallthrough
-      (parentInstance &&
-        getComponentName(parentInstance!.type) === 'VaporTransition')) &&
+      (parentInstance && isVaporTransition(parentInstance!.type))) &&
     component.inheritAttrs !== false &&
     isVaporComponent(parentInstance) &&
     parentInstance.hasFallthrough
@@ -412,7 +411,7 @@ export function setupComponent(
     if (root) {
       renderEffect(() => {
         const attrs =
-          isFunction(component) && component.displayName !== 'VaporTransition'
+          isFunction(component) && !isVaporTransition(component)
             ? getFunctionalFallthrough(instance.attrs)
             : instance.attrs
         if (attrs) applyFallthroughProps(root, attrs)
@@ -914,4 +913,8 @@ export function getRootElement(
     }
     return hasComment ? singleRoot : undefined
   }
+}
+
+function isVaporTransition(component: VaporComponent): boolean {
+  return getComponentName(component) === 'VaporTransition'
 }

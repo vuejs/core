@@ -190,6 +190,7 @@ export class DynamicFragment extends VaporFragment {
       }
 
       // switch current instance to parent instance during update
+      // ensure that the parent instance is correct for nested components
       let prev
       if (this.parentComponent && parent)
         prev = setCurrentInstance(this.parentComponent)
@@ -207,7 +208,7 @@ export class DynamicFragment extends VaporFragment {
       }
 
       if (parent) {
-        // fallthrough attrs
+        // apply fallthrough props during update
         if (this.attrs) {
           if (this.nodes instanceof Element) {
             renderEffect(() =>

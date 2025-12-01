@@ -44,7 +44,7 @@ const decorate = (t: typeof VaporTransition) => {
 }
 
 export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
-  (props, { slots, attrs }) => {
+  (props, { slots }) => {
     // wrapped <transition appear>
     let resetDisplay: Function | undefined
     if (
