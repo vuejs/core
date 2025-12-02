@@ -12,6 +12,7 @@ import {
   type RendererNode,
   type ShallowRef,
   type Slots,
+  type SuspenseBoundary,
   type TransitionHooks,
   type VNode,
   type VNodeNormalizedRef,
@@ -80,6 +81,7 @@ import {
   deactivate,
   findParentKeepAlive,
 } from './components/KeepAlive'
+import { setParentSuspense } from './components/Suspense'
 
 export const interopKey: unique symbol = Symbol(`interop`)
 
@@ -88,7 +90,7 @@ const vaporInteropImpl: Omit<
   VaporInteropInterface,
   'vdomMount' | 'vdomUnmount' | 'vdomSlot'
 > = {
-  mount(vnode, container, anchor, parentComponent) {
+  mount(vnode, container, anchor, parentComponent, parentSuspense) {
     let selfAnchor = (vnode.el = vnode.anchor = createTextNode())
     if (isHydrating) {
       // avoid vdom hydration children mismatch by the selfAnchor, delay its insertion
@@ -109,6 +111,11 @@ const vaporInteropImpl: Omit<
 
     const propsRef = shallowRef(props)
     const slotsRef = shallowRef(vnode.children)
+
+    let prevSuspense: SuspenseBoundary | null = null
+    if (__FEATURE_SUSPENSE__) {
+      prevSuspense = setParentSuspense(parentSuspense)
+    }
 
     const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
       () => propsRef.value,
@@ -140,6 +147,11 @@ const vaporInteropImpl: Omit<
         vnode.transition as VaporTransitionHooks,
       )
     }
+
+    if (__FEATURE_SUSPENSE__) {
+      setParentSuspense(prevSuspense)
+    }
+
     mountComponent(instance, container, selfAnchor)
     simpleSetCurrentInstance(prev)
     return instance
@@ -157,8 +169,12 @@ const vaporInteropImpl: Omit<
 
   unmount(vnode, doRemove) {
     const container = doRemove ? vnode.anchor!.parentNode : undefined
-    if (vnode.component) {
-      unmountComponent(vnode.component as any, container)
+    const instance = vnode.component as any as VaporComponentInstance
+    if (instance) {
+      // the async component may not be resolved yet, block is null
+      if (instance.block) {
+        unmountComponent(instance, container)
+      }
     } else if (vnode.vb) {
       remove(vnode.vb, container)
     }
@@ -197,9 +213,9 @@ const vaporInteropImpl: Omit<
     insert(vnode.anchor as any, container, anchor)
   },
 
-  hydrate(vnode, node, container, anchor, parentComponent) {
+  hydrate(vnode, node, container, anchor, parentComponent, parentSuspense) {
     vaporHydrateNode(node, () =>
-      this.mount(vnode, container, anchor, parentComponent),
+      this.mount(vnode, container, anchor, parentComponent, parentSuspense),
     )
     return _next(node)
   },

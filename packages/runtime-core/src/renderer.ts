@@ -1186,6 +1186,7 @@ function baseCreateRenderer(
             container,
             anchor,
             parentComponent,
+            parentSuspense,
           )
         }
       } else {

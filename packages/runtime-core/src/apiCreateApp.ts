@@ -27,7 +27,7 @@ import { warn } from './warning'
 import type { VNode } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
-import { type TransitionHooks, version } from '.'
+import { type SuspenseBoundary, type TransitionHooks, version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
@@ -187,6 +187,7 @@ export interface VaporInteropInterface {
     container: any,
     anchor: any,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
   ): GenericComponentInstance // VaporComponentInstance
   update(n1: VNode, n2: VNode, shouldUpdate: boolean): void
   unmount(vnode: VNode, doRemove?: boolean): void
@@ -198,6 +199,7 @@ export interface VaporInteropInterface {
     container: any,
     anchor: any,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
   ): Node
   hydrateSlot(vnode: VNode, node: any): Node
   activate(
