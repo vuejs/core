@@ -155,6 +155,16 @@ describe('compiler: transform slot', () => {
     })
   })
 
+  test('nested component should not inherit parent slots', () => {
+    const { code } = compileWithSlots(`
+      <Foo>
+        <template #header></template>
+        <Bar />
+      </Foo>
+    `)
+    expect(code).toMatchSnapshot()
+  })
+
   test('named slots w/ implicit default slot', () => {
     const { ir, code } = compileWithSlots(
       `<Comp>

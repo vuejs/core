@@ -228,6 +228,25 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform slot > nested component should not inherit parent slots 1`] = `
+"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Bar = _resolveComponent("Bar")
+  const _component_Foo = _resolveComponent("Foo")
+  const n2 = _createComponentWithFallback(_component_Foo, null, {
+    "header": _withVaporCtx(() => {
+      return null
+    }),
+    "default": _withVaporCtx(() => {
+      const n1 = _createComponentWithFallback(_component_Bar)
+      return n1
+    })
+  }, true)
+  return n2
+}"
+`;
+
 exports[`compiler: transform slot > nested component slot 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, withVaporCtx as _withVaporCtx } from 'vue';
 
