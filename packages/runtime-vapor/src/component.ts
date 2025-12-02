@@ -775,19 +775,15 @@ export function mountComponent(
     !instance.asyncResolved
   ) {
     const component = instance.type
-    instance.suspense.registerDep(
-      instance as any,
-      (setupResult: any) => {
-        handleSetupResult(
-          setupResult,
-          component,
-          instance,
-          isFunction(component) ? component : component.setup,
-        )
-        mountComponent(instance, parent, anchor)
-      },
-      false,
-    )
+    instance.suspense.registerDep(instance as any, setupResult => {
+      handleSetupResult(
+        setupResult,
+        component,
+        instance,
+        isFunction(component) ? component : component.setup,
+      )
+      mountComponent(instance, parent, anchor)
+    })
     return
   }
 
@@ -932,6 +928,10 @@ function handleSetupResult(
   instance: VaporComponentInstance,
   setupFn: VaporSetupFn | undefined,
 ) {
+  if (__DEV__) {
+    pushWarningContext(instance)
+  }
+
   if (__DEV__ && !isBlock(setupResult)) {
     if (isFunction(component)) {
       warn(`Functional vapor component must return a block directly.`)
@@ -993,5 +993,9 @@ function handleSetupResult(
     ) {
       warnExtraneousAttributes(instance.attrs)
     }
+  }
+
+  if (__DEV__) {
+    popWarningContext()
   }
 }

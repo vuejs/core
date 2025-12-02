@@ -24,6 +24,7 @@ import {
   type LifecycleHook,
   createComponentInstance,
   getComponentPublicInstance,
+  handleSetupResult,
   setupComponent,
 } from './component'
 import {
@@ -1273,9 +1274,45 @@ function baseCreateRenderer(
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      parentSuspense &&
-        parentSuspense.registerDep(instance, setupRenderEffect, optimized)
-
+      if (parentSuspense) {
+        const hydratedEl = instance.vnode.el
+        parentSuspense.registerDep(instance, setupResult => {
+          const { vnode } = instance
+          if (__DEV__) {
+            pushWarningContext(vnode)
+          }
+          handleSetupResult(instance, setupResult, false)
+          if (hydratedEl) {
+            // vnode may have been replaced if an update happened before the
+            // async dep is resolved.
+            vnode.el = hydratedEl
+          }
+          const placeholder = !hydratedEl && instance.subTree.el
+          setupRenderEffect(
+            instance,
+            vnode,
+            // component may have been moved before resolve.
+            // if this is not a hydration, instance.subTree will be the comment
+            // placeholder.
+            hostParentNode(hydratedEl || instance.subTree.el!)!,
+            // anchor will not be used if this is hydration, so only need to
+            // consider the comment placeholder case.
+            hydratedEl ? null : getNextHostNode(instance.subTree),
+            parentSuspense,
+            namespace,
+            optimized,
+          )
+          if (placeholder) {
+            // clean up placeholder reference
+            vnode.placeholder = null
+            hostRemove(placeholder)
+          }
+          updateHOCHostEl(instance, vnode.el)
+          if (__DEV__) {
+            popWarningContext()
+          }
+        })
+      }
       // Give it a placeholder if this is not hydration
       // TODO handle self-defined fallback
       if (!initialVNode.el) {
