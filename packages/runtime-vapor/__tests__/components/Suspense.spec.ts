@@ -4,6 +4,10 @@ import { compile, runtimeDom, runtimeVapor } from '../_utils'
 describe.todo('VaporSuspense', () => {})
 
 describe('vdom interop', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
   async function testSuspense(
     code: string,
     components: Record<string, { code: string; vapor: boolean }> = {},
