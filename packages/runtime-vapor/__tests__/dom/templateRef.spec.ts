@@ -756,6 +756,85 @@ describe('api: template ref', () => {
     }
   })
 
+  it('should not register duplicate onScopeDispose callbacks for dynamic function refs', async () => {
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    const toggle = ref(true)
+    const t0 = template('<div></div>')
+
+    const { app } = define({
+      render() {
+        const n0 = t0()
+        let r0: any
+        renderEffect(() => {
+          r0 = createTemplateRefSetter()(
+            n0 as Element,
+            toggle.value ? fn1 : fn2,
+            r0,
+          )
+        })
+        return n0
+      },
+    }).render()
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(0)
+
+    toggle.value = false
+    await nextTick()
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+
+    toggle.value = true
+    await nextTick()
+    expect(fn1).toHaveBeenCalledTimes(2)
+    expect(fn2).toHaveBeenCalledTimes(1)
+
+    app.unmount()
+    await nextTick()
+    // expected fn1 to be called again during scope dispose
+    expect(fn1).toHaveBeenCalledTimes(3)
+    expect(fn2).toHaveBeenCalledTimes(1)
+  })
+
+  it('should not register duplicate onScopeDispose callbacks for dynamic string refs', async () => {
+    const el1 = ref(null)
+    const el2 = ref(null)
+    const toggle = ref(true)
+    const t0 = template('<div></div>')
+
+    const { app, host } = define({
+      setup() {
+        return { ref1: el1, ref2: el2 }
+      },
+      render() {
+        const n0 = t0()
+        let r0: any
+        renderEffect(() => {
+          r0 = createTemplateRefSetter()(
+            n0 as Element,
+            toggle.value ? 'ref1' : 'ref2',
+            r0,
+          )
+        })
+        return n0
+      },
+    }).render()
+
+    expect(el1.value).toBe(host.children[0])
+    expect(el2.value).toBe(null)
+
+    toggle.value = false
+    await nextTick()
+    expect(el1.value).toBe(null)
+    expect(el2.value).toBe(host.children[0])
+
+    app.unmount()
+    await nextTick()
+    expect(el1.value).toBe(null)
+    expect(el2.value).toBe(null)
+  })
+
   // TODO: can not reproduce in Vapor
   // // #2078
   // test('handling multiple merged refs', async () => {

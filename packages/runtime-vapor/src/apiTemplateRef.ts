@@ -17,12 +17,26 @@ import {
 import {
   EMPTY_OBJ,
   NO,
+  NOOP,
   isArray,
   isFunction,
   isString,
   remove,
 } from '@vue/shared'
 import { DynamicFragment, isFragment } from './fragment'
+
+// track cleanup functions to prevent duplicate onScopeDispose registrations
+const refCleanups = new WeakMap<RefEl, { fn: () => void }>()
+
+// ensure only register onScopeDispose once per element
+function ensureCleanup(el: RefEl): { fn: () => void } {
+  let cleanupRef = refCleanups.get(el)
+  if (!cleanupRef) {
+    refCleanups.set(el, (cleanupRef = { fn: NOOP }))
+    onScopeDispose(() => cleanupRef!.fn())
+  }
+  return cleanupRef
+}
 
 export type NodeRef =
   | string
@@ -102,8 +116,7 @@ export function setRef(
     }
 
     invokeRefSetter(refValue)
-    // TODO this gets called repeatedly in renderEffect when it's dynamic ref?
-    onScopeDispose(() => invokeRefSetter())
+    ensureCleanup(el).fn = () => invokeRefSetter()
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)
@@ -150,8 +163,7 @@ export function setRef(
       }
       queuePostFlushCb(doSet, -1)
 
-      // TODO this gets called repeatedly in renderEffect when it's dynamic ref?
-      onScopeDispose(() => {
+      ensureCleanup(el).fn = () => {
         queuePostFlushCb(() => {
           if (isArray(existing)) {
             remove(existing, refValue)
@@ -165,7 +177,7 @@ export function setRef(
             if (refKey) refs[refKey] = null
           }
         })
-      })
+      }
     } else if (__DEV__) {
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
     }
