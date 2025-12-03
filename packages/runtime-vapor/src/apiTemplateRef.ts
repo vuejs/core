@@ -16,7 +16,8 @@ import {
 } from '@vue/runtime-dom'
 import {
   EMPTY_OBJ,
-  hasOwn,
+  NO,
+  NOOP,
   isArray,
   isFunction,
   isString,
@@ -37,6 +38,20 @@ export type setRefFn = (
   refFor?: boolean,
   refKey?: string,
 ) => NodeRef | undefined
+
+const refCleanups = new WeakMap<RefEl, { fn: () => void }>()
+
+function ensureCleanup(el: RefEl): { fn: () => void } {
+  let cleanupRef = refCleanups.get(el)
+  if (!cleanupRef) {
+    refCleanups.set(el, (cleanupRef = { fn: NOOP }))
+    onScopeDispose(() => {
+      cleanupRef!.fn()
+      refCleanups.delete(el)
+    })
+  }
+  return cleanupRef
+}
 
 export function createTemplateRefSetter(): setRefFn {
   const instance = currentInstance as VaporComponentInstance
@@ -80,12 +95,12 @@ export function setRef(
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
 
-  const canSetSetupRef = createCanSetSetupRefChecker(setupState)
+  const canSetSetupRef = __DEV__ ? createCanSetSetupRefChecker(setupState) : NO
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
-      if (__DEV__ && hasOwn(setupState, oldRef)) {
+      if (__DEV__ && canSetSetupRef(oldRef)) {
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
@@ -94,7 +109,7 @@ export function setRef(
   }
 
   if (isFunction(ref)) {
-    const invokeRefSetter = (value?: Element | Record<string, any>) => {
+    const invokeRefSetter = (value?: Element | Record<string, any> | null) => {
       callWithErrorHandling(ref, currentInstance, ErrorCodes.FUNCTION_REF, [
         value,
         refs,
@@ -102,8 +117,7 @@ export function setRef(
     }
 
     invokeRefSetter(refValue)
-    // TODO this gets called repeatedly in renderEffect when it's dynamic ref?
-    onScopeDispose(() => invokeRefSetter())
+    ensureCleanup(el).fn = () => invokeRefSetter(null)
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)
@@ -150,8 +164,7 @@ export function setRef(
       }
       queuePostFlushCb(doSet, -1)
 
-      // TODO this gets called repeatedly in renderEffect when it's dynamic ref?
-      onScopeDispose(() => {
+      ensureCleanup(el).fn = () => {
         queuePostFlushCb(() => {
           if (isArray(existing)) {
             remove(existing, refValue)
@@ -165,7 +178,7 @@ export function setRef(
             if (refKey) refs[refKey] = null
           }
         })
-      })
+      }
     } else if (__DEV__) {
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
     }
