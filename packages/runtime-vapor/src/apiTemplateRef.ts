@@ -16,7 +16,7 @@ import {
 } from '@vue/runtime-dom'
 import {
   EMPTY_OBJ,
-  hasOwn,
+  NO,
   isArray,
   isFunction,
   isString,
@@ -80,12 +80,12 @@ export function setRef(
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
 
-  const canSetSetupRef = createCanSetSetupRefChecker(setupState)
+  const canSetSetupRef = __DEV__ ? createCanSetSetupRefChecker(setupState) : NO
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
-      if (__DEV__ && hasOwn(setupState, oldRef)) {
+      if (__DEV__ && canSetSetupRef(oldRef)) {
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
