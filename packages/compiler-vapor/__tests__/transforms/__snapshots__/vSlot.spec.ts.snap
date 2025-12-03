@@ -33,7 +33,7 @@ export function render(_ctx) {
         name: item,
         fn: _withVaporCtx((_slotProps0) => {
           const n0 = t0()
-          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["bar"])))
+          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.bar)))
           return n0
         })
       })))
@@ -275,12 +275,12 @@ export function render(_ctx) {
       const n1 = _createComponentWithFallback(_component_Inner, null, {
         "default": _withVaporCtx((_slotProps1) => {
           const n0 = t0()
-          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _slotProps1["bar"] + _ctx.baz)))
+          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _slotProps1.bar + _ctx.baz)))
           return n0
         })
       })
       const n3 = t0()
-      _renderEffect(() => _setText(n3, " " + _toDisplayString(_slotProps0["foo"] + _ctx.bar + _ctx.baz)))
+      _renderEffect(() => _setText(n3, " " + _toDisplayString(_slotProps0.foo + _ctx.bar + _ctx.baz)))
       return [n1, n3]
     })
   }, true)
@@ -300,7 +300,7 @@ export function render(_ctx) {
         name: _ctx.named,
         fn: _withVaporCtx((_slotProps0) => {
           const n0 = t0()
-          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
+          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _ctx.bar)))
           return n0
         })
       })
@@ -319,7 +319,7 @@ export function render(_ctx) {
   const n1 = _createComponentWithFallback(_component_Comp, null, {
     "named": _withVaporCtx((_slotProps0) => {
       const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _ctx.bar)))
       return n0
     })
   }, true)
@@ -336,7 +336,7 @@ export function render(_ctx) {
   const n1 = _createComponentWithFallback(_component_Comp, null, {
     "default": _withVaporCtx((_slotProps0) => {
       const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _ctx.bar)))
       return n0
     })
   }, true)
@@ -377,6 +377,91 @@ export function render(_ctx) {
     return n5
   }, true)
   return n6
+}"
+`;
+
+exports[`compiler: transform slot > slot prop alias uses original key 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx((_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.msg)))
+      return n0
+    })
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > slot prop computed key destructuring 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx((_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0[_ctx.key])))
+      return n0
+    })
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > slot prop default value 1`] = `
+"import { resolveComponent as _resolveComponent, getDefaultValue as _getDefaultValue, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx((_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_getDefaultValue(_slotProps0.foo, 1))))
+      return n0
+    })
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > slot prop nested destructuring 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx((_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo.bar)))
+      return n0
+    })
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > slot prop rest destructuring 1`] = `
+"import { resolveComponent as _resolveComponent, getRestElement as _getRestElement, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx((_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_getRestElement(_slotProps0, ["foo"]).bar)))
+      return n0
+    })
+  }, true)
+  return n2
 }"
 `;
 

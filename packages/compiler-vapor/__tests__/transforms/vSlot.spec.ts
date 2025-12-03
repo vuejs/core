@@ -68,7 +68,7 @@ describe('compiler: transform slot', () => {
     expect(code).toMatchSnapshot()
 
     expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
-    expect(code).contains(`_slotProps0["foo"] + _ctx.bar`)
+    expect(code).contains(`_slotProps0.foo + _ctx.bar`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -102,7 +102,7 @@ describe('compiler: transform slot', () => {
     expect(code).toMatchSnapshot()
 
     expect(code).contains(`"named": _withVaporCtx((_slotProps0) =>`)
-    expect(code).contains(`_slotProps0["foo"] + _ctx.bar`)
+    expect(code).contains(`_slotProps0.foo + _ctx.bar`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -131,7 +131,7 @@ describe('compiler: transform slot', () => {
     expect(code).toMatchSnapshot()
 
     expect(code).contains(`fn: _withVaporCtx((_slotProps0) =>`)
-    expect(code).contains(`_slotProps0["foo"] + _ctx.bar`)
+    expect(code).contains(`_slotProps0.foo + _ctx.bar`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -163,6 +163,56 @@ describe('compiler: transform slot', () => {
       </Foo>
     `)
     expect(code).toMatchSnapshot()
+  })
+
+  test('slot prop alias uses original key', () => {
+    const { code } = compileWithSlots(
+      `<Comp><template #default="{ msg: msg1 }">{{ msg1 }}</template></Comp>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`_slotProps0.msg`)
+  })
+
+  test('slot prop nested destructuring', () => {
+    const { code } = compileWithSlots(
+      `<Comp><template #default="{ foo: { bar: baz } }">{{ baz }}</template></Comp>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`_slotProps0.foo.bar`)
+  })
+
+  test('slot prop computed key destructuring', () => {
+    const { code } = compileWithSlots(
+      `<Comp><template #default="{ [key]: val }">{{ val }}</template></Comp>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`_slotProps0[_ctx.key]`)
+  })
+
+  test('slot prop rest destructuring', () => {
+    const { code } = compileWithSlots(
+      `<Comp><template #default="{ foo, ...rest }">{{ rest.bar }}</template></Comp>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`_getRestElement(_slotProps0`)
+  })
+
+  test('slot prop default value', () => {
+    const { code } = compileWithSlots(
+      `<Comp><template #default="{ foo = 1 }">{{ foo }}</template></Comp>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`_getDefaultValue(_slotProps0.foo, 1)`)
   })
 
   test('named slots w/ implicit default slot', () => {
@@ -216,8 +266,8 @@ describe('compiler: transform slot', () => {
 
     expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
     expect(code).contains(`"default": _withVaporCtx((_slotProps1) =>`)
-    expect(code).contains(`_slotProps0["foo"] + _slotProps1["bar"] + _ctx.baz`)
-    expect(code).contains(`_slotProps0["foo"] + _ctx.bar + _ctx.baz`)
+    expect(code).contains(`_slotProps0.foo + _slotProps1.bar + _ctx.baz`)
+    expect(code).contains(`_slotProps0.foo + _ctx.bar + _ctx.baz`)
 
     const outerOp = ir.block.dynamic.children[0].operation
     expect(outerOp).toMatchObject({
@@ -293,7 +343,7 @@ describe('compiler: transform slot', () => {
     expect(code).toMatchSnapshot()
 
     expect(code).contains(`fn: _withVaporCtx((_slotProps0) =>`)
-    expect(code).contains(`_setText(n0, _toDisplayString(_slotProps0["bar"]))`)
+    expect(code).contains(`_setText(n0, _toDisplayString(_slotProps0.bar))`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,

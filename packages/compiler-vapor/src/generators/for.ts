@@ -40,39 +40,21 @@ export function genFor(
     onlyChild,
   } = oper
 
-  let rawValue: string | null = null
+  const rawValue = value ? value.content : null
   const rawKey = key && key.content
   const rawIndex = index && index.content
 
   const sourceExpr = ['() => (', ...genExpression(source, context), ')']
-  const idToPathMap = parseValueDestructure()
+  const idToPathMap = parseValueDestructure(value, context)
 
   const [depth, exitScope] = context.enterScope()
-  const idMap: Record<string, string | SimpleExpressionNode | null> = {}
-
   const itemVar = `_for_item${depth}`
+  const idMap = buildDestructureIdMap(
+    idToPathMap,
+    `${itemVar}.value`,
+    context.options.expressionPlugins,
+  )
   idMap[itemVar] = null
-
-  idToPathMap.forEach((pathInfo, id) => {
-    let path = `${itemVar}.value${pathInfo ? pathInfo.path : ''}`
-    if (pathInfo) {
-      if (pathInfo.helper) {
-        idMap[pathInfo.helper] = null
-        path = `${pathInfo.helper}(${path}, ${pathInfo.helperArgs})`
-      }
-      if (pathInfo.dynamic) {
-        const node = (idMap[id] = createSimpleExpression(path))
-        const plugins = context.options.expressionPlugins
-        node.ast = parseExpression(`(${path})`, {
-          plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
-        })
-      } else {
-        idMap[id] = path
-      }
-    } else {
-      idMap[id] = path
-    }
-  })
 
   const args = [itemVar]
   if (rawKey) {
@@ -180,108 +162,6 @@ export function genFor(
     ),
   ]
 
-  // construct a id -> accessor path map.
-  // e.g. `{ x: { y: [z] }}` -> `Map{ 'z' => '.x.y[0]' }`
-  function parseValueDestructure() {
-    const map = new Map<
-      string,
-      {
-        path: string
-        dynamic: boolean
-        helper?: string
-        helperArgs?: string
-      } | null
-    >()
-    if (value) {
-      rawValue = value && value.content
-      if (value.ast) {
-        walkIdentifiers(
-          value.ast,
-          (id, _, parentStack, ___, isLocal) => {
-            if (isLocal) {
-              let path = ''
-              let isDynamic = false
-              let helper
-              let helperArgs
-              for (let i = 0; i < parentStack.length; i++) {
-                const parent = parentStack[i]
-                const child = parentStack[i + 1] || id
-
-                if (
-                  parent.type === 'ObjectProperty' &&
-                  parent.value === child
-                ) {
-                  if (parent.key.type === 'StringLiteral') {
-                    path += `[${JSON.stringify(parent.key.value)}]`
-                  } else if (parent.computed) {
-                    isDynamic = true
-                    path += `[${value.content.slice(
-                      parent.key.start! - 1,
-                      parent.key.end! - 1,
-                    )}]`
-                  } else {
-                    // non-computed, can only be identifier
-                    path += `.${(parent.key as Identifier).name}`
-                  }
-                } else if (parent.type === 'ArrayPattern') {
-                  const index = parent.elements.indexOf(child as any)
-                  if (child.type === 'RestElement') {
-                    path += `.slice(${index})`
-                  } else {
-                    path += `[${index}]`
-                  }
-                } else if (
-                  parent.type === 'ObjectPattern' &&
-                  child.type === 'RestElement'
-                ) {
-                  helper = context.helper('getRestElement')
-                  helperArgs =
-                    '[' +
-                    parent.properties
-                      .filter(p => p.type === 'ObjectProperty')
-                      .map(p => {
-                        if (p.key.type === 'StringLiteral') {
-                          return JSON.stringify(p.key.value)
-                        } else if (p.computed) {
-                          isDynamic = true
-                          return value.content.slice(
-                            p.key.start! - 1,
-                            p.key.end! - 1,
-                          )
-                        } else {
-                          return JSON.stringify((p.key as Identifier).name)
-                        }
-                      })
-                      .join(', ') +
-                    ']'
-                }
-
-                // default value
-                if (
-                  child.type === 'AssignmentPattern' &&
-                  (parent.type === 'ObjectProperty' ||
-                    parent.type === 'ArrayPattern')
-                ) {
-                  isDynamic = true
-                  helper = context.helper('getDefaultValue')
-                  helperArgs = value.content.slice(
-                    child.right.start! - 1,
-                    child.right.end! - 1,
-                  )
-                }
-              }
-              map.set(id.name, { path, dynamic: isDynamic, helper, helperArgs })
-            }
-          },
-          true,
-        )
-      } else {
-        map.set(rawValue, null)
-      }
-    }
-    return map
-  }
-
   function genCallback(expr: SimpleExpressionNode | undefined) {
     if (!expr) return false
     const res = context.withId(
@@ -308,6 +188,139 @@ export function genFor(
     idToPathMap.forEach((_, id) => (idMap[id] = null))
     return idMap
   }
+}
+
+export type DestructureMapValue = {
+  path: string
+  dynamic: boolean
+  helper?: string
+  helperArgs?: string
+}
+
+export type DestructureMap = Map<string, DestructureMapValue | null>
+
+// construct a id -> accessor path map.
+// e.g. `{ x: { y: [z] }}` -> `Map{ 'z' => '.x.y[0]' }`
+export function parseValueDestructure(
+  value: SimpleExpressionNode | undefined,
+  context: CodegenContext,
+): DestructureMap {
+  const map: DestructureMap = new Map()
+  if (value) {
+    const rawValue = value.content
+    if (value.ast) {
+      walkIdentifiers(
+        value.ast,
+        (id, _, parentStack, ___, isLocal) => {
+          if (isLocal) {
+            let path = ''
+            let isDynamic = false
+            let helper
+            let helperArgs
+            for (let i = 0; i < parentStack.length; i++) {
+              const parent = parentStack[i]
+              const child = parentStack[i + 1] || id
+
+              if (parent.type === 'ObjectProperty' && parent.value === child) {
+                if (parent.key.type === 'StringLiteral') {
+                  path += `[${JSON.stringify(parent.key.value)}]`
+                } else if (parent.computed) {
+                  isDynamic = true
+                  path += `[${rawValue.slice(
+                    parent.key.start! - 1,
+                    parent.key.end! - 1,
+                  )}]`
+                } else {
+                  // non-computed, can only be identifier
+                  path += `.${(parent.key as Identifier).name}`
+                }
+              } else if (parent.type === 'ArrayPattern') {
+                const index = parent.elements.indexOf(child as any)
+                if (child.type === 'RestElement') {
+                  path += `.slice(${index})`
+                } else {
+                  path += `[${index}]`
+                }
+              } else if (
+                parent.type === 'ObjectPattern' &&
+                child.type === 'RestElement'
+              ) {
+                helper = context.helper('getRestElement')
+                helperArgs =
+                  '[' +
+                  parent.properties
+                    .filter(p => p.type === 'ObjectProperty')
+                    .map(p => {
+                      if (p.key.type === 'StringLiteral') {
+                        return JSON.stringify(p.key.value)
+                      } else if (p.computed) {
+                        isDynamic = true
+                        return rawValue.slice(p.key.start! - 1, p.key.end! - 1)
+                      } else {
+                        return JSON.stringify((p.key as Identifier).name)
+                      }
+                    })
+                    .join(', ') +
+                  ']'
+              }
+
+              // default value
+              if (
+                child.type === 'AssignmentPattern' &&
+                (parent.type === 'ObjectProperty' ||
+                  parent.type === 'ArrayPattern')
+              ) {
+                isDynamic = true
+                helper = context.helper('getDefaultValue')
+                helperArgs = rawValue.slice(
+                  child.right.start! - 1,
+                  child.right.end! - 1,
+                )
+              }
+            }
+            map.set(id.name, { path, dynamic: isDynamic, helper, helperArgs })
+          }
+        },
+        true,
+      )
+    } else if (rawValue) {
+      map.set(rawValue, null)
+    }
+  }
+  return map
+}
+
+export function buildDestructureIdMap(
+  idToPathMap: DestructureMap,
+  baseAccessor: string,
+  plugins: CodegenContext['options']['expressionPlugins'],
+): Record<string, string | SimpleExpressionNode | null> {
+  const idMap: Record<string, string | SimpleExpressionNode | null> = {}
+  idToPathMap.forEach((pathInfo, id) => {
+    let path = baseAccessor
+    if (pathInfo) {
+      path = `${baseAccessor}${pathInfo.path}`
+
+      if (pathInfo.helper) {
+        idMap[pathInfo.helper] = null
+        path = pathInfo.helperArgs
+          ? `${pathInfo.helper}(${path}, ${pathInfo.helperArgs})`
+          : `${pathInfo.helper}(${path})`
+      }
+
+      if (pathInfo.dynamic) {
+        const node = (idMap[id] = createSimpleExpression(path))
+        node.ast = parseExpression(`(${path})`, {
+          plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
+        })
+      } else {
+        idMap[id] = path
+      }
+    } else {
+      idMap[id] = path
+    }
+  })
+  return idMap
 }
 
 function matchPatterns(

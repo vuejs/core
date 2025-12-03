@@ -324,7 +324,7 @@ export function render(_ctx) {
   const n1 = _createComponentWithFallback(_component_Comp, null, {
     "foo": _withVaporCtx((_slotProps0) => {
       const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["a"] + _slotProps0["b"])))
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.a + _slotProps0.b)))
       return n0
     })
   }, true)

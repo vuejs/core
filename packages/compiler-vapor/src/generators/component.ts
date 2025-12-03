@@ -34,11 +34,16 @@ import {
   createSimpleExpression,
   isMemberExpression,
   toValidAssetId,
-  walkIdentifiers,
 } from '@vue/compiler-dom'
 import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
+import {
+  type DestructureMap,
+  type DestructureMapValue,
+  buildDestructureIdMap,
+  parseValueDestructure,
+} from './for'
 import { genModelHandler } from './vModel'
 import { isBuiltInComponent, isKeepAliveTag } from '../utils'
 
@@ -405,40 +410,35 @@ function genConditionalSlot(
 }
 
 function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
-  let isDestructureAssignment = false
-  let rawProps: string | undefined
   let propsName: string | undefined
   let exitScope: (() => void) | undefined
   let depth: number | undefined
   const { props, key, node } = oper
-  const idsOfProps = new Set<string>()
+  const idToPathMap: DestructureMap = props
+    ? parseValueDestructure(props, context)
+    : new Map<string, DestructureMapValue | null>()
+
   if (props) {
-    rawProps = props.content
-    if ((isDestructureAssignment = !!props.ast)) {
+    if (props.ast) {
       ;[depth, exitScope] = context.enterScope()
       propsName = `_slotProps${depth}`
-      walkIdentifiers(
-        props.ast,
-        (id, _, __, ___, isLocal) => {
-          if (isLocal) idsOfProps.add(id.name)
-        },
-        true,
-      )
     } else {
-      idsOfProps.add((propsName = rawProps))
+      propsName = props.content
     }
   }
 
-  const idMap: Record<string, string | null> = {}
-
-  idsOfProps.forEach(
-    id =>
-      (idMap[id] = isDestructureAssignment
-        ? `${propsName}[${JSON.stringify(id)}]`
-        : null),
+  const idMap = buildDestructureIdMap(
+    idToPathMap,
+    propsName || '',
+    context.options.expressionPlugins,
   )
+
+  if (propsName) {
+    idMap[propsName] = null
+  }
+
   let blockFn = context.withId(
-    () => genBlock(oper, context, [propsName]),
+    () => genBlock(oper, context, propsName ? [propsName] : []),
     idMap,
   )
   exitScope && exitScope()
