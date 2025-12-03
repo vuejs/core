@@ -50,8 +50,8 @@ describe('compiler: text transform', () => {
 
   it('escapes raw static text when generating the template string', () => {
     const { ir } = compileWithTextTransform('<code>&lt;script&gt;</code>')
-    expect([...ir.template.keys()]).toContain('<code>&lt;script&gt;</code>')
-    expect([...ir.template.keys()]).not.toContain('<code><script></code>')
+    expect([...ir.template.keys()]).toContain('<code>&lt;script&gt;')
+    expect([...ir.template.keys()]).not.toContain('<code><script>')
   })
 
   test('constant text', () => {
@@ -65,7 +65,7 @@ describe('compiler: text transform', () => {
           {{ '1' }}
         </div>`,
     )
-    expect(code).includes(`_template("<div>2 foo1 1 1 1</div>", true)`)
+    expect(code).includes(`_template("<div>2 foo1 1 1 1", true)`)
     expect(code).toMatchSnapshot()
   })
 })

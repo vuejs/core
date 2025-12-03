@@ -2,7 +2,7 @@
 
 exports[`compiler: template ref transform > dynamic ref 1`] = `
 "import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
@@ -15,7 +15,7 @@ export function render(_ctx) {
 
 exports[`compiler: template ref transform > function ref 1`] = `
 "import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
@@ -35,7 +35,7 @@ export function render(_ctx) {
 
 exports[`compiler: template ref transform > ref + v-for 1`] = `
 "import { createTemplateRefSetter as _createTemplateRefSetter, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
@@ -50,7 +50,7 @@ export function render(_ctx) {
 
 exports[`compiler: template ref transform > ref + v-if 1`] = `
 "import { createTemplateRefSetter as _createTemplateRefSetter, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
@@ -74,7 +74,7 @@ exports[`compiler: template ref transform > static ref (inline mode) 1`] = `
 
 exports[`compiler: template ref transform > static ref 1`] = `
 "import { createTemplateRefSetter as _createTemplateRefSetter, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()

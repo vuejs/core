@@ -21,6 +21,7 @@ import {
   capitalize,
   extend,
   isBuiltInDirective,
+  isFormattingTag,
   isVoidTag,
   makeMap,
 } from '@vue/shared'
@@ -92,7 +93,57 @@ export const transformElement: NodeTransform = (node, context) => {
       getEffectIndex,
     )
 
+    let { index, parent, block } = context
+    let isLastChild = true
+    const checkIsLastChild = () => {
+      // If all children after the element are components, then we can consider it "last"
+      // Components won't appear in the html template, so there's no need for closing tags
+      isLastChild &&=
+        !!parent &&
+        (block !== parent.block ||
+          parent.node.children.every(
+            (c, i) =>
+              i <= index ||
+              (c.type === NodeTypes.ELEMENT &&
+                c.tagType === ElementTypes.COMPONENT),
+          ))
+    }
+
+    checkIsLastChild()
     const singleRoot = isSingleRoot(context)
+
+    // If it is a formatting tag, close tag is absolutely required if it's not on the right-most path of the tree
+    // => https://html.spec.whatwg.org/multipage/parsing.html#reconstruct-the-active-formatting-elements
+    // If the parent has the same tag, then close tag is required if it's not on the right-most path of the tree
+    // => The parent's close tag will close the child otherwise; disambiguation is needed
+    if (
+      isFormattingTag(node.tag) ||
+      (parent &&
+        parent.node.type === NodeTypes.ELEMENT &&
+        node.tag === parent.node.tag)
+    ) {
+      while (
+        isLastChild &&
+        parent &&
+        parent.parent &&
+        block === parent.parent.block &&
+        parent.node.type === NodeTypes.ELEMENT
+      ) {
+        index = parent.index
+        parent = parent.parent
+        checkIsLastChild()
+      }
+    }
+
+    while (
+      parent &&
+      parent.parent &&
+      parent.node.type === NodeTypes.ELEMENT &&
+      parent.node.tagType === ElementTypes.TEMPLATE
+    ) {
+      parent = parent.parent
+    }
+
     if (isComponent) {
       transformComponentElement(
         node as ComponentNode,
@@ -107,6 +158,8 @@ export const transformElement: NodeTransform = (node, context) => {
         node as PlainElementNode,
         propsResult,
         singleRoot,
+        // Multi-root always generates dedicated templates for each root
+        isLastChild || context.root === parent,
         context,
         getEffectIndex,
       )
@@ -253,6 +306,7 @@ function transformNativeElement(
   node: PlainElementNode,
   propsResult: PropsResult,
   singleRoot: boolean,
+  isLastChild: boolean,
   context: TransformContext,
   getEffectIndex: () => number,
 ) {
@@ -315,8 +369,7 @@ function transformNativeElement(
   }
 
   template += `>` + context.childrenTemplate.join('')
-  // TODO remove unnecessary close tag, e.g. if it's the last element of the template
-  if (!isVoidTag(tag)) {
+  if (!isVoidTag(tag) && !isLastChild) {
     template += `</${tag}>`
   }
 

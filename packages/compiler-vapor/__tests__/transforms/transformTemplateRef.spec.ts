@@ -30,7 +30,7 @@ describe('compiler: template ref transform', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect([...ir.template.keys()]).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div>'])
     expect(ir.block.operation).lengthOf(1)
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.SET_TEMPLATE_REF,
@@ -66,7 +66,7 @@ describe('compiler: template ref transform', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect([...ir.template.keys()]).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div>'])
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.DECLARE_OLD_REF,
@@ -104,7 +104,7 @@ describe('compiler: template ref transform', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect([...ir.template.keys()]).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div>'])
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.DECLARE_OLD_REF,
