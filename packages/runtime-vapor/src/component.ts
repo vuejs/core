@@ -383,6 +383,9 @@ export function setupComponent(
       )
       instance.block = []
     } else {
+      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+        instance.devtoolsRawSetupState = setupResult
+      }
       instance.setupState = proxyRefs(setupResult)
       if (__DEV__) {
         instance.setupState = createDevSetupStateProxy(instance)
