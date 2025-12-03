@@ -406,6 +406,32 @@ describe('SFC compile <script setup>', () => {
       assertCode(content)
     })
 
+    test('referencing scope components casing', () => {
+      const { content } = compile(
+        `
+        <script setup>
+        import First from './First.vue'
+        import SecondComp from './Second.vue'
+        import thirdComp from './Fifth.vue'
+
+        const first = () => 1
+        const secondComp = () => 2
+        const ThirdComp = () => 3
+        </script>
+        <template>
+          <first/>
+          <second-comp/>
+          <third-comp/>
+        </template>
+        `,
+        { inlineTemplate: true },
+      )
+      expect(content).toMatch('_createVNode(First)')
+      expect(content).toMatch('_createVNode(SecondComp)')
+      expect(content).toMatch('_createVNode(thirdComp)')
+      assertCode(content)
+    })
+
     test('avoid unref() when necessary', () => {
       // function, const, component import
       const { content } = compile(

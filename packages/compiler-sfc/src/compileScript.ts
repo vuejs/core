@@ -742,16 +742,21 @@ export function compileScript(
   if (scriptAst) {
     Object.assign(ctx.bindingMetadata, analyzeScriptBindings(scriptAst.body))
   }
+  const knownComponents = new Set<string>()
   for (const [key, { isType, imported, source }] of Object.entries(
     ctx.userImports,
   )) {
     if (isType) continue
-    ctx.bindingMetadata[key] =
+    const isKnownComponent =
       imported === '*' ||
       (imported === 'default' && source.endsWith('.vue')) ||
       source === 'vue'
-        ? BindingTypes.SETUP_CONST
-        : BindingTypes.SETUP_MAYBE_REF
+    if (isKnownComponent) {
+      knownComponents.add(key)
+      ctx.bindingMetadata[key] = BindingTypes.SETUP_CONST
+    } else {
+      ctx.bindingMetadata[key] = BindingTypes.SETUP_MAYBE_REF
+    }
   }
   for (const key in scriptBindings) {
     ctx.bindingMetadata[key] = scriptBindings[key]
@@ -898,6 +903,7 @@ export function compileScript(
           inline: true,
           isTS: ctx.isTS,
           bindingMetadata: ctx.bindingMetadata,
+          knownComponents: knownComponents,
         },
       })
       templateMap = map
