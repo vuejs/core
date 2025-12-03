@@ -25,19 +25,6 @@ import {
 } from '@vue/shared'
 import { DynamicFragment, isFragment } from './fragment'
 
-// track cleanup functions to prevent duplicate onScopeDispose registrations
-const refCleanups = new WeakMap<RefEl, { fn: () => void }>()
-
-// ensure only register onScopeDispose once per element
-function ensureCleanup(el: RefEl): { fn: () => void } {
-  let cleanupRef = refCleanups.get(el)
-  if (!cleanupRef) {
-    refCleanups.set(el, (cleanupRef = { fn: NOOP }))
-    onScopeDispose(() => cleanupRef!.fn())
-  }
-  return cleanupRef
-}
-
 export type NodeRef =
   | string
   | Ref
@@ -51,6 +38,20 @@ export type setRefFn = (
   refFor?: boolean,
   refKey?: string,
 ) => NodeRef | undefined
+
+const refCleanups = new WeakMap<RefEl, { fn: () => void }>()
+
+function ensureCleanup(el: RefEl): { fn: () => void } {
+  let cleanupRef = refCleanups.get(el)
+  if (!cleanupRef) {
+    refCleanups.set(el, (cleanupRef = { fn: NOOP }))
+    onScopeDispose(() => {
+      cleanupRef!.fn()
+      refCleanups.delete(el)
+    })
+  }
+  return cleanupRef
+}
 
 export function createTemplateRefSetter(): setRefFn {
   const instance = currentInstance as VaporComponentInstance
@@ -108,7 +109,7 @@ export function setRef(
   }
 
   if (isFunction(ref)) {
-    const invokeRefSetter = (value?: Element | Record<string, any>) => {
+    const invokeRefSetter = (value?: Element | Record<string, any> | null) => {
       callWithErrorHandling(ref, currentInstance, ErrorCodes.FUNCTION_REF, [
         value,
         refs,
@@ -116,7 +117,7 @@ export function setRef(
     }
 
     invokeRefSetter(refValue)
-    ensureCleanup(el).fn = () => invokeRefSetter()
+    ensureCleanup(el).fn = () => invokeRefSetter(null)
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)

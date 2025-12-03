@@ -182,7 +182,7 @@ describe('api: template ref', () => {
     expect(fn.mock.calls[0][0]).toBe(host.children[0])
     toggle.value = false
     await nextTick()
-    expect(fn.mock.calls[1][0]).toBe(undefined)
+    expect(fn.mock.calls[1][0]).toBe(null)
   })
 
   test('useTemplateRef mount', () => {
