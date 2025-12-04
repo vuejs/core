@@ -99,7 +99,6 @@ export class DynamicFragment extends VaporFragment {
 
   constructor(anchorLabel?: string) {
     super([])
-    this.parentComponent = currentInstance
     if (isHydrating) {
       this.anchorLabel = anchorLabel
       locateHydrationNode()
@@ -117,6 +116,7 @@ export class DynamicFragment extends VaporFragment {
     }
     this.current = key
 
+    const instance = currentInstance
     const prevSub = setActiveSub()
     const parent = isHydrating ? null : this.anchor.parentNode
     const transition = this.$transition
@@ -136,7 +136,7 @@ export class DynamicFragment extends VaporFragment {
       const mode = transition && transition.mode
       if (mode) {
         applyTransitionLeaveHooks(this.nodes, transition, () =>
-          this.render(render, transition, parent),
+          this.render(render, transition, parent, instance),
         )
         parent && remove(this.nodes, parent)
         if (mode === 'out-in') {
@@ -148,7 +148,7 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    this.render(render, transition, parent)
+    this.render(render, transition, parent, instance)
 
     if (this.fallback) {
       // set fallback for nested fragments
@@ -182,6 +182,7 @@ export class DynamicFragment extends VaporFragment {
     render: BlockFn | undefined,
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,
+    instance: GenericComponentInstance | null,
   ) {
     if (render) {
       // try to reuse the kept-alive scope
@@ -195,10 +196,9 @@ export class DynamicFragment extends VaporFragment {
       // switch current instance to parent instance during update
       // ensure that the parent instance is correct for nested components
       let prev
-      if (this.parentComponent && parent)
-        prev = setCurrentInstance(this.parentComponent)
+      if (parent && instance) prev = setCurrentInstance(instance)
       this.nodes = this.scope.run(render) || []
-      if (this.parentComponent && parent) setCurrentInstance(...prev!)
+      if (parent && instance) setCurrentInstance(...prev!)
 
       if (transition) {
         this.$transition = applyTransitionHooks(this.nodes, transition)
