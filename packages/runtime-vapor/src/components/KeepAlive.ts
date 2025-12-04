@@ -116,7 +116,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     const cacheBlock = () => {
       // TODO suspense
       const block = keepAliveInstance.block!
-      const [innerBlock, interop] = getInnerBlock(block)!
+      const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
       innerCacheBlock(
         interop ? innerBlock.vnode!.type : innerBlock.type,
