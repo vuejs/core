@@ -56,7 +56,7 @@ export function render(_ctx) {
   const n4 = _createComponentWithFallback(_component_Child, null, {
     "foo": _withVaporCtx((_slotProps0) => {
       const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["msg"])))
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.msg)))
       return n0
     }),
     "bar": _withVaporCtx(() => {
