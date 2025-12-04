@@ -9,6 +9,7 @@ import {
   DEFAULT_FILENAME,
   type SFCDescriptor,
   type SFCScriptBlock,
+  type SFCTemplateBlock,
 } from './parse'
 import type { ParserPlugin } from '@babel/parser'
 import { generateCodeFrame } from '@vue/shared'
@@ -36,6 +37,7 @@ import {
 import { CSS_VARS_HELPER, genCssVarsCode } from './style/cssVars'
 import {
   type SFCTemplateCompileOptions,
+  type SFCTemplateCompileResults,
   compileTemplate,
 } from './compileTemplate'
 import { warnOnce } from './warn'
@@ -245,6 +247,8 @@ export function compileScript(
     ctx.s.move(start, end, 0)
   }
 
+  let customTemplateLangCompiledSFC: SFCTemplateCompileResults | undefined
+
   function registerUserImport(
     source: string,
     local: string,
@@ -260,10 +264,22 @@ export function compileScript(
       needTemplateUsageCheck &&
       ctx.isTS &&
       sfc.template &&
-      !sfc.template.src &&
-      !sfc.template.lang
+      !sfc.template.src
     ) {
-      isUsedInTemplate = isImportUsed(local, sfc)
+      if (!sfc.template.lang) {
+        isUsedInTemplate = isImportUsed(
+          local,
+          sfc.template.content,
+          sfc.template.ast!,
+        )
+      } else {
+        customTemplateLangCompiledSFC ||= compileSFCTemplate(sfc.template)
+        isUsedInTemplate = isImportUsed(
+          local,
+          sfc.template.content,
+          customTemplateLangCompiledSFC.ast!,
+        )
+      }
     }
 
     ctx.userImports[local] = {
@@ -290,6 +306,28 @@ export function compileScript(
           id,
         )
       }
+    })
+  }
+
+  function compileSFCTemplate(
+    sfcTemplate: SFCTemplateBlock,
+  ): SFCTemplateCompileResults {
+    return compileTemplate({
+      filename,
+      ast: sfcTemplate.ast,
+      source: sfcTemplate.content,
+      inMap: sfcTemplate.map,
+      ...options.templateOptions,
+      id: scopeId,
+      scoped: sfc.styles.some(s => s.scoped),
+      isProd: options.isProd,
+      ssrCssVars: sfc.cssVars,
+      compilerOptions: {
+        ...(options.templateOptions && options.templateOptions.compilerOptions),
+        inline: true,
+        isTS: ctx.isTS,
+        bindingMetadata: ctx.bindingMetadata,
+      },
     })
   }
 
@@ -882,24 +920,9 @@ export function compileScript(
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, ast, preamble, tips, errors, map } = compileTemplate({
-        filename,
-        ast: sfc.template.ast,
-        source: sfc.template.content,
-        inMap: sfc.template.map,
-        ...options.templateOptions,
-        id: scopeId,
-        scoped: sfc.styles.some(s => s.scoped),
-        isProd: options.isProd,
-        ssrCssVars: sfc.cssVars,
-        compilerOptions: {
-          ...(options.templateOptions &&
-            options.templateOptions.compilerOptions),
-          inline: true,
-          isTS: ctx.isTS,
-          bindingMetadata: ctx.bindingMetadata,
-        },
-      })
+      const { code, ast, preamble, tips, errors, map } = compileSFCTemplate(
+        sfc.template,
+      )
       templateMap = map
       if (tips.length) {
         tips.forEach(warnOnce)

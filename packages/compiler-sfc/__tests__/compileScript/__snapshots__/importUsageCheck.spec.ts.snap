@@ -49,6 +49,21 @@ return { fooBar, get FooBaz() { return FooBaz }, get FooQux() { return FooQux },
 })"
 `;
 
+exports[`custom template lang 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { Thing1, Thing2, Thing3, Thing4, Thing5, Thing6 } from "./types.ts"
+    
+export default /*@__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+return { get Thing2() { return Thing2 }, get Thing3() { return Thing3 }, get Thing4() { return Thing4 }, get Thing5() { return Thing5 }, get Thing6() { return Thing6 } }
+}
+
+})"
+`;
+
 exports[`directive 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { vMyDir } from './x'
