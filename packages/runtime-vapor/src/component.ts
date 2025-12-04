@@ -77,8 +77,8 @@ import {
   type RawSlots,
   type StaticSlots,
   type VaporSlot,
-  currentSlotOwner,
   dynamicSlotsProxyHandlers,
+  getScopeOwner,
   getSlot,
   setCurrentSlotOwner,
 } from './componentSlots'
@@ -654,9 +654,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
         : rawSlots
       : EMPTY_OBJ
 
-    // Use currentSlotOwner for scopeId inheritance when inside a slot
-    // This ensures components created in slots inherit the slot owner's scopeId
-    const scopeOwner = currentSlotOwner || currentInstance
+    const scopeOwner = getScopeOwner()
     this.scopeId = scopeOwner && scopeOwner.type.__scopeId
 
     // apply custom element special handling
@@ -747,8 +745,7 @@ export function createPlainElement(
   ;(el as any).$root = isSingleRoot
 
   if (!isHydrating) {
-    // Use currentSlotOwner for scopeId when inside a slot
-    const scopeOwner = currentSlotOwner || currentInstance
+    const scopeOwner = getScopeOwner()
     const scopeId = scopeOwner!.type.__scopeId
     if (scopeId) setScopeId(el, [scopeId])
   }

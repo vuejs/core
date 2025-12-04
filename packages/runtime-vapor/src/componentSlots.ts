@@ -145,7 +145,7 @@ export function setCurrentSlotOwner(
  * Get the effective slot instance for accessing rawSlots and scopeId.
  * Prefers currentSlotOwner (if inside a slot), falls back to currentInstance.
  */
-export function getSlotInstance(): VaporComponentInstance {
+export function getScopeOwner(): VaporComponentInstance {
   return (currentSlotOwner || currentInstance) as VaporComponentInstance
 }
 
@@ -180,8 +180,7 @@ export function createSlot(
   const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
 
-  // Use slot owner if inside a slot (forwarded slots), otherwise use currentInstance
-  const instance = getSlotInstance()
+  const instance = getScopeOwner()
   const rawSlots = instance.rawSlots
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)

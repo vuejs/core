@@ -60,7 +60,7 @@ import {
 } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
-import { currentSlotScopeIds, getSlotInstance } from './componentSlots'
+import { currentSlotScopeIds, getScopeOwner } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { _next, createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -350,8 +350,7 @@ function createVDOMComponent(
     frag.nodes = vnode.el as any
   }
 
-  // Use currentSlotOwner for scopeId when inside a slot
-  const scopeOwner = getSlotInstance()
+  const scopeOwner = getScopeOwner()
   vnode.scopeId = (scopeOwner && scopeOwner.type.__scopeId) || null
   vnode.slotScopeIds = currentSlotScopeIds
 
