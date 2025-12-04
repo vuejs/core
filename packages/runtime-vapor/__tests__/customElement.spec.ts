@@ -1407,7 +1407,7 @@ describe('defineVaporCustomElement', () => {
           return createPlainElement('my-parent', null, {
             default: withVaporCtx(() =>
               createPlainElement('my-child', null, {
-                default: withVaporCtx(() => template('<span>default</span>')()),
+                default: () => template('<span>default</span>')(),
               }),
             ),
           })
@@ -1461,7 +1461,7 @@ describe('defineVaporCustomElement', () => {
           return createPlainElement('my-el-teleport-parent', null, {
             default: withVaporCtx(() =>
               createPlainElement('my-el-teleport-child', null, {
-                default: withVaporCtx(() => template('<span>default</span>')()),
+                default: () => template('<span>default</span>')(),
               }),
             ),
           })
@@ -1505,10 +1505,10 @@ describe('defineVaporCustomElement', () => {
       const App = {
         setup() {
           return createPlainElement('my-el-two-teleport-child', null, {
-            default: withVaporCtx(() => [
+            default: () => [
               template('<div slot="header">header</div>')(),
               template('<span slot="body">body</span>')(),
-            ]),
+            ],
           })
         },
       }
@@ -1556,10 +1556,10 @@ describe('defineVaporCustomElement', () => {
       const App = {
         setup() {
           return createPlainElement('my-el-two-teleport-child-0', null, {
-            default: withVaporCtx(() => [
+            default: () => [
               template('<div slot="header">header</div>')(),
               template('<span slot="body">body</span>')(),
-            ]),
+            ],
           })
         },
       }
@@ -1591,7 +1591,7 @@ describe('defineVaporCustomElement', () => {
       const ChildWrapper = {
         setup() {
           return createPlainElement('my-el-child-shadow-false', null, {
-            default: withVaporCtx(() => template('child')()),
+            default: () => template('child')(),
           })
         },
       }

@@ -1,8 +1,12 @@
 import { camelize, extend, getModifierPropName, isArray } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
+  type BlockIRNode,
   type CreateComponentIRNode,
+  type ForIRNode,
+  type IRDynamicInfo,
   IRDynamicPropsKind,
+  IRNodeTypes,
   type IRProp,
   type IRProps,
   type IRPropsStatic,
@@ -13,6 +17,8 @@ import {
   IRSlotType,
   type IRSlots,
   type IRSlotsStatic,
+  type IfIRNode,
+  type OperationNode,
   type SlotBlockIRNode,
 } from '../ir'
 import {
@@ -45,7 +51,7 @@ import {
   parseValueDestructure,
 } from './for'
 import { genModelHandler } from './vModel'
-import { isBuiltInComponent, isKeepAliveTag } from '../utils'
+import { isBuiltInComponent } from '../utils'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -462,10 +468,88 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     ]
   }
 
-  if (node.type === NodeTypes.ELEMENT && !isKeepAliveTag(node.tag)) {
-    // wrap with withVaporCtx to ensure correct currentInstance inside slot
-    blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
+  if (node.type === NodeTypes.ELEMENT) {
+    // wrap with withVaporCtx to track slot owner for:
+    // 1. createSlot to get correct rawSlots in forwarded slots
+    // 2. scopeId inheritance for components created inside slots
+    // Skip if slot content has no components or slot outlets
+    if (needsVaporCtx(oper)) {
+      blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
+    }
   }
 
   return blockFn
+}
+
+/**
+ * Check if a slot block needs withVaporCtx wrapper.
+ * Returns true if the block contains:
+ * - Component creation (needs scopeId inheritance)
+ * - Slot outlet (needs rawSlots from slot owner)
+ */
+function needsVaporCtx(block: BlockIRNode): boolean {
+  return hasComponentOrSlotInBlock(block)
+}
+
+function hasComponentOrSlotInBlock(block: BlockIRNode): boolean {
+  // Check operations array
+  if (hasComponentOrSlotInOperations(block.operation)) return true
+  // Check dynamic children (components are often stored here)
+  return hasComponentOrSlotInDynamic(block.dynamic)
+}
+
+function hasComponentOrSlotInDynamic(dynamic: IRDynamicInfo): boolean {
+  // Check operation in this dynamic node
+  if (dynamic.operation) {
+    const type = dynamic.operation.type
+    if (
+      type === IRNodeTypes.CREATE_COMPONENT_NODE ||
+      type === IRNodeTypes.SLOT_OUTLET_NODE
+    ) {
+      return true
+    }
+    if (type === IRNodeTypes.IF) {
+      if (hasComponentOrSlotInIf(dynamic.operation as IfIRNode)) return true
+    }
+    if (type === IRNodeTypes.FOR) {
+      if (hasComponentOrSlotInBlock((dynamic.operation as ForIRNode).render))
+        return true
+    }
+  }
+  // Recursively check children
+  for (const child of dynamic.children) {
+    if (hasComponentOrSlotInDynamic(child)) return true
+  }
+  return false
+}
+
+function hasComponentOrSlotInOperations(operations: OperationNode[]): boolean {
+  for (const op of operations) {
+    switch (op.type) {
+      case IRNodeTypes.CREATE_COMPONENT_NODE:
+      case IRNodeTypes.SLOT_OUTLET_NODE:
+        return true
+      case IRNodeTypes.IF:
+        if (hasComponentOrSlotInIf(op as IfIRNode)) return true
+        break
+      case IRNodeTypes.FOR:
+        if (hasComponentOrSlotInBlock((op as ForIRNode).render)) return true
+        break
+    }
+  }
+  return false
+}
+
+function hasComponentOrSlotInIf(node: IfIRNode): boolean {
+  if (hasComponentOrSlotInBlock(node.positive)) return true
+  if (node.negative) {
+    if ('positive' in node.negative) {
+      // nested IfIRNode
+      return hasComponentOrSlotInIf(node.negative as IfIRNode)
+    } else {
+      // BlockIRNode
+      return hasComponentOrSlotInBlock(node.negative as BlockIRNode)
+    }
+  }
+  return false
 }

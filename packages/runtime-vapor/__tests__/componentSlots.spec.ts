@@ -178,7 +178,7 @@ describe('component: slots', () => {
 
       const { host } = define(() => {
         return createComponent(Comp, null, {
-          header: withVaporCtx(() => template('header')()),
+          header: () => template('header')(),
         })
       }).render()
 
@@ -225,7 +225,7 @@ describe('component: slots', () => {
       )
       define(() =>
         createComponent(Comp, null, {
-          default: withVaporCtx((_props: any) => ((props = _props), [])),
+          default: (_props: any) => ((props = _props), []),
         }),
       ).render()
 
@@ -253,7 +253,7 @@ describe('component: slots', () => {
       )
       define(() =>
         createComponent(Comp, null, {
-          default: withVaporCtx((_props: any) => ((props = _props), [])),
+          default: (_props: any) => ((props = _props), []),
         }),
       ).render()
 
@@ -286,13 +286,13 @@ describe('component: slots', () => {
           $: [
             () => ({
               name: 'header',
-              fn: withVaporCtx((props: any) => {
+              fn: (props: any) => {
                 const el = template('<h1></h1>')()
                 renderEffect(() => {
                   setElementText(el, props.title)
                 })
                 return el
-              }),
+              },
             }),
           ],
         })
@@ -321,8 +321,8 @@ describe('component: slots', () => {
 
       const { host } = define(() => {
         return createComponent(Comp, null, {
-          header: withVaporCtx(() => template('header')()),
-          footer: withVaporCtx(() => template('footer')()),
+          header: () => template('header')(),
+          footer: () => template('footer')(),
         })
       }).render()
 
@@ -371,11 +371,11 @@ describe('component: slots', () => {
               flag1.value
                 ? {
                     name: 'one',
-                    fn: withVaporCtx(() => template('one content')()),
+                    fn: () => template('one content')(),
                   }
                 : {
                     name: 'two',
-                    fn: withVaporCtx(() => template('two content')()),
+                    fn: () => template('two content')(),
                   },
           ],
         })
@@ -420,8 +420,8 @@ describe('component: slots', () => {
           Child,
           {},
           {
-            one: withVaporCtx(() => template('one content')()),
-            two: withVaporCtx(() => template('two content')()),
+            one: () => template('one content')(),
+            two: () => template('two content')(),
           },
         )
       }).render()
@@ -468,14 +468,14 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: withVaporCtx(() => {
+            default: () => {
               return createIf(
                 () => toggle.value,
                 () => {
                   return document.createTextNode('content')
                 },
               )
-            }),
+            },
           })
         },
       }).render()
@@ -505,14 +505,14 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: withVaporCtx(() => {
+            default: () => {
               return createIf(
                 () => toggle.value,
                 () => {
                   return document.createTextNode('content')
                 },
               )
-            }),
+            },
           })
         },
       }).render()
@@ -546,9 +546,9 @@ describe('component: slots', () => {
               (toggle.value
                 ? {
                     name: val.value,
-                    fn: withVaporCtx(() => {
+                    fn: () => {
                       return template('<h1></h1>')()
-                    }),
+                    },
                   }
                 : void 0) as DynamicSlot,
           ],
@@ -574,9 +574,9 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: withVaporCtx(() => {
+            default: () => {
               return template('<!--comment-->')()
-            }),
+            },
           })
         },
       }).render()
@@ -598,14 +598,14 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: withVaporCtx(() => {
+            default: () => {
               return createIf(
                 () => toggle.value,
                 () => {
                   return document.createTextNode('content')
                 },
               )
-            }),
+            },
           })
         },
       }).render()
@@ -636,7 +636,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: withVaporCtx(() => {
+            default: () => {
               return createIf(
                 () => outerShow.value,
                 () => {
@@ -648,7 +648,7 @@ describe('component: slots', () => {
                   )
                 },
               )
-            }),
+            },
           })
         },
       }).render()
@@ -693,7 +693,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: withVaporCtx(() => {
+            default: () => {
               const n2 = createFor(
                 () => items.value,
                 for_item0 => {
@@ -706,7 +706,7 @@ describe('component: slots', () => {
                 },
               )
               return n2
-            }),
+            },
           })
         },
       }).render()
@@ -739,7 +739,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: withVaporCtx(() => {
+            default: () => {
               const n2 = createFor(
                 () => items.value,
                 for_item0 => {
@@ -752,7 +752,7 @@ describe('component: slots', () => {
                 },
               )
               return n2
-            }),
+            },
           })
         },
       }).render()
@@ -794,12 +794,12 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: withVaporCtx(() => {
+            default: () => {
               const n3 = template('<div> </div>')() as any
               const x3 = txt(n3) as any
               renderEffect(() => setText(x3, toDisplayString(count.value)))
               return n3
-            }),
+            },
           })
         },
       }).render()
@@ -843,11 +843,11 @@ describe('component: slots', () => {
             Parent,
             null,
             {
-              foo: withVaporCtx(() => {
+              foo: () => {
                 const n0 = template(' ')() as any
                 renderEffect(() => setText(n0, foo.value))
                 return n0
-              }),
+              },
             },
             true,
           )
@@ -888,16 +888,16 @@ describe('component: slots', () => {
             Parent,
             null,
             {
-              foo: withVaporCtx(() => {
+              foo: () => {
                 const n0 = template(' ')() as any
                 renderEffect(() => setText(n0, foo.value))
                 return n0
-              }),
-              default: withVaporCtx(() => {
+              },
+              default: () => {
                 const n3 = template(' ')() as any
                 renderEffect(() => setText(n3, foo.value))
                 return n3
-              }),
+              },
             },
             true,
           )
@@ -936,7 +936,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Parent, null, {
-            default: withVaporCtx(() => template('<!-- <div>App</div> -->')()),
+            default: () => template('<!-- <div>App</div> -->')(),
           })
         },
       }).render()
@@ -976,7 +976,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Parent, null, {
-            default: withVaporCtx(() => template('<!-- <div>App</div> -->')()),
+            default: () => template('<!-- <div>App</div> -->')(),
           })
         },
       }).render()
@@ -1057,8 +1057,8 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: withVaporCtx(() => template('default')()),
-            foo: withVaporCtx(() => template('foo')()),
+            default: () => template('default')(),
+            foo: () => template('foo')(),
           })
         },
       }).render()
