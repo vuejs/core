@@ -205,6 +205,16 @@ describe('compiler: transform slot', () => {
     expect(code).contains(`_getRestElement(_slotProps0`)
   })
 
+  test('slot prop array rest destructuring', () => {
+    const { code } = compileWithSlots(
+      `<Comp><template #default="{ arr: [first, ...rest] }">{{ rest[0] }}</template></Comp>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`_slotProps0.arr.slice(1)`)
+  })
+
   test('slot prop default value', () => {
     const { code } = compileWithSlots(
       `<Comp><template #default="{ foo = 1 }">{{ foo }}</template></Comp>`,
@@ -213,6 +223,27 @@ describe('compiler: transform slot', () => {
     expect(code).toMatchSnapshot()
     expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
     expect(code).contains(`_getDefaultValue(_slotProps0.foo, 1)`)
+  })
+
+  test('slot prop nested default value', () => {
+    const { code } = compileWithSlots(
+      `<Comp><template #default="{ foo: [bar = 1], baz: { qux = 2 } }">{{ bar + qux }}</template></Comp>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`_getDefaultValue(_slotProps0.foo[0], 1)`)
+    expect(code).contains(`_getDefaultValue(_slotProps0.baz.qux, 2)`)
+  })
+
+  test('slot prop rest with computed keys preserved', () => {
+    const { code } = compileWithSlots(
+      `<Comp><template #default="{ foo, [key]: val, ...rest }">{{ foo + rest.other }}</template></Comp>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`_getRestElement(_slotProps0, ["foo", _ctx.key])`)
   })
 
   test('named slots w/ implicit default slot', () => {

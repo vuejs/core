@@ -40,7 +40,7 @@ export function genFor(
     onlyChild,
   } = oper
 
-  const rawValue = value ? value.content : null
+  const rawValue = value && value.content
   const rawKey = key && key.content
   const rawIndex = index && index.content
 

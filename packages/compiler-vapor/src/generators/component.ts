@@ -427,11 +427,13 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     }
   }
 
-  const idMap = buildDestructureIdMap(
-    idToPathMap,
-    propsName || '',
-    context.options.expressionPlugins,
-  )
+  const idMap = idToPathMap.size
+    ? buildDestructureIdMap(
+        idToPathMap,
+        propsName || '',
+        context.options.expressionPlugins,
+      )
+    : {}
 
   if (propsName) {
     idMap[propsName] = null

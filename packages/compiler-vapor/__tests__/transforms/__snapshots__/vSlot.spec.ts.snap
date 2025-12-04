@@ -397,6 +397,23 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform slot > slot prop array rest destructuring 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx((_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.arr.slice(1)[0])))
+      return n0
+    })
+  }, true)
+  return n2
+}"
+`;
+
 exports[`compiler: transform slot > slot prop computed key destructuring 1`] = `
 "import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template(" ")
@@ -431,6 +448,23 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform slot > slot prop nested default value 1`] = `
+"import { resolveComponent as _resolveComponent, getDefaultValue as _getDefaultValue, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx((_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_getDefaultValue(_slotProps0.foo[0], 1) + _getDefaultValue(_slotProps0.baz.qux, 2))))
+      return n0
+    })
+  }, true)
+  return n2
+}"
+`;
+
 exports[`compiler: transform slot > slot prop nested destructuring 1`] = `
 "import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template(" ")
@@ -458,6 +492,23 @@ export function render(_ctx) {
     "default": _withVaporCtx((_slotProps0) => {
       const n0 = t0()
       _renderEffect(() => _setText(n0, _toDisplayString(_getRestElement(_slotProps0, ["foo"]).bar)))
+      return n0
+    })
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > slot prop rest with computed keys preserved 1`] = `
+"import { resolveComponent as _resolveComponent, getRestElement as _getRestElement, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx((_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _getRestElement(_slotProps0, ["foo", _ctx.key]).other)))
       return n0
     })
   }, true)
