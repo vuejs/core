@@ -11,7 +11,10 @@ import {
   openBlock,
 } from '../vnode'
 import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
-import type { ComponentInternalInstance } from '../component'
+import type {
+  ComponentInternalInstance,
+  GenericComponentInstance,
+} from '../component'
 import type { Slots } from '../componentSlots'
 import {
   type ElementNamespace,
@@ -430,7 +433,7 @@ export interface SuspenseBoundary {
   ): void
   next(): RendererNode | null
   registerDep(
-    instance: ComponentInternalInstance,
+    instance: GenericComponentInstance,
     onResolve: (setupResult: unknown) => void,
   ): void
   unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void

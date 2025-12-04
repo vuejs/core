@@ -802,7 +802,7 @@ export function mountComponent(
     !instance.asyncResolved
   ) {
     const component = instance.type
-    instance.suspense.registerDep(instance as any, setupResult => {
+    instance.suspense.registerDep(instance, setupResult => {
       handleSetupResult(
         setupResult,
         component,
