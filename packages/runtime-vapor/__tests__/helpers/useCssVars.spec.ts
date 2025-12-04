@@ -9,7 +9,6 @@ import {
   setStyle,
   template,
   useVaporCssVars,
-  withVaporCtx,
 } from '@vue/runtime-vapor'
 import { nextTick, onMounted, reactive, ref } from '@vue/runtime-core'
 import { makeRender } from '../_utils'
@@ -246,14 +245,14 @@ describe('useVaporCssVars', () => {
           VaporTeleport,
           { to: () => target },
           {
-            default: withVaporCtx(() => {
+            default: () => {
               const n0 = template('<div></div>', true)()
               const n1 = createIf(
                 () => toggle.value,
                 () => template('<div></div>', true)(),
               )
               return [n0, n1]
-            }),
+            },
           },
         )
       },
@@ -286,7 +285,7 @@ describe('useVaporCssVars', () => {
           VaporTeleport,
           { to: () => target, disabled: () => true },
           {
-            default: withVaporCtx(() => template('<div></div>', true)()),
+            default: () => template('<div></div>', true)(),
           },
         )
       },

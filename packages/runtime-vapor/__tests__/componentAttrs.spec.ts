@@ -20,7 +20,6 @@ import {
   setProp,
   setStyle,
   template,
-  withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
 import { stringifyStyle } from '@vue/shared'
@@ -1087,10 +1086,10 @@ describe('attribute fallthrough', () => {
           () => 'button',
           null,
           {
-            default: withVaporCtx(() => {
+            default: () => {
               const n0 = createSlot('default', null)
               return n0
-            }),
+            },
           },
           true,
         )

@@ -67,7 +67,7 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`"default": (_slotProps0) =>`)
     expect(code).contains(`_slotProps0.foo + _ctx.bar`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -101,7 +101,7 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`"named": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`"named": (_slotProps0) =>`)
     expect(code).contains(`_slotProps0.foo + _ctx.bar`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -130,7 +130,7 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`fn: _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`fn: (_slotProps0) =>`)
     expect(code).contains(`_slotProps0.foo + _ctx.bar`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -171,7 +171,7 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`"default": (_slotProps0) =>`)
     expect(code).contains(`_slotProps0.msg`)
   })
 
@@ -181,7 +181,7 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`"default": (_slotProps0) =>`)
     expect(code).contains(`_slotProps0.foo.bar`)
   })
 
@@ -191,7 +191,7 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`"default": (_slotProps0) =>`)
     expect(code).contains(`_slotProps0[_ctx.key]`)
   })
 
@@ -201,7 +201,7 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`"default": (_slotProps0) =>`)
     expect(code).contains(`_getRestElement(_slotProps0`)
   })
 
@@ -211,7 +211,7 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`"default": (_slotProps0) =>`)
     expect(code).contains(`_slotProps0.arr.slice(1)`)
   })
 
@@ -221,7 +221,7 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`"default": (_slotProps0) =>`)
     expect(code).contains(`_getDefaultValue(_slotProps0.foo, 1)`)
   })
 
@@ -231,7 +231,7 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`"default": (_slotProps0) =>`)
     expect(code).contains(`_getDefaultValue(_slotProps0.foo[0], 1)`)
     expect(code).contains(`_getDefaultValue(_slotProps0.baz.qux, 2)`)
   })
@@ -242,7 +242,7 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`"default": (_slotProps0) =>`)
     expect(code).contains(`_getRestElement(_slotProps0, ["foo", _ctx.key])`)
   })
 
@@ -296,7 +296,7 @@ describe('compiler: transform slot', () => {
     expect(code).toMatchSnapshot()
 
     expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
-    expect(code).contains(`"default": _withVaporCtx((_slotProps1) =>`)
+    expect(code).contains(`"default": (_slotProps1) =>`)
     expect(code).contains(`_slotProps0.foo + _slotProps1.bar + _ctx.baz`)
     expect(code).contains(`_slotProps0.foo + _ctx.bar + _ctx.baz`)
 
@@ -373,7 +373,7 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`fn: _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`fn: (_slotProps0) =>`)
     expect(code).contains(`_setText(n0, _toDisplayString(_slotProps0.bar))`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -437,7 +437,7 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`fn: _withVaporCtx((_slotProps0) =>`)
+    expect(code).contains(`fn: (_slotProps0) =>`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -682,6 +682,161 @@ describe('compiler: transform slot', () => {
       expect(Object.keys(slots).length).toBe(2)
       expect(!!slots['default']).toBe(false)
 
+      expect(code).toMatchSnapshot()
+    })
+  })
+
+  describe('withVaporCtx optimization', () => {
+    test('slot with only static elements should not have withVaporCtx', () => {
+      const { code } = compileWithSlots(`
+        <Comp>
+          <template #default>
+            <div>static content</div>
+          </template>
+        </Comp>
+      `)
+      expect(code).not.toContain('withVaporCtx')
+      expect(code).toMatchSnapshot()
+    })
+
+    test('slot with component should have withVaporCtx', () => {
+      const { code } = compileWithSlots(`
+        <Comp>
+          <template #default>
+            <ChildComp />
+          </template>
+        </Comp>
+      `)
+      expect(code).toContain('withVaporCtx')
+      expect(code).toMatchSnapshot()
+    })
+
+    test('slot with slot outlet should have withVaporCtx', () => {
+      const { code } = compileWithSlots(`
+        <Comp>
+          <template #default>
+            <slot />
+          </template>
+        </Comp>
+      `)
+      expect(code).toContain('withVaporCtx')
+      expect(code).toMatchSnapshot()
+    })
+
+    test('slot with component inside v-if should have withVaporCtx', () => {
+      const { code } = compileWithSlots(`
+        <Comp>
+          <template #default>
+            <div v-if="show">
+              <ChildComp />
+            </div>
+          </template>
+        </Comp>
+      `)
+      expect(code).toContain('withVaporCtx')
+      expect(code).toMatchSnapshot()
+    })
+
+    test('slot with component inside v-for should have withVaporCtx', () => {
+      const { code } = compileWithSlots(`
+        <Comp>
+          <template #default>
+            <div v-for="item in items">
+              <ChildComp />
+            </div>
+          </template>
+        </Comp>
+      `)
+      expect(code).toContain('withVaporCtx')
+      expect(code).toMatchSnapshot()
+    })
+
+    test('slot with nested v-if containing component should have withVaporCtx', () => {
+      const { code } = compileWithSlots(`
+        <Comp>
+          <template #default>
+            <div v-if="a">
+              <span v-if="b">
+                <ChildComp />
+              </span>
+            </div>
+          </template>
+        </Comp>
+      `)
+      expect(code).toContain('withVaporCtx')
+      expect(code).toMatchSnapshot()
+    })
+
+    test('slot with only text interpolation should not have withVaporCtx', () => {
+      const { code } = compileWithSlots(`
+        <Comp>
+          <template #default>
+            {{ message }}
+          </template>
+        </Comp>
+      `)
+      expect(code).not.toContain('withVaporCtx')
+      expect(code).toMatchSnapshot()
+    })
+
+    test('slot with v-if but no component should not have withVaporCtx', () => {
+      const { code } = compileWithSlots(`
+        <Comp>
+          <template #default>
+            <div v-if="show">content</div>
+            <span v-else>fallback</span>
+          </template>
+        </Comp>
+      `)
+      expect(code).not.toContain('withVaporCtx')
+      expect(code).toMatchSnapshot()
+    })
+
+    test('slot with v-for but no component should not have withVaporCtx', () => {
+      const { code } = compileWithSlots(`
+        <Comp>
+          <template #default>
+            <div v-for="item in items">{{ item }}</div>
+          </template>
+        </Comp>
+      `)
+      expect(code).not.toContain('withVaporCtx')
+      expect(code).toMatchSnapshot()
+    })
+
+    test('slot with custom element should have withVaporCtx', () => {
+      const { code } = compileWithSlots(
+        `
+        <Comp>
+          <template #default>
+            <my-element></my-element>
+          </template>
+        </Comp>
+      `,
+        {
+          isCustomElement: tag => tag.startsWith('my-'),
+        },
+      )
+      expect(code).toContain('withVaporCtx')
+      expect(code).toMatchSnapshot()
+    })
+
+    test('slot with custom element inside v-if should have withVaporCtx', () => {
+      const { code } = compileWithSlots(
+        `
+        <Comp>
+          <template #default>
+            <div v-if="show">
+              <my-element></my-element>
+            </div>
+          </template>
+        </Comp>
+      `,
+        {
+          isCustomElement: tag => tag.startsWith('my-'),
+        },
+      )
+      expect(code).toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
   })
