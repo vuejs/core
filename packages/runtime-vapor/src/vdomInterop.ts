@@ -113,7 +113,7 @@ const vaporInteropImpl: Omit<
     const slotsRef = shallowRef(vnode.children)
 
     let prevSuspense: SuspenseBoundary | null = null
-    if (__FEATURE_SUSPENSE__) {
+    if (__FEATURE_SUSPENSE__ && parentSuspense) {
       prevSuspense = setParentSuspense(parentSuspense)
     }
 
@@ -148,7 +148,7 @@ const vaporInteropImpl: Omit<
       )
     }
 
-    if (__FEATURE_SUSPENSE__) {
+    if (__FEATURE_SUSPENSE__ && parentSuspense) {
       setParentSuspense(prevSuspense)
     }
 
