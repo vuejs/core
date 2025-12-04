@@ -654,8 +654,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
         : rawSlots
       : EMPTY_OBJ
 
-    const scopeOwner = getScopeOwner()
-    this.scopeId = scopeOwner && scopeOwner.type.__scopeId
+    this.scopeId = getCurrentScopeId()
 
     // apply custom element special handling
     if (comp.ce) {
@@ -745,8 +744,7 @@ export function createPlainElement(
   ;(el as any).$root = isSingleRoot
 
   if (!isHydrating) {
-    const scopeOwner = getScopeOwner()
-    const scopeId = scopeOwner!.type.__scopeId
+    const scopeId = getCurrentScopeId()
     if (scopeId) setScopeId(el, [scopeId])
   }
 
@@ -1030,4 +1028,9 @@ function handleSetupResult(
   if (__DEV__) {
     popWarningContext()
   }
+}
+
+export function getCurrentScopeId(): string | undefined {
+  const scopeOwner = getScopeOwner()
+  return scopeOwner && scopeOwner.type.__scopeId
 }
