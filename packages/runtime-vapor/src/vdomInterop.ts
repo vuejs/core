@@ -185,8 +185,10 @@ const vaporInteropImpl: Omit<
   /**
    * vapor slot in vdom
    */
-  slot(n1: VNode, n2: VNode, container, anchor) {
+  slot(n1: VNode, n2: VNode, container, anchor, parentComponent) {
     if (!n1) {
+      const prev = currentInstance
+      simpleSetCurrentInstance(parentComponent)
       // mount
       let selfAnchor: Node | undefined
       const { slot, fallback } = n2.vs!
@@ -198,6 +200,7 @@ const vaporInteropImpl: Omit<
         // use fragment's anchor when possible
         selfAnchor = slotBlock.anchor
       }
+      simpleSetCurrentInstance(prev)
       if (!selfAnchor) selfAnchor = createTextNode()
       insert((n2.el = n2.anchor = selfAnchor), container, anchor)
       insert((n2.vb = slotBlock), container, selfAnchor)

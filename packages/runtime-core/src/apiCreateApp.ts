@@ -192,7 +192,13 @@ export interface VaporInteropInterface {
   update(n1: VNode, n2: VNode, shouldUpdate: boolean): void
   unmount(vnode: VNode, doRemove?: boolean): void
   move(vnode: VNode, container: any, anchor: any): void
-  slot(n1: VNode | null, n2: VNode, container: any, anchor: any): void
+  slot(
+    n1: VNode | null,
+    n2: VNode,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance | null,
+  ): void
   hydrate(
     vnode: VNode,
     node: any,
