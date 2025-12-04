@@ -77,10 +77,10 @@ import {
   type RawSlots,
   type StaticSlots,
   type VaporSlot,
+  currentSlotOwner,
   dynamicSlotsProxyHandlers,
-  getParentInstance,
   getSlot,
-  setCurrentSlotConsumer,
+  setCurrentSlotOwner,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
@@ -202,24 +202,22 @@ export function createComponent(
     resetInsertionState()
   }
 
-  const parentInstance = getParentInstance()
-
   let prevSuspense: SuspenseBoundary | null = null
-  if (__FEATURE_SUSPENSE__ && parentInstance && parentInstance.suspense) {
-    prevSuspense = setParentSuspense(parentInstance.suspense)
+  if (__FEATURE_SUSPENSE__ && currentInstance && currentInstance.suspense) {
+    prevSuspense = setParentSuspense(currentInstance.suspense)
   }
 
   if (
     (isSingleRoot ||
       // transition has attrs fallthrough
-      (parentInstance && isVaporTransition(parentInstance!.type))) &&
+      (currentInstance && isVaporTransition(currentInstance!.type))) &&
     component.inheritAttrs !== false &&
-    isVaporComponent(parentInstance) &&
-    parentInstance.hasFallthrough
+    isVaporComponent(currentInstance) &&
+    currentInstance.hasFallthrough
   ) {
     // check if we are the single root of the parent
     // if yes, inject parent attrs as dynamic props source
-    const attrs = parentInstance.attrs
+    const attrs = currentInstance.attrs
     if (rawProps && rawProps !== EMPTY_OBJ) {
       ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
         () => attrs,
@@ -230,8 +228,12 @@ export function createComponent(
   }
 
   // keep-alive
-  if (parentInstance && parentInstance.vapor && isKeepAlive(parentInstance)) {
-    const cached = (parentInstance as KeepAliveInstance).getCachedComponent(
+  if (
+    currentInstance &&
+    currentInstance.vapor &&
+    isKeepAlive(currentInstance)
+  ) {
+    const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
       component,
     )
     // @ts-expect-error
@@ -240,14 +242,12 @@ export function createComponent(
 
   // vdom interop enabled and component is not an explicit vapor component
   if (appContext.vapor && !component.__vapor) {
-    const prevSlotConsumer = setCurrentSlotConsumer(null)
     const frag = appContext.vapor.vdomMount(
       component as any,
-      parentInstance as any,
+      currentInstance as any,
       rawProps,
       rawSlots,
     )
-    setCurrentSlotConsumer(prevSlotConsumer)
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
@@ -280,11 +280,10 @@ export function createComponent(
     rawSlots as RawSlots,
     appContext,
     once,
-    parentInstance,
   )
 
-  // set currentSlotConsumer to null to avoid affecting the child components
-  const prevSlotConsumer = setCurrentSlotConsumer(null)
+  // reset currentSlotOwner to null to avoid affecting the child components
+  const prevSlotOwner = setCurrentSlotOwner(null)
 
   // HMR
   if (__DEV__) {
@@ -347,12 +346,12 @@ export function createComponent(
     endMeasure(instance, 'init')
   }
 
-  if (__FEATURE_SUSPENSE__ && parentInstance && parentInstance.suspense) {
+  if (__FEATURE_SUSPENSE__ && currentInstance && currentInstance.suspense) {
     setParentSuspense(prevSuspense)
   }
 
-  // restore currentSlotConsumer to previous value after setupFn is called
-  setCurrentSlotConsumer(prevSlotConsumer)
+  // restore currentSlotOwner to previous value after setupFn is called
+  setCurrentSlotOwner(prevSlotOwner)
   onScopeDispose(() => unmountComponent(instance), true)
 
   if (_insertionParent || isHydrating) {
@@ -594,19 +593,19 @@ export class VaporComponentInstance implements GenericComponentInstance {
     rawSlots?: RawSlots | null,
     appContext?: GenericAppContext,
     once?: boolean,
-    parent: GenericComponentInstance | null = currentInstance,
   ) {
     this.vapor = true
     this.uid = nextUid()
     this.type = comp
-    this.parent = parent
-    this.root = parent ? parent.root : this
+    this.parent = currentInstance
 
-    if (parent) {
-      this.appContext = parent.appContext
-      this.provides = parent.provides
-      this.ids = parent.ids
+    if (currentInstance) {
+      this.root = currentInstance.root
+      this.appContext = currentInstance.appContext
+      this.provides = currentInstance.provides
+      this.ids = currentInstance.ids
     } else {
+      this.root = this
       this.appContext = appContext || emptyContext
       this.provides = Object.create(this.appContext.provides)
       this.ids = ['', 0, 0]
@@ -655,7 +654,10 @@ export class VaporComponentInstance implements GenericComponentInstance {
         : rawSlots
       : EMPTY_OBJ
 
-    this.scopeId = currentInstance && currentInstance.type.__scopeId
+    // Use currentSlotOwner for scopeId inheritance when inside a slot
+    // This ensures components created in slots inherit the slot owner's scopeId
+    const scopeOwner = currentSlotOwner || currentInstance
+    this.scopeId = scopeOwner && scopeOwner.type.__scopeId
 
     // apply custom element special handling
     if (comp.ce) {
@@ -745,7 +747,9 @@ export function createPlainElement(
   ;(el as any).$root = isSingleRoot
 
   if (!isHydrating) {
-    const scopeId = currentInstance!.type.__scopeId
+    // Use currentSlotOwner for scopeId when inside a slot
+    const scopeOwner = currentSlotOwner || currentInstance
+    const scopeId = scopeOwner!.type.__scopeId
     if (scopeId) setScopeId(el, [scopeId])
   }
 

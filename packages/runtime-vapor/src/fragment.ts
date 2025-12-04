@@ -14,6 +14,7 @@ import {
   type GenericComponentInstance,
   type TransitionHooks,
   type VNode,
+  currentInstance,
   queuePostFlushCb,
   setCurrentInstance,
   warnExtraneousAttributes,
@@ -31,7 +32,6 @@ import {
   locateFragmentEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
-import { getParentInstance } from './componentSlots'
 import { isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
 
@@ -99,7 +99,7 @@ export class DynamicFragment extends VaporFragment {
 
   constructor(anchorLabel?: string) {
     super([])
-    this.parentComponent = getParentInstance()
+    this.parentComponent = currentInstance
     if (isHydrating) {
       this.anchorLabel = anchorLabel
       locateHydrationNode()
