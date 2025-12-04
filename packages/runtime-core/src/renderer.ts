@@ -454,7 +454,13 @@ function baseCreateRenderer(
         )
         break
       case VaporSlot:
-        getVaporInterface(parentComponent, n2).slot(n1, n2, container, anchor)
+        getVaporInterface(parentComponent, n2).slot(
+          n1,
+          n2,
+          container,
+          anchor,
+          parentComponent,
+        )
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
