@@ -462,6 +462,19 @@ export interface GenericComponentInstance {
    */
   suspense: SuspenseBoundary | null
   /**
+   * suspense pending batch id
+   * @internal
+   */
+  suspenseId: number
+  /**
+   * @internal
+   */
+  asyncDep: Promise<any> | null
+  /**
+   * @internal
+   */
+  asyncResolved: boolean
+  /**
    * `updateTeleportCssVars`
    * For updating css vars on contained teleports
    * @internal

@@ -20,6 +20,7 @@ import {
   getFunctionalFallthrough,
   isAsyncWrapper,
   isKeepAlive,
+  markAsyncBoundary,
   nextUid,
   popWarningContext,
   pushWarningContext,
@@ -55,6 +56,7 @@ import {
   invokeArrayFns,
   isArray,
   isFunction,
+  isPromise,
   isString,
 } from '@vue/shared'
 import {
@@ -106,6 +108,7 @@ import {
 } from './insertionState'
 import { DynamicFragment, isFragment } from './fragment'
 import type { VaporElement } from './apiDefineVaporCustomElement'
+import { parentSuspense, setParentSuspense } from './components/Suspense'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -200,6 +203,11 @@ export function createComponent(
   }
 
   const parentInstance = getParentInstance()
+
+  let prevSuspense: SuspenseBoundary | null = null
+  if (__FEATURE_SUSPENSE__ && parentInstance && parentInstance.suspense) {
+    prevSuspense = setParentSuspense(parentInstance.suspense)
+  }
 
   if (
     (isSingleRoot ||
@@ -339,6 +347,10 @@ export function createComponent(
     endMeasure(instance, 'init')
   }
 
+  if (__FEATURE_SUSPENSE__ && parentInstance && parentInstance.suspense) {
+    setParentSuspense(prevSuspense)
+  }
+
   // restore currentSlotConsumer to previous value after setupFn is called
   setCurrentSlotConsumer(prevSlotConsumer)
   onScopeDispose(() => unmountComponent(instance), true)
@@ -373,71 +385,35 @@ export function setupComponent(
       ]) || EMPTY_OBJ
     : EMPTY_OBJ
 
-  if (__DEV__ && !isBlock(setupResult)) {
-    if (isFunction(component)) {
-      warn(`Functional vapor component must return a block directly.`)
-      instance.block = []
-    } else if (!component.render) {
-      warn(
-        `Vapor component setup() returned non-block value, and has no render function.`,
-      )
-      instance.block = []
-    } else {
-      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-        instance.devtoolsRawSetupState = setupResult
-      }
-      instance.setupState = proxyRefs(setupResult)
-      if (__DEV__) {
-        instance.setupState = createDevSetupStateProxy(instance)
-      }
-      devRender(instance)
-    }
-  } else {
-    // component has a render function but no setup function
-    // (typically components with only a template and no state)
-    if (!setupFn && component.render) {
-      instance.block = callWithErrorHandling(
-        component.render,
-        instance,
-        ErrorCodes.RENDER_FUNCTION,
-      )
-    } else {
-      // in prod result can only be block
-      instance.block = setupResult as Block
-    }
+  const isAsyncSetup = isPromise(setupResult)
+
+  if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
+    // async setup / serverPrefetch, mark as async boundary for useId()
+    markAsyncBoundary(instance)
   }
 
-  // single root, inherit attrs
-  if (
-    instance.hasFallthrough &&
-    component.inheritAttrs !== false &&
-    Object.keys(instance.attrs).length
-  ) {
-    const root = getRootElement(
-      instance.block,
-      // attach attrs to root dynamic fragments for applying during each update
-      frag => (frag.attrs = instance.attrs),
-      false,
-    )
-    if (root) {
-      renderEffect(() => {
-        const attrs =
-          isFunction(component) && !isVaporTransition(component)
-            ? getFunctionalFallthrough(instance.attrs)
-            : instance.attrs
-        if (attrs) applyFallthroughProps(root, attrs)
-      })
-    } else if (
-      __DEV__ &&
-      ((!instance.accessedAttrs &&
-        isArray(instance.block) &&
-        instance.block.length) ||
-        // preventing attrs fallthrough on Teleport
-        // consistent with VDOM Teleport behavior
-        instance.block instanceof TeleportFragment)
-    ) {
-      warnExtraneousAttributes(instance.attrs)
+  if (isAsyncSetup) {
+    if (__FEATURE_SUSPENSE__) {
+      // async setup returned Promise.
+      // bail here and wait for re-entry.
+      instance.asyncDep = setupResult
+      if (__DEV__ && !instance.suspense) {
+        const name = getComponentName(component) ?? 'Anonymous'
+        warn(
+          `Component <${name}>: setup function returned a promise, but no ` +
+            `<Suspense> boundary was found in the parent component tree. ` +
+            `A component with async setup() must be nested in a <Suspense> ` +
+            `in order to be rendered.`,
+        )
+      }
+    } else if (__DEV__) {
+      warn(
+        `setup() returned a Promise, but the version of Vue you are using ` +
+          `does not support it yet.`,
+      )
     }
+  } else {
+    handleSetupResult(setupResult, component, instance, setupFn)
   }
 
   setActiveSub(prevSub)
@@ -561,6 +537,9 @@ export class VaporComponentInstance implements GenericComponentInstance {
   ids: [string, number, number]
   // for suspense
   suspense: SuspenseBoundary | null
+  suspenseId: number
+  asyncDep: Promise<any> | null
+  asyncResolved: boolean
 
   // for HMR and vapor custom element
   // all render effects associated with this instance
@@ -639,12 +618,13 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.emit = emit.bind(null, this)
     this.expose = expose.bind(null, this)
     this.refs = EMPTY_OBJ
-    this.emitted =
-      this.exposed =
-      this.exposeProxy =
-      this.propsDefaults =
-      this.suspense =
-        null
+    this.emitted = this.exposed = this.exposeProxy = this.propsDefaults = null
+
+    // suspense related
+    this.suspense = parentSuspense
+    this.suspenseId = parentSuspense ? parentSuspense.pendingId : 0
+    this.asyncDep = null
+    this.asyncResolved = false
 
     this.isMounted =
       this.isUnmounted =
@@ -815,6 +795,25 @@ export function mountComponent(
   parent: ParentNode,
   anchor?: Node | null | 0,
 ): void {
+  if (
+    __FEATURE_SUSPENSE__ &&
+    instance.suspense &&
+    instance.asyncDep &&
+    !instance.asyncResolved
+  ) {
+    const component = instance.type
+    instance.suspense.registerDep(instance, setupResult => {
+      handleSetupResult(
+        setupResult,
+        component,
+        instance,
+        isFunction(component) ? component : component.setup,
+      )
+      mountComponent(instance, parent, anchor)
+    })
+    return
+  }
+
   if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
     findParentKeepAlive(instance)!.activate(instance, parent, anchor)
     return
@@ -948,4 +947,86 @@ export function getRootElement(
 
 function isVaporTransition(component: VaporComponent): boolean {
   return getComponentName(component) === 'VaporTransition'
+}
+
+function handleSetupResult(
+  setupResult: any,
+  component: VaporComponent,
+  instance: VaporComponentInstance,
+  setupFn: VaporSetupFn | undefined,
+) {
+  if (__DEV__) {
+    pushWarningContext(instance)
+  }
+
+  if (__DEV__ && !isBlock(setupResult)) {
+    if (isFunction(component)) {
+      warn(`Functional vapor component must return a block directly.`)
+      instance.block = []
+    } else if (!component.render) {
+      warn(
+        `Vapor component setup() returned non-block value, and has no render function.`,
+      )
+      instance.block = []
+    } else {
+      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+        instance.devtoolsRawSetupState = setupResult
+      }
+      instance.setupState = proxyRefs(setupResult)
+      if (__DEV__) {
+        instance.setupState = createDevSetupStateProxy(instance)
+      }
+      devRender(instance)
+    }
+  } else {
+    // component has a render function but no setup function
+    // (typically components with only a template and no state)
+    if (!setupFn && component.render) {
+      instance.block = callWithErrorHandling(
+        component.render,
+        instance,
+        ErrorCodes.RENDER_FUNCTION,
+      )
+    } else {
+      // in prod result can only be block
+      instance.block = setupResult as Block
+    }
+  }
+
+  // single root, inherit attrs
+  if (
+    instance.hasFallthrough &&
+    component.inheritAttrs !== false &&
+    Object.keys(instance.attrs).length
+  ) {
+    const root = getRootElement(
+      instance.block,
+      // attach attrs to root dynamic fragments for applying during each update
+      frag => (frag.attrs = instance.attrs),
+      false,
+    )
+    if (root) {
+      renderEffect(() => {
+        const attrs =
+          isFunction(component) && !isVaporTransition(component)
+            ? getFunctionalFallthrough(instance.attrs)
+            : instance.attrs
+        if (attrs) applyFallthroughProps(root, attrs)
+      })
+    } else if (
+      __DEV__ &&
+      ((!instance.accessedAttrs &&
+        isArray(instance.block) &&
+        instance.block.length) ||
+        // preventing attrs fallthrough on Teleport
+        // consistent with VDOM Teleport behavior
+        instance.block instanceof TeleportFragment)
+    ) {
+      warnExtraneousAttributes(instance.attrs)
+    }
+  }
+
+  if (__DEV__) {
+    popWarningContext()
+  }
 }

@@ -318,6 +318,7 @@ export function createHydrationFunctions(
               container,
               null,
               parentComponent,
+              parentSuspense,
             )
           } else {
             mountComponent(
