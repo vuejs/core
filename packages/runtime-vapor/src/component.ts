@@ -46,11 +46,13 @@ import {
   onScopeDispose,
   proxyRefs,
   setActiveSub,
+  toRaw,
   unref,
 } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
   ShapeFlags,
+  hasOwn,
   invokeArrayFns,
   isArray,
   isFunction,
@@ -427,6 +429,31 @@ export function applyFallthroughProps(
   isApplyingFallthroughProps = true
   setDynamicProps(el, [attrs])
   isApplyingFallthroughProps = false
+}
+
+/**
+ * dev only
+ */
+function createDevSetupStateProxy(
+  instance: VaporComponentInstance,
+): Record<string, any> {
+  const { setupState } = instance
+  return new Proxy(setupState!, {
+    get(target, key: string | symbol, receiver) {
+      if (
+        isString(key) &&
+        !key.startsWith('__v') &&
+        !hasOwn(toRaw(setupState)!, key)
+      ) {
+        warn(
+          `Property ${JSON.stringify(key)} was accessed during render ` +
+            `but is not defined on instance.`,
+        )
+      }
+
+      return Reflect.get(target, key, receiver)
+    },
+  })
 }
 
 /**
@@ -942,9 +969,13 @@ function handleSetupResult(
       )
       instance.block = []
     } else {
-      instance.devtoolsRawSetupState = setupResult
-      // TODO make the proxy warn non-existent property access during dev
+      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+        instance.devtoolsRawSetupState = setupResult
+      }
       instance.setupState = proxyRefs(setupResult)
+      if (__DEV__) {
+        instance.setupState = createDevSetupStateProxy(instance)
+      }
       devRender(instance)
     }
   } else {
