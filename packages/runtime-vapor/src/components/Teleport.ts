@@ -3,6 +3,7 @@ import {
   MismatchTypes,
   type TeleportProps,
   type TeleportTargetElement,
+  currentInstance,
   isMismatchAllowed,
   isTeleportDeferred,
   isTeleportDisabled,
@@ -31,7 +32,6 @@ import {
   setCurrentHydrationNode,
 } from '../dom/hydration'
 import { applyTransitionHooks } from './Transition'
-import { getParentInstance } from '../componentSlots'
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -62,7 +62,7 @@ export class TeleportFragment extends VaporFragment {
     super([])
     this.rawProps = props
     this.rawSlots = slots
-    this.parentComponent = getParentInstance()
+    this.parentComponent = currentInstance
     this.anchor = isHydrating
       ? undefined
       : __DEV__

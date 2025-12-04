@@ -6,7 +6,6 @@ import {
   currentInstance,
   isAsyncWrapper,
   isRef,
-  setCurrentInstance,
 } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
@@ -124,42 +123,47 @@ export function getSlot(
   }
 }
 
-export let currentSlotConsumer: GenericComponentInstance | null = null
+/**
+ * Tracks the slot owner (the component that defines the slot content).
+ * This is used for:
+ * 1. Getting the correct rawSlots in forwarded slots (via createSlot)
+ * 2. Inheriting the slot owner's scopeId
+ */
+export let currentSlotOwner: VaporComponentInstance | null = null
 
-export function setCurrentSlotConsumer(
-  consumer: GenericComponentInstance | null,
-): GenericComponentInstance | null {
+export function setCurrentSlotOwner(
+  owner: VaporComponentInstance | null,
+): VaporComponentInstance | null {
   try {
-    return currentSlotConsumer
+    return currentSlotOwner
   } finally {
-    currentSlotConsumer = consumer
+    currentSlotOwner = owner
   }
 }
 
 /**
- * use currentSlotConsumer as parent, the currentSlotConsumer will be reset to null
- * before setupFn call to avoid affecting children and restore to previous value
- * after setupFn is called
+ * Get the effective slot instance for accessing rawSlots and scopeId.
+ * Prefers currentSlotOwner (if inside a slot), falls back to currentInstance.
  */
-export function getParentInstance(): GenericComponentInstance | null {
-  return currentSlotConsumer || currentInstance
+export function getSlotInstance(): VaporComponentInstance {
+  return (currentSlotOwner || currentInstance) as VaporComponentInstance
 }
 
 /**
- * Wrap a slot function to memoize currentInstance
- * 1. ensure correct currentInstance in forwarded slots
- * 2. elements created in the slot inherit the slot owner's scopeId
+ * Wrap a slot function to track the slot owner.
+ *
+ * This ensures:
+ * 1. createSlot gets rawSlots from the correct component (slot owner)
+ * 2. Elements inherit the slot owner's scopeId
  */
 export function withVaporCtx(fn: Function): BlockFn {
-  const owner = currentInstance
+  const owner = currentInstance as VaporComponentInstance
   return (...args: any[]) => {
-    const prev = setCurrentInstance(owner)
-    const prevConsumer = setCurrentSlotConsumer(prev[0])
+    const prevOwner = setCurrentSlotOwner(owner)
     try {
       return fn(...args)
     } finally {
-      setCurrentInstance(...prev)
-      setCurrentSlotConsumer(prevConsumer)
+      setCurrentSlotOwner(prevOwner)
     }
   }
 }
@@ -176,7 +180,8 @@ export function createSlot(
   const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
 
-  const instance = currentInstance as VaporComponentInstance
+  // Use slot owner if inside a slot (forwarded slots), otherwise use currentInstance
+  const instance = getSlotInstance()
   const rawSlots = instance.rawSlots
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)
