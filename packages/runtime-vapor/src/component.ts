@@ -1032,5 +1032,5 @@ function handleSetupResult(
 
 export function getCurrentScopeId(): string | undefined {
   const scopeOwner = getScopeOwner()
-  return scopeOwner && scopeOwner.type.__scopeId
+  return scopeOwner ? scopeOwner.type.__scopeId : undefined
 }
