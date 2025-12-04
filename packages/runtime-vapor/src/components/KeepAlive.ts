@@ -126,7 +126,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
     const processFragment = (frag: DynamicFragment) => {
       const [innerBlock, interop] = getInnerBlock(frag.nodes)
-      if (!innerBlock && !shouldCache(innerBlock!, props, interop)) return
+      if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return
 
       if (interop) {
         if (cache.has(innerBlock.vnode!.type)) {
