@@ -208,7 +208,7 @@ export function applyTransitionHooks(
     return hooks
   }
 
-  const { props, instance, state, delayedLeave, group } = hooks
+  const { props, instance, state, delayedLeave } = hooks
   let resolvedHooks = resolveTransitionHooks(
     child,
     props,
@@ -217,7 +217,6 @@ export function applyTransitionHooks(
     hooks => (resolvedHooks = hooks as VaporTransitionHooks),
   )
   resolvedHooks.delayedLeave = delayedLeave
-  resolvedHooks.group = group
   child.$transition = resolvedHooks
   if (isFrag) setTransitionHooksOnFragment(block, resolvedHooks)
 
