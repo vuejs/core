@@ -141,7 +141,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
           )
           hooks.group = true
           setTransitionHooks(child, hooks)
-        } else if (__DEV__ && child.$key == null) {
+        } else if (__DEV__) {
           warn(`<transition-group> children must be keyed`)
         }
       }
