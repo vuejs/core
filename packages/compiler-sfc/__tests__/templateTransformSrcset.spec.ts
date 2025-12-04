@@ -106,4 +106,15 @@ describe('compiler sfc: transform srcset', () => {
     ).code
     expect(code).toMatchSnapshot()
   })
+
+  test('srcset w/ preserveLeadingTilde: true', () => {
+    const code = compileWithSrcset(
+      `
+      <img srcset="~/app/logo.png, ~app/logo.png 2x"/>
+      <img srcset="~app/logo.png 1x, ~/app/logo.png 2x"/>
+    `,
+      { preserveLeadingTilde: true },
+    ).code
+    expect(code).toMatchSnapshot()
+  })
 })
