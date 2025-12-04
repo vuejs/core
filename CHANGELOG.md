@@ -1,3 +1,30 @@
+# [3.6.0-alpha.6](https://github.com/vuejs/core/compare/v3.6.0-alpha.5...v3.6.0-alpha.6) (2025-12-04)
+
+
+### Bug Fixes
+
+* **compiler-vapor:** enhance v-slot prop destructuring support ([#14165](https://github.com/vuejs/core/issues/14165)) ([5db15cf](https://github.com/vuejs/core/commit/5db15cfe5e09faef0d9c1889e964465ad0da9ded))
+* **compiler-vapor:** only apply v-on key modifiers to keyboard events ([#14136](https://github.com/vuejs/core/issues/14136)) ([8e83197](https://github.com/vuejs/core/commit/8e83197bc7068b8217af92de41ed3fd920e91b80))
+* **compiler-vapor:** prevent `_camelize` from receiving nullish value for dynamic `v-bind` keys with `.camel` modifier. ([#14138](https://github.com/vuejs/core/issues/14138)) ([313d172](https://github.com/vuejs/core/commit/313d17278e24305f45432ddd5ff054f79fe72e00))
+* **compiler-vapor:** prevent nested components from inheriting parent slots ([#14158](https://github.com/vuejs/core/issues/14158)) ([0668ea3](https://github.com/vuejs/core/commit/0668ea3c87e53e2c5601f1ac32acae9c0111bf0a))
+* **compiler-vapor:** support merging multiple event handlers on components ([#14137](https://github.com/vuejs/core/issues/14137)) ([f2152d2](https://github.com/vuejs/core/commit/f2152d2dec0c8cc5dafa4b7d2a7af3e396431144))
+* **KeepAlive:** correct condition for caching inner blocks to handle null cases ([71e2495](https://github.com/vuejs/core/commit/71e2495e468d21b37d7b57c3013be9da3ce59c5b))
+* **KeepAlive:** remove unnecessary null check in getInnerBlock call ([50602ec](https://github.com/vuejs/core/commit/50602eca5a67150ac6feb079b2f5876e27e83f3c))
+* **runtime-vapor:** add dev-only warning for non-existent property access during render ([#14162](https://github.com/vuejs/core/issues/14162)) ([9bef3be](https://github.com/vuejs/core/commit/9bef3be1bf6550e0d7f6fc5c72027a3777613aed))
+* **runtime-vapor:** expose raw setup state to devtools via `devtoolsRawSetupState` ([0ab7e1b](https://github.com/vuejs/core/commit/0ab7e1bc8634d9be5b54cb59574f7032c5ec3bb6))
+* **templateRef:** prevent duplicate onScopeDispose registrations for dynamic template refs ([#14161](https://github.com/vuejs/core/issues/14161)) ([750e7cd](https://github.com/vuejs/core/commit/750e7cd47c6381419883af8d07c8b91971a546cb))
+* **TransitionGroup:** simplify dev-only warning condition for unkeyed children ([e70ca5d](https://github.com/vuejs/core/commit/e70ca5da5ed158e1b23f5544cbe22acb946d8cf9))
+
+
+### Features
+
+* **runtime-vapor:** support attrs fallthrough ([#14144](https://github.com/vuejs/core/issues/14144)) ([53ab5d5](https://github.com/vuejs/core/commit/53ab5d52716a9842d4505c8bb4322fb08cb42a83))
+* **runtime-vapor:** support custom directives on vapor components ([#14143](https://github.com/vuejs/core/issues/14143)) ([e405557](https://github.com/vuejs/core/commit/e4055574072ce1e28e249b96c417d87fe67b5c80))
+* **suspense:** support rendering of Vapor components ([#14157](https://github.com/vuejs/core/issues/14157)) ([0dcc98f](https://github.com/vuejs/core/commit/0dcc98fb3afaca4a1e4a58d01d3dfbc2d9676b5c))
+* **vapor:** implement `v-once` support for slot outlets ([#14141](https://github.com/vuejs/core/issues/14141)) ([498ce69](https://github.com/vuejs/core/commit/498ce69a58fa0c2dfca0881e091a398597846408))
+
+
+
 # [3.6.0-alpha.5](https://github.com/vuejs/core/compare/v3.5.25...v3.6.0-alpha.5) (2025-11-25)
 
 

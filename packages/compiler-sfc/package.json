@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.6.0-alpha.5",
+  "version": "3.6.0-alpha.6",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
   "module": "dist/compiler-sfc.esm-browser.js",
