@@ -305,28 +305,11 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
-// Track which fallback has been set on each fragment
-// to avoid duplicate chaining when nested DynamicFragments call setFragmentFallback
-const processedFallbacks = new WeakMap<VaporFragment, BlockFn>()
-
 export function setFragmentFallback(
   fragment: VaporFragment,
   fallback: BlockFn,
   onFragment?: (frag: VaporFragment) => void,
 ): void {
-  if (processedFallbacks.get(fragment) === fallback) {
-    // Already processed with this fallback, skip re-setting
-    // but still recurse since nodes may have changed
-    if (onFragment) onFragment(fragment)
-    if (isFragment(fragment.nodes)) {
-      setFragmentFallback(fragment.nodes, fragment.fallback!, onFragment)
-    }
-    return
-  }
-
-  // Mark as processed
-  processedFallbacks.set(fragment, fallback)
-
   if (fragment.fallback) {
     const originalFallback = fragment.fallback
     // if the original fallback also renders invalid blocks,
