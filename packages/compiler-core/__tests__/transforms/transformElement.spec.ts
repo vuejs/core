@@ -121,6 +121,25 @@ describe('compiler: element transform', () => {
     expect(node.tag).toBe(`Example`)
   })
 
+  test('resolve component from scoped slot bindings', () => {
+    const { root, node } = parseWithElementTransform(
+      `<Example v-slot="{Foo}"><Foo /></Example>`,
+      {
+        inline: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+        identifiers: {
+          Foo: 1,
+        },
+      },
+    )
+
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(root.components).not.toContain('Foo')
+    expect(node.tag).toBe(`Example`)
+  })
+
   test('resolve namespaced component from setup bindings', () => {
     const { root, node } = parseWithElementTransform(`<Foo.Example/>`, {
       bindingMetadata: {
@@ -173,6 +192,25 @@ describe('compiler: element transform', () => {
     })
     expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
     expect(node.tag).toBe('_unref($props["Foo"]).Example')
+  })
+
+  test('resolve namespaced component from scoped slot bindings', () => {
+    const { root, node } = parseWithElementTransform(
+      `<Example v-slot="SlotProps"><SlotProps.Foo /></Example>`,
+      {
+        inline: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+        identifiers: {
+          SlotProps: 1,
+        },
+      },
+    )
+
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(root.components).not.toContain('SlotProps')
+    expect(node.tag).toBe(`Example`)
   })
 
   test('do not resolve component from non-script-setup bindings', () => {

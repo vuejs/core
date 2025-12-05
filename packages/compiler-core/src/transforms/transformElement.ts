@@ -282,7 +282,24 @@ export function resolveComponentType(
     return builtIn
   }
 
-  // 3. user component (from setup bindings)
+  // 3. component from slot props
+  // this is skipped in browser build since browser builds do not perform
+  // identifier tracking.
+  if (!__BROWSER__) {
+    if (context.identifiers[tag]) {
+      return tag
+    }
+
+    const dotIndex = tag.indexOf('.')
+    if (dotIndex > 0) {
+      const ns = tag.slice(0, dotIndex)
+      if (context.identifiers[ns]) {
+        return ns + tag.slice(dotIndex)
+      }
+    }
+  }
+
+  // 4. user component (from setup bindings)
   // this is skipped in browser build since browser builds do not perform
   // binding analysis.
   if (!__BROWSER__) {
@@ -299,7 +316,7 @@ export function resolveComponentType(
     }
   }
 
-  // 4. Self referencing component (inferred from filename)
+  // 5. Self referencing component (inferred from filename)
   if (
     !__BROWSER__ &&
     context.selfName &&
@@ -313,7 +330,7 @@ export function resolveComponentType(
     return toValidAssetId(tag, `component`)
   }
 
-  // 5. user component (resolve)
+  // 6. user component (resolve)
   context.helper(RESOLVE_COMPONENT)
   context.components.add(tag)
   return toValidAssetId(tag, `component`)
