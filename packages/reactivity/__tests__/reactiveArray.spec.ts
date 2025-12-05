@@ -96,7 +96,7 @@ describe('reactivity/reactive/Array', () => {
 
     function instrumentArr(rawTarget: any[]) {
       identityMethods.forEach(key => {
-        const spy = vi.fn(rawTarget[key] as any)
+        const spy = vi.fn(rawTarget[key] as any) as any
         rawTarget[key] = spy
       })
     }

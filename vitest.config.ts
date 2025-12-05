@@ -1,5 +1,6 @@
 import { configDefaults, defineConfig } from 'vitest/config'
 import { entries } from './scripts/aliases.js'
+import { playwright } from '@vitest/browser-playwright'
 
 export default defineConfig({
   define: {
@@ -52,7 +53,7 @@ export default defineConfig({
         'packages/runtime-dom/src/components/Transition*',
       ],
     },
-    workspace: [
+    projects: [
       {
         extends: true,
         test: {
@@ -89,17 +90,33 @@ export default defineConfig({
         },
       },
       {
-        extends: true,
+        extends: './packages-private/vapor-e2e-test/vite.config.ts',
+        root: './packages-private/vapor-e2e-test',
         test: {
+          globals: true,
+          isolate: true,
           name: 'e2e-vapor',
-          poolOptions: {
-            threads: {
-              singleThread: !!process.env.CI,
-            },
+          setupFiles: ['./__tests__/setupBrowser.ts'],
+          browser: {
+            enabled: true,
+            provider: playwright({
+              launchOptions: {
+                args: process.env.CI
+                  ? ['--no-sandbox', '--disable-setuid-sandbox']
+                  : [],
+              },
+            }),
+            headless: true,
+            instances: [{ browser: 'chromium' }],
           },
-          include: ['packages-private/vapor-e2e-test/__tests__/*.spec.ts'],
+          include: ['./__tests__/*.spec.ts'],
         },
       },
     ],
+    onConsoleLog(log) {
+      if (log.startsWith('You are running a development build of Vue.')) {
+        return false
+      }
+    },
   },
 })
