@@ -15,6 +15,12 @@ import alias from '@rollup/plugin-alias'
 import { entries } from './scripts/aliases.js'
 import { inlineEnums } from './scripts/inline-enums.js'
 import { minify as minifySwc } from '@swc/core'
+import {
+  resolveCJSIgnores,
+  resolveDefines,
+  resolveEntryFile,
+  resolveExternal as resolveExternalShared,
+} from './scripts/build-shared.js'
 
 /**
  * @template T
@@ -32,7 +38,6 @@ const require = createRequire(import.meta.url)
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
 const masterVersion = require('./package.json').version
-const consolidatePkg = require('@vue/consolidate/package.json')
 
 const privatePackages = fs.readdirSync('packages-private')
 const pkgBase = privatePackages.includes(process.env.TARGET)
@@ -156,54 +161,19 @@ function createConfig(format, output, plugins = []) {
     output.name = packageOptions.name
   }
 
-  let entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
-
-  // the compat build needs both default AND named exports. This will cause
-  // Rollup to complain for non-ESM targets, so we use separate entries for
-  // esm vs. non-esm builds.
-  if (isCompatPackage && (isBrowserESMBuild || isBundlerESMBuild)) {
-    entryFile = /runtime$/.test(format)
-      ? `src/esm-runtime.ts`
-      : `src/esm-index.ts`
-  }
+  // Use shared function for entry file resolution
+  const entryFile = resolveEntryFile(format, isCompatPackage)
 
   function resolveDefine() {
-    /** @type {Record<string, string>} */
-    const replacements = {
-      __COMMIT__: `"${process.env.COMMIT}"`,
-      __VERSION__: `"${masterVersion}"`,
-      // this is only used during Vue's internal tests
-      __TEST__: `false`,
-      // If the build is expected to run directly in the browser (global / esm builds)
-      __BROWSER__: String(isBrowserBuild),
-      __GLOBAL__: String(isGlobalBuild),
-      __ESM_BUNDLER__: String(isBundlerESMBuild),
-      __ESM_BROWSER__: String(isBrowserESMBuild),
-      // is targeting Node (SSR)?
-      __CJS__: String(isCJSBuild),
-      // need SSR-specific branches?
-      __SSR__: String(!isGlobalBuild),
-
-      // 2.x compat build
-      __COMPAT__: String(isCompatBuild),
-
-      // feature flags
-      __FEATURE_SUSPENSE__: `true`,
-      __FEATURE_OPTIONS_API__: isBundlerESMBuild
-        ? `__VUE_OPTIONS_API__`
-        : `true`,
-      __FEATURE_PROD_DEVTOOLS__: isBundlerESMBuild
-        ? `__VUE_PROD_DEVTOOLS__`
-        : `false`,
-      __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: isBundlerESMBuild
-        ? `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__`
-        : `false`,
-    }
-
-    if (!isBundlerESMBuild) {
-      // hard coded dev/prod builds
-      replacements.__DEV__ = String(!isProductionBuild)
-    }
+    // Use shared function for base defines
+    const replacements = resolveDefines({
+      pkg,
+      format,
+      target: process.env.TARGET,
+      prod: isProductionBuild,
+      version: masterVersion,
+      commit: process.env.COMMIT || 'dev',
+    })
 
     // allow inline overrides like
     //__RUNTIME_COMPILE__=true pnpm build runtime-core
@@ -255,50 +225,21 @@ function createConfig(format, output, plugins = []) {
   }
 
   function resolveExternal() {
-    const treeShakenDeps = [
-      'source-map-js',
-      '@babel/parser',
-      'estree-walker',
-      'entities/lib/decode.js',
-    ]
-
-    if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
-      if (!packageOptions.enableNonBrowserBranches) {
-        // normal browser builds - non-browser only imports are tree-shaken,
-        // they are only listed here to suppress warnings.
-        return treeShakenDeps
-      }
-    } else {
-      // Node / esm-bundler builds.
-      // externalize all direct deps unless it's the compat build.
-      return [
-        ...Object.keys(pkg.dependencies || {}),
-        ...Object.keys(pkg.peerDependencies || {}),
-        // for @vue/compiler-sfc / server-renderer
-        ...['path', 'url', 'stream'],
-        // somehow these throw warnings for runtime-* package builds
-        ...treeShakenDeps,
-      ]
-    }
+    // Use shared function for external resolution
+    return resolveExternalShared({
+      pkg,
+      format,
+      target: process.env.TARGET,
+      isGlobalBuild,
+      isBrowserESMBuild,
+      isCompatPackage,
+      packageOptions,
+    })
   }
 
   function resolveNodePlugins() {
-    // we are bundling forked consolidate.js in compiler-sfc which dynamically
-    // requires a ton of template engines which should be ignored.
-    /** @type {ReadonlyArray<string>} */
-    let cjsIgnores = []
-    if (pkg.name === '@vue/compiler-sfc') {
-      cjsIgnores = [
-        ...Object.keys(consolidatePkg.devDependencies),
-        'vm',
-        'crypto',
-        'react-dom/server',
-        'teacup/lib/express',
-        'arc-templates/dist/es5',
-        'then-pug',
-        'then-jade',
-      ]
-    }
+    // Use shared function for CJS ignores
+    const cjsIgnores = resolveCJSIgnores(process.env.TARGET)
 
     const nodePlugins =
       (format === 'cjs' && Object.keys(pkg.devDependencies || {}).length) ||
