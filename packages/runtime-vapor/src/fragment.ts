@@ -151,20 +151,31 @@ export class DynamicFragment extends VaporFragment {
     this.render(render, transition, parent, instance)
 
     if (this.fallback) {
-      // set fallback for nested fragments
-      const hasNestedFragment = isFragment(this.nodes)
-      if (hasNestedFragment) {
-        setFragmentFallback(this.nodes as VaporFragment, this.fallback)
+      // Find the deepest invalid fragment
+      let invalidFragment: VaporFragment | null = null
+      if (isFragment(this.nodes)) {
+        setFragmentFallback(
+          this.nodes,
+          this.fallback,
+          (frag: VaporFragment) => {
+            if (!isValidBlock(frag.nodes)) {
+              invalidFragment = frag
+            }
+          },
+        )
       }
 
-      const invalidFragment = findInvalidFragment(this)
+      // Check self validity (when no nested fragment or nested is valid)
+      if (!invalidFragment && !isValidBlock(this.nodes)) {
+        invalidFragment = this
+      }
+
       if (invalidFragment) {
         parent && remove(this.nodes, parent)
         const scope = this.scope || (this.scope = new EffectScope())
         scope.run(() => {
-          // for nested fragments, render invalid fragment's fallback
-          if (hasNestedFragment) {
-            renderFragmentFallback(invalidFragment)
+          if (invalidFragment !== this) {
+            renderFragmentFallback(invalidFragment!)
           } else {
             this.nodes = this.fallback!() || []
           }
@@ -294,10 +305,28 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
+// Track which fallback has been set on each fragment
+// to avoid duplicate chaining when nested DynamicFragments call setFragmentFallback
+const processedFallbacks = new WeakMap<VaporFragment, BlockFn>()
+
 export function setFragmentFallback(
   fragment: VaporFragment,
   fallback: BlockFn,
+  onFragment?: (frag: VaporFragment) => void,
 ): void {
+  if (processedFallbacks.get(fragment) === fallback) {
+    // Already processed with this fallback, skip re-setting
+    // but still recurse since nodes may have changed
+    if (onFragment) onFragment(fragment)
+    if (isFragment(fragment.nodes)) {
+      setFragmentFallback(fragment.nodes, fragment.fallback!, onFragment)
+    }
+    return
+  }
+
+  // Mark as processed
+  processedFallbacks.set(fragment, fallback)
+
   if (fragment.fallback) {
     const originalFallback = fragment.fallback
     // if the original fallback also renders invalid blocks,
@@ -313,8 +342,10 @@ export function setFragmentFallback(
     fragment.fallback = fallback
   }
 
+  if (onFragment) onFragment(fragment)
+
   if (isFragment(fragment.nodes)) {
-    setFragmentFallback(fragment.nodes, fragment.fallback)
+    setFragmentFallback(fragment.nodes, fragment.fallback, onFragment)
   }
 }
 
@@ -326,14 +357,6 @@ function renderFragmentFallback(fragment: VaporFragment): void {
   } else {
     // vdom slots
   }
-}
-
-function findInvalidFragment(fragment: VaporFragment): VaporFragment | null {
-  if (isValidBlock(fragment.nodes)) return null
-
-  return isFragment(fragment.nodes)
-    ? findInvalidFragment(fragment.nodes) || fragment
-    : fragment
 }
 
 export function isFragment(val: NonNullable<unknown>): val is VaporFragment {
