@@ -32,7 +32,7 @@ describe('compiler: v-for', () => {
 
     expect(code).matchSnapshot()
     expect(helpers).contains('createFor')
-    expect(ir.template).toEqual(['<div> </div>'])
+    expect([...ir.template.keys()]).toEqual(['<div> </div>'])
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.FOR,
       id: 0,
@@ -156,7 +156,7 @@ describe('compiler: v-for', () => {
       `_createFor(() => (_for_item0.value), (_for_item1) => {`,
     )
     expect(code).contains(`_for_item1.value+_for_item0.value`)
-    expect(ir.template).toEqual(['<span> </span>', '<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<span> </span>', '<div></div>'])
     const parentOp = ir.block.dynamic.children[0].operation
     expect(parentOp).toMatchObject({
       type: IRNodeTypes.FOR,
@@ -367,5 +367,25 @@ describe('compiler: v-for', () => {
       key: undefined,
       index: undefined,
     })
+  })
+
+  test('v-for on component', () => {
+    const { code, ir } = compileWithVFor(
+      `<Comp v-for="item in list">{{item}}</Comp>`,
+    )
+    expect(code).matchSnapshot()
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).component,
+    ).toBe(true)
+  })
+
+  test('v-for on template with single component child', () => {
+    const { code, ir } = compileWithVFor(
+      `<template v-for="item in list"><Comp>{{item}}</Comp></template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).component,
+    ).toBe(true)
   })
 })

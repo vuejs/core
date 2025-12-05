@@ -429,7 +429,7 @@ export function defineComponent<
         Slots,
         {},
         {},
-        Exposed,
+        string, // Exposed
         TypeRefs,
         TypeEl,
         {},
@@ -463,7 +463,7 @@ export function defineComponent<
 }>
 
 // implementation, close to no-op
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function defineComponent(
   options: unknown,
   extraOptions?: ComponentOptions,

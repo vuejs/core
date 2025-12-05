@@ -1,8 +1,12 @@
-import { camelize, extend, isArray } from '@vue/shared'
+import { camelize, extend, getModifierPropName, isArray } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
+  type BlockIRNode,
   type CreateComponentIRNode,
+  type ForIRNode,
+  type IRDynamicInfo,
   IRDynamicPropsKind,
+  IRNodeTypes,
   type IRProp,
   type IRProps,
   type IRPropsStatic,
@@ -13,6 +17,8 @@ import {
   IRSlotType,
   type IRSlots,
   type IRSlotsStatic,
+  type IfIRNode,
+  type OperationNode,
   type SlotBlockIRNode,
 } from '../ir'
 import {
@@ -26,19 +32,26 @@ import {
   genCall,
   genMulti,
 } from './utils'
-import { genExpression } from './expression'
+import { genExpression, genVarName } from './expression'
 import { genPropKey, genPropValue } from './prop'
 import {
+  NodeTypes,
   type SimpleExpressionNode,
   createSimpleExpression,
   isMemberExpression,
   toValidAssetId,
-  walkIdentifiers,
 } from '@vue/compiler-dom'
 import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genBlock } from './block'
+import {
+  type DestructureMap,
+  type DestructureMapValue,
+  buildDestructureIdMap,
+  parseValueDestructure,
+} from './for'
 import { genModelHandler } from './vModel'
+import { isBuiltInComponent } from '../utils'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -53,13 +66,12 @@ export function genCreateComponent(
   const rawProps = context.withId(() => genRawProps(props, context), ids)
 
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
-    (acc, { name, value }) => {
-      const handler = genEventHandler(context, value, undefined, false)
+    (acc, { name, value }: InlineHandler) => {
+      const handler = genEventHandler(context, [value], undefined, false)
       return [...acc, `const ${name} = `, ...handler, NEWLINE]
     },
     [],
   )
-
   return [
     NEWLINE,
     ...inlineHandlers,
@@ -67,9 +79,11 @@ export function genCreateComponent(
     ...genCall(
       operation.dynamic && !operation.dynamic.isStatic
         ? helper('createDynamicComponent')
-        : operation.asset
-          ? helper('createComponentWithFallback')
-          : helper('createComponent'),
+        : operation.isCustomElement
+          ? helper('createPlainElement')
+          : operation.asset
+            ? helper('createComponentWithFallback')
+            : helper('createComponent'),
       tag,
       rawProps,
       rawSlots,
@@ -80,7 +94,9 @@ export function genCreateComponent(
   ]
 
   function genTag() {
-    if (operation.dynamic) {
+    if (operation.isCustomElement) {
+      return JSON.stringify(operation.tag)
+    } else if (operation.dynamic) {
       if (operation.dynamic.isStatic) {
         return genCall(
           helper('resolveDynamicComponent'),
@@ -92,8 +108,15 @@ export function genCreateComponent(
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
     } else {
+      const { tag } = operation
+      const builtInTag = isBuiltInComponent(tag)
+      if (builtInTag) {
+        // @ts-expect-error
+        helper(builtInTag)
+        return `_${builtInTag}`
+      }
       return genExpression(
-        extend(createSimpleExpression(operation.tag, false), { ast: null }),
+        extend(createSimpleExpression(tag, false), { ast: null }),
         context,
       )
     }
@@ -102,6 +125,7 @@ export function genCreateComponent(
 
 function getUniqueHandlerName(context: CodegenContext, name: string): string {
   const { seenInlineHandlerNames } = context
+  name = genVarName(name)
   const count = seenInlineHandlerNames[name] || 0
   seenInlineHandlerNames[name] = count + 1
   return count === 0 ? name : `${name}${count}`
@@ -127,7 +151,10 @@ function processInlineHandlers(
         const isMemberExp = isMemberExpression(value, context.options)
         // cache inline handlers (fn expression or inline statement)
         if (!isMemberExp) {
-          const name = getUniqueHandlerName(context, `_on_${prop.key.content}`)
+          const name = getUniqueHandlerName(
+            context,
+            `_on_${prop.key.content.replace(/-/g, '_')}`,
+          )
           handlers.push({ name, value })
           ids[name] = null
           // replace the original prop value with the handler name
@@ -210,8 +237,8 @@ function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
     ...(prop.handler
       ? genEventHandler(
           context,
-          prop.values[0],
-          undefined,
+          prop.values,
+          prop.handlerModifiers,
           true /* wrap handlers passed to components */,
         )
       : isStatic
@@ -240,9 +267,7 @@ function genModelModifiers(
   if (!modelModifiers || !modelModifiers.length) return []
 
   const modifiersKey = key.isStatic
-    ? key.content === 'modelValue'
-      ? [`modelModifiers`]
-      : [`${key.content}Modifiers`]
+    ? [getModifierPropName(key.content)]
     : ['[', ...genExpression(key, context), ' + "Modifiers"]']
 
   const modifiersVal = genDirectiveModifiers(modelModifiers)
@@ -391,44 +416,140 @@ function genConditionalSlot(
 }
 
 function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
-  let isDestructureAssignment = false
-  let rawProps: string | undefined
   let propsName: string | undefined
   let exitScope: (() => void) | undefined
   let depth: number | undefined
-  const { props } = oper
-  const idsOfProps = new Set<string>()
+  const { props, key, node } = oper
+  const idToPathMap: DestructureMap = props
+    ? parseValueDestructure(props, context)
+    : new Map<string, DestructureMapValue | null>()
 
   if (props) {
-    rawProps = props.content
-    if ((isDestructureAssignment = !!props.ast)) {
+    if (props.ast) {
       ;[depth, exitScope] = context.enterScope()
       propsName = `_slotProps${depth}`
-      walkIdentifiers(
-        props.ast,
-        (id, _, __, ___, isLocal) => {
-          if (isLocal) idsOfProps.add(id.name)
-        },
-        true,
-      )
     } else {
-      idsOfProps.add((propsName = rawProps))
+      propsName = props.content
     }
   }
 
-  const idMap: Record<string, string | null> = {}
+  const idMap = idToPathMap.size
+    ? buildDestructureIdMap(
+        idToPathMap,
+        propsName || '',
+        context.options.expressionPlugins,
+      )
+    : {}
 
-  idsOfProps.forEach(
-    id =>
-      (idMap[id] = isDestructureAssignment
-        ? `${propsName}[${JSON.stringify(id)}]`
-        : null),
-  )
-  const blockFn = context.withId(
-    () => genBlock(oper, context, [propsName]),
+  if (propsName) {
+    idMap[propsName] = null
+  }
+
+  let blockFn = context.withId(
+    () => genBlock(oper, context, propsName ? [propsName] : []),
     idMap,
   )
   exitScope && exitScope()
 
+  if (key) {
+    blockFn = [
+      `() => {`,
+      INDENT_START,
+      NEWLINE,
+      `return `,
+      ...genCall(
+        context.helper('createKeyedFragment'),
+        [`() => `, ...genExpression(key, context)],
+        blockFn,
+      ),
+      INDENT_END,
+      NEWLINE,
+      `}`,
+    ]
+  }
+
+  if (node.type === NodeTypes.ELEMENT) {
+    // wrap with withVaporCtx to track slot owner for:
+    // 1. createSlot to get correct rawSlots in forwarded slots
+    // 2. scopeId inheritance for components created inside slots
+    // Skip if slot content has no components or slot outlets
+    if (needsVaporCtx(oper)) {
+      blockFn = [`${context.helper('withVaporCtx')}(`, ...blockFn, `)`]
+    }
+  }
+
   return blockFn
+}
+
+/**
+ * Check if a slot block needs withVaporCtx wrapper.
+ * Returns true if the block contains:
+ * - Component creation (needs scopeId inheritance)
+ * - Slot outlet (needs rawSlots from slot owner)
+ */
+function needsVaporCtx(block: BlockIRNode): boolean {
+  return hasComponentOrSlotInBlock(block)
+}
+
+function hasComponentOrSlotInBlock(block: BlockIRNode): boolean {
+  // Check operations array
+  if (hasComponentOrSlotInOperations(block.operation)) return true
+  // Check dynamic children (components are often stored here)
+  return hasComponentOrSlotInDynamic(block.dynamic)
+}
+
+function hasComponentOrSlotInDynamic(dynamic: IRDynamicInfo): boolean {
+  // Check operation in this dynamic node
+  if (dynamic.operation) {
+    const type = dynamic.operation.type
+    if (
+      type === IRNodeTypes.CREATE_COMPONENT_NODE ||
+      type === IRNodeTypes.SLOT_OUTLET_NODE
+    ) {
+      return true
+    }
+    if (type === IRNodeTypes.IF) {
+      if (hasComponentOrSlotInIf(dynamic.operation as IfIRNode)) return true
+    }
+    if (type === IRNodeTypes.FOR) {
+      if (hasComponentOrSlotInBlock((dynamic.operation as ForIRNode).render))
+        return true
+    }
+  }
+  // Recursively check children
+  for (const child of dynamic.children) {
+    if (hasComponentOrSlotInDynamic(child)) return true
+  }
+  return false
+}
+
+function hasComponentOrSlotInOperations(operations: OperationNode[]): boolean {
+  for (const op of operations) {
+    switch (op.type) {
+      case IRNodeTypes.CREATE_COMPONENT_NODE:
+      case IRNodeTypes.SLOT_OUTLET_NODE:
+        return true
+      case IRNodeTypes.IF:
+        if (hasComponentOrSlotInIf(op as IfIRNode)) return true
+        break
+      case IRNodeTypes.FOR:
+        if (hasComponentOrSlotInBlock((op as ForIRNode).render)) return true
+        break
+    }
+  }
+  return false
+}
+
+function hasComponentOrSlotInIf(node: IfIRNode): boolean {
+  if (hasComponentOrSlotInBlock(node.positive)) return true
+  if (node.negative) {
+    if ('positive' in node.negative) {
+      // nested IfIRNode
+      return hasComponentOrSlotInIf(node.negative as IfIRNode)
+    } else {
+      // BlockIRNode
+      return hasComponentOrSlotInBlock(node.negative as BlockIRNode)
+    }
+  }
+  return false
 }

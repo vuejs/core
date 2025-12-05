@@ -9,9 +9,10 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import { type VaporComponentInstance, isVaporComponent } from './component'
+import { inOnceSlot } from './componentSlots'
 import { invokeArrayFns } from '@vue/shared'
 
-class RenderEffect extends ReactiveEffect {
+export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
   job: SchedulerJob
   updateJob: SchedulerJob
@@ -42,13 +43,16 @@ class RenderEffect extends ReactiveEffect {
           ? e => invokeArrayFns(instance.rtg!, e)
           : void 0
       }
+
+      if (__DEV__ || instance.type.ce) {
+        // register effect for stopping them during HMR rerender
+        ;(instance.renderEffects || (instance.renderEffects = [])).push(this)
+      }
       job.i = instance
     }
 
     this.job = job
     this.i = instance
-
-    // TODO recurse handling
   }
 
   fn(): void {
@@ -61,6 +65,7 @@ class RenderEffect extends ReactiveEffect {
     }
     const prev = setCurrentInstance(instance, scope)
     if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
+      // avoid recurse update until updateJob flushed
       instance.isUpdating = true
       instance.bu && invokeArrayFns(instance.bu)
       this.render()
@@ -83,6 +88,9 @@ class RenderEffect extends ReactiveEffect {
 }
 
 export function renderEffect(fn: () => void, noLifecycle = false): void {
+  // in once slot, just run the function directly
+  if (inOnceSlot) return fn()
+
   const effect = new RenderEffect(fn)
   if (noLifecycle) {
     effect.fn = fn

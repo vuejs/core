@@ -31,7 +31,7 @@ export function render(_ctx) {
   const n0 = _createComponentWithFallback(_component_Comp, {
     foo: () => (_ctx.foo),
     "onUpdate:foo": () => _value => (_ctx.foo = _value),
-    fooModifiers: () => ({ trim: true }), 
+    fooModifiers: () => ({ trim: true }),
     bar: () => (_ctx.bar),
     "onUpdate:bar": () => _value => (_ctx.bar = _value),
     barModifiers: () => ({ number: true })
@@ -59,7 +59,7 @@ export function render(_ctx) {
   const n0 = _createComponentWithFallback(_component_Comp, { $: [
     () => ({ [_ctx.foo]: _ctx.foo,
     ["onUpdate:" + _ctx.foo]: () => _value => (_ctx.foo = _value),
-    [_ctx.foo + "Modifiers"]: () => ({ trim: true }) }), 
+    [_ctx.foo + "Modifiers"]: () => ({ trim: true }) }),
     () => ({ [_ctx.bar]: _ctx.bar,
     ["onUpdate:" + _ctx.bar]: () => _value => (_ctx.bar = _value),
     [_ctx.bar + "Modifiers"]: () => ({ number: true }) })
@@ -77,6 +77,18 @@ export function render(_ctx) {
     () => ({ [_ctx.arg]: _ctx.foo,
     ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value) })
   ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model:model with arguments for component should generate modelModifiers$ 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponentWithFallback(_component_Comp, { model: () => (_ctx.foo),
+  "onUpdate:model": () => _value => (_ctx.foo = _value),
+  modelModifiers$: () => ({ trim: true }) }, null, true)
   return n0
 }"
 `;
@@ -225,7 +237,7 @@ const t0 = _template("<input>", true)
 export function render(_ctx) {
   const n0 = t0()
   _applyDynamicModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj]))
   return n0
 }"
 `;

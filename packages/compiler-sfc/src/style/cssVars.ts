@@ -14,6 +14,10 @@ import { getEscapedCssVarName } from '@vue/shared'
 
 export const CSS_VARS_HELPER = `useCssVars`
 
+export function getCssVarsHelper(vapor: boolean | undefined): string {
+  return vapor ? `useVaporCssVars` : CSS_VARS_HELPER
+}
+
 export function genCssVarsFromList(
   vars: string[],
   id: string,
@@ -40,7 +44,8 @@ function genVarName(
   isSSR = false,
 ): string {
   if (isProd) {
-    return hash(id + raw)
+    // hash must not start with a digit to comply with CSS custom property naming rules
+    return hash(id + raw).replace(/^\d/, r => `v${r}`)
   } else {
     // escape ASCII Punctuation & Symbols
     // #7823 need to double-escape in SSR because the attributes are rendered
@@ -167,6 +172,7 @@ export function genCssVarsCode(
   bindings: BindingMetadata,
   id: string,
   isProd: boolean,
+  vapor?: boolean,
 ) {
   const varsExp = genCssVarsFromList(vars, id, isProd)
   const exp = createSimpleExpression(varsExp, false)
@@ -187,7 +193,7 @@ export function genCssVarsCode(
           })
           .join('')
 
-  return `_${CSS_VARS_HELPER}(_ctx => (${transformedString}))`
+  return `_${getCssVarsHelper(vapor)}(_ctx => (${transformedString}))`
 }
 
 // <script setup> already gets the calls injected as part of the transform

@@ -1,10 +1,11 @@
 import {
+  type VaporDirective,
   createComponent,
   createTextNode,
   createVaporApp,
   defineVaporComponent,
-  // @ts-expect-error
-  withDirectives,
+  template,
+  withVaporDirectives,
 } from '../src'
 import {
   type GenericComponentInstance,
@@ -158,18 +159,17 @@ describe('api: createVaporApp', () => {
     expect(host.innerHTML).toBe(`foobar!barbaz!`)
   })
 
-  test.todo('directive', () => {
+  test('directive', () => {
     const spy1 = vi.fn()
     const spy2 = vi.fn()
 
     const { app, mount } = define({
       setup() {
-        const FooBar = resolveDirective('foo-bar')
-        const BarBaz = resolveDirective('bar-baz')
-        return withDirectives(document.createElement('div'), [
-          [FooBar],
-          [BarBaz],
-        ])
+        const FooBar = resolveDirective('foo-bar') as VaporDirective
+        const BarBaz = resolveDirective('bar-baz') as VaporDirective
+        const n0 = template('<div></div>')() as Element
+        withVaporDirectives(n0, [[FooBar], [BarBaz]])
+        return n0
       },
     }).create()
 
@@ -319,29 +319,7 @@ describe('api: createVaporApp', () => {
     })
   })
 
-  describe('config.performance', () => {
-    afterEach(() => {
-      window.performance.clearMeasures()
-    })
-
-    test('with performance enabled', () => {
-      const { app, mount } = define({ setup: () => [] }).create()
-
-      app.config.performance = true
-      mount()
-      expect(window.performance.getEntries()).lengthOf(2)
-    })
-
-    test('with performance disabled', () => {
-      const { app, mount } = define({ setup: () => [] }).create()
-
-      app.config.performance = false
-      mount()
-      expect(window.performance.getEntries()).lengthOf(0)
-    })
-  })
-
-  test('config.globalProperty', () => {
+  test.todo('config.globalProperty', () => {
     const { app } = define({
       setup() {
         return []
@@ -351,7 +329,7 @@ describe('api: createVaporApp', () => {
       app.config.globalProperties.msg = 'hello world'
     } catch (e) {}
     expect(
-      `app.config.globalProperties is not supported in vapor mode`,
+      `app.config.globalProperties is not supported in vapor mode components`,
     ).toHaveBeenWarned()
   })
 })

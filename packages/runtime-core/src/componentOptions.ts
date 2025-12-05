@@ -1,8 +1,8 @@
 import {
+  type AsyncComponentInternalOptions,
   type Component,
   type ComponentInternalInstance,
   type ComponentInternalOptions,
-  type ConcreteComponent,
   type Data,
   type InternalRenderFunction,
   type SetupContext,
@@ -129,6 +129,7 @@ export interface ComponentOptionsBase<
   DataVM = any,
 > extends LegacyOptions<DataVM, D, C, M, Mixin, Extends, I, Provide>,
     ComponentInternalOptions,
+    AsyncComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
     this: void,
@@ -187,26 +188,6 @@ export interface ComponentOptionsBase<
    * @internal
    */
   __ssrInlineRender?: boolean
-
-  /**
-   * marker for AsyncComponentWrapper
-   * @internal
-   */
-  __asyncLoader?: () => Promise<ConcreteComponent>
-  /**
-   * the inner component resolved by the AsyncComponentWrapper
-   * @internal
-   */
-  __asyncResolved?: ConcreteComponent
-  /**
-   * Exposed for lazy hydration
-   * @internal
-   */
-  __asyncHydrate?: (
-    el: Element,
-    instance: ComponentInternalInstance,
-    hydrate: () => void,
-  ) => void
 
   // Type differentiators ------------------------------------------------------
 
@@ -680,6 +661,7 @@ export function applyOptions(instance: ComponentInternalInstance): void {
         Object.defineProperty(exposed, key, {
           get: () => publicThis[key],
           set: val => (publicThis[key] = val),
+          enumerable: true,
         })
       })
     } else if (!instance.exposed) {
@@ -775,7 +757,7 @@ export function createWatcher(
 ): void {
   let getter = key.includes('.')
     ? createPathGetter(publicThis, key)
-    : () => (publicThis as any)[key]
+    : () => publicThis[key as keyof typeof publicThis]
 
   const options: WatchOptions = {}
   if (__COMPAT__) {
@@ -1118,7 +1100,7 @@ export type ComponentOptionsWithoutProps<
       S,
       LC,
       Directives,
-      Exposed
+      string
     >
   >
 
@@ -1180,7 +1162,7 @@ export type ComponentOptionsWithArrayProps<
       S,
       LC,
       Directives,
-      Exposed
+      string
     >
   >
 

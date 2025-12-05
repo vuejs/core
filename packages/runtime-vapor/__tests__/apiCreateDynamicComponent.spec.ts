@@ -63,6 +63,44 @@ describe('api: createDynamicComponent', () => {
     expect(html()).toBe('<baz></baz><!--dynamic-component-->')
   })
 
+  test('with v-once', async () => {
+    const val = shallowRef<any>(A)
+
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(() => val.value, null, null, true, true)
+      },
+    }).render()
+
+    expect(html()).toBe('AAA<!--dynamic-component-->')
+
+    val.value = B
+    await nextTick()
+    expect(html()).toBe('AAA<!--dynamic-component-->') // still AAA
+  })
+
+  test('fallback with v-once', async () => {
+    const val = shallowRef<any>('button')
+    const id = ref(0)
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(
+          () => val.value,
+          { id: () => id.value },
+          null,
+          true,
+          true,
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<button id="0"></button><!--dynamic-component-->')
+
+    id.value++
+    await nextTick()
+    expect(html()).toBe('<button id="0"></button><!--dynamic-component-->')
+  })
+
   test('render fallback with insertionState', async () => {
     const { html, mount } = define({
       setup() {
@@ -109,5 +147,36 @@ describe('api: createDynamicComponent', () => {
     current.value = CompB
     await nextTick()
     expect(html()).toBe('<div><div>B</div><!--dynamic-component--></div>')
+  })
+
+  test('fallback with dynamic slots', async () => {
+    const slotName = ref('default')
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(() => 'div', null, {
+          $: [
+            () => ({
+              name: slotName.value,
+              fn: () => template('<span>hi</span>')(),
+            }),
+          ] as any,
+        })
+      },
+    }).render()
+
+    expect(html()).toBe(
+      '<div><span>hi</span><!--slot--></div><!--dynamic-component-->',
+    )
+
+    // update slot name
+    slotName.value = 'custom'
+    await nextTick()
+    expect(html()).toBe('<div><!--slot--></div><!--dynamic-component-->')
+
+    slotName.value = 'default'
+    await nextTick()
+    expect(html()).toBe(
+      '<div><span>hi</span><!--slot--></div><!--dynamic-component-->',
+    )
   })
 })

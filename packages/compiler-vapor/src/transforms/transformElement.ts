@@ -1,4 +1,3 @@
-import { isValidHTMLNesting } from '@vue/compiler-dom'
 import {
   type AttributeNode,
   type ComponentNode,
@@ -7,10 +6,15 @@ import {
   ErrorCodes,
   NodeTypes,
   type PlainElementNode,
+  type RootNode,
   type SimpleExpressionNode,
+  type TemplateChildNode,
   createCompilerError,
   createSimpleExpression,
+  hasSingleChild,
+  isSingleIfBlock,
   isStaticArgOf,
+  isValidHTMLNesting,
 } from '@vue/compiler-dom'
 import {
   camelize,
@@ -33,10 +37,12 @@ import {
   type IRProps,
   type IRPropsDynamicAttribute,
   type IRPropsStatic,
+  type IRSlots,
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
-import { findProp } from '../utils'
+import { findProp, isBuiltInComponent } from '../utils'
+import { IMPORT_EXP_END, IMPORT_EXP_START } from '../generators/utils'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -46,6 +52,20 @@ export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
 export const transformElement: NodeTransform = (node, context) => {
   let effectIndex = context.block.effect.length
   const getEffectIndex = () => effectIndex++
+
+  // If the element is a component, we need to isolate its slots context.
+  // This ensures that slots defined for this component are not accidentally
+  // inherited by its children components.
+  let parentSlots: IRSlots[] | undefined
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    (node.tagType === ElementTypes.COMPONENT ||
+      context.options.isCustomElement(node.tag))
+  ) {
+    parentSlots = context.slots
+    context.slots = []
+  }
+
   return function postTransformElement() {
     ;({ node } = context)
     if (
@@ -57,7 +77,12 @@ export const transformElement: NodeTransform = (node, context) => {
     )
       return
 
-    const isComponent = node.tagType === ElementTypes.COMPONENT
+    // treat custom elements as components because the template helper cannot
+    // resolve them properly; they require creation via createElement
+    const isCustomElement = !!context.options.isCustomElement(node.tag)
+    const isComponent =
+      node.tagType === ElementTypes.COMPONENT || isCustomElement
+
     const isDynamicComponent = isComponentTag(node.tag)
     const propsResult = buildProps(
       node,
@@ -67,20 +92,7 @@ export const transformElement: NodeTransform = (node, context) => {
       getEffectIndex,
     )
 
-    let { parent } = context
-    while (
-      parent &&
-      parent.parent &&
-      parent.node.type === NodeTypes.ELEMENT &&
-      parent.node.tagType === ElementTypes.TEMPLATE
-    ) {
-      parent = parent.parent
-    }
-    const singleRoot =
-      context.root === parent &&
-      parent.node.children.filter(child => child.type !== NodeTypes.COMMENT)
-        .length === 1
-
+    const singleRoot = isSingleRoot(context)
     if (isComponent) {
       transformComponentElement(
         node as ComponentNode,
@@ -88,6 +100,7 @@ export const transformElement: NodeTransform = (node, context) => {
         singleRoot,
         context,
         isDynamicComponent,
+        isCustomElement,
       )
     } else {
       transformNativeElement(
@@ -98,7 +111,40 @@ export const transformElement: NodeTransform = (node, context) => {
         getEffectIndex,
       )
     }
+
+    if (parentSlots) {
+      context.slots = parentSlots
+    }
   }
+}
+
+function isSingleRoot(
+  context: TransformContext<RootNode | TemplateChildNode>,
+): boolean {
+  if (context.inVFor) {
+    return false
+  }
+
+  let { parent } = context
+  if (
+    parent &&
+    !(hasSingleChild(parent.node) || isSingleIfBlock(parent.node))
+  ) {
+    return false
+  }
+  while (
+    parent &&
+    parent.parent &&
+    parent.node.type === NodeTypes.ELEMENT &&
+    parent.node.tagType === ElementTypes.TEMPLATE
+  ) {
+    parent = parent.parent
+    if (!(hasSingleChild(parent.node) || isSingleIfBlock(parent.node))) {
+      return false
+    }
+  }
+
+  return context.root === parent
 }
 
 function transformComponentElement(
@@ -107,6 +153,7 @@ function transformComponentElement(
   singleRoot: boolean,
   context: TransformContext,
   isDynamicComponent: boolean,
+  isCustomElement: boolean,
 ) {
   const dynamicComponent = isDynamicComponent
     ? resolveDynamicComponent(node)
@@ -115,10 +162,16 @@ function transformComponentElement(
   let { tag } = node
   let asset = true
 
-  if (!dynamicComponent) {
+  if (!dynamicComponent && !isCustomElement) {
     const fromSetup = resolveSetupReference(tag, context)
     if (fromSetup) {
       tag = fromSetup
+      asset = false
+    }
+
+    const builtInTag = isBuiltInComponent(tag)
+    if (builtInTag) {
+      tag = builtInTag
       asset = false
     }
 
@@ -150,10 +203,11 @@ function transformComponentElement(
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
     asset,
-    root: singleRoot && !context.inVFor,
+    root: singleRoot,
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,
+    isCustomElement,
   }
   context.slots = []
 }
@@ -192,6 +246,9 @@ function resolveSetupReference(name: string, context: TransformContext) {
         : undefined
 }
 
+// keys cannot be a part of the template and need to be set dynamically
+const dynamicKeys = ['indeterminate']
+
 function transformNativeElement(
   node: PlainElementNode,
   propsResult: PropsResult,
@@ -216,16 +273,31 @@ function transformNativeElement(
         type: IRNodeTypes.SET_DYNAMIC_PROPS,
         element: context.reference(),
         props: dynamicArgs,
-        root: singleRoot,
+        tag,
       },
       getEffectIndex,
     )
   } else {
     for (const prop of propsResult[1]) {
       const { key, values } = prop
-      if (key.isStatic && values.length === 1 && values[0].isStatic) {
+      // handling asset imports
+      if (
+        context.imports.some(imported =>
+          values[0].content.includes(imported.exp.content),
+        )
+      ) {
+        // add start and end markers to the import expression, so it can be replaced
+        // with string concatenation in the generator, see genTemplates
+        template += ` ${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
+      } else if (
+        key.isStatic &&
+        values.length === 1 &&
+        (values[0].isStatic || values[0].content === "''") &&
+        !dynamicKeys.includes(key.content)
+      ) {
         template += ` ${key.content}`
-        if (values[0].content) template += `="${values[0].content}"`
+        if (values[0].content)
+          template += `="${values[0].content === "''" ? '' : values[0].content}"`
       } else {
         dynamicProps.push(key.content)
         context.registerEffect(
@@ -234,7 +306,6 @@ function transformNativeElement(
             type: IRNodeTypes.SET_PROP,
             element: context.reference(),
             prop,
-            root: singleRoot,
             tag,
           },
           getEffectIndex,
@@ -250,7 +321,7 @@ function transformNativeElement(
   }
 
   if (singleRoot) {
-    context.ir.rootTemplateIndex = context.ir.template.length
+    context.ir.rootTemplateIndexes.add(context.ir.template.size)
   }
 
   if (
@@ -437,8 +508,10 @@ function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
     }
     const name = prop.key.content
     const existing = knownProps.get(name)
-    if (existing) {
-      if (name === 'style' || name === 'class') {
+    // prop names and event handler names can be the same but serve different purposes
+    // e.g. `:appear="true"` is a prop while `@appear="handler"` is an event handler
+    if (existing && existing.handler === prop.handler) {
+      if (name === 'style' || name === 'class' || prop.handler) {
         mergePropValues(existing, prop)
       }
       // unexpected duplicate, should have emitted error during parse
