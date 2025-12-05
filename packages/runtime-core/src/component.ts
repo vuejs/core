@@ -116,8 +116,8 @@ export type Data = Record<string, unknown>
  */
 export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
   ? InstanceType<T>
-  : T extends FunctionalComponent<infer Props, infer Emits>
-    ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>
+  : T extends FunctionalComponent<infer Props, any, any, infer Emits>
+    ? ComponentPublicInstance<Props, {}, {}, {}, {}, Emits>
     : T extends Component<
           infer PropsOrInstance,
           infer RawBindings,
@@ -250,17 +250,17 @@ export interface AsyncComponentInternalOptions<
 
 export interface FunctionalComponent<
   P = {},
-  E extends EmitsOptions | Record<string, any[]> = {},
+  E extends EmitsOptions | Record<string, any[]> = string[],
   S extends Record<string, any> = any,
   EE extends EmitsOptions = ShortEmitsToObject<E>,
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (
-    props: P & EmitsToProps<EE>,
+    props: P & EmitsToProps<string[] extends E ? {} : EE>,
     ctx: Omit<SetupContext<EE, IfAny<S, {}, SlotsType<S>>>, 'expose'>,
   ): any
   props?: ComponentPropsOptions<P>
-  emits?: EE | (keyof EE)[]
+  emits?: EE extends string[] ? EE : (keyof EE)[] | EE
   slots?: IfAny<S, Slots, SlotsType<S>>
   inheritAttrs?: boolean
   displayName?: string
@@ -295,10 +295,18 @@ export type ConcreteComponent<
   D = any,
   C extends ComputedOptions = ComputedOptions,
   M extends MethodOptions = MethodOptions,
-  E extends EmitsOptions | Record<string, any[]> = {},
+  E extends EmitsOptions | Record<string, any[]> = string[],
   S extends Record<string, any> = any,
 > =
-  | ComponentOptions<Props, RawBindings, D, C, M>
+  | ComponentOptions<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      ComponentOptions,
+      ComponentOptions
+    >
   | FunctionalComponent<Props, E, S>
 
 /**
@@ -311,7 +319,7 @@ export type Component<
   D = any,
   C extends ComputedOptions = ComputedOptions,
   M extends MethodOptions = MethodOptions,
-  E extends EmitsOptions | Record<string, any[]> = {},
+  E extends EmitsOptions | Record<string, any[]> = string[],
   S extends Record<string, any> = any,
 > =
   | ConcreteComponent<PropsOrInstance, RawBindings, D, C, M, E, S>
@@ -323,13 +331,13 @@ export type LifecycleHook<TFn = Function> = (TFn & SchedulerJob)[] | null
 
 // use `E extends any` to force evaluating type to fix #2362
 export type SetupContext<
-  E = EmitsOptions,
+  E extends EmitsOptions | Record<string, any[]> = EmitsOptions,
   S extends SlotsType = {},
 > = E extends any
   ? {
       attrs: Data
       slots: UnwrapSlotsType<S>
-      emit: EmitFn<E>
+      emit: EmitFn<ShortEmitsToObject<E>>
       expose: <Exposed extends Record<string, any> = Record<string, any>>(
         exposed?: Exposed,
       ) => void

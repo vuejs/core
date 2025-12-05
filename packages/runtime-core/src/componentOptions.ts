@@ -64,8 +64,9 @@ import type { Directive } from './directives'
 import {
   type ComponentPublicInstance,
   type CreateComponentPublicInstanceWithMixins,
-  type IntersectionMixin,
-  type UnwrapMixinsType,
+  type ExtractMixinEmits,
+  type ExtractMixinProps,
+  type ExtractMixinTypeProps,
   isReservedPrefix,
 } from './componentPublicInstance'
 import { warn } from './warning'
@@ -125,7 +126,8 @@ export interface ComponentOptionsBase<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II, Provide>,
+  DataVM = any,
+> extends LegacyOptions<DataVM, D, C, M, Mixin, Extends, I, Provide>,
     ComponentInternalOptions,
     AsyncComponentInternalOptions,
     ComponentCustomOptions {
@@ -133,12 +135,12 @@ export interface ComponentOptionsBase<
     this: void,
     props: LooseRequired<
       Props &
-        Prettify<
-          UnwrapMixinsType<
-            IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
-            'P'
-          >
-        >
+        ExtractPropTypes<
+          ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>
+        > &
+        ExtractMixinTypeProps<Mixin> &
+        ExtractMixinTypeProps<Extends> &
+        EmitsToProps<ExtractMixinEmits<Mixin> & ExtractMixinEmits<Extends> & {}>
     >,
     ctx: SetupContext<E, S>,
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
@@ -150,14 +152,10 @@ export interface ComponentOptionsBase<
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
-  // NOTE: extending both LC and Record<string, Component> allows objects to be forced
-  // to be of type Component, while still inferring LC generic
-  components?: LC & Record<string, Component>
-  // NOTE: extending both Directives and Record<string, Directive> allows objects to be forced
-  // to be of type Directive, while still inferring Directives generic
-  directives?: Directives & Record<string, Directive>
+  components?: LC
+  directives?: Directives
   inheritAttrs?: boolean
-  emits?: (E | EE[]) & ThisType<void>
+  emits?: E
   slots?: S
   expose?: Exposed[]
   serverPrefetch?(): void | Promise<any>
@@ -203,8 +201,6 @@ export interface ComponentOptionsBase<
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-
-  __defaults?: Defaults
 }
 
 /**
@@ -223,8 +219,8 @@ export type ComponentOptions<
   D = any,
   C extends ComputedOptions = any,
   M extends MethodOptions = any,
-  Mixin extends ComponentOptionsMixin = any,
-  Extends extends ComponentOptionsMixin = any,
+  Mixin extends ComponentOptionsMixin = {},
+  Extends extends ComponentOptionsMixin = {},
   E extends EmitsOptions = any,
   EE extends string = string,
   Defaults = {},
@@ -249,8 +245,8 @@ export type ComponentOptions<
   I,
   II,
   S,
-  LC,
-  Directives,
+  Record<string, ComponentOptions> | LC,
+  Record<string, Directive> | Directives,
   Exposed,
   Provide
 > &
@@ -273,26 +269,6 @@ export type ComponentOptions<
       Directives
     >
   >
-
-export type ComponentOptionsMixin = ComponentOptionsBase<
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any
->
 
 export type ComputedOptions = Record<
   string,
@@ -327,7 +303,7 @@ type ObjectProvideOptions = Record<string | symbol, unknown>
 
 export type ComponentInjectOptions = string[] | ObjectInjectOptions
 
-type ObjectInjectOptions = Record<
+export type ObjectInjectOptions = Record<
   string | symbol,
   string | symbol | { from?: string | symbol; default?: unknown }
 >
@@ -344,14 +320,13 @@ export type InjectToObject<T extends ComponentInjectOptions> =
       : never
 
 interface LegacyOptions<
-  Props,
+  DataVM,
   D,
   C extends ComputedOptions,
   M extends MethodOptions,
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin,
   I extends ComponentInjectOptions,
-  II extends string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
 > {
   compatConfig?: CompatConfig
@@ -359,35 +334,12 @@ interface LegacyOptions<
   // allow any custom options
   [key: string]: any
 
-  // state
-  // Limitation: we cannot expose RawBindings on the `this` context for data
-  // since that leads to some sort of circular inference and breaks ThisType
-  // for the entire component.
-  data?: (
-    this: CreateComponentPublicInstanceWithMixins<
-      Props,
-      {},
-      {},
-      {},
-      MethodOptions,
-      Mixin,
-      Extends
-    >,
-    vm: CreateComponentPublicInstanceWithMixins<
-      Props,
-      {},
-      {},
-      {},
-      MethodOptions,
-      Mixin,
-      Extends
-    >,
-  ) => D
+  data?: (this: DataVM, vm: DataVM) => D
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions
   provide?: Provide
-  inject?: I | II[]
+  inject?: I
 
   // assets
   filters?: Record<string, Function>
@@ -420,16 +372,6 @@ interface LegacyOptions<
    * @deprecated use `compilerOptions.delimiters` instead.
    */
   delimiters?: [string, string]
-
-  /**
-   * #3468
-   *
-   * type-only, used to assist Mixin's type inference,
-   * TypeScript will try to simplify the inferred `Mixin` type,
-   * with the `__differentiator`, TypeScript won't be able to combine different mixins,
-   * because the `__differentiator` will be different
-   */
-  __differentiator?: keyof D | keyof C | keyof M
 }
 
 type MergedHook<T = () => void> = T | T[]
@@ -455,24 +397,6 @@ export type MergedComponentOptionsOverride = {
   renderTracked?: MergedHook<DebuggerHook>
   renderTriggered?: MergedHook<DebuggerHook>
   errorCaptured?: MergedHook<ErrorCapturedHook>
-}
-
-export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'
-
-export type OptionTypesType<
-  P = {},
-  B = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Defaults = {},
-> = {
-  P: P
-  B: B
-  D: D
-  C: C
-  M: M
-  Defaults: Defaults
 }
 
 enum OptionTypes {
@@ -959,9 +883,7 @@ export function mergeOptions(
     mergeOptions(to, extendsOptions, strats, true)
   }
   if (mixins) {
-    mixins.forEach((m: ComponentOptionsMixin) =>
-      mergeOptions(to, m, strats, true),
-    )
+    mixins.forEach((m: {}) => mergeOptions(to, m, strats, true))
   }
 
   for (const key in from) {
@@ -1106,15 +1028,20 @@ function mergeWatchOptions(
 /**
  * @deprecated
  */
+export type ComponentOptionsMixin = {}
+
+/**
+ * @deprecated
+ */
 export type ComponentOptionsWithoutProps<
   Props = {},
   RawBindings = {},
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
+  Mixin extends ComponentOptionsMixin = {},
+  Extends extends ComponentOptionsMixin = {},
+  E extends EmitsOptions = string[],
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
@@ -1186,8 +1113,8 @@ export type ComponentOptionsWithArrayProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Mixin extends ComponentOptionsMixin = {},
+  Extends extends ComponentOptionsMixin = {},
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   I extends ComponentInjectOptions = {},
@@ -1248,8 +1175,8 @@ export type ComponentOptionsWithObjectProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Mixin extends ComponentOptionsMixin = {},
+  Extends extends ComponentOptionsMixin = {},
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   I extends ComponentInjectOptions = {},

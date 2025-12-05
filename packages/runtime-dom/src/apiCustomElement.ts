@@ -6,20 +6,19 @@ import {
   type ComponentObjectPropsOptions,
   type ComponentOptions,
   type ComponentOptionsBase,
-  type ComponentOptionsMixin,
   type ComponentProvideOptions,
-  type ComponentPublicInstance,
   type ComputedOptions,
   type ConcreteComponent,
   type CreateAppFunction,
   type CreateComponentPublicInstanceWithMixins,
-  type DefineComponent,
   type Directive,
-  type EmitsOptions,
   type EmitsToProps,
+  type ExtractMixinProps,
   type ExtractPropTypes,
   type GenericComponentInstance,
   type MethodOptions,
+  type ObjectEmitsOptions,
+  type ObjectInjectOptions,
   type RenderFunction,
   type SetupContext,
   type SlotsType,
@@ -33,6 +32,7 @@ import {
   warn,
 } from '@vue/runtime-core'
 import {
+  type Prettify,
   camelize,
   extend,
   hasOwn,
@@ -41,7 +41,7 @@ import {
   isPlainObject,
   toNumber,
 } from '@vue/shared'
-import { createApp, createSSRApp, render } from '.'
+import { type ComponentOptionsMixin, createApp, createSSRApp, render } from '.'
 
 // marker for attr removal
 const REMOVAL = {}
@@ -80,89 +80,91 @@ export function defineCustomElement<Props, RawBindings = object>(
 // overload 2: defineCustomElement with options object, infer props from options
 export function defineCustomElement<
   // props
-  RuntimePropsOptions extends
-    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
-  PropsKeys extends string = string,
+  RuntimePropsOptions extends ComponentObjectPropsOptions = {},
   // emits
-  RuntimeEmitsOptions extends EmitsOptions = {},
-  EmitsKeys extends string = string,
+  RuntimeEmitsOptions extends ObjectEmitsOptions = {},
   // other options
   Data = {},
   SetupBindings = {},
   Computed extends ComputedOptions = {},
   Methods extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Mixin extends ComponentOptionsMixin = {},
+  Extends extends ComponentOptionsMixin = {},
   InjectOptions extends ComponentInjectOptions = {},
-  InjectKeys extends string = string,
   Slots extends SlotsType = {},
   LocalComponents extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  // assisted input types
+  _PropsKeys extends string = string,
+  _EmitsKeys extends string = string,
+  _InjectKeys extends string = string,
   // resolved types
-  InferredProps = string extends PropsKeys
-    ? ComponentObjectPropsOptions extends RuntimePropsOptions
-      ? {}
-      : ExtractPropTypes<RuntimePropsOptions>
-    : { [key in PropsKeys]?: any },
+  InferredProps = RuntimePropsOptions extends (infer Keys extends string)[]
+    ? { [K in Keys]?: any }
+    : ExtractPropTypes<RuntimePropsOptions>,
   ResolvedProps = InferredProps & EmitsToProps<RuntimeEmitsOptions>,
+  PublicP = ResolvedProps &
+    Prettify<
+      ExtractPropTypes<ExtractMixinProps<Mixin> & ExtractMixinProps<Extends>>
+    >,
+  InternalInstance = CreateComponentPublicInstanceWithMixins<
+    Readonly<ResolvedProps>,
+    SetupBindings,
+    Data,
+    Computed,
+    Methods,
+    Mixin,
+    Extends,
+    RuntimeEmitsOptions,
+    _EmitsKeys,
+    {},
+    false,
+    InjectOptions,
+    Slots,
+    LocalComponents,
+    Directives,
+    Exposed
+  >,
 >(
   options: CustomElementOptions & {
-    props?: (RuntimePropsOptions & ThisType<void>) | PropsKeys[]
+    props?:
+      | ComponentObjectPropsOptions
+      | (RuntimePropsOptions & ThisType<void>)
+      | _PropsKeys[]
   } & ComponentOptionsBase<
-      ResolvedProps,
+      InferredProps,
       SetupBindings,
       Data,
       Computed,
       Methods,
       Mixin,
       Extends,
-      RuntimeEmitsOptions,
-      EmitsKeys,
-      {}, // Defaults
-      InjectOptions,
-      InjectKeys,
+      | ObjectEmitsOptions
+      | (RuntimeEmitsOptions & ThisType<void>)
+      | _EmitsKeys[],
+      never,
+      never,
+      ObjectInjectOptions | InjectOptions | _InjectKeys[],
+      never,
       Slots,
       LocalComponents,
       Directives,
       Exposed,
-      Provide
+      Provide,
+      InternalInstance
     > &
-    ThisType<
-      CreateComponentPublicInstanceWithMixins<
-        Readonly<ResolvedProps>,
-        SetupBindings,
-        Data,
-        Computed,
-        Methods,
-        Mixin,
-        Extends,
-        RuntimeEmitsOptions,
-        EmitsKeys,
-        {},
-        false,
-        InjectOptions,
-        Slots,
-        LocalComponents,
-        Directives,
-        Exposed
-      >
-    >,
+    ThisType<NoInfer<InternalInstance>>,
   extraOptions?: CustomElementOptions,
 ): VueElementConstructor<ResolvedProps>
 
 // overload 3: defining a custom element from the returned value of
 // `defineComponent`
-export function defineCustomElement<
-  // this should be `ComponentPublicInstanceConstructor` but that type is not exported
-  T extends { new (...args: any[]): ComponentPublicInstance<any> },
->(
-  options: T,
+export function defineCustomElement<P>(
+  options: { props?: P },
   extraOptions?: CustomElementOptions,
-): VueElementConstructor<
-  T extends DefineComponent<infer P, any, any, any> ? P : unknown
->
+): VueElementConstructor<ExtractPropTypes<P>>
 
 /*@__NO_SIDE_EFFECTS__*/
 export function defineCustomElement(

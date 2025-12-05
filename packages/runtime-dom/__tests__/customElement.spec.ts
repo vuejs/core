@@ -4,6 +4,7 @@ import {
   type Ref,
   Teleport,
   type VueElement,
+  type VueElementConstructor,
   createApp,
   defineAsyncComponent,
   defineComponent,
@@ -1268,7 +1269,7 @@ describe('defineCustomElement', () => {
     })
 
     test('set DOM property before resolve', async () => {
-      const E = defineCustomElement(
+      const E: VueElementConstructor<any> = defineCustomElement(
         defineAsyncComponent(() => {
           return Promise.resolve({
             props: ['msg'],
