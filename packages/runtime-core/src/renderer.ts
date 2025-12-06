@@ -1239,6 +1239,7 @@ function baseCreateRenderer(
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
         initialVNode.placeholder = placeholder.el
+        updateHOCHostEl(instance, placeholder.el)
       }
     } else {
       setupRenderEffect(

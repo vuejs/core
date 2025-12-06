@@ -2395,4 +2395,67 @@ describe('Suspense', () => {
       expect(unmounted).toHaveBeenCalledTimes(1)
     })
   })
+
+  // #14173
+  test('renders multiple async components in Suspense with v-for and updates list order with HOC', async () => {
+    const CompAsyncSetup = defineAsyncComponent({
+      props: ['item'],
+      render(ctx: any) {
+        return h('div', ctx.item.name)
+      },
+    })
+
+    const CompWrapper = {
+      props: ['item'],
+      render(ctx: any) {
+        return h(CompAsyncSetup, { item: ctx.item })
+      },
+    }
+
+    const items = ref([
+      { id: 1, name: '111' },
+      { id: 2, name: '222' },
+      { id: 3, name: '333' },
+    ])
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: () =>
+              h('div', [
+                h(
+                  Fragment,
+                  null,
+                  items.value.map(item =>
+                    h(CompWrapper, { item, key: item.id }),
+                  ),
+                ),
+              ]),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    await nextTick()
+    await Promise.all(deps)
+
+    expect(serializeInner(root)).toBe(
+      `<div><div>111</div><div>222</div><div>333</div></div>`,
+    )
+
+    items.value = [
+      { id: 4, name: '444' },
+      { id: 5, name: '555' },
+      { id: 6, name: '666' },
+    ]
+
+    await nextTick()
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(
+      `<div><div>444</div><div>555</div><div>666</div></div>`,
+    )
+  })
 })
