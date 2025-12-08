@@ -977,7 +977,7 @@ function handleSetupResult(
     // - setup returning non-block state for use in render
     // support setup fn and render fn co-usage for defineComponent expose
     if (!isBlock(setupResult) && component.render) {
-      instance.setupState = setupResult
+      instance.setupState = proxyRefs(setupResult)
       instance.block =
         callWithErrorHandling(
           component.render,
