@@ -193,8 +193,8 @@ export function defineOptions<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Mixin extends ComponentOptionsMixin = {},
+  Extends extends ComponentOptionsMixin = {},
 >(
   options?: ComponentOptionsBase<
     {},
@@ -206,6 +206,10 @@ export function defineOptions<
     Extends,
     {}
   > & {
+    /**
+     * setup should be defined via `<script setup>`.
+     */
+    setup?: never
     /**
      * props should be defined via defineProps().
      */

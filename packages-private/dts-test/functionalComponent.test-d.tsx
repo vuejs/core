@@ -59,14 +59,14 @@ expectType<JSX.Element>(<Bar foo={1} onUpdate={() => {}} />)
 //  @ts-expect-error
 ;<Foo baz="bar" />
 
-const Baz: FunctionalComponent<{}, string[]> = (props, { emit }) => {
+const Baz: FunctionalComponent = (props, { emit }) => {
   expectType<{}>(props)
   expectType<(event: string) => void>(emit)
 }
 
 expectType<Component>(Baz)
 
-const Qux: FunctionalComponent<{}, ['foo', 'bar']> = (props, { emit }) => {
+const Qux: FunctionalComponent<{}, ('foo' | 'bar')[]> = (props, { emit }) => {
   emit('foo')
   emit('foo', 1, 2)
   emit('bar')
@@ -77,7 +77,7 @@ expectType<Component>(Qux)
 
 const Quux: FunctionalComponent<
   {},
-  {},
+  string[],
   {
     default: { foo: number }
     optional?: { foo: number }

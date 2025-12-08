@@ -152,8 +152,11 @@ describe('component props', () => {
     render(
       h(Comp, {
         // absent should cast to false
+        // @ts-expect-error
         bar: '', // empty string should cast to true
+        // @ts-expect-error
         baz: 'baz', // same string should cast to true
+        // @ts-expect-error
         qux: 'ok', // other values should be left in-tact (but raise warning)
       }),
       nodeOps.createElement('div'),
@@ -206,17 +209,42 @@ describe('component props', () => {
     expect(proxy.bar).toBe(prevBar)
     expect(defaultFn).toHaveBeenCalledTimes(1)
 
-    render(h(Comp, { bar: { b: 2 } }), root)
+    render(
+      h(Comp, {
+        bar: {
+          // @ts-expect-error
+          b: 2,
+        },
+      }),
+      root,
+    )
     expect(proxy.foo).toBe(1)
     expect(proxy.bar).toEqual({ b: 2 })
     expect(defaultFn).toHaveBeenCalledTimes(1)
 
-    render(h(Comp, { foo: 3, bar: { b: 3 } }), root)
+    render(
+      h(Comp, {
+        foo: 3,
+        bar: {
+          // @ts-expect-error
+          b: 3,
+        },
+      }),
+      root,
+    )
     expect(proxy.foo).toBe(3)
     expect(proxy.bar).toEqual({ b: 3 })
     expect(defaultFn).toHaveBeenCalledTimes(1)
 
-    render(h(Comp, { bar: { b: 4 } }), root)
+    render(
+      h(Comp, {
+        bar: {
+          // @ts-expect-error
+          b: 4,
+        },
+      }),
+      root,
+    )
     expect(proxy.foo).toBe(1)
     expect(proxy.bar).toEqual({ b: 4 })
     expect(defaultFn).toHaveBeenCalledTimes(1)
@@ -420,13 +448,19 @@ describe('component props', () => {
     }
     render(
       h(Comp, {
+        // @ts-expect-error
         bool: 'true',
+        // @ts-expect-error
         str: 100,
+        // @ts-expect-error
         num: '100',
+        // @ts-expect-error
         arr: {},
         obj: 'false',
         cls: {},
+        // @ts-expect-error
         fn: true,
+        // @ts-expect-error
         skipCheck: 'foo',
         empty: [1, 2, 3],
       }),
