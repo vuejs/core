@@ -103,13 +103,13 @@ export class TeleportFragment extends VaporFragment {
     // it will be called when root fragment changed
     if (this.parentComponent && this.parentComponent.ut) {
       if (isFragment(nodes)) {
-        ;(nodes.$updated || (nodes.$updated = [])).push(() =>
+        ;(nodes.onUpdated || (nodes.onUpdated = [])).push(() =>
           updateCssVars(this),
         )
       } else if (isArray(nodes)) {
         nodes.forEach(node => {
           if (isFragment(node)) {
-            ;(node.$updated || (node.$updated = [])).push(() =>
+            ;(node.onUpdated || (node.onUpdated = [])).push(() =>
               updateCssVars(this),
             )
           }

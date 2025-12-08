@@ -60,7 +60,7 @@ export class VaporFragment<T extends Block = Block>
   ) => void
 
   // hooks
-  $updated?: ((nodes?: Block) => void)[]
+  onUpdated?: ((nodes?: Block) => void)[]
 
   constructor(nodes: T) {
     this.nodes = nodes
@@ -90,12 +90,12 @@ export class DynamicFragment extends VaporFragment {
   getScope?: (key: any) => EffectScope | undefined
 
   // hooks
-  beforeTeardown?: ((
+  onBeforeTeardown?: ((
     oldKey: any,
     nodes: Block,
     scope: EffectScope,
   ) => boolean)[]
-  $beforeMount?: ((newKey: any, nodes: Block, scope: EffectScope) => void)[]
+  onBeforeMount?: ((newKey: any, nodes: Block, scope: EffectScope) => void)[]
 
   constructor(anchorLabel?: string) {
     super([])
@@ -125,8 +125,8 @@ export class DynamicFragment extends VaporFragment {
       let preserveScope = false
       // if any of the hooks returns true the scope will be preserved
       // for kept-alive component
-      if (this.beforeTeardown) {
-        preserveScope = this.beforeTeardown.some(hook =>
+      if (this.onBeforeTeardown) {
+        preserveScope = this.onBeforeTeardown.some(hook =>
           hook(this.current, this.nodes, this.scope!),
         )
       }
@@ -136,7 +136,7 @@ export class DynamicFragment extends VaporFragment {
       const mode = transition && transition.mode
       if (mode) {
         applyTransitionLeaveHooks(this.nodes, transition, () =>
-          this.$render(render, transition, parent, instance),
+          this.renderBranch(render, transition, parent, instance),
         )
         parent && remove(this.nodes, parent)
         if (mode === 'out-in') {
@@ -148,7 +148,7 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    this.$render(render, transition, parent, instance)
+    this.renderBranch(render, transition, parent, instance)
 
     if (this.fallback) {
       // Find the deepest invalid fragment
@@ -189,7 +189,7 @@ export class DynamicFragment extends VaporFragment {
     if (isHydrating) this.hydrate()
   }
 
-  private $render(
+  private renderBranch(
     render: BlockFn | undefined,
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,
@@ -215,8 +215,8 @@ export class DynamicFragment extends VaporFragment {
         this.$transition = applyTransitionHooks(this.nodes, transition)
       }
 
-      if (this.$beforeMount) {
-        this.$beforeMount.forEach(hook =>
+      if (this.onBeforeMount) {
+        this.onBeforeMount.forEach(hook =>
           hook(this.current, this.nodes, this.scope!),
         )
       }
@@ -240,8 +240,8 @@ export class DynamicFragment extends VaporFragment {
         }
 
         insert(this.nodes, parent, this.anchor)
-        if (this.$updated) {
-          this.$updated.forEach(hook => hook(this.nodes))
+        if (this.onUpdated) {
+          this.onUpdated.forEach(hook => hook(this.nodes))
         }
       }
     } else {
