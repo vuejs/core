@@ -972,8 +972,9 @@ function handleSetupResult(
       devRender(instance)
     }
   } else {
-    // component has a render function but no setup function
-    // (typically components with only a template and no state)
+    // component has a render function with either:
+    // - no setup function (components with only a template)
+    // - setup returning non-block state for use in render
     // support setup fn and render fn co-usage for defineComponent expose
     if (!isBlock(setupResult) && component.render) {
       instance.setupState = setupResult
