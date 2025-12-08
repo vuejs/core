@@ -1027,21 +1027,14 @@ function handleSetupResult(
       devRender(instance)
     }
   } else {
-    if (component.render) {
-      if (!isBlock(setupResult)) instance.setupState = setupResult
-      instance.block =
-        callWithErrorHandling(
-          component.render,
-          instance,
-          ErrorCodes.RENDER_FUNCTION,
-          [
-            instance.setupState,
-            instance.props,
-            instance.emit,
-            instance.attrs,
-            instance.slots,
-          ],
-        ) || []
+    // component has a render function but no setup function
+    // (typically components with only a template and no state)
+    if (setupResult === EMPTY_OBJ && component.render) {
+      instance.block = callWithErrorHandling(
+        component.render,
+        instance,
+        ErrorCodes.RENDER_FUNCTION,
+      )
     } else {
       // in prod result can only be block
       instance.block = setupResult as Block
