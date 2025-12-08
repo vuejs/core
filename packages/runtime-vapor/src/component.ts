@@ -148,7 +148,7 @@ export type FunctionalVaporComponent<
   } & SharedInternalOptions
 
 export interface ObjectVaporComponent<
-  Props = ComponentPropsOptions,
+  Props = {},
   Emits extends EmitsOptions = {},
   RuntimeEmitsKeys extends string = string,
   Slots extends StaticSlots = StaticSlots,

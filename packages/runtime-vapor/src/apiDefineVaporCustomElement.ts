@@ -35,7 +35,7 @@ export function defineVaporCustomElement(
    */
   _createApp?: CreateAppFunction<ParentNode, VaporComponent>,
 ): VaporElementConstructor {
-  let Comp = defineVaporComponent(options, extraOptions as any)
+  let Comp = defineVaporComponent(options, extraOptions)
   if (isPlainObject(Comp)) Comp = extend({}, Comp, extraOptions)
   class VaporCustomElement extends VaporElement {
     static def = Comp
