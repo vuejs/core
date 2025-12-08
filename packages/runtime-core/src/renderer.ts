@@ -1995,7 +1995,8 @@ function baseCreateRenderer(
         const anchorVNode = c2[nextIndex + 1] as VNode
         const anchor =
           nextIndex + 1 < l2
-            ? // #13559, fallback to el placeholder for unresolved async component
+            ? // #13559, #14173
+              //  fallback to el placeholder for unresolved async component
               anchorVNode.el || resolveAsyncComponentPlaceholder(anchorVNode)
             : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {

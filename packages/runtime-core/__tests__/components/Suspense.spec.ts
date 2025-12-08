@@ -2360,6 +2360,101 @@ describe('Suspense', () => {
       )
     })
 
+    // #14173
+    test('renders multiple async component wrappers in Suspense with v-for and updates on items change', async () => {
+      const CompAsyncSetup = defineAsyncComponent({
+        props: ['item', 'id'],
+        render(ctx: any) {
+          return h('div', ctx.id + '--' + ctx.item.name)
+        },
+      })
+      const items = ref([
+        { id: 1, name: '111' },
+        { id: 2, name: '222' },
+        { id: 3, name: '333' },
+      ])
+      const Comp = {
+        props: ['id'],
+        setup(props: any) {
+          return () =>
+            h(Suspense, null, {
+              default: () =>
+                h(
+                  Fragment,
+                  null,
+                  items.value.map(item =>
+                    h(CompAsyncSetup, {
+                      item,
+                      key: item.id,
+                      id: 'foo:' + props.id,
+                    }),
+                  ),
+                ),
+            })
+        },
+      }
+
+      const CompAsyncWrapper = defineAsyncComponent({
+        props: ['id'],
+        render(ctx: any) {
+          return h(Comp, { id: ctx.id })
+        },
+      })
+      const CompWrapper = defineComponent({
+        props: ['id'],
+        render(ctx: any) {
+          return h(CompAsyncWrapper, { id: ctx.id })
+        },
+      })
+      const list = ref([{ id: 1 }, { id: 2 }, { id: 3 }])
+
+      const App = {
+        setup() {
+          return () =>
+            h(Suspense, null, {
+              default: () =>
+                h(
+                  Fragment,
+                  null,
+                  list.value.map(item =>
+                    h(CompWrapper, { id: item.id, key: item.id }),
+                  ),
+                ),
+            })
+        },
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(App), root)
+      await nextTick()
+      await Promise.all(deps)
+      await Promise.all(deps)
+
+      expect(serializeInner(root)).toBe(
+        `<div>foo:1--111</div><div>foo:1--222</div><div>foo:1--333</div><div>foo:2--111</div><div>foo:2--222</div><div>foo:2--333</div><div>foo:3--111</div><div>foo:3--222</div><div>foo:3--333</div>`,
+      )
+
+      list.value = [{ id: 4 }, { id: 5 }, { id: 6 }]
+      await nextTick()
+      await Promise.all(deps)
+      await Promise.all(deps)
+      expect(serializeInner(root)).toBe(
+        `<div>foo:4--111</div><div>foo:4--222</div><div>foo:4--333</div><div>foo:5--111</div><div>foo:5--222</div><div>foo:5--333</div><div>foo:6--111</div><div>foo:6--222</div><div>foo:6--333</div>`,
+      )
+
+      items.value = [
+        { id: 4, name: '444' },
+        { id: 5, name: '555' },
+        { id: 6, name: '666' },
+      ]
+      await nextTick()
+      await Promise.all(deps)
+      await Promise.all(deps)
+      expect(serializeInner(root)).toBe(
+        `<div>foo:4--444</div><div>foo:4--555</div><div>foo:4--666</div><div>foo:5--444</div><div>foo:5--555</div><div>foo:5--666</div><div>foo:6--444</div><div>foo:6--555</div><div>foo:6--666</div>`,
+      )
+    })
+
     test('should call unmounted directive once when fallback is replaced by resolved async component', async () => {
       const Comp = {
         render() {
