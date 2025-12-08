@@ -2,6 +2,8 @@ import {
   ElementTypes,
   ErrorCodes,
   createCompilerError,
+  isKeyboardEvent,
+  isStaticExp,
 } from '@vue/compiler-dom'
 import type { DirectiveTransform } from '../transform'
 import { IRNodeTypes, type KeyOverride, type SetEventIRNode } from '../ir'
@@ -57,6 +59,16 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     } else if (!arg.isStatic) {
       keyOverride = ['click', 'contextmenu']
     }
+  }
+
+  // don't gen keys guard for non-keyboard events
+  // if event name is dynamic, always wrap with keys guard
+  if (
+    keyModifiers.length &&
+    isStaticExp(arg) &&
+    !isKeyboardEvent(`on${arg.content.toLowerCase()}`)
+  ) {
+    keyModifiers.length = 0
   }
 
   if (isComponent || isSlotOutlet) {

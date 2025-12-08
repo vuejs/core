@@ -1,5 +1,6 @@
 import {
   Fragment,
+  type GenericComponentInstance,
   Static,
   type VNode,
   getCurrentInstance,
@@ -22,51 +23,25 @@ export function useCssVars(
 ): void {
   if (!__BROWSER__ && !__TEST__) return
 
-  const instance = getCurrentInstance()
-  /* v8 ignore start */
-  if (!instance) {
-    __DEV__ &&
-      warn(`useCssVars is called without current active component instance.`)
-    return
-  }
-  /* v8 ignore stop */
-
-  const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
-    Array.from(
-      document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
-    ).forEach(node => setVarsOnNode(node, vars))
-  })
-
-  if (__DEV__) {
-    instance.getCssVars = () => getter(instance.proxy)
-  }
-
-  const setVars = () => {
-    const vars = getter(instance.proxy)
+  const instance = getCurrentInstance()! // to be check in baseUseCssVars
+  const getVars = () => getter(instance.proxy)
+  const setVars = (vars: Record<string, any>) => {
     if (instance.ce) {
       setVarsOnNode(instance.ce as any, vars)
     } else {
       setVarsOnVNode(instance.subTree, vars)
     }
-    updateTeleports(vars)
   }
 
-  // handle cases where child component root is affected
-  // and triggers reflow in onMounted
-  onBeforeUpdate(() => {
-    queuePostFlushCb(setVars)
-  })
-
-  onMounted(() => {
-    // run setVars synchronously here, but run as post-effect on changes
-    watch(setVars, NOOP, { flush: 'post' })
-    const ob = new MutationObserver(setVars)
-    ob.observe(instance.subTree.el!.parentNode, { childList: true })
-    onUnmounted(() => ob.disconnect())
-  })
+  baseUseCssVars(
+    instance as GenericComponentInstance,
+    () => instance.subTree.el!.parentNode!,
+    getVars,
+    setVars,
+  )
 }
 
-function setVarsOnVNode(vnode: VNode, vars: Record<string, unknown>) {
+function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
   if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     const suspense = vnode.suspense!
     vnode = suspense.activeBranch!
@@ -96,7 +71,60 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, unknown>) {
   }
 }
 
-function setVarsOnNode(el: Node, vars: Record<string, unknown>) {
+/**
+ * @internal
+ * shared between vdom and vapor
+ */
+export function baseUseCssVars(
+  instance: GenericComponentInstance | null,
+  getParentNode: () => Node,
+  getVars: () => Record<string, any>,
+  setVars: (vars: Record<string, any>) => void,
+): void {
+  /* v8 ignore start */
+  if (!instance) {
+    __DEV__ &&
+      warn(`useCssVars is called without current active component instance.`)
+    return
+  }
+  /* v8 ignore stop */
+
+  if (__DEV__) {
+    instance.getCssVars = getVars
+  }
+
+  const updateTeleports = (instance.ut = (vars = getVars()) => {
+    Array.from(
+      document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
+    ).forEach(node => setVarsOnNode(node, vars))
+  })
+
+  const applyCssCars = () => {
+    const vars = getVars()
+    setVars(vars)
+    updateTeleports(vars)
+  }
+
+  // handle cases where child component root is affected
+  // and triggers reflow in onMounted
+  onBeforeUpdate(() => {
+    queuePostFlushCb(applyCssCars)
+  })
+
+  onMounted(() => {
+    // run setVars synchronously here, but run as post-effect on changes
+    watch(applyCssCars, NOOP, { flush: 'post' })
+    const ob = new MutationObserver(applyCssCars)
+    ob.observe(getParentNode(), { childList: true })
+    onUnmounted(() => ob.disconnect())
+  })
+}
+
+/**
+ * @internal
+ * shared between vdom and vapor
+ */
+export function setVarsOnNode(el: Node, vars: Record<string, string>): void {
   if (el.nodeType === 1) {
     const style = (el as HTMLElement).style
     let cssText = ''

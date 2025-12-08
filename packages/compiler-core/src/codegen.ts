@@ -115,7 +115,6 @@ export interface BaseCodegenResult {
 
 export interface CodegenResult extends BaseCodegenResult {
   ast: RootNode
-  helpers: Set<symbol>
 }
 
 export enum NewlineType {

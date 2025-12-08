@@ -1,6 +1,7 @@
 import {
   BindingTypes,
   type SimpleExpressionNode,
+  TS_NODE_TYPES,
   isFnExpression,
   isMemberExpression,
 } from '@vue/compiler-dom'
@@ -28,7 +29,11 @@ export function genSetEvent(
   const { element, key, keyOverride, value, modifiers, delegate, effect } = oper
 
   const name = genName()
-  const handler = genEventHandler(context, value, modifiers)
+  const handler = [
+    `${context.helper('createInvoker')}(`,
+    ...genEventHandler(context, [value], modifiers),
+    `)`,
+  ]
   const eventOptions = genEventOptions()
 
   if (delegate) {
@@ -107,7 +112,7 @@ export function genSetDynamicEvents(
 
 export function genEventHandler(
   context: CodegenContext,
-  value: SimpleExpressionNode | undefined,
+  values: (SimpleExpressionNode | undefined)[] | undefined,
   modifiers: {
     nonKeys: string[]
     keys: string[]
@@ -115,42 +120,60 @@ export function genEventHandler(
   // passed as component prop - need additional wrap
   extraWrap: boolean = false,
 ): CodeFragment[] {
-  let handlerExp: CodeFragment[] = [`() => {}`]
-  if (value && value.content.trim()) {
-    // Determine how the handler should be wrapped so it always reference the
-    // latest value when invoked.
-    if (isMemberExpression(value, context.options)) {
-      // e.g. @click="foo.bar"
-      handlerExp = genExpression(value, context)
-      if (!isConstantBinding(value, context) && !extraWrap) {
-        // non constant, wrap with invocation as `e => foo.bar(e)`
-        // when passing as component handler, access is always dynamic so we
-        // can skip this
-        handlerExp = [`e => `, ...handlerExp, `(e)`]
+  let handlerExp: CodeFragment[] = []
+  if (values) {
+    values.forEach((value, index) => {
+      let exp: CodeFragment[] = []
+      if (value && value.content.trim()) {
+        // Determine how the handler should be wrapped so it always reference the
+        // latest value when invoked.
+        if (isMemberExpression(value, context.options)) {
+          // e.g. @click="foo.bar"
+          exp = genExpression(value, context)
+          if (!isConstantBinding(value, context) && !extraWrap) {
+            // non constant, wrap with invocation as `e => foo.bar(e)`
+            // when passing as component handler, access is always dynamic so we
+            // can skip this
+            const isTSNode = value.ast && TS_NODE_TYPES.includes(value.ast.type)
+            exp = [
+              `e => `,
+              isTSNode ? '(' : '',
+              ...exp,
+              isTSNode ? ')' : '',
+              `(e)`,
+            ]
+          }
+        } else if (isFnExpression(value, context.options)) {
+          // Fn expression: @click="e => foo(e)"
+          // no need to wrap in this case
+          exp = genExpression(value, context)
+        } else {
+          // inline statement
+          // @click="foo($event)" ---> $event => foo($event)
+          const referencesEvent = value.content.includes('$event')
+          const hasMultipleStatements = value.content.includes(`;`)
+          const expr = referencesEvent
+            ? context.withId(() => genExpression(value, context), {
+                $event: null,
+              })
+            : genExpression(value, context)
+          exp = [
+            referencesEvent ? '$event => ' : '() => ',
+            hasMultipleStatements ? '{' : '(',
+            ...expr,
+            hasMultipleStatements ? '}' : ')',
+          ]
+        }
+        handlerExp = handlerExp.concat([index !== 0 ? ', ' : '', ...exp])
       }
-    } else if (isFnExpression(value, context.options)) {
-      // Fn expression: @click="e => foo(e)"
-      // no need to wrap in this case
-      handlerExp = genExpression(value, context)
-    } else {
-      // inline statement
-      // @click="foo($event)" ---> $event => foo($event)
-      const referencesEvent = value.content.includes('$event')
-      const hasMultipleStatements = value.content.includes(`;`)
-      const expr = referencesEvent
-        ? context.withId(() => genExpression(value, context), {
-            $event: null,
-          })
-        : genExpression(value, context)
-      handlerExp = [
-        referencesEvent ? '$event => ' : '() => ',
-        hasMultipleStatements ? '{' : '(',
-        ...expr,
-        hasMultipleStatements ? '}' : ')',
-      ]
+    })
+
+    if (values.length > 1) {
+      handlerExp = ['[', ...handlerExp, ']']
     }
   }
 
+  if (handlerExp.length === 0) handlerExp = ['() => {}']
   const { keys, nonKeys } = modifiers
   if (nonKeys.length)
     handlerExp = genWithModifiers(context, handlerExp, nonKeys)

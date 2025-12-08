@@ -5,7 +5,6 @@ import {
   createAsyncComponentContext,
   currentInstance,
   handleError,
-  isKeepAlive,
   markAsyncBoundary,
   performAsyncHydrate,
   useAsyncComponentState,
@@ -29,7 +28,6 @@ import {
 import { invokeArrayFns } from '@vue/shared'
 import { type TransitionOptions, insert, remove } from './block'
 import { parentNode } from './dom/node'
-import type { KeepAliveInstance } from './components/KeepAlive'
 import { setTransitionHooks } from './components/Transition'
 
 /*@ __NO_SIDE_EFFECTS__ */
@@ -183,35 +181,23 @@ function createInnerComp(
   parent: VaporComponentInstance & TransitionOptions,
   frag?: DynamicFragment,
 ): VaporComponentInstance {
-  const { rawProps, rawSlots, isSingleRoot, appContext, $transition } = parent
+  const { rawProps, rawSlots, appContext, $transition } = parent
   const instance = createComponent(
     comp,
     rawProps,
     rawSlots,
-    isSingleRoot,
+    // rawProps is shared and already contains fallthrough attrs.
+    // so isSingleRoot should be undefined
+    undefined,
     undefined,
     appContext,
   )
-
-  if (parent.parent && isKeepAlive(parent.parent)) {
-    // If there is a parent KeepAlive, let it handle the resolved async component
-    // This will process shapeFlag and cache the component
-    ;(parent.parent as KeepAliveInstance).cacheComponent(instance)
-    // cache the wrapper instance as well
-    ;(parent.parent as KeepAliveInstance).cacheComponent(parent)
-  }
 
   // set transition hooks
   if ($transition) setTransitionHooks(instance, $transition)
 
   // set ref
-  // @ts-expect-error
-  frag && frag.setRef && frag.setRef(instance)
+  frag && frag.setAsyncRef && frag.setAsyncRef(instance)
 
-  // TODO custom element
-  // pass the custom element callback on to the inner comp
-  // and remove it from the async wrapper
-  // i.ce = ce
-  // delete parent.ce
   return instance
 }

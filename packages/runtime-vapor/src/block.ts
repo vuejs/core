@@ -26,8 +26,7 @@ export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
   props: TransitionProps
   instance: VaporComponentInstance
-  // mark transition hooks as disabled so that it skips during
-  // inserting
+  // mark transition hooks as disabled
   disabled?: boolean
 }
 
@@ -123,8 +122,6 @@ export function insert(
   }
 }
 
-export type InsertFn = typeof insert
-
 export function prepend(parent: ParentNode, ...blocks: Block[]): void {
   let i = blocks.length
   while (i--) insert(blocks[i], parent, 0)
@@ -157,11 +154,6 @@ export function remove(block: Block, parent?: ParentNode): void {
     if (block.anchor) remove(block.anchor, parent)
     if ((block as DynamicFragment).scope) {
       ;(block as DynamicFragment).scope!.stop()
-      const scopes = (block as DynamicFragment).keptAliveScopes
-      if (scopes) {
-        scopes.forEach(scope => scope.stop())
-        scopes.clear()
-      }
     }
   }
 }
@@ -252,16 +244,21 @@ export function setScopeId(block: Block, scopeIds: string[]): void {
 }
 
 export function setComponentScopeId(instance: VaporComponentInstance): void {
-  const parent = instance.parent
-  if (!parent) return
+  const { parent, scopeId } = instance
+  if (!parent || !scopeId) return
+
   // prevent setting scopeId on multi-root fragments
   if (isArray(instance.block) && instance.block.length > 1) return
 
   const scopeIds: string[] = []
-
-  const scopeId = parent.type.__scopeId
-  if (scopeId) {
+  const parentScopeId = parent && parent.type.__scopeId
+  // if parent scopeId is different from scopeId, this means scopeId
+  // is inherited from slot owner, so we need to set it to the component
+  // scopeIds. the `parentScopeId-s` is handled in createSlot
+  if (parentScopeId !== scopeId) {
     scopeIds.push(scopeId)
+  } else {
+    if (parentScopeId) scopeIds.push(parentScopeId)
   }
 
   // inherit scopeId from vdom parent

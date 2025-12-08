@@ -30,7 +30,7 @@ function combineValues(
 ): CodeFragment[] {
   return values.flatMap((value, i) => {
     let exp = genExpression(value, context)
-    if (!jsx && getLiteralExpressionValue(value) == null) {
+    if (!jsx && getLiteralExpressionValue(value, true) == null) {
       // dynamic, wrap with toDisplayString
       exp = genCall(context.helper('toDisplayString'), exp)
     }

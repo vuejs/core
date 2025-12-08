@@ -1,10 +1,11 @@
 import {
+  type VaporDirective,
   createComponent,
   createTextNode,
   createVaporApp,
   defineVaporComponent,
-  // @ts-expect-error
-  withDirectives,
+  template,
+  withVaporDirectives,
 } from '../src'
 import {
   type GenericComponentInstance,
@@ -158,18 +159,17 @@ describe('api: createVaporApp', () => {
     expect(host.innerHTML).toBe(`foobar!barbaz!`)
   })
 
-  test.todo('directive', () => {
+  test('directive', () => {
     const spy1 = vi.fn()
     const spy2 = vi.fn()
 
     const { app, mount } = define({
       setup() {
-        const FooBar = resolveDirective('foo-bar')
-        const BarBaz = resolveDirective('bar-baz')
-        return withDirectives(document.createElement('div'), [
-          [FooBar],
-          [BarBaz],
-        ])
+        const FooBar = resolveDirective('foo-bar') as VaporDirective
+        const BarBaz = resolveDirective('bar-baz') as VaporDirective
+        const n0 = template('<div></div>')() as Element
+        withVaporDirectives(n0, [[FooBar], [BarBaz]])
+        return n0
       },
     }).create()
 

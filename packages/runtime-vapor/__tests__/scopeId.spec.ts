@@ -293,9 +293,9 @@ describe('scopeId', () => {
           Slotted,
           null,
           {
-            default: withVaporCtx(() => {
+            default: () => {
               return template('<div root></div>')()
-            }),
+            },
           },
           true,
         )

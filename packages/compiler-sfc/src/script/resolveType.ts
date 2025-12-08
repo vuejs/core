@@ -29,6 +29,7 @@ import {
   createGetCanonicalFileName,
   getId,
   getImportedName,
+  getStringLiteralKey,
   joinPaths,
   normalizePath,
 } from './utils'
@@ -336,13 +337,9 @@ function typeElementsToMap(
         Object.assign(scope.types, typeParameters)
       }
       ;(e as MaybeWithScope)._ownerScope = scope
-      const name = getId(e.key)
-      if (name && !e.computed) {
+      const name = getStringLiteralKey(e)
+      if (name !== null) {
         res.props[name] = e as ResolvedElements['props'][string]
-      } else if (e.key.type === 'TemplateLiteral') {
-        for (const key of resolveTemplateKeys(ctx, e.key, scope)) {
-          res.props[key] = e as ResolvedElements['props'][string]
-        }
       } else {
         ctx.error(
           `Unsupported computed key in type referenced by a macro`,
@@ -2029,8 +2026,7 @@ function findStaticPropertyType(node: TSTypeLiteral, key: string) {
   const prop = node.members.find(
     m =>
       m.type === 'TSPropertySignature' &&
-      !m.computed &&
-      getId(m.key) === key &&
+      getStringLiteralKey(m) === key &&
       m.typeAnnotation,
   )
   return prop && prop.typeAnnotation!.typeAnnotation

@@ -29,13 +29,11 @@ import {
 import {
   type ObjectVaporComponent,
   type VaporComponentInstance,
-  applyFallthroughProps,
   isVaporComponent,
 } from '../component'
 import { isForBlock } from '../apiCreateFor'
-import { renderEffect } from '../renderEffect'
 import { createElement } from '../dom/node'
-import { DynamicFragment, isFragment } from '../fragment'
+import { isFragment } from '../fragment'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -133,11 +131,14 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       const child = children[i]
       if (isValidTransitionBlock(child)) {
         if (child.$key != null) {
-          setTransitionHooks(
+          const hooks = resolveTransitionHooks(
             child,
-            resolveTransitionHooks(child, cssTransitionProps, state, instance!),
+            cssTransitionProps,
+            state,
+            instance!,
           )
-        } else if (__DEV__ && child.$key == null) {
+          setTransitionHooks(child, hooks)
+        } else if (__DEV__) {
           warn(`<transition-group> children must be keyed`)
         }
       }
@@ -147,18 +148,9 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
     if (tag) {
       const container = createElement(tag)
       insert(slottedBlock, container)
-      // fallthrough attrs
-      if (instance!.hasFallthrough) {
-        ;(container as any).$root = true
-        renderEffect(() => applyFallthroughProps(container, instance!.attrs))
-      }
       return container
     } else {
-      const frag = __DEV__
-        ? new DynamicFragment('transition-group')
-        : new DynamicFragment()
-      renderEffect(() => frag.update(() => slottedBlock))
-      return frag
+      return slottedBlock
     }
   },
 })

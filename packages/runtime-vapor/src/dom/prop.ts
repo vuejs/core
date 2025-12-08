@@ -1,11 +1,14 @@
 import {
   type NormalizedStyle,
+  camelize,
   canSetValueDirectly,
+  getEscapedCssVarName,
   includeBooleanAttr,
   isArray,
   isOn,
   isString,
   normalizeClass,
+  normalizeCssVarValue,
   normalizeStyle,
   parseStringStyle,
   stringifyStyle,
@@ -13,6 +16,7 @@ import {
 } from '@vue/shared'
 import { on } from './event'
 import {
+  type GenericComponentInstance,
   MismatchTypes,
   currentInstance,
   getAttributeMismatch,
@@ -22,6 +26,7 @@ import {
   isValidHtmlOrSvgAttribute,
   mergeProps,
   patchStyle,
+  queuePostFlushCb,
   shouldSetAsProp,
   toClassSet,
   toStyleMap,
@@ -29,6 +34,7 @@ import {
   vShowHidden,
   warn,
   warnPropMismatch,
+  xlinkNS,
 } from '@vue/runtime-dom'
 import {
   type VaporComponentInstance,
@@ -36,7 +42,8 @@ import {
   isVaporComponent,
 } from '../component'
 import { isHydrating, logMismatchError } from './hydration'
-import type { Block } from '../block'
+import { type Block, normalizeBlock } from '../block'
+import type { VaporElement } from '../apiDefineVaporCustomElement'
 
 type TargetElement = Element & {
   $root?: true
@@ -59,7 +66,12 @@ export function setProp(el: any, key: string, value: any): void {
   }
 }
 
-export function setAttr(el: any, key: string, value: any): void {
+export function setAttr(
+  el: any,
+  key: string,
+  value: any,
+  isSVG: boolean = false,
+): void {
   if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey(key)) {
     return
   }
@@ -85,10 +97,18 @@ export function setAttr(el: any, key: string, value: any): void {
 
   if (value !== el[`$${key}`]) {
     el[`$${key}`] = value
-    if (value != null) {
-      el.setAttribute(key, value)
+    if (isSVG && key.startsWith('xlink:')) {
+      if (value != null) {
+        el.setAttributeNS(xlinkNS, key, value)
+      } else {
+        el.removeAttributeNS(xlinkNS, key.slice(6, key.length))
+      }
     } else {
-      el.removeAttribute(key)
+      if (value != null) {
+        el.setAttribute(key, value)
+      } else {
+        el.removeAttribute(key)
+      }
     }
   }
 }
@@ -98,6 +118,7 @@ export function setDOMProp(
   key: string,
   value: any,
   forceHydrate: boolean = false,
+  attrName?: string,
 ): void {
   if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey(key)) {
     return
@@ -149,10 +170,14 @@ export function setDOMProp(
       )
     }
   }
-  needRemove && el.removeAttribute(key)
+  needRemove && el.removeAttribute(attrName || key)
 }
 
-export function setClass(el: TargetElement, value: any): void {
+export function setClass(
+  el: TargetElement,
+  value: any,
+  isSVG: boolean = false,
+): void {
   if (el.$root) {
     setClassIncremental(el, value)
   } else {
@@ -167,7 +192,11 @@ export function setClass(el: TargetElement, value: any): void {
     }
 
     if (value !== el.$cls) {
-      el.className = el.$cls = value
+      if (isSVG) {
+        el.setAttribute('class', (el.$cls = value))
+      } else {
+        el.className = el.$cls = value
+      }
     }
   }
 }
@@ -199,6 +228,20 @@ function setClassIncremental(el: any, value: any): void {
   }
 }
 
+/**
+ * dev only
+ * defer style matching checks until hydration completes (instance.block is set) if
+ * the component uses style v-bind or the element contains CSS variables, to correctly
+ * verify if the element is the component root.
+ */
+function shouldDeferCheckStyleMismatch(el: TargetElement): boolean {
+  return (
+    __DEV__ &&
+    (!!currentInstance!.getCssVars ||
+      Object.values((el as HTMLElement).style).some(v => v.startsWith('--')))
+  )
+}
+
 export function setStyle(el: TargetElement, value: any): void {
   if (el.$root) {
     setStyleIncremental(el, value)
@@ -206,11 +249,22 @@ export function setStyle(el: TargetElement, value: any): void {
     const normalizedValue = normalizeStyle(value)
     if (
       (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      isHydrating &&
-      !styleHasMismatch(el, value, normalizedValue, false)
+      isHydrating
     ) {
-      el.$sty = normalizedValue
-      return
+      if (shouldDeferCheckStyleMismatch(el)) {
+        const instance = currentInstance as VaporComponentInstance
+        queuePostFlushCb(() => {
+          if (!styleHasMismatch(el, value, normalizedValue, false, instance)) {
+            el.$sty = normalizedValue
+            return
+          }
+          patchStyle(el, el.$sty, (el.$sty = normalizedValue))
+        })
+        return
+      } else if (!styleHasMismatch(el, value, normalizedValue, false)) {
+        el.$sty = normalizedValue
+        return
+      }
     }
 
     patchStyle(el, el.$sty, (el.$sty = normalizedValue))
@@ -223,13 +277,21 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
     ? parseStringStyle(value)
     : (normalizeStyle(value) as NormalizedStyle | undefined)
 
-  if (
-    (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-    isHydrating &&
-    !styleHasMismatch(el, value, normalizedValue, true)
-  ) {
-    el[cacheKey] = normalizedValue
-    return
+  if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
+    if (shouldDeferCheckStyleMismatch(el)) {
+      const instance = currentInstance as VaporComponentInstance
+      queuePostFlushCb(() => {
+        if (!styleHasMismatch(el, value, normalizedValue, true, instance)) {
+          el[cacheKey] = normalizedValue
+          return
+        }
+        patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
+      })
+      return
+    } else if (!styleHasMismatch(el, value, normalizedValue, true)) {
+      el[cacheKey] = normalizedValue
+      return
+    }
   }
 
   patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
@@ -405,7 +467,7 @@ function setHtmlToBlock(block: Block, value: any): void {
   }
 }
 
-export function setDynamicProps(el: any, args: any[]): void {
+export function setDynamicProps(el: any, args: any[], isSVG?: boolean): void {
   const props = args.length > 1 ? mergeProps(...args) : args[0]
   const cacheKey = `$dprops${isApplyingFallthroughProps ? '$' : ''}`
   const prevKeys = el[cacheKey] as string[]
@@ -413,13 +475,13 @@ export function setDynamicProps(el: any, args: any[]): void {
   if (prevKeys) {
     for (const key of prevKeys) {
       if (!(key in props)) {
-        setDynamicProp(el, key, null)
+        setDynamicProp(el, key, null, isSVG)
       }
     }
   }
 
   for (const key of (el[cacheKey] = Object.keys(props))) {
-    setDynamicProp(el, key, props[key])
+    setDynamicProp(el, key, props[key], isSVG)
   }
 }
 
@@ -430,12 +492,11 @@ export function setDynamicProp(
   el: TargetElement,
   key: string,
   value: any,
+  isSVG: boolean = false,
 ): void {
-  // TODO
-  const isSVG = false
   let forceHydrate = false
   if (key === 'class') {
-    setClass(el, value)
+    setClass(el, value, isSVG)
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
@@ -457,8 +518,14 @@ export function setDynamicProp(
     } else {
       setDOMProp(el, key, value, forceHydrate)
     }
+  } else if (
+    // custom elements
+    (el as VaporElement)._isVueCE &&
+    (/[A-Z]/.test(key) || !isString(value))
+  ) {
+    setDOMProp(el, camelize(key), value, forceHydrate, key)
   } else {
-    setAttr(el, key, value)
+    setAttr(el, key, value, isSVG)
   }
   return value
 }
@@ -476,12 +543,12 @@ export function optimizePropertyLookup(): void {
   proto.$key = undefined
   proto.$fc = proto.$evtclick = undefined
   proto.$root = false
-  proto.$html =
-    proto.$txt =
-    proto.$cls =
-    proto.$sty =
-    (Text.prototype as any).$txt =
-      ''
+  proto.$html = proto.$cls = proto.$sty = ''
+  // Initialize $txt to undefined instead of empty string to ensure setText()
+  // properly updates the text node even when the value is empty string.
+  // This prevents issues where setText(node, '') would be skipped because
+  // $txt === '' would return true, leaving the original nodeValue unchanged.
+  ;(Text.prototype as any).$txt = undefined
 }
 
 function classHasMismatch(
@@ -518,6 +585,7 @@ function styleHasMismatch(
   value: any,
   normalizedValue: string | NormalizedStyle | undefined,
   isIncremental: boolean,
+  instance = currentInstance,
 ): boolean {
   const actual = el.getAttribute('style')
   const actualStyleMap = toStyleMap(actual || '')
@@ -529,7 +597,10 @@ function styleHasMismatch(
     expectedStyleMap.set('display', 'none')
   }
 
-  // TODO: handle css vars
+  // handle css vars
+  if (instance) {
+    resolveCssVars(instance as VaporComponentInstance, el, expectedStyleMap)
+  }
 
   let hasMismatch: boolean = false
   if (isIncremental) {
@@ -550,6 +621,39 @@ function styleHasMismatch(
   }
 
   return false
+}
+
+/**
+ * dev only
+ */
+function resolveCssVars(
+  instance: VaporComponentInstance,
+  block: Block,
+  expectedMap: Map<string, string>,
+): void {
+  if (!instance.isMounted) return
+  const rootBlocks = normalizeBlock(instance)
+  if (
+    (instance as GenericComponentInstance).getCssVars &&
+    normalizeBlock(block).every(b => rootBlocks.includes(b))
+  ) {
+    const cssVars = (instance as GenericComponentInstance).getCssVars!()
+    for (const key in cssVars) {
+      const value = normalizeCssVarValue(cssVars[key])
+      expectedMap.set(`--${getEscapedCssVarName(key, false)}`, value)
+    }
+  }
+
+  if (
+    normalizeBlock(block).every(b => rootBlocks.includes(b)) &&
+    instance.parent
+  ) {
+    resolveCssVars(
+      instance.parent as VaporComponentInstance,
+      instance.block,
+      expectedMap,
+    )
+  }
 }
 
 function attributeHasMismatch(el: any, key: string, value: any): boolean {
