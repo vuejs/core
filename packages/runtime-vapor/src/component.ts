@@ -1,16 +1,20 @@
 import {
   type AsyncComponentInternalOptions,
   type ComponentInternalOptions,
+  type ComponentObjectPropsOptions,
   type ComponentPropsOptions,
   EffectScope,
   type EmitFn,
   type EmitsOptions,
+  type EmitsToProps,
   ErrorCodes,
+  type ExtractPropTypes,
   type GenericAppContext,
   type GenericComponentInstance,
   type LifecycleHook,
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
+  type ShallowUnwrapRef,
   type SuspenseBoundary,
   callWithErrorHandling,
   currentInstance,
@@ -51,6 +55,7 @@ import {
 } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
+  type Prettify,
   ShapeFlags,
   hasOwn,
   invokeArrayFns,
@@ -106,42 +111,79 @@ import {
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
+import type {
+  DefineVaporComponent,
+  VaporRenderResult,
+} from './apiDefineComponent'
 import { DynamicFragment, isFragment } from './fragment'
 import type { VaporElement } from './apiDefineVaporCustomElement'
 import { parentSuspense, setParentSuspense } from './components/Suspense'
 
 export { currentInstance } from '@vue/runtime-dom'
 
-export type VaporComponent = FunctionalVaporComponent | ObjectVaporComponent
+export type VaporComponent =
+  | FunctionalVaporComponent
+  | ObjectVaporComponent
+  | DefineVaporComponent
 
-export type VaporSetupFn = (
-  props: any,
-  ctx: Pick<VaporComponentInstance, 'slots' | 'attrs' | 'emit' | 'expose'>,
-) => Block | Record<string, any> | undefined
-
-export type FunctionalVaporComponent = VaporSetupFn &
-  Omit<ObjectVaporComponent, 'setup'> & {
+export type FunctionalVaporComponent<
+  Props = {},
+  Emits extends EmitsOptions = {},
+  Slots extends StaticSlots = StaticSlots,
+  Exposed extends Record<string, any> = Record<string, any>,
+> = ((
+  props: Readonly<Props & EmitsToProps<Emits>>,
+  ctx: {
+    emit: EmitFn<Emits>
+    slots: Slots
+    attrs: Record<string, any>
+    expose: <T extends Record<string, any> = Exposed>(exposed: T) => void
+  },
+) => VaporRenderResult) &
+  Omit<
+    ObjectVaporComponent<ComponentPropsOptions<Props>, Emits, string, Slots>,
+    'setup'
+  > & {
     displayName?: string
   } & SharedInternalOptions
 
-export interface ObjectVaporComponent
-  extends ComponentInternalOptions,
+export interface ObjectVaporComponent<
+  Props = {},
+  Emits extends EmitsOptions = {},
+  RuntimeEmitsKeys extends string = string,
+  Slots extends StaticSlots = StaticSlots,
+  Exposed extends Record<string, any> = Record<string, any>,
+  TypeBlock extends Block = Block,
+  InferredProps = ComponentObjectPropsOptions extends Props
+    ? {}
+    : ExtractPropTypes<Props>,
+> extends ComponentInternalOptions,
     AsyncComponentInternalOptions<ObjectVaporComponent, VaporComponentInstance>,
     SharedInternalOptions {
-  setup?: VaporSetupFn
   inheritAttrs?: boolean
-  props?: ComponentPropsOptions
-  emits?: EmitsOptions
+  props?: Props
+  emits?: Emits | RuntimeEmitsKeys[]
+  slots?: Slots
+  setup?: (
+    props: Readonly<InferredProps>,
+    ctx: {
+      emit: EmitFn<Emits>
+      slots: Slots
+      attrs: Record<string, any>
+      expose: <T extends Record<string, any> = Exposed>(exposed: T) => void
+    },
+  ) => TypeBlock | Exposed | Promise<Exposed> | void
   render?(
-    ctx: any,
-    props?: any,
-    emit?: EmitFn,
-    attrs?: any,
-    slots?: Record<string, VaporSlot>,
-  ): Block
+    ctx: Exposed extends Block ? undefined : ShallowUnwrapRef<Exposed>,
+    props: Readonly<InferredProps>,
+    emit: EmitFn<Emits>,
+    attrs: any,
+    slots: Slots,
+  ): VaporRenderResult<TypeBlock> | void
 
   name?: string
   vapor?: boolean
+  components?: Record<string, VaporComponent>
   /**
    * @internal custom element interception hook
    */
@@ -495,7 +537,15 @@ export const emptyContext: GenericAppContext = {
   provides: /*@__PURE__*/ Object.create(null),
 }
 
-export class VaporComponentInstance implements GenericComponentInstance {
+export class VaporComponentInstance<
+  Props extends Record<string, any> = {},
+  Emits extends EmitsOptions = {},
+  Slots extends StaticSlots = StaticSlots,
+  Exposed extends Record<string, any> = Record<string, any>,
+  TypeBlock extends Block = Block,
+  TypeRefs extends Record<string, any> = Record<string, any>,
+> implements GenericComponentInstance
+{
   vapor: true
   uid: number
   type: VaporComponent
@@ -503,17 +553,17 @@ export class VaporComponentInstance implements GenericComponentInstance {
   parent: GenericComponentInstance | null
   appContext: GenericAppContext
 
-  block: Block
+  block: TypeBlock
   scope: EffectScope
 
   rawProps: RawProps
   rawSlots: RawSlots
 
-  props: Record<string, any>
+  props: Readonly<Props>
   attrs: Record<string, any>
   propsDefaults: Record<string, any> | null
 
-  slots: StaticSlots
+  slots: Slots
 
   scopeId?: string | null
 
@@ -521,15 +571,17 @@ export class VaporComponentInstance implements GenericComponentInstance {
   rawPropsRef?: ShallowRef<any>
   rawSlotsRef?: ShallowRef<any>
 
-  emit: EmitFn
+  emit: EmitFn<Emits>
   emitted: Record<string, boolean> | null
 
-  expose: (exposed: Record<string, any>) => void
-  exposed: Record<string, any> | null
-  exposeProxy: Record<string, any> | null
+  expose: (<T extends Record<string, any> = Exposed>(exposed: T) => void) &
+    // compatible with vdom components
+    string[]
+  exposed: Exposed | null
+  exposeProxy: Prettify<ShallowUnwrapRef<Exposed>> | null
 
   // for useTemplateRef()
-  refs: Record<string, any>
+  refs: TypeRefs
   // for provide / inject
   provides: Record<string, any>
   // for useId
@@ -571,7 +623,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   sp?: LifecycleHook<() => Promise<unknown>> // LifecycleHooks.SERVER_PREFETCH
 
   // dev only
-  setupState?: Record<string, any>
+  setupState?: Exposed extends Block ? undefined : ShallowUnwrapRef<Exposed>
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void
@@ -614,9 +666,9 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.block = null! // to be set
     this.scope = new EffectScope(true)
 
-    this.emit = emit.bind(null, this)
-    this.expose = expose.bind(null, this)
-    this.refs = EMPTY_OBJ
+    this.emit = emit.bind(null, this) as EmitFn<Emits>
+    this.expose = expose.bind(null, this) as any
+    this.refs = EMPTY_OBJ as TypeRefs
     this.emitted = this.exposed = this.exposeProxy = this.propsDefaults = null
 
     // suspense related
@@ -637,22 +689,26 @@ export class VaporComponentInstance implements GenericComponentInstance {
     if (rawProps || comp.props) {
       const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp, once)
       this.attrs = new Proxy(this, attrsHandlers)
-      this.props = comp.props
-        ? new Proxy(this, propsHandlers!)
-        : isFunction(comp)
-          ? this.attrs
-          : EMPTY_OBJ
+      this.props = (
+        comp.props
+          ? new Proxy(this, propsHandlers!)
+          : isFunction(comp)
+            ? this.attrs
+            : EMPTY_OBJ
+      ) as Props
     } else {
-      this.props = this.attrs = EMPTY_OBJ
+      this.props = this.attrs = EMPTY_OBJ as Props
     }
 
     // init slots
     this.rawSlots = rawSlots || EMPTY_OBJ
-    this.slots = rawSlots
-      ? rawSlots.$
-        ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
-        : rawSlots
-      : EMPTY_OBJ
+    this.slots = (
+      rawSlots
+        ? rawSlots.$
+          ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
+          : rawSlots
+        : EMPTY_OBJ
+    ) as Slots
 
     this.scopeId = getCurrentScopeId()
 
@@ -975,7 +1031,7 @@ function handleSetupResult(
     // component has a render function with either:
     // - no setup function (components with only a template)
     // - setup returning non-block state for use in render
-    // support setup fn and render fn co-usage for defineComponent expose
+    // support setup fn and render fn co-usage for expose
     if (!isBlock(setupResult) && component.render) {
       instance.setupState = proxyRefs(setupResult)
       instance.block =

@@ -396,7 +396,7 @@ export const createFor = (
       oldBlocks = []
     }
 
-    if (isMounted && frag.updated) frag.updated.forEach(m => m())
+    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
     setActiveSub(prevSub)
   }
 

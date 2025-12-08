@@ -237,14 +237,14 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
     // inject hooks to DynamicFragment to cache components during updates
     const injectKeepAliveHooks = (frag: DynamicFragment) => {
-      ;(frag.beforeTeardown || (frag.beforeTeardown = [])).push(
+      ;(frag.onBeforeTeardown || (frag.onBeforeTeardown = [])).push(
         (oldKey, nodes, scope) => {
           processFragment(frag)
           keptAliveScopes.set(oldKey, scope)
           return true
         },
       )
-      ;(frag.beforeMount || (frag.beforeMount = [])).push(() =>
+      ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() =>
         cacheFragment(frag),
       )
       frag.getScope = key => {

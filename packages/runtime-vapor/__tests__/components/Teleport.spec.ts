@@ -84,7 +84,7 @@ describe('renderer: VaporTeleport', () => {
         setup(props) {
           const n0 = template(`<div> </div>`)()
           const x0 = child(n0 as any)
-          renderEffect(() => setText(x0 as any, props.foo))
+          renderEffect(() => setText(x0 as any, String(props.foo)))
           return [n0]
         },
       })

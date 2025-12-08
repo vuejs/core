@@ -1054,7 +1054,7 @@ describe('defineVaporCustomElement', () => {
         setup() {
           return template('bar')()
         },
-      } as any)
+      } as {})
       const Foo = defineVaporCustomElement({
         styles: [`div { color: red; }`],
         setup() {

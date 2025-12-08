@@ -68,7 +68,6 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: parentId,
-      // @ts-expect-error ObjectVaporComponent doesn't have components
       components: { Child },
       setup() {
         const count = ref(0)
@@ -197,7 +196,6 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: 'parentId',
-      // @ts-expect-error
       components: { Child },
       setup() {
         const toggle = ref(true)
@@ -271,7 +269,6 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: 'parentId',
-      // @ts-expect-error
       components: { Child },
       setup() {
         const toggle = ref(true)
@@ -349,7 +346,6 @@ describe('hot module replacement', () => {
     createRecord(childId, Child as any)
 
     const Parent = defineVaporComponent({
-      // @ts-expect-error
       components: { Child },
       setup() {
         function onLeave(_: any, done: Function) {
@@ -531,7 +527,6 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: parentId,
-      // @ts-expect-error
       components: { Child },
       render: compileToFunction(`<Child msg="foo" />`),
     })
@@ -557,7 +552,6 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: parentId,
-      // @ts-expect-error
       components: { Child },
       render: compileToFunction(`<Child class="test" />`),
     })
@@ -594,13 +588,11 @@ describe('hot module replacement', () => {
       components.push(parentComp)
       if (i === 0) {
         parentComp.render = compileToFunction(`<Child />`)
-        // @ts-expect-error
         parentComp.components = {
           Child,
         }
       } else {
         parentComp.render = compileToFunction(`<Parent />`)
-        // @ts-expect-error
         parentComp.components = {
           Parent: components[i - 1],
         }
@@ -1010,7 +1002,6 @@ describe('hot module replacement', () => {
 
     const { mount, component: Parent } = define({
       __hmrId: parentId,
-      // @ts-expect-error
       components: { Child },
       setup() {
         const msg = ref('root')
