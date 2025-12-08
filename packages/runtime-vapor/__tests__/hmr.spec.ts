@@ -68,7 +68,7 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: parentId,
-      // @ts-expect-error ObjectVaporComponent doesn't have components
+      // ObjectVaporComponent doesn't have components
       components: { Child },
       setup() {
         const count = ref(0)
@@ -77,7 +77,7 @@ describe('hot module replacement', () => {
       render: compileToFunction(
         `<div @click="count++">{{ count }}<Child>{{ count }}</Child></div>`,
       ),
-    })
+    } as any)
     createRecord(parentId, Parent as any)
 
     const { mount } = define(Parent).create()
@@ -197,7 +197,6 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: 'parentId',
-      // @ts-expect-error
       components: { Child },
       setup() {
         const toggle = ref(true)
@@ -207,7 +206,7 @@ describe('hot module replacement', () => {
         `<button @click="toggle = !toggle" />
         <KeepAlive><Child v-if="toggle" /></KeepAlive>`,
       ),
-    })
+    } as any)
 
     define(Parent).create().mount(root)
     expect(root.innerHTML).toBe(`<button></button><div>0</div><!--if-->`)
@@ -271,7 +270,6 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: 'parentId',
-      // @ts-expect-error
       components: { Child },
       setup() {
         const toggle = ref(true)
@@ -283,7 +281,7 @@ describe('hot module replacement', () => {
           <KeepAlive><Child v-if="toggle" /></KeepAlive>
         </Transition>`,
       ),
-    })
+    } as any)
 
     define(Parent).create().mount(root)
     expect(root.innerHTML).toBe(`<button></button><div>0</div><!--if-->`)
@@ -531,10 +529,9 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: parentId,
-      // @ts-expect-error
       components: { Child },
       render: compileToFunction(`<Child msg="foo" />`),
-    })
+    } as any)
     createRecord(parentId, Parent as any)
 
     define(Parent).create().mount(root)
@@ -557,10 +554,9 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: parentId,
-      // @ts-expect-error
       components: { Child },
       render: compileToFunction(`<Child class="test" />`),
-    })
+    } as any)
     createRecord(parentId, Parent as any)
 
     define(Parent).create().mount(root)
