@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: transform slot > dynamic slots name 1`] = `
-"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template("foo")
 
 export function render(_ctx) {
@@ -10,10 +10,10 @@ export function render(_ctx) {
     $: [
       () => ({
         name: _ctx.name,
-        fn: _withVaporCtx(() => {
+        fn: () => {
           const n0 = t0()
           return n0
-        })
+        }
       })
     ]
   }, true)
@@ -22,7 +22,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > dynamic slots name w/ v-for 1`] = `
-"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template(" ")
 
 export function render(_ctx) {
@@ -31,11 +31,11 @@ export function render(_ctx) {
     $: [
       () => (_createForSlots(_ctx.list, (item) => ({
         name: item,
-        fn: _withVaporCtx((_slotProps0) => {
+        fn: (_slotProps0) => {
           const n0 = t0()
-          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["bar"])))
+          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.bar)))
           return n0
-        })
+        }
       })))
     ]
   }, true)
@@ -44,7 +44,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > dynamic slots name w/ v-for and provide absent key 1`] = `
-"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template("foo")
 
 export function render(_ctx) {
@@ -53,10 +53,10 @@ export function render(_ctx) {
     $: [
       () => (_createForSlots(_ctx.list, (_, __, index) => ({
         name: index,
-        fn: _withVaporCtx(() => {
+        fn: () => {
           const n0 = t0()
           return n0
-        })
+        }
       })))
     ]
   }, true)
@@ -65,7 +65,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > dynamic slots name w/ v-if / v-else[-if] 1`] = `
-"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template("condition slot")
 const t1 = _template("another condition")
 const t2 = _template("else condition")
@@ -77,25 +77,25 @@ export function render(_ctx) {
       () => (_ctx.condition
         ? {
           name: "condition",
-          fn: _withVaporCtx(() => {
+          fn: () => {
             const n0 = t0()
             return n0
-          })
+          }
         }
         : _ctx.anotherCondition
           ? {
             name: "condition",
-            fn: _withVaporCtx((_slotProps0) => {
+            fn: (_slotProps0) => {
               const n2 = t1()
               return n2
-            })
+            }
           }
           : {
             name: "condition",
-            fn: _withVaporCtx(() => {
+            fn: () => {
               const n4 = t2()
               return n4
-            })
+            }
           })
     ]
   }, true)
@@ -190,23 +190,23 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > implicit default slot 1`] = `
-"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = _createComponentWithFallback(_component_Comp, null, {
-    "default": _withVaporCtx(() => {
+    "default": () => {
       const n0 = t0()
       return n0
-    })
+    }
   }, true)
   return n1
 }"
 `;
 
 exports[`compiler: transform slot > named slots w/ implicit default slot 1`] = `
-"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template("foo")
 const t1 = _template("bar")
 const t2 = _template("<span></span>")
@@ -214,17 +214,36 @@ const t2 = _template("<span></span>")
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n4 = _createComponentWithFallback(_component_Comp, null, {
-    "one": _withVaporCtx(() => {
+    "one": () => {
       const n0 = t0()
       return n0
-    }),
-    "default": _withVaporCtx(() => {
+    },
+    "default": () => {
       const n2 = t1()
       const n3 = t2()
       return [n2, n3]
-    })
+    }
   }, true)
   return n4
+}"
+`;
+
+exports[`compiler: transform slot > nested component should not inherit parent slots 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, withVaporCtx as _withVaporCtx } from 'vue';
+
+export function render(_ctx) {
+  const _component_Bar = _resolveComponent("Bar")
+  const _component_Foo = _resolveComponent("Foo")
+  const n2 = _createComponentWithFallback(_component_Foo, null, {
+    "header": () => {
+      return null
+    },
+    "default": _withVaporCtx(() => {
+      const n1 = _createComponentWithFallback(_component_Bar)
+      return n1
+    })
+  }, true)
+  return n2
 }"
 `;
 
@@ -245,7 +264,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > nested slots scoping 1`] = `
-"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, withVaporCtx as _withVaporCtx, template as _template } from 'vue';
 const t0 = _template(" ")
 
 export function render(_ctx) {
@@ -254,14 +273,14 @@ export function render(_ctx) {
   const n5 = _createComponentWithFallback(_component_Comp, null, {
     "default": _withVaporCtx((_slotProps0) => {
       const n1 = _createComponentWithFallback(_component_Inner, null, {
-        "default": _withVaporCtx((_slotProps1) => {
+        "default": (_slotProps1) => {
           const n0 = t0()
-          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _slotProps1["bar"] + _ctx.baz)))
+          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _slotProps1.bar + _ctx.baz)))
           return n0
-        })
+        }
       })
       const n3 = t0()
-      _renderEffect(() => _setText(n3, " " + _toDisplayString(_slotProps0["foo"] + _ctx.bar + _ctx.baz)))
+      _renderEffect(() => _setText(n3, " " + _toDisplayString(_slotProps0.foo + _ctx.bar + _ctx.baz)))
       return [n1, n3]
     })
   }, true)
@@ -270,7 +289,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > on component dynamically named slot 1`] = `
-"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template(" ")
 
 export function render(_ctx) {
@@ -279,11 +298,11 @@ export function render(_ctx) {
     $: [
       () => ({
         name: _ctx.named,
-        fn: _withVaporCtx((_slotProps0) => {
+        fn: (_slotProps0) => {
           const n0 = t0()
-          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
+          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _ctx.bar)))
           return n0
-        })
+        }
       })
     ]
   }, true)
@@ -292,48 +311,48 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > on component named slot 1`] = `
-"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template(" ")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = _createComponentWithFallback(_component_Comp, null, {
-    "named": _withVaporCtx((_slotProps0) => {
+    "named": (_slotProps0) => {
       const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _ctx.bar)))
       return n0
-    })
+    }
   }, true)
   return n1
 }"
 `;
 
 exports[`compiler: transform slot > on-component default slot 1`] = `
-"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template(" ")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = _createComponentWithFallback(_component_Comp, null, {
-    "default": _withVaporCtx((_slotProps0) => {
+    "default": (_slotProps0) => {
       const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["foo"] + _ctx.bar)))
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _ctx.bar)))
       return n0
-    })
+    }
   }, true)
   return n1
 }"
 `;
 
 exports[`compiler: transform slot > quote slot name 1`] = `
-"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = _createComponentWithFallback(_component_Comp, null, {
-    "nav-bar-title-before": _withVaporCtx(() => {
+    "nav-bar-title-before": () => {
       return null
-    })
+    }
   }, true)
   return n1
 }"
@@ -361,8 +380,144 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform slot > slot prop alias uses original key 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": (_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.msg)))
+      return n0
+    }
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > slot prop array rest destructuring 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": (_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.arr.slice(1)[0])))
+      return n0
+    }
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > slot prop computed key destructuring 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": (_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0[_ctx.key])))
+      return n0
+    }
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > slot prop default value 1`] = `
+"import { resolveComponent as _resolveComponent, getDefaultValue as _getDefaultValue, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": (_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_getDefaultValue(_slotProps0.foo, 1))))
+      return n0
+    }
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > slot prop nested default value 1`] = `
+"import { resolveComponent as _resolveComponent, getDefaultValue as _getDefaultValue, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": (_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_getDefaultValue(_slotProps0.foo[0], 1) + _getDefaultValue(_slotProps0.baz.qux, 2))))
+      return n0
+    }
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > slot prop nested destructuring 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": (_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo.bar)))
+      return n0
+    }
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > slot prop rest destructuring 1`] = `
+"import { resolveComponent as _resolveComponent, getRestElement as _getRestElement, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": (_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_getRestElement(_slotProps0, ["foo"]).bar)))
+      return n0
+    }
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > slot prop rest with computed keys preserved 1`] = `
+"import { resolveComponent as _resolveComponent, getRestElement as _getRestElement, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": (_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _getRestElement(_slotProps0, ["foo", _ctx.key]).other)))
+      return n0
+    }
+  }, true)
+  return n2
+}"
+`;
+
 exports[`compiler: transform slot > with whitespace: 'preserve' > implicit default slot 1`] = `
-"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template(" Header ")
 const t1 = _template(" ")
 const t2 = _template("<p></p>")
@@ -370,58 +525,276 @@ const t2 = _template("<p></p>")
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n4 = _createComponentWithFallback(_component_Comp, null, {
-    "header": _withVaporCtx(() => {
+    "header": () => {
       const n0 = t0()
       return n0
-    }),
-    "default": _withVaporCtx(() => {
+    },
+    "default": () => {
       const n2 = t1()
       const n3 = t2()
       return [n2, n3]
-    })
+    }
   }, true)
   return n4
 }"
 `;
 
 exports[`compiler: transform slot > with whitespace: 'preserve' > named default slot + implicit whitespace content 1`] = `
-"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template(" Header ")
 const t1 = _template(" Default ")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n5 = _createComponentWithFallback(_component_Comp, null, {
-    "header": _withVaporCtx(() => {
+    "header": () => {
       const n0 = t0()
       return n0
-    }),
-    "default": _withVaporCtx(() => {
+    },
+    "default": () => {
       const n3 = t1()
       return n3
-    })
+    }
   }, true)
   return n5
 }"
 `;
 
 exports[`compiler: transform slot > with whitespace: 'preserve' > should not generate whitespace only default slot 1`] = `
-"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template(" Header ")
 const t1 = _template(" Footer ")
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n5 = _createComponentWithFallback(_component_Comp, null, {
-    "header": _withVaporCtx(() => {
+    "header": () => {
       const n0 = t0()
       return n0
-    }),
-    "footer": _withVaporCtx(() => {
+    },
+    "footer": () => {
       const n3 = t1()
       return n3
+    }
+  }, true)
+  return n5
+}"
+`;
+
+exports[`compiler: transform slot > withVaporCtx optimization > slot with component inside v-for should have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createFor as _createFor, withVaporCtx as _withVaporCtx, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const _component_ChildComp = _resolveComponent("ChildComp")
+  const _component_Comp = _resolveComponent("Comp")
+  const n5 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+        const n3 = t0()
+        _setInsertionState(n3, null, true)
+        const n2 = _createComponentWithFallback(_component_ChildComp)
+        return n3
+      })
+      return n0
     })
   }, true)
   return n5
+}"
+`;
+
+exports[`compiler: transform slot > withVaporCtx optimization > slot with component inside v-if should have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, withVaporCtx as _withVaporCtx, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const _component_ChildComp = _resolveComponent("ChildComp")
+  const _component_Comp = _resolveComponent("Comp")
+  const n5 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createIf(() => (_ctx.show), () => {
+        const n3 = t0()
+        _setInsertionState(n3, null, true)
+        const n2 = _createComponentWithFallback(_component_ChildComp)
+        return n3
+      })
+      return n0
+    })
+  }, true)
+  return n5
+}"
+`;
+
+exports[`compiler: transform slot > withVaporCtx optimization > slot with component should have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, withVaporCtx as _withVaporCtx } from 'vue';
+
+export function render(_ctx) {
+  const _component_ChildComp = _resolveComponent("ChildComp")
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createComponentWithFallback(_component_ChildComp)
+      return n0
+    })
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > withVaporCtx optimization > slot with custom element inside v-if should have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createPlainElement as _createPlainElement, createIf as _createIf, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n5 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createIf(() => (_ctx.show), () => {
+        const n3 = t0()
+        _setInsertionState(n3, null, true)
+        const n2 = _createPlainElement("my-element")
+        return n3
+      })
+      return n0
+    })
+  }, true)
+  return n5
+}"
+`;
+
+exports[`compiler: transform slot > withVaporCtx optimization > slot with custom element should have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, createPlainElement as _createPlainElement, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createPlainElement("my-element")
+      return n0
+    })
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > withVaporCtx optimization > slot with nested v-if containing component should have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, withVaporCtx as _withVaporCtx, template as _template } from 'vue';
+const t0 = _template("<span></span>")
+const t1 = _template("<div></div>")
+
+export function render(_ctx) {
+  const _component_ChildComp = _resolveComponent("ChildComp")
+  const _component_Comp = _resolveComponent("Comp")
+  const n8 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createIf(() => (_ctx.a), () => {
+        const n6 = t1()
+        _setInsertionState(n6, null, true)
+        const n2 = _createIf(() => (_ctx.b), () => {
+          const n5 = t0()
+          _setInsertionState(n5, null, true)
+          const n4 = _createComponentWithFallback(_component_ChildComp)
+          return n5
+        })
+        return n6
+      })
+      return n0
+    })
+  }, true)
+  return n8
+}"
+`;
+
+exports[`compiler: transform slot > withVaporCtx optimization > slot with only static elements should not have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("<div>static content</div>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": () => {
+      const n0 = t0()
+      return n0
+    }
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > withVaporCtx optimization > slot with only text interpolation should not have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": () => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_ctx.message)))
+      return n0
+    }
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > withVaporCtx optimization > slot with slot outlet should have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    "default": _withVaporCtx(() => {
+      const n0 = _createSlot("default", null)
+      return n0
+    })
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transform slot > withVaporCtx optimization > slot with v-for but no component should not have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("<div> </div>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n4 = _createComponentWithFallback(_component_Comp, null, {
+    "default": () => {
+      const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+        const n2 = t0()
+        const x2 = _txt(n2)
+        _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value)))
+        return n2
+      })
+      const x0 = _txt(n0)
+      _renderEffect(() => _setText(x0, _toDisplayString(_ctx.item)))
+      return n0
+    }
+  }, true)
+  return n4
+}"
+`;
+
+exports[`compiler: transform slot > withVaporCtx optimization > slot with v-if but no component should not have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, createIf as _createIf, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("<div>content</div>")
+const t1 = _template("<span>fallback</span>")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n7 = _createComponentWithFallback(_component_Comp, null, {
+    "default": () => {
+      const n0 = _createIf(() => (_ctx.show), () => {
+        const n2 = t0()
+        return n2
+      }, () => {
+        const n4 = t1()
+        return n4
+      })
+      return n0
+    }
+  }, true)
+  return n7
 }"
 `;

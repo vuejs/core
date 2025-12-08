@@ -674,3 +674,11 @@ export {
  * @internal
  */
 export type { GenericComponent } from './component'
+
+/**
+ * @internal
+ */
+export {
+  warnExtraneousAttributes,
+  getFunctionalFallthrough,
+} from './componentRenderUtils'

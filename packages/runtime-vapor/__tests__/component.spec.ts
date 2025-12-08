@@ -416,6 +416,22 @@ describe('component', () => {
       'Vapor component setup() returned non-block value, and has no render function',
     ).toHaveBeenWarned()
   })
+
+  it('warn non-existent property access', () => {
+    define({
+      setup() {
+        return {}
+      },
+      render(ctx: any) {
+        ctx.foo
+        return []
+      },
+    }).render()
+
+    expect(
+      'Property "foo" was accessed during render but is not defined on instance.',
+    ).toHaveBeenWarned()
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {

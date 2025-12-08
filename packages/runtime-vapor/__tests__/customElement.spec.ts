@@ -580,10 +580,10 @@ describe('defineVaporCustomElement', () => {
   describe('attrs', () => {
     const E = defineVaporCustomElement({
       setup(_: any, { attrs }: any) {
-        const n0 = template('<div> </div>')() as any
+        const n0 = template('<div> </div>', true)() as any
         const x0 = txt(n0) as any
         renderEffect(() => setText(x0, toDisplayString(attrs.foo)))
-        return [n0]
+        return n0
       },
     })
     customElements.define('my-el-attrs', E)
@@ -591,11 +591,11 @@ describe('defineVaporCustomElement', () => {
     test('attrs via attribute', async () => {
       container.innerHTML = `<my-el-attrs foo="hello"></my-el-attrs>`
       const e = container.childNodes[0] as VaporElement
-      expect(e.shadowRoot!.innerHTML).toBe('<div>hello</div>')
+      expect(e.shadowRoot!.innerHTML).toBe('<div foo="hello">hello</div>')
 
       e.setAttribute('foo', 'changed')
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe('<div>changed</div>')
+      expect(e.shadowRoot!.innerHTML).toBe('<div foo="changed">changed</div>')
     })
 
     test('non-declared properties should not show up in $attrs', () => {
@@ -1407,7 +1407,7 @@ describe('defineVaporCustomElement', () => {
           return createPlainElement('my-parent', null, {
             default: withVaporCtx(() =>
               createPlainElement('my-child', null, {
-                default: withVaporCtx(() => template('<span>default</span>')()),
+                default: () => template('<span>default</span>')(),
               }),
             ),
           })
@@ -1461,7 +1461,7 @@ describe('defineVaporCustomElement', () => {
           return createPlainElement('my-el-teleport-parent', null, {
             default: withVaporCtx(() =>
               createPlainElement('my-el-teleport-child', null, {
-                default: withVaporCtx(() => template('<span>default</span>')()),
+                default: () => template('<span>default</span>')(),
               }),
             ),
           })
@@ -1505,10 +1505,10 @@ describe('defineVaporCustomElement', () => {
       const App = {
         setup() {
           return createPlainElement('my-el-two-teleport-child', null, {
-            default: withVaporCtx(() => [
+            default: () => [
               template('<div slot="header">header</div>')(),
               template('<span slot="body">body</span>')(),
-            ]),
+            ],
           })
         },
       }
@@ -1556,10 +1556,10 @@ describe('defineVaporCustomElement', () => {
       const App = {
         setup() {
           return createPlainElement('my-el-two-teleport-child-0', null, {
-            default: withVaporCtx(() => [
+            default: () => [
               template('<div slot="header">header</div>')(),
               template('<span slot="body">body</span>')(),
-            ]),
+            ],
           })
         },
       }
@@ -1591,7 +1591,7 @@ describe('defineVaporCustomElement', () => {
       const ChildWrapper = {
         setup() {
           return createPlainElement('my-el-child-shadow-false', null, {
-            default: withVaporCtx(() => template('child')()),
+            default: () => template('child')(),
           })
         },
       }

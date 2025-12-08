@@ -11,11 +11,15 @@ import {
   remove,
 } from './block'
 import {
+  type GenericComponentInstance,
   type TransitionHooks,
   type VNode,
+  currentInstance,
   queuePostFlushCb,
+  setCurrentInstance,
+  warnExtraneousAttributes,
 } from '@vue/runtime-dom'
-import type { VaporComponentInstance } from './component'
+import { type VaporComponentInstance, applyFallthroughProps } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
   applyTransitionHooks,
@@ -28,6 +32,8 @@ import {
   locateFragmentEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
+import { isArray } from '@vue/shared'
+import { renderEffect } from './renderEffect'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -37,6 +43,7 @@ export class VaporFragment<T extends Block = Block>
   nodes: T
   vnode?: VNode | null = null
   anchor?: Node
+  parentComponent?: GenericComponentInstance | null
   fallback?: BlockFn
   insert?: (
     parent: ParentNode,
@@ -73,6 +80,12 @@ export class DynamicFragment extends VaporFragment {
   fallback?: BlockFn
   anchorLabel?: string
 
+  // fallthrough attrs
+  attrs?: Record<string, any>
+
+  // set ref for async wrapper
+  setAsyncRef?: (instance: VaporComponentInstance) => void
+
   // get the kept-alive scope when used in keep-alive
   getScope?: (key: any) => EffectScope | undefined
 
@@ -92,6 +105,7 @@ export class DynamicFragment extends VaporFragment {
     } else {
       this.anchor =
         __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+      if (__DEV__) this.anchorLabel = anchorLabel
     }
   }
 
@@ -102,6 +116,7 @@ export class DynamicFragment extends VaporFragment {
     }
     this.current = key
 
+    const instance = currentInstance
     const prevSub = setActiveSub()
     const parent = isHydrating ? null : this.anchor.parentNode
     const transition = this.$transition
@@ -121,7 +136,7 @@ export class DynamicFragment extends VaporFragment {
       const mode = transition && transition.mode
       if (mode) {
         applyTransitionLeaveHooks(this.nodes, transition, () =>
-          this.render(render, transition, parent),
+          this.render(render, transition, parent, instance),
         )
         parent && remove(this.nodes, parent)
         if (mode === 'out-in') {
@@ -133,23 +148,34 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    this.render(render, transition, parent)
+    this.render(render, transition, parent, instance)
 
     if (this.fallback) {
-      // set fallback for nested fragments
-      const hasNestedFragment = isFragment(this.nodes)
-      if (hasNestedFragment) {
-        setFragmentFallback(this.nodes as VaporFragment, this.fallback)
+      // Find the deepest invalid fragment
+      let invalidFragment: VaporFragment | null = null
+      if (isFragment(this.nodes)) {
+        setFragmentFallback(
+          this.nodes,
+          this.fallback,
+          (frag: VaporFragment) => {
+            if (!isValidBlock(frag.nodes)) {
+              invalidFragment = frag
+            }
+          },
+        )
       }
 
-      const invalidFragment = findInvalidFragment(this)
+      // Check self validity (when no nested fragment or nested is valid)
+      if (!invalidFragment && !isValidBlock(this.nodes)) {
+        invalidFragment = this
+      }
+
       if (invalidFragment) {
         parent && remove(this.nodes, parent)
         const scope = this.scope || (this.scope = new EffectScope())
         scope.run(() => {
-          // for nested fragments, render invalid fragment's fallback
-          if (hasNestedFragment) {
-            renderFragmentFallback(invalidFragment)
+          if (invalidFragment !== this) {
+            renderFragmentFallback(invalidFragment!)
           } else {
             this.nodes = this.fallback!() || []
           }
@@ -167,6 +193,7 @@ export class DynamicFragment extends VaporFragment {
     render: BlockFn | undefined,
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,
+    instance: GenericComponentInstance | null,
   ) {
     if (render) {
       // try to reuse the kept-alive scope
@@ -177,7 +204,12 @@ export class DynamicFragment extends VaporFragment {
         this.scope = new EffectScope()
       }
 
+      // switch current instance to parent instance during update
+      // ensure that the parent instance is correct for nested components
+      let prev
+      if (parent && instance) prev = setCurrentInstance(instance)
       this.nodes = this.scope.run(render) || []
+      if (parent && instance) setCurrentInstance(...prev!)
 
       if (transition) {
         this.$transition = applyTransitionHooks(this.nodes, transition)
@@ -190,9 +222,25 @@ export class DynamicFragment extends VaporFragment {
       }
 
       if (parent) {
+        // apply fallthrough props during update
+        if (this.attrs) {
+          if (this.nodes instanceof Element) {
+            renderEffect(() =>
+              applyFallthroughProps(this.nodes as Element, this.attrs!),
+            )
+          } else if (
+            __DEV__ &&
+            // preventing attrs fallthrough on slots
+            // consistent with VDOM slots behavior
+            (this.anchorLabel === 'slot' ||
+              (isArray(this.nodes) && this.nodes.length))
+          ) {
+            warnExtraneousAttributes(this.attrs)
+          }
+        }
+
         insert(this.nodes, parent, this.anchor)
-        // anchor isConnected indicates the this render is updated
-        if (this.anchor.isConnected && this.updated) {
+        if (this.updated) {
           this.updated.forEach(hook => hook(this.nodes))
         }
       }
@@ -260,6 +308,7 @@ export class DynamicFragment extends VaporFragment {
 export function setFragmentFallback(
   fragment: VaporFragment,
   fallback: BlockFn,
+  onFragment?: (frag: VaporFragment) => void,
 ): void {
   if (fragment.fallback) {
     const originalFallback = fragment.fallback
@@ -276,8 +325,10 @@ export function setFragmentFallback(
     fragment.fallback = fallback
   }
 
+  if (onFragment) onFragment(fragment)
+
   if (isFragment(fragment.nodes)) {
-    setFragmentFallback(fragment.nodes, fragment.fallback)
+    setFragmentFallback(fragment.nodes, fragment.fallback, onFragment)
   }
 }
 
@@ -289,14 +340,6 @@ function renderFragmentFallback(fragment: VaporFragment): void {
   } else {
     // vdom slots
   }
-}
-
-function findInvalidFragment(fragment: VaporFragment): VaporFragment | null {
-  if (isValidBlock(fragment.nodes)) return null
-
-  return isFragment(fragment.nodes)
-    ? findInvalidFragment(fragment.nodes) || fragment
-    : fragment
 }
 
 export function isFragment(val: NonNullable<unknown>): val is VaporFragment {

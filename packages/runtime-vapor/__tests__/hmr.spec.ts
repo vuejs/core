@@ -631,7 +631,7 @@ describe('hot module replacement', () => {
       },
       render: compileToFunction(`
         <teleport :to="target">
-          <div :style="style">
+          <div>
             <slot/>
           </div>
         </teleport>

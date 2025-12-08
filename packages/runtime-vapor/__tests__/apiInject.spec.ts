@@ -9,6 +9,7 @@ import {
   reactive,
   readonly,
   ref,
+  renderSlot,
   toDisplayString,
 } from '@vue/runtime-dom'
 import {
@@ -18,11 +19,12 @@ import {
   createVaporApp,
   defineVaporComponent,
   renderEffect,
+  template,
   vaporInteropPlugin,
   withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
-import { setElementText } from '../src/dom/prop'
+import { setElementText, setText } from '../src/dom/prop'
 
 const define = makeRender<any>()
 
@@ -426,6 +428,10 @@ describe('api: provide/inject', () => {
 })
 
 describe('vdom interop', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
   test('should inject value from vapor parent', async () => {
     const VdomChild = {
       setup() {
@@ -453,5 +459,47 @@ describe('vdom interop', () => {
     value.value = 'bar'
     await nextTick()
     expect(root.innerHTML).toBe('<div>bar</div>')
+
+    app.unmount()
+  })
+
+  test('slotted vapor child should inject value from vdom parent', async () => {
+    const value = ref('foo')
+    const VdomParent = {
+      setup(_: any, { slots }: any) {
+        provide('foo', value)
+        return () => renderSlot(slots, 'default')
+      },
+    }
+
+    const VaporChild = defineVaporComponent({
+      setup() {
+        const foo = inject('foo')
+        const n0 = template(' ')() as any
+        renderEffect(() => setText(n0, toDisplayString(foo)))
+        return n0
+      },
+    })
+
+    const App = defineVaporComponent({
+      setup() {
+        return createComponent(VdomParent, null, {
+          default: () => createComponent(VaporChild),
+        })
+      },
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const app = createVaporApp(App)
+    app.use(vaporInteropPlugin)
+    app.mount(root)
+
+    expect(root.innerHTML).toBe('foo')
+
+    value.value = 'bar'
+    await nextTick()
+    expect(root.innerHTML).toBe('bar')
+    app.unmount()
   })
 })

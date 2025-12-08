@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-dom",
-  "version": "3.6.0-alpha.5",
+  "version": "3.6.0-alpha.6",
   "description": "@vue/runtime-dom",
   "main": "index.js",
   "module": "dist/runtime-dom.esm-bundler.js",

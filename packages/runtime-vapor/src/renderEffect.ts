@@ -53,8 +53,6 @@ export class RenderEffect extends ReactiveEffect {
 
     this.job = job
     this.i = instance
-
-    // TODO recurse handling
   }
 
   fn(): void {
@@ -67,6 +65,7 @@ export class RenderEffect extends ReactiveEffect {
     }
     const prev = setCurrentInstance(instance, scope)
     if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
+      // avoid recurse update until updateJob flushed
       instance.isUpdating = true
       instance.bu && invokeArrayFns(instance.bu)
       this.render()

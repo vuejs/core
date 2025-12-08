@@ -11,7 +11,10 @@ import {
   openBlock,
 } from '../vnode'
 import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
-import { type ComponentInternalInstance, handleSetupResult } from '../component'
+import type {
+  ComponentInternalInstance,
+  GenericComponentInstance,
+} from '../component'
 import type { Slots } from '../componentSlots'
 import {
   type ElementNamespace,
@@ -19,17 +22,11 @@ import {
   type RendererElement,
   type RendererInternals,
   type RendererNode,
-  type SetupRenderEffectFn,
   queuePostRenderEffect,
 } from '../renderer'
 import { queuePostFlushCb } from '../scheduler'
 import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
-import {
-  assertNumber,
-  popWarningContext,
-  pushWarningContext,
-  warn,
-} from '../warning'
+import { assertNumber, warn } from '../warning'
 import { ErrorCodes, handleError } from '../errorHandling'
 import { NULL_DYNAMIC_COMPONENT } from '../helpers/resolveAssets'
 
@@ -436,9 +433,8 @@ export interface SuspenseBoundary {
   ): void
   next(): RendererNode | null
   registerDep(
-    instance: ComponentInternalInstance,
-    setupRenderEffect: SetupRenderEffectFn,
-    optimized: boolean,
+    instance: GenericComponentInstance,
+    onResolve: (setupResult: unknown) => void,
   ): void
   unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void
 }
@@ -474,7 +470,7 @@ function createSuspenseBoundary(
     m: move,
     um: unmount,
     n: next,
-    o: { parentNode, remove },
+    o: { parentNode },
   } = rendererInternals
 
   // if set `suspensible: true`, set the current suspense as a dep of parent suspense
@@ -701,12 +697,12 @@ function createSuspenseBoundary(
       return suspense.activeBranch && next(suspense.activeBranch)
     },
 
-    registerDep(instance, setupRenderEffect, optimized) {
+    registerDep(instance, onResolve) {
       const isInPendingSuspense = !!suspense.pendingBranch
       if (isInPendingSuspense) {
         suspense.deps++
       }
-      const hydratedEl = instance.vnode.el
+
       instance
         .asyncDep!.catch(err => {
           handleError(err, instance, ErrorCodes.SETUP_FUNCTION)
@@ -723,40 +719,8 @@ function createSuspenseBoundary(
           }
           // retry from this component
           instance.asyncResolved = true
-          const { vnode } = instance
-          if (__DEV__) {
-            pushWarningContext(vnode)
-          }
-          handleSetupResult(instance, asyncSetupResult, false)
-          if (hydratedEl) {
-            // vnode may have been replaced if an update happened before the
-            // async dep is resolved.
-            vnode.el = hydratedEl
-          }
-          const placeholder = !hydratedEl && instance.subTree.el
-          setupRenderEffect(
-            instance,
-            vnode,
-            // component may have been moved before resolve.
-            // if this is not a hydration, instance.subTree will be the comment
-            // placeholder.
-            parentNode(hydratedEl || instance.subTree.el!)!,
-            // anchor will not be used if this is hydration, so only need to
-            // consider the comment placeholder case.
-            hydratedEl ? null : next(instance.subTree),
-            suspense,
-            namespace,
-            optimized,
-          )
-          if (placeholder) {
-            // clean up placeholder reference
-            vnode.placeholder = null
-            remove(placeholder)
-          }
-          updateHOCHostEl(instance, vnode.el)
-          if (__DEV__) {
-            popWarningContext()
-          }
+          onResolve(asyncSetupResult)
+
           // only decrease deps count if suspense is not already resolved
           if (isInPendingSuspense && --suspense.deps === 0) {
             suspense.resolve()
