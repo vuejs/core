@@ -183,6 +183,7 @@ export interface ObjectVaporComponent<
 
   name?: string
   vapor?: boolean
+  components?: Record<string, VaporComponent>
   /**
    * @internal custom element interception hook
    */

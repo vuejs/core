@@ -691,7 +691,6 @@ describe('attribute fallthrough', () => {
       },
     })
     const Child = defineVaporComponent({
-      // @ts-expect-error
       components: { GrandChild },
       render(_ctx, $props, $emit, $attrs, $slots) {
         const n0 = template('<div></div>')() as any
