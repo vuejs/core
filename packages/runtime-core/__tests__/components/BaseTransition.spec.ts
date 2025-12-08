@@ -1198,4 +1198,51 @@ describe('BaseTransition', () => {
   test('should not error on KeepAlive w/ function children', () => {
     expect(() => mount({}, () => () => h('div'), true)).not.toThrow()
   })
+
+  // #12465
+  test('mode: "out-in" w/ KeepAlive + fallthrough attrs (prod mode)', async () => {
+    __DEV__ = false
+    async function testOutIn({ trueBranch, falseBranch }: ToggleOptions) {
+      const toggle = ref(true)
+      const { props, cbs } = mockProps({ mode: 'out-in' }, true)
+      const root = nodeOps.createElement('div')
+      const App = {
+        render() {
+          return h(
+            BaseTransition,
+            {
+              ...props,
+              class: 'test',
+            },
+            () =>
+              h(KeepAlive, null, toggle.value ? trueBranch() : falseBranch()),
+          )
+        },
+      }
+      render(h(App), root)
+
+      expect(serializeInner(root)).toBe(`<div class="test">0</div>`)
+
+      // trigger toggle
+      toggle.value = false
+      await nextTick()
+      expect(props.onBeforeLeave).toHaveBeenCalledTimes(1)
+      expect(serialize((props.onBeforeLeave as any).mock.calls[0][0])).toBe(
+        `<div class="test">0</div>`,
+      )
+      expect(props.onLeave).toHaveBeenCalledTimes(1)
+      expect(serialize((props.onLeave as any).mock.calls[0][0])).toBe(
+        `<div class="test">0</div>`,
+      )
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+      // enter should not have started
+      expect(props.onBeforeEnter).not.toHaveBeenCalled()
+      expect(props.onEnter).not.toHaveBeenCalled()
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+      cbs.doneLeave[`<div class="test">0</div>`]()
+      expect(serializeInner(root)).toBe(`<span class="test">0</span>`)
+    }
+    await runTestWithKeepAlive(testOutIn)
+    __DEV__ = true
+  })
 })

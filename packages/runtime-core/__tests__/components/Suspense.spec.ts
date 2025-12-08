@@ -17,11 +17,14 @@ import {
   onUnmounted,
   ref,
   render,
+  renderList,
+  renderSlot,
   resolveDynamicComponent,
   serializeInner,
   shallowRef,
   watch,
   watchEffect,
+  withDirectives,
 } from '@vue/runtime-test'
 import { computed, createApp, defineComponent, inject, provide } from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
@@ -2161,6 +2164,80 @@ describe('Suspense', () => {
     await Promise.all(deps)
   })
 
+  // #13453
+  test('add new async deps during patching', async () => {
+    const getComponent = (type: string) => {
+      if (type === 'A') {
+        return defineAsyncComponent({
+          setup() {
+            return () => h('div', 'A')
+          },
+        })
+      }
+      return defineAsyncComponent({
+        setup() {
+          return () => h('div', 'B')
+        },
+      })
+    }
+
+    const types = ref(['A'])
+    const add = async () => {
+      types.value.push('B')
+    }
+
+    const update = async () => {
+      // mount Suspense B
+      // [Suspense A] -> [Suspense A(pending), Suspense B(pending)]
+      await add()
+      // patch Suspense B (still pending)
+      // [Suspense A(pending), Suspense B(pending)] -> [Suspense B(pending)]
+      types.value.shift()
+    }
+
+    const Comp = {
+      render(this: any) {
+        return h(Fragment, null, [
+          renderList(types.value, type => {
+            return h(
+              Suspense,
+              { key: type },
+              {
+                default: () => [
+                  renderSlot(this.$slots, 'default', { type: type }),
+                ],
+              },
+            )
+          }),
+        ])
+      },
+    }
+
+    const App = {
+      setup() {
+        return () =>
+          h(Comp, null, {
+            default: (params: any) => [h(getComponent(params.type))],
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(`<div>A</div>`)
+
+    update()
+    await nextTick()
+    // wait for both A and B to resolve
+    await Promise.all(deps)
+    // wait for new B to resolve
+    await Promise.all(deps)
+    expect(serializeInner(root)).toBe(`<div>B</div>`)
+  })
+
   describe('warnings', () => {
     // base function to check if a combination of slots warns or not
     function baseCheckWarn(
@@ -2229,6 +2306,93 @@ describe('Suspense', () => {
         default: h('div'),
         fallback: [h('div'), h('div')],
       })
+    })
+
+    // #13559
+    test('renders multiple async components in Suspense with v-for and updates on items change', async () => {
+      const CompAsyncSetup = defineAsyncComponent({
+        props: ['item'],
+        render(ctx: any) {
+          return h('div', ctx.item.name)
+        },
+      })
+
+      const items = ref([
+        { id: 1, name: '111' },
+        { id: 2, name: '222' },
+        { id: 3, name: '333' },
+      ])
+
+      const Comp = {
+        setup() {
+          return () =>
+            h(Suspense, null, {
+              default: () =>
+                h(
+                  Fragment,
+                  null,
+                  items.value.map(item =>
+                    h(CompAsyncSetup, { item, key: item.id }),
+                  ),
+                ),
+            })
+        },
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      await nextTick()
+      await Promise.all(deps)
+
+      expect(serializeInner(root)).toBe(
+        `<div>111</div><div>222</div><div>333</div>`,
+      )
+
+      items.value = [
+        { id: 4, name: '444' },
+        { id: 5, name: '555' },
+        { id: 6, name: '666' },
+      ]
+      await nextTick()
+      await Promise.all(deps)
+      expect(serializeInner(root)).toBe(
+        `<div>444</div><div>555</div><div>666</div>`,
+      )
+    })
+
+    test('should call unmounted directive once when fallback is replaced by resolved async component', async () => {
+      const Comp = {
+        render() {
+          return h('div', null, 'comp')
+        },
+      }
+      const Foo = defineAsyncComponent({
+        render() {
+          return h(Comp)
+        },
+      })
+      const unmounted = vi.fn(el => {
+        el.foo = null
+      })
+      const vDir = {
+        unmounted,
+      }
+      const App = {
+        setup() {
+          return () => {
+            return h(Suspense, null, {
+              fallback: () => withDirectives(h('div'), [[vDir, true]]),
+              default: () => h(Foo),
+            })
+          }
+        },
+      }
+      const root = nodeOps.createElement('div')
+      render(h(App), root)
+
+      await Promise.all(deps)
+      await nextTick()
+      expect(unmounted).toHaveBeenCalledTimes(1)
     })
   })
 })
