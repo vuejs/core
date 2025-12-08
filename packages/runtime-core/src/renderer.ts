@@ -1996,7 +1996,7 @@ function baseCreateRenderer(
         const anchor =
           nextIndex + 1 < l2
             ? // #13559, fallback to el placeholder for unresolved async component
-              anchorVNode.el || anchorVNode.placeholder
+              anchorVNode.el || resolveAsyncComponentPlaceholder(anchorVNode)
             : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
@@ -2576,4 +2576,27 @@ export function invalidateMount(hooks: LifecycleHook): void {
     for (let i = 0; i < hooks.length; i++)
       hooks[i].flags! |= SchedulerJobFlags.DISPOSED
   }
+}
+
+function resolveAsyncComponentPlaceholder(anchorVnode: VNode) {
+  // anchor vnode is a unresolved async component
+  if (anchorVnode.placeholder) {
+    return anchorVnode.placeholder
+  }
+
+  // anchor vnode maybe is a wrapper component has single unresolved async component
+  const asyncWrapper = anchorVnode.component
+  if (asyncWrapper) {
+    const subTree = asyncWrapper.subTree
+
+    // wrapper that directly contains an unresolved async component
+    if (subTree.placeholder) {
+      return subTree.placeholder
+    }
+
+    // try to locate deeper nested async component placeholder
+    return resolveAsyncComponentPlaceholder(subTree)
+  }
+
+  return null
 }
