@@ -60,7 +60,7 @@ export class VaporFragment<T extends Block = Block>
   ) => void
 
   // hooks
-  updated?: ((nodes?: Block) => void)[]
+  $updated?: ((nodes?: Block) => void)[]
 
   constructor(nodes: T) {
     this.nodes = nodes
@@ -95,7 +95,7 @@ export class DynamicFragment extends VaporFragment {
     nodes: Block,
     scope: EffectScope,
   ) => boolean)[]
-  beforeMount?: ((newKey: any, nodes: Block, scope: EffectScope) => void)[]
+  $beforeMount?: ((newKey: any, nodes: Block, scope: EffectScope) => void)[]
 
   constructor(anchorLabel?: string) {
     super([])
@@ -215,8 +215,8 @@ export class DynamicFragment extends VaporFragment {
         this.$transition = applyTransitionHooks(this.nodes, transition)
       }
 
-      if (this.beforeMount) {
-        this.beforeMount.forEach(hook =>
+      if (this.$beforeMount) {
+        this.$beforeMount.forEach(hook =>
           hook(this.current, this.nodes, this.scope!),
         )
       }
@@ -240,8 +240,8 @@ export class DynamicFragment extends VaporFragment {
         }
 
         insert(this.nodes, parent, this.anchor)
-        if (this.updated) {
-          this.updated.forEach(hook => hook(this.nodes))
+        if (this.$updated) {
+          this.$updated.forEach(hook => hook(this.nodes))
         }
       }
     } else {

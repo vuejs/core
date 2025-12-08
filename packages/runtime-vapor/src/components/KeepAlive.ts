@@ -244,7 +244,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
           return true
         },
       )
-      ;(frag.beforeMount || (frag.beforeMount = [])).push(() =>
+      ;(frag.$beforeMount || (frag.$beforeMount = [])).push(() =>
         cacheFragment(frag),
       )
       frag.getScope = key => {
