@@ -136,7 +136,7 @@ export class DynamicFragment extends VaporFragment {
       const mode = transition && transition.mode
       if (mode) {
         applyTransitionLeaveHooks(this.nodes, transition, () =>
-          this.renderBranch(render, transition, parent, instance),
+          this.$render(render, transition, parent, instance),
         )
         parent && remove(this.nodes, parent)
         if (mode === 'out-in') {
@@ -148,7 +148,7 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    this.renderBranch(render, transition, parent, instance)
+    this.$render(render, transition, parent, instance)
 
     if (this.fallback) {
       // Find the deepest invalid fragment
@@ -189,7 +189,7 @@ export class DynamicFragment extends VaporFragment {
     if (isHydrating) this.hydrate()
   }
 
-  private renderBranch(
+  private $render(
     render: BlockFn | undefined,
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,

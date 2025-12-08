@@ -666,7 +666,7 @@ export class VaporComponentInstance<
     this.block = null! // to be set
     this.scope = new EffectScope(true)
 
-    this.emit = emit.bind(null, this) as any
+    this.emit = emit.bind(null, this) as EmitFn<Emits>
     this.expose = expose.bind(null, this) as any
     this.refs = EMPTY_OBJ as TypeRefs
     this.emitted = this.exposed = this.exposeProxy = this.propsDefaults = null
