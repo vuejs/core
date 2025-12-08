@@ -194,6 +194,8 @@ describe('reactivity/effect/scope', () => {
       onScopeDispose(() => (dummy += 2))
     })
 
+    expect(scope.signal.aborted).toBe(false)
+
     scope.run(() => {
       onScopeDispose(() => (dummy += 4))
     })
@@ -202,6 +204,7 @@ describe('reactivity/effect/scope', () => {
 
     scope.stop()
     expect(dummy).toBe(7)
+    expect(scope.signal.aborted).toBe(true)
   })
 
   it('should warn onScopeDispose() is called when there is no active effect scope', () => {
@@ -361,7 +364,24 @@ describe('reactivity/effect/scope', () => {
     expect(cleanupCalls).toBe(1)
 
     expect(getEffectsCount(scope)).toBe(0)
-    expect(scope.cleanupsLength).toBe(0)
+  })
+
+  test('signal', () => {
+    const scope = effectScope()
+    // should not create an `AbortController` until `scope.signal` is accessed
+    expect((scope as any)._controller).toBeUndefined()
+
+    const { signal } = scope
+    expect((scope as any)._controller).toBeDefined()
+    expect(signal).toBeDefined()
+
+    const spy = vi.fn()
+    signal.addEventListener('abort', spy)
+
+    scope.stop()
+    // should trigger `abort` on the `signal` when `scope.stop()` is called.
+    expect(spy).toBeCalled()
+    expect(scope.signal.aborted).toBe(true)
   })
 })
 
