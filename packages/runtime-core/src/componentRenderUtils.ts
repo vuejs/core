@@ -461,9 +461,6 @@ export function updateHOCHostEl(
     }
     if (root === vnode) {
       ;(vnode = parent.vnode).el = el
-      if (root.placeholder) {
-        vnode.placeholder = root.placeholder
-      }
       parent = parent.parent
     } else {
       break

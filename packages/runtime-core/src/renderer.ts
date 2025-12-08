@@ -1239,7 +1239,6 @@ function baseCreateRenderer(
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
         initialVNode.placeholder = placeholder.el
-        updateHOCHostEl(instance, placeholder.el)
       }
     } else {
       setupRenderEffect(
@@ -1997,7 +1996,9 @@ function baseCreateRenderer(
         const anchor =
           nextIndex + 1 < l2
             ? // #13559, fallback to el placeholder for unresolved async component
-              anchorVNode.el || anchorVNode.placeholder
+              anchorVNode.el ||
+              anchorVNode.placeholder ||
+              getSubTreeElement(anchorVNode)
             : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
@@ -2417,6 +2418,14 @@ function baseCreateRenderer(
     ;[hydrate, hydrateNode] = createHydrationFns(
       internals as RendererInternals<Node, Element>,
     )
+  }
+
+  const getSubTreeElement = (vnode: VNode): RendererNode | null => {
+    let current = vnode
+    while (current.component) {
+      current = current.component.subTree
+    }
+    return current.el || current.placeholder
   }
 
   return {
