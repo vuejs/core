@@ -412,7 +412,7 @@ export function setupComponent(
       )
     }
   } else {
-    handleSetupResult(setupResult, component, instance, setupFn)
+    handleSetupResult(setupResult, component, instance)
   }
 
   setActiveSub(prevSub)
@@ -802,12 +802,7 @@ export function mountComponent(
   ) {
     const component = instance.type
     instance.suspense.registerDep(instance, setupResult => {
-      handleSetupResult(
-        setupResult,
-        component,
-        instance,
-        isFunction(component) ? component : component.setup,
-      )
+      handleSetupResult(setupResult, component, instance)
       mountComponent(instance, parent, anchor)
     })
     return
@@ -952,7 +947,6 @@ function handleSetupResult(
   setupResult: any,
   component: VaporComponent,
   instance: VaporComponentInstance,
-  setupFn: VaporSetupFn | undefined,
 ) {
   if (__DEV__) {
     pushWarningContext(instance)
@@ -980,12 +974,22 @@ function handleSetupResult(
   } else {
     // component has a render function but no setup function
     // (typically components with only a template and no state)
-    if (!setupFn && component.render) {
-      instance.block = callWithErrorHandling(
-        component.render,
-        instance,
-        ErrorCodes.RENDER_FUNCTION,
-      )
+    // support setup fn and render fn co-usage for defineComponent expose
+    if (!isBlock(setupResult) && component.render) {
+      instance.setupState = setupResult
+      instance.block =
+        callWithErrorHandling(
+          component.render,
+          instance,
+          ErrorCodes.RENDER_FUNCTION,
+          [
+            instance.setupState,
+            instance.props,
+            instance.emit,
+            instance.attrs,
+            instance.slots,
+          ],
+        ) || []
     } else {
       // in prod result can only be block
       instance.block = setupResult as Block
