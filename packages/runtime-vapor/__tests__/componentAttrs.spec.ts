@@ -154,6 +154,7 @@ describe('attribute fallthrough', () => {
       return n0
     })
 
+    // @ts-expect-error
     Child.props = ['foo']
 
     const { host } = define(Hello).render()
@@ -510,7 +511,6 @@ describe('attribute fallthrough', () => {
       render(_ctx, $props, $emit, $attrs, $slots) {
         const n0 = template('<button>hello</button>')() as any
         n0.$evtclick = () => {
-          // @ts-expect-error
           $emit('click', 'custom')
         }
         return n0
@@ -691,7 +691,6 @@ describe('attribute fallthrough', () => {
       },
     })
     const Child = defineVaporComponent({
-      // @ts-expect-error
       components: { GrandChild },
       render(_ctx, $props, $emit, $attrs, $slots) {
         const n0 = template('<div></div>')() as any
