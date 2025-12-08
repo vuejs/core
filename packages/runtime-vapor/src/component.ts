@@ -116,7 +116,7 @@ import type {
   VaporRenderResult,
 } from './apiDefineComponent'
 import { DynamicFragment, isFragment } from './fragment'
-import type { VaporElement } from './apiDefineVaporCustomElement'
+import type { VaporElement } from './apiDefineCustomElement'
 import { parentSuspense, setParentSuspense } from './components/Suspense'
 
 export { currentInstance } from '@vue/runtime-dom'

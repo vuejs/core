@@ -1,5 +1,5 @@
 import type { MockedFunction } from 'vitest'
-import type { VaporElement } from '../src/apiDefineVaporCustomElement'
+import type { VaporElement } from '../src/apiDefineCustomElement'
 import {
   type HMRRuntime,
   type Ref,
