@@ -25,6 +25,10 @@ DOM-based runtime for Vue template.
 
 single-file component (SFC) compiler for Vue template.
 
+## reactivity
+
+reactive system for Vue instance.
+
 ## runtime-core
 
 core runtime for Vue instance.
@@ -162,3 +166,16 @@ Computed is a way to define a derived state based on other state. It's a way to 
 Watch/WatchEffect is a way to define a side effect based on state changes. It's a way to react to state changes in a more imperative way.
 
 > `Computed` is instantiate from `ComputedRefImpl`, `Watch/WatchEffect` is instantiate from `ReactiveEffect`. And these two classes are both implements the interface `Subscriber` who has been introduced in the upper part.
+
+## Batch Update process
+
+```
+dep been triggerd(reactive target updated) -> 
+startBatch -> 
+notify subscribers(batch by setup notified flag) -> 
+endBatch(trigger effects) -> 
+run fn or jobs(view update in next tick) 
+```
+First, a `reactiveEffect` will be triggered when its dependencies are changed.
+`Dep` will invoke `notify` method to trigger the effects. Then all the sub includes `reactiveEffect` and `computedEffect` will be triggered and invoke `notify` as well. Once the `notify` been called, vue will batch these effects and trigger them, if the effect created by `renderer`, it will be triggered in the next tick.
+When make sure all the subscribers have been setted a `NOTIFIED` flag, vue will end batch and trigger the effects in the order they been batched.
