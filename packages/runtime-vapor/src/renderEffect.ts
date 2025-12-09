@@ -44,8 +44,8 @@ export class RenderEffect extends ReactiveEffect {
           : void 0
       }
 
-      if (__DEV__ || instance.type.ce) {
-        // register effect for stopping them during HMR rerender
+      // register effect for vapor custom element update
+      if (instance.type.ce) {
         ;(instance.renderEffects || (instance.renderEffects = [])).push(this)
       }
       job.i = instance
