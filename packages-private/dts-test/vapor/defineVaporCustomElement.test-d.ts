@@ -70,6 +70,35 @@ describe('defineVaporCustomElement using defineVaporComponent return type', () =
     expectType<number>(instance.a)
     instance.a = 42
   })
+
+  test('with extra options', () => {
+    const Comp1Vapor = defineVaporComponent({
+      props: {
+        a: {
+          type: Number,
+          default: 1,
+          validator: () => true,
+        },
+      },
+      emits: ['click'],
+    })
+    const Comp = defineVaporCustomElement(Comp1Vapor, {
+      shadowRoot: false,
+      styles: [`div { color: red; }`],
+      nonce: 'xxx',
+      shadowRootOptions: {
+        clonable: false,
+      },
+      configureApp: app => {
+        app.provide('a', 1)
+      },
+    })
+    expectType<VaporElementConstructor>(Comp)
+
+    const instance = new Comp()
+    expectType<number>(instance.a)
+    instance.a = 42
+  })
 })
 
 describe('defineVaporCustomElement with direct setup function', () => {
@@ -92,6 +121,33 @@ describe('defineVaporCustomElement with direct setup function', () => {
       },
       {
         emits: ['foo'],
+      },
+    )
+    expectType<VaporElementConstructor<{ msg: string }>>(Comp)
+
+    const instance = new Comp()
+    expectType<string>(instance.msg)
+  })
+
+  test('setup function with extra options', () => {
+    const Comp = defineVaporCustomElement(
+      (props: { msg: string }, ctx) => {
+        ctx.emit('foo')
+        return []
+      },
+      {
+        name: 'Foo',
+        emits: ['foo'],
+        inheritAttrs: false,
+        shadowRoot: false,
+        styles: [`div { color: red; }`],
+        nonce: 'xxx',
+        shadowRootOptions: {
+          clonable: false,
+        },
+        configureApp: app => {
+          app.provide('a', 1)
+        },
       },
     )
     expectType<VaporElementConstructor<{ msg: string }>>(Comp)
@@ -154,6 +210,36 @@ describe('defineVaporCustomElement with options object', () => {
         emit('unknown')
       },
     })
+    expectType<VaporElementConstructor>(Comp)
+
+    const instance = new Comp()
+    expectType<string | undefined>(instance.value)
+  })
+
+  test('with extra options', () => {
+    const Comp = defineVaporCustomElement(
+      {
+        props: {
+          value: String,
+        },
+        emits: {
+          change: (val: string) => true,
+        },
+        setup(props, { emit }) {
+          emit('change', 'test')
+          // @ts-expect-error
+          emit('change', 123)
+          // @ts-expect-error
+          emit('unknown')
+        },
+      },
+      {
+        shadowRoot: false,
+        configureApp: app => {
+          app.provide('a', 1)
+        },
+      },
+    )
     expectType<VaporElementConstructor>(Comp)
 
     const instance = new Comp()
