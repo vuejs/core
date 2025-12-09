@@ -2361,7 +2361,7 @@ describe('Suspense', () => {
     })
 
     // #14173
-    test('renders multiple async component wrappers in Suspense with v-for and updates on items change', async () => {
+    test('nested async components with v-for + only Suspense and async component wrappers', async () => {
       const CompAsyncSetup = defineAsyncComponent({
         props: ['item', 'id'],
         render(ctx: any) {

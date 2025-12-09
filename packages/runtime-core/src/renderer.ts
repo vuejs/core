@@ -1995,8 +1995,7 @@ function baseCreateRenderer(
         const anchorVNode = c2[nextIndex + 1] as VNode
         const anchor =
           nextIndex + 1 < l2
-            ? // #13559, #14173
-              //  fallback to el placeholder for unresolved async component
+            ? // #13559, #14173 fallback to el placeholder for unresolved async component
               anchorVNode.el || resolveAsyncComponentPlaceholder(anchorVNode)
             : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
@@ -2589,12 +2588,6 @@ function resolveAsyncComponentPlaceholder(anchorVnode: VNode) {
   const asyncWrapper = anchorVnode.component
   if (asyncWrapper) {
     const subTree = asyncWrapper.subTree
-
-    // wrapper that directly contains an unresolved async component
-    if (subTree.placeholder) {
-      return subTree.placeholder
-    }
-
     // try to locate deeper nested async component placeholder
     return resolveAsyncComponentPlaceholder(subTree)
   }
