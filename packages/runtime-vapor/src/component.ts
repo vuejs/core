@@ -592,8 +592,7 @@ export class VaporComponentInstance<
   asyncDep: Promise<any> | null
   asyncResolved: boolean
 
-  // for HMR and vapor custom element
-  // all render effects associated with this instance
+  // for vapor custom element
   renderEffects?: RenderEffect[]
 
   hasFallthrough: boolean
