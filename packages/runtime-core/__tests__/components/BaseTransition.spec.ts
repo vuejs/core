@@ -52,20 +52,20 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
     onEnter: vi.fn((el, done) => {
       cbs.doneEnter[serialize(el as TestElement)] = done
     }),
-    onAfterEnter: vi.fn(),
-    onEnterCancelled: vi.fn(),
-    onBeforeLeave: vi.fn(),
+    onAfterEnter: vi.fn() as any,
+    onEnterCancelled: vi.fn() as any,
+    onBeforeLeave: vi.fn() as any,
     onLeave: vi.fn((el, done) => {
       cbs.doneLeave[serialize(el as TestElement)] = done
     }),
-    onAfterLeave: vi.fn(),
-    onLeaveCancelled: vi.fn(),
-    onBeforeAppear: vi.fn(),
+    onAfterLeave: vi.fn() as any,
+    onLeaveCancelled: vi.fn() as any,
+    onBeforeAppear: vi.fn() as any,
     onAppear: vi.fn((el, done) => {
       cbs.doneEnter[serialize(el as TestElement)] = done
     }),
-    onAfterAppear: vi.fn(),
-    onAppearCancelled: vi.fn(),
+    onAfterAppear: vi.fn() as any,
+    onAppearCancelled: vi.fn() as any,
     ...extra,
   }
   return {

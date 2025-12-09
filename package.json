@@ -74,9 +74,10 @@
     "@types/node": "^22.19.0",
     "@types/semver": "^7.7.1",
     "@types/serve-handler": "^6.1.4",
-    "@vitest/ui": "^3.0.2",
-    "@vitest/coverage-v8": "^3.2.4",
-    "@vitest/eslint-plugin": "^1.4.0",
+    "@vitest/ui": "^4.0.14",
+    "@vitest/browser-playwright": "^4.0.14",
+    "@vitest/coverage-v8": "^4.0.14",
+    "@vitest/eslint-plugin": "^1.5.0",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
@@ -93,6 +94,7 @@
     "marked": "13.0.3",
     "npm-run-all2": "^8.0.4",
     "picocolors": "^1.1.1",
+    "playwright": "^1.56.1",
     "prettier": "^3.5.3",
     "pretty-bytes": "^7.1.0",
     "pug": "^3.0.3",
@@ -111,6 +113,6 @@
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.32.1",
     "vite": "catalog:",
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.14"
   }
 }
