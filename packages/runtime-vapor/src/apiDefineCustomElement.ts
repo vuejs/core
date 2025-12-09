@@ -7,8 +7,13 @@ import {
   isFragment,
 } from '.'
 import {
+  type ComponentObjectPropsOptions,
   type CreateAppFunction,
   type CustomElementOptions,
+  type EmitFn,
+  type EmitsOptions,
+  type EmitsToProps,
+  type ExtractPropTypes,
   VueElementBase,
   warn,
 } from '@vue/runtime-dom'
@@ -19,17 +24,124 @@ import type {
 } from './component'
 import type { Block } from './block'
 import { withHydration } from './dom/hydration'
+import type {
+  DefineVaporComponent,
+  DefineVaporSetupFnComponent,
+  VaporRenderResult,
+} from './apiDefineComponent'
+import type { StaticSlots } from './componentSlots'
 
 export type VaporElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VaporElement & P
 }
 
-// TODO type inference
+// overload 1: direct setup function
+export function defineVaporCustomElement<Props, RawBindings = object>(
+  setup: (
+    props: Props,
+    ctx: {
+      attrs: Record<string, any>
+      slots: StaticSlots
+      emit: EmitFn
+      expose: (exposed: Record<string, any>) => void
+    },
+  ) => RawBindings | VaporRenderResult,
+  options?: Pick<ObjectVaporComponent, 'name' | 'inheritAttrs' | 'emits'> &
+    CustomElementOptions & {
+      props?: (keyof Props)[]
+    },
+): VaporElementConstructor<Props>
+export function defineVaporCustomElement<Props, RawBindings = object>(
+  setup: (
+    props: Props,
+    ctx: {
+      attrs: Record<string, any>
+      slots: StaticSlots
+      emit: EmitFn
+      expose: (exposed: Record<string, any>) => void
+    },
+  ) => RawBindings | VaporRenderResult,
+  options?: Pick<ObjectVaporComponent, 'name' | 'inheritAttrs' | 'emits'> &
+    CustomElementOptions & {
+      props?: ComponentObjectPropsOptions<Props>
+    },
+): VaporElementConstructor<Props>
+
+// overload 2: defineVaporCustomElement with options object, infer props from options
+export function defineVaporCustomElement<
+  // props
+  RuntimePropsOptions extends
+    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
+  RuntimePropsKeys extends string = string,
+  // emits
+  RuntimeEmitsOptions extends EmitsOptions = {},
+  RuntimeEmitsKeys extends string = string,
+  Slots extends StaticSlots = StaticSlots,
+  // resolved types
+  InferredProps = string extends RuntimePropsKeys
+    ? ComponentObjectPropsOptions extends RuntimePropsOptions
+      ? {}
+      : ExtractPropTypes<RuntimePropsOptions>
+    : { [key in RuntimePropsKeys]?: any },
+  ResolvedProps = InferredProps & EmitsToProps<RuntimeEmitsOptions>,
+>(
+  options: CustomElementOptions & {
+    props?: (RuntimePropsOptions & ThisType<void>) | RuntimePropsKeys[]
+    emits?: RuntimeEmitsOptions | RuntimeEmitsKeys[]
+    slots?: Slots
+    setup?: (
+      props: Readonly<InferredProps>,
+      ctx: {
+        attrs: Record<string, any>
+        slots: Slots
+        emit: EmitFn<RuntimeEmitsOptions>
+        expose: (exposed: Record<string, any>) => void
+      },
+    ) => any
+  } & ThisType<void>,
+  extraOptions?: CustomElementOptions,
+): VaporElementConstructor<ResolvedProps>
+
+// overload 3: defining a custom element from the returned value of
+// `defineVaporComponent`
+export function defineVaporCustomElement<
+  T extends
+    | DefineVaporComponent<any, any, any, any, any, any, any, any, any, any>
+    | DefineVaporSetupFnComponent<any, any, any, any, any>,
+>(
+  options: T,
+  extraOptions?: CustomElementOptions,
+): VaporElementConstructor<
+  T extends DefineVaporComponent<
+    infer RuntimePropsOptions,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any
+  >
+    ? ComponentObjectPropsOptions extends RuntimePropsOptions
+      ? {}
+      : ExtractPropTypes<RuntimePropsOptions>
+    : T extends DefineVaporSetupFnComponent<
+          infer P extends Record<string, any>,
+          any,
+          any,
+          any,
+          any
+        >
+      ? P
+      : unknown
+>
 
 /*@__NO_SIDE_EFFECTS__*/
 export function defineVaporCustomElement(
   options: any,
-  extraOptions?: Omit<ObjectVaporComponent, 'setup'>,
+  extraOptions?: Omit<ObjectVaporComponent, 'setup'> & CustomElementOptions,
   /**
    * @internal
    */
@@ -52,6 +164,7 @@ export const defineVaporSSRCustomElement = ((
   options: any,
   extraOptions?: Omit<ObjectVaporComponent, 'setup'>,
 ) => {
+  // @ts-expect-error
   return defineVaporCustomElement(options, extraOptions, createVaporSSRApp)
 }) as typeof defineVaporCustomElement
 

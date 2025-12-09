@@ -14,6 +14,8 @@ export { VaporKeepAliveImpl as VaporKeepAlive } from './components/KeepAlive'
 export {
   defineVaporCustomElement,
   defineVaporSSRCustomElement,
+  VaporElement,
+  type VaporElementConstructor,
 } from './apiDefineCustomElement'
 
 // compiler-use only

@@ -230,8 +230,7 @@ describe('defineVaporCustomElement', () => {
     })
 
     test('props via properties', async () => {
-      // TODO remove this after type inference done
-      const e = new E() as any
+      const e = new E()
       e.foo = 'one'
       e.bar = { x: 'two' }
       container.appendChild(e)
@@ -266,8 +265,7 @@ describe('defineVaporCustomElement', () => {
     })
 
     test('props via attributes and properties changed together', async () => {
-      // TODO remove this after type inference done
-      const e = new E() as any
+      const e = new E()
       e.foo = 'foo1'
       e.bar = { x: 'bar1' }
       container.appendChild(e)
@@ -617,7 +615,7 @@ describe('defineVaporCustomElement', () => {
             return template('<input tabindex="1">', true)()
           },
         },
-        { shadowRootOptions: { delegatesFocus: true } } as any,
+        { shadowRootOptions: { delegatesFocus: true } },
       )
       customElements.define('my-el-with-delegate-focus', E)
 
@@ -689,7 +687,7 @@ describe('defineVaporCustomElement', () => {
     })
 
     test('emit from within async component wrapper', async () => {
-      const p = new Promise<typeof CompDef>(res => res(CompDef as any))
+      const p = new Promise<typeof CompDef>(res => res(CompDef))
       const E = defineVaporCustomElement(defineVaporAsyncComponent(() => p))
       customElements.define('my-async-el-emits', E)
       container.innerHTML = `<my-async-el-emits></my-async-el-emits>`
@@ -715,7 +713,7 @@ describe('defineVaporCustomElement', () => {
     test('emit in an async component wrapper with properties bound', async () => {
       const E = defineVaporCustomElement(
         defineVaporAsyncComponent(
-          () => new Promise<typeof CompDef>(res => res(CompDef as any)),
+          () => new Promise<typeof CompDef>(res => res(CompDef)),
         ),
       )
       customElements.define('my-async-el-props-emits', E)
@@ -938,7 +936,7 @@ describe('defineVaporCustomElement', () => {
             app.provide('shared', 'shared')
             app.provide('outer', 'outer')
           },
-        } as any,
+        },
       )
 
       const Inner = defineVaporCustomElement(
@@ -963,7 +961,7 @@ describe('defineVaporCustomElement', () => {
             app.provide('outer', 'override-outer')
             app.provide('inner', 'inner')
           },
-        } as any,
+        },
       )
 
       const InnerChild = defineVaporCustomElement({
@@ -1107,7 +1105,7 @@ describe('defineVaporCustomElement', () => {
             return [createComponent(Baz)]
           },
         },
-        { shadowRoot: false } as any,
+        { shadowRoot: false },
       )
 
       customElements.define('my-foo-with-shadowroot-false', Foo)
@@ -1125,7 +1123,7 @@ describe('defineVaporCustomElement', () => {
             return template('<div>hello</div>', true)()
           },
         },
-        { nonce: 'xxx' } as any,
+        { nonce: 'xxx' },
       )
       customElements.define('my-el-with-nonce', Foo)
       container.innerHTML = `<my-el-with-nonce></my-el-with-nonce>`
@@ -1141,16 +1139,18 @@ describe('defineVaporCustomElement', () => {
       const E = defineVaporCustomElement(
         defineVaporAsyncComponent(() => {
           loaderSpy()
-          return Promise.resolve({
-            props: ['msg'],
-            styles: [`div { color: red }`],
-            setup(props: any) {
-              const n0 = template('<div> </div>', true)() as any
-              const x0 = txt(n0) as any
-              renderEffect(() => setText(x0, props.msg))
-              return n0
-            },
-          })
+          return Promise.resolve(
+            defineVaporComponent({
+              props: ['msg'],
+              styles: [`div { color: red }`],
+              setup(props: any) {
+                const n0 = template('<div> </div>', true)() as any
+                const x0 = txt(n0) as any
+                renderEffect(() => setText(x0, props.msg))
+                return n0
+              },
+            } as any),
+          )
         }),
       )
       customElements.define('my-el-async', E)
@@ -1194,16 +1194,18 @@ describe('defineVaporCustomElement', () => {
     test('set DOM property before resolve', async () => {
       const E = defineVaporCustomElement(
         defineVaporAsyncComponent(() => {
-          return Promise.resolve({
-            props: ['msg'],
-            setup(props: any) {
-              expect(typeof props.msg).toBe('string')
-              const n0 = template('<div> </div>', true)() as any
-              const x0 = txt(n0) as any
-              renderEffect(() => setText(x0, props.msg))
-              return n0
-            },
-          })
+          return Promise.resolve(
+            defineVaporComponent({
+              props: ['msg'],
+              setup(props: any) {
+                expect(typeof props.msg).toBe('string')
+                const n0 = template('<div> </div>', true)() as any
+                const x0 = txt(n0) as any
+                renderEffect(() => setText(x0, props.msg))
+                return n0
+              },
+            }),
+          )
         }),
       )
       customElements.define('my-el-async-2', E)
@@ -1236,16 +1238,18 @@ describe('defineVaporCustomElement', () => {
     test('Number prop casting before resolve', async () => {
       const E = defineVaporCustomElement(
         defineVaporAsyncComponent(() => {
-          return Promise.resolve({
-            props: { n: Number },
-            setup(props: any) {
-              expect(props.n).toBe(20)
-              const n0 = template('<div> </div>', true)() as any
-              const x0 = txt(n0) as any
-              renderEffect(() => setText(x0, `${props.n},${typeof props.n}`))
-              return n0
-            },
-          })
+          return Promise.resolve(
+            defineVaporComponent({
+              props: { n: Number },
+              setup(props: any) {
+                expect(props.n).toBe(20)
+                const n0 = template('<div> </div>', true)() as any
+                const x0 = txt(n0) as any
+                renderEffect(() => setText(x0, `${props.n},${typeof props.n}`))
+                return n0
+              },
+            }),
+          )
         }),
       )
       customElements.define('my-el-async-3', E)
@@ -1260,22 +1264,24 @@ describe('defineVaporCustomElement', () => {
     test('with slots', async () => {
       const E = defineVaporCustomElement(
         defineVaporAsyncComponent(() => {
-          return Promise.resolve({
-            setup() {
-              const t0 = template('<div>fallback</div>')
-              const t1 = template('<div></div>')
-              const n3 = t1() as any
-              setInsertionState(n3, null)
-              createSlot('default', null, () => {
-                const n2 = t0()
-                return n2
-              })
-              const n5 = t1() as any
-              setInsertionState(n5, null)
-              createSlot('named', null)
-              return [n3, n5]
-            },
-          })
+          return Promise.resolve(
+            defineVaporComponent({
+              setup() {
+                const t0 = template('<div>fallback</div>')
+                const t1 = template('<div></div>')
+                const n3 = t1() as any
+                setInsertionState(n3, null)
+                createSlot('default', null, () => {
+                  const n2 = t0()
+                  return n2
+                })
+                const n5 = t1() as any
+                setInsertionState(n5, null)
+                createSlot('named', null)
+                return [n3, n5]
+              },
+            }),
+          )
         }),
       )
       customElements.define('my-el-async-slots', E)
@@ -1343,7 +1349,7 @@ describe('defineVaporCustomElement', () => {
           return [n0, n1, n2]
         },
       },
-      { shadowRoot: false } as any,
+      { shadowRoot: false },
     )
     customElements.define('my-el-shadowroot-false-slots', ES)
 
@@ -1384,7 +1390,7 @@ describe('defineVaporCustomElement', () => {
             return createSlot('default')
           },
         },
-        { shadowRoot: false } as any,
+        { shadowRoot: false },
       )
       customElements.define('my-child', Child)
 
@@ -1398,7 +1404,7 @@ describe('defineVaporCustomElement', () => {
             return createSlot('default')
           },
         },
-        { shadowRoot: false } as any,
+        { shadowRoot: false },
       )
       customElements.define('my-parent', Parent)
 
@@ -1443,7 +1449,7 @@ describe('defineVaporCustomElement', () => {
             )
           },
         },
-        { shadowRoot: false } as any,
+        { shadowRoot: false },
       )
       customElements.define('my-el-teleport-child', Child)
       const Parent = defineVaporCustomElement(
@@ -1452,7 +1458,7 @@ describe('defineVaporCustomElement', () => {
             return createSlot('default')
           },
         },
-        { shadowRoot: false } as any,
+        { shadowRoot: false },
       )
       customElements.define('my-el-teleport-parent', Parent)
 
@@ -1498,7 +1504,7 @@ describe('defineVaporCustomElement', () => {
             ]
           },
         },
-        { shadowRoot: false } as any,
+        { shadowRoot: false },
       )
       customElements.define('my-el-two-teleport-child', Child)
 
@@ -1549,7 +1555,7 @@ describe('defineVaporCustomElement', () => {
             ]
           },
         },
-        { shadowRoot: false } as any,
+        { shadowRoot: false },
       )
       customElements.define('my-el-two-teleport-child-0', Child)
 
@@ -1585,7 +1591,7 @@ describe('defineVaporCustomElement', () => {
               return n0
             },
           },
-          { shadowRoot: false } as any,
+          { shadowRoot: false },
         ),
       )
       const ChildWrapper = {
@@ -1615,7 +1621,7 @@ describe('defineVaporCustomElement', () => {
               )
             },
           },
-          { shadowRoot: false } as any,
+          { shadowRoot: false },
         ),
       )
       const ParentWrapper = {
@@ -1808,15 +1814,17 @@ describe('defineVaporCustomElement', () => {
     let fooVal: string | undefined = ''
     const E = defineVaporCustomElement(
       defineVaporAsyncComponent(() => {
-        return Promise.resolve({
-          setup() {
-            provide('foo', 'foo')
-            const n0 = template('<div></div>')() as any
-            setInsertionState(n0, null)
-            createSlot('default', null)
-            return n0
-          },
-        })
+        return Promise.resolve(
+          defineVaporComponent({
+            setup() {
+              provide('foo', 'foo')
+              const n0 = template('<div></div>')() as any
+              setInsertionState(n0, null)
+              createSlot('default', null)
+              return n0
+            },
+          }),
+        )
       }),
     )
 
@@ -1842,15 +1850,17 @@ describe('defineVaporCustomElement', () => {
     let barVal: string | undefined = ''
     const E = defineVaporCustomElement(
       defineVaporAsyncComponent(() => {
-        return Promise.resolve({
-          setup() {
-            provide('foo', 'foo')
-            const n0 = template('<div></div>')() as any
-            setInsertionState(n0, null)
-            createSlot('default', null)
-            return n0
-          },
-        })
+        return Promise.resolve(
+          defineVaporComponent({
+            setup() {
+              provide('foo', 'foo')
+              const n0 = template('<div></div>')() as any
+              setInsertionState(n0, null)
+              createSlot('default', null)
+              return n0
+            },
+          }),
+        )
       }),
     )
 
@@ -1903,7 +1913,7 @@ describe('defineVaporCustomElement', () => {
           configureApp(app: any) {
             app.provide('msg', 'app-injected')
           },
-        } as any,
+        },
       )
       customElements.define('my-element-with-app', E)
 
@@ -1914,21 +1924,23 @@ describe('defineVaporCustomElement', () => {
 
     test('work with async component', async () => {
       const AsyncComp = defineVaporAsyncComponent(() => {
-        return Promise.resolve({
-          setup() {
-            const msg = inject('msg')
-            const n0 = template('<div> </div>', true)() as any
-            const x0 = txt(n0) as any
-            renderEffect(() => setText(x0, msg as string))
-            return n0
-          },
-        } as any)
+        return Promise.resolve(
+          defineVaporComponent({
+            setup() {
+              const msg = inject('msg')
+              const n0 = template('<div> </div>', true)() as any
+              const x0 = txt(n0) as any
+              renderEffect(() => setText(x0, msg as string))
+              return n0
+            },
+          }),
+        )
       })
       const E = defineVaporCustomElement(AsyncComp, {
         configureApp(app: any) {
           app.provide('msg', 'app-injected')
         },
-      } as any)
+      })
       customElements.define('my-async-element-with-app', E)
 
       container.innerHTML = `<my-async-element-with-app></my-async-element-with-app>`
@@ -1954,7 +1966,7 @@ describe('defineVaporCustomElement', () => {
         configureApp(app: any) {
           app.provide('msg', 'app-injected')
         },
-      } as any)
+      })
       customElements.define('my-element-with-app-hmr', E)
 
       container.innerHTML = `<my-element-with-app-hmr></my-element-with-app-hmr>`
@@ -2010,16 +2022,18 @@ describe('defineVaporCustomElement', () => {
   test('Props can be casted when mounting custom elements in component rendering functions', async () => {
     const E = defineVaporCustomElement(
       defineVaporAsyncComponent(() =>
-        Promise.resolve({
-          props: ['fooValue'],
-          setup(props: any) {
-            expect(props.fooValue).toBe('fooValue')
-            const n0 = template('<div> </div>', true)() as any
-            const x0 = txt(n0) as any
-            renderEffect(() => setText(x0, props.fooValue))
-            return n0
-          },
-        }),
+        Promise.resolve(
+          defineVaporComponent({
+            props: ['fooValue'],
+            setup(props: any) {
+              expect(props.fooValue).toBe('fooValue')
+              const n0 = template('<div> </div>', true)() as any
+              const x0 = txt(n0) as any
+              renderEffect(() => setText(x0, props.fooValue))
+              return n0
+            },
+          }),
+        ),
       ),
     )
     customElements.define('my-el-async-4', E)
@@ -2103,7 +2117,7 @@ describe('defineVaporCustomElement', () => {
       name: 'Foo',
     }
 
-    defineVaporCustomElement(Foo, { shadowRoot: false } as any)
+    defineVaporCustomElement(Foo, { shadowRoot: false })
 
     expect(Foo).toEqual({
       __vapor: true,
