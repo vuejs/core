@@ -87,7 +87,7 @@ describe('defineVaporCustomElement using defineVaporComponent return type', () =
       styles: [`div { color: red; }`],
       nonce: 'xxx',
       shadowRootOptions: {
-        clonable: false,
+        delegatesFocus: false,
       },
       configureApp: app => {
         app.provide('a', 1)
@@ -143,7 +143,7 @@ describe('defineVaporCustomElement with direct setup function', () => {
         styles: [`div { color: red; }`],
         nonce: 'xxx',
         shadowRootOptions: {
-          clonable: false,
+          delegatesFocus: false,
         },
         configureApp: app => {
           app.provide('a', 1)
