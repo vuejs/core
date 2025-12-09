@@ -2579,17 +2579,14 @@ export function invalidateMount(hooks: LifecycleHook): void {
 }
 
 function resolveAsyncComponentPlaceholder(anchorVnode: VNode) {
-  // anchor vnode is a unresolved async component
   if (anchorVnode.placeholder) {
     return anchorVnode.placeholder
   }
 
   // anchor vnode maybe is a wrapper component has single unresolved async component
-  const asyncWrapper = anchorVnode.component
-  if (asyncWrapper) {
-    const subTree = asyncWrapper.subTree
-    // try to locate deeper nested async component placeholder
-    return resolveAsyncComponentPlaceholder(subTree)
+  const instance = anchorVnode.component
+  if (instance) {
+    return resolveAsyncComponentPlaceholder(instance.subTree)
   }
 
   return null
