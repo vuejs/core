@@ -114,7 +114,7 @@ class RefImpl<T = any> {
   dep: Dep = new Dep()
 
   public readonly [ReactiveFlags.IS_REF] = true
-  public readonly [ReactiveFlags.IS_SHALLOW]: boolean = false
+  public readonly [ReactiveFlags.IS_SHALLOW]: boolean
 
   constructor(value: T, isShallow: boolean) {
     this._rawValue = isShallow ? value : toRaw(value)
