@@ -2365,13 +2365,13 @@ describe('Suspense', () => {
       const CompAsyncSetup = defineAsyncComponent({
         props: ['item', 'id'],
         render(ctx: any) {
-          return h('div', ctx.id + '--' + ctx.item.name)
+          return h('div', ctx.id + '-' + ctx.item.name)
         },
       })
       const items = ref([
-        { id: 1, name: '111' },
-        { id: 2, name: '222' },
-        { id: 3, name: '333' },
+        { id: 1, name: 'a' },
+        { id: 2, name: 'b' },
+        { id: 3, name: 'c' },
       ])
       const Comp = {
         props: ['id'],
@@ -2386,7 +2386,7 @@ describe('Suspense', () => {
                     h(CompAsyncSetup, {
                       item,
                       key: item.id,
-                      id: 'foo:' + props.id,
+                      id: props.id,
                     }),
                   ),
                 ),
@@ -2431,7 +2431,7 @@ describe('Suspense', () => {
       await Promise.all(deps)
 
       expect(serializeInner(root)).toBe(
-        `<div>foo:1--111</div><div>foo:1--222</div><div>foo:1--333</div><div>foo:2--111</div><div>foo:2--222</div><div>foo:2--333</div><div>foo:3--111</div><div>foo:3--222</div><div>foo:3--333</div>`,
+        `<div>1-a</div><div>1-b</div><div>1-c</div><div>2-a</div><div>2-b</div><div>2-c</div><div>3-a</div><div>3-b</div><div>3-c</div>`,
       )
 
       list.value = [{ id: 4 }, { id: 5 }, { id: 6 }]
@@ -2439,19 +2439,19 @@ describe('Suspense', () => {
       await Promise.all(deps)
       await Promise.all(deps)
       expect(serializeInner(root)).toBe(
-        `<div>foo:4--111</div><div>foo:4--222</div><div>foo:4--333</div><div>foo:5--111</div><div>foo:5--222</div><div>foo:5--333</div><div>foo:6--111</div><div>foo:6--222</div><div>foo:6--333</div>`,
+        `<div>4-a</div><div>4-b</div><div>4-c</div><div>5-a</div><div>5-b</div><div>5-c</div><div>6-a</div><div>6-b</div><div>6-c</div>`,
       )
 
       items.value = [
-        { id: 4, name: '444' },
-        { id: 5, name: '555' },
-        { id: 6, name: '666' },
+        { id: 4, name: 'd' },
+        { id: 5, name: 'f' },
+        { id: 6, name: 'g' },
       ]
       await nextTick()
       await Promise.all(deps)
       await Promise.all(deps)
       expect(serializeInner(root)).toBe(
-        `<div>foo:4--444</div><div>foo:4--555</div><div>foo:4--666</div><div>foo:5--444</div><div>foo:5--555</div><div>foo:5--666</div><div>foo:6--444</div><div>foo:6--555</div><div>foo:6--666</div>`,
+        `<div>4-d</div><div>4-f</div><div>4-g</div><div>5-d</div><div>5-f</div><div>5-g</div><div>6-d</div><div>6-f</div><div>6-g</div>`,
       )
     })
 
