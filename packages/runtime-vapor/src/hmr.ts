@@ -19,12 +19,10 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   const normalized = normalizeBlock(instance.block)
   const parent = normalized[0].parentNode!
   const anchor = normalized[normalized.length - 1].nextSibling
+  // reset scope to avoid stale effects
+  instance.scope.reset()
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
-  if (instance.renderEffects) {
-    instance.renderEffects.forEach(e => e.stop())
-    instance.renderEffects = []
-  }
   pushWarningContext(instance)
   devRender(instance)
   popWarningContext()

@@ -117,13 +117,14 @@ function reload(id: string, newComp: HMRComponent): void {
   if (!record) return
 
   newComp = normalizeClassComponent(newComp)
+  const isVapor = record.initialDef.__vapor
   // update initial def (for not-yet-rendered components)
   updateComponentDef(record.initialDef, newComp)
 
   // create a snapshot which avoids the set being mutated during updates
   const instances = [...record.instances]
 
-  if (newComp.__vapor && !instances.some(i => i.ceReload)) {
+  if (isVapor && newComp.__vapor && !instances.some(i => i.ceReload)) {
     // For multiple instances with the same __hmrId, remove styles first before reload
     // to avoid the second instance's style removal deleting the first instance's
     // newly added styles (since hmrReload is synchronous)
