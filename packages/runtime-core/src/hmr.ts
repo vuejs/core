@@ -20,6 +20,17 @@ export const hmrDirtyComponents: Map<
   Set<GenericComponentInstance>
 > = new Map<ConcreteComponent, Set<GenericComponentInstance>>()
 
+// During HMR reload, `updateComponentDef` mutates the old component definition
+// with the new one's properties (including `__vapor`). This causes issues when
+// a component switches between vapor and vdom modes, because the renderer still
+// holds references to the old VNodes whose `type` now has an incorrect `__vapor`
+// value. This Map tracks the original `__vapor` state of dirty components so
+// that operations like unmount/move/getNextHostNode can use the correct mode.
+export const hmrDirtyComponentsMode: Map<ConcreteComponent, boolean> = new Map<
+  ConcreteComponent,
+  boolean
+>()
+
 export interface HMRRuntime {
   createRecord: typeof createRecord
   rerender: typeof rerender
@@ -152,6 +163,7 @@ function reload(id: string, newComp: HMRComponent): void {
         hmrDirtyComponents.set(oldComp, (dirtyInstances = new Set()))
       }
       dirtyInstances.add(instance)
+      hmrDirtyComponentsMode.set(oldComp, !!isVapor)
 
       // 3. invalidate options resolution cache
       instance.appContext.propsCache.delete(instance.type as any)
@@ -206,6 +218,7 @@ function reload(id: string, newComp: HMRComponent): void {
   // 5. make sure to cleanup dirty hmr components after update
   queuePostFlushCb(() => {
     hmrDirtyComponents.clear()
+    hmrDirtyComponentsMode.clear()
   })
 }
 

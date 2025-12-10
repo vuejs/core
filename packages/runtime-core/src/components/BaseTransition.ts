@@ -21,7 +21,11 @@ import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
-import { type RendererElement, getVaporInterface } from '../renderer'
+import {
+  type RendererElement,
+  getVaporInterface,
+  isVaporComponent,
+} from '../renderer'
 import { SchedulerJobFlags } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
@@ -140,7 +144,7 @@ export const BaseTransitionPropsValidators: Record<string, any> = {
 }
 
 const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
-  const subTree = instance.type.__vapor
+  const subTree = isVaporComponent(instance.type)
     ? (instance as any).block
     : instance.subTree
   return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
@@ -559,7 +563,7 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
-    if ((vnode.type as ConcreteComponent).__vapor) {
+    if (isVaporComponent(vnode.type as ConcreteComponent)) {
       getVaporInterface(vnode.component, vnode).setTransitionHooks(
         vnode.component,
         hooks,
