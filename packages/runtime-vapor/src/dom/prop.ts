@@ -43,7 +43,7 @@ import {
 } from '../component'
 import { isHydrating, logMismatchError } from './hydration'
 import { type Block, normalizeBlock } from '../block'
-import type { VaporElement } from '../apiDefineVaporCustomElement'
+import type { VaporElement } from '../apiDefineCustomElement'
 
 type TargetElement = Element & {
   $root?: true

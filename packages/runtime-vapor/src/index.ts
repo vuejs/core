@@ -14,7 +14,9 @@ export { VaporKeepAliveImpl as VaporKeepAlive } from './components/KeepAlive'
 export {
   defineVaporCustomElement,
   defineVaporSSRCustomElement,
-} from './apiDefineVaporCustomElement'
+  VaporElement,
+  type VaporElementConstructor,
+} from './apiDefineCustomElement'
 
 // compiler-use only
 export { insert, prepend, remove, type Block } from './block'
