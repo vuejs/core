@@ -189,12 +189,12 @@ export class DynamicFragment extends VaporFragment {
     if (isHydrating) this.hydrate()
   }
 
-  private renderBranch(
+  renderBranch(
     render: BlockFn | undefined,
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,
     instance: GenericComponentInstance | null,
-  ) {
+  ): void {
     if (render) {
       // try to reuse the kept-alive scope
       const scope = this.getScope && this.getScope(this.current)
