@@ -81,3 +81,4 @@ export { VaporTransitionGroup } from './components/TransitionGroup'
 // types
 export type { VaporComponent } from './component'
 export type { VaporSlot } from './componentSlots'
+export type { VaporTransitionHooks } from './block'
