@@ -83,7 +83,12 @@ import {
   type TeleportVNode,
 } from './components/Teleport'
 import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
-import { isHmrUpdating, registerHMR, unregisterHMR } from './hmr'
+import {
+  hmrDirtyComponentsMode,
+  isHmrUpdating,
+  registerHMR,
+  unregisterHMR,
+} from './hmr'
 import { type RootHydrateFunction, createHydrationFunctions } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { endMeasure, startMeasure } from './profiling'
@@ -2177,7 +2182,7 @@ function baseCreateRenderer(
   ) => {
     const { el, type, transition, children, shapeFlag } = vnode
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      if ((type as ConcreteComponent).__vapor) {
+      if (isVaporComponent(type as ConcreteComponent)) {
         getVaporInterface(parentComponent, vnode).move(vnode, container, anchor)
       } else {
         move(
@@ -2309,7 +2314,7 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      if ((vnode.type as ConcreteComponent).__vapor) {
+      if (isVaporComponent(vnode.type as ConcreteComponent)) {
         getVaporInterface(parentComponent!, vnode).deactivate(
           vnode,
           (parentComponent!.ctx as KeepAliveContext).getStorageContainer(),
@@ -2332,7 +2337,7 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      if ((type as ConcreteComponent).__vapor) {
+      if (isVaporComponent(type as ConcreteComponent)) {
         getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
         return
       } else {
@@ -2539,7 +2544,7 @@ function baseCreateRenderer(
 
   const getNextHostNode: NextFn = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
-      if ((vnode.type as ConcreteComponent).__vapor) {
+      if (isVaporComponent(vnode.type as ConcreteComponent)) {
         return hostNextSibling(vnode.anchor!)
       }
       return getNextHostNode(vnode.component!.subTree)
@@ -2826,6 +2831,13 @@ export function getVaporInterface(
     )
   }
   return res!
+}
+
+export function isVaporComponent(type: ConcreteComponent): boolean | undefined {
+  if (__DEV__ && isHmrUpdating && hmrDirtyComponentsMode.has(type)) {
+    return hmrDirtyComponentsMode.get(type)
+  }
+  return type.__vapor
 }
 
 /**

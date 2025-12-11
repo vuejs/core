@@ -1,6 +1,8 @@
 import {
   type HMRRuntime,
   computed,
+  createApp,
+  h,
   nextTick,
   onActivated,
   onDeactivated,
@@ -20,6 +22,7 @@ import {
   renderEffect,
   setText,
   template,
+  vaporInteropPlugin,
   withVaporCtx,
 } from '@vue/runtime-vapor'
 import { BindingTypes } from '@vue/compiler-core'
@@ -1059,5 +1062,75 @@ describe('hot module replacement', () => {
     expect(root.innerHTML).toMatchInlineSnapshot(
       `"<div>child changed2</div><div>root changed</div>"`,
     )
+  })
+
+  describe('switch vapor/vdom modes', () => {
+    test('vapor -> vdom', async () => {
+      const id = 'vapor-to-vdom'
+      const Comp = {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>foo</div>')()
+        },
+      }
+      createRecord(id, Comp)
+
+      const App = {
+        render() {
+          return h(Comp as any)
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      expect(root.innerHTML).toBe('<div>foo</div>')
+
+      // switch to vdom
+      reload(id, {
+        __hmrId: id,
+        render() {
+          return h('div', 'bar')
+        },
+      })
+
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>bar</div>')
+    })
+
+    test('vdom -> vapor', async () => {
+      const id = 'vdom-to-vapor'
+      const Comp = {
+        __hmrId: id,
+        render() {
+          return h('div', 'foo')
+        },
+      }
+      createRecord(id, Comp)
+
+      const App = {
+        render() {
+          return h(Comp)
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      expect(root.innerHTML).toBe('<div>foo</div>')
+
+      // switch to vapor
+      reload(id, {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>bar</div>')()
+        },
+      })
+
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>bar</div>')
+    })
   })
 })
