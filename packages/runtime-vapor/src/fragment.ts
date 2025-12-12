@@ -231,9 +231,12 @@ export class DynamicFragment extends VaporFragment {
         // apply fallthrough props during update
         if (this.attrs) {
           if (this.nodes instanceof Element) {
-            renderEffect(() =>
-              applyFallthroughProps(this.nodes as Element, this.attrs!),
-            )
+            // ensure render effect is cleaned up when scope is stopped
+            this.scope.run(() => {
+              renderEffect(() =>
+                applyFallthroughProps(this.nodes as Element, this.attrs!),
+              )
+            })
           } else if (
             __DEV__ &&
             // preventing attrs fallthrough on slots
