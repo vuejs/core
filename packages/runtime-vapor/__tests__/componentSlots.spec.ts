@@ -909,6 +909,72 @@ describe('component: slots', () => {
       expect(html()).toBe('child fallback<!--slot--><!--slot-->')
     })
 
+    test('named forwarded slot with v-if', async () => {
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot('default', null)
+        },
+      })
+
+      const Parent = defineVaporComponent({
+        props: {
+          show: Boolean,
+        },
+        setup(props) {
+          const n6 = createComponent(
+            Child,
+            null,
+            {
+              default: withVaporCtx(() => {
+                const n0 = createIf(
+                  () => props.show,
+                  () => {
+                    const n5 = template('<div></div>')() as any
+                    setInsertionState(n5, null, true)
+                    createSlot('header', null, () => {
+                      const n4 = template('default header')()
+                      return n4
+                    })
+                    return n5
+                  },
+                )
+                return n0
+              }),
+            },
+            true,
+          )
+          return n6
+        },
+      })
+
+      const show = ref(false)
+      const { html } = define({
+        setup() {
+          return createComponent(
+            Parent,
+            {
+              show: () => show.value,
+            },
+            {
+              header: () => template('custom header')(),
+            },
+          )
+        },
+      }).render()
+
+      expect(html()).toBe('<!--if--><!--slot-->')
+
+      show.value = true
+      await nextTick()
+      expect(html()).toBe(
+        '<div>custom header<!--slot--></div><!--if--><!--slot-->',
+      )
+
+      show.value = false
+      await nextTick()
+      expect(html()).toBe('<!--if--><!--slot-->')
+    })
+
     test('forwarded slot with fallback (v-if)', async () => {
       const Child = defineVaporComponent({
         setup() {
