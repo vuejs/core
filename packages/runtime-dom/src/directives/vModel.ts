@@ -51,12 +51,6 @@ function castValue(value: string, trim?: boolean, number?: boolean | null) {
   return value
 }
 
-function activeElement() {
-  return document.activeElement && document.activeElement.shadowRoot
-    ? document.activeElement.shadowRoot.activeElement
-    : document.activeElement
-}
-
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
@@ -108,7 +102,12 @@ export const vModelText: ModelDirective<
       return
     }
 
-    if (activeElement() === el && el.type !== 'range') {
+    const rootNode = el.getRootNode()
+    if (
+      (rootNode instanceof Document || rootNode instanceof ShadowRoot) &&
+      rootNode.activeElement === el &&
+      el.type !== 'range'
+    ) {
       // #8546
       if (lazy && value === oldValue) {
         return
