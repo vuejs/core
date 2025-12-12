@@ -34,6 +34,7 @@ import {
 } from './dom/hydration'
 import { isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
+import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 
 export class VaporFragment<T extends Block = Block>
   implements TransitionOptions
@@ -97,8 +98,11 @@ export class DynamicFragment extends VaporFragment {
   ) => boolean)[]
   onBeforeMount?: ((newKey: any, nodes: Block, scope: EffectScope) => void)[]
 
+  slotOwner: VaporComponentInstance | null
+
   constructor(anchorLabel?: string) {
     super([])
+    this.slotOwner = currentSlotOwner
     if (isHydrating) {
       this.anchorLabel = anchorLabel
       locateHydrationNode()
@@ -204,12 +208,14 @@ export class DynamicFragment extends VaporFragment {
         this.scope = new EffectScope()
       }
 
+      // restore slot owner
+      const prevOwner = setCurrentSlotOwner(this.slotOwner)
       // switch current instance to parent instance during update
       // ensure that the parent instance is correct for nested components
-      let prev
-      if (parent && instance) prev = setCurrentInstance(instance)
+      const prev = parent && instance ? setCurrentInstance(instance) : undefined
       this.nodes = this.scope.run(render) || []
-      if (parent && instance) setCurrentInstance(...prev!)
+      if (prev !== undefined) setCurrentInstance(...prev)
+      setCurrentSlotOwner(prevOwner)
 
       if (transition) {
         this.$transition = applyTransitionHooks(this.nodes, transition)
