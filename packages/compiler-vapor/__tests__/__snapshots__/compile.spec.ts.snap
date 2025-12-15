@@ -223,7 +223,7 @@ export function render(_ctx) {
   const n5 = _next(_child(n6), 1)
   const n7 = _nthChild(n6, 3, 3)
   const p0 = _next(n7, 4)
-  const n4 = _child(p0, 0)
+  const n4 = _child(p0)
   _setInsertionState(n6, n5)
   const n0 = _createComponentWithFallback(_component_Comp)
   _setInsertionState(n6, n7, true)
@@ -243,7 +243,7 @@ const t0 = _template("<div><div></div></div>", true)
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n3 = t0()
-  const n1 = _child(n3, 0)
+  const n1 = _child(n3)
   _setInsertionState(n1, null, true)
   const n0 = _createSlot("default", null)
   _setInsertionState(n3, 1, true)
@@ -258,7 +258,7 @@ const t0 = _template("<div><span> </span> <br> </div>", true)
 
 export function render(_ctx) {
   const n3 = t0()
-  const n0 = _child(n3, 0)
+  const n0 = _child(n3)
   const n1 = _next(n0, 1)
   const n2 = _nthChild(n3, 3, 3)
   const x0 = _txt(n0)
@@ -404,9 +404,9 @@ const t0 = _template("<div><div><div><span></span></div></div></div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n1 = t0()
-  const p1 = _child(n1, 0)
-  const p3 = _child(p1, 0)
-  const n0 = _child(p3, 0)
+  const p1 = _child(n1)
+  const p3 = _child(p1)
+  const n0 = _child(p3)
   _renderEffect(() => _setProp(n0, "id", _ctx.foo))
   return n1
 }"
