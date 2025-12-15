@@ -80,8 +80,8 @@ export function defineCustomElement<Props, RawBindings = object>(
 // overload 2: defineCustomElement with options object, infer props from options
 export function defineCustomElement<
   // props
-  RuntimePropsOptions extends
-    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
+  RuntimePropsOptions extends ComponentObjectPropsOptions =
+    ComponentObjectPropsOptions,
   PropsKeys extends string = string,
   // emits
   RuntimeEmitsOptions extends EmitsOptions = {},
