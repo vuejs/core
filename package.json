@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.5.25",
-  "packageManager": "pnpm@10.20.0",
+  "packageManager": "pnpm@10.25.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -96,7 +96,7 @@
     "pretty-bytes": "^7.1.0",
     "pug": "^3.0.3",
     "puppeteer": "~24.28.0",
-    "rimraf": "^6.1.0",
+    "rimraf": "^6.1.2",
     "rollup": "^4.53.3",
     "rollup-plugin-dts": "^6.3.0",
     "rollup-plugin-esbuild": "^6.2.1",
