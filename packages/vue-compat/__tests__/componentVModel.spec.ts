@@ -142,7 +142,7 @@ describe('COMPONENT_V_MODEL', () => {
   })
 
   // #14202
-  test('should not crash', async () => {
+  test('should handle v-model deprecation warning with missing appContext (#14202)', async () => {
     const ChildComponent = {
       template: `<div @click="$emit('input', 'new val')">{{ value }}</div>`,
       props: ['value'],
