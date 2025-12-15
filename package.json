@@ -64,8 +64,8 @@
   "devDependencies": {
     "@babel/parser": "catalog:",
     "@babel/types": "catalog:",
-    "@rollup/plugin-alias": "^5.1.1",
-    "@rollup/plugin-commonjs": "^28.0.9",
+    "@rollup/plugin-alias": "^6.0.0",
+    "@rollup/plugin-commonjs": "^29.0.0",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-replace": "5.0.4",
