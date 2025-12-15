@@ -122,7 +122,13 @@ export function genChildren(
       }
     } else {
       if (elementIndex === 0) {
-        pushBlock(...genCall(helper('child'), from, String(logicalIndex)))
+        pushBlock(
+          ...genCall(
+            helper('child'),
+            from,
+            logicalIndex !== 0 ? String(logicalIndex) : undefined,
+          ),
+        )
       } else {
         // check if there's a node that we can reuse from
         let init = genCall(helper('child'), from)
