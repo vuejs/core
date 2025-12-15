@@ -11,6 +11,12 @@ import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import { parseArgs } from 'node:util'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
+import {
+  resolveDefines,
+  resolveExternal,
+  resolveOutputFormat,
+  resolvePostfix,
+} from './build-shared.js'
 
 const require = createRequire(import.meta.url)
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -42,16 +48,9 @@ const {
 const format = rawFormat || 'global'
 const targets = positionals.length ? positionals : ['vue']
 
-// resolve output
-const outputFormat = format.startsWith('global')
-  ? 'iife'
-  : format === 'cjs'
-    ? 'cjs'
-    : 'esm'
-
-const postfix = format.endsWith('-runtime')
-  ? `runtime.${format.replace(/-runtime$/, '')}`
-  : format
+// resolve output using shared functions
+const outputFormat = resolveOutputFormat(format)
+const postfix = resolvePostfix(format)
 
 const privatePackages = fs.readdirSync('packages-private')
 
@@ -69,48 +68,19 @@ for (const target of targets) {
   )
   const relativeOutfile = relative(process.cwd(), outfile)
 
-  // resolve externals
-  // TODO this logic is largely duplicated from rollup.config.js
-  /** @type {string[]} */
-  let external = []
-  if (!inlineDeps) {
-    // cjs & esm-bundler: external all deps
-    if (format === 'cjs' || format.includes('esm-bundler')) {
-      external = [
-        ...external,
-        ...Object.keys(pkg.dependencies || {}),
-        ...Object.keys(pkg.peerDependencies || {}),
-        // for @vue/compiler-sfc / server-renderer
-        'path',
-        'url',
-        'stream',
-      ]
-    }
+  // resolve externals using shared function
+  const external = inlineDeps
+    ? []
+    : resolveExternal({
+        pkg,
+        format,
+        target,
+        isGlobalBuild: format === 'global',
+        isBrowserESMBuild: format.includes('esm-browser'),
+        isCompatPackage: target === 'vue-compat',
+        packageOptions: pkg.buildOptions || {},
+      })
 
-    if (target === 'compiler-sfc') {
-      const consolidatePkgPath = require.resolve(
-        '@vue/consolidate/package.json',
-        {
-          paths: [resolve(__dirname, `../packages/${target}/`)],
-        },
-      )
-      const consolidateDeps = Object.keys(
-        require(consolidatePkgPath).devDependencies,
-      )
-      external = [
-        ...external,
-        ...consolidateDeps,
-        'fs',
-        'vm',
-        'crypto',
-        'react-dom/server',
-        'teacup/lib/express',
-        'arc-templates/dist/es5',
-        'then-pug',
-        'then-jade',
-      ]
-    }
-  }
   /** @type {Array<import('esbuild').Plugin>} */
   const plugins = [
     {
@@ -127,6 +97,15 @@ for (const target of targets) {
     plugins.push(polyfillNode())
   }
 
+  // resolve defines using shared function
+  const defines = resolveDefines({
+    pkg,
+    format,
+    target,
+    prod,
+    commit: 'dev',
+  })
+
   esbuild
     .context({
       entryPoints: [resolve(__dirname, `${pkgBasePath}/src/index.ts`)],
@@ -138,25 +117,7 @@ for (const target of targets) {
       globalName: pkg.buildOptions?.name,
       platform: format === 'cjs' ? 'node' : 'browser',
       plugins,
-      define: {
-        __COMMIT__: `"dev"`,
-        __VERSION__: `"${pkg.version}"`,
-        __DEV__: prod ? `false` : `true`,
-        __TEST__: `false`,
-        __BROWSER__: String(
-          format !== 'cjs' && !pkg.buildOptions?.enableNonBrowserBranches,
-        ),
-        __GLOBAL__: String(format === 'global'),
-        __ESM_BUNDLER__: String(format.includes('esm-bundler')),
-        __ESM_BROWSER__: String(format.includes('esm-browser')),
-        __CJS__: String(format === 'cjs'),
-        __SSR__: String(format !== 'global'),
-        __COMPAT__: String(target === 'vue-compat'),
-        __FEATURE_SUSPENSE__: `true`,
-        __FEATURE_OPTIONS_API__: `true`,
-        __FEATURE_PROD_DEVTOOLS__: `false`,
-        __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: `true`,
-      },
+      define: defines,
     })
     .then(ctx => ctx.watch())
 }
