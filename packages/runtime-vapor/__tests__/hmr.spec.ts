@@ -8,6 +8,7 @@ import {
   onDeactivated,
   onMounted,
   onUnmounted,
+  provide,
   ref,
   toDisplayString,
 } from '@vue/runtime-dom'
@@ -1062,6 +1063,44 @@ describe('hot module replacement', () => {
     expect(root.innerHTML).toMatchInlineSnapshot(
       `"<div>child changed2</div><div>root changed</div>"`,
     )
+  })
+
+  // Vapor router-view has no render function (setup-only).
+  // When HMR rerender is triggered, the setup function is re-executed.
+  // Ensure provide() warning is suppressed.
+  test('rerender setup-only component', async () => {
+    const childId = 'test-child-reload-01'
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<div>foo</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    // without a render function
+    const Parent = defineVaporComponent({
+      setup() {
+        provide('foo', 'bar')
+        return createComponent(Child)
+      },
+    })
+
+    const { html } = define({
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    expect(html()).toBe('<div>foo</div>')
+
+    // will trigger parent rerender
+    reload(childId, {
+      __hmrId: childId,
+      render: compileToFunction(`<div>bar</div>`),
+    })
+
+    await nextTick()
+    expect(html()).toBe('<div>bar</div>')
+    expect('provide() can only be used inside setup()').not.toHaveBeenWarned()
   })
 
   describe('switch vapor/vdom modes', () => {
