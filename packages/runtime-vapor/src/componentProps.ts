@@ -113,18 +113,29 @@ export function getPropsProxyHandlers(
     )
   }
 
-  const getPropValue = once
-    ? (...args: Parameters<typeof getProp>) => {
+  const withOnceCache = <
+    T extends (instance: VaporComponentInstance, key: string | symbol) => any,
+  >(
+    getter: T,
+  ): T => {
+    return ((instance: VaporComponentInstance, key: string | symbol) => {
+      const cache = instance.oncePropsCache || (instance.oncePropsCache = {})
+      if (!(key in cache)) {
         pauseTracking()
-        const value = getProp(...args)
-        resetTracking()
-        return value
+        try {
+          cache[key] = getter(instance, key)
+        } finally {
+          resetTracking()
+        }
       }
-    : getProp
+      return cache[key]
+    }) as T
+  }
 
+  const getOnceProp = withOnceCache(getProp)
   const propsHandlers = propsOptions
     ? ({
-        get: (target, key) => getPropValue(target, key),
+        get: (target, key) => (once ? getOnceProp : getProp)(target, key),
         has: (_, key) => isProp(key),
         ownKeys: () => Object.keys(propsOptions),
         getOwnPropertyDescriptor(target, key) {
@@ -132,7 +143,7 @@ export function getPropsProxyHandlers(
             return {
               configurable: true,
               enumerable: true,
-              get: () => getPropValue(target, key),
+              get: () => (once ? getOnceProp : getProp)(target, key),
             }
           }
         },
@@ -160,17 +171,12 @@ export function getPropsProxyHandlers(
     }
   }
 
-  const getAttrValue = once
-    ? (...args: Parameters<typeof getAttr>) => {
-        pauseTracking()
-        const value = getAttr(...args)
-        resetTracking()
-        return value
-      }
-    : getAttr
-
+  const getOnceAttr = withOnceCache((instance, key) =>
+    getAttr(instance.rawProps, key as string),
+  )
   const attrsHandlers = {
-    get: (target, key: string) => getAttrValue(target.rawProps, key),
+    get: (target, key: string) =>
+      once ? getOnceAttr(target, key) : getAttr(target.rawProps, key),
     has: (target, key: string) => hasAttr(target.rawProps, key),
     ownKeys: target => getKeysFromRawProps(target.rawProps).filter(isAttr),
     getOwnPropertyDescriptor(target, key: string) {
@@ -178,7 +184,8 @@ export function getPropsProxyHandlers(
         return {
           configurable: true,
           enumerable: true,
-          get: () => getAttrValue(target.rawProps, key),
+          get: () =>
+            once ? getOnceAttr(target, key) : getAttr(target.rawProps, key),
         }
       }
     },
