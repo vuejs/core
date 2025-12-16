@@ -1173,4 +1173,48 @@ describe('KeepAlive', () => {
     expect(deactivatedHome).toHaveBeenCalledTimes(0)
     expect(unmountedHome).toHaveBeenCalledTimes(1)
   })
+
+  // #12017
+  test('avoid duplicate mounts of deactivate components', async () => {
+    const About = {
+      name: 'About',
+      setup() {
+        return () => h('h1', 'About')
+      },
+    }
+    const mountedHome = vi.fn()
+    const Home = {
+      name: 'Home',
+      setup() {
+        onMounted(mountedHome)
+        return () => h('h1', 'Home')
+      },
+    }
+    const activeView = shallowRef(About)
+    const HomeView = {
+      name: 'HomeView',
+      setup() {
+        return () => h(activeView.value)
+      },
+    }
+
+    const App = createApp({
+      setup() {
+        return () => {
+          return [
+            h(KeepAlive, null, [
+              h(HomeView, {
+                key: activeView.value.name,
+              }),
+            ]),
+          ]
+        }
+      },
+    })
+    App.mount(nodeOps.createElement('div'))
+    expect(mountedHome).toHaveBeenCalledTimes(0)
+    activeView.value = Home
+    await nextTick()
+    expect(mountedHome).toHaveBeenCalledTimes(1)
+  })
 })
