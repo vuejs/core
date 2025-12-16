@@ -123,7 +123,9 @@ export function getPropsProxyHandlers(
             return resolvePropValue(
               propsOptions!,
               key,
-              isDynamic ? source[rawKey] : source[rawKey](),
+              isDynamic
+                ? source[rawKey]
+                : resolveFunctionSource(source[rawKey]),
               instance,
               resolveDefault,
             )
@@ -255,7 +257,9 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
         ? resolveFunctionSource(source as () => Record<string, unknown>)
         : source
       if (source && hasOwn(source, key)) {
-        const value = isDynamic ? source[key] : (source[key] as Function)()
+        const value = isDynamic
+          ? source[key]
+          : resolveFunctionSource(source[key])
         if (merged) {
           merged.push(value)
         } else {
@@ -391,7 +395,9 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
       const isDynamic = isFunction(source)
       const resolved = isDynamic ? resolveFunctionSource(source) : source
       for (const key in resolved) {
-        const value = isDynamic ? resolved[key] : (resolved[key] as Function)()
+        const value = isDynamic
+          ? resolved[key]
+          : resolveFunctionSource(source[key])
         if (key === 'class' || key === 'style') {
           const existing = mergedRawProps[key]
           if (isArray(existing)) {
