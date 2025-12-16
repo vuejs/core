@@ -61,8 +61,6 @@ export function resolveFunctionSource<T>(
   // so the computed can be properly disposed with the instance's scope
   const instance = currentInstance
   if (instance) {
-    // wrap source to restore currentInstance when computed re-evaluates
-    // this ensures inject() works correctly inside the source function
     source._cache = computed(() => {
       const prev = setCurrentInstance(instance)
       try {
