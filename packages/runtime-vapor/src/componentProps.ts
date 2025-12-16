@@ -57,12 +57,14 @@ export function resolveFunctionSource<T>(
     return source._cache.value
   }
 
-  // only create cache when inside an active instance
-  // so the computed can be properly disposed with the instance's scope
-  const instance = currentInstance
-  if (instance) {
+  // source function is defined in the parent component, so it should be
+  // executed in the parent's context. currentInstance is the child component
+  // (the one accessing props/slots), so we use parent to get the component
+  // where source was defined.
+  const parent = currentInstance && currentInstance.parent
+  if (parent) {
     source._cache = computed(() => {
-      const prev = setCurrentInstance(instance)
+      const prev = setCurrentInstance(parent)
       try {
         return source()
       } finally {
@@ -73,7 +75,7 @@ export function resolveFunctionSource<T>(
     return source._cache.value
   }
 
-  // no instance, no cache - just call directly
+  // no parent, no cache - just call directly
   return source()
 }
 
