@@ -23,7 +23,7 @@
     "prepare-e2e-vapor": "node scripts/build.js -f cjs+esm-bundler+esm-bundler-runtime && pnpm run -C packages-private/vapor-e2e-test build",
     "test-dts": "run-s build-dts test-dts-only",
     "test-dts-only": "tsc -p packages-private/dts-built-test/tsconfig.json && tsc -p ./packages-private/dts-test/tsconfig.test.json && tsc -p ./packages-private/dts-test/vapor/tsconfig.json",
-    "test-coverage": "vitest run --project unit* --coverage",
+    "test-coverage": "vitest --ui --project unit* --coverage.enabled=true",
     "prebench": "node scripts/build.js -pf esm-browser reactivity",
     "prebench-compare": "node scripts/build.js -pf esm-browser reactivity",
     "bench": "vitest bench --project=unit --outputJson=temp/bench.json",
