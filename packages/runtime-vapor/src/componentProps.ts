@@ -114,16 +114,19 @@ export function getPropsProxyHandlers(
   }
 
   const withOnceCache = <
-    T extends (instance: VaporComponentInstance, key: string) => any,
+    T extends (instance: VaporComponentInstance, key: string | symbol) => any,
   >(
     getter: T,
   ): T => {
-    return ((instance: VaporComponentInstance, key: string) => {
+    return ((instance: VaporComponentInstance, key: string | symbol) => {
       const cache = instance.oncePropsCache || (instance.oncePropsCache = {})
       if (!(key in cache)) {
         pauseTracking()
-        cache[key] = getter(instance, key)
-        resetTracking()
+        try {
+          cache[key] = getter(instance, key)
+        } finally {
+          resetTracking()
+        }
       }
       return cache[key]
     }) as T
@@ -169,7 +172,7 @@ export function getPropsProxyHandlers(
   }
 
   const getOnceAttr = withOnceCache((instance, key) =>
-    getAttr(instance.rawProps, key),
+    getAttr(instance.rawProps, key as string),
   )
   const attrsHandlers = {
     get: (target, key: string) =>
