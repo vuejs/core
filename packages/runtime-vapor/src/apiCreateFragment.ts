@@ -9,6 +9,16 @@ import {
 } from './insertionState'
 import { renderEffect } from './renderEffect'
 
+/**
+ * Create a dynamic fragment keyed by a reactive value for Vapor transitions.
+ * The fragment is re-rendered when the key changes to trigger enter/leave
+ * animations.
+ *
+ * Example:
+ * <VaporTransition>
+ *   <h1 :key="count">{{ count }}</h1>
+ * </VaporTransition>
+ */
 export function createKeyedFragment(key: () => any, render: BlockFn): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -16,9 +26,7 @@ export function createKeyedFragment(key: () => any, render: BlockFn): Block {
   if (!isHydrating) resetInsertionState()
 
   const frag = __DEV__ ? new DynamicFragment('keyed') : new DynamicFragment()
-  renderEffect(() => {
-    frag.update(render, key())
-  })
+  renderEffect(() => frag.update(render, key()))
 
   if (!isHydrating) {
     if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
