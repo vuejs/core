@@ -1,7 +1,9 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type ComputedRef, computed } from '@vue/reactivity'
 import { type Block, type BlockFn, insert, setScopeId } from './block'
-import { rawPropsProxyHandlers } from './componentProps'
+import {
+  rawPropsProxyHandlers,
+  resolveDynamicFunctionSource,
+} from './componentProps'
 import {
   type GenericComponentInstance,
   currentInstance,
@@ -52,23 +54,8 @@ export type StaticSlots = Record<string, VaporSlot>
 
 export type VaporSlot = BlockFn
 export type DynamicSlot = { name: string; fn: VaporSlot }
-export type DynamicSlotFn = (() => DynamicSlot | DynamicSlot[]) & {
-  _cache?: ComputedRef<DynamicSlot | DynamicSlot[]>
-}
+export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 export type DynamicSlotSource = StaticSlots | DynamicSlotFn
-
-/**
- * Get cached result of a DynamicSlotFn.
- * Uses computed to cache the result and avoid redundant calls.
- */
-function resolveDynamicSlot(
-  source: DynamicSlotFn,
-): DynamicSlot | DynamicSlot[] {
-  if (!source._cache) {
-    source._cache = computed(source)
-  }
-  return source._cache.value
-}
 
 export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   get: getSlot,
@@ -90,7 +77,7 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
       keys = keys.filter(k => k !== '$')
       for (const source of dynamicSources) {
         if (isFunction(source)) {
-          const slot = resolveDynamicSlot(source)
+          const slot = resolveDynamicFunctionSource(source)
           if (isArray(slot)) {
             for (const s of slot) keys.push(String(s.name))
           } else {
@@ -119,7 +106,7 @@ export function getSlot(
     while (i--) {
       source = dynamicSources[i]
       if (isFunction(source)) {
-        const slot = resolveDynamicSlot(source)
+        const slot = resolveDynamicFunctionSource(source)
         if (slot) {
           if (isArray(slot)) {
             for (const s of slot) {

@@ -20,7 +20,13 @@ import {
   validateProps,
   warn,
 } from '@vue/runtime-dom'
-import { ReactiveFlags } from '@vue/reactivity'
+import {
+  type ComputedRef,
+  ReactiveFlags,
+  computed,
+  getCurrentScope,
+  onScopeDispose,
+} from '@vue/reactivity'
 import { normalizeEmitsOptions } from './componentEmits'
 import { renderEffect } from './renderEffect'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
@@ -40,6 +46,27 @@ export function resolveSource(
   source: Record<string, any> | (() => Record<string, any>),
 ): Record<string, any> {
   return isFunction(source) ? source() : source
+}
+
+export function resolveDynamicFunctionSource<T>(
+  source: (() => T) & { _cache?: ComputedRef<T> },
+): T {
+  // use existing cache if available
+  if (source._cache) {
+    return source._cache.value
+  }
+
+  // only create cache when inside an active scope
+  // so the computed can be properly disposed
+  const currentScope = getCurrentScope()
+  if (currentScope) {
+    source._cache = computed(source)
+    onScopeDispose(() => (source._cache = undefined))
+    return source._cache.value
+  }
+
+  // no scope, no cache - just call directly
+  return source()
 }
 
 export function getPropsProxyHandlers(
@@ -78,7 +105,11 @@ export function getPropsProxyHandlers(
       while (i--) {
         source = dynamicSources[i]
         isDynamic = isFunction(source)
-        source = isDynamic ? (source as Function)() : source
+        source = isDynamic
+          ? (resolveDynamicFunctionSource(
+              source as () => Record<string, unknown>,
+            ) as any)
+          : source
         for (rawKey in source) {
           if (camelize(rawKey) === key) {
             return resolvePropValue(
@@ -212,9 +243,11 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
     while (i--) {
       source = dynamicSources[i]
       isDynamic = isFunction(source)
-      source = isDynamic ? (source as Function)() : source
+      source = isDynamic
+        ? resolveDynamicFunctionSource(source as () => Record<string, unknown>)
+        : source
       if (source && hasOwn(source, key)) {
-        const value = isDynamic ? source[key] : source[key]()
+        const value = isDynamic ? source[key] : (source[key] as Function)()
         if (merged) {
           merged.push(value)
         } else {
@@ -261,7 +294,11 @@ export function getKeysFromRawProps(rawProps: RawProps): string[] {
     let i = dynamicSources.length
     let source
     while (i--) {
-      source = resolveSource(dynamicSources[i])
+      source = isFunction(dynamicSources[i])
+        ? resolveDynamicFunctionSource(
+            dynamicSources[i] as () => Record<string, unknown>,
+          )
+        : dynamicSources[i]
       for (const key in source) {
         keys.push(key)
       }
@@ -344,7 +381,7 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
   if (props.$) {
     for (const source of props.$) {
       const isDynamic = isFunction(source)
-      const resolved = isDynamic ? source() : source
+      const resolved = isDynamic ? resolveDynamicFunctionSource(source) : source
       for (const key in resolved) {
         const value = isDynamic ? resolved[key] : (resolved[key] as Function)()
         if (key === 'class' || key === 'style') {

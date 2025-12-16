@@ -591,4 +591,82 @@ describe('component: props', () => {
     render({ msg: () => 'test' })
     expect(`Invalid prop name: "$foo"`).toHaveBeenWarned()
   })
+
+  describe('dynamic props source caching', () => {
+    test('v-bind object should be cached when child accesses multiple props', () => {
+      let sourceCallCount = 0
+      const obj = ref({ foo: 1, bar: 2, baz: 3 })
+
+      const t0 = template('<div></div>')
+      const Child = defineVaporComponent({
+        props: ['foo', 'bar', 'baz'],
+        setup(props: any) {
+          const n0 = t0()
+          // Child component accesses multiple props
+          renderEffect(() => {
+            setElementText(n0, `${props.foo}-${props.bar}-${props.baz}`)
+          })
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, {
+            $: [
+              () => {
+                sourceCallCount++
+                return obj.value
+              },
+            ],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div>1-2-3</div>')
+      // Source should only be called once even though 3 props are accessed
+      expect(sourceCallCount).toBe(1)
+    })
+
+    test('v-bind object should update when source changes', async () => {
+      let sourceCallCount = 0
+      const obj = ref({ foo: 1, bar: 2 })
+
+      const t0 = template('<div></div>')
+      const Child = defineVaporComponent({
+        props: ['foo', 'bar'],
+        setup(props: any) {
+          const n0 = t0()
+          renderEffect(() => {
+            setElementText(n0, `${props.foo}-${props.bar}`)
+          })
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, {
+            $: [
+              () => {
+                sourceCallCount++
+                return obj.value
+              },
+            ],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div>1-2</div>')
+      expect(sourceCallCount).toBe(1)
+
+      // Update source
+      obj.value = { foo: 10, bar: 20 }
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<div>10-20</div>')
+      // Should be called again after source changes
+      expect(sourceCallCount).toBe(2)
+    })
+  })
 })
