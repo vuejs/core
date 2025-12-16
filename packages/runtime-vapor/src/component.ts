@@ -600,6 +600,10 @@ export class VaporComponentInstance<
   // for keep-alive
   shapeFlag?: number
 
+  // for v-once: caches props/attrs values to ensure they remain frozen
+  // even when the component re-renders due to local state changes
+  oncePropsCache?: Record<string | symbol, any>
+
   // lifecycle hooks
   isMounted: boolean
   isUnmounted: boolean

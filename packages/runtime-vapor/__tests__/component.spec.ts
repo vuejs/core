@@ -377,6 +377,83 @@ describe('component', () => {
     expect(html()).toBe('0')
   })
 
+  it('v-once props should be frozen and not update when parent changes', async () => {
+    const localCount = ref(0)
+    const Child = defineVaporComponent({
+      props: {
+        count: Number,
+      },
+      setup(props) {
+        const n0 = template('<div></div>')() as any
+        renderEffect(() =>
+          setElementText(n0, `${localCount.value} - ${props.count}`),
+        )
+        return n0
+      },
+    })
+
+    const parentCount = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => parentCount.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    parentCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    localCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>1 - 0</div>')
+  })
+
+  it('v-once attrs should be frozen and not update when parent changes', async () => {
+    const localCount = ref(0)
+    const Child = defineVaporComponent({
+      inheritAttrs: false,
+      setup() {
+        const attrs = useAttrs()
+        const n0 = template('<div></div>')() as any
+        renderEffect(() =>
+          setElementText(n0, `${localCount.value} - ${attrs.count}`),
+        )
+        return n0
+      },
+    })
+
+    const parentCount = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => parentCount.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    parentCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    localCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>1 - 0</div>')
+  })
+
   test('should mount component only with template in production mode', () => {
     __DEV__ = false
     const { component: Child } = define({
