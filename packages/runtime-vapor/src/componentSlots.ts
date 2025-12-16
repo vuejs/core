@@ -1,9 +1,6 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
 import { type Block, type BlockFn, insert, setScopeId } from './block'
-import {
-  rawPropsProxyHandlers,
-  resolveDynamicFunctionSource,
-} from './componentProps'
+import { rawPropsProxyHandlers, resolveFunctionSource } from './componentProps'
 import {
   type GenericComponentInstance,
   currentInstance,
@@ -77,7 +74,7 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
       keys = keys.filter(k => k !== '$')
       for (const source of dynamicSources) {
         if (isFunction(source)) {
-          const slot = resolveDynamicFunctionSource(source)
+          const slot = resolveFunctionSource(source)
           if (isArray(slot)) {
             for (const s of slot) keys.push(String(s.name))
           } else {
@@ -106,7 +103,7 @@ export function getSlot(
     while (i--) {
       source = dynamicSources[i]
       if (isFunction(source)) {
-        const slot = resolveDynamicFunctionSource(source)
+        const slot = resolveFunctionSource(source)
         if (slot) {
           if (isArray(slot)) {
             for (const s of slot) {

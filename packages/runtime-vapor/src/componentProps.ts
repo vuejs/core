@@ -12,6 +12,7 @@ import type { VaporComponent, VaporComponentInstance } from './component'
 import {
   type NormalizedPropsOptions,
   baseNormalizePropsOptions,
+  currentInstance,
   isEmitListener,
   popWarningContext,
   pushWarningContext,
@@ -24,7 +25,6 @@ import {
   type ComputedRef,
   ReactiveFlags,
   computed,
-  getCurrentScope,
   onScopeDispose,
 } from '@vue/reactivity'
 import { normalizeEmitsOptions } from './componentEmits'
@@ -41,14 +41,15 @@ export type DynamicPropsSource =
   | (() => Record<string, unknown>)
   | Record<string, () => unknown>
 
-// TODO optimization: maybe convert functions into computeds
 export function resolveSource(
   source: Record<string, any> | (() => Record<string, any>),
 ): Record<string, any> {
-  return isFunction(source) ? source() : source
+  return isFunction(source)
+    ? resolveFunctionSource(source as () => Record<string, any>)
+    : source
 }
 
-export function resolveDynamicFunctionSource<T>(
+export function resolveFunctionSource<T>(
   source: (() => T) & { _cache?: ComputedRef<T> },
 ): T {
   // use existing cache if available
@@ -56,16 +57,25 @@ export function resolveDynamicFunctionSource<T>(
     return source._cache.value
   }
 
-  // only create cache when inside an active scope
-  // so the computed can be properly disposed
-  const currentScope = getCurrentScope()
-  if (currentScope) {
-    source._cache = computed(source)
+  // only create cache when inside an active instance
+  // so the computed can be properly disposed with the instance's scope
+  const instance = currentInstance
+  if (instance) {
+    // wrap source to restore currentInstance when computed re-evaluates
+    // this ensures inject() works correctly inside the source function
+    source._cache = computed(() => {
+      const prev = setCurrentInstance(instance)
+      try {
+        return source()
+      } finally {
+        setCurrentInstance(...prev)
+      }
+    })
     onScopeDispose(() => (source._cache = undefined))
     return source._cache.value
   }
 
-  // no scope, no cache - just call directly
+  // no instance, no cache - just call directly
   return source()
 }
 
@@ -106,7 +116,7 @@ export function getPropsProxyHandlers(
         source = dynamicSources[i]
         isDynamic = isFunction(source)
         source = isDynamic
-          ? (resolveDynamicFunctionSource(
+          ? (resolveFunctionSource(
               source as () => Record<string, unknown>,
             ) as any)
           : source
@@ -244,7 +254,7 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
       source = dynamicSources[i]
       isDynamic = isFunction(source)
       source = isDynamic
-        ? resolveDynamicFunctionSource(source as () => Record<string, unknown>)
+        ? resolveFunctionSource(source as () => Record<string, unknown>)
         : source
       if (source && hasOwn(source, key)) {
         const value = isDynamic ? source[key] : (source[key] as Function)()
@@ -295,7 +305,7 @@ export function getKeysFromRawProps(rawProps: RawProps): string[] {
     let source
     while (i--) {
       source = isFunction(dynamicSources[i])
-        ? resolveDynamicFunctionSource(
+        ? resolveFunctionSource(
             dynamicSources[i] as () => Record<string, unknown>,
           )
         : dynamicSources[i]
@@ -381,7 +391,7 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
   if (props.$) {
     for (const source of props.$) {
       const isDynamic = isFunction(source)
-      const resolved = isDynamic ? resolveDynamicFunctionSource(source) : source
+      const resolved = isDynamic ? resolveFunctionSource(source) : source
       for (const key in resolved) {
         const value = isDynamic ? resolved[key] : (resolved[key] as Function)()
         if (key === 'class' || key === 'style') {

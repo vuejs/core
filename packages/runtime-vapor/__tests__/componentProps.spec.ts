@@ -668,5 +668,80 @@ describe('component: props', () => {
       // Should be called again after source changes
       expect(sourceCallCount).toBe(2)
     })
+
+    test('v-bind object should be cached when child accesses multiple attrs', () => {
+      let sourceCallCount = 0
+      const obj = ref({ foo: 1, bar: 2, baz: 3 })
+
+      const t0 = template('<div></div>')
+      const Child = defineVaporComponent({
+        // No props declaration - all become attrs
+        setup(_: any, { attrs }: any) {
+          const n0 = t0()
+          renderEffect(() => {
+            setElementText(n0, `${attrs.foo}-${attrs.bar}-${attrs.baz}`)
+          })
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, {
+            $: [
+              () => {
+                sourceCallCount++
+                return obj.value
+              },
+            ],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div foo="1" bar="2" baz="3">1-2-3</div>')
+      // Source should only be called once
+      expect(sourceCallCount).toBe(1)
+    })
+
+    test('mixed static and dynamic props', async () => {
+      let sourceCallCount = 0
+      const obj = ref({ foo: 1 })
+
+      const t0 = template('<div></div>')
+      const Child = defineVaporComponent({
+        props: ['id', 'foo', 'class'],
+        setup(props: any) {
+          const n0 = t0()
+          renderEffect(() => {
+            setElementText(n0, `${props.id}-${props.foo}-${props.class}`)
+          })
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, {
+            id: () => 'static',
+            $: [
+              () => {
+                sourceCallCount++
+                return obj.value
+              },
+              { class: () => 'bar' },
+            ],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div>static-1-bar</div>')
+      expect(sourceCallCount).toBe(1)
+
+      obj.value = { foo: 2 }
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<div>static-2-bar</div>')
+      expect(sourceCallCount).toBe(2)
+    })
   })
 })
