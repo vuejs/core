@@ -8,6 +8,7 @@ import { warn } from '../warning'
 export function toHandlers(
   obj: Record<string, any>,
   preserveCaseIfNecessary?: boolean,
+  needWrap?: boolean,
 ): Record<string, any> {
   const ret: Record<string, any> = {}
   if (__DEV__ && !isObject(obj)) {
@@ -19,7 +20,7 @@ export function toHandlers(
       preserveCaseIfNecessary && /[A-Z]/.test(key)
         ? `on:${key}`
         : toHandlerKey(key)
-    ] = obj[key]
+    ] = needWrap ? () => obj[key] : obj[key]
   }
   return ret
 }

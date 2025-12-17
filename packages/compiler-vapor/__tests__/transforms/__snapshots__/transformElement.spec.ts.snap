@@ -291,7 +291,7 @@ exports[`compiler: element transform > component > v-on="obj" 1`] = `
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => (_toHandlers(_ctx.obj))
+    () => (_toHandlers(_ctx.obj, false, true))
   ] }, null, true)
   return n0
 }"
