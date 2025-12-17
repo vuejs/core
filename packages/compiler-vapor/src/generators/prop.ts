@@ -21,6 +21,7 @@ import {
   genMulti,
 } from './utils'
 import {
+  camelize,
   canSetValueDirectly,
   capitalize,
   extend,
@@ -125,7 +126,7 @@ export function genPropKey(
   if (node.isStatic) {
     // only quote keys if necessary
     const keyName =
-      (handler ? toHandlerKey(node.content) : node.content) +
+      (handler ? toHandlerKey(camelize(node.content)) : node.content) +
       handlerModifierPostfix
     return [
       [

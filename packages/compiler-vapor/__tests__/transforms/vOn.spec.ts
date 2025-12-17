@@ -725,6 +725,12 @@ describe('v-on', () => {
     expect(code).contains('const _on_update_model = () => {}')
     expect(code).contains('const _on_update_model1 = () => {}')
     expect(code).contains('"onUpdate:model": () => _on_update_model')
-    expect(code).contains('"onUpdate-model": () => _on_update_model1')
+    expect(code).contains('onUpdateModel: () => _on_update_model1')
+  })
+
+  test('component event should camelize kebab-case', () => {
+    const { code } = compileWithVOn(`<Comp @name-click="handleClick" />`)
+    expect(code).matchSnapshot()
+    expect(code).contains('onNameClick: () => _ctx.handleClick')
   })
 })
