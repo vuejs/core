@@ -223,7 +223,7 @@ function genDynamicProps(
           expr = genCall(
             helper('toHandlers'),
             expr,
-            `false`,
+            `false`, // preserveCaseIfNecessary: false, not needed for component
             `true`, // wrap handler values in functions
           )
       }
