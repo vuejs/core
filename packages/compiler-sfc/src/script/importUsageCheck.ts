@@ -21,31 +21,36 @@ export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
 }
 
 const templateAnalysisCache = createCache<{
-  usedIds: Set<string>
+  usedIds?: Set<string>
   vModelIds: Set<string>
 }>()
 
 export function resolveTemplateVModelIdentifiers(
   sfc: SFCDescriptor,
 ): Set<string> {
-  return resolveTemplateAnalysisResult(sfc).vModelIds
+  return resolveTemplateAnalysisResult(sfc, false).vModelIds
 }
 
 function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
-  return resolveTemplateAnalysisResult(sfc).usedIds
+  return resolveTemplateAnalysisResult(sfc).usedIds!
 }
 
-function resolveTemplateAnalysisResult(sfc: SFCDescriptor): {
-  usedIds: Set<string>
+function resolveTemplateAnalysisResult(
+  sfc: SFCDescriptor,
+  collectUsedIds = true,
+): {
+  usedIds?: Set<string>
   vModelIds: Set<string>
 } {
   const { content, ast } = sfc.template!
   const cached = templateAnalysisCache.get(content)
-  if (cached) {
+  if (cached && (!collectUsedIds || cached.usedIds)) {
     return cached
   }
 
-  const ids = new Set<string>()
+  // When `collectUsedIds` is false we skip the expensive identifier extraction
+  // and only collect `vModelIds`.
+  const ids = collectUsedIds ? new Set<string>() : undefined
   const vModelIds = new Set<string>()
 
   ast!.children.forEach(walk)
@@ -59,14 +64,18 @@ function resolveTemplateAnalysisResult(sfc: SFCDescriptor): {
           !parserOptions.isNativeTag!(tag) &&
           !parserOptions.isBuiltInComponent!(tag)
         ) {
-          ids.add(camelize(tag))
-          ids.add(capitalize(camelize(tag)))
+          if (ids) {
+            ids.add(camelize(tag))
+            ids.add(capitalize(camelize(tag)))
+          }
         }
         for (let i = 0; i < node.props.length; i++) {
           const prop = node.props[i]
           if (prop.type === NodeTypes.DIRECTIVE) {
-            if (!isBuiltInDirective(prop.name)) {
-              ids.add(`v${capitalize(camelize(prop.name))}`)
+            if (ids) {
+              if (!isBuiltInDirective(prop.name)) {
+                ids.add(`v${capitalize(camelize(prop.name))}`)
+              }
             }
 
             // collect v-model target identifiers (simple identifiers only)
@@ -84,20 +93,27 @@ function resolveTemplateAnalysisResult(sfc: SFCDescriptor): {
             }
 
             // process dynamic directive arguments
-            if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
+            if (
+              ids &&
+              prop.arg &&
+              !(prop.arg as SimpleExpressionNode).isStatic
+            ) {
               extractIdentifiers(ids, prop.arg)
             }
 
-            if (prop.name === 'for') {
-              extractIdentifiers(ids, prop.forParseResult!.source)
-            } else if (prop.exp) {
-              extractIdentifiers(ids, prop.exp)
-            } else if (prop.name === 'bind' && !prop.exp) {
-              // v-bind shorthand name as identifier
-              ids.add(camelize((prop.arg as SimpleExpressionNode).content))
+            if (ids) {
+              if (prop.name === 'for') {
+                extractIdentifiers(ids, prop.forParseResult!.source)
+              } else if (prop.exp) {
+                extractIdentifiers(ids, prop.exp)
+              } else if (prop.name === 'bind' && !prop.exp) {
+                // v-bind shorthand name as identifier
+                ids.add(camelize((prop.arg as SimpleExpressionNode).content))
+              }
             }
           }
           if (
+            ids &&
             prop.type === NodeTypes.ATTRIBUTE &&
             prop.name === 'ref' &&
             prop.value?.content
@@ -108,7 +124,7 @@ function resolveTemplateAnalysisResult(sfc: SFCDescriptor): {
         node.children.forEach(walk)
         break
       case NodeTypes.INTERPOLATION:
-        extractIdentifiers(ids, node.content)
+        if (ids) extractIdentifiers(ids, node.content)
         break
     }
   }
