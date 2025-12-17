@@ -132,16 +132,12 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         if (cache.has(innerBlock.vnode!.type)) {
           innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
         }
-        if (shouldCache(innerBlock!, props, true)) {
-          innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        }
+        innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       } else {
         if (cache.has(innerBlock!.type)) {
           innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
         }
-        if (shouldCache(innerBlock!, props)) {
-          innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        }
+        innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       }
     }
 
