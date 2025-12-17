@@ -1,7 +1,10 @@
 import {
   BindingTypes,
+  NodeTypes,
+  type TemplateChildNode,
   UNREF,
   isFunctionType,
+  isSimpleIdentifier,
   unwrapTSNode,
   walkIdentifiers,
 } from '@vue/compiler-dom'
@@ -136,6 +139,36 @@ export interface SFCScriptCompileOptions {
    * Transform Vue SFCs into custom elements.
    */
   customElement?: boolean | ((filename: string) => boolean)
+}
+
+function resolveTemplateVModelIdentifiers(sfc: SFCDescriptor): Set<string> {
+  const ids = new Set<string>()
+  const template = sfc.template
+  if (!template?.ast) return ids
+
+  template.ast.children.forEach(walk)
+
+  function walk(node: TemplateChildNode) {
+    switch (node.type) {
+      case NodeTypes.ELEMENT:
+        for (let i = 0; i < node.props.length; i++) {
+          const prop = node.props[i]
+          if (prop.type === NodeTypes.DIRECTIVE && prop.name === 'model') {
+            const exp = prop.exp
+            if (exp && exp.type === NodeTypes.SIMPLE_EXPRESSION) {
+              const expString = exp.content.trim()
+              if (isSimpleIdentifier(expString) && expString !== 'undefined') {
+                ids.add(expString)
+              }
+            }
+          }
+        }
+        node.children.forEach(walk)
+        break
+    }
+  }
+
+  return ids
 }
 
 export interface ImportBinding {
@@ -758,6 +791,55 @@ export function compileScript(
   }
   for (const key in setupBindings) {
     ctx.bindingMetadata[key] = setupBindings[key]
+  }
+
+  // #11265, https://github.com/vitejs/rolldown-vite/issues/432
+  // 6.1 demote `const foo = reactive()` to `let` when used as v-model target.
+  // In non-inline template compilation, v-model assigns via `$setup.foo = $event`,
+  // which requires a SETUP_LET binding (getter + setter) to keep script state in sync.
+  // In inline mode, it generates `foo = $event`, which also requires `let`.
+  if (sfc.template && !sfc.template.src && sfc.template.ast) {
+    const vModelIds = resolveTemplateVModelIdentifiers(sfc)
+    if (vModelIds.size) {
+      const toDemote = new Set<string>()
+      for (const id of vModelIds) {
+        if (setupBindings[id] === BindingTypes.SETUP_REACTIVE_CONST) {
+          toDemote.add(id)
+        }
+      }
+
+      if (toDemote.size) {
+        for (const node of scriptSetupAst.body) {
+          if (
+            node.type === 'VariableDeclaration' &&
+            node.kind === 'const' &&
+            !node.declare
+          ) {
+            const demotedInDecl: string[] = []
+            for (const decl of node.declarations) {
+              if (decl.id.type === 'Identifier' && toDemote.has(decl.id.name)) {
+                demotedInDecl.push(decl.id.name)
+              }
+            }
+            if (demotedInDecl.length) {
+              ctx.s.overwrite(
+                node.start! + startOffset,
+                node.start! + startOffset + 'const'.length,
+                'let',
+              )
+              for (const id of demotedInDecl) {
+                setupBindings[id] = BindingTypes.SETUP_LET
+                ctx.bindingMetadata[id] = BindingTypes.SETUP_LET
+                warnOnce(
+                  `\`v-model\` cannot update a \`const\` reactive binding \`${id}\`. ` +
+                    `The compiler has transformed it to \`let\` to make the update work.`,
+                )
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   // 7. inject `useCssVars` calls
