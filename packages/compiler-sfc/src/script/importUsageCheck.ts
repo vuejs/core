@@ -4,6 +4,7 @@ import {
   NodeTypes,
   type SimpleExpressionNode,
   type TemplateChildNode,
+  isSimpleIdentifier,
   parserOptions,
   walkIdentifiers,
 } from '@vue/compiler-dom'
@@ -19,16 +20,33 @@ export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
   return resolveTemplateUsedIdentifiers(sfc).has(local)
 }
 
-const templateUsageCheckCache = createCache<Set<string>>()
+const templateAnalysisCache = createCache<{
+  usedIds: Set<string>
+  vModelIds: Set<string>
+}>()
+
+export function resolveTemplateVModelIdentifiers(
+  sfc: SFCDescriptor,
+): Set<string> {
+  return resolveTemplateAnalysisResult(sfc).vModelIds
+}
 
 function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
+  return resolveTemplateAnalysisResult(sfc).usedIds
+}
+
+function resolveTemplateAnalysisResult(sfc: SFCDescriptor): {
+  usedIds: Set<string>
+  vModelIds: Set<string>
+} {
   const { content, ast } = sfc.template!
-  const cached = templateUsageCheckCache.get(content)
+  const cached = templateAnalysisCache.get(content)
   if (cached) {
     return cached
   }
 
   const ids = new Set<string>()
+  const vModelIds = new Set<string>()
 
   ast!.children.forEach(walk)
 
@@ -49,6 +67,20 @@ function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
           if (prop.type === NodeTypes.DIRECTIVE) {
             if (!isBuiltInDirective(prop.name)) {
               ids.add(`v${capitalize(camelize(prop.name))}`)
+            }
+
+            // collect v-model target identifiers (simple identifiers only)
+            if (prop.name === 'model') {
+              const exp = prop.exp
+              if (exp && exp.type === NodeTypes.SIMPLE_EXPRESSION) {
+                const expString = exp.content.trim()
+                if (
+                  isSimpleIdentifier(expString) &&
+                  expString !== 'undefined'
+                ) {
+                  vModelIds.add(expString)
+                }
+              }
             }
 
             // process dynamic directive arguments
@@ -81,8 +113,9 @@ function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
     }
   }
 
-  templateUsageCheckCache.set(content, ids)
-  return ids
+  const result = { usedIds: ids, vModelIds }
+  templateAnalysisCache.set(content, result)
+  return result
 }
 
 function extractIdentifiers(ids: Set<string>, node: ExpressionNode) {

@@ -1,10 +1,7 @@
 import {
   BindingTypes,
-  NodeTypes,
-  type TemplateChildNode,
   UNREF,
   isFunctionType,
-  isSimpleIdentifier,
   unwrapTSNode,
   walkIdentifiers,
 } from '@vue/compiler-dom'
@@ -67,7 +64,10 @@ import {
   isTS,
 } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
-import { isImportUsed } from './script/importUsageCheck'
+import {
+  isImportUsed,
+  resolveTemplateVModelIdentifiers,
+} from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
 
 export interface SFCScriptCompileOptions {
@@ -139,36 +139,6 @@ export interface SFCScriptCompileOptions {
    * Transform Vue SFCs into custom elements.
    */
   customElement?: boolean | ((filename: string) => boolean)
-}
-
-function resolveTemplateVModelIdentifiers(sfc: SFCDescriptor): Set<string> {
-  const ids = new Set<string>()
-  const template = sfc.template
-  if (!template?.ast) return ids
-
-  template.ast.children.forEach(walk)
-
-  function walk(node: TemplateChildNode) {
-    switch (node.type) {
-      case NodeTypes.ELEMENT:
-        for (let i = 0; i < node.props.length; i++) {
-          const prop = node.props[i]
-          if (prop.type === NodeTypes.DIRECTIVE && prop.name === 'model') {
-            const exp = prop.exp
-            if (exp && exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-              const expString = exp.content.trim()
-              if (isSimpleIdentifier(expString) && expString !== 'undefined') {
-                ids.add(expString)
-              }
-            }
-          }
-        }
-        node.children.forEach(walk)
-        break
-    }
-  }
-
-  return ids
 }
 
 export interface ImportBinding {
