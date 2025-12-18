@@ -1,3 +1,25 @@
+## [3.5.26](https://github.com/vuejs/core/compare/v3.5.25...v3.5.26) (2025-12-18)
+
+
+### Bug Fixes
+
+* **compat:** fix compat handler of draggable ([#12445](https://github.com/vuejs/core/issues/12445)) ([ed85953](https://github.com/vuejs/core/commit/ed85953e28741ae1913cfc92b7b66e1a8da47f8c)), closes [#12444](https://github.com/vuejs/core/issues/12444)
+* **compat:** handle v-model deprecation warning with missing appContext ([#14203](https://github.com/vuejs/core/issues/14203)) ([945a543](https://github.com/vuejs/core/commit/945a543152e8d80903d4f7a18a84ebe8d36e56f8)), closes [#14202](https://github.com/vuejs/core/issues/14202)
+* **compiler-sfc:** demote const reactive bindings used in v-model ([#14214](https://github.com/vuejs/core/issues/14214)) ([e24ff7d](https://github.com/vuejs/core/commit/e24ff7d302a887ea532571c231a385362fa17279)), closes [#11265](https://github.com/vuejs/core/issues/11265) [#11275](https://github.com/vuejs/core/issues/11275)
+* **compiler-ssr:** handle ssr attr fallthrough when preserve whitespace ([#12304](https://github.com/vuejs/core/issues/12304)) ([4783118](https://github.com/vuejs/core/commit/47831189196b62b12dd17f6e909efc51d9d22fd2)), closes [#8072](https://github.com/vuejs/core/issues/8072)
+* **hmr:** handle cached text node update ([#14134](https://github.com/vuejs/core/issues/14134)) ([69ce3c7](https://github.com/vuejs/core/commit/69ce3c7d755db868cfa66d67ab5b3f383a44e053)), closes [#14127](https://github.com/vuejs/core/issues/14127)
+* **keep-alive:** use resolved component name for async components in cache pruning ([#14212](https://github.com/vuejs/core/issues/14212)) ([dfe667c](https://github.com/vuejs/core/commit/dfe667c8567d48167c250062483d2d2cfc7bdc03)), closes [#14210](https://github.com/vuejs/core/issues/14210)
+* **runtime-core:** ensure correct anchor el for deeper unresolved async components ([#14182](https://github.com/vuejs/core/issues/14182)) ([f5b3bf2](https://github.com/vuejs/core/commit/f5b3bf264d2e12725381bed1c492069437069b03)), closes [#14173](https://github.com/vuejs/core/issues/14173)
+* **runtime-core:** handle patch stable fragment edge case ([#12411](https://github.com/vuejs/core/issues/12411)) ([94aeb64](https://github.com/vuejs/core/commit/94aeb64ccdf20d541059b533c9780977c14db9cb)), closes [#12410](https://github.com/vuejs/core/issues/12410)
+* **runtime-core:** pass component instance to flushPreFlushCbs on unmount ([#14221](https://github.com/vuejs/core/issues/14221)) ([e857e12](https://github.com/vuejs/core/commit/e857e12c0aff03c0148e3e52d92935918872dc33)), closes [#14215](https://github.com/vuejs/core/issues/14215)
+
+
+### Performance Improvements
+
+* **compiler-core:** use binary-search to get line and column ([#14222](https://github.com/vuejs/core/issues/14222)) ([1904053](https://github.com/vuejs/core/commit/1904053f1f7986c2d6dbe858ee1b594b4b229c17))
+
+
+
 ## [3.5.25](https://github.com/vuejs/core/compare/v3.5.24...v3.5.25) (2025-11-24)
 
 
