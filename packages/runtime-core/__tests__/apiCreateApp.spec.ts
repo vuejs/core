@@ -646,7 +646,7 @@ describe('api: createApp', () => {
   })
 
   // #14215
-  test("unmount new app should not trigger ohter app's watcher", async () => {
+  test("unmount new app should not trigger other app's watcher", async () => {
     const compWatcherTriggerFn = vi.fn()
     const data = ref(true)
     const foo = ref('')
