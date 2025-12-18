@@ -645,6 +645,46 @@ describe('api: createApp', () => {
     expect(order).toMatchObject(['render', 'render', 'post watcher'])
   })
 
+  // #14215
+  test("unmount new app should not trigger ohter app's watcher", async () => {
+    const compWatcherTriggerFn = vi.fn()
+    const data = ref(true)
+    const foo = ref('')
+
+    const createNewApp = () => {
+      const app = createApp({ render: () => h('new app') })
+      const wrapper = nodeOps.createElement('div')
+      app.mount(wrapper)
+      return function destroy() {
+        app.unmount()
+      }
+    }
+
+    const Comp = defineComponent({
+      setup() {
+        watch(() => foo.value, compWatcherTriggerFn)
+        return () => h('div', 'comp')
+      },
+    })
+
+    const App = defineComponent({
+      setup() {
+        return () => (data.value ? h(Comp) : null)
+      },
+    })
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    await nextTick()
+
+    data.value = false
+    const destroy = createNewApp()
+    foo.value = 'bar'
+    destroy()
+    await nextTick()
+
+    expect(compWatcherTriggerFn).toBeCalledTimes(0)
+  })
+
   // config.compilerOptions is tested in packages/vue since it is only
   // supported in the full build.
 })

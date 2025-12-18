@@ -2388,10 +2388,13 @@ function baseCreateRenderer(
         namespace,
       )
     }
+    const prev = container._vnode
     container._vnode = vnode
     if (!isFlushing) {
       isFlushing = true
-      flushPreFlushCbs()
+      flushPreFlushCbs(
+        prev ? (prev.component ? prev.component : undefined) : undefined,
+      )
       flushPostFlushCbs()
       isFlushing = false
     }
