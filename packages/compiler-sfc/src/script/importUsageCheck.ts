@@ -7,8 +7,9 @@ import {
   parserOptions,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import { createCache } from '../cache'
+import { COMPILER_CACHE_KEYS, createCache } from '../cache'
 import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
+import type { LRUCache } from 'lru-cache'
 
 /**
  * Check if an identifier is used in the SFC's template.
@@ -23,11 +24,16 @@ export function isUsedInTemplate(
   return resolveTemplateUsedIdentifiers(sfc).has(identifier)
 }
 
-const templateUsageCheckCache = createCache<Set<string>>()
+let templateUsageCheckCache: LRUCache<string, Set<string>>
 
 function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
   const { content, ast } = sfc.template!
-  const cached = templateUsageCheckCache.get(content)
+  const cached = (
+    templateUsageCheckCache ||
+    (templateUsageCheckCache = createCache<Set<string>>(
+      COMPILER_CACHE_KEYS.templateUsageCheck,
+    ) as LRUCache<string, Set<string>>)
+  ).get(content)
   if (cached) {
     return cached
   }
