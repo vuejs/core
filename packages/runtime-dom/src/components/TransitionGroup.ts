@@ -97,7 +97,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
-      forceReflow()
+      forceReflow(instance.vnode.el as Node)
 
       movedChildren.forEach(c => {
         const el = c.el as ElementWithTransition
@@ -108,7 +108,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
           if (e && e.target !== el) {
             return
           }
-          if (!e || /transform$/.test(e.propertyName)) {
+          if (!e || e.propertyName.endsWith('transform')) {
             el.removeEventListener('transitionend', cb)
             ;(el as any)[moveCbKey] = null
             removeTransitionClass(el, moveClass)
@@ -150,7 +150,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
                 instance,
               ),
             )
-            positionMap.set(child, getRelativePosition(child.el as Element))
+            positionMap.set(child, getRelativePosition(child.el as HTMLElement))
           }
         }
       }
@@ -190,24 +190,22 @@ function callPendingCbs(c: VNode) {
   }
 }
 
-function getRelativePosition(el: Element): Position {
-  const elRect = el.getBoundingClientRect()
+function getRelativePosition(el: HTMLElement): Position {
   if (!el.parentElement) {
     return {
-      left: elRect.left,
-      top: elRect.top,
+      left: el.offsetLeft,
+      top: el.offsetTop,
     }
   }
 
-  const parentRect = el.parentElement.getBoundingClientRect()
   return {
-    left: elRect.left - parentRect.left,
-    top: elRect.top - parentRect.top,
+    left: el.offsetLeft - el.parentElement.offsetLeft,
+    top: el.offsetTop - el.parentElement.offsetTop,
   }
 }
 
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, getRelativePosition(c.el as Element))
+  newPositionMap.set(c, getRelativePosition(c.el as HTMLElement))
 }
 
 function applyTranslation(c: VNode): VNode | undefined {

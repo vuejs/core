@@ -42,6 +42,7 @@ import type { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import type { Expression, Node } from '@babel/types'
 import { unwrapTSNode } from './babelUtils'
+import { isWhitespace } from './tokenizer'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -63,7 +64,7 @@ export function isCoreComponent(tag: string): symbol | void {
   }
 }
 
-const nonIdentifierRE = /^\d|[^\$\w\xA0-\uFFFF]/
+const nonIdentifierRE = /^$|^\d|[^\$\w\xA0-\uFFFF]/
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
@@ -74,7 +75,7 @@ enum MemberExpLexState {
   inString,
 }
 
-const validFirstIdentCharRE = /[A-Za-z_$\xA0-\uFFFF]/
+export const validFirstIdentCharRE: RegExp = /[A-Za-z_$\xA0-\uFFFF]/
 const validIdentCharRE = /[\.\?\w$\xA0-\uFFFF]/
 const whitespaceRE = /\s+[.[]\s*|\s*[.[]\s+/g
 
@@ -189,7 +190,7 @@ export const isMemberExpression: (
 ) => boolean = __BROWSER__ ? isMemberExpressionBrowser : isMemberExpressionNode
 
 const fnExpRE =
-  /^\s*(async\s*)?(\([^)]*?\)|[\w$_]+)\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/
+  /^\s*(?:async\s*)?(?:\([^)]*?\)|[\w$_]+)\s*(?::[^=]+)?=>|^\s*(?:async\s+)?function(?:\s+[\w$]+)?\s*\(/
 
 export const isFnExpressionBrowser: (exp: ExpressionNode) => boolean = exp =>
   fnExpRE.test(getExpSource(exp))
@@ -341,6 +342,10 @@ export function isText(
   node: TemplateChildNode,
 ): node is TextNode | InterpolationNode {
   return node.type === NodeTypes.INTERPOLATION || node.type === NodeTypes.TEXT
+}
+
+export function isVPre(p: ElementNode['props'][0]): p is DirectiveNode {
+  return p.type === NodeTypes.DIRECTIVE && p.name === 'pre'
 }
 
 export function isVSlot(p: ElementNode['props'][0]): p is DirectiveNode {
@@ -564,3 +569,23 @@ export function getMemoedVNodeCall(
 }
 
 export const forAliasRE: RegExp = /([\s\S]*?)\s+(?:in|of)\s+(\S[\s\S]*)/
+
+export function isAllWhitespace(str: string): boolean {
+  for (let i = 0; i < str.length; i++) {
+    if (!isWhitespace(str.charCodeAt(i))) {
+      return false
+    }
+  }
+  return true
+}
+
+export function isWhitespaceText(node: TemplateChildNode): boolean {
+  return (
+    (node.type === NodeTypes.TEXT && isAllWhitespace(node.content)) ||
+    (node.type === NodeTypes.TEXT_CALL && isWhitespaceText(node.content))
+  )
+}
+
+export function isCommentOrWhitespace(node: TemplateChildNode): boolean {
+  return node.type === NodeTypes.COMMENT || isWhitespaceText(node)
+}
