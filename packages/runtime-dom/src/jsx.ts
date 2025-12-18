@@ -29,7 +29,8 @@
 import type * as CSS from 'csstype'
 
 export interface CSSProperties
-  extends CSS.Properties<string | number>,
+  extends
+    CSS.Properties<string | number>,
     CSS.PropertiesHyphen<string | number> {
   /**
    * The index signature was removed to enable closed typing for style
