@@ -29,8 +29,13 @@ import {
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
-const positionMap = new WeakMap<VNode, DOMRect>()
-const newPositionMap = new WeakMap<VNode, DOMRect>()
+interface Position {
+  top: number
+  left: number
+}
+
+const positionMap = new WeakMap<VNode, Position>()
+const newPositionMap = new WeakMap<VNode, Position>()
 const moveCbKey = Symbol('_moveCb')
 const enterCbKey = Symbol('_enterCb')
 
@@ -92,7 +97,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
-      forceReflow()
+      forceReflow(instance.vnode.el as Node)
 
       movedChildren.forEach(c => {
         const el = c.el as ElementWithTransition
@@ -103,7 +108,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
           if (e && e.target !== el) {
             return
           }
-          if (!e || /transform$/.test(e.propertyName)) {
+          if (!e || e.propertyName.endsWith('transform')) {
             el.removeEventListener('transitionend', cb)
             ;(el as any)[moveCbKey] = null
             removeTransitionClass(el, moveClass)
@@ -145,10 +150,10 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
                 instance,
               ),
             )
-            positionMap.set(
-              child,
-              (child.el as Element).getBoundingClientRect(),
-            )
+            positionMap.set(child, {
+              left: (child.el as HTMLElement).offsetLeft,
+              top: (child.el as HTMLElement).offsetTop,
+            })
           }
         }
       }
@@ -189,7 +194,10 @@ function callPendingCbs(c: VNode) {
 }
 
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, (c.el as Element).getBoundingClientRect())
+  newPositionMap.set(c, {
+    left: (c.el as HTMLElement).offsetLeft,
+    top: (c.el as HTMLElement).offsetTop,
+  })
 }
 
 function applyTranslation(c: VNode): VNode | undefined {

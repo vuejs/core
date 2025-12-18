@@ -17,7 +17,11 @@ import {
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
-import { type ContextualRenderFn, withCtx } from './componentRenderContext'
+import {
+  type ContextualRenderFn,
+  currentRenderingInstance,
+  withCtx,
+} from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { TriggerOpTypes, trigger } from '@vue/reactivity'
@@ -75,14 +79,10 @@ export type RawSlots = {
    * @internal
    */
   _?: SlotFlags
-  /**
-   * cache indexes for slot content
-   * @internal
-   */
-  __?: number[]
 }
 
-const isInternalKey = (key: string) => key[0] === '_' || key === '$stable'
+const isInternalKey = (key: string) =>
+  key === '_' || key === '_ctx' || key === '$stable'
 
 const normalizeSlotValue = (value: unknown): VNode[] =>
   isArray(value)
@@ -102,7 +102,8 @@ const normalizeSlot = (
     if (
       __DEV__ &&
       currentInstance &&
-      (!ctx || ctx.root === currentInstance.root)
+      !(ctx === null && currentRenderingInstance) &&
+      !(ctx && ctx.root !== currentInstance.root)
     ) {
       warn(
         `Slot "${key}" invoked outside of the render function: ` +
