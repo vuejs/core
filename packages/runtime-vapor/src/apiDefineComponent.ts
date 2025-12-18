@@ -32,7 +32,7 @@ type VaporComponentInstanceConstructor<T extends VaporComponentInstance> = {
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-  new (props?: T['props']): T
+  new (...args: any[]): T
 }
 
 export type DefineVaporComponent<
