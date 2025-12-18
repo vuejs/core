@@ -70,8 +70,8 @@ export function defineVaporCustomElement<Props, RawBindings = object>(
 // overload 2: defineVaporCustomElement with options object, infer props from options
 export function defineVaporCustomElement<
   // props
-  RuntimePropsOptions extends
-    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
+  RuntimePropsOptions extends ComponentObjectPropsOptions =
+    ComponentObjectPropsOptions,
   RuntimePropsKeys extends string = string,
   // emits
   RuntimeEmitsOptions extends EmitsOptions = {},

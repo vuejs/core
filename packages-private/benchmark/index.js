@@ -143,9 +143,8 @@ async function buildApp(isVapor) {
 
   process.env.NODE_ENV = 'production'
 
-  const CompilerSFC = await import(
-    '../../packages/compiler-sfc/dist/compiler-sfc.cjs.js'
-  )
+  const CompilerSFC =
+    await import('../../packages/compiler-sfc/dist/compiler-sfc.cjs.js')
 
   const runtimePath = path.resolve(
     import.meta.dirname,

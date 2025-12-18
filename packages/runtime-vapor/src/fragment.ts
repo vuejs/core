@@ -36,9 +36,9 @@ import { isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 
-export class VaporFragment<T extends Block = Block>
-  implements TransitionOptions
-{
+export class VaporFragment<
+  T extends Block = Block,
+> implements TransitionOptions {
   $key?: any
   $transition?: VaporTransitionHooks | undefined
   nodes: T

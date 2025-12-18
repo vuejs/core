@@ -157,7 +157,9 @@ export interface ObjectVaporComponent<
   InferredProps = ComponentObjectPropsOptions extends Props
     ? {}
     : ExtractPropTypes<Props>,
-> extends ComponentInternalOptions,
+>
+  extends
+    ComponentInternalOptions,
     AsyncComponentInternalOptions<ObjectVaporComponent, VaporComponentInstance>,
     SharedInternalOptions {
   inheritAttrs?: boolean
@@ -544,8 +546,7 @@ export class VaporComponentInstance<
   Exposed extends Record<string, any> = Record<string, any>,
   TypeBlock extends Block = Block,
   TypeRefs extends Record<string, any> = Record<string, any>,
-> implements GenericComponentInstance
-{
+> implements GenericComponentInstance {
   vapor: true
   uid: number
   type: VaporComponent
