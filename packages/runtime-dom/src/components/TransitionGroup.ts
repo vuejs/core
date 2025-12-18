@@ -166,7 +166,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
 })
 
 export const TransitionGroup = TransitionGroupImpl as unknown as {
-  new (props?: TransitionGroupProps): {
+  new (): {
     $props: TransitionGroupProps
   }
 }
