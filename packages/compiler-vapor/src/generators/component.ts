@@ -219,7 +219,13 @@ function genDynamicProps(
         expr = genMulti(DELIMITERS_OBJECT, genProp(p, context))
       else {
         expr = genExpression(p.value, context)
-        if (p.handler) expr = genCall(helper('toHandlers'), expr)
+        if (p.handler)
+          expr = genCall(
+            helper('toHandlers'),
+            expr,
+            `false`, // preserveCaseIfNecessary: false, not needed for component
+            `true`, // wrap handler values in functions
+          )
       }
     }
     frags.push(['() => (', ...expr, ')'])
