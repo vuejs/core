@@ -46,7 +46,7 @@ import {
   isStaticArgOf,
   isVPre,
 } from './utils'
-import { decodeHTML } from 'entities/lib/decode.js'
+import { decodeHTML } from 'entities/decode'
 import {
   type ParserOptions as BabelOptions,
   parse,
