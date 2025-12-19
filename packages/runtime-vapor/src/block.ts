@@ -158,6 +158,30 @@ export function remove(block: Block, parent?: ParentNode): void {
   }
 }
 
+export function move(block: Block, parent: ParentNode): void {
+  if (block instanceof Node) {
+    if ((block as TransitionBlock).$transition && block instanceof Element) {
+      performTransitionLeave(
+        block,
+        (block as TransitionBlock).$transition as TransitionHooks,
+        () => insert(block, parent),
+      )
+    } else {
+      insert(block, parent)
+    }
+  } else if (isVaporComponent(block)) {
+    move(block.block, parent)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      move(block[i], parent)
+    }
+  } else {
+    // fragment
+    move(block.nodes, parent)
+    if (block.anchor) move(block.anchor, parent)
+  }
+}
+
 /**
  * dev / test only
  */
