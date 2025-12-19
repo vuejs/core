@@ -133,6 +133,7 @@ export {
 export { withDirectives } from './directives'
 // SSR context
 export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
+export { MoveType } from './renderer'
 
 // Custom Renderer API ---------------------------------------------------------
 
@@ -519,11 +520,7 @@ export { type VaporInteropInterface } from './apiCreateApp'
 /**
  * @internal
  */
-export {
-  type RendererInternals,
-  MoveType,
-  getInheritedScopeIds,
-} from './renderer'
+export { type RendererInternals, getInheritedScopeIds } from './renderer'
 /**
  * @internal
  */
