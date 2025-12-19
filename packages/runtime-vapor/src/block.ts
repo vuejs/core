@@ -8,6 +8,7 @@ import {
 import { _child } from './dom/node'
 import { isComment, isHydrating } from './dom/hydration'
 import {
+  MoveType,
   type TransitionHooks,
   type TransitionProps,
   type TransitionState,
@@ -77,6 +78,7 @@ export function insert(
   block: Block,
   parent: ParentNode & { $fc?: Node | null },
   anchor: Node | null | 0 = null, // 0 means prepend
+  moveType: MoveType = MoveType.ENTER,
   parentSuspense?: any, // TODO Suspense
 ): void {
   anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
@@ -88,7 +90,12 @@ export function insert(
         (block as TransitionBlock).$transition &&
         !(block as TransitionBlock).$transition!.disabled
       ) {
-        performTransitionEnter(
+        const action =
+          moveType === MoveType.LEAVE
+            ? performTransitionLeave
+            : performTransitionEnter
+
+        action(
           block,
           (block as TransitionBlock).$transition as TransitionHooks,
           () => parent.insertBefore(block, anchor as Node),
@@ -155,30 +162,6 @@ export function remove(block: Block, parent?: ParentNode): void {
     if ((block as DynamicFragment).scope) {
       ;(block as DynamicFragment).scope!.stop()
     }
-  }
-}
-
-export function move(block: Block, parent: ParentNode): void {
-  if (block instanceof Node) {
-    if ((block as TransitionBlock).$transition && block instanceof Element) {
-      performTransitionLeave(
-        block,
-        (block as TransitionBlock).$transition as TransitionHooks,
-        () => insert(block, parent),
-      )
-    } else {
-      insert(block, parent)
-    }
-  } else if (isVaporComponent(block)) {
-    move(block.block, parent)
-  } else if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      move(block[i], parent)
-    }
-  } else {
-    // fragment
-    move(block.nodes, parent)
-    if (block.anchor) move(block.anchor, parent)
   }
 }
 

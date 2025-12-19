@@ -276,11 +276,14 @@ describe('hot module replacement', () => {
       components: { Child },
       setup() {
         const toggle = ref(true)
-        return { toggle }
+        function onLeave(_: any, done: Function) {
+          setTimeout(done, 0)
+        }
+        return { toggle, onLeave }
       },
       render: compileToFunction(
         `<button @click="toggle = !toggle" />
-        <Transition>
+        <Transition @leave="onLeave">
           <KeepAlive><Child v-if="toggle" /></KeepAlive>
         </Transition>`,
       ),
@@ -303,6 +306,7 @@ describe('hot module replacement', () => {
       render: compileToFunction(`<div>{{ count }}</div>`),
     })
     await nextTick()
+    await new Promise(r => setTimeout(r, 0))
     expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
