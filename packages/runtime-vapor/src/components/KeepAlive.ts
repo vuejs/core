@@ -3,6 +3,7 @@ import {
   type GenericComponent,
   type GenericComponentInstance,
   type KeepAliveProps,
+  MoveType,
   type VNode,
   currentInstance,
   devtoolsComponentAdded,
@@ -18,7 +19,7 @@ import {
   warn,
   watch,
 } from '@vue/runtime-dom'
-import { type Block, insert, move, remove } from '../block'
+import { type Block, insert, remove } from '../block'
 import {
   type ObjectVaporComponent,
   type VaporComponent,
@@ -358,7 +359,7 @@ export function deactivate(
   instance: VaporComponentInstance,
   container: ParentNode,
 ): void {
-  move(instance.block, container)
+  insert(instance.block, container, null, MoveType.LEAVE)
 
   queuePostFlushCb(() => {
     if (instance.da) invokeArrayFns(instance.da)
