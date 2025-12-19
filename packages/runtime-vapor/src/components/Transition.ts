@@ -175,7 +175,6 @@ export function resolveTransitionHooks(
 export function applyTransitionHooks(
   block: Block,
   hooks: VaporTransitionHooks,
-  isResolved: boolean = false,
 ): VaporTransitionHooks {
   // filter out comment nodes
   if (isArray(block)) {
@@ -188,9 +187,7 @@ export function applyTransitionHooks(
   }
 
   const isFrag = isFragment(block)
-  const child = isResolved
-    ? (block as TransitionBlock)
-    : findTransitionBlock(block, isFrag)
+  const child = findTransitionBlock(block, isFrag)
   if (!child) {
     // set transition hooks on fragment for reusing during it's updating
     if (isFrag) setTransitionHooksOnFragment(block, hooks)
