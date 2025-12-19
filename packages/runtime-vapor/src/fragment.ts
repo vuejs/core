@@ -118,6 +118,7 @@ export class DynamicFragment extends VaporFragment {
       if (isHydrating) this.hydrate(true)
       return
     }
+    const prevKey = this.current
     this.current = key
 
     const instance = currentInstance
@@ -130,9 +131,11 @@ export class DynamicFragment extends VaporFragment {
       // if any of the hooks returns true the scope will be preserved
       // for kept-alive component
       if (this.onBeforeTeardown) {
-        preserveScope = this.onBeforeTeardown.some(hook =>
-          hook(this.current, this.nodes, this.scope!),
-        )
+        for (const teardown of this.onBeforeTeardown) {
+          if (teardown(prevKey, this.nodes, this.scope!)) {
+            preserveScope = true
+          }
+        }
       }
       if (!preserveScope) {
         this.scope.stop()
