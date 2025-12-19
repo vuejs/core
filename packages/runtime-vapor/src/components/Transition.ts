@@ -80,29 +80,19 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     checkTransitionMode(mode)
 
     let resolvedProps: BaseTransitionProps<Element>
-    let isMounted = false
-    renderEffect(() => {
-      resolvedProps = resolveTransitionProps(props)
-      if (isMounted) {
-        // only update props for Fragment transition, for later reusing
-        if (isFragment(children)) {
-          children.$transition!.props = resolvedProps
-        } else {
-          const child = findTransitionBlock(children)
-          if (child) {
-            // replace existing transition hooks
-            child.$transition!.props = resolvedProps
-            applyTransitionHooks(child, child.$transition!, true)
-          }
-        }
-      } else {
-        isMounted = true
-      }
-    })
+    renderEffect(() => (resolvedProps = resolveTransitionProps(props)))
 
     const hooks = applyTransitionHooks(children, {
       state: useTransitionState(),
-      props: resolvedProps!,
+      // use proxy to keep props reference stable
+      props: new Proxy(
+        {},
+        {
+          get(_, key) {
+            return resolvedProps[key as keyof BaseTransitionProps<Element>]
+          },
+        },
+      ),
       instance: instance,
     } as VaporTransitionHooks)
 
