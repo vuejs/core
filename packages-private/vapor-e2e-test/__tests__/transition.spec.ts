@@ -871,11 +871,13 @@ describe('vapor transition', () => {
         await click(btnSwitchToB)
         await nextTick()
         await click(btnSwitchToC)
-        await transitionFinish(duration * 3)
+        await transitionFinish()
+        await transitionFinish()
         expect(await html(containerSelector)).toBe('<div class="">CompC</div>')
 
         await click(btnSwitchToA)
-        await transitionFinish(duration * 3)
+        await transitionFinish()
+        await transitionFinish()
         expect(await html(containerSelector)).toBe('<div class="">CompA</div>')
 
         let calls = await page().evaluate(() => {
@@ -892,6 +894,342 @@ describe('vapor transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #11775
+    // test(
+    //   'switch child then update include (out-in mode)',
+    //   async () => {
+    //     const onUpdatedSpyA = vi.fn()
+    //     const onUnmountedSpyC = vi.fn()
+
+    //     await page().exposeFunction('onUpdatedSpyA', onUpdatedSpyA)
+    //     await page().exposeFunction('onUnmountedSpyC', onUnmountedSpyC)
+
+    //     await page().evaluate(() => {
+    //       const { onUpdatedSpyA, onUnmountedSpyC } = window as any
+    //       const { createApp, ref, shallowRef, h, onUpdated, onUnmounted } = (
+    //         window as any
+    //       ).Vue
+    //       createApp({
+    //         template: `
+    //         <div id="container">
+    //           <transition mode="out-in">
+    //             <KeepAlive :include="includeRef">
+    //               <component :is="current" />
+    //             </KeepAlive>
+    //           </transition>
+    //         </div>
+    //         <button id="switchToB" @click="switchToB">switchToB</button>
+    //         <button id="switchToC" @click="switchToC">switchToC</button>
+    //         <button id="switchToA" @click="switchToA">switchToA</button>
+    //       `,
+    //         components: {
+    //           CompA: {
+    //             name: 'CompA',
+    //             setup() {
+    //               onUpdated(onUpdatedSpyA)
+    //               return () => h('div', 'CompA')
+    //             },
+    //           },
+    //           CompB: {
+    //             name: 'CompB',
+    //             setup() {
+    //               return () => h('div', 'CompB')
+    //             },
+    //           },
+    //           CompC: {
+    //             name: 'CompC',
+    //             setup() {
+    //               onUnmounted(onUnmountedSpyC)
+    //               return () => h('div', 'CompC')
+    //             },
+    //           },
+    //         },
+    //         setup: () => {
+    //           const includeRef = ref(['CompA', 'CompB', 'CompC'])
+    //           const current = shallowRef('CompA')
+    //           const switchToB = () => (current.value = 'CompB')
+    //           const switchToC = () => (current.value = 'CompC')
+    //           const switchToA = () => {
+    //             current.value = 'CompA'
+    //             includeRef.value = ['CompA']
+    //           }
+    //           return { current, switchToB, switchToC, switchToA, includeRef }
+    //         },
+    //       }).mount('#app')
+    //     })
+
+    //     await transitionFinish()
+    //     expect(await html('#container')).toBe('<div>CompA</div>')
+
+    //     await click('#switchToB')
+    //     await nextTick()
+    //     await click('#switchToC')
+    //     await transitionFinish()
+    //     expect(await html('#container')).toBe('<div class="">CompC</div>')
+
+    //     await click('#switchToA')
+    //     await transitionFinish()
+    //     expect(await html('#container')).toBe('<div class="">CompA</div>')
+
+    //     // expect CompA only update once
+    //     expect(onUpdatedSpyA).toBeCalledTimes(1)
+    //     expect(onUnmountedSpyC).toBeCalledTimes(1)
+    //   },
+    //   E2E_TIMEOUT,
+    // )
+
+    // // #10827
+    // test(
+    //   'switch and update child then update include (out-in mode)',
+    //   async () => {
+    //     const onUnmountedSpyB = vi.fn()
+    //     await page().exposeFunction('onUnmountedSpyB', onUnmountedSpyB)
+
+    //     await page().evaluate(() => {
+    //       const { onUnmountedSpyB } = window as any
+    //       const {
+    //         createApp,
+    //         ref,
+    //         shallowRef,
+    //         h,
+    //         provide,
+    //         inject,
+    //         onUnmounted,
+    //       } = (window as any).Vue
+    //       createApp({
+    //         template: `
+    //         <div id="container">
+    //           <transition name="test-anim" mode="out-in">
+    //             <KeepAlive :include="includeRef">
+    //               <component :is="current" />
+    //             </KeepAlive>
+    //           </transition>
+    //         </div>
+    //         <button id="switchToA" @click="switchToA">switchToA</button>
+    //         <button id="switchToB" @click="switchToB">switchToB</button>
+    //       `,
+    //         components: {
+    //           CompA: {
+    //             name: 'CompA',
+    //             setup() {
+    //               const current = inject('current')
+    //               return () => h('div', current.value)
+    //             },
+    //           },
+    //           CompB: {
+    //             name: 'CompB',
+    //             setup() {
+    //               const current = inject('current')
+    //               onUnmounted(onUnmountedSpyB)
+    //               return () => h('div', current.value)
+    //             },
+    //           },
+    //         },
+    //         setup: () => {
+    //           const includeRef = ref(['CompA'])
+    //           const current = shallowRef('CompA')
+    //           provide('current', current)
+
+    //           const switchToB = () => {
+    //             current.value = 'CompB'
+    //             includeRef.value = ['CompA', 'CompB']
+    //           }
+    //           const switchToA = () => {
+    //             current.value = 'CompA'
+    //             includeRef.value = ['CompA']
+    //           }
+    //           return { current, switchToB, switchToA, includeRef }
+    //         },
+    //       }).mount('#app')
+    //     })
+
+    //     await transitionFinish()
+    //     expect(await html('#container')).toBe('<div>CompA</div>')
+
+    //     await click('#switchToB')
+    //     await transitionFinish()
+    //     await transitionFinish()
+    //     expect(await html('#container')).toBe('<div class="">CompB</div>')
+
+    //     await click('#switchToA')
+    //     await transitionFinish()
+    //     await transitionFinish()
+    //     expect(await html('#container')).toBe('<div class="">CompA</div>')
+
+    //     expect(onUnmountedSpyB).toBeCalledTimes(1)
+    //   },
+    //   E2E_TIMEOUT,
+    // )
+
+    // // #12860
+    // test(
+    //   'unmount children',
+    //   async () => {
+    //     const unmountSpy = vi.fn()
+    //     let storageContainer: ElementHandle<HTMLDivElement>
+    //     const setStorageContainer = (container: any) =>
+    //       (storageContainer = container)
+    //     await page().exposeFunction('unmountSpy', unmountSpy)
+    //     await page().exposeFunction('setStorageContainer', setStorageContainer)
+    //     await page().evaluate(() => {
+    //       const { unmountSpy, setStorageContainer } = window as any
+    //       const { createApp, ref, h, onUnmounted, getCurrentInstance } = (
+    //         window as any
+    //       ).Vue
+    //       createApp({
+    //         template: `
+    //         <div id="container">
+    //           <transition>
+    //             <KeepAlive :include="includeRef">
+    //               <TrueBranch v-if="toggle"></TrueBranch>
+    //             </KeepAlive>
+    //           </transition>
+    //         </div>
+    //         <button id="toggleBtn" @click="click">button</button>
+    //       `,
+    //         components: {
+    //           TrueBranch: {
+    //             name: 'TrueBranch',
+    //             setup() {
+    //               const instance = getCurrentInstance()
+    //               onUnmounted(() => {
+    //                 unmountSpy()
+    //                 setStorageContainer(instance.__keepAliveStorageContainer)
+    //               })
+    //               const count = ref(0)
+    //               return () => h('div', count.value)
+    //             },
+    //           },
+    //         },
+    //         setup: () => {
+    //           const includeRef = ref(['TrueBranch'])
+    //           const toggle = ref(true)
+    //           const click = () => {
+    //             toggle.value = !toggle.value
+    //             if (toggle.value) {
+    //               includeRef.value = ['TrueBranch']
+    //             } else {
+    //               includeRef.value = []
+    //             }
+    //           }
+    //           return { toggle, click, unmountSpy, includeRef }
+    //         },
+    //       }).mount('#app')
+    //     })
+
+    //     await transitionFinish()
+    //     expect(await html('#container')).toBe('<div>0</div>')
+
+    //     await click('#toggleBtn')
+    //     await transitionFinish()
+    //     expect(await html('#container')).toBe('<!--v-if-->')
+    //     expect(unmountSpy).toBeCalledTimes(1)
+    //     expect(await storageContainer!.evaluate(x => x.innerHTML)).toBe(``)
+    //   },
+    //   E2E_TIMEOUT,
+    // )
+
+    // // #13153
+    // test(
+    //   'move kept-alive node before v-show transition leave finishes',
+    //   async () => {
+    //     await page().evaluate(() => {
+    //       const { createApp, ref } = (window as any).Vue
+    //       const show = ref(true)
+    //       createApp({
+    //         template: `
+    //         <div id="container">
+    //           <KeepAlive :include="['Comp1', 'Comp2']">
+    //             <component :is="state === 1 ? 'Comp1' : 'Comp2'"/>
+    //           </KeepAlive>
+    //         </div>
+    //         <button id="toggleBtn" @click="click">button</button>
+    //       `,
+    //         setup: () => {
+    //           const state = ref(1)
+    //           const click = () => (state.value = state.value === 1 ? 2 : 1)
+    //           return { state, click }
+    //         },
+    //         components: {
+    //           Comp1: {
+    //             components: {
+    //               Item: {
+    //                 name: 'Item',
+    //                 setup() {
+    //                   return { show }
+    //                 },
+    //                 template: `
+    //                   <Transition name="test">
+    //                     <div v-show="show" >
+    //                       <h2>{{ show ? "I should show" : "I shouldn't show " }}</h2>
+    //                     </div>
+    //                   </Transition>
+    //                 `,
+    //               },
+    //             },
+    //             name: 'Comp1',
+    //             setup() {
+    //               const toggle = () => (show.value = !show.value)
+    //               return { show, toggle }
+    //             },
+    //             template: `
+    //               <Item />
+    //               <h2>This is page1</h2>
+    //               <button id="changeShowBtn" @click="toggle">{{ show }}</button>
+    //             `,
+    //           },
+    //           Comp2: {
+    //             name: 'Comp2',
+    //             template: `<h2>This is page2</h2>`,
+    //           },
+    //         },
+    //       }).mount('#app')
+    //     })
+
+    //     expect(await html('#container')).toBe(
+    //       `<div><h2>I should show</h2></div>` +
+    //         `<h2>This is page1</h2>` +
+    //         `<button id="changeShowBtn">true</button>`,
+    //     )
+
+    //     // trigger v-show transition leave
+    //     await click('#changeShowBtn')
+    //     await nextTick()
+    //     expect(await html('#container')).toBe(
+    //       `<div class="test-leave-from test-leave-active"><h2>I shouldn't show </h2></div>` +
+    //         `<h2>This is page1</h2>` +
+    //         `<button id="changeShowBtn">false</button>`,
+    //     )
+
+    //     // switch to page2, before leave finishes
+    //     // expect v-show element's display to be none
+    //     await click('#toggleBtn')
+    //     await nextTick()
+    //     expect(await html('#container')).toBe(
+    //       `<div class="test-leave-from test-leave-active" style="display: none;"><h2>I shouldn't show </h2></div>` +
+    //         `<h2>This is page2</h2>`,
+    //     )
+
+    //     // switch back to page1
+    //     // expect v-show element's display to be none
+    //     await click('#toggleBtn')
+    //     await nextTick()
+    //     expect(await html('#container')).toBe(
+    //       `<div class="test-enter-from test-enter-active" style="display: none;"><h2>I shouldn't show </h2></div>` +
+    //         `<h2>This is page1</h2>` +
+    //         `<button id="changeShowBtn">false</button>`,
+    //     )
+
+    //     await transitionFinish()
+    //     expect(await html('#container')).toBe(
+    //       `<div class="" style="display: none;"><h2>I shouldn't show </h2></div>` +
+    //         `<h2>This is page1</h2>` +
+    //         `<button id="changeShowBtn">false</button>`,
+    //     )
+    //   },
+    //   E2E_TIMEOUT,
+    // )
   })
 
   describe.todo('transition with Suspense', () => {})
