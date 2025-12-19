@@ -127,7 +127,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
     const processFragment = (frag: DynamicFragment) => {
       const [innerBlock, interop] = getInnerBlock(frag.nodes)
-      if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return
+      if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
 
       if (interop) {
         if (cache.has(innerBlock.vnode!.type)) {
@@ -140,6 +140,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         }
         innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       }
+      return true
     }
 
     const cacheFragment = (fragment: DynamicFragment) => {
@@ -236,9 +237,13 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     const injectKeepAliveHooks = (frag: DynamicFragment) => {
       ;(frag.onBeforeTeardown || (frag.onBeforeTeardown = [])).push(
         (oldKey, nodes, scope) => {
-          processFragment(frag)
-          keptAliveScopes.set(oldKey, scope)
-          return true
+          // if the fragment's nodes include a component that should be cached
+          // return true to avoid tearing down the fragment's scope
+          if (processFragment(frag)) {
+            keptAliveScopes.set(oldKey, scope)
+            return true
+          }
+          return false
         },
       )
       ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() =>
