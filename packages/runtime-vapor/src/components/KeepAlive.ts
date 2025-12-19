@@ -359,7 +359,7 @@ export function deactivate(
   instance: VaporComponentInstance,
   container: ParentNode,
 ): void {
-  insert(instance.block, container, null, MoveType.LEAVE)
+  insert(instance.block, container, null, MoveType.LEAVE, instance)
 
   queuePostFlushCb(() => {
     if (instance.da) invokeArrayFns(instance.da)

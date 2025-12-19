@@ -79,6 +79,7 @@ export function insert(
   parent: ParentNode & { $fc?: Node | null },
   anchor: Node | null | 0 = null, // 0 means prepend
   moveType: MoveType = MoveType.ENTER,
+  parentComponent?: VaporComponentInstance,
   parentSuspense?: any, // TODO Suspense
 ): void {
   anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
@@ -98,7 +99,15 @@ export function insert(
         action(
           block,
           (block as TransitionBlock).$transition as TransitionHooks,
-          () => parent.insertBefore(block, anchor as Node),
+          () => {
+            // if the component is unmounted after leave finish, remove the block
+            // to avoid retaining a detached node.
+            if (moveType === MoveType.LEAVE && parentComponent!.isUnmounted) {
+              block.remove()
+            } else {
+              parent.insertBefore(block, anchor as Node)
+            }
+          },
           parentSuspense,
         )
       } else {
