@@ -9,6 +9,7 @@ import {
   template,
   defineVaporAsyncComponent,
   onUnmounted,
+  onUpdated,
 } from 'vue'
 const show = ref(true)
 const toggle = ref(true)
@@ -31,6 +32,7 @@ let calls = {
   showAppear: [],
   notEnter: [],
 
+  updated: [],
   unmount: [],
 }
 window.getCalls = key => calls[key]
@@ -116,6 +118,42 @@ const click = () => {
   } else {
     includeRef.value = []
   }
+}
+
+const CompA = defineVaporComponent({
+  name: 'CompA',
+  setup() {
+    onUpdated(() => {
+      calls.updated.push('CompA updated')
+    })
+    return template('<div>CompA</div>')()
+  },
+})
+
+const CompB = defineVaporComponent({
+  name: 'CompB',
+  setup() {
+    return template('<div>CompB</div>')()
+  },
+})
+
+const CompC = defineVaporComponent({
+  name: 'CompC',
+  setup() {
+    onUnmounted(() => {
+      calls.unmount.push('CompC unmounted')
+    })
+    return template('<div>CompC</div>')()
+  },
+})
+
+const includeToChange = ref(['CompA', 'CompB', 'CompC'])
+const currentView = shallowRef(CompA)
+const switchToB = () => (currentView.value = CompB)
+const switchToC = () => (currentView.value = CompC)
+const switchToA = () => {
+  currentView.value = CompA
+  includeToChange.value = ['CompA']
 }
 </script>
 
@@ -544,6 +582,18 @@ const click = () => {
         </transition>
       </div>
       <button @click="click">button</button>
+    </div>
+    <div class="keep-alive-update-include">
+      <div>
+        <transition mode="out-in">
+          <KeepAlive :include="includeToChange">
+            <component :is="currentView" />
+          </KeepAlive>
+        </transition>
+      </div>
+      <button id="switchToB" @click="switchToB">switchToB</button>
+      <button id="switchToC" @click="switchToC">switchToC</button>
+      <button id="switchToA" @click="switchToA">switchToA</button>
     </div>
     <!-- with keep-alive end -->
 
