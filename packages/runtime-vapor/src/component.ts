@@ -920,7 +920,7 @@ export function unmountComponent(
   }
 
   if (instance.isMounted && !instance.isUnmounted) {
-    if (__DEV__ && instance.type.__hmrId) {
+    if (__DEV__) {
       unregisterHMR(instance)
     }
     if (instance.bum) {
