@@ -922,6 +922,42 @@ describe('vapor transition', () => {
       })
       expect(calls).toStrictEqual(['TrueBranch'])
     })
+
+    test(
+      'switch child then update include (out-in mode)',
+      async () => {
+        const containerSelector = '.keep-alive-update-include > div'
+        const btnSwitchToB = '.keep-alive-update-include > #switchToB'
+        const btnSwitchToA = '.keep-alive-update-include > #switchToA'
+        const btnSwitchToC = '.keep-alive-update-include > #switchToC'
+
+        await transitionFinish()
+        expect(await html(containerSelector)).toBe('<div>CompA</div>')
+
+        await click(btnSwitchToB)
+        await nextTick()
+        await click(btnSwitchToC)
+        await transitionFinish(duration * 3)
+        expect(await html(containerSelector)).toBe('<div class="">CompC</div>')
+
+        await click(btnSwitchToA)
+        await transitionFinish(duration * 3)
+        expect(await html(containerSelector)).toBe('<div class="">CompA</div>')
+
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls('unmount')
+        })
+        expect(calls).toStrictEqual(['CompC unmounted'])
+
+        // Unlike vdom, CompA does not update because there are no state changes
+        // expect CompA only update once
+        // calls = await page().evaluate(() => {
+        //   return (window as any).getCalls('updated')
+        // })
+        // expect(calls).toStrictEqual(['CompA updated'])
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe.todo('transition with Suspense', () => {})
