@@ -27,7 +27,7 @@ import {
 } from '../component'
 import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
-import { isFragment } from '../fragment'
+import { type VaporFragment, isFragment } from '../fragment'
 import {
   currentHydrationNode,
   isHydrating,
@@ -85,14 +85,11 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     const hooks = applyTransitionHooks(children, {
       state: useTransitionState(),
       // use proxy to keep props reference stable
-      props: new Proxy(
-        {},
-        {
-          get(_, key) {
-            return resolvedProps[key as keyof BaseTransitionProps<Element>]
-          },
+      props: new Proxy({} as BaseTransitionProps<Element>, {
+        get(_, key) {
+          return resolvedProps[key as keyof BaseTransitionProps<Element>]
         },
-      ),
+      }),
       instance: instance,
     } as VaporTransitionHooks)
 
@@ -186,11 +183,15 @@ export function applyTransitionHooks(
     }
   }
 
-  const isFrag = isFragment(block)
-  const child = findTransitionBlock(block, isFrag)
+  const fragments: VaporFragment[] = []
+  const child = findTransitionBlock(block, frag => fragments.push(frag))
   if (!child) {
-    // set transition hooks on fragment for reusing during it's updating
-    if (isFrag) setTransitionHooksOnFragment(block, hooks)
+    // set transition hooks on fragments for later use
+    fragments.forEach(f => (f.$transition = hooks))
+    // warn if no child and no fragments
+    if (__DEV__ && fragments.length === 0) {
+      warn('Transition component has no valid child element')
+    }
     return hooks
   }
 
@@ -204,7 +205,7 @@ export function applyTransitionHooks(
   )
   resolvedHooks.delayedLeave = delayedLeave
   child.$transition = resolvedHooks
-  if (isFrag) setTransitionHooksOnFragment(block, resolvedHooks)
+  fragments.forEach(f => (f.$transition = resolvedHooks))
 
   return resolvedHooks
 }
@@ -260,7 +261,7 @@ export function applyTransitionLeaveHooks(
 
 export function findTransitionBlock(
   block: Block,
-  inFragment: boolean = false,
+  onFragment?: (frag: VaporFragment) => void,
 ): TransitionBlock | undefined {
   let child: TransitionBlock | undefined
   if (block instanceof Node) {
@@ -273,7 +274,7 @@ export function findTransitionBlock(
     } else {
       // stop searching if encountering nested Transition component
       if (getComponentName(block.type) === displayName) return undefined
-      child = findTransitionBlock(block.block, inFragment)
+      child = findTransitionBlock(block.block, onFragment)
       // use component id as key
       if (child && child.$key === undefined) child.$key = block.uid
     }
@@ -281,9 +282,7 @@ export function findTransitionBlock(
     let hasFound = false
     for (const c of block) {
       if (c instanceof Comment) continue
-      // check if the child is a fragment to suppress warnings
-      if (isFragment(c)) inFragment = true
-      const item = findTransitionBlock(c, inFragment)
+      const item = findTransitionBlock(c, onFragment)
       if (__DEV__ && hasFound) {
         // warn more than one non-comment child
         warn(
@@ -297,17 +296,13 @@ export function findTransitionBlock(
       if (!__DEV__) break
     }
   } else if (isFragment(block)) {
-    // mark as in fragment to suppress warnings
-    inFragment = true
     if (block.insert) {
       child = block
     } else {
-      child = findTransitionBlock(block.nodes, true)
+      // collect fragments for setting transition hooks
+      if (onFragment) onFragment(block)
+      child = findTransitionBlock(block.nodes, onFragment)
     }
-  }
-
-  if (__DEV__ && !child && !inFragment) {
-    warn('Transition component has no valid child element')
   }
 
   return child
