@@ -29,7 +29,6 @@ import {
 } from '../ir'
 import {
   type CodeFragment,
-  DELIMITERS_ARRAY,
   DELIMITERS_ARRAY_NEWLINE,
   DELIMITERS_OBJECT,
   DELIMITERS_OBJECT_NEWLINE,
@@ -325,7 +324,7 @@ function genStaticProps(
   for (const group of handlerGroups.values()) {
     const handlerValue =
       group.handlers.length > 1
-        ? genMulti(DELIMITERS_ARRAY, ...group.handlers)
+        ? genMulti(DELIMITERS_ARRAY_NEWLINE, ...group.handlers)
         : group.handlers[0]
     args[group.index] = [...group.keyFrag, ': () => ', ...handlerValue]
   }
@@ -387,7 +386,7 @@ function genDynamicProps(
             entries.push([...modifiersKey, `: () => ({ ${modifiersVal} })`])
           }
 
-          expr = genMulti(DELIMITERS_OBJECT, ...entries)
+          expr = genMulti(DELIMITERS_OBJECT_NEWLINE, ...entries)
         } else {
           expr = genMulti(DELIMITERS_OBJECT, genProp(p, context))
         }

@@ -5,7 +5,10 @@ exports[`compiler: vModel transform > component > component v-model should merge
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, {
     modelValue: () => (counter.value),
-    "onUpdate:modelValue": () => [_value => (counter.value = _value), onUpdate]
+    "onUpdate:modelValue": () => [
+      _value => (counter.value = _value),
+      onUpdate
+    ]
   }, null, true)
   return n0
 "
@@ -74,8 +77,16 @@ exports[`compiler: vModel transform > component > v-model with dynamic arguments
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, { $: [
-    () => ({ [_ctx.foo]: _ctx.foo, ["onUpdate:" + _ctx.foo]: () => _value => (_ctx.foo = _value), [_ctx.foo + "Modifiers"]: () => ({ trim: true }) }),
-    () => ({ [_ctx.bar]: _ctx.bar, ["onUpdate:" + _ctx.bar]: () => _value => (_ctx.bar = _value), [_ctx.bar + "Modifiers"]: () => ({ number: true }) })
+    () => ({
+      [_ctx.foo]: _ctx.foo,
+      ["onUpdate:" + _ctx.foo]: () => _value => (_ctx.foo = _value),
+      [_ctx.foo + "Modifiers"]: () => ({ trim: true })
+    }),
+    () => ({
+      [_ctx.bar]: _ctx.bar,
+      ["onUpdate:" + _ctx.bar]: () => _value => (_ctx.bar = _value),
+      [_ctx.bar + "Modifiers"]: () => ({ number: true })
+    })
   ] }, null, true)
   return n0
 }"
@@ -87,7 +98,10 @@ exports[`compiler: vModel transform > component > v-model with dynamic arguments
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, { $: [
-    () => ({ [_ctx.arg]: _ctx.foo, ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value) })
+    () => ({
+      [_ctx.arg]: _ctx.foo,
+      ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value)
+    })
   ] }, null, true)
   return n0
 }"

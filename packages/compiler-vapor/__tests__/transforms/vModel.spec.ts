@@ -250,7 +250,10 @@ describe('compiler: vModel transform', () => {
       const { code, ir } = compileWithVModel('<Comp v-model:[arg]="foo" />')
       expect(code).toMatchSnapshot()
       expect(code).contains(
-        `[_ctx.arg]: _ctx.foo, ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value)`,
+        `() => ({
+      [_ctx.arg]: _ctx.foo,
+      ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value)
+    })`,
       )
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -388,7 +391,10 @@ describe('compiler: vModel transform', () => {
 
       expect(code).toMatchSnapshot()
       expect(code).toContain(
-        '"onUpdate:modelValue": () => [_value => (counter.value = _value), onUpdate]',
+        `"onUpdate:modelValue": () => [
+      _value => (counter.value = _value),
+      onUpdate
+    ]`,
       )
     })
   })
