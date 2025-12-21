@@ -490,7 +490,6 @@ const tokenizer = new Tokenizer(stack, {
 // This regex doesn't cover the case if key or index aliases have destructuring,
 // but those do not make sense in the first place, so this works in practice.
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
-const stripParensRE = /^\(|\)$/g
 
 function parseForExpression(
   input: SimpleExpressionNode,
@@ -526,7 +525,16 @@ function parseForExpression(
     finalized: false,
   }
 
-  let valueContent = LHS.trim().replace(stripParensRE, '').trim()
+  let valueContent = LHS.trim()
+  const hasLeadingParen = valueContent.startsWith('(')
+  const hasTrailingParen = valueContent.endsWith(')')
+
+  if (hasLeadingParen && hasTrailingParen) {
+    valueContent = valueContent.slice(1, -1).trim()
+  } else if (hasLeadingParen || hasTrailingParen) {
+    return
+  }
+
   const trimmedOffset = LHS.indexOf(valueContent)
 
   const iteratorMatch = valueContent.match(forIteratorRE)

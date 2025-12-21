@@ -293,6 +293,30 @@ describe('compiler: v-for', () => {
       )
     })
 
+    test('unmatched closing parenthesis', () => {
+      const onError = vi.fn()
+      parseWithForTransform('<span v-for="i) in items" />', { onError })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION,
+        }),
+      )
+    })
+
+    test('unmatched opening parenthesis', () => {
+      const onError = vi.fn()
+      parseWithForTransform('<span v-for="(i in items" />', { onError })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION,
+        }),
+      )
+    })
+
     test('<template v-for> key placement', () => {
       const onError = vi.fn()
       parseWithForTransform(
