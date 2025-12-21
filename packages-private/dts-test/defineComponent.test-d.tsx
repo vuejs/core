@@ -1385,8 +1385,14 @@ describe('function syntax w/ generics', () => {
     <CompWithProps msg={123} />,
   )
 
-  expectType<JSX.Element>(<CompWithProps msg="hello" list={[123]} />)
-  expectType<JSX.Element>(<CompWithProps msg={123} list={['hello']} />)
+  expectType<JSX.Element>(
+    // @ts-expect-error generics don't match
+    <CompWithProps msg="hello" list={[123]} />,
+  )
+  expectType<JSX.Element>(
+    // @ts-expect-error generics don't match
+    <CompWithProps msg={123} list={['hello']} />,
+  )
 })
 
 describe('function syntax w/ emits', () => {
@@ -1443,6 +1449,7 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
+  // @ts-expect-error object props with generics is not fully supported
   defineComponent(
     <T extends string>(_props: { msg: T }) => {
       return () => {}
@@ -1454,6 +1461,7 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
+  // @ts-expect-error string prop names don't match
   defineComponent(
     (_props: { msg: string }) => {
       return () => {}

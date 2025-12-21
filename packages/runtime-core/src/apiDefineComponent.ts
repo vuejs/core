@@ -157,7 +157,7 @@ export function defineComponent<
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
-    props?: (keyof Props)[]
+    props?: (keyof NoInfer<Props>)[]
     emits?: E | EE[]
     slots?: S
   },
@@ -173,30 +173,11 @@ export function defineComponent<
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
-    props?: ComponentObjectPropsOptions<Props>
+    props?: ComponentObjectPropsOptions<NoInfer<Props>>
     emits?: E | EE[]
     slots?: S
   },
 ): DefineSetupFnComponent<Props, E, S>
-
-// overload for generic setup functions with props option
-export function defineComponent<
-  F extends (props: any, ctx?: SetupContext<any, any>) => any,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  S extends SlotsType = {},
->(
-  setup: F,
-  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
-    props?: string[]
-    emits?: E | EE[]
-    slots?: S
-  },
-): F extends (props: infer P, ...args: any[]) => any
-  ? P extends Record<string, any>
-    ? DefineSetupFnComponent<P, E, S>
-    : never
-  : never
 
 // overload 2: defineComponent with options object, infer props from options
 export function defineComponent<
