@@ -117,7 +117,10 @@ export function genEventHandler(
     nonKeys: string[]
     keys: string[]
   } = { nonKeys: [], keys: [] },
-  // passed as component prop - need additional wrap
+  // when true, generate handler expressions suitable for passing as component
+  // props (avoid wrapping member expressions with invocation).
+  asComponentProp: boolean = false,
+  // when true, wrap the result in a getter function `() => ...`.
   extraWrap: boolean = false,
 ): CodeFragment[] {
   let handlerExp: CodeFragment[] = []
@@ -130,7 +133,7 @@ export function genEventHandler(
         if (isMemberExpression(value, context.options)) {
           // e.g. @click="foo.bar"
           exp = genExpression(value, context)
-          if (!isConstantBinding(value, context) && !extraWrap) {
+          if (!isConstantBinding(value, context) && !asComponentProp) {
             // non constant, wrap with invocation as `e => foo.bar(e)`
             // when passing as component handler, access is always dynamic so we
             // can skip this

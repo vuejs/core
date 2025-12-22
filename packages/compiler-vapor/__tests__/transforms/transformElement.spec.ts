@@ -333,7 +333,10 @@ describe('compiler: element transform', () => {
         `<Foo @click.foo="a" @click.bar="b" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(code).contains('onClick: () => [_ctx.a, _ctx.b]')
+      expect(code).contains(`onClick: () => [
+    _ctx.a,
+    _ctx.b
+  ]`)
     })
 
     test('props merging: inline event handlers', () => {
@@ -343,7 +346,10 @@ describe('compiler: element transform', () => {
       expect(code).toMatchSnapshot()
       expect(code).contains('const _on_click = e => _ctx.a(e)')
       expect(code).contains('const _on_click1 = e => _ctx.b(e)')
-      expect(code).contains('onClick: () => [_on_click, _on_click1]')
+      expect(code).contains(`onClick: () => [
+    _on_click,
+    _on_click1
+  ]`)
     })
 
     test('props merging: style', () => {
