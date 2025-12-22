@@ -1006,14 +1006,23 @@ describe('vapor transition', () => {
         // expect v-show element's display to be none
         await click(btnToggle)
         await nextTick()
-        // different from vdom behavior, the leaving element is removed immediately
-        // vdom's behavior is hidden but still in DOM until leave transition finishes
-        await waitForInnerHTML(containerSelector, `<h2>This is page2</h2>`)
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test-leave-from test-leave-active" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page2</h2>`,
+        )
 
         // switch back to page1
         // expect v-show element's display to be none
         await click(btnToggle)
         await nextTick()
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test-enter-from test-enter-active" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+
         await waitForInnerHTML(
           containerSelector,
           `<div class="" style="display: none;"><h2>I shouldn't show </h2></div>` +

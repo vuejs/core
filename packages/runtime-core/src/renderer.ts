@@ -2822,6 +2822,7 @@ export function performTransitionLeave(
   transition: TransitionHooks,
   remove: () => void,
   isElement: boolean = true,
+  force: boolean = false,
 ): void {
   const performRemove = () => {
     remove()
@@ -2830,9 +2831,17 @@ export function performTransitionLeave(
     }
   }
 
-  if (isElement && transition && !transition.persisted) {
+  if (force || (isElement && transition && !transition.persisted)) {
     const { leave, delayLeave } = transition
-    const performLeave = () => leave(el, performRemove)
+    const performLeave = () => {
+      // #13153 move kept-alive node before v-show transition leave finishes
+      // it needs to call the leaving callback to ensure element's `display`
+      // is `none`
+      if (el!._isLeaving && force) {
+        el![leaveCbKey](true /* cancelled */)
+      }
+      leave(el, performRemove)
+    }
     if (delayLeave) {
       delayLeave(el, performRemove, performLeave)
     } else {

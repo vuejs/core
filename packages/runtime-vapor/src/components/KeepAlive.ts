@@ -19,7 +19,7 @@ import {
   warn,
   watch,
 } from '@vue/runtime-dom'
-import { type Block, insert, remove } from '../block'
+import { type Block, move, remove } from '../block'
 import {
   type ObjectVaporComponent,
   type VaporComponent,
@@ -348,7 +348,7 @@ export function activate(
   parentNode: ParentNode,
   anchor?: Node | null | 0,
 ): void {
-  insert(instance.block, parentNode, anchor)
+  move(instance.block, parentNode, anchor, MoveType.ENTER, instance)
 
   queuePostFlushCb(() => {
     instance.isDeactivated = false
@@ -364,7 +364,7 @@ export function deactivate(
   instance: VaporComponentInstance,
   container: ParentNode,
 ): void {
-  insert(instance.block, container, null, MoveType.LEAVE, instance)
+  move(instance.block, container, null, MoveType.LEAVE, instance)
 
   queuePostFlushCb(() => {
     if (instance.da) invokeArrayFns(instance.da)
