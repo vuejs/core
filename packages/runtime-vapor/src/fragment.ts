@@ -78,6 +78,7 @@ export class DynamicFragment extends VaporFragment {
   anchor!: Node
   scope: EffectScope | undefined
   current?: BlockFn
+  pending?: { render?: BlockFn; key: any }
   fallback?: BlockFn
   anchorLabel?: string
 
@@ -118,13 +119,22 @@ export class DynamicFragment extends VaporFragment {
       if (isHydrating) this.hydrate(true)
       return
     }
+
+    const transition = this.$transition
+    // currently leaving: defer mounting the next branch until
+    // the leave finishes.
+    if (transition && transition.state.isLeaving) {
+      this.current = key
+      this.pending = { render, key }
+      return
+    }
+
     const prevKey = this.current
     this.current = key
 
     const instance = currentInstance
     const prevSub = setActiveSub()
     const parent = isHydrating ? null : this.anchor.parentNode
-    const transition = this.$transition
     // teardown previous branch
     if (this.scope) {
       let preserveScope = false
@@ -142,9 +152,16 @@ export class DynamicFragment extends VaporFragment {
       }
       const mode = transition && transition.mode
       if (mode) {
-        applyTransitionLeaveHooks(this.nodes, transition, () =>
-          this.renderBranch(render, transition, parent, instance),
-        )
+        applyTransitionLeaveHooks(this.nodes, transition, () => {
+          const pending = this.pending
+          if (pending) {
+            this.pending = undefined
+            this.current = pending.key
+            this.renderBranch(pending.render, transition, parent, instance)
+          } else {
+            this.renderBranch(render, transition, parent, instance)
+          }
+        })
         parent && remove(this.nodes, parent)
         if (mode === 'out-in') {
           setActiveSub(prevSub)

@@ -78,8 +78,6 @@ export function insert(
   block: Block,
   parent: ParentNode & { $fc?: Node | null },
   anchor: Node | null | 0 = null, // 0 means prepend
-  moveType: MoveType = MoveType.ENTER,
-  parentComponent?: VaporComponentInstance,
   parentSuspense?: any, // TODO Suspense
 ): void {
   anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
@@ -91,23 +89,10 @@ export function insert(
         (block as TransitionBlock).$transition &&
         !(block as TransitionBlock).$transition!.disabled
       ) {
-        const action =
-          moveType === MoveType.LEAVE
-            ? performTransitionLeave
-            : performTransitionEnter
-
-        action(
+        performTransitionEnter(
           block,
           (block as TransitionBlock).$transition as TransitionHooks,
-          () => {
-            // if the component is unmounted after leave finish, remove the block
-            // to avoid retaining a detached node.
-            if (moveType === MoveType.LEAVE && parentComponent!.isUnmounted) {
-              block.remove()
-            } else {
-              parent.insertBefore(block, anchor as Node)
-            }
-          },
+          () => parent.insertBefore(block, anchor as Node),
           parentSuspense,
         )
       } else {
@@ -134,6 +119,100 @@ export function insert(
       block.insert(parent, anchor, (block as TransitionBlock).$transition)
     } else {
       insert(block.nodes, parent, anchor, parentSuspense)
+    }
+  }
+}
+
+export function move(
+  block: Block,
+  parent: ParentNode & { $fc?: Node | null },
+  anchor: Node | null | 0 = null, // 0 means prepend
+  moveType: MoveType = MoveType.LEAVE,
+  parentComponent?: VaporComponentInstance,
+  parentSuspense?: any, // TODO Suspense
+): void {
+  anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
+  if (block instanceof Node) {
+    // only apply transition on Element nodes
+    if (
+      block instanceof Element &&
+      (block as TransitionBlock).$transition &&
+      !(block as TransitionBlock).$transition!.disabled &&
+      moveType !== MoveType.REORDER
+    ) {
+      if (moveType === MoveType.ENTER) {
+        performTransitionEnter(
+          block,
+          (block as TransitionBlock).$transition as TransitionHooks,
+          () => parent.insertBefore(block, anchor as Node),
+          parentSuspense,
+          true,
+        )
+      } else {
+        performTransitionLeave(
+          block,
+          (block as TransitionBlock).$transition as TransitionHooks,
+          () => {
+            // if the component is unmounted after leave finish, remove the block
+            // to avoid retaining a detached node.
+            if (
+              moveType === MoveType.LEAVE &&
+              parentComponent &&
+              parentComponent.isUnmounted
+            ) {
+              block.remove()
+            } else {
+              parent.insertBefore(block, anchor as Node)
+            }
+          },
+          parentSuspense,
+          true,
+        )
+      }
+    } else {
+      parent.insertBefore(block, anchor)
+    }
+  } else if (isVaporComponent(block)) {
+    if (block.isMounted) {
+      move(
+        block.block!,
+        parent,
+        anchor,
+        moveType,
+        parentComponent,
+        parentSuspense,
+      )
+    } else {
+      mountComponent(block, parent, anchor)
+    }
+  } else if (isArray(block)) {
+    for (const b of block) {
+      move(b, parent, anchor, moveType, parentComponent, parentSuspense)
+    }
+  } else {
+    if (block.anchor) {
+      move(
+        block.anchor,
+        parent,
+        anchor,
+        moveType,
+        parentComponent,
+        parentSuspense,
+      )
+      anchor = block.anchor
+    }
+    // fragment
+    if (block.insert) {
+      block.insert(parent, anchor, (block as TransitionBlock).$transition)
+    } else {
+      move(
+        block.nodes,
+        parent,
+        anchor,
+        moveType,
+        parentComponent,
+        parentSuspense,
+      )
     }
   }
 }
