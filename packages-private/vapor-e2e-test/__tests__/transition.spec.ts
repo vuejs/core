@@ -16,6 +16,7 @@ const {
   transitionStart,
   waitForInnerHTML,
   click,
+  domClick,
 } = setupPuppeteer()
 
 const duration = process.env.CI ? 200 : 50
@@ -196,8 +197,9 @@ describe('vapor transition', () => {
         await waitForInnerHTML(containerSelector, '')
 
         // enter
-        await click(btnChangeNameSelector)
-        await nextTick()
+        await domClick(btnChangeNameSelector)
+        await waitForInnerHTML(btnChangeNameSelector, 'changed')
+
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'changed-enter-from', 'changed-enter-active'])
