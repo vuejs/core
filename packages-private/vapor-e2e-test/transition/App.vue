@@ -21,6 +21,10 @@ import {
   delegateEvents,
   toDisplayString,
 } from 'vue'
+import VaporCompA from './components/VaporCompA.vue'
+import VaporCompB from './components/VaporCompB.vue'
+import VDomComp from './components/VdomComp.vue'
+
 const show = ref(true)
 const toggle = ref(true)
 const count = ref(0)
@@ -48,8 +52,6 @@ let calls = {
 window.getCalls = key => calls[key]
 window.resetCalls = key => (calls[key] = [])
 
-import VaporCompA from './components/VaporCompA.vue'
-import VaporCompB from './components/VaporCompB.vue'
 const activeComponent = shallowRef(VaporCompB)
 function toggleComponent() {
   activeComponent.value =
@@ -57,7 +59,6 @@ function toggleComponent() {
 }
 
 const toggleVdom = ref(true)
-import VDomComp from './components/VdomComp.vue'
 
 const interopComponent = shallowRef(VDomComp)
 function toggleInteropComponent() {
