@@ -53,11 +53,16 @@ interface PuppeteerUtils {
   transitionStart(
     btnSelector: string,
     containerSelector: string,
-  ): Promise<{ classNames: string[]; innerHTML: string }>
+  ): Promise<{ classNames: string[]; innerHTML: string; outerHTML: string }>
   waitForElement(
     selector: string,
     text: string,
     classNames: string[],
+    timeout?: number,
+  ): Promise<any>
+  waitForInnerHTML(
+    selector: string,
+    expected: string,
     timeout?: number,
   ): Promise<any>
 }
@@ -219,6 +224,7 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
           return {
             classNames: container.className.split(/\s+/g),
             innerHTML: container.innerHTML,
+            outerHTML: container.outerHTML,
           }
         })
       },
@@ -247,6 +253,21 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
       classNames,
     )
 
+  const waitForInnerHTML = (
+    selector: string,
+    expected: string,
+    timeout = 2000,
+  ) =>
+    page.waitForFunction(
+      (sel, exp) => {
+        const el = document.querySelector(sel)
+        return !!el && el.innerHTML === exp
+      },
+      { timeout },
+      selector,
+      expected,
+    )
+
   return {
     page: () => page,
     click,
@@ -268,5 +289,6 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
     nextFrame,
     transitionStart,
     waitForElement,
+    waitForInnerHTML,
   }
 }
