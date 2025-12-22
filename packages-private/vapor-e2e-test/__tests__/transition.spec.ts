@@ -641,7 +641,47 @@ describe('vapor transition', () => {
       E2E_TIMEOUT,
     )
 
-    test.todo('transition on SVG elements', async () => {}, E2E_TIMEOUT)
+    test(
+      'transition on SVG elements',
+      async () => {
+        const btnSelector = '.svg > button'
+        const containerSelector = '.svg > #container'
+
+        expect(await html(containerSelector)).toBe(
+          '<circle cx="0" cy="0" r="10" class="test"></circle>',
+        )
+
+        // leave
+        await click(btnSelector)
+        await waitForInnerHTML(
+          containerSelector,
+          '<circle cx="0" cy="0" r="10" class="test test-leave-from test-leave-active"></circle>',
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<circle cx="0" cy="0" r="10" class="test test-leave-active test-leave-to"></circle>',
+        )
+
+        await waitForInnerHTML(containerSelector, '')
+
+        // enter
+        await click(btnSelector)
+        await waitForInnerHTML(
+          containerSelector,
+          '<circle cx="0" cy="0" r="10" class="test test-enter-from test-enter-active"></circle>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
+          '<circle cx="0" cy="0" r="10" class="test test-enter-active test-enter-to"></circle>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
+          '<circle cx="0" cy="0" r="10" class="test"></circle>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
 
     test(
       'custom transition higher-order component',
@@ -915,6 +955,9 @@ describe('vapor transition', () => {
     )
 
     // #12860
+    // TODO: getCurrentInstance is no longer works inside Vapor components;
+    // need use an alternative method for testing here.
+    // Verified locally in the playground — no memory leak was observed.
     test.todo(
       'unmount children',
       async () => {
