@@ -12,6 +12,7 @@ const {
   timeout,
   isVisible,
   html,
+  nextFrame,
   transitionStart,
   waitForInnerHTML,
   click,
@@ -1364,11 +1365,28 @@ describe('vapor transition', () => {
       await waitForInnerHTML(containerSelector, '0')
 
       // change key
-      await click(btnSelector)
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).classNames,
+      ).toStrictEqual(['v-leave-from', 'v-leave-active'])
+
+      await nextFrame()
+      expect(await classList(containerSelector)).toStrictEqual([
+        'v-leave-active',
+        'v-leave-to',
+      ])
       await waitForInnerHTML(containerSelector, '1')
 
       // change key again
-      await click(btnSelector)
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).classNames,
+      ).toStrictEqual(['v-leave-from', 'v-leave-active'])
+
+      await nextFrame()
+      expect(await classList(containerSelector)).toStrictEqual([
+        'v-leave-active',
+        'v-leave-to',
+      ])
+
       await waitForInnerHTML(containerSelector, '2')
     },
     E2E_TIMEOUT,
