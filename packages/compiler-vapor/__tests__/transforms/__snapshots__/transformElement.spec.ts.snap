@@ -90,7 +90,10 @@ exports[`compiler: element transform > component > props merging: event handlers
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { onClick: () => [_ctx.a, _ctx.b] }, null, true)
+  const n0 = _createComponentWithFallback(_component_Foo, { onClick: () => [
+    _ctx.a,
+    _ctx.b
+  ] }, null, true)
   return n0
 }"
 `;
@@ -102,7 +105,10 @@ export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const _on_click = e => _ctx.a(e)
   const _on_click1 = e => _ctx.b(e)
-  const n0 = _createComponentWithFallback(_component_Foo, { onClick: () => [_on_click, _on_click1] }, null, true)
+  const n0 = _createComponentWithFallback(_component_Foo, { onClick: () => [
+    _on_click,
+    _on_click1
+  ] }, null, true)
   return n0
 }"
 `;
