@@ -10,6 +10,16 @@ import {
   defineVaporAsyncComponent,
   onUnmounted,
   onUpdated,
+  setElementText,
+  renderEffect,
+  inject,
+  provide,
+  child,
+  txt,
+  applyVShow,
+  setText,
+  delegateEvents,
+  toDisplayString,
 } from 'vue'
 const show = ref(true)
 const toggle = ref(true)
@@ -155,6 +165,89 @@ const switchToA = () => {
   currentView.value = CompA
   includeToChange.value = ['CompA']
 }
+
+const CompA2 = defineVaporComponent({
+  name: 'CompA2',
+  setup() {
+    const current = inject('currentView2')
+    const n0 = template('<div></div>')()
+    renderEffect(() => setElementText(n0, toDisplayString(current.value.name)))
+    return n0
+  },
+})
+const CompB2 = defineVaporComponent({
+  name: 'CompB2',
+  setup() {
+    onUnmounted(() => {
+      calls.unmount.push('CompB2 unmounted')
+    })
+    const current = inject('currentView2')
+    const n0 = template('<div></div>')()
+    renderEffect(() => setElementText(n0, toDisplayString(current.value.name)))
+    return n0
+  },
+})
+
+const includeRef2 = ref(['CompA2'])
+const currentView2 = shallowRef(CompA2)
+provide('currentView2', currentView2)
+const switchToB2 = () => {
+  currentView2.value = CompB2
+  includeRef2.value = ['CompA2', 'CompB2']
+}
+const switchToA2 = () => {
+  currentView2.value = CompA2
+  includeRef2.value = ['CompA2']
+}
+
+const show2 = ref(true)
+const state = ref(1)
+const Item = defineVaporComponent({
+  name: 'Item',
+  setup() {
+    return createComponent(
+      VaporTransition,
+      { name: () => 'test', persisted: () => '' },
+      {
+        default: () => {
+          const n1 = template('<div><h2> </h2></div>')()
+          const n0 = child(n1)
+          const x0 = txt(n0)
+          applyVShow(n1, () => show2.value)
+          renderEffect(() =>
+            setText(
+              x0,
+              toDisplayString(
+                show2.value ? 'I should show' : "I shouldn't show ",
+              ),
+            ),
+          )
+          return n1
+        },
+      },
+    )
+  },
+})
+const Comp1 = defineVaporComponent({
+  name: 'Comp1',
+  setup() {
+    delegateEvents('click')
+    const n0 = createComponent(Item)
+    const n1 = template('<h2>This is page1</h2>')()
+    const n2 = template('<button id="changeShowBtn"></button>')()
+    n2.$evtclick = () => (show2.value = !show2.value)
+    renderEffect(() => {
+      setElementText(n2, show2.value)
+    })
+    return [n0, n1, n2]
+  },
+})
+const Comp2 = defineVaporComponent({
+  name: 'Comp2',
+  setup() {
+    return template('<h2>This is page2</h2>')()
+  },
+})
 </script>
 
 <template>
@@ -594,6 +687,25 @@ const switchToA = () => {
       <button id="switchToB" @click="switchToB">switchToB</button>
       <button id="switchToC" @click="switchToC">switchToC</button>
       <button id="switchToA" @click="switchToA">switchToA</button>
+    </div>
+    <div class="keep-alive-switch-then-update-include">
+      <div>
+        <transition name="test-anim" mode="out-in">
+          <KeepAlive :include="includeRef2">
+            <component :is="currentView2" />
+          </KeepAlive>
+        </transition>
+      </div>
+      <button id="switchToA" @click="switchToA2">switchToA</button>
+      <button id="switchToB" @click="switchToB2">switchToB</button>
+    </div>
+    <div class="keep-alive-move-before-leave-finishes">
+      <div>
+        <KeepAlive :include="['Comp1', 'Comp2']">
+          <component :is="state === 1 ? Comp1 : Comp2" />
+        </KeepAlive>
+      </div>
+      <button @click="state = state === 1 ? 2 : 1">button</button>
     </div>
     <!-- with keep-alive end -->
 
