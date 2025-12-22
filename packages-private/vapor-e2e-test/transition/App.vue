@@ -709,6 +709,16 @@ const Comp2 = defineVaporComponent({
       <button @click="state = state === 1 ? 2 : 1">button</button>
     </div>
     <!-- with keep-alive end -->
+    <!-- with svg -->
+    <div class="svg">
+      <svg id="container">
+        <transition name="test">
+          <circle v-if="toggle" cx="0" cy="0" r="10" class="test"></circle>
+        </transition>
+      </svg>
+      <button id="toggleBtn" @click="toggle = !toggle">button</button>
+    </div>
+    <!-- with svg end -->
 
     <!-- vdom interop -->
     <div class="vdom">
