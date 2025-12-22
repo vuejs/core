@@ -561,10 +561,72 @@ export type InputTypeHTMLAttribute =
   | 'week'
   | (string & {})
 
+export type AutoFillAddressKind = 'billing' | 'shipping'
+export type AutoFillBase = '' | 'off' | 'on'
+export type AutoFillContactField =
+  | 'email'
+  | 'tel'
+  | 'tel-area-code'
+  | 'tel-country-code'
+  | 'tel-extension'
+  | 'tel-local'
+  | 'tel-local-prefix'
+  | 'tel-local-suffix'
+  | 'tel-national'
+export type AutoFillContactKind = 'home' | 'mobile' | 'work'
+export type AutoFillCredentialField = 'webauthn'
+export type AutoFillNormalField =
+  | 'additional-name'
+  | 'address-level1'
+  | 'address-level2'
+  | 'address-level3'
+  | 'address-level4'
+  | 'address-line1'
+  | 'address-line2'
+  | 'address-line3'
+  | 'bday-day'
+  | 'bday-month'
+  | 'bday-year'
+  | 'cc-csc'
+  | 'cc-exp'
+  | 'cc-exp-month'
+  | 'cc-exp-year'
+  | 'cc-family-name'
+  | 'cc-given-name'
+  | 'cc-name'
+  | 'cc-number'
+  | 'cc-type'
+  | 'country'
+  | 'country-name'
+  | 'current-password'
+  | 'family-name'
+  | 'given-name'
+  | 'honorific-prefix'
+  | 'honorific-suffix'
+  | 'name'
+  | 'new-password'
+  | 'one-time-code'
+  | 'organization'
+  | 'postal-code'
+  | 'street-address'
+  | 'transaction-amount'
+  | 'transaction-currency'
+  | 'username'
+export type OptionalPrefixToken<T extends string> = `${T} ` | ''
+export type OptionalPostfixToken<T extends string> = ` ${T}` | ''
+export type AutoFillField =
+  | AutoFillNormalField
+  | `${OptionalPrefixToken<AutoFillContactKind>}${AutoFillContactField}`
+export type AutoFillSection = `section-${string}`
+export type AutoFill =
+  | AutoFillBase
+  | `${OptionalPrefixToken<AutoFillSection>}${OptionalPrefixToken<AutoFillAddressKind>}${AutoFillField}${OptionalPostfixToken<AutoFillCredentialField>}`
+export type InputAutoCompleteAttribute = AutoFill | (string & {})
+
 export interface InputHTMLAttributes extends HTMLAttributes {
   accept?: string | undefined
   alt?: string | undefined
-  autocomplete?: string | undefined
+  autocomplete?: InputAutoCompleteAttribute | undefined
   autofocus?: Booleanish | undefined
   capture?: boolean | 'user' | 'environment' | undefined // https://www.w3.org/tr/html-media-capture/#the-capture-attribute
   checked?: Booleanish | any[] | Set<any> | undefined // for IDE v-model multi-checkbox support
