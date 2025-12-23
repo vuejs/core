@@ -25,7 +25,7 @@ const targetPackages = targets
   ? packages.filter(pkg => targets.includes(pkg))
   : packages
 
-function resolveExternal(packageName) {
+function resolveExternal(/**@type {string}*/ packageName) {
   const pkg = require(`${packagesDir}/${packageName}/package.json`)
   return [
     ...Object.keys(pkg.dependencies || {}),

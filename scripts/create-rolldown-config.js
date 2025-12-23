@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { replacePlugin } from 'rolldown/experimental'
+import { replacePlugin } from 'rolldown/plugins'
 import pico from 'picocolors'
 import polyfillNode from '@rolldown/plugin-node-polyfills'
 import { entries } from './aliases.js'
@@ -90,7 +90,8 @@ export function createConfigsForPackage({
 
   const resolvedFormats = (
     formats ||
-    packageOptions.formats || ['esm-bundler', 'cjs']
+    /** @type {PackageFormat[]} */
+    (packageOptions.formats || ['esm-bundler', 'cjs'])
   ).filter(format => outputConfigs[format])
 
   const packageConfigs = prodOnly
@@ -258,6 +259,7 @@ export function createConfigsForPackage({
 
       // we are bundling forked consolidate.js in compiler-sfc which dynamically
       // requires a ton of template engines which should be ignored.
+      /** @type {string[]} */
       let cjsIgnores = []
       if (
         pkg.name === '@vue/compiler-sfc' ||
@@ -312,7 +314,9 @@ export function createConfigsForPackage({
       // Global and Browser ESM builds inlines everything so that they can be
       // used alone.
       external: resolveExternal(),
-      define: resolveDefine(),
+      transform: {
+        define: resolveDefine(),
+      },
       platform: format === 'cjs' ? 'node' : 'browser',
       resolve: {
         alias: entries,
