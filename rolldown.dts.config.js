@@ -29,6 +29,7 @@ function resolveExternal(/**@type {string}*/ packageName) {
   const pkg = require(`${packagesDir}/${packageName}/package.json`)
   return [
     ...Object.keys(pkg.dependencies || {}),
+    ...Object.keys(pkg.devDependencies || {}),
     ...Object.keys(pkg.peerDependencies || {}),
   ]
 }
