@@ -127,7 +127,7 @@ jobs:
       - name: Run eslint
         run: pnpm run lint
 
-      - name: Run prettier
+      - name: Run oxfmt
         run: pnpm run format-check
 
       - name: Run tsc

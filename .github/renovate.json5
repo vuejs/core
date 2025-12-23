@@ -42,7 +42,7 @@
         'lint-staged',
         'typescript-eslint{/,}**',
         'eslint{/,}**',
-        'prettier{/,}**',
+        'oxfmt{/,}**',
       ],
     },
   ],

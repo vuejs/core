@@ -1,7 +1,6 @@
 {
-  "private": true,
   "version": "3.6.0-alpha.7",
-  "packageManager": "pnpm@10.20.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -14,8 +13,8 @@
     "size-esm": "node scripts/build.js runtime-shared runtime-dom runtime-core reactivity shared runtime-vapor -f esm-bundler",
     "check": "tsc --incremental --noEmit",
     "lint": "eslint --cache .",
-    "format": "prettier --write --cache .",
-    "format-check": "prettier --check --cache .",
+    "format": "oxfmt",
+    "format-check": "oxfmt --check",
     "test": "vitest",
     "test-unit": "vitest --project unit*",
     "test-e2e": "node scripts/build.js vue -f global+esm-browser-vapor -d && vitest --project e2e",
@@ -45,22 +44,6 @@
     "preinstall": "npx only-allow pnpm",
     "postinstall": "simple-git-hooks"
   },
-  "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged && pnpm check",
-    "commit-msg": "node scripts/verify-commit.js"
-  },
-  "lint-staged": {
-    "*.{js,json}": [
-      "prettier --write"
-    ],
-    "*.ts?(x)": [
-      "eslint --fix",
-      "prettier --parser=typescript --write"
-    ]
-  },
-  "engines": {
-    "node": ">=18.12.0"
-  },
   "devDependencies": {
     "@babel/parser": "catalog:",
     "@babel/types": "catalog:",
@@ -74,9 +57,9 @@
     "@types/node": "^24.10.4",
     "@types/semver": "^7.7.1",
     "@types/serve-handler": "^6.1.4",
-    "@vitest/ui": "^3.0.2",
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/eslint-plugin": "^1.5.2",
+    "@vitest/ui": "^3.0.2",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
@@ -92,8 +75,8 @@
     "markdown-table": "^3.0.4",
     "marked": "13.0.3",
     "npm-run-all2": "^8.0.4",
+    "oxfmt": "^0.20.0",
     "picocolors": "^1.1.1",
-    "prettier": "^3.7.4",
     "pretty-bytes": "^7.1.0",
     "pug": "^3.0.3",
     "puppeteer": "~24.33.0",
@@ -112,5 +95,22 @@
     "typescript-eslint": "^8.49.0",
     "vite": "catalog:",
     "vitest": "^3.2.4"
-  }
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged && pnpm check",
+    "commit-msg": "node scripts/verify-commit.js"
+  },
+  "lint-staged": {
+    "*.{js,json}": [
+      "oxfmt"
+    ],
+    "*.ts?(x)": [
+      "eslint --fix",
+      "oxfmt"
+    ]
+  },
+  "engines": {
+    "node": ">=18.12.0"
+  },
+  "packageManager": "pnpm@10.20.0"
 }
