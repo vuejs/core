@@ -17,7 +17,7 @@ for (const file of await glob('packages/*/src/**/*.ts')) {
   if (file.includes('runtime-test')) continue
 
   const ts = fs.readFileSync(file, 'utf-8')
-  const dts = isolatedDeclaration(file, ts, {
+  const dts = await isolatedDeclaration(file, ts, {
     sourcemap: false,
     stripInternal: true,
   })
