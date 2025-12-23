@@ -87,7 +87,6 @@ By design, Vapor Mode supports a **subset** of existing Vue features. For the su
 - Options API
 - `app.config.globalProperties`
 - `getCurrentInstance()` returns `null` in Vapor components
-- Implicit instance properties like `$slots` and `$props` are not available in Vapor template expressions
 - `@vue:xxx` per-element lifecycle events
 
 Custom directives in Vapor also have a different interface:
