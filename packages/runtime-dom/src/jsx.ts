@@ -561,9 +561,9 @@ export type InputTypeHTMLAttribute =
   | 'week'
   | (string & {})
 
-export type AutoFillAddressKind = 'billing' | 'shipping'
-export type AutoFillBase = '' | 'off' | 'on'
-export type AutoFillContactField =
+type AutoFillAddressKind = 'billing' | 'shipping'
+type AutoFillBase = '' | 'off' | 'on'
+type AutoFillContactField =
   | 'email'
   | 'tel'
   | 'tel-area-code'
@@ -573,9 +573,9 @@ export type AutoFillContactField =
   | 'tel-local-prefix'
   | 'tel-local-suffix'
   | 'tel-national'
-export type AutoFillContactKind = 'home' | 'mobile' | 'work'
-export type AutoFillCredentialField = 'webauthn'
-export type AutoFillNormalField =
+type AutoFillContactKind = 'home' | 'mobile' | 'work'
+type AutoFillCredentialField = 'webauthn'
+type AutoFillNormalField =
   | 'additional-name'
   | 'address-level1'
   | 'address-level2'
@@ -612,16 +612,16 @@ export type AutoFillNormalField =
   | 'transaction-amount'
   | 'transaction-currency'
   | 'username'
-export type OptionalPrefixToken<T extends string> = `${T} ` | ''
-export type OptionalPostfixToken<T extends string> = ` ${T}` | ''
-export type AutoFillField =
+type OptionalPrefixToken<T extends string> = `${T} ` | ''
+type OptionalPostfixToken<T extends string> = ` ${T}` | ''
+type AutoFillField =
   | AutoFillNormalField
   | `${OptionalPrefixToken<AutoFillContactKind>}${AutoFillContactField}`
-export type AutoFillSection = `section-${string}`
-export type AutoFill =
+type AutoFillSection = `section-${string}`
+type AutoFill =
   | AutoFillBase
   | `${OptionalPrefixToken<AutoFillSection>}${OptionalPrefixToken<AutoFillAddressKind>}${AutoFillField}${OptionalPostfixToken<AutoFillCredentialField>}`
-export type InputAutoCompleteAttribute = AutoFill | (string & {})
+type InputAutoCompleteAttribute = AutoFill | (string & {})
 
 export interface InputHTMLAttributes extends HTMLAttributes {
   accept?: string | undefined
