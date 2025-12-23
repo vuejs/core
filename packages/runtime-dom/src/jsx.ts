@@ -621,7 +621,7 @@ type AutoFillSection = `section-${string}`
 type AutoFill =
   | AutoFillBase
   | `${OptionalPrefixToken<AutoFillSection>}${OptionalPrefixToken<AutoFillAddressKind>}${AutoFillField}${OptionalPostfixToken<AutoFillCredentialField>}`
-type InputAutoCompleteAttribute = AutoFill | (string & {})
+export type InputAutoCompleteAttribute = AutoFill | (string & {})
 
 export interface InputHTMLAttributes extends HTMLAttributes {
   accept?: string | undefined
