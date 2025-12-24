@@ -1,3 +1,122 @@
+# [3.6.0-beta.1](https://github.com/vuejs/core/compare/v3.5.26...v3.6.0-beta.1) (2025-12-23)
+
+
+Vue 3.6 is now entering beta phase as we have completed the intended feature set for Vapor Mode as outlined in the [roadmap](https://github.com/vuejs/core/issues/13687)! Vapor Mode now has feature parity with all stable features in Virtual DOM mode. Suspense is not supported in Vapor-only mode, but you can render Vapor components inside a VDOM Suspense.
+
+3.6 also includes a major refactor of `@vue/reactivity` based on [alien-signals](https://github.com/stackblitz/alien-signals), which significantly improves the reactivity system's performance and memory usage.
+
+For more details about Vapor Mode, see [About Vapor Mode](#about-vapor-mode) section at the end of this release note.
+
+### Features
+
+* **runtime-vapor:** support render block in createDynamicComponent ([#14213](https://github.com/vuejs/core/issues/14213)) ([ddc1bae](https://github.com/vuejs/core/commit/ddc1baecb974721e1b6f2570ffab4e783c397418))
+
+
+### Performance Improvements
+
+* **runtime-vapor:** implement dynamic props/slots source caching ([#14208](https://github.com/vuejs/core/issues/14208)) ([1428c06](https://github.com/vuejs/core/commit/1428c06466b3c69385d4755213ef1dfc604d3f97))
+
+### Bug Fixes
+
+* **compiler-vapor:** camelize kebab-case component event handlers ([#14211](https://github.com/vuejs/core/issues/14211)) ([b205408](https://github.com/vuejs/core/commit/b205408ff0b0a611fc4f93c7e12b89bbae506a04))
+* **compiler-vapor:** merge component v-model onUpdate handlers ([#14229](https://github.com/vuejs/core/issues/14229)) ([e6bff23](https://github.com/vuejs/core/commit/e6bff23a4a1e25fc405d2392dd3d083f08651c2b))
+* **compiler-vapor:** wrap handler values in functions for dynamic v-on ([#14218](https://github.com/vuejs/core/issues/14218)) ([1e3e1ef](https://github.com/vuejs/core/commit/1e3e1ef2bf5d61e82c3220f6e2f3414333fdef8b))
+* **hmr:** suppress `provide()` warning during HMR updates for mounted instances ([#14195](https://github.com/vuejs/core/issues/14195)) ([d823d6a](https://github.com/vuejs/core/commit/d823d6a325e173192c1c5635e892656cb2550cd3))
+* **keep-alive:** preserve fragment's scope only if it include a component that should be cached ([26b0b37](https://github.com/vuejs/core/commit/26b0b374e1cf1d31a4db09df5e1a9e9ed023675a))
+* **runtime-core:** remove constructor props for defineComponent ([#14223](https://github.com/vuejs/core/issues/14223)) ([ad0a237](https://github.com/vuejs/core/commit/ad0a237138ab87143dd3728128b2f784b676e840))
+* **runtime-vapor:** implement v-once caching for props and attrs ([#14207](https://github.com/vuejs/core/issues/14207)) ([be2b79d](https://github.com/vuejs/core/commit/be2b79dedd67c11b26510f9f7eafdd0848839f39))
+* **runtime-vapor:** optimize prop handling in VaporTransitionGroup using Proxy ([0ceebeb](https://github.com/vuejs/core/commit/0ceebebf58c8f7ea686e96c79763f8b01672ddfd))
+* **transition:** move kept-alive node before v-show transition leave finishes ([e393552](https://github.com/vuejs/core/commit/e393552feb1176a878ef1852289d5c8563822770))
+* **transition:** optimize prop handling in VaporTransition using Proxy ([b092624](https://github.com/vuejs/core/commit/b0926246f1e8d5ff4ada7416bb641e025b4846c8))
+* **transition:** prevent unmounted block from being inserted after transition leave ([f9a9fad](https://github.com/vuejs/core/commit/f9a9fadc6d0e89d8eb82c0b4702d514e4c303634))
+
+### About Vapor Mode
+
+Vapor Mode is a new compilation mode for Vue Single-File Components (SFC) with the goal of reducing baseline bundle size and improved performance. It is 100% opt-in, and supports a subset of existing Vue APIs with mostly identical behavior.
+
+Vapor Mode has demonstrated the same level of performance with Solid and Svelte 5 in [3rd party benchmarks](https://github.com/krausest/js-framework-benchmark).
+
+#### General Stability Notes
+
+Vapor Mode is feature-complete in Vue 3.6 beta, but is still considered unstable. For now, we recommend using it for the following cases:
+
+- Partial usage in existing apps, e.g. implementing a perf-sensitive sub page in Vapor Mode.
+- Build small new apps entirely in Vapor Mode.
+
+#### Opting in to Vapor Mode
+
+Vapor Mode only works for Single File Components using `<script setup>`. To opt-in, add the `vapor` attribute to `<script setup>`:
+
+```vue
+<script setup vapor>
+// ...
+</script>
+```
+
+Vapor Mode components are usable in two scenarios:
+
+1. Inside a Vapor app instance create via `createVaporApp`. Apps created this way avoids pulling in the Virtual DOM runtime code and allows bundle baseline size to be drastically reduced.
+
+2. To use Vapor components in a VDOM app instance created via `createApp`, the `vaporInteropPlugin` must be installed:
+
+   ```js
+   import { createApp, vaporInteropPlugin } from 'vue'
+   import App from './App.vue'
+
+   createApp(App)
+     .use(vaporInteropPlugin) // enable vapor interop
+     .mount('#app')
+   ```
+
+   A Vapor app instance can also install `vaporInteropPlugin` to allow vdom components to be used inside, but it will pull in the vdom runtime and offset the benefits of a smaller bundle.
+
+#### VDOM Interop Limitations
+
+When the interop plugin is installed, Vapor and non-Vapor components can be nested inside each other. This currently covers standard props, events, and slots usage, but does not yet account for all possible edge cases. For example, there will most likely still be rough edges when using a VDOM-based component library in Vapor Mode.
+
+A know issue is that vapor slots cannot be rendered with `slots.default()` inside a VDOM component. `renderSlot` must be used instead. [[Example](https://play.vuejs.org/#eNp9UsGO0zAQ/ZWRL02lkCAtcKi6KwHaAxwAsUgcMEJWMm2y69iWPclWqvLvjJ02pRXbkz0zb948z/NevHeuGHoUK7EOlW8dQUDqHQzKWX8nTdvxSbCHn145hx5G2HjbwaIoK9u5gsJCmnU59TKeA8LOaUXIEcD60JcCgAa1thNDmgCRxBo0lMDlCb0uZx6RCwqVNZt2WzwGa1jsPsKliN2tRv/VUWtNkGIFqRJriic9f0458j3mx3zVYPX0n/xj2MWcFN88BvQDSjHXSPkt0lS+f/iCO77Pxc7WvWb0leJ3DFb3UeME+9CbmmX/g0tqP6Vlt2b7I9zvCE04PioKjcgx4aVgxz5eefpJ7k3xJvVJM/IWD47x/mZba9y0JpElF3KPpkb/oC3l0Mxm8zy2WRrcpTb2ItD8I24vSbIkJP2jzHnrQs6DFJHnS2DmAOPyKLYswViCZ+uf+N1TznOnN5At4fYOmmxRt8MiPxIkyarXtJq4ikPInDPjGcEZKmPQDDsbetl2WkSWGHLe64FEihdGXWr9dZ3kd6KJno5LdufPgD46zvbcFO+K16+Udo0q3orxLxb6NNM=)]
+
+This is expected to improve over time, but in general, we recommend having distinct "regions" in your app where it's one mode or another, and avoid mixed nesting as much as possible.
+
+In the future, we may provide support tooling to enforce Vapor usage boundaries in codebases.
+
+#### Feature Compatibility
+
+By design, Vapor Mode supports a **subset** of existing Vue features. For the supported subset, we aim to deliver the exact same behavior per API specifications. At the same time, this means there are some features that are explicitly not supported in Vapor Mode:
+
+- Options API
+- `app.config.globalProperties`
+- `getCurrentInstance()` returns `null` in Vapor components
+- `@vue:xxx` per-element lifecycle events
+
+Custom directives in Vapor also have a different interface:
+
+```ts
+type VaporDirective = (
+  node: Element | VaporComponentInstance,
+  value?: () => any,
+  argument?: string,
+  modifiers?: DirectiveModifiers,
+) => (() => void) | void
+```
+
+`value` is a reactive getter that returns the binding value. The user can set up reactive effects using `watchEffect` (auto released when component unmounts), and can optionally return a cleanup function. Example:
+
+```ts
+const MyDirective = (el, source) => {
+  watchEffect(() => {
+    el.textContent = source()
+  })
+  return () => console.log('cleanup')
+}
+```
+
+#### Behavior Consistency
+
+Vapor Mode attempts to match VDOM Mode behavior as much as possible, but there could still be minor behavior inconsistencies in edge cases due to how fundamentally different the two rendering modes are. In general, we do not consider a minor inconsistency to be breaking change unless the behavior has previously been documented.
+
+
+
 # [3.6.0-alpha.7](https://github.com/vuejs/core/compare/v3.6.0-alpha.6...v3.6.0-alpha.7) (2025-12-12)
 
 
