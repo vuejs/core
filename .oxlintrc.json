@@ -66,8 +66,7 @@
         "no-unused-vars": "off",
         "no-unsafe-optional-chaining": "off",
         "no-constant-condition": "off",
-        "vitest/no-disabled-tests": "error",
-        "vitest/no-focused-tests": "error"
+        "vitest/no-conditional-tests": "off"
       },
       "globals": {
         "suite": "writeable",

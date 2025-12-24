@@ -242,7 +242,6 @@ describe('reactivity/readonly', () => {
         expect(isReadonly(roItem)).toBe(true)
       })
 
-      // oxlint-disable-next-line no-conditional-tests
       if (Collection === Map) {
         test('should retrieve readonly values on iteration', () => {
           const key1 = {}
@@ -337,7 +336,6 @@ describe('reactivity/readonly', () => {
         ).toHaveBeenWarned()
       })
 
-      // oxlint-disable-next-line no-conditional-tests
       if (Collection === Set) {
         test('should retrieve readonly values on iteration', () => {
           const original = new Collection([{}, {}])
