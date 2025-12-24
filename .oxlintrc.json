@@ -10,8 +10,9 @@
   "ignorePatterns": [
     "**/dist/",
     "**/temp/",
+    "**/__tests__/",
+    "packages-private/",
     "**/coverage/",
-    ".idea/",
     "explorations/",
     "dts-build/packages"
   ],
