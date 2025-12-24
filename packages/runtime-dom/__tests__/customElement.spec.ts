@@ -1,3 +1,4 @@
+// oxlint-disable no-non-null-asserted-optional-chain
 import type { MockedFunction } from 'vitest'
 import {
   type HMRRuntime,
@@ -714,7 +715,7 @@ describe('defineCustomElement', () => {
     // https://github.com/vuejs/core/issues/12964
     // Disabled because of missing support for `delegatesFocus` in jsdom
     // https://github.com/jsdom/jsdom/issues/3418
-    // eslint-disable-next-line vitest/no-disabled-tests
+    // oxlint-disable-next-line vitest/no-disabled-tests
     test.skip('shadowRoot should be initialized with delegatesFocus', () => {
       const E = defineCustomElement(
         {

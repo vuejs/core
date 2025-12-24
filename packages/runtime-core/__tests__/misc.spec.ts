@@ -1,3 +1,4 @@
+// oxlint-disable no-this-alias
 import { h, isReactive, nodeOps, reactive, render } from '@vue/runtime-test'
 
 describe('misc', () => {

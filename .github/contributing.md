@@ -93,7 +93,7 @@ A high level overview of tools used:
 - [Rollup](https://rollupjs.org) for production bundling
 - [Vitest](https://vitest.dev/) for unit testing
 - [Prettier](https://prettier.io/) for code formatting
-- [ESLint](https://eslint.org/) for static error prevention (outside of types)
+- [oxlint](https://oxc.rs/docs/guide/usage/linter.html) for static error prevention (outside of types)
 
 ## Git Hooks
 

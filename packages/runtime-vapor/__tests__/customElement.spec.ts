@@ -1,3 +1,4 @@
+// oxlint-disable no-non-null-asserted-optional-chain
 import type { MockedFunction } from 'vitest'
 import type { VaporElement } from '../src/apiDefineCustomElement'
 import {

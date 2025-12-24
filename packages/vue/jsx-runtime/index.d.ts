@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
 
 /**

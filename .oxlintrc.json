@@ -10,8 +10,6 @@
   "ignorePatterns": [
     "**/dist/",
     "**/temp/",
-    "**/__tests__/",
-    "packages-private/",
     "**/coverage/",
     "explorations/",
     "dts-build/packages"
@@ -66,6 +64,10 @@
       "rules": {
         "no-console": "off",
         "no-restricted-globals": "off",
+        "no-unused-expressions": "off",
+        "no-unused-vars": "off",
+        "no-unsafe-optional-chaining": "off",
+        "no-constant-condition": "off",
         "vitest/no-disabled-tests": "error",
         "vitest/no-focused-tests": "error"
       },
@@ -91,7 +93,7 @@
       "plugins": ["vitest"]
     },
     {
-      "files": ["packages/shared/**", "eslint.config.js"],
+      "files": ["packages/shared/**"],
       "rules": {
         "no-restricted-globals": "off"
       }
@@ -134,7 +136,6 @@
     },
     {
       "files": [
-        "eslint.config.js",
         "rollup*.config.js",
         "scripts/**",
         "./*.{js,ts}",

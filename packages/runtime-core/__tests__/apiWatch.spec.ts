@@ -1264,6 +1264,7 @@ describe('api: watch', () => {
       sideEffect = obj.a
     })
 
+    // oxlint-disable-next-line no-self-assign
     v.value = v.value
     await nextTick()
     // should not trigger
@@ -1398,6 +1399,7 @@ describe('api: watch', () => {
     const Comp = defineComponent({
       render() {},
       created(this: any) {
+        // oxlint-disable-next-line no-this-alias
         instance = this
         this.$watch(source, function () {})
       },
