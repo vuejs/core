@@ -3,12 +3,11 @@ import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { replacePlugin } from 'rolldown/experimental'
+import { replacePlugin } from 'rolldown/plugins'
 import pico from 'picocolors'
 import polyfillNode from '@rolldown/plugin-node-polyfills'
 import { entries } from './aliases.js'
 import { inlineEnums } from './inline-enums.js'
-import { minify as minifySwc } from '@swc/core'
 
 const require = createRequire(import.meta.url)
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -59,39 +58,40 @@ export function createConfigsForPackage({
   /** @type {Record<PackageFormat, import('rolldown').OutputOptions>} */
   const outputConfigs = {
     'esm-bundler': {
-      file: `${name}.esm-bundler.js`,
+      file: resolve(`dist/${name}.esm-bundler.js`),
       format: 'es',
     },
     'esm-browser': {
-      file: `${name}.esm-browser.js`,
+      file: resolve(`dist/${name}.esm-browser.js`),
       format: 'es',
     },
     cjs: {
-      file: `${name}.cjs.js`,
+      file: resolve(`dist/${name}.cjs.js`),
       format: 'cjs',
     },
     global: {
-      file: `${name}.global.js`,
+      file: resolve(`dist/${name}.global.js`),
       format: 'iife',
     },
     // runtime-only builds, for main "vue" package only
     'esm-bundler-runtime': {
-      file: `${name}.runtime.esm-bundler.js`,
+      file: resolve(`dist/${name}.runtime.esm-bundler.js`),
       format: 'es',
     },
     'esm-browser-runtime': {
-      file: `${name}.runtime.esm-browser.js`,
+      file: resolve(`dist/${name}.runtime.esm-browser.js`),
       format: 'es',
     },
     'global-runtime': {
-      file: `${name}.runtime.global.js`,
+      file: resolve(`dist/${name}.runtime.global.js`),
       format: 'iife',
     },
   }
 
   const resolvedFormats = (
     formats ||
-    packageOptions.formats || ['esm-bundler', 'cjs']
+    /** @type {PackageFormat[]} */
+    (packageOptions.formats || ['esm-bundler', 'cjs'])
   ).filter(format => outputConfigs[format])
 
   const packageConfigs = prodOnly
@@ -125,8 +125,6 @@ export function createConfigsForPackage({
       process.exit(1)
     }
 
-    output.dir = resolve('dist')
-
     const isProductionBuild = /\.prod\.js$/.test(String(output.file) || '')
     const isBundlerESMBuild = /esm-bundler/.test(format)
     const isBrowserESMBuild = /esm-browser/.test(format)
@@ -149,7 +147,6 @@ export function createConfigsForPackage({
 
     output.externalLiveBindings = false
 
-    // https://github.com/rollup/rollup/pull/5380
     // @ts-expect-error Not supported yet
     output.reexportProtoFromExternal = false
 
@@ -160,7 +157,7 @@ export function createConfigsForPackage({
     let entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
 
     // the compat build needs both default AND named exports. This will cause
-    // Rollup to complain for non-ESM targets, so we use separate entries for
+    // Rolldown to complain for non-ESM targets, so we use separate entries for
     // esm vs. non-esm builds.
     if (isCompatPackage && (isBrowserESMBuild || isBundlerESMBuild)) {
       entryFile = /runtime$/.test(format)
@@ -242,7 +239,11 @@ export function createConfigsForPackage({
       }
 
       if (Object.keys(replacements).length) {
-        return [replacePlugin(replacements)]
+        return [
+          replacePlugin(replacements, {
+            preventAssignment: true,
+          }),
+        ]
       } else {
         return []
       }
@@ -258,6 +259,7 @@ export function createConfigsForPackage({
 
       // we are bundling forked consolidate.js in compiler-sfc which dynamically
       // requires a ton of template engines which should be ignored.
+      /** @type {string[]} */
       let cjsIgnores = []
       if (
         pkg.name === '@vue/compiler-sfc' ||
@@ -312,12 +314,13 @@ export function createConfigsForPackage({
       // Global and Browser ESM builds inlines everything so that they can be
       // used alone.
       external: resolveExternal(),
-      define: resolveDefine(),
+      transform: {
+        define: resolveDefine(),
+      },
       platform: format === 'cjs' ? 'node' : 'browser',
       resolve: {
         alias: entries,
       },
-      // @ts-expect-error rollup's Plugin type incompatible w/ rolldown's vendored Plugin type
       plugins: [
         ...(localDev ? [] : [enumPlugin]),
         ...resolveReplace(),
@@ -331,7 +334,6 @@ export function createConfigsForPackage({
         }
       },
       treeshake: {
-        // https://github.com/rolldown/rolldown/issues/1917
         moduleSideEffects: false,
       },
     }
@@ -339,41 +341,17 @@ export function createConfigsForPackage({
 
   function createProductionConfig(/** @type {PackageFormat} */ format) {
     return createConfig(format, {
-      file: `${name}.${format}.prod.js`,
+      file: resolve(`dist/${name}.${format}.prod.js`),
       format: outputConfigs[format].format,
     })
   }
 
   function createMinifiedConfig(/** @type {PackageFormat} */ format) {
-    return createConfig(
-      format,
-      {
-        file: String(outputConfigs[format].file).replace(/\.js$/, '.prod.js'),
-        format: outputConfigs[format].format,
-        // minify: true,
-      },
-      [
-        {
-          name: 'swc-minify',
-          async renderChunk(contents, _, { format }) {
-            const { code } = await minifySwc(contents, {
-              module: format === 'es',
-              format: {
-                comments: false,
-              },
-              compress: {
-                ecma: 2016,
-                pure_getters: true,
-              },
-              safari10: true,
-              mangle: true,
-            })
-            // swc removes banner
-            return { code: banner + code, map: null }
-          },
-        },
-      ],
-    )
+    return createConfig(format, {
+      file: String(outputConfigs[format].file).replace(/\.js$/, '.prod.js'),
+      format: outputConfigs[format].format,
+      minify: true,
+    })
   }
 
   return packageConfigs

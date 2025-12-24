@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import glob from 'fast-glob'
 import { isolatedDeclaration } from 'oxc-transform'
-import { rollup } from 'rollup'
+import { rolldown } from 'rolldown'
 import picocolors from 'picocolors'
 
 if (fs.existsSync('temp/packages')) {
@@ -17,16 +17,13 @@ for (const file of await glob('packages/*/src/**/*.ts')) {
   if (file.includes('runtime-test')) continue
 
   const ts = fs.readFileSync(file, 'utf-8')
-  const dts = isolatedDeclaration(file, ts, {
+  const dts = await isolatedDeclaration(file, ts, {
     sourcemap: false,
     stripInternal: true,
   })
   if (dts.errors.length) {
     dts.errors.forEach(err => {
-      // temporary workaround for https://github.com/oxc-project/oxc/issues/5668
-      if (!err.includes('set value(_: S)')) {
-        console.error(err)
-      }
+      console.error(err)
       errs += err + '\n'
     })
   }
@@ -43,16 +40,16 @@ if (errs) {
   write(path.join('temp', 'oxc-iso-decl-errors.txt'), errs)
 }
 
-console.log('bundling dts with rollup-plugin-dts...')
+console.log('bundling dts with rolldown-plugin-dts...')
 
-// bundle with rollup-plugin-dts
-const rollupConfigs = (await import('../rollup.dts.config.js')).default
+// bundle with rolldown-plugin-dts
+const rolldownConfigs = (await import('../rolldown.dts.config.js')).default
 
 start = performance.now()
 
 await Promise.all(
-  rollupConfigs.map(c =>
-    rollup(c).then(bundle => {
+  rolldownConfigs.map(c =>
+    rolldown(c).then(bundle => {
       return bundle.write(c.output).then(() => {
         console.log(picocolors.gray('built: ') + picocolors.blue(c.output.file))
       })

@@ -22,7 +22,7 @@
 
 - **`vue(.runtime).esm-bundler.js`**:
 
-  - For use with bundlers like `webpack`, `rollup` and `parcel`.
+  - For use with bundlers like `rolldown`, `webpack`, `rollup` and `parcel`.
   - Leaves prod/dev branches with `process.env.NODE_ENV` guards (must be replaced by bundler)
   - Does not ship minified builds (to be done together with the rest of the code after bundling)
   - Imports dependencies (e.g. `@vue/runtime-core`, `@vue/compiler-core`)

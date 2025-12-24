@@ -1,10 +1,9 @@
 // @ts-check
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { rollup } from 'rollup'
-import nodeResolve from '@rollup/plugin-node-resolve'
-import { minify } from '@swc/core'
-import replace from '@rollup/plugin-replace'
+import { rolldown } from 'rolldown'
+import { minify } from 'oxc-minify'
+import { replacePlugin } from 'rolldown/experimental'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { parseArgs } from 'node:util'
 import pico from 'picocolors'
@@ -95,7 +94,7 @@ async function generateBundle(preset) {
   const id = 'virtual:entry'
   const content = `export { ${preset.imports.join(', ')} } from '${entry}'`
 
-  const result = await rollup({
+  const result = await rolldown({
     input: id,
     plugins: [
       {
@@ -108,33 +107,34 @@ async function generateBundle(preset) {
           if (_id === id) return content
         },
       },
-      nodeResolve(),
-      replace({
-        'process.env.NODE_ENV': '"production"',
-        __VUE_PROD_DEVTOOLS__: 'false',
-        __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
-        __VUE_OPTIONS_API__: 'true',
-        preventAssignment: true,
-        ...preset.replace,
-      }),
+      replacePlugin(
+        {
+          'process.env.NODE_ENV': '"production"',
+          __VUE_PROD_DEVTOOLS__: 'false',
+          __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
+          __VUE_OPTIONS_API__: 'true',
+          ...preset.replace,
+        },
+        { preventAssignment: true },
+      ),
     ],
   })
 
   const generated = await result.generate({})
   const bundled = generated.output[0].code
-  const minified = (
-    await minify(bundled, {
-      module: true,
+  const file = preset.name + '.js'
+  const minified = minify(file, bundled, {
+    mangle: {
       toplevel: true,
-    })
-  ).code
+    },
+  }).code
 
   const size = minified.length
   const gzip = gzipSync(minified).length
   const brotli = brotliCompressSync(minified).length
 
   if (write) {
-    await writeFile(path.resolve(sizeDir, preset.name + '.js'), bundled)
+    await writeFile(path.resolve(sizeDir, file), bundled)
   }
 
   return {
