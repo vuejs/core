@@ -16,9 +16,10 @@
   "[javascript]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
   },
-  "[json]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
-  },
+  // oxc-vscode does not yet support JSON formatting
+  // "[json]": {
+  //   "editor.defaultFormatter": "oxc.oxc-vscode"
+  // },
   "editor.formatOnSave": true,
   "vitest.disableWorkspaceWarning": true
 }
