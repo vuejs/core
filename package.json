@@ -103,7 +103,7 @@
     "pug": "^3.0.3",
     "puppeteer": "~23.3.0",
     "rimraf": "^6.0.1",
-    "rolldown": "^1.0.0-beta.56",
+    "rolldown": "^1.0.0-beta.57",
     "rollup": "^4.25.0",
     "rollup-plugin-esbuild": "^6.1.1",
     "rollup-plugin-polyfill-node": "^0.13.0",
