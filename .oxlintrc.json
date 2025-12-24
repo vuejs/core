@@ -67,7 +67,8 @@
         "no-unsafe-optional-chaining": "off",
         "no-constant-condition": "off",
         "vitest/no-conditional-tests": "off",
-        "typescript/no-this-alias": "off"
+        "typescript/no-this-alias": "off",
+        "typescript/no-non-null-asserted-optional-chain": "off"
       },
       "globals": {
         "suite": "writeable",

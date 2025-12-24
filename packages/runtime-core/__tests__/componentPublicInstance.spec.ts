@@ -1,4 +1,3 @@
-// oxlint-disable
 import {
   createApp,
   defineComponent,
