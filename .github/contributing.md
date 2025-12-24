@@ -271,7 +271,7 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 The packages can import each other directly using their package names. Note that when importing a package, the name listed in its `package.json` should be used. Most of the time the `@vue/` prefix is needed:
 
 ```js
-import { h } from "@vue/runtime-core";
+import { h } from '@vue/runtime-core';
 ```
 
 This is made possible via several configurations:

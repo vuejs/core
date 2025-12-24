@@ -4,5 +4,5 @@
   "singleQuote": true,
   "arrowParens": "avoid",
   "printWidth": 80,
-  "ignorePatterns": ["dist", "pnpm-lock.yaml", "CHANGELOG*.md", "package.json"],
+  "ignorePatterns": ["dist", "CHANGELOG*.md", "package.json", "*.toml"],
 }

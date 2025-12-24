@@ -1,6 +1,7 @@
 {
-  "version": "3.6.0-alpha.7",
   "private": true,
+  "version": "3.6.0-alpha.7",
+  "packageManager": "pnpm@10.20.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -43,6 +44,22 @@
     "build-sfc-playground-self": "pnpm run -C packages-private/sfc-playground build",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged && pnpm check",
+    "commit-msg": "node scripts/verify-commit.js"
+  },
+  "lint-staged": {
+    "*.{js,json}": [
+      "oxfmt --no-error-on-unmatched-pattern"
+    ],
+    "*.ts?(x)": [
+      "eslint --fix",
+      "oxfmt --no-error-on-unmatched-pattern"
+    ]
+  },
+  "engines": {
+    "node": ">=18.12.0"
   },
   "devDependencies": {
     "@babel/parser": "catalog:",
@@ -95,22 +112,5 @@
     "typescript-eslint": "^8.49.0",
     "vite": "catalog:",
     "vitest": "^3.2.4"
-  },
-  "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged && pnpm check",
-    "commit-msg": "node scripts/verify-commit.js"
-  },
-  "lint-staged": {
-    "*.{js,json}": [
-      "oxfmt"
-    ],
-    "*.ts?(x)": [
-      "eslint --fix",
-      "oxfmt"
-    ]
-  },
-  "engines": {
-    "node": ">=18.12.0"
-  },
-  "packageManager": "pnpm@10.20.0"
+  }
 }
