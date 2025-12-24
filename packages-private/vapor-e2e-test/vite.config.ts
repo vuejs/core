@@ -10,7 +10,7 @@ export default defineConfig({
     }),
   ],
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         interop: resolve(import.meta.dirname, 'interop/index.html'),
         todomvc: resolve(import.meta.dirname, 'todomvc/index.html'),
