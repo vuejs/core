@@ -1,4 +1,3 @@
-// oxlint-disable no-this-alias
 import {
   type Ref,
   type SetupContext,

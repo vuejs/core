@@ -66,7 +66,8 @@
         "no-unused-vars": "off",
         "no-unsafe-optional-chaining": "off",
         "no-constant-condition": "off",
-        "vitest/no-conditional-tests": "off"
+        "vitest/no-conditional-tests": "off",
+        "typescript/no-this-alias": "off"
       },
       "globals": {
         "suite": "writeable",
@@ -87,7 +88,7 @@
         "onTestFailed": "writeable",
         "onTestFinished": "writeable"
       },
-      "plugins": ["vitest"]
+      "plugins": ["vitest", "typescript"]
     },
     {
       "files": ["packages/shared/**"],

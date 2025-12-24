@@ -1399,7 +1399,6 @@ describe('api: watch', () => {
     const Comp = defineComponent({
       render() {},
       created(this: any) {
-        // oxlint-disable-next-line no-this-alias
         instance = this
         this.$watch(source, function () {})
       },

@@ -1,4 +1,4 @@
-// oxlint-disable no-this-alias
+// oxlint-disable
 import {
   createApp,
   defineComponent,
