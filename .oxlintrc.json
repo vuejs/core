@@ -41,7 +41,6 @@
             "ignoreDeclarationSort": true
           }
         ],
-        "unicorn/prefer-node-protocol": "error",
         "@typescript-eslint/prefer-ts-expect-error": "error",
         "@typescript-eslint/consistent-type-imports": [
           "error",
@@ -52,7 +51,7 @@
         ],
         "@typescript-eslint/no-import-type-side-effects": "error"
       },
-      "plugins": ["typescript", "unicorn"]
+      "plugins": ["typescript"]
     },
     {
       "files": [
