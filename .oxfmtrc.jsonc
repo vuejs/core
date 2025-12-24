@@ -4,5 +4,6 @@
   "singleQuote": true,
   "arrowParens": "avoid",
   "printWidth": 80,
-  "ignorePatterns": ["dist", "CHANGELOG*.md", "package.json", "*.toml"],
+  "experimentalSortPackageJson": false,
+  "ignorePatterns": ["dist", "CHANGELOG*.md", "*.toml"],
 }
