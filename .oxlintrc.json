@@ -11,7 +11,6 @@
     "**/dist/",
     "**/temp/",
     "**/coverage/",
-    "explorations/",
     "dts-build/packages"
   ],
   "overrides": [
@@ -53,7 +52,7 @@
         ],
         "@typescript-eslint/no-import-type-side-effects": "error"
       },
-      "plugins": ["typescript"]
+      "plugins": ["typescript", "unicorn"]
     },
     {
       "files": [
