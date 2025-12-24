@@ -318,6 +318,7 @@ export function createHydrationFunctions(
               container,
               null,
               parentComponent,
+              parentSuspense,
             )
           } else {
             mountComponent(
@@ -486,18 +487,22 @@ export function createHydrationFunctions(
         ) {
           clientText = clientText.slice(1)
         }
-        if (el.textContent !== clientText) {
+        const { textContent } = el
+        if (
+          textContent !== clientText &&
+          // innerHTML normalize \r\n or \r into a single \n in the DOM
+          textContent !== clientText.replace(/\r\n|\r/g, '\n')
+        ) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
                 `Hydration text content mismatch on`,
                 el,
-                `\n  - rendered on server: ${el.textContent}` +
-                  `\n  - expected on client: ${vnode.children as string}`,
+                `\n  - rendered on server: ${textContent}` +
+                  `\n  - expected on client: ${clientText}`,
               )
             logMismatchError()
           }
-
           el.textContent = vnode.children as string
         }
       }

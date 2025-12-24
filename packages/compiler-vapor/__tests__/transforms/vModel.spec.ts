@@ -6,11 +6,13 @@ import {
   transformVModel,
 } from '../../src'
 import { BindingTypes, DOMErrorCodes } from '@vue/compiler-dom'
+import { transformVOn } from '../../src/transforms/vOn'
 
 const compileWithVModel = makeCompile({
   nodeTransforms: [transformElement, transformChildren],
   directiveTransforms: {
     model: transformVModel,
+    on: transformVOn,
   },
 })
 
@@ -102,8 +104,7 @@ describe('compiler: vModel transform', () => {
       )
     })
 
-    // TODO: component
-    test.todo('should allow usage on custom element', () => {
+    test('should allow usage on custom element', () => {
       const onError = vi.fn()
       const root = compileWithVModel('<my-input v-model="model" />', {
         onError,
@@ -249,8 +250,10 @@ describe('compiler: vModel transform', () => {
       const { code, ir } = compileWithVModel('<Comp v-model:[arg]="foo" />')
       expect(code).toMatchSnapshot()
       expect(code).contains(
-        `[_ctx.arg]: _ctx.foo,
-    ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value)`,
+        `() => ({
+      [_ctx.arg]: _ctx.foo,
+      ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value)
+    })`,
       )
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -319,12 +322,40 @@ describe('compiler: vModel transform', () => {
       })
     })
 
+    test('v-model:model with arguments for component should generate modelModifiers$', () => {
+      const { code, ir } = compileWithVModel(
+        '<Comp v-model:model.trim="foo" />',
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contain(`modelModifiers$: () => ({ trim: true })`)
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Comp',
+        props: [
+          [
+            {
+              key: { content: 'model', isStatic: true },
+              values: [{ content: 'foo', isStatic: false }],
+              model: true,
+              modelModifiers: ['trim'],
+            },
+          ],
+        ],
+      })
+    })
+
     test('v-model with dynamic arguments for component should generate modelModifiers ', () => {
       const { code, ir } = compileWithVModel(
         '<Comp v-model:[foo].trim="foo" v-model:[bar].number="bar" />',
       )
       expect(code).toMatchSnapshot()
+      expect(code).contain(
+        '["onUpdate:" + _ctx.foo]: () => _value => (_ctx.foo = _value)',
+      )
       expect(code).contain(`[_ctx.foo + "Modifiers"]: () => ({ trim: true })`)
+      expect(code).contain(
+        '["onUpdate:" + _ctx.bar]: () => _value => (_ctx.bar = _value)',
+      )
       expect(code).contain(`[_ctx.bar + "Modifiers"]: () => ({ number: true })`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -344,6 +375,27 @@ describe('compiler: vModel transform', () => {
           },
         ],
       })
+    })
+
+    test('component v-model should merge with explicit @update:modelValue', () => {
+      const { code } = compileWithVModel(
+        '<Comp v-model="counter" @update:modelValue="onUpdate" />',
+        {
+          inline: true,
+          bindingMetadata: {
+            counter: BindingTypes.SETUP_REF,
+            onUpdate: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).toContain(
+        `"onUpdate:modelValue": () => [
+      _value => (counter.value = _value),
+      onUpdate
+    ]`,
+      )
     })
   })
 })

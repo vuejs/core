@@ -43,6 +43,8 @@ export default defineConfig({
         'packages/vue-compat/**',
         'packages/vue/src/dev.ts',
         'packages/vue/src/runtime.ts',
+        'packages/vue/src/runtime-with-vapor.ts',
+        'packages/vue/src/index-with-vapor.ts',
         // not testable during unit tests
         'packages/runtime-core/src/profiling.ts',
         'packages/runtime-core/src/featureFlags.ts',
@@ -50,6 +52,7 @@ export default defineConfig({
         // tested via e2e so no coverage is collected
         'packages/runtime-core/src/hydrationStrategies.ts',
         'packages/runtime-dom/src/components/Transition*',
+        'packages/runtime-vapor/src/components/Transition*',
       ],
     },
     workspace: [

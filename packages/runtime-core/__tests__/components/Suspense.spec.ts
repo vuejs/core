@@ -24,6 +24,7 @@ import {
   shallowRef,
   watch,
   watchEffect,
+  withDirectives,
 } from '@vue/runtime-test'
 import { computed, createApp, defineComponent, inject, provide } from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
@@ -2357,6 +2358,136 @@ describe('Suspense', () => {
       expect(serializeInner(root)).toBe(
         `<div>444</div><div>555</div><div>666</div>`,
       )
+    })
+
+    // #14173
+    test('nested async components with v-for + only Suspense and async component wrappers', async () => {
+      const CompAsyncSetup = defineAsyncComponent({
+        props: ['item', 'id'],
+        render(ctx: any) {
+          return h('div', ctx.id + '-' + ctx.item.name)
+        },
+      })
+      const items = ref([
+        { id: 1, name: 'a' },
+        { id: 2, name: 'b' },
+        { id: 3, name: 'c' },
+      ])
+      const Comp = {
+        props: ['id'],
+        setup(props: any) {
+          return () =>
+            h(Suspense, null, {
+              default: () =>
+                h(
+                  Fragment,
+                  null,
+                  items.value.map(item =>
+                    h(CompAsyncSetup, {
+                      item,
+                      key: item.id,
+                      id: props.id,
+                    }),
+                  ),
+                ),
+            })
+        },
+      }
+
+      const CompAsyncWrapper = defineAsyncComponent({
+        props: ['id'],
+        render(ctx: any) {
+          return h(Comp, { id: ctx.id })
+        },
+      })
+      const CompWrapper = defineComponent({
+        props: ['id'],
+        render(ctx: any) {
+          return h(CompAsyncWrapper, { id: ctx.id })
+        },
+      })
+      const list = ref([{ id: 1 }, { id: 2 }, { id: 3 }])
+
+      const App = {
+        setup() {
+          return () =>
+            h(Suspense, null, {
+              default: () =>
+                h(
+                  Fragment,
+                  null,
+                  list.value.map(item =>
+                    h(CompWrapper, { id: item.id, key: item.id }),
+                  ),
+                ),
+            })
+        },
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(App), root)
+      await nextTick()
+      await Promise.all(deps)
+      await Promise.all(deps)
+
+      expect(serializeInner(root)).toBe(
+        `<div>1-a</div><div>1-b</div><div>1-c</div><div>2-a</div><div>2-b</div><div>2-c</div><div>3-a</div><div>3-b</div><div>3-c</div>`,
+      )
+
+      list.value = [{ id: 4 }, { id: 5 }, { id: 6 }]
+      await nextTick()
+      await Promise.all(deps)
+      await Promise.all(deps)
+      expect(serializeInner(root)).toBe(
+        `<div>4-a</div><div>4-b</div><div>4-c</div><div>5-a</div><div>5-b</div><div>5-c</div><div>6-a</div><div>6-b</div><div>6-c</div>`,
+      )
+
+      items.value = [
+        { id: 4, name: 'd' },
+        { id: 5, name: 'f' },
+        { id: 6, name: 'g' },
+      ]
+      await nextTick()
+      await Promise.all(deps)
+      await Promise.all(deps)
+      expect(serializeInner(root)).toBe(
+        `<div>4-d</div><div>4-f</div><div>4-g</div><div>5-d</div><div>5-f</div><div>5-g</div><div>6-d</div><div>6-f</div><div>6-g</div>`,
+      )
+    })
+
+    test('should call unmounted directive once when fallback is replaced by resolved async component', async () => {
+      const Comp = {
+        render() {
+          return h('div', null, 'comp')
+        },
+      }
+      const Foo = defineAsyncComponent({
+        render() {
+          return h(Comp)
+        },
+      })
+      const unmounted = vi.fn(el => {
+        el.foo = null
+      })
+      const vDir = {
+        unmounted,
+      }
+      const App = {
+        setup() {
+          return () => {
+            return h(Suspense, null, {
+              fallback: () => withDirectives(h('div'), [[vDir, true]]),
+              default: () => h(Foo),
+            })
+          }
+        },
+      }
+      const root = nodeOps.createElement('div')
+      render(h(App), root)
+
+      await Promise.all(deps)
+      await nextTick()
+      expect(unmounted).toHaveBeenCalledTimes(1)
     })
   })
 })

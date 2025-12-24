@@ -87,7 +87,6 @@ describe('component: emit', () => {
     expect(fooSpy).toHaveBeenCalledTimes(1)
   })
 
-  // #3527
   test('trigger mixed case handlers', () => {
     const { render } = define({
       setup(_, { emit }) {
@@ -100,10 +99,17 @@ describe('component: emit', () => {
     const fooSpy = vi.fn()
     const barSpy = vi.fn()
     render(
-      toHandlers({
-        'test-event': () => fooSpy,
-        testEvent: () => barSpy,
-      }),
+      // v-on="{ testEvent: handler }"
+      // will be compiled to
+      // toHandlers({ testEvent: handler }, false, true)
+      toHandlers(
+        {
+          'test-event': fooSpy,
+          testEvent: barSpy,
+        },
+        false,
+        true,
+      ),
     )
     expect(fooSpy).toHaveBeenCalledTimes(1)
     expect(barSpy).toHaveBeenCalledTimes(1)

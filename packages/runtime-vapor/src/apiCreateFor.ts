@@ -395,6 +395,8 @@ export const createFor = (
     } else {
       oldBlocks = []
     }
+
+    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
     setActiveSub(prevSub)
   }
 
@@ -437,7 +439,7 @@ export const createFor = (
 
     // apply transition for new nodes
     if (frag.$transition) {
-      applyTransitionHooks(block.nodes, frag.$transition, false)
+      applyTransitionHooks(block.nodes, frag.$transition)
     }
 
     if (parent) insert(block.nodes, parent, anchor)

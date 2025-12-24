@@ -2,7 +2,12 @@
   // Use the project's typescript version
   "typescript.tsdk": "node_modules/typescript/lib",
 
-  "cSpell.enabledLanguageIds": ["markdown", "plaintext", "text", "yml"],
+  "cSpell.enabledFileTypes": {
+    "markdown": true,
+    "plaintext": true,
+    "text": true,
+    "yml": true
+  },
 
   // Use prettier to format TypeScript, JavaScript and JSON files
   "[typescript]": {

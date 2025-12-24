@@ -19,6 +19,7 @@ import {
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
+export { nodeOps, patchProp }
 // Importing from the compiler, will be tree-shaken in prod
 import {
   NOOP,
@@ -261,6 +262,7 @@ export {
   useShadowRoot,
   useHost,
   VueElement,
+  VueElementBase,
   type VueElementConstructor,
   type CustomElementOptions,
 } from './apiCustomElement'
@@ -330,6 +332,10 @@ export { shouldSetAsProp } from './patchProp'
 /**
  * @internal
  */
+export { baseUseCssVars, setVarsOnNode } from './helpers/useCssVars'
+/**
+ * @internal
+ */
 export {
   vShowOriginalDisplay,
   vShowHidden,
@@ -350,12 +356,18 @@ export {
 /**
  * @internal
  */
+export { svgNS } from './nodeOps'
+/**
+ * @internal
+ */
+export { xlinkNS } from './modules/attrs'
+/**
+ * @internal
+ */
 export {
   resolveTransitionProps,
   TransitionPropsValidators,
   forceReflow,
-  addTransitionClass,
-  removeTransitionClass,
   type ElementWithTransition,
 } from './components/Transition'
 /**
@@ -364,7 +376,6 @@ export {
 export {
   hasCSSTransform,
   callPendingCbs,
-  moveCbKey,
   handleMovedChildren,
   baseApplyTranslation,
 } from './components/TransitionGroup'

@@ -24,6 +24,7 @@ import {
   type LifecycleHook,
   createComponentInstance,
   getComponentPublicInstance,
+  handleSetupResult,
   setupComponent,
 } from './component'
 import {
@@ -82,7 +83,12 @@ import {
   type TeleportVNode,
 } from './components/Teleport'
 import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
-import { isHmrUpdating, registerHMR, unregisterHMR } from './hmr'
+import {
+  hmrDirtyComponentsMode,
+  isHmrUpdating,
+  registerHMR,
+  unregisterHMR,
+} from './hmr'
 import { type RootHydrateFunction, createHydrationFunctions } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { endMeasure, startMeasure } from './profiling'
@@ -453,7 +459,13 @@ function baseCreateRenderer(
         )
         break
       case VaporSlot:
-        getVaporInterface(parentComponent, n2).slot(n1, n2, container, anchor)
+        getVaporInterface(parentComponent, n2).slot(
+          n1,
+          n2,
+          container,
+          anchor,
+          parentComponent,
+        )
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
@@ -529,7 +541,27 @@ function baseCreateRenderer(
     } else {
       const el = (n2.el = n1.el!)
       if (n2.children !== n1.children) {
-        hostSetText(el, n2.children as string)
+        // We don't inherit el for cached text nodes in `traverseStaticChildren`
+        // to avoid retaining detached DOM nodes. However, the text node may be
+        // changed during HMR. In this case we need to replace the old text node
+        // with the new one.
+        if (
+          __DEV__ &&
+          isHmrUpdating &&
+          n2.patchFlag === PatchFlags.CACHED &&
+          '__elIndex' in n1
+        ) {
+          const childNodes = __TEST__
+            ? container.children
+            : container.childNodes
+          const newChild = hostCreateText(n2.children as string)
+          const oldChild =
+            childNodes[((n2 as any).__elIndex = (n1 as any).__elIndex)]
+          hostInsert(newChild, container, oldChild)
+          hostRemove(oldChild)
+        } else {
+          hostSetText(el, n2.children as string)
+        }
       }
     }
   }
@@ -650,15 +682,27 @@ function baseCreateRenderer(
         optimized,
       )
     } else {
-      patchElement(
-        n1,
-        n2,
-        parentComponent,
-        parentSuspense,
-        namespace,
-        slotScopeIds,
-        optimized,
-      )
+      const customElement = !!(n1.el && (n1.el as VueElement)._isVueCE)
+        ? (n1.el as VueElement)
+        : null
+      try {
+        if (customElement) {
+          customElement._beginPatch()
+        }
+        patchElement(
+          n1,
+          n2,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        )
+      } finally {
+        if (customElement) {
+          customElement._endPatch()
+        }
+      }
     }
   }
 
@@ -1100,7 +1144,8 @@ function baseCreateRenderer(
         dynamicChildren &&
         // #2715 the previous fragment could've been a BAILed one as a result
         // of renderSlot() with no valid children
-        n1.dynamicChildren
+        n1.dynamicChildren &&
+        n1.dynamicChildren.length === dynamicChildren.length
       ) {
         // a stable fragment (template root or <template v-for>) doesn't need to
         // patch children order, but it may contain dynamicChildren.
@@ -1174,6 +1219,7 @@ function baseCreateRenderer(
             container,
             anchor,
             parentComponent,
+            parentSuspense,
           )
         }
       } else {
@@ -1260,9 +1306,45 @@ function baseCreateRenderer(
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      parentSuspense &&
-        parentSuspense.registerDep(instance, setupRenderEffect, optimized)
-
+      if (parentSuspense) {
+        const hydratedEl = instance.vnode.el
+        parentSuspense.registerDep(instance, setupResult => {
+          const { vnode } = instance
+          if (__DEV__) {
+            pushWarningContext(vnode)
+          }
+          handleSetupResult(instance, setupResult, false)
+          if (hydratedEl) {
+            // vnode may have been replaced if an update happened before the
+            // async dep is resolved.
+            vnode.el = hydratedEl
+          }
+          const placeholder = !hydratedEl && instance.subTree.el
+          setupRenderEffect(
+            instance,
+            vnode,
+            // component may have been moved before resolve.
+            // if this is not a hydration, instance.subTree will be the comment
+            // placeholder.
+            hostParentNode(hydratedEl || instance.subTree.el!)!,
+            // anchor will not be used if this is hydration, so only need to
+            // consider the comment placeholder case.
+            hydratedEl ? null : getNextHostNode(instance.subTree),
+            parentSuspense,
+            namespace,
+            optimized,
+          )
+          if (placeholder) {
+            // clean up placeholder reference
+            vnode.placeholder = null
+            hostRemove(placeholder)
+          }
+          updateHOCHostEl(instance, vnode.el)
+          if (__DEV__) {
+            popWarningContext()
+          }
+        })
+      }
       // Give it a placeholder if this is not hydration
       // TODO handle self-defined fallback
       if (!initialVNode.el) {
@@ -2075,8 +2157,8 @@ function baseCreateRenderer(
         const anchorVNode = c2[nextIndex + 1] as VNode
         const anchor =
           nextIndex + 1 < l2
-            ? // #13559, fallback to el placeholder for unresolved async component
-              anchorVNode.el || anchorVNode.placeholder
+            ? // #13559, #14173 fallback to el placeholder for unresolved async component
+              anchorVNode.el || resolveAsyncComponentPlaceholder(anchorVNode)
             : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
@@ -2121,7 +2203,7 @@ function baseCreateRenderer(
   ) => {
     const { el, type, transition, children, shapeFlag } = vnode
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      if ((type as ConcreteComponent).__vapor) {
+      if (isVaporComponent(type as ConcreteComponent)) {
         getVaporInterface(parentComponent, vnode).move(vnode, container, anchor)
       } else {
         move(
@@ -2253,7 +2335,7 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      if ((vnode.type as ConcreteComponent).__vapor) {
+      if (isVaporComponent(vnode.type as ConcreteComponent)) {
         getVaporInterface(parentComponent!, vnode).deactivate(
           vnode,
           (parentComponent!.ctx as KeepAliveContext).getStorageContainer(),
@@ -2276,7 +2358,7 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      if ((type as ConcreteComponent).__vapor) {
+      if (isVaporComponent(type as ConcreteComponent)) {
         getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
         return
       } else {
@@ -2483,7 +2565,7 @@ function baseCreateRenderer(
 
   const getNextHostNode: NextFn = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
-      if ((vnode.type as ConcreteComponent).__vapor) {
+      if (isVaporComponent(vnode.type as ConcreteComponent)) {
         return hostNextSibling(vnode.anchor!)
       }
       return getNextHostNode(vnode.component!.subTree)
@@ -2500,9 +2582,11 @@ function baseCreateRenderer(
   }
 
   const render: RootRenderFunction = (vnode, container, namespace) => {
+    let instance
     if (vnode == null) {
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
+        instance = container._vnode.component
       }
     } else {
       patch(
@@ -2516,7 +2600,7 @@ function baseCreateRenderer(
       )
     }
     container._vnode = vnode
-    flushOnAppMount()
+    flushOnAppMount(instance)
   }
 
   const internals: RendererInternals = {
@@ -2670,12 +2754,17 @@ export function traverseStaticChildren(
           traverseStaticChildren(c1, c2)
       }
       // #6852 also inherit for text nodes
-      if (
-        c2.type === Text &&
+      if (c2.type === Text) {
         // avoid cached text nodes retaining detached dom nodes
-        c2.patchFlag !== PatchFlags.CACHED
-      ) {
-        c2.el = c1.el
+        if (c2.patchFlag !== PatchFlags.CACHED) {
+          c2.el = c1.el
+        } else {
+          // cache the child index for HMR updates
+          ;(c2 as any).__elIndex =
+            i +
+            // take fragment start anchor into account
+            (n1.type === Fragment ? 1 : 0)
+        }
       }
       // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
       // would have received .el during block patch)
@@ -2733,6 +2822,7 @@ export function performTransitionLeave(
   transition: TransitionHooks,
   remove: () => void,
   isElement: boolean = true,
+  force: boolean = false,
 ): void {
   const performRemove = () => {
     remove()
@@ -2741,9 +2831,17 @@ export function performTransitionLeave(
     }
   }
 
-  if (isElement && transition && !transition.persisted) {
+  if (force || (isElement && transition && !transition.persisted)) {
     const { leave, delayLeave } = transition
-    const performLeave = () => leave(el, performRemove)
+    const performLeave = () => {
+      // #13153 move kept-alive node before v-show transition leave finishes
+      // it needs to call the leaving callback to ensure element's `display`
+      // is `none`
+      if (el!._isLeaving && force) {
+        el![leaveCbKey](true /* cancelled */)
+      }
+      leave(el, performRemove)
+    }
     if (delayLeave) {
       delayLeave(el, performRemove, performLeave)
     } else {
@@ -2770,6 +2868,13 @@ export function getVaporInterface(
     )
   }
   return res!
+}
+
+export function isVaporComponent(type: ConcreteComponent): boolean | undefined {
+  if (__DEV__ && isHmrUpdating && hmrDirtyComponentsMode.has(type)) {
+    return hmrDirtyComponentsMode.get(type)
+  }
+  return type.__vapor
 }
 
 /**
@@ -2821,4 +2926,18 @@ export function getInheritedScopeIds(
   }
 
   return inheritedScopeIds
+}
+
+function resolveAsyncComponentPlaceholder(anchorVnode: VNode) {
+  if (anchorVnode.placeholder) {
+    return anchorVnode.placeholder
+  }
+
+  // anchor vnode maybe is a wrapper component has single unresolved async component
+  const instance = anchorVnode.component
+  if (instance) {
+    return resolveAsyncComponentPlaceholder(instance.subTree)
+  }
+
+  return null
 }

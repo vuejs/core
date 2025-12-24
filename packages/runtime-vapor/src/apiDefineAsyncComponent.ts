@@ -26,8 +26,9 @@ import {
   removeFragmentNodes,
 } from './dom/hydration'
 import { invokeArrayFns } from '@vue/shared'
-import { insert, remove } from './block'
+import { type TransitionOptions, insert, remove } from './block'
 import { parentNode } from './dom/node'
+import { setTransitionHooks } from './components/Transition'
 
 /*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
@@ -109,7 +110,8 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
     },
 
     setup() {
-      const instance = currentInstance as VaporComponentInstance
+      const instance = currentInstance as VaporComponentInstance &
+        TransitionOptions
       markAsyncBoundary(instance)
 
       const frag =
@@ -120,7 +122,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // already resolved
       let resolvedComp = getResolvedComp()
       if (resolvedComp) {
-        frag!.update(() => createInnerComp(resolvedComp!, instance))
+        frag!.update(() => createInnerComp(resolvedComp!, instance, frag))
         return frag
       }
 
@@ -147,8 +149,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       load()
         .then(() => {
           loaded.value = true
-          // TODO parent is keep-alive, force update so the loaded component's
-          // name is taken into account
         })
         .catch(err => {
           onError(err)
@@ -166,6 +166,8 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         } else if (loadingComponent && !delayed.value) {
           render = () => createComponent(loadingComponent)
         }
+
+        if (instance.$transition) frag!.$transition = instance.$transition
         frag!.update(render)
       })
 
@@ -176,27 +178,26 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
 
 function createInnerComp(
   comp: VaporComponent,
-  parent: VaporComponentInstance,
+  parent: VaporComponentInstance & TransitionOptions,
   frag?: DynamicFragment,
 ): VaporComponentInstance {
-  const { rawProps, rawSlots, isSingleRoot, appContext } = parent
+  const { rawProps, rawSlots, appContext, $transition } = parent
   const instance = createComponent(
     comp,
     rawProps,
     rawSlots,
-    isSingleRoot,
+    // rawProps is shared and already contains fallthrough attrs.
+    // so isSingleRoot should be undefined
+    undefined,
     undefined,
     appContext,
   )
 
-  // set ref
-  // @ts-expect-error
-  frag && frag.setRef && frag.setRef(instance)
+  // set transition hooks
+  if ($transition) setTransitionHooks(instance, $transition)
 
-  // TODO custom element
-  // pass the custom element callback on to the inner comp
-  // and remove it from the async wrapper
-  // i.ce = ce
-  // delete parent.ce
+  // set ref
+  frag && frag.setAsyncRef && frag.setAsyncRef(instance)
+
   return instance
 }

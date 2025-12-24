@@ -7,13 +7,30 @@ import {
   VaporTransition,
   createIf,
   template,
+  defineVaporAsyncComponent,
+  onUnmounted,
+  onUpdated,
+  setElementText,
+  renderEffect,
+  inject,
+  provide,
+  child,
+  txt,
+  applyVShow,
+  setText,
+  delegateEvents,
+  toDisplayString,
 } from 'vue'
+import VaporCompA from './components/VaporCompA.vue'
+import VaporCompB from './components/VaporCompB.vue'
+import VDomComp from './components/VdomComp.vue'
+
 const show = ref(true)
 const toggle = ref(true)
 const count = ref(0)
 
 const timeout = (fn, time) => setTimeout(fn, time)
-const duration = typeof process !== 'undefined' && process.env.CI ? 200 : 50
+const duration = window.__TRANSITION_DURATION__ || 50
 
 let calls = {
   basic: [],
@@ -28,12 +45,13 @@ let calls = {
   showLeaveCancel: [],
   showAppear: [],
   notEnter: [],
+
+  updated: [],
+  unmount: [],
 }
 window.getCalls = key => calls[key]
 window.resetCalls = key => (calls[key] = [])
 
-import VaporCompA from './components/VaporCompA.vue'
-import VaporCompB from './components/VaporCompB.vue'
 const activeComponent = shallowRef(VaporCompB)
 function toggleComponent() {
   activeComponent.value =
@@ -41,7 +59,6 @@ function toggleComponent() {
 }
 
 const toggleVdom = ref(true)
-import VDomComp from './components/VdomComp.vue'
 
 const interopComponent = shallowRef(VDomComp)
 function toggleInteropComponent() {
@@ -90,6 +107,148 @@ const viewInOut = shallowRef(SimpleOne)
 function changeViewInOut() {
   viewInOut.value = viewInOut.value === SimpleOne ? Two : SimpleOne
 }
+
+const AsyncComp = defineVaporAsyncComponent(() => {
+  return new Promise(resolve => setTimeout(() => resolve(VaporCompA), 50))
+})
+
+const TrueBranch = defineVaporComponent({
+  name: 'TrueBranch',
+  setup() {
+    onUnmounted(() => {
+      calls.unmount.push('TrueBranch')
+    })
+    return template('<div>0</div>')()
+  },
+})
+const includeRef = ref(['TrueBranch'])
+const click = () => {
+  toggle.value = !toggle.value
+  if (toggle.value) {
+    includeRef.value = ['TrueBranch']
+  } else {
+    includeRef.value = []
+  }
+}
+
+const CompA = defineVaporComponent({
+  name: 'CompA',
+  setup() {
+    onUpdated(() => {
+      calls.updated.push('CompA updated')
+    })
+    return template('<div>CompA</div>')()
+  },
+})
+
+const CompB = defineVaporComponent({
+  name: 'CompB',
+  setup() {
+    return template('<div>CompB</div>')()
+  },
+})
+
+const CompC = defineVaporComponent({
+  name: 'CompC',
+  setup() {
+    onUnmounted(() => {
+      calls.unmount.push('CompC unmounted')
+    })
+    return template('<div>CompC</div>')()
+  },
+})
+
+const includeToChange = ref(['CompA', 'CompB', 'CompC'])
+const currentView = shallowRef(CompA)
+const switchToB = () => (currentView.value = CompB)
+const switchToC = () => (currentView.value = CompC)
+const switchToA = () => {
+  currentView.value = CompA
+  includeToChange.value = ['CompA']
+}
+
+const CompA2 = defineVaporComponent({
+  name: 'CompA2',
+  setup() {
+    const current = inject('currentView2')
+    const n0 = template('<div></div>')()
+    renderEffect(() => setElementText(n0, toDisplayString(current.value.name)))
+    return n0
+  },
+})
+const CompB2 = defineVaporComponent({
+  name: 'CompB2',
+  setup() {
+    onUnmounted(() => {
+      calls.unmount.push('CompB2 unmounted')
+    })
+    const current = inject('currentView2')
+    const n0 = template('<div></div>')()
+    renderEffect(() => setElementText(n0, toDisplayString(current.value.name)))
+    return n0
+  },
+})
+
+const includeRef2 = ref(['CompA2'])
+const currentView2 = shallowRef(CompA2)
+provide('currentView2', currentView2)
+const switchToB2 = () => {
+  currentView2.value = CompB2
+  includeRef2.value = ['CompA2', 'CompB2']
+}
+const switchToA2 = () => {
+  currentView2.value = CompA2
+  includeRef2.value = ['CompA2']
+}
+
+const show2 = ref(true)
+const state = ref(1)
+const Item = defineVaporComponent({
+  name: 'Item',
+  setup() {
+    return createComponent(
+      VaporTransition,
+      { name: () => 'test', persisted: () => '' },
+      {
+        default: () => {
+          const n1 = template('<div><h2> </h2></div>')()
+          const n0 = child(n1)
+          const x0 = txt(n0)
+          applyVShow(n1, () => show2.value)
+          renderEffect(() =>
+            setText(
+              x0,
+              toDisplayString(
+                show2.value ? 'I should show' : "I shouldn't show ",
+              ),
+            ),
+          )
+          return n1
+        },
+      },
+    )
+  },
+})
+const Comp1 = defineVaporComponent({
+  name: 'Comp1',
+  setup() {
+    delegateEvents('click')
+    const n0 = createComponent(Item)
+    const n1 = template('<h2>This is page1</h2>')()
+    const n2 = template('<button id="changeShowBtn"></button>')()
+    n2.$evtclick = () => (show2.value = !show2.value)
+    renderEffect(() => {
+      setElementText(n2, show2.value)
+    })
+    return [n0, n1, n2]
+  },
+})
+const Comp2 = defineVaporComponent({
+  name: 'Comp2',
+  setup() {
+    return template('<h2>This is page2</h2>')()
+  },
+})
 </script>
 
 <template>
@@ -480,6 +639,86 @@ function changeViewInOut() {
       </div>
     </div>
     <!-- mode end -->
+
+    <!-- async component -->
+    <div class="async">
+      <div id="container">
+        <transition>
+          <AsyncComp v-if="!toggle"></AsyncComp>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <!-- async component end -->
+
+    <!-- with teleport -->
+    <div class="with-teleport">
+      <div class="target"></div>
+      <div class="container">
+        <Transition>
+          <Teleport to=".target" defer>
+            <!-- comment -->
+            <VaporCompB v-if="!toggle" class="test"></VaporCompB>
+          </Teleport>
+        </Transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <!-- with teleport end -->
+
+    <!-- with keep-alive -->
+    <div class="keep-alive">
+      <div>
+        <transition mode="out-in">
+          <KeepAlive :include="includeRef">
+            <TrueBranch v-if="toggle"></TrueBranch>
+          </KeepAlive>
+        </transition>
+      </div>
+      <button @click="click">button</button>
+    </div>
+    <div class="keep-alive-update-include">
+      <div>
+        <transition mode="out-in">
+          <KeepAlive :include="includeToChange">
+            <component :is="currentView" />
+          </KeepAlive>
+        </transition>
+      </div>
+      <button id="switchToB" @click="switchToB">switchToB</button>
+      <button id="switchToC" @click="switchToC">switchToC</button>
+      <button id="switchToA" @click="switchToA">switchToA</button>
+    </div>
+    <div class="keep-alive-switch-then-update-include">
+      <div>
+        <transition name="test-anim" mode="out-in">
+          <KeepAlive :include="includeRef2">
+            <component :is="currentView2" />
+          </KeepAlive>
+        </transition>
+      </div>
+      <button id="switchToA" @click="switchToA2">switchToA</button>
+      <button id="switchToB" @click="switchToB2">switchToB</button>
+    </div>
+    <div class="keep-alive-move-before-leave-finishes">
+      <div>
+        <KeepAlive :include="['Comp1', 'Comp2']">
+          <component :is="state === 1 ? Comp1 : Comp2" />
+        </KeepAlive>
+      </div>
+      <button @click="state = state === 1 ? 2 : 1">button</button>
+    </div>
+    <!-- with keep-alive end -->
+    <!-- with svg -->
+    <div class="svg">
+      <svg id="container">
+        <transition name="test">
+          <circle v-if="toggle" cx="0" cy="0" r="10" class="test"></circle>
+        </transition>
+      </svg>
+      <button id="toggleBtn" @click="toggle = !toggle">button</button>
+    </div>
+    <!-- with svg end -->
 
     <!-- vdom interop -->
     <div class="vdom">

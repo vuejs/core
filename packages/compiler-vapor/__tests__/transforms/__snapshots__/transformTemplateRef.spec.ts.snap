@@ -35,7 +35,7 @@ export function render(_ctx) {
 
 exports[`compiler: template ref transform > ref + v-for 1`] = `
 "import { createTemplateRefSetter as _createTemplateRefSetter, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
@@ -58,7 +58,7 @@ export function render(_ctx) {
     const n2 = t0()
     _setTemplateRef(n2, "foo")
     return n2
-  })
+  }, null, true)
   return n0
 }"
 `;

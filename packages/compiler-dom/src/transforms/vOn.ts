@@ -28,7 +28,9 @@ const isNonKeyModifier = /*@__PURE__*/ makeMap(
 )
 // left & right could be mouse or key modifiers based on event type
 const maybeKeyModifier = /*@__PURE__*/ makeMap('left,right')
-const isKeyboardEvent = /*@__PURE__*/ makeMap(`onkeyup,onkeydown,onkeypress`)
+export const isKeyboardEvent: (key: string) => boolean = /*@__PURE__*/ makeMap(
+  `onkeyup,onkeydown,onkeypress`,
+)
 
 export const resolveModifiers = (
   key: ExpressionNode | string,

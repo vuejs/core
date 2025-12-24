@@ -1,5 +1,19 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`cache multiple access > TSNonNullExpression 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _obj = _ctx.obj
+    _setProp(n0, "id", _obj!.foo + _obj!.bar)
+  })
+  return n0
+}"
+`;
+
 exports[`cache multiple access > cache variable used in both property shorthand and normal binding 1`] = `
 "import { setStyle as _setStyle, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
@@ -23,7 +37,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     const _key = _ctx.key
-    _setDynamicProps(n0, [{ [_key+1]: _ctx.foo[_key+1]() }], true)
+    _setDynamicProps(n0, [{ [_key+1]: _ctx.foo[_key+1]() }])
   })
   return n0
 }"
@@ -38,6 +52,21 @@ export function render(_ctx) {
   _renderEffect(() => {
     const _obj = _ctx.obj
     _setProp(n0, "id", _obj[1][_ctx.baz] + _obj.bar)
+  })
+  return n0
+}"
+`;
+
+exports[`cache multiple access > dynamic property access with parentheses 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _foo_bar = _ctx.foo[_ctx.bar]
+    _setProp(n0, "x", (_foo_bar).x)
+    _setProp(n0, "bar", (_foo_bar))
   })
   return n0
 }"
@@ -80,7 +109,7 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ foo: bar => _ctx.foo = bar }], true))
+  _renderEffect(() => _setDynamicProps(n0, [{ foo: bar => _ctx.foo = bar }]))
   return n0
 }"
 `;
@@ -209,6 +238,38 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`cache multiple access > shared member root 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    _setProp(n0, "id", _foo.bar)
+    _setProp(n1, "id", _foo.baz)
+  })
+  return [n0, n1]
+}"
+`;
+
+exports[`cache multiple access > shared member root with TSNonNullExpression 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    _setProp(n0, "id", _foo!.bar)
+    _setProp(n1, "id", _foo!.baz)
+  })
+  return [n0, n1]
+}"
+`;
+
 exports[`cache multiple access > variable name substring edge cases 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
@@ -300,13 +361,24 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > .camel modifier w/ dynamic arg + prefixIdentifiers 1`] = `
+"import { camelize as _camelize, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ [_camelize(_ctx.foo(_ctx.bar) || "")]: _ctx.id }]))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > .camel modifier w/ dynamic arg 1`] = `
 "import { camelize as _camelize, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }], true))
+  _renderEffect(() => _setDynamicProps(n0, [{ [_camelize(_ctx.foo || "")]: _ctx.id }]))
   return n0
 }"
 `;
@@ -399,13 +471,24 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > .prop modifier w/ dynamic arg + prefixIdentifiers 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div></div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ ["." + _ctx.foo(_ctx.bar)]: _ctx.id }]))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > .prop modifier w/ dynamic arg 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }], true))
+  _renderEffect(() => _setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }]))
   return n0
 }"
 `;
@@ -461,6 +544,17 @@ const t0 = _template("<div></div>", true)
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => _setValue(n0, _ctx.foo))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > :class w/ svg elements 1`] = `
+"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<svg></svg>", true, 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setAttr(n0, "class", _ctx.cls, true))
   return n0
 }"
 `;
@@ -569,7 +663,7 @@ export function render(_ctx) {
   _renderEffect(() => {
     const _id = _ctx.id
     const _title = _ctx.title
-    _setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }], true)
+    _setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }])
   })
   return n0
 }"
@@ -583,7 +677,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     const _id = _ctx.id
-    _setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }], true)
+    _setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }])
   })
   return n0
 }"
@@ -631,9 +725,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > v-bind w/ svg elements 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<svg></svg>", true, 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > with constant value 1`] = `
 "import { setProp as _setProp, template as _template } from 'vue';
-const t0 = _template("<div f=\\"foo1\\" h=\\"1\\"></div>", true)
+const t0 = _template("<div e=\\"2\\" f=\\"foo1\\" g=\\"1\\" h=\\"1\\"></div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -641,8 +746,6 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   _setProp(n0, "b", 1 > 2)
   _setProp(n0, "c", 1 + 2)
   _setProp(n0, "d", 1 ? 2 : 3)
-  _setProp(n0, "e", (2))
-  _setProp(n0, "g", 1)
   _setProp(n0, "i", true)
   _setProp(n0, "j", null)
   _setProp(n0, "k", _ctx.x)

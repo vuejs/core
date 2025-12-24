@@ -77,12 +77,13 @@ export type StructuralDirectiveTransform = (
 ) => void | (() => void)
 
 export interface ImportItem {
-  exp: string | ExpressionNode
+  exp: SimpleExpressionNode
   path: string
 }
 
 export interface TransformContext
-  extends Required<Omit<TransformOptions, keyof CompilerCompatOptions>>,
+  extends
+    Required<Omit<TransformOptions, keyof CompilerCompatOptions>>,
     CompilerCompatOptions {
   selfName: string | null
   root: RootNode

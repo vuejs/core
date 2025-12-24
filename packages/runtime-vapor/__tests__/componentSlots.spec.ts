@@ -14,6 +14,7 @@ import {
   renderEffect,
   setInsertionState,
   template,
+  txt,
   vaporInteropPlugin,
   withVaporCtx,
 } from '../src'
@@ -100,41 +101,6 @@ describe('component: slots', () => {
 
     expect(instance.slots).not.toHaveProperty('one')
     expect(instance.slots).toHaveProperty('two')
-  })
-
-  test('should work with createFlorSlots', async () => {
-    const loop = ref([1, 2, 3])
-
-    let instance: any
-    const Child = () => {
-      instance = currentInstance
-      return template('child')()
-    }
-
-    const { render } = define({
-      setup() {
-        return createComponent(Child, null, {
-          $: [
-            () =>
-              createForSlots(loop.value, (item, i) => ({
-                name: item,
-                fn: () => template(item + i)(),
-              })),
-          ],
-        })
-      },
-    })
-    render()
-
-    expect(instance.slots).toHaveProperty('1')
-    expect(instance.slots).toHaveProperty('2')
-    expect(instance.slots).toHaveProperty('3')
-    loop.value.push(4)
-    await nextTick()
-    expect(instance.slots).toHaveProperty('4')
-    loop.value.shift()
-    await nextTick()
-    expect(instance.slots).not.toHaveProperty('1')
   })
 
   // passes but no warning for slot invocation in vapor currently
@@ -224,7 +190,7 @@ describe('component: slots', () => {
       )
       define(() =>
         createComponent(Comp, null, {
-          default: _props => ((props = _props), []),
+          default: (_props: any) => ((props = _props), []),
         }),
       ).render()
 
@@ -252,7 +218,7 @@ describe('component: slots', () => {
       )
       define(() =>
         createComponent(Comp, null, {
-          default: _props => ((props = _props), []),
+          default: (_props: any) => ((props = _props), []),
         }),
       ).render()
 
@@ -368,8 +334,14 @@ describe('component: slots', () => {
           $: [
             () =>
               flag1.value
-                ? { name: 'one', fn: () => template('one content')() }
-                : { name: 'two', fn: () => template('two content')() },
+                ? {
+                    name: 'one',
+                    fn: () => template('one content')(),
+                  }
+                : {
+                    name: 'two',
+                    fn: () => template('two content')(),
+                  },
           ],
         })
       }).render()
@@ -768,6 +740,42 @@ describe('component: slots', () => {
       await nextTick()
       expect(html()).toBe('<span>2</span><!--for--><!--slot-->')
     })
+
+    test('work with v-once', async () => {
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            undefined,
+            undefined,
+            true /* once */,
+          )
+        },
+      })
+
+      const count = ref(0)
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              const n3 = template('<div> </div>')() as any
+              const x3 = txt(n3) as any
+              renderEffect(() => setText(x3, toDisplayString(count.value)))
+              return n3
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('<div>0</div><!--slot-->')
+
+      // expect no changes due to v-once
+      count.value++
+      await nextTick()
+      expect(html()).toBe('<div>0</div><!--slot-->')
+    })
   })
 
   describe('forwarded slot', () => {
@@ -901,6 +909,72 @@ describe('component: slots', () => {
       expect(html()).toBe('child fallback<!--slot--><!--slot-->')
     })
 
+    test('named forwarded slot with v-if', async () => {
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot('default', null)
+        },
+      })
+
+      const Parent = defineVaporComponent({
+        props: {
+          show: Boolean,
+        },
+        setup(props) {
+          const n6 = createComponent(
+            Child,
+            null,
+            {
+              default: withVaporCtx(() => {
+                const n0 = createIf(
+                  () => props.show,
+                  () => {
+                    const n5 = template('<div></div>')() as any
+                    setInsertionState(n5, null, true)
+                    createSlot('header', null, () => {
+                      const n4 = template('default header')()
+                      return n4
+                    })
+                    return n5
+                  },
+                )
+                return n0
+              }),
+            },
+            true,
+          )
+          return n6
+        },
+      })
+
+      const show = ref(false)
+      const { html } = define({
+        setup() {
+          return createComponent(
+            Parent,
+            {
+              show: () => show.value,
+            },
+            {
+              header: () => template('custom header')(),
+            },
+          )
+        },
+      }).render()
+
+      expect(html()).toBe('<!--if--><!--slot-->')
+
+      show.value = true
+      await nextTick()
+      expect(html()).toBe(
+        '<div>custom header<!--slot--></div><!--if--><!--slot-->',
+      )
+
+      show.value = false
+      await nextTick()
+      expect(html()).toBe('<!--if--><!--slot-->')
+    })
+
     test('forwarded slot with fallback (v-if)', async () => {
       const Child = defineVaporComponent({
         setup() {
@@ -997,6 +1071,36 @@ describe('component: slots', () => {
       items.value.pop()
       await nextTick()
       expect(html()).toBe('child fallback<!--for--><!--slot--><!--slot-->')
+    })
+
+    test('consecutive slots with insertion state', async () => {
+      const { component: Child } = define({
+        setup() {
+          const n2 = template('<div><div>baz</div></div>', true)() as any
+          setInsertionState(n2, 0)
+          createSlot('default', null)
+          setInsertionState(n2, 0)
+          createSlot('foo', null)
+          return n2
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => template('default')(),
+            foo: () => template('foo')(),
+          })
+        },
+      }).render()
+
+      expect(html()).toBe(
+        `<div>` +
+          `default<!--slot-->` +
+          `foo<!--slot-->` +
+          `<div>baz</div>` +
+          `</div>`,
+      )
     })
 
     describe('vdom interop', () => {
@@ -1862,34 +1966,184 @@ describe('component: slots', () => {
         expect(root.innerHTML).toBe('<span>bar</span>')
       })
     })
+  })
 
-    test('consecutive slots with insertion state', async () => {
-      const { component: Child } = define({
-        setup() {
-          const n2 = template('<div><div>baz</div></div>', true)() as any
-          setInsertionState(n2, 0)
-          createSlot('default', null)
-          setInsertionState(n2, 0)
-          createSlot('foo', null)
-          return n2
-        },
-      })
+  describe('createForSlots', () => {
+    test('should work', async () => {
+      const loop = ref([1, 2, 3])
 
-      const { html } = define({
+      let instance: any
+      const Child = () => {
+        instance = currentInstance
+        return template('child')()
+      }
+
+      const { render } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => template('default')(),
-            foo: () => template('foo')(),
+            $: [
+              () =>
+                createForSlots(loop.value, (item, i) => ({
+                  name: item,
+                  fn: () => template(item + i)(),
+                })),
+            ],
+          })
+        },
+      })
+      render()
+
+      expect(instance.slots).toHaveProperty('1')
+      expect(instance.slots).toHaveProperty('2')
+      expect(instance.slots).toHaveProperty('3')
+      loop.value.push(4)
+      await nextTick()
+      expect(instance.slots).toHaveProperty('4')
+      loop.value.shift()
+      await nextTick()
+      expect(instance.slots).not.toHaveProperty('1')
+    })
+
+    test('should cache dynamic slot source result', async () => {
+      const items = ref([1, 2, 3])
+      let callCount = 0
+
+      const getItems = () => {
+        callCount++
+        return items.value
+      }
+
+      let instance: any
+      const Child = defineVaporComponent(() => {
+        instance = currentInstance
+        // Create multiple slots to trigger multiple getSlot calls
+        const n1 = template('<div></div>')()
+        const n2 = template('<div></div>')()
+        const n3 = template('<div></div>')()
+        insert(createSlot('slot1'), n1 as any as ParentNode)
+        insert(createSlot('slot2'), n2 as any as ParentNode)
+        insert(createSlot('slot3'), n3 as any as ParentNode)
+        return [n1, n2, n3]
+      })
+
+      define({
+        setup() {
+          return createComponent(Child, null, {
+            $: [
+              () =>
+                createForSlots(getItems(), (item, i) => ({
+                  name: 'slot' + item,
+                  fn: () => template(String(item))(),
+                })),
+            ],
           })
         },
       }).render()
 
-      expect(html()).toBe(
-        `<div>` +
-          `default<!--slot-->` +
-          `foo<!--slot-->` +
-          `<div>baz</div>` +
-          `</div>`,
+      // getItems should only be called once
+      expect(callCount).toBe(1)
+
+      expect(instance.slots).toHaveProperty('slot1')
+      expect(instance.slots).toHaveProperty('slot2')
+      expect(instance.slots).toHaveProperty('slot3')
+    })
+
+    test('should update when source changes', async () => {
+      const items = ref([1, 2])
+      let callCount = 0
+
+      const getItems = () => {
+        callCount++
+        return items.value
+      }
+
+      let instance: any
+      const Child = defineVaporComponent(() => {
+        instance = currentInstance
+        const n1 = template('<div></div>')()
+        const n2 = template('<div></div>')()
+        const n3 = template('<div></div>')()
+        insert(createSlot('slot1'), n1 as any as ParentNode)
+        insert(createSlot('slot2'), n2 as any as ParentNode)
+        insert(createSlot('slot3'), n3 as any as ParentNode)
+        return [n1, n2, n3]
+      })
+
+      define({
+        setup() {
+          return createComponent(Child, null, {
+            $: [
+              () =>
+                createForSlots(getItems(), (item, i) => ({
+                  name: 'slot' + item,
+                  fn: () => template(String(item))(),
+                })),
+            ],
+          })
+        },
+      }).render()
+
+      expect(callCount).toBe(1)
+      expect(instance.slots).toHaveProperty('slot1')
+      expect(instance.slots).toHaveProperty('slot2')
+      expect(instance.slots).not.toHaveProperty('slot3')
+
+      // Update items
+      items.value.push(3)
+      await nextTick()
+
+      // Should be called again after source changes
+      expect(callCount).toBe(2)
+      expect(instance.slots).toHaveProperty('slot1')
+      expect(instance.slots).toHaveProperty('slot2')
+      expect(instance.slots).toHaveProperty('slot3')
+    })
+
+    test('should render slots correctly with caching', async () => {
+      const items = ref([1, 2, 3, 4, 5])
+
+      const Child = defineVaporComponent(() => {
+        const containers: any[] = []
+        for (let i = 1; i <= 5; i++) {
+          const n = template('<div></div>')()
+          insert(createSlot('slot' + i), n as any as ParentNode)
+          containers.push(n)
+        }
+        return containers
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, null, {
+            $: [
+              () =>
+                createForSlots(items.value, item => ({
+                  name: 'slot' + item,
+                  fn: () => template('content' + item)(),
+                })),
+            ],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe(
+        '<div>content1<!--slot--></div>' +
+          '<div>content2<!--slot--></div>' +
+          '<div>content3<!--slot--></div>' +
+          '<div>content4<!--slot--></div>' +
+          '<div>content5<!--slot--></div>',
+      )
+
+      // Update items
+      items.value = [2, 4]
+      await nextTick()
+
+      expect(host.innerHTML).toBe(
+        '<div><!--slot--></div>' +
+          '<div>content2<!--slot--></div>' +
+          '<div><!--slot--></div>' +
+          '<div>content4<!--slot--></div>' +
+          '<div><!--slot--></div>',
       )
     })
   })

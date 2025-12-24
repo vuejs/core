@@ -3,6 +3,7 @@ import {
   type ElementNode,
   NodeTypes,
   type TemplateChildNode,
+  isCommentOrWhitespace,
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import { DynamicFlag } from '../ir'
@@ -31,7 +32,7 @@ export function getSiblingIf(
   let i = siblings.indexOf(context.node)
   while (reverse ? --i >= 0 : ++i < siblings.length) {
     sibling = siblings[i]
-    if (!isCommentLike(sibling)) {
+    if (!isCommentOrWhitespace(sibling)) {
       break
     }
   }
@@ -47,11 +48,4 @@ export function getSiblingIf(
   ) {
     return sibling
   }
-}
-
-function isCommentLike(node: TemplateChildNode) {
-  return (
-    node.type === NodeTypes.COMMENT ||
-    (node.type === NodeTypes.TEXT && !node.content.trim().length)
-  )
 }

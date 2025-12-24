@@ -27,7 +27,7 @@ import { warn } from './warning'
 import type { VNode } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
-import { type TransitionHooks, version } from '.'
+import { type SuspenseBoundary, type TransitionHooks, version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
@@ -112,6 +112,11 @@ export interface App<HostElement = any> {
   _ceVNode?: VNode
 
   /**
+   * @internal vapor custom element instance
+   */
+  _ceComponent?: GenericComponentInstance | null
+
+  /**
    * v2 compat only
    */
   filter?(name: string): Function | undefined
@@ -182,17 +187,25 @@ export interface VaporInteropInterface {
     container: any,
     anchor: any,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
   ): GenericComponentInstance // VaporComponentInstance
   update(n1: VNode, n2: VNode, shouldUpdate: boolean): void
   unmount(vnode: VNode, doRemove?: boolean): void
   move(vnode: VNode, container: any, anchor: any): void
-  slot(n1: VNode | null, n2: VNode, container: any, anchor: any): void
+  slot(
+    n1: VNode | null,
+    n2: VNode,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance | null,
+  ): void
   hydrate(
     vnode: VNode,
     node: any,
     container: any,
     anchor: any,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
   ): Node
   hydrateSlot(vnode: VNode, node: any): Node
   activate(
@@ -207,7 +220,12 @@ export interface VaporInteropInterface {
     transition: TransitionHooks,
   ): void
 
-  vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
+  vdomMount: (
+    component: ConcreteComponent,
+    parentComponent: any,
+    props?: any,
+    slots?: any,
+  ) => any
   vdomUnmount: UnmountComponentFn
   vdomSlot: (
     slots: any,

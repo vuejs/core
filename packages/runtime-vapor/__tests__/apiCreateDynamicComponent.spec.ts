@@ -148,4 +148,46 @@ describe('api: createDynamicComponent', () => {
     await nextTick()
     expect(html()).toBe('<div><div>B</div><!--dynamic-component--></div>')
   })
+
+  test('fallback with dynamic slots', async () => {
+    const slotName = ref('default')
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(() => 'div', null, {
+          $: [
+            () => ({
+              name: slotName.value,
+              fn: () => template('<span>hi</span>')(),
+            }),
+          ] as any,
+        })
+      },
+    }).render()
+
+    expect(html()).toBe(
+      '<div><span>hi</span><!--slot--></div><!--dynamic-component-->',
+    )
+
+    // update slot name
+    slotName.value = 'custom'
+    await nextTick()
+    expect(html()).toBe('<div><!--slot--></div><!--dynamic-component-->')
+
+    slotName.value = 'default'
+    await nextTick()
+    expect(html()).toBe(
+      '<div><span>hi</span><!--slot--></div><!--dynamic-component-->',
+    )
+  })
+
+  test('accept blocks', async () => {
+    const { html } = define({
+      setup() {
+        const n0 = template('<a>router link</a>')()
+        return createDynamicComponent(() => n0)
+      },
+    }).render()
+
+    expect(html()).toBe('<a>router link</a><!--dynamic-component-->')
+  })
 })

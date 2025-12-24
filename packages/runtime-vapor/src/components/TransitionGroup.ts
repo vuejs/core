@@ -21,6 +21,7 @@ import {
   type VaporTransitionHooks,
   insert,
 } from '../block'
+import { renderEffect } from '../renderEffect'
 import {
   resolveTransitionHooks,
   setTransitionHooks,
@@ -29,13 +30,11 @@ import {
 import {
   type ObjectVaporComponent,
   type VaporComponentInstance,
-  applyFallthroughProps,
   isVaporComponent,
 } from '../component'
 import { isForBlock } from '../apiCreateFor'
-import { renderEffect } from '../renderEffect'
 import { createElement } from '../dom/node'
-import { DynamicFragment, isFragment } from '../fragment'
+import { isFragment } from '../fragment'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -57,7 +56,18 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
   setup(props: TransitionGroupProps, { slots }) {
     const instance = currentInstance as VaporComponentInstance
     const state = useTransitionState()
-    const cssTransitionProps = resolveTransitionProps(props)
+
+    // use proxy to keep props reference stable
+    let cssTransitionProps = resolveTransitionProps(props)
+    const propsProxy = new Proxy({} as typeof cssTransitionProps, {
+      get(_, key) {
+        return cssTransitionProps[key as keyof typeof cssTransitionProps]
+      },
+    })
+
+    renderEffect(() => {
+      cssTransitionProps = resolveTransitionProps(props)
+    })
 
     let prevChildren: TransitionBlock[]
     let children: TransitionBlock[]
@@ -123,7 +133,7 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
 
     // store props and state on fragment for reusing during insert new items
     setTransitionHooksOnFragment(slottedBlock, {
-      props: cssTransitionProps,
+      props: propsProxy,
       state,
       instance,
     } as VaporTransitionHooks)
@@ -133,11 +143,14 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       const child = children[i]
       if (isValidTransitionBlock(child)) {
         if (child.$key != null) {
-          setTransitionHooks(
+          const hooks = resolveTransitionHooks(
             child,
-            resolveTransitionHooks(child, cssTransitionProps, state, instance!),
+            propsProxy,
+            state,
+            instance!,
           )
-        } else if (__DEV__ && child.$key == null) {
+          setTransitionHooks(child, hooks)
+        } else if (__DEV__) {
           warn(`<transition-group> children must be keyed`)
         }
       }
@@ -147,18 +160,9 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
     if (tag) {
       const container = createElement(tag)
       insert(slottedBlock, container)
-      // fallthrough attrs
-      if (instance!.hasFallthrough) {
-        ;(container as any).$root = true
-        renderEffect(() => applyFallthroughProps(container, instance!.attrs))
-      }
       return container
     } else {
-      const frag = __DEV__
-        ? new DynamicFragment('transition-group')
-        : new DynamicFragment()
-      renderEffect(() => frag.update(() => slottedBlock))
-      return frag
+      return slottedBlock
     }
   },
 })

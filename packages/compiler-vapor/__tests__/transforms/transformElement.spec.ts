@@ -328,36 +328,38 @@ describe('compiler: element transform', () => {
       })
     })
 
-    test.todo('props merging: event handlers', () => {
-      const { code, ir } = compileWithElementTransform(
+    test('props merging: event handlers', () => {
+      const { code } = compileWithElementTransform(
         `<Foo @click.foo="a" @click.bar="b" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(code).contains('onClick: () => [_ctx.a, _ctx.b]')
-      expect(ir.block.operation).toMatchObject([
-        {
-          type: IRNodeTypes.CREATE_COMPONENT_NODE,
-          tag: 'Foo',
-          props: [
-            [
-              {
-                key: { content: 'onClick', isStatic: true },
-                values: [{ content: 'a' }, { content: 'b' }],
-              },
-            ],
-          ],
-        },
-      ])
+      expect(code).contains(`onClick: () => [
+    _ctx.a,
+    _ctx.b
+  ]`)
     })
 
-    test.todo('props merging: style', () => {
+    test('props merging: inline event handlers', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo @click.foo="e => a(e)" @click.bar="e => b(e)" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains('const _on_click = e => _ctx.a(e)')
+      expect(code).contains('const _on_click1 = e => _ctx.b(e)')
+      expect(code).contains(`onClick: () => [
+    _on_click,
+    _on_click1
+  ]`)
+    })
+
+    test('props merging: style', () => {
       const { code } = compileWithElementTransform(
         `<Foo style="color: green" :style="{ color: 'red' }" />`,
       )
       expect(code).toMatchSnapshot()
     })
 
-    test.todo('props merging: class', () => {
+    test('props merging: class', () => {
       const { code } = compileWithElementTransform(
         `<Foo class="foo" :class="{ bar: isBar }" />`,
       )
@@ -368,7 +370,7 @@ describe('compiler: element transform', () => {
       const { code, ir } = compileWithElementTransform(`<Foo v-on="obj" />`)
       expect(code).toMatchSnapshot()
       expect(code).contains(`[
-    () => (_toHandlers(_ctx.obj))
+    () => (_toHandlers(_ctx.obj, false, true))
   ]`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -579,7 +581,7 @@ describe('compiler: element transform', () => {
     const template = '<div id="foo" class="bar"></div>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
-    expect(ir.template).toMatchObject([template])
+    expect([...ir.template.keys()]).toMatchObject([template])
     expect(ir.block.effect).lengthOf(0)
   })
 
@@ -600,7 +602,7 @@ describe('compiler: element transform', () => {
     const template = '<div id="foo"><span></span></div>'
     expect(code).toMatchSnapshot()
     expect(code).contains(JSON.stringify(template))
-    expect(ir.template).toMatchObject([template])
+    expect([...ir.template.keys()]).toMatchObject([template])
     expect(ir.block.effect).lengthOf(0)
   })
 
@@ -634,7 +636,7 @@ describe('compiler: element transform', () => {
         ],
       },
     ])
-    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], true)')
+    expect(code).contains('_setDynamicProps(n0, [_ctx.obj])')
   })
 
   test('v-bind="obj" after static prop', () => {
@@ -670,9 +672,7 @@ describe('compiler: element transform', () => {
         ],
       },
     ])
-    expect(code).contains(
-      '_setDynamicProps(n0, [{ id: "foo" }, _ctx.obj], true)',
-    )
+    expect(code).contains('_setDynamicProps(n0, [{ id: "foo" }, _ctx.obj])')
   })
 
   test('v-bind="obj" before static prop', () => {
@@ -698,9 +698,7 @@ describe('compiler: element transform', () => {
         ],
       },
     ])
-    expect(code).contains(
-      '_setDynamicProps(n0, [_ctx.obj, { id: "foo" }], true)',
-    )
+    expect(code).contains('_setDynamicProps(n0, [_ctx.obj, { id: "foo" }])')
   })
 
   test('v-bind="obj" between static props', () => {
@@ -728,7 +726,7 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains(
-      '_setDynamicProps(n0, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true)',
+      '_setDynamicProps(n0, [{ id: "foo" }, _ctx.obj, { class: "bar" }])',
     )
   })
 
@@ -967,7 +965,7 @@ describe('compiler: element transform', () => {
             key: { content: 'foo' },
             handler: true,
             handlerModifiers: {
-              keys: ['enter'],
+              keys: [],
               nonKeys: ['stop', 'prevent'],
               options: ['capture', 'once'],
             },
@@ -1018,7 +1016,11 @@ describe('compiler: element transform', () => {
       <form><form/></form>`,
     )
     expect(code).toMatchSnapshot()
-    expect(ir.template).toEqual(['<div>123</div>', '<p></p>', '<form></form>'])
+    expect([...ir.template.keys()]).toEqual([
+      '<div>123</div>',
+      '<p></p>',
+      '<form></form>',
+    ])
     expect(ir.block.dynamic).toMatchObject({
       children: [
         { id: 1, template: 1, children: [{ id: 0, template: 0 }] },
@@ -1036,5 +1038,38 @@ describe('compiler: element transform', () => {
     const { code } = compileWithElementTransform('')
     expect(code).toMatchSnapshot()
     expect(code).contain('return null')
+  })
+
+  test('custom element', () => {
+    const { code } = compileWithElementTransform(
+      '<my-custom-element></my-custom-element>',
+      {
+        isCustomElement: tag => tag === 'my-custom-element',
+      },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+  })
+
+  test('svg', () => {
+    const t = `<svg><circle r="40"></circle></svg>`
+    const { code, ir } = compileWithElementTransform(t)
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '_template("<svg><circle r=\\"40\\"></circle></svg>", true, 1)',
+    )
+    expect([...ir.template.keys()]).toMatchObject([t])
+    expect(ir.template.get(t)).toBe(1)
+  })
+
+  test('MathML', () => {
+    const t = `<math><mrow><mi>x</mi></mrow></math>`
+    const { code, ir } = compileWithElementTransform(t)
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '_template("<math><mrow><mi>x</mi></mrow></math>", true, 2)',
+    )
+    expect([...ir.template.keys()]).toMatchObject([t])
+    expect(ir.template.get(t)).toBe(2)
   })
 })

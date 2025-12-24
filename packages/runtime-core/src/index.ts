@@ -105,6 +105,11 @@ export {
 // plugins
 export { getCurrentInstance } from './component'
 
+/**
+ * @internal
+ */
+export { useInstanceOption } from './component'
+
 // For raw render function users
 export { h } from './h'
 // Advanced render function utilities
@@ -128,6 +133,7 @@ export {
 export { withDirectives } from './directives'
 // SSR context
 export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
+export { MoveType } from './renderer'
 
 // Custom Renderer API ---------------------------------------------------------
 
@@ -300,6 +306,7 @@ export type {
   EmitsToProps,
   ShortEmitsToObject,
   EmitFn,
+  TypeEmitsToOptions,
 } from './componentEmits'
 export type {
   ComponentPublicInstance,
@@ -513,11 +520,7 @@ export { type VaporInteropInterface } from './apiCreateApp'
 /**
  * @internal
  */
-export {
-  type RendererInternals,
-  MoveType,
-  getInheritedScopeIds,
-} from './renderer'
+export { type RendererInternals, getInheritedScopeIds } from './renderer'
 /**
  * @internal
  */
@@ -664,3 +667,16 @@ export {
   checkTransitionMode,
   leaveCbKey,
 } from './components/BaseTransition'
+
+/**
+ * @internal
+ */
+export type { GenericComponent } from './component'
+
+/**
+ * @internal
+ */
+export {
+  warnExtraneousAttributes,
+  getFunctionalFallthrough,
+} from './componentRenderUtils'

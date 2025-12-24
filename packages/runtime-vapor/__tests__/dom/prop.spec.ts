@@ -14,7 +14,7 @@ import {
 } from '../../src/dom/prop'
 import { setStyle } from '../../src/dom/prop'
 import { VaporComponentInstance, createComponent } from '../../src/component'
-import { ref, setCurrentInstance } from '@vue/runtime-dom'
+import { ref, setCurrentInstance, svgNS, xlinkNS } from '@vue/runtime-dom'
 import { makeRender } from '../_utils'
 import {
   createDynamicComponent,
@@ -188,9 +188,92 @@ describe('patchProp', () => {
     })
   })
 
-  describe.todo('setClassIncremental', () => {})
+  describe('setClassIncremental', () => {
+    test('should set class', () => {
+      const el = document.createElement('div')
+      // mark as root
+      ;(el as any).$root = true
+      setClass(el, 'foo')
+      expect(el.className).toBe('foo')
 
-  describe.todo('setStyleIncremental', () => {})
+      // Should replace previous class set by setClass
+      setClass(el, 'bar')
+      expect(el.className).toBe('bar')
+    })
+
+    test('should coexist with existing classes', () => {
+      const el = document.createElement('div')
+      el.className = 'existing'
+      ;(el as any).$root = true
+
+      setClass(el, 'foo')
+      expect(el.className).toBe('existing foo')
+
+      setClass(el, 'bar')
+      expect(el.className).toBe('existing bar')
+
+      setClass(el, '')
+      expect(el.className).toBe('existing')
+    })
+
+    test('should handle multiple classes', () => {
+      const el = document.createElement('div')
+      ;(el as any).$root = true
+
+      setClass(el, 'foo bar')
+      expect(el.className).toBe('foo bar')
+
+      setClass(el, 'baz')
+      expect(el.className).toBe('baz')
+    })
+  })
+
+  describe('setStyleIncremental', () => {
+    test('should set style', () => {
+      const el = document.createElement('div')
+      ;(el as any).$root = true
+      setStyle(el, 'color: red')
+      expect(el.style.cssText).toBe('color: red;')
+
+      setStyle(el, 'font-size: 12px')
+      expect(el.style.cssText).toBe('font-size: 12px;')
+    })
+
+    test('should coexist with existing styles', () => {
+      const el = document.createElement('div')
+      el.style.display = 'block'
+      ;(el as any).$root = true
+
+      setStyle(el, 'color: red')
+      expect(el.style.display).toBe('block')
+      expect(el.style.color).toBe('red')
+
+      setStyle(el, 'font-size: 12px')
+      expect(el.style.display).toBe('block')
+      expect(el.style.fontSize).toBe('12px')
+      expect(el.style.color).toBe('')
+    })
+
+    test('should set style with object', () => {
+      const el = document.createElement('div')
+      ;(el as any).$root = true
+      setStyle(el, { color: 'red' })
+      expect(el.style.cssText).toBe('color: red;')
+
+      setStyle(el, { fontSize: '12px' })
+      expect(el.style.cssText).toBe('font-size: 12px;')
+    })
+
+    test('should remove style', () => {
+      const el = document.createElement('div')
+      ;(el as any).$root = true
+      setStyle(el, 'color: red')
+      expect(el.style.cssText).toBe('color: red;')
+
+      setStyle(el, '')
+      expect(el.style.cssText).toBe('')
+    })
+  })
 
   describe('setAttr', () => {
     test('should set attribute', () => {
@@ -329,8 +412,9 @@ describe('patchProp', () => {
       key: string,
       value: any,
       el = element.cloneNode(true) as HTMLElement,
+      isSVG: boolean = false,
     ) {
-      _setDynamicProp(el, key, value)
+      _setDynamicProp(el, key, value, isSVG)
       return el
     }
 
@@ -381,7 +465,40 @@ describe('patchProp', () => {
       expect(res.textContent).toBe('foo')
     })
 
-    test.todo('should be able to set something on SVG')
+    test('set class w/ SVG', () => {
+      const el = document.createElementNS(svgNS, 'svg') as any
+      setDynamicProp('class', 'foo', el, true)
+      expect(el.getAttribute('class')).toBe('foo')
+    })
+
+    test('set class incremental w/ SVG', () => {
+      const el = document.createElementNS(svgNS, 'svg') as any
+      el.setAttribute('class', 'bar')
+      el.$root = true
+      setDynamicProp('class', 'foo', el, true)
+      expect(el.getAttribute('class')).toBe('bar foo')
+    })
+
+    test('set xlink attributes w/ SVG', () => {
+      const el = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'use',
+      ) as any
+      setDynamicProp('xlink:href', 'a', el, true)
+      expect(el.getAttributeNS(xlinkNS, 'href')).toBe('a')
+      setDynamicProp('xlink:href', null, el, true)
+      expect(el.getAttributeNS(xlinkNS, 'href')).toBe(null)
+    })
+
+    test('set textContent attributes w/ SVG', () => {
+      const el = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'use',
+      ) as any
+      setDynamicProp('textContent', 'foo', el, true)
+      expect(el.attributes.length).toBe(0)
+      expect(el.innerHTML).toBe('foo')
+    })
   })
 
   describe('setDynamicProps', () => {

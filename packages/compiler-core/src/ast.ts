@@ -1,4 +1,4 @@
-import { type PatchFlags, isString } from '@vue/shared'
+import { type Namespace, type PatchFlags, isString } from '@vue/shared'
 import {
   CREATE_BLOCK,
   CREATE_ELEMENT_BLOCK,
@@ -15,16 +15,6 @@ import {
 import type { PropsExpression } from './transforms/transformElement'
 import type { ImportItem, TransformContext } from './transform'
 import type { Node as BabelNode } from '@babel/types'
-
-// Vue template is a platform-agnostic superset of HTML (syntax only).
-// More namespaces can be declared by platform specific compilers.
-export type Namespace = number
-
-export enum Namespaces {
-  HTML,
-  SVG,
-  MATH_ML,
-}
 
 export enum NodeTypes {
   ROOT,
@@ -489,7 +479,7 @@ export interface DirectiveArguments extends ArrayExpression {
 
 export interface DirectiveArgumentNode extends ArrayExpression {
   elements: // dir, exp, arg, modifiers
-  | [string]
+    | [string]
     | [string, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode, ObjectExpression]
@@ -499,7 +489,7 @@ export interface DirectiveArgumentNode extends ArrayExpression {
 export interface RenderSlotCall extends CallExpression {
   callee: typeof RENDER_SLOT
   arguments: // $slots, name, props, fallback
-  | [string, string | ExpressionNode]
+    | [string, string | ExpressionNode]
     | [string, string | ExpressionNode, PropsExpression]
     | [
         string,

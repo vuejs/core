@@ -134,6 +134,28 @@ describe('createIf', () => {
     expect(host.innerHTML).toBe('<!--if-->')
   })
 
+  test('with v-once', async () => {
+    const toggle = ref(false)
+    const { html } = define({
+      setup() {
+        return createIf(
+          () => toggle.value,
+          () => template('<p>foo</p>')(),
+          () => template('<p>bar</p>')(),
+          true,
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<p>bar</p>')
+
+    toggle.value = true
+    await nextTick()
+    // should not change
+    expect(html()).toBe('<p>bar</p>')
+  })
+
+  // vapor custom directives have no lifecycle hooks.
   test.todo('should work with directive hooks', async () => {
     const calls: string[] = []
     const show1 = ref(true)

@@ -125,7 +125,9 @@ export interface ComponentOptionsBase<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II, Provide>,
+>
+  extends
+    LegacyOptions<Props, D, C, M, Mixin, Extends, I, II, Provide>,
     ComponentInternalOptions,
     AsyncComponentInternalOptions,
     ComponentCustomOptions {
@@ -1173,7 +1175,7 @@ export type ComponentOptionsWithoutProps<
       S,
       LC,
       Directives,
-      Exposed
+      string
     >
   >
 
@@ -1235,7 +1237,7 @@ export type ComponentOptionsWithArrayProps<
       S,
       LC,
       Directives,
-      Exposed
+      string
     >
   >
 

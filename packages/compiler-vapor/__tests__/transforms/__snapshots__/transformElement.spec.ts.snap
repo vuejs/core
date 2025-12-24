@@ -1,5 +1,15 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > MathML 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<math><mrow><mi>x</mi></mrow></math>", true, 2)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > checkbox with static indeterminate 1`] = `
 "import { setProp as _setProp, template as _template } from 'vue';
 const t0 = _template("<input type=\\"checkbox\\">", true)
@@ -61,6 +71,54 @@ exports[`compiler: element transform > component > import + resolve component 1`
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > props merging: class 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { class: () => (["foo", { bar: _ctx.isBar }]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > props merging: event handlers 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onClick: () => [
+    _ctx.a,
+    _ctx.b
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > props merging: inline event handlers 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const _on_click = e => _ctx.a(e)
+  const _on_click1 = e => _ctx.b(e)
+  const n0 = _createComponentWithFallback(_component_Foo, { onClick: () => [
+    _on_click,
+    _on_click1
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > props merging: style 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { style: () => (["color: green", { color: 'red' }]) }, null, true)
   return n0
 }"
 `;
@@ -239,7 +297,7 @@ exports[`compiler: element transform > component > v-on="obj" 1`] = `
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => (_toHandlers(_ctx.obj))
+    () => (_toHandlers(_ctx.obj, false, true))
   ] }, null, true)
   return n0
 }"
@@ -268,11 +326,11 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component event with multiple modifiers and event options 1`] = `
-"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, withKeys as _withKeys, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { onFooCaptureOnce: () => _withKeys(_withModifiers(_ctx.bar, ["stop","prevent"]), ["enter"]) }, null, true)
+  const n0 = _createComponentWithFallback(_component_Foo, { onFooCaptureOnce: () => _withModifiers(_ctx.bar, ["stop","prevent"]) }, null, true)
   return n0
 }"
 `;
@@ -319,6 +377,15 @@ export function render(_ctx) {
     () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }),
     () => ({ [_ctx.baz]: _ctx.qux })
   ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > custom element 1`] = `
+"import { createPlainElement as _createPlainElement } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createPlainElement("my-custom-element", null, null, true)
   return n0
 }"
 `;
@@ -415,14 +482,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: event handlers 1`] = `
-"import { withKeys as _withKeys, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { createInvoker as _createInvoker, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", _withKeys(e => _ctx.a(e), ["foo"]))
-  _delegate(n0, "click", _withKeys(e => _ctx.b(e), ["bar"]))
+  _delegate(n0, "click", _createInvoker(e => _ctx.a(e)))
+  _delegate(n0, "click", _createInvoker(e => _ctx.b(e)))
   return n0
 }"
 `;
@@ -448,13 +515,23 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > svg 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<svg><circle r=\\"40\\"></circle></svg>", true, 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > v-bind="obj" 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj]))
   return n0
 }"
 `;
@@ -465,7 +542,7 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj], true))
+  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj]))
   return n0
 }"
 `;
@@ -476,7 +553,7 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj, { id: "foo" }], true))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj, { id: "foo" }]))
   return n0
 }"
 `;
@@ -487,7 +564,7 @@ const t0 = _template("<div></div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true))
+  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj, { class: "bar" }]))
   return n0
 }"
 `;

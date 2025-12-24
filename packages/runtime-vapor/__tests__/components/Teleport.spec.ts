@@ -84,7 +84,7 @@ describe('renderer: VaporTeleport', () => {
         setup(props) {
           const n0 = template(`<div> </div>`)()
           const x0 = child(n0 as any)
-          renderEffect(() => setText(x0 as any, props.foo))
+          renderEffect(() => setText(x0 as any, String(props.foo)))
           return [n0]
         },
       })
@@ -192,6 +192,7 @@ describe('renderer: VaporTeleport', () => {
       expect(root.innerHTML).toBe(
         '<!--teleport start--><!--teleport end--><div>root 2</div>',
       )
+      await nextTick()
       expect(target.innerHTML).toBe('<div>teleported 2</div>')
     })
 
@@ -367,6 +368,7 @@ describe('renderer: VaporTeleport', () => {
       expect(root.innerHTML).toBe(
         '<!--teleport start--><!--teleport end--><div>root 2</div>',
       )
+      await nextTick()
       expect(target.innerHTML).toBe('<div>teleported 2</div>')
 
       // reload parent again by changing disabled
@@ -702,7 +704,42 @@ function runSharedTests(deferMode: boolean): void {
     expect(target.innerHTML).toBe('<div>teleported</div>')
   })
 
-  test.todo('should work with SVG', async () => {})
+  test('should work with SVG', async () => {
+    const svg = ref()
+    const circle = ref()
+    const { host } = define({
+      setup() {
+        const _setTemplateRef = createTemplateRefSetter()
+        const n0 = template('<svg></svg>', false, 1)() as any
+        const n1 = createIf(
+          () => svg.value,
+          () => {
+            const n4 = createComponent(
+              VaporTeleport,
+              { to: () => svg.value },
+              {
+                default: () => {
+                  const n3 = template('<circle></circle>', false, 1)() as any
+                  _setTemplateRef(n3, circle, undefined, undefined, 'circle')
+                  return n3
+                },
+              },
+            )
+            return n4
+          },
+        )
+        _setTemplateRef(n0, svg, undefined, undefined, 'svg')
+        return [n0, n1]
+      },
+    }).render()
+
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<svg><circle></circle></svg><!--teleport start--><!--teleport end--><!--if-->',
+    )
+    expect(svg.value.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    expect(circle.value.namespaceURI).toBe('http://www.w3.org/2000/svg')
+  })
 
   test('should update target', async () => {
     const targetA = document.createElement('div')
@@ -1254,5 +1291,42 @@ function runSharedTests(deferMode: boolean): void {
     const child = target.children[0]
     expect(child.outerHTML).toBe(`<div>teleported</div>`)
     expect(tRefInMounted).toBe(child)
+  })
+
+  test('with insertion state', async () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+
+    const Comp = defineVaporComponent({
+      setup() {
+        return template('content')()
+      },
+    })
+
+    const { app, mount } = define({
+      setup() {
+        const n0 = template('<div id="tt"></div>')()
+        const n4 = template('<div></div>')() as any
+        setInsertionState(n4, null, true)
+        createComponent(
+          VaporTeleport,
+          { to: () => '#tt' },
+          {
+            default: () =>
+              createComponent(Comp, null, {
+                default: () => template('content')(),
+              }),
+          },
+        )
+        return [n0, n4]
+      },
+    }).create()
+
+    mount(root)
+
+    await nextTick()
+    const target = document.querySelector('#tt')!
+    expect(target.innerHTML).toBe('content')
+    app.unmount()
   })
 }
