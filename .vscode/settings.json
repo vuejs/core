@@ -4,7 +4,7 @@
 
   "cSpell.enabledLanguageIds": ["markdown", "plaintext", "text", "yml"],
 
-  // Use oxfmt to format TypeScript, JavaScript and JSON files
+  // Use Oxc to format TypeScript, JavaScript and JSON files
   "[typescript]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
   },
