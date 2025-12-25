@@ -16,7 +16,7 @@ import {
   isStaticProperty,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import type { Identifier, Node } from '@babel/types'
+import { type Identifier, type Node, isCallExpression } from '@babel/types'
 import type { CodegenContext } from '../generate'
 import { isConstantExpression } from '../utils'
 import { type CodeFragment, NEWLINE, buildCodeFragment } from './utils'
@@ -337,13 +337,16 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
             end: id.end!,
           })
         })
-        registerVariable(
-          memberExp,
-          exp,
-          false,
-          { start: parent.start!, end: parent.end! },
-          parentStack,
-        )
+        const grandparent = parentStack[parentStack.length - 2]
+        if (grandparent && !isCallExpression(grandparent)) {
+          registerVariable(
+            memberExp,
+            exp,
+            false,
+            { start: parent.start!, end: parent.end! },
+            parentStack,
+          )
+        }
       } else if (!parentStack.some(isMemberExpression)) {
         registerVariable(
           currentNode.name,

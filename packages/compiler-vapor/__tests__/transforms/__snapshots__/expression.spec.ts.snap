@@ -11,6 +11,48 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: expression > duplicate expressions 1`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _foo_bar = _ctx.foo + _ctx.bar
+    _setText(n0, _toDisplayString(_foo_bar) + " " + _toDisplayString(_foo_bar))
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: expression > duplicate expressions 2`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _msg_replace_1_2 = _ctx.msg.replace('1', '2')
+    _setText(n0, _toDisplayString(_msg_replace_1_2) + " " + _toDisplayString(_msg_replace_1_2))
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: expression > duplicate expressions 3`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _msg = _ctx.msg
+    _setText(n0, _toDisplayString(_msg.replace('1', '2')) + " " + _toDisplayString(_msg.replace('1', '3')))
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: expression > empty interpolation 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template(" ")
