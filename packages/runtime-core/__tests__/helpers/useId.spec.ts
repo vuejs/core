@@ -28,7 +28,7 @@ async function runOnClient(factory: TestCaseFactory) {
 async function runOnServer(factory: TestCaseFactory) {
   const [app, _] = await factory()
   return (await renderToString(app))
-    .replace(/<!--[\[\]]-->/g, '') // remove fragment wrappers
+    .replace(/<!--[[\]]-->/g, '') // remove fragment wrappers
     .trim()
 }
 

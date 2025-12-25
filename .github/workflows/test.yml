@@ -124,7 +124,7 @@ jobs:
 
       - run: pnpm install
 
-      - name: Run eslint
+      - name: Run oxlint
         run: pnpm run lint
 
       - name: Run oxfmt

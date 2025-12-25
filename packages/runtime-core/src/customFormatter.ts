@@ -12,7 +12,7 @@ import type { ComponentInternalInstance, ComponentOptions } from './component'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 
 export function initCustomFormatter(): void {
-  /* eslint-disable no-restricted-globals */
+  /* oxlint-disable no-restricted-globals */
   if (!__DEV__ || typeof window === 'undefined') {
     return
   }

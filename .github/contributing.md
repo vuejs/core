@@ -92,8 +92,8 @@ A high level overview of tools used:
 - [Vite](https://vitejs.dev/) and [ESBuild](https://esbuild.github.io/) for development bundling
 - [Rollup](https://rollupjs.org) for production bundling
 - [Vitest](https://vitest.dev/) for unit testing
+- [oxlint](https://oxc.rs/docs/guide/usage/linter.html) for static error prevention (outside of types)
 - [oxfmt](https://oxc.rs/docs/guide/usage/formatter.html) for code formatting
-- [ESLint](https://eslint.org/) for static error prevention (outside of types)
 
 ## Git Hooks
 
@@ -271,7 +271,7 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 The packages can import each other directly using their package names. Note that when importing a package, the name listed in its `package.json` should be used. Most of the time the `@vue/` prefix is needed:
 
 ```js
-import { h } from '@vue/runtime-core'
+import { h } from "@vue/runtime-core";
 ```
 
 This is made possible via several configurations:
