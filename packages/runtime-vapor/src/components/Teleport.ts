@@ -44,6 +44,11 @@ export const VaporTeleportImpl = {
 }
 
 export class TeleportFragment extends VaporFragment {
+  /**
+   * @internal marker for duck typing to avoid direct instanceof check
+   * which prevents tree-shaking of TeleportFragment
+   */
+  readonly __isTeleportFragment = true
   anchor?: Node
   private rawProps?: LooseRawProps
   private resolvedProps?: TeleportProps
@@ -342,6 +347,14 @@ export function isVaporTeleport(
   value: unknown,
 ): value is typeof VaporTeleportImpl {
   return !!(value && (value as any).__isTeleport && (value as any).__vapor)
+}
+
+/**
+ * Use duck typing to check for TeleportFragment instead of instanceof,
+ * allowing tree-shaking when Teleport is not used.
+ */
+export function isTeleportFragment(value: unknown): value is TeleportFragment {
+  return !!(value && (value as any).__isTeleportFragment)
 }
 
 function locateTeleportEndAnchor(

@@ -21,7 +21,7 @@ import {
   type VaporFragment,
   isFragment,
 } from './fragment'
-import { TeleportFragment } from './components/Teleport'
+import { isTeleportFragment } from './components/Teleport'
 
 export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
@@ -270,7 +270,7 @@ export function normalizeBlock(block: Block): Node[] {
   } else if (isVaporComponent(block)) {
     nodes.push(...normalizeBlock(block.block!))
   } else {
-    if (block instanceof TeleportFragment) {
+    if (isTeleportFragment(block)) {
       nodes.push(block.placeholder!, block.anchor!)
     } else {
       nodes.push(...normalizeBlock(block.nodes))
