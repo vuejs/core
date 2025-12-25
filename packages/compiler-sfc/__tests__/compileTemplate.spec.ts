@@ -395,8 +395,8 @@ test('should generate the correct imports expression', () => {
     `,
     ssr: true,
   })
-  expect(code).toMatch(`_ssrRenderAttr(\"src\", _imports_1)`)
-  expect(code).toMatch(`_createVNode(\"img\", { src: _imports_1 })`)
+  expect(code).toMatch(`_ssrRenderAttr("src", _imports_1)`)
+  expect(code).toMatch(`_createVNode("img", { src: _imports_1 })`)
 })
 
 // #3874

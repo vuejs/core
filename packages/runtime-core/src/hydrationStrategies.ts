@@ -35,7 +35,7 @@ export const hydrateOnIdle: HydrationStrategyFactory<number> =
 
 function elementIsVisibleInViewport(el: Element) {
   const { top, left, bottom, right } = el.getBoundingClientRect()
-  // eslint-disable-next-line no-restricted-globals
+  // oxlint-disable-next-line no-restricted-globals
   const { innerHeight, innerWidth } = window
   return (
     ((top > 0 && top < innerHeight) || (bottom > 0 && bottom < innerHeight)) &&

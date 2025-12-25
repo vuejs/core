@@ -1959,6 +1959,7 @@ describe('SSR hydration', () => {
       expect(container.innerHTML).toBe(
         `<div show="true"><!--[--><div><div><div>foo</div></div></div><div>1</div><!--]--></div>`,
       )
+      // oxlint-disable-next-line no-useless-catch
     } catch (e) {
       throw e
     } finally {

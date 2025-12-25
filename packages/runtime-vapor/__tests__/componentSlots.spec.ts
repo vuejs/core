@@ -1197,7 +1197,7 @@ describe('component: slots', () => {
       const createTestApp = (
         rootComponent: any,
         foo: Ref<string>,
-        show: Ref<Boolean>,
+        show: Ref<boolean>,
       ) => {
         return {
           setup() {

@@ -7,13 +7,13 @@
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
     "build-dts": "tsc -p tsconfig.build.json --noCheck && rollup -c rollup.dts.config.js",
-    "clean": "rimraf --glob packages/*/dist temp .eslintcache",
+    "clean": "rimraf --glob packages/*/dist temp",
     "size": "run-s \"size-*\" && node scripts/usage-size.js",
     "size-global": "node scripts/build.js vue runtime-dom compiler-dom -f global -p --size",
     "size-esm-runtime": "node scripts/build.js vue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime-shared runtime-dom runtime-core reactivity shared runtime-vapor -f esm-bundler",
     "check": "tsc --incremental --noEmit",
-    "lint": "eslint --cache .",
+    "lint": "oxlint",
     "format": "prettier --write --cache .",
     "format-check": "prettier --check --cache .",
     "test": "vitest",
@@ -54,7 +54,7 @@
       "prettier --write"
     ],
     "*.ts?(x)": [
-      "eslint --fix",
+      "oxlint --fix",
       "prettier --parser=typescript --write"
     ]
   },
@@ -74,16 +74,13 @@
     "@types/node": "^24.10.4",
     "@types/semver": "^7.7.1",
     "@types/serve-handler": "^6.1.4",
-    "@vitest/ui": "^3.0.2",
     "@vitest/coverage-v8": "^3.2.4",
-    "@vitest/eslint-plugin": "^1.5.2",
+    "@vitest/ui": "^3.0.2",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
     "esbuild": "^0.27.1",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "eslint": "^9.39.2",
-    "eslint-plugin-import-x": "^4.16.1",
     "estree-walker": "catalog:",
     "jsdom": "^27.3.0",
     "lint-staged": "^16.2.7",
@@ -91,6 +88,7 @@
     "magic-string": "^0.30.21",
     "markdown-table": "^3.0.4",
     "marked": "13.0.3",
+    "oxlint": "^1.24.0",
     "npm-run-all2": "^8.0.4",
     "picocolors": "^1.1.1",
     "prettier": "^3.7.4",
@@ -109,7 +107,6 @@
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.8.1",
     "typescript": "~5.6.2",
-    "typescript-eslint": "^8.49.0",
     "vite": "catalog:",
     "vitest": "^3.2.4"
   }
