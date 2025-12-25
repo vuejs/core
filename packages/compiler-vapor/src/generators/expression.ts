@@ -337,10 +337,12 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
             end: id.end!,
           })
         })
-        const grandparent = parentStack[parentStack.length - 2]
-        if (grandparent && isCallExpression(grandparent)) {
+
+        const parentOfMemberExp = parentStack[parentStack.length - 2]
+        if (parentOfMemberExp && isCallExpression(parentOfMemberExp)) {
           return
         }
+
         registerVariable(
           memberExp,
           exp,

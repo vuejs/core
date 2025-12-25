@@ -954,4 +954,24 @@ describe('cache multiple access', () => {
     expect(code).matchSnapshot()
     expect(code).not.contains('const _bar = _ctx.bar')
   })
+
+  test('should not cache method call with different arguments', () => {
+    const { code } = compileWithVBind(`
+      <div :id="msg.replace('1', '2')"></div>
+      <div :id="msg.replace('1', '3')"></div>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const _msg = _ctx.msg')
+    expect(code).not.contains('_ctx.msg.replace')
+  })
+
+  test('should cache method call with same arguments', () => {
+    const { code } = compileWithVBind(`
+      <div :id="msg.replace('1', '2')"></div>
+      <div :id="msg.replace('1', '2')"></div>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(`const _msg_replace_1_2 = _ctx.msg.replace('1', '2')`)
+    expect(code).not.contains('const _msg = _ctx.msg')
+  })
 })

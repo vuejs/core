@@ -68,28 +68,4 @@ describe('compiler: expression', () => {
 
     expect(code4).toMatchSnapshot()
   })
-
-  test('duplicate expressions', () => {
-    const { code } = compileWithExpression(`
-      {{ foo + bar }}
-      {{ foo + bar }}
-    `)
-    const { code: code2 } = compileWithExpression(`
-      {{ msg.replace('1', '2') }}
-      {{ msg.replace('1', '2') }}
-    `)
-    const { code: code3 } = compileWithExpression(`
-      {{ msg.replace('1', '2') }}
-      {{ msg.replace('1', '3') }}
-    `)
-
-    expect(code).toMatchSnapshot()
-    expect(code).contains(`_foo_bar`)
-
-    expect(code2).toMatchSnapshot()
-    expect(code2).contains(`_msg_replace_1_2`)
-
-    expect(code3).toMatchSnapshot()
-    expect(code3).not.toContain(`_msg_replace`)
-  })
 })
