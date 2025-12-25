@@ -338,15 +338,16 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
           })
         })
         const grandparent = parentStack[parentStack.length - 2]
-        if (grandparent && !isCallExpression(grandparent)) {
-          registerVariable(
-            memberExp,
-            exp,
-            false,
-            { start: parent.start!, end: parent.end! },
-            parentStack,
-          )
+        if (grandparent && isCallExpression(grandparent)) {
+          return
         }
+        registerVariable(
+          memberExp,
+          exp,
+          false,
+          { start: parent.start!, end: parent.end! },
+          parentStack,
+        )
       } else if (!parentStack.some(isMemberExpression)) {
         registerVariable(
           currentNode.name,
