@@ -44,9 +44,11 @@ const [config, prodConfig] = createConfigsForPackage({
 
 const configToUse = prod ? prodConfig : config
 
+// @ts-expect-error
 console.log(`watching: ${configToUse.output.file}`)
 watch(configToUse).on('event', event => {
   if (event.code === 'BUNDLE_END') {
+    // @ts-expect-error
     console.log(`rebuilt ${config.output.file} in ${event.duration}ms`)
   }
 })

@@ -5,20 +5,22 @@ Produces production builds and stitches together d.ts files.
 
 To specify the package to build, simply pass its name and the desired build
 formats to output (defaults to `buildOptions.formats` specified in that package,
-or "esm,cjs"):
+or ["esm-bundler", "cjs"]):
 
 ```
 # name supports fuzzy match. will build all packages with name containing "dom":
 nr build dom
 
 # specify the format to output
-nr build core --formats cjs
+nr build vue -f cjs
+
+# to specify multiple formats, separate with "+":
+nr build vue -f esm-bundler+esm-browser
 ```
 */
 
 import fs from 'node:fs'
 import { parseArgs } from 'node:util'
-import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import pico from 'picocolors'
@@ -163,34 +165,63 @@ async function build(target) {
     ? `packages-private`
     : `packages`
   const pkgDir = path.resolve(`${pkgBase}/${target}`)
-  const pkg = JSON.parse(readFileSync(`${pkgDir}/package.json`, 'utf-8'))
+  const pkg = JSON.parse(fs.readFileSync(`${pkgDir}/package.json`, 'utf-8'))
 
   // if this is a full build (no specific targets), ignore private packages
   if ((isRelease || !targets.length) && pkg.private) {
     return
   }
 
+  /**
+   * @type {string[]}
+   */
+  let resolvedFormats
+  if (formats) {
+    const isNegation = formats.startsWith('~')
+    resolvedFormats = (isNegation ? formats.slice(1) : formats).split('+')
+    const pkgFormats = pkg.buildOptions?.formats
+    if (pkgFormats) {
+      if (isNegation) {
+        resolvedFormats = pkgFormats.filter(
+          (/** @type {string} */ f) => !resolvedFormats.includes(f),
+        )
+      } else {
+        resolvedFormats = resolvedFormats.filter(f => pkgFormats.includes(f))
+      }
+    }
+    if (!resolvedFormats.length) {
+      return
+    }
+  }
+
   // if building a specific format, do not remove dist.
-  if (!formats && existsSync(`${pkgDir}/dist`)) {
+  if (!formats && fs.existsSync(`${pkgDir}/dist`)) {
     fs.rmSync(`${pkgDir}/dist`, { recursive: true })
   }
 
-  const env = {
-    ...process.env,
-    TARGET: target,
-    COMMIT: commit,
-    NODE_ENV:
-      (pkg.buildOptions && pkg.buildOptions.env) ||
-      (devOnly ? 'development' : 'production'),
-    ...(formats ? { FORMATS: formats } : null),
-    ...(prodOnly ? { PROD_ONLY: true } : null),
-    ...(sourceMap ? { SOURCE_MAP: true } : null),
-  }
+  const env =
+    (pkg.buildOptions && pkg.buildOptions.env) ||
+    (devOnly ? 'development' : 'production')
 
-  await exec('rollup', ['-c'], {
-    stdio: 'inherit',
-    env,
-  })
+  await exec(
+    'rollup',
+    [
+      '-c',
+      '--environment',
+      [
+        `COMMIT:${commit}`,
+        `NODE_ENV:${env}`,
+        `TARGET:${target}`,
+        // @ts-expect-error
+        resolvedFormats ? `FORMATS:${resolvedFormats.join('+')}` : ``,
+        prodOnly ? `PROD_ONLY:true` : ``,
+        sourceMap ? `SOURCE_MAP:true` : ``,
+      ]
+        .filter(Boolean)
+        .join(','),
+    ],
+    { stdio: 'inherit' },
+  )
 }
 
 /**
@@ -199,7 +230,10 @@ async function build(target) {
  * @returns {Promise<void>}
  */
 async function checkAllSizes(targets) {
-  if (devOnly || (formats && !formats.includes('global'))) {
+  if (
+    devOnly ||
+    (formats && (formats.startsWith('~') || !formats.includes('global')))
+  ) {
     return
   }
   console.log()
@@ -228,7 +262,7 @@ async function checkSize(target) {
  * @returns {Promise<void>}
  */
 async function checkFileSize(filePath) {
-  if (!existsSync(filePath)) {
+  if (!fs.existsSync(filePath)) {
     return
   }
   const file = fs.readFileSync(filePath)

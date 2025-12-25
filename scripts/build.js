@@ -20,7 +20,14 @@ nr build vue -f esm-bundler+esm-browser
 */
 
 import { rolldown } from 'rolldown'
-import fs from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { parseArgs } from 'node:util'
 import path from 'node:path'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
@@ -33,7 +40,7 @@ import { scanEnums } from './inline-enums.js'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
-const privatePackages = fs.readdirSync('packages-private')
+const privatePackages = readdirSync('packages-private')
 const commit = spawnSync('git', ['rev-parse', '--short=7', 'HEAD'])
   .stdout.toString()
   .trim()
@@ -91,7 +98,7 @@ const sizeDir = path.resolve('temp/size')
 run()
 
 async function run() {
-  if (size) fs.mkdirSync(sizeDir, { recursive: true })
+  if (size) mkdirSync(sizeDir, { recursive: true })
   const removeCache = scanEnums()
   try {
     const resolvedTargets = targets.length
@@ -132,7 +139,7 @@ async function buildAll(targets) {
           }),
         ).then(files => {
           const from = process.cwd()
-          files.forEach(f => {
+          files.forEach((/** @type {string} */ f) => {
             count++
             console.log(
               pico.gray('built: ') + pico.green(path.relative(from, f)),
@@ -165,26 +172,26 @@ function createConfigsForTarget(target) {
     return
   }
 
-  let resolvedFormats
-  if (formats) {
-    const isNegation = formats.startsWith('~')
-    resolvedFormats = (isNegation ? formats.slice(1) : formats).split('+')
-    const pkgFormats = pkg.buildOptions?.formats
-    if (pkgFormats) {
-      if (isNegation) {
-        resolvedFormats = pkgFormats.filter(f => !resolvedFormats.includes(f))
-      } else {
-        resolvedFormats = resolvedFormats.filter(f => pkgFormats.includes(f))
-      }
-    }
-    if (!resolvedFormats.length) {
-      return
-    }
-  }
+  // let resolvedFormats
+  // if (formats) {
+  //   const isNegation = formats.startsWith('~')
+  //   resolvedFormats = (isNegation ? formats.slice(1) : formats).split('+')
+  //   const pkgFormats = pkg.buildOptions?.formats
+  //   if (pkgFormats) {
+  //     if (isNegation) {
+  //       resolvedFormats = pkgFormats.filter(f => !resolvedFormats.includes(f))
+  //     } else {
+  //       resolvedFormats = resolvedFormats.filter(f => pkgFormats.includes(f))
+  //     }
+  //   }
+  //   if (!resolvedFormats.length) {
+  //     return
+  //   }
+  // }
 
   // if building a specific format, do not remove dist.
-  if (!formats && fs.existsSync(`${pkgDir}/dist`)) {
-    fs.rmSync(`${pkgDir}/dist`, { recursive: true })
+  if (!formats && existsSync(`${pkgDir}/dist`)) {
+    rmSync(`${pkgDir}/dist`, { recursive: true })
   }
 
   return createConfigsForPackage({
@@ -205,10 +212,7 @@ function createConfigsForTarget(target) {
  * @returns {Promise<void>}
  */
 async function checkAllSizes(targets) {
-  if (
-    devOnly ||
-    (formats && (formats.startsWith('~') || !formats.includes('global')))
-  ) {
+  if (devOnly || (formats && !formats.includes('global'))) {
     return
   }
   console.log()
@@ -237,10 +241,10 @@ async function checkSize(target) {
  * @returns {Promise<void>}
  */
 async function checkFileSize(filePath) {
-  if (!fs.existsSync(filePath)) {
+  if (!existsSync(filePath)) {
     return
   }
-  const file = fs.readFileSync(filePath)
+  const file = readFileSync(filePath)
   const fileName = path.basename(filePath)
 
   const gzipped = gzipSync(file)
@@ -255,7 +259,7 @@ async function checkFileSize(filePath) {
   )
 
   if (size)
-    fs.writeFileSync(
+    writeFileSync(
       path.resolve(sizeDir, `${fileName}.json`),
       JSON.stringify({
         file: fileName,

@@ -97,7 +97,11 @@ async function main() {
  */
 async function generateBundle(preset) {
   const id = 'virtual:entry'
-  const content = `export { ${preset.imports.join(', ')} } from '${vuePath}'`
+  const exportSpecifiers =
+    preset.imports === '*'
+      ? `* as ${preset.name}`
+      : `{ ${preset.imports.join(', ')} }`
+  const content = `export ${exportSpecifiers} from '${vuePath}'`
 
   const result = await rolldown({
     input: id,
