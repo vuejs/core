@@ -16,7 +16,7 @@ import {
   isStaticProperty,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import { type Identifier, type Node, isCallExpression } from '@babel/types'
+import type { Identifier, Node } from '@babel/types'
 import type { CodegenContext } from '../generate'
 import { isConstantExpression } from '../utils'
 import { type CodeFragment, NEWLINE, buildCodeFragment } from './utils'
@@ -686,6 +686,12 @@ function extractMemberExpression(
     default:
       return ''
   }
+}
+
+const isCallExpression = (node: Node) => {
+  return (
+    node.type === 'CallExpression' || node.type === 'OptionalCallExpression'
+  )
 }
 
 const isMemberExpression = (node: Node) => {
