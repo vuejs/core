@@ -334,10 +334,14 @@ export class TeleportFragment extends VaporFragment {
   }
 }
 
+/**
+ * Use duck typing to check for VaporTeleport instead of direct reference
+ * to VaporTeleportImpl, allowing tree-shaking when Teleport is not used.
+ */
 export function isVaporTeleport(
   value: unknown,
 ): value is typeof VaporTeleportImpl {
-  return value === VaporTeleportImpl
+  return !!(value && (value as any).__isTeleport && (value as any).__vapor)
 }
 
 function locateTeleportEndAnchor(
