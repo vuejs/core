@@ -7,7 +7,7 @@ import {
 import type { ComponentPublicInstance } from './componentPublicInstance'
 import { ErrorTypeStrings, callWithAsyncErrorHandling } from './errorHandling'
 import { warn } from './warning'
-import { toHandlerKey } from '@vue/shared'
+import { invokeArrayFns, toHandlerKey } from '@vue/shared'
 import {
   type DebuggerEvent,
   pauseTracking,
@@ -61,6 +61,14 @@ export function injectHook(
           : ``),
     )
   }
+}
+
+export const triggerHooks = (
+  instance: ComponentInternalInstance,
+  type: LifecycleHooks,
+): void => {
+  const hooks = instance[type]
+  if (hooks) invokeArrayFns(hooks)
 }
 
 const createHook =

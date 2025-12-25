@@ -9,7 +9,6 @@ import {
 import {
   NOOP,
   extend,
-  invokeArrayFns,
   isArray,
   isFunction,
   isObject,
@@ -58,6 +57,8 @@ import {
   warnDeprecation,
 } from './compatConfig'
 import type { LegacyPublicInstance } from './instance'
+import { triggerHooks } from '../apiLifecycle'
+import { LifecycleHooks } from '../enums'
 
 /**
  * @deprecated the default `Vue` export has been removed in Vue 3. The type for
@@ -577,11 +578,8 @@ function installCompatMount(
         }
         delete app._container.__vue_app__
       } else {
-        const { bum, scope, um } = instance
-        // beforeDestroy hooks
-        if (bum) {
-          invokeArrayFns(bum)
-        }
+        const { scope } = instance
+        triggerHooks(instance, LifecycleHooks.BEFORE_UNMOUNT)
         if (isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)) {
           instance.emit('hook:beforeDestroy')
         }
@@ -589,10 +587,7 @@ function installCompatMount(
         if (scope) {
           scope.stop()
         }
-        // unmounted hook
-        if (um) {
-          invokeArrayFns(um)
-        }
+        triggerHooks(instance, LifecycleHooks.UNMOUNTED)
         if (isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)) {
           instance.emit('hook:destroyed')
         }

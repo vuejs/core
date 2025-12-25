@@ -23,15 +23,9 @@ import {
   onMounted,
   onUnmounted,
   onUpdated,
+  triggerHooks,
 } from '../apiLifecycle'
-import {
-  ShapeFlags,
-  invokeArrayFns,
-  isArray,
-  isRegExp,
-  isString,
-  remove,
-} from '@vue/shared'
+import { ShapeFlags, isArray, isRegExp, isString, remove } from '@vue/shared'
 import { watch } from '../apiWatch'
 import {
   type ElementNamespace,
@@ -151,9 +145,7 @@ const KeepAliveImpl: ComponentOptions = {
       )
       queuePostRenderEffect(() => {
         instance.isDeactivated = false
-        if (instance.a) {
-          invokeArrayFns(instance.a)
-        }
+        triggerHooks(instance, LifecycleHooks.ACTIVATED)
         const vnodeHook = vnode.props && vnode.props.onVnodeMounted
         if (vnodeHook) {
           invokeVNodeHook(vnodeHook, instance.parent, vnode)
@@ -173,9 +165,7 @@ const KeepAliveImpl: ComponentOptions = {
 
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
-        if (instance.da) {
-          invokeArrayFns(instance.da)
-        }
+        triggerHooks(instance, LifecycleHooks.DEACTIVATED)
         const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
         if (vnodeHook) {
           invokeVNodeHook(vnodeHook, instance.parent, vnode)

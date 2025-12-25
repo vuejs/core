@@ -87,6 +87,8 @@ import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
 import type { VueElement } from '@vue/runtime-dom'
+import { triggerHooks } from './apiLifecycle'
+import { LifecycleHooks } from './enums'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -1323,14 +1325,11 @@ function baseCreateRenderer(
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
-        const { bm, m, parent, root, type } = instance
+        const { m, parent, root, type } = instance
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
         toggleRecurse(instance, false)
-        // beforeMount hook
-        if (bm) {
-          invokeArrayFns(bm)
-        }
+        triggerHooks(instance, LifecycleHooks.BEFORE_MOUNT)
         // onVnodeBeforeMount
         if (
           !isAsyncWrapperVNode &&
@@ -2316,14 +2315,11 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, job, subTree, um, m, a } = instance
+    const { scope, job, subTree, um, m, a } = instance
     invalidateMount(m)
     invalidateMount(a)
 
-    // beforeUnmount hook
-    if (bum) {
-      invokeArrayFns(bum)
-    }
+    triggerHooks(instance, LifecycleHooks.BEFORE_UNMOUNT)
 
     if (
       __COMPAT__ &&
