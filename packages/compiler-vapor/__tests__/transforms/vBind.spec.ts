@@ -974,4 +974,13 @@ describe('cache multiple access', () => {
     expect(code).contains(`const _msg_replace_1_2 = _ctx.msg.replace('1', '2')`)
     expect(code).not.contains('const _msg = _ctx.msg')
   })
+
+  test('should cache optional call expression with same arguments', () => {
+    const { code } = compileWithVBind(`
+      <div :id="obj[foo?.(bar)]"></div>
+      <div :id="obj[foo?.(bar)]"></div>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(`const _obj_foo_bar = _ctx.obj[_ctx.foo?.(_ctx.bar)]`)
+  })
 })
