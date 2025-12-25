@@ -14,8 +14,8 @@
     "size-esm": "node scripts/build.js runtime-shared runtime-dom runtime-core reactivity shared runtime-vapor -f esm-bundler",
     "check": "tsc --incremental --noEmit",
     "lint": "oxlint",
-    "format": "prettier --write --cache .",
-    "format-check": "prettier --check --cache .",
+    "format": "oxfmt",
+    "format-check": "oxfmt --check",
     "test": "vitest",
     "test-unit": "vitest --project unit*",
     "test-e2e": "node scripts/build.js vue -f global+esm-browser-vapor -d && vitest --project e2e",
@@ -51,15 +51,15 @@
   },
   "lint-staged": {
     "*.{js,json}": [
-      "prettier --write"
+      "oxfmt --no-error-on-unmatched-pattern"
     ],
     "*.ts?(x)": [
       "oxlint --fix",
-      "prettier --parser=typescript --write"
+      "oxfmt --no-error-on-unmatched-pattern"
     ]
   },
   "engines": {
-    "node": ">=18.12.0"
+    "node": ">=22.12.0"
   },
   "devDependencies": {
     "@babel/parser": "catalog:",
@@ -90,8 +90,8 @@
     "marked": "13.0.3",
     "oxlint": "^1.24.0",
     "npm-run-all2": "^8.0.4",
+    "oxfmt": "^0.20.0",
     "picocolors": "^1.1.1",
-    "prettier": "^3.7.4",
     "pretty-bytes": "^7.1.0",
     "pug": "^3.0.3",
     "puppeteer": "~24.33.0",

@@ -41,7 +41,7 @@
         'simple-git-hooks',
         'lint-staged',
         'oxlint',
-        'prettier{/,}**',
+        'oxfmt{/,}**',
       ],
     },
   ],
