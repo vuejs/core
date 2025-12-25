@@ -421,6 +421,10 @@ function createVDOMComponent(
       },
       instance as any,
     )
+
+    if (isMounted && rawRef) {
+      vdomSetRef(rawRef, null, null, vnode)
+    }
   }
 
   return frag
