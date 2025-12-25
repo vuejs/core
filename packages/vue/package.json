@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "3.5.12",
+  "version": "3.6.0-beta.1",
   "description": "The progressive JavaScript framework for building modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -78,7 +78,8 @@
       "global",
       "global-runtime",
       "esm-browser",
-      "esm-browser-runtime"
+      "esm-browser-runtime",
+      "esm-browser-vapor"
     ]
   },
   "repository": {
@@ -98,6 +99,7 @@
     "@vue/shared": "workspace:*",
     "@vue/compiler-dom": "workspace:*",
     "@vue/runtime-dom": "workspace:*",
+    "@vue/runtime-vapor": "workspace:*",
     "@vue/compiler-sfc": "workspace:*",
     "@vue/server-renderer": "workspace:*"
   },

@@ -1,469 +1,402 @@
-## [3.5.12](https://github.com/vuejs/core/compare/v3.5.11...v3.5.12) (2024-10-11)
+# [3.6.0-beta.1](https://github.com/vuejs/core/compare/v3.5.26...v3.6.0-beta.1) (2025-12-23)
 
 
-### Bug Fixes
+Vue 3.6 is now entering beta phase as we have completed the intended feature set for Vapor Mode as outlined in the [roadmap](https://github.com/vuejs/core/issues/13687)! Vapor Mode now has feature parity with all stable features in Virtual DOM mode. Suspense is not supported in Vapor-only mode, but you can render Vapor components inside a VDOM Suspense.
 
-* **compiler-dom:** avoid stringify option with null value ([#12096](https://github.com/vuejs/core/issues/12096)) ([f6d9926](https://github.com/vuejs/core/commit/f6d99262364b7444ebab8742158599e8cdd79eaa)), closes [#12093](https://github.com/vuejs/core/issues/12093)
-* **compiler-sfc:**  do not skip TSInstantiationExpression when transforming props destructure ([#12064](https://github.com/vuejs/core/issues/12064)) ([d3ecde8](https://github.com/vuejs/core/commit/d3ecde8a696ff62c8d0ab067fd1d7ee0565b63c5))
-* **compiler-sfc:** use sass modern api if available and avoid deprecation warning ([#11992](https://github.com/vuejs/core/issues/11992)) ([4474c11](https://github.com/vuejs/core/commit/4474c113d1fb1c26298dd6794275d5b5c7cc4d93))
-* **compiler:** clone loc to `ifNode` ([#12131](https://github.com/vuejs/core/issues/12131)) ([cde2c06](https://github.com/vuejs/core/commit/cde2c0671b00d4f6111fcbd7aa76e45872f20b0c)), closes [vuejs/language-tools#4911](https://github.com/vuejs/language-tools/issues/4911)
-* **custom-element:** properly remove hyphenated attribute ([#12143](https://github.com/vuejs/core/issues/12143)) ([e16e9a7](https://github.com/vuejs/core/commit/e16e9a7341e7cfb3c443da4e5e5b06e8158712c3)), closes [#12139](https://github.com/vuejs/core/issues/12139)
-* **defineModel:** handle kebab-case model correctly ([#12063](https://github.com/vuejs/core/issues/12063)) ([c0418a3](https://github.com/vuejs/core/commit/c0418a3b8fa96a0b108ab71b7aab5d3388f90557)), closes [#12060](https://github.com/vuejs/core/issues/12060)
-* **deps:** update dependency monaco-editor to ^0.52.0 ([#12119](https://github.com/vuejs/core/issues/12119)) ([f7cbea2](https://github.com/vuejs/core/commit/f7cbea2111c7770a180b640f36f6a5d4d6abc698))
-* **hydration:** provide compat fallback for idle callback hydration strategy ([#11935](https://github.com/vuejs/core/issues/11935)) ([1ae545a](https://github.com/vuejs/core/commit/1ae545a3786abef983be1c969726489685569c92))
-* **reactivity:** trigger reactivity for Map key `undefined` ([#12055](https://github.com/vuejs/core/issues/12055)) ([7ad289e](https://github.com/vuejs/core/commit/7ad289e1e7fea654524008ff91e43a8b8a55ef22)), closes [#12054](https://github.com/vuejs/core/issues/12054)
-* **runtime-core:** allow symbol values for slot prop key ([#12069](https://github.com/vuejs/core/issues/12069)) ([d9d4d4e](https://github.com/vuejs/core/commit/d9d4d4e158cd51a9ddda249f29de8467f60b2792)), closes [#12068](https://github.com/vuejs/core/issues/12068)
-* **runtime-core:** fix required prop check false positive for kebab-case edge cases  ([#12034](https://github.com/vuejs/core/issues/12034)) ([9da1ac1](https://github.com/vuejs/core/commit/9da1ac156552ac449754e1373aac7e349841becb)), closes [#12011](https://github.com/vuejs/core/issues/12011)
-* **runtime-dom:** prevent unnecessary updates in v-model checkbox when value is unchanged ([#12146](https://github.com/vuejs/core/issues/12146)) ([ea943af](https://github.com/vuejs/core/commit/ea943afe404c4ca4b729906c5e8daf7aa2ccde9b)), closes [#12144](https://github.com/vuejs/core/issues/12144)
-* **teleport:** handle disabled teleport with updateCssVars ([#12113](https://github.com/vuejs/core/issues/12113)) ([76a8223](https://github.com/vuejs/core/commit/76a8223199c148b79a5c0ea19e235164809760cd)), closes [#12112](https://github.com/vuejs/core/issues/12112)
-* **transition/ssr:** make transition appear work with Suspense in SSR ([#12047](https://github.com/vuejs/core/issues/12047)) ([f1a4f67](https://github.com/vuejs/core/commit/f1a4f67aedfe83e440c54222213f070774faa421)), closes [#12046](https://github.com/vuejs/core/issues/12046)
-* **types:** ensure `this.$props` type does not include `string` ([#12123](https://github.com/vuejs/core/issues/12123)) ([704173e](https://github.com/vuejs/core/commit/704173e24276706de672cca6c9507e4dd9651197)), closes [#12122](https://github.com/vuejs/core/issues/12122)
-* **types:** retain union type narrowing with defaults applied ([#12108](https://github.com/vuejs/core/issues/12108)) ([05685a9](https://github.com/vuejs/core/commit/05685a9d7c42d4cd37169b867833776b91154fed)), closes [#12106](https://github.com/vuejs/core/issues/12106)
-* **useId:** ensure useId consistency when using serverPrefetch ([#12128](https://github.com/vuejs/core/issues/12128)) ([b4d3534](https://github.com/vuejs/core/commit/b4d35349d8bc39aa15bd3f1094d230e5928b177c)), closes [#12102](https://github.com/vuejs/core/issues/12102)
-* **watch:** watchEffect clean-up with SSR ([#12097](https://github.com/vuejs/core/issues/12097)) ([b094c72](https://github.com/vuejs/core/commit/b094c72b3d40c52c7124f145a9db028509a11202)), closes [#11956](https://github.com/vuejs/core/issues/11956)
+3.6 also includes a major refactor of `@vue/reactivity` based on [alien-signals](https://github.com/stackblitz/alien-signals), which significantly improves the reactivity system's performance and memory usage.
+
+For more details about Vapor Mode, see [About Vapor Mode](#about-vapor-mode) section at the end of this release note.
+
+### Features
+
+* **runtime-vapor:** support render block in createDynamicComponent ([#14213](https://github.com/vuejs/core/issues/14213)) ([ddc1bae](https://github.com/vuejs/core/commit/ddc1baecb974721e1b6f2570ffab4e783c397418))
 
 
 ### Performance Improvements
 
-* **reactivity:** avoid unnecessary recursion in removeSub ([#12135](https://github.com/vuejs/core/issues/12135)) ([ec917cf](https://github.com/vuejs/core/commit/ec917cfdb9d0169cd0835d3a0e28244242657dc9))
+* **runtime-vapor:** implement dynamic props/slots source caching ([#14208](https://github.com/vuejs/core/issues/14208)) ([1428c06](https://github.com/vuejs/core/commit/1428c06466b3c69385d4755213ef1dfc604d3f97))
+
+### Bug Fixes
+
+* **compiler-vapor:** camelize kebab-case component event handlers ([#14211](https://github.com/vuejs/core/issues/14211)) ([b205408](https://github.com/vuejs/core/commit/b205408ff0b0a611fc4f93c7e12b89bbae506a04))
+* **compiler-vapor:** merge component v-model onUpdate handlers ([#14229](https://github.com/vuejs/core/issues/14229)) ([e6bff23](https://github.com/vuejs/core/commit/e6bff23a4a1e25fc405d2392dd3d083f08651c2b))
+* **compiler-vapor:** wrap handler values in functions for dynamic v-on ([#14218](https://github.com/vuejs/core/issues/14218)) ([1e3e1ef](https://github.com/vuejs/core/commit/1e3e1ef2bf5d61e82c3220f6e2f3414333fdef8b))
+* **hmr:** suppress `provide()` warning during HMR updates for mounted instances ([#14195](https://github.com/vuejs/core/issues/14195)) ([d823d6a](https://github.com/vuejs/core/commit/d823d6a325e173192c1c5635e892656cb2550cd3))
+* **keep-alive:** preserve fragment's scope only if it include a component that should be cached ([26b0b37](https://github.com/vuejs/core/commit/26b0b374e1cf1d31a4db09df5e1a9e9ed023675a))
+* **runtime-core:** remove constructor props for defineComponent ([#14223](https://github.com/vuejs/core/issues/14223)) ([ad0a237](https://github.com/vuejs/core/commit/ad0a237138ab87143dd3728128b2f784b676e840))
+* **runtime-vapor:** implement v-once caching for props and attrs ([#14207](https://github.com/vuejs/core/issues/14207)) ([be2b79d](https://github.com/vuejs/core/commit/be2b79dedd67c11b26510f9f7eafdd0848839f39))
+* **runtime-vapor:** optimize prop handling in VaporTransitionGroup using Proxy ([0ceebeb](https://github.com/vuejs/core/commit/0ceebebf58c8f7ea686e96c79763f8b01672ddfd))
+* **transition:** move kept-alive node before v-show transition leave finishes ([e393552](https://github.com/vuejs/core/commit/e393552feb1176a878ef1852289d5c8563822770))
+* **transition:** optimize prop handling in VaporTransition using Proxy ([b092624](https://github.com/vuejs/core/commit/b0926246f1e8d5ff4ada7416bb641e025b4846c8))
+* **transition:** prevent unmounted block from being inserted after transition leave ([f9a9fad](https://github.com/vuejs/core/commit/f9a9fadc6d0e89d8eb82c0b4702d514e4c303634))
+
+### About Vapor Mode
+
+Vapor Mode is a new compilation mode for Vue Single-File Components (SFC) with the goal of reducing baseline bundle size and improved performance. It is 100% opt-in, and supports a subset of existing Vue APIs with mostly identical behavior.
+
+Vapor Mode has demonstrated the same level of performance with Solid and Svelte 5 in [3rd party benchmarks](https://github.com/krausest/js-framework-benchmark).
+
+#### General Stability Notes
+
+Vapor Mode is feature-complete in Vue 3.6 beta, but is still considered unstable. For now, we recommend using it for the following cases:
+
+- Partial usage in existing apps, e.g. implementing a perf-sensitive sub page in Vapor Mode.
+- Build small new apps entirely in Vapor Mode.
+
+#### Opting in to Vapor Mode
+
+Vapor Mode only works for Single File Components using `<script setup>`. To opt-in, add the `vapor` attribute to `<script setup>`:
+
+```vue
+<script setup vapor>
+// ...
+</script>
+```
+
+Vapor Mode components are usable in two scenarios:
+
+1. Inside a Vapor app instance create via `createVaporApp`. Apps created this way avoids pulling in the Virtual DOM runtime code and allows bundle baseline size to be drastically reduced.
+
+2. To use Vapor components in a VDOM app instance created via `createApp`, the `vaporInteropPlugin` must be installed:
+
+   ```js
+   import { createApp, vaporInteropPlugin } from 'vue'
+   import App from './App.vue'
+
+   createApp(App)
+     .use(vaporInteropPlugin) // enable vapor interop
+     .mount('#app')
+   ```
+
+   A Vapor app instance can also install `vaporInteropPlugin` to allow vdom components to be used inside, but it will pull in the vdom runtime and offset the benefits of a smaller bundle.
+
+#### VDOM Interop Limitations
+
+When the interop plugin is installed, Vapor and non-Vapor components can be nested inside each other. This currently covers standard props, events, and slots usage, but does not yet account for all possible edge cases. For example, there will most likely still be rough edges when using a VDOM-based component library in Vapor Mode.
+
+A know issue is that vapor slots cannot be rendered with `slots.default()` inside a VDOM component. `renderSlot` must be used instead. [[Example](https://play.vuejs.org/#eNp9UsGO0zAQ/ZWRL02lkCAtcKi6KwHaAxwAsUgcMEJWMm2y69iWPclWqvLvjJ02pRXbkz0zb948z/NevHeuGHoUK7EOlW8dQUDqHQzKWX8nTdvxSbCHn145hx5G2HjbwaIoK9u5gsJCmnU59TKeA8LOaUXIEcD60JcCgAa1thNDmgCRxBo0lMDlCb0uZx6RCwqVNZt2WzwGa1jsPsKliN2tRv/VUWtNkGIFqRJriic9f0458j3mx3zVYPX0n/xj2MWcFN88BvQDSjHXSPkt0lS+f/iCO77Pxc7WvWb0leJ3DFb3UeME+9CbmmX/g0tqP6Vlt2b7I9zvCE04PioKjcgx4aVgxz5eefpJ7k3xJvVJM/IWD47x/mZba9y0JpElF3KPpkb/oC3l0Mxm8zy2WRrcpTb2ItD8I24vSbIkJP2jzHnrQs6DFJHnS2DmAOPyKLYswViCZ+uf+N1TznOnN5At4fYOmmxRt8MiPxIkyarXtJq4ikPInDPjGcEZKmPQDDsbetl2WkSWGHLe64FEihdGXWr9dZ3kd6KJno5LdufPgD46zvbcFO+K16+Udo0q3orxLxb6NNM=)]
+
+This is expected to improve over time, but in general, we recommend having distinct "regions" in your app where it's one mode or another, and avoid mixed nesting as much as possible.
+
+In the future, we may provide support tooling to enforce Vapor usage boundaries in codebases.
+
+#### Feature Compatibility
+
+By design, Vapor Mode supports a **subset** of existing Vue features. For the supported subset, we aim to deliver the exact same behavior per API specifications. At the same time, this means there are some features that are explicitly not supported in Vapor Mode:
+
+- Options API
+- `app.config.globalProperties`
+- `getCurrentInstance()` returns `null` in Vapor components
+- `@vue:xxx` per-element lifecycle events
+
+Custom directives in Vapor also have a different interface:
+
+```ts
+type VaporDirective = (
+  node: Element | VaporComponentInstance,
+  value?: () => any,
+  argument?: string,
+  modifiers?: DirectiveModifiers,
+) => (() => void) | void
+```
+
+`value` is a reactive getter that returns the binding value. The user can set up reactive effects using `watchEffect` (auto released when component unmounts), and can optionally return a cleanup function. Example:
+
+```ts
+const MyDirective = (el, source) => {
+  watchEffect(() => {
+    el.textContent = source()
+  })
+  return () => console.log('cleanup')
+}
+```
+
+#### Behavior Consistency
+
+Vapor Mode attempts to match VDOM Mode behavior as much as possible, but there could still be minor behavior inconsistencies in edge cases due to how fundamentally different the two rendering modes are. In general, we do not consider a minor inconsistency to be breaking change unless the behavior has previously been documented.
 
 
 
-## [3.5.11](https://github.com/vuejs/core/compare/v3.5.10...v3.5.11) (2024-10-03)
+# [3.6.0-alpha.7](https://github.com/vuejs/core/compare/v3.6.0-alpha.6...v3.6.0-alpha.7) (2025-12-12)
 
 
 ### Bug Fixes
 
-* **compiler-sfc:** do not skip `TSSatisfiesExpression` when transforming props destructure ([#12062](https://github.com/vuejs/core/issues/12062)) ([2328b05](https://github.com/vuejs/core/commit/2328b051f4efa1f1394b7d4e73b7c3f76e430e7c)), closes [#12061](https://github.com/vuejs/core/issues/12061)
-* **reactivity:** prevent overwriting `next` property during batch processing ([#12075](https://github.com/vuejs/core/issues/12075)) ([d3f5e6e](https://github.com/vuejs/core/commit/d3f5e6e5319b4ffaa55ca9a2ea3d95d78e76fa58)), closes [#12072](https://github.com/vuejs/core/issues/12072)
-* **scheduler:** job ordering when the post queue is flushing ([#12090](https://github.com/vuejs/core/issues/12090)) ([577edca](https://github.com/vuejs/core/commit/577edca8e7795436efd710d1c289ea8ea2642b0e))
-* **types:** correctly infer `TypeProps` when it is `any` ([#12073](https://github.com/vuejs/core/issues/12073)) ([57315ab](https://github.com/vuejs/core/commit/57315ab9688c9741a271d1075bbd28cbe5f71e2f)), closes [#12058](https://github.com/vuejs/core/issues/12058)
-* **types:** should not intersect `PublicProps` with `Props` ([#12077](https://github.com/vuejs/core/issues/12077)) ([6f85894](https://github.com/vuejs/core/commit/6f8589437635706f825ccec51800effba1d2bf5f))
-* **types:** infer the first generic type of `Ref` correctly ([#12094](https://github.com/vuejs/core/issues/12094)) ([c97bb84](https://github.com/vuejs/core/commit/c97bb84d0b0a16b012f886b6498e924415ed63e5))
+* **hmr:** handle reload for template-only components switching between vapor and vdom ([bfd4f18](https://github.com/vuejs/core/commit/bfd4f1887a458316bedd0f23e52d9ca87aa521ed))
+* **hmr:** refactor scope cleanup to use reset method for stale effects management ([918b50f](https://github.com/vuejs/core/commit/918b50fd5f9e88132248c75688586158bc621536))
+* **hmr:** track original `__vapor` state during component mode switching ([#14187](https://github.com/vuejs/core/issues/14187)) ([158e706](https://github.com/vuejs/core/commit/158e706e48ea2d16d4e4dca19adb73a55c4bf883))
+* **runtime-vapor:** enable injection from VDOM parent to slotted Vapor child ([#14167](https://github.com/vuejs/core/issues/14167)) ([2f0676f](https://github.com/vuejs/core/commit/2f0676f1ed38d8e132b8bea33ca15bf49338dfed))
+* **runtime-vapor:** track and restore slot owner context for DynamicFragment rendering ([#14193](https://github.com/vuejs/core/issues/14193)) ([79aa9db](https://github.com/vuejs/core/commit/79aa9dbf68a59585ca9593d60efaa719bb91b3d5)), closes [#14192](https://github.com/vuejs/core/issues/14192)
+* **runtime-vapor:** use computed to cache the result of dynamic slot function to avoid redundant calls. ([#14176](https://github.com/vuejs/core/issues/14176)) ([92c2d8c](https://github.com/vuejs/core/commit/92c2d8ccbb643397ab95741d24f2dd0513c3a402))
+
+
+### Features
+
+* **runtime-vapor:** implement `defineVaporCustomElement` type inference ([#14183](https://github.com/vuejs/core/issues/14183)) ([6de8f68](https://github.com/vuejs/core/commit/6de8f689a6b3407c2ae1ad2e2362fcfd8be1d938))
+* **runtime-vapor:** implement `defineVaporComponent` type inference ([#13831](https://github.com/vuejs/core/issues/13831)) ([9d9efd4](https://github.com/vuejs/core/commit/9d9efd493ebc59be8ae3969148ce4a26ce53b413))
 
 
 
-## [3.5.10](https://github.com/vuejs/core/compare/v3.5.9...v3.5.10) (2024-09-27)
-
-
-### Bug Fixes
-
-* **custom-element:** properly set kebab-case props on Vue custom elements ([ea3efa0](https://github.com/vuejs/core/commit/ea3efa09e008918c1d9ba7226833a8b1a7a57244)), closes [#12030](https://github.com/vuejs/core/issues/12030) [#12032](https://github.com/vuejs/core/issues/12032)
-* **reactivity:** fix nested batch edge case ([93c95dd](https://github.com/vuejs/core/commit/93c95dd4cd416503f43a98a1455f62658d22b0b2))
-* **reactivity:** only clear notified flags for computed in first batch iteration ([aa9ef23](https://github.com/vuejs/core/commit/aa9ef2386a0cd39a174e5a887ec2b1a3525034fc)), closes [#12045](https://github.com/vuejs/core/issues/12045)
-* **types/ref:** handle nested refs in UnwrapRef ([#12049](https://github.com/vuejs/core/issues/12049)) ([e2c19c2](https://github.com/vuejs/core/commit/e2c19c20cfee9788519a80c0e53e216b78505994)), closes [#12044](https://github.com/vuejs/core/issues/12044)
-
-
-
-## [3.5.9](https://github.com/vuejs/core/compare/v3.5.8...v3.5.9) (2024-09-26)
+# [3.6.0-alpha.6](https://github.com/vuejs/core/compare/v3.6.0-alpha.5...v3.6.0-alpha.6) (2025-12-04)
 
 
 ### Bug Fixes
 
-* **reactivity:** fix property dep removal regression ([6001e5c](https://github.com/vuejs/core/commit/6001e5c81a05c894586f9287fbd991677bdd0455)), closes [#12020](https://github.com/vuejs/core/issues/12020) [#12021](https://github.com/vuejs/core/issues/12021)
-* **reactivity:** fix recursive sync watcher on computed edge case ([10ff159](https://github.com/vuejs/core/commit/10ff15924053d9bd95ad706f78ce09e288213fcf)), closes [#12033](https://github.com/vuejs/core/issues/12033) [#12037](https://github.com/vuejs/core/issues/12037)
-* **runtime-core:** avoid rendering plain object as VNode ([#12038](https://github.com/vuejs/core/issues/12038)) ([cb34b28](https://github.com/vuejs/core/commit/cb34b28a4a9bf868be4785b001c526163eda342e)), closes [#12035](https://github.com/vuejs/core/issues/12035) [vitejs/vite-plugin-vue#353](https://github.com/vitejs/vite-plugin-vue/issues/353)
-* **runtime-core:** make useId() always return a string ([a177092](https://github.com/vuejs/core/commit/a177092754642af2f98c33a4feffe8f198c3c950))
-* **types:** correct type inference of union event names ([#12022](https://github.com/vuejs/core/issues/12022)) ([4da6881](https://github.com/vuejs/core/commit/4da688141d9e7c15b622c289deaa81b11845b2c7))
-* **vue:** properly cache runtime compilation ([#12019](https://github.com/vuejs/core/issues/12019)) ([fa0ba24](https://github.com/vuejs/core/commit/fa0ba24b3ace02d7ecab65e57c2bea89a2550dcb))
+* **compiler-vapor:** enhance v-slot prop destructuring support ([#14165](https://github.com/vuejs/core/issues/14165)) ([5db15cf](https://github.com/vuejs/core/commit/5db15cfe5e09faef0d9c1889e964465ad0da9ded))
+* **compiler-vapor:** only apply v-on key modifiers to keyboard events ([#14136](https://github.com/vuejs/core/issues/14136)) ([8e83197](https://github.com/vuejs/core/commit/8e83197bc7068b8217af92de41ed3fd920e91b80))
+* **compiler-vapor:** prevent `_camelize` from receiving nullish value for dynamic `v-bind` keys with `.camel` modifier. ([#14138](https://github.com/vuejs/core/issues/14138)) ([313d172](https://github.com/vuejs/core/commit/313d17278e24305f45432ddd5ff054f79fe72e00))
+* **compiler-vapor:** prevent nested components from inheriting parent slots ([#14158](https://github.com/vuejs/core/issues/14158)) ([0668ea3](https://github.com/vuejs/core/commit/0668ea3c87e53e2c5601f1ac32acae9c0111bf0a))
+* **compiler-vapor:** support merging multiple event handlers on components ([#14137](https://github.com/vuejs/core/issues/14137)) ([f2152d2](https://github.com/vuejs/core/commit/f2152d2dec0c8cc5dafa4b7d2a7af3e396431144))
+* **KeepAlive:** correct condition for caching inner blocks to handle null cases ([71e2495](https://github.com/vuejs/core/commit/71e2495e468d21b37d7b57c3013be9da3ce59c5b))
+* **KeepAlive:** remove unnecessary null check in getInnerBlock call ([50602ec](https://github.com/vuejs/core/commit/50602eca5a67150ac6feb079b2f5876e27e83f3c))
+* **runtime-vapor:** add dev-only warning for non-existent property access during render ([#14162](https://github.com/vuejs/core/issues/14162)) ([9bef3be](https://github.com/vuejs/core/commit/9bef3be1bf6550e0d7f6fc5c72027a3777613aed))
+* **runtime-vapor:** expose raw setup state to devtools via `devtoolsRawSetupState` ([0ab7e1b](https://github.com/vuejs/core/commit/0ab7e1bc8634d9be5b54cb59574f7032c5ec3bb6))
+* **templateRef:** prevent duplicate onScopeDispose registrations for dynamic template refs ([#14161](https://github.com/vuejs/core/issues/14161)) ([750e7cd](https://github.com/vuejs/core/commit/750e7cd47c6381419883af8d07c8b91971a546cb))
+* **TransitionGroup:** simplify dev-only warning condition for unkeyed children ([e70ca5d](https://github.com/vuejs/core/commit/e70ca5da5ed158e1b23f5544cbe22acb946d8cf9))
+
+
+### Features
+
+* **runtime-vapor:** support attrs fallthrough ([#14144](https://github.com/vuejs/core/issues/14144)) ([53ab5d5](https://github.com/vuejs/core/commit/53ab5d52716a9842d4505c8bb4322fb08cb42a83))
+* **runtime-vapor:** support custom directives on vapor components ([#14143](https://github.com/vuejs/core/issues/14143)) ([e405557](https://github.com/vuejs/core/commit/e4055574072ce1e28e249b96c417d87fe67b5c80))
+* **suspense:** support rendering of Vapor components ([#14157](https://github.com/vuejs/core/issues/14157)) ([0dcc98f](https://github.com/vuejs/core/commit/0dcc98fb3afaca4a1e4a58d01d3dfbc2d9676b5c))
+* **vapor:** implement `v-once` support for slot outlets ([#14141](https://github.com/vuejs/core/issues/14141)) ([498ce69](https://github.com/vuejs/core/commit/498ce69a58fa0c2dfca0881e091a398597846408))
 
 
 
-## [3.5.8](https://github.com/vuejs/core/compare/v3.5.7...v3.5.8) (2024-09-22)
+# [3.6.0-alpha.5](https://github.com/vuejs/core/compare/v3.5.25...v3.6.0-alpha.5) (2025-11-25)
 
 
 ### Bug Fixes
 
-* **reactivity:** do not remove dep from depsMap when cleaning up deps of computed ([#11995](https://github.com/vuejs/core/issues/11995)) ([0267a58](https://github.com/vuejs/core/commit/0267a588017eee4951ac2a877fe1ccae84cad905))
+* **compiler-vapor:** handle `TSNonNullExpression` and improve expression processing ([#14097](https://github.com/vuejs/core/issues/14097)) ([092c73a](https://github.com/vuejs/core/commit/092c73ae28486ca8746fdcef2da41f4fdd8c73f9))
+* **compiler-vapor:** improve expression caching for shared member roots ([#14132](https://github.com/vuejs/core/issues/14132)) ([25ec4f4](https://github.com/vuejs/core/commit/25ec4f43065c3ade0e5b899a2675c12666cfffbf))
+* **compiler-vapor:** prevent duplicate processing of member expressions in expression analysis ([#14105](https://github.com/vuejs/core/issues/14105)) ([35d135e](https://github.com/vuejs/core/commit/35d135ee14195f26257b46b8c46831dc9facc724))
+* **runtime-vapor:** prevent infinite recursion in `vShow`'s `setDisplay` when handling Vapor components. ([005ba04](https://github.com/vuejs/core/commit/005ba04c343d5546689d3cd2b1b3515a0d69236a))
+* **vapor:** more accurate fallthrough attr support ([#13972](https://github.com/vuejs/core/issues/13972)) ([584f25f](https://github.com/vuejs/core/commit/584f25f7a89671c0510d4ccc84b7716ba5d58181))
+* **runtime-vapor:** prevent fragment `updated` hooks from running before the fragment is mounted. ([#14123](https://github.com/vuejs/core/issues/14123)) ([b07fa60](https://github.com/vuejs/core/commit/b07fa60d5f723c2f84c3840f9e05768c89c2fd11))
+
+
+### Features
+
+* **vapor:** support `v-bind()` in CSS ([#12621](https://github.com/vuejs/core/issues/12621)) ([b9dca57](https://github.com/vuejs/core/commit/b9dca57c205be99d08690ab24d3c5420ec166f85))
 
 
 
-## [3.5.7](https://github.com/vuejs/core/compare/v3.5.6...v3.5.7) (2024-09-20)
+# [3.6.0-alpha.4](https://github.com/vuejs/core/compare/v3.5.24...v3.6.0-alpha.4) (2025-11-14)
 
 
 ### Bug Fixes
 
-* **compile-core:** fix v-model with newlines edge case ([#11960](https://github.com/vuejs/core/issues/11960)) ([6224288](https://github.com/vuejs/core/commit/62242886d705ece88dbcad45bb78072ecccad0ca)), closes [#8306](https://github.com/vuejs/core/issues/8306)
-* **compiler-sfc:** initialize scope with null prototype object ([#11963](https://github.com/vuejs/core/issues/11963)) ([215e154](https://github.com/vuejs/core/commit/215e15407294bf667261360218f975b88c99c2e5))
-* **hydration:** avoid observing non-Element node ([#11954](https://github.com/vuejs/core/issues/11954)) ([7257e6a](https://github.com/vuejs/core/commit/7257e6a34200409b3fc347d3bb807e11e2785974)), closes [#11952](https://github.com/vuejs/core/issues/11952)
-* **reactivity:** do not remove dep from depsMap when unsubbed by computed ([960706e](https://github.com/vuejs/core/commit/960706eebf73f08ebc9d5dd853a05def05e2c153))
-* **reactivity:** fix dev-only memory leak by updating dep.subsHead on sub removal ([5c8b76e](https://github.com/vuejs/core/commit/5c8b76ed6cfbbcee4cbaac0b72beab7291044e4f)), closes [#11956](https://github.com/vuejs/core/issues/11956)
-* **reactivity:** fix memory leak from dep instances of garbage collected objects ([235ea47](https://github.com/vuejs/core/commit/235ea4772ed2972914cf142da8b7ac1fb04f7585)), closes [#11979](https://github.com/vuejs/core/issues/11979) [#11971](https://github.com/vuejs/core/issues/11971)
-* **reactivity:** fix triggerRef call on ObjectRefImpl returned by toRef ([#11986](https://github.com/vuejs/core/issues/11986)) ([b030c8b](https://github.com/vuejs/core/commit/b030c8bc7327877efb98aa3d9a58eb287a6ff07a)), closes [#11982](https://github.com/vuejs/core/issues/11982)
-* **scheduler:** ensure recursive jobs can't be queued twice ([#11955](https://github.com/vuejs/core/issues/11955)) ([d18d6aa](https://github.com/vuejs/core/commit/d18d6aa1b20dc57a8103c51ec4d61e8e53ed936d))
-* **ssr:** don't render comments in TransitionGroup ([#11961](https://github.com/vuejs/core/issues/11961)) ([a2f6ede](https://github.com/vuejs/core/commit/a2f6edeb02faedbb673c4bc5c6a59d9a79a37d07)), closes [#11958](https://github.com/vuejs/core/issues/11958)
-* **transition:** respect `duration` setting even when it is `0` ([#11967](https://github.com/vuejs/core/issues/11967)) ([f927a4a](https://github.com/vuejs/core/commit/f927a4ae6f7c453f70ba89498ee0c737dc9866fd))
-* **types:** correct type inference of all-optional props ([#11644](https://github.com/vuejs/core/issues/11644)) ([9eca65e](https://github.com/vuejs/core/commit/9eca65ee9871d1ac878755afa9a3eb1b02030350)), closes [#11733](https://github.com/vuejs/core/issues/11733) [vuejs/language-tools#4704](https://github.com/vuejs/language-tools/issues/4704)
+* **compiler-vapor:** handle boolean as constant node ([#13994](https://github.com/vuejs/core/issues/13994)) ([c1f2289](https://github.com/vuejs/core/commit/c1f228913b5849ea8a548313c9c0603ccf07d6af))
+* **compiler-vapor:** handle numbers as static text ([#13957](https://github.com/vuejs/core/issues/13957)) ([4b9399a](https://github.com/vuejs/core/commit/4b9399ae8243abda99cd73dfdb178887284c69d6))
+* **compiler-vapor:** wrap event handler in parentheses for TSExpression ([#14061](https://github.com/vuejs/core/issues/14061)) ([0f4edb4](https://github.com/vuejs/core/commit/0f4edb47cbab64c304d79b7565985c02dec877b6))
+* **runtime-dom:** useCssModule vapor support ([#13711](https://github.com/vuejs/core/issues/13711)) ([abe8fc2](https://github.com/vuejs/core/commit/abe8fc29e493e1e5f7bd92df4c26b5ca835526be))
+* **runtime-vapor:** force defer mount when teleport has insertion state ([#14049](https://github.com/vuejs/core/issues/14049)) ([b005811](https://github.com/vuejs/core/commit/b005811f65016b199b5bc426e67cd9d8b825a3f7))
+* **runtime-vapor:** preserve correct parent instance for slotted content ([#14095](https://github.com/vuejs/core/issues/14095)) ([fe3a998](https://github.com/vuejs/core/commit/fe3a998b4182ef5712c8dddd0ba9459d86ce818c))
+* **transition-group:** support reusable transition group ([#14077](https://github.com/vuejs/core/issues/14077)) ([171f3f5](https://github.com/vuejs/core/commit/171f3f56947d668072e6a811b4b1f1c045f6ea1d))
+* **vapor:** v-model and v-model:model co-usage ([#13070](https://github.com/vuejs/core/issues/13070)) ([bf2d2b2](https://github.com/vuejs/core/commit/bf2d2b2fde3315c575628a7462a0397c8b49d076))
 
+
+### Features
+
+* **compiler-vapor:** handle asset imports  ([#13630](https://github.com/vuejs/core/issues/13630)) ([7d4ab91](https://github.com/vuejs/core/commit/7d4ab91e9cac5dc177f1a55ac1137246fee9407c))
+* **vapor:** implement defineVaporCustomElement ([#14017](https://github.com/vuejs/core/issues/14017)) ([615db5e](https://github.com/vuejs/core/commit/615db5e95986c6fedfa7936c3c3bb71dc87bf1e6))
+* **runtime-vapor:** dynamic component fallback work with dynamic slots ([#14064](https://github.com/vuejs/core/issues/14064)) ([f4b3613](https://github.com/vuejs/core/commit/f4b3613f66d4604186e3008231a44b68196a45c7))
+* **vapor:** support svg and MathML ([#13703](https://github.com/vuejs/core/issues/13703)) ([f0d0cfd](https://github.com/vuejs/core/commit/f0d0cfd1d48a61ea5f5e094f6546272a758363c9))
+* **vapor:** dom event error handling ([#13769](https://github.com/vuejs/core/issues/13769)) ([d2eebe4](https://github.com/vuejs/core/commit/d2eebe45a87e8af2c19f4e2792d8aff0fb0fff24))
+
+
+
+# [3.6.0-alpha.3](https://github.com/vuejs/core/compare/v3.5.23...v3.6.0-alpha.3) (2025-11-06)
+
+
+### Bug Fixes
+
+* **compiler-vapor:** adjust children generation order for hydration ([#13729](https://github.com/vuejs/core/issues/13729)) ([248b394](https://github.com/vuejs/core/commit/248b394e15d20f3f9a6195833a0b93f97b27916d))
+* **compiler-vapor:** escape html for safer template output  ([#13919](https://github.com/vuejs/core/issues/13919)) ([3c31b71](https://github.com/vuejs/core/commit/3c31b71abcee08d913582a71fca665a3e7e8c298))
+* **compiler-vapor:** treat template v-for with single component child as component ([#13914](https://github.com/vuejs/core/issues/13914)) ([3b5e13c](https://github.com/vuejs/core/commit/3b5e13c7eba5a7dddc33aa725ceaa775faff6fff))
+* **hmr:** properly stop render effects during hmr re-render ([#14023](https://github.com/vuejs/core/issues/14023)) ([34c6ebf](https://github.com/vuejs/core/commit/34c6ebfd7a226e0c83fe16317b096dbcba6973c3))
+* **runtime-vapor:**  sync parent component block reference during HMR reload ([#13866](https://github.com/vuejs/core/issues/13866)) ([b65a6b8](https://github.com/vuejs/core/commit/b65a6b869e25846716960eb25b0a6c5b8ae5a429))
+* **runtime-vapor:** apply v-show to vdom child ([#13767](https://github.com/vuejs/core/issues/13767)) ([def21b6](https://github.com/vuejs/core/commit/def21b67800abdaffabb7314732e74538119e263)), closes [#13765](https://github.com/vuejs/core/issues/13765)
+* **runtime-vapor:** fix readonly warning when useTemplateRef has same variable name as template ref ([#13672](https://github.com/vuejs/core/issues/13672)) ([e56997f](https://github.com/vuejs/core/commit/e56997f0d5eda6f8c15a628f8ddb6d838ecc6200)), closes [#13665](https://github.com/vuejs/core/issues/13665)
+* **runtime-vapor:** handle vapor attrs fallthrough to vdom component ([#13551](https://github.com/vuejs/core/issues/13551)) ([5ce227b](https://github.com/vuejs/core/commit/5ce227bd22494e6910116e04a9d57eebeb2eda5a))
+* **runtime-vapor:** pass plain object props to createVNode during vdom interop ([#13382](https://github.com/vuejs/core/issues/13382)) ([6c50e20](https://github.com/vuejs/core/commit/6c50e20332a9f4807ec41de70694492117f8a965)), closes [#14027](https://github.com/vuejs/core/issues/14027)
+* **runtime-vapor:** properly handle consecutive prepend operations with insertionState ([#13558](https://github.com/vuejs/core/issues/13558)) ([6a801de](https://github.com/vuejs/core/commit/6a801de36bb9ad1cad5b224127b218643ee3259d)), closes [#13764](https://github.com/vuejs/core/issues/13764)
+* **runtime-vapor:** properly handle fast remove in keyed diff ([07fd7e4](https://github.com/vuejs/core/commit/07fd7e4d418c48502f572d77bee0384fb44aba40))
+* **runtime-vapor:** remove v-cloak and add data-v-app after app mount ([#14035](https://github.com/vuejs/core/issues/14035)) ([172cb8b](https://github.com/vuejs/core/commit/172cb8b1a1508de5a2d0cf33aba347b08a0aa958))
+* **runtime-vapor:** resolve multiple vFor rendering issues ([#13714](https://github.com/vuejs/core/issues/13714)) ([348ffaf](https://github.com/vuejs/core/commit/348ffafbc67b684249a576ae66b7f626abe99ae7))
+* **runtime-vapor:** setting innerHTML should go through trusted types ([#13825](https://github.com/vuejs/core/issues/13825)) ([23bc91c](https://github.com/vuejs/core/commit/23bc91ca599ba206f3b0d7a5c24b4fa3436cf0f3))
+* **runtime-vapor:** setting innerHTML should go through trusted types ([#14000](https://github.com/vuejs/core/issues/14000)) ([a3453e3](https://github.com/vuejs/core/commit/a3453e31da629223e641398e872c38b109bb40ad))
+* **runtime-vapor:** avoid unnecessary block movement in renderList ([#13722](https://github.com/vuejs/core/issues/13722)) ([c4f41ee](https://github.com/vuejs/core/commit/c4f41ee75053916f774764b6430fbdf3735494b2))
+* **runtime-core:** handle next host node for vapor component ([#13823](https://github.com/vuejs/core/issues/13823)) ([96ca3b0](https://github.com/vuejs/core/commit/96ca3b02438fe78186b79c90e8636a3a3f43d29b)), closes [#13824](https://github.com/vuejs/core/issues/13824)
+
+
+### Features
+
+* **compiler-vapor:** support keys and nonKeys modifier for component event ([#13053](https://github.com/vuejs/core/issues/13053)) ([a697871](https://github.com/vuejs/core/commit/a69787187ed4e85ab9c3fa10d92bbaef92b54bdc))
+* **hydration:** hydrate vapor async component ([#14003](https://github.com/vuejs/core/issues/14003)) ([1e1e13a](https://github.com/vuejs/core/commit/1e1e13a64e6d29d0ab3858fce68a14e85d110aae))
+* **hydration:** hydrate VaporTeleport ([#14002](https://github.com/vuejs/core/issues/14002)) ([a886dfc](https://github.com/vuejs/core/commit/a886dfc4d2889d196705e0c98d2663dc9cacdcdb))
+* **hydration:** hydrate VaporTransition ([#14001](https://github.com/vuejs/core/issues/14001)) ([f1fcada](https://github.com/vuejs/core/commit/f1fcada83fde0d02494cfc3a7ab0934e8d468e4e))
+* **runtime-vapor:** add support for async components in VaporKeepAlive ([#14040](https://github.com/vuejs/core/issues/14040)) ([e4b147a](https://github.com/vuejs/core/commit/e4b147a24fb64a258f3372de299a2b8486bb8e21))
+* **runtime-vapor:** add support for v-once ([#13459](https://github.com/vuejs/core/issues/13459)) ([ff5a06c](https://github.com/vuejs/core/commit/ff5a06cf5dd6962e157a68be87166e82e1c58b31))
+* **runtime-vapor:** add withVaporCtx helper to manage currentInstance context in slot blocks ([#14007](https://github.com/vuejs/core/issues/14007)) ([d381c2f](https://github.com/vuejs/core/commit/d381c2f804d914394644406bb96ef6c7e3dccc57))
+* **runtime-vapor:** v-html and v-text work with component ([#13496](https://github.com/vuejs/core/issues/13496)) ([7870fc0](https://github.com/vuejs/core/commit/7870fc08a148c4a1e7ac60e7bdc759b56e589de5))
+* **runtime-vapor:** vapor transition work with vapor async component ([#14053](https://github.com/vuejs/core/issues/14053)) ([0f4d7fb](https://github.com/vuejs/core/commit/0f4d7fbf6d557523e6e74269cd5c5539f3499107))
+* **runtime-vapor:** vapor transition work with vapor keep-alive ([#14050](https://github.com/vuejs/core/issues/14050)) ([c6bbc4a](https://github.com/vuejs/core/commit/c6bbc4a75ec37c94a85716840583043b0532c4ac))
+* **runtime-vapor:** vapor transition work with vapor teleport ([#14047](https://github.com/vuejs/core/issues/14047)) ([d14c5a2](https://github.com/vuejs/core/commit/d14c5a2322c555a64483dba44d99c45a534026a5))
+* **vapor:** defineVaporAsyncComponent ([#13059](https://github.com/vuejs/core/issues/13059)) ([6ec403f](https://github.com/vuejs/core/commit/6ec403f09795fad0a061bf360479b6eccc435c5f))
+* **vapor:** forwarded slots ([#13408](https://github.com/vuejs/core/issues/13408)) ([2182e88](https://github.com/vuejs/core/commit/2182e88e1bb835ebd5f0ed87d1c759f1e81e02b3))
+* **vapor:** hydration ([#13226](https://github.com/vuejs/core/issues/13226)) ([d1d35cb](https://github.com/vuejs/core/commit/d1d35cbcea47a0878153b5d08b364dd57054b5b9))
+* **vapor:** set scopeId ([#14004](https://github.com/vuejs/core/issues/14004)) ([5bdcd81](https://github.com/vuejs/core/commit/5bdcd81ad63c769d7430423f7bd83c681d30e6e0))
+* **vapor:** template ref vdom interop ([#13323](https://github.com/vuejs/core/issues/13323)) ([436eda7](https://github.com/vuejs/core/commit/436eda776395b2ff473057652bc3a6bef2991c1e))
+* **vapor:** vapor keepalive ([#13186](https://github.com/vuejs/core/issues/13186)) ([35475c0](https://github.com/vuejs/core/commit/35475c0c2b08546858d00684a8f91923c0d1f748))
+* **vapor:** vapor teleport ([#13082](https://github.com/vuejs/core/issues/13082)) ([7204cb6](https://github.com/vuejs/core/commit/7204cb614eb8f04b96d6f7099566ceb9637e1026))
+* **vapor:** vapor transition + transition-group ([#12962](https://github.com/vuejs/core/issues/12962)) ([bba328a](https://github.com/vuejs/core/commit/bba328adf5b448b75a975e1195cbc088d333939f))
+
+
+
+# [3.6.0-alpha.2](https://github.com/vuejs/core/compare/v3.6.0-alpha.1...v3.6.0-alpha.2) (2025-07-18)
+
+
+### Bug Fixes
+
+* **compiler-vapor:** handle empty interpolation ([#13592](https://github.com/vuejs/core/issues/13592)) ([d1f2915](https://github.com/vuejs/core/commit/d1f2915cfe7915fa73624485ff3dd443176a31a9))
+* **compiler-vapor:** handle special characters in cached variable names ([#13626](https://github.com/vuejs/core/issues/13626)) ([a5e106d](https://github.com/vuejs/core/commit/a5e106d96eb17d73c8673e826393c910d5594a2f))
+* **compiler-vapor:** selectors was not initialized in time when the initial value of createFor source was not empty ([#13642](https://github.com/vuejs/core/issues/13642)) ([f04c9c3](https://github.com/vuejs/core/commit/f04c9c342d398c11111c873143dc437f588578ee))
+* **reactivity:** allow collect effects in EffectScope ([#13657](https://github.com/vuejs/core/issues/13657)) ([b9fb79a](https://github.com/vuejs/core/commit/b9fb79a1fd099b67e01c5fe5941551c0da3a0cae)), closes [#13656](https://github.com/vuejs/core/issues/13656)
+* **reactivity:** remove link check to align with 3.5 ([#13654](https://github.com/vuejs/core/issues/13654)) ([3cb27d1](https://github.com/vuejs/core/commit/3cb27d156f6a30e8f950616a53a3726519eaf216)), closes [#13620](https://github.com/vuejs/core/issues/13620)
+* **runtime-core:** use __vapor instead of vapor to identify Vapor components ([#13652](https://github.com/vuejs/core/issues/13652)) ([ad21b1b](https://github.com/vuejs/core/commit/ad21b1b7e96bc894f5df0d95fbd77c9ba6b15c2e))
+* **runtime-vapor:** component emits vdom interop ([#13498](https://github.com/vuejs/core/issues/13498)) ([d95fc18](https://github.com/vuejs/core/commit/d95fc186c26e81345cd75037c3c1304b0eae13b4))
+* **runtime-vapor:** handle v-model vdom interop error ([#13643](https://github.com/vuejs/core/issues/13643)) ([2be828a](https://github.com/vuejs/core/commit/2be828a0c165c7f1533ace0bd81fba43a2af16d6))
+* **runtime-vapor:** remove access globalProperties warning ([#13609](https://github.com/vuejs/core/issues/13609)) ([fca74b0](https://github.com/vuejs/core/commit/fca74b00a86c6039aa05591618539a77aaa72daf))
+
+
+
+# [3.6.0-alpha.1](https://github.com/vuejs/core/compare/v3.5.17...v3.6.0-alpha.1) (2025-07-12)
+
+### Features
+
+- **vapor mode** ([#12359](https://github.com/vuejs/core/issues/12359)) ([bfe5ce3](https://github.com/vuejs/core/commit/bfe5ce309c6fc16bb49cca78e141862bc12708ac))
+
+  Please see [About Vapor Mode](#about-vapor-mode) section below for details.
 
 ### Performance Improvements
 
-* **hydration:** avoid observer if element is in viewport ([#11639](https://github.com/vuejs/core/issues/11639)) ([e075dfa](https://github.com/vuejs/core/commit/e075dfad5c7649c6045e3711687ec888e7aa1a39))
-
-
-
-## [3.5.6](https://github.com/vuejs/core/compare/v3.5.5...v3.5.6) (2024-09-16)
-
+- **reactivity:** refactor reactivity core by porting [alien-signals](https://github.com/stackblitz/alien-signals) ([#12349](https://github.com/vuejs/core/issues/12349)) ([313dc61](https://github.com/vuejs/core/commit/313dc61bef59e6869aaec9b5ea47c0bf9044a3fc))
 
 ### Bug Fixes
 
-* **compile-dom:** should be able to stringify mathML ([#11891](https://github.com/vuejs/core/issues/11891)) ([85c138c](https://github.com/vuejs/core/commit/85c138ced108268f7656b568dfd3036a1e0aae34))
-* **compiler-sfc:** preserve old behavior when using withDefaults with desutructure ([8492c3c](https://github.com/vuejs/core/commit/8492c3c49a922363d6c77ef192c133a8fbce6514)), closes [#11930](https://github.com/vuejs/core/issues/11930)
-* **reactivity:** avoid exponential perf cost and reduce call stack depth for deeply chained computeds ([#11944](https://github.com/vuejs/core/issues/11944)) ([c74bb8c](https://github.com/vuejs/core/commit/c74bb8c2dd9e82aaabb0a2a2b368e900929b513b)), closes [#11928](https://github.com/vuejs/core/issues/11928)
-* **reactivity:** rely on dirty check only when computed has deps ([#11931](https://github.com/vuejs/core/issues/11931)) ([aa5dafd](https://github.com/vuejs/core/commit/aa5dafd2b55d42d6a29316a3bc91aea85c676a0b)), closes [#11929](https://github.com/vuejs/core/issues/11929)
-* **watch:** `once` option should be ignored by watchEffect ([#11884](https://github.com/vuejs/core/issues/11884)) ([49fa673](https://github.com/vuejs/core/commit/49fa673493d93b77ddba2165ab6545bae84fd1ae))
-* **watch:** unwatch should be callable during SSR ([#11925](https://github.com/vuejs/core/issues/11925)) ([2d6adf7](https://github.com/vuejs/core/commit/2d6adf78a047eed091db277ffbd9df0822fb0bdd)), closes [#11924](https://github.com/vuejs/core/issues/11924)
+- **css-vars:** nullish v-bind in style should not lead to unexpected inheritance ([#12461](https://github.com/vuejs/core/issues/12461)) ([c85f1b5](https://github.com/vuejs/core/commit/c85f1b5a132eb8ec25f71b250e25e65a5c20964f)), closes [#12434](https://github.com/vuejs/core/issues/12434) [#12439](https://github.com/vuejs/core/issues/12439) [#7474](https://github.com/vuejs/core/issues/7474) [#7475](https://github.com/vuejs/core/issues/7475)
+- **reactivity:** ensure multiple effectScope `on()` and `off()` calls maintains correct active scope ([#12641](https://github.com/vuejs/core/issues/12641)) ([679cbdf](https://github.com/vuejs/core/commit/679cbdf4806cf8c325098f2b579abab60fffb1bb))
+- **reactivity:** queuing effects in an array ([#13078](https://github.com/vuejs/core/issues/13078)) ([826550c](https://github.com/vuejs/core/commit/826550cd629c59dd91aeb5abdbe101a483497358))
+- **reactivity:** toRefs should be allowed on plain objects ([ac43b11](https://github.com/vuejs/core/commit/ac43b118975b17d7ce7d9e6886f8806af11bee55))
+- **scheduler:** improve error handling in job flushing ([#13587](https://github.com/vuejs/core/issues/13587)) ([94b2ddc](https://github.com/vuejs/core/commit/94b2ddc6f97170f4169d9d81b963c6bcaab08be2))
+- **scheduler:** recover nextTick from error in post flush cb ([2bbb6d2](https://github.com/vuejs/core/commit/2bbb6d2fc56896e64a32b4421822d12bde2bb6e8))
 
+### About Vapor Mode
 
+Vapor Mode is a new compilation mode for Vue Single-File Components (SFC) with the goal of reducing baseline bundle size and improved performance. It is 100% opt-in, and supports a subset of existing Vue APIs with mostly identical behavior.
 
-## [3.5.5](https://github.com/vuejs/core/compare/v3.5.4...v3.5.5) (2024-09-13)
+Vapor Mode has demonstrated the same level of performance with Solid and Svelte 5 in [3rd party benchmarks](https://github.com/krausest/js-framework-benchmark).
 
+#### General Stability Notes
 
-### Bug Fixes
+Vapor Mode is available starting in Vue 3.6 alpha. Please note it is still incomplete and unstable during the alpha phase. The current focus is making it available for wider stability and compatibility testing. For now, we recommend using it for the following cases:
 
-* **compiler-core:** fix handling of delimiterOpen in VPre ([#11915](https://github.com/vuejs/core/issues/11915)) ([706d4ac](https://github.com/vuejs/core/commit/706d4ac1d0210b2d9134b3228280187fe02fc971)), closes [#11913](https://github.com/vuejs/core/issues/11913)
-* **compiler-dom:** fix stringify static edge for partially eligible chunks in cached parent ([1d99d61](https://github.com/vuejs/core/commit/1d99d61c1bd77f9ea6743f6214a82add8346a121)), closes [#11879](https://github.com/vuejs/core/issues/11879) [#11890](https://github.com/vuejs/core/issues/11890)
-* **compiler-dom:** should ignore leading newline in <textarea> per spec ([3c4bf76](https://github.com/vuejs/core/commit/3c4bf7627649ec1e3220f8c4e4163c20d2afb367))
-* **compiler-sfc:** nested css supports atrule and comment ([#11899](https://github.com/vuejs/core/issues/11899)) ([0e7bc71](https://github.com/vuejs/core/commit/0e7bc717e6640644f062957ec5031506f0dab215)), closes [#11896](https://github.com/vuejs/core/issues/11896)
-* **custom-element:** handle nested customElement mount w/ shadowRoot false ([#11861](https://github.com/vuejs/core/issues/11861)) ([f2d8019](https://github.com/vuejs/core/commit/f2d801918841e7673ff3f048d0d895592a2f7e23)), closes [#11851](https://github.com/vuejs/core/issues/11851) [#11871](https://github.com/vuejs/core/issues/11871)
-* **hmr:** reload async child wrapped in Suspense + KeepAlive ([#11907](https://github.com/vuejs/core/issues/11907)) ([10a2c60](https://github.com/vuejs/core/commit/10a2c6053bd30d160d0214bb3566f540187e6874)), closes [#11868](https://github.com/vuejs/core/issues/11868)
-* **hydration:** fix mismatch of leading newline in `<textarea>` and `<pre>` ([a5f3c2e](https://github.com/vuejs/core/commit/a5f3c2eb4d2e7fae93ff93ce865b269f01cc825e)), closes [#11873](https://github.com/vuejs/core/issues/11873) [#11874](https://github.com/vuejs/core/issues/11874)
-* **reactivity:** properly clean up deps, fix memory leak ([8ea5d6d](https://github.com/vuejs/core/commit/8ea5d6d6981ab7febda0be43c3c92b18869c3a2a)), closes [#11901](https://github.com/vuejs/core/issues/11901)
-* **runtime-core:** properly update async component nested in KeepAlive ([#11917](https://github.com/vuejs/core/issues/11917)) ([7fe6c79](https://github.com/vuejs/core/commit/7fe6c795a1fc7ddcea5ad91a56141561192373ac)), closes [#11916](https://github.com/vuejs/core/issues/11916)
-* **TransitionGroup:** not warn unkeyed text children with whitespece preserve ([#11888](https://github.com/vuejs/core/issues/11888)) ([7571f20](https://github.com/vuejs/core/commit/7571f20bc3d1854377a146f41d211e05bb68cd47)), closes [#11885](https://github.com/vuejs/core/issues/11885)
+- Partial usage in existing apps, e.g. implementing a perf-sensitive sub page in Vapor Mode.
+- Build small new apps entirely in Vapor Mode.
 
+We do not recommend migrating existing components to Vapor Mode yet.
 
+#### Pending Features
 
-## [3.5.4](https://github.com/vuejs/core/compare/v3.5.3...v3.5.4) (2024-09-10)
+Things that do not work in this version yet:
 
+- SSR hydration\* (which means it does not work with Nuxt yet)
+- Async Component\*
+- Transition\*
+- KeepAlive\*
+- Suspense
 
-### Bug Fixes
+Features marked with \* have pending PRs which will be merged during the alpha phase.
 
-* **compiler-sfc:** correct scoped injection for nesting selector ([#11854](https://github.com/vuejs/core/issues/11854)) ([b1de75e](https://github.com/vuejs/core/commit/b1de75ed04626b6423085dfde91fb0cb481a25e8)), closes [#10567](https://github.com/vuejs/core/issues/10567)
-* **reactivity:** fix markRaw error on already marked object ([#11864](https://github.com/vuejs/core/issues/11864)) ([67d6596](https://github.com/vuejs/core/commit/67d6596d40b1807b9cd8eb0d9282932ea77be3c0)), closes [#11862](https://github.com/vuejs/core/issues/11862)
-* Revert "fix: Revert "fix(reactivity): self-referencing computed should refresh"" ([e596378](https://github.com/vuejs/core/commit/e596378e0be728dad7d60938449f3fa557ca2ec9))
-* **runtime-core:** handle shallow reactive arrays in renderList correctly ([#11870](https://github.com/vuejs/core/issues/11870)) ([ced59ab](https://github.com/vuejs/core/commit/ced59ab8f2f2e89c13119bab3a0c25a1a1f1c3d6)), closes [#11869](https://github.com/vuejs/core/issues/11869)
-* **types:** correctly infer `TypeEmits` with both tuple and function syntax ([#11840](https://github.com/vuejs/core/issues/11840)) ([dad6738](https://github.com/vuejs/core/commit/dad673809929c084dcb8e42640eb7daa675d4ea4)), closes [#11836](https://github.com/vuejs/core/issues/11836)
+#### Opting in to Vapor Mode
 
+Vapor Mode only works for Single File Components using `<script setup>`. To opt-in, add the `vapor` attribute to `<script setup>`:
 
-### Performance Improvements
+```vue
+<script setup vapor>
+// ...
+</script>
+```
 
-* **reactivity:** trigger deps directly instead of storing in an array first ([#11695](https://github.com/vuejs/core/issues/11695)) ([f80d447](https://github.com/vuejs/core/commit/f80d447c17662556e9e3f99f6d199967f4c8cf3d))
+Vapor Mode components are usable in two scenarios:
 
+1. Inside a Vapor app instance create via `createVaporApp`. Apps created this way avoids pulling in the Virtual DOM runtime code and allows bundle baseline size to be drastically reduced.
 
+2. To use Vapor components in a VDOM app instance created via `createApp`, the `vaporInteropPlugin` must be installed:
 
-## [3.5.3](https://github.com/vuejs/core/compare/v3.5.2...v3.5.3) (2024-09-06)
+   ```js
+   import { createApp, vaporInteropPlugin } from 'vue'
+   import App from './App.vue'
 
+   createApp(App)
+     .use(vaporInteropPlugin) // enable vapor interop
+     .mount('#app')
+   ```
 
-### Bug Fixes
+   A Vapor app instance can also install `vaporInteropPlugin` to allow vdom components to be used inside, but it will pull in the vdom runtime and offset the benefits of a smaller bundle.
 
-* **hydration:** check __asyncHydrate presence for vue3-lazy-hydration compat ([#11825](https://github.com/vuejs/core/issues/11825)) ([8e6c337](https://github.com/vuejs/core/commit/8e6c3378676be05cea7f53664442acdfb86784f9)), closes [#11793](https://github.com/vuejs/core/issues/11793)
-* Revert "fix(reactivity): self-referencing computed should refresh" ([35c760f](https://github.com/vuejs/core/commit/35c760f82f749f7c6e3f9bfead8221ce498e892f))
-* **ssr:** respect app.config.warnHandler during ssr ([bf3d9a2](https://github.com/vuejs/core/commit/bf3d9a2af41659a743706306fc798b3d215df5af)), closes [#11830](https://github.com/vuejs/core/issues/11830)
-* **Transition:** handle KeepAlive child unmount in Transition out-in mode ([#11833](https://github.com/vuejs/core/issues/11833)) ([6b7901d](https://github.com/vuejs/core/commit/6b7901d28ed3a6a9242c666cc1b8e3c0b0b0fe62)), closes [#11775](https://github.com/vuejs/core/issues/11775)
-* **useId:** make generated IDs selector compatible ([babfb4c](https://github.com/vuejs/core/commit/babfb4cbcbf98601d76c1d7653eae8d250ce2710)), closes [#11828](https://github.com/vuejs/core/issues/11828)
+#### VDOM Interop Limitations
 
+When the interop plugin is installed, Vapor and non-Vapor components can be nested inside each other. This currently covers standard props, events, and slots usage, but does not yet account for all possible edge cases. For example, there will most likely still be rough edges when using a VDOM-based component library in Vapor Mode.
 
+This is expected to improve over time, but in general, we recommend having distinct "regions" in your app where it's one mode or another, and avoid mixed nesting as much as possible.
 
-## [3.5.2](https://github.com/vuejs/core/compare/v3.5.1...v3.5.2) (2024-09-05)
+In the future, we may provide support tooling to enforce Vapor usage boundaries in codebases.
 
+#### Feature Compatibility
 
-### Bug Fixes
+By design, Vapor Mode supports a **subset** of existing Vue features. For the supported subset, we aim to deliver the exact same behavior per API specifications. At the same time, this means there are some features that are explicitly not supported in Vapor Mode:
 
-* **reactivity:** make toRaw work on proxies created by proxyRef ([46c3ab1](https://github.com/vuejs/core/commit/46c3ab1d714024894fa1d33e495d5d35c7817d4d))
-* **reactivity:** pass oldValue to computed getter ([#11813](https://github.com/vuejs/core/issues/11813)) ([98864a7](https://github.com/vuejs/core/commit/98864a7ef5c8080c407166c8221488a4eacbbc81)), closes [#11812](https://github.com/vuejs/core/issues/11812)
-* **reactivity:** prevent endless recursion in computed getters ([#11797](https://github.com/vuejs/core/issues/11797)) ([716275d](https://github.com/vuejs/core/commit/716275d1b1d2383d8ef0306fcd94558d4d9170f2))
-* **reactivity:** self-referencing computed should refresh ([e84c4a6](https://github.com/vuejs/core/commit/e84c4a608e9dc96fb2a4a29d538bcc64f26103a2)), closes [/github.com/vuejs/core/pull/11797#issuecomment-2330738633](https://github.com//github.com/vuejs/core/pull/11797/issues/issuecomment-2330738633)
-* **scheduler:** prevent duplicate jobs being queued ([#11826](https://github.com/vuejs/core/issues/11826)) ([df56cc5](https://github.com/vuejs/core/commit/df56cc528793b1d6131a1e64095dd5cb95c56bee)), closes [#11712](https://github.com/vuejs/core/issues/11712) [#11807](https://github.com/vuejs/core/issues/11807)
-* **suspense:** avoid updating anchor if activeBranch has not been rendered to the actual container ([#11818](https://github.com/vuejs/core/issues/11818)) ([3c0d531](https://github.com/vuejs/core/commit/3c0d531fa7fe762bfe46fbe63f318adc95221795)), closes [#11806](https://github.com/vuejs/core/issues/11806)
-* **Transition:** handle KeepAlive child unmount in Transition out-in mode ([#11778](https://github.com/vuejs/core/issues/11778)) ([3116553](https://github.com/vuejs/core/commit/311655352931863dfcf520b8cf29cebc5b7e1e00)), closes [#11775](https://github.com/vuejs/core/issues/11775)
-* **types:** add HTMLDialogElement missing close event ([#11811](https://github.com/vuejs/core/issues/11811)) ([3634f7a](https://github.com/vuejs/core/commit/3634f7a4c1649ad2e7e969eb4512512868c61d01))
-* **types:** added name attribute support to details tag ([#11823](https://github.com/vuejs/core/issues/11823)) ([c74176e](https://github.com/vuejs/core/commit/c74176ec7b4d1d34159ce21d600c04b157ac5549)), closes [#11821](https://github.com/vuejs/core/issues/11821)
-* **types:** fix defineComponent props inference when setup() has explicit annotation ([fca20a3](https://github.com/vuejs/core/commit/fca20a39aa4a6f98c8f972bd435ebb7dc535648a)), closes [#11803](https://github.com/vuejs/core/issues/11803)
-* **useTemplateRef:** properly fix readonly warning in dev and ensure prod behavior consistency ([9b7797d](https://github.com/vuejs/core/commit/9b7797d0d1fc773e979e042673d5b9b3151c40fc)), closes [#11808](https://github.com/vuejs/core/issues/11808) [#11816](https://github.com/vuejs/core/issues/11816) [#11810](https://github.com/vuejs/core/issues/11810)
+- Options API
+- `app.config.globalProperties`
+- `getCurrentInstance()` returns `null` in Vapor components
+- Implicit instance properties like `$slots` and `$props` are not available in Vapor template expressions
+- `@vue:xxx` per-element lifecycle events
 
+Custom directives in Vapor also have a different interface:
 
-### Features
+```ts
+type VaporDirective = (
+  node: Element | VaporComponentInstance,
+  value?: () => any,
+  argument?: string,
+  modifiers?: DirectiveModifiers,
+) => (() => void) | void
+```
 
-* **compiler-core:** parse modifiers as expression to provide location data ([#11819](https://github.com/vuejs/core/issues/11819)) ([3f13203](https://github.com/vuejs/core/commit/3f13203564164eeb2945bdc0b9ef755c37477d75))
+`value` is a reactive getter that returns the binding value. The user can set up reactive effects using `watchEffect` (auto released when component unmounts), and can optionally return a cleanup function. Example:
 
+```ts
+const MyDirective = (el, source) => {
+  watchEffect(() => {
+    el.textContent = source()
+  })
+  return () => console.log('cleanup')
+}
+```
 
+#### Behavior Consistency
 
-## [3.5.1](https://github.com/vuejs/core/compare/v3.5.0...v3.5.1) (2024-09-04)
-
-
-### Bug Fixes
-
-* **build:** improve built-in components treeshakability ([4eee630](https://github.com/vuejs/core/commit/4eee630b3122a10d0baf9b91358cfffa92d6fd81))
-* **reactivity:** handle non-array arguments in reactive `concat` method ([#11794](https://github.com/vuejs/core/issues/11794)) ([475977a](https://github.com/vuejs/core/commit/475977a6f76b77392610e0a3ec2b0e076d1e1d59)), closes [#11792](https://github.com/vuejs/core/issues/11792)
-* **Transition:** avoid applying transition hooks on comment vnode ([#11788](https://github.com/vuejs/core/issues/11788)) ([51912f8](https://github.com/vuejs/core/commit/51912f8a02e35f172f6d30ed7a2f3a92c1407cf9)), closes [#11782](https://github.com/vuejs/core/issues/11782)
-* **types:** avoid using intersection type in `Readonly<...>` to fix JSDoc emit ([#11799](https://github.com/vuejs/core/issues/11799)) ([7518bc1](https://github.com/vuejs/core/commit/7518bc19dc73ba46dcf1eef6e23f9e6e75552675))
-* **useTemplateRef:** fix readonly warning when useTemplateRef has same variable name as template ref ([bc63df0](https://github.com/vuejs/core/commit/bc63df01992fdbf0b6749ad234153725697ed896)), closes [#11795](https://github.com/vuejs/core/issues/11795) [#11802](https://github.com/vuejs/core/issues/11802) [#11804](https://github.com/vuejs/core/issues/11804)
-
-
-
-# [3.5.0](https://github.com/vuejs/core/compare/v3.5.0-rc.1...v3.5.0) (2024-09-03)
-
-## Aggregated Features List for 3.5 (alpha to stable)
-
-### Reactivity
-
-- **reactivity**: Refactor reactivity system to use version counting and doubly-linked list tracking ([#10397](https://github.com/vuejs/core/pull/10397)) ([05eb4e0](https://github.com/vuejs/core/commit/05eb4e0fefd585125dd60b7f8fe9c36928d921aa))
-- **reactivity**: Optimize array tracking ([#9511](https://github.com/vuejs/core/pull/9511)) ([70196a4](https://github.com/vuejs/core/commit/70196a40cc078f50fcc1110c38c06fbcc70b205e))
-- **compiler-sfc:** enable reactive props destructure by default ([d2dac0e](https://github.com/vuejs/core/commit/d2dac0e359c47d1ed0aa77eda488e76fd6466d2d))
-- **reactivity:** `onEffectCleanup` API ([2cc5615](https://github.com/vuejs/core/commit/2cc5615590de77126e8df46136de0240dbde5004)), closes [#10173](https://github.com/vuejs/core/issues/10173)
-- **reactivity:** add `failSilently` argument for `onScopeDispose` ([9a936aa](https://github.com/vuejs/core/commit/9a936aaec489c79433a32791ecf5ddb1739a62bd))
-- **reactivity/watch:** base `watch`, `getCurrentWatcher`, and `onWatcherCleanup` ([#9927](https://github.com/vuejs/core/issues/9927)) ([205e5b5](https://github.com/vuejs/core/commit/205e5b5e277243c3af2c937d9bd46cf671296b72))
-- **reactivity/watch:** add pause/resume for ReactiveEffect, EffectScope, and WatchHandle ([#9651](https://github.com/vuejs/core/issues/9651)) ([267093c](https://github.com/vuejs/core/commit/267093c31490050bfcf3ff2b30a2aefee2dad582))
-- **watch:** support passing number to `deep` option to control the watch depth ([#9572](https://github.com/vuejs/core/issues/9572)) ([22f7d96](https://github.com/vuejs/core/commit/22f7d96757956ebe0baafe52256aa327908cc51c))
-- **types:** export `MultiWatchSources` type ([#9563](https://github.com/vuejs/core/issues/9563)) ([998dca5](https://github.com/vuejs/core/commit/998dca59f140420280803233f41707580688562c))
-- **types:** allow computed getter and setter types to be unrelated ([#11472](https://github.com/vuejs/core/issues/11472)) ([a01675e](https://github.com/vuejs/core/commit/a01675ef8f99b5acd6832c53051f4415b18609f2)), closes [#7271](https://github.com/vuejs/core/issues/7271)
-
-### SSR
-
-- **runtime-core:** `useId()` and `app.config.idPrefix` ([#11404](https://github.com/vuejs/core/issues/11404)) ([73ef156](https://github.com/vuejs/core/commit/73ef1561f6905d69f968c094d0180c61824f1247))
-- **hydration:** lazy hydration strategies for async components ([#11458](https://github.com/vuejs/core/issues/11458)) ([d14a11c](https://github.com/vuejs/core/commit/d14a11c1cdcee88452f17ce97758743c863958f4))
-- **hydration:** support suppressing hydration mismatch via data-allow-mismatch ([94fb2b8](https://github.com/vuejs/core/commit/94fb2b8106a66bcca1a3f922a246a29fdd1274b1))
-
-### Custom Element
-
-- **custom-element:** `useHost()` helper ([775103a](https://github.com/vuejs/core/commit/775103af37df69d34c79f12c4c1776c47d07f0a0))
-- **custom-element:** `useShadowRoot()` helper ([5a1a89b](https://github.com/vuejs/core/commit/5a1a89bd6178cc2f84ba91da7d72aee4c6ec1282)), closes [#6113](https://github.com/vuejs/core/issues/6113) [#8195](https://github.com/vuejs/core/issues/8195)
-- **custom-element:** expose `this.$host` in Options API ([1ef8f46](https://github.com/vuejs/core/commit/1ef8f46af0cfdec2fed66376772409e0aa25ad50))
-- **custom-element:** inject child components styles to custom element shadow root ([#11517](https://github.com/vuejs/core/issues/11517)) ([56c76a8](https://github.com/vuejs/core/commit/56c76a8b05c45f782ed3a16ec77c6292b71a17f1)), closes [#4662](https://github.com/vuejs/core/issues/4662) [#7941](https://github.com/vuejs/core/issues/7941) [#7942](https://github.com/vuejs/core/issues/7942)
-- **custom-element:** support configurable app instance in defineCustomElement ([6758c3c](https://github.com/vuejs/core/commit/6758c3cd0427f97394d95168c655dae3b7fa62cd)), closes [#4356](https://github.com/vuejs/core/issues/4356) [#4635](https://github.com/vuejs/core/issues/4635)
-- **custom-element:** support css `:host` selector by applying css vars on host element ([#8830](https://github.com/vuejs/core/issues/8830)) ([03a9ea2](https://github.com/vuejs/core/commit/03a9ea2b88df0842a820e09f7445c4b9189e3fcb)), closes [#8826](https://github.com/vuejs/core/issues/8826)
-- **custom-element:** support emit with options ([e181bff](https://github.com/vuejs/core/commit/e181bff6dc39d5cef92000c10291243c7d6e4d08)), closes [#7605](https://github.com/vuejs/core/issues/7605)
-- **custom-element:** support expose on customElement ([#6256](https://github.com/vuejs/core/issues/6256)) ([af838c1](https://github.com/vuejs/core/commit/af838c1b5ec23552e52e64ffa7db0eb0246c3624)), closes [#5540](https://github.com/vuejs/core/issues/5540)
-- **custom-element:** support `nonce` option for injected style tags ([bb4a02a](https://github.com/vuejs/core/commit/bb4a02a70c30e739a3c705b3d96d09258d7d7ded)), closes [#6530](https://github.com/vuejs/core/issues/6530)
-- **custom-element:** support passing custom-element-specific options via 2nd argument of defineCustomElement ([60a88a2](https://github.com/vuejs/core/commit/60a88a2b129714186cf6ba66f30f31d733d0311e))
-- **custom-element:** support `shadowRoot: false` in `defineCustomElement()` ([37d2ce5](https://github.com/vuejs/core/commit/37d2ce5d8e0fac4a00064f02b05f91f69b2d5d5e)), closes [#4314](https://github.com/vuejs/core/issues/4314) [#4404](https://github.com/vuejs/core/issues/4404)
-
-### Teleport
-
-- **teleport:** support deferred Teleport ([#11387](https://github.com/vuejs/core/issues/11387)) ([59a3e88](https://github.com/vuejs/core/commit/59a3e88903b10ac2278170a44d5a03f24fef23ef)), closes [#2015](https://github.com/vuejs/core/issues/2015) [#11386](https://github.com/vuejs/core/issues/11386)
-- **teleport/transition:** support directly nesting Teleport inside Transition ([#6548](https://github.com/vuejs/core/issues/6548)) ([0e6e3c7](https://github.com/vuejs/core/commit/0e6e3c7eb0e5320b7c1818e025cb4a490fede9c0)), closes [#5836](https://github.com/vuejs/core/issues/5836)
-
-### Misc
-
-- **runtime-core:** `useTemplateRef()` ([3ba70e4](https://github.com/vuejs/core/commit/3ba70e49b5856c53611c314d4855d679a546a7df))
-- **runtime-core:** add `app.onUnmount()` for registering cleanup functions ([#4619](https://github.com/vuejs/core/issues/4619)) ([582a3a3](https://github.com/vuejs/core/commit/582a3a382b1adda565bac576b913a88d9e8d7a9e)), closes [#4516](https://github.com/vuejs/core/issues/4516)
-- **runtime-core:** add `app.config.throwUnhandledErrorInProduction` ([f476b7f](https://github.com/vuejs/core/commit/f476b7f030f2dd427ca655fcea36f4933a4b4da0)), closes [#7876](https://github.com/vuejs/core/issues/7876)
-- **runtime-dom:** Trusted Types compatibility ([#10844](https://github.com/vuejs/core/issues/10844)) ([6d4eb94](https://github.com/vuejs/core/commit/6d4eb94853ed1b2b1675bdd7d5ba9c75cc6daed5))
-- **compiler-core:** support `Symbol` global in template expressions ([#9069](https://github.com/vuejs/core/issues/9069)) ([a501a85](https://github.com/vuejs/core/commit/a501a85a7c910868e01a5c70a2abea4e9d9e87f3))
-- **types:** export more emit related types ([#11017](https://github.com/vuejs/core/issues/11017)) ([189573d](https://github.com/vuejs/core/commit/189573dcee2a16bd3ed36ff5589d43f535e5e733))
-* **types:** add loading prop to iframe ([#11767](https://github.com/vuejs/core/issues/11767)) ([d86fe0e](https://github.com/vuejs/core/commit/d86fe0ec002901dc359a0e85f3a421b4a8538d68))
-
-### Internals
-
-- **reactivity:** store value cache on CustomRefs impls ([#11539](https://github.com/vuejs/core/issues/11539)) ([e044b6e](https://github.com/vuejs/core/commit/e044b6e737efc9433d1d84590036b82280da6292))
-- **types:** provide internal options for directly using user types in language tools ([#10801](https://github.com/vuejs/core/issues/10801)) ([75c8cf6](https://github.com/vuejs/core/commit/75c8cf63a1ef30ac84f91282d66ad3f57c6612e9))
-- **types:** provide internal options for using refs type in language tools ([#11492](https://github.com/vuejs/core/issues/11492)) ([5ffd1a8](https://github.com/vuejs/core/commit/5ffd1a89455807d5069eb2c28eba0379641dca76))
-
-
-
-## Bug Fixes
-
-* **compiler-sfc:** fix import usage check for kebab-case same name shorthand binding ([0f7c0e5](https://github.com/vuejs/core/commit/0f7c0e5dc0eedada7a5194db87fd0a7dbd1d3354)), closes [#11745](https://github.com/vuejs/core/issues/11745) [#11754](https://github.com/vuejs/core/issues/11754)
-* **cssVars:** correctly escape double quotes in SSR ([#11784](https://github.com/vuejs/core/issues/11784)) ([7b5b6e0](https://github.com/vuejs/core/commit/7b5b6e0275f35748dca6d7eb842f8ab2364c6b9a)), closes [#11779](https://github.com/vuejs/core/issues/11779)
-* **deps:** update dependency postcss to ^8.4.44 ([#11774](https://github.com/vuejs/core/issues/11774)) ([cb843e0](https://github.com/vuejs/core/commit/cb843e0be31f9e563ccfc30eca0c06f2a224b505))
-* **hydration:** escape css var name to avoid mismatch ([#11739](https://github.com/vuejs/core/issues/11739)) ([ca12e77](https://github.com/vuejs/core/commit/ca12e776bc53aaa31f2df6bb6edc6be1b2f10c37)), closes [#11735](https://github.com/vuejs/core/issues/11735)
-* **hydration:** handle text nodes with 0 during hydration ([#11772](https://github.com/vuejs/core/issues/11772)) ([c756da2](https://github.com/vuejs/core/commit/c756da24b2d8635cf52b4c7d3abf5bf938852cc5)), closes [#11771](https://github.com/vuejs/core/issues/11771)
-* **reactivity:** correctly handle method calls on user-extended arrays ([#11760](https://github.com/vuejs/core/issues/11760)) ([9817c80](https://github.com/vuejs/core/commit/9817c80187bec6a3344c74d65fac92262de0fcdd)), closes [#11759](https://github.com/vuejs/core/issues/11759)
-* **runtime-dom:** avoid unnecessary prop patch for checkbox ([#11657](https://github.com/vuejs/core/issues/11657)) ([c3ce9fe](https://github.com/vuejs/core/commit/c3ce9fe3d8fc27d864ce7148cd36da882cfc21ab)), closes [#11647](https://github.com/vuejs/core/issues/11647)
-* **runtime-dom:** prevent unnecessary DOM update from v-model ([#11656](https://github.com/vuejs/core/issues/11656)) ([b1be9bd](https://github.com/vuejs/core/commit/b1be9bd64f2c7c4286fecb25bad5d5edd49efce9)), closes [#11647](https://github.com/vuejs/core/issues/11647)
-* **server-renderer:** Fix call to serverPrefetch in server renderer with an async setup ([#10893](https://github.com/vuejs/core/issues/10893)) ([6039e25](https://github.com/vuejs/core/commit/6039e25e04a8c1db5821955f011d57f1615807ab))
-* **server-renderer:** render `className` during SSR ([#11722](https://github.com/vuejs/core/issues/11722)) ([52cdb0f](https://github.com/vuejs/core/commit/52cdb0f991dc154ae32a2900874d5dbc4e078565))
-* **types/defineModel:** allow getter and setter types to be unrelated ([#11699](https://github.com/vuejs/core/issues/11699)) ([fe07f70](https://github.com/vuejs/core/commit/fe07f7073617df358c2f8cbc3de433359e873c96)), closes [#11697](https://github.com/vuejs/core/issues/11697)
-
-
-
-# [3.5.0-rc.1](https://github.com/vuejs/core/compare/v3.5.0-beta.3...v3.5.0-rc.1) (2024-08-29)
-
-
-### Bug Fixes
-
-* **compiler-sfc:** skip circular tsconfig project reference ([#11680](https://github.com/vuejs/core/issues/11680)) ([9c4c2e5](https://github.com/vuejs/core/commit/9c4c2e51b045218d0c5ca64b4fb58b17d5d580cc)), closes [#11382](https://github.com/vuejs/core/issues/11382)
-* **custom-element:** handle keys set on custom elements ([#11655](https://github.com/vuejs/core/issues/11655)) ([f1d1831](https://github.com/vuejs/core/commit/f1d1831f07fe52d5681a5ec9ec310572463abf26)), closes [#11641](https://github.com/vuejs/core/issues/11641)
-* **deps:** update dependency monaco-editor to ^0.51.0 ([#11713](https://github.com/vuejs/core/issues/11713)) ([434f8a9](https://github.com/vuejs/core/commit/434f8a97c77f68aeae050e9e4e1f54f63bc4bd26))
-* **keep-alive:**  reset keep alive flag when the component is removed from include ([#11718](https://github.com/vuejs/core/issues/11718)) ([29c321b](https://github.com/vuejs/core/commit/29c321bfd33f9197244dec3d027077e63b2cdf2f)), closes [#11717](https://github.com/vuejs/core/issues/11717)
-* **reactivity:** avoid infinite recursion when mutating ref wrapped in reactive ([313e4bf](https://github.com/vuejs/core/commit/313e4bf55214ac1e334a99c329a3ba5daca4f156)), closes [#11696](https://github.com/vuejs/core/issues/11696)
-* **reactivity:** ensure watcher with once: true are properly removed from effect scope  ([#11665](https://github.com/vuejs/core/issues/11665)) ([fbc0c42](https://github.com/vuejs/core/commit/fbc0c42bcf6dea5a6ae664223fa19d4375ca39f0))
-* **runtime-dom:** setting innerHTML when patching props should go through trusted types ([d875de5](https://github.com/vuejs/core/commit/d875de54e9e03e0768fe550aa4c4886a4baf3bd7))
-* **types:** GlobalDirective / GlobalComponents should not be records ([42e8df6](https://github.com/vuejs/core/commit/42e8df62030e7f2c287d9103f045e67b34a63e3b))
-
-
-
-# [3.5.0-beta.3](https://github.com/vuejs/core/compare/v3.5.0-beta.2...v3.5.0-beta.3) (2024-08-20)
-
-
-### Bug Fixes
-
-* **reactivity:** extended methods respect reactive ([#11629](https://github.com/vuejs/core/issues/11629)) ([9de1d10](https://github.com/vuejs/core/commit/9de1d101f98bf6081f41038f6974826f190330a0)), closes [#11628](https://github.com/vuejs/core/issues/11628)
-* **runtime-core:** correct type inference for PascalCase emits ([#11579](https://github.com/vuejs/core/issues/11579)) ([d7d0371](https://github.com/vuejs/core/commit/d7d0371e74707ee601020f67de88e091cdae2673)), closes [vuejs/language-tools#4269](https://github.com/vuejs/language-tools/issues/4269)
-* **runtime-core:** ensure suspense content inherit scopeId ([#10652](https://github.com/vuejs/core/issues/10652)) ([ac2a410](https://github.com/vuejs/core/commit/ac2a410e46392db63ca4ed2db3c0fa71ebe1e855)), closes [#5148](https://github.com/vuejs/core/issues/5148)
-* **runtime-core:** pre jobs without an id should run first ([#7746](https://github.com/vuejs/core/issues/7746)) ([b332f80](https://github.com/vuejs/core/commit/b332f80f0edb018229a23b43b93bb402b6368a3c))
-* **ssr:** apply ssr props to the the fallback vnode-based branch in ssr ([#7247](https://github.com/vuejs/core/issues/7247)) ([98b83e8](https://github.com/vuejs/core/commit/98b83e86d16c635547a1e735e5fb675aea2f0f1b)), closes [#6123](https://github.com/vuejs/core/issues/6123)
-* **types/custom-element:** `defineCustomElement` with required props ([#11578](https://github.com/vuejs/core/issues/11578)) ([5e0f6d5](https://github.com/vuejs/core/commit/5e0f6d5f8fe7c4eb8f247357c3e2e281726f36db))
-* **types:** strip non-prop default values from return type of withDefaults ([#9998](https://github.com/vuejs/core/issues/9998)) ([44973bb](https://github.com/vuejs/core/commit/44973bb3e790db7d8aa7af4eda21c80cac73a8de)), closes [#9899](https://github.com/vuejs/core/issues/9899)
-* **watch:** handle errors in computed used as watch source ([#11626](https://github.com/vuejs/core/issues/11626)) ([8bcaad4](https://github.com/vuejs/core/commit/8bcaad4a32cf0f1f89e0259f6a53036620b7fe9f)), closes [#11624](https://github.com/vuejs/core/issues/11624)
-
-
-### Features
-
-* **reactivity:** base `watch`, `getCurrentWatcher`, and `onWatcherCleanup` ([#9927](https://github.com/vuejs/core/issues/9927)) ([205e5b5](https://github.com/vuejs/core/commit/205e5b5e277243c3af2c937d9bd46cf671296b72))
-
-
-### Performance Improvements
-
-* **runtime-core:** use `apply` to avoid spreading. ([#5985](https://github.com/vuejs/core/issues/5985)) ([bb6babc](https://github.com/vuejs/core/commit/bb6babca8f206615d4e246457cd54d21bb3bc5a4))
-
-
-
-# [3.5.0-beta.2](https://github.com/vuejs/core/compare/v3.5.0-beta.1...v3.5.0-beta.2) (2024-08-15)
-
-
-### Bug Fixes
-
-* **build:** revert entities to 4.5 to avoid runtime resolution errors ([e9e0815](https://github.com/vuejs/core/commit/e9e08155bf8d00c3327ed7371330eb2ae467e560)), closes [#11603](https://github.com/vuejs/core/issues/11603)
-* **compiler-core:** use ast-based check for function expressions when possible ([5861229](https://github.com/vuejs/core/commit/58612294757480974e667652ede5bbcf72b1089d)), closes [#11615](https://github.com/vuejs/core/issues/11615)
-* **compiler-sfc:** fix prefixIdentifier default value ([3d6f015](https://github.com/vuejs/core/commit/3d6f01571b3fb61b32da599d0419eff4e3ebb231))
-* **compiler-sfc:** handle keyof operator with index object ([#11581](https://github.com/vuejs/core/issues/11581)) ([fe00815](https://github.com/vuejs/core/commit/fe008152c0612ff3ecc7ad88e7e66a06b1b2bc3f))
-* **custom-element:** keep instance.isCE for backwards compat ([e19fc27](https://github.com/vuejs/core/commit/e19fc270428b59456fee43224990138c4d6ccb2d))
-* **deps:** update dependency postcss to ^8.4.41 ([#11585](https://github.com/vuejs/core/issues/11585)) ([4c4e12a](https://github.com/vuejs/core/commit/4c4e12ae28d67d616924b0601e68adc551959971))
-* **keep-alive:** ensure include/exclude regexp work with global flag ([#11595](https://github.com/vuejs/core/issues/11595)) ([3653bc0](https://github.com/vuejs/core/commit/3653bc0f45d6fedf84e29b64ca52584359c383c0))
-* **reactivity:** ensure extended method arguments are not lost ([#11574](https://github.com/vuejs/core/issues/11574)) ([4085def](https://github.com/vuejs/core/commit/4085def1bae42d01ee3c22c731cc4a02096464ee)), closes [#11570](https://github.com/vuejs/core/issues/11570)
-* **reactivity:** sync watch should be executed correctly ([#11589](https://github.com/vuejs/core/issues/11589)) ([3bda3e8](https://github.com/vuejs/core/commit/3bda3e83fd9e2fbe451a1c79dae82ff6a7467683)), closes [#11577](https://github.com/vuejs/core/issues/11577)
-* **types/computed:** ensure type safety for `WritableComputedRef` ([#11608](https://github.com/vuejs/core/issues/11608)) ([5cf5a16](https://github.com/vuejs/core/commit/5cf5a1620d9a97382d386c277265d9dd051fe484))
-* **types:** add fallback stub for DOM types when DOM lib is absent ([#11598](https://github.com/vuejs/core/issues/11598)) ([fee6697](https://github.com/vuejs/core/commit/fee669764fbf475adce9e47a7a73b4937ab31ffc))
-
-
-### Features
-
-* **deprecated:** remove deprecated parseExpressions option ([#11597](https://github.com/vuejs/core/issues/11597)) ([4e7d5db](https://github.com/vuejs/core/commit/4e7d5db4d276a5d4aaf3af7d43cfd28c171db307))
-
-
-
-# [3.5.0-beta.1](https://github.com/vuejs/core/compare/v3.4.37...v3.5.0-beta.1) (2024-08-08)
-
-
-### Bug Fixes
-
-* **custom-element:** delay mounting of custom elements with async parent ([37ccb9b](https://github.com/vuejs/core/commit/37ccb9b9a0e4381f9465e0fc6459609003030da4)), closes [#8127](https://github.com/vuejs/core/issues/8127) [#9341](https://github.com/vuejs/core/issues/9341) [#9351](https://github.com/vuejs/core/issues/9351) [#9351](https://github.com/vuejs/core/issues/9351)
-* **custom-element:** delete prop on attribute removal ([506c4c5](https://github.com/vuejs/core/commit/506c4c53fdf9766c2ce9517ad58d501ef6b1b9de)), closes [#11276](https://github.com/vuejs/core/issues/11276)
-* **custom-element:** ignore scoped id ([7f2c505](https://github.com/vuejs/core/commit/7f2c505f92026408a8262ba9b5104a465be19446))
-* **custom-element:** reflect prop default value on custom element ([63689ed](https://github.com/vuejs/core/commit/63689ed77601d5f9b78540f810612806c3a5de15)), closes [#9006](https://github.com/vuejs/core/issues/9006) [#10537](https://github.com/vuejs/core/issues/10537)
-* **custom-element:** support early-set domProps for async custom elements ([a07e7bf](https://github.com/vuejs/core/commit/a07e7bf5536a6b3db70ba9bb1c3f366dac1bf5a0)), closes [#11081](https://github.com/vuejs/core/issues/11081) [#11082](https://github.com/vuejs/core/issues/11082)
-* **types/custome-element:** `defineCustomElement` props inference with array emits ([#11384](https://github.com/vuejs/core/issues/11384)) ([e94b01b](https://github.com/vuejs/core/commit/e94b01bd8a1ec740eddc823839ab2627b307c1b0)), closes [#11353](https://github.com/vuejs/core/issues/11353)
-* **types:** allow using InjectionKey as valid property key ([321d807](https://github.com/vuejs/core/commit/321d80758c42fccbd39ecbb63f1a4f6632a1580a)), closes [#5089](https://github.com/vuejs/core/issues/5089)
-
-
-### Features
-
-* **custom-element:** expose this.$host in Options API ([1ef8f46](https://github.com/vuejs/core/commit/1ef8f46af0cfdec2fed66376772409e0aa25ad50))
-* **custom-element:** inject child components styles to custom element shadow root ([#11517](https://github.com/vuejs/core/issues/11517)) ([56c76a8](https://github.com/vuejs/core/commit/56c76a8b05c45f782ed3a16ec77c6292b71a17f1)), closes [#4662](https://github.com/vuejs/core/issues/4662) [#7941](https://github.com/vuejs/core/issues/7941) [#7942](https://github.com/vuejs/core/issues/7942)
-* **custom-element:** support configurable app instance in defineCustomElement ([6758c3c](https://github.com/vuejs/core/commit/6758c3cd0427f97394d95168c655dae3b7fa62cd)), closes [#4356](https://github.com/vuejs/core/issues/4356) [#4635](https://github.com/vuejs/core/issues/4635)
-* **custom-element:** support css `:host` selector by applying css vars on host element ([#8830](https://github.com/vuejs/core/issues/8830)) ([03a9ea2](https://github.com/vuejs/core/commit/03a9ea2b88df0842a820e09f7445c4b9189e3fcb)), closes [#8826](https://github.com/vuejs/core/issues/8826)
-* **custom-element:** support emit with options ([e181bff](https://github.com/vuejs/core/commit/e181bff6dc39d5cef92000c10291243c7d6e4d08)), closes [#7605](https://github.com/vuejs/core/issues/7605)
-* **custom-element:** support for expose on customElement ([#6256](https://github.com/vuejs/core/issues/6256)) ([af838c1](https://github.com/vuejs/core/commit/af838c1b5ec23552e52e64ffa7db0eb0246c3624)), closes [#5540](https://github.com/vuejs/core/issues/5540)
-* **custom-element:** support nonce option for injected style tags ([bb4a02a](https://github.com/vuejs/core/commit/bb4a02a70c30e739a3c705b3d96d09258d7d7ded)), closes [#6530](https://github.com/vuejs/core/issues/6530)
-* **custom-element:** support passing custom-element-specific options via 2nd argument of defineCustomElement ([60a88a2](https://github.com/vuejs/core/commit/60a88a2b129714186cf6ba66f30f31d733d0311e))
-* **custom-element:** support shadowRoot: false in defineCustomElement() ([37d2ce5](https://github.com/vuejs/core/commit/37d2ce5d8e0fac4a00064f02b05f91f69b2d5d5e)), closes [#4314](https://github.com/vuejs/core/issues/4314) [#4404](https://github.com/vuejs/core/issues/4404)
-* **custom-element:** useHost() helper ([775103a](https://github.com/vuejs/core/commit/775103af37df69d34c79f12c4c1776c47d07f0a0))
-* **custom-element:** useShadowRoot() helper ([5a1a89b](https://github.com/vuejs/core/commit/5a1a89bd6178cc2f84ba91da7d72aee4c6ec1282)), closes [#6113](https://github.com/vuejs/core/issues/6113) [#8195](https://github.com/vuejs/core/issues/8195)
-* **hydration:** allow fine tuning of lazy hydration strategy triggers ([#11530](https://github.com/vuejs/core/issues/11530)) ([261c8b1](https://github.com/vuejs/core/commit/261c8b111d046204bd22392a8b920e3c3d4def48))
-* **reactivity/watch:** add pause/resume for ReactiveEffect, EffectScope, and WatchHandle ([#9651](https://github.com/vuejs/core/issues/9651)) ([267093c](https://github.com/vuejs/core/commit/267093c31490050bfcf3ff2b30a2aefee2dad582))
-* **reactivity:** store value cache on CustomRefs impls ([#11539](https://github.com/vuejs/core/issues/11539)) ([e044b6e](https://github.com/vuejs/core/commit/e044b6e737efc9433d1d84590036b82280da6292))
-* **runtime-dom:** Trusted Types compatibility ([#10844](https://github.com/vuejs/core/issues/10844)) ([6d4eb94](https://github.com/vuejs/core/commit/6d4eb94853ed1b2b1675bdd7d5ba9c75cc6daed5))
-* support specifying allowed keys via generic argument in useTemplateRef() ([1fbfa69](https://github.com/vuejs/core/commit/1fbfa6962b48634ff60837084b82dd57f215c109))
-* **types:** allow computed getter and setter types to be unrelated ([#11472](https://github.com/vuejs/core/issues/11472)) ([a01675e](https://github.com/vuejs/core/commit/a01675ef8f99b5acd6832c53051f4415b18609f2)), closes [#7271](https://github.com/vuejs/core/issues/7271)
-* **types:** export `MultiWatchSources` type ([#9563](https://github.com/vuejs/core/issues/9563)) ([998dca5](https://github.com/vuejs/core/commit/998dca59f140420280803233f41707580688562c))
-* **types:** provide internal options for using refs type in language tools ([#11492](https://github.com/vuejs/core/issues/11492)) ([5ffd1a8](https://github.com/vuejs/core/commit/5ffd1a89455807d5069eb2c28eba0379641dca76))
-* **watch:** support passing number to `deep` option to control the watch depth ([#9572](https://github.com/vuejs/core/issues/9572)) ([22f7d96](https://github.com/vuejs/core/commit/22f7d96757956ebe0baafe52256aa327908cc51c))
-
-
-
-# [3.5.0-alpha.5](https://github.com/vuejs/core/compare/v3.4.35...v3.5.0-alpha.5) (2024-07-31)
-
-
-### Features
-
-* **hydration:** support suppressing hydration mismatch via data-allow-mismatch ([94fb2b8](https://github.com/vuejs/core/commit/94fb2b8106a66bcca1a3f922a246a29fdd1274b1))
-* lazy hydration strategies for async components ([#11458](https://github.com/vuejs/core/issues/11458)) ([d14a11c](https://github.com/vuejs/core/commit/d14a11c1cdcee88452f17ce97758743c863958f4))
-
-
-
-# [3.5.0-alpha.4](https://github.com/vuejs/core/compare/v3.4.34...v3.5.0-alpha.4) (2024-07-24)
-
-### Bug Fixes
-
-* **suspense/hydration:** fix hydration timing of async component inside suspense ([1b8e197](https://github.com/vuejs/core/commit/1b8e197a5b65d67a9703b8511786fb81df9aa7cc)), closes [#6638](https://github.com/vuejs/core/issues/6638)
-* **useId:** properly mark async boundary for already resolved async component ([cd28172](https://github.com/vuejs/core/commit/cd281725781ada2ab279e919031ae307e146a9d9))
-
-
-
-# [3.5.0-alpha.3](https://github.com/vuejs/core/compare/v3.4.33...v3.5.0-alpha.3) (2024-07-19)
-
-
-### Bug Fixes
-
-* **build:** enable SSR branches in esm-browser builds ([b14cd9a](https://github.com/vuejs/core/commit/b14cd9a68bab082332b0169be075be357be076ca))
-* **compiler-core:** change node hoisting to caching per instance ([#11067](https://github.com/vuejs/core/issues/11067)) ([cd0ea0d](https://github.com/vuejs/core/commit/cd0ea0d479a276583fa181d8ecbc97fb0e4a9dce)), closes [#5256](https://github.com/vuejs/core/issues/5256) [#9219](https://github.com/vuejs/core/issues/9219) [#10959](https://github.com/vuejs/core/issues/10959)
-* **compiler-sfc:** should properly walk desutructured props when reactive destructure is not enabled ([0fd6193](https://github.com/vuejs/core/commit/0fd6193def2380916eb51a118f37f2d9ec2ace23)), closes [#11325](https://github.com/vuejs/core/issues/11325)
-* **types:** respect props with default on instance type when using __typeProps ([96e4738](https://github.com/vuejs/core/commit/96e473833422342c5ca371ae1aeb186dec9a55e3))
-
-
-### Features
-
-* **runtime-core:** useTemplateRef() ([3ba70e4](https://github.com/vuejs/core/commit/3ba70e49b5856c53611c314d4855d679a546a7df))
-* **runtime-core:** useId() and app.config.idPrefix ([#11404](https://github.com/vuejs/core/issues/11404)) ([73ef156](https://github.com/vuejs/core/commit/73ef1561f6905d69f968c094d0180c61824f1247))
-* **runtime-core:** add app.config.throwUnhandledErrorInProduction ([f476b7f](https://github.com/vuejs/core/commit/f476b7f030f2dd427ca655fcea36f4933a4b4da0)), closes [#7876](https://github.com/vuejs/core/issues/7876)
-* **teleport:** support deferred Teleport ([#11387](https://github.com/vuejs/core/issues/11387)) ([59a3e88](https://github.com/vuejs/core/commit/59a3e88903b10ac2278170a44d5a03f24fef23ef)), closes [#2015](https://github.com/vuejs/core/issues/2015) [#11386](https://github.com/vuejs/core/issues/11386)
-* **compiler-core:** support `Symbol` global in template expressions ([#9069](https://github.com/vuejs/core/issues/9069)) ([a501a85](https://github.com/vuejs/core/commit/a501a85a7c910868e01a5c70a2abea4e9d9e87f3))
-* **types:** export more emit related types ([#11017](https://github.com/vuejs/core/issues/11017)) ([189573d](https://github.com/vuejs/core/commit/189573dcee2a16bd3ed36ff5589d43f535e5e733))
-
-
-
-# [3.5.0-alpha.2](https://github.com/vuejs/core/compare/v3.4.26...v3.5.0-alpha.2) (2024-05-04)
-
-
-### Bug Fixes
-
-* **types:** fix app.component() typing with inline defineComponent ([908f70a](https://github.com/vuejs/core/commit/908f70adc06038d1ea253d96f4024367f4a7545d)), closes [#10843](https://github.com/vuejs/core/issues/10843)
-* **types:** fix compat with generated types that rely on CreateComponentPublicInstance ([c146186](https://github.com/vuejs/core/commit/c146186396d0c1a65423b8c9a21251c5a6467336)), closes [#10842](https://github.com/vuejs/core/issues/10842)
-* **types:** props in defineOptions type should be optional ([124c4ca](https://github.com/vuejs/core/commit/124c4cac833a28ae9bc8edc576c1d0c7c41f5985)), closes [#10841](https://github.com/vuejs/core/issues/10841)
-
-
-### Features
-
-* **runtime-core:** add app.onUnmount() for registering cleanup functions ([#4619](https://github.com/vuejs/core/issues/4619)) ([582a3a3](https://github.com/vuejs/core/commit/582a3a382b1adda565bac576b913a88d9e8d7a9e)), closes [#4516](https://github.com/vuejs/core/issues/4516)
-
-
-
-# [3.5.0-alpha.1](https://github.com/vuejs/core/compare/v3.4.25...v3.5.0-alpha.1) (2024-04-29)
-
-
-### Bug Fixes
-
-* **reactivity:** fix call sequence of ontrigger in effect ([#10501](https://github.com/vuejs/core/issues/10501)) ([28841fe](https://github.com/vuejs/core/commit/28841fee43a45c37905c2c1ed9ace23067539045))
-
-
-### Features
-
-* **compiler-sfc:** enable reactive props destructure by default ([d2dac0e](https://github.com/vuejs/core/commit/d2dac0e359c47d1ed0aa77eda488e76fd6466d2d))
-* **reactivity:** `onEffectCleanup` API ([2cc5615](https://github.com/vuejs/core/commit/2cc5615590de77126e8df46136de0240dbde5004)), closes [#10173](https://github.com/vuejs/core/issues/10173)
-* **reactivity:** add failSilently argument for onScopeDispose ([9a936aa](https://github.com/vuejs/core/commit/9a936aaec489c79433a32791ecf5ddb1739a62bd))
-* **transition:** support directly nesting Teleport inside Transition ([#6548](https://github.com/vuejs/core/issues/6548)) ([0e6e3c7](https://github.com/vuejs/core/commit/0e6e3c7eb0e5320b7c1818e025cb4a490fede9c0)), closes [#5836](https://github.com/vuejs/core/issues/5836)
-* **types:** provide internal options for directly using user types in language tools ([#10801](https://github.com/vuejs/core/issues/10801)) ([75c8cf6](https://github.com/vuejs/core/commit/75c8cf63a1ef30ac84f91282d66ad3f57c6612e9))
-
-
-### Performance Improvements
-
-* **reactivity:** optimize array tracking ([#9511](https://github.com/vuejs/core/issues/9511)) ([70196a4](https://github.com/vuejs/core/commit/70196a40cc078f50fcc1110c38c06fbcc70b205e)), closes [#4318](https://github.com/vuejs/core/issues/4318)
-
-
+Vapor Mode attempts to match VDOM Mode behavior as much as possible, but there could still be minor behavior inconsistencies in edge cases due to how fundamentally different the two rendering modes are. In general, we do not consider a minor inconsistency to be breaking change unless the behavior has previously been documented.
 
 ## Previous Changelogs
+
+### 3.5.x (2024-04-29 - 2025-06-18)
+
+See [3.5 changelog](./changelogs/CHANGELOG-3.5.md)
 
 ### 3.4.x (2023-10-28 - 2024-08-15)
 

@@ -8,8 +8,9 @@ import {
 import selectorParser from 'postcss-selector-parser'
 import { warn } from '../warn'
 
-const animationNameRE = /^(-\w+-)?animation-name$/
-const animationRE = /^(-\w+-)?animation$/
+const animationNameRE = /^(?:-\w+-)?animation-name$/
+const animationRE = /^(?:-\w+-)?animation$/
+const keyframesRE = /^(?:-\w+-)?keyframes$/
 
 const scopedPlugin: PluginCreator<string> = (id = '') => {
   const keyframes = Object.create(null)
@@ -21,10 +22,7 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
       processRule(id, rule)
     },
     AtRule(node) {
-      if (
-        /-?keyframes$/.test(node.name) &&
-        !node.params.endsWith(`-${shortId}`)
-      ) {
+      if (keyframesRE.test(node.name) && !node.params.endsWith(`-${shortId}`)) {
         // register keyframes
         keyframes[node.params] = node.params = node.params + '-' + shortId
       }
@@ -72,7 +70,7 @@ function processRule(id: string, rule: Rule) {
     processedRules.has(rule) ||
     (rule.parent &&
       rule.parent.type === 'atrule' &&
-      /-?keyframes$/.test((rule.parent as AtRule).name))
+      keyframesRE.test((rule.parent as AtRule).name))
   ) {
     return
   }
@@ -189,8 +187,7 @@ function rewriteSelector(
       // global: replace with inner selector and do not inject [id].
       // ::v-global(.foo) -> .foo
       if (value === ':global' || value === '::v-global') {
-        selectorRoot.insertAfter(selector, n.nodes[0])
-        selectorRoot.removeChild(selector)
+        selector.replaceWith(n.nodes[0])
         return false
       }
     }

@@ -117,6 +117,8 @@ return () => {}
 
 exports[`sfc reactive props destructure > default values w/ type declaration & key is string 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
+import { toDisplayString as _toDisplayString } from "vue"
+
 
 export default /*@__PURE__*/_defineComponent({
   props: {
@@ -129,7 +131,9 @@ export default /*@__PURE__*/_defineComponent({
 
       
       
-return () => {}
+return (_ctx: any,_cache: any) => {
+  return _toDisplayString(__props.foo)
+}
 }
 
 })"
@@ -185,6 +189,25 @@ export default {
 
     const props = __props,
           emit = __emit;
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > handle function parameters with same name as destructured props 1`] = `
+"
+export default {
+  setup(__props) {
+
+    
+    function test(value) {
+      try {
+      } catch {
+      }
+    }
+    console.log(__props.value)
     
 return () => {}
 }

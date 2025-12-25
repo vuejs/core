@@ -532,6 +532,9 @@ describe('error handling', () => {
     }
     expect(fn).toHaveBeenCalledWith(err, 'setup function')
     expect(
+      `Active effect was not restored correctly - this is likely a Vue internal bug.`,
+    ).toHaveBeenWarned()
+    expect(
       `Unhandled error during execution of setup function`,
     ).toHaveBeenWarned()
     expect(caughtError).toBe(err)

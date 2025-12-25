@@ -9,6 +9,7 @@ on:
     branches:
       - main
       - minor
+      - vapor
 
 jobs:
   test:
@@ -16,17 +17,17 @@ jobs:
     uses: ./.github/workflows/test.yml
 
   continuous-release:
-    if: github.repository == 'vuejs/core'
+    if: github.repository == 'vuejs/core' && github.ref_name != 'vapor'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.node-version'
           registry-url: 'https://registry.npmjs.org'
@@ -39,4 +40,4 @@ jobs:
         run: pnpm build --withTypes
 
       - name: Release
-        run: pnpx pkg-pr-new publish --compact --pnpm './packages/*'
+        run: pnpx pkg-pr-new publish --compact --pnpm './packages/*' --packageManager=pnpm,npm,yarn

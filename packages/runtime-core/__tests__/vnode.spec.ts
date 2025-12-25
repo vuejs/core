@@ -12,8 +12,8 @@ import {
   openBlock,
   transformVNodeArgs,
 } from '../src/vnode'
-import type { Data } from '../src/component'
 import { PatchFlags, ShapeFlags } from '@vue/shared'
+import type { Data } from '../src/component'
 import { h, isReactive, reactive, ref, setBlockTracking, withCtx } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'
@@ -542,18 +542,6 @@ describe('vnode', () => {
     })
 
     test('with functional component', () => {
-      const hoist = createVNode('div')
-      let vnode1
-      const vnode =
-        (openBlock(),
-        createBlock('div', null, [
-          hoist,
-          (vnode1 = createVNode(() => {}, null, 'text')),
-        ]))
-      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
-    })
-
-    test('with suspense', () => {
       const hoist = createVNode('div')
       let vnode1
       const vnode =

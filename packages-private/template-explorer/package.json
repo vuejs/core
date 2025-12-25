@@ -11,7 +11,8 @@
     "enableNonBrowserBranches": true
   },
   "dependencies": {
-    "monaco-editor": "^0.52.0",
+    "@vue/compiler-vapor": "workspace:^",
+    "monaco-editor": "^0.55.1",
     "source-map-js": "^1.2.1"
   }
 }

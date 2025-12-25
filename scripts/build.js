@@ -5,21 +5,23 @@ Produces production builds and stitches together d.ts files.
 
 To specify the package to build, simply pass its name and the desired build
 formats to output (defaults to `buildOptions.formats` specified in that package,
-or "esm,cjs"):
+or ["esm-bundler", "cjs"]):
 
 ```
 # name supports fuzzy match. will build all packages with name containing "dom":
 nr build dom
 
 # specify the format to output
-nr build core --formats cjs
+nr build vue -f cjs
+
+# to specify multiple formats, separate with "+":
+nr build vue -f esm-bundler+esm-browser
 ```
 */
 
 import { rolldown } from 'rolldown'
 import fs from 'node:fs'
 import { parseArgs } from 'node:util'
-import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import pico from 'picocolors'
@@ -163,8 +165,25 @@ function createConfigsForTarget(target) {
     return
   }
 
+  let resolvedFormats
+  if (formats) {
+    const isNegation = formats.startsWith('~')
+    resolvedFormats = (isNegation ? formats.slice(1) : formats).split('+')
+    const pkgFormats = pkg.buildOptions?.formats
+    if (pkgFormats) {
+      if (isNegation) {
+        resolvedFormats = pkgFormats.filter(f => !resolvedFormats.includes(f))
+      } else {
+        resolvedFormats = resolvedFormats.filter(f => pkgFormats.includes(f))
+      }
+    }
+    if (!resolvedFormats.length) {
+      return
+    }
+  }
+
   // if building a specific format, do not remove dist.
-  if (!formats && existsSync(`${pkgDir}/dist`)) {
+  if (!formats && fs.existsSync(`${pkgDir}/dist`)) {
     fs.rmSync(`${pkgDir}/dist`, { recursive: true })
   }
 
@@ -186,7 +205,10 @@ function createConfigsForTarget(target) {
  * @returns {Promise<void>}
  */
 async function checkAllSizes(targets) {
-  if (devOnly || (formats && !formats.includes('global'))) {
+  if (
+    devOnly ||
+    (formats && (formats.startsWith('~') || !formats.includes('global')))
+  ) {
     return
   }
   console.log()
@@ -215,7 +237,7 @@ async function checkSize(target) {
  * @returns {Promise<void>}
  */
 async function checkFileSize(filePath) {
-  if (!existsSync(filePath)) {
+  if (!fs.existsSync(filePath)) {
     return
   }
   const file = fs.readFileSync(filePath)

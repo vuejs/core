@@ -4,6 +4,7 @@ import {
   isReadonly,
   isRef,
   isShallow,
+  setActiveSub,
   toRaw,
 } from '@vue/reactivity'
 import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
@@ -11,7 +12,7 @@ import type { ComponentInternalInstance, ComponentOptions } from './component'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 
 export function initCustomFormatter(): void {
-  /* eslint-disable no-restricted-globals */
+  /* oxlint-disable no-restricted-globals */
   if (!__DEV__ || typeof window === 'undefined') {
     return
   }
@@ -34,13 +35,16 @@ export function initCustomFormatter(): void {
       if (obj.__isVue) {
         return ['div', vueStyle, `VueInstance`]
       } else if (isRef(obj)) {
+        // avoid tracking during debugger accessing
+        const prevSub = setActiveSub()
+        const value = obj.value
+        setActiveSub(prevSub)
         return [
           'div',
           {},
           ['span', vueStyle, genRefFlag(obj)],
           '<',
-          // avoid debugger accessing value affecting behavior
-          formatValue('_value' in obj ? obj._value : obj),
+          formatValue(value),
           `>`,
         ]
       } else if (isReactive(obj)) {

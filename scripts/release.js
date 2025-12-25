@@ -6,7 +6,7 @@ import semver from 'semver'
 import enquirer from 'enquirer'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-import { exec } from './utils.js'
+import { exec, getSha } from './utils.js'
 import { parseArgs } from 'node:util'
 
 /**
@@ -35,9 +35,6 @@ const { values: args, positionals } = parseArgs({
     },
     tag: {
       type: 'string',
-    },
-    canary: {
-      type: 'boolean',
     },
     skipBuild: {
       type: 'boolean',
@@ -69,9 +66,8 @@ const isDryRun = args.dry
 /** @type {boolean | undefined} */
 let skipTests = args.skipTests
 const skipBuild = args.skipBuild
-const isCanary = args.canary
-const skipPrompts = args.skipPrompts || args.canary
-const skipGit = args.skipGit || args.canary
+const skipPrompts = args.skipPrompts
+const skipGit = args.skipGit
 
 const packages = fs
   .readdirSync(path.resolve(__dirname, '../packages'))
@@ -84,31 +80,6 @@ const packages = fs
       return !pkg.private
     }
   })
-
-const isCorePackage = (/** @type {string} */ pkgName) => {
-  if (!pkgName) return
-
-  if (pkgName === 'vue' || pkgName === '@vue/compat') {
-    return true
-  }
-
-  return (
-    pkgName.startsWith('@vue') &&
-    packages.includes(pkgName.replace(/^@vue\//, ''))
-  )
-}
-
-const renamePackageToCanary = (/** @type {string} */ pkgName) => {
-  if (pkgName === 'vue') {
-    return '@vue/canary'
-  }
-
-  if (isCorePackage(pkgName)) {
-    return `${pkgName}-canary`
-  }
-
-  return pkgName
-}
 
 const keepThePackageName = (/** @type {string} */ pkgName) => pkgName
 
@@ -151,57 +122,6 @@ async function main() {
 
   let targetVersion = positionals[0]
 
-  if (isCanary) {
-    // The canary version string format is `3.yyyyMMdd.0` (or `3.yyyyMMdd.0-minor.0` for minor)
-    // Use UTC date so that it's consistent across CI and maintainers' machines
-    const date = new Date()
-    const yyyy = date.getUTCFullYear()
-    const MM = (date.getUTCMonth() + 1).toString().padStart(2, '0')
-    const dd = date.getUTCDate().toString().padStart(2, '0')
-
-    const major = semver.major(currentVersion)
-    const datestamp = `${yyyy}${MM}${dd}`
-    let canaryVersion
-
-    canaryVersion = `${major}.${datestamp}.0`
-    if (args.tag && args.tag !== 'latest') {
-      canaryVersion = `${major}.${datestamp}.0-${args.tag}.0`
-    }
-
-    // check the registry to avoid version collision
-    // in case we need to publish more than one canary versions in a day
-    try {
-      const pkgName = renamePackageToCanary('vue')
-      const { stdout } = await run(
-        'pnpm',
-        ['view', `${pkgName}@~${canaryVersion}`, 'version', '--json'],
-        { stdio: 'pipe' },
-      )
-      let versions = JSON.parse(/** @type {string} */ (stdout))
-      versions = Array.isArray(versions) ? versions : [versions]
-      const latestSameDayPatch = /** @type {string} */ (
-        semver.maxSatisfying(versions, `~${canaryVersion}`)
-      )
-
-      canaryVersion = /** @type {string} */ (
-        semver.inc(latestSameDayPatch, 'patch')
-      )
-      if (args.tag && args.tag !== 'latest') {
-        canaryVersion = /** @type {string} */ (
-          semver.inc(latestSameDayPatch, 'prerelease', args.tag)
-        )
-      }
-    } catch (/** @type {any} */ e) {
-      if (/E404/.test(e.message)) {
-        // the first patch version on that day
-      } else {
-        throw e
-      }
-    }
-
-    targetVersion = canaryVersion
-  }
-
   if (!targetVersion) {
     // no explicit version, offer suggestions
     /** @type {{ release: string }} */
@@ -239,11 +159,7 @@ async function main() {
   }
 
   if (skipPrompts) {
-    step(
-      isCanary
-        ? `Releasing canary version v${targetVersion}...`
-        : `Releasing v${targetVersion}...`,
-    )
+    step(`Releasing v${targetVersion}...`)
   } else {
     /** @type {{ yes: boolean }} */
     const { yes: confirmRelease } = await prompt({
@@ -261,10 +177,7 @@ async function main() {
 
   // update all package versions and inter-dependencies
   step('\nUpdating cross dependencies...')
-  updateVersions(
-    targetVersion,
-    isCanary ? renamePackageToCanary : keepThePackageName,
-  )
+  updateVersions(targetVersion, keepThePackageName)
   versionUpdated = true
 
   // generate changelog
@@ -285,11 +198,8 @@ async function main() {
   }
 
   // update pnpm-lock.yaml
-  // skipped during canary release because the package names changed and installing with `workspace:*` would fail
-  if (!isCanary) {
-    step('\nUpdating lockfile...')
-    await run(`pnpm`, ['install', '--prefer-offline'])
-  }
+  step('\nUpdating lockfile...')
+  await run(`pnpm`, ['install', '--prefer-offline'])
 
   if (!skipGit) {
     const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
@@ -425,10 +335,6 @@ async function isInSyncWithRemote() {
   }
 }
 
-async function getSha() {
-  return (await exec('git', ['rev-parse', 'HEAD'])).stdout
-}
-
 async function getBranch() {
   return (await exec('git', ['rev-parse', '--abbrev-ref', 'HEAD'])).stdout
 }
@@ -457,32 +363,7 @@ function updatePackage(pkgRoot, version, getNewPackageName) {
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
   pkg.name = getNewPackageName(pkg.name)
   pkg.version = version
-  if (isCanary) {
-    updateDeps(pkg, 'dependencies', version, getNewPackageName)
-    updateDeps(pkg, 'peerDependencies', version, getNewPackageName)
-  }
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
-}
-
-/**
- * @param {Package} pkg
- * @param {'dependencies' | 'peerDependencies'} depType
- * @param {string} version
- * @param {(pkgName: string) => string} getNewPackageName
- */
-function updateDeps(pkg, depType, version, getNewPackageName) {
-  const deps = pkg[depType]
-  if (!deps) return
-  Object.keys(deps).forEach(dep => {
-    if (isCorePackage(dep)) {
-      const newName = getNewPackageName(dep)
-      const newVersion = newName === dep ? version : `npm:${newName}@${version}`
-      console.log(
-        pico.yellow(`${pkg.name} -> ${depType} -> ${dep}@${newVersion}`),
-      )
-      deps[dep] = newVersion
-    }
-  })
 }
 
 async function buildPackages() {
@@ -509,9 +390,8 @@ async function publishPackages(version) {
     additionalPublishFlags.push('--no-git-checks')
   }
   // add provenance metadata when releasing from CI
-  // canary release commits are not pushed therefore we don't need to add provenance
-  // also skip provenance if not publishing to actual npm
-  if (process.env.CI && !isCanary && !args.registry) {
+  // skip provenance if not publishing to actual npm
+  if (process.env.CI && !args.registry) {
     additionalPublishFlags.push('--provenance')
   }
 

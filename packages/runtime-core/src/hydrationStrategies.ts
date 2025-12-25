@@ -35,7 +35,7 @@ export const hydrateOnIdle: HydrationStrategyFactory<number> =
 
 function elementIsVisibleInViewport(el: Element) {
   const { top, left, bottom, right } = el.getBoundingClientRect()
-  // eslint-disable-next-line no-restricted-globals
+  // oxlint-disable-next-line no-restricted-globals
   const { innerHeight, innerWidth } = window
   return (
     ((top > 0 && top < innerHeight) || (bottom > 0 && bottom < innerHeight)) &&
@@ -91,8 +91,10 @@ export const hydrateOnInteraction: HydrationStrategyFactory<
         hasHydrated = true
         teardown()
         hydrate()
-        // replay event
-        e.target!.dispatchEvent(new (e.constructor as any)(e.type, e))
+        // replay event if the event is not delegated
+        if (!(`$evt${e.type}` in e.target!)) {
+          e.target!.dispatchEvent(new (e.constructor as any)(e.type, e))
+        }
       }
     }
     const teardown = () => {

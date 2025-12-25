@@ -39,9 +39,8 @@
       matchPackageNames: [
         'simple-git-hooks',
         'lint-staged',
-        'typescript-eslint{/,}**',
-        'eslint{/,}**',
-        'prettier{/,}**',
+        'oxlint',
+        'oxfmt{/,}**',
       ],
     },
   ],
@@ -66,9 +65,5 @@
     // pinned
     // only used in example for e2e tests
     'marked',
-
-    // pinned, 5.0+ has exports issues
-    // https://github.com/vuejs/core/issues/11603
-    'entities',
   ],
 }

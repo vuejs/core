@@ -1,6 +1,8 @@
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
+  type ConcreteComponent,
+  type GenericComponentInstance,
   type SetupContext,
   getCurrentInstance,
 } from '../component'
@@ -19,12 +21,16 @@ import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
-import type { RendererElement } from '../renderer'
+import {
+  type RendererElement,
+  getVaporInterface,
+  isVaporComponent,
+} from '../renderer'
 import { SchedulerJobFlags } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
 
-const leaveCbKey: unique symbol = Symbol('_leaveCb')
+export const leaveCbKey: unique symbol = Symbol('_leaveCb')
 const enterCbKey: unique symbol = Symbol('_enterCb')
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
@@ -87,7 +93,7 @@ export interface TransitionState {
   isUnmounting: boolean
   // Track pending leave callbacks for children of the same key.
   // This is used to force remove leaving a child when a new copy is entering.
-  leavingVNodes: Map<any, Record<string, VNode>>
+  leavingNodes: Map<any, Record<string, any>>
 }
 
 export interface TransitionElement {
@@ -103,7 +109,7 @@ export function useTransitionState(): TransitionState {
     isMounted: false,
     isLeaving: false,
     isUnmounting: false,
-    leavingVNodes: new Map(),
+    leavingNodes: new Map(),
   }
   onMounted(() => {
     state.isMounted = true
@@ -138,7 +144,9 @@ export const BaseTransitionPropsValidators: Record<string, any> = {
 }
 
 const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
-  const subTree = instance.subTree
+  const subTree = isVaporComponent(instance.type)
+    ? (instance as any).block
+    : instance.subTree
   return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
 }
 
@@ -164,15 +172,7 @@ const BaseTransitionImpl: ComponentOptions = {
       const rawProps = toRaw(props)
       const { mode } = rawProps
       // check mode
-      if (
-        __DEV__ &&
-        mode &&
-        mode !== 'in-out' &&
-        mode !== 'out-in' &&
-        mode !== 'default'
-      ) {
-        warn(`invalid <transition> mode: ${mode}`)
-      }
+      checkTransitionMode(mode)
 
       if (state.isLeaving) {
         return emptyPlaceholder(child)
@@ -198,17 +198,16 @@ const BaseTransitionImpl: ComponentOptions = {
         setTransitionHooks(innerChild, enterHooks)
       }
 
-      const oldChild = instance.subTree
-      const oldInnerChild = oldChild && getInnerChild(oldChild)
+      let oldInnerChild = instance.subTree && getInnerChild(instance.subTree)
 
       // handle mode
       if (
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
-        !isSameVNodeType(innerChild, oldInnerChild) &&
+        !isSameVNodeType(oldInnerChild, innerChild) &&
         recursiveGetSubtree(instance).type !== Comment
       ) {
-        const leavingHooks = resolveTransitionHooks(
+        let leavingHooks = resolveTransitionHooks(
           oldInnerChild,
           rawProps,
           state,
@@ -228,6 +227,7 @@ const BaseTransitionImpl: ComponentOptions = {
               instance.update()
             }
             delete leavingHooks.afterLeave
+            oldInnerChild = undefined
           }
           return emptyPlaceholder(child)
         } else if (mode === 'in-out' && innerChild.type !== Comment) {
@@ -238,18 +238,27 @@ const BaseTransitionImpl: ComponentOptions = {
           ) => {
             const leavingVNodesCache = getLeavingNodesForType(
               state,
-              oldInnerChild,
+              oldInnerChild!,
             )
-            leavingVNodesCache[String(oldInnerChild.key)] = oldInnerChild
+            leavingVNodesCache[String(oldInnerChild!.key)] = oldInnerChild!
             // early removal callback
             el[leaveCbKey] = () => {
               earlyRemove()
               el[leaveCbKey] = undefined
               delete enterHooks.delayedLeave
+              oldInnerChild = undefined
             }
-            enterHooks.delayedLeave = delayedLeave
+            enterHooks.delayedLeave = () => {
+              delayedLeave()
+              delete enterHooks.delayedLeave
+              oldInnerChild = undefined
+            }
           }
+        } else {
+          oldInnerChild = undefined
         }
+      } else if (oldInnerChild) {
+        oldInnerChild = undefined
       }
 
       return child
@@ -300,13 +309,20 @@ function getLeavingNodesForType(
   state: TransitionState,
   vnode: VNode,
 ): Record<string, VNode> {
-  const { leavingVNodes } = state
-  let leavingVNodesCache = leavingVNodes.get(vnode.type)!
+  const { leavingNodes } = state
+  let leavingVNodesCache = leavingNodes.get(vnode.type)!
   if (!leavingVNodesCache) {
     leavingVNodesCache = Object.create(null)
-    leavingVNodes.set(vnode.type, leavingVNodesCache)
+    leavingNodes.set(vnode.type, leavingVNodesCache)
   }
   return leavingVNodesCache
+}
+
+export interface TransitionHooksContext {
+  setLeavingNodeCache: (node: any) => void
+  unsetLeavingNodeCache: (node: any) => void
+  earlyRemove: () => void
+  cloneHooks: (node: any) => TransitionHooks
 }
 
 // The transition hooks are attached to the vnode as vnode.transition
@@ -315,9 +331,61 @@ export function resolveTransitionHooks(
   vnode: VNode,
   props: BaseTransitionProps<any>,
   state: TransitionState,
-  instance: ComponentInternalInstance,
+  instance: GenericComponentInstance,
   postClone?: (hooks: TransitionHooks) => void,
 ): TransitionHooks {
+  const key = String(vnode.key)
+  const leavingVNodesCache = getLeavingNodesForType(state, vnode)
+  const context: TransitionHooksContext = {
+    setLeavingNodeCache: () => {
+      leavingVNodesCache[key] = vnode
+    },
+    unsetLeavingNodeCache: () => {
+      if (leavingVNodesCache[key] === vnode) {
+        delete leavingVNodesCache[key]
+      }
+    },
+    earlyRemove: () => {
+      const leavingVNode = leavingVNodesCache[key]
+      if (
+        leavingVNode &&
+        isSameVNodeType(vnode, leavingVNode) &&
+        (leavingVNode.el as TransitionElement)[leaveCbKey]
+      ) {
+        // force early removal (not cancelled)
+        ;(leavingVNode.el as TransitionElement)[leaveCbKey]!()
+      }
+    },
+    cloneHooks: vnode => {
+      const hooks = resolveTransitionHooks(
+        vnode,
+        props,
+        state,
+        instance,
+        postClone,
+      )
+      if (postClone) postClone(hooks)
+      return hooks
+    },
+  }
+
+  return baseResolveTransitionHooks(context, props, state, instance)
+}
+
+// shared between vdom and vapor
+export function baseResolveTransitionHooks(
+  context: TransitionHooksContext,
+  props: BaseTransitionProps<any>,
+  state: TransitionState,
+  instance: GenericComponentInstance,
+): TransitionHooks {
+  const {
+    setLeavingNodeCache,
+    unsetLeavingNodeCache,
+    earlyRemove,
+    cloneHooks,
+  } = context
+
   const {
     appear,
     mode,
@@ -335,8 +403,6 @@ export function resolveTransitionHooks(
     onAfterAppear,
     onAppearCancelled,
   } = props
-  const key = String(vnode.key)
-  const leavingVNodesCache = getLeavingNodesForType(state, vnode)
 
   const callHook: TransitionHookCaller = (hook, args) => {
     hook &&
@@ -378,15 +444,7 @@ export function resolveTransitionHooks(
         el[leaveCbKey](true /* cancelled */)
       }
       // for toggled element with same key (v-if)
-      const leavingVNode = leavingVNodesCache[key]
-      if (
-        leavingVNode &&
-        isSameVNodeType(vnode, leavingVNode) &&
-        (leavingVNode.el as TransitionElement)[leaveCbKey]
-      ) {
-        // force early removal (not cancelled)
-        ;(leavingVNode.el as TransitionElement)[leaveCbKey]!()
-      }
+      earlyRemove()
       callHook(hook, [el])
     },
 
@@ -425,7 +483,7 @@ export function resolveTransitionHooks(
     },
 
     leave(el, remove) {
-      const key = String(vnode.key)
+      // const key = String(vnode.key)
       if (el[enterCbKey]) {
         el[enterCbKey](true /* cancelled */)
       }
@@ -444,11 +502,9 @@ export function resolveTransitionHooks(
           callHook(onAfterLeave, [el])
         }
         el[leaveCbKey] = undefined
-        if (leavingVNodesCache[key] === vnode) {
-          delete leavingVNodesCache[key]
-        }
+        unsetLeavingNodeCache(el)
       })
-      leavingVNodesCache[key] = vnode
+      setLeavingNodeCache(el)
       if (onLeave) {
         callAsyncHook(onLeave, [el, done])
       } else {
@@ -456,16 +512,8 @@ export function resolveTransitionHooks(
       }
     },
 
-    clone(vnode) {
-      const hooks = resolveTransitionHooks(
-        vnode,
-        props,
-        state,
-        instance,
-        postClone,
-      )
-      if (postClone) postClone(hooks)
-      return hooks
+    clone(node) {
+      return cloneHooks(node)
     },
   }
 
@@ -492,9 +540,8 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
     return vnode
   }
-  // #7121 ensure get the child component subtree in case
-  // it's been replaced during HMR
-  if (__DEV__ && vnode.component) {
+  // #7121,#12465 get the component subtree if it's been mounted
+  if (vnode.component) {
     return vnode.component.subTree
   }
 
@@ -516,8 +563,15 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
-    vnode.transition = hooks
-    setTransitionHooks(vnode.component.subTree, hooks)
+    if (isVaporComponent(vnode.type as ConcreteComponent)) {
+      getVaporInterface(vnode.component, vnode).setTransitionHooks(
+        vnode.component,
+        hooks,
+      )
+    } else {
+      vnode.transition = hooks
+      setTransitionHooks(vnode.component.subTree, hooks)
+    }
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
     vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
@@ -562,4 +616,19 @@ export function getTransitionRawChildren(
     }
   }
   return ret
+}
+
+/**
+ * dev-only
+ */
+export function checkTransitionMode(mode: string | undefined): void {
+  if (
+    __DEV__ &&
+    mode &&
+    mode !== 'in-out' &&
+    mode !== 'out-in' &&
+    mode !== 'default'
+  ) {
+    warn(`invalid <transition> mode: ${mode}`)
+  }
 }

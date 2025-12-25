@@ -9,6 +9,7 @@ import type { BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
 import type { TypeScope } from './resolveType'
 import { warn } from '../warn'
+import { isJS, isTS } from './utils'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -92,16 +93,8 @@ export class ScriptCompileContext {
     this.startOffset = descriptor.scriptSetup?.loc.start.offset
     this.endOffset = descriptor.scriptSetup?.loc.end.offset
 
-    this.isJS =
-      scriptLang === 'js' ||
-      scriptLang === 'jsx' ||
-      scriptSetupLang === 'js' ||
-      scriptSetupLang === 'jsx'
-    this.isTS =
-      scriptLang === 'ts' ||
-      scriptLang === 'tsx' ||
-      scriptSetupLang === 'ts' ||
-      scriptSetupLang === 'tsx'
+    this.isJS = isJS(scriptLang, scriptSetupLang)
+    this.isTS = isTS(scriptLang, scriptSetupLang)
 
     const customElement = options.customElement
     const filename = descriptor.filename

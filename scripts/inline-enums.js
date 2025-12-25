@@ -217,7 +217,9 @@ export function scanEnums() {
   }
 
   // 3. save cache
-  if (!existsSync('temp')) mkdirSync('temp')
+  try {
+    mkdirSync('temp')
+  } catch {}
 
   /** @type {EnumData} */
   const enumData = {

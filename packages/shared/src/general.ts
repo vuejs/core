@@ -8,6 +8,11 @@ export const EMPTY_ARR: readonly never[] = __DEV__ ? Object.freeze([]) : []
 export const NOOP = (): void => {}
 
 /**
+ * Always return true.
+ */
+export const YES = () => true
+
+/**
  * Always return false.
  */
 export const NO = () => false
@@ -18,7 +23,14 @@ export const isOn = (key: string): boolean =>
   // uppercase letter
   (key.charCodeAt(2) > 122 || key.charCodeAt(2) < 97)
 
-export const isModelListener = (key: string): key is `onUpdate:${string}` =>
+export const isNativeOn = (key: string): boolean =>
+  key.charCodeAt(0) === 111 /* o */ &&
+  key.charCodeAt(1) === 110 /* n */ &&
+  // lowercase letter
+  key.charCodeAt(2) > 96 &&
+  key.charCodeAt(2) < 123
+
+export const isModelListener = (key: string): boolean =>
   key.startsWith('onUpdate:')
 
 export const extend: typeof Object.assign = Object.assign
@@ -88,6 +100,9 @@ export const isReservedProp: (key: string) => boolean = /*@__PURE__*/ makeMap(
     'onVnodeBeforeUnmount,onVnodeUnmounted',
 )
 
+export const isBuiltInTag: (key: string) => boolean =
+  /*#__PURE__*/ makeMap('slot,component')
+
 export const isBuiltInDirective: (key: string) => boolean =
   /*@__PURE__*/ makeMap(
     'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo',
@@ -102,13 +117,12 @@ const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
 }
 
 const camelizeRE = /-(\w)/g
+const camelizeReplacer = (_: any, c: string) => (c ? c.toUpperCase() : '')
 /**
  * @private
  */
 export const camelize: (str: string) => string = cacheStringFunction(
-  (str: string): string => {
-    return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
-  },
+  (str: string): string => str.replace(camelizeRE, camelizeReplacer),
 )
 
 const hyphenateRE = /\B([A-Z])/g
@@ -138,6 +152,18 @@ export const toHandlerKey: <T extends string>(
     return s as T extends '' ? '' : `on${Capitalize<T>}`
   },
 )
+
+/**
+ * #13070 When v-model and v-model:model directives are used together,
+ * they will generate the same modelModifiers prop,
+ * so a `$` suffix is added to avoid conflicts.
+ * @private
+ */
+export const getModifierPropName = (name: string): string => {
+  return `${
+    name === 'modelValue' || name === 'model-value' ? 'model' : name
+  }Modifiers${name === 'model' ? '$' : ''}`
+}
 
 // compare whether a value has changed, accounting for NaN.
 export const hasChanged = (value: any, oldValue: any): boolean =>
@@ -215,5 +241,13 @@ export function genCacheKey(source: string, options: any): string {
     JSON.stringify(options, (_, val) =>
       typeof val === 'function' ? val.toString() : val,
     )
+  )
+}
+
+export function canSetValueDirectly(tagName: string): boolean {
+  return (
+    tagName !== 'PROGRESS' &&
+    // custom elements may use _value internally
+    !tagName.includes('-')
   )
 }

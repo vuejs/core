@@ -11,13 +11,13 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4.0.0
+        uses: pnpm/action-setup@v4.2.0
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.node-version'
           cache: 'pnpm'
@@ -32,13 +32,13 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4.0.0
+        uses: pnpm/action-setup@v4.2.0
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.node-version'
           cache: 'pnpm'
@@ -52,6 +52,35 @@ jobs:
         run: pnpm run test-unit server-renderer
 
   e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup cache for Chromium binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: chromium-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4.2.0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+
+      - run: pnpm install
+      - run: node node_modules/puppeteer/install.mjs
+
+      - name: Run e2e tests
+        run: pnpm run test-e2e
+
+      - name: verify treeshaking
+        run: node scripts/verify-treeshaking.js
+
+  e2e-vapor:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -75,34 +104,34 @@ jobs:
       - run: node node_modules/puppeteer/install.mjs
 
       - name: Run e2e tests
-        run: pnpm run test-e2e
-
-      - name: verify treeshaking
-        run: node scripts/verify-treeshaking.js
+        run: pnpm run test-e2e-vapor
 
   lint-and-test-dts:
     runs-on: ubuntu-latest
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4.0.0
+        uses: pnpm/action-setup@v4.2.0
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.node-version'
           cache: 'pnpm'
 
       - run: pnpm install
 
-      - name: Run eslint
+      - name: Run oxlint
         run: pnpm run lint
 
-      - name: Run prettier
+      - name: Run oxfmt
         run: pnpm run format-check
+
+      - name: Run tsc
+        run: pnpm run check
 
       - name: Run type declaration tests
         run: pnpm run test-dts

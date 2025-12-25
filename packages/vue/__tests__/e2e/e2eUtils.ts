@@ -1,13 +1,13 @@
 import puppeteer, {
   type Browser,
   type ClickOptions,
+  type LaunchOptions,
   type Page,
-  type PuppeteerLaunchOptions,
 } from 'puppeteer'
 
 export const E2E_TIMEOUT: number = 30 * 1000
 
-const puppeteerOptions: PuppeteerLaunchOptions = {
+const puppeteerOptions: LaunchOptions = {
   args: process.env.CI ? ['--no-sandbox', '--disable-setuid-sandbox'] : [],
   headless: true,
 }
@@ -34,11 +34,13 @@ export async function expectByPolling(
 interface PuppeteerUtils {
   page: () => Page
   click(selector: string, options?: ClickOptions): Promise<void>
+  domClick(selector: string): Promise<void>
   count(selector: string): Promise<number>
   text(selector: string): Promise<string | null>
   value(selector: string): Promise<string>
   html(selector: string): Promise<string>
   classList(selector: string): Promise<string[]>
+  style(selector: string, property: keyof CSSStyleDeclaration): Promise<any>
   children(selector: string): Promise<any[]>
   isVisible(selector: string): Promise<boolean>
   isChecked(selector: string): Promise<boolean>
@@ -49,6 +51,21 @@ interface PuppeteerUtils {
   clearValue(selector: string): Promise<any>
   timeout(time: number): Promise<any>
   nextFrame(): Promise<any>
+  transitionStart(
+    btnSelector: string,
+    containerSelector: string,
+  ): Promise<{ classNames: string[]; innerHTML: string; outerHTML: string }>
+  waitForElement(
+    selector: string,
+    text: string,
+    classNames: string[],
+    timeout?: number,
+  ): Promise<any>
+  waitForInnerHTML(
+    selector: string,
+    expected: string,
+    timeout?: number,
+  ): Promise<any>
 }
 
 export function setupPuppeteer(args?: string[]): PuppeteerUtils {
@@ -75,8 +92,7 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
 
     page.on('console', e => {
       if (e.type() === 'error') {
-        const err = e.args()[0]
-        console.error(`Error from Puppeteer-loaded page:\n`, err.remoteObject())
+        console.error(`Error from Puppeteer-loaded page:\n`, e.text())
       }
     })
   })
@@ -94,6 +110,10 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
     options?: ClickOptions,
   ): Promise<void> {
     await page.click(selector, options)
+  }
+
+  async function domClick(selector: string): Promise<void> {
+    await page.$eval(selector, (el: any) => el.click())
   }
 
   async function count(selector: string): Promise<number> {
@@ -118,6 +138,19 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
 
   async function children(selector: string): Promise<any[]> {
     return page.$eval(selector, (node: any) => [...node.children])
+  }
+
+  async function style(
+    selector: string,
+    property: keyof CSSStyleDeclaration,
+  ): Promise<any> {
+    return await page.$eval(
+      selector,
+      (node, property) => {
+        return window.getComputedStyle(node)[property]
+      },
+      property,
+    )
   }
 
   async function isVisible(selector: string): Promise<boolean> {
@@ -187,14 +220,69 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
     })
   }
 
+  const transitionStart = (btnSelector: string, containerSelector: string) =>
+    page.evaluate(
+      ([btnSel, containerSel]) => {
+        ;(document.querySelector(btnSel) as HTMLElement)!.click()
+        return Promise.resolve().then(() => {
+          const container = document.querySelector(containerSel)!
+          return {
+            classNames: container.className.split(/\s+/g),
+            innerHTML: container.innerHTML,
+            outerHTML: container.outerHTML,
+          }
+        })
+      },
+      [btnSelector, containerSelector],
+    )
+
+  const waitForElement = (
+    selector: string,
+    text: string,
+    classNames: string[], // if empty, check for no classes
+    timeout = 2000,
+  ) =>
+    page.waitForFunction(
+      (sel, expectedText, expectedClasses) => {
+        const el = document.querySelector(sel)
+        const hasClasses =
+          expectedClasses.length === 0
+            ? el?.classList.length === 0
+            : expectedClasses.every(c => el?.classList.contains(c))
+        const hasText = el?.textContent?.includes(expectedText)
+        return !!el && hasClasses && hasText
+      },
+      { timeout },
+      selector,
+      text,
+      classNames,
+    )
+
+  const waitForInnerHTML = (
+    selector: string,
+    expected: string,
+    timeout = 2000,
+  ) =>
+    page.waitForFunction(
+      (sel, exp) => {
+        const el = document.querySelector(sel)
+        return !!el && el.innerHTML === exp
+      },
+      { timeout },
+      selector,
+      expected,
+    )
+
   return {
     page: () => page,
     click,
+    domClick,
     count,
     text,
     value,
     html,
     classList,
+    style,
     children,
     isVisible,
     isChecked,
@@ -205,5 +293,8 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
     clearValue,
     timeout,
     nextFrame,
+    transitionStart,
+    waitForElement,
+    waitForInnerHTML,
   }
 }

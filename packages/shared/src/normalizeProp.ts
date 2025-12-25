@@ -1,6 +1,6 @@
 import { hyphenate, isArray, isObject, isString } from './general'
 
-export type NormalizedStyle = Record<string, string | number>
+export type NormalizedStyle = Record<string, unknown>
 
 export function normalizeStyle(
   value: unknown,
@@ -45,10 +45,10 @@ export function parseStringStyle(cssText: string): NormalizedStyle {
 export function stringifyStyle(
   styles: NormalizedStyle | string | undefined,
 ): string {
+  if (!styles) return ''
+  if (isString(styles)) return styles
+
   let ret = ''
-  if (!styles || isString(styles)) {
-    return ret
-  }
   for (const key in styles) {
     const value = styles[key]
     if (isString(value) || typeof value === 'number') {

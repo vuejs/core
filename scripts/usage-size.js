@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { rolldown } from 'rolldown'
 import { minify } from 'oxc-minify'
-import { replacePlugin } from 'rolldown/experimental'
+import { replacePlugin } from 'rolldown/plugins'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { parseArgs } from 'node:util'
 import pico from 'picocolors'
@@ -21,12 +21,12 @@ const {
 })
 
 const sizeDir = path.resolve('temp/size')
-const entry = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
+const vuePath = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
 
 /**
  * @typedef {Object} Preset
  * @property {string} name - The name of the preset
- * @property {string[]} imports - The imports that are part of this preset
+ * @property {'*' | string[]} imports - The imports that are part of this preset
  * @property {Record<string, string>} [replace]
  */
 
@@ -38,6 +38,11 @@ const presets = [
     replace: { __VUE_OPTIONS_API__: 'false' },
   },
   { name: 'createApp', imports: ['createApp'] },
+  {
+    name: 'createApp + vaporInteropPlugin',
+    imports: ['createApp', 'vaporInteropPlugin'],
+  },
+  { name: 'createVaporApp', imports: ['createVaporApp'] },
   { name: 'createSSRApp', imports: ['createSSRApp'] },
   { name: 'defineCustomElement', imports: ['defineCustomElement'] },
   {
@@ -92,7 +97,7 @@ async function main() {
  */
 async function generateBundle(preset) {
   const id = 'virtual:entry'
-  const content = `export { ${preset.imports.join(', ')} } from '${entry}'`
+  const content = `export { ${preset.imports.join(', ')} } from '${vuePath}'`
 
   const result = await rolldown({
     input: id,
@@ -123,12 +128,13 @@ async function generateBundle(preset) {
   const generated = await result.generate({})
   const bundled = generated.output[0].code
   const file = preset.name + '.js'
-  const minified = minify(file, bundled, {
-    mangle: {
-      toplevel: true,
-    },
-  }).code
-
+  const minified = (
+    await minify(file, bundled, {
+      mangle: {
+        toplevel: true,
+      },
+    })
+  ).code
   const size = minified.length
   const gzip = gzipSync(minified).length
   const brotli = brotliCompressSync(minified).length

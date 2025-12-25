@@ -10,7 +10,7 @@ import path from 'node:path'
 
 if (!existsSync('temp/packages')) {
   console.warn(
-    'no temp dts files found. run `tsc -p tsconfig.build-browser.json && tsc -p tsconfig.build-node.json` first.',
+    'no temp dts files found. run `tsc -p tsconfig.build.json --noCheck` first.',
   )
   process.exit(1)
 }
@@ -38,7 +38,7 @@ export default targetPackages.map(
   /** @returns {import('rolldown').BuildOptions} */
   pkg => {
     return {
-      input: `./temp/packages/${pkg}/src/index.d.ts`,
+      input: `./temp/packages/${pkg}/src/index${pkg === 'vue' ? '-with-vapor' : ''}.d.ts`,
       output: {
         file: `packages/${pkg}/dist/${pkg}.d.ts`,
         format: 'es',

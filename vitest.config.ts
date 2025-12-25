@@ -3,7 +3,7 @@ import { entries } from './scripts/aliases.js'
 
 export default defineConfig({
   define: {
-    __DEV__: true,
+    __DEV__: process.env.MODE !== 'benchmark',
     __TEST__: true,
     __VERSION__: '"test"',
     __BROWSER__: false,
@@ -12,6 +12,7 @@ export default defineConfig({
     __ESM_BROWSER__: false,
     __CJS__: true,
     __SSR__: true,
+    __BENCHMARK__: false,
     __FEATURE_OPTIONS_API__: true,
     __FEATURE_SUSPENSE__: true,
     __FEATURE_PROD_DEVTOOLS__: false,
@@ -24,10 +25,12 @@ export default defineConfig({
   test: {
     globals: true,
     pool: 'threads',
+    poolOptions: {
+      forks: {
+        execArgv: ['--expose-gc'],
+      },
+    },
     setupFiles: 'scripts/setup-vitest.ts',
-    environmentMatchGlobs: [
-      ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom'],
-    ],
     sequence: {
       hooks: 'list',
     },
@@ -40,6 +43,8 @@ export default defineConfig({
         'packages/vue-compat/**',
         'packages/vue/src/dev.ts',
         'packages/vue/src/runtime.ts',
+        'packages/vue/src/runtime-with-vapor.ts',
+        'packages/vue/src/index-with-vapor.ts',
         // not testable during unit tests
         'packages/runtime-core/src/profiling.ts',
         'packages/runtime-core/src/featureFlags.ts',
@@ -47,7 +52,57 @@ export default defineConfig({
         // tested via e2e so no coverage is collected
         'packages/runtime-core/src/hydrationStrategies.ts',
         'packages/runtime-dom/src/components/Transition*',
+        'packages/runtime-vapor/src/components/Transition*',
       ],
     },
+    workspace: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          exclude: [
+            ...configDefaults.exclude,
+            '**/e2e/**',
+            '**/vapor-e2e-test/**',
+            'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**',
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'unit-jsdom',
+          environment: 'jsdom',
+          include: [
+            'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**/*.spec.ts',
+          ],
+          exclude: [...configDefaults.exclude, '**/e2e/**'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'e2e',
+          poolOptions: {
+            threads: {
+              singleThread: !!process.env.CI,
+            },
+          },
+          include: ['packages/vue/__tests__/e2e/*.spec.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'e2e-vapor',
+          poolOptions: {
+            threads: {
+              singleThread: !!process.env.CI,
+            },
+          },
+          include: ['packages-private/vapor-e2e-test/__tests__/*.spec.ts'],
+        },
+      },
+    ],
   },
 })

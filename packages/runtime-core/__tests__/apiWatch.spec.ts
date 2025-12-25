@@ -25,12 +25,15 @@ import {
 } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
+  type EffectScope,
   ITERATE_KEY,
+  ReactiveEffect,
   type Ref,
   type ShallowRef,
   TrackOpTypes,
   TriggerOpTypes,
   effectScope,
+  onScopeDispose,
   shallowReactive,
   shallowRef,
   toRef,
@@ -500,6 +503,52 @@ describe('api: watch', () => {
     expect(cleanupEffect).toHaveBeenCalledTimes(3)
     stopWatch()
     expect(cleanupWatch).toHaveBeenCalledTimes(2)
+  })
+
+  it('nested calls to baseWatch and onWatcherCleanup', async () => {
+    let calls: string[] = []
+    let source: Ref<number>
+    let copyist: Ref<number>
+    const scope = effectScope()
+
+    scope.run(() => {
+      source = ref(0)
+      copyist = ref(0)
+      // sync flush
+      watchEffect(
+        () => {
+          const current = (copyist.value = source.value)
+          onWatcherCleanup(() => calls.push(`sync ${current}`))
+        },
+        { flush: 'sync' },
+      )
+      // post flush
+      watchEffect(
+        () => {
+          const current = copyist.value
+          onWatcherCleanup(() => calls.push(`post ${current}`))
+        },
+        { flush: 'post' },
+      )
+    })
+
+    await nextTick()
+    expect(calls).toEqual([])
+
+    scope.run(() => source.value++)
+    expect(calls).toEqual(['sync 0'])
+    await nextTick()
+    expect(calls).toEqual(['sync 0', 'post 0'])
+    calls.length = 0
+
+    scope.run(() => source.value++)
+    expect(calls).toEqual(['sync 1'])
+    await nextTick()
+    expect(calls).toEqual(['sync 1', 'post 1'])
+    calls.length = 0
+
+    scope.stop()
+    expect(calls).toEqual(['sync 2', 'post 2'])
   })
 
   it('flush timing: pre (default)', async () => {
@@ -1215,6 +1264,7 @@ describe('api: watch', () => {
       sideEffect = obj.a
     })
 
+    // oxlint-disable-next-line no-self-assign
     v.value = v.value
     await nextTick()
     // should not trigger
@@ -1331,16 +1381,15 @@ describe('api: watch', () => {
     render(h(Comp), nodeOps.createElement('div'))
 
     expect(instance!).toBeDefined()
-    expect(instance!.scope.effects).toBeInstanceOf(Array)
     // includes the component's own render effect AND the watcher effect
-    expect(instance!.scope.effects.length).toBe(2)
+    expect(getEffectsCount(instance!.scope)).toBe(2)
 
     _show!.value = false
 
     await nextTick()
     await nextTick()
 
-    expect(instance!.scope.effects.length).toBe(0)
+    expect(getEffectsCount(instance!.scope)).toBe(0)
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {
@@ -1488,7 +1537,7 @@ describe('api: watch', () => {
     createApp(Comp).mount(root)
     // should not record watcher in detached scope and only the instance's
     // own update effect
-    expect(instance!.scope.effects.length).toBe(1)
+    expect(getEffectsCount(instance!.scope)).toBe(1)
   })
 
   test('watchEffect should keep running if created in a detached scope', async () => {
@@ -1594,7 +1643,7 @@ describe('api: watch', () => {
 
     num.value++
     await nextTick()
-    // would not be calld when value>1
+    // would not be called when value>1
     expect(spy1).toHaveBeenCalledTimes(1)
     expect(spy2).toHaveBeenCalledTimes(1)
   })
@@ -1686,6 +1735,57 @@ describe('api: watch', () => {
     arr.value.pop()
     await nextTick()
     expect(cb).toHaveBeenCalledTimes(4)
+  })
+
+  test('watching the same object at different depths', async () => {
+    const arr1: any[] = reactive([[[{ foo: {} }]]])
+    const arr2 = arr1[0]
+    const arr3 = arr2[0]
+    const obj = arr3[0]
+    arr1.push(arr3)
+
+    const cb1 = vi.fn()
+    const cb2 = vi.fn()
+    const cb3 = vi.fn()
+    const cb4 = vi.fn()
+    watch(arr1, cb1, { deep: 1 })
+    watch(arr1, cb2, { deep: 2 })
+    watch(arr1, cb3, { deep: 3 })
+    watch(arr1, cb4, { deep: 4 })
+
+    await nextTick()
+    expect(cb1).toHaveBeenCalledTimes(0)
+    expect(cb2).toHaveBeenCalledTimes(0)
+    expect(cb3).toHaveBeenCalledTimes(0)
+    expect(cb4).toHaveBeenCalledTimes(0)
+
+    obj.foo = {}
+    await nextTick()
+    expect(cb1).toHaveBeenCalledTimes(0)
+    expect(cb2).toHaveBeenCalledTimes(0)
+    expect(cb3).toHaveBeenCalledTimes(1)
+    expect(cb4).toHaveBeenCalledTimes(1)
+
+    obj.foo.bar = 1
+    await nextTick()
+    expect(cb1).toHaveBeenCalledTimes(0)
+    expect(cb2).toHaveBeenCalledTimes(0)
+    expect(cb3).toHaveBeenCalledTimes(1)
+    expect(cb4).toHaveBeenCalledTimes(2)
+
+    arr3.push(obj.foo)
+    await nextTick()
+    expect(cb1).toHaveBeenCalledTimes(0)
+    expect(cb2).toHaveBeenCalledTimes(1)
+    expect(cb3).toHaveBeenCalledTimes(2)
+    expect(cb4).toHaveBeenCalledTimes(3)
+
+    obj.foo.bar = 2
+    await nextTick()
+    expect(cb1).toHaveBeenCalledTimes(0)
+    expect(cb2).toHaveBeenCalledTimes(1)
+    expect(cb3).toHaveBeenCalledTimes(3)
+    expect(cb4).toHaveBeenCalledTimes(4)
   })
 
   test('pause / resume', async () => {
@@ -1795,9 +1895,9 @@ describe('api: watch', () => {
     }
     const root = nodeOps.createElement('div')
     createApp(Comp).mount(root)
-    expect(instance!.scope.effects.length).toBe(2)
+    expect(getEffectsCount(instance!.scope)).toBe(2)
     unwatch!()
-    expect(instance!.scope.effects.length).toBe(1)
+    expect(getEffectsCount(instance!.scope)).toBe(1)
 
     const scope = effectScope()
     scope.run(() => {
@@ -1805,14 +1905,14 @@ describe('api: watch', () => {
         console.log(num.value)
       })
     })
-    expect(scope.effects.length).toBe(1)
+    expect(getEffectsCount(scope)).toBe(1)
     unwatch!()
-    expect(scope.effects.length).toBe(0)
+    expect(getEffectsCount(scope)).toBe(0)
 
     scope.run(() => {
       watch(num, () => {}, { once: true, immediate: true })
     })
-    expect(scope.effects.length).toBe(0)
+    expect(getEffectsCount(scope)).toBe(0)
   })
 
   // simplified case of VueUse syncRef
@@ -1873,7 +1973,7 @@ describe('api: watch', () => {
     expect(foo.value.a).toBe(2)
   })
 
-  test('watch immediate error in effect scope should be catched by onErrorCaptured', async () => {
+  test('watch immediate error in effect scope should be caught by onErrorCaptured', async () => {
     const warn = vi.spyOn(console, 'warn')
     warn.mockImplementation(() => {})
     const ERROR_IN_SCOPE = 'ERROR_IN_SCOPE'
@@ -1982,4 +2082,41 @@ describe('api: watch', () => {
     expect(spy1).toHaveBeenCalled()
     expect(spy2).toHaveBeenCalled()
   })
+
+  // #12631
+  test('this.$watch w/ onScopeDispose', () => {
+    const onCleanup = vi.fn()
+    const toggle = ref(true)
+
+    const Comp = defineComponent({
+      render() {},
+      created(this: any) {
+        this.$watch(
+          () => 1,
+          function () {},
+        )
+        onScopeDispose(onCleanup)
+      },
+    })
+
+    const App = defineComponent({
+      render() {
+        return toggle.value ? h(Comp) : null
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(App).mount(root)
+    expect(onCleanup).toBeCalledTimes(0)
+  })
 })
+
+function getEffectsCount(scope: EffectScope): number {
+  let n = 0
+  for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
+    if (dep.dep instanceof ReactiveEffect) {
+      n++
+    }
+  }
+  return n
+}

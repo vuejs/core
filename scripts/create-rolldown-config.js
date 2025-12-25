@@ -91,7 +91,7 @@ export function createConfigsForPackage({
   const resolvedFormats = (
     formats ||
     /** @type {PackageFormat[]} */
-    (packageOptions.formats || ['esm-bundler', 'cjs'])
+    packageOptions.formats || ['esm-bundler', 'cjs']
   ).filter(format => outputConfigs[format])
 
   const packageConfigs = prodOnly

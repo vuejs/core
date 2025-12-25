@@ -21,7 +21,7 @@ export function createDOMCompilerError(
 }
 
 export enum DOMErrorCodes {
-  X_V_HTML_NO_EXPRESSION = 53 /* ErrorCodes.__EXTEND_POINT__ */,
+  X_V_HTML_NO_EXPRESSION = 54 /* ErrorCodes.__EXTEND_POINT__ */,
   X_V_HTML_WITH_CHILDREN,
   X_V_TEXT_NO_EXPRESSION,
   X_V_TEXT_WITH_CHILDREN,
@@ -42,13 +42,13 @@ if (__TEST__) {
   if (DOMErrorCodes.X_V_HTML_NO_EXPRESSION < ErrorCodes.__EXTEND_POINT__) {
     throw new Error(
       `DOMErrorCodes need to be updated to ${
-        ErrorCodes.__EXTEND_POINT__ + 1
+        ErrorCodes.__EXTEND_POINT__
       } to match extension point from core ErrorCodes.`,
     )
   }
 }
 
-export const DOMErrorMessages: { [code: number]: string } = {
+export const DOMErrorMessages: Record<DOMErrorCodes, string> = {
   [DOMErrorCodes.X_V_HTML_NO_EXPRESSION]: `v-html is missing expression.`,
   [DOMErrorCodes.X_V_HTML_WITH_CHILDREN]: `v-html will override element children.`,
   [DOMErrorCodes.X_V_TEXT_NO_EXPRESSION]: `v-text is missing expression.`,
@@ -60,4 +60,7 @@ export const DOMErrorMessages: { [code: number]: string } = {
   [DOMErrorCodes.X_V_SHOW_NO_EXPRESSION]: `v-show is missing expression.`,
   [DOMErrorCodes.X_TRANSITION_INVALID_CHILDREN]: `<Transition> expects exactly one child element or component.`,
   [DOMErrorCodes.X_IGNORED_SIDE_EFFECT_TAG]: `Tags with side effect (<script> and <style>) are ignored in client component templates.`,
+
+  // just to fulfill types
+  [DOMErrorCodes.__EXTEND_POINT__]: ``,
 }
