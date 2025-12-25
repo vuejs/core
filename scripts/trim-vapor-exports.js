@@ -8,7 +8,7 @@
  *
  * @param {string} format
  * @param {string} pkgName
- * @returns {import('rollup').Plugin[]}
+ * @returns {import('rolldown').Plugin[]}
  */
 export function trimVaporExportsPlugin(format, pkgName) {
   if (

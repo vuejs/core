@@ -92,7 +92,15 @@ const {
   size,
 } = values
 
-const formats = rawFormats?.split(',')
+/**
+ * @type {string[] | undefined}
+ */
+let formats
+let isNegation = false
+if (rawFormats) {
+  isNegation = rawFormats.startsWith('~')
+  formats = (isNegation ? rawFormats.slice(1) : rawFormats).split('+')
+}
 const sizeDir = path.resolve('temp/size')
 
 run()
@@ -172,22 +180,22 @@ function createConfigsForTarget(target) {
     return
   }
 
-  // let resolvedFormats
-  // if (formats) {
-  //   const isNegation = formats.startsWith('~')
-  //   resolvedFormats = (isNegation ? formats.slice(1) : formats).split('+')
-  //   const pkgFormats = pkg.buildOptions?.formats
-  //   if (pkgFormats) {
-  //     if (isNegation) {
-  //       resolvedFormats = pkgFormats.filter(f => !resolvedFormats.includes(f))
-  //     } else {
-  //       resolvedFormats = resolvedFormats.filter(f => pkgFormats.includes(f))
-  //     }
-  //   }
-  //   if (!resolvedFormats.length) {
-  //     return
-  //   }
-  // }
+  let resolvedFormats
+  if (formats) {
+    const pkgFormats = pkg.buildOptions?.formats
+    if (pkgFormats) {
+      if (isNegation) {
+        resolvedFormats = pkgFormats.filter(
+          (/** @type {string} */ f) => !formats.includes(f),
+        )
+      } else {
+        resolvedFormats = formats.filter(f => pkgFormats.includes(f))
+      }
+    }
+    if (!resolvedFormats.length) {
+      return
+    }
+  }
 
   // if building a specific format, do not remove dist.
   if (!formats && existsSync(`${pkgDir}/dist`)) {
@@ -197,8 +205,7 @@ function createConfigsForTarget(target) {
   return createConfigsForPackage({
     target,
     commit,
-    // @ts-expect-error
-    formats,
+    formats: resolvedFormats,
     prodOnly,
     devOnly:
       (pkg.buildOptions && pkg.buildOptions.env === 'development') || devOnly,
