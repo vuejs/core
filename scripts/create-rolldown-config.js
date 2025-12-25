@@ -337,9 +337,6 @@ export function createConfigsForPackage({
         target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2016',
       },
       tsconfig: path.resolve(__dirname, '../tsconfig.json'),
-      // esm-bundler outputs are meant to be consumed by bundlers (Vite/Rspack/etc)
-      // and should preserve `process.env.NODE_ENV` checks for downstream replacement.
-      // Using `browser` here may cause the bundler to inline/fold env checks too early.
       platform:
         format === 'cjs' ? 'node' : isBundlerESMBuild ? 'neutral' : 'browser',
       resolve: {
