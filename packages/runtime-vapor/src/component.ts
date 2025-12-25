@@ -100,7 +100,11 @@ import {
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { _next, createElement } from './dom/node'
-import { TeleportFragment, isVaporTeleport } from './components/Teleport'
+import {
+  type TeleportFragment,
+  isTeleportFragment,
+  isVaporTeleport,
+} from './components/Teleport'
 import {
   type KeepAliveInstance,
   findParentKeepAlive,
@@ -966,7 +970,7 @@ export function getRootElement(
     return getRootElement(block.block, onDynamicFragment, recurse)
   }
 
-  if (isFragment(block) && !(block instanceof TeleportFragment)) {
+  if (isFragment(block) && !isTeleportFragment(block)) {
     if (block instanceof DynamicFragment && onDynamicFragment) {
       onDynamicFragment(block)
     }
@@ -1073,7 +1077,7 @@ function handleSetupResult(
         instance.block.length) ||
         // preventing attrs fallthrough on Teleport
         // consistent with VDOM Teleport behavior
-        instance.block instanceof TeleportFragment)
+        isTeleportFragment(instance.block))
     ) {
       warnExtraneousAttributes(instance.attrs)
     }
