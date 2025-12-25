@@ -677,6 +677,8 @@ function extractMemberExpression(
       return `${extractMemberExpression(exp.left, onIdentifier)} ${exp.operator} ${extractMemberExpression(exp.right, onIdentifier)}`
     case 'CallExpression': // foo[bar(baz)]
       return `${extractMemberExpression(exp.callee, onIdentifier)}(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
+    case 'OptionalCallExpression': // foo[bar?.(baz)]
+      return `${extractMemberExpression(exp.callee, onIdentifier)}?.(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
     case 'MemberExpression': // foo[bar.baz]
     case 'OptionalMemberExpression': // foo?.bar
       const object = extractMemberExpression(exp.object, onIdentifier)
