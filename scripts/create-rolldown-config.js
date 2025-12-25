@@ -336,7 +336,11 @@ export function createConfigsForPackage({
         define: resolveDefine(),
         target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2016',
       },
-      tsconfig: path.resolve(__dirname, '../tsconfig.json'),
+      // IMPORTANT: the root tsconfig maps `vue` -> `runtime-with-vapor.ts` for TS usage.
+      // For bundling we want `vue` to resolve to the normal entry to avoid pulling
+      // runtime-vapor into non-vapor build graphs (e.g. server-renderer esm-browser).
+      // this avoid MISSING_EXPORT errors for vapor-only exports.
+      tsconfig: path.resolve(__dirname, '../tsconfig.rolldown.json'),
       platform:
         format === 'cjs' ? 'node' : isBundlerESMBuild ? 'neutral' : 'browser',
       resolve: {
