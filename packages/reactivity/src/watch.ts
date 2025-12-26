@@ -250,7 +250,8 @@ export function watch(
         : options.equals
           ? !options.equals(newValue, oldValue)
           : hasChanged(newValue, oldValue)
-
+      // If equals is provided, it fully controls the trigger decision,
+      // bypassing deep and forceTrigger logic.
       const shouldTrigger = options.equals
         ? isChanged
         : deep || forceTrigger || isChanged

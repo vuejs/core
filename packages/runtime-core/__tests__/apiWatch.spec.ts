@@ -2061,7 +2061,7 @@ describe('api: watch', () => {
     createApp(App).mount(root)
     expect(onCleanup).toBeCalledTimes(0)
   })
-  it('onCleanup should not fire if semantic values are equal (REPRODUCTION #13242)', async () => {
+  it('watch: should trigger cleanup even if manually skipped in callback (current behavior)', async () => {
     const state = ref({ id: 1 })
     let cleanupCount = 0
     let effectCount = 0
@@ -2069,6 +2069,7 @@ describe('api: watch', () => {
     watch(
       state,
       (newVal, oldVal, onCleanup) => {
+        // Even if we skip the logic here, the scheduler has already fired the cleanup
         if (JSON.stringify(newVal) === JSON.stringify(oldVal)) {
           return
         }
@@ -2086,10 +2087,16 @@ describe('api: watch', () => {
     expect(effectCount).toBe(1)
     expect(cleanupCount).toBe(0)
 
+    // Trigger with semantically identical value
     state.value = { id: 2 }
     await nextTick()
+
+    // Assert current behavior: cleanup fires even if we return early in the callback
+    expect(cleanupCount).toBe(1)
+    expect(effectCount).toBe(1)
   })
-  it('should NOT fire cleanup when custom equals returns true (FIX VALIDATION)', async () => {
+
+  it('watch: should respect custom equality check via "equals" option', async () => {
     const state = ref({ id: 1 })
     let cleanupCount = 0
     let callbackCount = 0
@@ -2113,9 +2120,11 @@ describe('api: watch', () => {
     expect(callbackCount).toBe(1)
     expect(cleanupCount).toBe(0)
 
+    // Trigger with semantically identical value
     state.value = { id: 2 }
     await nextTick()
 
+    // With the fix, these should remain unchanged
     expect(callbackCount).toBe(1)
     expect(cleanupCount).toBe(0)
   })
