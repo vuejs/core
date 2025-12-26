@@ -50,7 +50,7 @@ export function createConfigsForPackage({
   const packageOptions = pkg.buildOptions || {}
   const name = packageOptions.filename || path.basename(packageDir)
 
-  const banner = `/**!
+  const banner = `/**
   * ${pkg.name} v${masterVersion}
   * (c) 2018-present Yuxi (Evan) You and Vue contributors
   * @license MIT
@@ -148,7 +148,7 @@ export function createConfigsForPackage({
       (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
       !packageOptions.enableNonBrowserBranches
 
-    output.banner = banner
+    output.postBanner = banner
     output.exports = isCompatPackage ? 'auto' : 'named'
     if (isCJSBuild) {
       output.esModule = true
