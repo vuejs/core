@@ -1,4 +1,9 @@
-import { MismatchTypes, isMismatchAllowed, warn } from '@vue/runtime-dom'
+import {
+  MismatchTypes,
+  isMismatchAllowed,
+  queuePostFlushCb,
+  warn,
+} from '@vue/runtime-dom'
 import {
   type ChildItem,
   insertionAnchor,
@@ -9,6 +14,7 @@ import {
 import {
   _child,
   _next,
+  createComment,
   createElement,
   createTextNode,
   disableHydrationNodeLookup,
@@ -16,11 +22,13 @@ import {
   locateChildByLogicalIndex,
   parentNode,
 } from './node'
-import { remove } from '../block'
+import { findBlockNode, remove } from '../block'
 
 const isHydratingStack = [] as boolean[]
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
+
+let _hydrateDynamicFragment: ((frag: any, isEmpty: boolean) => void) | undefined
 
 function pushIsHydrating(value: boolean): void {
   isHydratingStack.push((isHydrating = value))
@@ -50,6 +58,7 @@ function performHydration<T>(
   if (!isOptimized) {
     adoptTemplate = adoptTemplateImpl
     locateHydrationNode = locateHydrationNodeImpl
+    _hydrateDynamicFragment = hydrateDynamicFragmentImpl
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
     ;(Node.prototype as any).$pns = undefined
@@ -306,4 +315,63 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
       break
     }
   }
+}
+
+export function hydrateDynamicFragment(frag: any, isEmpty: boolean): void {
+  _hydrateDynamicFragment && _hydrateDynamicFragment(frag, isEmpty)
+}
+
+// Hydrate implementation for DynamicFragment
+function hydrateDynamicFragmentImpl(frag: any, isEmpty: boolean): void {
+  // avoid repeated hydration during fallback rendering
+  if (frag.anchor) return
+
+  if (frag.anchorLabel === 'if') {
+    // reuse the empty comment node as the anchor for empty if
+    // e.g. `<div v-if="false"></div>` -> `<!---->`
+    if (isEmpty) {
+      frag.anchor = locateFragmentEndAnchor('')!
+      if (__DEV__ && !frag.anchor) {
+        throw new Error(
+          'Failed to locate if anchor. this is likely a Vue internal bug.',
+        )
+      } else {
+        if (__DEV__) {
+          ;(frag.anchor as Comment).data = frag.anchorLabel
+        }
+        return
+      }
+    }
+  } else if (frag.anchorLabel === 'slot') {
+    // reuse the empty comment node for empty slot
+    // e.g. `<slot v-if="false"></slot>`
+    if (isEmpty && isComment(currentHydrationNode!, '')) {
+      frag.anchor = currentHydrationNode!
+      if (__DEV__) {
+        ;(frag.anchor as Comment).data = frag.anchorLabel!
+      }
+      return
+    }
+
+    // reuse the vdom fragment end anchor
+    frag.anchor = locateFragmentEndAnchor()!
+    if (__DEV__ && !frag.anchor) {
+      throw new Error(
+        'Failed to locate slot anchor. this is likely a Vue internal bug.',
+      )
+    } else {
+      return
+    }
+  }
+
+  const { parentNode: pn, nextNode } = findBlockNode(frag.nodes)!
+  // create an anchor
+  queuePostFlushCb(() => {
+    pn!.insertBefore(
+      (frag.anchor = __DEV__
+        ? createComment(frag.anchorLabel!)
+        : createTextNode()),
+      nextNode,
+    )
+  })
 }
