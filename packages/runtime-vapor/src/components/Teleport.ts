@@ -11,7 +11,13 @@ import {
   resolveTeleportTarget,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, type BlockFn, insert, remove } from '../block'
+import {
+  type Block,
+  type BlockFn,
+  applyTransitionHooks,
+  insert,
+  remove,
+} from '../block'
 import { createComment, createTextNode, querySelector } from '../dom/node'
 import {
   type LooseRawProps,
@@ -31,7 +37,6 @@ import {
   runWithoutHydration,
   setCurrentHydrationNode,
 } from '../dom/hydration'
-import { applyTransitionHooks } from './Transition'
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',

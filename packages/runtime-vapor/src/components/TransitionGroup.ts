@@ -23,6 +23,7 @@ import {
 } from '../block'
 import { renderEffect } from '../renderEffect'
 import {
+  ensureTransitionHooksRegistered,
   resolveTransitionHooks,
   setTransitionHooks,
   setTransitionHooksOnFragment,
@@ -55,6 +56,9 @@ export const VaporTransitionGroup: ObjectVaporComponent =
     }),
 
     setup(props: TransitionGroupProps, { slots }) {
+      // Register transition hooks on first use
+      ensureTransitionHooksRegistered()
+
       const instance = currentInstance as VaporComponentInstance
       const state = useTransitionState()
 
