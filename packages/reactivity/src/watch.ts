@@ -34,7 +34,7 @@ export enum WatchErrorCodes {
   WATCH_CLEANUP,
 }
 
-export type WatchEffect = (onCleanup: OnCleanup) => void
+export type WatchEffect = (onCleanup: OnCleanup) => Promise<void> | void
 
 export type WatchSource<T = any> = Ref<T, any> | ComputedRef<T> | (() => T)
 

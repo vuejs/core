@@ -1104,8 +1104,8 @@ describe('api: watch', () => {
     const spy = vi.fn()
     watchEffect(
       () => {
-        spy()
-        return arr
+        spy(arr)
+        return
       },
       // @ts-expect-error
       { deep: true },
