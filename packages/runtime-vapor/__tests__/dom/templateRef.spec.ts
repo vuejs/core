@@ -1057,6 +1057,54 @@ describe('interop: template ref', () => {
     )
   })
 
+  test('vapor app: useTemplateRef with vdom child + insertionState', async () => {
+    const { container } = await testTemplateRefInterop(
+      `<script vapor>
+        import { useTemplateRef } from 'vue'
+        const components = _components;
+        const elRef = useTemplateRef('el')
+        function click() {
+          elRef.value.change()
+        }
+      </script>
+      <template>
+        <div>
+          <button class="btn" @click="click"></button>
+          <components.VDOMChild ref="el"/>
+        </div>
+      </template>`,
+      {
+        VDOMChild: {
+          code: `
+            <script setup>
+              import { ref } from 'vue'
+              const msg = ref('foo')
+              function change(){
+                msg.value = 'bar'
+              }
+              defineExpose({ change })
+            </script>
+            <template><div>{{msg}}</div></template>
+          `,
+          vapor: false,
+        },
+      },
+      undefined,
+      { vapor: true },
+    )
+
+    expect(container.innerHTML).toBe(
+      `<div><button class="btn"></button><div>foo</div></div>`,
+    )
+
+    const btn = container.querySelector('.btn')
+    triggerEvent('click', btn!)
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><button class="btn"></button><div>bar</div></div>`,
+    )
+  })
+
   test('vapor app: static ref with vdom child', async () => {
     const { container } = await testTemplateRefInterop(
       `<script vapor>

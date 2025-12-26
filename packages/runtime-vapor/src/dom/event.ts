@@ -60,7 +60,7 @@ type DelegatedHandler = {
 /**
  * Event delegation borrowed from solid
  */
-const delegatedEvents = Object.create(null)
+const delegatedEvents = /*@__PURE__*/ Object.create(null)
 
 export const delegateEvents = (...names: string[]): void => {
   for (const name of names) {

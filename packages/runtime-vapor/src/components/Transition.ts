@@ -19,7 +19,12 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
-import type { Block, TransitionBlock, VaporTransitionHooks } from '../block'
+import {
+  type Block,
+  type TransitionBlock,
+  type VaporTransitionHooks,
+  registerTransitionHooks,
+} from '../block'
 import {
   type FunctionalVaporComponent,
   type VaporComponentInstance,
@@ -36,6 +41,17 @@ import {
 
 const displayName = 'VaporTransition'
 
+let registered = false
+export const ensureTransitionHooksRegistered = (): void => {
+  if (!registered) {
+    registered = true
+    registerTransitionHooks(
+      applyTransitionHooksImpl,
+      applyTransitionLeaveHooksImpl,
+    )
+  }
+}
+
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = displayName
   t.props = TransitionPropsValidators
@@ -45,6 +61,9 @@ const decorate = (t: typeof VaporTransition) => {
 
 export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
   /*@__PURE__*/ decorate((props, { slots }) => {
+    // Register transition hooks on first use
+    ensureTransitionHooksRegistered()
+
     // wrapped <transition appear>
     let resetDisplay: Function | undefined
     if (
@@ -82,7 +101,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     let resolvedProps: BaseTransitionProps<Element>
     renderEffect(() => (resolvedProps = resolveTransitionProps(props)))
 
-    const hooks = applyTransitionHooks(children, {
+    const hooks = applyTransitionHooksImpl(children, {
       state: useTransitionState(),
       // use proxy to keep props reference stable
       props: new Proxy({} as BaseTransitionProps<Element>, {
@@ -169,7 +188,7 @@ export function resolveTransitionHooks(
   return hooks
 }
 
-export function applyTransitionHooks(
+function applyTransitionHooksImpl(
   block: Block,
   hooks: VaporTransitionHooks,
 ): VaporTransitionHooks {
@@ -210,7 +229,7 @@ export function applyTransitionHooks(
   return resolvedHooks
 }
 
-export function applyTransitionLeaveHooks(
+function applyTransitionLeaveHooksImpl(
   block: Block,
   enterHooks: VaporTransitionHooks,
   afterLeaveCb: () => void,

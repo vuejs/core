@@ -54,7 +54,7 @@ type CacheKey = VaporComponent | VNode['type']
 type Cache = Map<CacheKey, VaporComponentInstance | VaporFragment>
 type Keys = Set<CacheKey>
 
-export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
+const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
   name: 'VaporKeepAlive',
   __isKeepAlive: true,
   props: {
@@ -277,6 +277,9 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     return children
   },
 })
+
+export const VaporKeepAliveImpl: ObjectVaporComponent =
+  /*@__PURE__*/ KeepAliveImpl
 
 const shouldCache = (
   block: GenericComponentInstance | VaporFragment,
