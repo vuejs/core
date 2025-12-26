@@ -5,6 +5,8 @@ import {
   type BlockFn,
   type TransitionOptions,
   type VaporTransitionHooks,
+  applyTransitionHooks,
+  applyTransitionLeaveHooks,
   findBlockNode,
   insert,
   isValidBlock,
@@ -21,10 +23,6 @@ import {
 } from '@vue/runtime-dom'
 import { type VaporComponentInstance, applyFallthroughProps } from './component'
 import type { NodeRef } from './apiTemplateRef'
-import {
-  applyTransitionHooks,
-  applyTransitionLeaveHooks,
-} from './components/Transition'
 import {
   currentHydrationNode,
   isComment,
