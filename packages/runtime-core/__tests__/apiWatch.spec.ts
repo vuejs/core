@@ -2061,4 +2061,62 @@ describe('api: watch', () => {
     createApp(App).mount(root)
     expect(onCleanup).toBeCalledTimes(0)
   })
+  it('onCleanup should not fire if semantic values are equal (REPRODUCTION #13242)', async () => {
+    const state = ref({ id: 1 })
+    let cleanupCount = 0
+    let effectCount = 0
+
+    watch(
+      state,
+      (newVal, oldVal, onCleanup) => {
+        if (JSON.stringify(newVal) === JSON.stringify(oldVal)) {
+          return
+        }
+
+        effectCount++
+        onCleanup(() => {
+          cleanupCount++
+        })
+      },
+      { deep: true },
+    )
+
+    state.value = { id: 2 }
+    await nextTick()
+    expect(effectCount).toBe(1)
+    expect(cleanupCount).toBe(0)
+
+    state.value = { id: 2 }
+    await nextTick()
+  })
+  it('should NOT fire cleanup when custom equals returns true (FIX VALIDATION)', async () => {
+    const state = ref({ id: 1 })
+    let cleanupCount = 0
+    let callbackCount = 0
+
+    watch(
+      state,
+      (newVal, oldVal, onCleanup) => {
+        callbackCount++
+        onCleanup(() => {
+          cleanupCount++
+        })
+      },
+      {
+        deep: true,
+        equals: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+      },
+    )
+
+    state.value = { id: 2 }
+    await nextTick()
+    expect(callbackCount).toBe(1)
+    expect(cleanupCount).toBe(0)
+
+    state.value = { id: 2 }
+    await nextTick()
+
+    expect(callbackCount).toBe(1)
+    expect(cleanupCount).toBe(0)
+  })
 })

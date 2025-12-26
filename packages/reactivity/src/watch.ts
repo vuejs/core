@@ -50,6 +50,7 @@ export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
   immediate?: Immediate
   deep?: boolean | number
   once?: boolean
+  equals?: (a: any, b: any) => boolean
   scheduler?: WatchScheduler
   onWarn?: (msg: string, ...args: any[]) => void
   /**
@@ -240,14 +241,21 @@ export function watch(
     if (cb) {
       // watch(source, cb)
       const newValue = effect.run()
-      if (
-        deep ||
-        forceTrigger ||
-        (isMultiSource
-          ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
-          : hasChanged(newValue, oldValue))
-      ) {
-        // cleanup before running cb again
+      const isChanged = isMultiSource
+        ? (newValue as any[]).some((v, i) =>
+            options.equals
+              ? !options.equals(v, oldValue[i])
+              : hasChanged(v, oldValue[i]),
+          )
+        : options.equals
+          ? !options.equals(newValue, oldValue)
+          : hasChanged(newValue, oldValue)
+
+      const shouldTrigger = options.equals
+        ? isChanged
+        : deep || forceTrigger || isChanged
+
+      if (shouldTrigger) {
         if (cleanup) {
           cleanup()
         }

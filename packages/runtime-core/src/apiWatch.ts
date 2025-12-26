@@ -50,6 +50,7 @@ export interface WatchOptions<Immediate = boolean> extends WatchEffectOptions {
   immediate?: Immediate
   deep?: boolean | number
   once?: boolean
+  equals?: (a: any, b: any) => boolean
 }
 
 // Simple effect.
