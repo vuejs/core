@@ -45,6 +45,7 @@ const presets = [
   { name: 'createVaporApp', imports: ['createVaporApp'] },
   { name: 'createSSRApp', imports: ['createSSRApp'] },
   { name: 'defineCustomElement', imports: ['defineCustomElement'] },
+  { name: 'defineVaporCustomElement', imports: ['defineVaporCustomElement'] },
   {
     name: 'overall',
     imports: [
