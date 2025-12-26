@@ -44,7 +44,7 @@ export type WatchCallback<V = any, OV = any> = (
   onCleanup: OnCleanup,
 ) => any
 
-export type OnCleanup = (cleanupFn: () => void) => Promise<void> | void
+export type OnCleanup = (cleanupFn: () => void) => void
 
 export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
   immediate?: Immediate
