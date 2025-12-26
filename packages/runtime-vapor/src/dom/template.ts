@@ -4,7 +4,7 @@ import { _child, createTextNode } from './node'
 
 let t: HTMLTemplateElement
 
-/*! #__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function template(html: string, root?: boolean, ns?: Namespace) {
   let node: Node
   return (): Node & { $root?: true } => {
