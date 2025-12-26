@@ -23,12 +23,15 @@ import {
   parentNode,
 } from './node'
 import { findBlockNode, remove } from '../block'
+import type { DynamicFragment } from '../fragment'
 
 const isHydratingStack = [] as boolean[]
 export let isHydrating = false
 export let currentHydrationNode: Node | null = null
 
-let _hydrateDynamicFragment: ((frag: any, isEmpty: boolean) => void) | undefined
+let _hydrateDynamicFragment:
+  | ((frag: DynamicFragment, isEmpty: boolean) => void)
+  | undefined
 
 function pushIsHydrating(value: boolean): void {
   isHydratingStack.push((isHydrating = value))
@@ -317,12 +320,18 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
   }
 }
 
-export function hydrateDynamicFragment(frag: any, isEmpty: boolean): void {
+export function hydrateDynamicFragment(
+  frag: DynamicFragment,
+  isEmpty: boolean,
+): void {
   _hydrateDynamicFragment && _hydrateDynamicFragment(frag, isEmpty)
 }
 
 // Hydrate implementation for DynamicFragment
-function hydrateDynamicFragmentImpl(frag: any, isEmpty: boolean): void {
+function hydrateDynamicFragmentImpl(
+  frag: DynamicFragment,
+  isEmpty: boolean,
+): void {
   // avoid repeated hydration during fallback rendering
   if (frag.anchor) return
 
