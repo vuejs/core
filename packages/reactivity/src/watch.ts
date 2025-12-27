@@ -241,15 +241,24 @@ export function watch(
     if (cb) {
       // watch(source, cb)
       const newValue = effect.run()
+      const areEqual = (a: any, b: any): boolean => {
+        if (options.equals) {
+          try {
+            return !!options.equals(a, b)
+          } catch (e) {
+            if (call) {
+              call(() => {
+                throw e
+              }, WatchErrorCodes.WATCH_CALLBACK)
+            }
+            return false
+          }
+        }
+        return !hasChanged(a, b)
+      }
       const isChanged = isMultiSource
-        ? (newValue as any[]).some((v, i) =>
-            options.equals
-              ? !options.equals(v, oldValue[i])
-              : hasChanged(v, oldValue[i]),
-          )
-        : options.equals
-          ? !options.equals(newValue, oldValue)
-          : hasChanged(newValue, oldValue)
+        ? (newValue as any[]).some((v, i) => !areEqual(v, oldValue[i]))
+        : !areEqual(newValue, oldValue)
       // If equals is provided, it fully controls the trigger decision,
       // bypassing deep and forceTrigger logic.
       const shouldTrigger = options.equals
