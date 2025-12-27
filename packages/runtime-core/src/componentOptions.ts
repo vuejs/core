@@ -1,12 +1,11 @@
-import {
-  type AsyncComponentInternalOptions,
-  type Component,
-  type ComponentInternalInstance,
-  type ComponentInternalOptions,
-  type Data,
-  type InternalRenderFunction,
-  type SetupContext,
-  getCurrentInstance,
+import type {
+  AsyncComponentInternalOptions,
+  Component,
+  ComponentInternalInstance,
+  ComponentInternalOptions,
+  Data,
+  InternalRenderFunction,
+  SetupContext,
 } from './component'
 import {
   type LooseRequired,
@@ -19,11 +18,12 @@ import {
   isPromise,
   isString,
 } from '@vue/shared'
-import { type Ref, getCurrentScope, isRef, traverse } from '@vue/reactivity'
+import { type Ref, isRef } from '@vue/reactivity'
 import { computed } from './apiComputed'
 import {
   type WatchCallback,
   type WatchOptions,
+  createCompatWatchGetter,
   createPathGetter,
   watch,
 } from './apiWatch'
@@ -72,9 +72,9 @@ import { warn } from './warning'
 import type { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
 import { deepMergeData } from './compat/data'
-import { DeprecationTypes, checkCompatEnabled } from './compat/compatConfig'
 import {
   type CompatConfig,
+  DeprecationTypes,
   isCompatEnabled,
   softAssertCompatEnabled,
 } from './compat/compatConfig'
@@ -827,7 +827,7 @@ function callHook(
   )
 }
 
-export function createWatcher(
+function createWatcher(
   raw: ComponentWatchOptionItem,
   ctx: Data,
   publicThis: ComponentPublicInstance,
@@ -838,28 +838,14 @@ export function createWatcher(
     : () => publicThis[key as keyof typeof publicThis]
 
   const options: WatchOptions = {}
-  if (__COMPAT__) {
-    const cur = getCurrentInstance()
-    const instance = cur && getCurrentScope() === cur.scope ? cur : null
-
-    const newValue = getter()
-    if (
-      isArray(newValue) &&
-      isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
-    ) {
-      options.deep = true
-    }
-
-    const baseGetter = getter
-    getter = () => {
-      const val = baseGetter()
-      if (
-        isArray(val) &&
-        checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
-      ) {
-        traverse(val)
-      }
-      return val
+  if (
+    __COMPAT__ &&
+    isCompatEnabled(DeprecationTypes.WATCH_ARRAY, publicThis.$)
+  ) {
+    const deep = isObject(raw) && !isArray(raw) && !isFunction(raw) && raw.deep
+    if (!deep) {
+      ;(options as any).compatWatchArray = true
+      getter = createCompatWatchGetter(getter, publicThis.$)
     }
   }
 
