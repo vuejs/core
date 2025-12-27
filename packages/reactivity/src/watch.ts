@@ -250,8 +250,10 @@ export function watch(
               call(() => {
                 throw e
               }, WatchErrorCodes.WATCH_CALLBACK)
+              return false
+            } else {
+              throw e
             }
-            return false
           }
         }
         return !hasChanged(a, b)
