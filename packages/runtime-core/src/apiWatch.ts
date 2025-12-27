@@ -50,6 +50,12 @@ export interface WatchOptions<Immediate = boolean> extends WatchEffectOptions {
   immediate?: Immediate
   deep?: boolean | number
   once?: boolean
+  /**
+   * Custom equality function to determine if the value has changed.
+   * If provided, it takes precedence over the default equality check,
+   * `deep` watches, and `forceTrigger`.
+   */
+  equals?: (a: any, b: any) => boolean
 }
 
 // Simple effect.
