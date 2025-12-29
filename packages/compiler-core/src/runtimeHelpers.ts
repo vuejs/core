@@ -26,6 +26,9 @@ export const CREATE_STATIC: unique symbol = Symbol(
 export const RESOLVE_COMPONENT: unique symbol = Symbol(
   __DEV__ ? `resolveComponent` : ``,
 )
+export const RESOLVE_LATE_ADDED_TAG: unique symbol = Symbol(
+  __DEV__ ? `resolveLateAddedTag` : ``,
+)
 export const RESOLVE_DYNAMIC_COMPONENT: unique symbol = Symbol(
   __DEV__ ? `resolveDynamicComponent` : ``,
 )
@@ -98,6 +101,7 @@ export const helperNameMap: Record<symbol, string> = {
   [CREATE_TEXT]: `createTextVNode`,
   [CREATE_STATIC]: `createStaticVNode`,
   [RESOLVE_COMPONENT]: `resolveComponent`,
+  [RESOLVE_LATE_ADDED_TAG]: `resolveLateAddedTag`,
   [RESOLVE_DYNAMIC_COMPONENT]: `resolveDynamicComponent`,
   [RESOLVE_DIRECTIVE]: `resolveDirective`,
   [RESOLVE_FILTER]: `resolveFilter`,

@@ -99,6 +99,40 @@ describe('compiler: element transform', () => {
     expect(node.tag).toBe(`$setup["Example"]`)
   })
 
+  test('resolve component from setup bindings & component', () => {
+    const { root, node } = parseWithElementTransform(`<search/>`, {
+      bindingMetadata: {
+        search: BindingTypes.SETUP_CONST,
+      },
+      isNativeTag: (tag: string) => tag !== 'search',
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`_resolveLateAddedTag("search", 'setupState')`)
+
+    const { root: root2, node: node2 } = parseWithElementTransform(
+      `<search/>`,
+      {
+        bindingMetadata: {
+          search: BindingTypes.SETUP_LET,
+        },
+        isNativeTag: (tag: string) => tag !== 'search',
+      },
+    )
+    expect(root2.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node2.tag).toBe(`_resolveLateAddedTag("search", 'setupState')`)
+  })
+
+  test('resolve component from props', () => {
+    const { root, node } = parseWithElementTransform(`<search/>`, {
+      bindingMetadata: {
+        search: BindingTypes.PROPS,
+      },
+      isNativeTag: (tag: string) => tag !== 'search',
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`_unref(_resolveLateAddedTag("search", 'props'))`)
+  })
+
   test('resolve component from setup bindings (inline)', () => {
     const { root, node } = parseWithElementTransform(`<Example/>`, {
       inline: true,
