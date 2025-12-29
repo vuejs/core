@@ -18,7 +18,11 @@ export function getCompatChildren(
 
 function walk(vnode: VNode, children: ComponentPublicInstance[]) {
   if (vnode.component) {
-    children.push(vnode.component.proxy!)
+    // `proxy` is not available for functional components
+    children.push(
+      vnode.component.proxy ||
+        (vnode.component.ctx as unknown as ComponentPublicInstance),
+    )
   } else if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
     const vnodes = vnode.children as VNode[]
     for (let i = 0; i < vnodes.length; i++) {
