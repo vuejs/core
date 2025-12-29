@@ -44,6 +44,7 @@ const presets = [
   },
   { name: 'createVaporApp', imports: ['createVaporApp'] },
   { name: 'createSSRApp', imports: ['createSSRApp'] },
+  { name: 'createVaporSSRApp', imports: ['createVaporSSRApp'] },
   { name: 'defineCustomElement', imports: ['defineCustomElement'] },
   { name: 'defineVaporCustomElement', imports: ['defineVaporCustomElement'] },
   {
@@ -128,13 +129,19 @@ async function generateBundle(preset) {
         { preventAssignment: true },
       ),
     ],
+    treeshake: {
+      moduleSideEffects: false,
+    },
   })
 
-  const generated = await result.generate({})
+  const generated = await result.generate({
+    minify: 'dce-only',
+  })
   const bundled = generated.output[0].code
   const file = preset.name + '.js'
   const minified = (
     await minify(file, bundled, {
+      module: true,
       mangle: {
         toplevel: true,
       },
