@@ -25,29 +25,27 @@ import {
 import { findBlockNode, remove } from '../block'
 import type { DynamicFragment } from '../fragment'
 
-const isHydratingStack = [] as boolean[]
-export let isHydrating = false
 export let currentHydrationNode: Node | null = null
 
 let _hydrateDynamicFragment:
   | ((frag: DynamicFragment, isEmpty: boolean) => void)
   | undefined
 
-function pushIsHydrating(value: boolean): void {
-  isHydratingStack.push((isHydrating = value))
-}
-
-function popIsHydrating(): void {
-  isHydratingStack.pop()
-  isHydrating = isHydratingStack[isHydratingStack.length - 1] || false
+export let isHydrating = false
+function setIsHydrating(value: boolean) {
+  try {
+    return isHydrating
+  } finally {
+    isHydrating = value
+  }
 }
 
 export function runWithoutHydration(fn: () => any): any {
+  const prev = setIsHydrating(false)
   try {
-    pushIsHydrating(false)
     return fn()
   } finally {
-    popIsHydrating()
+    setIsHydrating(prev)
   }
 }
 
@@ -75,12 +73,12 @@ function performHydration<T>(
     isOptimized = true
   }
   enableHydrationNodeLookup()
-  pushIsHydrating(true)
+  const prev = setIsHydrating(true)
   setup()
   const res = fn()
   cleanup()
   currentHydrationNode = null
-  popIsHydrating()
+  setIsHydrating(prev)
   if (!isHydrating) disableHydrationNodeLookup()
   return res
 }
