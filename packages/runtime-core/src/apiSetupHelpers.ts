@@ -2,7 +2,6 @@ import {
   type IfAny,
   type LooseRequired,
   type Prettify,
-  type UnionToIntersection,
   extend,
   isArray,
   isFunction,
@@ -153,13 +152,10 @@ export function defineEmits() {
 
 export type ComponentTypeEmits = ((...args: any[]) => any) | Record<string, any>
 
-type RecordToUnion<T extends Record<string, any>> = T[keyof T]
-
-type ShortEmits<T extends Record<string, any>> = UnionToIntersection<
-  RecordToUnion<{
-    [K in keyof T]: (evt: K, ...args: T[K]) => void
-  }>
->
+type ShortEmits<T extends Record<string, any>> = <K extends keyof T>(
+  evt: K,
+  ...args: T[K]
+) => void
 
 /**
  * Vue `<script setup>` compiler macro for declaring a component's exposed
