@@ -113,6 +113,7 @@ export function setCurrentHydrationNode(node: Node | null): void {
   currentHydrationNode = node
 }
 
+/* @__NO_SIDE_EFFECTS__ */
 function locateNextSiblingOfParent(n: Node): Node | null {
   if (!n.parentNode) return null
   return n.parentNode.nextSibling || locateNextSiblingOfParent(n.parentNode)
@@ -320,6 +321,7 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
   }
 }
 
+/* @__NO_SIDE_EFFECTS__ */
 export function hydrateDynamicFragment(
   frag: DynamicFragment,
   isEmpty: boolean,
