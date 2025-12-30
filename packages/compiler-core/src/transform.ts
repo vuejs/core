@@ -82,7 +82,8 @@ export interface ImportItem {
 }
 
 export interface TransformContext
-  extends Required<Omit<TransformOptions, keyof CompilerCompatOptions>>,
+  extends
+    Required<Omit<TransformOptions, keyof CompilerCompatOptions>>,
     CompilerCompatOptions {
   selfName: string | null
   root: RootNode

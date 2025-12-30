@@ -897,7 +897,7 @@ function setupStatefulComponent(
         // bail here and wait for re-entry.
         instance.asyncDep = setupResult
         if (__DEV__ && !instance.suspense) {
-          const name = Component.name ?? 'Anonymous'
+          const name = formatComponentName(instance, Component)
           warn(
             `Component <${name}>: setup function returned a promise, but no ` +
               `<Suspense> boundary was found in the parent component tree. ` +
@@ -1203,7 +1203,7 @@ export function getComponentPublicInstance(
   }
 }
 
-const classifyRE = /(?:^|[-_])(\w)/g
+const classifyRE = /(?:^|[-_])\w/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
@@ -1229,9 +1229,11 @@ export function formatComponentName(
     }
   }
 
-  if (!name && instance && instance.parent) {
+  if (!name && instance) {
     // try to infer the name based on reverse resolution
-    const inferFromRegistry = (registry: Record<string, any> | undefined) => {
+    const inferFromRegistry = (
+      registry: Record<string, any> | undefined | null,
+    ) => {
       for (const key in registry) {
         if (registry[key] === Component) {
           return key
@@ -1239,10 +1241,12 @@ export function formatComponentName(
       }
     }
     name =
-      inferFromRegistry(
-        instance.components ||
+      inferFromRegistry(instance.components) ||
+      (instance.parent &&
+        inferFromRegistry(
           (instance.parent.type as ComponentOptions).components,
-      ) || inferFromRegistry(instance.appContext.components)
+        )) ||
+      inferFromRegistry(instance.appContext.components)
   }
 
   return name ? classify(name) : isRoot ? `App` : `Anonymous`
@@ -1271,7 +1275,15 @@ export interface ComponentCustomElementInterface {
     shouldUpdate?: boolean,
   ): void
   /**
+   * @internal
+   */
+  _beginPatch(): void
+  /**
+   * @internal
+   */
+  _endPatch(): void
+  /**
    * @internal attached by the nested Teleport when shadowRoot is false.
    */
-  _teleportTarget?: RendererElement
+  _teleportTargets?: Set<RendererElement>
 }

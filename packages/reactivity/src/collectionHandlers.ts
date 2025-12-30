@@ -125,7 +125,7 @@ function createInstrumentations(
     get size() {
       const target = (this as unknown as IterableCollections)[ReactiveFlags.RAW]
       !readonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
-      return Reflect.get(target, 'size', target)
+      return target.size
     },
     has(this: CollectionTypes, key: unknown): boolean {
       const target = this[ReactiveFlags.RAW]
