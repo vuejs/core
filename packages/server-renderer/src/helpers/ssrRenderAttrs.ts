@@ -24,6 +24,16 @@ const shouldIgnoreProp = /*@__PURE__*/ makeMap(
   `,key,ref,innerHTML,textContent,ref_key,ref_for`,
 )
 
+const applyModifiers = (prop: string): string | null => {
+  if (prop.startsWith('^')) {
+    return prop.slice(1) // attribute binding
+  }
+  if (prop.startsWith('.')) {
+    return null // prop should be ignored
+  }
+  return prop // normal prop
+}
+
 export function ssrRenderAttrs(
   props: Record<string, unknown>,
   tag?: string,
@@ -45,7 +55,11 @@ export function ssrRenderAttrs(
     } else if (key === 'className') {
       ret += ` class="${String(value)}"`
     } else {
-      ret += ssrRenderDynamicAttr(key, value, tag)
+      const modifiedKey = applyModifiers(key)
+      if (modifiedKey === null) {
+        continue
+      }
+      ret += ssrRenderDynamicAttr(modifiedKey, value, tag)
     }
   }
   return ret
