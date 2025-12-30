@@ -26,10 +26,10 @@ const shouldIgnoreProp = /*@__PURE__*/ makeMap(
 
 const applyModifiers = (prop: string): string | null => {
   if (prop.startsWith('^')) {
-    return prop.slice(1) // attribute binding
+    return prop.slice(1) // force as attribute
   }
   if (prop.startsWith('.')) {
-    return null // prop should be ignored
+    return null // force as property (not rendered in SSR)
   }
   return prop // normal prop
 }
