@@ -24,30 +24,24 @@ const shouldIgnoreProp = /*@__PURE__*/ makeMap(
   `,key,ref,innerHTML,textContent,ref_key,ref_for`,
 )
 
-const applyModifiers = (prop: string): string | null => {
-  if (prop.startsWith('^')) {
-    return prop.slice(1) // force as attribute
-  }
-  if (prop.startsWith('.')) {
-    return null // force as property (not rendered in SSR)
-  }
-  return prop // normal prop
-}
-
 export function ssrRenderAttrs(
   props: Record<string, unknown>,
   tag?: string,
 ): string {
   let ret = ''
-  for (const key in props) {
+  for (let key in props) {
     if (
       shouldIgnoreProp(key) ||
       isOn(key) ||
-      (tag === 'textarea' && key === 'value')
+      (tag === 'textarea' && key === 'value') ||
+      // force as property (not rendered in SSR)
+      key.startsWith('.')
     ) {
       continue
     }
     const value = props[key]
+    // force as attribute
+    if (key.startsWith('^')) key = key.slice(1)
     if (key === 'class') {
       ret += ` class="${ssrRenderClass(value)}"`
     } else if (key === 'style') {
@@ -55,11 +49,7 @@ export function ssrRenderAttrs(
     } else if (key === 'className') {
       ret += ` class="${String(value)}"`
     } else {
-      const modifiedKey = applyModifiers(key)
-      if (modifiedKey === null) {
-        continue
-      }
-      ret += ssrRenderDynamicAttr(modifiedKey, value, tag)
+      ret += ssrRenderDynamicAttr(key, value, tag)
     }
   }
   return ret
