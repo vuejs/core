@@ -23,7 +23,8 @@ function resolveParentNode(block: Block): Node {
   if (block instanceof Node) {
     return block.parentNode!
   } else if (isArray(block)) {
-    return resolveParentNode(block[0])
+    // Use the last element, so ForFragment will use the anchor
+    return resolveParentNode(block[block.length - 1])
   } else if (isVaporComponent(block)) {
     return resolveParentNode(block.block!)
   } else {
