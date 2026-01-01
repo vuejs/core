@@ -27,7 +27,7 @@ function resolveParentNode(block: Block): Node {
   } else if (isVaporComponent(block)) {
     return resolveParentNode(block.block!)
   } else {
-    return resolveParentNode(block.nodes)
+    return resolveParentNode(block.anchor || block.nodes)
   }
 }
 
