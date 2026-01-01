@@ -1229,6 +1229,7 @@ function testRender(type: string, render: typeof renderToString) {
       // during the render phase
       expect(getterSpy).toHaveBeenCalledTimes(2)
     })
+
     test('props modifiers in render functions', async () => {
       const app = createApp({
         setup() {
