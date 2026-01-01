@@ -1,5 +1,6 @@
 import {
   BindingTypes,
+  UNREF,
   isFunctionType,
   isStaticNode,
   unwrapTSNode,
@@ -1041,7 +1042,12 @@ export function compileScript(
       // avoid duplicated unref import
       // as this may get injected by the render function preamble OR the
       // css vars codegen
-      if (helpers && helpers.has('unref')) {
+      if (
+        helpers &&
+        (helpers.has(UNREF) ||
+          // vapor compiler uses 'unref' instead of UNREF
+          helpers.has('unref'))
+      ) {
         ctx.helperImports.delete('unref')
       }
       returned = code
