@@ -416,7 +416,7 @@ describe('useVaporCssVars', () => {
     const state = reactive({ color: 'red' })
     const root = document.createElement('div')
 
-    const { html } = define({
+    define({
       setup() {
         useVaporCssVars(() => state)
         return createIf(
@@ -431,14 +431,14 @@ describe('useVaporCssVars', () => {
       },
     }).render({}, root)
 
-    expect(html()).toBe(``)
+    expect(root.innerHTML).toBe(`<!--if-->`)
   })
 
   test('work with empty v-for', () => {
     const state = reactive({ color: 'red' })
     const root = document.createElement('div')
 
-    const { html } = define({
+    define({
       setup() {
         useVaporCssVars(() => state)
         return createFor(
@@ -453,6 +453,6 @@ describe('useVaporCssVars', () => {
       },
     }).render({}, root)
 
-    expect(html()).toBe(``)
+    expect(root.innerHTML).toBe(`<!--for-->`)
   })
 })
