@@ -283,6 +283,11 @@ function resolveSetupReference(name: string, context: TransformContext) {
 // keys cannot be a part of the template and need to be set dynamically
 const dynamicKeys = ['indeterminate']
 
+// The attribute value can remain unquoted if it doesn't contain ASCII whitespace
+// or any of " ' ` = < or >.
+// https://html.spec.whatwg.org/multipage/introduction.html#intro-early-example
+const NEEDS_QUOTES_RE = /[\s"'`=<>]/
+
 function transformNativeElement(
   node: PlainElementNode,
   propsResult: PropsResult,
@@ -313,8 +318,9 @@ function transformNativeElement(
       getEffectIndex,
     )
   } else {
-    let needsQuoting = false
-
+    // tracks if previous attribute was quoted, allowing space omission
+    // e.g. `class="foo"id="bar"` is valid, `class=foo id=bar` needs space
+    let prevWasQuoted = false
     for (const prop of propsResult[1]) {
       const { key, values } = prop
       // handling asset imports
@@ -323,36 +329,27 @@ function transformNativeElement(
           values[0].content.includes(imported.exp.content),
         )
       ) {
-        if (!needsQuoting) template += ` `
-
+        if (!prevWasQuoted) template += ` `
         // add start and end markers to the import expression, so it can be replaced
         // with string concatenation in the generator, see genTemplates
         template += `${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
-        needsQuoting = true
+        prevWasQuoted = true
       } else if (
         key.isStatic &&
         values.length === 1 &&
         (values[0].isStatic || values[0].content === "''") &&
         !dynamicKeys.includes(key.content)
       ) {
+        if (!prevWasQuoted) template += ` `
         const value = values[0].content === "''" ? '' : values[0].content
-
-        if (!needsQuoting) template += ` `
         template += key.content
 
         if (value) {
-          // https://html.spec.whatwg.org/multipage/introduction.html#intro-early-example
-          needsQuoting = /[\s>]|^["'=]/.test(value)
-
-          if (needsQuoting) {
-            const encoded = value.replace(/"/g, '&#34;')
-
-            template += `="${encoded}"`
-          } else {
-            template += `=${value}`
-          }
+          template += (prevWasQuoted = NEEDS_QUOTES_RE.test(value))
+            ? `="${value.replace(/"/g, '&quot;')}"`
+            : `=${value}`
         } else {
-          needsQuoting = false
+          prevWasQuoted = false
         }
       } else {
         dynamicProps.push(key.content)

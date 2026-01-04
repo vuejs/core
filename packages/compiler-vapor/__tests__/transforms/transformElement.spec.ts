@@ -573,55 +573,6 @@ describe('compiler: element transform', () => {
     })
   })
 
-  test('static props', () => {
-    const { code, ir } = compileWithElementTransform(
-      `<div id="foo" class="bar" />`,
-    )
-
-    const template = '<div id=foo class=bar>'
-    expect(code).toMatchSnapshot()
-    expect(code).contains(JSON.stringify(template))
-    expect([...ir.template.keys()]).toMatchObject([template])
-    expect(ir.block.effect).lengthOf(0)
-  })
-
-  test('static props unquoted', () => {
-    const { code, ir } = compileWithElementTransform(
-      `<div id="foo" class="bar" title='foo"=bar' />`,
-    )
-
-    const template = '<div id=foo class=bar title=foo"=bar>'
-    expect(code).toMatchSnapshot()
-    expect(code).contains(JSON.stringify(template))
-    expect([...ir.template.keys()]).toMatchObject([template])
-    expect(ir.block.effect).lengthOf(0)
-  })
-
-  test('static props quoted', () => {
-    const { code, ir } = compileWithElementTransform(
-      `<div title="has whitespace" alt='"contains quotes"' data-targets="foo>bar" />`,
-    )
-
-    const template =
-      '<div title="has whitespace"alt="&#34;contains quotes&#34;"data-targets="foo>bar">'
-    expect(code).toMatchSnapshot()
-    expect(code).contains(JSON.stringify(template))
-    expect([...ir.template.keys()]).toMatchObject([template])
-    expect(ir.block.effect).lengthOf(0)
-  })
-
-  test('static props mixed quoting', () => {
-    const { code, ir } = compileWithElementTransform(
-      `<div title="has whitespace" inert data-targets="foo>bar" />`,
-    )
-
-    const template = '<div title="has whitespace"inert data-targets="foo>bar">'
-    expect(code).toMatchSnapshot()
-    expect(code).contains(JSON.stringify(template))
-    expect([...ir.template.keys()]).toMatchObject([template])
-    expect(ir.block.effect).lengthOf(0)
-  })
-
   test('checkbox with static indeterminate', () => {
     const { code } = compileWithElementTransform(
       `<input type="checkbox" indeterminate/>`,
@@ -1162,5 +1113,117 @@ describe('compiler: element transform', () => {
     expect(code).contains('_template("<math><mrow><mi>x", true, 2)')
     expect([...ir.template.keys()]).toMatchObject(['<math><mrow><mi>x'])
     expect(ir.template.get('<math><mrow><mi>x')).toBe(2)
+  })
+
+  describe('static props quoting', () => {
+    test('unquoted when value has no special chars', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<div id="foo" class="bar" />`,
+      )
+
+      const template = '<div id=foo class=bar>'
+      expect(code).toMatchSnapshot()
+      expect(code).contains(JSON.stringify(template))
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
+
+    test('quoted when value contains whitespace', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<div title="has whitespace" />`,
+      )
+
+      const template = '<div title="has whitespace">'
+      expect(code).toMatchSnapshot()
+      expect(code).contains(JSON.stringify(template))
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
+
+    test('quoted when value contains >', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<div data-expr="a>b" />`,
+      )
+
+      const template = '<div data-expr="a>b">'
+      expect(code).toMatchSnapshot()
+      expect(code).contains(JSON.stringify(template))
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
+
+    test('quoted when value contains <', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<div data-expr="a<b" />`,
+      )
+
+      const template = '<div data-expr="a<b">'
+      expect(code).toMatchSnapshot()
+      expect(code).contains(JSON.stringify(template))
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
+
+    test('quoted when value contains =', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<div data-expr="a=b" />`,
+      )
+
+      const template = '<div data-expr="a=b">'
+      expect(code).toMatchSnapshot()
+      expect(code).contains(JSON.stringify(template))
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
+
+    test('quoted when value contains single quote', () => {
+      const { code, ir } = compileWithElementTransform(`<div title="it's" />`)
+
+      const template = `<div title="it's">`
+      expect(code).toMatchSnapshot()
+      expect(code).contains(JSON.stringify(template))
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
+
+    test('quoted when value contains backtick', () => {
+      const { code, ir } = compileWithElementTransform(
+        '<div title="foo`bar" />',
+      )
+
+      const template = '<div title="foo`bar">'
+      expect(code).toMatchSnapshot()
+      expect(code).contains(JSON.stringify(template))
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
+
+    test('escapes double quotes in value', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<div title='say "hello"' />`,
+      )
+
+      const template = '<div title="say &quot;hello&quot;">'
+      expect(code).toMatchSnapshot()
+      expect(code).contains(JSON.stringify(template))
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
+
+    test('mixed quoting with boolean attribute', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<div title="has whitespace" inert data-targets="foo>bar" />`,
+      )
+
+      const template =
+        '<div title="has whitespace"inert data-targets="foo>bar">'
+      expect(code).toMatchSnapshot()
+      expect(code).contains(JSON.stringify(template))
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
+
+    test('space omitted after quoted attribute', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<div title="has whitespace" alt='"contains quotes"' data-targets="foo>bar" />`,
+      )
+
+      const template =
+        '<div title="has whitespace"alt="&quot;contains quotes&quot;"data-targets="foo>bar">'
+      expect(code).toMatchSnapshot()
+      expect(code).contains(JSON.stringify(template))
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
   })
 })
