@@ -1597,6 +1597,22 @@ describe('SSR hydration', () => {
     expect((container.firstChild as any).foo).toBe(msg.value)
   })
 
+  test('should not render ref on custom element during hydration', () => {
+    const container = document.createElement('div')
+    container.innerHTML = '<my-element>hello</my-element>'
+    const root = ref()
+    const app = createSSRApp({
+      render: () =>
+        h('my-element', {
+          ref: root,
+          innerHTML: 'hello',
+        }),
+    })
+    app.mount(container)
+    expect(container.innerHTML).toBe('<my-element>hello</my-element>')
+    expect((container.firstChild as Element).hasAttribute('ref')).toBe(false)
+  })
+
   // #5728
   test('empty text node in slot', () => {
     const Comp = {
