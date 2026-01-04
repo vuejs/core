@@ -92,7 +92,7 @@ export const setCurrentInstance = (
   }
 }
 
-const internalOptions = ['ce', 'type'] as const
+const internalOptions = ['ce', 'type', 'uid'] as const
 
 /**
  * @internal
