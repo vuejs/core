@@ -67,7 +67,7 @@ describe('compile', () => {
 
         expect(code).toMatchSnapshot()
         expect(code).contains(
-          JSON.stringify('<div :id="foo"><Comp></Comp>{{ bar }}'),
+          JSON.stringify('<div :id=foo><Comp></Comp>{{ bar }}'),
         )
         expect(code).not.contains('effect')
       })

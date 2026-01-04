@@ -786,7 +786,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > with constant value 1`] = `
 "import { setProp as _setProp, template as _template } from 'vue';
-const t0 = _template("<div e=\\"2\\" f=\\"foo1\\" g=\\"1\\" h=\\"1\\">", true)
+const t0 = _template("<div e=2 f=foo1 g=1 h=1>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
