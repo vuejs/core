@@ -21,12 +21,11 @@ export function querySelector(selectors: string): Element | null {
   return document.querySelector(selectors)
 }
 
-/*! @__NO_SIDE_EFFECTS__ */
+/* @__NO_SIDE_EFFECTS__ */
 export function parentNode(node: Node): ParentNode | null {
   return node.parentNode
 }
 
-/* @__NO_SIDE_EFFECTS__ */
 const _txt: typeof _child = _child
 
 /**
