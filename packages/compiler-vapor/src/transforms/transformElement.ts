@@ -93,56 +93,7 @@ export const transformElement: NodeTransform = (node, context) => {
       getEffectIndex,
     )
 
-    let { index, parent, block } = context
-    let isLastChild = true
-    const checkIsLastChild = () => {
-      // If all children after the element are components, then we can consider it "last"
-      // Components won't appear in the html template, so there's no need for closing tags
-      isLastChild &&=
-        !!parent &&
-        (block !== parent.block ||
-          parent.node.children.every(
-            (c, i) =>
-              i <= index ||
-              (c.type === NodeTypes.ELEMENT &&
-                c.tagType === ElementTypes.COMPONENT),
-          ))
-    }
-
-    checkIsLastChild()
     const singleRoot = isSingleRoot(context)
-
-    // If it is a formatting tag, close tag is absolutely required if it's not on the right-most path of the tree
-    // => https://html.spec.whatwg.org/multipage/parsing.html#reconstruct-the-active-formatting-elements
-    // If the parent has the same tag, then close tag is required if it's not on the right-most path of the tree
-    // => The parent's close tag will close the child otherwise; disambiguation is needed
-    if (
-      isFormattingTag(node.tag) ||
-      (parent &&
-        parent.node.type === NodeTypes.ELEMENT &&
-        node.tag === parent.node.tag)
-    ) {
-      while (
-        isLastChild &&
-        parent &&
-        parent.parent &&
-        block === parent.parent.block &&
-        parent.node.type === NodeTypes.ELEMENT
-      ) {
-        index = parent.index
-        parent = parent.parent
-        checkIsLastChild()
-      }
-    }
-
-    while (
-      parent &&
-      parent.parent &&
-      parent.node.type === NodeTypes.ELEMENT &&
-      parent.node.tagType === ElementTypes.TEMPLATE
-    ) {
-      parent = parent.parent
-    }
 
     if (isComponent) {
       transformComponentElement(
@@ -158,10 +109,12 @@ export const transformElement: NodeTransform = (node, context) => {
         node as PlainElementNode,
         propsResult,
         singleRoot,
-        // Multi-root always generates dedicated templates for each root
-        isLastChild || context.root === parent,
         context,
         getEffectIndex,
+        // Root-level elements generate dedicated templates
+        // so closing tags can be omitted
+        context.root === context.effectiveParent ||
+          canOmitEndTag(node as PlainElementNode, context),
       )
     }
 
@@ -169,6 +122,34 @@ export const transformElement: NodeTransform = (node, context) => {
       context.slots = parentSlots
     }
   }
+}
+
+function canOmitEndTag(
+  node: PlainElementNode,
+  context: TransformContext,
+): boolean {
+  const { block, parent } = context
+
+  if (!parent) return false
+
+  // If in a different block than parent, this is a block root element
+  // and can omit the closing tag
+  if (block !== parent.block) {
+    return true
+  }
+
+  // Formatting tags and same-name nested tags require explicit closing
+  // unless on the rightmost path of the tree:
+  // - Formatting tags: https://html.spec.whatwg.org/multipage/parsing.html#reconstruct-the-active-formatting-elements
+  // - Same-name tags: parent's close tag would incorrectly close the child
+  if (
+    isFormattingTag(node.tag) ||
+    (parent.node.type === NodeTypes.ELEMENT && node.tag === parent.node.tag)
+  ) {
+    return context.isOnRightmostPath
+  }
+
+  return context.isLastEffectiveChild
 }
 
 function isSingleRoot(
@@ -306,9 +287,9 @@ function transformNativeElement(
   node: PlainElementNode,
   propsResult: PropsResult,
   singleRoot: boolean,
-  isLastChild: boolean,
   context: TransformContext,
   getEffectIndex: () => number,
+  omitEndTag: boolean,
 ) {
   const { tag } = node
   const { scopeId } = context.options
@@ -369,7 +350,7 @@ function transformNativeElement(
   }
 
   template += `>` + context.childrenTemplate.join('')
-  if (!isVoidTag(tag) && !isLastChild) {
+  if (!isVoidTag(tag) && !omitEndTag) {
     template += `</${tag}>`
   }
 
