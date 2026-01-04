@@ -22,6 +22,7 @@ describe('useInstanceOption', () => {
     let hasInstance: boolean | undefined
     let type: any
     const Comp = {
+      __i18n: { locale: 'en' }, // inject by custom blocks
       setup() {
         const option = useInstanceOption('type', true)
         hasInstance = option.hasInstance
@@ -34,6 +35,7 @@ describe('useInstanceOption', () => {
     expect(hasInstance).toBe(true)
     expect('setup' in type).toBe(true)
     expect('mounted' in type).toBe(true)
+    expect(type.__i18n).toEqual({ locale: 'en' })
   })
 
   test(`'uid' key`, () => {
