@@ -280,6 +280,13 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
     const slot = target[key]
     if (isFunction(slot)) {
       slot.__vapor = true
+      // Create a wrapper that internally uses renderSlot for proper vapor slot handling
+      // This ensures that calling slots.default() works the same as renderSlot(slots, 'default')
+      const wrapped = (props?: Record<string, any>) => [
+        renderSlot({ [key]: slot }, key as string, props),
+      ]
+      ;(wrapped as any).__vs = slot
+      return wrapped
     }
     return slot
   },
