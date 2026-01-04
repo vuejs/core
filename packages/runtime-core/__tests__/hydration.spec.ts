@@ -1612,6 +1612,7 @@ describe('SSR hydration', () => {
     app.mount(container)
     expect(container.innerHTML).toBe('<my-element>hello</my-element>')
     expect((container.firstChild as Element).hasAttribute('ref')).toBe(false)
+    expect(root.value).toBe(container.firstChild)
   })
 
   // #5728
