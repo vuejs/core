@@ -1597,6 +1597,7 @@ describe('SSR hydration', () => {
     expect((container.firstChild as any).foo).toBe(msg.value)
   })
 
+  // #14274
   test('should not render ref on custom element during hydration', () => {
     const container = document.createElement('div')
     container.innerHTML = '<my-element>hello</my-element>'
