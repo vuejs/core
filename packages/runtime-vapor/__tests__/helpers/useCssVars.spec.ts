@@ -1,6 +1,7 @@
 import {
   VaporTeleport,
   createComponent,
+  createFor,
   createIf,
   createPlainElement,
   defineVaporComponent,
@@ -409,5 +410,49 @@ describe('useVaporCssVars', () => {
     }).render({}, root)
 
     expect(colorInOnMount).toBe(`red`)
+  })
+
+  test('work with v-if false', () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+
+    define({
+      setup() {
+        useVaporCssVars(() => state)
+        return createIf(
+          () => false,
+          () => {
+            const n2 = template('<div class="red">Hi</div>')()
+            return n2
+          },
+          null as any,
+          true,
+        )
+      },
+    }).render({}, root)
+
+    expect(root.innerHTML).toBe(`<!--if-->`)
+  })
+
+  test('work with empty v-for', () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+
+    define({
+      setup() {
+        useVaporCssVars(() => state)
+        return createFor(
+          // empty source
+          () => [],
+          item => {
+            return template('<div class="red">Hi</div>')()
+          },
+          undefined,
+          4,
+        )
+      },
+    }).render({}, root)
+
+    expect(root.innerHTML).toBe(`<!--for-->`)
   })
 })
