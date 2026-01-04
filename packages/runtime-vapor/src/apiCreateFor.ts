@@ -17,7 +17,13 @@ import {
   createTextNode,
   updateLastLogicalChild,
 } from './dom/node'
-import { type Block, findBlockNode, insert, remove } from './block'
+import {
+  type Block,
+  applyTransitionHooks,
+  findBlockNode,
+  insert,
+  remove,
+} from './block'
 import { warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
@@ -31,7 +37,6 @@ import {
   locateHydrationNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { applyTransitionHooks } from './components/Transition'
 import { ForFragment, VaporFragment } from './fragment'
 import {
   insertionAnchor,
@@ -39,7 +44,6 @@ import {
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-import { triggerTransitionGroupUpdate } from './components/TransitionGroup'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
@@ -130,12 +134,6 @@ export const createFor = (
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
     let isFallback = false
-
-    // trigger TransitionGroup update hooks
-    const transitionHooks = frag.$transition
-    if (transitionHooks && transitionHooks.group && isMounted) {
-      triggerTransitionGroupUpdate(transitionHooks)
-    }
 
     const prevSub = setActiveSub()
 
@@ -403,7 +401,7 @@ export const createFor = (
       oldBlocks = []
     }
 
-    if (isMounted && frag.updated) frag.updated.forEach(m => m())
+    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
     setActiveSub(prevSub)
   }
 
@@ -446,7 +444,7 @@ export const createFor = (
 
     // apply transition for new nodes
     if (frag.$transition) {
-      applyTransitionHooks(block.nodes, frag.$transition, false)
+      applyTransitionHooks(block.nodes, frag.$transition)
     }
 
     if (parent) insert(block.nodes, parent, anchor)

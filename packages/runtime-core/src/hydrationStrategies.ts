@@ -3,10 +3,17 @@ import { DOMNodeTypes, isComment } from './hydration'
 
 // Polyfills for Safari support
 // see https://caniuse.com/requestidlecallback
-const requestIdleCallback: Window['requestIdleCallback'] =
-  getGlobalThis().requestIdleCallback || (cb => setTimeout(cb, 1))
-const cancelIdleCallback: Window['cancelIdleCallback'] =
-  getGlobalThis().cancelIdleCallback || (id => clearTimeout(id))
+// Use lazy initialization to allow tree-shaking when hydrateOnIdle is not used
+let requestIdleCallback: Window['requestIdleCallback']
+let cancelIdleCallback: Window['cancelIdleCallback']
+
+function ensureIdleCallbacks() {
+  if (!requestIdleCallback) {
+    const g = getGlobalThis()
+    requestIdleCallback = g.requestIdleCallback || (cb => setTimeout(cb, 1))
+    cancelIdleCallback = g.cancelIdleCallback || (id => clearTimeout(id))
+  }
+}
 
 /**
  * A lazy hydration strategy for async components.
@@ -29,13 +36,14 @@ export type HydrationStrategyFactory<Options> = (
 export const hydrateOnIdle: HydrationStrategyFactory<number> =
   (timeout = 10000) =>
   hydrate => {
+    ensureIdleCallbacks()
     const id = requestIdleCallback(hydrate, { timeout })
     return () => cancelIdleCallback(id)
   }
 
 function elementIsVisibleInViewport(el: Element) {
   const { top, left, bottom, right } = el.getBoundingClientRect()
-  // eslint-disable-next-line no-restricted-globals
+  // oxlint-disable-next-line no-restricted-globals
   const { innerHeight, innerWidth } = window
   return (
     ((top > 0 && top < innerHeight) || (bottom > 0 && bottom < innerHeight)) &&

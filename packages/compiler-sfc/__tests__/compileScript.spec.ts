@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { BindingTypes } from '@vue/compiler-core'
 import {
   assertCode,
@@ -6,6 +7,15 @@ import {
   mockId,
 } from './utils'
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+
+vi.mock('../src/warn', () => ({
+  warn: vi.fn(),
+  warnOnce: vi.fn(),
+}))
+
+import { warnOnce } from '../src/warn'
+
+const warnOnceMock = vi.mocked(warnOnce)
 
 describe('SFC compile <script setup>', () => {
   test('should compile JS syntax', () => {
@@ -72,6 +82,77 @@ describe('SFC compile <script setup>', () => {
       z: BindingTypes.SETUP_MAYBE_REF,
     })
     assertCode(content)
+  })
+
+  test('demote const reactive binding to let when used in v-model', () => {
+    warnOnceMock.mockClear()
+    const { content, bindings } = compile(`
+      <script setup>
+      import { reactive } from 'vue'
+      const name = reactive({ first: 'john', last: 'doe' })
+      </script>
+
+      <template>
+        <MyComponent v-model="name" />
+      </template>
+    `)
+
+    expect(content).toMatch(
+      `let name = reactive({ first: 'john', last: 'doe' })`,
+    )
+    expect(bindings!.name).toBe(BindingTypes.SETUP_LET)
+    expect(warnOnceMock).toHaveBeenCalledTimes(1)
+    expect(warnOnceMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '`v-model` cannot update a `const` reactive binding',
+      ),
+    )
+    assertCode(content)
+  })
+
+  test('demote const reactive binding to let when used in v-model (inlineTemplate)', () => {
+    warnOnceMock.mockClear()
+    const { content, bindings } = compile(
+      `
+      <script setup>
+      import { reactive } from 'vue'
+      const name = reactive({ first: 'john', last: 'doe' })
+      </script>
+
+      <template>
+        <MyComponent v-model="name" />
+      </template>
+      `,
+      { inlineTemplate: true },
+    )
+
+    expect(content).toMatch(
+      `let name = reactive({ first: 'john', last: 'doe' })`,
+    )
+    expect(bindings!.name).toBe(BindingTypes.SETUP_LET)
+    expect(warnOnceMock).toHaveBeenCalledTimes(1)
+    expect(warnOnceMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '`v-model` cannot update a `const` reactive binding',
+      ),
+    )
+    assertCode(content)
+  })
+
+  test('v-model should error on literal const bindings', () => {
+    expect(() =>
+      compile(
+        `
+        <script setup>
+        const foo = 1
+        </script>
+        <template>
+          <input v-model="foo" />
+        </template>
+        `,
+        { inlineTemplate: true },
+      ),
+    ).toThrow('v-model cannot be used on a const binding')
   })
 
   describe('<script> and <script setup> co-usage', () => {

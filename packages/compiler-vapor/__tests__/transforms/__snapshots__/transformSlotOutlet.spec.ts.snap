@@ -181,7 +181,7 @@ export function render(_ctx) {
   const n0 = _createSlot("default", {
     onClick: () => _ctx.foo,
     $: [
-      () => (_toHandlers(_ctx.bar)),
+      () => (_toHandlers(_ctx.bar, false, true)),
       { baz: () => (_ctx.qux) }
     ]
   })

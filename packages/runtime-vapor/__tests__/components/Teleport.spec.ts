@@ -4,7 +4,6 @@ import {
   createComponent as createComp,
   createComponent,
 } from '../../src/component'
-import { withVaporCtx } from '../../src'
 import {
   type VaporDirective,
   VaporTeleport,
@@ -85,7 +84,7 @@ describe('renderer: VaporTeleport', () => {
         setup(props) {
           const n0 = template(`<div> </div>`)()
           const x0 = child(n0 as any)
-          renderEffect(() => setText(x0 as any, props.foo))
+          renderEffect(() => setText(x0 as any, String(props.foo)))
           return [n0]
         },
       })
@@ -719,11 +718,11 @@ function runSharedTests(deferMode: boolean): void {
               VaporTeleport,
               { to: () => svg.value },
               {
-                default: withVaporCtx(() => {
+                default: () => {
                   const n3 = template('<circle></circle>', false, 1)() as any
                   _setTemplateRef(n3, circle, undefined, undefined, 'circle')
                   return n3
-                }),
+                },
               },
             )
             return n4

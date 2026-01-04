@@ -1,5 +1,5 @@
 import { currentInstance, resolveDynamicComponent } from '@vue/runtime-dom'
-import { insert } from './block'
+import { insert, isBlock } from './block'
 import { createComponentWithFallback, emptyContext } from './component'
 import { renderEffect } from './renderEffect'
 import type { RawProps } from './componentProps'
@@ -36,14 +36,17 @@ export function createDynamicComponent(
       (currentInstance && currentInstance.appContext) || emptyContext
     frag.update(
       () =>
-        createComponentWithFallback(
-          resolveDynamicComponent(value) as any,
-          rawProps,
-          rawSlots,
-          isSingleRoot,
-          once,
-          appContext,
-        ),
+        // Support integration with VaporRouterView/VaporRouterLink by accepting blocks
+        isBlock(value)
+          ? value
+          : createComponentWithFallback(
+              resolveDynamicComponent(value) as any,
+              rawProps,
+              rawSlots,
+              isSingleRoot,
+              once,
+              appContext,
+            ),
       value,
     )
   }

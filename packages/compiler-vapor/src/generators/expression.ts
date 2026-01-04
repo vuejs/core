@@ -337,6 +337,12 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
             end: id.end!,
           })
         })
+
+        const parentOfMemberExp = parentStack[parentStack.length - 2]
+        if (parentOfMemberExp && isCallExpression(parentOfMemberExp)) {
+          return
+        }
+
         registerVariable(
           memberExp,
           exp,
@@ -671,6 +677,8 @@ function extractMemberExpression(
       return `${extractMemberExpression(exp.left, onIdentifier)} ${exp.operator} ${extractMemberExpression(exp.right, onIdentifier)}`
     case 'CallExpression': // foo[bar(baz)]
       return `${extractMemberExpression(exp.callee, onIdentifier)}(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
+    case 'OptionalCallExpression': // foo[bar?.(baz)]
+      return `${extractMemberExpression(exp.callee, onIdentifier)}?.(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
     case 'MemberExpression': // foo[bar.baz]
     case 'OptionalMemberExpression': // foo?.bar
       const object = extractMemberExpression(exp.object, onIdentifier)
@@ -683,6 +691,12 @@ function extractMemberExpression(
     default:
       return ''
   }
+}
+
+const isCallExpression = (node: Node) => {
+  return (
+    node.type === 'CallExpression' || node.type === 'OptionalCallExpression'
+  )
 }
 
 const isMemberExpression = (node: Node) => {

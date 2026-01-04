@@ -315,7 +315,7 @@ function createConfig(format, output, plugins = []) {
       '@babel/parser',
       '@babel/types',
       'estree-walker',
-      'entities/lib/decode.js',
+      'entities/decode',
     ]
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {

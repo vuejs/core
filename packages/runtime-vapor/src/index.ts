@@ -1,6 +1,11 @@
 // public APIs
 export { createVaporApp, createVaporSSRApp } from './apiCreateApp'
-export { defineVaporComponent } from './apiDefineComponent'
+export {
+  defineVaporComponent,
+  type DefineVaporComponent,
+  type VaporPublicProps,
+  type VaporRenderResult,
+} from './apiDefineComponent'
 export { defineVaporAsyncComponent } from './apiDefineAsyncComponent'
 export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
@@ -9,16 +14,20 @@ export { VaporKeepAliveImpl as VaporKeepAlive } from './components/KeepAlive'
 export {
   defineVaporCustomElement,
   defineVaporSSRCustomElement,
-} from './apiDefineVaporCustomElement'
+  VaporElement,
+  type VaporElementConstructor,
+} from './apiDefineCustomElement'
 
 // compiler-use only
-export { insert, prepend, remove } from './block'
+export { insert, prepend, remove, type Block } from './block'
 export { setInsertionState } from './insertionState'
 export {
   createComponent,
   createComponentWithFallback,
   createPlainElement,
   isVaporComponent,
+  type FunctionalVaporComponent,
+  type VaporComponentInstance,
 } from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot, withVaporCtx } from './componentSlots'
@@ -68,3 +77,8 @@ export { withVaporDirectives } from './directives/custom'
 export { isFragment, VaporFragment } from './fragment'
 export { VaporTransition } from './components/Transition'
 export { VaporTransitionGroup } from './components/TransitionGroup'
+
+// types
+export type { VaporComponent } from './component'
+export type { VaporSlot } from './componentSlots'
+export type { VaporTransitionHooks } from './block'

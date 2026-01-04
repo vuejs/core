@@ -270,6 +270,54 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`cache multiple access > should cache method call with same arguments 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    const _msg_replace_1_2 = _ctx.msg.replace('1', '2')
+    _setProp(n0, "id", _msg_replace_1_2)
+    _setProp(n1, "id", _msg_replace_1_2)
+  })
+  return [n0, n1]
+}"
+`;
+
+exports[`cache multiple access > should cache optional call expression with same arguments 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    const _obj_foo_bar = _ctx.obj[_ctx.foo?.(_ctx.bar)]
+    _setProp(n0, "id", _obj_foo_bar)
+    _setProp(n1, "id", _obj_foo_bar)
+  })
+  return [n0, n1]
+}"
+`;
+
+exports[`cache multiple access > should not cache method call with different arguments 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    const _msg = _ctx.msg
+    _setProp(n0, "id", _msg.replace('1', '2'))
+    _setProp(n1, "id", _msg.replace('1', '3'))
+  })
+  return [n0, n1]
+}"
+`;
+
 exports[`cache multiple access > variable name substring edge cases 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", true)

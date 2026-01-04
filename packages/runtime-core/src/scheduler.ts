@@ -244,10 +244,10 @@ let isFlushing = false
 /**
  * @internal
  */
-export function flushOnAppMount(): void {
+export function flushOnAppMount(instance?: GenericComponentInstance): void {
   if (!isFlushing) {
     isFlushing = true
-    flushPreFlushCbs()
+    flushPreFlushCbs(instance)
     flushPostFlushCbs()
     isFlushing = false
   }

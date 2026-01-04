@@ -21,6 +21,7 @@ export function on(
   if (isArray(handler)) {
     handler.forEach(fn => on(el, event, fn, options))
   } else {
+    if (!handler) return
     addEventListener(el, event, handler, options)
     if (options.effect) {
       onEffectCleanup(() => {
@@ -55,7 +56,7 @@ type DelegatedHandler = {
 /**
  * Event delegation borrowed from solid
  */
-const delegatedEvents = Object.create(null)
+const delegatedEvents = /*@__PURE__*/ Object.create(null)
 
 export const delegateEvents = (...names: string[]): void => {
   for (const name of names) {

@@ -3,6 +3,7 @@ import {
   type GenericComponent,
   type GenericComponentInstance,
   type KeepAliveProps,
+  MoveType,
   type VNode,
   currentInstance,
   devtoolsComponentAdded,
@@ -18,7 +19,7 @@ import {
   warn,
   watch,
 } from '@vue/runtime-dom'
-import { type Block, insert, remove } from '../block'
+import { type Block, move, remove } from '../block'
 import {
   type ObjectVaporComponent,
   type VaporComponent,
@@ -53,7 +54,7 @@ type CacheKey = VaporComponent | VNode['type']
 type Cache = Map<CacheKey, VaporComponentInstance | VaporFragment>
 type Keys = Set<CacheKey>
 
-export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
+const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
   name: 'VaporKeepAlive',
   __isKeepAlive: true,
   props: {
@@ -116,7 +117,7 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     const cacheBlock = () => {
       // TODO suspense
       const block = keepAliveInstance.block!
-      const [innerBlock, interop] = getInnerBlock(block)!
+      const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
       innerCacheBlock(
         interop ? innerBlock.vnode!.type : innerBlock.type,
@@ -126,23 +127,20 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
     const processFragment = (frag: DynamicFragment) => {
       const [innerBlock, interop] = getInnerBlock(frag.nodes)
-      if (!innerBlock && !shouldCache(innerBlock!, props, interop)) return
+      if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
 
       if (interop) {
         if (cache.has(innerBlock.vnode!.type)) {
           innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
         }
-        if (shouldCache(innerBlock!, props, true)) {
-          innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        }
+        innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       } else {
         if (cache.has(innerBlock!.type)) {
           innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
         }
-        if (shouldCache(innerBlock!, props)) {
-          innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        }
+        innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       }
+      return true
     }
 
     const cacheFragment = (fragment: DynamicFragment) => {
@@ -237,14 +235,18 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
     // inject hooks to DynamicFragment to cache components during updates
     const injectKeepAliveHooks = (frag: DynamicFragment) => {
-      ;(frag.beforeTeardown || (frag.beforeTeardown = [])).push(
+      ;(frag.onBeforeTeardown || (frag.onBeforeTeardown = [])).push(
         (oldKey, nodes, scope) => {
-          processFragment(frag)
-          keptAliveScopes.set(oldKey, scope)
-          return true
+          // if the fragment's nodes include a component that should be cached
+          // return true to avoid tearing down the fragment's scope
+          if (processFragment(frag)) {
+            keptAliveScopes.set(oldKey, scope)
+            return true
+          }
+          return false
         },
       )
-      ;(frag.beforeMount || (frag.beforeMount = [])).push(() =>
+      ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() =>
         cacheFragment(frag),
       )
       frag.getScope = key => {
@@ -275,6 +277,9 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     return children
   },
 })
+
+export const VaporKeepAliveImpl: ObjectVaporComponent =
+  /*@__PURE__*/ KeepAliveImpl
 
 const shouldCache = (
   block: GenericComponentInstance | VaporFragment,
@@ -346,7 +351,7 @@ export function activate(
   parentNode: ParentNode,
   anchor?: Node | null | 0,
 ): void {
-  insert(instance.block, parentNode, anchor)
+  move(instance.block, parentNode, anchor, MoveType.ENTER, instance)
 
   queuePostFlushCb(() => {
     instance.isDeactivated = false
@@ -362,7 +367,7 @@ export function deactivate(
   instance: VaporComponentInstance,
   container: ParentNode,
 ): void {
-  insert(instance.block, container)
+  move(instance.block, container, null, MoveType.LEAVE, instance)
 
   queuePostFlushCb(() => {
     if (instance.da) invokeArrayFns(instance.da)

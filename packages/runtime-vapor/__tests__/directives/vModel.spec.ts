@@ -1,12 +1,14 @@
 import { reactive, ref } from '@vue/reactivity'
 import {
   applyCheckboxModel,
+  applyDynamicModel,
   applyRadioModel,
   applySelectModel,
   applyTextModel,
   delegate,
   delegateEvents,
   on,
+  renderEffect,
   setClass,
   setProp,
   setValue,
@@ -1001,5 +1003,185 @@ describe('directive: v-model', () => {
     triggerEvent('compositionend', input)
     await nextTick()
     expect(data.value).toEqual('使用拼音输入')
+  })
+
+  describe('applyDynamicModel', () => {
+    test('input + dynamic type', async () => {
+      const spy = vi.fn()
+      const inputType = ref<string>('text')
+
+      const data = ref<string | null | undefined>('')
+      const { host } = define(() => {
+        const n0 = template('<input />')() as HTMLInputElement
+        delegateEvents('input')
+        renderEffect(() => setProp(n0, 'type', inputType.value))
+        applyDynamicModel(
+          n0,
+          () => data.value,
+          val => (data.value = val),
+        )
+        delegate(n0, 'input', () => spy(data.value))
+        return n0
+      }).render()
+
+      const input = host.querySelector('input')!
+      expect(input.value).toEqual('')
+
+      input.value = 'foo'
+      triggerEvent('input', input)
+      await nextTick()
+      expect(data.value).toEqual('foo')
+      expect(spy).toHaveBeenCalledWith('foo')
+
+      data.value = 'bar'
+      await nextTick()
+      expect(input.value).toEqual('bar')
+
+      data.value = undefined
+      await nextTick()
+      expect(input.value).toEqual('')
+    })
+
+    test('should work with textarea', async () => {
+      const data = ref<string>('')
+      const { host } = define(() => {
+        const t0 = template('<textarea />')
+        const n0 = t0() as HTMLInputElement
+        applyDynamicModel(
+          n0,
+          () => data.value,
+          val => (data.value = val),
+        )
+        return n0
+      }).render()
+
+      const input = host.querySelector('textarea')!
+
+      input.value = 'foo'
+      triggerEvent('input', input)
+      await nextTick()
+      expect(data.value).toEqual('foo')
+
+      data.value = 'bar'
+      await nextTick()
+      expect(input.value).toEqual('bar')
+    })
+
+    test('should work with select', async () => {
+      const spy = vi.fn()
+      const data = ref<string | null>('')
+      const { host } = define(() => {
+        const t0 = template(
+          '<select><option>red</option><option>green</option><option>blue</option></select>',
+        )
+        const n0 = t0() as HTMLSelectElement
+        applyDynamicModel(
+          n0,
+          () => data.value,
+          val => (data.value = val),
+        )
+        on(n0, 'change', () => spy(data.value))
+        return n0
+      }).render()
+
+      const select = host.querySelector('select')!
+      expect(select.value).toEqual('')
+
+      select.value = 'red'
+      triggerEvent('change', select)
+      await nextTick()
+      expect(data.value).toEqual('red')
+      expect(spy).toHaveBeenCalledWith('red')
+
+      data.value = 'blue'
+      await nextTick()
+      expect(select.value).toEqual('blue')
+    })
+
+    test('should work with checkbox', async () => {
+      const data = ref<boolean | null>(null)
+      const { host } = define(() => {
+        const t0 = template('<input type="checkbox" />')
+        const n0 = t0() as HTMLInputElement
+        applyDynamicModel(
+          n0,
+          () => data.value,
+          val => (data.value = val),
+        )
+        return n0
+      }).render()
+
+      const input = host.querySelector('input') as HTMLInputElement
+
+      input.checked = true
+      triggerEvent('change', input)
+      await nextTick()
+      expect(data.value).toEqual(true)
+
+      data.value = false
+      await nextTick()
+      expect(input.checked).toEqual(false)
+
+      data.value = true
+      await nextTick()
+      expect(input.checked).toEqual(true)
+
+      input.checked = false
+      triggerEvent('change', input)
+      await nextTick()
+      expect(data.value).toEqual(false)
+    })
+
+    test('should work with radio', async () => {
+      const data = ref<string | null>(null)
+      let n1: HTMLInputElement, n2: HTMLInputElement
+      define(() => {
+        const t0 = template(
+          `<div>` +
+            `<input type="radio" value="foo">` +
+            `<input type="radio" value="bar">` +
+            `</div>`,
+        )
+        const n0 = t0() as HTMLInputElement
+        ;[n1, n2] = Array.from(n0.children) as Array<HTMLInputElement>
+
+        applyDynamicModel(
+          n1,
+          () => data.value,
+          val => (data.value = val),
+        )
+        applyDynamicModel(
+          n2,
+          () => data.value,
+          val => (data.value = val),
+        )
+        return n0
+      }).render()
+
+      n1!.checked = true
+      triggerEvent('change', n1!)
+      await nextTick()
+      expect(data.value).toEqual('foo')
+
+      n2!.checked = true
+      triggerEvent('change', n2!)
+      await nextTick()
+      expect(data.value).toEqual('bar')
+
+      data.value = null
+      await nextTick()
+      expect(n1!.checked).toEqual(false)
+      expect(n2!.checked).toEqual(false)
+
+      data.value = 'foo'
+      await nextTick()
+      expect(n1!.checked).toEqual(true)
+      expect(n2!.checked).toEqual(false)
+
+      data.value = 'bar'
+      await nextTick()
+      expect(n1!.checked).toEqual(false)
+      expect(n2!.checked).toEqual(true)
+    })
   })
 })

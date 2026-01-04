@@ -38,6 +38,7 @@ import {
   type IRProps,
   type IRPropsDynamicAttribute,
   type IRPropsStatic,
+  type IRSlots,
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
@@ -52,6 +53,20 @@ export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
 export const transformElement: NodeTransform = (node, context) => {
   let effectIndex = context.block.effect.length
   const getEffectIndex = () => effectIndex++
+
+  // If the element is a component, we need to isolate its slots context.
+  // This ensures that slots defined for this component are not accidentally
+  // inherited by its children components.
+  let parentSlots: IRSlots[] | undefined
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    (node.tagType === ElementTypes.COMPONENT ||
+      context.options.isCustomElement(node.tag))
+  ) {
+    parentSlots = context.slots
+    context.slots = []
+  }
+
   return function postTransformElement() {
     ;({ node } = context)
     if (
@@ -148,6 +163,10 @@ export const transformElement: NodeTransform = (node, context) => {
         context,
         getEffectIndex,
       )
+    }
+
+    if (parentSlots) {
+      context.slots = parentSlots
     }
   }
 }

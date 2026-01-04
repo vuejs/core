@@ -11,7 +11,7 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4.2.0
@@ -32,7 +32,7 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4.2.0
@@ -54,7 +54,7 @@ jobs:
   e2e-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup cache for Chromium binary
         uses: actions/cache@v4
@@ -111,7 +111,7 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4.2.0
@@ -124,10 +124,10 @@ jobs:
 
       - run: pnpm install
 
-      - name: Run eslint
+      - name: Run oxlint
         run: pnpm run lint
 
-      - name: Run prettier
+      - name: Run oxfmt
         run: pnpm run format-check
 
       - name: Run tsc

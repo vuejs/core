@@ -462,6 +462,19 @@ export interface GenericComponentInstance {
    */
   suspense: SuspenseBoundary | null
   /**
+   * suspense pending batch id
+   * @internal
+   */
+  suspenseId: number
+  /**
+   * @internal
+   */
+  asyncDep: Promise<any> | null
+  /**
+   * @internal
+   */
+  asyncResolved: boolean
+  /**
    * `updateTeleportCssVars`
    * For updating css vars on contained teleports
    * @internal
@@ -709,7 +722,7 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
   resolvedOptions?: MergedComponentOptions
 }
 
-const emptyAppContext = createAppContext()
+const emptyAppContext = /*@__PURE__*/ createAppContext()
 
 let uid = 0
 

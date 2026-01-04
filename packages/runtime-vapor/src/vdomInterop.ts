@@ -12,6 +12,7 @@ import {
   type RendererNode,
   type ShallowRef,
   type Slots,
+  type SuspenseBoundary,
   type TransitionHooks,
   type VNode,
   type VNodeNormalizedRef,
@@ -44,6 +45,7 @@ import {
   type VaporComponent,
   VaporComponentInstance,
   createComponent,
+  getCurrentScopeId,
   isVaporComponent,
   mountComponent,
   unmountComponent,
@@ -80,6 +82,7 @@ import {
   deactivate,
   findParentKeepAlive,
 } from './components/KeepAlive'
+import { setParentSuspense } from './components/Suspense'
 
 export const interopKey: unique symbol = Symbol(`interop`)
 
@@ -88,7 +91,7 @@ const vaporInteropImpl: Omit<
   VaporInteropInterface,
   'vdomMount' | 'vdomUnmount' | 'vdomSlot'
 > = {
-  mount(vnode, container, anchor, parentComponent) {
+  mount(vnode, container, anchor, parentComponent, parentSuspense) {
     let selfAnchor = (vnode.el = vnode.anchor = createTextNode())
     if (isHydrating) {
       // avoid vdom hydration children mismatch by the selfAnchor, delay its insertion
@@ -109,6 +112,11 @@ const vaporInteropImpl: Omit<
 
     const propsRef = shallowRef(props)
     const slotsRef = shallowRef(vnode.children)
+
+    let prevSuspense: SuspenseBoundary | null = null
+    if (__FEATURE_SUSPENSE__ && parentSuspense) {
+      prevSuspense = setParentSuspense(parentSuspense)
+    }
 
     const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
       () => propsRef.value,
@@ -140,6 +148,11 @@ const vaporInteropImpl: Omit<
         vnode.transition as VaporTransitionHooks,
       )
     }
+
+    if (__FEATURE_SUSPENSE__ && parentSuspense) {
+      setParentSuspense(prevSuspense)
+    }
+
     mountComponent(instance, container, selfAnchor)
     simpleSetCurrentInstance(prev)
     return instance
@@ -157,8 +170,12 @@ const vaporInteropImpl: Omit<
 
   unmount(vnode, doRemove) {
     const container = doRemove ? vnode.anchor!.parentNode : undefined
-    if (vnode.component) {
-      unmountComponent(vnode.component as any, container)
+    const instance = vnode.component as any as VaporComponentInstance
+    if (instance) {
+      // the async component may not be resolved yet, block is null
+      if (instance.block) {
+        unmountComponent(instance, container)
+      }
     } else if (vnode.vb) {
       remove(vnode.vb, container)
     }
@@ -168,8 +185,10 @@ const vaporInteropImpl: Omit<
   /**
    * vapor slot in vdom
    */
-  slot(n1: VNode, n2: VNode, container, anchor) {
+  slot(n1: VNode, n2: VNode, container, anchor, parentComponent) {
     if (!n1) {
+      const prev = currentInstance
+      simpleSetCurrentInstance(parentComponent)
       // mount
       let selfAnchor: Node | undefined
       const { slot, fallback } = n2.vs!
@@ -181,6 +200,7 @@ const vaporInteropImpl: Omit<
         // use fragment's anchor when possible
         selfAnchor = slotBlock.anchor
       }
+      simpleSetCurrentInstance(prev)
       if (!selfAnchor) selfAnchor = createTextNode()
       insert((n2.el = n2.anchor = selfAnchor), container, anchor)
       insert((n2.vb = slotBlock), container, selfAnchor)
@@ -197,9 +217,9 @@ const vaporInteropImpl: Omit<
     insert(vnode.anchor as any, container, anchor)
   },
 
-  hydrate(vnode, node, container, anchor, parentComponent) {
+  hydrate(vnode, node, container, anchor, parentComponent, parentSuspense) {
     vaporHydrateNode(node, () =>
-      this.mount(vnode, container, anchor, parentComponent),
+      this.mount(vnode, container, anchor, parentComponent, parentSuspense),
     )
     return _next(node)
   },
@@ -288,7 +308,6 @@ function createVDOMComponent(
     rawSlots as RawSlots,
     parentComponent ? parentComponent.appContext : undefined,
     undefined,
-    parentComponent,
   )
 
   // overwrite how the vdom instance handles props
@@ -335,7 +354,7 @@ function createVDOMComponent(
     frag.nodes = vnode.el as any
   }
 
-  vnode.scopeId = (currentInstance && currentInstance.type.__scopeId) || null
+  vnode.scopeId = getCurrentScopeId() || null
   vnode.slotScopeIds = currentSlotScopeIds
 
   frag.insert = (parentNode, anchor, transition) => {
@@ -383,7 +402,7 @@ function createVDOMComponent(
     }
 
     frag.nodes = vnode.el as any
-    if (isMounted && frag.updated) frag.updated.forEach(m => m())
+    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
 
   frag.remove = unmount
@@ -402,6 +421,10 @@ function createVDOMComponent(
       },
       instance as any,
     )
+
+    if (isMounted && rawRef) {
+      vdomSetRef(rawRef, null, null, vnode)
+    }
   }
 
   return frag
@@ -450,7 +473,7 @@ function renderVDOMSlot(
       }
     }
 
-    if (isMounted && frag.updated) frag.updated.forEach(m => m())
+    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
 
   const render = (parentNode?: ParentNode, anchor?: Node | null) => {

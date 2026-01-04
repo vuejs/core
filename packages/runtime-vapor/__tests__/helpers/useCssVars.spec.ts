@@ -1,6 +1,7 @@
 import {
   VaporTeleport,
   createComponent,
+  createFor,
   createIf,
   createPlainElement,
   defineVaporComponent,
@@ -9,7 +10,6 @@ import {
   setStyle,
   template,
   useVaporCssVars,
-  withVaporCtx,
 } from '@vue/runtime-vapor'
 import { nextTick, onMounted, reactive, ref } from '@vue/runtime-core'
 import { makeRender } from '../_utils'
@@ -246,14 +246,14 @@ describe('useVaporCssVars', () => {
           VaporTeleport,
           { to: () => target },
           {
-            default: withVaporCtx(() => {
+            default: () => {
               const n0 = template('<div></div>', true)()
               const n1 = createIf(
                 () => toggle.value,
                 () => template('<div></div>', true)(),
               )
               return [n0, n1]
-            }),
+            },
           },
         )
       },
@@ -286,7 +286,7 @@ describe('useVaporCssVars', () => {
           VaporTeleport,
           { to: () => target, disabled: () => true },
           {
-            default: withVaporCtx(() => template('<div></div>', true)()),
+            default: () => template('<div></div>', true)(),
           },
         )
       },
@@ -410,5 +410,49 @@ describe('useVaporCssVars', () => {
     }).render({}, root)
 
     expect(colorInOnMount).toBe(`red`)
+  })
+
+  test('work with v-if false', () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+
+    define({
+      setup() {
+        useVaporCssVars(() => state)
+        return createIf(
+          () => false,
+          () => {
+            const n2 = template('<div class="red">Hi</div>')()
+            return n2
+          },
+          null as any,
+          true,
+        )
+      },
+    }).render({}, root)
+
+    expect(root.innerHTML).toBe(`<!--if-->`)
+  })
+
+  test('work with empty v-for', () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+
+    define({
+      setup() {
+        useVaporCssVars(() => state)
+        return createFor(
+          // empty source
+          () => [],
+          item => {
+            return template('<div class="red">Hi</div>')()
+          },
+          undefined,
+          4,
+        )
+      },
+    }).render({}, root)
+
+    expect(root.innerHTML).toBe(`<!--for-->`)
   })
 })

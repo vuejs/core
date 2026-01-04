@@ -1,2 +1,6 @@
 # update prettier & eslint config (#9162)
 bfe6b459d3a0ce6168611ee1ac7e6e789709df9d
+# migrate linting to oxlint (#13326)
+08598a6bedefae792255f6ce2500e1acfd36d499
+# migrate formatter to oxfmt (#14238)
+65437f954a040070a93afc900f6771cb3c562fef

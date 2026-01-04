@@ -10,7 +10,6 @@ import {
   setDynamicProps,
   setText,
   template,
-  withVaporCtx,
 } from '../src'
 import { nextTick, reactive, ref, watchEffect } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
@@ -55,7 +54,7 @@ describe('api: setup context', () => {
         })
         const n = createTextNode()
         renderEffect(() => {
-          setText(n, props.count)
+          setText(n, String(props.count))
         })
         return n
       },
@@ -114,11 +113,11 @@ describe('api: setup context', () => {
       inheritAttrs: false,
       setup(_: any, { attrs }: any) {
         const n0 = createComponent(Wrapper, null, {
-          default: withVaporCtx(() => {
+          default: () => {
             const n0 = template('<div>')() as HTMLDivElement
             renderEffect(() => setDynamicProps(n0, [attrs]))
             return n0
-          }),
+          },
         })
         return n0
       },
@@ -192,7 +191,7 @@ describe('api: setup context', () => {
           emit('inc', props.count + 1)
         })
         const n = createTextNode()
-        renderEffect(() => setText(n, props.count))
+        renderEffect(() => setText(n, String(props.count)))
         insert(n, n0)
         return n0
       },

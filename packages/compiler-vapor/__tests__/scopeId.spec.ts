@@ -18,7 +18,7 @@ function compile(template: string | RootNode, options: CompilerOptions = {}) {
 describe('scopeId compiler support', () => {
   test('should wrap default slot', () => {
     const code = compile(`<Child><div/></Child>`)
-    expect(code).toMatch(`"default": _withVaporCtx(() => {`)
+    expect(code).toMatch(`"default": () => {`)
     expect(code).toMatchSnapshot()
   })
 
@@ -34,8 +34,8 @@ describe('scopeId compiler support', () => {
         scopeId: 'test',
       },
     )
-    expect(code).toMatch(`"foo": _withVaporCtx((_slotProps0) => {`)
-    expect(code).toMatch(`"bar": _withVaporCtx(() => {`)
+    expect(code).toMatch(`"foo": (_slotProps0) => {`)
+    expect(code).toMatch(`"bar": () => {`)
     expect(code).toMatchSnapshot()
   })
 
@@ -51,8 +51,8 @@ describe('scopeId compiler support', () => {
         scopeId: 'test',
       },
     )
-    expect(code).toMatch(/name: "foo",\s+fn: _withVaporCtx\(/)
-    expect(code).toMatch(/name: i,\s+fn: _withVaporCtx\(/)
+    expect(code).toMatch(/name: "foo",\s+fn: \(/)
+    expect(code).toMatch(/name: i,\s+fn: \(/)
     expect(code).toMatchSnapshot()
   })
 })

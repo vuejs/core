@@ -1892,7 +1892,8 @@ declare const ErrorMessage: {
           type: StringConstructor
           required: true
         }
-      }>
+      }> &
+        vue.AllowedComponentProps
     >,
     () =>
       | VNode<

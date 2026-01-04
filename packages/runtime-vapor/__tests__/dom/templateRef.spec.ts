@@ -12,7 +12,6 @@ import {
   insert,
   renderEffect,
   template,
-  withVaporCtx,
 } from '../../src'
 import { compile, makeRender, runtimeDom, runtimeVapor } from '../_utils'
 import {
@@ -182,7 +181,7 @@ describe('api: template ref', () => {
     expect(fn.mock.calls[0][0]).toBe(host.children[0])
     toggle.value = false
     await nextTick()
-    expect(fn.mock.calls[1][0]).toBe(undefined)
+    expect(fn.mock.calls[1][0]).toBe(null)
   })
 
   test('useTemplateRef mount', () => {
@@ -613,11 +612,11 @@ describe('api: template ref', () => {
       render() {
         const setRef = createTemplateRefSetter()
         const n0 = createComponent(Child, null, {
-          default: withVaporCtx(() => {
+          default: () => {
             n = document.createElement('div')
             setRef(n, 'foo')
             return n
-          }),
+          },
         })
         return n0
       },
@@ -641,11 +640,11 @@ describe('api: template ref', () => {
       setup() {
         const setRef = createTemplateRefSetter()
         const n0 = createComponent(Child, null, {
-          default: withVaporCtx(() => {
+          default: () => {
             n = document.createElement('div')
             setRef(n, r)
             return n
-          }),
+          },
         })
         return n0
       },
@@ -670,11 +669,11 @@ describe('api: template ref', () => {
         r = useTemplateRef('foo')
         const setRef = createTemplateRefSetter()
         const n0 = createComponent(Child, null, {
-          default: withVaporCtx(() => {
+          default: () => {
             n = document.createElement('div')
             setRef(n, 'foo')
             return n
-          }),
+          },
         })
         return n0
       },
@@ -754,6 +753,90 @@ describe('api: template ref', () => {
     } finally {
       __DEV__ = true
     }
+  })
+
+  it('should not register duplicate onScopeDispose callbacks for dynamic function refs', async () => {
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    const toggle = ref(true)
+    const t0 = template('<div></div>')
+
+    const { app } = define({
+      render() {
+        const n0 = t0()
+        let r0: any
+        renderEffect(() => {
+          r0 = createTemplateRefSetter()(
+            n0 as Element,
+            toggle.value ? fn1 : fn2,
+            r0,
+          )
+        })
+        return n0
+      },
+    }).render()
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(0)
+    expect(app._instance!.scope.cleanups.length).toBe(1)
+
+    toggle.value = false
+    await nextTick()
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(app._instance!.scope.cleanups.length).toBe(1)
+
+    toggle.value = true
+    await nextTick()
+    expect(fn1).toHaveBeenCalledTimes(2)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(app._instance!.scope.cleanups.length).toBe(1)
+
+    app.unmount()
+    await nextTick()
+    // expected fn1 to be called again during scope dispose
+    expect(fn1).toHaveBeenCalledTimes(3)
+    expect(fn2).toHaveBeenCalledTimes(1)
+  })
+
+  it('should not register duplicate onScopeDispose callbacks for dynamic string refs', async () => {
+    const el1 = ref(null)
+    const el2 = ref(null)
+    const toggle = ref(true)
+    const t0 = template('<div></div>')
+
+    const { app, host } = define({
+      setup() {
+        return { ref1: el1, ref2: el2 }
+      },
+      render() {
+        const n0 = t0()
+        let r0: any
+        renderEffect(() => {
+          r0 = createTemplateRefSetter()(
+            n0 as Element,
+            toggle.value ? 'ref1' : 'ref2',
+            r0,
+          )
+        })
+        return n0
+      },
+    }).render()
+
+    expect(el1.value).toBe(host.children[0])
+    expect(el2.value).toBe(null)
+    expect(app._instance!.scope.cleanups.length).toBe(1)
+
+    toggle.value = false
+    await nextTick()
+    expect(el1.value).toBe(null)
+    expect(el2.value).toBe(host.children[0])
+    expect(app._instance!.scope.cleanups.length).toBe(1)
+
+    app.unmount()
+    await nextTick()
+    expect(el1.value).toBe(null)
+    expect(el2.value).toBe(null)
   })
 
   // TODO: can not reproduce in Vapor
@@ -971,6 +1054,54 @@ describe('interop: template ref', () => {
     await nextTick()
     expect(container.innerHTML).toBe(
       `<button class="btn"></button><div>bar</div>`,
+    )
+  })
+
+  test('vapor app: useTemplateRef with vdom child + insertionState', async () => {
+    const { container } = await testTemplateRefInterop(
+      `<script vapor>
+        import { useTemplateRef } from 'vue'
+        const components = _components;
+        const elRef = useTemplateRef('el')
+        function click() {
+          elRef.value.change()
+        }
+      </script>
+      <template>
+        <div>
+          <button class="btn" @click="click"></button>
+          <components.VDOMChild ref="el"/>
+        </div>
+      </template>`,
+      {
+        VDOMChild: {
+          code: `
+            <script setup>
+              import { ref } from 'vue'
+              const msg = ref('foo')
+              function change(){
+                msg.value = 'bar'
+              }
+              defineExpose({ change })
+            </script>
+            <template><div>{{msg}}</div></template>
+          `,
+          vapor: false,
+        },
+      },
+      undefined,
+      { vapor: true },
+    )
+
+    expect(container.innerHTML).toBe(
+      `<div><button class="btn"></button><div>foo</div></div>`,
+    )
+
+    const btn = container.querySelector('.btn')
+    triggerEvent('click', btn!)
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><button class="btn"></button><div>bar</div></div>`,
     )
   })
 

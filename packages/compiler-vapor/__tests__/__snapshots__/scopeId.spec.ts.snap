@@ -1,23 +1,23 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`scopeId compiler support > should wrap default slot 1`] = `
-"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _component_Child = _resolveComponent("Child")
   const n1 = _createComponentWithFallback(_component_Child, null, {
-    "default": _withVaporCtx(() => {
+    "default": () => {
       const n0 = t0()
       return n0
-    })
+    }
   }, true)
   return n1
 }"
 `;
 
 exports[`scopeId compiler support > should wrap dynamic slots 1`] = `
-"import { resolveComponent as _resolveComponent, withVaporCtx as _withVaporCtx, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template("<div test>")
 
 export function render(_ctx) {
@@ -27,18 +27,18 @@ export function render(_ctx) {
       () => (_ctx.ok
         ? {
           name: "foo",
-          fn: _withVaporCtx(() => {
+          fn: () => {
             const n0 = t0()
             return n0
-          })
+          }
         }
         : void 0),
       () => (_createForSlots(_ctx.list, (i) => ({
         name: i,
-        fn: _withVaporCtx(() => {
+        fn: () => {
           const n2 = t0()
           return n2
-        })
+        }
       })))
     ]
   }, true)
@@ -47,22 +47,22 @@ export function render(_ctx) {
 `;
 
 exports[`scopeId compiler support > should wrap named slots 1`] = `
-"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, withVaporCtx as _withVaporCtx, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
 const t0 = _template(" ")
 const t1 = _template("<div test>")
 
 export function render(_ctx) {
   const _component_Child = _resolveComponent("Child")
   const n4 = _createComponentWithFallback(_component_Child, null, {
-    "foo": _withVaporCtx((_slotProps0) => {
+    "foo": (_slotProps0) => {
       const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0["msg"])))
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.msg)))
       return n0
-    }),
-    "bar": _withVaporCtx(() => {
+    },
+    "bar": () => {
       const n2 = t1()
       return n2
-    })
+    }
   }, true)
   return n4
 }"
