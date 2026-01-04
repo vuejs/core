@@ -38,6 +38,9 @@ const MATH_TAGS =
 const VOID_TAGS =
   'area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr'
 
+// https://html.spec.whatwg.org/multipage/parsing.html#formatting
+const FORMATTING_TAGS = 'a,b,big,code,em,font,i,nobr,s,small,strike,strong,tt,u'
+
 /**
  * Compiler only.
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
@@ -62,3 +65,9 @@ export const isMathMLTag: (key: string) => boolean =
  */
 export const isVoidTag: (key: string) => boolean =
   /*@__PURE__*/ makeMap(VOID_TAGS)
+/**
+ * Compiler only.
+ * Do NOT use in runtime code paths unless behind `__DEV__` flag.
+ */
+export const isFormattingTag: (key: string) => boolean =
+  /*@__PURE__*/ makeMap(FORMATTING_TAGS)

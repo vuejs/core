@@ -11,7 +11,7 @@ export function render(_ctx) {
 
 exports[`compiler: transform <slot> outlets > default slot outlet with fallback 1`] = `
 "import { createSlot as _createSlot, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = _createSlot("default", null, () => {
@@ -24,7 +24,7 @@ export function render(_ctx) {
 
 exports[`compiler: transform <slot> outlets > default slot outlet with props & fallback 1`] = `
 "import { createSlot as _createSlot, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = _createSlot("default", { foo: () => (_ctx.bar) }, () => {
@@ -87,7 +87,7 @@ export function render(_ctx) {
 
 exports[`compiler: transform <slot> outlets > named slot outlet with fallback 1`] = `
 "import { createSlot as _createSlot, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", null, () => {
@@ -100,7 +100,7 @@ export function render(_ctx) {
 
 exports[`compiler: transform <slot> outlets > named slot outlet with props & fallback 1`] = `
 "import { createSlot as _createSlot, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", { foo: () => (_ctx.bar) }, () => {
