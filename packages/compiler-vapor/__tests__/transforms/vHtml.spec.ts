@@ -78,7 +78,7 @@ describe('v-html', () => {
     expect(helpers).contains('setHtml')
 
     // children should have been removed
-    expect([...ir.template.keys()]).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div>'])
 
     expect(ir.block.operation).toMatchObject([])
     expect(ir.block.effect).toMatchObject([
@@ -110,7 +110,7 @@ describe('v-html', () => {
 
     expect(code).matchSnapshot()
     // children should have been removed
-    expect(code).contains('template("<div></div>", true)')
+    expect(code).contains('template("<div>", true)')
   })
 
   test('should raise error if has no expression', () => {

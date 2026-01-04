@@ -21,6 +21,7 @@ import {
   capitalize,
   extend,
   isBuiltInDirective,
+  isFormattingTag,
   isVoidTag,
   makeMap,
 } from '@vue/shared'
@@ -93,6 +94,7 @@ export const transformElement: NodeTransform = (node, context) => {
     )
 
     const singleRoot = isSingleRoot(context)
+
     if (isComponent) {
       transformComponentElement(
         node as ComponentNode,
@@ -109,6 +111,10 @@ export const transformElement: NodeTransform = (node, context) => {
         singleRoot,
         context,
         getEffectIndex,
+        // Root-level elements generate dedicated templates
+        // so closing tags can be omitted
+        context.root === context.effectiveParent ||
+          canOmitEndTag(node as PlainElementNode, context),
       )
     }
 
@@ -116,6 +122,34 @@ export const transformElement: NodeTransform = (node, context) => {
       context.slots = parentSlots
     }
   }
+}
+
+function canOmitEndTag(
+  node: PlainElementNode,
+  context: TransformContext,
+): boolean {
+  const { block, parent } = context
+
+  if (!parent) return false
+
+  // If in a different block than parent, this is a block root element
+  // and can omit the closing tag
+  if (block !== parent.block) {
+    return true
+  }
+
+  // Formatting tags and same-name nested tags require explicit closing
+  // unless on the rightmost path of the tree:
+  // - Formatting tags: https://html.spec.whatwg.org/multipage/parsing.html#reconstruct-the-active-formatting-elements
+  // - Same-name tags: parent's close tag would incorrectly close the child
+  if (
+    isFormattingTag(node.tag) ||
+    (parent.node.type === NodeTypes.ELEMENT && node.tag === parent.node.tag)
+  ) {
+    return context.isOnRightmostPath
+  }
+
+  return context.isLastEffectiveChild
 }
 
 function isSingleRoot(
@@ -255,6 +289,7 @@ function transformNativeElement(
   singleRoot: boolean,
   context: TransformContext,
   getEffectIndex: () => number,
+  omitEndTag: boolean,
 ) {
   const { tag } = node
   const { scopeId } = context.options
@@ -336,8 +371,7 @@ function transformNativeElement(
   }
 
   template += `>` + context.childrenTemplate.join('')
-  // TODO remove unnecessary close tag, e.g. if it's the last element of the template
-  if (!isVoidTag(tag)) {
+  if (!isVoidTag(tag) && !omitEndTag) {
     template += `</${tag}>`
   }
 
