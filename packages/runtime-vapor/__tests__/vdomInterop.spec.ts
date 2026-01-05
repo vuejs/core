@@ -515,7 +515,7 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<div>vapor child</div>')
     })
 
-    it('should render VNode passed from VDOM slot as dynamic component', async () => {
+    it('should render VNode containing vapor component from VDOM slot', async () => {
       const VaporComp = defineVaporComponent({
         setup() {
           return template('<div>vapor comp</div>')() as any
@@ -555,7 +555,7 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<div>vapor comp</div><!--dynamic-component-->')
     })
 
-    it('should render VNode with vdom component passed from VDOM slot', async () => {
+    it('should render VNode containing vdom component from VDOM slot', async () => {
       const VdomComp = defineComponent({
         setup() {
           return () => h('div', 'vdom comp')
