@@ -680,3 +680,7 @@ export {
   warnExtraneousAttributes,
   getFunctionalFallthrough,
 } from './componentRenderUtils'
+/**
+ * @internal
+ */
+export { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
