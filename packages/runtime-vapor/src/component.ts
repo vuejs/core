@@ -282,9 +282,9 @@ export function createComponent(
     currentInstance.vapor &&
     isKeepAlive(currentInstance)
   ) {
-    const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
-      component,
-    )
+    const cached = (
+      currentInstance as KeepAliveInstance
+    ).ctx.getCachedComponent(component)
     // @ts-expect-error
     if (cached) return cached
   }
@@ -880,7 +880,7 @@ export function mountComponent(
   }
 
   if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-    findParentKeepAlive(instance)!.activate(instance, parent, anchor)
+    findParentKeepAlive(instance)!.ctx.activate(instance, parent, anchor)
     return
   }
 
@@ -926,7 +926,7 @@ export function unmountComponent(
     instance.parent.vapor &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
   ) {
-    findParentKeepAlive(instance)!.deactivate(instance)
+    findParentKeepAlive(instance)!.ctx.deactivate(instance)
     return
   }
 

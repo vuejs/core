@@ -38,16 +38,18 @@ import {
 import type { EffectScope } from '@vue/reactivity'
 
 export interface KeepAliveInstance extends VaporComponentInstance {
-  activate: (
-    instance: VaporComponentInstance,
-    parentNode: ParentNode,
-    anchor?: Node | null | 0,
-  ) => void
-  deactivate: (instance: VaporComponentInstance) => void
-  getCachedComponent: (
-    comp: VaporComponent,
-  ) => VaporComponentInstance | VaporFragment | undefined
-  getStorageContainer: () => ParentNode
+  ctx: {
+    activate: (
+      instance: VaporComponentInstance,
+      parentNode: ParentNode,
+      anchor?: Node | null | 0,
+    ) => void
+    deactivate: (instance: VaporComponentInstance) => void
+    getCachedComponent: (
+      comp: VaporComponent,
+    ) => VaporComponentInstance | VaporFragment | undefined
+    getStorageContainer: () => ParentNode
+  }
 }
 
 type CacheKey = VaporComponent | VNode['type']
@@ -78,23 +80,22 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       ;(keepAliveInstance as any).__v_cache = cache
     }
 
-    keepAliveInstance.getStorageContainer = () => storageContainer
-
-    keepAliveInstance.getCachedComponent = comp => cache.get(comp)
-
-    keepAliveInstance.activate = (instance, parentNode, anchor) => {
-      current = instance
-      activate(instance, parentNode, anchor)
-    }
-
-    keepAliveInstance.deactivate = instance => {
-      current = undefined
-      deactivate(instance, storageContainer)
+    keepAliveInstance.ctx = {
+      getStorageContainer: () => storageContainer,
+      getCachedComponent: comp => cache.get(comp),
+      activate: (instance, parentNode, anchor) => {
+        current = instance
+        activate(instance, parentNode, anchor)
+      },
+      deactivate: instance => {
+        current = undefined
+        deactivate(instance, storageContainer)
+      },
     }
 
     const innerCacheBlock = (
       key: CacheKey,
-      instance: VaporComponentInstance | VaporFragment,
+      block: VaporComponentInstance | VaporFragment,
     ) => {
       const { max } = props
 
@@ -110,8 +111,8 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         }
       }
 
-      cache.set(key, instance)
-      current = instance
+      cache.set(key, block)
+      current = block
     }
 
     const cacheBlock = () => {
@@ -141,21 +142,6 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       }
       return true
-    }
-
-    const cacheFragment = (fragment: DynamicFragment) => {
-      const [innerBlock, interop] = getInnerBlock(fragment.nodes)
-      if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
-
-      let key: CacheKey
-      if (interop) {
-        innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        key = innerBlock.vnode!.type
-      } else {
-        innerBlock.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        key = innerBlock.type
-      }
-      innerCacheBlock(key, innerBlock)
     }
 
     const pruneCache = (filter: (name: string) => boolean) => {
@@ -247,7 +233,7 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         },
       )
       ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() =>
-        cacheFragment(frag),
+        processFragment(frag),
       )
       frag.getScope = key => {
         const scope = keptAliveScopes.get(key)

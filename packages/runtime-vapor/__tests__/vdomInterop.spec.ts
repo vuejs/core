@@ -22,6 +22,7 @@ import {
 } from '@vue/runtime-dom'
 import { makeInteropRender } from './_utils'
 import {
+  VaporKeepAlive,
   applyTextModel,
   applyVShow,
   child,
@@ -641,10 +642,68 @@ describe('vdomInterop', () => {
       }).render()
 
       expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
+      current.value = VaporCompB
+      await nextTick()
+      expect(html()).toBe('<div>vapor B</div><!--dynamic-component-->')
+    })
+
+    it('should update when VNode changes with VaporKeepAlive', async () => {
+      const VaporCompA = defineVaporComponent({
+        setup() {
+          return template('<div>vapor A</div>')() as any
+        },
+      })
+
+      const VaporCompB = defineVaporComponent({
+        setup() {
+          return template('<div>vapor B</div>')() as any
+        },
+      })
+
+      const current = shallowRef<any>(VaporCompA)
+
+      const RouterView = defineComponent({
+        setup(_, { slots }) {
+          return () => {
+            const component = h(current.value as any)
+            return slots.default!({ Component: component })
+          }
+        },
+      })
+
+      const App = defineVaporComponent({
+        setup() {
+          return createComponent(
+            RouterView as any,
+            null,
+            {
+              default: (slotProps: { Component: any }) => {
+                return createComponent(VaporKeepAlive, null, {
+                  default: () =>
+                    createDynamicComponent(() => slotProps.Component),
+                })
+              },
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(App as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
 
       current.value = VaporCompB
       await nextTick()
       expect(html()).toBe('<div>vapor B</div><!--dynamic-component-->')
+
+      current.value = VaporCompA
+      await nextTick()
+      expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
     })
   })
 

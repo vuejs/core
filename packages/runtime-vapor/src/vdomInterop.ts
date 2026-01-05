@@ -78,6 +78,7 @@ import { VaporFragment, isFragment, setFragmentFallback } from './fragment'
 import type { NodeRef } from './apiTemplateRef'
 import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
 import {
+  type KeepAliveInstance,
   activate,
   deactivate,
   findParentKeepAlive,
@@ -244,9 +245,18 @@ const vaporInteropImpl: Omit<
   },
 
   activate(vnode, container, anchor, parentComponent) {
-    const cached = (parentComponent.ctx as KeepAliveContext).getCachedComponent(
-      vnode,
-    )
+    let cached: VNode
+    if (isVaporComponent(parentComponent)) {
+      cached = (
+        (parentComponent as KeepAliveInstance).ctx.getCachedComponent(
+          vnode.type as VaporComponent,
+        ) as VaporFragment
+      ).vnode!
+    } else {
+      cached = (parentComponent.ctx as KeepAliveContext).getCachedComponent(
+        vnode,
+      )
+    }
 
     vnode.el = cached.el
     vnode.component = cached.component
@@ -405,7 +415,7 @@ function createVDOMComponent(
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       vdomDeactivate(
         vnode,
-        findParentKeepAlive(parentComponent!)!.getStorageContainer(),
+        findParentKeepAlive(parentComponent!)!.ctx.getStorageContainer(),
         internals,
         parentComponent as any,
         null,
