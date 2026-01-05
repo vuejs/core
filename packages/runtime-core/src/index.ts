@@ -154,6 +154,7 @@ export {
   resolveComponent,
   resolveDirective,
   resolveDynamicComponent,
+  NULL_DYNAMIC_COMPONENT,
 } from './helpers/resolveAssets'
 // For integration with runtime compiler
 export { registerRuntimeCompiler, isRuntimeOnly } from './component'
@@ -510,17 +511,25 @@ export const DeprecationTypes = (
 export {
   type ComponentInternalOptions,
   type GenericComponentInstance,
+  type GenericComponent,
   type LifecycleHook,
 } from './component'
+
+/**
+ * @private
+ */
 export { type NormalizedPropsOptions } from './componentProps'
+
 /**
  * @internal
  */
-export { type VaporInteropInterface } from './apiCreateApp'
-/**
- * @internal
- */
-export { type RendererInternals, getInheritedScopeIds } from './renderer'
+export {
+  expose,
+  nextUid,
+  validateComponentName,
+  getComponentName,
+} from './component'
+
 /**
  * @internal
  */
@@ -529,30 +538,42 @@ export {
   resolvePropValue,
   validateProps,
 } from './componentProps'
-/**
- * @internal
- */
-export { baseEmit, isEmitListener } from './componentEmits'
-/**
- * @internal
- */
-export { queueJob, flushOnAppMount } from './scheduler'
-/**
- * @internal
- */
-export { expose, nextUid, validateComponentName } from './component'
-/**
- * @internal
- */
-export { pushWarningContext, popWarningContext } from './warning'
+
 /**
  * @internal
  */
 export {
+  type VaporInteropInterface,
   createAppAPI,
   type AppMountFn,
   type AppUnmountFn,
 } from './apiCreateApp'
+
+/**
+ * @internal
+ */
+export {
+  type RendererInternals,
+  getInheritedScopeIds,
+  performTransitionEnter,
+  performTransitionLeave,
+} from './renderer'
+
+/**
+ * @internal
+ */
+export { baseEmit, isEmitListener } from './componentEmits'
+
+/**
+ * @internal
+ */
+export { queueJob, flushOnAppMount } from './scheduler'
+
+/**
+ * @internal
+ */
+export { pushWarningContext, popWarningContext } from './warning'
+
 /**
  * @internal
  */
@@ -561,18 +582,22 @@ export {
   setCurrentInstance,
   simpleSetCurrentInstance,
 } from './componentCurrentInstance'
+
 /**
  * @internal
  */
 export { registerHMR, unregisterHMR } from './hmr'
+
 /**
  * @internal
  */
 export { startMeasure, endMeasure } from './profiling'
+
 /**
  * @internal
  */
 export { initFeatureFlags } from './featureFlags'
+
 /**
  * @internal
  */
@@ -580,11 +605,9 @@ export {
   resolveTarget as resolveTeleportTarget,
   isTeleportDisabled,
   isTeleportDeferred,
+  type TeleportTargetElement,
 } from './components/Teleport'
-/**
- * @internal
- */
-export type { TeleportTargetElement } from './components/Teleport'
+
 /**
  * @internal
  */
@@ -594,26 +617,27 @@ export {
   isAsyncWrapper,
   performAsyncHydrate,
 } from './apiAsyncComponent'
+
 /**
  * @internal
  */
 export { markAsyncBoundary } from './helpers/useId'
+
 /**
  * @internal
  */
-export { setRef } from './rendererTemplateRef'
+export { setRef, createCanSetSetupRefChecker } from './rendererTemplateRef'
+
 /**
  * @internal
  */
 export { type VNodeNormalizedRef, normalizeRef } from './vnode'
+
 /**
  * @internal
  */
 export { ensureVaporSlotFallback } from './helpers/renderSlot'
-/**
- * @internal
- */
-export { getComponentName } from './component'
+
 /**
  * @internal
  */
@@ -624,18 +648,17 @@ export {
   activate,
   deactivate,
 } from './components/KeepAlive'
+
 /**
  * @internal
  */
 export { devtoolsComponentAdded } from './devtools'
-/**
- * @internal
- */
-export { performTransitionEnter, performTransitionLeave } from './renderer'
+
 /**
  * @internal
  */
 export { createInternalObject } from './internalObject'
+
 /**
  * @internal
  */
@@ -649,15 +672,8 @@ export {
   isMapEqual,
   isValidHtmlOrSvgAttribute,
   getAttributeMismatch,
+  isTemplateNode,
 } from './hydration'
-/**
- * @internal
- */
-export { createCanSetSetupRefChecker } from './rendererTemplateRef'
-/**
- * @internal
- */
-export { isTemplateNode } from './hydration'
 
 /**
  * @internal
@@ -671,16 +687,7 @@ export {
 /**
  * @internal
  */
-export type { GenericComponent } from './component'
-
-/**
- * @internal
- */
 export {
   warnExtraneousAttributes,
   getFunctionalFallthrough,
 } from './componentRenderUtils'
-/**
- * @internal
- */
-export { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
