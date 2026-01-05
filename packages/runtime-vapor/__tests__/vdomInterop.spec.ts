@@ -238,6 +238,164 @@ describe('vdomInterop', () => {
 
       expect(html()).toBe('default slot')
     })
+
+    test('slots.default() direct invocation', () => {
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => h('div', null, slots.default!())
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: () => template('direct call slot')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>direct call slot</div>')
+    })
+
+    test('slots.default() with slot props', () => {
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => h('div', null, slots.default!({ msg: 'hello' }))
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: (props: { msg: string }) => {
+                const n0 = template('<span></span>')()
+                n0.textContent = props.msg
+                return [n0]
+              },
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div><span>hello</span></div>')
+    })
+
+    test('named slot with slots[name]() invocation', () => {
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () =>
+            h('div', null, [
+              h('header', null, slots.header!()),
+              h('main', null, slots.default!()),
+              h('footer', null, slots.footer!()),
+            ])
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              header: () => template('Header')(),
+              default: () => template('Main')(),
+              footer: () => template('Footer')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe(
+        '<div><header>Header</header><main>Main</main><footer>Footer</footer></div>',
+      )
+    })
+
+    test('slots.default() return directly', () => {
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => slots.default!()
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: () => template('direct return slot')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('direct return slot')
+    })
+
+    test('rendering forwarding vapor slot', () => {
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => h('div', null, { default: slots.default })
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: () => template('forwarded slot')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>forwarded slot</div>')
+    })
   })
 
   describe('provide / inject', () => {
