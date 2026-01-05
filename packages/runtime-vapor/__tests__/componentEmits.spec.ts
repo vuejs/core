@@ -99,17 +99,10 @@ describe('component: emit', () => {
     const fooSpy = vi.fn()
     const barSpy = vi.fn()
     render(
-      // v-on="{ testEvent: handler }"
-      // will be compiled to
-      // toHandlers({ testEvent: handler }, false, true)
-      toHandlers(
-        {
-          'test-event': fooSpy,
-          testEvent: barSpy,
-        },
-        false,
-        true,
-      ),
+      toHandlers({
+        'test-event': () => fooSpy,
+        testEvent: () => barSpy,
+      }),
     )
     expect(fooSpy).toHaveBeenCalledTimes(1)
     expect(barSpy).toHaveBeenCalledTimes(1)

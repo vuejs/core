@@ -370,7 +370,7 @@ describe('compiler: element transform', () => {
       const { code, ir } = compileWithElementTransform(`<Foo v-on="obj" />`)
       expect(code).toMatchSnapshot()
       expect(code).contains(`[
-    () => (_toHandlers(_ctx.obj, false, true))
+    () => (_toHandlers(_ctx.obj))
   ]`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
