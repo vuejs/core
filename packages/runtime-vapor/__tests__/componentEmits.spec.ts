@@ -423,4 +423,25 @@ describe('component: emit', () => {
     await nextTick()
     expect(fn).not.toHaveBeenCalled()
   })
+
+  test('should not execute handler during lookup', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('click')
+        return []
+      },
+    })
+
+    const handler = vi.fn()
+    const props = {
+      $: [
+        () => ({
+          onClick: handler,
+        }),
+      ],
+    }
+    render(props as any)
+
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
 })
