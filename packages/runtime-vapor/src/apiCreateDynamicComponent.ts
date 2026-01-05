@@ -1,4 +1,8 @@
-import { currentInstance, resolveDynamicComponent } from '@vue/runtime-dom'
+import {
+  currentInstance,
+  isVNode,
+  resolveDynamicComponent,
+} from '@vue/runtime-dom'
 import { insert, isBlock } from './block'
 import { createComponentWithFallback, emptyContext } from './component'
 import { renderEffect } from './renderEffect'
@@ -39,14 +43,17 @@ export function createDynamicComponent(
         // Support integration with VaporRouterView/VaporRouterLink by accepting blocks
         isBlock(value)
           ? value
-          : createComponentWithFallback(
-              resolveDynamicComponent(value) as any,
-              rawProps,
-              rawSlots,
-              isSingleRoot,
-              once,
-              appContext,
-            ),
+          : // Handle VNode passed from VDOM components (e.g., h(VaporComp) from slots)
+            appContext.vapor && isVNode(value)
+            ? appContext.vapor.vdomMountVNode(value, currentInstance)
+            : createComponentWithFallback(
+                resolveDynamicComponent(value) as any,
+                rawProps,
+                rawSlots,
+                isSingleRoot,
+                once,
+                appContext,
+              ),
       value,
     )
   }

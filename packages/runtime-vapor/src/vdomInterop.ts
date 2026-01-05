@@ -89,7 +89,7 @@ export const interopKey: unique symbol = Symbol(`interop`)
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
   VaporInteropInterface,
-  'vdomMount' | 'vdomUnmount' | 'vdomSlot'
+  'vdomMount' | 'vdomUnmount' | 'vdomSlot' | 'vdomMountVNode'
 > = {
   mount(vnode, container, anchor, parentComponent, parentSuspense) {
     let selfAnchor = (vnode.el = vnode.anchor = createTextNode())
@@ -293,6 +293,67 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
 }
 
 let vdomHydrateNode: HydrationRenderer['hydrateNode'] | undefined
+
+/**
+ * Mount VNode in vapor
+ */
+function mountVNode(
+  internals: RendererInternals,
+  vnode: VNode,
+  parentComponent: VaporComponentInstance | null,
+): VaporFragment {
+  const frag = new VaporFragment([])
+  frag.vnode = vnode
+
+  let isMounted = false
+  const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
+    if (transition) setVNodeTransitionHooks(vnode, transition)
+    internals.um(vnode, parentComponent as any, null, !!parentNode)
+  }
+
+  frag.hydrate = () => {
+    hydrateVNode(vnode, parentComponent as any)
+    onScopeDispose(unmount, true)
+    isMounted = true
+    frag.nodes = vnode.el as any
+  }
+
+  frag.insert = (parentNode, anchor, transition) => {
+    if (isHydrating) return
+    const prev = currentInstance
+    simpleSetCurrentInstance(parentComponent)
+    if (!isMounted) {
+      if (transition) setVNodeTransitionHooks(vnode, transition)
+      internals.p(
+        null,
+        vnode,
+        parentNode,
+        anchor,
+        parentComponent as any,
+        null, // parentSuspense
+        undefined, // namespace
+        vnode.slotScopeIds,
+      )
+      onScopeDispose(unmount, true)
+      isMounted = true
+    } else {
+      // move
+      internals.m(
+        vnode,
+        parentNode,
+        anchor,
+        MoveType.REORDER,
+        parentComponent as any,
+      )
+    }
+    simpleSetCurrentInstance(prev)
+    frag.nodes = vnode.el as any
+    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+  }
+
+  frag.remove = unmount
+  return frag
+}
 
 /**
  * Mount vdom component in vapor
@@ -572,6 +633,7 @@ export const vaporInteropPlugin: Plugin = app => {
     vdomMount: createVDOMComponent.bind(null, internals),
     vdomUnmount: internals.umt,
     vdomSlot: renderVDOMSlot.bind(null, internals),
+    vdomMountVNode: mountVNode.bind(null, internals),
   })
   const mount = app.mount
   app.mount = ((...args) => {

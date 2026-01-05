@@ -234,6 +234,10 @@ export interface VaporInteropInterface {
     parentComponent: any, // VaporComponentInstance
     fallback?: any, // VaporSlot
   ) => any
+  vdomMountVNode: (
+    vnode: VNode,
+    parentComponent: any, // VaporComponentInstance
+  ) => any
 }
 
 /**
