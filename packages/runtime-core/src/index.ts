@@ -154,6 +154,7 @@ export {
   resolveComponent,
   resolveDirective,
   resolveDynamicComponent,
+  NULL_DYNAMIC_COMPONENT,
 } from './helpers/resolveAssets'
 // For integration with runtime compiler
 export { registerRuntimeCompiler, isRuntimeOnly } from './component'
@@ -680,7 +681,3 @@ export {
   warnExtraneousAttributes,
   getFunctionalFallthrough,
 } from './componentRenderUtils'
-/**
- * @internal
- */
-export { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
