@@ -340,6 +340,11 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   security?: string | undefined
   unselectable?: 'on' | 'off' | undefined
 
+  // Popover API
+  popover?: '' | 'auto' | 'manual' | 'hint' | undefined
+  popoverTargetAction?: 'toggle' | 'show' | 'hide' | undefined
+  popoverTarget?: string | undefined
+
   // Living Standard
   /**
    * Hints at the type of data that might be entered by the user while editing the element or its contents
