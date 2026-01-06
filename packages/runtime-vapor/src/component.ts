@@ -106,10 +106,7 @@ import {
   isTeleportFragment,
   isVaporTeleport,
 } from './components/Teleport'
-import {
-  type KeepAliveInstance,
-  findParentKeepAlive,
-} from './components/KeepAlive'
+import type { KeepAliveInstance } from './components/KeepAlive'
 import {
   insertionAnchor,
   insertionParent,
@@ -880,7 +877,11 @@ export function mountComponent(
   }
 
   if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-    findParentKeepAlive(instance)!.ctx.activate(instance, parent, anchor)
+    ;(instance.parent as KeepAliveInstance)!.ctx.activate(
+      instance,
+      parent,
+      anchor,
+    )
     return
   }
 
@@ -926,7 +927,7 @@ export function unmountComponent(
     instance.parent.vapor &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
   ) {
-    findParentKeepAlive(instance)!.ctx.deactivate(instance)
+    ;(instance.parent as KeepAliveInstance)!.ctx.deactivate(instance)
     return
   }
 

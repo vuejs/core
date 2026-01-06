@@ -9,7 +9,6 @@ import {
   devtoolsComponentAdded,
   getComponentName,
   isAsyncWrapper,
-  isKeepAlive,
   matches,
   onBeforeUnmount,
   onMounted,
@@ -49,6 +48,7 @@ export interface KeepAliveInstance extends VaporComponentInstance {
       comp: VaporComponent,
     ) => VaporComponentInstance | VaporFragment | undefined
     getStorageContainer: () => ParentNode
+    onAsyncResolve: (asyncWrapper: VaporComponentInstance) => void
   }
 }
 
@@ -90,6 +90,13 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       deactivate: instance => {
         current = undefined
         deactivate(instance, storageContainer)
+      },
+      // called when async component resolves to evaluate caching
+      onAsyncResolve: (asyncWrapper: VaporComponentInstance) => {
+        if (shouldCache(asyncWrapper, props, false)) {
+          asyncWrapper.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+          innerCacheBlock(asyncWrapper.type, asyncWrapper)
+        }
       },
     }
 
@@ -279,9 +286,10 @@ const shouldCache = (
       : (block as GenericComponentInstance).type
   ) as GenericComponent & AsyncComponentInternalOptions
 
-  // return true to ensure hooks are injected into its block (DynamicFragment)
+  // for unresolved async components, don't cache yet
+  // caching will be done in onAsyncResolve after the component resolves
   if (isAsync && !type.__asyncResolved) {
-    return true
+    return false
   }
 
   const { include, exclude } = props
@@ -363,17 +371,4 @@ export function deactivate(
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentAdded(instance)
   }
-}
-
-export function findParentKeepAlive(
-  instance: VaporComponentInstance,
-): KeepAliveInstance | null {
-  let parent = instance as GenericComponentInstance | null
-  while (parent) {
-    if (isKeepAlive(parent)) {
-      return parent as KeepAliveInstance
-    }
-    parent = parent.parent
-  }
-  return null
 }

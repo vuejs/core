@@ -1123,6 +1123,76 @@ describe('VaporKeepAlive', () => {
     expect(html()).toBe('<!--if-->')
   })
 
+  test('should not cache async component when resolved name does not match include', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const mounted = vi.fn()
+    const unmounted = vi.fn()
+    const activated = vi.fn()
+    const deactivated = vi.fn()
+
+    const toggle = ref(true)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          // include only 'SomeOtherName', not 'Bar'
+          { include: () => 'SomeOtherName' },
+          {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => createComponent(AsyncComp),
+              )
+            },
+          },
+        )
+      },
+    }).render()
+
+    expect(html()).toBe(`<!--async component--><!--if-->`)
+
+    // Resolve with name 'Bar' which doesn't match include 'SomeOtherName'
+    resolve!(
+      defineVaporComponent({
+        name: 'Bar',
+        setup() {
+          onMounted(mounted)
+          onUnmounted(unmounted)
+          onActivated(activated)
+          onDeactivated(deactivated)
+          return template(`<div>Bar</div>`)()
+        },
+      }),
+    )
+
+    await timeout()
+    expect(html()).toBe(`<div>Bar</div><!--async component--><!--if-->`)
+    expect(mounted).toHaveBeenCalledTimes(1)
+    // Should NOT call activated because it doesn't match include
+    expect(activated).toHaveBeenCalledTimes(0)
+
+    // Toggle off - should unmount, NOT deactivate (because not cached)
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+    expect(unmounted).toHaveBeenCalledTimes(1)
+    expect(deactivated).toHaveBeenCalledTimes(0)
+
+    // Toggle on - should remount, NOT activate from cache
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe(`<div>Bar</div><!--async component--><!--if-->`)
+    expect(mounted).toHaveBeenCalledTimes(2) // Should be called again
+    expect(activated).toHaveBeenCalledTimes(0)
+  })
+
   test('handle error in async onActivated', async () => {
     const err = new Error('foo')
     const handler = vi.fn()

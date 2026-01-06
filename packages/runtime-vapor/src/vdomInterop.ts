@@ -81,7 +81,6 @@ import {
   type KeepAliveInstance,
   activate,
   deactivate,
-  findParentKeepAlive,
 } from './components/KeepAlive'
 import { setParentSuspense } from './components/Suspense'
 
@@ -415,7 +414,7 @@ function createVDOMComponent(
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       vdomDeactivate(
         vnode,
-        findParentKeepAlive(parentComponent!)!.ctx.getStorageContainer(),
+        (parentComponent as KeepAliveInstance)!.ctx.getStorageContainer(),
         internals,
         parentComponent as any,
         null,

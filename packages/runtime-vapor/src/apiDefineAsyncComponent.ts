@@ -5,6 +5,7 @@ import {
   createAsyncComponentContext,
   currentInstance,
   handleError,
+  isKeepAlive,
   markAsyncBoundary,
   performAsyncHydrate,
   useAsyncComponentState,
@@ -29,6 +30,7 @@ import { invokeArrayFns } from '@vue/shared'
 import { type TransitionOptions, insert, remove } from './block'
 import { parentNode } from './dom/node'
 import { setTransitionHooks } from './components/Transition'
+import type { KeepAliveInstance } from './components/KeepAlive'
 
 /*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
@@ -149,6 +151,10 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       load()
         .then(() => {
           loaded.value = true
+          // if parent is keep-alive, re-evaluate caching
+          if (instance.parent && isKeepAlive(instance.parent)) {
+            ;(instance.parent as KeepAliveInstance).ctx.onAsyncResolve(instance)
+          }
         })
         .catch(err => {
           onError(err)

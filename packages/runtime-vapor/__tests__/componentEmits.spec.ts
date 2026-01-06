@@ -99,17 +99,10 @@ describe('component: emit', () => {
     const fooSpy = vi.fn()
     const barSpy = vi.fn()
     render(
-      // v-on="{ testEvent: handler }"
-      // will be compiled to
-      // toHandlers({ testEvent: handler }, false, true)
-      toHandlers(
-        {
-          'test-event': fooSpy,
-          testEvent: barSpy,
-        },
-        false,
-        true,
-      ),
+      toHandlers({
+        'test-event': () => fooSpy,
+        testEvent: () => barSpy,
+      }),
     )
     expect(fooSpy).toHaveBeenCalledTimes(1)
     expect(barSpy).toHaveBeenCalledTimes(1)
@@ -429,5 +422,26 @@ describe('component: emit', () => {
     app.unmount()
     await nextTick()
     expect(fn).not.toHaveBeenCalled()
+  })
+
+  test('should not execute handler during lookup', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('click')
+        return []
+      },
+    })
+
+    const handler = vi.fn()
+    const props = {
+      $: [
+        () => ({
+          onClick: handler,
+        }),
+      ],
+    }
+    render(props as any)
+
+    expect(handler).toHaveBeenCalledTimes(1)
   })
 })
