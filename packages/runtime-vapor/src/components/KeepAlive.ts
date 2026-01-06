@@ -9,7 +9,6 @@ import {
   devtoolsComponentAdded,
   getComponentName,
   isAsyncWrapper,
-  isKeepAlive,
   matches,
   onBeforeUnmount,
   onMounted,
@@ -387,17 +386,4 @@ export function deactivate(
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentAdded(instance)
   }
-}
-
-export function findParentKeepAlive(
-  instance: VaporComponentInstance,
-): KeepAliveInstance | null {
-  let parent = instance as GenericComponentInstance | null
-  while (parent) {
-    if (isKeepAlive(parent)) {
-      return parent as KeepAliveInstance
-    }
-    parent = parent.parent
-  }
-  return null
 }
