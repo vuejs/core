@@ -52,7 +52,15 @@ export function createDynamicComponent(
           ).ctx.getCachedComponent(value.type as any) as VaporFragment
           if (frag) return frag
         }
-        return appContext.vapor.vdomMountVNode(value, currentInstance)
+
+        const frag = appContext.vapor.vdomMountVNode(value, currentInstance)
+        if (isHydrating) {
+          frag.hydrate()
+          if (_isLastInsertion) {
+            advanceHydrationNode(_insertionParent!)
+          }
+        }
+        return frag
       }
 
       return createComponentWithFallback(

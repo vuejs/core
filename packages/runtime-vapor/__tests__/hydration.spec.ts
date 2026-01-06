@@ -4958,4 +4958,56 @@ describe('VDOM interop', () => {
     `,
     )
   })
+
+  test.todo('hydrate VNode rendered via createDynamicComponent', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data; const components = _components;
+
+        // Simulating RouterView pattern: VDOM component passes VNode through slot
+        const RouterView = {
+          setup(_, { slots }) {
+            return () => {
+              const component = h(components.VaporChild)
+              return slots.default({ Component: component })
+            }
+          }
+        }
+      </script>
+      <template>
+        <RouterView v-slot="{ Component }">
+          <component :is="Component" />
+        </RouterView>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><div>{{ data }}</div></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>foo</div><!--dynamic-component--><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>bar</div><!--dynamic-component--><!--]-->
+      "
+    `,
+    )
+  })
 })

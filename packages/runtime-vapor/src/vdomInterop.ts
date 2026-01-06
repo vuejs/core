@@ -92,11 +92,12 @@ const vaporInteropImpl: Omit<
   'vdomMount' | 'vdomUnmount' | 'vdomSlot' | 'vdomMountVNode'
 > = {
   mount(vnode, container, anchor, parentComponent, parentSuspense) {
-    let selfAnchor = (vnode.el = vnode.anchor = createTextNode())
+    let selfAnchor = (vnode.anchor = createTextNode())
     if (isHydrating) {
       // avoid vdom hydration children mismatch by the selfAnchor, delay its insertion
       queuePostFlushCb(() => container.insertBefore(selfAnchor, anchor))
     } else {
+      vnode.el = selfAnchor
       container.insertBefore(selfAnchor, anchor)
     }
     const prev = currentInstance
@@ -236,7 +237,7 @@ const vaporInteropImpl: Omit<
         )
       }
     })
-    return _next(vnode.anchor as Node)
+    return vnode.anchor as Node
   },
 
   setTransitionHooks(component, hooks) {
