@@ -105,10 +105,7 @@ import {
   isTeleportFragment,
   isVaporTeleport,
 } from './components/Teleport'
-import {
-  type KeepAliveInstance,
-  findParentKeepAlive,
-} from './components/KeepAlive'
+import type { KeepAliveInstance } from './components/KeepAlive'
 import {
   insertionAnchor,
   insertionParent,
@@ -281,9 +278,9 @@ export function createComponent(
     currentInstance.vapor &&
     isKeepAlive(currentInstance)
   ) {
-    const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
-      component,
-    )
+    const cached = (
+      currentInstance as KeepAliveInstance
+    ).ctx.getCachedComponent(component)
     // @ts-expect-error
     if (cached) return cached
   }
@@ -873,7 +870,11 @@ export function mountComponent(
   }
 
   if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-    findParentKeepAlive(instance)!.activate(instance, parent, anchor)
+    ;(instance.parent as KeepAliveInstance)!.ctx.activate(
+      instance,
+      parent,
+      anchor,
+    )
     return
   }
 
@@ -919,7 +920,7 @@ export function unmountComponent(
     instance.parent.vapor &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
   ) {
-    findParentKeepAlive(instance)!.deactivate(instance)
+    ;(instance.parent as KeepAliveInstance)!.ctx.deactivate(instance)
     return
   }
 
