@@ -17,7 +17,7 @@ import {
 } from './insertionState'
 import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
-import { type KeepAliveInstance } from './components/KeepAlive'
+import type { KeepAliveInstance } from './components/KeepAlive'
 
 export function createDynamicComponent(
   getter: () => any,
