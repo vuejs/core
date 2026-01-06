@@ -244,19 +244,9 @@ const vaporInteropImpl: Omit<
   },
 
   activate(vnode, container, anchor, parentComponent) {
-    let cached: VNode
-    if (isVaporComponent(parentComponent)) {
-      cached = (
-        (parentComponent as KeepAliveInstance).ctx.getCachedComponent(
-          vnode.type as VaporComponent,
-        ) as VaporFragment
-      ).vnode!
-    } else {
-      cached = (parentComponent.ctx as KeepAliveContext).getCachedComponent(
-        vnode,
-      )
-    }
-
+    const cached = (parentComponent.ctx as KeepAliveContext).getCachedComponent(
+      vnode,
+    )
     vnode.el = cached.el
     vnode.component = cached.component
     vnode.anchor = cached.anchor
@@ -317,7 +307,24 @@ function mountVNode(
   let isMounted = false
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
     if (transition) setVNodeTransitionHooks(vnode, transition)
-    internals.um(vnode, parentComponent as any, null, !!parentNode)
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      if ((vnode.type as any).__vapor) {
+        deactivate(
+          vnode.component as any,
+          (parentComponent as KeepAliveInstance)!.ctx.getStorageContainer(),
+        )
+      } else {
+        vdomDeactivate(
+          vnode,
+          (parentComponent as KeepAliveInstance)!.ctx.getStorageContainer(),
+          internals,
+          parentComponent as any,
+          null,
+        )
+      }
+    } else {
+      internals.um(vnode, parentComponent as any, null, !!parentNode)
+    }
   }
 
   frag.hydrate = () => {
@@ -329,33 +336,51 @@ function mountVNode(
 
   frag.insert = (parentNode, anchor, transition) => {
     if (isHydrating) return
-    const prev = currentInstance
-    simpleSetCurrentInstance(parentComponent)
-    if (!isMounted) {
-      if (transition) setVNodeTransitionHooks(vnode, transition)
-      internals.p(
-        null,
-        vnode,
-        parentNode,
-        anchor,
-        parentComponent as any,
-        null, // parentSuspense
-        undefined, // namespace
-        vnode.slotScopeIds,
-      )
-      onScopeDispose(unmount, true)
-      isMounted = true
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      if ((vnode.type as any).__vapor) {
+        activate(vnode.component as any, parentNode, anchor)
+      } else {
+        vdomActivate(
+          vnode,
+          parentNode,
+          anchor,
+          internals,
+          parentComponent as any,
+          null,
+          undefined,
+          false,
+        )
+      }
+      return
     } else {
-      // move
-      internals.m(
-        vnode,
-        parentNode,
-        anchor,
-        MoveType.REORDER,
-        parentComponent as any,
-      )
+      const prev = currentInstance
+      simpleSetCurrentInstance(parentComponent)
+      if (!isMounted) {
+        if (transition) setVNodeTransitionHooks(vnode, transition)
+        internals.p(
+          null,
+          vnode,
+          parentNode,
+          anchor,
+          parentComponent as any,
+          null, // parentSuspense
+          undefined, // namespace
+          vnode.slotScopeIds,
+        )
+        onScopeDispose(unmount, true)
+        isMounted = true
+      } else {
+        // move
+        internals.m(
+          vnode,
+          parentNode,
+          anchor,
+          MoveType.REORDER,
+          parentComponent as any,
+        )
+      }
+      simpleSetCurrentInstance(prev)
     }
-    simpleSetCurrentInstance(prev)
     frag.nodes = vnode.el as any
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
   }

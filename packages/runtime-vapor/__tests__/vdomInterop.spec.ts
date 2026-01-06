@@ -516,194 +516,316 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<div>vapor child</div>')
     })
 
-    it('should render VNode containing vapor component from VDOM slot', async () => {
-      const VaporComp = defineVaporComponent({
-        setup() {
-          return template('<div>vapor comp</div>')() as any
-        },
-      })
+    describe('render VNodes', () => {
+      it('should render VNode containing vapor component from VDOM slot', async () => {
+        const VaporComp = defineVaporComponent({
+          setup() {
+            return template('<div>vapor comp</div>')() as any
+          },
+        })
 
-      const RouterView = defineComponent({
-        setup(_, { slots }) {
-          return () => {
-            const component = h(VaporComp as any)
-            return slots.default!({ Component: component })
-          }
-        },
-      })
+        const RouterView = defineComponent({
+          setup(_, { slots }) {
+            return () => {
+              const component = h(VaporComp as any)
+              return slots.default!({ Component: component })
+            }
+          },
+        })
 
-      const App = defineVaporComponent({
-        setup() {
-          return createComponent(
-            RouterView as any,
-            null,
-            {
-              default: (slotProps: { Component: any }) => {
-                return createDynamicComponent(() => slotProps.Component)
+        const App = defineVaporComponent({
+          setup() {
+            return createComponent(
+              RouterView as any,
+              null,
+              {
+                default: (slotProps: { Component: any }) => {
+                  return createDynamicComponent(() => slotProps.Component)
+                },
               },
-            },
-            true,
-          )
-        },
+              true,
+            )
+          },
+        })
+
+        const { html } = define({
+          setup() {
+            return () => h(App as any)
+          },
+        }).render()
+
+        expect(html()).toBe('<div>vapor comp</div><!--dynamic-component-->')
       })
 
-      const { html } = define({
-        setup() {
-          return () => h(App as any)
-        },
-      }).render()
+      it('should render VNode containing vdom component from VDOM slot', async () => {
+        const VdomComp = defineComponent({
+          setup() {
+            return () => h('div', 'vdom comp')
+          },
+        })
 
-      expect(html()).toBe('<div>vapor comp</div><!--dynamic-component-->')
-    })
+        const RouterView = defineComponent({
+          setup(_, { slots }) {
+            return () => {
+              const component = h(VdomComp)
+              return slots.default!({ Component: component })
+            }
+          },
+        })
 
-    it('should render VNode containing vdom component from VDOM slot', async () => {
-      const VdomComp = defineComponent({
-        setup() {
-          return () => h('div', 'vdom comp')
-        },
-      })
-
-      const RouterView = defineComponent({
-        setup(_, { slots }) {
-          return () => {
-            const component = h(VdomComp)
-            return slots.default!({ Component: component })
-          }
-        },
-      })
-
-      const App = defineVaporComponent({
-        setup() {
-          return createComponent(
-            RouterView as any,
-            null,
-            {
-              default: (slotProps: { Component: any }) => {
-                return createDynamicComponent(() => slotProps.Component)
+        const App = defineVaporComponent({
+          setup() {
+            return createComponent(
+              RouterView as any,
+              null,
+              {
+                default: (slotProps: { Component: any }) => {
+                  return createDynamicComponent(() => slotProps.Component)
+                },
               },
-            },
-            true,
-          )
-        },
+              true,
+            )
+          },
+        })
+
+        const { html } = define({
+          setup() {
+            return () => h(App as any)
+          },
+        }).render()
+
+        expect(html()).toBe('<div>vdom comp</div><!--dynamic-component-->')
       })
 
-      const { html } = define({
-        setup() {
-          return () => h(App as any)
-        },
-      }).render()
+      it('should update when VNode changes', async () => {
+        const VaporCompA = defineVaporComponent({
+          setup() {
+            return template('<div>vapor A</div>')() as any
+          },
+        })
 
-      expect(html()).toBe('<div>vdom comp</div><!--dynamic-component-->')
-    })
+        const VaporCompB = defineVaporComponent({
+          setup() {
+            return template('<div>vapor B</div>')() as any
+          },
+        })
 
-    it('should update when VNode changes', async () => {
-      const VaporCompA = defineVaporComponent({
-        setup() {
-          return template('<div>vapor A</div>')() as any
-        },
-      })
+        const current = shallowRef<any>(VaporCompA)
 
-      const VaporCompB = defineVaporComponent({
-        setup() {
-          return template('<div>vapor B</div>')() as any
-        },
-      })
+        const RouterView = defineComponent({
+          setup(_, { slots }) {
+            return () => {
+              const component = h(current.value as any)
+              return slots.default!({ Component: component })
+            }
+          },
+        })
 
-      const current = shallowRef<any>(VaporCompA)
-
-      const RouterView = defineComponent({
-        setup(_, { slots }) {
-          return () => {
-            const component = h(current.value as any)
-            return slots.default!({ Component: component })
-          }
-        },
-      })
-
-      const App = defineVaporComponent({
-        setup() {
-          return createComponent(
-            RouterView as any,
-            null,
-            {
-              default: (slotProps: { Component: any }) => {
-                return createDynamicComponent(() => slotProps.Component)
+        const App = defineVaporComponent({
+          setup() {
+            return createComponent(
+              RouterView as any,
+              null,
+              {
+                default: (slotProps: { Component: any }) => {
+                  return createDynamicComponent(() => slotProps.Component)
+                },
               },
+              true,
+            )
+          },
+        })
+
+        const { html } = define({
+          setup() {
+            return () => h(App as any)
+          },
+        }).render()
+
+        expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
+        current.value = VaporCompB
+        await nextTick()
+        expect(html()).toBe('<div>vapor B</div><!--dynamic-component-->')
+      })
+
+      describe('with VaporKeepAlive', () => {
+        it('switch VNode with inner vapor components', async () => {
+          const VaporCompA = defineVaporComponent({
+            setup() {
+              return template('<div>vapor A</div>')() as any
             },
-            true,
-          )
-        },
-      })
+          })
 
-      const { html } = define({
-        setup() {
-          return () => h(App as any)
-        },
-      }).render()
-
-      expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
-      current.value = VaporCompB
-      await nextTick()
-      expect(html()).toBe('<div>vapor B</div><!--dynamic-component-->')
-    })
-
-    it('should update when VNode changes with VaporKeepAlive', async () => {
-      const VaporCompA = defineVaporComponent({
-        setup() {
-          return template('<div>vapor A</div>')() as any
-        },
-      })
-
-      const VaporCompB = defineVaporComponent({
-        setup() {
-          return template('<div>vapor B</div>')() as any
-        },
-      })
-
-      const current = shallowRef<any>(VaporCompA)
-
-      const RouterView = defineComponent({
-        setup(_, { slots }) {
-          return () => {
-            const component = h(current.value as any)
-            return slots.default!({ Component: component })
-          }
-        },
-      })
-
-      const App = defineVaporComponent({
-        setup() {
-          return createComponent(
-            RouterView as any,
-            null,
-            {
-              default: (slotProps: { Component: any }) => {
-                return createComponent(VaporKeepAlive, null, {
-                  default: () =>
-                    createDynamicComponent(() => slotProps.Component),
-                })
-              },
+          const VaporCompB = defineVaporComponent({
+            setup() {
+              return template('<div>vapor B</div>')() as any
             },
-            true,
-          )
-        },
+          })
+
+          const current = shallowRef<any>(VaporCompA)
+
+          const RouterView = defineComponent({
+            setup(_, { slots }) {
+              return () => {
+                const component = h(current.value as any)
+                return slots.default!({ Component: component })
+              }
+            },
+          })
+
+          const App = defineVaporComponent({
+            setup() {
+              return createComponent(
+                RouterView as any,
+                null,
+                {
+                  default: (slotProps: { Component: any }) => {
+                    return createComponent(VaporKeepAlive, null, {
+                      default: () =>
+                        createDynamicComponent(() => slotProps.Component),
+                    })
+                  },
+                },
+                true,
+              )
+            },
+          })
+
+          const { html } = define({
+            setup() {
+              return () => h(App as any)
+            },
+          }).render()
+
+          expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
+
+          current.value = VaporCompB
+          await nextTick()
+          expect(html()).toBe('<div>vapor B</div><!--dynamic-component-->')
+
+          current.value = VaporCompA
+          await nextTick()
+          expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
+        })
+
+        it('switch VNode with inner VDOM components', async () => {
+          const VDOMCompA = defineComponent({
+            setup() {
+              return () => h('div', 'vdom A')
+            },
+          })
+
+          const VDOMCompB = defineComponent({
+            setup() {
+              return () => h('div', 'vdom B')
+            },
+          })
+
+          const current = shallowRef<any>(VDOMCompA)
+
+          const RouterView = defineComponent({
+            setup(_, { slots }) {
+              return () => {
+                const component = h(current.value as any)
+                return slots.default!({ Component: component })
+              }
+            },
+          })
+
+          const App = defineVaporComponent({
+            setup() {
+              return createComponent(
+                RouterView as any,
+                null,
+                {
+                  default: (slotProps: { Component: any }) => {
+                    return createComponent(VaporKeepAlive, null, {
+                      default: () =>
+                        createDynamicComponent(() => slotProps.Component),
+                    })
+                  },
+                },
+                true,
+              )
+            },
+          })
+
+          const { html } = define({
+            setup() {
+              return () => h(App as any)
+            },
+          }).render()
+
+          expect(html()).toBe('<div>vdom A</div><!--dynamic-component-->')
+
+          current.value = VDOMCompB
+          await nextTick()
+          expect(html()).toBe('<div>vdom B</div><!--dynamic-component-->')
+
+          current.value = VDOMCompA
+          await nextTick()
+          expect(html()).toBe('<div>vdom A</div><!--dynamic-component-->')
+        })
+
+        it('switch VNode with inner mixed vapor/VDOM components', async () => {
+          const VaporCompA = defineVaporComponent({
+            setup() {
+              return template('<div>vapor A</div>')()
+            },
+          })
+
+          const VDOMCompB = defineComponent({
+            setup() {
+              return () => h('div', 'vdom B')
+            },
+          })
+
+          const current = shallowRef<any>(VaporCompA)
+
+          const RouterView = defineComponent({
+            setup(_, { slots }) {
+              return () => {
+                const component = h(current.value as any)
+                return slots.default!({ Component: component })
+              }
+            },
+          })
+
+          const App = defineVaporComponent({
+            setup() {
+              return createComponent(
+                RouterView as any,
+                null,
+                {
+                  default: (slotProps: { Component: any }) => {
+                    return createComponent(VaporKeepAlive, null, {
+                      default: () =>
+                        createDynamicComponent(() => slotProps.Component),
+                    })
+                  },
+                },
+                true,
+              )
+            },
+          })
+
+          const { html } = define({
+            setup() {
+              return () => h(App as any)
+            },
+          }).render()
+
+          expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
+
+          current.value = VDOMCompB
+          await nextTick()
+          expect(html()).toBe('<div>vdom B</div><!--dynamic-component-->')
+
+          current.value = VaporCompA
+          await nextTick()
+          expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
+        })
       })
-
-      const { html } = define({
-        setup() {
-          return () => h(App as any)
-        },
-      }).render()
-
-      expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
-
-      current.value = VaporCompB
-      await nextTick()
-      expect(html()).toBe('<div>vapor B</div><!--dynamic-component-->')
-
-      current.value = VaporCompA
-      await nextTick()
-      expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
     })
   })
 

@@ -1,5 +1,6 @@
 import {
   currentInstance,
+  isKeepAlive,
   isVNode,
   resolveDynamicComponent,
 } from '@vue/runtime-dom'
@@ -16,6 +17,7 @@ import {
 } from './insertionState'
 import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
+import { type KeepAliveInstance } from './components/KeepAlive'
 
 export function createDynamicComponent(
   getter: () => any,
@@ -38,24 +40,31 @@ export function createDynamicComponent(
     const value = getter()
     const appContext =
       (currentInstance && currentInstance.appContext) || emptyContext
-    frag.update(
-      () =>
-        // Support integration with VaporRouterView/VaporRouterLink by accepting blocks
-        isBlock(value)
-          ? value
-          : // Handle VNode passed from VDOM components (e.g., h(VaporComp) from slots)
-            appContext.vapor && isVNode(value)
-            ? appContext.vapor.vdomMountVNode(value, currentInstance)
-            : createComponentWithFallback(
-                resolveDynamicComponent(value) as any,
-                rawProps,
-                rawSlots,
-                isSingleRoot,
-                once,
-                appContext,
-              ),
-      value,
-    )
+    frag.update(() => {
+      // Support integration with VaporRouterView/VaporRouterLink by accepting blocks
+      if (isBlock(value)) return value
+
+      // Handles VNodes passed from VDOM components (e.g., `h(VaporComp)` from slots).
+      // This block will be tree-shaken if the Vapor interop plugin is not installed.
+      if (appContext.vapor && isVNode(value)) {
+        if (isKeepAlive(currentInstance)) {
+          const frag = (
+            currentInstance as KeepAliveInstance
+          ).ctx.getCachedComponent(value.type as any) as VaporFragment
+          if (frag) return frag
+        }
+        return appContext.vapor.vdomMountVNode(value, currentInstance)
+      }
+
+      return createComponentWithFallback(
+        resolveDynamicComponent(value) as any,
+        rawProps,
+        rawSlots,
+        isSingleRoot,
+        once,
+        appContext,
+      )
+    }, value)
   }
 
   if (once) renderFn()
