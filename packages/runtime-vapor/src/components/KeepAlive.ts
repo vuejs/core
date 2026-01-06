@@ -102,7 +102,7 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
     const innerCacheBlock = (
       key: CacheKey,
-      instance: VaporComponentInstance | VaporFragment,
+      block: VaporComponentInstance | VaporFragment,
     ) => {
       const { max } = props
 
@@ -118,8 +118,8 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         }
       }
 
-      cache.set(key, instance)
-      current = instance
+      cache.set(key, block)
+      current = block
     }
 
     const cacheBlock = () => {
@@ -149,21 +149,6 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       }
       return true
-    }
-
-    const cacheFragment = (fragment: DynamicFragment) => {
-      const [innerBlock, interop] = getInnerBlock(fragment.nodes)
-      if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
-
-      let key: CacheKey
-      if (interop) {
-        innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        key = innerBlock.vnode!.type
-      } else {
-        innerBlock.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        key = innerBlock.type
-      }
-      innerCacheBlock(key, innerBlock)
     }
 
     const pruneCache = (filter: (name: string) => boolean) => {
@@ -255,7 +240,7 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         },
       )
       ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() =>
-        cacheFragment(frag),
+        processFragment(frag),
       )
       frag.getScope = key => {
         const scope = keptAliveScopes.get(key)
