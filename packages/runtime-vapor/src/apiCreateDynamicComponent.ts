@@ -44,8 +44,7 @@ export function createDynamicComponent(
       // Support integration with VaporRouterView/VaporRouterLink by accepting blocks
       if (isBlock(value)) return value
 
-      // Handles VNodes passed from VDOM components (e.g., `h(VaporComp)` from slots).
-      // This block will be tree-shaken if the Vapor interop plugin is not installed.
+      // Handles VNodes passed from VDOM components (e.g., `h(VaporComp)` from slots)
       if (appContext.vapor && isVNode(value)) {
         if (isKeepAlive(currentInstance)) {
           const frag = (
