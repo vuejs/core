@@ -116,6 +116,10 @@ export class TeleportFragment extends VaporFragment {
         ;(nodes.onUpdated || (nodes.onUpdated = [])).push(() =>
           updateCssVars(this),
         )
+      } else if (isVaporComponent(nodes) && isFragment(nodes.block)) {
+        ;(nodes.block.onUpdated || (nodes.block.onUpdated = [])).push(() =>
+          updateCssVars(this),
+        )
       } else if (isArray(nodes)) {
         nodes.forEach(node => {
           if (isFragment(node)) {
