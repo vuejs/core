@@ -650,14 +650,35 @@ describe('vdomInterop', () => {
 
       describe('with VaporKeepAlive', () => {
         it('switch VNode with inner vapor components', async () => {
+          const hooksA = {
+            mounted: vi.fn(),
+            activated: vi.fn(),
+            deactivated: vi.fn(),
+            unmounted: vi.fn(),
+          }
+          const hooksB = {
+            mounted: vi.fn(),
+            activated: vi.fn(),
+            deactivated: vi.fn(),
+            unmounted: vi.fn(),
+          }
+
           const VaporCompA = defineVaporComponent({
             setup() {
+              onMounted(() => hooksA.mounted())
+              onActivated(() => hooksA.activated())
+              onDeactivated(() => hooksA.deactivated())
+              onUnmounted(() => hooksA.unmounted())
               return template('<div>vapor A</div>')() as any
             },
           })
 
           const VaporCompB = defineVaporComponent({
             setup() {
+              onMounted(() => hooksB.mounted())
+              onActivated(() => hooksB.activated())
+              onDeactivated(() => hooksB.deactivated())
+              onUnmounted(() => hooksB.unmounted())
               return template('<div>vapor B</div>')() as any
             },
           })
@@ -698,25 +719,63 @@ describe('vdomInterop', () => {
           }).render()
 
           expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
+          // A: mounted + activated
+          expect(hooksA.mounted).toHaveBeenCalledTimes(1)
+          expect(hooksA.activated).toHaveBeenCalledTimes(1)
+          expect(hooksA.deactivated).toHaveBeenCalledTimes(0)
+          expect(hooksA.unmounted).toHaveBeenCalledTimes(0)
 
           current.value = VaporCompB
           await nextTick()
           expect(html()).toBe('<div>vapor B</div><!--dynamic-component-->')
+          // A: deactivated (cached)
+          expect(hooksA.deactivated).toHaveBeenCalledTimes(1)
+          expect(hooksA.unmounted).toHaveBeenCalledTimes(0)
+          // B: mounted + activated
+          expect(hooksB.mounted).toHaveBeenCalledTimes(1)
+          expect(hooksB.activated).toHaveBeenCalledTimes(1)
 
           current.value = VaporCompA
           await nextTick()
           expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
+          // B: deactivated (cached)
+          expect(hooksB.deactivated).toHaveBeenCalledTimes(1)
+          expect(hooksB.unmounted).toHaveBeenCalledTimes(0)
+          // A: re-activated (not re-mounted)
+          expect(hooksA.mounted).toHaveBeenCalledTimes(1)
+          expect(hooksA.activated).toHaveBeenCalledTimes(2)
         })
 
         it('switch VNode with inner VDOM components', async () => {
+          const hooksA = {
+            mounted: vi.fn(),
+            activated: vi.fn(),
+            deactivated: vi.fn(),
+            unmounted: vi.fn(),
+          }
+          const hooksB = {
+            mounted: vi.fn(),
+            activated: vi.fn(),
+            deactivated: vi.fn(),
+            unmounted: vi.fn(),
+          }
+
           const VDOMCompA = defineComponent({
             setup() {
+              onMounted(() => hooksA.mounted())
+              onActivated(() => hooksA.activated())
+              onDeactivated(() => hooksA.deactivated())
+              onUnmounted(() => hooksA.unmounted())
               return () => h('div', 'vdom A')
             },
           })
 
           const VDOMCompB = defineComponent({
             setup() {
+              onMounted(() => hooksB.mounted())
+              onActivated(() => hooksB.activated())
+              onDeactivated(() => hooksB.deactivated())
+              onUnmounted(() => hooksB.unmounted())
               return () => h('div', 'vdom B')
             },
           })
@@ -757,25 +816,63 @@ describe('vdomInterop', () => {
           }).render()
 
           expect(html()).toBe('<div>vdom A</div><!--dynamic-component-->')
+          // A: mounted + activated
+          expect(hooksA.mounted).toHaveBeenCalledTimes(1)
+          expect(hooksA.activated).toHaveBeenCalledTimes(1)
+          expect(hooksA.deactivated).toHaveBeenCalledTimes(0)
+          expect(hooksA.unmounted).toHaveBeenCalledTimes(0)
 
           current.value = VDOMCompB
           await nextTick()
           expect(html()).toBe('<div>vdom B</div><!--dynamic-component-->')
+          // A: deactivated (cached)
+          expect(hooksA.deactivated).toHaveBeenCalledTimes(1)
+          expect(hooksA.unmounted).toHaveBeenCalledTimes(0)
+          // B: mounted + activated
+          expect(hooksB.mounted).toHaveBeenCalledTimes(1)
+          expect(hooksB.activated).toHaveBeenCalledTimes(1)
 
           current.value = VDOMCompA
           await nextTick()
           expect(html()).toBe('<div>vdom A</div><!--dynamic-component-->')
+          // B: deactivated (cached)
+          expect(hooksB.deactivated).toHaveBeenCalledTimes(1)
+          expect(hooksB.unmounted).toHaveBeenCalledTimes(0)
+          // A: re-activated (not re-mounted)
+          expect(hooksA.mounted).toHaveBeenCalledTimes(1)
+          expect(hooksA.activated).toHaveBeenCalledTimes(2)
         })
 
         it('switch VNode with inner mixed vapor/VDOM components', async () => {
+          const hooksA = {
+            mounted: vi.fn(),
+            activated: vi.fn(),
+            deactivated: vi.fn(),
+            unmounted: vi.fn(),
+          }
+          const hooksB = {
+            mounted: vi.fn(),
+            activated: vi.fn(),
+            deactivated: vi.fn(),
+            unmounted: vi.fn(),
+          }
+
           const VaporCompA = defineVaporComponent({
             setup() {
+              onMounted(() => hooksA.mounted())
+              onActivated(() => hooksA.activated())
+              onDeactivated(() => hooksA.deactivated())
+              onUnmounted(() => hooksA.unmounted())
               return template('<div>vapor A</div>')()
             },
           })
 
           const VDOMCompB = defineComponent({
             setup() {
+              onMounted(() => hooksB.mounted())
+              onActivated(() => hooksB.activated())
+              onDeactivated(() => hooksB.deactivated())
+              onUnmounted(() => hooksB.unmounted())
               return () => h('div', 'vdom B')
             },
           })
@@ -816,14 +913,31 @@ describe('vdomInterop', () => {
           }).render()
 
           expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
+          // A (vapor): mounted + activated
+          expect(hooksA.mounted).toHaveBeenCalledTimes(1)
+          expect(hooksA.activated).toHaveBeenCalledTimes(1)
+          expect(hooksA.deactivated).toHaveBeenCalledTimes(0)
+          expect(hooksA.unmounted).toHaveBeenCalledTimes(0)
 
           current.value = VDOMCompB
           await nextTick()
           expect(html()).toBe('<div>vdom B</div><!--dynamic-component-->')
+          // A (vapor): deactivated (cached)
+          expect(hooksA.deactivated).toHaveBeenCalledTimes(1)
+          expect(hooksA.unmounted).toHaveBeenCalledTimes(0)
+          // B (vdom): mounted + activated
+          expect(hooksB.mounted).toHaveBeenCalledTimes(1)
+          expect(hooksB.activated).toHaveBeenCalledTimes(1)
 
           current.value = VaporCompA
           await nextTick()
           expect(html()).toBe('<div>vapor A</div><!--dynamic-component-->')
+          // B (vdom): deactivated (cached)
+          expect(hooksB.deactivated).toHaveBeenCalledTimes(1)
+          expect(hooksB.unmounted).toHaveBeenCalledTimes(0)
+          // A (vapor): re-activated (not re-mounted)
+          expect(hooksA.mounted).toHaveBeenCalledTimes(1)
+          expect(hooksA.activated).toHaveBeenCalledTimes(2)
         })
       })
     })
