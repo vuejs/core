@@ -338,7 +338,7 @@ function setKey(block: Block & { $key?: any }, key: any) {
   if (block instanceof Node) {
     block.$key = key
   } else if (isVaporComponent(block)) {
-    block.$key = key
+    setKey(block.block, key)
   } else if (isArray(block)) {
     for (const b of block) {
       setKey(b, key)
