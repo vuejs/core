@@ -2,7 +2,6 @@ import {
   type App,
   type ComponentInternalInstance,
   type ConcreteComponent,
-  Fragment,
   type HydrationRenderer,
   type KeepAliveContext,
   MoveType,
@@ -453,7 +452,7 @@ function createVDOMComponent(
     hydrateVNode(
       vnode,
       parentComponent as any,
-      // skip fragment start anchor for multi-root VDOM components
+      // skip fragment start anchor for multi-root component
       // to avoid mismatch
       !isSingleRoot,
     )
@@ -690,19 +689,13 @@ function hydrateVNode(
   locateHydrationNode()
 
   let node = currentHydrationNode!
-  if (
-    skipFragmentAnchor &&
-    isComment(node, '[') &&
-    // vnode is not a fragment
-    vnode.type !== Fragment
-  ) {
-    node = node.nextSibling!
-    setCurrentHydrationNode(node)
+  if (skipFragmentAnchor && isComment(node, '[')) {
+    setCurrentHydrationNode((node = node.nextSibling!))
   }
 
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
   const nextNode = vdomHydrateNode(
-    currentHydrationNode!,
+    node,
     vnode,
     parentComponent,
     null,

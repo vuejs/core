@@ -4739,6 +4739,50 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"false"`)
   })
 
+  test('nested components (VDOM -> Vapor(multi-root) -> VDOM)', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild/>
+      </template>`,
+      {
+        // Vapor component with multiple root nodes, VDOM child as first element
+        // This ensures hydration starts at <!--[--> and tests skipFragmentAnchor
+        VaporChild: {
+          code: `<template><components.VdomChild/><div>second</div></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template><span>{{ data }}</span></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>foo</span><div>second</div><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>bar</span><div>second</div><!--]-->
+      "
+    `,
+    )
+  })
+
   test('nested components (VDOM -> Vapor -> VDOM (with slot fallback))', async () => {
     const data = ref(true)
     const { container } = await testWithVDOMApp(
@@ -5006,6 +5050,129 @@ describe('VDOM interop', () => {
       `
       "
       <!--[--><div>bar</div><!--dynamic-component--><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate VDOM slot content', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const data = _data; const components = _components;
+      </script>
+      <template>
+        <components.VdomWrapper>
+          <div>{{ data }}</div>
+        </components.VdomWrapper>
+      </template>`,
+      {
+        VdomWrapper: {
+          code: `<script setup>const data = _data;</script>
+            <template><slot /></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>foo</div><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>bar</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate VDOM slot fallback', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const data = _data; const components = _components;
+      </script>
+      <template>
+        <components.VdomWrapper />
+      </template>`,
+      {
+        VdomWrapper: {
+          code: `<script setup>const data = _data;</script>
+            <template><slot><div>{{ data }}</div></slot></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>foo</div><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>bar</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate VDOM component returning Fragment', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const data = _data; const components = _components;
+      </script>
+      <template>
+        <components.VdomFragmentComp />
+      </template>`,
+      {
+        // VDOM component that returns a Fragment (multiple root nodes)
+        VdomFragmentComp: {
+          code: `<script setup>const data = _data;</script>
+            <template><div>first {{ data }}</div><div>second {{ data }}</div></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>first foo</div><div>second foo</div><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>first bar</div><div>second bar</div><!--]-->
       "
     `,
     )
