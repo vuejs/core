@@ -153,6 +153,24 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-if > template v-if (with v-for on same element) 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.arr.length > 0), () => {
+    const n2 = _createFor(() => (_ctx.arr), (_for_item0, _for_key0) => {
+      const n4 = t0()
+      const x4 = _txt(n4)
+      _renderEffect(() => _setText(x4, "item: " + _toDisplayString(_for_item0.value)))
+      return n4
+    }, (item, index) => (index))
+    return n2
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: v-if > template v-if + normal v-else 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div>hi")
