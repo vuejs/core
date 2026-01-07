@@ -9,6 +9,12 @@
     "yml": true
   },
 
+  "prettier.enable": false,
+  "eslint.enable": false,
+  "oxc.enable": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.oxc": "explicit"
+  },
   // Use Oxc to format TypeScript, JavaScript and JSON files
   "[typescript]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
