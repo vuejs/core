@@ -331,11 +331,11 @@ function resolveSetupReference(name: string, context: TransformContext) {
     if (bindings[name] === type) {
       return name
     }
-    if (bindings[camelName] === type) {
-      return camelName
-    }
     if (bindings[PascalName] === type) {
       return PascalName
+    }
+    if (bindings[camelName] === type) {
+      return camelName
     }
   }
 
