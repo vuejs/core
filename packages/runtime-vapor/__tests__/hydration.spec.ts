@@ -4956,6 +4956,51 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('vapor slot render vdom component (multi-root slot content)', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <components.VaporChild>
+          <components.VdomChild/>
+          <div>vapor content</div>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><div><slot/></div></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template><span>{{ data }}</span></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "<div>
+      <!--[--><span>foo</span><div>vapor content</div><!--]-->
+      </div>"
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "<div>
+      <!--[--><span>bar</span><div>vapor content</div><!--]-->
+      </div>"
+    `,
+    )
+  })
+
   test('vapor slot render vdom component (render function)', async () => {
     const data = ref(true)
     const { container } = await testWithVaporApp(
