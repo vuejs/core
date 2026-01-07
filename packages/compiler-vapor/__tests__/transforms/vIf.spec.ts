@@ -172,6 +172,24 @@ describe('compiler: v-if', () => {
     expect([...ir.template.keys()]).toMatchObject(['<div>'])
   })
 
+  test('template v-if (with v-for on same element)', () => {
+    const { code, ir, helpers } = compileWithVIf(
+      `<template v-if="arr.length > 0" v-for="(item, index) in arr" :key="index">
+        <div>item: {{ item }}</div>
+      </template>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    // should generate both createIf and createFor
+    expect(helpers).toContain('createIf')
+    expect(helpers).toContain('createFor')
+    // v-if should wrap v-for
+    const op = ir.block.dynamic.children[0].operation
+    expect(op).toMatchObject({
+      type: IRNodeTypes.IF,
+    })
+  })
+
   test('template v-if + normal v-else', () => {
     const { code, ir } = compileWithVIf(
       `<template v-if="foo"><div>hi</div><div>ho</div></template><div v-else/>`,
