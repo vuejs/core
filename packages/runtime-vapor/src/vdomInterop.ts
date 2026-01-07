@@ -25,7 +25,6 @@ import {
   ensureVaporSlotFallback,
   isEmitListener,
   isKeepAlive,
-  isRef,
   isVNode,
   normalizeRef,
   onScopeDispose,
@@ -46,7 +45,6 @@ import {
   VaporComponentInstance,
   createComponent,
   getCurrentScopeId,
-  isVaporComponent,
   mountComponent,
   unmountComponent,
 } from './component'
@@ -399,6 +397,7 @@ function createVDOMComponent(
   parentComponent: VaporComponentInstance | null,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
+  isSingleRoot?: boolean,
 ): VaporFragment {
   const frag = new VaporFragment([])
   const vnode = (frag.vnode = createVNode(
@@ -451,7 +450,13 @@ function createVDOMComponent(
   }
 
   frag.hydrate = () => {
-    hydrateVNode(vnode, parentComponent as any)
+    hydrateVNode(
+      vnode,
+      parentComponent as any,
+      // skip fragment start anchor for multi-root VDOM components
+      // to avoid mismatch
+      !isSingleRoot,
+    )
     onScopeDispose(unmount, true)
     isMounted = true
     frag.nodes = vnode.el as any
@@ -680,24 +685,20 @@ export const vaporInteropPlugin: Plugin = app => {
 function hydrateVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
+  skipFragmentAnchor: boolean = false,
 ) {
   locateHydrationNode()
 
-  // skip fragment start anchor
   let node = currentHydrationNode!
-  while (
+  if (
+    skipFragmentAnchor &&
     isComment(node, '[') &&
     // vnode is not a fragment
-    vnode.type !== Fragment &&
-    // not inside vdom slot
-    !(
-      isVaporComponent(parentComponent) &&
-      isRef((parentComponent as VaporComponentInstance).rawSlots._)
-    )
+    vnode.type !== Fragment
   ) {
     node = node.nextSibling!
+    setCurrentHydrationNode(node)
   }
-  if (currentHydrationNode !== node) setCurrentHydrationNode(node)
 
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
   const nextNode = vdomHydrateNode(

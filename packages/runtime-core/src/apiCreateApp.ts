@@ -225,6 +225,7 @@ export interface VaporInteropInterface {
     parentComponent: any,
     props?: any,
     slots?: any,
+    isSingleRoot?: boolean,
   ) => any
   vdomUnmount: UnmountComponentFn
   vdomSlot: (

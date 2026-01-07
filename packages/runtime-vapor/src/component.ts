@@ -293,6 +293,7 @@ export function createComponent(
       currentInstance as any,
       rawProps,
       rawSlots,
+      isSingleRoot,
     )
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)

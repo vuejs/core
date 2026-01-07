@@ -4959,7 +4959,7 @@ describe('VDOM interop', () => {
     )
   })
 
-  test.todo('hydrate VNode rendered via createDynamicComponent', async () => {
+  test('hydrate VNode rendered via createDynamicComponent', async () => {
     const data = ref('foo')
     const { container } = await testWithVaporApp(
       `<script setup>
