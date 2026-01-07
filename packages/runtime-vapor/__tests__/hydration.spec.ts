@@ -3793,16 +3793,10 @@ describe('Vapor Mode hydration', () => {
     })
 
     // required vapor Suspense
-    test.todo(
-      'hydrate safely when property used by async setup changed before render',
-      async () => {},
-    )
+    test.todo('hydrate safely when property used by async setup changed before render', async () => {})
 
     // required vapor Suspense
-    test.todo(
-      'hydrate safely when property used by deep nested async setup changed before render',
-      async () => {},
-    )
+    test.todo('hydrate safely when property used by deep nested async setup changed before render', async () => {})
 
     test('unmount async wrapper before load', async () => {
       const data = ref({
