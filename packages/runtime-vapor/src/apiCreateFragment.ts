@@ -25,7 +25,10 @@ export function createKeyedFragment(key: () => any, render: BlockFn): Block {
   const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
 
-  const frag = __DEV__ ? new DynamicFragment('keyed') : new DynamicFragment()
+  const frag = __DEV__
+    ? new DynamicFragment('keyed', true)
+    : new DynamicFragment(undefined, true)
+
   renderEffect(() => frag.update(render, key()))
 
   if (!isHydrating) {

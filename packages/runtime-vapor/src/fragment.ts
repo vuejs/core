@@ -19,7 +19,11 @@ import {
   setCurrentInstance,
   warnExtraneousAttributes,
 } from '@vue/runtime-dom'
-import { type VaporComponentInstance, applyFallthroughProps } from './component'
+import {
+  type VaporComponentInstance,
+  applyFallthroughProps,
+  isVaporComponent,
+} from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
   hydrateDynamicFragment,
@@ -75,6 +79,7 @@ export class DynamicFragment extends VaporFragment {
   pending?: { render?: BlockFn; key: any }
   fallback?: BlockFn
   anchorLabel?: string
+  keyed?: boolean
 
   // fallthrough attrs
   attrs?: Record<string, any>
@@ -95,8 +100,9 @@ export class DynamicFragment extends VaporFragment {
 
   slotOwner: VaporComponentInstance | null
 
-  constructor(anchorLabel?: string) {
+  constructor(anchorLabel?: string, keyed: boolean = false) {
     super([])
+    this.keyed = keyed
     this.slotOwner = currentSlotOwner
     if (isHydrating) {
       this.anchorLabel = anchorLabel
@@ -231,6 +237,9 @@ export class DynamicFragment extends VaporFragment {
       if (prev !== undefined) setCurrentInstance(...prev)
       setCurrentSlotOwner(prevOwner)
 
+      // set key on nodes
+      if (this.keyed) setKey(this.nodes, this.current)
+
       if (transition) {
         this.$transition = applyTransitionHooks(this.nodes, transition)
       }
@@ -323,4 +332,18 @@ export function isDynamicFragment(
   val: NonNullable<unknown>,
 ): val is DynamicFragment {
   return val instanceof DynamicFragment
+}
+
+function setKey(block: Block & { $key?: any }, key: any) {
+  if (block instanceof Node) {
+    block.$key = key
+  } else if (isVaporComponent(block)) {
+    setKey(block.block, key)
+  } else if (isArray(block)) {
+    for (const b of block) {
+      setKey(b, key)
+    }
+  } else {
+    setKey(block.nodes, key)
+  }
 }

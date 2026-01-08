@@ -47,8 +47,6 @@ describe('compiler: transition', () => {
     )
 
     expect(code).toMatchSnapshot()
-    // n2 should have a key
-    expect(code).contains('n2.$key = 2')
   })
 
   test('work with dynamic keyed children', () => {
@@ -60,8 +58,6 @@ describe('compiler: transition', () => {
 
     expect(code).toMatchSnapshot()
     expect(code).contains('_createKeyedFragment(() => _ctx.key')
-    // should preserve key
-    expect(code).contains('n0.$key = _ctx.key')
   })
 
   function checkWarning(template: string, shouldWarn = true) {

@@ -275,7 +275,6 @@ export interface IRDynamicInfo {
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
-  needsKey?: boolean
   operation?: OperationNode
   ifBranch?: boolean
 }
