@@ -148,11 +148,6 @@ export function transformDestructuredProps(
         if (stmt.declare || !stmt.id) continue
         registerLocalBinding(stmt.id)
       } else if (
-        (stmt.type === 'ForOfStatement' || stmt.type === 'ForInStatement') &&
-        stmt.left.type === 'VariableDeclaration'
-      ) {
-        walkVariableDeclaration(stmt.left)
-      } else if (
         stmt.type === 'ExportNamedDeclaration' &&
         stmt.declaration &&
         stmt.declaration.type === 'VariableDeclaration'
@@ -269,6 +264,18 @@ export function transformDestructuredProps(
         return
       }
 
+      // for-of / for-in loops: loop variable should be scoped to the loop
+      if (node.type === 'ForOfStatement' || node.type === 'ForInStatement') {
+        pushScope()
+        if (node.left.type === 'VariableDeclaration') {
+          walkVariableDeclaration(node.left)
+        }
+        if (node.body.type === 'BlockStatement') {
+          walkScope(node.body)
+        }
+        return
+      }
+
       // non-function block scopes
       if (node.type === 'BlockStatement' && !isFunctionType(parent!)) {
         pushScope()
@@ -292,7 +299,9 @@ export function transformDestructuredProps(
       if (
         (node.type === 'BlockStatement' && !isFunctionType(parent!)) ||
         isFunctionType(node) ||
-        node.type === 'CatchClause'
+        node.type === 'CatchClause' ||
+        node.type === 'ForOfStatement' ||
+        node.type === 'ForInStatement'
       ) {
         popScope()
       }

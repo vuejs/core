@@ -192,6 +192,32 @@ return () => {}
 }"
 `;
 
+exports[`sfc reactive props destructure > for-of loop variable shadowing 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Props {
+        msg: string;
+        input: string[];
+      }
+      
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    msg: { type: String, required: true },
+    input: { type: Array, required: true }
+  },
+  setup(__props: any) {
+
+      
+      for (const msg of __props.input) {
+        console.log('MESSAGE', msg);
+      }
+      console.log('NOT FAIL', { msg: __props.msg });
+      
+return () => {}
+}
+
+})"
+`;
+
 exports[`sfc reactive props destructure > handle function parameters with same name as destructured props 1`] = `
 "
 export default {

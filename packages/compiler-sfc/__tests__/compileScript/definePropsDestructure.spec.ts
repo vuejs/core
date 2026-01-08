@@ -68,6 +68,28 @@ describe('sfc reactive props destructure', () => {
     })
   })
 
+  test('for-of loop variable shadowing', () => {
+    const { content } = compile(`
+      <script setup lang="ts">
+      interface Props {
+        msg: string;
+        input: string[];
+      }
+      const { msg, input } = defineProps<Props>();
+      for (const msg of input) {
+        console.log('MESSAGE', msg);
+      }
+      console.log('NOT FAIL', { msg });
+      </script>
+    `)
+    // inside loop: should use local variable
+    expect(content).toMatch(`for (const msg of __props.input)`)
+    expect(content).toMatch(`console.log('MESSAGE', msg)`)
+    // after loop: should restore to prop reference
+    expect(content).toMatch(`console.log('NOT FAIL', { msg: __props.msg })`)
+    assertCode(content)
+  })
+
   test('default values w/ array runtime declaration', () => {
     const { content } = compile(`
       <script setup>
