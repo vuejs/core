@@ -74,6 +74,7 @@ export type SimpleTypeResolveContext = Pick<
 
   // utils
   | 'error'
+  | 'warn'
   | 'helper'
   | 'getString'
 
@@ -95,7 +96,12 @@ export type SimpleTypeResolveContext = Pick<
     options: SimpleTypeResolveOptions
   }
 
-export type TypeResolveContext = ScriptCompileContext | SimpleTypeResolveContext
+export type TypeResolveContext = (
+  | ScriptCompileContext
+  | SimpleTypeResolveContext
+) & {
+  silentOnExtendsFailure?: boolean
+}
 
 type Import = Pick<ImportBinding, 'source' | 'imported'>
 
@@ -429,16 +435,21 @@ function resolveInterfaceMembers(
           ;(base.calls || (base.calls = [])).push(...calls)
         }
       } catch (e) {
-        ctx.error(
-          `Failed to resolve extends base type.\nIf this previously worked in 3.2, ` +
-            `you can instruct the compiler to ignore this extend by adding ` +
-            `/* @vue-ignore */ before it, for example:\n\n` +
-            `interface Props extends /* @vue-ignore */ Base {}\n\n` +
-            `Note: both in 3.2 or with the ignore, the properties in the base ` +
-            `type are treated as fallthrough attrs at runtime.`,
-          ext,
-          scope,
-        )
+        // when called from inferRuntimeType context, silently ignore extends
+        // resolution failure so that properties defined in the interface can
+        // still be correctly resolved
+        if (!ctx.silentOnExtendsFailure) {
+          ctx.error(
+            `Failed to resolve extends base type.\nIf this previously worked in 3.2, ` +
+              `you can instruct the compiler to ignore this extend by adding ` +
+              `/* @vue-ignore */ before it, for example:\n\n` +
+              `interface Props extends /* @vue-ignore */ Base {}\n\n` +
+              `Note: both in 3.2 or with the ignore, the properties in the base ` +
+              `type are treated as fallthrough attrs at runtime.`,
+            ext,
+            scope,
+          )
+        }
       }
     }
   }
@@ -1519,6 +1530,10 @@ export function inferRuntimeType(
     return [UNKNOWN_TYPE]
   }
 
+  // set flag to silence extends resolution errors in this context
+  const prevSilent = ctx.silentOnExtendsFailure
+  ctx.silentOnExtendsFailure = true
+
   try {
     switch (node.type) {
       case 'TSStringKeyword':
@@ -1886,6 +1901,8 @@ export function inferRuntimeType(
     }
   } catch (e) {
     // always soft fail on failed runtime type inference
+  } finally {
+    ctx.silentOnExtendsFailure = prevSilent
   }
   return [UNKNOWN_TYPE] // no runtime check
 }

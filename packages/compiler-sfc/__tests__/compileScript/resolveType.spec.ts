@@ -1161,6 +1161,39 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('relative import with indexed access type with unresolvable extends', () => {
+      const files = {
+        '/foo.ts': `
+          type EventHandlers<E> = {
+            [K in keyof E]?: E[K] extends (...args: any) => any 
+            ? E[K] 
+            : (payload: E[K]) => void;
+          };
+          export interface Events {
+            onCopy: ClipboardEvent;
+          }
+          type Booleanish = boolean | 'true' | 'false';
+          export interface InputHTMLAttributes extends EventHandlers<Events>{
+            required?: Booleanish | undefined;
+          }
+        `,
+      }
+      const { props, deps } = resolve(
+        `
+        import { InputHTMLAttributes } from './foo.ts'
+        type ImportedType = InputHTMLAttributes['required']
+        defineProps<{
+          required: ImportedType,
+        }>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        required: ['Boolean', 'String', 'Unknown'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
     // #8339
     test('relative, .js import', () => {
       const files = {
