@@ -1,5 +1,4 @@
-// using literal strings instead of numbers so that it's easier to inspect
-// debugger events
+// Using literal strings instead of numeric values provides better debugging and inspection capabilities// debugger events
 
 export enum TrackOpTypes {
   GET = 'get',
