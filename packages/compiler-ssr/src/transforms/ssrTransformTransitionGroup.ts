@@ -6,7 +6,10 @@ import {
   NodeTypes,
   type TransformContext,
   buildProps,
+  createBlockStatement,
   createCallExpression,
+  createIfStatement,
+  createSimpleExpression,
   findProp,
 } from '@vue/compiler-dom'
 import { SSR_RENDER_ATTRS } from '../runtimeHelpers'
@@ -112,7 +115,38 @@ export function ssrProcessTransitionGroup(
       context.pushStringPart(`</${tag.value!.content}>`)
     }
   } else {
+    // _attrs may contain tag property
+    const hasFallthroughAttrs = node.props.some(
+      p =>
+        p.type === NodeTypes.DIRECTIVE &&
+        p.name === 'bind' &&
+        p.exp &&
+        p.exp.type === NodeTypes.SIMPLE_EXPRESSION &&
+        p.exp.content === '_attrs',
+    )
+    if (hasFallthroughAttrs) {
+      context.pushStatement(
+        createSimpleExpression(
+          `const _tag = (_attrs && typeof _attrs.tag === 'string') ? _attrs.tag : ''`,
+        ),
+      )
+      context.pushStatement(
+        createIfStatement(
+          createSimpleExpression('_tag'),
+          createBlockStatement([createSimpleExpression('_push(`<${_tag}>`)')]),
+        ),
+      )
+    }
     // fragment
     processChildren(node, context, true, true, true)
+
+    if (hasFallthroughAttrs) {
+      context.pushStatement(
+        createIfStatement(
+          createSimpleExpression('_tag'),
+          createBlockStatement([createSimpleExpression('_push(`</${_tag}>`)')]),
+        ),
+      )
+    }
   }
 }
