@@ -264,11 +264,16 @@ export function transformDestructuredProps(
         return
       }
 
-      // for-of / for-in loops: loop variable should be scoped to the loop
-      if (node.type === 'ForOfStatement' || node.type === 'ForInStatement') {
+      // for loops: loop variable should be scoped to the loop
+      if (
+        node.type === 'ForOfStatement' ||
+        node.type === 'ForInStatement' ||
+        node.type === 'ForStatement'
+      ) {
         pushScope()
-        if (node.left.type === 'VariableDeclaration') {
-          walkVariableDeclaration(node.left)
+        const varDecl = node.type === 'ForStatement' ? node.init : node.left
+        if (varDecl && varDecl.type === 'VariableDeclaration') {
+          walkVariableDeclaration(varDecl)
         }
         if (node.body.type === 'BlockStatement') {
           walkScope(node.body)
@@ -301,7 +306,8 @@ export function transformDestructuredProps(
         isFunctionType(node) ||
         node.type === 'CatchClause' ||
         node.type === 'ForOfStatement' ||
-        node.type === 'ForInStatement'
+        node.type === 'ForInStatement' ||
+        node.type === 'ForStatement'
       ) {
         popScope()
       }

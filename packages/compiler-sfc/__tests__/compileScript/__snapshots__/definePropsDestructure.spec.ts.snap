@@ -335,6 +335,28 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`sfc reactive props destructure > regular for loop variable shadowing 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    i: { type: Number, required: true },
+    len: { type: Number, required: true }
+  },
+  setup(__props: any) {
+
+      
+      for (let i = 0; i < __props.len; i++) {
+        console.log('INDEX', i);
+      }
+      console.log('AFTER', { i: __props.i });
+      
+return () => {}
+}
+
+})"
+`;
+
 exports[`sfc reactive props destructure > rest spread 1`] = `
 "import { createPropsRestProxy as _createPropsRestProxy } from 'vue'
 
