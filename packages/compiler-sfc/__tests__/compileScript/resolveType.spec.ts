@@ -1136,6 +1136,31 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('relative import with indexed access type', () => {
+      const files = {
+        '/foo.ts': `
+          type Booleanish = boolean | 'true' | 'false';
+          export interface InputHTMLAttributes {
+            required?: Booleanish | undefined;
+          }
+        `,
+      }
+      const { props, deps } = resolve(
+        `
+        import { InputHTMLAttributes } from './foo.ts'
+        type ImportedType = InputHTMLAttributes['required']
+        defineProps<{
+          required: ImportedType,
+        }>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        required: ['Boolean', 'String', 'Unknown'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
     // #8339
     test('relative, .js import', () => {
       const files = {
