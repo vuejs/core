@@ -60,7 +60,7 @@
     "merge-source-map": "^1.1.0",
     "minimatch": "~10.1.1",
     "postcss-modules": "^6.0.1",
-    "postcss-selector-parser": "^7.1.0",
+    "postcss-selector-parser": "^7.1.1",
     "pug": "^3.0.3",
     "sass": "^1.96.0"
   }
