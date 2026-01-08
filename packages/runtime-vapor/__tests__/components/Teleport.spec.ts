@@ -16,7 +16,6 @@ import {
   setInsertionState,
   setText,
   template,
-  useVaporCssVars,
   vaporInteropPlugin,
   withVaporDirectives,
 } from '@vue/runtime-vapor'
@@ -27,7 +26,6 @@ import {
   onBeforeUnmount,
   onMounted,
   onUnmounted,
-  reactive,
   ref,
   shallowRef,
 } from 'vue'
@@ -1330,68 +1328,5 @@ function runSharedTests(deferMode: boolean): void {
     const target = document.querySelector('#tt')!
     expect(target.innerHTML).toBe('content')
     app.unmount()
-  })
-
-  test('with css vars', async () => {
-    const state = reactive({ color: 'red' })
-    const target = document.createElement('div')
-    document.body.appendChild(target)
-
-    const value = ref(true)
-    const Child = defineVaporComponent({
-      setup(_, { slots }) {
-        return slots.default!()
-      },
-    })
-
-    const Comp = defineVaporComponent({
-      setup() {
-        const t = createComponent(Child, null, {
-          default: () => {
-            return createComponent(Child, null, {
-              default: () => {
-                return createIf(
-                  () => value.value,
-                  () => {
-                    return template('<div></div>')()
-                  },
-                  () => {
-                    return template('<span></span>')()
-                  },
-                )
-              },
-            })
-          },
-        })
-
-        return t
-      },
-    })
-
-    define({
-      setup() {
-        useVaporCssVars(() => state)
-        const n1 = createComponent(
-          VaporTeleport,
-          { to: () => target },
-          {
-            default: () => createComponent(Comp),
-          },
-        )
-        return [n1]
-      },
-    }).render()
-
-    await nextTick()
-    for (const c of [].slice.call(target.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
-      expect((c as HTMLElement).outerHTML.includes('data-v-owner')).toBe(true)
-    }
-    value.value = false
-    await nextTick()
-    for (const c of [].slice.call(target.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
-      expect((c as HTMLElement).outerHTML.includes('data-v-owner')).toBe(true)
-    }
   })
 }

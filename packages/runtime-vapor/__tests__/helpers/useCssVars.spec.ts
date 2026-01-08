@@ -297,6 +297,68 @@ describe('useVaporCssVars', () => {
     expect(host.children[0].outerHTML.includes('data-v-owner')).toBe(true)
   })
 
+  test('with teleport and nested component', async () => {
+    const state = reactive({ color: 'red' })
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+
+    const value = ref(true)
+    const Child = defineVaporComponent({
+      setup(_, { slots }) {
+        return slots.default!()
+      },
+    })
+
+    const Comp = defineVaporComponent({
+      setup() {
+        return createComponent(Child, null, {
+          default: () => {
+            return createComponent(Child, null, {
+              default: () => {
+                return createIf(
+                  () => value.value,
+                  () => {
+                    return template('<div></div>')()
+                  },
+                  () => {
+                    return template('<span></span>')()
+                  },
+                )
+              },
+            })
+          },
+        })
+      },
+    })
+
+    define({
+      setup() {
+        useVaporCssVars(() => state)
+        const n1 = createComponent(
+          VaporTeleport,
+          { to: () => target },
+          {
+            default: () => createComponent(Comp),
+          },
+        )
+        return n1
+      },
+    }).render()
+
+    await nextTick()
+    let el = target.children[0] as HTMLElement
+    expect(el.tagName).toBe('DIV')
+    expect(el.outerHTML.includes('data-v-owner')).toBe(true)
+    expect(el.style.getPropertyValue(`--color`)).toBe('red')
+
+    value.value = false
+    await nextTick()
+    el = target.children[0] as HTMLElement
+    expect(el.tagName).toBe('SPAN')
+    expect(el.outerHTML.includes('data-v-owner')).toBe(true)
+    expect(el.style.getPropertyValue(`--color`)).toBe('red')
+  })
+
   test('with string style', async () => {
     const state = reactive({ color: 'red' })
     const root = document.createElement('div')

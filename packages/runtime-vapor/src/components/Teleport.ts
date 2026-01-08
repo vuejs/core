@@ -108,7 +108,8 @@ export class TeleportFragment extends VaporFragment {
       )
     })
     const nodes = this.nodes
-    // register updateCssVars to root fragments's update hooks so that
+
+    // register updateCssVars to nested fragments's update hooks so that
     // it will be called when root fragment changed
     if (this.parentComponent && this.parentComponent.ut) {
       this.registerUpdateCssVars(nodes)
@@ -125,17 +126,16 @@ export class TeleportFragment extends VaporFragment {
     }
   }
 
-  private registerUpdateCssVars(nodes: Block) {
-    if (isFragment(nodes)) {
-      ;(nodes.onUpdated || (nodes.onUpdated = [])).push(() =>
+  private registerUpdateCssVars(block: Block) {
+    if (isFragment(block)) {
+      ;(block.onUpdated || (block.onUpdated = [])).push(() =>
         updateCssVars(this),
       )
-      this.registerUpdateCssVars(nodes.nodes)
-    } else if (isVaporComponent(nodes)) {
-      ;(nodes.u || (nodes.u = [])).push(() => updateCssVars(this))
-      this.registerUpdateCssVars(nodes.block)
-    } else if (isArray(nodes)) {
-      nodes.forEach(node => this.registerUpdateCssVars(node))
+      this.registerUpdateCssVars(block.nodes)
+    } else if (isVaporComponent(block)) {
+      this.registerUpdateCssVars(block.block)
+    } else if (isArray(block)) {
+      block.forEach(node => this.registerUpdateCssVars(node))
     }
   }
 
