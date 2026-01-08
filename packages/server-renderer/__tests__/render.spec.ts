@@ -252,12 +252,44 @@ function testRender(type: string, render: typeof renderToString) {
         )
       })
 
+      test('undefined class/style excluded', async () => {
+        const app = createApp({
+          template: `<div><div :class="undefined" :style="undefined"></div></div>`,
+        })
+        expect(await render(app)).toBe(`<div><div></div></div>`)
+      })
+
+      test('null class/style excluded', async () => {
+        const app = createApp({
+          template: `<div><div :class="null" :style="null"></div></div>`,
+        })
+        expect(await render(app)).toBe(`<div><div></div></div>`)
+      })
+
+      test('empty string class/style not excluded', async () => {
+        const app = createApp({
+          template: `<div><div :class="''" :style="''"></div></div>`,
+        })
+        expect(await render(app)).toBe(
+          `<div><div class="" style=""></div></div>`,
+        )
+      })
+
       test('template components with dynamic class attribute before static', async () => {
         const app = createApp({
           template: `<div><div :class="'dynamic'" class="child"></div></div>`,
         })
         expect(await render(app)).toBe(
           `<div><div class="dynamic child"></div></div>`,
+        )
+      })
+
+      test('template components with both static and undefined dynamic class/style attributes', async () => {
+        const app = createApp({
+          template: `<div><div :class="undefined" class="child" :style="undefined" style="color: red;"></div></div>`,
+        })
+        expect(await render(app)).toBe(
+          `<div><div class="child" style="color:red;"></div></div>`,
         )
       })
 
