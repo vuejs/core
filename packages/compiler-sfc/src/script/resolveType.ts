@@ -1898,13 +1898,25 @@ function flattenTypes(
   typeParameters: Record<string, Node> | undefined = undefined,
 ): string[] {
   if (types.length === 1) {
-    return inferRuntimeType(ctx, types[0], scope, isKeyOf, typeParameters)
+    return inferRuntimeType(
+      ctx,
+      types[0],
+      (types[0] as MaybeWithScope)._ownerScope || scope,
+      isKeyOf,
+      typeParameters,
+    )
   }
   return [
     ...new Set(
       ([] as string[]).concat(
         ...types.map(t =>
-          inferRuntimeType(ctx, t, scope, isKeyOf, typeParameters),
+          inferRuntimeType(
+            ctx,
+            t,
+            (t as MaybeWithScope)._ownerScope || scope,
+            isKeyOf,
+            typeParameters,
+          ),
         ),
       ),
     ),
