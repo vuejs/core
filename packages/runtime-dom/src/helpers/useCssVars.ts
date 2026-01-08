@@ -11,7 +11,7 @@ import {
   warn,
   watch,
 } from '@vue/runtime-core'
-import { NOOP, ShapeFlags, normalizeCssVarValue } from '@vue/shared'
+import { NOOP, ShapeFlags, extend, normalizeCssVarValue } from '@vue/shared'
 
 export const CSS_VAR_TEXT: unique symbol = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
 /**
@@ -99,8 +99,7 @@ export function baseUseCssVars(
     ).forEach(node => setVarsOnNode(node, vars))
   })
 
-  const applyCssCars = () => {
-    const vars = getVars()
+  const applyCssVars = (vars = getVars()) => {
     setVars(vars)
     updateTeleports(vars)
   }
@@ -108,13 +107,23 @@ export function baseUseCssVars(
   // handle cases where child component root is affected
   // and triggers reflow in onMounted
   onBeforeUpdate(() => {
-    queuePostFlushCb(applyCssCars)
+    queuePostFlushCb(applyCssVars)
   })
 
   onMounted(() => {
     // run setVars synchronously here, but run as post-effect on changes
-    watch(applyCssCars, NOOP, { flush: 'post' })
-    const ob = new MutationObserver(applyCssCars)
+    watch(
+      () => {
+        const vars = getVars()
+        // access all properties to ensure dependency tracking
+        // even if there are no DOM elements to receive vars yet
+        extend({}, vars)
+        applyCssVars(vars)
+      },
+      NOOP,
+      { flush: 'post' },
+    )
+    const ob = new MutationObserver(() => applyCssVars())
     ob.observe(getParentNode(), { childList: true })
     onUnmounted(() => ob.disconnect())
   })
