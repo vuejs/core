@@ -623,24 +623,34 @@ describe('e2e: TransitionGroup', () => {
         app.mount('#app')
       })
 
-      expect(await html('#container')).toBe(`<div class="test">foo</div>` + ` `)
+      expect(await html('#container')).toBe(
+        `  ` + `<div class="test">foo</div>` + `   `,
+      )
 
       expect(await htmlWhenTransitionStart()).toBe(
-        `<div class="test">foo</div>` +
+        `  ` +
+          `<div class="test">foo</div>` +
           ` ` +
-          `<div class="test test-enter-from test-enter-active">bar</div>`,
+          `<div class="test test-enter-from test-enter-active">bar</div>` +
+          `  `,
       )
 
       await nextFrame()
       expect(await html('#container')).toBe(
-        `<div class="test">foo</div>` +
+        `  ` +
+          `<div class="test">foo</div>` +
           ` ` +
-          `<div class="test test-enter-active test-enter-to">bar</div>`,
+          `<div class="test test-enter-active test-enter-to">bar</div>` +
+          `  `,
       )
 
       await transitionFinish(duration)
       expect(await html('#container')).toBe(
-        `<div class="test">foo</div>` + ` ` + `<div class="test">bar</div>`,
+        `  ` +
+          `<div class="test">foo</div>` +
+          ` ` +
+          `<div class="test">bar</div>` +
+          `  `,
       )
     },
     E2E_TIMEOUT,
