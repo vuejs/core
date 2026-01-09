@@ -1114,12 +1114,15 @@ const attrsProxyHandlers = __DEV__
 const createSlotsProxyHandlers = (
   instance: ComponentInternalInstance,
 ): ProxyHandler<InternalSlots> => ({
-  get(target, key: string) {
+  get(target, key: string | symbol) {
     if (__DEV__) {
       track(instance, TrackOpTypes.GET, '$slots')
     }
     // in-DOM templates use kebab-case slot names, only relevant in browser
-    return target[key] || (__BROWSER__ && target[hyphenate(key)])
+    return (
+      target[key as string] ||
+      (__BROWSER__ && typeof key === 'string' && target[hyphenate(key)])
+    )
   },
 })
 
