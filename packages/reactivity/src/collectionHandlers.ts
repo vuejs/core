@@ -69,10 +69,6 @@ function createIterableMethod(
                 done,
               }
         },
-        // iterable protocol
-        [Symbol.iterator]() {
-          return this
-        },
       },
     )
   }
