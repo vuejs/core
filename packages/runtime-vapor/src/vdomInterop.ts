@@ -78,9 +78,9 @@ import { VaporFragment, isFragment, setFragmentFallback } from './fragment'
 import type { NodeRef } from './apiTemplateRef'
 import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
 import {
+  type KeepAliveInstance,
   activate,
   deactivate,
-  findParentKeepAlive,
 } from './components/KeepAlive'
 import { setParentSuspense } from './components/Suspense'
 
@@ -280,6 +280,13 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
     const slot = target[key]
     if (isFunction(slot)) {
       slot.__vapor = true
+      // Create a wrapper that internally uses renderSlot for proper vapor slot handling
+      // This ensures that calling slots.default() works the same as renderSlot(slots, 'default')
+      const wrapped = (props?: Record<string, any>) => [
+        renderSlot({ [key]: slot }, key as string, props),
+      ]
+      ;(wrapped as any).__vs = slot
+      return wrapped
     }
     return slot
   },
@@ -337,7 +344,7 @@ function createVDOMComponent(
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       vdomDeactivate(
         vnode,
-        findParentKeepAlive(parentComponent!)!.getStorageContainer(),
+        (parentComponent as KeepAliveInstance)!.ctx.getStorageContainer(),
         internals,
         parentComponent as any,
         null,

@@ -2,7 +2,7 @@
 
 exports[`v-html > should convert v-html to innerHTML 1`] = `
 "import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -13,7 +13,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`v-html > should raise error and ignore children when v-html is present 1`] = `
 "import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -24,7 +24,7 @@ export function render(_ctx) {
 
 exports[`v-html > should raise error if has no expression 1`] = `
 "import { setHtml as _setHtml, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()

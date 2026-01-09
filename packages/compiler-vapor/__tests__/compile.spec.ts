@@ -67,7 +67,7 @@ describe('compile', () => {
 
         expect(code).toMatchSnapshot()
         expect(code).contains(
-          JSON.stringify('<div :id="foo"><Comp></Comp>{{ bar }}</div>'),
+          JSON.stringify('<div :id=foo><Comp></Comp>{{ bar }}'),
         )
         expect(code).not.contains('effect')
       })
@@ -353,9 +353,9 @@ describe('compile', () => {
       expect(code).matchSnapshot()
       expect(code).not.contains('const t0 =')
       expect(code).not.contains('const t2 =')
-      expect(code).contains('const t1 = _template("<div></div>")')
-      expect(code).contains('const t3 = _template("<span></span>")')
-      expect(code).contains('const t4 = _template("<p></p>")')
+      expect(code).contains('const t1 = _template("<div>")')
+      expect(code).contains('const t3 = _template("<span>")')
+      expect(code).contains('const t4 = _template("<p>")')
     })
 
     test('should bump placeholder var (p*) on conflict', () => {

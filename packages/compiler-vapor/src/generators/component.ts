@@ -392,13 +392,7 @@ function genDynamicProps(
         }
       } else {
         expr = genExpression(p.value, context)
-        if (p.handler)
-          expr = genCall(
-            helper('toHandlers'),
-            expr,
-            `false`, // preserveCaseIfNecessary: false, not needed for component
-            `true`, // wrap handler values in functions
-          )
+        if (p.handler) expr = genCall(helper('toHandlers'), expr)
       }
     }
     frags.push(['() => (', ...expr, ')'])
