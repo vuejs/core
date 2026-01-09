@@ -1,9 +1,10 @@
 // @ts-check
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { rolldown } from 'rolldown'
-import { minify } from 'oxc-minify'
-import { replacePlugin } from 'rolldown/plugins'
+import { rollup } from 'rollup'
+import nodeResolve from '@rollup/plugin-node-resolve'
+import { minify } from '@swc/core'
+import replace from '@rollup/plugin-replace'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { parseArgs } from 'node:util'
 import pico from 'picocolors'
@@ -20,7 +21,7 @@ const {
   },
 })
 
-const sizeDir = path.resolve('temp/size')
+const sizeDir = path.resolve('temp/size-rollup')
 const vuePath = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
 
 /**
@@ -44,9 +45,7 @@ const presets = [
   },
   { name: 'createVaporApp', imports: ['createVaporApp'] },
   { name: 'createSSRApp', imports: ['createSSRApp'] },
-  { name: 'createVaporSSRApp', imports: ['createVaporSSRApp'] },
   { name: 'defineCustomElement', imports: ['defineCustomElement'] },
-  { name: 'defineVaporCustomElement', imports: ['defineVaporCustomElement'] },
   {
     name: 'overall',
     imports: [
@@ -104,8 +103,7 @@ async function generateBundle(preset) {
       ? `* as ${preset.name}`
       : `{ ${preset.imports.join(', ')} }`
   const content = `export ${exportSpecifiers} from '${vuePath}'`
-
-  const result = await rolldown({
+  const result = await rollup({
     input: id,
     plugins: [
       {
@@ -118,41 +116,33 @@ async function generateBundle(preset) {
           if (_id === id) return content
         },
       },
-      replacePlugin(
-        {
-          'process.env.NODE_ENV': '"production"',
-          __VUE_PROD_DEVTOOLS__: 'false',
-          __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
-          __VUE_OPTIONS_API__: 'true',
-          ...preset.replace,
-        },
-        { preventAssignment: true },
-      ),
+      nodeResolve(),
+      replace({
+        'process.env.NODE_ENV': '"production"',
+        __VUE_PROD_DEVTOOLS__: 'false',
+        __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
+        __VUE_OPTIONS_API__: 'true',
+        preventAssignment: true,
+        ...preset.replace,
+      }),
     ],
-    treeshake: {
-      moduleSideEffects: false,
-    },
   })
 
-  const generated = await result.generate({
-    minify: 'dce-only',
-  })
+  const generated = await result.generate({})
   const bundled = generated.output[0].code
-  const file = preset.name + '.js'
   const minified = (
-    await minify(file, bundled, {
+    await minify(bundled, {
       module: true,
-      mangle: {
-        toplevel: true,
-      },
+      toplevel: true,
     })
   ).code
+
   const size = minified.length
   const gzip = gzipSync(minified).length
   const brotli = brotliCompressSync(minified).length
 
   if (write) {
-    await writeFile(path.resolve(sizeDir, file), bundled)
+    await writeFile(path.resolve(sizeDir, preset.name + '.js'), bundled)
   }
 
   return {
