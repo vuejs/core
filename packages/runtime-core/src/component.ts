@@ -1118,10 +1118,10 @@ const createSlotsProxyHandlers = (
     if (__DEV__) {
       track(instance, TrackOpTypes.GET, '$slots')
     }
-    // in-DOM templates use kebab-case slot names, only relevant in browser
+    // in-DOM templates use kebab-case slot names, only relevant in global builds
     return (
       target[key as string] ||
-      (__BROWSER__ && typeof key === 'string' && target[hyphenate(key)])
+      (__GLOBAL__ && typeof key === 'string' && target[hyphenate(key)])
     )
   },
 })
@@ -1182,7 +1182,7 @@ export function createSetupContext(
   } else {
     return {
       attrs: new Proxy(instance.attrs, attrsProxyHandlers),
-      slots: __BROWSER__
+      slots: __GLOBAL__
         ? new Proxy(instance.slots, createSlotsProxyHandlers(instance))
         : instance.slots,
       emit: instance.emit,

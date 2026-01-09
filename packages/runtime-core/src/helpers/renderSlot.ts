@@ -53,8 +53,8 @@ export function renderSlot(
     )
   }
 
-  // in-DOM templates use kebab-case slot names, only relevant in browser
-  let slot = slots[name] || (__BROWSER__ && slots[hyphenate(name)])
+  // in-DOM templates use kebab-case slot names, only relevant in global builds
+  let slot = slots[name] || (__GLOBAL__ && slots[hyphenate(name)])
 
   if (__DEV__ && slot && slot.length > 1) {
     warn(
