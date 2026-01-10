@@ -467,11 +467,11 @@ describe('component: slots', () => {
   // in-DOM templates use kebab-case slot names
   describe('in-DOM template kebab-case slot name resolution', () => {
     beforeEach(() => {
-      __GLOBAL__ = true
+      __BROWSER__ = true
     })
 
     afterEach(() => {
-      __GLOBAL__ = false
+      __BROWSER__ = false
     })
 
     test('should resolve camelCase slot access to kebab-case via slots', () => {
