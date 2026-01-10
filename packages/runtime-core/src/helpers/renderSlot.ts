@@ -14,7 +14,7 @@ import {
   isVNode,
   openBlock,
 } from '../vnode'
-import { PatchFlags, SlotFlags, isSymbol } from '@vue/shared'
+import { PatchFlags, SlotFlags, hyphenate, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 
@@ -53,7 +53,8 @@ export function renderSlot(
     )
   }
 
-  let slot = slots[name]
+  // in-DOM templates use kebab-case slot names, only relevant in browser
+  let slot = slots[name] || (__BROWSER__ && slots[hyphenate(name)])
 
   if (__DEV__ && slot && slot.length > 1) {
     warn(
