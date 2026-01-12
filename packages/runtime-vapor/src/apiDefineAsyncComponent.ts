@@ -5,9 +5,9 @@ import {
   createAsyncComponentContext,
   currentInstance,
   handleError,
-  isKeepAlive,
   markAsyncBoundary,
   performAsyncHydrate,
+  shallowRef,
   useAsyncComponentState,
   watch,
 } from '@vue/runtime-dom'
@@ -30,7 +30,6 @@ import { invokeArrayFns } from '@vue/shared'
 import { type TransitionOptions, insert, remove } from './block'
 import { parentNode } from './dom/node'
 import { setTransitionHooks } from './components/Transition'
-import type { KeepAliveInstance } from './components/KeepAlive'
 
 /*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
@@ -49,6 +48,8 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       suspensible = true,
     },
   } = createAsyncComponentContext<T, VaporComponent>(source)
+
+  const resolvedDef = shallowRef<VaporComponent>()
 
   return defineVaporComponent({
     name: 'VaporAsyncComponentWrapper',
@@ -107,8 +108,10 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       )
     },
 
+    // this accessor tracks the internal shallowRef `resolvedDef`.
+    // this allows KeepAlive to watch the resolution status.
     get __asyncResolved() {
-      return getResolvedComp()
+      return resolvedDef.value
     },
 
     setup() {
@@ -150,11 +153,8 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
 
       load()
         .then(() => {
+          resolvedDef.value = getResolvedComp()!
           loaded.value = true
-          // if parent is keep-alive, re-evaluate caching
-          if (instance.parent && isKeepAlive(instance.parent)) {
-            ;(instance.parent as KeepAliveInstance).ctx.onAsyncResolve(instance)
-          }
         })
         .catch(err => {
           onError(err)
