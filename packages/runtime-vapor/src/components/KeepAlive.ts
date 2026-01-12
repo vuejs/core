@@ -229,14 +229,13 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     // inject hooks to DynamicFragment to cache components during updates
     const injectKeepAliveHooks = (frag: DynamicFragment) => {
       ;(frag.onBeforeTeardown || (frag.onBeforeTeardown = [])).push(
-        (oldKey, nodes, scope) => {
+        (oldKey, { retainScope }) => {
           // if the fragment's nodes include a component that should be cached
-          // return true to avoid tearing down the fragment's scope
+          // call retainScope() to avoid stopping the fragment's scope
           if (processFragment(frag)) {
-            keptAliveScopes.set(oldKey, scope)
-            return true
+            keptAliveScopes.set(oldKey, frag.scope!)
+            retainScope()
           }
-          return false
         },
       )
       ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() =>

@@ -93,9 +93,8 @@ export class DynamicFragment extends VaporFragment {
   // hooks
   onBeforeTeardown?: ((
     oldKey: any,
-    nodes: Block,
-    scope: EffectScope,
-  ) => boolean)[]
+    context: { retainScope: () => void },
+  ) => void)[]
   onBeforeMount?: ((newKey: any, nodes: Block, scope: EffectScope) => void)[]
 
   slotOwner: VaporComponentInstance | null
@@ -137,17 +136,16 @@ export class DynamicFragment extends VaporFragment {
     const parent = isHydrating ? null : this.anchor.parentNode
     // teardown previous branch
     if (this.scope) {
-      let preserveScope = false
-      // if any of the hooks returns true the scope will be preserved
-      // for kept-alive component
+      let retainScope = false
+      const context = {
+        retainScope: () => (retainScope = true),
+      }
       if (this.onBeforeTeardown) {
         for (const teardown of this.onBeforeTeardown) {
-          if (teardown(prevKey, this.nodes, this.scope!)) {
-            preserveScope = true
-          }
+          teardown(prevKey, context)
         }
       }
-      if (!preserveScope) {
+      if (!retainScope) {
         this.scope.stop()
       }
       const mode = transition && transition.mode
