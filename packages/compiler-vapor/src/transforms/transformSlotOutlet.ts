@@ -106,6 +106,8 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       name: slotName,
       props: irProps,
       fallback,
+      noSlotted: !!(context.options.scopeId && !context.options.slotted),
+      once: context.inVOnce,
     }
   }
 }

@@ -1,5 +1,4 @@
-/* eslint-disable */
-// Ported from https://github.com/stackblitz/alien-signals/blob/v2.0.4/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/v3.0.0/src/system.ts
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
 import type { EffectScope } from './effectScope.js'
@@ -14,6 +13,7 @@ export interface ReactiveNode {
 }
 
 export interface Link {
+  version: number
   dep: ReactiveNode | Computed | Effect | EffectScope
   sub: ReactiveNode | Computed | Effect | EffectScope
   prevSub: Link | undefined
@@ -42,6 +42,7 @@ const notifyBuffer: (Effect | undefined)[] = []
 export let batchDepth = 0
 export let activeSub: ReactiveNode | undefined = undefined
 
+let globalVersion = 0
 let notifyIndex = 0
 let notifyBufferLength = 0
 
@@ -68,21 +69,25 @@ export function link(dep: ReactiveNode, sub: ReactiveNode): void {
   if (prevDep !== undefined && prevDep.dep === dep) {
     return
   }
-  let nextDep: Link | undefined = undefined
-  const recursedCheck = sub.flags & ReactiveFlags.RecursedCheck
-  if (recursedCheck) {
-    nextDep = prevDep !== undefined ? prevDep.nextDep : sub.deps
-    if (nextDep !== undefined && nextDep.dep === dep) {
-      sub.depsTail = nextDep
-      return
-    }
+  const nextDep = prevDep !== undefined ? prevDep.nextDep : sub.deps
+  if (nextDep !== undefined && nextDep.dep === dep) {
+    nextDep.version = globalVersion
+    sub.depsTail = nextDep
+    return
   }
-  // TODO: maybe can find a good way to check duplicate link
   const prevSub = dep.subsTail
+  if (
+    prevSub !== undefined &&
+    prevSub.version === globalVersion &&
+    prevSub.sub === sub
+  ) {
+    return
+  }
   const newLink =
     (sub.depsTail =
     dep.subsTail =
       {
+        version: globalVersion,
         dep,
         sub,
         prevDep,
@@ -149,7 +154,6 @@ export function propagate(link: Link): void {
 
   top: do {
     const sub = link.sub
-
     let flags = sub.flags
 
     if (flags & (ReactiveFlags.Mutable | ReactiveFlags.Watching)) {
@@ -215,6 +219,7 @@ export function propagate(link: Link): void {
 }
 
 export function startTracking(sub: ReactiveNode): ReactiveNode | undefined {
+  ++globalVersion
   sub.depsTail = undefined
   sub.flags =
     (sub.flags &
@@ -343,18 +348,12 @@ export function shallowPropagate(link: Link): void {
 }
 
 function isValidLink(checkLink: Link, sub: ReactiveNode): boolean {
-  const depsTail = sub.depsTail
-  if (depsTail !== undefined) {
-    let link = sub.deps!
-    do {
-      if (link === checkLink) {
-        return true
-      }
-      if (link === depsTail) {
-        break
-      }
-      link = link.nextDep!
-    } while (link !== undefined)
+  let link = sub.depsTail
+  while (link !== undefined) {
+    if (link === checkLink) {
+      return true
+    }
+    link = link.prevDep
   }
   return false
 }

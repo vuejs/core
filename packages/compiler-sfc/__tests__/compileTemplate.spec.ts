@@ -395,8 +395,8 @@ test('should generate the correct imports expression', () => {
     `,
     ssr: true,
   })
-  expect(code).toMatch(`_ssrRenderAttr(\"src\", _imports_1)`)
-  expect(code).toMatch(`_createVNode(\"img\", { src: _imports_1 })`)
+  expect(code).toMatch(`_ssrRenderAttr("src", _imports_1)`)
+  expect(code).toMatch(`_createVNode("img", { src: _imports_1 })`)
 })
 
 // #3874
@@ -511,4 +511,23 @@ test('non-identifier expression in legacy filter syntax', () => {
   expect(() => {
     babelParse(compilationResult.code, { sourceType: 'module' })
   }).not.toThrow()
+})
+
+test('prefixing props edge case in inline mode', () => {
+  const src = `
+  <script setup lang="ts">
+    defineProps<{ Foo: { Bar: unknown } }>()
+  </script>
+  <template>
+    <Foo.Bar/>
+  </template>
+  `
+  const { descriptor } = parse(src)
+  const { content } = compileScript(descriptor, {
+    id: 'xxx',
+    inlineTemplate: true,
+  })
+
+  expect(content).toMatchSnapshot()
+  expect(content).toMatch(`__props["Foo"]).Bar`)
 })

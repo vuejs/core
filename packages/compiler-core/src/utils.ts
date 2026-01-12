@@ -12,6 +12,7 @@ import {
   type MemoExpression,
   NodeTypes,
   type ObjectExpression,
+  type ParentNode,
   type Position,
   type Property,
   type RenderSlotCall,
@@ -42,6 +43,7 @@ import type { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import type { Expression, Node } from '@babel/types'
 import { unwrapTSNode } from './babelUtils'
+import { isWhitespace } from './tokenizer'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -74,7 +76,7 @@ enum MemberExpLexState {
   inString,
 }
 
-const validFirstIdentCharRE = /[A-Za-z_$\xA0-\uFFFF]/
+export const validFirstIdentCharRE: RegExp = /[A-Za-z_$\xA0-\uFFFF]/
 const validIdentCharRE = /[\.\?\w$\xA0-\uFFFF]/
 const whitespaceRE = /\s+[.[]\s*|\s*[.[]\s+/g
 
@@ -189,7 +191,7 @@ export const isMemberExpression: (
 ) => boolean = __BROWSER__ ? isMemberExpressionBrowser : isMemberExpressionNode
 
 const fnExpRE =
-  /^\s*(async\s*)?(\([^)]*?\)|[\w$_]+)\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/
+  /^\s*(?:async\s*)?(?:\([^)]*?\)|[\w$_]+)\s*(?::[^=]+)?=>|^\s*(?:async\s+)?function(?:\s+[\w$]+)?\s*\(/
 
 export const isFnExpressionBrowser: (exp: ExpressionNode) => boolean = exp =>
   fnExpRE.test(getExpSource(exp))
@@ -568,4 +570,58 @@ export function getMemoedVNodeCall(
   }
 }
 
+export function filterNonCommentChildren(
+  node: ParentNode,
+): TemplateChildNode[] {
+  return node.children.filter(n => !isCommentOrWhitespace(n))
+}
+
+export function hasSingleChild(node: ParentNode): boolean {
+  return filterNonCommentChildren(node).length === 1
+}
+
+export function isSingleIfBlock(parent: ParentNode): boolean {
+  // detect cases where the parent v-if is not the only root level node
+  let hasEncounteredIf = false
+  for (const c of filterNonCommentChildren(parent)) {
+    if (
+      c.type === NodeTypes.IF ||
+      (c.type === NodeTypes.ELEMENT && findDir(c, 'if'))
+    ) {
+      // multiple root v-if
+      if (hasEncounteredIf) return false
+      hasEncounteredIf = true
+    } else if (
+      // node before v-if
+      !hasEncounteredIf ||
+      // non else nodes
+      !(c.type === NodeTypes.ELEMENT && findDir(c, /^else(-if)?$/, true))
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
+
 export const forAliasRE: RegExp = /([\s\S]*?)\s+(?:in|of)\s+(\S[\s\S]*)/
+
+export function isAllWhitespace(str: string): boolean {
+  for (let i = 0; i < str.length; i++) {
+    if (!isWhitespace(str.charCodeAt(i))) {
+      return false
+    }
+  }
+  return true
+}
+
+export function isWhitespaceText(node: TemplateChildNode): boolean {
+  return (
+    (node.type === NodeTypes.TEXT && isAllWhitespace(node.content)) ||
+    (node.type === NodeTypes.TEXT_CALL && isWhitespaceText(node.content))
+  )
+}
+
+export function isCommentOrWhitespace(node: TemplateChildNode): boolean {
+  return node.type === NodeTypes.COMMENT || isWhitespaceText(node)
+}

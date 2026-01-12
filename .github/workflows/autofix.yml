@@ -11,13 +11,13 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4.1.0
+        uses: pnpm/action-setup@v4.2.0
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.node-version'
           registry-url: 'https://registry.npmjs.org'
@@ -25,10 +25,10 @@ jobs:
 
       - run: pnpm install
 
-      - name: Run eslint
+      - name: Run oxlint
         run: pnpm run lint --fix
 
-      - name: Run prettier
+      - name: Run oxfmt
         run: pnpm run format
 
       - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27

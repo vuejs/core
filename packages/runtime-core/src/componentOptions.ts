@@ -1,8 +1,8 @@
 import {
+  type AsyncComponentInternalOptions,
   type Component,
   type ComponentInternalInstance,
   type ComponentInternalOptions,
-  type ConcreteComponent,
   type Data,
   type InternalRenderFunction,
   type SetupContext,
@@ -125,8 +125,11 @@ export interface ComponentOptionsBase<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II, Provide>,
+>
+  extends
+    LegacyOptions<Props, D, C, M, Mixin, Extends, I, II, Provide>,
     ComponentInternalOptions,
+    AsyncComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
     this: void,
@@ -189,26 +192,6 @@ export interface ComponentOptionsBase<
    * @internal
    */
   __ssrInlineRender?: boolean
-
-  /**
-   * marker for AsyncComponentWrapper
-   * @internal
-   */
-  __asyncLoader?: () => Promise<ConcreteComponent>
-  /**
-   * the inner component resolved by the AsyncComponentWrapper
-   * @internal
-   */
-  __asyncResolved?: ConcreteComponent
-  /**
-   * Exposed for lazy hydration
-   * @internal
-   */
-  __asyncHydrate?: (
-    el: Element,
-    instance: ComponentInternalInstance,
-    hydrate: () => void,
-  ) => void
 
   // Type differentiators ------------------------------------------------------
 
@@ -444,8 +427,8 @@ interface LegacyOptions<
    * #3468
    *
    * type-only, used to assist Mixin's type inference,
-   * typescript will try to simplify the inferred `Mixin` type,
-   * with the `__differentiator`, typescript won't be able to combine different mixins,
+   * TypeScript will try to simplify the inferred `Mixin` type,
+   * with the `__differentiator`, TypeScript won't be able to combine different mixins,
    * because the `__differentiator` will be different
    */
   __differentiator?: keyof D | keyof C | keyof M
@@ -852,7 +835,7 @@ export function createWatcher(
 ): void {
   let getter = key.includes('.')
     ? createPathGetter(publicThis, key)
-    : () => (publicThis as any)[key]
+    : () => publicThis[key as keyof typeof publicThis]
 
   const options: WatchOptions = {}
   if (__COMPAT__) {
@@ -1192,7 +1175,7 @@ export type ComponentOptionsWithoutProps<
       S,
       LC,
       Directives,
-      Exposed
+      string
     >
   >
 
@@ -1254,7 +1237,7 @@ export type ComponentOptionsWithArrayProps<
       S,
       LC,
       Directives,
-      Exposed
+      string
     >
   >
 

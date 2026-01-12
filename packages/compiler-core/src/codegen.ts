@@ -115,7 +115,6 @@ export interface BaseCodegenResult {
 
 export interface CodegenResult extends BaseCodegenResult {
   ast: RootNode
-  helpers: Set<symbol>
 }
 
 export enum NewlineType {
@@ -129,14 +128,10 @@ export enum NewlineType {
   Unknown = -3,
 }
 
-export interface CodegenContext
-  extends Omit<
-    Required<CodegenOptions>,
-    | 'bindingMetadata'
-    | 'inline'
-    | 'vaporRuntimeModuleName'
-    | 'expressionPlugins'
-  > {
+export interface CodegenContext extends Omit<
+  Required<CodegenOptions>,
+  'bindingMetadata' | 'inline' | 'vaporRuntimeModuleName' | 'expressionPlugins'
+> {
   source: string
   code: string
   line: number

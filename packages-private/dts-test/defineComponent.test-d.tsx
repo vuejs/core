@@ -1892,7 +1892,8 @@ declare const ErrorMessage: {
           type: StringConstructor
           required: true
         }
-      }>
+      }> &
+        vue.AllowedComponentProps
     >,
     () =>
       | VNode<
@@ -2106,4 +2107,39 @@ defineComponent({
     // @ts-expect-error
     expectType<string>(this.$props)
   },
+})
+
+// #14117
+defineComponent({
+  setup() {
+    const setup1 = ref('setup1')
+    const setup2 = ref('setup2')
+    return { setup1, setup2 }
+  },
+  data() {
+    return {
+      data1: 1,
+    }
+  },
+  props: {
+    props1: {
+      type: String,
+    },
+  },
+  methods: {
+    methods1() {
+      return `methods1`
+    },
+  },
+  computed: {
+    computed1() {
+      this.setup1
+      this.setup2
+      this.data1
+      this.props1
+      this.methods1()
+      return `computed1`
+    },
+  },
+  expose: ['setup1'],
 })

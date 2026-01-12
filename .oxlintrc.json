@@ -1,0 +1,154 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [],
+  "categories": {
+    "correctness": "off"
+  },
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": [
+    "**/dist/",
+    "**/temp/",
+    "**/coverage/",
+    "dts-build/packages"
+  ],
+  "overrides": [
+    {
+      "files": ["**/*.js", "**/*.ts", "**/*.tsx"],
+      "rules": {
+        "no-debugger": "error",
+        "no-console": [
+          "error",
+          {
+            "allow": ["warn", "error", "info"]
+          }
+        ],
+        "no-restricted-globals": [
+          "error",
+          "window",
+          "document",
+          "module",
+          "require"
+        ],
+        "oxc/no-const-enum": "error",
+        "oxc/no-rest-spread-properties": "error",
+        "oxc/no-async-await": "error",
+        "oxc/no-optional-chaining": "error",
+        "sort-imports": [
+          "error",
+          {
+            "ignoreDeclarationSort": true
+          }
+        ],
+        "@typescript-eslint/prefer-ts-expect-error": "error",
+        "@typescript-eslint/consistent-type-imports": [
+          "error",
+          {
+            "fixStyle": "inline-type-imports",
+            "disallowTypeAnnotations": false
+          }
+        ],
+        "@typescript-eslint/no-import-type-side-effects": "error"
+      },
+      "plugins": ["typescript"]
+    },
+    {
+      "files": [
+        "**/__tests__/**",
+        "packages-private/dts-test/**",
+        "packages-private/dts-build-test/**"
+      ],
+      "rules": {
+        "no-console": "off",
+        "no-restricted-globals": "off",
+        "no-unused-expressions": "off",
+        "no-unused-vars": "off",
+        "no-unsafe-optional-chaining": "off",
+        "no-constant-condition": "off",
+        "vitest/no-conditional-tests": "off",
+        "typescript/no-this-alias": "off",
+        "vitest/warn-todo": "off",
+        "typescript/no-non-null-asserted-optional-chain": "off"
+      },
+      "globals": {
+        "suite": "writable",
+        "test": "writable",
+        "describe": "writable",
+        "it": "writable",
+        "expectTypeOf": "writable",
+        "assertType": "writable",
+        "expect": "writable",
+        "assert": "writable",
+        "chai": "writable",
+        "vitest": "writable",
+        "vi": "writable",
+        "beforeAll": "writable",
+        "afterAll": "writable",
+        "beforeEach": "writable",
+        "afterEach": "writable",
+        "onTestFailed": "writable",
+        "onTestFinished": "writable"
+      },
+      "plugins": ["vitest", "typescript"]
+    },
+    {
+      "files": ["packages/shared/**"],
+      "rules": {
+        "no-restricted-globals": "off"
+      }
+    },
+    {
+      "files": ["packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**"],
+      "rules": {
+        "no-restricted-globals": ["error", "module", "require"]
+      }
+    },
+    {
+      "files": ["packages/{compiler-sfc,compiler-ssr,server-renderer}/**"],
+      "rules": {
+        "no-restricted-globals": ["error", "window", "document"],
+        "oxc/no-const-enum": "error"
+      }
+    },
+    {
+      "files": [
+        "packages-private/template-explorer/**",
+        "packages-private/sfc-playground/**"
+      ],
+      "rules": {
+        "no-restricted-globals": ["error", "module", "require"],
+        "oxc/no-const-enum": "error",
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["*.js"],
+      "rules": {
+        "no-unused-vars": [
+          "error",
+          {
+            "vars": "all",
+            "args": "none"
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "rollup*.config.js",
+        "scripts/**",
+        "./*.{js,ts}",
+        "packages/*/*.js",
+        "packages/vue/*/*.js",
+        "packages-private/benchmark/*",
+        "packages-private/e2e-utils/*"
+      ],
+      "rules": {
+        "no-restricted-globals": "off",
+        "oxc/no-const-enum": "error",
+        "no-console": "off"
+      }
+    }
+  ]
+}

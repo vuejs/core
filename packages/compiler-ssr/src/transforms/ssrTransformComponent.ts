@@ -10,7 +10,6 @@ import {
   type ExpressionNode,
   type FunctionExpression,
   type JSChildNode,
-  Namespaces,
   type NodeTransform,
   NodeTypes,
   RESOLVE_DYNAMIC_COMPONENT,
@@ -55,7 +54,14 @@ import {
   ssrProcessTransitionGroup,
   ssrTransformTransitionGroup,
 } from './ssrTransformTransitionGroup'
-import { extend, isArray, isObject, isPlainObject, isSymbol } from '@vue/shared'
+import {
+  Namespaces,
+  extend,
+  isArray,
+  isObject,
+  isPlainObject,
+  isSymbol,
+} from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
 import {
   ssrProcessTransition,

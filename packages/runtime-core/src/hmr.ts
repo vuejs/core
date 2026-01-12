@@ -1,4 +1,4 @@
-/* eslint-disable no-restricted-globals */
+/* oxlint-disable no-restricted-globals */
 import { EffectFlags } from '@vue/reactivity'
 import {
   type ClassComponent,
@@ -19,6 +19,17 @@ export const hmrDirtyComponents: Map<
   ConcreteComponent,
   Set<GenericComponentInstance>
 > = new Map<ConcreteComponent, Set<GenericComponentInstance>>()
+
+// During HMR reload, `updateComponentDef` mutates the old component definition
+// with the new one's properties (including `__vapor`). This causes issues when
+// a component switches between vapor and vdom modes, because the renderer still
+// holds references to the old VNodes whose `type` now has an incorrect `__vapor`
+// value. This Map tracks the original `__vapor` state of dirty components so
+// that operations like unmount/move/getNextHostNode can use the correct mode.
+export const hmrDirtyComponentsMode: Map<ConcreteComponent, boolean> = new Map<
+  ConcreteComponent,
+  boolean
+>()
 
 export interface HMRRuntime {
   createRecord: typeof createRecord
@@ -97,7 +108,7 @@ function rerender(id: string, newRender?: Function): void {
     // this flag forces child components with slot content to update
     isHmrUpdating = true
     if (instance.vapor) {
-      instance.hmrRerender!()
+      if (!instance.isUnmounted) instance.hmrRerender!()
     } else {
       const i = instance as ComponentInternalInstance
       // #13771 don't update if the job is already disposed
@@ -117,13 +128,23 @@ function reload(id: string, newComp: HMRComponent): void {
   if (!record) return
 
   newComp = normalizeClassComponent(newComp)
+  const isVapor = record.initialDef.__vapor
   // update initial def (for not-yet-rendered components)
   updateComponentDef(record.initialDef, newComp)
 
   // create a snapshot which avoids the set being mutated during updates
   const instances = [...record.instances]
 
-  if (newComp.__vapor) {
+  if (isVapor && newComp.__vapor && !instances.some(i => i.ceReload)) {
+    // For multiple instances with the same __hmrId, remove styles first before reload
+    // to avoid the second instance's style removal deleting the first instance's
+    // newly added styles (since hmrReload is synchronous)
+    for (const instance of instances) {
+      // update custom element child style
+      if (instance.root && instance.root.ce && instance !== instance.root) {
+        instance.root.ce._removeChildStyle(instance.type)
+      }
+    }
     for (const instance of instances) {
       instance.hmrReload!(newComp)
     }
@@ -142,6 +163,7 @@ function reload(id: string, newComp: HMRComponent): void {
         hmrDirtyComponents.set(oldComp, (dirtyInstances = new Set()))
       }
       dirtyInstances.add(instance)
+      hmrDirtyComponentsMode.set(oldComp, !!isVapor)
 
       // 3. invalidate options resolution cache
       instance.appContext.propsCache.delete(instance.type as any)
@@ -160,11 +182,14 @@ function reload(id: string, newComp: HMRComponent): void {
         // don't end up forcing the same parent to re-render multiple times.
         queueJob(() => {
           isHmrUpdating = true
-          const parent = instance.parent!
+          const parent = instance.parent! as ComponentInternalInstance
           if (parent.vapor) {
             parent.hmrRerender!()
           } else {
-            ;(parent as ComponentInternalInstance).effect.run()
+            if (!(parent.effect.flags! & EffectFlags.STOP)) {
+              parent.renderCache = []
+              parent.effect.run()
+            }
           }
           nextTick(() => {
             isHmrUpdating = false
@@ -193,6 +218,7 @@ function reload(id: string, newComp: HMRComponent): void {
   // 5. make sure to cleanup dirty hmr components after update
   queuePostFlushCb(() => {
     hmrDirtyComponents.clear()
+    hmrDirtyComponentsMode.clear()
   })
 }
 

@@ -1,4 +1,4 @@
-/* eslint-disable no-restricted-globals */
+/* oxlint-disable no-restricted-globals */
 import type { App } from './apiCreateApp'
 import { Comment, Fragment, Static, Text } from './vnode'
 import type { GenericComponentInstance } from './component'
@@ -63,7 +63,6 @@ export function setDevtoolsHook(hook: DevtoolsHook, target: any): void {
     // some envs mock window but not fully
     window.HTMLElement &&
     // also exclude jsdom
-    // eslint-disable-next-line no-restricted-syntax
     !window.navigator?.userAgent?.includes('jsdom')
   ) {
     const replay = (target.__VUE_DEVTOOLS_HOOK_REPLAY__ =
@@ -125,7 +124,7 @@ export const devtoolsComponentRemoved = (
 
 type DevtoolsComponentHook = (component: GenericComponentInstance) => void
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 function createDevtoolsComponentHook(
   hook: DevtoolsHooks,
 ): DevtoolsComponentHook {

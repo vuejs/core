@@ -10,7 +10,6 @@ import {
   NewlineType,
   type SimpleExpressionNode,
   type SourceLocation,
-  TS_NODE_TYPES,
   advancePositionWithClone,
   createSimpleExpression,
   isInDestructureAssignment,
@@ -64,7 +63,6 @@ export function genExpression(
   let hasMemberExpression = false
   if (ids.length) {
     const [frag, push] = buildCodeFragment()
-    const isTSNode = ast && TS_NODE_TYPES.includes(ast.type)
     ids
       .sort((a, b) => a.start! - b.start!)
       .forEach((id, i) => {
@@ -73,11 +71,8 @@ export function genExpression(
         const end = id.end! - 1
         const last = ids[i - 1]
 
-        if (!(isTSNode && i === 0)) {
-          const leadingText = content.slice(last ? last.end! - 1 : 0, start)
-          if (leadingText.length) push([leadingText, NewlineType.Unknown])
-        }
-
+        const leadingText = content.slice(last ? last.end! - 1 : 0, start)
+        if (leadingText.length) push([leadingText, NewlineType.Unknown])
         const source = content.slice(start, end)
         const parentStack = parentStackMap.get(id)!
         const parent = parentStack[parentStack.length - 1]
@@ -103,7 +98,7 @@ export function genExpression(
           ),
         )
 
-        if (i === ids.length - 1 && end < content.length && !isTSNode) {
+        if (i === ids.length - 1 && end < content.length) {
           push([content.slice(end), NewlineType.Unknown])
         }
       })
@@ -332,14 +327,22 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
       continue
     }
 
+    const seenParents = new Set<Node>()
     walkIdentifiers(exp.ast, (currentNode, parent, parentStack) => {
-      if (parent && isMemberExpression(parent)) {
+      if (parent && isMemberExpression(parent) && !seenParents.has(parent)) {
+        seenParents.add(parent)
         const memberExp = extractMemberExpression(parent, id => {
           registerVariable(id.name, exp, true, {
             start: id.start!,
             end: id.end!,
           })
         })
+
+        const parentOfMemberExp = parentStack[parentStack.length - 2]
+        if (parentOfMemberExp && isCallExpression(parentOfMemberExp)) {
+          return
+        }
+
         registerVariable(
           memberExp,
           exp,
@@ -495,10 +498,10 @@ function shouldDeclareVariable(
     }
     return true
   }
-  // if arrays share common elements, no declaration needed
-  // because they will be treat as repeated expressions
+  // if arrays are identical, no declaration needed
+  // because they will be treated as repeated expressions
   // e.g., [[foo,bar],[foo,bar]] -> const foo_bar = _ctx.foo + _ctx.bar
-  if (vars.some(v => v.some(e => first.includes(e)))) {
+  if (vars.every(v => v.every((e, idx) => e === first[idx]))) {
     return false
   }
 
@@ -518,7 +521,10 @@ function processRepeatedExpressions(
   const declarations: DeclarationValue[] = []
   const seenExp = expressions.reduce(
     (acc, exp) => {
-      const variables = expToVariableMap.get(exp)!.map(v => v.name)
+      const vars = expToVariableMap.get(exp)
+      if (!vars) return acc
+
+      const variables = vars.map(v => v.name)
       // only handle expressions that are not identifiers
       if (
         exp.ast &&
@@ -671,6 +677,8 @@ function extractMemberExpression(
       return `${extractMemberExpression(exp.left, onIdentifier)} ${exp.operator} ${extractMemberExpression(exp.right, onIdentifier)}`
     case 'CallExpression': // foo[bar(baz)]
       return `${extractMemberExpression(exp.callee, onIdentifier)}(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
+    case 'OptionalCallExpression': // foo[bar?.(baz)]
+      return `${extractMemberExpression(exp.callee, onIdentifier)}?.(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
     case 'MemberExpression': // foo[bar.baz]
     case 'OptionalMemberExpression': // foo?.bar
       const object = extractMemberExpression(exp.object, onIdentifier)
@@ -678,13 +686,23 @@ function extractMemberExpression(
         ? `[${extractMemberExpression(exp.property, onIdentifier)}]`
         : `.${extractMemberExpression(exp.property, NOOP)}`
       return `${object}${prop}`
+    case 'TSNonNullExpression': // foo!.bar
+      return `${extractMemberExpression(exp.expression, onIdentifier)}`
     default:
       return ''
   }
 }
 
+const isCallExpression = (node: Node) => {
+  return (
+    node.type === 'CallExpression' || node.type === 'OptionalCallExpression'
+  )
+}
+
 const isMemberExpression = (node: Node) => {
   return (
-    node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression'
+    node.type === 'MemberExpression' ||
+    node.type === 'OptionalMemberExpression' ||
+    node.type === 'TSNonNullExpression'
   )
 }

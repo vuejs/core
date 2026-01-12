@@ -6,6 +6,7 @@ import {
   type SimpleExpressionNode,
   type TemplateChildNode,
   createCompilerError,
+  isCommentOrWhitespace,
   isTemplateNode,
   isVSlot,
 } from '@vue/compiler-dom'
@@ -23,7 +24,12 @@ import {
   type SlotBlockIRNode,
   type VaporDirectiveNode,
 } from '../ir'
-import { findDir, resolveExpression } from '../utils'
+import {
+  findDir,
+  findProp,
+  isTransitionNode,
+  resolveExpression,
+} from '../utils'
 import { markNonTemplate } from './transformText'
 
 export const transformVSlot: NodeTransform = (node, context) => {
@@ -84,6 +90,22 @@ function transformComponentSlot(
   }
 
   const [block, onExit] = createSlotBlock(node, dir, context)
+
+  // only add key for slot content inside Transition
+  if (isTransitionNode(node) && nonSlotTemplateChildren.length) {
+    const nonCommentChild = nonSlotTemplateChildren.find(
+      n => !isCommentOrWhitespace(n),
+    )
+    if (nonCommentChild) {
+      const keyProp = findProp(
+        nonCommentChild as ElementNode,
+        'key',
+      ) as VaporDirectiveNode
+      if (keyProp) {
+        block.key = keyProp.exp
+      }
+    }
+  }
 
   const { slots } = context
 

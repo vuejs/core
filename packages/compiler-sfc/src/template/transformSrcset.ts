@@ -1,11 +1,8 @@
 import path from 'path'
 import {
   ConstantTypes,
-  type ExpressionNode,
   type NodeTransform,
   NodeTypes,
-  type SimpleExpressionNode,
-  createCompoundExpression,
   createSimpleExpression,
 } from '@vue/compiler-core'
 import {
@@ -106,55 +103,52 @@ export const transformSrcset: NodeTransform = (
             }
           }
 
-          const compoundExpression = createCompoundExpression([], attr.loc)
+          let content = ''
           imageCandidates.forEach(({ url, descriptor }, index) => {
             if (shouldProcessUrl(url)) {
               const { path } = parseUrl(url)
-              let exp: SimpleExpressionNode
               if (path) {
+                let exp = ''
                 const existingImportsIndex = context.imports.findIndex(
                   i => i.path === path,
                 )
                 if (existingImportsIndex > -1) {
-                  exp = createSimpleExpression(
-                    `_imports_${existingImportsIndex}`,
-                    false,
-                    attr.loc,
-                    ConstantTypes.CAN_STRINGIFY,
-                  )
+                  exp = `_imports_${existingImportsIndex}`
                 } else {
-                  exp = createSimpleExpression(
-                    `_imports_${context.imports.length}`,
-                    false,
-                    attr.loc,
-                    ConstantTypes.CAN_STRINGIFY,
-                  )
-                  context.imports.push({ exp, path })
+                  exp = `_imports_${context.imports.length}`
+                  context.imports.push({
+                    exp: createSimpleExpression(
+                      exp,
+                      false,
+                      attr.loc,
+                      ConstantTypes.CAN_STRINGIFY,
+                    ),
+                    path,
+                  })
                 }
-                compoundExpression.children.push(exp)
+                content += exp
               }
             } else {
-              const exp = createSimpleExpression(
-                `"${url}"`,
-                false,
-                attr.loc,
-                ConstantTypes.CAN_STRINGIFY,
-              )
-              compoundExpression.children.push(exp)
+              content += `"${url}"`
             }
             const isNotLast = imageCandidates.length - 1 > index
-            if (descriptor && isNotLast) {
-              compoundExpression.children.push(` + ' ${descriptor}, ' + `)
-            } else if (descriptor) {
-              compoundExpression.children.push(` + ' ${descriptor}'`)
+            if (descriptor) {
+              content += ` + ' ${descriptor}${isNotLast ? ', ' : ''}'${
+                isNotLast ? ' + ' : ''
+              }`
             } else if (isNotLast) {
-              compoundExpression.children.push(` + ', ' + `)
+              content += ` + ', ' + `
             }
           })
 
-          let exp: ExpressionNode = compoundExpression
+          let exp = createSimpleExpression(
+            content,
+            false,
+            attr.loc,
+            ConstantTypes.CAN_STRINGIFY,
+          )
           if (context.hoistStatic) {
-            exp = context.hoist(compoundExpression)
+            exp = context.hoist(exp)
             exp.constType = ConstantTypes.CAN_STRINGIFY
           }
 

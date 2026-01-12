@@ -59,6 +59,7 @@ export function processIf(
   } else {
     // check the adjacent v-if
     const siblingIf = getSiblingIf(context, true)
+    context.dynamic.ifBranch = true
 
     const siblings = context.parent && context.parent.dynamic.children
     let lastIfNode
@@ -118,7 +119,9 @@ export function processIf(
         id: -1,
         condition: dir.exp!,
         positive: branch,
-        once: context.inVOnce,
+        once:
+          context.inVOnce ||
+          isStaticExpression(dir.exp!, context.options.bindingMetadata),
       }
     }
 

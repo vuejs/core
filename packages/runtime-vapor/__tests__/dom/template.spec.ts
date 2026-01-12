@@ -20,8 +20,8 @@ describe('api: template', () => {
 
   test('nthChild', () => {
     const t = template('<div><span><b>nested</b></span><p></p></div>')
-    const root = t()
-    const span = nthChild(root, 0)
+    const root = t() as ParentNode
+    const span = nthChild(root, 0) as ParentNode
     const b = nthChild(span, 0)
     const p = nthChild(root, 1)
     expect(span).toBe(root.firstChild)
@@ -31,7 +31,7 @@ describe('api: template', () => {
 
   test('next', () => {
     const t = template('<div><span></span><b></b><p></p></div>')
-    const root = t()
+    const root = t() as ParentNode
     const span = child(root as ParentNode)
     const b = next(span)
 
@@ -39,5 +39,26 @@ describe('api: template', () => {
     expect(b).toBe(root.childNodes[1])
     expect(nthChild(root, 2)).toBe(root.childNodes[2])
     expect(next(b)).toBe(root.childNodes[2])
+  })
+
+  test('attribute quote omission', () => {
+    {
+      const t = template('<div id=foo class=bar alt=`<="foo></div>')
+      const root = t() as HTMLElement
+
+      expect(root.attributes).toHaveLength(3)
+      expect(root.getAttribute('id')).toBe('foo')
+      expect(root.getAttribute('class')).toBe('bar')
+      expect(root.getAttribute('alt')).toBe('`<="foo')
+    }
+
+    {
+      const t = template('<div id="foo>bar"class="has whitespace"></div>')
+      const root = t() as HTMLElement
+
+      expect(root.attributes).toHaveLength(2)
+      expect(root.getAttribute('id')).toBe('foo>bar')
+      expect(root.getAttribute('class')).toBe('has whitespace')
+    }
   })
 })

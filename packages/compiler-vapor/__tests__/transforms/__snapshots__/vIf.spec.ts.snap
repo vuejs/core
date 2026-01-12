@@ -1,13 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-if > basic v-if 1`] = `
-"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div> ", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
-    const x2 = _child(n2)
+    const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_ctx.msg)))
     return n2
   })
@@ -16,13 +16,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > comment between branches 1`] = `
-"import { createIf as _createIf, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+"import { createIf as _createIf, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
 const t1 = _template("<!--foo-->")
-const t2 = _template("<p></p>")
+const t2 = _template("<p>")
 const t3 = _template("<!--bar-->")
 const t4 = _template("fine")
-const t5 = _template("<div> </div>")
+const t5 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
@@ -38,15 +38,28 @@ export function render(_ctx) {
     return [n10, n11]
   }))
   const n13 = t5()
-  const x13 = _child(n13)
+  const x13 = _txt(n13)
   _renderEffect(() => _setText(x13, _toDisplayString(_ctx.text)))
   return [n0, n13]
 }"
 `;
 
+exports[`compiler: v-if > component v-if 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf } from 'vue';
+
+export function render(_ctx) {
+  const _component_Component = _resolveComponent("Component")
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = _createComponentWithFallback(_component_Component, null, null, true)
+    return n2
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: v-if > dedupe same template 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>hello</div>")
+const t0 = _template("<div>hello")
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
@@ -61,18 +74,134 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-if > multiple v-if at root 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>foo")
+const t1 = _template("<div>bar")
+const t2 = _template("<div>baz")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.foo), () => {
+    const n2 = t0()
+    return n2
+  }, () => _createIf(() => (_ctx.bar), () => {
+    const n4 = t1()
+    return n4
+  }))
+  const n6 = _createIf(() => (_ctx.baz), () => {
+    const n8 = t2()
+    return n8
+  })
+  return [n0, n6]
+}"
+`;
+
+exports[`compiler: v-if > template v-if (multiple element) 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>hi")
+const t1 = _template("<div>ho")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.foo), () => {
+    const n2 = t0()
+    const n3 = t1()
+    return [n2, n3]
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > template v-if (single element) 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>hi", true)
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.foo), () => {
+    const n2 = t0()
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > template v-if (text) 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("hello")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.foo), () => {
+    const n2 = t0()
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > template v-if (with v-for inside) 1`] = `
+"import { createFor as _createFor, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.foo), () => {
+    const n2 = _createFor(() => (_ctx.list), (_for_item0) => {
+      const n4 = t0()
+      return n4
+    })
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > template v-if (with v-for on same element) 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.arr.length > 0), () => {
+    const n2 = _createFor(() => (_ctx.arr), (_for_item0, _for_key0) => {
+      const n4 = t0()
+      const x4 = _txt(n4)
+      _renderEffect(() => _setText(x4, "item: " + _toDisplayString(_for_item0.value)))
+      return n4
+    }, (item, index) => (index))
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > template v-if + normal v-else 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>hi")
+const t1 = _template("<div>ho")
+const t2 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.foo), () => {
+    const n2 = t0()
+    const n3 = t1()
+    return [n2, n3]
+  }, () => {
+    const n5 = t2()
+    return n5
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: v-if > template v-if 1`] = `
-"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>")
 const t1 = _template("hello")
-const t2 = _template("<p> </p>", true)
+const t2 = _template("<p> ")
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     const n3 = t1()
     const n4 = t2()
-    const x4 = _child(n4)
+    const x4 = _txt(n4)
     _renderEffect(() => _setText(x4, _toDisplayString(_ctx.msg)))
     return [n2, n3, n4]
   })
@@ -82,8 +211,8 @@ export function render(_ctx) {
 
 exports[`compiler: v-if > v-if + v-else 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-const t1 = _template("<p></p>")
+const t0 = _template("<div>", true)
+const t1 = _template("<p>", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
@@ -99,9 +228,9 @@ export function render(_ctx) {
 
 exports[`compiler: v-if > v-if + v-else-if + v-else 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-const t1 = _template("<p></p>")
-const t2 = _template("fine")
+const t0 = _template("<div>", true)
+const t1 = _template("<p>", true)
+const t2 = _template("fine", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
@@ -110,18 +239,21 @@ export function render(_ctx) {
   }, () => _createIf(() => (_ctx.orNot), () => {
     const n4 = t1()
     return n4
-  }, () => {
-    const n7 = t2()
+  }, () => _createIf(() => (false), () => {
+    const n7 = t1()
     return n7
-  }))
+  }, () => {
+    const n10 = t2()
+    return n10
+  }, true)))
   return n0
 }"
 `;
 
 exports[`compiler: v-if > v-if + v-else-if 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-const t1 = _template("<p></p>")
+const t0 = _template("<div>", true)
+const t1 = _template("<p>", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
@@ -137,19 +269,19 @@ export function render(_ctx) {
 
 exports[`compiler: v-if > v-if + v-if / v-else[-if] 1`] = `
 "import { setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<span>foo</span>")
-const t1 = _template("<span>bar</span>")
-const t2 = _template("<span>baz</span>")
-const t3 = _template("<div></div>", true)
+const t0 = _template("<span>foo")
+const t1 = _template("<span>bar")
+const t2 = _template("<span>baz")
+const t3 = _template("<div>", true)
 
 export function render(_ctx) {
   const n8 = t3()
-  _setInsertionState(n8)
+  _setInsertionState(n8, null)
   const n0 = _createIf(() => (_ctx.foo), () => {
     const n2 = t0()
     return n2
   })
-  _setInsertionState(n8)
+  _setInsertionState(n8, null, true)
   const n3 = _createIf(() => (_ctx.bar), () => {
     const n5 = t1()
     return n5
@@ -158,5 +290,53 @@ export function render(_ctx) {
     return n7
   })
   return n8
+}"
+`;
+
+exports[`compiler: v-if > v-if and extra at root 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>foo")
+const t1 = _template("<div>bar")
+const t2 = _template("<div>baz")
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.foo), () => {
+    const n2 = t0()
+    return n2
+  }, () => _createIf(() => (_ctx.bar), () => {
+    const n4 = t1()
+    return n4
+  }))
+  const n6 = t2()
+  return [n0, n6]
+}"
+`;
+
+exports[`compiler: v-if > v-if with v-once 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div> ", true)
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    const x2 = _txt(n2)
+    _setText(x2, _toDisplayString(_ctx.msg))
+    return n2
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > v-on with v-if 1`] = `
+"import { setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<button>w/ v-if", true)
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (true), () => {
+    const n2 = t0()
+    _renderEffect(() => _setDynamicEvents(n2, { click: _ctx.clickEvent }))
+    return n2
+  }, null, true)
+  return n0
 }"
 `;

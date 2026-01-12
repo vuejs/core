@@ -145,8 +145,7 @@ function createConfig(format, output, plugins = []) {
   const isServerRenderer = name === 'server-renderer'
   const isCJSBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
-  const isCompatPackage =
-    pkg.name === '@vue/compat' || pkg.name === '@vue/compat-canary'
+  const isCompatPackage = pkg.name === '@vue/compat'
   const isCompatBuild = !!packageOptions.compat
   const isBrowserBuild =
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
@@ -316,7 +315,7 @@ function createConfig(format, output, plugins = []) {
       '@babel/parser',
       '@babel/types',
       'estree-walker',
-      'entities/lib/decode.js',
+      'entities/decode',
     ]
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
@@ -344,10 +343,7 @@ function createConfig(format, output, plugins = []) {
     // requires a ton of template engines which should be ignored.
     /** @type {ReadonlyArray<string>} */
     let cjsIgnores = []
-    if (
-      pkg.name === '@vue/compiler-sfc' ||
-      pkg.name === '@vue/compiler-sfc-canary'
-    ) {
+    if (pkg.name === '@vue/compiler-sfc') {
       cjsIgnores = [
         ...Object.keys(consolidatePkg.devDependencies),
         'vm',

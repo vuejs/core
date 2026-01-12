@@ -135,7 +135,13 @@ describe('compiler: v-once', () => {
     })
   })
 
-  test.todo('on slot outlet')
+  test('on slot outlet', () => {
+    const { ir, code } = compileWithOnce(`<div><slot v-once /></div>`)
+    expect(code).toMatchSnapshot()
+
+    expect(ir.block.effect).lengthOf(0)
+    expect(ir.block.operation).lengthOf(0)
+  })
 
   test('inside v-once', () => {
     const { ir, code } = compileWithOnce(`<div v-once><div v-once/></div>`)
@@ -145,8 +151,6 @@ describe('compiler: v-once', () => {
     expect(ir.block.effect).lengthOf(0)
     expect(ir.block.operation).lengthOf(0)
   })
-
-  test.todo('with hoistStatic: true')
 
   test('with v-if', () => {
     const { ir, code } = compileWithOnce(`<div v-if="expr" v-once />`)

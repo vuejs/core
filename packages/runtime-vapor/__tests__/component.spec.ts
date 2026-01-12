@@ -8,6 +8,7 @@ import {
   onUpdated,
   provide,
   ref,
+  useAttrs,
   watch,
   watchEffect,
 } from '@vue/runtime-dom'
@@ -15,6 +16,7 @@ import {
   createComponent,
   createIf,
   createTextNode,
+  defineVaporComponent,
   renderEffect,
   setInsertionState,
   template,
@@ -315,6 +317,143 @@ describe('component', () => {
     expect(getEffectsCount(i.scope)).toBe(0)
   })
 
+  it('work with v-once + props', () => {
+    const Child = defineVaporComponent({
+      props: {
+        count: Number,
+      },
+      setup(props) {
+        const n0 = template(' ')() as any
+        renderEffect(() => setText(n0, String(props.count)))
+        return n0
+      },
+    })
+
+    const count = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => count.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('0')
+
+    count.value++
+    expect(html()).toBe('0')
+  })
+
+  it('work with v-once + attrs', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        const attrs = useAttrs()
+        const n0 = template(' ')() as any
+        renderEffect(() => setText(n0, attrs.count as string))
+        return n0
+      },
+    })
+
+    const count = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => count.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('0')
+
+    count.value++
+    expect(html()).toBe('0')
+  })
+
+  it('v-once props should be frozen and not update when parent changes', async () => {
+    const localCount = ref(0)
+    const Child = defineVaporComponent({
+      props: {
+        count: Number,
+      },
+      setup(props) {
+        const n0 = template('<div></div>')() as any
+        renderEffect(() =>
+          setElementText(n0, `${localCount.value} - ${props.count}`),
+        )
+        return n0
+      },
+    })
+
+    const parentCount = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => parentCount.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    parentCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    localCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>1 - 0</div>')
+  })
+
+  it('v-once attrs should be frozen and not update when parent changes', async () => {
+    const localCount = ref(0)
+    const Child = defineVaporComponent({
+      inheritAttrs: false,
+      setup() {
+        const attrs = useAttrs()
+        const n0 = template('<div></div>')() as any
+        renderEffect(() =>
+          setElementText(n0, `${localCount.value} - ${attrs.count}`),
+        )
+        return n0
+      },
+    })
+
+    const parentCount = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => parentCount.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    parentCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    localCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>1 - 0</div>')
+  })
+
   test('should mount component only with template in production mode', () => {
     __DEV__ = false
     const { component: Child } = define({
@@ -334,6 +473,7 @@ describe('component', () => {
   })
 
   it('warn if functional vapor component not return a block', () => {
+    // @ts-expect-error
     define(() => {
       return () => {}
     }).render()
@@ -352,6 +492,22 @@ describe('component', () => {
 
     expect(
       'Vapor component setup() returned non-block value, and has no render function',
+    ).toHaveBeenWarned()
+  })
+
+  it('warn non-existent property access', () => {
+    define({
+      setup() {
+        return {}
+      },
+      render(ctx: any) {
+        ctx.foo
+        return []
+      },
+    }).render()
+
+    expect(
+      'Property "foo" was accessed during render but is not defined on instance.',
     ).toHaveBeenWarned()
   })
 })

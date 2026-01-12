@@ -1,11 +1,14 @@
-import { type Block, type BlockFn, DynamicFragment, insert } from './block'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import { type Block, type BlockFn, insert } from './block'
+import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import { renderEffect } from './renderEffect'
+import { DynamicFragment } from './fragment'
+import { createComment, createTextNode } from './dom/node'
 
 export function createIf(
   condition: () => any,
@@ -15,22 +18,28 @@ export function createIf(
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  if (isHydrating) {
-    locateHydrationNode()
-  } else {
-    resetInsertionState()
-  }
+  const _isLastInsertion = isLastInsertion
+  if (!isHydrating) resetInsertionState()
 
   let frag: Block
   if (once) {
-    frag = condition() ? b1() : b2 ? b2() : []
+    frag = condition()
+      ? b1()
+      : b2
+        ? b2()
+        : [__DEV__ ? createComment('if') : createTextNode()]
   } else {
-    frag = __DEV__ ? new DynamicFragment('if') : new DynamicFragment()
+    frag =
+      isHydrating || __DEV__ ? new DynamicFragment('if') : new DynamicFragment()
     renderEffect(() => (frag as DynamicFragment).update(condition() ? b1 : b2))
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(frag, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+  } else {
+    if (_isLastInsertion) {
+      advanceHydrationNode(_insertionParent!)
+    }
   }
 
   return frag

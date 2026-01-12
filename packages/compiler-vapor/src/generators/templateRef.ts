@@ -10,13 +10,15 @@ export function genSetTemplateRef(
   oper: SetTemplateRefIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
+  const [refValue, refKey] = genRefValue(oper.value, context)
   return [
     NEWLINE,
     ...genCall(
       setTemplateRefIdent, // will be generated in root scope
       `n${oper.element}`,
-      genRefValue(oper.value, context),
+      refValue,
       oper.refFor && 'true',
+      refKey,
     ),
   ]
 }
@@ -32,8 +34,8 @@ function genRefValue(value: SimpleExpressionNode, context: CodegenContext) {
       binding === BindingTypes.SETUP_REF ||
       binding === BindingTypes.SETUP_MAYBE_REF
     ) {
-      return [value.content]
+      return [[value.content], JSON.stringify(value.content)]
     }
   }
-  return genExpression(value, context)
+  return [genExpression(value, context)]
 }

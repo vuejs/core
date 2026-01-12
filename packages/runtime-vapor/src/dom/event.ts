@@ -1,5 +1,6 @@
 import { onEffectCleanup } from '@vue/reactivity'
 import { isArray } from '@vue/shared'
+import { ErrorCodes, callWithAsyncErrorHandling, currentInstance } from 'vue'
 
 export function addEventListener(
   el: Element,
@@ -14,14 +15,19 @@ export function addEventListener(
 export function on(
   el: Element,
   event: string,
-  handler: (e: Event) => any,
+  handler: (e: Event) => any | ((e: Event) => any)[],
   options: AddEventListenerOptions & { effect?: boolean } = {},
 ): void {
-  addEventListener(el, event, handler, options)
-  if (options.effect) {
-    onEffectCleanup(() => {
-      el.removeEventListener(event, handler, options)
-    })
+  if (isArray(handler)) {
+    handler.forEach(fn => on(el, event, fn, options))
+  } else {
+    if (!handler) return
+    addEventListener(el, event, handler, options)
+    if (options.effect) {
+      onEffectCleanup(() => {
+        el.removeEventListener(event, handler, options)
+      })
+    }
   }
 }
 
@@ -50,7 +56,7 @@ type DelegatedHandler = {
 /**
  * Event delegation borrowed from solid
  */
-const delegatedEvents = Object.create(null)
+const delegatedEvents = /*@__PURE__*/ Object.create(null)
 
 export const delegateEvents = (...names: string[]): void => {
   for (const name of names) {
@@ -106,4 +112,17 @@ export function setDynamicEvents(
   for (const name in events) {
     on(el, name, events[name], { effect: true })
   }
+}
+
+export function createInvoker(
+  handler: (...args: any[]) => any,
+): (...args: any[]) => any {
+  const i = currentInstance
+  return (...args: any[]) =>
+    callWithAsyncErrorHandling(
+      handler,
+      i,
+      ErrorCodes.NATIVE_EVENT_HANDLER,
+      args,
+    )
 }

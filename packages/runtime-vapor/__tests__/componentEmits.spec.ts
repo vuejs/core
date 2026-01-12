@@ -87,7 +87,6 @@ describe('component: emit', () => {
     expect(fooSpy).toHaveBeenCalledTimes(1)
   })
 
-  // #3527
   test('trigger mixed case handlers', () => {
     const { render } = define({
       setup(_, { emit }) {
@@ -423,5 +422,26 @@ describe('component: emit', () => {
     app.unmount()
     await nextTick()
     expect(fn).not.toHaveBeenCalled()
+  })
+
+  test('should not execute handler during lookup', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('click')
+        return []
+      },
+    })
+
+    const handler = vi.fn()
+    const props = {
+      $: [
+        () => ({
+          onClick: handler,
+        }),
+      ],
+    }
+    render(props as any)
+
+    expect(handler).toHaveBeenCalledTimes(1)
   })
 })
