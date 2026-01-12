@@ -1,6 +1,6 @@
 {
   "name": "@vue/reactivity",
-  "version": "3.6.0-beta.2",
+  "version": "3.6.0-beta.3",
   "description": "@vue/reactivity",
   "main": "index.js",
   "module": "dist/reactivity.esm-bundler.js",
