@@ -48,7 +48,6 @@ export interface KeepAliveInstance extends VaporComponentInstance {
       comp: VaporComponent,
     ) => VaporComponentInstance | VaporFragment | undefined
     getStorageContainer: () => ParentNode
-    onAsyncResolve: (asyncWrapper: VaporComponentInstance) => void
   }
 }
 
@@ -90,13 +89,6 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       deactivate: instance => {
         current = undefined
         deactivate(instance, storageContainer)
-      },
-      // called when async component resolves to evaluate caching
-      onAsyncResolve: (asyncWrapper: VaporComponentInstance) => {
-        if (shouldCache(asyncWrapper, props, false)) {
-          asyncWrapper.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-          innerCacheBlock(asyncWrapper.type, asyncWrapper)
-        }
       },
     }
 
@@ -250,11 +242,26 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       }
     }
 
+    // for unresolved async wrapper, we need to watch the __asyncResolved
+    // property and cache the resolved component once it resolves.
+    const watchAsyncResolve = (instance: VaporComponentInstance) => {
+      if (!instance.type.__asyncResolved) {
+        watch(
+          () => instance.type.__asyncResolved,
+          resolved => {
+            if (resolved) cacheBlock()
+          },
+          { once: true },
+        )
+      }
+    }
+
     // process shapeFlag
     if (isVaporComponent(children)) {
       children.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       if (isAsyncWrapper(children)) {
         injectKeepAliveHooks(children.block as DynamicFragment)
+        watchAsyncResolve(children)
       }
     } else if (isInteropFragment(children)) {
       children.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
@@ -263,6 +270,7 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       injectKeepAliveHooks(children)
       if (isVaporComponent(children.nodes) && isAsyncWrapper(children.nodes)) {
         injectKeepAliveHooks(children.nodes.block as DynamicFragment)
+        watchAsyncResolve(children.nodes)
       }
     }
 
@@ -286,7 +294,7 @@ const shouldCache = (
   ) as GenericComponent & AsyncComponentInternalOptions
 
   // for unresolved async components, don't cache yet
-  // caching will be done in onAsyncResolve after the component resolves
+  // caching will be handled by the watcher in watchAsyncResolve
   if (isAsync && !type.__asyncResolved) {
     return false
   }
