@@ -12,6 +12,7 @@ import {
   type GenericAppContext,
   type GenericComponentInstance,
   type LifecycleHook,
+  NULL_DYNAMIC_COMPONENT,
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
   type ShallowUnwrapRef,
@@ -99,7 +100,7 @@ import {
   locateNextNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { _next, createElement } from './dom/node'
+import { _next, createComment, createElement, createTextNode } from './dom/node'
 import {
   type TeleportFragment,
   isTeleportFragment,
@@ -292,6 +293,7 @@ export function createComponent(
       currentInstance as any,
       rawProps,
       rawSlots,
+      isSingleRoot,
     )
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
@@ -760,13 +762,19 @@ export function isVaporComponent(
  * element if the resolution fails.
  */
 export function createComponentWithFallback(
-  comp: VaporComponent | string,
+  comp: VaporComponent | typeof NULL_DYNAMIC_COMPONENT | string,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
   once?: boolean,
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
+  if (comp === NULL_DYNAMIC_COMPONENT) {
+    return (__DEV__
+      ? createComment('ndc')
+      : createTextNode('')) as any as HTMLElement
+  }
+
   if (!isString(comp)) {
     return createComponent(
       comp,
