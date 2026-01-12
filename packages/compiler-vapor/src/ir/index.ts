@@ -29,7 +29,6 @@ export enum IRNodeTypes {
   SLOT_OUTLET_NODE,
 
   DIRECTIVE,
-  DECLARE_OLD_REF, // consider make it more general
 
   IF,
   FOR,
@@ -209,11 +208,6 @@ export interface CreateComponentIRNode extends BaseIRNode {
   last?: boolean
 }
 
-export interface DeclareOldRefIRNode extends BaseIRNode {
-  type: IRNodeTypes.DECLARE_OLD_REF
-  id: number
-}
-
 export interface SlotOutletIRNode extends BaseIRNode {
   type: IRNodeTypes.SLOT_OUTLET_NODE
   id: number
@@ -248,7 +242,6 @@ export type OperationNode =
   | IfIRNode
   | ForIRNode
   | CreateComponentIRNode
-  | DeclareOldRefIRNode
   | SlotOutletIRNode
   | GetTextChildIRNode
 

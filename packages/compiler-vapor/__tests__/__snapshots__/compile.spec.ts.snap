@@ -385,14 +385,11 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n1 = t0()
   const n3 = t0()
   const n4 = t0()
-  let r1
-  let r3
-  let r4
   _renderEffect(() => {
     const _bar = _ctx.bar
-    r1 = _setTemplateRef(n1, _bar, r1)
-    r3 = _setTemplateRef(n3, _bar, r3)
-    r4 = _setTemplateRef(n4, _bar, r4)
+    _setTemplateRef(n1, _bar)
+    _setTemplateRef(n3, _bar)
+    _setTemplateRef(n4, _bar)
   })
   return [n1, n3, n4]
 }"
