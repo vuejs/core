@@ -486,6 +486,184 @@ describe('VaporKeepAlive', () => {
     assertHookCalls(twoHooks, [1, 1, 4, 4, 0]) // should remain inactive
   })
 
+  test('should cache components in nested DynamicFragment (v-if > dynamic component)', async () => {
+    const outerIf = ref(true)
+    const viewRef = ref('one')
+
+    const { html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => outerIf.value,
+              () => createDynamicComponent(() => views[viewRef.value]),
+            ),
+        })
+      },
+    }).render()
+
+    expect(html()).toBe(`<div>one</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 1, 0, 0])
+    assertHookCalls(twoHooks, [0, 0, 0, 0, 0])
+
+    viewRef.value = 'two'
+    await nextTick()
+    expect(html()).toBe(`<div>two</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+    assertHookCalls(twoHooks, [1, 1, 1, 0, 0])
+
+    viewRef.value = 'one'
+    await nextTick()
+    expect(html()).toBe(`<div>one</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 1, 0])
+    assertHookCalls(twoHooks, [1, 1, 1, 1, 0])
+
+    // Toggle v-if off
+    outerIf.value = false
+    await nextTick()
+    expect(html()).toBe(`<!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 2, 0])
+    assertHookCalls(twoHooks, [1, 1, 1, 1, 0])
+
+    // Toggle v-if back on
+    outerIf.value = true
+    await nextTick()
+    expect(html()).toBe(`<div>one</div><!--dynamic-component--><!--if-->`)
+    // one should be reactivated from cache
+    assertHookCalls(oneHooks, [1, 1, 3, 2, 0])
+    assertHookCalls(twoHooks, [1, 1, 1, 1, 0])
+  })
+
+  test('should cache async components in nested v-if', async () => {
+    const asyncOneHooks = {
+      mounted: vi.fn(),
+      activated: vi.fn(),
+      deactivated: vi.fn(),
+      unmounted: vi.fn(),
+    }
+
+    const AsyncOne = defineVaporAsyncComponent({
+      loader: () =>
+        Promise.resolve(
+          defineVaporComponent({
+            name: 'AsyncOne',
+            setup() {
+              onMounted(asyncOneHooks.mounted)
+              onActivated(asyncOneHooks.activated)
+              onDeactivated(asyncOneHooks.deactivated)
+              onUnmounted(asyncOneHooks.unmounted)
+              return template('<div>async one</div>')()
+            },
+          }),
+        ),
+    })
+
+    const outerIf = ref(true)
+
+    const { html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => outerIf.value,
+              () => createComponent(AsyncOne),
+            ),
+        })
+      },
+    }).render()
+
+    await timeout()
+    await nextTick()
+    expect(html()).toBe('<div>async one</div><!--async component--><!--if-->')
+    expect(asyncOneHooks.mounted).toHaveBeenCalledTimes(1)
+    expect(asyncOneHooks.activated).toHaveBeenCalledTimes(1)
+
+    // Toggle v-if off - should deactivate, not unmount
+    outerIf.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+    expect(asyncOneHooks.deactivated).toHaveBeenCalledTimes(1)
+    expect(asyncOneHooks.unmounted).toHaveBeenCalledTimes(0)
+
+    // Toggle back on - should reactivate from cache
+    outerIf.value = true
+    await nextTick()
+    expect(html()).toBe('<div>async one</div><!--async component--><!--if-->')
+    expect(asyncOneHooks.activated).toHaveBeenCalledTimes(2)
+    expect(asyncOneHooks.mounted).toHaveBeenCalledTimes(1) // not re-mounted
+  })
+
+  test('should cache components in deeply nested v-if (v-if > v-if > component)', async () => {
+    const compHooks = {
+      mounted: vi.fn(),
+      activated: vi.fn(),
+      deactivated: vi.fn(),
+      unmounted: vi.fn(),
+    }
+
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      setup() {
+        onMounted(compHooks.mounted)
+        onActivated(compHooks.activated)
+        onDeactivated(compHooks.deactivated)
+        onUnmounted(compHooks.unmounted)
+        return template('<div>comp</div>')()
+      },
+    })
+
+    const outerIf = ref(true)
+    const innerIf = ref(true)
+
+    const { html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => outerIf.value,
+              () =>
+                createIf(
+                  () => innerIf.value,
+                  () => createComponent(Comp),
+                ),
+            ),
+        })
+      },
+    }).render()
+
+    expect(html()).toBe('<div>comp</div><!--if--><!--if-->')
+    expect(compHooks.mounted).toHaveBeenCalledTimes(1)
+    expect(compHooks.activated).toHaveBeenCalledTimes(1)
+
+    // Toggle inner v-if off
+    innerIf.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if--><!--if-->')
+    expect(compHooks.deactivated).toHaveBeenCalledTimes(1)
+    expect(compHooks.unmounted).toHaveBeenCalledTimes(0)
+
+    // Toggle inner v-if back on - should reactivate
+    innerIf.value = true
+    await nextTick()
+    expect(html()).toBe('<div>comp</div><!--if--><!--if-->')
+    expect(compHooks.activated).toHaveBeenCalledTimes(2)
+    expect(compHooks.mounted).toHaveBeenCalledTimes(1)
+
+    // Toggle outer v-if off
+    outerIf.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+    expect(compHooks.deactivated).toHaveBeenCalledTimes(2)
+    expect(compHooks.unmounted).toHaveBeenCalledTimes(0)
+
+    // Toggle outer v-if back on - should reactivate
+    outerIf.value = true
+    await nextTick()
+    expect(html()).toBe('<div>comp</div><!--if--><!--if-->')
+    expect(compHooks.activated).toHaveBeenCalledTimes(3)
+    expect(compHooks.mounted).toHaveBeenCalledTimes(1)
+  })
+
   async function assertNameMatch(props: LooseRawProps) {
     const outerRef = ref(true)
     const viewRef = ref('one')

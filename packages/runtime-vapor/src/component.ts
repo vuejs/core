@@ -922,13 +922,15 @@ export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
 ): void {
+  // Skip unmount for kept-alive components - deactivate if called from remove()
   if (
-    parentNode &&
+    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.parent &&
-    instance.parent.vapor &&
-    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    instance.parent.vapor
   ) {
-    ;(instance.parent as KeepAliveInstance)!.ctx.deactivate(instance)
+    if (parentNode) {
+      ;(instance.parent as KeepAliveInstance)!.ctx.deactivate(instance)
+    }
     return
   }
 

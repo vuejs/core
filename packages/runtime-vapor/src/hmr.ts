@@ -34,7 +34,8 @@ export function hmrReload(
   instance: VaporComponentInstance,
   newComp: VaporComponent,
 ): void {
-  // if parent is KeepAlive, we need to rerender it
+  // If parent is KeepAlive, rerender it so new component goes through
+  // KeepAlive's slot rendering flow to receive activated hooks properly
   if (instance.parent && isKeepAlive(instance.parent)) {
     instance.parent.hmrRerender!()
     return

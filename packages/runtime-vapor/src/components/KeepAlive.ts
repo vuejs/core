@@ -79,6 +79,22 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       ;(keepAliveInstance as any).__v_cache = cache
     }
 
+    // Clear cache and shapeFlags before HMR rerender so cached components
+    // can be properly unmounted
+    if (__DEV__) {
+      const rerender = keepAliveInstance.hmrRerender
+      keepAliveInstance.hmrRerender = () => {
+        cache.forEach(cached => resetCachedShapeFlag(cached))
+        cache.clear()
+        keys.clear()
+        keptAliveScopes.forEach(scope => scope.stop())
+        keptAliveScopes.clear()
+        storageContainer.innerHTML = ''
+        current = undefined
+        rerender!()
+      }
+    }
+
     keepAliveInstance.ctx = {
       getStorageContainer: () => storageContainer,
       getCachedComponent: comp => cache.get(comp),
@@ -230,14 +246,35 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
           }
         },
       )
-      ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() =>
-        processFragment(frag),
-      )
+      ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() => {
+        processFragment(frag)
+        // recursively inject hooks to nested DynamicFragments
+        // this handles cases like v-if > dynamic component
+        injectNestedHooks(frag.nodes)
+      })
       frag.getScope = key => {
         const scope = keptAliveScopes.get(key)
         if (scope) {
           keptAliveScopes.delete(key)
           return scope
+        }
+      }
+    }
+
+    // recursively inject KeepAlive hooks to nested DynamicFragments
+    const injectNestedHooks = (block: Block): void => {
+      if (isDynamicFragment(block)) {
+        // avoid injecting hooks multiple times
+        if (!block.getScope) {
+          injectKeepAliveHooks(block)
+        }
+        // continue checking the nodes inside
+        injectNestedHooks(block.nodes)
+      } else if (isVaporComponent(block)) {
+        // handle async wrapper containing DynamicFragment
+        if (isAsyncWrapper(block) && isDynamicFragment(block.block)) {
+          injectNestedHooks(block.block)
+          watchAsyncResolve(block)
         }
       }
     }
@@ -256,7 +293,7 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       }
     }
 
-    // process shapeFlag
+    // process shapeFlag and inject hooks
     if (isVaporComponent(children)) {
       children.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       if (isAsyncWrapper(children)) {
@@ -268,10 +305,8 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     } else if (isDynamicFragment(children)) {
       processFragment(children)
       injectKeepAliveHooks(children)
-      if (isVaporComponent(children.nodes) && isAsyncWrapper(children.nodes)) {
-        injectKeepAliveHooks(children.nodes.block as DynamicFragment)
-        watchAsyncResolve(children.nodes)
-      }
+      // also inject hooks to nested DynamicFragments
+      injectNestedHooks(children.nodes)
     }
 
     return children
