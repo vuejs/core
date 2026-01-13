@@ -133,6 +133,19 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     const cacheBlock = () => {
       // TODO suspense
       const block = keepAliveInstance.block!
+      // Skip caching during out-in transition leaving phase.
+      // The correct component will be cached after renderBranch completes
+      // via the Fragment's onUpdated hook.
+      if (isDynamicFragment(block)) {
+        const transition = block.$transition
+        if (
+          transition &&
+          transition.mode === 'out-in' &&
+          transition.state.isLeaving
+        ) {
+          return
+        }
+      }
       const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
       innerCacheBlock(
@@ -173,11 +186,12 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     const pruneCacheEntry = (key: CacheKey) => {
       const cached = cache.get(key)!
 
-      resetCachedShapeFlag(cached)
-
       // don't unmount if the instance is the current one
-      if (cached !== current) {
+      if (cached && (!current || cached !== current)) {
+        resetCachedShapeFlag(cached)
         remove(cached)
+      } else if (current) {
+        resetCachedShapeFlag(current)
       }
       cache.delete(key)
       keys.delete(key)
@@ -251,6 +265,13 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         // recursively inject hooks to nested DynamicFragments
         // this handles cases like v-if > dynamic component
         injectNestedHooks(frag.nodes)
+      })
+      // This ensures caching happens after renderBranch completes,
+      // since Vue's onUpdated fires before the deferred rendering finishes.
+      ;(frag.onUpdated || (frag.onUpdated = [])).push(() => {
+        if (frag.$transition && frag.$transition.mode === 'out-in') {
+          cacheBlock()
+        }
       })
       frag.getScope = key => {
         const scope = keptAliveScopes.get(key)
