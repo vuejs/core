@@ -262,8 +262,10 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       )
       ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() => {
         processFragment(frag)
-        // recursively inject hooks to nested DynamicFragments
-        // this handles cases like v-if > dynamic component
+        // recursively inject hooks to nested DynamicFragments.
+        // this is necessary for cases like v-if > dynamic component where
+        // v-if starts as false - the nested DynamicFragment doesn't exist
+        // during initial setup, so we must inject hooks when v-if becomes true.
         processChildren(frag.nodes)
       })
       // This ensures caching happens after renderBranch completes,

@@ -534,6 +534,63 @@ describe('VaporKeepAlive', () => {
     assertHookCalls(twoHooks, [1, 1, 1, 1, 0])
   })
 
+  test('should cache components in nested DynamicFragment with initial false v-if', async () => {
+    const outerIf = ref(false)
+    const viewRef = ref('one')
+
+    const { html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => outerIf.value,
+              () => createDynamicComponent(() => views[viewRef.value]),
+            ),
+        })
+      },
+    }).render()
+
+    // Initially v-if is false, nothing rendered
+    expect(html()).toBe(`<!--if-->`)
+    assertHookCalls(oneHooks, [0, 0, 0, 0, 0])
+    assertHookCalls(twoHooks, [0, 0, 0, 0, 0])
+
+    // Toggle v-if on - component should mount and activate
+    outerIf.value = true
+    await nextTick()
+    expect(html()).toBe(`<div>one</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 1, 0, 0])
+    assertHookCalls(twoHooks, [0, 0, 0, 0, 0])
+
+    // Switch to component two
+    viewRef.value = 'two'
+    await nextTick()
+    expect(html()).toBe(`<div>two</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+    assertHookCalls(twoHooks, [1, 1, 1, 0, 0])
+
+    // Switch back to one - should be reactivated from cache
+    viewRef.value = 'one'
+    await nextTick()
+    expect(html()).toBe(`<div>one</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 1, 0])
+    assertHookCalls(twoHooks, [1, 1, 1, 1, 0])
+
+    // Toggle v-if off
+    outerIf.value = false
+    await nextTick()
+    expect(html()).toBe(`<!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 2, 2, 0])
+    assertHookCalls(twoHooks, [1, 1, 1, 1, 0])
+
+    // Toggle v-if back on - should reactivate from cache
+    outerIf.value = true
+    await nextTick()
+    expect(html()).toBe(`<div>one</div><!--dynamic-component--><!--if-->`)
+    assertHookCalls(oneHooks, [1, 1, 3, 2, 0])
+    assertHookCalls(twoHooks, [1, 1, 1, 1, 0])
+  })
+
   test('should cache async components in nested v-if', async () => {
     const asyncOneHooks = {
       mounted: vi.fn(),
