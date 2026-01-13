@@ -43,6 +43,7 @@ export interface Ref<T = any, S = T> {
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isref}
  */
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
+/*@__NO_SIDE_EFFECTS__*/
 export function isRef(r: any): r is Ref {
   return r ? r[ReactiveFlags.IS_REF] === true : false
 }
@@ -93,6 +94,7 @@ export function shallowRef<T>(
     : ShallowRef<T>
   : ShallowRef<T>
 export function shallowRef<T = any>(): ShallowRef<T | undefined>
+/*@__NO_SIDE_EFFECTS__*/
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
@@ -338,6 +340,7 @@ export type ToRefs<T = any> = {
  * @param object - Reactive object to be made into an object of linked refs.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#torefs}
  */
+/*@__NO_SIDE_EFFECTS__*/
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
     warn(`toRefs() expects a reactive object but received a plain one.`)
@@ -474,6 +477,7 @@ export function toRef<T extends object, K extends keyof T>(
   key: K,
   defaultValue: T[K],
 ): ToRef<Exclude<T[K], undefined>>
+/*@__NO_SIDE_EFFECTS__*/
 export function toRef(
   source: Record<string, any> | MaybeRef,
   key?: string,
