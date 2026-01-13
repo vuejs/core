@@ -59,6 +59,7 @@ export function ref<T>(
   value: T,
 ): [T] extends [Ref] ? IfAny<T, Ref<T>, T> : Ref<UnwrapRef<T>, UnwrapRef<T> | T>
 export function ref<T = any>(): Ref<T | undefined>
+/*@__NO_SIDE_EFFECTS__*/
 export function ref(value?: unknown) {
   return createRef(value, false)
 }
