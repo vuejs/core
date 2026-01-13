@@ -264,7 +264,7 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         processFragment(frag)
         // recursively inject hooks to nested DynamicFragments
         // this handles cases like v-if > dynamic component
-        injectNestedHooks(frag.nodes)
+        processChildren(frag.nodes)
       })
       // This ensures caching happens after renderBranch completes,
       // since Vue's onUpdated fires before the deferred rendering finishes.
@@ -278,24 +278,6 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         if (scope) {
           keptAliveScopes.delete(key)
           return scope
-        }
-      }
-    }
-
-    // recursively inject KeepAlive hooks to nested DynamicFragments
-    const injectNestedHooks = (block: Block): void => {
-      if (isDynamicFragment(block)) {
-        // avoid injecting hooks multiple times
-        if (!block.getScope) {
-          injectKeepAliveHooks(block)
-        }
-        // continue checking the nodes inside
-        injectNestedHooks(block.nodes)
-      } else if (isVaporComponent(block)) {
-        // handle async wrapper containing DynamicFragment
-        if (isAsyncWrapper(block) && isDynamicFragment(block.block)) {
-          injectNestedHooks(block.block)
-          watchAsyncResolve(block)
         }
       }
     }
@@ -314,20 +296,35 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       }
     }
 
-    // process shapeFlag and inject hooks
+    // recursively inject hooks to nested DynamicFragments and handle AsyncWrapper
+    const processChildren = (block: Block): void => {
+      // handle async wrapper
+      if (isVaporComponent(block) && isAsyncWrapper(block)) {
+        watchAsyncResolve(block)
+        // block.block is a DynamicFragment
+        processChildren(block.block)
+      } else if (isDynamicFragment(block)) {
+        // avoid injecting hooks multiple times
+        if (!block.getScope) {
+          // DynamicFragment triggers processFragment via onBeforeMount hook,
+          // which correctly handles shapeFlag marking for inner components.
+          injectKeepAliveHooks(block)
+          if (block.nodes) processFragment(block)
+        }
+        processChildren(block.nodes)
+      }
+    }
+
     if (isVaporComponent(children)) {
       children.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-      if (isAsyncWrapper(children)) {
-        injectKeepAliveHooks(children.block as DynamicFragment)
-        watchAsyncResolve(children)
+      processChildren(children)
+    } else if (isFragment(children)) {
+      // vdom interop
+      if (children.vnode) {
+        children.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+      } else {
+        processChildren(children)
       }
-    } else if (isInteropFragment(children)) {
-      children.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    } else if (isDynamicFragment(children)) {
-      processFragment(children)
-      injectKeepAliveHooks(children)
-      // also inject hooks to nested DynamicFragments
-      injectNestedHooks(children.nodes)
     }
 
     return children
