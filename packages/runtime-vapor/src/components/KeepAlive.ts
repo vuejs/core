@@ -28,13 +28,27 @@ import {
 import { defineVaporComponent } from '../apiDefineComponent'
 import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
 import { createElement } from '../dom/node'
-import {
-  type DynamicFragment,
-  type VaporFragment,
-  isDynamicFragment,
-  isFragment,
-} from '../fragment'
+import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
 import type { EffectScope } from '@vue/reactivity'
+
+export interface KeepAliveContext {
+  processShapeFlag(block: Block): boolean
+  cacheBlock(): void
+  cacheScope(key: any, scope: EffectScope): void
+  getScope(key: any): EffectScope | undefined
+}
+
+export let currentKeepAliveCtx: KeepAliveContext | null = null
+
+export function setCurrentKeepAliveCtx(
+  ctx: KeepAliveContext | null,
+): KeepAliveContext | null {
+  try {
+    return currentKeepAliveCtx
+  } finally {
+    currentKeepAliveCtx = ctx
+  }
+}
 
 export interface KeepAliveInstance extends VaporComponentInstance {
   ctx: {
@@ -154,8 +168,8 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       )
     }
 
-    const processFragment = (frag: DynamicFragment) => {
-      const [innerBlock, interop] = getInnerBlock(frag.nodes)
+    const processShapeFlag = (block: Block): boolean => {
+      const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
 
       if (interop) {
@@ -237,7 +251,25 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       keptAliveScopes.clear()
     })
 
+    const keepAliveCtx: KeepAliveContext = {
+      processShapeFlag,
+      cacheBlock,
+      cacheScope(key, scope) {
+        keptAliveScopes.set(key, scope)
+      },
+      getScope(key) {
+        const scope = keptAliveScopes.get(key)
+        if (scope) {
+          keptAliveScopes.delete(key)
+          return scope
+        }
+      },
+    }
+
+    const prevCtx = setCurrentKeepAliveCtx(keepAliveCtx)
     let children = slots.default()
+    setCurrentKeepAliveCtx(prevCtx)
+
     if (isArray(children)) {
       children = children.filter(child => !(child instanceof Comment))
       if (children.length > 1) {
@@ -245,87 +277,6 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
           warn(`KeepAlive should contain exactly one component child.`)
         }
         return children
-      }
-    }
-
-    // inject hooks to DynamicFragment to cache components during updates
-    const injectKeepAliveHooks = (frag: DynamicFragment) => {
-      ;(frag.onBeforeTeardown || (frag.onBeforeTeardown = [])).push(
-        (oldKey, { retainScope }) => {
-          // if the fragment's nodes include a component that should be cached
-          // call retainScope() to avoid stopping the fragment's scope
-          if (processFragment(frag)) {
-            keptAliveScopes.set(oldKey, frag.scope!)
-            retainScope()
-          }
-        },
-      )
-      ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() => {
-        processFragment(frag)
-        // recursively inject hooks to nested DynamicFragments.
-        // this is necessary for cases like v-if > dynamic component where
-        // v-if starts as false - the nested DynamicFragment doesn't exist
-        // during initial setup, so we must inject hooks when v-if becomes true.
-        processChildren(frag.nodes)
-      })
-      // This ensures caching happens after renderBranch completes,
-      // since Vue's onUpdated fires before the deferred rendering finishes.
-      ;(frag.onUpdated || (frag.onUpdated = [])).push(() => {
-        if (frag.$transition && frag.$transition.mode === 'out-in') {
-          cacheBlock()
-        }
-      })
-      frag.getScope = key => {
-        const scope = keptAliveScopes.get(key)
-        if (scope) {
-          keptAliveScopes.delete(key)
-          return scope
-        }
-      }
-    }
-
-    // for unresolved async wrapper, we need to watch the __asyncResolved
-    // property and cache the resolved component once it resolves.
-    const watchAsyncResolve = (instance: VaporComponentInstance) => {
-      if (!instance.type.__asyncResolved) {
-        watch(
-          () => instance.type.__asyncResolved,
-          resolved => {
-            if (resolved) cacheBlock()
-          },
-          { once: true },
-        )
-      }
-    }
-
-    // recursively inject hooks to nested DynamicFragments and handle AsyncWrapper
-    const processChildren = (block: Block): void => {
-      // handle async wrapper
-      if (isVaporComponent(block) && isAsyncWrapper(block)) {
-        watchAsyncResolve(block)
-        // block.block is a DynamicFragment
-        processChildren(block.block)
-      } else if (isDynamicFragment(block)) {
-        // avoid injecting hooks multiple times
-        if (!block.getScope) {
-          // DynamicFragment triggers processFragment via onBeforeMount hook,
-          // which correctly handles shapeFlag marking for inner components.
-          injectKeepAliveHooks(block)
-          if (block.nodes) processFragment(block)
-        }
-        processChildren(block.nodes)
-      }
-    }
-
-    if (isVaporComponent(children)) {
-      children.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-      processChildren(children)
-    } else if (isFragment(children)) {
-      // vdom interop
-      if (children.vnode) {
-        children.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-      } else {
-        processChildren(children)
       }
     }
 
@@ -349,7 +300,7 @@ const shouldCache = (
   ) as GenericComponent & AsyncComponentInternalOptions
 
   // for unresolved async components, don't cache yet
-  // caching will be handled by the watcher in watchAsyncResolve
+  // caching will be handled by AsyncWrapper calling keepAliveCtx.cacheBlock()
   if (isAsync && !type.__asyncResolved) {
     return false
   }

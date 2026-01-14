@@ -108,6 +108,10 @@ import {
 } from './components/Teleport'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import {
+  currentKeepAliveCtx,
+  setCurrentKeepAliveCtx,
+} from './components/KeepAlive'
+import {
   insertionAnchor,
   insertionParent,
   isLastInsertion,
@@ -328,6 +332,16 @@ export function createComponent(
     appContext,
     once,
   )
+
+  // handle currentKeepAliveCtx for component boundary isolation
+  // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
+  // DynamicFragment can capture it
+  if (currentKeepAliveCtx && !isAsyncWrapper(instance)) {
+    currentKeepAliveCtx.processShapeFlag(instance)
+    // clear currentKeepAliveCtx so child components don't associate
+    // with parent's KeepAlive
+    setCurrentKeepAliveCtx(null)
+  }
 
   // reset currentSlotOwner to null to avoid affecting the child components
   const prevSlotOwner = setCurrentSlotOwner(null)
