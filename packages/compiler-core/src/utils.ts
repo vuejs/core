@@ -231,6 +231,10 @@ export const isFnExpression: (
   context: TransformContext,
 ) => boolean = __BROWSER__ ? isFnExpressionBrowser : isFnExpressionNode
 
+/**
+ * Check whether an expression can be parsed in the browser build, so
+ * semicolons inside valid expressions aren't treated as statements.
+ */
 export const isValidExpressionBrowser: (
   exp: ExpressionNode,
 ) => boolean = exp => {
@@ -243,6 +247,9 @@ export const isValidExpressionBrowser: (
   }
 }
 
+/**
+ * Check whether an expression can be parsed in the Node build.
+ */
 export const isValidExpressionNode: (
   exp: ExpressionNode,
   context: TransformContext,
@@ -262,6 +269,9 @@ export const isValidExpressionNode: (
       }
     }
 
+/**
+ * Check whether an expression parses as an expression in the current build.
+ */
 export const isValidExpression: (
   exp: ExpressionNode,
   context: TransformContext,
