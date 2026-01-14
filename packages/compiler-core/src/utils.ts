@@ -231,6 +231,42 @@ export const isFnExpression: (
   context: TransformContext,
 ) => boolean = __BROWSER__ ? isFnExpressionBrowser : isFnExpressionNode
 
+export const isValidExpressionBrowser: (
+  exp: ExpressionNode,
+) => boolean = exp => {
+  try {
+    // Use parens to normalize object expressions and arrow functions.
+    new Function(`return (${getExpSource(exp)})`)
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
+export const isValidExpressionNode: (
+  exp: ExpressionNode,
+  context: TransformContext,
+) => boolean = __BROWSER__
+  ? (NOOP as any)
+  : (exp, context) => {
+      try {
+        parseExpression(`(${getExpSource(exp)})`, {
+          sourceType: 'module',
+          plugins: context.expressionPlugins
+            ? [...context.expressionPlugins, 'typescript']
+            : ['typescript'],
+        })
+        return true
+      } catch (e) {
+        return false
+      }
+    }
+
+export const isValidExpression: (
+  exp: ExpressionNode,
+  context: TransformContext,
+) => boolean = __BROWSER__ ? isValidExpressionBrowser : isValidExpressionNode
+
 export function advancePositionWithClone(
   pos: Position,
   source: string,
