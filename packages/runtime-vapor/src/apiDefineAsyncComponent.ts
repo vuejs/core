@@ -28,7 +28,6 @@ import {
 import { invokeArrayFns } from '@vue/shared'
 import { type TransitionOptions, insert, remove } from './block'
 import { parentNode } from './dom/node'
-import { setTransitionHooks } from './components/Transition'
 
 /*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
@@ -167,7 +166,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
           render = () => createComponent(loadingComponent)
         }
 
-        if (instance.$transition) frag!.$transition = instance.$transition
         frag.update(render)
         // Manually trigger cacheBlock for KeepAlive
         if (frag.keepAliveCtx) frag.keepAliveCtx.cacheBlock()
@@ -183,7 +181,7 @@ function createInnerComp(
   parent: VaporComponentInstance & TransitionOptions,
   frag?: DynamicFragment,
 ): VaporComponentInstance {
-  const { rawProps, rawSlots, appContext, $transition } = parent
+  const { rawProps, rawSlots, appContext } = parent
   const instance = createComponent(
     comp,
     rawProps,
@@ -194,9 +192,6 @@ function createInnerComp(
     undefined,
     appContext,
   )
-
-  // set transition hooks
-  if ($transition) setTransitionHooks(instance, $transition)
 
   // set ref
   frag && frag.setAsyncRef && frag.setAsyncRef(instance)

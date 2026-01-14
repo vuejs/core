@@ -32,7 +32,11 @@ import {
 } from '../component'
 import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
-import { type VaporFragment, isFragment } from '../fragment'
+import {
+  type DynamicFragment,
+  type VaporFragment,
+  isFragment,
+} from '../fragment'
 import {
   currentHydrationNode,
   isHydrating,
@@ -288,9 +292,16 @@ export function findTransitionBlock(
     // transition can only be applied on Element child
     if (block instanceof Element) child = block
   } else if (isVaporComponent(block)) {
-    // should save hooks on unresolved async wrapper, so that it can be applied after resolved
-    if (isAsyncWrapper(block) && !block.type.__asyncResolved) {
-      child = block
+    if (isAsyncWrapper(block)) {
+      // for unresolved async wrapper, set transition hooks on inner fragment
+      if (!block.type.__asyncResolved) {
+        onFragment && onFragment(block.block! as DynamicFragment)
+      } else {
+        child = findTransitionBlock(
+          (block.block! as DynamicFragment).nodes,
+          onFragment,
+        )
+      }
     } else {
       // stop searching if encountering nested Transition component
       if (getComponentName(block.type) === displayName) return undefined
