@@ -77,7 +77,9 @@ import { setTransitionHooks as setVaporTransitionHooks } from './components/Tran
 import {
   type KeepAliveInstance,
   activate,
+  currentKeepAliveCtx,
   deactivate,
+  setCurrentKeepAliveCtx,
 } from './components/KeepAlive'
 import { setParentSuspense } from './components/Suspense'
 
@@ -403,6 +405,12 @@ function createVDOMComponent(
     component,
     rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
   ))
+
+  if (currentKeepAliveCtx) {
+    currentKeepAliveCtx.processShapeFlag(frag)
+    setCurrentKeepAliveCtx(null)
+  }
+
   const wrapper = new VaporComponentInstance(
     { props: component.props },
     rawProps as RawProps,

@@ -174,7 +174,9 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         }
 
         if (instance.$transition) frag!.$transition = instance.$transition
-        frag!.update(render)
+        frag.update(render)
+        // Manually trigger cacheBlock for KeepAlive
+        if (frag.keepAliveCtx) frag.keepAliveCtx.cacheBlock()
       })
 
       return frag

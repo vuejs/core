@@ -33,6 +33,11 @@ import {
 import { isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
+import {
+  type KeepAliveContext,
+  currentKeepAliveCtx,
+  setCurrentKeepAliveCtx,
+} from './components/KeepAlive'
 
 export class VaporFragment<
   T extends Block = Block,
@@ -87,15 +92,7 @@ export class DynamicFragment extends VaporFragment {
   // set ref for async wrapper
   setAsyncRef?: (instance: VaporComponentInstance) => void
 
-  // get the kept-alive scope when used in keep-alive
-  getScope?: (key: any) => EffectScope | undefined
-
-  // hooks
-  onBeforeTeardown?: ((
-    oldKey: any,
-    context: { retainScope: () => void },
-  ) => void)[]
-  onBeforeMount?: ((newKey: any, nodes: Block, scope: EffectScope) => void)[]
+  keepAliveCtx: KeepAliveContext | null
 
   slotOwner: VaporComponentInstance | null
 
@@ -103,6 +100,7 @@ export class DynamicFragment extends VaporFragment {
     super([])
     this.keyed = keyed
     this.slotOwner = currentSlotOwner
+    this.keepAliveCtx = currentKeepAliveCtx
     if (isHydrating) {
       this.anchorLabel = anchorLabel
       locateHydrationNode()
@@ -137,14 +135,15 @@ export class DynamicFragment extends VaporFragment {
     // teardown previous branch
     if (this.scope) {
       let retainScope = false
-      const context = {
-        retainScope: () => (retainScope = true),
+      const keepAliveCtx = this.keepAliveCtx
+
+      // if keepAliveCtx exists and processShapeFlag returns true,
+      // cache the scope and retain it
+      if (keepAliveCtx && keepAliveCtx.processShapeFlag(this.nodes)) {
+        keepAliveCtx.cacheScope(prevKey, this.scope)
+        retainScope = true
       }
-      if (this.onBeforeTeardown) {
-        for (const teardown of this.onBeforeTeardown) {
-          teardown(prevKey, context)
-        }
-      }
+
       if (!retainScope) {
         this.scope.stop()
       }
@@ -218,8 +217,9 @@ export class DynamicFragment extends VaporFragment {
     instance: GenericComponentInstance | null,
   ): void {
     if (render) {
+      const keepAliveCtx = this.keepAliveCtx
       // try to reuse the kept-alive scope
-      const scope = this.getScope && this.getScope(this.current)
+      const scope = keepAliveCtx && keepAliveCtx.getScope(this.current)
       if (scope) {
         this.scope = scope
       } else {
@@ -228,11 +228,14 @@ export class DynamicFragment extends VaporFragment {
 
       // restore slot owner
       const prevOwner = setCurrentSlotOwner(this.slotOwner)
+      // set currentKeepAliveCtx so nested DynamicFragments and components can capture it
+      const prevCtx = setCurrentKeepAliveCtx(keepAliveCtx)
       // switch current instance to parent instance during update
       // ensure that the parent instance is correct for nested components
       const prev = parent && instance ? setCurrentInstance(instance) : undefined
       this.nodes = this.scope.run(render) || []
       if (prev !== undefined) setCurrentInstance(...prev)
+      setCurrentKeepAliveCtx(prevCtx)
       setCurrentSlotOwner(prevOwner)
 
       // set key on nodes
@@ -242,10 +245,9 @@ export class DynamicFragment extends VaporFragment {
         this.$transition = applyTransitionHooks(this.nodes, transition)
       }
 
-      if (this.onBeforeMount) {
-        this.onBeforeMount.forEach(hook =>
-          hook(this.current, this.nodes, this.scope!),
-        )
+      // call processShapeFlag to mark shapeFlag before mounting
+      if (keepAliveCtx) {
+        keepAliveCtx.processShapeFlag(this.nodes)
       }
 
       if (parent) {
@@ -270,6 +272,13 @@ export class DynamicFragment extends VaporFragment {
         }
 
         insert(this.nodes, parent, this.anchor)
+
+        // For out-in transition, call cacheBlock after renderBranch completes
+        // because KeepAlive's onUpdated fires before the deferred rendering finishes
+        if (keepAliveCtx && transition && transition.mode === 'out-in') {
+          keepAliveCtx.cacheBlock()
+        }
+
         if (this.onUpdated) {
           this.onUpdated.forEach(hook => hook(this.nodes))
         }
