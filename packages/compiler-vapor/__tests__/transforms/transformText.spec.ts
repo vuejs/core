@@ -54,6 +54,19 @@ describe('compiler: text transform', () => {
     expect([...ir.template.keys()]).not.toContain('<code><script>')
   })
 
+  it('should not escape quotes in root-level text nodes', () => {
+    // Root-level text goes through createTextNode() which doesn't need escaping
+    const { ir } = compileWithTextTransform(`Howdy y'all`)
+    expect([...ir.template.keys()]).toContain(`Howdy y'all`)
+    expect([...ir.template.keys()]).not.toContain(`Howdy y&#39;all`)
+  })
+
+  it('should not escape double quotes in root-level text nodes', () => {
+    const { ir } = compileWithTextTransform(`Say "hello"`)
+    expect([...ir.template.keys()]).toContain(`Say "hello"`)
+    expect([...ir.template.keys()]).not.toContain(`Say &quot;hello&quot;`)
+  })
+
   test('constant text', () => {
     const { code } = compileWithTextTransform(
       `

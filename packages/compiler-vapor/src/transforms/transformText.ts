@@ -79,7 +79,18 @@ export const transformText: NodeTransform = (node, context) => {
   } else if (node.type === NodeTypes.INTERPOLATION) {
     processInterpolation(context as TransformContext<InterpolationNode>)
   } else if (node.type === NodeTypes.TEXT) {
-    context.template += escapeHtml(node.content)
+    // Check if this is a root-level text node (parent is ROOT or fragment)
+    // Root-level text nodes go through createTextNode() which doesn't need escaping
+    // Element children go through innerHTML which needs escaping
+    const parent = context.parent?.node
+    const isRootText =
+      !parent ||
+      parent.type === NodeTypes.ROOT ||
+      (parent.type === NodeTypes.ELEMENT &&
+        (parent.tagType === ElementTypes.TEMPLATE ||
+          parent.tagType === ElementTypes.COMPONENT))
+
+    context.template += isRootText ? node.content : escapeHtml(node.content)
   }
 }
 
