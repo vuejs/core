@@ -79,6 +79,22 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       ;(keepAliveInstance as any).__v_cache = cache
     }
 
+    // Clear cache and shapeFlags before HMR rerender so cached components
+    // can be properly unmounted
+    if (__DEV__) {
+      const rerender = keepAliveInstance.hmrRerender
+      keepAliveInstance.hmrRerender = () => {
+        cache.forEach(cached => resetCachedShapeFlag(cached))
+        cache.clear()
+        keys.clear()
+        keptAliveScopes.forEach(scope => scope.stop())
+        keptAliveScopes.clear()
+        storageContainer.innerHTML = ''
+        current = undefined
+        rerender!()
+      }
+    }
+
     keepAliveInstance.ctx = {
       getStorageContainer: () => storageContainer,
       getCachedComponent: comp => cache.get(comp),
@@ -117,6 +133,19 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     const cacheBlock = () => {
       // TODO suspense
       const block = keepAliveInstance.block!
+      // Skip caching during out-in transition leaving phase.
+      // The correct component will be cached after renderBranch completes
+      // via the Fragment's onUpdated hook.
+      if (isDynamicFragment(block)) {
+        const transition = block.$transition
+        if (
+          transition &&
+          transition.mode === 'out-in' &&
+          transition.state.isLeaving
+        ) {
+          return
+        }
+      }
       const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
       innerCacheBlock(
@@ -157,11 +186,12 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     const pruneCacheEntry = (key: CacheKey) => {
       const cached = cache.get(key)!
 
-      resetCachedShapeFlag(cached)
-
       // don't unmount if the instance is the current one
-      if (cached !== current) {
+      if (cached && (!current || cached !== current)) {
+        resetCachedShapeFlag(cached)
         remove(cached)
+      } else if (current) {
+        resetCachedShapeFlag(current)
       }
       cache.delete(key)
       keys.delete(key)
@@ -230,9 +260,21 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
           }
         },
       )
-      ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() =>
-        processFragment(frag),
-      )
+      ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() => {
+        processFragment(frag)
+        // recursively inject hooks to nested DynamicFragments.
+        // this is necessary for cases like v-if > dynamic component where
+        // v-if starts as false - the nested DynamicFragment doesn't exist
+        // during initial setup, so we must inject hooks when v-if becomes true.
+        processChildren(frag.nodes)
+      })
+      // This ensures caching happens after renderBranch completes,
+      // since Vue's onUpdated fires before the deferred rendering finishes.
+      ;(frag.onUpdated || (frag.onUpdated = [])).push(() => {
+        if (frag.$transition && frag.$transition.mode === 'out-in') {
+          cacheBlock()
+        }
+      })
       frag.getScope = key => {
         const scope = keptAliveScopes.get(key)
         if (scope) {
@@ -256,21 +298,34 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       }
     }
 
-    // process shapeFlag
+    // recursively inject hooks to nested DynamicFragments and handle AsyncWrapper
+    const processChildren = (block: Block): void => {
+      // handle async wrapper
+      if (isVaporComponent(block) && isAsyncWrapper(block)) {
+        watchAsyncResolve(block)
+        // block.block is a DynamicFragment
+        processChildren(block.block)
+      } else if (isDynamicFragment(block)) {
+        // avoid injecting hooks multiple times
+        if (!block.getScope) {
+          // DynamicFragment triggers processFragment via onBeforeMount hook,
+          // which correctly handles shapeFlag marking for inner components.
+          injectKeepAliveHooks(block)
+          if (block.nodes) processFragment(block)
+        }
+        processChildren(block.nodes)
+      }
+    }
+
     if (isVaporComponent(children)) {
       children.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-      if (isAsyncWrapper(children)) {
-        injectKeepAliveHooks(children.block as DynamicFragment)
-        watchAsyncResolve(children)
-      }
-    } else if (isInteropFragment(children)) {
-      children.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    } else if (isDynamicFragment(children)) {
-      processFragment(children)
-      injectKeepAliveHooks(children)
-      if (isVaporComponent(children.nodes) && isAsyncWrapper(children.nodes)) {
-        injectKeepAliveHooks(children.nodes.block as DynamicFragment)
-        watchAsyncResolve(children.nodes)
+      processChildren(children)
+    } else if (isFragment(children)) {
+      // vdom interop
+      if (children.vnode) {
+        children.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+      } else {
+        processChildren(children)
       }
     }
 
