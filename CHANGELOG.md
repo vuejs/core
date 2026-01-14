@@ -1,3 +1,21 @@
+# [3.6.0-beta.3](https://github.com/vuejs/core/compare/v3.6.0-beta.2...v3.6.0-beta.3) (2026-01-12)
+
+
+### Bug Fixes
+
+* **compiler-vapor:** support `v-if` and `v-for` on the same `<template>` element by correctly wrapping structural directives. ([#14289](https://github.com/vuejs/core/issues/14289)) ([ea1c978](https://github.com/vuejs/core/commit/ea1c97874b4eb3f969f104ee092a4d4080317324))
+* **keep-alive:** improve KeepAlive caching behavior for async components by re-evaluating caching after resolution ([#14285](https://github.com/vuejs/core/issues/14285)) ([6fc638f](https://github.com/vuejs/core/commit/6fc638ffa805407377b00b60c9c55d29c1004481))
+* **runtime-vapor:** prevent event handler execution during emits lookup ([#14281](https://github.com/vuejs/core/issues/14281)) ([15f6652](https://github.com/vuejs/core/commit/15f66529995c03d4788f3e6851aa741dbf862427)), closes [#14218](https://github.com/vuejs/core/issues/14218) [#14280](https://github.com/vuejs/core/issues/14280)
+* **teleport:** handle css var update on nested fragment ([#14284](https://github.com/vuejs/core/issues/14284)) ([9bb5046](https://github.com/vuejs/core/commit/9bb5046937959ccfd01ca665efb57ebbc619c430))
+
+
+### Features
+
+* **runtime-vapor:** allow VDOM components to directly invoke vapor slots via `slots.name()` ([#14273](https://github.com/vuejs/core/issues/14273)) ([6ffd55a](https://github.com/vuejs/core/commit/6ffd55aba2cacaeb61dabeb402ade02e68966896))
+* **vapor:** support rendering VNodes in dynamic components ([#14278](https://github.com/vuejs/core/issues/14278)) ([b074a81](https://github.com/vuejs/core/commit/b074a81b2a80b8d856a622fc764d0a830be23bf4))
+
+
+
 # [3.6.0-beta.2](https://github.com/vuejs/core/compare/v3.6.0-beta.1...v3.6.0-beta.2) (2026-01-04)
 
 

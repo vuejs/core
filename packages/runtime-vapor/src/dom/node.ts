@@ -1,22 +1,22 @@
 import type { ChildItem, InsertionParent } from '../insertionState'
 import { isComment, locateEndAnchor } from './hydration'
 
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function createElement(tagName: string): HTMLElement {
   return document.createElement(tagName)
 }
 
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function createTextNode(value = ''): Text {
   return document.createTextNode(value)
 }
 
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function createComment(data: string): Comment {
   return document.createComment(data)
 }
 
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function querySelector(selectors: string): Element | null {
   return document.querySelector(selectors)
 }
@@ -31,7 +31,7 @@ const _txt: typeof _child = _child
 /**
  * Hydration-specific version of `txt`.
  */
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 const __txt = (node: ParentNode): Node => {
   let n = node.firstChild!
 
@@ -44,7 +44,7 @@ const __txt = (node: ParentNode): Node => {
   return n
 }
 
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function _child(node: InsertionParent): Node {
   return node.firstChild!
 }
@@ -52,12 +52,12 @@ export function _child(node: InsertionParent): Node {
 /**
  * Hydration-specific version of `child`.
  */
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function __child(node: ParentNode, logicalIndex: number = 0): Node {
   return locateChildByLogicalIndex(node as InsertionParent, logicalIndex)!
 }
 
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function _nthChild(node: InsertionParent, i: number): Node {
   return node.childNodes[i]
 }
@@ -65,12 +65,12 @@ export function _nthChild(node: InsertionParent, i: number): Node {
 /**
  * Hydration-specific version of `nthChild`.
  */
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function __nthChild(node: Node, logicalIndex: number): Node {
   return locateChildByLogicalIndex(node as InsertionParent, logicalIndex)!
 }
 
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function _next(node: Node): Node {
   return node.nextSibling!
 }
@@ -78,7 +78,7 @@ export function _next(node: Node): Node {
 /**
  * Hydration-specific version of `next`.
  */
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function __next(node: Node, logicalIndex: number): Node {
   return locateChildByLogicalIndex(
     node.parentNode! as InsertionParent,
@@ -90,25 +90,25 @@ type DelegatedFunction<T extends (...args: any[]) => any> = T & {
   impl: T
 }
 
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export const txt: DelegatedFunction<typeof _txt> = (...args) => {
   return txt.impl(...args)
 }
 txt.impl = _txt
 
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export const child: DelegatedFunction<typeof _child> = (...args) => {
   return child.impl(...args)
 }
 child.impl = _child
 
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export const next: DelegatedFunction<typeof _next> = (...args) => {
   return next.impl(...args)
 }
 next.impl = _next
 
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export const nthChild: DelegatedFunction<typeof _nthChild> = (...args) => {
   return nthChild.impl(...args)
 }

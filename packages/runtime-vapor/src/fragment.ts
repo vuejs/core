@@ -19,7 +19,11 @@ import {
   setCurrentInstance,
   warnExtraneousAttributes,
 } from '@vue/runtime-dom'
-import { type VaporComponentInstance, applyFallthroughProps } from './component'
+import {
+  type VaporComponentInstance,
+  applyFallthroughProps,
+  isVaporComponent,
+} from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
   hydrateDynamicFragment,
@@ -29,6 +33,11 @@ import {
 import { isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
+import {
+  type KeepAliveContext,
+  currentKeepAliveCtx,
+  setCurrentKeepAliveCtx,
+} from './components/KeepAlive'
 
 export class VaporFragment<
   T extends Block = Block,
@@ -75,6 +84,7 @@ export class DynamicFragment extends VaporFragment {
   pending?: { render?: BlockFn; key: any }
   fallback?: BlockFn
   anchorLabel?: string
+  keyed?: boolean
 
   // fallthrough attrs
   attrs?: Record<string, any>
@@ -82,22 +92,15 @@ export class DynamicFragment extends VaporFragment {
   // set ref for async wrapper
   setAsyncRef?: (instance: VaporComponentInstance) => void
 
-  // get the kept-alive scope when used in keep-alive
-  getScope?: (key: any) => EffectScope | undefined
-
-  // hooks
-  onBeforeTeardown?: ((
-    oldKey: any,
-    nodes: Block,
-    scope: EffectScope,
-  ) => boolean)[]
-  onBeforeMount?: ((newKey: any, nodes: Block, scope: EffectScope) => void)[]
+  keepAliveCtx: KeepAliveContext | null
 
   slotOwner: VaporComponentInstance | null
 
-  constructor(anchorLabel?: string) {
+  constructor(anchorLabel?: string, keyed: boolean = false) {
     super([])
+    this.keyed = keyed
     this.slotOwner = currentSlotOwner
+    this.keepAliveCtx = currentKeepAliveCtx
     if (isHydrating) {
       this.anchorLabel = anchorLabel
       locateHydrationNode()
@@ -131,17 +134,17 @@ export class DynamicFragment extends VaporFragment {
     const parent = isHydrating ? null : this.anchor.parentNode
     // teardown previous branch
     if (this.scope) {
-      let preserveScope = false
-      // if any of the hooks returns true the scope will be preserved
-      // for kept-alive component
-      if (this.onBeforeTeardown) {
-        for (const teardown of this.onBeforeTeardown) {
-          if (teardown(prevKey, this.nodes, this.scope!)) {
-            preserveScope = true
-          }
-        }
+      let retainScope = false
+      const keepAliveCtx = this.keepAliveCtx
+
+      // if keepAliveCtx exists and processShapeFlag returns true,
+      // cache the scope and retain it
+      if (keepAliveCtx && keepAliveCtx.processShapeFlag(this.nodes)) {
+        keepAliveCtx.cacheScope(prevKey, this.scope)
+        retainScope = true
       }
-      if (!preserveScope) {
+
+      if (!retainScope) {
         this.scope.stop()
       }
       const mode = transition && transition.mode
@@ -214,8 +217,9 @@ export class DynamicFragment extends VaporFragment {
     instance: GenericComponentInstance | null,
   ): void {
     if (render) {
+      const keepAliveCtx = this.keepAliveCtx
       // try to reuse the kept-alive scope
-      const scope = this.getScope && this.getScope(this.current)
+      const scope = keepAliveCtx && keepAliveCtx.getScope(this.current)
       if (scope) {
         this.scope = scope
       } else {
@@ -224,21 +228,26 @@ export class DynamicFragment extends VaporFragment {
 
       // restore slot owner
       const prevOwner = setCurrentSlotOwner(this.slotOwner)
+      // set currentKeepAliveCtx so nested DynamicFragments and components can capture it
+      const prevCtx = setCurrentKeepAliveCtx(keepAliveCtx)
       // switch current instance to parent instance during update
       // ensure that the parent instance is correct for nested components
       const prev = parent && instance ? setCurrentInstance(instance) : undefined
       this.nodes = this.scope.run(render) || []
       if (prev !== undefined) setCurrentInstance(...prev)
+      setCurrentKeepAliveCtx(prevCtx)
       setCurrentSlotOwner(prevOwner)
+
+      // set key on nodes
+      if (this.keyed) setKey(this.nodes, this.current)
 
       if (transition) {
         this.$transition = applyTransitionHooks(this.nodes, transition)
       }
 
-      if (this.onBeforeMount) {
-        this.onBeforeMount.forEach(hook =>
-          hook(this.current, this.nodes, this.scope!),
-        )
+      // call processShapeFlag to mark shapeFlag before mounting
+      if (keepAliveCtx) {
+        keepAliveCtx.processShapeFlag(this.nodes)
       }
 
       if (parent) {
@@ -263,6 +272,13 @@ export class DynamicFragment extends VaporFragment {
         }
 
         insert(this.nodes, parent, this.anchor)
+
+        // For out-in transition, call cacheBlock after renderBranch completes
+        // because KeepAlive's onUpdated fires before the deferred rendering finishes
+        if (keepAliveCtx && transition && transition.mode === 'out-in') {
+          keepAliveCtx.cacheBlock()
+        }
+
         if (this.onUpdated) {
           this.onUpdated.forEach(hook => hook(this.nodes))
         }
@@ -323,4 +339,18 @@ export function isDynamicFragment(
   val: NonNullable<unknown>,
 ): val is DynamicFragment {
   return val instanceof DynamicFragment
+}
+
+function setKey(block: Block & { $key?: any }, key: any) {
+  if (block instanceof Node) {
+    block.$key = key
+  } else if (isVaporComponent(block)) {
+    setKey(block.block, key)
+  } else if (isArray(block)) {
+    for (const b of block) {
+      setKey(b, key)
+    }
+  } else {
+    setKey(block.nodes, key)
+  }
 }

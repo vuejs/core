@@ -334,12 +334,9 @@ describe('compile', () => {
       expect(code).matchSnapshot()
       expect(code).not.contains('let r0')
       expect(code).not.contains('let r2')
-      expect(code).contains('let r1')
-      expect(code).contains('let r3')
-      expect(code).contains('let r4')
-      expect(code).contains('r1 = _setTemplateRef(n1, _bar, r1)')
-      expect(code).contains('r3 = _setTemplateRef(n3, _bar, r3)')
-      expect(code).contains('r4 = _setTemplateRef(n4, _bar, r4)')
+      expect(code).contains('_setTemplateRef(n1, _bar)')
+      expect(code).contains('_setTemplateRef(n3, _bar)')
+      expect(code).contains('_setTemplateRef(n4, _bar)')
     })
 
     test('should bump template var (t*) on conflict', () => {

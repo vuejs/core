@@ -7,8 +7,7 @@ const t0 = _template("<div>", true)
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
   const n0 = t0()
-  let r0
-  _renderEffect(() => r0 = _setTemplateRef(n0, _ctx.foo, r0))
+  _renderEffect(() => _setTemplateRef(n0, _ctx.foo))
   return n0
 }"
 `;
@@ -20,14 +19,13 @@ const t0 = _template("<div>", true)
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
   const n0 = t0()
-  let r0
   _renderEffect(() => {
     const _foo = _ctx.foo
-    r0 = _setTemplateRef(n0, bar => {
+    _setTemplateRef(n0, bar => {
         _foo.value = bar
         ;({ baz: _ctx.baz } = bar)
         console.log(_foo.value, _ctx.baz)
-      }, r0)
+      })
   })
   return n0
 }"
@@ -41,7 +39,7 @@ export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
   const n0 = _createFor(() => ([1,2,3]), (_for_item0) => {
     const n2 = t0()
-    _setTemplateRef(n2, "foo", void 0, true)
+    _setTemplateRef(n2, "foo", true)
     return n2
   }, undefined, 4)
   return n0
@@ -67,7 +65,7 @@ exports[`compiler: template ref transform > static ref (inline mode) 1`] = `
 "
   const _setTemplateRef = _createTemplateRefSetter()
   const n0 = t0()
-  _setTemplateRef(n0, foo, null, null, "foo")
+  _setTemplateRef(n0, foo, null, "foo")
   return n0
 "
 `;

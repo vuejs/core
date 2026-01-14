@@ -1,6 +1,6 @@
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
-import type { DeclareOldRefIRNode, SetTemplateRefIRNode } from '../ir'
+import type { SetTemplateRefIRNode } from '../ir'
 import { type CodeFragment, NEWLINE, genCall } from './utils'
 import { BindingTypes, type SimpleExpressionNode } from '@vue/compiler-dom'
 
@@ -13,20 +13,14 @@ export function genSetTemplateRef(
   const [refValue, refKey] = genRefValue(oper.value, context)
   return [
     NEWLINE,
-    oper.effect && `r${oper.element} = `,
     ...genCall(
       setTemplateRefIdent, // will be generated in root scope
       `n${oper.element}`,
       refValue,
-      oper.effect ? `r${oper.element}` : oper.refFor ? 'void 0' : undefined,
       oper.refFor && 'true',
       refKey,
     ),
   ]
-}
-
-export function genDeclareOldRef(oper: DeclareOldRefIRNode): CodeFragment[] {
-  return [NEWLINE, `let r${oper.id}`]
 }
 
 function genRefValue(value: SimpleExpressionNode, context: CodegenContext) {

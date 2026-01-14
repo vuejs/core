@@ -720,7 +720,7 @@ function runSharedTests(deferMode: boolean): void {
               {
                 default: () => {
                   const n3 = template('<circle></circle>', false, 1)() as any
-                  _setTemplateRef(n3, circle, undefined, undefined, 'circle')
+                  _setTemplateRef(n3, circle, undefined, 'circle')
                   return n3
                 },
               },
@@ -728,7 +728,7 @@ function runSharedTests(deferMode: boolean): void {
             return n4
           },
         )
-        _setTemplateRef(n0, svg, undefined, undefined, 'svg')
+        _setTemplateRef(n0, svg, undefined, 'svg')
         return [n0, n1]
       },
     }).render()

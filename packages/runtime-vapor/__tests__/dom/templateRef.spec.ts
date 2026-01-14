@@ -1,4 +1,3 @@
-import type { NodeRef } from '../../src/apiTemplateRef'
 import {
   child,
   createComponent,
@@ -65,9 +64,9 @@ describe('api: template ref', () => {
       },
       render() {
         const n0 = t0()
-        let r0: NodeRef | undefined
+        const setRef = createTemplateRefSetter()
         renderEffect(() => {
-          r0 = createTemplateRefSetter()(n0 as Element, refKey.value, r0)
+          setRef(n0 as Element, refKey.value)
         })
         return n0
       },
@@ -138,9 +137,9 @@ describe('api: template ref', () => {
     const { render } = define({
       render() {
         const n0 = t0()
-        let r0: NodeRef | undefined
+        const setRef = createTemplateRefSetter()
         renderEffect(() => {
-          r0 = createTemplateRefSetter()(n0 as Element, fn.value, r0)
+          setRef(n0 as Element, fn.value)
         })
         return n0
       },
@@ -166,11 +165,12 @@ describe('api: template ref', () => {
     const t0 = template('<div></div>')
     const { render } = define({
       render() {
+        const setRef = createTemplateRefSetter()
         const n0 = createIf(
           () => toggle.value,
           () => {
             const n1 = t0()
-            createTemplateRefSetter()(n1 as Element, fn)
+            setRef(n1 as Element, fn)
             return n1
           },
         )
@@ -218,9 +218,9 @@ describe('api: template ref', () => {
         fooEl = useTemplateRef('foo')
         barEl = useTemplateRef('bar')
         const n0 = t0()
-        let r0: NodeRef | undefined
+        const setRef = createTemplateRefSetter()
         renderEffect(() => {
-          r0 = createTemplateRefSetter()(n0 as Element, refKey.value, r0)
+          setRef(n0 as Element, refKey.value)
         })
         return n0
       },
@@ -325,21 +325,12 @@ describe('api: template ref', () => {
         const instance = currentInstance!
         const n0 = t0()
         const n1 = t1()
-        let r0: NodeRef | undefined
-        let r1: NodeRef | undefined
+        const setRef = createTemplateRefSetter()
         renderEffect(() => {
-          r0 = createTemplateRefSetter()(
-            n0 as Element,
-            refToggle.value ? 'foo' : 'bar',
-            r0,
-          )
+          setRef(n0 as Element, refToggle.value ? 'foo' : 'bar')
         })
         renderEffect(() => {
-          r1 = createTemplateRefSetter()(
-            n1 as Element,
-            refToggle.value ? 'bar' : 'foo',
-            r1,
-          )
+          setRef(n1 as Element, refToggle.value ? 'bar' : 'foo')
         })
         watchEffect(
           () => {
@@ -423,6 +414,7 @@ describe('api: template ref', () => {
     const t1 = template('<li></li>')
     const { render } = define({
       render() {
+        const setRef = createTemplateRefSetter()
         const n0 = createIf(
           () => show.value,
           () => {
@@ -431,12 +423,7 @@ describe('api: template ref', () => {
               () => list,
               item => {
                 const n1 = t1()
-                createTemplateRefSetter()(
-                  n1 as Element,
-                  listRefs,
-                  undefined,
-                  true,
-                )
+                setRef(n1 as Element, listRefs, true)
                 renderEffect(() => {
                   setElementText(n1, item)
                 })
@@ -485,6 +472,7 @@ describe('api: template ref', () => {
         return { listRefs }
       },
       render() {
+        const setRef = createTemplateRefSetter()
         const n0 = createIf(
           () => show.value,
           () => {
@@ -493,12 +481,7 @@ describe('api: template ref', () => {
               () => list,
               item => {
                 const n1 = t1()
-                createTemplateRefSetter()(
-                  n1 as Element,
-                  'listRefs',
-                  undefined,
-                  true,
-                )
+                setRef(n1 as Element, 'listRefs', true)
                 renderEffect(() => {
                   setElementText(n1, item)
                 })
@@ -549,16 +532,12 @@ describe('api: template ref', () => {
         const n0 = t0()
         const n1 = n0.firstChild
         const n2 = n1!.nextSibling!
+        const setRef = createTemplateRefSetter()
         const n3 = createFor(
           () => list.value,
           item => {
             const n4 = t1()
-            createTemplateRefSetter()(
-              n4 as Element,
-              'listRefs',
-              undefined,
-              true,
-            )
+            setRef(n4 as Element, 'listRefs', true)
             renderEffect(() => {
               setElementText(n4, item)
             })
@@ -811,13 +790,9 @@ describe('api: template ref', () => {
       },
       render() {
         const n0 = t0()
-        let r0: any
+        const setRef = createTemplateRefSetter()
         renderEffect(() => {
-          r0 = createTemplateRefSetter()(
-            n0 as Element,
-            toggle.value ? 'ref1' : 'ref2',
-            r0,
-          )
+          setRef(n0 as Element, toggle.value ? 'ref1' : 'ref2')
         })
         return n0
       },

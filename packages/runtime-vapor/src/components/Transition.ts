@@ -65,7 +65,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     ensureTransitionHooksRegistered()
 
     // wrapped <transition appear>
-    let resetDisplay: Function | undefined
+    let performAppear: Function | undefined
     if (
       isHydrating &&
       currentHydrationNode &&
@@ -83,7 +83,11 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
         ) {
           const originalDisplay = firstChild.style.display
           firstChild.style.display = 'none'
-          resetDisplay = () => (firstChild.style.display = originalDisplay)
+          performAppear = () => {
+            hooks.beforeEnter(firstChild)
+            firstChild.style.display = originalDisplay
+            queuePostFlushCb(() => hooks.enter(firstChild))
+          }
         }
 
         parentNode!.replaceChild(firstChild, currentHydrationNode)
@@ -112,11 +116,8 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       instance: instance,
     } as VaporTransitionHooks)
 
-    if (resetDisplay && resolvedProps!.appear) {
-      const child = findTransitionBlock(children)!
-      hooks.beforeEnter(child)
-      resetDisplay()
-      queuePostFlushCb(() => hooks.enter(child))
+    if (resolvedProps!.appear && performAppear) {
+      performAppear()
     }
 
     return children

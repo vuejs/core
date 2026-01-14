@@ -5,13 +5,19 @@ import {
   transformElement,
   transformText,
   transformVBind,
+  transformVIf,
   transformVOn,
 } from '../../src'
 
 import { makeCompile } from './_utils'
 
 const compileWithTextTransform = makeCompile({
-  nodeTransforms: [transformElement, transformChildren, transformText],
+  nodeTransforms: [
+    transformVIf,
+    transformElement,
+    transformChildren,
+    transformText,
+  ],
   directiveTransforms: {
     bind: transformVBind,
     on: transformVOn,
@@ -52,6 +58,35 @@ describe('compiler: text transform', () => {
     const { ir } = compileWithTextTransform('<code>&lt;script&gt;</code>')
     expect([...ir.template.keys()]).toContain('<code>&lt;script&gt;')
     expect([...ir.template.keys()]).not.toContain('<code><script>')
+  })
+
+  it('should not escape quotes in root-level text nodes', () => {
+    // Root-level text goes through createTextNode() which doesn't need escaping
+    const { ir } = compileWithTextTransform(`Howdy y'all`)
+    expect([...ir.template.keys()]).toContain(`Howdy y'all`)
+    expect([...ir.template.keys()]).not.toContain(`Howdy y&#39;all`)
+  })
+
+  it('should not escape double quotes in root-level text nodes', () => {
+    const { ir } = compileWithTextTransform(`Say "hello"`)
+    expect([...ir.template.keys()]).toContain(`Say "hello"`)
+    expect([...ir.template.keys()]).not.toContain(`Say &quot;hello&quot;`)
+  })
+
+  it('should not escape quotes in template v-if text', () => {
+    // Text inside <template> tag also goes through createTextNode()
+    const { code } = compileWithTextTransform(
+      `<template v-if="ok">Howdy y'all</template>`,
+    )
+    expect(code).toContain(`Howdy y'all`)
+    expect(code).not.toContain(`Howdy y&#39;all`)
+  })
+
+  it('should not escape quotes in component slot text', () => {
+    // Text inside component (slot content) also goes through createTextNode()
+    const { ir } = compileWithTextTransform(`<Comp>Howdy y'all</Comp>`)
+    expect([...ir.template.keys()]).toContain(`Howdy y'all`)
+    expect([...ir.template.keys()]).not.toContain(`Howdy y&#39;all`)
   })
 
   test('constant text', () => {

@@ -12,6 +12,7 @@ import {
   type GenericAppContext,
   type GenericComponentInstance,
   type LifecycleHook,
+  NULL_DYNAMIC_COMPONENT,
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
   type ShallowUnwrapRef,
@@ -99,13 +100,17 @@ import {
   locateNextNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { _next, createElement } from './dom/node'
+import { _next, createComment, createElement, createTextNode } from './dom/node'
 import {
   type TeleportFragment,
   isTeleportFragment,
   isVaporTeleport,
 } from './components/Teleport'
 import type { KeepAliveInstance } from './components/KeepAlive'
+import {
+  currentKeepAliveCtx,
+  setCurrentKeepAliveCtx,
+} from './components/KeepAlive'
 import {
   insertionAnchor,
   insertionParent,
@@ -292,6 +297,7 @@ export function createComponent(
       currentInstance as any,
       rawProps,
       rawSlots,
+      isSingleRoot,
     )
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
@@ -326,6 +332,16 @@ export function createComponent(
     appContext,
     once,
   )
+
+  // handle currentKeepAliveCtx for component boundary isolation
+  // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
+  // DynamicFragment can capture it
+  if (currentKeepAliveCtx && !isAsyncWrapper(instance)) {
+    currentKeepAliveCtx.processShapeFlag(instance)
+    // clear currentKeepAliveCtx so child components don't associate
+    // with parent's KeepAlive
+    setCurrentKeepAliveCtx(null)
+  }
 
   // reset currentSlotOwner to null to avoid affecting the child components
   const prevSlotOwner = setCurrentSlotOwner(null)
@@ -760,13 +776,19 @@ export function isVaporComponent(
  * element if the resolution fails.
  */
 export function createComponentWithFallback(
-  comp: VaporComponent | string,
+  comp: VaporComponent | typeof NULL_DYNAMIC_COMPONENT | string,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
   once?: boolean,
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
+  if (comp === NULL_DYNAMIC_COMPONENT) {
+    return (__DEV__
+      ? createComment('ndc')
+      : createTextNode('')) as any as HTMLElement
+  }
+
   if (!isString(comp)) {
     return createComponent(
       comp,
@@ -914,13 +936,15 @@ export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
 ): void {
+  // Skip unmount for kept-alive components - deactivate if called from remove()
   if (
-    parentNode &&
+    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.parent &&
-    instance.parent.vapor &&
-    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    instance.parent.vapor
   ) {
-    ;(instance.parent as KeepAliveInstance)!.ctx.deactivate(instance)
+    if (parentNode) {
+      ;(instance.parent as KeepAliveInstance)!.ctx.deactivate(instance)
+    }
     return
   }
 
