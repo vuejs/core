@@ -212,7 +212,7 @@ export function defineVaporComponent<
   InferredProps
 >
 
-/* @__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function defineVaporComponent(comp: any, extraOptions?: any) {
   if (isFunction(comp)) {
     // #8236: extend call and options.name access are considered side-effects
