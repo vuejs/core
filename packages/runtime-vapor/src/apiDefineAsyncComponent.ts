@@ -7,7 +7,6 @@ import {
   handleError,
   markAsyncBoundary,
   performAsyncHydrate,
-  shallowRef,
   useAsyncComponentState,
   watch,
 } from '@vue/runtime-dom'
@@ -48,8 +47,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       suspensible = true,
     },
   } = createAsyncComponentContext<T, VaporComponent>(source)
-
-  const resolvedDef = shallowRef<VaporComponent>()
 
   return defineVaporComponent({
     name: 'VaporAsyncComponentWrapper',
@@ -108,10 +105,8 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       )
     },
 
-    // this accessor tracks the internal shallowRef `resolvedDef`.
-    // this allows KeepAlive to watch the resolution status.
     get __asyncResolved() {
-      return resolvedDef.value
+      return getResolvedComp()
     },
 
     setup() {
@@ -153,7 +148,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
 
       load()
         .then(() => {
-          resolvedDef.value = getResolvedComp()!
           loaded.value = true
         })
         .catch(err => {
