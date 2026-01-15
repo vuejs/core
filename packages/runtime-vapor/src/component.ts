@@ -1087,6 +1087,16 @@ function handleSetupResult(
 }
 
 export function getCurrentScopeId(): string | undefined {
-  const scopeOwner = getScopeOwner()
+  let scopeOwner = getScopeOwner()
+
+  while (scopeOwner?.parent != null) {
+    const ownerTmp = scopeOwner.parent as VaporComponentInstance
+    if (ownerTmp?.isSlotOwner ?? false) {
+      scopeOwner = ownerTmp as VaporComponentInstance
+    } else {
+      break
+    }
+  }
+
   return scopeOwner ? scopeOwner.type.__scopeId : undefined
 }
