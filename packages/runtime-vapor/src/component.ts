@@ -556,6 +556,8 @@ export class VaporComponentInstance<
 
   scopeId?: string | null
 
+  isSlotOwner?: boolean
+
   // to hold vnode props / slots in vdom interop mode
   rawPropsRef?: ShallowRef<any>
   rawSlotsRef?: ShallowRef<any>
