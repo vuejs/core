@@ -56,6 +56,30 @@ export const ensureTransitionHooksRegistered = (): void => {
   }
 }
 
+const hydrateTransitionImpl = () => {
+  if (!currentHydrationNode || !isTemplateNode(currentHydrationNode)) return
+  // replace <template> node with inner child
+  const {
+    content: { firstChild },
+    parentNode,
+  } = currentHydrationNode
+  if (firstChild) {
+    parentNode!.replaceChild(firstChild, currentHydrationNode)
+    setCurrentHydrationNode(firstChild)
+
+    if (firstChild instanceof HTMLElement || firstChild instanceof SVGElement) {
+      const originalDisplay = firstChild.style.display
+      firstChild.style.display = 'none'
+
+      return (hooks: TransitionHooks) => {
+        hooks.beforeEnter(firstChild)
+        firstChild.style.display = originalDisplay
+        queuePostFlushCb(() => hooks.enter(firstChild))
+      }
+    }
+  }
+}
+
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = displayName
   t.props = TransitionPropsValidators
@@ -68,36 +92,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     // Register transition hooks on first use
     ensureTransitionHooksRegistered()
 
-    // wrapped <transition appear>
-    let performAppear: Function | undefined
-    if (
-      isHydrating &&
-      currentHydrationNode &&
-      isTemplateNode(currentHydrationNode)
-    ) {
-      // replace <template> node with inner child
-      const {
-        content: { firstChild },
-        parentNode,
-      } = currentHydrationNode
-      if (firstChild) {
-        if (
-          firstChild instanceof HTMLElement ||
-          firstChild instanceof SVGElement
-        ) {
-          const originalDisplay = firstChild.style.display
-          firstChild.style.display = 'none'
-          performAppear = () => {
-            hooks.beforeEnter(firstChild)
-            firstChild.style.display = originalDisplay
-            queuePostFlushCb(() => hooks.enter(firstChild))
-          }
-        }
-
-        parentNode!.replaceChild(firstChild, currentHydrationNode)
-        setCurrentHydrationNode(firstChild)
-      }
-    }
+    const performAppear = isHydrating ? hydrateTransitionImpl() : undefined
 
     const children = (slots.default && slots.default()) as any as Block
     if (!children) return []
@@ -121,7 +116,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     } as VaporTransitionHooks)
 
     if (resolvedProps!.appear && performAppear) {
-      performAppear()
+      performAppear(hooks)
     }
 
     return children
