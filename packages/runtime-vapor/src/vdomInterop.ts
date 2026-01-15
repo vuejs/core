@@ -223,6 +223,7 @@ const vaporInteropImpl: Omit<
     )
     return _next(node)
   },
+
   hydrateSlot(vnode, node) {
     const { slot } = vnode.vs!
     const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
@@ -328,6 +329,7 @@ function mountVNode(
   }
 
   frag.hydrate = () => {
+    if (!isHydrating) return
     hydrateVNode(vnode, parentComponent as any)
     onScopeDispose(unmount, true)
     isMounted = true
@@ -457,6 +459,7 @@ function createVDOMComponent(
   }
 
   frag.hydrate = () => {
+    if (!isHydrating) return
     hydrateVNode(
       vnode,
       parentComponent as any,
@@ -667,6 +670,7 @@ function renderVDOMSlot(
   }
 
   frag.hydrate = () => {
+    if (!isHydrating) return
     render()
     isMounted = true
   }
