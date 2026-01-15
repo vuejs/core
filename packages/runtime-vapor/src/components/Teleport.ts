@@ -264,6 +264,7 @@ export class TeleportFragment extends VaporFragment {
   }
 
   private hydrateDisabledTeleport(targetNode: Node | null): void {
+    if (!isHydrating) return
     let nextNode = this.placeholder!.nextSibling!
     setCurrentHydrationNode(nextNode)
     this.mountAnchor = this.anchor = locateTeleportEndAnchor(nextNode)!
@@ -274,6 +275,7 @@ export class TeleportFragment extends VaporFragment {
   }
 
   private mountChildren(target: Node): void {
+    if (!isHydrating) return
     target.appendChild((this.targetStart = createTextNode('')))
     target.appendChild(
       (this.mountAnchor = this.targetAnchor = createTextNode('')),
@@ -294,6 +296,7 @@ export class TeleportFragment extends VaporFragment {
   }
 
   hydrate = (): void => {
+    if (!isHydrating) return
     const target = (this.target = resolveTeleportTarget(
       this.resolvedProps!,
       querySelector,
