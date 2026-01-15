@@ -188,6 +188,21 @@ describe('compiler: transition', () => {
     )
   })
 
+  test('does not warn with multiple children in v-if branch', () => {
+    checkWarning(
+      `
+      <transition>
+        <h1 v-if="condition">
+          <span>True</span>
+          <span>True</span>
+        </h1>
+        <h1 v-else>False</h1>
+      </transition>
+      `,
+      false,
+    )
+  })
+
   test('inject persisted when child has v-show', () => {
     expect(
       compileWithElementTransform(`
