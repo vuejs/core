@@ -15,6 +15,15 @@ import type { RawSymbol, Ref, UnwrapRefSimple } from './ref'
 import { ReactiveFlags } from './constants'
 import { warn } from './warning'
 
+declare const ReadonlyRawSymbol: unique symbol
+
+interface ReadonlyRaw<T> {
+  /**
+   * Original type used to hold readonly function parameters
+   */
+  [ReadonlyRawSymbol]: T
+}
+
 export interface Target {
   [ReactiveFlags.SKIP]?: boolean
   [ReactiveFlags.IS_REACTIVE]?: boolean
@@ -204,7 +213,7 @@ export type DeepReadonly<T> = T extends Builtin
  */
 export function readonly<T extends object>(
   target: T,
-): DeepReadonly<UnwrapNestedRefs<T>> {
+): DeepReadonly<UnwrapNestedRefs<T>> & ReadonlyRaw<T> {
   return createReactiveObject(
     target,
     true,
@@ -244,7 +253,9 @@ export function readonly<T extends object>(
  * @param target - The source object.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowreadonly}
  */
-export function shallowReadonly<T extends object>(target: T): Readonly<T> {
+export function shallowReadonly<T extends object>(
+  target: T,
+): Readonly<T> & ReadonlyRaw<T> {
   return createReactiveObject(
     target,
     true,
@@ -375,6 +386,10 @@ export function isProxy(value: any): boolean {
  * @param observed - The object for which the "raw" value is requested.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#toraw}
  */
+export function toRaw<T extends ReadonlyRaw<any>>(
+  observed: T,
+): T[typeof ReadonlyRawSymbol]
+export function toRaw<T>(observed: T): T
 export function toRaw<T>(observed: T): T {
   const raw = observed && (observed as Target)[ReactiveFlags.RAW]
   return raw ? toRaw(raw) : observed

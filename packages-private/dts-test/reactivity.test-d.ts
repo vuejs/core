@@ -5,6 +5,7 @@ import {
   readonly,
   ref,
   shallowReadonly,
+  toRaw,
 } from 'vue'
 import { describe, expectType } from './utils'
 
@@ -129,4 +130,24 @@ describe('should not error when assignment', () => {
   let record2: { [key: number]: string }
   record2 = arr
   expectType<string>(record2[0])
+})
+
+// #7478
+describe('readonly raw type', () => {
+  type Foo = { a: number; b: string; c: { d: number } }
+  const foo: Foo = {
+    a: 1,
+    b: 'b',
+    c: { d: 2 },
+  }
+
+  // readonly
+  const r = readonly(foo)
+  const rawObj = toRaw(r)
+  expectType<Foo>(rawObj)
+
+  // shallowReadonly
+  const shallowR = shallowReadonly(foo)
+  const shallowRawObj = toRaw(shallowR)
+  expectType<Foo>(shallowRawObj)
 })
