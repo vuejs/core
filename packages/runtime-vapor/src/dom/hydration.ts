@@ -24,6 +24,7 @@ import {
 } from './node'
 import { findBlockNode, remove } from '../block'
 import type { DynamicFragment } from '../fragment'
+import { registerAsyncHydrateImpl } from '../apiDefineAsyncComponent'
 
 export let currentHydrationNode: Node | null = null
 
@@ -60,6 +61,7 @@ function performHydration<T>(
     adoptTemplate = adoptTemplateImpl
     locateHydrationNode = locateHydrationNodeImpl
     _hydrateDynamicFragment = hydrateDynamicFragmentImpl
+    registerAsyncHydrateImpl()
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
     ;(Node.prototype as any).$pns = undefined
