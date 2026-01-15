@@ -30,103 +30,6 @@ import { type TransitionOptions, insert, remove } from './block'
 import { _next, parentNode } from './dom/node'
 import { invokeArrayFns } from '@vue/shared'
 
-export type AsyncHydrateImplFn = (
-  el: Element,
-  instance: VaporComponentInstance,
-  hydrate: () => void,
-  load: () => Promise<VaporComponent>,
-  getResolvedComp: () => VaporComponent | undefined,
-  hydrateStrategy: any,
-) => void
-
-let asyncHydrate: AsyncHydrateImplFn | undefined
-
-// Register async hydrate implementation for tree-shaking
-export function registerAsyncHydrateImpl(): void {
-  asyncHydrate = asyncHydrateImpl
-}
-
-const asyncHydrateImpl: AsyncHydrateImplFn = (
-  el: Element,
-  instance: VaporComponentInstance,
-  hydrate: () => void,
-  load: () => Promise<VaporComponent>,
-  getResolvedComp: () => VaporComponent | undefined,
-  hydrateStrategy: any,
-) => {
-  // Create placeholder block that matches the adopted DOM.
-  // The async component may get unmounted before its inner component is loaded,
-  // so we need to give it a placeholder block.
-  if (isComment(el, '[')) {
-    const end = _next(locateEndAnchor(el)!)
-    const block = (instance.block = [el as Node])
-    let cur = el as Node
-    while (true) {
-      let n = _next(cur)
-      if (n && n !== end) {
-        block.push((cur = n))
-      } else {
-        break
-      }
-    }
-  } else {
-    instance.block = el
-  }
-
-  // Mark as mounted to ensure it can be unmounted before
-  // its inner component is resolved
-  instance.isMounted = true
-
-  // Advance current hydration node to the nextSibling
-  setCurrentHydrationNode(
-    isComment(el, '[') ? locateEndAnchor(el)! : el.nextSibling,
-  )
-
-  // If async component needs to be updated before hydration, hydration is no longer needed.
-  let isHydrated = false
-  watch(
-    () => instance.attrs,
-    () => {
-      // early return if already hydrated
-      if (isHydrated) return
-
-      // call the beforeUpdate hook to avoid calling hydrate in performAsyncHydrate
-      instance.bu && invokeArrayFns(instance.bu)
-
-      // mount the inner component and remove the placeholder
-      const parent = parentNode(el)!
-      load().then(() => {
-        if (instance.isUnmounted) return
-        hydrate()
-        if (isComment(el, '[')) {
-          const endAnchor = locateEndAnchor(el)!
-          removeFragmentNodes(el, endAnchor)
-          insert(instance.block, parent, endAnchor)
-        } else {
-          insert(instance.block, parent, el)
-          remove(el, parent)
-        }
-      })
-    },
-    { deep: true, once: true },
-  )
-
-  performAsyncHydrate(
-    el,
-    instance,
-    () => {
-      hydrateNode(el, () => {
-        hydrate()
-        insert(instance.block, parentNode(el)!, el)
-        isHydrated = true
-      })
-    },
-    getResolvedComp,
-    load,
-    hydrateStrategy,
-  )
-}
-
 /*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
   source: AsyncComponentLoader<T> | AsyncComponentOptions<T>,
@@ -157,15 +60,80 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // not the actual hydrate function
       hydrate: () => void,
     ) {
-      asyncHydrate &&
-        asyncHydrate(
-          el,
-          instance,
-          hydrate,
-          load,
-          getResolvedComp,
-          hydrateStrategy,
-        )
+      // early return allows tree-shaking of hydration logic when not used
+      if (!isHydrating) return
+
+      // Create placeholder block that matches the adopted DOM.
+      // The async component may get unmounted before its inner component is loaded,
+      // so we need to give it a placeholder block.
+      if (isComment(el, '[')) {
+        const end = _next(locateEndAnchor(el)!)
+        const block = (instance.block = [el as Node])
+        let cur = el as Node
+        while (true) {
+          let n = _next(cur)
+          if (n && n !== end) {
+            block.push((cur = n))
+          } else {
+            break
+          }
+        }
+      } else {
+        instance.block = el
+      }
+
+      // Mark as mounted to ensure it can be unmounted before
+      // its inner component is resolved
+      instance.isMounted = true
+
+      // Advance current hydration node to the nextSibling
+      setCurrentHydrationNode(
+        isComment(el, '[') ? locateEndAnchor(el)! : el.nextSibling,
+      )
+
+      // If async component needs to be updated before hydration, hydration is no longer needed.
+      let isHydrated = false
+      watch(
+        () => instance.attrs,
+        () => {
+          // early return if already hydrated
+          if (isHydrated) return
+
+          // call the beforeUpdate hook to avoid calling hydrate in performAsyncHydrate
+          instance.bu && invokeArrayFns(instance.bu)
+
+          // mount the inner component and remove the placeholder
+          const parent = parentNode(el)!
+          load().then(() => {
+            if (instance.isUnmounted) return
+            hydrate()
+            if (isComment(el, '[')) {
+              const endAnchor = locateEndAnchor(el)!
+              removeFragmentNodes(el, endAnchor)
+              insert(instance.block, parent, endAnchor)
+            } else {
+              insert(instance.block, parent, el)
+              remove(el, parent)
+            }
+          })
+        },
+        { deep: true, once: true },
+      )
+
+      performAsyncHydrate(
+        el,
+        instance,
+        () => {
+          hydrateNode(el, () => {
+            hydrate()
+            insert(instance.block, parentNode(el)!, el)
+            isHydrated = true
+          })
+        },
+        getResolvedComp,
+        load,
+        hydrateStrategy,
+      )
     },
 
     get __asyncResolved() {
