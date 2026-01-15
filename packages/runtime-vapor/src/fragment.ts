@@ -7,6 +7,7 @@ import {
   type VaporTransitionHooks,
   applyTransitionHooks,
   applyTransitionLeaveHooks,
+  findBlockNode,
   insert,
   isValidBlock,
   remove,
@@ -16,6 +17,7 @@ import {
   type TransitionHooks,
   type VNode,
   currentInstance,
+  queuePostFlushCb,
   setCurrentInstance,
   warnExtraneousAttributes,
 } from '@vue/runtime-dom'
@@ -26,8 +28,10 @@ import {
 } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
-  hydrateDynamicFragment,
+  currentHydrationNode,
+  isComment,
   isHydrating,
+  locateFragmentEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
 import { isArray } from '@vue/shared'
@@ -290,7 +294,60 @@ export class DynamicFragment extends VaporFragment {
   }
 
   hydrate = (isEmpty = false): void => {
-    hydrateDynamicFragment(this, isEmpty)
+    // early return allows tree-shaking of hydration logic when not used
+    if (!isHydrating) return
+
+    // avoid repeated hydration during fallback rendering
+    if (this.anchor) return
+
+    if (this.anchorLabel === 'if') {
+      // reuse the empty comment node as the anchor for empty if
+      // e.g. `<div v-if="false"></div>` -> `<!---->`
+      if (isEmpty) {
+        this.anchor = locateFragmentEndAnchor('')!
+        if (__DEV__ && !this.anchor) {
+          throw new Error(
+            'Failed to locate if anchor. this is likely a Vue internal bug.',
+          )
+        } else {
+          if (__DEV__) {
+            ;(this.anchor as Comment).data = this.anchorLabel
+          }
+          return
+        }
+      }
+    } else if (this.anchorLabel === 'slot') {
+      // reuse the empty comment node for empty slot
+      // e.g. `<slot v-if="false"></slot>`
+      if (isEmpty && isComment(currentHydrationNode!, '')) {
+        this.anchor = currentHydrationNode!
+        if (__DEV__) {
+          ;(this.anchor as Comment).data = this.anchorLabel!
+        }
+        return
+      }
+
+      // reuse the vdom fragment end anchor
+      this.anchor = locateFragmentEndAnchor()!
+      if (__DEV__ && !this.anchor) {
+        throw new Error(
+          'Failed to locate slot anchor. this is likely a Vue internal bug.',
+        )
+      } else {
+        return
+      }
+    }
+
+    const { parentNode: pn, nextNode } = findBlockNode(this.nodes)!
+    // create an anchor
+    queuePostFlushCb(() => {
+      pn!.insertBefore(
+        (this.anchor = __DEV__
+          ? createComment(this.anchorLabel!)
+          : createTextNode()),
+        nextNode,
+      )
+    })
   }
 }
 
