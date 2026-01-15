@@ -217,18 +217,14 @@ const vaporInteropImpl: Omit<
     insert(vnode.anchor as any, container, anchor)
   },
 
-  // @ts-expect-error
   hydrate(vnode, node, container, anchor, parentComponent, parentSuspense) {
-    if (!isHydrating) return
     vaporHydrateNode(node, () =>
       this.mount(vnode, container, anchor, parentComponent, parentSuspense),
     )
     return _next(node)
   },
 
-  // @ts-expect-error
   hydrateSlot(vnode, node) {
-    if (!isHydrating) return
     const { slot } = vnode.vs!
     const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
     vaporHydrateNode(node, () => {
