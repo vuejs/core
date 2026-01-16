@@ -93,14 +93,12 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
-  isComment,
   isHydrating,
-  locateEndAnchor,
   locateHydrationNode,
   locateNextNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { _next, createComment, createElement, createTextNode } from './dom/node'
+import { createComment, createElement, createTextNode } from './dom/node'
 import {
   type TeleportFragment,
   isTeleportFragment,
@@ -368,34 +366,7 @@ export function createComponent(
     component.__asyncHydrate &&
     !component.__asyncResolved
   ) {
-    // it may get unmounted before its inner component is loaded,
-    // so we need to give it a placeholder block that matches its
-    // adopted DOM
-    const el = currentHydrationNode!
-    if (isComment(el, '[')) {
-      const end = _next(locateEndAnchor(el)!)
-      const block = (instance.block = [el as Node])
-      let cur = el as Node
-      while (true) {
-        let n = _next(cur)
-        if (n && n !== end) {
-          block.push((cur = n))
-        } else {
-          break
-        }
-      }
-    } else {
-      instance.block = el
-    }
-    // also mark it as mounted to ensure it can be unmounted before
-    // its inner component is resolved
-    instance.isMounted = true
-
-    // advance current hydration node to the nextSibling
-    setCurrentHydrationNode(
-      isComment(el, '[') ? locateEndAnchor(el)! : el.nextSibling,
-    )
-    component.__asyncHydrate(el as Element, instance, () =>
+    component.__asyncHydrate(currentHydrationNode as Element, instance, () =>
       setupComponent(instance, component),
     )
   } else {

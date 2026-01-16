@@ -112,6 +112,10 @@ const AsyncComp = defineVaporAsyncComponent(() => {
   return new Promise(resolve => setTimeout(() => resolve(VaporCompA), 50))
 })
 
+const AsyncCompResolved = defineVaporAsyncComponent(() =>
+  Promise.resolve(VaporCompA),
+)
+
 const TrueBranch = defineVaporComponent({
   name: 'TrueBranch',
   setup() {
@@ -645,6 +649,18 @@ const Comp2 = defineVaporComponent({
       <div id="container">
         <transition>
           <AsyncComp v-if="!toggle"></AsyncComp>
+        </transition>
+      </div>
+      <button @click="toggle = !toggle">button</button>
+    </div>
+    <div class="async-resolved">
+      <!-- Pre-resolve the async component by rendering it hidden -->
+      <div id="hidden-async">
+        <AsyncCompResolved v-show="false" />
+      </div>
+      <div id="container">
+        <transition>
+          <AsyncCompResolved v-if="!toggle"></AsyncCompResolved>
         </transition>
       </div>
       <button @click="toggle = !toggle">button</button>

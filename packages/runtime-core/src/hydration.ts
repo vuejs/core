@@ -53,6 +53,14 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { isReactive } from '@vue/reactivity'
 import { updateHOCHostEl } from './componentRenderUtils'
 
+/**
+ * VDOM hydration state.
+ * Also used by vapor interop plugin for tree-shaking:
+ * In non-hydration builds, this is never set to true, so the logic in
+ * vaporInteropImpl's hydrate/hydrateSlot can be tree-shaken.
+ */
+export let isHydrating = false
+
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
   container: (Element | ShadowRoot) & { _vnode?: VNode },
@@ -138,7 +146,9 @@ export function createHydrationFunctions(
       return
     }
 
+    isHydrating = true
     hydrateNode(container.firstChild!, vnode, null, null, null)
+    isHydrating = false
     flushPostFlushCbs()
     container._vnode = vnode
   }

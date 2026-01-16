@@ -25,6 +25,7 @@ import {
   isEmitListener,
   isKeepAlive,
   isVNode,
+  isHydrating as isVdomHydrating,
   normalizeRef,
   onScopeDispose,
   queuePostFlushCb,
@@ -218,12 +219,19 @@ const vaporInteropImpl: Omit<
   },
 
   hydrate(vnode, node, container, anchor, parentComponent, parentSuspense) {
+    // Check both vapor's isHydrating (for createVaporSSRApp) and
+    // VDOM's isVdomHydrating (for createSSRApp).
+    // In CSR (createApp/createVaporApp + vaporInteropPlugin), both are false,
+    // so this logic is tree-shaken.
+    if (!isHydrating && !isVdomHydrating) return node
     vaporHydrateNode(node, () =>
       this.mount(vnode, container, anchor, parentComponent, parentSuspense),
     )
     return _next(node)
   },
+
   hydrateSlot(vnode, node) {
+    if (!isHydrating && !isVdomHydrating) return node
     const { slot } = vnode.vs!
     const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
     vaporHydrateNode(node, () => {
@@ -328,6 +336,7 @@ function mountVNode(
   }
 
   frag.hydrate = () => {
+    if (!isHydrating) return
     hydrateVNode(vnode, parentComponent as any)
     onScopeDispose(unmount, true)
     isMounted = true
@@ -457,6 +466,7 @@ function createVDOMComponent(
   }
 
   frag.hydrate = () => {
+    if (!isHydrating) return
     hydrateVNode(
       vnode,
       parentComponent as any,
@@ -667,6 +677,7 @@ function renderVDOMSlot(
   }
 
   frag.hydrate = () => {
+    if (!isHydrating) return
     render()
     isMounted = true
   }

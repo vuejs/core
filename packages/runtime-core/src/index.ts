@@ -650,6 +650,7 @@ export {
   isMapEqual,
   isValidHtmlOrSvgAttribute,
   getAttributeMismatch,
+  isHydrating,
 } from './hydration'
 /**
  * @internal

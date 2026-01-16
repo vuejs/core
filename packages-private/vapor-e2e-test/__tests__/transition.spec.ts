@@ -1179,6 +1179,59 @@ describe('vapor transition', () => {
         '<div class="">vapor compA</div>',
       )
     })
+
+    test('apply transition to pre-resolved async component', async () => {
+      const btnSelector = '.async-resolved > button'
+      const containerSelector = '.async-resolved #container'
+      const hiddenCompSelector = '.async-resolved #hidden-async'
+
+      // Wait for the hidden AsyncCompResolved to resolve and render
+      await waitForInnerHTML(
+        hiddenCompSelector,
+        '<div style="display: none;">vapor compA</div>',
+      )
+
+      expect(await html(containerSelector)).toBe('')
+
+      await click(btnSelector)
+      expect(await html(containerSelector)).toBe(
+        '<div class="v-enter-from v-enter-active">vapor compA</div>',
+      )
+      await waitForInnerHTML(
+        containerSelector,
+        '<div class="v-enter-active v-enter-to">vapor compA</div>',
+      )
+      await waitForInnerHTML(
+        containerSelector,
+        '<div class="">vapor compA</div>',
+      )
+
+      // leave
+      await click(btnSelector)
+      await nextTick()
+      expect(await html(containerSelector)).toBe(
+        '<div class="v-leave-from v-leave-active">vapor compA</div>',
+      )
+      await waitForInnerHTML(
+        containerSelector,
+        '<div class="v-leave-active v-leave-to">vapor compA</div>',
+      )
+      await waitForInnerHTML(containerSelector, '')
+
+      // enter again
+      await click(btnSelector)
+      expect(await html(containerSelector)).toBe(
+        '<div class="v-enter-from v-enter-active">vapor compA</div>',
+      )
+      await waitForInnerHTML(
+        containerSelector,
+        '<div class="v-enter-active v-enter-to">vapor compA</div>',
+      )
+      await waitForInnerHTML(
+        containerSelector,
+        '<div class="">vapor compA</div>',
+      )
+    })
   })
 
   describe('transition with v-show', () => {
