@@ -154,7 +154,7 @@ describe('ssr: renderClass', () => {
       ssrRenderAttrs({
         className: ['foo', 'bar'],
       }),
-    ).toBe(` class="foo,bar"`)
+    ).toBe(` class="foo bar"`)
   })
 })
 
