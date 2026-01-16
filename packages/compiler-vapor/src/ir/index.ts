@@ -128,7 +128,6 @@ export interface SetTextIRNode extends BaseIRNode {
   element: number
   values: SimpleExpressionNode[]
   generated?: boolean // whether this is a generated empty text node by `processTextLikeContainer`
-  jsx?: boolean
   isComponent?: boolean
 }
 

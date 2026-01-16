@@ -10,8 +10,8 @@ export function genSetText(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { element, values, generated, jsx, isComponent } = oper
-  const texts = combineValues(values, context, jsx)
+  const { element, values, generated, isComponent } = oper
+  const texts = combineValues(values, context)
   return [
     NEWLINE,
     ...genCall(
@@ -26,16 +26,15 @@ export function genSetText(
 function combineValues(
   values: SimpleExpressionNode[],
   context: CodegenContext,
-  jsx?: boolean,
 ): CodeFragment[] {
   return values.flatMap((value, i) => {
     let exp = genExpression(value, context)
-    if (!jsx && getLiteralExpressionValue(value, true) == null) {
+    if (getLiteralExpressionValue(value, true) == null) {
       // dynamic, wrap with toDisplayString
       exp = genCall(context.helper('toDisplayString'), exp)
     }
     if (i > 0) {
-      exp.unshift(jsx ? ', ' : ' + ')
+      exp.unshift(' + ')
     }
     return exp
   })
