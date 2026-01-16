@@ -310,6 +310,70 @@ describe('scopeId', () => {
         `</div>`,
     )
   })
+
+  test('nested components with slots', async () => {
+    const Child = defineVaporComponent({
+      setup() {
+        const n0 = template('<div>')() as any
+        setInsertionState(n0, null, true)
+        createSlot('default')
+        return n0
+      },
+    })
+    const Parent = defineVaporComponent({
+      __scopeId: 'data-v-parent',
+      setup() {
+        const n3 = createComponent(
+          Child,
+          null,
+          {
+            default: withVaporCtx(() => {
+              const n2 = createComponent(
+                Child,
+                null,
+                {
+                  default: withVaporCtx(() => {
+                    const n1 = createComponent(
+                      Child,
+                      null,
+                      {
+                        default: () => {
+                          const t0 = template('test')() as any
+                          return t0
+                        },
+                      },
+                      true,
+                    )
+                    return n1
+                  }),
+                },
+                true,
+              )
+              return n2
+            }),
+          },
+          true,
+        )
+        return n3
+      },
+    })
+
+    const { host } = define({
+      __scopeId: 'app',
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe(
+      `<div data-v-parent="" app="">` +
+        `<div data-v-parent="">` +
+        `<div data-v-parent="">test<!--slot-->` +
+        `</div><!--slot-->` +
+        `</div><!--slot-->` +
+        `</div>`,
+    )
+  })
 })
 
 describe('vdom interop', () => {
