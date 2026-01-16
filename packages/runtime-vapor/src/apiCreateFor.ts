@@ -130,7 +130,7 @@ export const createFor = (
 
   const renderList = () => {
     const source = normalizeSource(src())
-    const newLength = source.values.length
+    const newLength = source.values?.length ?? 0
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
     let isFallback = false
