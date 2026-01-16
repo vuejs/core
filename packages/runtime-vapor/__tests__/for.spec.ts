@@ -691,6 +691,40 @@ describe('createFor', () => {
     expectCalledTimesToBe('Clear rows', 1, 0, 0, 0)
   })
 
+  test('should work with null and undefined', async () => {
+    const list = ref<{ name: string }[] | null | undefined>(undefined)
+
+    const { host } = define(() => {
+      const n1 = createFor(
+        () => list.value,
+        (item, key, index) => {
+          const span = document.createElement('li')
+          renderEffect(() => {
+            span.innerHTML = `${key.value}. ${item.value.name}`
+
+            // index should be undefined if source is not an object
+            expect(index.value).toBe(undefined)
+          })
+          return span
+        },
+        item => item.name,
+      )
+      return n1
+    }).render()
+
+    expect(host.innerHTML).toBe('<!--for-->')
+
+    // set to valid array
+    list.value = [{ name: '1' }]
+    await nextTick()
+    expect(host.innerHTML).toBe('<li>0. 1</li><!--for-->')
+
+    // null
+    list.value = null
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--for-->')
+  })
+
   describe('readonly source', () => {
     test('should not allow mutation', () => {
       const arr = readonly(reactive([{ foo: 1 }]))

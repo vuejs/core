@@ -73,7 +73,14 @@ class ForBlock extends VaporFragment {
   }
 }
 
-type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
+type Source =
+  | any[]
+  | Record<any, any>
+  | number
+  | Set<any>
+  | Map<any, any>
+  | null
+  | undefined
 
 type ResolvedSource = {
   values: any[]
@@ -572,7 +579,7 @@ export function createForSlots(
   getSlot: (item: any, key: any, index?: number) => DynamicSlot,
 ): DynamicSlot[] {
   const source = normalizeSource(rawSource)
-  const sourceLength = source.values.length
+  const sourceLength = source.values?.length ?? 0
   const slots = new Array<DynamicSlot>(sourceLength)
   for (let i = 0; i < sourceLength; i++) {
     slots[i] = getSlot(...getItem(source, i))
