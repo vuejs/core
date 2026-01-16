@@ -159,9 +159,7 @@ export function getScopeOwner(): VaporComponentInstance | null {
  * 2. Elements inherit the slot owner's scopeId
  */
 export function withVaporCtx(fn: Function): BlockFn {
-  const owner = currentInstance as VaporComponentInstance
-  owner.isSlotOwner = true
-
+  const owner = getScopeOwner()
   return (...args: any[]) => {
     const prevOwner = setCurrentSlotOwner(owner)
     try {

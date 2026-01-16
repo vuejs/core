@@ -556,8 +556,6 @@ export class VaporComponentInstance<
 
   scopeId?: string | null
 
-  isSlotOwner?: boolean
-
   // to hold vnode props / slots in vdom interop mode
   rawPropsRef?: ShallowRef<any>
   rawSlotsRef?: ShallowRef<any>
@@ -1087,16 +1085,6 @@ function handleSetupResult(
 }
 
 export function getCurrentScopeId(): string | undefined {
-  let scopeOwner = getScopeOwner()
-
-  while (scopeOwner?.parent != null) {
-    const ownerTmp = scopeOwner.parent as VaporComponentInstance
-    if (ownerTmp?.isSlotOwner ?? false) {
-      scopeOwner = ownerTmp as VaporComponentInstance
-    } else {
-      break
-    }
-  }
-
+  const scopeOwner = getScopeOwner()
   return scopeOwner ? scopeOwner.type.__scopeId : undefined
 }
