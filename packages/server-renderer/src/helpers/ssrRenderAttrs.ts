@@ -27,13 +27,16 @@ const shouldIgnoreProp = /*@__PURE__*/ makeMap(
 export function ssrRenderAttrs(
   props: Record<string, unknown>,
   tag?: string,
+  isTransition?: boolean,
 ): string {
   let ret = ''
   for (const key in props) {
     if (
       shouldIgnoreProp(key) ||
       isOn(key) ||
-      (tag === 'textarea' && key === 'value')
+      (tag === 'textarea' && key === 'value') ||
+      (isTransition && transitionPropsToFilter(key)) ||
+      (isTransition && transitionPropsToFilter(kebabToCamel(key)))
     ) {
       continue
     }
@@ -112,4 +115,18 @@ function ssrResetCssVars(raw: unknown) {
     return res
   }
   return raw
+}
+
+// TransitionGroup transition props that should be filtered in SSR
+const transitionPropsToFilter = /*@__PURE__*/ makeMap(
+  `mode,appear,persisted,onBeforeEnter,onEnter,onAfterEnter,onEnterCancelled,` +
+    `onBeforeLeave,onLeave,onAfterLeave,onLeaveCancelled,onBeforeAppear,` +
+    `onAppear,onAfterAppear,onAppearCancelled,name,type,css,duration,` +
+    `enterFromClass,enterActiveClass,enterToClass,appearFromClass,` +
+    `appearActiveClass,appearToClass,leaveFromClass,leaveActiveClass,` +
+    `leaveToClass,moveClass,move-class`,
+)
+
+function kebabToCamel(str: string): string {
+  return str.replace(/-([a-z])/g, (_, char) => char.toUpperCase())
 }
