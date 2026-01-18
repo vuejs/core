@@ -434,6 +434,48 @@ describe('api: watch', () => {
     expect(dummy).toBe(1)
   })
 
+  it('stopping the watcher (effect) by abort controller', async () => {
+    const controller = new AbortController()
+    const state = reactive({ count: 0 })
+    let dummy
+    watchEffect(
+      () => {
+        dummy = state.count
+      },
+      { signal: controller.signal },
+    )
+    expect(dummy).toBe(0)
+
+    controller.abort()
+    state.count++
+    await nextTick()
+    // should not update
+    expect(dummy).toBe(0)
+  })
+
+  it('stopping the watcher (with source) by abort controller', async () => {
+    const controller = new AbortController()
+    const state = reactive({ count: 0 })
+    let dummy
+    watch(
+      () => state.count,
+      count => {
+        dummy = count
+      },
+      { signal: controller.signal },
+    )
+
+    state.count++
+    await nextTick()
+    expect(dummy).toBe(1)
+
+    controller.abort()
+    state.count++
+    await nextTick()
+    // should not update
+    expect(dummy).toBe(1)
+  })
+
   it('cleanup registration (effect)', async () => {
     const state = reactive({ count: 0 })
     const cleanup = vi.fn()
