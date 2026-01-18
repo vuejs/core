@@ -115,7 +115,7 @@ describe('reactivity/shallowReadonly', () => {
     })
 
     test('should return undefined from Map.clear() call', () => {
-      const sroMap = shallowReadonly(new Map())
+      const sroMap = shallowReadonly(new Map() as any)
       expect(sroMap.clear()).toBeUndefined()
       expect(`Clear operation failed: target is readonly.`).toHaveBeenWarned()
     })
@@ -141,7 +141,7 @@ describe('reactivity/shallowReadonly', () => {
     test('should not make nested values readonly', () => {
       const obj = { foo: 1 }
       const original = new Set([obj])
-      const sroSet = shallowReadonly(original)
+      const sroSet = shallowReadonly(original as any)
 
       const values = [...sroSet.values()]
 
@@ -205,7 +205,7 @@ describe('reactivity/shallowReadonly', () => {
     })
 
     test('should return undefined from Set.clear() call', () => {
-      const sroSet = shallowReadonly(new Set())
+      const sroSet = shallowReadonly(new Set() as any)
       expect(sroSet.clear()).toBeUndefined()
       expect(`Clear operation failed: target is readonly.`).toHaveBeenWarned()
     })
