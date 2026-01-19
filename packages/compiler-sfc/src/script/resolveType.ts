@@ -1399,6 +1399,18 @@ function recordType(
     case 'TSInterfaceDeclaration':
     case 'TSEnumDeclaration':
     case 'TSModuleDeclaration': {
+      // Handle `declare global { ... }` blocks by recursively processing their contents
+      if (node.type === 'TSModuleDeclaration' && node.global) {
+        const body = node.body as TSModuleBlock
+        for (const s of body.body) {
+          if (s.type === 'ExportNamedDeclaration' && s.declaration) {
+            recordType(s.declaration, types, declares)
+          } else {
+            recordType(s, types, declares)
+          }
+        }
+        break
+      }
       const id = overwriteId || getId(node.id)
       let existing = types[id]
       if (existing) {

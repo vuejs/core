@@ -1525,6 +1525,26 @@ describe('resolveType', () => {
       })
     })
 
+    test('declare global with indexed access type', () => {
+      const files = {
+        '/global.d.ts': `
+          declare global {
+            type Options = {
+              code: {
+                selected: boolean
+              }
+            }
+          }`,
+      }
+      const { props } = resolve(`defineProps<Options["code"]>()`, files, {
+        globalTypeFiles: Object.keys(files),
+      })
+
+      expect(props).toStrictEqual({
+        selected: ['Boolean'],
+      })
+    })
+
     // #9871
     test('shared generics with different args', () => {
       const files = {
