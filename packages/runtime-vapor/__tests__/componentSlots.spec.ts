@@ -2201,7 +2201,7 @@ describe('component: slots', () => {
           return createComponent(Child, null, {
             $: [
               () =>
-                createForSlots(loop.value, (item, i) => ({
+                createForSlots(loop.value as any, (item, i) => ({
                   name: item,
                   fn: () => template(item + i)(),
                 })),

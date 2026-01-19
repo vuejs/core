@@ -696,7 +696,7 @@ describe('createFor', () => {
 
     const { host } = define(() => {
       const n1 = createFor(
-        () => list.value,
+        () => list.value as any,
         (item, key, index) => {
           const span = document.createElement('li')
           renderEffect(() => {
