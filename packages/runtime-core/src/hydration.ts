@@ -53,6 +53,12 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { isReactive } from '@vue/reactivity'
 import { updateHOCHostEl } from './componentRenderUtils'
 
+export let isHydratingEnabled = false
+
+export function setIsHydratingEnabled(value: boolean): void {
+  isHydratingEnabled = value
+}
+
 /**
  * VDOM hydration state.
  * Also used by vapor interop plugin for tree-shaking:
@@ -134,6 +140,7 @@ export function createHydrationFunctions(
   } = rendererInternals
 
   const hydrate: RootHydrateFunction = (vnode, container) => {
+    if (!isHydratingEnabled) return
     if (!container.hasChildNodes()) {
       ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
         warn(

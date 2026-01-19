@@ -15,6 +15,7 @@ import {
   createHydrationRenderer,
   createRenderer,
   isRuntimeOnly,
+  setIsHydratingEnabled,
   warn,
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
@@ -148,6 +149,7 @@ export const createApp = ((...args) => {
 }) as CreateAppFunction<Element, Component>
 
 export const createSSRApp = ((...args) => {
+  setIsHydratingEnabled(true)
   const app = ensureHydrationRenderer().createApp(...args)
 
   if (__DEV__) {

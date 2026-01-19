@@ -18,7 +18,7 @@ import {
   createDevRenderContext,
   exposePropsOnRenderContext,
   exposeSetupStateOnRenderContext,
-  publicPropertiesMap,
+  getPublicPropertiesMap,
 } from './componentPublicInstance'
 import {
   type ComponentPropsOptions,
@@ -1262,13 +1262,17 @@ export function getComponentPublicInstance(
         get(target, key: string) {
           if (key in target) {
             return target[key]
-          } else if (key in publicPropertiesMap) {
-            return publicPropertiesMap[key](
-              instance as ComponentInternalInstance,
-            )
+          } else {
+            const publicPropertiesMap = getPublicPropertiesMap()
+            if (key in publicPropertiesMap) {
+              return publicPropertiesMap[key](
+                instance as ComponentInternalInstance,
+              )
+            }
           }
         },
         has(target, key: string) {
+          const publicPropertiesMap = getPublicPropertiesMap()
           return key in target || key in publicPropertiesMap
         },
       }))

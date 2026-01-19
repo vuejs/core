@@ -400,6 +400,7 @@ export {
   normalizeClass,
   normalizeStyle,
 } from '@vue/shared'
+export { setIsHydratingEnabled } from './hydration'
 
 // For test-utils
 export { transformVNodeArgs } from './vnode'

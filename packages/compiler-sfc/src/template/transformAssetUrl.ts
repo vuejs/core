@@ -124,7 +124,7 @@ export const transformAssetUrl: NodeTransform = (
         const basePath = base.path || '/'
 
         // when packaged in the browser, path will be using the posix-
-        // only version provided by rollup-plugin-node-builtins.
+        // only version provided by @rolldown/plugin-node-polyfills.
         attr.value.content =
           host +
           (path.posix || path).join(basePath, url.path + (url.hash || ''))

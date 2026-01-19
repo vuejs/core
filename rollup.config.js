@@ -190,6 +190,7 @@ function createConfig(format, output, plugins = []) {
     // Global and Browser ESM builds inlines everything so that they can be
     // used alone.
     external: resolveExternal(),
+    // @ts-expect-error
     plugins: [
       ...trimVaporExportsPlugin(format, pkg.name),
       json({

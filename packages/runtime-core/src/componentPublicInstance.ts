@@ -359,33 +359,44 @@ const getPublicInstance = (
   return getPublicInstance(i.parent)
 }
 
-export const publicPropertiesMap: PublicPropertiesMap =
-  // Move PURE marker to new line to workaround compiler discarding it
-  // due to type annotation
-  /*@__PURE__*/ extend(Object.create(null), {
-    $: i => i,
-    $el: i => i.vnode.el,
-    $data: i => i.data,
-    $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
-    $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
-    $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
-    $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
-    $parent: i => getPublicInstance(i.parent),
-    $root: i => getPublicInstance(i.root),
-    $host: i => i.ce,
-    $emit: i => i.emit,
-    $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
-    $forceUpdate: i =>
-      i.f ||
-      (i.f = () => {
-        queueJob(i.update)
-      }),
-    $nextTick: i => i.n || (i.n = nextTick.bind(i.proxy!)),
-    $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP),
-  } as PublicPropertiesMap)
+// https://github.com/rolldown/rolldown/issues/7666
+// Lazy init to break circular dependency for rolldown tree-shaking
+// Circular:
+//    publicPropertiesMap
+//    -> getPublicInstance
+//    -> getComponentPublicInstance
+//    -> publicPropertiesMap
+let publicPropertiesMap: PublicPropertiesMap
+export const getPublicPropertiesMap = (): PublicPropertiesMap => {
+  if (!publicPropertiesMap) {
+    publicPropertiesMap = extend(Object.create(null), {
+      $: i => i,
+      $el: i => i.vnode.el,
+      $data: i => i.data,
+      $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
+      $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
+      $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
+      $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
+      $parent: i => getPublicInstance(i.parent),
+      $root: i => getPublicInstance(i.root),
+      $host: i => i.ce,
+      $emit: i => i.emit,
+      $options: i =>
+        __FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type,
+      $forceUpdate: i =>
+        i.f ||
+        (i.f = () => {
+          queueJob(i.update)
+        }),
+      $nextTick: i => i.n || (i.n = nextTick.bind(i.proxy!)),
+      $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP),
+    } as PublicPropertiesMap)
+  }
+  return publicPropertiesMap
+}
 
 if (__COMPAT__) {
-  installCompatInstanceProperties(publicPropertiesMap)
+  installCompatInstanceProperties(getPublicPropertiesMap())
 }
 
 enum AccessTypes {
@@ -462,7 +473,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
     }
 
-    const publicGetter = publicPropertiesMap[key]
+    const publicGetter = getPublicPropertiesMap()[key]
     let cssModule, globalProperties
     // public $xxx properties
     if (publicGetter) {
@@ -588,7 +599,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       hasSetupBinding(setupState, key) ||
       hasOwn(props, key) ||
       hasOwn(ctx, key) ||
-      hasOwn(publicPropertiesMap, key) ||
+      hasOwn(getPublicPropertiesMap(), key) ||
       hasOwn(appContext.config.globalProperties, key) ||
       ((cssModules = type.__cssModules) && cssModules[key])
     )
@@ -656,11 +667,11 @@ export function createDevRenderContext(instance: ComponentInternalInstance) {
   })
 
   // expose public properties
-  Object.keys(publicPropertiesMap).forEach(key => {
+  Object.keys(getPublicPropertiesMap()).forEach(key => {
     Object.defineProperty(target, key, {
       configurable: true,
       enumerable: false,
-      get: () => publicPropertiesMap[key](instance),
+      get: () => getPublicPropertiesMap()[key](instance),
       // intercepted by the proxy so no need for implementation,
       // but needed to prevent set errors
       set: NOOP,

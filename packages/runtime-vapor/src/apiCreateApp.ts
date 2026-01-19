@@ -21,7 +21,7 @@ import {
 import type { RawProps } from './componentProps'
 import { getGlobalThis } from '@vue/shared'
 import { optimizePropertyLookup } from './dom/prop'
-import { withHydration } from './dom/hydration'
+import { setIsHydratingEnabled, withHydration } from './dom/hydration'
 
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
 
@@ -122,6 +122,7 @@ export const createVaporSSRApp: CreateAppFunction<
   ParentNode,
   VaporComponent
 > = (comp, props) => {
+  setIsHydratingEnabled(true)
   prepareApp()
   if (!_hydrateApp)
     _hydrateApp = createAppAPI(hydrateApp, unmountApp, getExposed)

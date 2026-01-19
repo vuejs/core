@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@vue/compat": ["./packages/vue-compat/src"],
+      "@vue/*": ["./packages/*/src"],
+      "vue": ["./packages/vue/src/index.ts"],
+      "*": ["./*"]
+    }
+  }
+}

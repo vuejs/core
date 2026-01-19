@@ -19,28 +19,17 @@ nr build vue -f esm-bundler+esm-browser
 ```
 */
 
-import { rolldown } from 'rolldown'
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs'
+import fs from 'node:fs'
 import { parseArgs } from 'node:util'
 import path from 'node:path'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import pico from 'picocolors'
-import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
+import { cpus } from 'node:os'
+import { targets as allTargets, exec, fuzzyMatchTarget } from './utils.js'
+import { scanEnums } from './inline-enums.js'
 import prettyBytes from 'pretty-bytes'
 import { spawnSync } from 'node:child_process'
-import { createConfigsForPackage } from './create-rolldown-config.js'
-import { scanEnums } from './inline-enums.js'
-import { fileURLToPath } from 'node:url'
 
-const __dirname = fileURLToPath(new URL('.', import.meta.url))
-const privatePackages = readdirSync('packages-private')
 const commit = spawnSync('git', ['rev-parse', '--short=7', 'HEAD'])
   .stdout.toString()
   .trim()
@@ -82,40 +71,43 @@ const { values, positionals: targets } = parseArgs({
 })
 
 const {
-  formats: rawFormats,
+  formats,
   all: buildAllMatching,
   devOnly,
   prodOnly,
   withTypes: buildTypes,
   sourceMap,
   release: isRelease,
-  size,
+  size: writeSize,
 } = values
 
-/**
- * @type {string[] | undefined}
- */
-let formats
-let isNegation = false
-if (rawFormats) {
-  isNegation = rawFormats.startsWith('~')
-  formats = (isNegation ? rawFormats.slice(1) : rawFormats).split('+')
-}
 const sizeDir = path.resolve('temp/size')
 
 run()
 
 async function run() {
-  if (size) mkdirSync(sizeDir, { recursive: true })
+  if (writeSize) fs.mkdirSync(sizeDir, { recursive: true })
   const removeCache = scanEnums()
   try {
     const resolvedTargets = targets.length
       ? fuzzyMatchTarget(targets, buildAllMatching)
       : allTargets
     await buildAll(resolvedTargets)
-    if (size) await checkAllSizes(resolvedTargets)
+    await checkAllSizes(resolvedTargets)
     if (buildTypes) {
-      await import('./build-types.js')
+      await exec(
+        'pnpm',
+        [
+          'run',
+          'build-dts',
+          ...(targets.length
+            ? ['--environment', `TARGETS:${resolvedTargets.join(',')}`]
+            : []),
+        ],
+        {
+          stdio: 'inherit',
+        },
+      )
     }
   } finally {
     removeCache()
@@ -128,68 +120,73 @@ async function run() {
  * @returns {Promise<void>} - A promise representing the build process.
  */
 async function buildAll(targets) {
-  const start = performance.now()
-  const all = []
-  let count = 0
-  for (const t of targets) {
-    const configs = createConfigsForTarget(t)
-    if (configs) {
-      all.push(
-        Promise.all(
-          configs.map(c => {
-            return rolldown(c).then(bundle => {
-              // @ts-expect-error
-              return bundle.write(c.output).then(() => {
-                // @ts-expect-error
-                return c.output.file
-              })
-            })
-          }),
-        ).then(files => {
-          const from = process.cwd()
-          files.forEach((/** @type {string} */ f) => {
-            count++
-            console.log(
-              pico.gray('built: ') + pico.green(path.relative(from, f)),
-            )
-          })
-        }),
-      )
+  await runParallel(cpus().length, targets, build)
+}
+
+/**
+ * Runs iterator function in parallel.
+ * @template T - The type of items in the data source
+ * @param {number} maxConcurrency - The maximum concurrency.
+ * @param {Array<T>} source - The data source
+ * @param {(item: T) => Promise<void>} iteratorFn - The iteratorFn
+ * @returns {Promise<void[]>} - A Promise array containing all iteration results.
+ */
+async function runParallel(maxConcurrency, source, iteratorFn) {
+  /**@type {Promise<void>[]} */
+  const ret = []
+  /**@type {Promise<void>[]} */
+  const executing = []
+  for (const item of source) {
+    const p = Promise.resolve().then(() => iteratorFn(item))
+    ret.push(p)
+
+    if (maxConcurrency <= source.length) {
+      const e = p.then(() => {
+        executing.splice(executing.indexOf(e), 1)
+      })
+      executing.push(e)
+      if (executing.length >= maxConcurrency) {
+        await Promise.race(executing)
+      }
     }
   }
-  await Promise.all(all)
-  console.log(
-    `\n${count} files built in ${(performance.now() - start).toFixed(2)}ms.`,
-  )
+  return Promise.all(ret)
 }
+
+const privatePackages = fs.readdirSync('packages-private')
 
 /**
  * Builds the target.
  * @param {string} target - The target to build.
- * @returns {import('rolldown').RolldownOptions[] | void} - A promise representing the build process.
+ * @returns {Promise<void>} - A promise representing the build process.
  */
-function createConfigsForTarget(target) {
+async function build(target) {
   const pkgBase = privatePackages.includes(target)
     ? `packages-private`
     : `packages`
-  const pkgDir = path.resolve(__dirname, `../${pkgBase}/${target}`)
-  const pkg = JSON.parse(readFileSync(`${pkgDir}/package.json`, 'utf-8'))
+  const pkgDir = path.resolve(`${pkgBase}/${target}`)
+  const pkg = JSON.parse(fs.readFileSync(`${pkgDir}/package.json`, 'utf-8'))
 
   // if this is a full build (no specific targets), ignore private packages
   if ((isRelease || !targets.length) && pkg.private) {
     return
   }
 
+  /**
+   * @type {string[]}
+   */
   let resolvedFormats
   if (formats) {
+    const isNegation = formats.startsWith('~')
+    resolvedFormats = (isNegation ? formats.slice(1) : formats).split('+')
     const pkgFormats = pkg.buildOptions?.formats
     if (pkgFormats) {
       if (isNegation) {
         resolvedFormats = pkgFormats.filter(
-          (/** @type {string} */ f) => !formats.includes(f),
+          (/** @type {string} */ f) => !resolvedFormats.includes(f),
         )
       } else {
-        resolvedFormats = formats.filter(f => pkgFormats.includes(f))
+        resolvedFormats = resolvedFormats.filter(f => pkgFormats.includes(f))
       }
     }
     if (!resolvedFormats.length) {
@@ -198,19 +195,33 @@ function createConfigsForTarget(target) {
   }
 
   // if building a specific format, do not remove dist.
-  if (!formats && existsSync(`${pkgDir}/dist`)) {
-    rmSync(`${pkgDir}/dist`, { recursive: true })
+  if (!formats && fs.existsSync(`${pkgDir}/dist`)) {
+    fs.rmSync(`${pkgDir}/dist`, { recursive: true })
   }
 
-  return createConfigsForPackage({
-    target,
-    commit,
-    formats: resolvedFormats,
-    prodOnly,
-    devOnly:
-      (pkg.buildOptions && pkg.buildOptions.env === 'development') || devOnly,
-    sourceMap,
-  })
+  const env =
+    (pkg.buildOptions && pkg.buildOptions.env) ||
+    (devOnly ? 'development' : 'production')
+
+  await exec(
+    'rollup',
+    [
+      '-c',
+      '--environment',
+      [
+        `COMMIT:${commit}`,
+        `NODE_ENV:${env}`,
+        `TARGET:${target}`,
+        // @ts-expect-error
+        resolvedFormats ? `FORMATS:${resolvedFormats.join('+')}` : ``,
+        prodOnly ? `PROD_ONLY:true` : ``,
+        sourceMap ? `SOURCE_MAP:true` : ``,
+      ]
+        .filter(Boolean)
+        .join(','),
+    ],
+    { stdio: 'inherit' },
+  )
 }
 
 /**
@@ -219,7 +230,10 @@ function createConfigsForTarget(target) {
  * @returns {Promise<void>}
  */
 async function checkAllSizes(targets) {
-  if (devOnly || (formats && !formats.includes('global'))) {
+  if (
+    devOnly ||
+    (formats && (formats.startsWith('~') || !formats.includes('global')))
+  ) {
     return
   }
   console.log()
@@ -235,7 +249,7 @@ async function checkAllSizes(targets) {
  * @returns {Promise<void>}
  */
 async function checkSize(target) {
-  const pkgDir = path.resolve(__dirname, `../packages/${target}`)
+  const pkgDir = path.resolve(`packages/${target}`)
   await checkFileSize(`${pkgDir}/dist/${target}.global.prod.js`)
   if (!formats || formats.includes('global-runtime')) {
     await checkFileSize(`${pkgDir}/dist/${target}.runtime.global.prod.js`)
@@ -248,10 +262,10 @@ async function checkSize(target) {
  * @returns {Promise<void>}
  */
 async function checkFileSize(filePath) {
-  if (!existsSync(filePath)) {
+  if (!fs.existsSync(filePath)) {
     return
   }
-  const file = readFileSync(filePath)
+  const file = fs.readFileSync(filePath)
   const fileName = path.basename(filePath)
 
   const gzipped = gzipSync(file)
@@ -265,8 +279,8 @@ async function checkFileSize(filePath) {
     )}`,
   )
 
-  if (size)
-    writeFileSync(
+  if (writeSize)
+    fs.writeFileSync(
       path.resolve(sizeDir, `${fileName}.json`),
       JSON.stringify({
         file: fileName,
