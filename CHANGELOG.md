@@ -1,3 +1,18 @@
+## [3.5.27](https://github.com/vuejs/core/compare/v3.5.26...v3.5.27) (2026-01-19)
+
+
+### Bug Fixes
+
+* **compile-sfc:** correctly handle variable shadowing in for loop for `defineProps` destructuring. ([#14296](https://github.com/vuejs/core/issues/14296)) ([6a1bb50](https://github.com/vuejs/core/commit/6a1bb50594db03904f401fc33ea85afa8fa71cf7)), closes [#14294](https://github.com/vuejs/core/issues/14294)
+* **compiler-sfc:** handle indexed access types in declare global blocks ([#14260](https://github.com/vuejs/core/issues/14260)) ([e4091fe](https://github.com/vuejs/core/commit/e4091fe1f917346a66ffa8d013b3cf4b331b6682)), closes [#14236](https://github.com/vuejs/core/issues/14236)
+* **compiler-sfc:** use correct scope when resolving indexed access types from external files ([#14297](https://github.com/vuejs/core/issues/14297)) ([f0f0a21](https://github.com/vuejs/core/commit/f0f0a21dfaf0f41bb2198106db0f4ff32b97dcd3)), closes [#14292](https://github.com/vuejs/core/issues/14292)
+* **reactivity:** collection iteration should inherit iterator instance methods ([#12644](https://github.com/vuejs/core/issues/12644)) ([3c8b2fc](https://github.com/vuejs/core/commit/3c8b2fc836b2f60c90c2459933e66b2fd9fb8c08)), closes [#12615](https://github.com/vuejs/core/issues/12615)
+* **runtime-core:** skip patching reserved props for custom elements ([#14275](https://github.com/vuejs/core/issues/14275)) ([19cc7e2](https://github.com/vuejs/core/commit/19cc7e2cd053629f3233cd55dff98951e69f5391)), closes [#14274](https://github.com/vuejs/core/issues/14274)
+* **server-renderer:** use ssrRenderClass helper for className attribute ([#14327](https://github.com/vuejs/core/issues/14327)) ([a4708f3](https://github.com/vuejs/core/commit/a4708f324f62ac2122f87c4ee039deb2745f0905))
+* **ssr:** handle v-bind modifiers during render attrs ([#14263](https://github.com/vuejs/core/issues/14263)) ([c2f5964](https://github.com/vuejs/core/commit/c2f5964c47890321cab40fcf0ebc528e6d00337f)), closes [#14262](https://github.com/vuejs/core/issues/14262)
+
+
+
 ## [3.5.26](https://github.com/vuejs/core/compare/v3.5.25...v3.5.26) (2025-12-18)
 
 
