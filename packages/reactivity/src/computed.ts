@@ -194,6 +194,7 @@ export function computed<T, S = T>(
   options: WritableComputedOptions<T, S>,
   debugOptions?: DebuggerOptions,
 ): WritableComputedRef<T, S>
+/*@__NO_SIDE_EFFECTS__*/
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
