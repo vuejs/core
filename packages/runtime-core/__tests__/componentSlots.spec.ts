@@ -11,8 +11,6 @@ import {
 } from '@vue/runtime-test'
 import { createBlock, normalizeVNode } from '../src/vnode'
 import { createSlots } from '../src/helpers/createSlots'
-import { renderSlot } from '../src/helpers/renderSlot'
-import { setCurrentRenderingInstance } from '../src/componentRenderContext'
 
 describe('component: slots', () => {
   function renderWithSlots(slots: any): any {
@@ -462,119 +460,5 @@ describe('component: slots', () => {
     const root = nodeOps.createElement('div')
     createApp(App).mount(root)
     expect(serializeInner(root)).toBe('foo')
-  })
-
-  // in-DOM templates use kebab-case slot names
-  describe('in-DOM template kebab-case slot name resolution', () => {
-    beforeEach(() => {
-      __BROWSER__ = true
-    })
-
-    afterEach(() => {
-      __BROWSER__ = false
-    })
-
-    test('should resolve camelCase slot access to kebab-case via slots', () => {
-      const Comp = {
-        setup(_: any, { slots }: any) {
-          // Access with camelCase, but slot is passed with kebab-case
-          return () => slots.dropdownRender()
-        },
-      }
-
-      const App = {
-        setup() {
-          // Parent passes slot with kebab-case name (simulating in-DOM template)
-          return () =>
-            h(Comp, null, { 'dropdown-render': () => 'dropdown content' })
-        },
-      }
-
-      const root = nodeOps.createElement('div')
-      createApp(App).mount(root)
-      expect(serializeInner(root)).toBe('dropdown content')
-    })
-
-    test('should resolve camelCase slot access to kebab-case via slots (PROD)', () => {
-      __DEV__ = false
-      try {
-        const Comp = {
-          setup(_: any, { slots }: any) {
-            // Access with camelCase, but slot is passed with kebab-case
-            return () => slots.dropdownRender()
-          },
-        }
-
-        const App = {
-          setup() {
-            // Parent passes slot with kebab-case name (simulating in-DOM template)
-            return () =>
-              h(Comp, null, { 'dropdown-render': () => 'dropdown content' })
-          },
-        }
-
-        const root = nodeOps.createElement('div')
-        createApp(App).mount(root)
-        expect(serializeInner(root)).toBe('dropdown content')
-      } finally {
-        __DEV__ = true
-      }
-    })
-
-    test('should prefer exact match over kebab-case conversion via slots', () => {
-      const Comp = {
-        setup(_: any, { slots }: any) {
-          return () => slots.dropdownRender()
-        },
-      }
-
-      const App = {
-        setup() {
-          // Both exact match and kebab-case exist
-          return () =>
-            h(Comp, null, {
-              'dropdown-render': () => 'kebab',
-              dropdownRender: () => 'exact',
-            })
-        },
-      }
-
-      const root = nodeOps.createElement('div')
-      createApp(App).mount(root)
-      // exact match should take priority
-      expect(serializeInner(root)).toBe('exact')
-    })
-
-    // renderSlot tests
-    describe('renderSlot', () => {
-      beforeEach(() => {
-        setCurrentRenderingInstance({ type: {} } as any)
-      })
-
-      afterEach(() => {
-        setCurrentRenderingInstance(null)
-      })
-
-      test('should resolve camelCase slot name to kebab-case via renderSlot', () => {
-        let child: any
-        const vnode = renderSlot(
-          { 'dropdown-render': () => [(child = h('child'))] },
-          'dropdownRender',
-        )
-        expect(vnode.children).toEqual([child])
-      })
-
-      test('should prefer exact match over kebab-case conversion via renderSlot', () => {
-        let exactChild: any
-        const vnode = renderSlot(
-          {
-            'dropdown-render': () => [h('kebab')],
-            dropdownRender: () => [(exactChild = h('exact'))],
-          },
-          'dropdownRender',
-        )
-        expect(vnode.children).toEqual([exactChild])
-      })
-    })
   })
 })

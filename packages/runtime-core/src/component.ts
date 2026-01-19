@@ -66,7 +66,6 @@ import {
   ShapeFlags,
   extend,
   getGlobalThis,
-  hyphenate,
   isArray,
   isFunction,
   isObject,
@@ -1111,20 +1110,17 @@ const attrsProxyHandlers = __DEV__
       },
     }
 
-const createSlotsProxyHandlers = (
-  instance: ComponentInternalInstance,
-): ProxyHandler<InternalSlots> => ({
-  get(target, key: string | symbol) {
-    if (__DEV__) {
+/**
+ * Dev-only
+ */
+function getSlotsProxy(instance: ComponentInternalInstance): Slots {
+  return new Proxy(instance.slots, {
+    get(target, key: string) {
       track(instance, TrackOpTypes.GET, '$slots')
-    }
-    // in-DOM templates use kebab-case slot names, only relevant in browser
-    return (
-      target[key as string] ||
-      (__BROWSER__ && typeof key === 'string' && target[hyphenate(key)])
-    )
-  },
-})
+      return target[key]
+    },
+  })
+}
 
 export function createSetupContext(
   instance: ComponentInternalInstance,
@@ -1166,13 +1162,7 @@ export function createSetupContext(
         )
       },
       get slots() {
-        return (
-          slotsProxy ||
-          (slotsProxy = new Proxy(
-            instance.slots,
-            createSlotsProxyHandlers(instance),
-          ))
-        )
+        return slotsProxy || (slotsProxy = getSlotsProxy(instance))
       },
       get emit() {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
@@ -1182,9 +1172,7 @@ export function createSetupContext(
   } else {
     return {
       attrs: new Proxy(instance.attrs, attrsProxyHandlers),
-      slots: __BROWSER__
-        ? new Proxy(instance.slots, createSlotsProxyHandlers(instance))
-        : instance.slots,
+      slots: instance.slots,
       emit: instance.emit,
       expose,
     }
