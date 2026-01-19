@@ -189,7 +189,7 @@ const KeepAliveImpl: ComponentOptions = {
       }
 
       // for e2e test
-      if (__DEV__ && __GLOBAL__) {
+      if (__DEV__ && __BROWSER__) {
         ;(instance as any).__keepAliveStorageContainer = storageContainer
       }
     }
