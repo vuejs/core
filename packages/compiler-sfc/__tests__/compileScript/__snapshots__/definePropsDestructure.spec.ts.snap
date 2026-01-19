@@ -192,6 +192,32 @@ return () => {}
 }"
 `;
 
+exports[`sfc reactive props destructure > for-of loop variable shadowing 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Props {
+        msg: string;
+        input: string[];
+      }
+      
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    msg: { type: String, required: true },
+    input: { type: Array, required: true }
+  },
+  setup(__props: any) {
+
+      
+      for (const msg of __props.input) {
+        console.log('MESSAGE', msg);
+      }
+      console.log('NOT FAIL', { msg: __props.msg });
+      
+return () => {}
+}
+
+})"
+`;
+
 exports[`sfc reactive props destructure > handle function parameters with same name as destructured props 1`] = `
 "
 export default {
@@ -307,6 +333,28 @@ return (_ctx, _cache) => {
 }
 
 }"
+`;
+
+exports[`sfc reactive props destructure > regular for loop variable shadowing 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    i: { type: Number, required: true },
+    len: { type: Number, required: true }
+  },
+  setup(__props: any) {
+
+      
+      for (let i = 0; i < __props.len; i++) {
+        console.log('INDEX', i);
+      }
+      console.log('AFTER', { i: __props.i });
+      
+return () => {}
+}
+
+})"
 `;
 
 exports[`sfc reactive props destructure > rest spread 1`] = `
