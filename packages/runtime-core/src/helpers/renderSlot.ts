@@ -54,7 +54,7 @@ export function renderSlot(
   }
 
   // in-DOM templates use kebab-case slot names, only relevant in browser
-  let slot = slots[name] || (__BROWSER__ && slots[hyphenate(name)])
+  let slot = slots[name] || (__BROWSER__ && slots[hyphenate(name)]) || undefined
 
   if (__DEV__ && slot && slot.length > 1) {
     warn(

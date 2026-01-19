@@ -1121,7 +1121,8 @@ const createSlotsProxyHandlers = (
     // in-DOM templates use kebab-case slot names, only relevant in browser
     return (
       target[key as string] ||
-      (__BROWSER__ && typeof key === 'string' && target[hyphenate(key)])
+      (__BROWSER__ && typeof key === 'string' && target[hyphenate(key)]) ||
+      undefined
     )
   },
 })
