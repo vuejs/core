@@ -18,10 +18,17 @@ import {
 } from './node'
 import { remove } from '../block'
 
+export let isHydratingEnabled = false
+
+export function setIsHydratingEnabled(value: boolean): void {
+  isHydratingEnabled = value
+}
+
 export let currentHydrationNode: Node | null = null
 
 export let isHydrating = false
 function setIsHydrating(value: boolean) {
+  if (!isHydratingEnabled) return false
   try {
     return isHydrating
   } finally {
