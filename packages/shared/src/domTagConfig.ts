@@ -41,6 +41,15 @@ const VOID_TAGS =
 // https://html.spec.whatwg.org/multipage/parsing.html#formatting
 const FORMATTING_TAGS = 'a,b,big,code,em,font,i,nobr,s,small,strike,strong,tt,u'
 
+// Elements that always require explicit closing tags due to HTML parsing rules.
+// These include:
+// - Formatting elements (a, b, i, etc.) - handled by FORMATTING_TAGS
+// - Elements with special parsing rules
+// - Scope boundary elements
+const ALWAYS_CLOSE_TAGS =
+  'title,style,script,noscript,template,' + // raw text / special parsing
+  'object,table,button,textarea,select,iframe,fieldset' // scope boundary / form elements
+
 /**
  * Compiler only.
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
@@ -71,3 +80,9 @@ export const isVoidTag: (key: string) => boolean =
  */
 export const isFormattingTag: (key: string) => boolean =
   /*@__PURE__*/ makeMap(FORMATTING_TAGS)
+/**
+ * Compiler only.
+ * Do NOT use in runtime code paths unless behind `__DEV__` flag.
+ */
+export const isAlwaysCloseTag: (key: string) => boolean =
+  /*@__PURE__*/ makeMap(ALWAYS_CLOSE_TAGS)
