@@ -141,8 +141,8 @@ function canOmitEndTag(
   }
 
   // Elements in the alwaysClose list cannot have their end tags omitted
-  // because the browser's HTML parser has special handling for them
-  if (isAlwaysCloseTag(node.tag)) {
+  // unless they are on the rightmost path.
+  if (isAlwaysCloseTag(node.tag) && !context.isOnRightmostPath) {
     return false
   }
 
