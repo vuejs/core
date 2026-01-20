@@ -63,7 +63,9 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
   let staticCount = 0
   let dynamicCount = 0
   let lastInsertionChild: IRDynamicInfo | undefined
-  const children = context.dynamic.children
+  const children = context.dynamic.children as (IRDynamicInfo & {
+    logicalIndex?: number
+  })[]
 
   // Track logical index for each dynamic child
   // logicalIndex represents the position in SSR DOM (counting fragments as single units)
@@ -72,8 +74,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.INSERT) {
       // Assign logical index to this dynamic child
-      ;(child as IRDynamicInfo & { logicalIndex: number }).logicalIndex =
-        currentLogicalIndex
+      child.logicalIndex = currentLogicalIndex
       prevDynamics.push((lastInsertionChild = child))
       currentLogicalIndex++
     }
@@ -100,7 +101,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
     registerInsertion(
       prevDynamics,
       context,
-      // the logical index of append child (kept for backward compatibility)
+      // the logical index of append child
       dynamicCount + staticCount,
       true,
     )
@@ -112,14 +113,13 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
 }
 
 function registerInsertion(
-  dynamics: IRDynamicInfo[],
+  dynamics: (IRDynamicInfo & { logicalIndex?: number })[],
   context: TransformContext,
   anchor: number,
   append?: boolean,
 ) {
   for (const child of dynamics) {
-    const logicalIndex = (child as IRDynamicInfo & { logicalIndex?: number })
-      .logicalIndex
+    const logicalIndex = child.logicalIndex
     if (child.template != null) {
       // template node due to invalid nesting - generate actual insertion
       context.registerOperation({
