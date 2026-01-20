@@ -215,7 +215,7 @@ export function render(_ctx) {
 exports[`compile > execution order > setInsertionState > next, child and nthChild should be above the setInsertionState 1`] = `
 "import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, nthChild as _nthChild, createIf as _createIf, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>")
-const t1 = _template("<div><div></div><!><div></div><!><div><button></button>", true)
+const t1 = _template("<div><div></div><!><div></div><!><div><button>", true)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")

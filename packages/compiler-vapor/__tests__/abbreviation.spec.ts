@@ -131,46 +131,76 @@ test('deeply nested', () => {
 })
 
 test('always close tags', () => {
-  // button always needs closing tag
+  // button always needs closing tag unless on rightmost path
   checkAbbr(
     '<div><button>click</button></div>',
-    '<div><button>click</button>',
+    '<div><button>click',
     '<div><button>click</button></div>',
   )
+  checkAbbr(
+    '<div><button>click</button><span>sibling</span></div>',
+    '<div><button>click</button><span>sibling',
+    '<div><button>click</button><span>sibling</span></div>',
+  )
 
-  // select always needs closing tag
+  // select always needs closing tag unless rightmost
   checkAbbr(
     '<div><select></select></div>',
-    '<div><select></select>',
+    '<div><select>',
     '<div><select></select></div>',
   )
+  checkAbbr(
+    '<div><select></select><span>sibling</span></div>',
+    '<div><select></select><span>sibling',
+    '<div><select></select><span>sibling</span></div>',
+  )
 
-  // table always needs closing tag
+  // table always needs closing tag unless rightmost
   checkAbbr(
     '<div><table></table></div>',
-    '<div><table></table>',
+    '<div><table>',
     '<div><table></table></div>',
   )
-
-  // textarea always needs closing tag
   checkAbbr(
-    '<div><textarea></textarea></div>',
-    '<div><textarea></textarea>',
-    '<div><textarea></textarea></div>',
+    '<div><table></table><span>sibling</span></div>',
+    '<div><table></table><span>sibling',
+    '<div><table></table><span>sibling</span></div>',
   )
 
-  // template always needs closing tag
+  // textarea always needs closing tag unless rightmost
   checkAbbr(
-    '<div><template></template></div>',
-    '<div><template></template>',
-    '<div><template></template></div>',
+    '<div><textarea></textarea></div>',
+    '<div><textarea>',
+    '<div><textarea></textarea></div>',
+  )
+  checkAbbr(
+    '<div><textarea></textarea><span>sibling</span></div>',
+    '<div><textarea></textarea><span>sibling',
+    '<div><textarea></textarea><span>sibling</span></div>',
   )
 
-  // script always needs closing tag
+  // template always needs closing tag unless rightmost
+  checkAbbr(
+    '<div><template></template></div>',
+    '<div><template>',
+    '<div><template></template></div>',
+  )
+  checkAbbr(
+    '<div><template></template><span>sibling</span></div>',
+    '<div><template></template><span>sibling',
+    '<div><template></template><span>sibling</span></div>',
+  )
+
+  // script always needs closing tag unless rightmost
   checkAbbr(
     '<div><script></script></div>',
-    '<div><script></script>',
+    '<div><script>',
     '<div><script></script></div>',
+  )
+  checkAbbr(
+    '<div><script></script><span>sibling</span></div>',
+    '<div><script></script><span>sibling',
+    '<div><script></script><span>sibling</span></div>',
   )
 
   // without always-close elements, normal abbreviation should work
