@@ -21,6 +21,7 @@ import {
   capitalize,
   extend,
   isAlwaysCloseTag,
+  isBlockTag,
   isBuiltInDirective,
   isFormattingTag,
   isVoidTag,
@@ -154,6 +155,12 @@ function canOmitEndTag(
     (parent.node.type === NodeTypes.ELEMENT && node.tag === parent.node.tag)
   ) {
     return context.isOnRightmostPath
+  }
+
+  // For inline element containing block element, if the inline ancestor
+  // is not on rightmost path, the block must close to avoid parsing issues
+  if (isBlockTag(node.tag) && context.hasInlineAncestorNeedingClose) {
+    return false
   }
 
   return context.isLastEffectiveChild

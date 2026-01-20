@@ -50,6 +50,19 @@ const ALWAYS_CLOSE_TAGS =
   'title,style,script,noscript,template,' + // raw text / special parsing
   'object,table,button,textarea,select,iframe,fieldset' // scope boundary / form elements
 
+// Inline elements
+const INLINE_TAGS =
+  'a,abbr,acronym,b,bdi,bdo,big,br,button,canvas,cite,code,data,datalist,' +
+  'del,dfn,em,embed,i,iframe,img,input,ins,kbd,label,map,mark,meter,' +
+  'noscript,object,output,picture,progress,q,ruby,s,samp,script,select,' +
+  'small,span,strong,sub,sup,svg,textarea,time,u,tt,var,video'
+
+// Block elements
+const BLOCK_TAGS =
+  'address,article,aside,blockquote,dd,details,dialog,div,dl,dt,fieldset,' +
+  'figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,header,hgroup,hr,li,' +
+  'main,menu,nav,ol,p,pre,section,table,ul'
+
 /**
  * Compiler only.
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
@@ -86,3 +99,15 @@ export const isFormattingTag: (key: string) => boolean =
  */
 export const isAlwaysCloseTag: (key: string) => boolean =
   /*@__PURE__*/ makeMap(ALWAYS_CLOSE_TAGS)
+/**
+ * Compiler only.
+ * Do NOT use in runtime code paths unless behind `__DEV__` flag.
+ */
+export const isInlineTag: (key: string) => boolean =
+  /*@__PURE__*/ makeMap(INLINE_TAGS)
+/**
+ * Compiler only.
+ * Do NOT use in runtime code paths unless behind `__DEV__` flag.
+ */
+export const isBlockTag: (key: string) => boolean =
+  /*@__PURE__*/ makeMap(BLOCK_TAGS)
