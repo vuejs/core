@@ -268,7 +268,6 @@ export interface IRDynamicInfo {
   template?: number
   hasDynamicChild?: boolean
   operation?: OperationNode
-  ifBranch?: boolean
 }
 
 export interface IREffect {
