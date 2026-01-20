@@ -970,7 +970,7 @@ describe('component: slots', () => {
                   () => props.show,
                   () => {
                     const n5 = template('<div></div>')() as any
-                    setInsertionState(n5, null, true)
+                    setInsertionState(n5, null, 0, true)
                     createSlot('header', null, () => {
                       const n4 = template('default header')()
                       return n4

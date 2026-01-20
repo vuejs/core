@@ -1206,6 +1206,40 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('v-if/else with sibling components and elements', async () => {
+      const data = ref('a')
+      const { container } = await testHydration(
+        `<script setup>
+          const msg = _data
+          const { Comp } = _components
+        </script>
+        <template>
+          <div>
+            <Comp/>
+            <div>11</div>
+            <div v-if="msg === 'a'">foo</div>
+            <div v-else>baz</div>
+            <div>11</div>
+            <Comp/>
+          </div>
+        </template>`,
+        {
+          Comp: `<template><span>comp</span></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>comp</span><div>11</div><div>foo</div><!--if--><div>11</div><span>comp</span></div>"`,
+      )
+
+      data.value = 'b'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>comp</span><div>11</div><div>baz</div><!--if--><div>11</div><span>comp</span></div>"`,
+      )
+    })
+
     test('nested if', async () => {
       const data = reactive({ outer: true, inner: true })
       const { container } = await testHydration(

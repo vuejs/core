@@ -78,6 +78,7 @@ export interface IfIRNode extends BaseIRNode {
   once?: boolean
   parent?: number
   anchor?: number
+  logicalIndex?: number
   append?: boolean
   last?: boolean
 }
@@ -99,6 +100,7 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   onlyChild: boolean
   parent?: number
   anchor?: number
+  logicalIndex?: number
   append?: boolean
   last?: boolean
 }
@@ -203,6 +205,7 @@ export interface CreateComponentIRNode extends BaseIRNode {
   isCustomElement: boolean
   parent?: number
   anchor?: number
+  logicalIndex?: number
   append?: boolean
   last?: boolean
 }
@@ -217,6 +220,7 @@ export interface SlotOutletIRNode extends BaseIRNode {
   once?: boolean
   parent?: number
   anchor?: number
+  logicalIndex?: number
   append?: boolean
   last?: boolean
 }
