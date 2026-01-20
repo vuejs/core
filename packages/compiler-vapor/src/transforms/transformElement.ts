@@ -20,6 +20,7 @@ import {
   camelize,
   capitalize,
   extend,
+  isAlwaysCloseTag,
   isBuiltInDirective,
   isFormattingTag,
   isVoidTag,
@@ -136,6 +137,12 @@ function canOmitEndTag(
   // and can omit the closing tag
   if (block !== parent.block) {
     return true
+  }
+
+  // Elements in the alwaysClose list cannot have their end tags omitted
+  // because the browser's HTML parser has special handling for them
+  if (isAlwaysCloseTag(node.tag)) {
+    return false
   }
 
   // Formatting tags and same-name nested tags require explicit closing

@@ -129,3 +129,54 @@ test('deeply nested', () => {
     '<div><div><span>a</span><span>b</span></div></div>',
   )
 })
+
+test('always close tags', () => {
+  // button always needs closing tag
+  checkAbbr(
+    '<div><button>click</button></div>',
+    '<div><button>click</button>',
+    '<div><button>click</button></div>',
+  )
+
+  // select always needs closing tag
+  checkAbbr(
+    '<div><select></select></div>',
+    '<div><select></select>',
+    '<div><select></select></div>',
+  )
+
+  // table always needs closing tag
+  checkAbbr(
+    '<div><table></table></div>',
+    '<div><table></table>',
+    '<div><table></table></div>',
+  )
+
+  // textarea always needs closing tag
+  checkAbbr(
+    '<div><textarea></textarea></div>',
+    '<div><textarea></textarea>',
+    '<div><textarea></textarea></div>',
+  )
+
+  // template always needs closing tag
+  checkAbbr(
+    '<div><template></template></div>',
+    '<div><template></template>',
+    '<div><template></template></div>',
+  )
+
+  // script always needs closing tag
+  checkAbbr(
+    '<div><script></script></div>',
+    '<div><script></script>',
+    '<div><script></script></div>',
+  )
+
+  // without always-close elements, normal abbreviation should work
+  checkAbbr(
+    '<div><form><input></form></div>',
+    '<div><form><input>',
+    '<div><form><input></form></div>',
+  )
+})
