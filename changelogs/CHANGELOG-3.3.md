@@ -528,7 +528,7 @@
 * **compiler-sfc:** improve runtime props inference for enum ([eded947](https://github.com/vuejs/core/commit/eded94712e37856f258dc8c85f98a26fa41ae05f))
 * **compiler-sfc:** support generating variable instead of default export in compileScript ([71635be](https://github.com/vuejs/core/commit/71635be68d25887f91d624bb7f78281a851bc0cb))
 * **compiler-sfc:** support module string names syntax ([#7428](https://github.com/vuejs/core/issues/7428)) ([0002567](https://github.com/vuejs/core/commit/000256772816d54976e462330a7be342c49c7304))
-* **complier-sfc:** hoist literal constants for script ([#5752](https://github.com/vuejs/core/issues/5752)) ([7def8b1](https://github.com/vuejs/core/commit/7def8b15b89aa78accd9a00927db91e8091a12b7)), closes [#5750](https://github.com/vuejs/core/issues/5750)
+* **compiler-sfc:** hoist literal constants for script ([#5752](https://github.com/vuejs/core/issues/5752)) ([7def8b1](https://github.com/vuejs/core/commit/7def8b15b89aa78accd9a00927db91e8091a12b7)), closes [#5750](https://github.com/vuejs/core/issues/5750)
 * **runtime-core:** add skipCheck for prop ([#7548](https://github.com/vuejs/core/issues/7548)) ([63ad77f](https://github.com/vuejs/core/commit/63ad77f6f65751780aa52f817387165b4773cfe4))
 * **sfc:** deprecate reactivity transform ([efb54e7](https://github.com/vuejs/core/commit/efb54e7315e93f4be7004d1c0a4de8c523dab334))
 * **types:** `defineComponent()` with generics support ([#7963](https://github.com/vuejs/core/issues/7963)) ([d77557c](https://github.com/vuejs/core/commit/d77557c4038f88a676903b379505b280a88cc774)), closes [#3102](https://github.com/vuejs/core/issues/3102)
