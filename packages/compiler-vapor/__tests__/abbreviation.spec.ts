@@ -180,3 +180,54 @@ test('always close tags', () => {
     '<div><form><input></form></div>',
   )
 })
+
+test('inline/block ancestor relationships', () => {
+  // Inline element containing block element with sibling after inline
+  // The block element must close because inline ancestor needs to close
+  checkAbbr(
+    '<div><span><div>text</div></span><p>after</p></div>',
+    '<div><span><div>text</div></span><p>after',
+    '<div><span><div>text</div></span><p>after</p></div>',
+  )
+
+  // Same situation but deeper nesting
+  checkAbbr(
+    '<div><span><p>text</p></span><span>after</span></div>',
+    '<div><span><p>text</p></span><span>after',
+    '<div><span><p>text</p></span><span>after</span></div>',
+  )
+
+  // Inline containing block on rightmost path - can omit
+  checkAbbr(
+    '<div><span><div>text</div></span></div>',
+    '<div><span><div>text',
+    '<div><span><div>text</div></span></div>',
+  )
+
+  // Normal case - no inline/block issue
+  checkAbbr('<div><p>text</p></div>', '<div><p>text', '<div><p>text</p></div>')
+
+  // Sibling after parent but no inline/block issue
+  checkAbbr(
+    '<div><div><p>text</p></div><span>after</span></div>',
+    '<div><div><p>text</div><span>after',
+    '<div><div><p>text</p></div><span>after</span></div>',
+  )
+
+  // Multi-level inline nesting with block inside
+  // Outer span is not rightmost -> Needs close -> Inner block needs close
+  checkAbbr(
+    '<div><span><b><div>text</div></b></span><p>after</p></div>',
+    '<div><span><b><div>text</div></b></span><p>after',
+    '<div><span><b><div>text</div></b></span><p>after</p></div>',
+  )
+
+  // Mixed nesting: div > span > div > span > div
+  // The middle div is inside a span that needs closing (because of outer structure)
+  // Both inner divs need closing because they are inside spans that need closing
+  checkAbbr(
+    '<div><span><div><span><div>text</div></span></div></span><p>after</p></div>',
+    '<div><span><div><span><div>text</div></div></span><p>after',
+    '<div><span><div><span><div>text</div></span></div></span><p>after</p></div>',
+  )
+})
