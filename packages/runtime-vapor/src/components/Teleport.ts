@@ -344,6 +344,7 @@ export class TeleportFragment extends VaporFragment {
       this.hydrateDisabledTeleport(currentHydrationNode!)
     }
 
+    updateCssVars(this)
     advanceHydrationNode(this.anchor!)
   }
 }
