@@ -80,7 +80,7 @@ describe('v-text', () => {
     ])
 
     // children should have been removed
-    expect([...ir.template.keys()]).toEqual(['<div> </div>'])
+    expect([...ir.template.keys()]).toEqual(['<div> '])
 
     expect(ir.block.effect).toMatchObject([
       {
@@ -109,7 +109,7 @@ describe('v-text', () => {
 
     expect(code).matchSnapshot()
     // children should have been removed
-    expect(code).contains('template("<div> </div>", true)')
+    expect(code).contains('template("<div> ", true)')
   })
 
   test('should raise error if has no expression', () => {

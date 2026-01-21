@@ -133,6 +133,7 @@ export {
 export { withDirectives } from './directives'
 // SSR context
 export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
+export { MoveType } from './renderer'
 
 // Custom Renderer API ---------------------------------------------------------
 
@@ -153,6 +154,7 @@ export {
   resolveComponent,
   resolveDirective,
   resolveDynamicComponent,
+  NULL_DYNAMIC_COMPONENT,
 } from './helpers/resolveAssets'
 // For integration with runtime compiler
 export { registerRuntimeCompiler, isRuntimeOnly } from './component'
@@ -519,11 +521,7 @@ export { type VaporInteropInterface } from './apiCreateApp'
 /**
  * @internal
  */
-export {
-  type RendererInternals,
-  MoveType,
-  getInheritedScopeIds,
-} from './renderer'
+export { type RendererInternals, getInheritedScopeIds } from './renderer'
 /**
  * @internal
  */
@@ -652,6 +650,7 @@ export {
   isMapEqual,
   isValidHtmlOrSvgAttribute,
   getAttributeMismatch,
+  isHydrating,
 } from './hydration'
 /**
  * @internal

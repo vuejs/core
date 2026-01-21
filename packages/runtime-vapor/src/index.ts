@@ -14,7 +14,9 @@ export { VaporKeepAliveImpl as VaporKeepAlive } from './components/KeepAlive'
 export {
   defineVaporCustomElement,
   defineVaporSSRCustomElement,
-} from './apiDefineVaporCustomElement'
+  VaporElement,
+  type VaporElementConstructor,
+} from './apiDefineCustomElement'
 
 // compiler-use only
 export { insert, prepend, remove, type Block } from './block'
@@ -75,3 +77,8 @@ export { withVaporDirectives } from './directives/custom'
 export { isFragment, VaporFragment } from './fragment'
 export { VaporTransition } from './components/Transition'
 export { VaporTransitionGroup } from './components/TransitionGroup'
+
+// types
+export type { VaporComponent } from './component'
+export type { VaporSlot } from './componentSlots'
+export type { VaporTransitionHooks } from './block'

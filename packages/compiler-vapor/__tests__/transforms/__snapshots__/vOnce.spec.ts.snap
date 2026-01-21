@@ -2,7 +2,7 @@
 
 exports[`compiler: v-once > as root node 1`] = `
 "import { setProp as _setProp, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -13,11 +13,11 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > basic 1`] = `
 "import { child as _child, next as _next, toDisplayString as _toDisplayString, setText as _setText, setClass as _setClass, template as _template } from 'vue';
-const t0 = _template("<div> <span></span></div>", true)
+const t0 = _template("<div> <span>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n2 = t0()
-  const n0 = _child(n2, 0)
+  const n0 = _child(n2)
   const n1 = _next(n0, 1)
   _setText(n0, _toDisplayString(_ctx.msg) + " ")
   _setClass(n1, _ctx.clz)
@@ -27,7 +27,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compiler: v-once > inside v-once 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div><div></div></div>", true)
+const t0 = _template("<div><div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -37,7 +37,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > on component 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -50,11 +50,11 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > on nested plain element 1`] = `
 "import { child as _child, setProp as _setProp, template as _template } from 'vue';
-const t0 = _template("<div><div></div></div>", true)
+const t0 = _template("<div><div>", true)
 
 export function render(_ctx) {
   const n1 = t0()
-  const n0 = _child(n1, 0)
+  const n0 = _child(n1)
   _setProp(n0, "id", _ctx.foo)
   return n1
 }"
@@ -62,7 +62,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > on slot outlet 1`] = `
 "import { setInsertionState as _setInsertionState, createSlot as _createSlot, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n1 = t0()
@@ -74,7 +74,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > with v-for 1`] = `
 "import { createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div>")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
@@ -87,7 +87,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > with v-if 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.expr), () => {
@@ -100,8 +100,8 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > with v-if/else 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-const t1 = _template("<p></p>", true)
+const t0 = _template("<div>", true)
+const t1 = _template("<p>", true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.expr), () => {

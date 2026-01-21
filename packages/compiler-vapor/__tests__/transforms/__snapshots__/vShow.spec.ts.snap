@@ -2,7 +2,7 @@
 
 exports[`compiler: v-show transform > simple expression 1`] = `
 "import { applyVShow as _applyVShow, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()

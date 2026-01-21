@@ -2,7 +2,7 @@
 
 exports[`compile > bindings 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+const t0 = _template("<div> ", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -14,7 +14,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > custom directive > basic 1`] = `
 "import { resolveDirective as _resolveDirective, withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const _directive_test = _resolveDirective("test")
@@ -27,7 +27,7 @@ export function render(_ctx) {
 
 exports[`compile > custom directive > component 1`] = `
 "import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, withVaporDirectives as _withVaporDirectives, createIf as _createIf, withVaporCtx as _withVaporCtx, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _component_Bar = _resolveComponent("Bar")
@@ -53,7 +53,7 @@ export function render(_ctx) {
 
 exports[`compile > directives > custom directive > basic 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -64,7 +64,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > directives > custom directive > binding value 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -75,7 +75,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > directives > custom directive > dynamic parameters 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -86,7 +86,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > directives > custom directive > modifiers 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -97,7 +97,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > directives > custom directive > modifiers w/o binding 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -108,7 +108,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > directives > custom directive > static parameters 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -119,7 +119,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > directives > custom directive > static parameters and modifiers 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -130,7 +130,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > directives > v-cloak > basic 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div>test</div>", true)
+const t0 = _template("<div>test", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -140,7 +140,7 @@ export function render(_ctx) {
 
 exports[`compile > directives > v-pre > basic 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>", true)
+const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -150,8 +150,8 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
-const t1 = _template("<div> </div>")
+const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}")
+const t1 = _template("<div> ")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const _component_Comp = _resolveComponent("Comp")
@@ -181,7 +181,7 @@ export function render(_ctx) {
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
 "import { txt as _txt, createInvoker as _createInvoker, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<button> </button>", true)
+const t0 = _template("<button> ", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -199,7 +199,7 @@ export function render(_ctx) {
 
 exports[`compile > execution order > basic 1`] = `
 "import { txt as _txt, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+const t0 = _template("<div> ", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -214,8 +214,8 @@ export function render(_ctx) {
 
 exports[`compile > execution order > setInsertionState > next, child and nthChild should be above the setInsertionState 1`] = `
 "import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, nthChild as _nthChild, createIf as _createIf, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-const t1 = _template("<div><div></div><!><div></div><!><div><button></button></div></div>", true)
+const t0 = _template("<div>")
+const t1 = _template("<div><div></div><!><div></div><!><div><button>", true)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -223,7 +223,7 @@ export function render(_ctx) {
   const n5 = _next(_child(n6), 1)
   const n7 = _nthChild(n6, 3, 3)
   const p0 = _next(n7, 4)
-  const n4 = _child(p0, 0)
+  const n4 = _child(p0)
   _setInsertionState(n6, n5)
   const n0 = _createComponentWithFallback(_component_Comp)
   _setInsertionState(n6, n7, true)
@@ -238,12 +238,12 @@ export function render(_ctx) {
 
 exports[`compile > execution order > with insertionState 1`] = `
 "import { resolveComponent as _resolveComponent, child as _child, setInsertionState as _setInsertionState, createSlot as _createSlot, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div><div></div></div>", true)
+const t0 = _template("<div><div>", true)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n3 = t0()
-  const n1 = _child(n3, 0)
+  const n1 = _child(n3)
   _setInsertionState(n1, null, true)
   const n0 = _createSlot("default", null)
   _setInsertionState(n3, 1, true)
@@ -254,11 +254,11 @@ export function render(_ctx) {
 
 exports[`compile > execution order > with v-once 1`] = `
 "import { child as _child, next as _next, nthChild as _nthChild, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div><span> </span> <br> </div>", true)
+const t0 = _template("<div><span> </span> <br> ", true)
 
 export function render(_ctx) {
   const n3 = t0()
-  const n0 = _child(n3, 0)
+  const n0 = _child(n3)
   const n1 = _next(n0, 1)
   const n2 = _nthChild(n3, 3, 3)
   const x0 = _txt(n0)
@@ -292,7 +292,7 @@ exports[`compile > expression parsing > v-bind 1`] = `
 
 exports[`compile > expression parsing > v-for 1`] = `
 "import { createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div>")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.a.b), (_for_item0, _for_key0, _for_index0) => {
@@ -305,7 +305,7 @@ export function render(_ctx) {
 
 exports[`compile > expression parsing > v-on multi statements 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -334,9 +334,9 @@ export function render(_ctx) {
 
 exports[`compile > fragment 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<p></p>")
-const t1 = _template("<span></span>")
-const t2 = _template("<div></div>")
+const t0 = _template("<p>")
+const t1 = _template("<span>")
+const t2 = _template("<div>")
 
 export function render(_ctx) {
   const n0 = t0()
@@ -348,7 +348,7 @@ export function render(_ctx) {
 
 exports[`compile > gen unique helper alias > should avoid conflicts with existing variable names 1`] = `
 "import { txt as _txt2, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+const t0 = _template("<div> ", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -360,7 +360,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > gen unique node variables > should avoid binding conflicts for node vars (n*/x*) 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> </div>")
+const t0 = _template("<div> ")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n1 = t0()
@@ -378,21 +378,18 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > gen unique node variables > should bump old ref var (r*) on conflict 1`] = `
 "import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const _setTemplateRef = _createTemplateRefSetter()
   const n1 = t0()
   const n3 = t0()
   const n4 = t0()
-  let r1
-  let r3
-  let r4
   _renderEffect(() => {
     const _bar = _ctx.bar
-    r1 = _setTemplateRef(n1, _bar, r1)
-    r3 = _setTemplateRef(n3, _bar, r3)
-    r4 = _setTemplateRef(n4, _bar, r4)
+    _setTemplateRef(n1, _bar)
+    _setTemplateRef(n3, _bar)
+    _setTemplateRef(n4, _bar)
   })
   return [n1, n3, n4]
 }"
@@ -400,13 +397,13 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > gen unique node variables > should bump placeholder var (p*) on conflict 1`] = `
 "import { child as _child, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div><div><div><span></span></div></div></div>", true)
+const t0 = _template("<div><div><div><span>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n1 = t0()
-  const p1 = _child(n1, 0)
-  const p3 = _child(p1, 0)
-  const n0 = _child(p3, 0)
+  const p1 = _child(n1)
+  const p3 = _child(p1)
+  const n0 = _child(p3)
   _renderEffect(() => _setProp(n0, "id", _ctx.foo))
   return n1
 }"
@@ -414,9 +411,9 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > gen unique node variables > should bump template var (t*) on conflict 1`] = `
 "import { template as _template } from 'vue';
-const t1 = _template("<div></div>")
-const t3 = _template("<span></span>")
-const t4 = _template("<p></p>")
+const t1 = _template("<div>")
+const t3 = _template("<span>")
+const t4 = _template("<p>")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t1()
@@ -439,7 +436,7 @@ export function render(_ctx) {
 
 exports[`compile > static template 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div><p>hello</p><input><span></span></div>", true)
+const t0 = _template("<div><p>hello</p><input><span>", true)
 
 export function render(_ctx) {
   const n0 = t0()

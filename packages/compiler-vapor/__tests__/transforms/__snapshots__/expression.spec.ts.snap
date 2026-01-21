@@ -33,7 +33,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > empty interpolation 3`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -43,11 +43,11 @@ export function render(_ctx) {
 
 exports[`compiler: expression > empty interpolation 4`] = `
 "import { child as _child, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+const t0 = _template("<div> ", true)
 
 export function render(_ctx) {
   const n1 = t0()
-  const n0 = _child(n1, 0)
+  const n0 = _child(n1)
   const x1 = _txt(n1)
   _renderEffect(() => {
     const _foo = _ctx.foo
@@ -82,11 +82,11 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compiler: expression > update expression 1`] = `
 "import { child as _child, txt as _txt, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+const t0 = _template("<div> ", true)
 
 export function render(_ctx) {
   const n1 = t0()
-  const n0 = _child(n1, 0)
+  const n0 = _child(n1)
   const x1 = _txt(n1)
   _renderEffect(() => {
     const _String = String

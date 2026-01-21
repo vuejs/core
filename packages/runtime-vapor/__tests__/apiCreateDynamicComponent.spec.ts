@@ -179,4 +179,15 @@ describe('api: createDynamicComponent', () => {
       '<div><span>hi</span><!--slot--></div><!--dynamic-component-->',
     )
   })
+
+  test('accept blocks', async () => {
+    const { html } = define({
+      setup() {
+        const n0 = template('<a>router link</a>')()
+        return createDynamicComponent(() => n0)
+      },
+    }).render()
+
+    expect(html()).toBe('<a>router link</a><!--dynamic-component-->')
+  })
 })

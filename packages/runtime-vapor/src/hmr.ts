@@ -19,12 +19,10 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   const normalized = normalizeBlock(instance.block)
   const parent = normalized[0].parentNode!
   const anchor = normalized[normalized.length - 1].nextSibling
+  // reset scope to avoid stale effects
+  instance.scope.reset()
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
-  if (instance.renderEffects) {
-    instance.renderEffects.forEach(e => e.stop())
-    instance.renderEffects = []
-  }
   pushWarningContext(instance)
   devRender(instance)
   popWarningContext()
@@ -36,7 +34,8 @@ export function hmrReload(
   instance: VaporComponentInstance,
   newComp: VaporComponent,
 ): void {
-  // if parent is KeepAlive, we need to rerender it
+  // If parent is KeepAlive, rerender it so new component goes through
+  // KeepAlive's slot rendering flow to receive activated hooks properly
   if (instance.parent && isKeepAlive(instance.parent)) {
     instance.parent.hmrRerender!()
     return

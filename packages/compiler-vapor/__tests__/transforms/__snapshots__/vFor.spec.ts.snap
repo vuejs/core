@@ -2,7 +2,7 @@
 
 exports[`compiler: v-for > array de-structured value (with rest) 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div> </div>")
+const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0) => {
@@ -17,7 +17,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > array de-structured value 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div> </div>")
+const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0) => {
@@ -32,7 +32,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > basic v-for 1`] = `
 "import { txt as _txt, createInvoker as _createInvoker, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div> </div>")
+const t0 = _template("<div> ")
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -49,7 +49,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > key only binding pattern 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<tr> </tr>")
+const t0 = _template("<tr> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
@@ -64,7 +64,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > multi effect 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div>")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0, _for_key0) => {
@@ -81,8 +81,8 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > nested v-for 1`] = `
 "import { setInsertionState as _setInsertionState, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<span> </span>")
-const t1 = _template("<div></div>")
+const t0 = _template("<span> ")
+const t1 = _template("<div>")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
@@ -102,7 +102,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > object de-structured value (with rest) 1`] = `
 "import { getRestElement as _getRestElement, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div> </div>")
+const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0) => {
@@ -117,7 +117,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > object de-structured value 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<span> </span>")
+const t0 = _template("<span> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
@@ -132,7 +132,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > object value, key and index 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div> </div>")
+const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0, _for_index0) => {
@@ -147,7 +147,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > selector pattern 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<tr> </tr>")
+const t0 = _template("<tr> ")
 
 export function render(_ctx) {
   let _selector0_0
@@ -167,7 +167,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > selector pattern 2`] = `
 "import { setClass as _setClass, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<tr></tr>")
+const t0 = _template("<tr>")
 
 export function render(_ctx) {
   let _selector0_0
@@ -186,7 +186,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > selector pattern 3`] = `
 "import { setClass as _setClass, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<tr></tr>")
+const t0 = _template("<tr>")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
@@ -203,7 +203,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > selector pattern 4`] = `
 "import { setClass as _setClass, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<tr></tr>")
+const t0 = _template("<tr>")
 
 export function render(_ctx) {
   let _selector0_0
@@ -222,7 +222,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > v-for aliases w/ complex expressions 1`] = `
 "import { getDefaultValue as _getDefaultValue, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div> </div>")
+const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
@@ -243,7 +243,7 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n3 = _createComponentWithFallback(_component_Comp)
-    const n2 = _child(n3, 0)
+    const n2 = _child(n3)
     _renderEffect(() => _setText(n2, _toDisplayString(_for_item0.value)))
     return [n2, n3]
   }, undefined, 2)
@@ -259,7 +259,7 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n3 = _createComponentWithFallback(_component_Comp)
-    const n2 = _child(n3, 0)
+    const n2 = _child(n3)
     _renderEffect(() => _setText(n2, _toDisplayString(_for_item0.value)))
     return [n2, n3]
   }, undefined, 2)
@@ -269,7 +269,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > w/o value 1`] = `
 "import { createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div>item</div>")
+const t0 = _template("<div>item")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {

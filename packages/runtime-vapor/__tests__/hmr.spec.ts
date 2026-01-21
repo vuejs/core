@@ -1,11 +1,14 @@
 import {
   type HMRRuntime,
   computed,
+  createApp,
+  h,
   nextTick,
   onActivated,
   onDeactivated,
   onMounted,
   onUnmounted,
+  provide,
   ref,
   toDisplayString,
 } from '@vue/runtime-dom'
@@ -20,6 +23,7 @@ import {
   renderEffect,
   setText,
   template,
+  vaporInteropPlugin,
   withVaporCtx,
 } from '@vue/runtime-vapor'
 import { BindingTypes } from '@vue/compiler-core'
@@ -272,11 +276,14 @@ describe('hot module replacement', () => {
       components: { Child },
       setup() {
         const toggle = ref(true)
-        return { toggle }
+        function onLeave(_: any, done: Function) {
+          setTimeout(done, 0)
+        }
+        return { toggle, onLeave }
       },
       render: compileToFunction(
         `<button @click="toggle = !toggle" />
-        <Transition>
+        <Transition @leave="onLeave">
           <KeepAlive><Child v-if="toggle" /></KeepAlive>
         </Transition>`,
       ),
@@ -299,6 +306,7 @@ describe('hot module replacement', () => {
       render: compileToFunction(`<div>{{ count }}</div>`),
     })
     await nextTick()
+    await new Promise(r => setTimeout(r, 0))
     expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
@@ -1059,5 +1067,113 @@ describe('hot module replacement', () => {
     expect(root.innerHTML).toMatchInlineSnapshot(
       `"<div>child changed2</div><div>root changed</div>"`,
     )
+  })
+
+  // Vapor router-view has no render function (setup-only).
+  // When HMR rerender is triggered, the setup function is re-executed.
+  // Ensure provide() warning is suppressed.
+  test('rerender setup-only component', async () => {
+    const childId = 'test-child-reload-01'
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<div>foo</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    // without a render function
+    const Parent = defineVaporComponent({
+      setup() {
+        provide('foo', 'bar')
+        return createComponent(Child)
+      },
+    })
+
+    const { html } = define({
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    expect(html()).toBe('<div>foo</div>')
+
+    // will trigger parent rerender
+    reload(childId, {
+      __hmrId: childId,
+      render: compileToFunction(`<div>bar</div>`),
+    })
+
+    await nextTick()
+    expect(html()).toBe('<div>bar</div>')
+    expect('provide() can only be used inside setup()').not.toHaveBeenWarned()
+  })
+
+  describe('switch vapor/vdom modes', () => {
+    test('vapor -> vdom', async () => {
+      const id = 'vapor-to-vdom'
+      const Comp = {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>foo</div>')()
+        },
+      }
+      createRecord(id, Comp)
+
+      const App = {
+        render() {
+          return h(Comp as any)
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      expect(root.innerHTML).toBe('<div>foo</div>')
+
+      // switch to vdom
+      reload(id, {
+        __hmrId: id,
+        render() {
+          return h('div', 'bar')
+        },
+      })
+
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>bar</div>')
+    })
+
+    test('vdom -> vapor', async () => {
+      const id = 'vdom-to-vapor'
+      const Comp = {
+        __hmrId: id,
+        render() {
+          return h('div', 'foo')
+        },
+      }
+      createRecord(id, Comp)
+
+      const App = {
+        render() {
+          return h(Comp)
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      expect(root.innerHTML).toBe('<div>foo</div>')
+
+      // switch to vapor
+      reload(id, {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>bar</div>')()
+        },
+      })
+
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>bar</div>')
+    })
   })
 })

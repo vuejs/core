@@ -29,7 +29,6 @@ export enum IRNodeTypes {
   SLOT_OUTLET_NODE,
 
   DIRECTIVE,
-  DECLARE_OLD_REF, // consider make it more general
 
   IF,
   FOR,
@@ -129,7 +128,6 @@ export interface SetTextIRNode extends BaseIRNode {
   element: number
   values: SimpleExpressionNode[]
   generated?: boolean // whether this is a generated empty text node by `processTextLikeContainer`
-  jsx?: boolean
   isComponent?: boolean
 }
 
@@ -209,11 +207,6 @@ export interface CreateComponentIRNode extends BaseIRNode {
   last?: boolean
 }
 
-export interface DeclareOldRefIRNode extends BaseIRNode {
-  type: IRNodeTypes.DECLARE_OLD_REF
-  id: number
-}
-
 export interface SlotOutletIRNode extends BaseIRNode {
   type: IRNodeTypes.SLOT_OUTLET_NODE
   id: number
@@ -248,7 +241,6 @@ export type OperationNode =
   | IfIRNode
   | ForIRNode
   | CreateComponentIRNode
-  | DeclareOldRefIRNode
   | SlotOutletIRNode
   | GetTextChildIRNode
 
@@ -275,9 +267,7 @@ export interface IRDynamicInfo {
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
-  needsKey?: boolean
   operation?: OperationNode
-  ifBranch?: boolean
 }
 
 export interface IREffect {

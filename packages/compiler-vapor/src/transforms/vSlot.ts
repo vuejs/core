@@ -6,6 +6,7 @@ import {
   type SimpleExpressionNode,
   type TemplateChildNode,
   createCompilerError,
+  isCommentOrWhitespace,
   isTemplateNode,
   isVSlot,
 } from '@vue/compiler-dom'
@@ -88,10 +89,12 @@ function transformComponentSlot(
     })
   }
 
-  let slotKey
+  const [block, onExit] = createSlotBlock(node, dir, context)
+
+  // only add key for slot content inside Transition
   if (isTransitionNode(node) && nonSlotTemplateChildren.length) {
     const nonCommentChild = nonSlotTemplateChildren.find(
-      n => n.type !== NodeTypes.COMMENT,
+      n => !isCommentOrWhitespace(n),
     )
     if (nonCommentChild) {
       const keyProp = findProp(
@@ -99,12 +102,10 @@ function transformComponentSlot(
         'key',
       ) as VaporDirectiveNode
       if (keyProp) {
-        slotKey = keyProp.exp
+        block.key = keyProp.exp
       }
     }
   }
-
-  const [block, onExit] = createSlotBlock(node, dir, context, slotKey)
 
   const { slots } = context
 
@@ -265,14 +266,9 @@ function createSlotBlock(
   slotNode: ElementNode,
   dir: VaporDirectiveNode | undefined,
   context: TransformContext<ElementNode>,
-  key: SimpleExpressionNode | undefined = undefined,
 ): [SlotBlockIRNode, () => void] {
   const block: SlotBlockIRNode = newBlock(slotNode)
   block.props = dir && dir.exp
-  if (key) {
-    block.key = key
-    block.dynamic.needsKey = true
-  }
   const exitBlock = context.enterBlock(block)
   return [block, exitBlock]
 }

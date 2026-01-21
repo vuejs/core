@@ -1,13 +1,29 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: vModel transform > component > component v-model should merge with explicit @update:modelValue 1`] = `
+"
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponentWithFallback(_component_Comp, {
+    modelValue: () => (counter.value),
+    "onUpdate:modelValue": () => [
+      _value => (counter.value = _value),
+      onUpdate
+    ]
+  }, null, true)
+  return n0
+"
+`;
+
 exports[`compiler: vModel transform > component > v-model for component should generate modelModifiers 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, { modelValue: () => (_ctx.foo),
-  "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
-  modelModifiers: () => ({ trim: true, "bar-baz": true }) }, null, true)
+  const n0 = _createComponentWithFallback(_component_Comp, {
+    modelValue: () => (_ctx.foo),
+    "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
+    modelModifiers: () => ({ trim: true, "bar-baz": true })
+  }, null, true)
   return n0
 }"
 `;
@@ -17,8 +33,10 @@ exports[`compiler: vModel transform > component > v-model for component should w
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, { modelValue: () => (_ctx.foo),
-  "onUpdate:modelValue": () => _value => (_ctx.foo = _value) }, null, true)
+  const n0 = _createComponentWithFallback(_component_Comp, {
+    modelValue: () => (_ctx.foo),
+    "onUpdate:modelValue": () => _value => (_ctx.foo = _value)
+  }, null, true)
   return n0
 }"
 `;
@@ -45,8 +63,10 @@ exports[`compiler: vModel transform > component > v-model with arguments for com
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, { bar: () => (_ctx.foo),
-  "onUpdate:bar": () => _value => (_ctx.foo = _value) }, null, true)
+  const n0 = _createComponentWithFallback(_component_Comp, {
+    bar: () => (_ctx.foo),
+    "onUpdate:bar": () => _value => (_ctx.foo = _value)
+  }, null, true)
   return n0
 }"
 `;
@@ -57,12 +77,16 @@ exports[`compiler: vModel transform > component > v-model with dynamic arguments
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, { $: [
-    () => ({ [_ctx.foo]: _ctx.foo,
-    ["onUpdate:" + _ctx.foo]: () => _value => (_ctx.foo = _value),
-    [_ctx.foo + "Modifiers"]: () => ({ trim: true }) }),
-    () => ({ [_ctx.bar]: _ctx.bar,
-    ["onUpdate:" + _ctx.bar]: () => _value => (_ctx.bar = _value),
-    [_ctx.bar + "Modifiers"]: () => ({ number: true }) })
+    () => ({
+      [_ctx.foo]: _ctx.foo,
+      ["onUpdate:" + _ctx.foo]: () => _value => (_ctx.foo = _value),
+      [_ctx.foo + "Modifiers"]: () => ({ trim: true })
+    }),
+    () => ({
+      [_ctx.bar]: _ctx.bar,
+      ["onUpdate:" + _ctx.bar]: () => _value => (_ctx.bar = _value),
+      [_ctx.bar + "Modifiers"]: () => ({ number: true })
+    })
   ] }, null, true)
   return n0
 }"
@@ -74,8 +98,10 @@ exports[`compiler: vModel transform > component > v-model with dynamic arguments
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n0 = _createComponentWithFallback(_component_Comp, { $: [
-    () => ({ [_ctx.arg]: _ctx.foo,
-    ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value) })
+    () => ({
+      [_ctx.arg]: _ctx.foo,
+      ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value)
+    })
   ] }, null, true)
   return n0
 }"
@@ -86,9 +112,11 @@ exports[`compiler: vModel transform > component > v-model:model with arguments f
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, { model: () => (_ctx.foo),
-  "onUpdate:model": () => _value => (_ctx.foo = _value),
-  modelModifiers$: () => ({ trim: true }) }, null, true)
+  const n0 = _createComponentWithFallback(_component_Comp, {
+    model: () => (_ctx.foo),
+    "onUpdate:model": () => _value => (_ctx.foo = _value),
+    modelModifiers$: () => ({ trim: true })
+  }, null, true)
   return n0
 }"
 `;
@@ -128,7 +156,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (checkbox) 1`] = `
 "import { applyCheckboxModel as _applyCheckboxModel, template as _template } from 'vue';
-const t0 = _template("<input type=\\"checkbox\\">", true)
+const t0 = _template("<input type=checkbox>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -150,7 +178,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (radio) 1`] = `
 "import { applyRadioModel as _applyRadioModel, template as _template } from 'vue';
-const t0 = _template("<input type=\\"radio\\">", true)
+const t0 = _template("<input type=radio>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -161,7 +189,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support input (text) 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
-const t0 = _template("<input type=\\"text\\">", true)
+const t0 = _template("<input type=text>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -199,7 +227,7 @@ exports[`compiler: vModel transform > should support member expression w/ inline
 
 exports[`compiler: vModel transform > should support select 1`] = `
 "import { applySelectModel as _applySelectModel, template as _template } from 'vue';
-const t0 = _template("<select></select>", true)
+const t0 = _template("<select>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -221,7 +249,7 @@ export function render(_ctx) {
 
 exports[`compiler: vModel transform > should support textarea 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
-const t0 = _template("<textarea></textarea>", true)
+const t0 = _template("<textarea>", true)
 
 export function render(_ctx) {
   const n0 = t0()

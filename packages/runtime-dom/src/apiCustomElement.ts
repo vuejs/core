@@ -80,8 +80,8 @@ export function defineCustomElement<Props, RawBindings = object>(
 // overload 2: defineCustomElement with options object, infer props from options
 export function defineCustomElement<
   // props
-  RuntimePropsOptions extends
-    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
+  RuntimePropsOptions extends ComponentObjectPropsOptions =
+    ComponentObjectPropsOptions,
   PropsKeys extends string = string,
   // emits
   RuntimeEmitsOptions extends EmitsOptions = {},
@@ -201,10 +201,10 @@ const BaseClass = (
 type InnerComponentDef = ConcreteComponent & CustomElementOptions
 
 export abstract class VueElementBase<
-    E = Element,
-    C = Component,
-    Def extends CustomElementOptions & { props?: any } = InnerComponentDef,
-  >
+  E = Element,
+  C = Component,
+  Def extends CustomElementOptions & { props?: any } = InnerComponentDef,
+>
   extends BaseClass
   implements ComponentCustomElementInterface
 {

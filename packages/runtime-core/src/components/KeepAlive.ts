@@ -173,7 +173,13 @@ const KeepAliveImpl: ComponentOptions = {
 
     function pruneCache(filter: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
-        const name = getComponentName(vnode.type as ConcreteComponent)
+        // for async components, name check should be based in its loaded
+        // inner component if available
+        const name = getComponentName(
+          isAsyncWrapper(vnode)
+            ? (vnode.type as ComponentOptions).__asyncResolved || {}
+            : (vnode.type as ConcreteComponent),
+        )
         if (name && !filter(name)) {
           pruneCacheEntry(key)
         }
@@ -356,7 +362,7 @@ export const KeepAlive = (__COMPAT__
   ? /*@__PURE__*/ decorate(KeepAliveImpl)
   : KeepAliveImpl) as any as {
   __isKeepAlive: true
-  new (props?: VNodeProps & KeepAliveProps): {
+  new (): {
     $props: VNodeProps & KeepAliveProps
     $slots: {
       default(): VNode[]

@@ -133,13 +133,8 @@ export type UnwrapMixinsType<
 type EnsureNonVoid<T> = T extends void ? {} : T
 
 export type ComponentPublicInstanceConstructor<
-  T extends ComponentPublicInstance<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M
-  > = ComponentPublicInstance<any>,
+  T extends ComponentPublicInstance<Props, RawBindings, D, C, M> =
+    ComponentPublicInstance<any>,
   Props = any,
   RawBindings = any,
   D = any,
@@ -149,7 +144,7 @@ export type ComponentPublicInstanceConstructor<
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-  new (props?: T['$props']): T
+  new (...args: any[]): T
 }
 
 /**

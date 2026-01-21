@@ -2,12 +2,22 @@
 
 exports[`v-on > complex member expression w/ prefixIdentifiers: true 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
   n0.$evtclick = _createInvoker(e => _ctx.a['b' + _ctx.c](e))
+  return n0
+}"
+`;
+
+exports[`v-on > component event should camelize kebab-case 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponentWithFallback(_component_Comp, { onNameClick: () => _ctx.handleClick }, null, true)
   return n0
 }"
 `;
@@ -21,7 +31,7 @@ export function render(_ctx) {
   const _on_update_model1 = () => {}
   const n0 = _createComponentWithFallback(_component_Foo, {
     "onUpdate:model": () => _on_update_model,
-    "onUpdate-model": () => _on_update_model1
+    onUpdateModel: () => _on_update_model1
   }, null, true)
   return n0
 }"
@@ -29,7 +39,7 @@ export function render(_ctx) {
 
 exports[`v-on > dynamic arg 1`] = `
 "import { createInvoker as _createInvoker, on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -45,7 +55,7 @@ export function render(_ctx) {
 
 exports[`v-on > dynamic arg with complex exp prefixing 1`] = `
 "import { createInvoker as _createInvoker, on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -61,7 +71,7 @@ export function render(_ctx) {
 
 exports[`v-on > dynamic arg with prefixing 1`] = `
 "import { createInvoker as _createInvoker, on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -77,9 +87,9 @@ export function render(_ctx) {
 
 exports[`v-on > event modifier 1`] = `
 "import { createInvoker as _createInvoker, withModifiers as _withModifiers, on as _on, withKeys as _withKeys, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<a></a>")
-const t1 = _template("<form></form>")
-const t2 = _template("<div></div>")
+const t0 = _template("<a>")
+const t1 = _template("<form>")
+const t2 = _template("<div>")
 const t3 = _template("<input>")
 _delegateEvents("click", "contextmenu", "mouseup", "keyup")
 
@@ -140,7 +150,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`v-on > expression with type 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
@@ -152,7 +162,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`v-on > function expression w/ prefixIdentifiers: true 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -164,7 +174,7 @@ export function render(_ctx) {
 
 exports[`v-on > inline statement w/ prefixIdentifiers: true 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -176,7 +186,7 @@ export function render(_ctx) {
 
 exports[`v-on > multiple inline statements w/ prefixIdentifiers: true 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -188,7 +198,7 @@ export function render(_ctx) {
 
 exports[`v-on > should NOT add a prefix to $event if the expression is a function expression 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -200,7 +210,7 @@ export function render(_ctx) {
 
 exports[`v-on > should NOT wrap as function if expression is already function expression (with Typescript) 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -212,7 +222,7 @@ export function render(_ctx) {
 
 exports[`v-on > should NOT wrap as function if expression is already function expression (with newlines) 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -228,7 +238,7 @@ export function render(_ctx) {
 
 exports[`v-on > should NOT wrap as function if expression is already function expression 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -240,7 +250,7 @@ export function render(_ctx) {
 
 exports[`v-on > should NOT wrap as function if expression is complex member expression 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -252,7 +262,7 @@ export function render(_ctx) {
 
 exports[`v-on > should delegate event 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -264,7 +274,7 @@ export function render(_ctx) {
 
 exports[`v-on > should handle multi-line statement 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -279,7 +289,7 @@ _ctx.bar()
 
 exports[`v-on > should handle multiple inline statement 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -291,7 +301,7 @@ export function render(_ctx) {
 
 exports[`v-on > should not prefix member expression 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -303,7 +313,7 @@ export function render(_ctx) {
 
 exports[`v-on > should not wrap keys guard if no key modifier is present 1`] = `
 "import { createInvoker as _createInvoker, withModifiers as _withModifiers, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("keyup")
 
 export function render(_ctx) {
@@ -315,7 +325,7 @@ export function render(_ctx) {
 
 exports[`v-on > should support multiple events and modifiers options w/ prefixIdentifiers: true 1`] = `
 "import { createInvoker as _createInvoker, withModifiers as _withModifiers, withKeys as _withKeys, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click", "keyup")
 
 export function render(_ctx) {
@@ -328,7 +338,7 @@ export function render(_ctx) {
 
 exports[`v-on > should support multiple modifiers and event options w/ prefixIdentifiers: true 1`] = `
 "import { createInvoker as _createInvoker, withModifiers as _withModifiers, on as _on, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -342,7 +352,7 @@ export function render(_ctx) {
 
 exports[`v-on > should transform click.middle 1`] = `
 "import { createInvoker as _createInvoker, withModifiers as _withModifiers, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("mouseup")
 
 export function render(_ctx) {
@@ -354,7 +364,7 @@ export function render(_ctx) {
 
 exports[`v-on > should transform click.middle 2`] = `
 "import { createInvoker as _createInvoker, withModifiers as _withModifiers, on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -370,7 +380,7 @@ export function render(_ctx) {
 
 exports[`v-on > should transform click.right 1`] = `
 "import { createInvoker as _createInvoker, withModifiers as _withModifiers, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("contextmenu")
 
 export function render(_ctx) {
@@ -382,7 +392,7 @@ export function render(_ctx) {
 
 exports[`v-on > should transform click.right 2`] = `
 "import { createInvoker as _createInvoker, withModifiers as _withModifiers, withKeys as _withKeys, on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -398,7 +408,7 @@ export function render(_ctx) {
 
 exports[`v-on > should use delegate helper when have multiple events of same name 1`] = `
 "import { createInvoker as _createInvoker, delegate as _delegate, withModifiers as _withModifiers, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -411,7 +421,7 @@ export function render(_ctx) {
 
 exports[`v-on > should wrap as function if expression is inline statement 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -423,7 +433,7 @@ export function render(_ctx) {
 
 exports[`v-on > should wrap both for dynamic key event w/ left/right modifiers 1`] = `
 "import { createInvoker as _createInvoker, withModifiers as _withModifiers, withKeys as _withKeys, on as _on, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -451,7 +461,7 @@ exports[`v-on > should wrap in unref if identifier is setup-maybe-ref w/ inline:
 
 exports[`v-on > should wrap keys guard for keyboard events or dynamic events 1`] = `
 "import { createInvoker as _createInvoker, withModifiers as _withModifiers, withKeys as _withKeys, on as _on, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -464,7 +474,7 @@ export function render(_ctx) {
 
 exports[`v-on > should wrap keys guard for static key event w/ left/right modifiers 1`] = `
 "import { createInvoker as _createInvoker, withKeys as _withKeys, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("keyup")
 
 export function render(_ctx) {
@@ -476,7 +486,7 @@ export function render(_ctx) {
 
 exports[`v-on > simple expression 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 _delegateEvents("click")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {

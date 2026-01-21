@@ -2,7 +2,7 @@
 
 exports[`v-text > should convert v-text to setText 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+const t0 = _template("<div> ", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -14,7 +14,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`v-text > should raise error and ignore children when v-text is present 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+const t0 = _template("<div> ", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -26,7 +26,7 @@ export function render(_ctx) {
 
 exports[`v-text > should raise error if has no expression 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()

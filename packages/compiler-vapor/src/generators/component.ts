@@ -1,4 +1,10 @@
-import { camelize, extend, getModifierPropName, isArray } from '@vue/shared'
+import {
+  camelize,
+  extend,
+  getModifierPropName,
+  isArray,
+  toHandlerKey,
+} from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
   type BlockIRNode,
@@ -67,7 +73,7 @@ export function genCreateComponent(
 
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
     (acc, { name, value }: InlineHandler) => {
-      const handler = genEventHandler(context, [value], undefined, false)
+      const handler = genEventHandler(context, [value], undefined, false, false)
       return [...acc, `const ${name} = `, ...handler, NEWLINE]
     },
     [],
@@ -191,7 +197,138 @@ function genStaticProps(
   context: CodegenContext,
   dynamicProps?: CodeFragment[],
 ): CodeFragment[] {
-  const args = props.map(prop => genProp(prop, context, true))
+  const args: CodeFragment[][] = []
+
+  type HandlerGroup = {
+    keyFrag: CodeFragment[]
+    handlers: CodeFragment[][]
+    index: number
+  }
+  const handlerGroups = new Map<string, HandlerGroup>()
+
+  const ensureHandlerGroup = (
+    keyName: string,
+    keyFrag: CodeFragment[],
+  ): HandlerGroup => {
+    let group = handlerGroups.get(keyName)
+    if (!group) {
+      const index = args.length
+      // placeholder, filled later
+      args.push([])
+      group = { keyFrag, handlers: [], index }
+      handlerGroups.set(keyName, group)
+    }
+    return group
+  }
+
+  const addHandler = (
+    keyName: string,
+    keyFrag: CodeFragment[],
+    handlerExp: CodeFragment[],
+  ) => {
+    ensureHandlerGroup(keyName, keyFrag).handlers.push(handlerExp)
+  }
+
+  const getStaticPropKeyName = (prop: IRProp): string | undefined => {
+    if (!prop.key.isStatic) return
+    const handlerModifierPostfix =
+      prop.handlerModifiers && prop.handlerModifiers.options
+        ? prop.handlerModifiers.options
+            .map(m => m.charAt(0).toUpperCase() + m.slice(1))
+            .join('')
+        : ''
+    const keyName =
+      (prop.handler
+        ? toHandlerKey(camelize(prop.key.content))
+        : prop.key.content) + handlerModifierPostfix
+    return keyName
+  }
+
+  for (const prop of props) {
+    if (prop.handler) {
+      const keyName = getStaticPropKeyName(prop)
+      if (!keyName) {
+        // dynamic key handlers are emitted as-is
+        args.push(genProp(prop, context, true))
+        continue
+      }
+
+      const keyFrag = genPropKey(prop, context)
+      const hasModifiers =
+        !!prop.handlerModifiers &&
+        (prop.handlerModifiers.keys.length > 0 ||
+          prop.handlerModifiers.nonKeys.length > 0)
+
+      if (hasModifiers || prop.values.length <= 1) {
+        const handlerExp = genEventHandler(
+          context,
+          prop.values,
+          prop.handlerModifiers,
+          true,
+          false,
+        )
+        addHandler(keyName, keyFrag, handlerExp)
+      } else {
+        // no modifiers: flatten multiple handler values
+        for (const value of prop.values) {
+          const handlerExp = genEventHandler(
+            context,
+            [value],
+            prop.handlerModifiers,
+            true,
+            false,
+          )
+          addHandler(keyName, keyFrag, handlerExp)
+        }
+      }
+      continue
+    }
+
+    // normal (non-handler) props
+    args.push(genProp(prop, context, true))
+
+    // v-model on component: synthesize onUpdate:* and modifiers props, and
+    // dedupe/merge with user provided @update:* handlers.
+    if (prop.model) {
+      // onUpdate:* handler
+      if (prop.key.isStatic) {
+        const keyName = `onUpdate:${camelize(prop.key.content)}`
+        const keyFrag: CodeFragment[] = [JSON.stringify(keyName)]
+        addHandler(keyName, keyFrag, genModelHandler(prop.values[0], context))
+      } else {
+        const keyFrag: CodeFragment[] = [
+          '["onUpdate:" + ',
+          ...genExpression(prop.key, context),
+          ']',
+        ]
+        args.push([
+          ...keyFrag,
+          ': () => ',
+          ...genModelHandler(prop.values[0], context),
+        ])
+      }
+
+      // modelModifiers prop
+      const { key, modelModifiers } = prop
+      if (modelModifiers && modelModifiers.length) {
+        const modifiersKey = key.isStatic
+          ? [getModifierPropName(key.content)]
+          : ['[', ...genExpression(key, context), ' + "Modifiers"]']
+        const modifiersVal = genDirectiveModifiers(modelModifiers)
+        args.push([...modifiersKey, `: () => ({ ${modifiersVal} })`])
+      }
+    }
+  }
+
+  // fill handler placeholders
+  for (const group of handlerGroups.values()) {
+    const handlerValue =
+      group.handlers.length > 1
+        ? genMulti(DELIMITERS_ARRAY_NEWLINE, ...group.handlers)
+        : group.handlers[0]
+    args[group.index] = [...group.keyFrag, ': () => ', ...handlerValue]
+  }
+
   if (dynamicProps) {
     args.push([`$: `, ...dynamicProps])
   }
@@ -215,9 +352,45 @@ function genDynamicProps(
       }
       continue
     } else {
-      if (p.kind === IRDynamicPropsKind.ATTRIBUTE)
-        expr = genMulti(DELIMITERS_OBJECT, genProp(p, context))
-      else {
+      if (p.kind === IRDynamicPropsKind.ATTRIBUTE) {
+        if (p.model) {
+          const entries: CodeFragment[][] = [genProp(p, context)]
+
+          // onUpdate:* handler for component v-model with dynamic argument
+          const updateKey = p.key.isStatic
+            ? ([
+                JSON.stringify(`onUpdate:${camelize(p.key.content)}`),
+              ] as CodeFragment[])
+            : ([
+                '["onUpdate:" + ',
+                ...genExpression(p.key, context),
+                ']',
+              ] as CodeFragment[])
+          entries.push([
+            ...updateKey,
+            ': () => ',
+            ...genModelHandler(p.values[0], context),
+          ])
+
+          // *Modifiers
+          const { modelModifiers } = p
+          if (modelModifiers && modelModifiers.length) {
+            const modifiersKey = p.key.isStatic
+              ? ([getModifierPropName(p.key.content)] as CodeFragment[])
+              : ([
+                  '[',
+                  ...genExpression(p.key, context),
+                  ' + "Modifiers"]',
+                ] as CodeFragment[])
+            const modifiersVal = genDirectiveModifiers(modelModifiers)
+            entries.push([...modifiersKey, `: () => ({ ${modifiersVal} })`])
+          }
+
+          expr = genMulti(DELIMITERS_OBJECT_NEWLINE, ...entries)
+        } else {
+          expr = genMulti(DELIMITERS_OBJECT, genProp(p, context))
+        }
+      } else {
         expr = genExpression(p.value, context)
         if (p.handler) expr = genCall(helper('toHandlers'), expr)
       }
@@ -239,39 +412,13 @@ function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
           context,
           prop.values,
           prop.handlerModifiers,
-          true /* wrap handlers passed to components */,
+          true /* asComponentProp */,
+          true /* wrapInGetter */,
         )
       : isStatic
         ? ['() => (', ...values, ')']
         : values),
-    ...(prop.model
-      ? [...genModelEvent(prop, context), ...genModelModifiers(prop, context)]
-      : []),
   ]
-}
-
-function genModelEvent(prop: IRProp, context: CodegenContext): CodeFragment[] {
-  const name = prop.key.isStatic
-    ? [JSON.stringify(`onUpdate:${camelize(prop.key.content)}`)]
-    : ['["onUpdate:" + ', ...genExpression(prop.key, context), ']']
-  const handler = genModelHandler(prop.values[0], context)
-
-  return [',', NEWLINE, ...name, ': () => ', ...handler]
-}
-
-function genModelModifiers(
-  prop: IRProp,
-  context: CodegenContext,
-): CodeFragment[] {
-  const { key, modelModifiers } = prop
-  if (!modelModifiers || !modelModifiers.length) return []
-
-  const modifiersKey = key.isStatic
-    ? [getModifierPropName(key.content)]
-    : ['[', ...genExpression(key, context), ' + "Modifiers"]']
-
-  const modifiersVal = genDirectiveModifiers(modelModifiers)
-  return [',', NEWLINE, ...modifiersKey, `: () => ({ ${modifiersVal} })`]
 }
 
 function genRawSlots(slots: IRSlots[], context: CodegenContext) {

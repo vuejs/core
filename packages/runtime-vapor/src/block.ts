@@ -8,6 +8,7 @@ import {
 import { _child } from './dom/node'
 import { isComment, isHydrating } from './dom/hydration'
 import {
+  MoveType,
   type TransitionHooks,
   type TransitionProps,
   type TransitionState,
@@ -20,7 +21,7 @@ import {
   type VaporFragment,
   isFragment,
 } from './fragment'
-import { TeleportFragment } from './components/Teleport'
+import { isTeleportFragment } from './components/Teleport'
 
 export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
@@ -122,6 +123,100 @@ export function insert(
   }
 }
 
+export function move(
+  block: Block,
+  parent: ParentNode & { $fc?: Node | null },
+  anchor: Node | null | 0 = null, // 0 means prepend
+  moveType: MoveType = MoveType.LEAVE,
+  parentComponent?: VaporComponentInstance,
+  parentSuspense?: any, // TODO Suspense
+): void {
+  anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
+  if (block instanceof Node) {
+    // only apply transition on Element nodes
+    if (
+      block instanceof Element &&
+      (block as TransitionBlock).$transition &&
+      !(block as TransitionBlock).$transition!.disabled &&
+      moveType !== MoveType.REORDER
+    ) {
+      if (moveType === MoveType.ENTER) {
+        performTransitionEnter(
+          block,
+          (block as TransitionBlock).$transition as TransitionHooks,
+          () => parent.insertBefore(block, anchor as Node),
+          parentSuspense,
+          true,
+        )
+      } else {
+        performTransitionLeave(
+          block,
+          (block as TransitionBlock).$transition as TransitionHooks,
+          () => {
+            // if the component is unmounted after leave finish, remove the block
+            // to avoid retaining a detached node.
+            if (
+              moveType === MoveType.LEAVE &&
+              parentComponent &&
+              parentComponent.isUnmounted
+            ) {
+              block.remove()
+            } else {
+              parent.insertBefore(block, anchor as Node)
+            }
+          },
+          parentSuspense,
+          true,
+        )
+      }
+    } else {
+      parent.insertBefore(block, anchor)
+    }
+  } else if (isVaporComponent(block)) {
+    if (block.isMounted) {
+      move(
+        block.block!,
+        parent,
+        anchor,
+        moveType,
+        parentComponent,
+        parentSuspense,
+      )
+    } else {
+      mountComponent(block, parent, anchor)
+    }
+  } else if (isArray(block)) {
+    for (const b of block) {
+      move(b, parent, anchor, moveType, parentComponent, parentSuspense)
+    }
+  } else {
+    if (block.anchor) {
+      move(
+        block.anchor,
+        parent,
+        anchor,
+        moveType,
+        parentComponent,
+        parentSuspense,
+      )
+      anchor = block.anchor
+    }
+    // fragment
+    if (block.insert) {
+      block.insert(parent, anchor, (block as TransitionBlock).$transition)
+    } else {
+      move(
+        block.nodes,
+        parent,
+        anchor,
+        moveType,
+        parentComponent,
+        parentSuspense,
+      )
+    }
+  }
+}
+
 export function prepend(parent: ParentNode, ...blocks: Block[]): void {
   let i = blocks.length
   while (i--) insert(blocks[i], parent, 0)
@@ -175,7 +270,7 @@ export function normalizeBlock(block: Block): Node[] {
   } else if (isVaporComponent(block)) {
     nodes.push(...normalizeBlock(block.block!))
   } else {
-    if (block instanceof TeleportFragment) {
+    if (isTeleportFragment(block)) {
       nodes.push(block.placeholder!, block.anchor!)
     } else {
       nodes.push(...normalizeBlock(block.nodes))
@@ -275,4 +370,43 @@ export function setComponentScopeId(instance: VaporComponentInstance): void {
   if (scopeIds.length > 0) {
     setScopeId(instance.block, scopeIds)
   }
+}
+
+// Transition hooks registry for tree-shaking
+// These are registered by Transition component when it's used
+type ApplyTransitionHooksFn = (
+  block: Block,
+  hooks: VaporTransitionHooks,
+) => VaporTransitionHooks
+type ApplyTransitionLeaveHooksFn = (
+  block: Block,
+  enterHooks: VaporTransitionHooks,
+  afterLeaveCb: () => void,
+) => void
+
+let _applyTransitionHooks: ApplyTransitionHooksFn | undefined
+let _applyTransitionLeaveHooks: ApplyTransitionLeaveHooksFn | undefined
+
+export function registerTransitionHooks(
+  applyHooks: ApplyTransitionHooksFn,
+  applyLeaveHooks: ApplyTransitionLeaveHooksFn,
+): void {
+  _applyTransitionHooks = applyHooks
+  _applyTransitionLeaveHooks = applyLeaveHooks
+}
+
+export function applyTransitionHooks(
+  block: Block,
+  hooks: VaporTransitionHooks,
+): VaporTransitionHooks {
+  return _applyTransitionHooks ? _applyTransitionHooks(block, hooks) : hooks
+}
+
+export function applyTransitionLeaveHooks(
+  block: Block,
+  enterHooks: VaporTransitionHooks,
+  afterLeaveCb: () => void,
+): void {
+  _applyTransitionLeaveHooks &&
+    _applyTransitionLeaveHooks(block, enterHooks, afterLeaveCb)
 }

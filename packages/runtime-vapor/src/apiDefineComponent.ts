@@ -32,7 +32,7 @@ type VaporComponentInstanceConstructor<T extends VaporComponentInstance> = {
   __isFragment?: never
   __isTeleport?: never
   __isSuspense?: never
-  new (props?: T['props']): T
+  new (...args: any[]): T
 }
 
 export type DefineVaporComponent<
@@ -148,8 +148,8 @@ export function defineVaporComponent<
 export function defineVaporComponent<
   // props
   TypeProps,
-  RuntimePropsOptions extends
-    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
+  RuntimePropsOptions extends ComponentObjectPropsOptions =
+    ComponentObjectPropsOptions,
   RuntimePropsKeys extends string = string,
   // emits
   TypeEmits extends ComponentTypeEmits = {},
@@ -212,7 +212,7 @@ export function defineVaporComponent<
   InferredProps
 >
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function defineVaporComponent(comp: any, extraOptions?: any) {
   if (isFunction(comp)) {
     // #8236: extend call and options.name access are considered side-effects

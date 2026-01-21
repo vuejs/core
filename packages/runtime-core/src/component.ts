@@ -114,9 +114,7 @@ export type Data = Record<string, unknown>
  * declare const instance: ComponentInstance<typeof MyComp>
  * ```
  */
-export type ComponentInstance<T> = T extends {
-  new (...args: any[]): ComponentPublicInstance
-}
+export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
   ? InstanceType<T>
   : T extends FunctionalComponent<infer Props, infer Emits>
     ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>
@@ -724,7 +722,7 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
   resolvedOptions?: MergedComponentOptions
 }
 
-const emptyAppContext = createAppContext()
+const emptyAppContext = /*@__PURE__*/ createAppContext()
 
 let uid = 0
 

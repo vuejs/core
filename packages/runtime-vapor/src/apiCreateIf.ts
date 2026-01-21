@@ -8,6 +8,7 @@ import {
 } from './insertionState'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
+import { createComment, createTextNode } from './dom/node'
 
 export function createIf(
   condition: () => any,
@@ -22,7 +23,11 @@ export function createIf(
 
   let frag: Block
   if (once) {
-    frag = condition() ? b1() : b2 ? b2() : []
+    frag = condition()
+      ? b1()
+      : b2
+        ? b2()
+        : [__DEV__ ? createComment('if') : createTextNode()]
   } else {
     frag =
       isHydrating || __DEV__ ? new DynamicFragment('if') : new DynamicFragment()

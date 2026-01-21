@@ -30,7 +30,7 @@ describe('compiler: template ref transform', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect([...ir.template.keys()]).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div>'])
     expect(ir.block.operation).lengthOf(1)
     expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.SET_TEMPLATE_REF,
@@ -56,7 +56,7 @@ describe('compiler: template ref transform', () => {
     })
     expect(code).matchSnapshot()
     // pass the actual ref and ref key
-    expect(code).contains('_setTemplateRef(n0, foo, null, null, "foo")')
+    expect(code).contains('_setTemplateRef(n0, foo, null, "foo")')
   })
 
   test('dynamic ref', () => {
@@ -66,13 +66,7 @@ describe('compiler: template ref transform', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect([...ir.template.keys()]).toEqual(['<div></div>'])
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.DECLARE_OLD_REF,
-        id: 0,
-      },
-    ])
+    expect([...ir.template.keys()]).toEqual(['<div>'])
     expect(ir.block.effect).toMatchObject([
       {
         operations: [
@@ -89,7 +83,7 @@ describe('compiler: template ref transform', () => {
     ])
     expect(code).matchSnapshot()
     expect(code).contains('const _setTemplateRef = _createTemplateRefSetter()')
-    expect(code).contains('_setTemplateRef(n0, _ctx.foo, r0)')
+    expect(code).contains('_setTemplateRef(n0, _ctx.foo)')
   })
 
   test('function ref', () => {
@@ -104,13 +98,7 @@ describe('compiler: template ref transform', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect([...ir.template.keys()]).toEqual(['<div></div>'])
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.DECLARE_OLD_REF,
-        id: 0,
-      },
-    ])
+    expect([...ir.template.keys()]).toEqual(['<div>'])
     expect(ir.block.effect).toMatchObject([
       {
         operations: [
@@ -130,7 +118,7 @@ describe('compiler: template ref transform', () => {
         _foo.value = bar
         ;({ baz: _ctx.baz } = bar)
         console.log(_foo.value, _ctx.baz)
-      }, r0)`)
+      })`)
   })
 
   test('ref + v-if', () => {
@@ -178,6 +166,6 @@ describe('compiler: template ref transform', () => {
     ])
     expect(code).matchSnapshot()
     expect(code).contains('const _setTemplateRef = _createTemplateRefSetter()')
-    expect(code).contains('_setTemplateRef(n2, "foo", void 0, true)')
+    expect(code).contains('_setTemplateRef(n2, "foo", true)')
   })
 })

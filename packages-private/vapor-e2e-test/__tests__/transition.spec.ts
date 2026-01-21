@@ -9,19 +9,18 @@ import { nextTick } from 'vue'
 const {
   page,
   classList,
-  text,
-  nextFrame,
   timeout,
   isVisible,
   html,
+  nextFrame,
   transitionStart,
-  waitForElement,
+  waitForInnerHTML,
   click,
+  domClick,
 } = setupPuppeteer()
 
 const duration = process.env.CI ? 200 : 50
 const buffer = process.env.CI ? 50 : 20
-const transitionFinish = (time = duration) => timeout(time + buffer)
 
 describe('vapor transition', () => {
   let server: any
@@ -60,30 +59,28 @@ describe('vapor transition', () => {
 
         // leave
         expect(
-          (await transitionStart(btnSelector, childSelector)).classNames,
-        ).toStrictEqual(['test', 'v-leave-from', 'v-leave-active'])
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(`<div class="test v-leave-from v-leave-active">content</div>`)
 
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'v-leave-active',
-          'v-leave-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test v-leave-active v-leave-to">content</div>`,
+        )
+
+        await waitForInnerHTML(containerSelector, ``)
 
         // enter
         expect(
-          (await transitionStart(btnSelector, childSelector)).classNames,
-        ).toStrictEqual(['test', 'v-enter-from', 'v-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'v-enter-active',
-          'v-enter-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(`<div class="test v-enter-from v-enter-active">content</div>`)
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test v-enter-active v-enter-to">content</div>`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
       },
@@ -103,30 +100,32 @@ describe('vapor transition', () => {
 
         // leave
         expect(
-          (await transitionStart(btnSelector, childSelector)).classNames,
-        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(
+          `<div class="test test-leave-from test-leave-active">content</div>`,
+        )
 
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+
+        await waitForInnerHTML(containerSelector, '')
 
         // enter
         expect(
-          (await transitionStart(btnSelector, childSelector)).classNames,
-        ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(
+          `<div class="test test-enter-from test-enter-active">content</div>`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to">content</div>',
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
       },
@@ -145,29 +144,28 @@ describe('vapor transition', () => {
         )
         // leave
         expect(
-          (await transitionStart(btnSelector, childSelector)).classNames,
-        ).toStrictEqual(['test', 'bye-from', 'bye-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'bye-active',
-          'bye-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(`<div class="test bye-from bye-active">content</div>`)
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test bye-active bye-to">content</div>',
+        )
+
+        await waitForInnerHTML(containerSelector, '')
 
         // enter
         expect(
-          (await transitionStart(btnSelector, childSelector)).classNames,
-        ).toStrictEqual(['test', 'hello-from', 'hello-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'hello-active',
-          'hello-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(`<div class="test hello-from hello-active">content</div>`)
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test hello-active hello-to">content</div>',
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
       },
@@ -188,30 +186,30 @@ describe('vapor transition', () => {
 
         // leave
         expect(
-          (await transitionStart(btnSelector, childSelector)).classNames,
-        ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(
+          `<div class="test test-leave-from test-leave-active">content</div>`,
+        )
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+        await waitForInnerHTML(containerSelector, '')
 
         // enter
-        await click(btnChangeNameSelector)
+        await domClick(btnChangeNameSelector)
+        await waitForInnerHTML(btnChangeNameSelector, 'changed')
+
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'changed-enter-from', 'changed-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'changed-enter-active',
-          'changed-enter-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test changed-enter-active changed-enter-to">content</div>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
       },
@@ -237,20 +235,19 @@ describe('vapor transition', () => {
           return (window as any).getCalls('withoutAppear')
         })
         expect(calls).toStrictEqual(['beforeLeave', 'onLeave'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
 
         expect(
           await page().evaluate(() => {
             return (window as any).getCalls('withoutAppear')
           }),
         ).not.contain('afterLeave')
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(containerSelector, '')
+
         expect(
           await page().evaluate(() => {
             return (window as any).getCalls('withoutAppear')
@@ -270,19 +267,19 @@ describe('vapor transition', () => {
           return (window as any).getCalls('withoutAppear')
         })
         expect(calls).toStrictEqual(['beforeEnter', 'onEnter'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to">content</div>',
+        )
         expect(
           await page().evaluate(() => {
             return (window as any).getCalls('withoutAppear')
           }),
         ).not.contain('afterEnter')
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
         expect(
@@ -365,12 +362,11 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to">content</div>',
+        )
 
         // cancel (leave)
         expect(
@@ -380,14 +376,12 @@ describe('vapor transition', () => {
           return (window as any).getCalls('enterCancel')
         })
         expect(calls).toStrictEqual(['enterCancelled'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+        await waitForInnerHTML(containerSelector, '')
       },
       E2E_TIMEOUT,
     )
@@ -401,8 +395,8 @@ describe('vapor transition', () => {
 
         // appear
         expect(await classList(childSelector)).contains('test-appear-active')
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
 
@@ -410,27 +404,24 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+        await waitForInnerHTML(containerSelector, '')
 
         // enter
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to">content</div>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
       },
@@ -450,8 +441,8 @@ describe('vapor transition', () => {
         })
         expect(calls).toStrictEqual(['beforeAppear', 'onAppear'])
 
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
         calls = await page().evaluate(() => {
@@ -473,19 +464,16 @@ describe('vapor transition', () => {
         })
         expect(calls).toStrictEqual(['beforeLeave', 'onLeave'])
 
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
         calls = await page().evaluate(() => {
           return (window as any).getCalls('withAppear')
         })
         expect(calls).not.contain('afterLeave')
 
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(containerSelector, '')
         calls = await page().evaluate(() => {
           return (window as any).getCalls('withAppear')
         })
@@ -503,18 +491,17 @@ describe('vapor transition', () => {
           return (window as any).getCalls('withAppear')
         })
         expect(calls).toStrictEqual(['beforeEnter', 'onEnter'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to">content</div>',
+        )
         calls = await page().evaluate(() => {
           return (window as any).getCalls('withAppear')
         })
         expect(calls).not.contain('afterEnter')
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
         calls = await page().evaluate(() => {
@@ -571,17 +558,15 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['noop-leave-from', 'noop-leave-active'])
-        await nextFrame()
-        expect(await html(containerSelector)).toBe('')
+
+        await waitForInnerHTML(containerSelector, '')
 
         // enter
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['noop-enter-from', 'noop-enter-active'])
-        await nextFrame()
-        expect(await html(containerSelector)).toBe(
-          '<div class="">content</div>',
-        )
+
+        await waitForInnerHTML(containerSelector, '<div class="">content</div>')
       },
       E2E_TIMEOUT,
     )
@@ -599,27 +584,21 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test-anim-leave-from', 'test-anim-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test-anim-leave-active',
-          'test-anim-leave-to',
-        ])
-        await transitionFinish(duration * 2)
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test-anim-leave-active test-anim-leave-to">content</div>',
+        )
+        await waitForInnerHTML(containerSelector, '')
 
         // enter
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test-anim-enter-from', 'test-anim-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test-anim-enter-active',
-          'test-anim-enter-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
-          '<div class="">content</div>',
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test-anim-enter-active test-anim-enter-to">content</div>',
         )
+        await waitForInnerHTML(containerSelector, '<div class="">content</div>')
       },
       E2E_TIMEOUT,
     )
@@ -640,24 +619,12 @@ describe('vapor transition', () => {
           'test-anim-long-leave-from',
           'test-anim-long-leave-active',
         ])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test-anim-long-leave-active',
-          'test-anim-long-leave-to',
-        ])
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test-anim-long-leave-active test-anim-long-leave-to">content</div>',
+        )
 
-        if (!process.env.CI) {
-          await new Promise(r => {
-            setTimeout(r, duration - buffer)
-          })
-          expect(await classList(childSelector)).toStrictEqual([
-            'test-anim-long-leave-active',
-            'test-anim-long-leave-to',
-          ])
-        }
-
-        await transitionFinish(duration * 2)
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(containerSelector, '')
 
         // enter
         expect(
@@ -666,31 +633,57 @@ describe('vapor transition', () => {
           'test-anim-long-enter-from',
           'test-anim-long-enter-active',
         ])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test-anim-long-enter-active',
-          'test-anim-long-enter-to',
-        ])
-
-        if (!process.env.CI) {
-          await new Promise(r => {
-            setTimeout(r, duration - buffer)
-          })
-          expect(await classList(childSelector)).toStrictEqual([
-            'test-anim-long-enter-active',
-            'test-anim-long-enter-to',
-          ])
-        }
-
-        await transitionFinish(duration * 2)
-        expect(await html(containerSelector)).toBe(
-          '<div class="">content</div>',
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test-anim-long-enter-active test-anim-long-enter-to">content</div>',
         )
+
+        await waitForInnerHTML(containerSelector, '<div class="">content</div>')
       },
       E2E_TIMEOUT,
     )
 
-    test.todo('transition on SVG elements', async () => {}, E2E_TIMEOUT)
+    test(
+      'transition on SVG elements',
+      async () => {
+        const btnSelector = '.svg > button'
+        const containerSelector = '.svg > #container'
+
+        expect(await html(containerSelector)).toBe(
+          '<circle cx="0" cy="0" r="10" class="test"></circle>',
+        )
+
+        // leave
+        await click(btnSelector)
+        await waitForInnerHTML(
+          containerSelector,
+          '<circle cx="0" cy="0" r="10" class="test test-leave-from test-leave-active"></circle>',
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<circle cx="0" cy="0" r="10" class="test test-leave-active test-leave-to"></circle>',
+        )
+
+        await waitForInnerHTML(containerSelector, '')
+
+        // enter
+        await click(btnSelector)
+        await waitForInnerHTML(
+          containerSelector,
+          '<circle cx="0" cy="0" r="10" class="test test-enter-from test-enter-active"></circle>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
+          '<circle cx="0" cy="0" r="10" class="test test-enter-active test-enter-to"></circle>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
+          '<circle cx="0" cy="0" r="10" class="test"></circle>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
 
     test(
       'custom transition higher-order component',
@@ -707,27 +700,22 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+        await waitForInnerHTML(containerSelector, '')
 
         // enter
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to">content</div>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
       },
@@ -751,16 +739,11 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
-          '<div class="test">two</div>',
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to">two</div>',
         )
+        await waitForInnerHTML(containerSelector, '<div class="test">two</div>')
 
         // change view -> 'one'
         await click(btnChangeSelector)
@@ -769,14 +752,11 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">two</div>',
+        )
+        await waitForInnerHTML(containerSelector, '')
       },
       E2E_TIMEOUT,
     )
@@ -797,16 +777,11 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
-          '<div class="test">two</div>',
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to">two</div>',
         )
+        await waitForInnerHTML(containerSelector, '<div class="test">two</div>')
 
         // change view -> 'one'
         await click(btnChangeSelector)
@@ -814,14 +789,11 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">two</div>',
+        )
+        await waitForInnerHTML(containerSelector, '')
       },
       E2E_TIMEOUT,
     )
@@ -839,8 +811,8 @@ describe('vapor transition', () => {
         await nextTick()
         await click(btnSelector)
 
-        await transitionFinish(duration * 2)
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           '<div foo="1" class="">content</div>',
         )
       },
@@ -858,7 +830,10 @@ describe('vapor transition', () => {
         // toggle
         await click(btnSelector)
         await nextTick()
-        await transitionFinish(duration * 3)
+        await waitForInnerHTML(
+          containerSelector,
+          '<div foo="1" class="">two</div>',
+        )
         let calls = await page().evaluate(() => {
           return (window as any).getCalls('ifInOut')
         })
@@ -883,7 +858,10 @@ describe('vapor transition', () => {
         // toggle back
         await click(btnSelector)
         await nextTick()
-        await transitionFinish(duration * 3)
+        await waitForInnerHTML(
+          containerSelector,
+          '<div foo="1" class="">one</div>',
+        )
 
         calls = await page().evaluate(() => {
           return (window as any).getCalls('ifInOut')
@@ -910,18 +888,195 @@ describe('vapor transition', () => {
       const btnSelector = '.keep-alive > button'
       const containerSelector = '.keep-alive > div'
 
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe('<div>0</div>')
+      await waitForInnerHTML(containerSelector, '<div>0</div>')
 
       await click(btnSelector)
 
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe('')
+      await waitForInnerHTML(containerSelector, '')
       const calls = await page().evaluate(() => {
         return (window as any).getCalls('unmount')
       })
       expect(calls).toStrictEqual(['TrueBranch'])
     })
+
+    // #11775
+    test(
+      'switch child then update include (out-in mode)',
+      async () => {
+        const containerSelector = '.keep-alive-update-include > div'
+        const btnSwitchToB = '.keep-alive-update-include > #switchToB'
+        const btnSwitchToA = '.keep-alive-update-include > #switchToA'
+        const btnSwitchToC = '.keep-alive-update-include > #switchToC'
+
+        expect(await html(containerSelector)).toBe('<div>CompA</div>')
+
+        await click(btnSwitchToB)
+        await nextTick()
+        await click(btnSwitchToC)
+        await waitForInnerHTML(containerSelector, '<div class="">CompC</div>')
+
+        await click(btnSwitchToA)
+        await waitForInnerHTML(containerSelector, '<div class="">CompA</div>')
+
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls('unmount')
+        })
+        expect(calls).toStrictEqual(['CompC unmounted'])
+
+        // Unlike vdom, CompA does not update because there are no state changes
+        // expect CompA only update once
+        // calls = await page().evaluate(() => {
+        //   return (window as any).getCalls('updated')
+        // })
+        // expect(calls).toStrictEqual(['CompA updated'])
+      },
+      E2E_TIMEOUT,
+    )
+
+    // #10827
+    test(
+      'switch and update child then update include (out-in mode)',
+      async () => {
+        const containerSelector = '.keep-alive-switch-then-update-include > div'
+        const btnSwitchToA =
+          '.keep-alive-switch-then-update-include > #switchToA'
+        const btnSwitchToB =
+          '.keep-alive-switch-then-update-include > #switchToB'
+
+        expect(await html(containerSelector)).toBe('<div>CompA2</div>')
+        await click(btnSwitchToB)
+        await waitForInnerHTML(containerSelector, '<div class="">CompB2</div>')
+        await click(btnSwitchToA)
+        await waitForInnerHTML(containerSelector, '<div class="">CompA2</div>')
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls('unmount')
+        })
+        expect(calls).toStrictEqual(['CompB2 unmounted'])
+      },
+      E2E_TIMEOUT,
+    )
+
+    // #12860
+    // TODO: getCurrentInstance is no longer works inside Vapor components;
+    // need use an alternative method for testing here.
+    // Verified locally in the playground — no memory leak was observed.
+    test.todo(
+      'unmount children',
+      async () => {
+        //     const unmountSpy = vi.fn()
+        //     let storageContainer: ElementHandle<HTMLDivElement>
+        //     const setStorageContainer = (container: any) =>
+        //       (storageContainer = container)
+        //     await page().exposeFunction('unmountSpy', unmountSpy)
+        //     await page().exposeFunction('setStorageContainer', setStorageContainer)
+        //     await page().evaluate(() => {
+        //       const { unmountSpy, setStorageContainer } = window as any
+        //       const { createApp, ref, h, onUnmounted, getCurrentInstance } = (
+        //         window as any
+        //       ).Vue
+        //       createApp({
+        //         template: `
+        //         <div id="container">
+        //           <transition>
+        //             <KeepAlive :include="includeRef">
+        //               <TrueBranch v-if="toggle"></TrueBranch>
+        //             </KeepAlive>
+        //           </transition>
+        //         </div>
+        //         <button id="toggleBtn" @click="click">button</button>
+        //       `,
+        //         components: {
+        //           TrueBranch: {
+        //             name: 'TrueBranch',
+        //             setup() {
+        //               const instance = getCurrentInstance()
+        //               onUnmounted(() => {
+        //                 unmountSpy()
+        //                 setStorageContainer(instance.__keepAliveStorageContainer)
+        //               })
+        //               const count = ref(0)
+        //               return () => h('div', count.value)
+        //             },
+        //           },
+        //         },
+        //         setup: () => {
+        //           const includeRef = ref(['TrueBranch'])
+        //           const toggle = ref(true)
+        //           const click = () => {
+        //             toggle.value = !toggle.value
+        //             if (toggle.value) {
+        //               includeRef.value = ['TrueBranch']
+        //             } else {
+        //               includeRef.value = []
+        //             }
+        //           }
+        //           return { toggle, click, unmountSpy, includeRef }
+        //         },
+        //       }).mount('#app')
+        //     })
+        //     await transitionFinish()
+        //     expect(await html('#container')).toBe('<div>0</div>')
+        //     await click('#toggleBtn')
+        //     await transitionFinish()
+        //     expect(await html('#container')).toBe('<!--v-if-->')
+        //     expect(unmountSpy).toBeCalledTimes(1)
+        //     expect(await storageContainer!.evaluate(x => x.innerHTML)).toBe(``)
+      },
+      E2E_TIMEOUT,
+    )
+
+    // #13153
+    test(
+      'move kept-alive node before v-show transition leave finishes',
+      async () => {
+        const containerSelector = '.keep-alive-move-before-leave-finishes > div'
+        const btnToggle = '.keep-alive-move-before-leave-finishes > button'
+        const changeShowBtn = `${containerSelector} #changeShowBtn`
+
+        expect(await html(containerSelector)).toBe(
+          `<div><h2>I should show</h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">true</button>`,
+        )
+        // trigger v-show transition leave
+        await click(changeShowBtn)
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test-leave-from test-leave-active"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+
+        // switch to page2, before leave finishes
+        // expect v-show element's display to be none
+        await click(btnToggle)
+        await nextTick()
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test-leave-from test-leave-active" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page2</h2>`,
+        )
+
+        // switch back to page1
+        // expect v-show element's display to be none
+        await click(btnToggle)
+        await nextTick()
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test-enter-from test-enter-active" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe.todo('transition with Suspense', () => {})
@@ -934,23 +1089,20 @@ describe('vapor transition', () => {
         const containerSelector = '.with-teleport > .container'
         const targetSelector = `.with-teleport > .target`
 
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
-        expect(await html(targetSelector)).toBe('')
+        await waitForInnerHTML(containerSelector, '')
+        await waitForInnerHTML(targetSelector, '')
 
         // enter
         expect(
           (await transitionStart(btnSelector, `${targetSelector} div`))
             .classNames,
         ).toStrictEqual(['test', 'v-enter-from', 'v-enter-active'])
-        await nextFrame()
-        expect(await classList(`${targetSelector} div`)).toStrictEqual([
-          'test',
-          'v-enter-active',
-          'v-enter-to',
-        ])
-        await transitionFinish()
-        expect(await html(targetSelector)).toBe(
+        await waitForInnerHTML(
+          targetSelector,
+          '<div class="test v-enter-active v-enter-to">vapor compB</div>',
+        )
+        await waitForInnerHTML(
+          targetSelector,
           '<div class="test">vapor compB</div>',
         )
         expect(await html(containerSelector)).toBe('')
@@ -960,14 +1112,11 @@ describe('vapor transition', () => {
           (await transitionStart(btnSelector, `${targetSelector} div`))
             .classNames,
         ).toStrictEqual(['test', 'v-leave-from', 'v-leave-active'])
-        await nextFrame()
-        expect(await classList(`${targetSelector} div`)).toStrictEqual([
-          'test',
-          'v-leave-active',
-          'v-leave-to',
-        ])
-        await transitionFinish()
-        expect(await html(targetSelector)).toBe('')
+        await waitForInnerHTML(
+          targetSelector,
+          '<div class="test v-leave-active v-leave-to">vapor compB</div>',
+        )
+        await waitForInnerHTML(targetSelector, '')
         expect(await html(containerSelector)).toBe('')
       },
       E2E_TIMEOUT,
@@ -994,12 +1143,12 @@ describe('vapor transition', () => {
       expect(await html(containerSelector)).toBe(
         '<div class="v-enter-from v-enter-active">vapor compA</div>',
       )
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         '<div class="v-enter-active v-enter-to">vapor compA</div>',
       )
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         '<div class="">vapor compA</div>',
       )
 
@@ -1009,12 +1158,11 @@ describe('vapor transition', () => {
       expect(await html(containerSelector)).toBe(
         '<div class="v-leave-from v-leave-active">vapor compA</div>',
       )
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         '<div class="v-leave-active v-leave-to">vapor compA</div>',
       )
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe('')
+      await waitForInnerHTML(containerSelector, '')
 
       // enter again
       await click(btnSelector)
@@ -1022,12 +1170,65 @@ describe('vapor transition', () => {
       expect(await html(containerSelector)).toBe(
         '<div class="v-enter-from v-enter-active">vapor compA</div>',
       )
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         '<div class="v-enter-active v-enter-to">vapor compA</div>',
       )
-      await transitionFinish()
+      await waitForInnerHTML(
+        containerSelector,
+        '<div class="">vapor compA</div>',
+      )
+    })
+
+    test('apply transition to pre-resolved async component', async () => {
+      const btnSelector = '.async-resolved > button'
+      const containerSelector = '.async-resolved #container'
+      const hiddenCompSelector = '.async-resolved #hidden-async'
+
+      // Wait for the hidden AsyncCompResolved to resolve and render
+      await waitForInnerHTML(
+        hiddenCompSelector,
+        '<div style="display: none;">vapor compA</div>',
+      )
+
+      expect(await html(containerSelector)).toBe('')
+
+      await click(btnSelector)
       expect(await html(containerSelector)).toBe(
+        '<div class="v-enter-from v-enter-active">vapor compA</div>',
+      )
+      await waitForInnerHTML(
+        containerSelector,
+        '<div class="v-enter-active v-enter-to">vapor compA</div>',
+      )
+      await waitForInnerHTML(
+        containerSelector,
+        '<div class="">vapor compA</div>',
+      )
+
+      // leave
+      await click(btnSelector)
+      await nextTick()
+      expect(await html(containerSelector)).toBe(
+        '<div class="v-leave-from v-leave-active">vapor compA</div>',
+      )
+      await waitForInnerHTML(
+        containerSelector,
+        '<div class="v-leave-active v-leave-to">vapor compA</div>',
+      )
+      await waitForInnerHTML(containerSelector, '')
+
+      // enter again
+      await click(btnSelector)
+      expect(await html(containerSelector)).toBe(
+        '<div class="v-enter-from v-enter-active">vapor compA</div>',
+      )
+      await waitForInnerHTML(
+        containerSelector,
+        '<div class="v-enter-active v-enter-to">vapor compA</div>',
+      )
+      await waitForInnerHTML(
+        containerSelector,
         '<div class="">vapor compA</div>',
       )
     })
@@ -1050,27 +1251,25 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
-        await transitionFinish()
-        expect(await isVisible(childSelector)).toBe(false)
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test" style="display: none;">content</div>',
+        )
 
         // enter
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to" style="">content</div>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test" style="">content</div>',
         )
       },
@@ -1093,22 +1292,23 @@ describe('vapor transition', () => {
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
 
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+
         let calls = await page().evaluate(() => {
           return (window as any).getCalls('show')
         })
         expect(calls).toStrictEqual(['beforeLeave', 'onLeave'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
         calls = await page().evaluate(() => {
           return (window as any).getCalls('show')
         })
         expect(calls).not.contain('afterLeave')
-        await transitionFinish()
-        expect(await isVisible(childSelector)).toBe(false)
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test" style="display: none;">content</div>',
+        )
         calls = await page().evaluate(() => {
           return (window as any).getCalls('show')
         })
@@ -1123,18 +1323,16 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to" style="">content</div>',
+        )
         calls = await page().evaluate(() => {
           return (window as any).getCalls('show')
         })
         expect(calls).toStrictEqual(['beforeEnter', 'onEnter'])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test" style="">content</div>',
         )
         calls = await page().evaluate(() => {
@@ -1160,12 +1358,10 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
 
         // cancel (enter)
         expect(
@@ -1175,14 +1371,15 @@ describe('vapor transition', () => {
           return (window as any).getCalls('showLeaveCancel')
         })
         expect(calls).toStrictEqual(['leaveCancelled'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
-        await transitionFinish()
-        expect(await isVisible(childSelector)).toBe(true)
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to" style="">content</div>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test" style="">content</div>',
+        )
       },
       E2E_TIMEOUT,
     )
@@ -1202,8 +1399,8 @@ describe('vapor transition', () => {
         // appear
         expect(await classList(childSelector)).contains('test-appear-active')
 
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
         calls = await page().evaluate(() => {
@@ -1215,27 +1412,25 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
-        await transitionFinish()
-        expect(await isVisible(childSelector)).toBe(false)
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test" style="display: none;">content</div>',
+        )
 
         // enter
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to" style="">content</div>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test" style="">content</div>',
         )
       },
@@ -1263,18 +1458,17 @@ describe('vapor transition', () => {
           return (window as any).getCalls('notEnter')
         })
         expect(calls).toStrictEqual(['beforeEnter', 'onEnter'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to" style="">content</div>',
+        )
         calls = await page().evaluate(() => {
           return (window as any).getCalls('notEnter')
         })
         expect(calls).not.contain('afterEnter')
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test" style="">content</div>',
         )
         calls = await page().evaluate(() => {
@@ -1302,27 +1496,22 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
-        await transitionFinish(duration * 2)
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+        await waitForInnerHTML(containerSelector, '')
 
         // enter
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
-        await transitionFinish(duration * 2)
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to">content</div>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
       },
@@ -1344,27 +1533,22 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+        await waitForInnerHTML(containerSelector, '')
 
         // enter
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
-        await transitionFinish(duration * 2)
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to">content</div>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
       },
@@ -1386,27 +1570,22 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
-        await transitionFinish(duration * 2)
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+        await waitForInnerHTML(containerSelector, '')
 
         // enter
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to">content</div>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
       },
@@ -1428,27 +1607,22 @@ describe('vapor transition', () => {
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-leave-from', 'test-leave-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-leave-active',
-          'test-leave-to',
-        ])
-        await transitionFinish(duration * 2)
-        expect(await html(containerSelector)).toBe('')
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+        await waitForInnerHTML(containerSelector, '')
 
         // enter
         expect(
           (await transitionStart(btnSelector, childSelector)).classNames,
         ).toStrictEqual(['test', 'test-enter-from', 'test-enter-active'])
-        await nextFrame()
-        expect(await classList(childSelector)).toStrictEqual([
-          'test',
-          'test-enter-active',
-          'test-enter-to',
-        ])
-        await transitionFinish(duration * 4)
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test test-enter-active test-enter-to">content</div>',
+        )
+        await waitForInnerHTML(
+          containerSelector,
           '<div class="test">content</div>',
         )
       },
@@ -1462,7 +1636,7 @@ describe('vapor transition', () => {
       const btnSelector = '.keyed > button'
       const containerSelector = '.keyed > h1'
 
-      expect(await text(containerSelector)).toContain('0')
+      await waitForInnerHTML(containerSelector, '0')
 
       // change key
       expect(
@@ -1474,10 +1648,7 @@ describe('vapor transition', () => {
         'v-leave-active',
         'v-leave-to',
       ])
-
-      await transitionFinish()
-      await nextFrame()
-      expect(await text(containerSelector)).toContain('1')
+      await waitForInnerHTML(containerSelector, '1')
 
       // change key again
       expect(
@@ -1490,9 +1661,7 @@ describe('vapor transition', () => {
         'v-leave-to',
       ])
 
-      await transitionFinish()
-      await nextFrame()
-      expect(await text(containerSelector)).toContain('2')
+      await waitForInnerHTML(containerSelector, '2')
     },
     E2E_TIMEOUT,
   )
@@ -1502,7 +1671,6 @@ describe('vapor transition', () => {
     async () => {
       const btnSelector = '.out-in > button'
       const containerSelector = '.out-in > div'
-      const childSelector = `${containerSelector} > div`
 
       expect(await html(containerSelector)).toBe(`<div>vapor compB</div>`)
 
@@ -1512,25 +1680,24 @@ describe('vapor transition', () => {
         (await transitionStart(btnSelector, containerSelector)).innerHTML,
       ).toBe(`<div class="fade-leave-from fade-leave-active">vapor compB</div>`)
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="fade-leave-active fade-leave-to">vapor compB</div>`,
       )
 
       // compA enter
-      await waitForElement(childSelector, 'vapor compA', [
-        'fade-enter-from',
-        'fade-enter-active',
-      ])
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="fade-enter-from fade-enter-active">vapor compA</div>`,
+      )
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="fade-enter-active fade-enter-to">vapor compA</div>`,
       )
 
-      await transitionFinish()
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="">vapor compA</div>`,
       )
 
@@ -1540,24 +1707,24 @@ describe('vapor transition', () => {
         (await transitionStart(btnSelector, containerSelector)).innerHTML,
       ).toBe(`<div class="fade-leave-from fade-leave-active">vapor compA</div>`)
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="fade-leave-active fade-leave-to">vapor compA</div>`,
       )
 
       // compB enter
-      await waitForElement(childSelector, 'vapor compB', [
-        'fade-enter-from',
-        'fade-enter-active',
-      ])
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="fade-enter-from fade-enter-active">vapor compB</div>`,
+      )
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="fade-enter-active fade-enter-to">vapor compB</div>`,
       )
 
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="">vapor compB</div>`,
       )
     },
@@ -1569,7 +1736,6 @@ describe('vapor transition', () => {
     async () => {
       const btnSelector = '.in-out > button'
       const containerSelector = '.in-out > div'
-      const childSelector = `${containerSelector} > div`
 
       expect(await html(containerSelector)).toBe(`<div>vapor compB</div>`)
 
@@ -1580,24 +1746,24 @@ describe('vapor transition', () => {
         `<div>vapor compB</div><div class="fade-enter-from fade-enter-active">vapor compA</div>`,
       )
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div>vapor compB</div><div class="fade-enter-active fade-enter-to">vapor compA</div>`,
       )
 
       // compB leave
-      await waitForElement(childSelector, 'vapor compB', [
-        'fade-leave-from',
-        'fade-leave-active',
-      ])
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="fade-leave-from fade-leave-active">vapor compB</div><div class="">vapor compA</div>`,
+      )
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="fade-leave-active fade-leave-to">vapor compB</div><div class="">vapor compA</div>`,
       )
 
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="">vapor compA</div>`,
       )
     },
@@ -1619,26 +1785,25 @@ describe('vapor transition', () => {
           (await transitionStart(btnSelector, containerSelector)).innerHTML,
         ).toBe(`<div class="v-leave-from v-leave-active">vdom comp</div>`)
 
-        await nextFrame()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="v-leave-active v-leave-to">vdom comp</div>`,
         )
 
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(``)
+        await waitForInnerHTML(containerSelector, ``)
 
         // comp enter
         expect(
           (await transitionStart(btnSelector, containerSelector)).innerHTML,
         ).toBe(`<div class="v-enter-from v-enter-active">vdom comp</div>`)
 
-        await nextFrame()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="v-enter-active v-enter-to">vdom comp</div>`,
         )
 
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="">vdom comp</div>`,
         )
       },
@@ -1650,7 +1815,6 @@ describe('vapor transition', () => {
       async () => {
         const btnSelector = '.vdom-vapor-out-in > button'
         const containerSelector = '.vdom-vapor-out-in > div'
-        const childSelector = `${containerSelector} > div`
 
         expect(await html(containerSelector)).toBe(`<div>vdom comp</div>`)
 
@@ -1660,24 +1824,24 @@ describe('vapor transition', () => {
           (await transitionStart(btnSelector, containerSelector)).innerHTML,
         ).toBe(`<div class="fade-leave-from fade-leave-active">vdom comp</div>`)
 
-        await nextFrame()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="fade-leave-active fade-leave-to">vdom comp</div>`,
         )
 
         // vapor comp enter
-        await waitForElement(childSelector, 'vapor compA', [
-          'fade-enter-from',
-          'fade-enter-active',
-        ])
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="fade-enter-from fade-enter-active">vapor compA</div>`,
+        )
 
-        await nextFrame()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="fade-enter-active fade-enter-to">vapor compA</div>`,
         )
 
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="">vapor compA</div>`,
         )
 
@@ -1689,24 +1853,24 @@ describe('vapor transition', () => {
           `<div class="fade-leave-from fade-leave-active">vapor compA</div>`,
         )
 
-        await nextFrame()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="fade-leave-active fade-leave-to">vapor compA</div>`,
         )
 
         // vdom comp enter
-        await waitForElement(childSelector, 'vdom comp', [
-          'fade-enter-from',
-          'fade-enter-active',
-        ])
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="fade-enter-from fade-enter-active">vdom comp</div>`,
+        )
 
-        await nextFrame()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="fade-enter-active fade-enter-to">vdom comp</div>`,
         )
 
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="">vdom comp</div>`,
         )
       },
@@ -1718,7 +1882,6 @@ describe('vapor transition', () => {
       async () => {
         const btnSelector = '.vdom-vapor-in-out > button'
         const containerSelector = '.vdom-vapor-in-out > div'
-        const childSelector = `${containerSelector} > div`
 
         expect(await html(containerSelector)).toBe(`<div>vapor compA</div>`)
 
@@ -1730,24 +1893,24 @@ describe('vapor transition', () => {
           `<div>vapor compA</div><div class="fade-enter-from fade-enter-active">vdom comp</div>`,
         )
 
-        await nextFrame()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div>vapor compA</div><div class="fade-enter-active fade-enter-to">vdom comp</div>`,
         )
 
         // vapor comp leave
-        await waitForElement(childSelector, 'vapor compA', [
-          'fade-leave-from',
-          'fade-leave-active',
-        ])
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="fade-leave-from fade-leave-active">vapor compA</div><div class="">vdom comp</div>`,
+        )
 
-        await nextFrame()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="fade-leave-active fade-leave-to">vapor compA</div><div class="">vdom comp</div>`,
         )
 
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="">vdom comp</div>`,
         )
 
@@ -1759,24 +1922,24 @@ describe('vapor transition', () => {
           `<div class="">vdom comp</div><div class="fade-enter-from fade-enter-active">vapor compA</div>`,
         )
 
-        await nextFrame()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="">vdom comp</div><div class="fade-enter-active fade-enter-to">vapor compA</div>`,
         )
 
         // vdom comp leave
-        await waitForElement(childSelector, 'vdom comp', [
-          'fade-leave-from',
-          'fade-leave-active',
-        ])
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="fade-leave-from fade-leave-active">vdom comp</div><div class="">vapor compA</div>`,
+        )
 
-        await nextFrame()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="fade-leave-active fade-leave-to">vdom comp</div><div class="">vapor compA</div>`,
         )
 
-        await transitionFinish()
-        expect(await html(containerSelector)).toBe(
+        await waitForInnerHTML(
+          containerSelector,
           `<div class="">vapor compA</div>`,
         )
       },

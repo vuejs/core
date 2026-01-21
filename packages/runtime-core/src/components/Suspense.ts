@@ -129,7 +129,7 @@ export const Suspense = (__FEATURE_SUSPENSE__
   ? SuspenseImpl
   : null) as unknown as {
   __isSuspense: true
-  new (props?: VNodeProps & SuspenseProps): {
+  new (): {
     $props: VNodeProps & SuspenseProps
     $slots: {
       default(): VNode[]
@@ -458,7 +458,7 @@ function createSuspenseBoundary(
   if (__DEV__ && !__TEST__ && !hasWarned) {
     hasWarned = true
     // @ts-expect-error `console.info` cannot be null error
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console[console.info ? 'info' : 'log'](
       `<Suspense> is an experimental feature and its API will likely change.`,
     )
@@ -775,7 +775,7 @@ function hydrateSuspense(
     parentSuspense,
     parentComponent,
     node.parentNode!,
-    // eslint-disable-next-line no-restricted-globals
+    // oxlint-disable-next-line no-restricted-globals
     document.createElement('div'),
     null,
     namespace,

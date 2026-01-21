@@ -59,7 +59,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 - Commit messages must follow the [commit message convention](./commit-convention.md) so that changelogs can be automatically generated. Commit messages are automatically validated before commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
 
-- No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with Prettier on commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
+- No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with oxfmt on commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
 
 ### Advanced Pull Request Tips
 
@@ -92,15 +92,15 @@ A high level overview of tools used:
 - [Vite](https://vitejs.dev/) and [ESBuild](https://esbuild.github.io/) for development bundling
 - [Rollup](https://rollupjs.org) for production bundling
 - [Vitest](https://vitest.dev/) for unit testing
-- [Prettier](https://prettier.io/) for code formatting
-- [ESLint](https://eslint.org/) for static error prevention (outside of types)
+- [oxlint](https://oxc.rs/docs/guide/usage/linter.html) for static error prevention (outside of types)
+- [oxfmt](https://oxc.rs/docs/guide/usage/formatter.html) for code formatting
 
 ## Git Hooks
 
 The project uses [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks) to enforce the following on each commit:
 
 - Type check the entire project
-- Automatically format changed files using Prettier
+- Automatically format changed files using oxfmt
 - Verify commit message format (logic in `scripts/verify-commit.js`)
 
 ## Scripts

@@ -17,7 +17,13 @@ import {
   createTextNode,
   updateLastLogicalChild,
 } from './dom/node'
-import { type Block, findBlockNode, insert, remove } from './block'
+import {
+  type Block,
+  applyTransitionHooks,
+  findBlockNode,
+  insert,
+  remove,
+} from './block'
 import { warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import type { DynamicSlot } from './componentSlots'
@@ -31,7 +37,6 @@ import {
   locateHydrationNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { applyTransitionHooks } from './components/Transition'
 import { ForFragment, VaporFragment } from './fragment'
 import {
   insertionAnchor,
@@ -604,6 +609,8 @@ function normalizeSource(source: any): ResolvedSource {
         values[i] = source[keys[i]]
       }
     }
+  } else {
+    values = []
   }
   return {
     values,

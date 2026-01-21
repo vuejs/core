@@ -7,7 +7,7 @@ catalog:
   '@babel/types': ^7.28.5
   'estree-walker': ^2.0.2
   'vite': ^6.1.0
-  '@vitejs/plugin-vue': ^6.0.1
+  '@vitejs/plugin-vue': ^6.0.3
   'magic-string': ^0.30.21
   'source-map-js': ^1.2.1
 
@@ -17,11 +17,3 @@ onlyBuiltDependencies:
   - 'puppeteer'
   - 'simple-git-hooks'
   - 'unrs-resolver'
-
-peerDependencyRules:
-  allowedVersions:
-    'typescript-eslint>eslint': '^9.0.0'
-    '@typescript-eslint/eslint-plugin>eslint': '^9.0.0'
-    '@typescript-eslint/parser>eslint': '^9.0.0'
-    '@typescript-eslint/type-utils>eslint': '^9.0.0'
-    '@typescript-eslint/utils>eslint': '^9.0.0'

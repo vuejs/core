@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-vapor",
-  "version": "3.6.0-alpha.6",
+  "version": "3.6.0-beta.3",
   "description": "@vue/compiler-vapor",
   "main": "dist/compiler-vapor.cjs.js",
   "module": "dist/compiler-vapor.esm-bundler.js",

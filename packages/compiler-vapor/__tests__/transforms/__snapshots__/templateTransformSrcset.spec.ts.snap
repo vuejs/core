@@ -18,17 +18,17 @@ exports[`compiler sfc: transform srcset > transform srcset 1`] = `
 "import { template as _template } from 'vue';
 import _imports_0 from './logo.png';
 import _imports_1 from '/logo.png';
-const t0 = _template("<img src=\\"" + _imports_0 + "\\" srcset>")
-const t1 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + "\\">")
-const t2 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ' 2x' + "\\">")
-const t3 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x' + "\\">")
-const t4 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ' 2x, ' + _imports_0 + "\\">")
-const t5 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ' 2x, ' + _imports_0 + ' 3x' + "\\">")
-const t6 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x, ' + _imports_0 + ' 3x' + "\\">")
-const t7 = _template("<img src=\\"" + _imports_1 + "\\" srcset=\\"" + _imports_1 + ', ' + _imports_1 + ' 2x' + "\\">")
-const t8 = _template("<img src=\\"https://example.com/logo.png\\" srcset=\\"https://example.com/logo.png, https://example.com/logo.png 2x\\">")
-const t9 = _template("<img src=\\"" + _imports_1 + "\\" srcset=\\"" + _imports_1 + ', ' + _imports_0 + ' 2x' + "\\">")
-const t10 = _template("<img src=\\"data:image/png;base64,i\\" srcset=\\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\">")
+const t0 = _template("<img src=\\"" + _imports_0 + "\\"srcset>")
+const t1 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + "\\">")
+const t2 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ' 2x' + "\\">")
+const t3 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x' + "\\">")
+const t4 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ' 2x, ' + _imports_0 + "\\">")
+const t5 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ' 2x, ' + _imports_0 + ' 3x' + "\\">")
+const t6 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x, ' + _imports_0 + ' 3x' + "\\">")
+const t7 = _template("<img src=\\"" + _imports_1 + "\\"srcset=\\"" + _imports_1 + ', ' + _imports_1 + ' 2x' + "\\">")
+const t8 = _template("<img src=https://example.com/logo.png srcset=\\"https://example.com/logo.png, https://example.com/logo.png 2x\\">")
+const t9 = _template("<img src=\\"" + _imports_1 + "\\"srcset=\\"" + _imports_1 + ', ' + _imports_0 + ' 2x' + "\\">")
+const t10 = _template("<img src=data:image/png;base64,i srcset=\\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\">")
 
 export function render(_ctx) {
   const n0 = t0()
@@ -51,17 +51,17 @@ exports[`compiler sfc: transform srcset > transform srcset w/ base 1`] = `
 "import { template as _template } from 'vue';
 import _imports_0 from '/logo.png';
 import _imports_1 from '/foo/logo.png';
-const t0 = _template("<img src=\\"/foo/logo.png\\" srcset>")
-const t1 = _template("<img src=\\"/foo/logo.png\\" srcset=\\"/foo/logo.png\\">")
-const t2 = _template("<img src=\\"/foo/logo.png\\" srcset=\\"/foo/logo.png 2x\\">")
-const t3 = _template("<img src=\\"/foo/logo.png\\" srcset=\\"/foo/logo.png, /foo/logo.png 2x\\">")
-const t4 = _template("<img src=\\"/foo/logo.png\\" srcset=\\"/foo/logo.png 2x, /foo/logo.png\\">")
-const t5 = _template("<img src=\\"/foo/logo.png\\" srcset=\\"/foo/logo.png 2x, /foo/logo.png 3x\\">")
-const t6 = _template("<img src=\\"/foo/logo.png\\" srcset=\\"/foo/logo.png, /foo/logo.png 2x, /foo/logo.png 3x\\">")
-const t7 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x' + "\\">")
-const t8 = _template("<img src=\\"https://example.com/logo.png\\" srcset=\\"https://example.com/logo.png, https://example.com/logo.png 2x\\">")
-const t9 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ', ' + _imports_1 + ' 2x' + "\\">")
-const t10 = _template("<img src=\\"data:image/png;base64,i\\" srcset=\\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\">")
+const t0 = _template("<img src=/foo/logo.png srcset>")
+const t1 = _template("<img src=/foo/logo.png srcset=/foo/logo.png>")
+const t2 = _template("<img src=/foo/logo.png srcset=\\"/foo/logo.png 2x\\">")
+const t3 = _template("<img src=/foo/logo.png srcset=\\"/foo/logo.png, /foo/logo.png 2x\\">")
+const t4 = _template("<img src=/foo/logo.png srcset=\\"/foo/logo.png 2x, /foo/logo.png\\">")
+const t5 = _template("<img src=/foo/logo.png srcset=\\"/foo/logo.png 2x, /foo/logo.png 3x\\">")
+const t6 = _template("<img src=/foo/logo.png srcset=\\"/foo/logo.png, /foo/logo.png 2x, /foo/logo.png 3x\\">")
+const t7 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x' + "\\">")
+const t8 = _template("<img src=https://example.com/logo.png srcset=\\"https://example.com/logo.png, https://example.com/logo.png 2x\\">")
+const t9 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ', ' + _imports_1 + ' 2x' + "\\">")
+const t10 = _template("<img src=data:image/png;base64,i srcset=\\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\">")
 
 export function render(_ctx) {
   const n0 = t0()
@@ -84,17 +84,17 @@ exports[`compiler sfc: transform srcset > transform srcset w/ includeAbsolute: t
 "import { template as _template } from 'vue';
 import _imports_0 from './logo.png';
 import _imports_1 from '/logo.png';
-const t0 = _template("<img src=\\"" + _imports_0 + "\\" srcset>")
-const t1 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + "\\">")
-const t2 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ' 2x' + "\\">")
-const t3 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x' + "\\">")
-const t4 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ' 2x, ' + _imports_0 + "\\">")
-const t5 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ' 2x, ' + _imports_0 + ' 3x' + "\\">")
-const t6 = _template("<img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x, ' + _imports_0 + ' 3x' + "\\">")
-const t7 = _template("<img src=\\"" + _imports_1 + "\\" srcset=\\"" + _imports_1 + ', ' + _imports_1 + ' 2x' + "\\">")
-const t8 = _template("<img src=\\"https://example.com/logo.png\\" srcset=\\"https://example.com/logo.png, https://example.com/logo.png 2x\\">")
-const t9 = _template("<img src=\\"" + _imports_1 + "\\" srcset=\\"" + _imports_1 + ', ' + _imports_0 + ' 2x' + "\\">")
-const t10 = _template("<img src=\\"data:image/png;base64,i\\" srcset=\\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\">")
+const t0 = _template("<img src=\\"" + _imports_0 + "\\"srcset>")
+const t1 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + "\\">")
+const t2 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ' 2x' + "\\">")
+const t3 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x' + "\\">")
+const t4 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ' 2x, ' + _imports_0 + "\\">")
+const t5 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ' 2x, ' + _imports_0 + ' 3x' + "\\">")
+const t6 = _template("<img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x, ' + _imports_0 + ' 3x' + "\\">")
+const t7 = _template("<img src=\\"" + _imports_1 + "\\"srcset=\\"" + _imports_1 + ', ' + _imports_1 + ' 2x' + "\\">")
+const t8 = _template("<img src=https://example.com/logo.png srcset=\\"https://example.com/logo.png, https://example.com/logo.png 2x\\">")
+const t9 = _template("<img src=\\"" + _imports_1 + "\\"srcset=\\"" + _imports_1 + ', ' + _imports_0 + ' 2x' + "\\">")
+const t10 = _template("<img src=data:image/png;base64,i srcset=\\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\">")
 
 export function render(_ctx) {
   const n0 = t0()
@@ -117,7 +117,7 @@ exports[`compiler sfc: transform srcset > transform srcset w/ stringify 1`] = `
 "import { template as _template } from 'vue';
 import _imports_0 from './logo.png';
 import _imports_1 from '/logo.png';
-const t0 = _template("<div><img src=\\"" + _imports_0 + "\\" srcset><img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + "\\"><img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ' 2x' + "\\"><img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ' 2x' + "\\"><img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x' + "\\"><img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ' 2x, ' + _imports_0 + "\\"><img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ' 2x, ' + _imports_0 + ' 3x' + "\\"><img src=\\"" + _imports_0 + "\\" srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x, ' + _imports_0 + ' 3x' + "\\"><img src=\\"" + _imports_1 + "\\" srcset=\\"" + _imports_1 + ', ' + _imports_1 + ' 2x' + "\\"><img src=\\"https://example.com/logo.png\\" srcset=\\"https://example.com/logo.png, https://example.com/logo.png 2x\\"><img src=\\"" + _imports_1 + "\\" srcset=\\"" + _imports_1 + ', ' + _imports_0 + ' 2x' + "\\"><img src=\\"data:image/png;base64,i\\" srcset=\\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"></div>", true)
+const t0 = _template("<div><img src=\\"" + _imports_0 + "\\"srcset><img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + "\\"><img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ' 2x' + "\\"><img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ' 2x' + "\\"><img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x' + "\\"><img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ' 2x, ' + _imports_0 + "\\"><img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ' 2x, ' + _imports_0 + ' 3x' + "\\"><img src=\\"" + _imports_0 + "\\"srcset=\\"" + _imports_0 + ', ' + _imports_0 + ' 2x, ' + _imports_0 + ' 3x' + "\\"><img src=\\"" + _imports_1 + "\\"srcset=\\"" + _imports_1 + ', ' + _imports_1 + ' 2x' + "\\"><img src=https://example.com/logo.png srcset=\\"https://example.com/logo.png, https://example.com/logo.png 2x\\"><img src=\\"" + _imports_1 + "\\"srcset=\\"" + _imports_1 + ', ' + _imports_0 + ' 2x' + "\\"><img src=data:image/png;base64,i srcset=\\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\">", true)
 
 export function render(_ctx) {
   const n0 = t0()
