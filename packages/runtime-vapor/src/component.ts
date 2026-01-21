@@ -1025,6 +1025,7 @@ function handleSetupResult(
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
         instance.devtoolsRawSetupState = setupResult
       }
+      instance.exposed || instance.expose(setupResult)
       instance.setupState = proxyRefs(setupResult)
       if (__DEV__) {
         instance.setupState = createDevSetupStateProxy(instance)
@@ -1037,6 +1038,7 @@ function handleSetupResult(
     // - setup returning non-block state for use in render
     // support setup fn and render fn co-usage for expose
     if (!isBlock(setupResult) && component.render) {
+      instance.exposed || instance.expose(setupResult)
       instance.setupState = proxyRefs(setupResult)
       instance.block =
         callWithErrorHandling(
