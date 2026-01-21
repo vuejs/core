@@ -1,4 +1,5 @@
 import {
+  VaporTeleport,
   child,
   createComponent,
   createPlainElement,
@@ -3783,6 +3784,49 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toBe(
         `<!--teleport start--><span>bar</span><!--teleport end-->`,
       )
+    })
+
+    test('should apply css vars after hydration', async () => {
+      const state = reactive({ color: 'red' })
+
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport-css-vars'
+      teleportContainer.innerHTML =
+        `<!--teleport start anchor-->` +
+        `<span>content</span>` +
+        `<!--teleport anchor-->`
+      document.body.appendChild(teleportContainer)
+
+      const App = defineVaporComponent({
+        setup() {
+          useVaporCssVars(() => state)
+          return createComponent(
+            VaporTeleport,
+            { to: () => '#teleport-css-vars' },
+            { default: () => template('<span>content</span>', true)() },
+          )
+        },
+      })
+
+      const container = document.createElement('div')
+      container.innerHTML = '<!--teleport start--><!--teleport end-->'
+      document.body.appendChild(container)
+
+      const app = createVaporSSRApp(App)
+      app.mount(container)
+
+      await nextTick()
+
+      // css vars should be applied after hydration
+      const span = teleportContainer.querySelector('span') as HTMLElement
+      expect(span).toBeTruthy()
+      expect(span.style.getPropertyValue('--color')).toBe('red')
+      expect(span.hasAttribute('data-v-owner')).toBe(true)
+
+      // css vars should update reactively
+      state.color = 'green'
+      await nextTick()
+      expect(span.style.getPropertyValue('--color')).toBe('green')
     })
   })
 
