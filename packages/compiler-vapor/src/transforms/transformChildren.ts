@@ -63,23 +63,23 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
   let staticCount = 0
   let dynamicCount = 0
   let lastInsertionChild: IRDynamicInfo | undefined
-  const children = context.dynamic.children as (IRDynamicInfo & {
-    logicalIndex?: number
-  })[]
+  const children = context.dynamic.children
 
-  // Track logical index for each dynamic child
-  // logicalIndex represents the position in SSR DOM (counting fragments as single units)
-  let currentLogicalIndex = 0
+  // Track logical index for each child.
+  // logicalIndex represents the position in SSR DOM, used during hydration
+  // to locate the correct DOM node. Each child (static element, component,
+  // v-if/v-else-if/v-else chain, v-for, slot) counts as one logical unit.
+  let logicalIndex = 0
 
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.INSERT) {
-      // Assign logical index to this dynamic child
-      child.logicalIndex = currentLogicalIndex
+      child.logicalIndex = logicalIndex
       prevDynamics.push((lastInsertionChild = child))
-      currentLogicalIndex++
+      logicalIndex++
     }
 
     if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
+      child.logicalIndex = logicalIndex
       if (prevDynamics.length) {
         if (staticCount) {
           context.childrenTemplate[index - prevDynamics.length] = `<!>`
@@ -93,7 +93,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
         prevDynamics = []
       }
       staticCount++
-      currentLogicalIndex++
+      logicalIndex++
     }
   }
 
@@ -113,7 +113,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
 }
 
 function registerInsertion(
-  dynamics: (IRDynamicInfo & { logicalIndex?: number })[],
+  dynamics: IRDynamicInfo[],
   context: TransformContext,
   anchor: number,
   append?: boolean,

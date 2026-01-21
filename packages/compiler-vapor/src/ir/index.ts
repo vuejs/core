@@ -268,6 +268,9 @@ export interface IRDynamicInfo {
   id?: number
   flags: DynamicFlag
   anchor?: number
+  // logical index of this node among siblings (including dynamic nodes)
+  // used during hydration to locate the correct DOM node
+  logicalIndex?: number
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
