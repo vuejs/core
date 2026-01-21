@@ -298,6 +298,57 @@ describe('e2e: TransitionGroup', () => {
   )
 
   test(
+    'ref',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref } = (window as any).Vue
+        createApp({
+          template: `
+              <div id="container">
+                <transition-group name="group">
+                  <div v-for="item in items" :key="item" ref="itemRef" class="test">{{item}}</div>
+                </transition-group>
+              </div>
+              <button id="toggleBtn" @click="click">button</button>
+            `,
+          setup: () => {
+            const items = ref(['a', 'b', 'c'])
+            const click = () => (items.value = ['d', 'b', 'a'])
+            const itemRef = ref()
+            return { click, items, itemRef }
+          },
+        }).mount('#app')
+      })
+      expect(await html('#container')).toBe(
+        `<div class="test">a</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test">c</div>`,
+      )
+
+      expect(await htmlWhenTransitionStart()).toBe(
+        `<div class="test group-enter-from group-enter-active">d</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test group-move" style="">a</div>` +
+          `<div class="test group-leave-from group-leave-active group-move" style="">c</div>`,
+      )
+      await nextFrame()
+      expect(await html('#container')).toBe(
+        `<div class="test group-enter-active group-enter-to">d</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test group-move" style="">a</div>` +
+          `<div class="test group-leave-active group-move group-leave-to" style="">c</div>`,
+      )
+      await transitionFinish(duration * 2)
+      expect(await html('#container')).toBe(
+        `<div class="test">d</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test" style="">a</div>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
     'dynamic name',
     async () => {
       await page().evaluate(() => {
