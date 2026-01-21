@@ -1623,6 +1623,135 @@ describe('Vapor Mode hydration', () => {
         `"<div><span></span>foo<!--dynamic-component--><!--if--><span></span></div>"`,
       )
     })
+
+    test('v-if with insertion parent + sibling component', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span v-if="data">hello</span>
+          </div>
+          <components.Child/>
+        </template>`,
+        {
+          Child: `<template><div>child</div></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div><span>hello</span><!--if--></div><div>child</div><!--]-->
+        "
+      `,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div><!--if--></div><div>child</div><!--]-->
+        "
+      `,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div><span>hello</span><!--if--></div><div>child</div><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('v-if with static sibling + root sibling component', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <span v-if="data">hello</span>
+            <div>1</div>
+          </div>
+          <components.Child/>
+        </template>`,
+        {
+          Child: `<template><div>child</div></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div><span>hello</span><!--if--><div>1</div></div><div>child</div><!--]-->
+        "
+      `,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div><!--if--><div>1</div></div><div>child</div><!--]-->
+        "
+      `,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div><span>hello</span><!--if--><div>1</div></div><div>child</div><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('v-if + static sibling + root sibling component (flat)', async () => {
+      const data = ref(true)
+      const { container } = await testHydration(
+        `<template>
+          <span v-if="data">hello</span>
+          <span></span>
+          <components.Child/>
+        </template>`,
+        {
+          Child: `<template><div>child</div></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>hello</span><!--if--><span></span><div>child</div><!--]-->
+        "
+      `,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><!--if--><span></span><div>child</div><!--]-->
+        "
+      `,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>hello</span><!--if--><span></span><div>child</div><!--]-->
+        "
+      `,
+      )
+    })
   })
 
   describe('for', () => {
@@ -1711,6 +1840,43 @@ describe('Vapor Mode hydration', () => {
         <!--[--><div>
         <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--]-->
         </div><div>4</div><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('v-for with static sibling + root sibling component', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <span v-for="item in data" :key="item">{{ item }}</span>
+            <div>1</div>
+          </div>
+          <components.Child/>
+        </template>`,
+        {
+          Child: `<template><div>{{data.length}}</div></template>`,
+        },
+        ref(['a', 'b', 'c']),
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><span>a</span><span>b</span><span>c</span><!--]-->
+        <div>1</div></div><div>3</div><!--]-->
+        "
+      `,
+      )
+
+      data.value.push('d')
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><span>a</span><span>b</span><span>c</span><span>d</span><!--]-->
+        <div>1</div></div><div>4</div><!--]-->
         "
       `,
       )
