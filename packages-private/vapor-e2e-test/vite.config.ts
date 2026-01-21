@@ -19,6 +19,7 @@ export default defineConfig({
           import.meta.dirname,
           'transition-group/index.html',
         ),
+        teleport: resolve(import.meta.dirname, 'teleport/index.html'),
       },
     },
   },

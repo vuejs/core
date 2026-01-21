@@ -16,6 +16,7 @@ import {
   type BlockFn,
   applyTransitionHooks,
   insert,
+  move,
   remove,
 } from '../block'
 import { createComment, createTextNode, querySelector } from '../dom/node'
@@ -59,6 +60,7 @@ export class TeleportFragment extends VaporFragment {
   private resolvedProps?: TeleportProps
   private rawSlots?: LooseRawSlots
   isDisabled?: boolean
+  private isMounted = false
 
   target?: ParentNode | null
   targetAnchor?: Node | null
@@ -156,11 +158,25 @@ export class TeleportFragment extends VaporFragment {
     if (this.$transition) {
       applyTransitionHooks(this.nodes, this.$transition)
     }
-    insert(
-      this.nodes,
-      (this.mountContainer = parent),
-      (this.mountAnchor = anchor),
-    )
+    if (this.isMounted) {
+      // use preserveState to keep iframe/video state when moving
+      move(
+        this.nodes,
+        (this.mountContainer = parent),
+        (this.mountAnchor = anchor),
+        undefined,
+        undefined,
+        undefined,
+        true,
+      )
+    } else {
+      insert(
+        this.nodes,
+        (this.mountContainer = parent),
+        (this.mountAnchor = anchor),
+      )
+      this.isMounted = true
+    }
   }
 
   private mountToTarget(): void {

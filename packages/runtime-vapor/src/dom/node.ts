@@ -26,6 +26,20 @@ export function parentNode(node: Node): ParentNode | null {
   return node.parentNode
 }
 
+/**
+ * Move a node to a new position
+ * Prefers moveBefore (preserves node state), falls back to insertBefore
+ */
+/*@__NO_SIDE_EFFECTS__*/
+export const moveNode: (
+  parent: ParentNode & { moveBefore?: ParentNode['insertBefore'] },
+  node: Node,
+  anchor: Node | null,
+) => void = /*@__PURE__*/ (() =>
+  'moveBefore' in HTMLElement.prototype
+    ? (parent, node, anchor) => parent.moveBefore!(node, anchor)
+    : (parent, node, anchor) => parent.insertBefore(node, anchor))()
+
 /*@__NO_SIDE_EFFECTS__*/
 const _txt: typeof _child = _child
 

@@ -5,7 +5,7 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { _child } from './dom/node'
+import { _child, moveNode } from './dom/node'
 import { isComment, isHydrating } from './dom/hydration'
 import {
   MoveType,
@@ -130,6 +130,7 @@ export function move(
   moveType: MoveType = MoveType.LEAVE,
   parentComponent?: VaporComponentInstance,
   parentSuspense?: any, // TODO Suspense
+  preserveState?: boolean, // use moveBefore to preserve node state when possible
 ): void {
   anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
   if (block instanceof Node) {
@@ -144,7 +145,10 @@ export function move(
         performTransitionEnter(
           block,
           (block as TransitionBlock).$transition as TransitionHooks,
-          () => parent.insertBefore(block, anchor as Node),
+          () =>
+            preserveState
+              ? moveNode(parent, block, anchor as Node | null)
+              : parent.insertBefore(block, anchor as Node | null),
           parentSuspense,
           true,
         )
@@ -161,14 +165,18 @@ export function move(
               parentComponent.isUnmounted
             ) {
               block.remove()
+            } else if (preserveState) {
+              moveNode(parent, block, anchor as Node | null)
             } else {
-              parent.insertBefore(block, anchor as Node)
+              parent.insertBefore(block, anchor as Node | null)
             }
           },
           parentSuspense,
           true,
         )
       }
+    } else if (preserveState) {
+      moveNode(parent, block, anchor)
     } else {
       parent.insertBefore(block, anchor)
     }
@@ -181,13 +189,22 @@ export function move(
         moveType,
         parentComponent,
         parentSuspense,
+        preserveState,
       )
     } else {
       mountComponent(block, parent, anchor)
     }
   } else if (isArray(block)) {
     for (const b of block) {
-      move(b, parent, anchor, moveType, parentComponent, parentSuspense)
+      move(
+        b,
+        parent,
+        anchor,
+        moveType,
+        parentComponent,
+        parentSuspense,
+        preserveState,
+      )
     }
   } else {
     if (block.anchor) {
@@ -198,6 +215,7 @@ export function move(
         moveType,
         parentComponent,
         parentSuspense,
+        preserveState,
       )
       anchor = block.anchor
     }
@@ -212,6 +230,7 @@ export function move(
         moveType,
         parentComponent,
         parentSuspense,
+        preserveState,
       )
     }
   }
