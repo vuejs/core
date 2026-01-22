@@ -78,7 +78,7 @@ describe('vapor teleport', () => {
         expect(playingAfter).toBe(true)
         // time should have continued (not reset to 0)
         // allow small tolerance for timing
-        expect(timeAfter).toBeGreaterThanOrEqual(timeBefore - 0.5)
+        expect(timeAfter).toBeGreaterThanOrEqual(timeBefore)
 
         // toggle back (move to target)
         await click(btnSelector)
