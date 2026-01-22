@@ -643,7 +643,7 @@ function baseCreateRenderer(
     } else {
       const customElement =
         n1.el && (n1.el as ComponentCustomElementInterface)._isVueCE
-          ? n1.el
+          ? (n1.el as ComponentCustomElementInterface)
           : null
       try {
         if (customElement) {
