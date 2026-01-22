@@ -382,4 +382,4 @@ export {
 /**
  * @internal
  */
-export { unsafeToTrustedHTML } from './nodeOps'
+export { unsafeToTrustedHTML, moveNode } from './nodeOps'

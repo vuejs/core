@@ -5,7 +5,7 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { _child, moveNode } from './dom/node'
+import { _child } from './dom/node'
 import { isComment, isHydrating } from './dom/hydration'
 import {
   MoveType,
@@ -13,6 +13,7 @@ import {
   type TransitionProps,
   type TransitionState,
   getInheritedScopeIds,
+  moveNode,
   performTransitionEnter,
   performTransitionLeave,
 } from '@vue/runtime-dom'

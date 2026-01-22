@@ -137,7 +137,12 @@ export interface RendererOptions<
     namespace?: ElementNamespace,
     parentComponent?: ComponentInternalInstance | null,
   ): void
-  insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
+  insert(
+    el: HostNode,
+    parent: HostElement,
+    anchor?: HostNode | null,
+    preserveState?: boolean,
+  ): void
   remove(el: HostNode): void
   createElement(
     type: string,
@@ -250,6 +255,7 @@ type MoveFn = (
   type: MoveType,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense?: SuspenseBoundary | null,
+  preserveState?: boolean,
 ) => void
 
 type NextFn = (vnode: VNode) => RendererNode | null
@@ -2200,6 +2206,7 @@ function baseCreateRenderer(
     moveType,
     parentComponent,
     parentSuspense = null,
+    preserveState,
   ) => {
     const { el, type, transition, children, shapeFlag } = vnode
     if (shapeFlag & ShapeFlags.COMPONENT) {
@@ -2212,6 +2219,8 @@ function baseCreateRenderer(
           anchor,
           moveType,
           parentComponent,
+          parentSuspense,
+          preserveState,
         )
       }
       return
@@ -2234,7 +2243,7 @@ function baseCreateRenderer(
     }
 
     if (type === Fragment) {
-      hostInsert(el!, container, anchor)
+      hostInsert(el!, container, anchor, preserveState)
       for (let i = 0; i < (children as VNode[]).length; i++) {
         move(
           (children as VNode[])[i],
@@ -2242,9 +2251,11 @@ function baseCreateRenderer(
           anchor,
           moveType,
           parentComponent,
+          parentSuspense,
+          preserveState,
         )
       }
-      hostInsert(vnode.anchor!, container, anchor)
+      hostInsert(vnode.anchor!, container, anchor, preserveState)
       return
     }
 
@@ -2295,7 +2306,7 @@ function baseCreateRenderer(
         }
       }
     } else {
-      hostInsert(el!, container, anchor)
+      hostInsert(el!, container, anchor, preserveState)
     }
   }
 
