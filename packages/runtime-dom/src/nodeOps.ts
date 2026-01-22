@@ -54,8 +54,7 @@ export const moveNode: (
   anchor: Node | null,
 ) => void =
   /*@__PURE__*/ (() =>
-    (__TEST__ ? typeof HTMLElement !== 'undefined' : true) &&
-    'moveBefore' in HTMLElement.prototype
+    typeof HTMLElement !== 'undefined' && 'moveBefore' in HTMLElement.prototype
       ? (parent, child, anchor) => parent.moveBefore!(child, anchor)
       : (parent, child, anchor) => parent.insertBefore(child, anchor))()
 
