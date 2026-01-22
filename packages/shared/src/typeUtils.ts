@@ -45,7 +45,7 @@ type OverloadUnionRecursive<
         | ((...args: TArgs) => TReturn)
   : never
 
-type OverloadUnion<TOverload extends (...args: any[]) => any> = Exclude<
-  OverloadUnionRecursive<(() => never) & TOverload>,
-  TOverload extends () => never ? never : () => never
->
+type OverloadUnion<TOverload extends (...args: any[]) => any> =
+  TOverload extends () => never
+    ? TOverload
+    : Exclude<OverloadUnionRecursive<(() => never) & TOverload>, () => never>
