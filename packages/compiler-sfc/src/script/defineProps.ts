@@ -349,13 +349,16 @@ function genDestructuredDefaultValue(
       }
     }
 
+    const isDestructuredBinding = ctx.propsDestructuredBindings[value]
+
     // If the default value is a function or is an identifier referencing
     // external value, skip factory wrap. This is needed when using
     // destructure w/ runtime declaration since we cannot safely infer
     // whether the expected runtime prop type is `Function`.
     const needSkipFactory =
       !inferredType &&
-      (isFunctionType(unwrapped) || unwrapped.type === 'Identifier')
+      (isFunctionType(unwrapped) ||
+        (unwrapped.type === 'Identifier' && !isDestructuredBinding))
 
     const needFactoryWrap =
       !needSkipFactory &&
@@ -363,7 +366,11 @@ function genDestructuredDefaultValue(
       !inferredType?.includes('Function')
 
     return {
-      valueString: needFactoryWrap ? `() => (${value})` : value,
+      valueString: needFactoryWrap
+        ? isDestructuredBinding
+          ? `(props) => (props["${value}"])`
+          : `() => (${value})`
+        : value,
       needSkipFactory,
     }
   }
