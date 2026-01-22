@@ -1454,7 +1454,7 @@ function baseCreateRenderer(
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
-        const { bm, m, parent, root, type } = instance
+        const { bm, parent, root, type } = instance
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
         toggleRecurse(instance, false)
@@ -1550,8 +1550,8 @@ function baseCreateRenderer(
           initialVNode.el = subTree.el
         }
         // mounted hook
-        if (m) {
-          queuePostRenderEffect(m, undefined, parentSuspense)
+        if (instance.m) {
+          queuePostRenderEffect(instance.m, undefined, parentSuspense)
         }
         // onVnodeMounted
         if (
