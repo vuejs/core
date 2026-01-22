@@ -12,16 +12,15 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
 ): TemplateRef<T> {
   const i = getCurrentInstance()
   const r = shallowRef(null)
+  const ret = __DEV__ ? readonly(r) : r
   if (i) {
     const refs = i.refs === EMPTY_OBJ ? (i.refs = {}) : i.refs
-    let desc: PropertyDescriptor | undefined
-    if (
-      __DEV__ &&
-      (desc = Object.getOwnPropertyDescriptor(refs, key)) &&
-      !desc.configurable
-    ) {
-      warn(`useTemplateRef('${key}') already exists.`)
+    const refsCache =
+      i.refsCache || (i.refsCache = new Map<string, ShallowRef>())
+    if (refsCache.has(key)) {
+      return refsCache.get(key)!
     } else {
+      refsCache.set(key, ret)
       Object.defineProperty(refs, key, {
         enumerable: true,
         get: () => r.value,
@@ -34,7 +33,6 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
         `instance to be associated with.`,
     )
   }
-  const ret = __DEV__ ? readonly(r) : r
   if (__DEV__) {
     knownTemplateRefs.add(ret)
   }
