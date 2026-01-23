@@ -40,12 +40,13 @@ import {
 } from './errors'
 import {
   forAliasRE,
+  isAllWhitespace,
   isCoreComponent,
   isSimpleIdentifier,
   isStaticArgOf,
   isVPre,
 } from './utils'
-import { decodeHTML } from 'entities/lib/decode.js'
+import { decodeHTML } from 'entities/decode'
 import {
   type ParserOptions as BabelOptions,
   parse,
@@ -879,15 +880,6 @@ function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
     }
   }
   return removedWhitespace ? nodes.filter(Boolean) : nodes
-}
-
-function isAllWhitespace(str: string) {
-  for (let i = 0; i < str.length; i++) {
-    if (!isWhitespace(str.charCodeAt(i))) {
-      return false
-    }
-  }
-  return true
 }
 
 function hasNewlineChar(str: string) {

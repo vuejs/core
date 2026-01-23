@@ -83,11 +83,11 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
 
   if (node.tagType === ElementTypes.ELEMENT) {
     const res: DirectiveTransformResult = { props: [] }
-    const defaultProps = [
-      // default value binding for text type inputs
-      createObjectProperty(`value`, model),
-    ]
     if (node.tag === 'input') {
+      const defaultProps = [
+        // default value binding for text type inputs
+        createObjectProperty(`value`, model),
+      ]
       const type = findProp(node, 'type')
       if (type) {
         const value = findValueBinding(node)

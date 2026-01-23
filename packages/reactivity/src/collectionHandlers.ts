@@ -55,22 +55,22 @@ function createIterableMethod(
       )
     // return a wrapped iterator which returns observed versions of the
     // values emitted from the real iterator
-    return {
-      // iterator protocol
-      next() {
-        const { value, done } = innerIterator.next()
-        return done
-          ? { value, done }
-          : {
-              value: isPair ? [wrap(value[0]), wrap(value[1])] : wrap(value),
-              done,
-            }
+    return extend(
+      // inheriting all iterator properties
+      Object.create(innerIterator),
+      {
+        // iterator protocol
+        next() {
+          const { value, done } = innerIterator.next()
+          return done
+            ? { value, done }
+            : {
+                value: isPair ? [wrap(value[0]), wrap(value[1])] : wrap(value),
+                done,
+              }
+        },
       },
-      // iterable protocol
-      [Symbol.iterator]() {
-        return this
-      },
-    }
+    )
   }
 }
 
