@@ -257,6 +257,8 @@ export class TeleportFragment extends VaporFragment {
       this.nodes = []
     }
 
+    this.isMounted = false
+
     // remove anchors
     if (this.targetStart) {
       remove(this.targetStart!, this.target!)
