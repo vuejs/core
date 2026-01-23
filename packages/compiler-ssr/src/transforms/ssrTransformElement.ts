@@ -264,12 +264,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                 }
                 if (attrName === 'class') {
                   openTag.push(
-                    ` class="`,
                     (dynamicClassBinding = createCallExpression(
                       context.helper(SSR_RENDER_CLASS),
                       [value],
                     )),
-                    `"`,
                   )
                 } else if (attrName === 'style') {
                   if (dynamicStyleBinding) {
@@ -277,12 +275,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                     mergeCall(dynamicStyleBinding, value)
                   } else {
                     openTag.push(
-                      ` style="`,
                       (dynamicStyleBinding = createCallExpression(
                         context.helper(SSR_RENDER_STYLE),
                         [value],
                       )),
-                      `"`,
                     )
                   }
                 } else {

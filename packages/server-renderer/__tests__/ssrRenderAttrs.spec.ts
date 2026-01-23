@@ -134,14 +134,16 @@ describe('ssr: renderClass', () => {
   })
 
   test('standalone', () => {
-    expect(ssrRenderClass(`foo`)).toBe(`foo`)
-    expect(ssrRenderClass([`foo`, `bar`])).toBe(`foo bar`)
-    expect(ssrRenderClass({ foo: true, bar: false })).toBe(`foo`)
-    expect(ssrRenderClass([{ foo: true, bar: false }, `baz`])).toBe(`foo baz`)
+    expect(ssrRenderClass(`foo`)).toBe(` class="foo"`)
+    expect(ssrRenderClass([`foo`, `bar`])).toBe(` class="foo bar"`)
+    expect(ssrRenderClass({ foo: true, bar: false })).toBe(` class="foo"`)
+    expect(ssrRenderClass([{ foo: true, bar: false }, `baz`])).toBe(
+      ` class="foo baz"`,
+    )
   })
 
   test('escape class values', () => {
-    expect(ssrRenderClass(`"><script`)).toBe(`&quot;&gt;&lt;script`)
+    expect(ssrRenderClass(`"><script`)).toBe(` class="&quot;&gt;&lt;script"`)
   })
 
   test('className', () => {
@@ -155,6 +157,11 @@ describe('ssr: renderClass', () => {
         className: ['foo', 'bar'],
       }),
     ).toBe(` class="foo,bar"`)
+    expect(
+      ssrRenderAttrs({
+        className: undefined,
+      }),
+    ).toBe(``)
   })
 })
 
@@ -172,18 +179,18 @@ describe('ssr: renderStyle', () => {
   })
 
   test('standalone', () => {
-    expect(ssrRenderStyle(`color:red`)).toBe(`color:red`)
+    expect(ssrRenderStyle(`color:red`)).toBe(` style="color:red"`)
     expect(
       ssrRenderStyle({
         color: `red`,
       }),
-    ).toBe(`color:red;`)
+    ).toBe(` style="color:red;"`)
     expect(
       ssrRenderStyle([
         { color: `red` },
         { fontSize: `15px` }, // case conversion
       ]),
-    ).toBe(`color:red;font-size:15px;`)
+    ).toBe(` style="color:red;font-size:15px;"`)
   })
 
   test('number handling', () => {
@@ -192,16 +199,16 @@ describe('ssr: renderStyle', () => {
         fontSize: null, // invalid value should be ignored
         opacity: 0.5,
       }),
-    ).toBe(`opacity:0.5;`)
+    ).toBe(` style="opacity:0.5;"`)
   })
 
   test('escape inline CSS', () => {
-    expect(ssrRenderStyle(`"><script`)).toBe(`&quot;&gt;&lt;script`)
+    expect(ssrRenderStyle(`"><script`)).toBe(` style="&quot;&gt;&lt;script"`)
     expect(
       ssrRenderStyle({
         color: `"><script`,
       }),
-    ).toBe(`color:&quot;&gt;&lt;script;`)
+    ).toBe(` style="color:&quot;&gt;&lt;script;"`)
   })
 
   test('useCssVars handling', () => {
@@ -216,6 +223,8 @@ describe('ssr: renderStyle', () => {
         ':--v6': 0,
         '--foo': 1,
       }),
-    ).toBe(`--v1:initial;--v2:initial;--v3: ;--v4:  ;--v5:foo;--v6:0;--foo:1;`)
+    ).toBe(
+      ` style="--v1:initial;--v2:initial;--v3: ;--v4:  ;--v5:foo;--v6:0;--foo:1;"`,
+    )
   })
 })

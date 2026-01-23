@@ -131,45 +131,45 @@ describe('ssr: element', () => {
     test('v-bind:class', () => {
       expect(getCompiledString(`<div id="foo" :class="bar"></div>`))
         .toMatchInlineSnapshot(`
-          "\`<div id="foo" class="\${
+          "\`<div id="foo"\${
               _ssrRenderClass(_ctx.bar)
-            }"></div>\`"
+            }></div>\`"
         `)
     })
 
     test('static class + v-bind:class', () => {
       expect(getCompiledString(`<div class="foo" :class="bar"></div>`))
         .toMatchInlineSnapshot(`
-          "\`<div class="\${
+          "\`<div\${
               _ssrRenderClass([_ctx.bar, "foo"])
-            }"></div>\`"
+            }></div>\`"
         `)
     })
 
     test('v-bind:class + static class', () => {
       expect(getCompiledString(`<div :class="bar" class="foo"></div>`))
         .toMatchInlineSnapshot(`
-          "\`<div class="\${
+          "\`<div\${
               _ssrRenderClass([_ctx.bar, "foo"])
-            }"></div>\`"
+            }></div>\`"
         `)
     })
 
     test('v-bind:style', () => {
       expect(getCompiledString(`<div id="foo" :style="bar"></div>`))
         .toMatchInlineSnapshot(`
-          "\`<div id="foo" style="\${
+          "\`<div id="foo"\${
               _ssrRenderStyle(_ctx.bar)
-            }"></div>\`"
+            }></div>\`"
         `)
     })
 
     test('static style + v-bind:style', () => {
       expect(getCompiledString(`<div style="color:red;" :style="bar"></div>`))
         .toMatchInlineSnapshot(`
-          "\`<div style="\${
+          "\`<div\${
               _ssrRenderStyle([{"color":"red"}, _ctx.bar])
-            }"></div>\`"
+            }></div>\`"
         `)
     })
 
