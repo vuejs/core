@@ -522,7 +522,7 @@ export function validateCompatConfig(
   }
   seenConfigObjects.add(config)
 
-  for (const key of Object.keys(config)) {
+  for (const key in config) {
     if (
       key !== 'MODE' &&
       !(key in deprecationData) &&
