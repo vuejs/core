@@ -315,7 +315,7 @@ describe('scopeId', () => {
     const Child = defineVaporComponent({
       setup() {
         const n0 = template('<div>')() as any
-        setInsertionState(n0, null, true)
+        setInsertionState(n0, null, 0, true)
         createSlot('default')
         return n0
       },
