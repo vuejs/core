@@ -28,6 +28,7 @@ import {
   child,
   createComponent,
   createDynamicComponent,
+  createSlot,
   defineVaporAsyncComponent,
   defineVaporComponent,
   renderEffect,
@@ -126,6 +127,84 @@ describe('vdomInterop', () => {
 
       await nextTick()
       expect(html()).toBe('<h1>bar</h1><input>')
+    })
+
+    test('slot v-model should persist when switching vapor/vdom child', async () => {
+      const VaporComp1 = defineVaporComponent({
+        name: 'VaporComp1',
+        setup() {
+          return [document.createTextNode('comp1: '), createSlot('default')]
+        },
+      })
+
+      const VDomComp2 = defineComponent({
+        name: 'VDomComp2',
+        setup(_, { slots }) {
+          return () =>
+            h('div', [
+              'comp2: ',
+              // vdom <slot/>
+              renderSlot(slots, 'default'),
+            ])
+        },
+      })
+
+      const VaporParent = defineVaporComponent({
+        name: 'VaporParent',
+        props: {
+          show: Boolean,
+          modelValue: {},
+          modelModifiers: {},
+        },
+        emits: ['update:modelValue'],
+        setup(__props) {
+          const modelValue = useModel(__props, 'modelValue')
+          return createDynamicComponent(
+            () => (__props.show ? VaporComp1 : VDomComp2),
+            null,
+            {
+              default: () => {
+                const input = template('<input>')() as any
+                applyTextModel(
+                  input,
+                  () => modelValue.value,
+                  _value => (modelValue.value = _value),
+                )
+                return input
+              },
+            },
+            true,
+          )
+        },
+      })
+
+      const show = ref(true)
+      const msg = ref('')
+
+      const { host } = define({
+        setup() {
+          return () =>
+            h(VaporParent as any, {
+              show: show.value,
+              modelValue: msg.value,
+              'onUpdate:modelValue': (value: string) => {
+                msg.value = value
+              },
+            })
+        },
+      }).render()
+
+      const input1 = host.querySelector('input')!
+      input1.value = 'hello'
+      input1.dispatchEvent(new Event('input'))
+      await nextTick()
+      expect(msg.value).toBe('hello')
+
+      show.value = false
+      await nextTick()
+
+      const input2 = host.querySelector('input')!
+      expect(input2.value).toBe('hello')
     })
   })
 

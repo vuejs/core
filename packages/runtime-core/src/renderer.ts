@@ -1549,7 +1549,8 @@ function baseCreateRenderer(
           }
           initialVNode.el = subTree.el
         }
-        // mounted hook
+        // Mounted hooks may be added to `instance.m` while mounting.
+        // Reading `instance.m` here ensures those hooks are still scheduled.
         if (instance.m) {
           queuePostRenderEffect(instance.m, undefined, parentSuspense)
         }
