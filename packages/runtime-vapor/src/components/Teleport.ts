@@ -1,6 +1,7 @@
 import {
   type GenericComponentInstance,
   MismatchTypes,
+  MoveType,
   type TeleportProps,
   type TeleportTargetElement,
   currentInstance,
@@ -164,7 +165,7 @@ export class TeleportFragment extends VaporFragment {
         this.nodes,
         (this.mountContainer = parent),
         (this.mountAnchor = anchor),
-        undefined,
+        MoveType.REORDER,
         undefined,
         undefined,
         true,

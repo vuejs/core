@@ -128,7 +128,7 @@ export function move(
   block: Block,
   parent: ParentNode & { $fc?: Node | null },
   anchor: Node | null | 0 = null, // 0 means prepend
-  moveType: MoveType = MoveType.LEAVE,
+  moveType: MoveType = MoveType.REORDER,
   parentComponent?: VaporComponentInstance,
   parentSuspense?: any, // TODO Suspense
   preserveState?: boolean, // use moveBefore to preserve node state when possible
