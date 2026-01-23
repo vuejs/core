@@ -1108,12 +1108,13 @@ describe('defineCustomElement', () => {
           return h('div', 'hello')
         },
       })
-      const Foo = defineCustomElement(def)
+      const Foo = defineCustomElement(def, {
+        extraStyles: [`div { color: green; }`],
+      })
       customElements.define('my-el-with-styles', Foo)
       container.innerHTML = `<my-el-with-styles></my-el-with-styles>`
       const el = container.childNodes[0] as VueElement
-      const style = el.shadowRoot?.querySelector('style')!
-      expect(style.textContent).toBe(`div { color: red; }`)
+      assertStyles(el, [`div { color: red; }`, `div { color: green; }`])
 
       // hmr
       __VUE_HMR_RUNTIME__.reload('foo', {
@@ -1122,7 +1123,52 @@ describe('defineCustomElement', () => {
       } as any)
 
       await nextTick()
-      assertStyles(el, [`div { color: blue; }`, `div { color: yellow; }`])
+      assertStyles(el, [
+        `div { color: blue; }`,
+        `div { color: yellow; }`,
+        `div { color: green; }`,
+      ])
+    })
+
+    test('extraStyles apply once and are not duplicated by child injections (and persist across child HMR)', async () => {
+      const Child = defineComponent({
+        __hmrId: 'child-extra',
+        styles: [`div { color: purple; }`],
+        render() {
+          return h('div', 'child')
+        },
+      })
+      const Parent = defineCustomElement(
+        {
+          __hmrId: 'parent-extra',
+          styles: [`div { color: red; }`],
+          render() {
+            return h(Child)
+          },
+        },
+        { extraStyles: [`div { color: green; }`] },
+      )
+      customElements.define('my-el-extra-child', Parent)
+      container.innerHTML = `<my-el-extra-child></my-el-extra-child>`
+      const el = container.childNodes[0] as VueElement
+      // Order: child (prepended after mount) -> parent -> extra
+      assertStyles(el, [
+        `div { color: purple; }`,
+        `div { color: red; }`,
+        `div { color: green; }`,
+      ])
+
+      // HMR child: extraStyles should remain and not duplicate or be removed
+      __VUE_HMR_RUNTIME__.reload('child-extra', {
+        ...Child,
+        styles: [`div { color: orange; }`],
+      } as any)
+      await nextTick()
+      assertStyles(el, [
+        `div { color: orange; }`,
+        `div { color: red; }`,
+        `div { color: green; }`,
+      ])
     })
 
     test("child components should inject styles to root element's shadow root", async () => {
