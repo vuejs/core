@@ -2186,5 +2186,38 @@ describe('component: slots', () => {
           '<div><!--slot--></div>',
       )
     })
+
+    test('should work with null and undefined', async () => {
+      const loop = ref<number[] | null | undefined>(undefined)
+
+      let instance: any
+      const Child = () => {
+        instance = currentInstance
+        return template('child')()
+      }
+
+      const { render } = define({
+        setup() {
+          return createComponent(Child, null, {
+            $: [
+              () =>
+                createForSlots(loop.value as any, (item, i) => ({
+                  name: item,
+                  fn: () => template(item + i)(),
+                })),
+            ],
+          })
+        },
+      })
+      render()
+
+      expect(instance.slots).toEqual({})
+      loop.value = [1]
+      await nextTick()
+      expect(instance.slots).toHaveProperty('1')
+      loop.value = null
+      await nextTick()
+      expect(instance.slots).toEqual({})
+    })
   })
 })

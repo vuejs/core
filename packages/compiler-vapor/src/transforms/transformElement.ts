@@ -20,6 +20,8 @@ import {
   camelize,
   capitalize,
   extend,
+  isAlwaysCloseTag,
+  isBlockTag,
   isBuiltInDirective,
   isFormattingTag,
   isVoidTag,
@@ -138,6 +140,12 @@ function canOmitEndTag(
     return true
   }
 
+  // Elements in the alwaysClose list cannot have their end tags omitted
+  // unless they are on the rightmost path.
+  if (isAlwaysCloseTag(node.tag) && !context.isOnRightmostPath) {
+    return false
+  }
+
   // Formatting tags and same-name nested tags require explicit closing
   // unless on the rightmost path of the tree:
   // - Formatting tags: https://html.spec.whatwg.org/multipage/parsing.html#reconstruct-the-active-formatting-elements
@@ -147,6 +155,12 @@ function canOmitEndTag(
     (parent.node.type === NodeTypes.ELEMENT && node.tag === parent.node.tag)
   ) {
     return context.isOnRightmostPath
+  }
+
+  // For inline element containing block element, if the inline ancestor
+  // is not on rightmost path, the block must close to avoid parsing issues
+  if (isBlockTag(node.tag) && context.hasInlineAncestorNeedingClose) {
+    return false
   }
 
   return context.isLastEffectiveChild

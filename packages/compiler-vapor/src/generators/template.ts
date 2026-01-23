@@ -71,7 +71,6 @@ export function genChildren(
 
   let offset = 0
   let prev: [variable: string, elementIndex: number] | undefined
-  let ifBranchCount = 0
   let prependCount = 0
 
   for (const [index, child] of children.entries()) {
@@ -83,8 +82,6 @@ export function genChildren(
     }
     if (child.flags & DynamicFlag.NON_TEMPLATE) {
       offset--
-    } else if (child.ifBranch) {
-      ifBranchCount++
     }
 
     const id =
@@ -100,7 +97,7 @@ export function genChildren(
     }
 
     const elementIndex = index + offset
-    const logicalIndex = elementIndex - ifBranchCount + prependCount
+    const logicalIndex = elementIndex + prependCount
     // p for "placeholder" variables that are meant for possible reuse by
     // other access paths
     const variable =

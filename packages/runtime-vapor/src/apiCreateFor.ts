@@ -609,6 +609,8 @@ function normalizeSource(source: any): ResolvedSource {
         values[i] = source[keys[i]]
       }
     }
+  } else {
+    values = []
   }
   return {
     values,
