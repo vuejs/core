@@ -262,7 +262,7 @@ function genRuntimePropFromType(
       } else {
         defaultString = `${prop.async ? 'async ' : ''}${
           prop.kind !== 'method' ? `${prop.kind} ` : ''
-        }default() ${ctx.getString(prop.body)}`
+        }default(${prop.params.map(node => ctx.getString(node)).join(',')}) ${ctx.getString(prop.body)}`
       }
     }
   }
