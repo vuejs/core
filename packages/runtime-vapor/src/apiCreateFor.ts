@@ -22,7 +22,11 @@ import {
 } from './block'
 import { warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
-import type { DynamicSlot } from './componentSlots'
+import {
+  type DynamicSlot,
+  currentSlotOwner,
+  setCurrentSlotOwner,
+} from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import {
@@ -123,6 +127,8 @@ export const createFor = (
     cleanup: () => void
   }[] = []
 
+  const scopeOwner = currentSlotOwner
+
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
   }
@@ -167,6 +173,7 @@ export const createFor = (
         }
       }
     } else {
+      const prevOwner = setCurrentSlotOwner(scopeOwner)
       parent = parent || parentAnchor!.parentNode
       if (!oldLength) {
         // remove fallback nodes
@@ -394,6 +401,7 @@ export const createFor = (
           }
         }
       }
+      setCurrentSlotOwner(prevOwner)
     }
 
     if (!isFallback) {
