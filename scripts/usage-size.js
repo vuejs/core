@@ -129,6 +129,7 @@ async function generateBundle(preset) {
         { preventAssignment: true },
       ),
     ],
+    tsconfig: false,
     treeshake: {
       moduleSideEffects: false,
     },
