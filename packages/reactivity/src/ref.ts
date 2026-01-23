@@ -21,6 +21,7 @@ import {
 import type { ComputedRef, WritableComputedRef } from './computed'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { warn } from './warning'
+import type { BuiltinSymbols } from './baseHandlers'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -550,6 +551,8 @@ export type UnwrapRefSimple<T> = T extends
             ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
             : T extends object & { [ShallowReactiveMarker]?: never }
               ? {
-                  [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
+                  [P in keyof T]: P extends BuiltinSymbols
+                    ? T[P]
+                    : UnwrapRef<T[P]>
                 }
               : T
