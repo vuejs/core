@@ -22,9 +22,12 @@ export let insertionIndex: number | undefined
 export let isLastInsertion: boolean | undefined
 
 /**
- * This function is called before a block type that requires insertion
- * (component, slot outlet, if, for) is created. The state is used for actual
- * insertion on client-side render, and used for node adoption during hydration.
+ * Establishes global insertion state used for subsequent DOM insertion or node adoption during hydration.
+ *
+ * @param parent - The parent node under which new nodes will be inserted; may receive a cached first-child in `parent.$fc`.
+ * @param anchor - A DOM node to use as the insertion anchor, `0` to indicate the position before the first child, or `null`/`undefined` for no anchor.
+ * @param logicalIndex - Optional logical index used during hydration to locate where nodes should be adopted.
+ * @param last - Optional flag indicating this insertion is the last within its containing sequence.
  */
 export function setInsertionState(
   parent: ParentNode & { $fc?: Node | null },
@@ -51,6 +54,11 @@ export function setInsertionState(
   }
 }
 
+/**
+ * Clear any active insertion state used for client-side insertion and hydration.
+ *
+ * Resets `insertionParent`, `insertionAnchor`, `insertionIndex`, and `isLastInsertion` to `undefined`.
+ */
 export function resetInsertionState(): void {
   insertionParent =
     insertionAnchor =

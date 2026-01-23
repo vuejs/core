@@ -58,6 +58,17 @@ export const transformChildren: NodeTransform = (node, context) => {
   }
 }
 
+/**
+ * Analyze a fragment-like element's dynamic children, assign logical indices for SSR hydration, and register insertion points or placeholder templates.
+ *
+ * Processes the array in `context.dynamic.children`, grouping INSERT dynamics and handling non-template children so that hydration indices and insertion operations are produced. As a result it may:
+ * - set `logicalIndex`, `anchor`, `flags`, and `operation` fields on dynamic child entries;
+ * - update `context.childrenTemplate` with placeholder templates where needed;
+ * - register insertion operations/anchors via the transform `context`.
+ * It also marks the final insertion operation as the last insertion when applicable.
+ *
+ * @param context - The element transform context whose dynamic children and templates will be mutated and whose operations/ids may be registered
+ */
 function processDynamicChildren(context: TransformContext<ElementNode>) {
   let prevDynamics: IRDynamicInfo[] = []
   let staticCount = 0
@@ -112,6 +123,18 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
   }
 }
 
+/**
+ * Apply insertion transformations for a group of dynamic children within a fragment-like transform context.
+ *
+ * Mutates each dynamic item by either registering an `INSERT_NODE` operation (for items with a `template`)
+ * or updating the child's block operation fields (`parent`, `anchor`, `logicalIndex`, `append`) so the
+ * operation is correctly anchored and ordered for SSR hydration and runtime insertion.
+ *
+ * @param dynamics - The dynamic children to register or update.
+ * @param context - The transform context used to register operations and obtain the parent reference.
+ * @param anchor - The numerical anchor index to use for anchoring insertions; special values (e.g. -1) indicate prepend semantics.
+ * @param append - When true, treat the insertion as an append (do not set an explicit anchor on generated insert operations).
+ */
 function registerInsertion(
   dynamics: IRDynamicInfo[],
   context: TransformContext,

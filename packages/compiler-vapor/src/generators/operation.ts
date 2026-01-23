@@ -162,6 +162,17 @@ export function genEffect(
   return frag
 }
 
+/**
+ * Generate the code fragments that set up insertion state for a block's parent during code generation.
+ *
+ * @param operation - Insertion state descriptor containing:
+ *   - parent: the parent node id
+ *   - anchor: the anchor node id or -1 for prepend, or undefined
+ *   - logicalIndex: optional logical index used for append scenarios
+ *   - append: whether the insertion is an append
+ *   - last: whether this is the last insertion in the block
+ * @returns An array of CodeFragment containing a newline and a call to the `setInsertionState` helper with:
+ *   the parent node id, the runtime anchor (or `null`/`0`/`undefined` as appropriate), the stringified logicalIndex when provided, and `'true'` when `last` is set.
 function genInsertionState(
   operation: InsertionStateTypes,
   context: CodegenContext,

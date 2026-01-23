@@ -39,6 +39,14 @@ export function runWithoutHydration(fn: () => any): any {
 
 let isOptimized = false
 
+/**
+ * Run a function within a hydration-enabled environment, performing one-time optimization and ensuring hydration state is set up and restored.
+ *
+ * @param fn - The primary operation to execute while hydration is active; its return value is propagated.
+ * @param setup - Routine executed before `fn` to prepare hydration-related state.
+ * @param cleanup - Routine executed after `fn` to finalize or clear hydration-related state.
+ * @returns The value returned by `fn`.
+ */
 function performHydration<T>(
   fn: () => T,
   setup: () => void,
@@ -155,6 +163,11 @@ export function locateNextNode(node: Node): Node | null {
       : _next(node)
 }
 
+/**
+ * Sets the current hydration node from insertionIndex, insertionParent, or the existing currentHydrationNode and resets insertion state.
+ *
+ * If insertionIndex is defined, selects the node via logical index lookup; otherwise uses insertionParent.firstChild when insertionParent exists, or falls back to the previously tracked currentHydrationNode. In development builds, throws an error if no node can be determined.
+ */
 function locateHydrationNodeImpl(): void {
   let node: Node | null
 

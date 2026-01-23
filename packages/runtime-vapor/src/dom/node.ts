@@ -137,6 +137,17 @@ export function disableHydrationNodeLookup(): void {
   nthChild.impl = _nthChild
 }
 
+/**
+ * Locate the Node corresponding to a zero-based logical child index within an insertion parent.
+ *
+ * Searches from a cached starting position on `parent` when available, updates the parent's cache
+ * to the found child, and sets the child's cached logical index. When a fragment start comment (`'['`)
+ * is encountered, the search skips the entire fragment to the node after its matching end anchor.
+ *
+ * @param parent - The insertion parent whose logical children are being searched
+ * @param logicalIndex - The zero-based logical index of the desired child
+ * @returns The Node at the given logical index, or `null` if no such node exists
+ */
 export function locateChildByLogicalIndex(
   parent: InsertionParent,
   logicalIndex: number,

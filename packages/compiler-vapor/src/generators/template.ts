@@ -55,6 +55,24 @@ export function genSelf(
   return frag
 }
 
+/**
+ * Generate code fragments to access and initialize all children of a dynamic node.
+ *
+ * Iterates dynamic.children and emits fragments that:
+ * - skip or adjust indexing for NON_TEMPLATE children,
+ * - resolve a child's reference id (anchor or id) when REFERENCED (and possibly INSERT),
+ * - create a temporary variable (or use `n{id}`) that references the child node using
+ *   helpers such as `child`, `next`, or `nthChild` with the child's computed element and logical indices,
+ * - inline generation for child nodes that require their own dynamic setup,
+ * - emit directive code for referenced element ids,
+ * - recurse into children to generate nested child handling.
+ *
+ * @param dynamic - IR dynamic node containing children and related metadata used to determine indexing and reference behavior
+ * @param context - CodegenContext providing helper lookups and naming utilities
+ * @param pushBlock - Callback used to append code fragment pieces (e.g., helper call expressions) to the output stream
+ * @param from - Expression that refers to the parent node from which children are accessed; defaults to `n${dynamic.id}`
+ * @returns An array of CodeFragment objects representing the generated code for all processed children
+ */
 export function genChildren(
   dynamic: IRDynamicInfo,
   context: CodegenContext,
