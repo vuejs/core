@@ -363,6 +363,23 @@ describe('reactivity/effect/scope', () => {
     expect(getEffectsCount(scope)).toBe(0)
     expect(scope.cleanupsLength).toBe(0)
   })
+
+  test('signal', () => {
+    const scope = effectScope()
+    // should not create an `AbortController` until `scope.signal` is accessed
+    expect((scope as any)._controller).toBeUndefined()
+
+    const { signal } = scope
+    expect((scope as any)._controller).toBeDefined()
+    expect(signal).toBeDefined()
+
+    const spy = vi.fn()
+    signal.addEventListener('abort', spy)
+
+    scope.stop()
+    // should trigger `abort` on the `signal` when `scope.stop()` is called.
+    expect(spy).toBeCalled()
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {
