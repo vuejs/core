@@ -1,7 +1,7 @@
 import { once } from 'node:events'
 import { createServer } from 'node:http'
 import path from 'node:path'
-import { beforeAll } from 'vitest'
+import { afterAll, beforeAll } from 'vitest'
 import serveHandler from 'serve-handler'
 
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
