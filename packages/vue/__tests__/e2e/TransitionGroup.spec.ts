@@ -356,7 +356,7 @@ describe('e2e: TransitionGroup', () => {
 
       const overlapDelay = Math.max(10, Math.floor(duration / 2))
       const { midTop, finalTop } = await page().evaluate(
-        ({ overlapDelay, duration }) => {
+        ({ overlapDelay, duration, buffer }) => {
           ;(document.querySelector('#addBtn') as any)!.click()
           return new Promise<{ midTop: number; finalTop: number }>(resolve => {
             setTimeout(() => {
@@ -376,12 +376,12 @@ describe('e2e: TransitionGroup', () => {
                     ? firstToast.getBoundingClientRect().top
                     : NaN
                   resolve({ midTop, finalTop })
-                }, duration)
+                }, duration + buffer)
               })
             }, overlapDelay)
           })
         },
-        { overlapDelay, duration },
+        { overlapDelay, duration, buffer },
       )
 
       expect(midTop).toBeGreaterThan(finalTop)

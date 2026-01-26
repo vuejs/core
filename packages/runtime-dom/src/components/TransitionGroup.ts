@@ -207,6 +207,8 @@ function applyTranslation(c: VNode): VNode | undefined {
     let scaleY = 1
     if (el.offsetWidth) scaleX = rect.width / el.offsetWidth
     if (el.offsetHeight) scaleY = rect.height / el.offsetHeight
+    if (!Number.isFinite(scaleX) || scaleX === 0) scaleX = 1
+    if (!Number.isFinite(scaleY) || scaleY === 0) scaleY = 1
     // Avoid division noise when scale is effectively 1.
     if (Math.abs(scaleX - 1) < 0.01) scaleX = 1
     if (Math.abs(scaleY - 1) < 0.01) scaleY = 1
