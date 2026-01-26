@@ -298,6 +298,65 @@ describe('e2e: TransitionGroup', () => {
   )
 
   test(
+    'move while entering without scale',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+              <div id="container">
+                <transition-group name="test">
+                  <div v-for="item in items" :key="item" class="test">{{item}}</div>
+                </transition-group>
+              </div>
+              <button id="addBtn" @click="add">button</button>
+            `,
+          setup: () => {
+            const items = ref(['a'])
+            let id = 0
+            const add = () => {
+              id++
+              items.value.unshift(String.fromCharCode(97 + id))
+            }
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.innerHTML = `
+                .test-move { transition: transform ${duration}ms ease; }
+                .test-enter-from { transform: translateY(-10px); }
+                .test-enter-active { transition: transform ${duration}ms ease; }
+              `
+              document.body.appendChild(styleNode)
+            })
+
+            return { items, add }
+          },
+        }).mount('#app')
+      }, duration)
+
+      const overlapDelay = Math.max(10, Math.floor(duration / 2))
+      const aClassName = await page().evaluate(overlapDelay => {
+        ;(document.querySelector('#addBtn') as any)!.click()
+        return new Promise(resolve => {
+          setTimeout(() => {
+            ;(document.querySelector('#addBtn') as any)!.click()
+            Promise.resolve().then(() => {
+              const nodes = Array.from(
+                document.querySelectorAll('#container .test'),
+              ) as HTMLElement[]
+              const aNode = nodes.find(node => node.textContent === 'a')
+              resolve(aNode ? aNode.className : '')
+            })
+          }, overlapDelay)
+        })
+      }, overlapDelay)
+
+      expect(aClassName).toContain('test-move')
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
     'dynamic name',
     async () => {
       await page().evaluate(() => {

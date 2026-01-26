@@ -150,10 +150,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
                 instance,
               ),
             )
-            positionMap.set(child, {
-              left: (child.el as HTMLElement).offsetLeft,
-              top: (child.el as HTMLElement).offsetTop,
-            })
+            positionMap.set(child, getPosition(child.el as HTMLElement))
           }
         }
       }
@@ -194,10 +191,7 @@ function callPendingCbs(c: VNode) {
 }
 
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, {
-    left: (c.el as HTMLElement).offsetLeft,
-    top: (c.el as HTMLElement).offsetTop,
-  })
+  newPositionMap.set(c, getPosition(c.el as HTMLElement))
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
@@ -206,10 +200,29 @@ function applyTranslation(c: VNode): VNode | undefined {
   const dx = oldPos.left - newPos.left
   const dy = oldPos.top - newPos.top
   if (dx || dy) {
-    const s = (c.el as HTMLElement).style
-    s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
+    const el = c.el as HTMLElement
+    const s = el.style
+    const rect = el.getBoundingClientRect()
+    let scaleX = 1
+    let scaleY = 1
+    if (el.offsetWidth) scaleX = rect.width / el.offsetWidth
+    if (el.offsetHeight) scaleY = rect.height / el.offsetHeight
+    // Avoid division noise when scale is effectively 1.
+    if (Math.abs(scaleX - 1) < 0.01) scaleX = 1
+    if (Math.abs(scaleY - 1) < 0.01) scaleY = 1
+    s.transform = s.webkitTransform = `translate(${dx / scaleX}px,${
+      dy / scaleY
+    }px)`
     s.transitionDuration = '0s'
     return c
+  }
+}
+
+function getPosition(el: HTMLElement): Position {
+  const rect = el.getBoundingClientRect()
+  return {
+    left: rect.left,
+    top: rect.top,
   }
 }
 
