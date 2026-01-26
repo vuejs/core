@@ -380,9 +380,7 @@ describe('reactivity/effect/scope', () => {
       status.stage = 1
       status.scope = effectScope()
       status.scope.run(() => {
-        watch([() => status.stage], (values: any) => {
-          console.log('-- rs', values)
-        })
+        watch([() => status.stage], () => {})
       })
     }
 
