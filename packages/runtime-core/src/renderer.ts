@@ -2201,7 +2201,8 @@ function baseCreateRenderer(
     parentComponent,
     parentSuspense = null,
   ) => {
-    const { el, type, transition, children, shapeFlag } = vnode
+    const { el: rawEl, vb, type, transition, children, shapeFlag } = vnode
+    const el = vb || rawEl
     if (shapeFlag & ShapeFlags.COMPONENT) {
       if (isVaporComponent(type as ConcreteComponent)) {
         getVaporInterface(parentComponent, vnode).move(vnode, container, anchor)
