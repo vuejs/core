@@ -22,7 +22,6 @@ import {
 import * as path from 'node:path'
 import { parseSync } from 'oxc-parser'
 import { spawnSync } from 'node:child_process'
-import MagicString from 'magic-string'
 
 /**
  * @typedef {{ readonly name: string, readonly value: string | number }} EnumMember
@@ -254,20 +253,20 @@ export function inlineEnums() {
    */
   const plugin = {
     name: 'inline-enum',
-    transform(code, id) {
+    transform(code, id, meta) {
       /**
-       * @type {MagicString | undefined}
+       * @type {import('rolldown').BindingMagicString | undefined}
        */
       let s
-
       if (id in enumData.declarations) {
-        s = s || new MagicString(code)
+        s = s || meta.magicString
         for (const declaration of enumData.declarations[id]) {
           const {
             range: [start, end],
             id,
             members,
           } = declaration
+          // @ts-ignore
           s.update(
             start,
             end,
@@ -297,8 +296,7 @@ export function inlineEnums() {
 
       if (s) {
         return {
-          code: s.toString(),
-          map: s.generateMap(),
+          code: s,
         }
       }
     },
