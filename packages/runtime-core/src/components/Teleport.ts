@@ -390,6 +390,8 @@ function moveTeleport(
           parentAnchor,
           MoveType.REORDER,
           parentComponent,
+          null,
+          true, // preserveState - nodes are already mounted
         )
       }
     }

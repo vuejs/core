@@ -41,9 +41,30 @@ const doc = (typeof document !== 'undefined' ? document : null) as Document
 
 const templateContainer = doc && /*@__PURE__*/ doc.createElement('template')
 
+/**
+ * Move a node to a new position
+ * Prefers moveBefore (preserves node state), falls back to insertBefore
+ */
+/*@__NO_SIDE_EFFECTS__*/
+export const moveNode: (
+  parent: ParentNode & {
+    moveBefore?: ParentNode['insertBefore']
+  },
+  child: Node,
+  anchor: Node | null,
+) => void =
+  /*@__PURE__*/ (() =>
+    typeof HTMLElement !== 'undefined' && 'moveBefore' in HTMLElement.prototype
+      ? (parent, child, anchor) => parent.moveBefore!(child, anchor)
+      : (parent, child, anchor) => parent.insertBefore(child, anchor))()
+
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
-  insert: (child, parent, anchor) => {
-    parent.insertBefore(child, anchor || null)
+  insert: (child, parent, anchor, preserveState) => {
+    if (preserveState) {
+      moveNode(parent, child, anchor || null)
+    } else {
+      parent.insertBefore(child, anchor || null)
+    }
   },
 
   remove: child => {
