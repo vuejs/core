@@ -21,14 +21,16 @@ export function trimVaporExportsPlugin(format, pkgName) {
     return [
       {
         name: 'trim-vapor-exports',
-        transform(code, id) {
-          if (
-            id.endsWith('runtime-core/src/index.ts') ||
-            id.endsWith('runtime-dom/src/index.ts')
-          ) {
+        transform: {
+          filter: {
+            id: {
+              include: /runtime-(core|dom)\/src\/index\.ts$/,
+            },
+          },
+          handler(code) {
             const index = code.lastIndexOf('// VAPOR ---')
             return code.slice(0, index)
-          }
+          },
         },
       },
     ]
