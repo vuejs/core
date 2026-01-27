@@ -64,7 +64,7 @@
   "devDependencies": {
     "@babel/parser": "catalog:",
     "@babel/types": "catalog:",
-    "@rolldown/plugin-node-polyfills": "^1.0.0",
+    "@rolldown/plugin-node-polyfills": "^1.0.3",
     "@types/hash-sum": "^1.0.2",
     "@types/node": "^24.10.4",
     "@types/semver": "^7.7.1",
