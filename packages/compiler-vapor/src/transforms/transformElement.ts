@@ -20,7 +20,10 @@ import {
   camelize,
   capitalize,
   extend,
+  isAlwaysCloseTag,
+  isBlockTag,
   isBuiltInDirective,
+  isFormattingTag,
   isVoidTag,
   makeMap,
 } from '@vue/shared'
@@ -93,6 +96,7 @@ export const transformElement: NodeTransform = (node, context) => {
     )
 
     const singleRoot = isSingleRoot(context)
+
     if (isComponent) {
       transformComponentElement(
         node as ComponentNode,
@@ -109,6 +113,10 @@ export const transformElement: NodeTransform = (node, context) => {
         singleRoot,
         context,
         getEffectIndex,
+        // Root-level elements generate dedicated templates
+        // so closing tags can be omitted
+        context.root === context.effectiveParent ||
+          canOmitEndTag(node as PlainElementNode, context),
       )
     }
 
@@ -116,6 +124,46 @@ export const transformElement: NodeTransform = (node, context) => {
       context.slots = parentSlots
     }
   }
+}
+
+function canOmitEndTag(
+  node: PlainElementNode,
+  context: TransformContext,
+): boolean {
+  const { block, parent } = context
+
+  if (!parent) return false
+
+  // If in a different block than parent, this is a block root element
+  // and can omit the closing tag
+  if (block !== parent.block) {
+    return true
+  }
+
+  // Elements in the alwaysClose list cannot have their end tags omitted
+  // unless they are on the rightmost path.
+  if (isAlwaysCloseTag(node.tag) && !context.isOnRightmostPath) {
+    return false
+  }
+
+  // Formatting tags and same-name nested tags require explicit closing
+  // unless on the rightmost path of the tree:
+  // - Formatting tags: https://html.spec.whatwg.org/multipage/parsing.html#reconstruct-the-active-formatting-elements
+  // - Same-name tags: parent's close tag would incorrectly close the child
+  if (
+    isFormattingTag(node.tag) ||
+    (parent.node.type === NodeTypes.ELEMENT && node.tag === parent.node.tag)
+  ) {
+    return context.isOnRightmostPath
+  }
+
+  // For inline element containing block element, if the inline ancestor
+  // is not on rightmost path, the block must close to avoid parsing issues
+  if (isBlockTag(node.tag) && context.hasInlineAncestorNeedingClose) {
+    return false
+  }
+
+  return context.isLastEffectiveChild
 }
 
 function isSingleRoot(
@@ -249,12 +297,18 @@ function resolveSetupReference(name: string, context: TransformContext) {
 // keys cannot be a part of the template and need to be set dynamically
 const dynamicKeys = ['indeterminate']
 
+// The attribute value can remain unquoted if it doesn't contain ASCII whitespace
+// or any of " ' ` = < or >.
+// https://html.spec.whatwg.org/multipage/introduction.html#intro-early-example
+const NEEDS_QUOTES_RE = /[\s"'`=<>]/
+
 function transformNativeElement(
   node: PlainElementNode,
   propsResult: PropsResult,
   singleRoot: boolean,
   context: TransformContext,
   getEffectIndex: () => number,
+  omitEndTag: boolean,
 ) {
   const { tag } = node
   const { scopeId } = context.options
@@ -278,6 +332,9 @@ function transformNativeElement(
       getEffectIndex,
     )
   } else {
+    // tracks if previous attribute was quoted, allowing space omission
+    // e.g. `class="foo"id="bar"` is valid, `class=foo id=bar` needs space
+    let prevWasQuoted = false
     for (const prop of propsResult[1]) {
       const { key, values } = prop
       // handling asset imports
@@ -286,18 +343,28 @@ function transformNativeElement(
           values[0].content.includes(imported.exp.content),
         )
       ) {
+        if (!prevWasQuoted) template += ` `
         // add start and end markers to the import expression, so it can be replaced
         // with string concatenation in the generator, see genTemplates
-        template += ` ${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
+        template += `${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
+        prevWasQuoted = true
       } else if (
         key.isStatic &&
         values.length === 1 &&
         (values[0].isStatic || values[0].content === "''") &&
         !dynamicKeys.includes(key.content)
       ) {
-        template += ` ${key.content}`
-        if (values[0].content)
-          template += `="${values[0].content === "''" ? '' : values[0].content}"`
+        if (!prevWasQuoted) template += ` `
+        const value = values[0].content === "''" ? '' : values[0].content
+        template += key.content
+
+        if (value) {
+          template += (prevWasQuoted = NEEDS_QUOTES_RE.test(value))
+            ? `="${value.replace(/"/g, '&quot;')}"`
+            : `=${value}`
+        } else {
+          prevWasQuoted = false
+        }
       } else {
         dynamicProps.push(key.content)
         context.registerEffect(
@@ -315,8 +382,7 @@ function transformNativeElement(
   }
 
   template += `>` + context.childrenTemplate.join('')
-  // TODO remove unnecessary close tag, e.g. if it's the last element of the template
-  if (!isVoidTag(tag)) {
+  if (!isVoidTag(tag) && !omitEndTag) {
     template += `</${tag}>`
   }
 

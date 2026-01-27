@@ -23,6 +23,7 @@ import {
 } from '../block'
 import { renderEffect } from '../renderEffect'
 import {
+  ensureTransitionHooksRegistered,
   resolveTransitionHooks,
   setTransitionHooks,
   setTransitionHooksOnFragment,
@@ -39,13 +40,13 @@ import { isFragment } from '../fragment'
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
 
-const decorate = (t: typeof VaporTransitionGroup) => {
+const decorate = <T extends ObjectVaporComponent>(t: T): T => {
   delete (t.props! as any).mode
   t.__vapor = true
   return t
 }
 
-export const VaporTransitionGroup: ObjectVaporComponent = decorate({
+const VaporTransitionGroupImpl: ObjectVaporComponent = {
   name: 'VaporTransitionGroup',
 
   props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
@@ -54,6 +55,9 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
   }),
 
   setup(props: TransitionGroupProps, { slots }) {
+    // Register transition hooks on first use
+    ensureTransitionHooksRegistered()
+
     const instance = currentInstance as VaporComponentInstance
     const state = useTransitionState()
 
@@ -165,7 +169,10 @@ export const VaporTransitionGroup: ObjectVaporComponent = decorate({
       return slottedBlock
     }
   },
-})
+}
+
+export const VaporTransitionGroup: ObjectVaporComponent =
+  /*@__PURE__*/ decorate(VaporTransitionGroupImpl)
 
 function getTransitionBlocks(block: Block) {
   let children: TransitionBlock[] = []

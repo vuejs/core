@@ -29,7 +29,6 @@ export enum IRNodeTypes {
   SLOT_OUTLET_NODE,
 
   DIRECTIVE,
-  DECLARE_OLD_REF, // consider make it more general
 
   IF,
   FOR,
@@ -79,6 +78,7 @@ export interface IfIRNode extends BaseIRNode {
   once?: boolean
   parent?: number
   anchor?: number
+  logicalIndex?: number
   append?: boolean
   last?: boolean
 }
@@ -100,6 +100,7 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   onlyChild: boolean
   parent?: number
   anchor?: number
+  logicalIndex?: number
   append?: boolean
   last?: boolean
 }
@@ -129,7 +130,6 @@ export interface SetTextIRNode extends BaseIRNode {
   element: number
   values: SimpleExpressionNode[]
   generated?: boolean // whether this is a generated empty text node by `processTextLikeContainer`
-  jsx?: boolean
   isComponent?: boolean
 }
 
@@ -205,13 +205,9 @@ export interface CreateComponentIRNode extends BaseIRNode {
   isCustomElement: boolean
   parent?: number
   anchor?: number
+  logicalIndex?: number
   append?: boolean
   last?: boolean
-}
-
-export interface DeclareOldRefIRNode extends BaseIRNode {
-  type: IRNodeTypes.DECLARE_OLD_REF
-  id: number
 }
 
 export interface SlotOutletIRNode extends BaseIRNode {
@@ -224,6 +220,7 @@ export interface SlotOutletIRNode extends BaseIRNode {
   once?: boolean
   parent?: number
   anchor?: number
+  logicalIndex?: number
   append?: boolean
   last?: boolean
 }
@@ -248,7 +245,6 @@ export type OperationNode =
   | IfIRNode
   | ForIRNode
   | CreateComponentIRNode
-  | DeclareOldRefIRNode
   | SlotOutletIRNode
   | GetTextChildIRNode
 
@@ -272,12 +268,13 @@ export interface IRDynamicInfo {
   id?: number
   flags: DynamicFlag
   anchor?: number
+  // logical index of this node among siblings (including dynamic nodes)
+  // used during hydration to locate the correct DOM node
+  logicalIndex?: number
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
-  needsKey?: boolean
   operation?: OperationNode
-  ifBranch?: boolean
 }
 
 export interface IREffect {

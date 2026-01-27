@@ -104,7 +104,7 @@ import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import type { VaporInteropInterface } from './apiCreateApp'
 import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
-import type { VueElement } from '@vue/runtime-dom'
+import type { ComponentCustomElementInterface } from './component'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -682,9 +682,10 @@ function baseCreateRenderer(
         optimized,
       )
     } else {
-      const customElement = !!(n1.el && (n1.el as VueElement)._isVueCE)
-        ? (n1.el as VueElement)
-        : null
+      const customElement =
+        n1.el && (n1.el as ComponentCustomElementInterface)._isVueCE
+          ? (n1.el as ComponentCustomElementInterface)
+          : null
       try {
         if (customElement) {
           customElement._beginPatch()
@@ -1454,7 +1455,7 @@ function baseCreateRenderer(
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
-        const { bm, m, parent, root, type } = instance
+        const { bm, parent, root, type } = instance
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
         toggleRecurse(instance, false)
@@ -1518,9 +1519,7 @@ function baseCreateRenderer(
           // custom element style injection
           if (
             (root as ComponentInternalInstance).ce &&
-            // @ts-expect-error _def is private
-            ((root as ComponentInternalInstance).ce as VueElement)._def
-              .shadowRoot !== false
+            (root as ComponentInternalInstance).ce!._hasShadowRoot()
           ) {
             ;(root as ComponentInternalInstance).ce!._injectChildStyle(type)
           }
@@ -1549,9 +1548,10 @@ function baseCreateRenderer(
           }
           initialVNode.el = subTree.el
         }
-        // mounted hook
-        if (m) {
-          queuePostRenderEffect(m, undefined, parentSuspense)
+        // Mounted hooks may be added to `instance.m` while mounting.
+        // Reading `instance.m` here ensures those hooks are still scheduled.
+        if (instance.m) {
+          queuePostRenderEffect(instance.m, undefined, parentSuspense)
         }
         // onVnodeMounted
         if (

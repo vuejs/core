@@ -1,7 +1,8 @@
-import { createApp, h } from '@vue/runtime-dom'
+import { createApp, h, nextTick, ref } from '@vue/runtime-dom'
 import {
   createComponent,
   createDynamicComponent,
+  createFor,
   createSlot,
   defineVaporComponent,
   setInsertionState,
@@ -308,6 +309,138 @@ describe('scopeId', () => {
         `<div root="" slotted-s=""></div>` +
         `<!--slot--><!--slot-->` +
         `</div>`,
+    )
+  })
+
+  test('nested components with slots', async () => {
+    const Child = defineVaporComponent({
+      setup() {
+        const n0 = template('<div>')() as any
+        setInsertionState(n0, null, 0, true)
+        createSlot('default')
+        return n0
+      },
+    })
+    const Parent = defineVaporComponent({
+      __scopeId: 'data-v-parent',
+      setup() {
+        const n3 = createComponent(
+          Child,
+          null,
+          {
+            default: withVaporCtx(() => {
+              const n2 = createComponent(
+                Child,
+                null,
+                {
+                  default: withVaporCtx(() => {
+                    const n1 = createComponent(
+                      Child,
+                      null,
+                      {
+                        default: () => {
+                          const t0 = template('test')() as any
+                          return t0
+                        },
+                      },
+                      true,
+                    )
+                    return n1
+                  }),
+                },
+                true,
+              )
+              return n2
+            }),
+          },
+          true,
+        )
+        return n3
+      },
+    })
+
+    const { host } = define({
+      __scopeId: 'app',
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe(
+      `<div data-v-parent="" app="">` +
+        `<div data-v-parent="">` +
+        `<div data-v-parent="">test<!--slot-->` +
+        `</div><!--slot-->` +
+        `</div><!--slot-->` +
+        `</div>`,
+    )
+  })
+
+  test('nested components in vFor with slots', async () => {
+    const Parent = defineVaporComponent({
+      setup() {
+        const n1 = template('<div>', true)() as any
+        setInsertionState(n1, null, 0, true)
+        createSlot('default', null)
+        return n1
+      },
+    })
+
+    const Child = defineVaporComponent({
+      setup() {
+        const n1 = template('<div>', true)() as any
+        setInsertionState(n1, null, 0, true)
+        createSlot('default', null)
+        return n1
+      },
+    })
+
+    const count = ref(0)
+    const { html } = define({
+      __scopeId: 'app',
+      setup() {
+        const n4 = createComponent(
+          Parent,
+          null,
+          {
+            default: withVaporCtx(() => {
+              const n0 = createFor(
+                () => count.value,
+                _for_item0 => {
+                  const n3 = createComponent(
+                    Child,
+                    { class: () => 'test' },
+                    {
+                      default: () => {
+                        const n2 = template('<div> red ')()
+                        return n2
+                      },
+                    },
+                  )
+                  return n3
+                },
+                item => item,
+                2,
+              )
+              return n0
+            }),
+          },
+          true,
+        )
+        return n4
+      },
+    }).render()
+
+    expect(html()).toBe(`<div app=""><!--for--><!--slot--></div>`)
+
+    count.value++
+    await nextTick()
+    expect(html()).toBe(
+      `<div app="">` +
+        `<div class="test" app="">` + // should have app scopeId
+        `<div> red </div><!--slot-->` +
+        `</div><!--for-->` +
+        `<!--slot--></div>`,
     )
   })
 })

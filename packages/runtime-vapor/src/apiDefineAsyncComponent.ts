@@ -24,11 +24,11 @@ import {
   isHydrating,
   locateEndAnchor,
   removeFragmentNodes,
+  setCurrentHydrationNode,
 } from './dom/hydration'
-import { invokeArrayFns } from '@vue/shared'
 import { type TransitionOptions, insert, remove } from './block'
-import { parentNode } from './dom/node'
-import { setTransitionHooks } from './components/Transition'
+import { _next, parentNode } from './dom/node'
+import { invokeArrayFns } from '@vue/shared'
 
 /*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
@@ -60,7 +60,38 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // not the actual hydrate function
       hydrate: () => void,
     ) {
-      // if async component needs to be updated before hydration, hydration is no longer needed.
+      // early return allows tree-shaking of hydration logic when not used
+      if (!isHydrating) return
+
+      // Create placeholder block that matches the adopted DOM.
+      // The async component may get unmounted before its inner component is loaded,
+      // so we need to give it a placeholder block.
+      if (isComment(el, '[')) {
+        const end = _next(locateEndAnchor(el)!)
+        const block = (instance.block = [el as Node])
+        let cur = el as Node
+        while (true) {
+          let n = _next(cur)
+          if (n && n !== end) {
+            block.push((cur = n))
+          } else {
+            break
+          }
+        }
+      } else {
+        instance.block = el
+      }
+
+      // Mark as mounted to ensure it can be unmounted before
+      // its inner component is resolved
+      instance.isMounted = true
+
+      // Advance current hydration node to the nextSibling
+      setCurrentHydrationNode(
+        isComment(el, '[') ? locateEndAnchor(el)! : el.nextSibling,
+      )
+
+      // If async component needs to be updated before hydration, hydration is no longer needed.
       let isHydrated = false
       watch(
         () => instance.attrs,
@@ -167,8 +198,9 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
           render = () => createComponent(loadingComponent)
         }
 
-        if (instance.$transition) frag!.$transition = instance.$transition
-        frag!.update(render)
+        frag.update(render)
+        // Manually trigger cacheBlock for KeepAlive
+        if (frag.keepAliveCtx) frag.keepAliveCtx.cacheBlock()
       })
 
       return frag
@@ -181,7 +213,7 @@ function createInnerComp(
   parent: VaporComponentInstance & TransitionOptions,
   frag?: DynamicFragment,
 ): VaporComponentInstance {
-  const { rawProps, rawSlots, appContext, $transition } = parent
+  const { rawProps, rawSlots, appContext } = parent
   const instance = createComponent(
     comp,
     rawProps,
@@ -192,9 +224,6 @@ function createInnerComp(
     undefined,
     appContext,
   )
-
-  // set transition hooks
-  if ($transition) setTransitionHooks(instance, $transition)
 
   // set ref
   frag && frag.setAsyncRef && frag.setAsyncRef(instance)

@@ -47,8 +47,6 @@ describe('compiler: transition', () => {
     )
 
     expect(code).toMatchSnapshot()
-    // n2 should have a key
-    expect(code).contains('n2.$key = 2')
   })
 
   test('work with dynamic keyed children', () => {
@@ -60,8 +58,6 @@ describe('compiler: transition', () => {
 
     expect(code).toMatchSnapshot()
     expect(code).contains('_createKeyedFragment(() => _ctx.key')
-    // should preserve key
-    expect(code).contains('n0.$key = _ctx.key')
   })
 
   function checkWarning(template: string, shouldWarn = true) {
@@ -186,6 +182,21 @@ describe('compiler: transition', () => {
       <transition>
         <div v-if="a">hey</div>
         <div v-else>hey</div>
+      </transition>
+      `,
+      false,
+    )
+  })
+
+  test('does not warn with multiple children in v-if branch', () => {
+    checkWarning(
+      `
+      <transition>
+        <h1 v-if="condition">
+          <span>True</span>
+          <span>True</span>
+        </h1>
+        <h1 v-else>False</h1>
       </transition>
       `,
       false,

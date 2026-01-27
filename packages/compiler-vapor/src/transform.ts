@@ -15,7 +15,14 @@ import {
   getSelfName,
   isVSlot,
 } from '@vue/compiler-dom'
-import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  NOOP,
+  extend,
+  isArray,
+  isInlineTag,
+  isString,
+} from '@vue/shared'
 import {
   type BlockIRNode,
   DynamicFlag,
@@ -69,6 +76,8 @@ const generatedVarRE = /^[nxr](\d+)$/
 export class TransformContext<T extends AllNode = AllNode> {
   selfName: string | null = null
   parent: TransformContext<RootNode | ElementNode> | null = null
+  // cached parent that skips template tags
+  effectiveParent: TransformContext<RootNode | ElementNode> | null = null
   root: TransformContext<RootNode>
   index: number = 0
 
@@ -89,6 +98,16 @@ export class TransformContext<T extends AllNode = AllNode> {
   directive: Set<string> = this.ir.directive
 
   slots: IRSlots[] = []
+
+  // whether this node is the last effective child of its parent
+  // (all siblings after it are components, which don't appear in HTML template)
+  isLastEffectiveChild: boolean = true
+  // whether this node is on the rightmost path of the tree
+  // (all ancestors are also last effective children)
+  isOnRightmostPath: boolean = true
+  // whether there is an inline ancestor that needs closing
+  // (i.e. is an inline tag and not on the rightmost path)
+  hasInlineAncestorNeedingClose: boolean = false
 
   private globalId = 0
   private nextIdMap: Map<number, number> | null = null
@@ -204,6 +223,40 @@ export class TransformContext<T extends AllNode = AllNode> {
     node: T,
     index: number,
   ): TransformContext<T> {
+    // find effectiveParent (skip template tags)
+    let effectiveParent: TransformContext<RootNode | ElementNode> | null =
+      this as TransformContext<RootNode | ElementNode>
+    while (
+      effectiveParent &&
+      effectiveParent.node.type === NodeTypes.ELEMENT &&
+      (effectiveParent.node as ElementNode).tagType === ElementTypes.TEMPLATE
+    ) {
+      effectiveParent = effectiveParent.parent
+    }
+
+    // compute whether this node is effectively the last child
+    const isLastEffectiveChild = this.isEffectivelyLastChild(index)
+    const isOnRightmostPath = this.isOnRightmostPath && isLastEffectiveChild
+
+    // propagate the inline ancestor status
+    let hasInlineAncestorNeedingClose = this.hasInlineAncestorNeedingClose
+    if (this.node.type === NodeTypes.ELEMENT) {
+      if (this.node.tag === 'template') {
+        // <template> acts as a boundary ensuring its content is parsed as a fragment,
+        // protecting inner blocks from outer inline contexts.
+        hasInlineAncestorNeedingClose = false
+      } else if (
+        !hasInlineAncestorNeedingClose &&
+        !this.isOnRightmostPath &&
+        isInlineTag(this.node.tag)
+      ) {
+        // Logic: if current node (parent of the node being created) is inline
+        // AND it's not on the rightmost path, then it needs closing.
+        // Any block child inside will need to be careful.
+        hasInlineAncestorNeedingClose = true
+      }
+    }
+
     return Object.assign(Object.create(TransformContext.prototype), this, {
       node,
       parent: this as any,
@@ -212,7 +265,22 @@ export class TransformContext<T extends AllNode = AllNode> {
       template: '',
       childrenTemplate: [],
       dynamic: newDynamic(),
+      effectiveParent,
+      isLastEffectiveChild,
+      isOnRightmostPath,
+      hasInlineAncestorNeedingClose,
     } satisfies Partial<TransformContext<T>>)
+  }
+
+  private isEffectivelyLastChild(index: number): boolean {
+    const children = (this.node as ElementNode).children
+    if (!children) return true
+
+    return children.every(
+      (c, i) =>
+        i <= index ||
+        (c.type === NodeTypes.ELEMENT && c.tagType === ElementTypes.COMPONENT),
+    )
   }
 }
 

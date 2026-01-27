@@ -631,7 +631,7 @@ describe('attribute fallthrough', () => {
     toggle.value = true
     await nextTick()
     expect(host.innerHTML).toBe(
-      `<!-- comment A --><span class=\"red\">Foo</span><!--if-->`,
+      `<!-- comment A --><span class="red">Foo</span><!--if-->`,
     )
   })
 

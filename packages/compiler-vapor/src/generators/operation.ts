@@ -12,7 +12,7 @@ import { genFor } from './for'
 import { genSetHtml } from './html'
 import { genIf } from './if'
 import { genDynamicProps, genSetProp } from './prop'
-import { genDeclareOldRef, genSetTemplateRef } from './templateRef'
+import { genSetTemplateRef } from './templateRef'
 import { genGetTextChild, genSetText } from './text'
 import {
   type CodeFragment,
@@ -79,8 +79,6 @@ export function genOperation(
       return genFor(oper, context)
     case IRNodeTypes.CREATE_COMPONENT_NODE:
       return genCreateComponent(oper, context)
-    case IRNodeTypes.DECLARE_OLD_REF:
-      return genDeclareOldRef(oper)
     case IRNodeTypes.SLOT_OUTLET_NODE:
       return genSlotOutlet(oper, context)
     case IRNodeTypes.DIRECTIVE:
@@ -168,7 +166,7 @@ function genInsertionState(
   operation: InsertionStateTypes,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { parent, anchor, append, last } = operation
+  const { parent, anchor, logicalIndex, append, last } = operation
   return [
     NEWLINE,
     ...genCall(
@@ -178,13 +176,11 @@ function genInsertionState(
         ? undefined
         : anchor === -1 // -1 indicates prepend
           ? `0` // runtime anchor value for prepend
-          : append // -2 indicates append
-            ? // null or anchor > 0 for append
-              // anchor > 0 is the logical index of append node - used for locate node during hydration
-              anchor === 0
-              ? 'null'
-              : `${anchor}`
+          : append
+            ? // for append, always use null since we have logicalIndex
+              'null'
             : `n${anchor}`,
+      logicalIndex !== undefined ? String(logicalIndex) : undefined,
       last && 'true',
     ),
   ]

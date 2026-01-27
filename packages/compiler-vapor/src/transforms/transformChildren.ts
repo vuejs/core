@@ -65,12 +65,21 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
   let lastInsertionChild: IRDynamicInfo | undefined
   const children = context.dynamic.children
 
+  // Track logical index for each child.
+  // logicalIndex represents the position in SSR DOM, used during hydration
+  // to locate the correct DOM node. Each child (static element, component,
+  // v-if/v-else-if/v-else chain, v-for, slot) counts as one logical unit.
+  let logicalIndex = 0
+
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.INSERT) {
+      child.logicalIndex = logicalIndex
       prevDynamics.push((lastInsertionChild = child))
+      logicalIndex++
     }
 
     if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
+      child.logicalIndex = logicalIndex
       if (prevDynamics.length) {
         if (staticCount) {
           context.childrenTemplate[index - prevDynamics.length] = `<!>`
@@ -84,6 +93,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
         prevDynamics = []
       }
       staticCount++
+      logicalIndex++
     }
   }
 
@@ -109,6 +119,7 @@ function registerInsertion(
   append?: boolean,
 ) {
   for (const child of dynamics) {
+    const logicalIndex = child.logicalIndex
     if (child.template != null) {
       // template node due to invalid nesting - generate actual insertion
       context.registerOperation({
@@ -121,6 +132,7 @@ function registerInsertion(
       // block types
       child.operation.parent = context.reference()
       child.operation.anchor = anchor
+      child.operation.logicalIndex = logicalIndex
       child.operation.append = append
     }
   }

@@ -9,7 +9,6 @@ import {
   devtoolsComponentAdded,
   getComponentName,
   isAsyncWrapper,
-  isKeepAlive,
   matches,
   onBeforeUnmount,
   onMounted,
@@ -29,32 +28,48 @@ import {
 import { defineVaporComponent } from '../apiDefineComponent'
 import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
 import { createElement } from '../dom/node'
-import {
-  type DynamicFragment,
-  type VaporFragment,
-  isDynamicFragment,
-  isFragment,
-} from '../fragment'
+import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
 import type { EffectScope } from '@vue/reactivity'
 
+export interface KeepAliveContext {
+  processShapeFlag(block: Block): boolean
+  cacheBlock(): void
+  cacheScope(key: any, scope: EffectScope): void
+  getScope(key: any): EffectScope | undefined
+}
+
+export let currentKeepAliveCtx: KeepAliveContext | null = null
+
+export function setCurrentKeepAliveCtx(
+  ctx: KeepAliveContext | null,
+): KeepAliveContext | null {
+  try {
+    return currentKeepAliveCtx
+  } finally {
+    currentKeepAliveCtx = ctx
+  }
+}
+
 export interface KeepAliveInstance extends VaporComponentInstance {
-  activate: (
-    instance: VaporComponentInstance,
-    parentNode: ParentNode,
-    anchor?: Node | null | 0,
-  ) => void
-  deactivate: (instance: VaporComponentInstance) => void
-  getCachedComponent: (
-    comp: VaporComponent,
-  ) => VaporComponentInstance | VaporFragment | undefined
-  getStorageContainer: () => ParentNode
+  ctx: {
+    activate: (
+      instance: VaporComponentInstance,
+      parentNode: ParentNode,
+      anchor?: Node | null | 0,
+    ) => void
+    deactivate: (instance: VaporComponentInstance) => void
+    getCachedComponent: (
+      comp: VaporComponent,
+    ) => VaporComponentInstance | VaporFragment | undefined
+    getStorageContainer: () => ParentNode
+  }
 }
 
 type CacheKey = VaporComponent | VNode['type']
 type Cache = Map<CacheKey, VaporComponentInstance | VaporFragment>
 type Keys = Set<CacheKey>
 
-export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
+const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
   name: 'VaporKeepAlive',
   __isKeepAlive: true,
   props: {
@@ -78,23 +93,38 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       ;(keepAliveInstance as any).__v_cache = cache
     }
 
-    keepAliveInstance.getStorageContainer = () => storageContainer
-
-    keepAliveInstance.getCachedComponent = comp => cache.get(comp)
-
-    keepAliveInstance.activate = (instance, parentNode, anchor) => {
-      current = instance
-      activate(instance, parentNode, anchor)
+    // Clear cache and shapeFlags before HMR rerender so cached components
+    // can be properly unmounted
+    if (__DEV__) {
+      const rerender = keepAliveInstance.hmrRerender
+      keepAliveInstance.hmrRerender = () => {
+        cache.forEach(cached => resetCachedShapeFlag(cached))
+        cache.clear()
+        keys.clear()
+        keptAliveScopes.forEach(scope => scope.stop())
+        keptAliveScopes.clear()
+        storageContainer.innerHTML = ''
+        current = undefined
+        rerender!()
+      }
     }
 
-    keepAliveInstance.deactivate = instance => {
-      current = undefined
-      deactivate(instance, storageContainer)
+    keepAliveInstance.ctx = {
+      getStorageContainer: () => storageContainer,
+      getCachedComponent: comp => cache.get(comp),
+      activate: (instance, parentNode, anchor) => {
+        current = instance
+        activate(instance, parentNode, anchor)
+      },
+      deactivate: instance => {
+        current = undefined
+        deactivate(instance, storageContainer)
+      },
     }
 
     const innerCacheBlock = (
       key: CacheKey,
-      instance: VaporComponentInstance | VaporFragment,
+      block: VaporComponentInstance | VaporFragment,
     ) => {
       const { max } = props
 
@@ -110,13 +140,26 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         }
       }
 
-      cache.set(key, instance)
-      current = instance
+      cache.set(key, block)
+      current = block
     }
 
     const cacheBlock = () => {
       // TODO suspense
       const block = keepAliveInstance.block!
+      // Skip caching during out-in transition leaving phase.
+      // The correct component will be cached after renderBranch completes
+      // via the Fragment's onUpdated hook.
+      if (isDynamicFragment(block)) {
+        const transition = block.$transition
+        if (
+          transition &&
+          transition.mode === 'out-in' &&
+          transition.state.isLeaving
+        ) {
+          return
+        }
+      }
       const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
       innerCacheBlock(
@@ -125,8 +168,8 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       )
     }
 
-    const processFragment = (frag: DynamicFragment) => {
-      const [innerBlock, interop] = getInnerBlock(frag.nodes)
+    const processShapeFlag = (block: Block): boolean => {
+      const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
 
       if (interop) {
@@ -143,21 +186,6 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       return true
     }
 
-    const cacheFragment = (fragment: DynamicFragment) => {
-      const [innerBlock, interop] = getInnerBlock(fragment.nodes)
-      if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
-
-      let key: CacheKey
-      if (interop) {
-        innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        key = innerBlock.vnode!.type
-      } else {
-        innerBlock.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        key = innerBlock.type
-      }
-      innerCacheBlock(key, innerBlock)
-    }
-
     const pruneCache = (filter: (name: string) => boolean) => {
       cache.forEach((cached, key) => {
         const instance = getInstanceFromCache(cached)
@@ -172,11 +200,12 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     const pruneCacheEntry = (key: CacheKey) => {
       const cached = cache.get(key)!
 
-      resetCachedShapeFlag(cached)
-
       // don't unmount if the instance is the current one
-      if (cached !== current) {
+      if (cached && (!current || cached !== current)) {
+        resetCachedShapeFlag(cached)
         remove(cached)
+      } else if (current) {
+        resetCachedShapeFlag(current)
       }
       cache.delete(key)
       keys.delete(key)
@@ -222,7 +251,25 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       keptAliveScopes.clear()
     })
 
+    const keepAliveCtx: KeepAliveContext = {
+      processShapeFlag,
+      cacheBlock,
+      cacheScope(key, scope) {
+        keptAliveScopes.set(key, scope)
+      },
+      getScope(key) {
+        const scope = keptAliveScopes.get(key)
+        if (scope) {
+          keptAliveScopes.delete(key)
+          return scope
+        }
+      },
+    }
+
+    const prevCtx = setCurrentKeepAliveCtx(keepAliveCtx)
     let children = slots.default()
+    setCurrentKeepAliveCtx(prevCtx)
+
     if (isArray(children)) {
       children = children.filter(child => !(child instanceof Comment))
       if (children.length > 1) {
@@ -233,50 +280,12 @@ export const VaporKeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       }
     }
 
-    // inject hooks to DynamicFragment to cache components during updates
-    const injectKeepAliveHooks = (frag: DynamicFragment) => {
-      ;(frag.onBeforeTeardown || (frag.onBeforeTeardown = [])).push(
-        (oldKey, nodes, scope) => {
-          // if the fragment's nodes include a component that should be cached
-          // return true to avoid tearing down the fragment's scope
-          if (processFragment(frag)) {
-            keptAliveScopes.set(oldKey, scope)
-            return true
-          }
-          return false
-        },
-      )
-      ;(frag.onBeforeMount || (frag.onBeforeMount = [])).push(() =>
-        cacheFragment(frag),
-      )
-      frag.getScope = key => {
-        const scope = keptAliveScopes.get(key)
-        if (scope) {
-          keptAliveScopes.delete(key)
-          return scope
-        }
-      }
-    }
-
-    // process shapeFlag
-    if (isVaporComponent(children)) {
-      children.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-      if (isAsyncWrapper(children)) {
-        injectKeepAliveHooks(children.block as DynamicFragment)
-      }
-    } else if (isInteropFragment(children)) {
-      children.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    } else if (isDynamicFragment(children)) {
-      processFragment(children)
-      injectKeepAliveHooks(children)
-      if (isVaporComponent(children.nodes) && isAsyncWrapper(children.nodes)) {
-        injectKeepAliveHooks(children.nodes.block as DynamicFragment)
-      }
-    }
-
     return children
   },
 })
+
+export const VaporKeepAliveImpl: ObjectVaporComponent =
+  /*@__PURE__*/ KeepAliveImpl
 
 const shouldCache = (
   block: GenericComponentInstance | VaporFragment,
@@ -290,9 +299,10 @@ const shouldCache = (
       : (block as GenericComponentInstance).type
   ) as GenericComponent & AsyncComponentInternalOptions
 
-  // return true to ensure hooks are injected into its block (DynamicFragment)
+  // for unresolved async components, don't cache yet
+  // caching will be handled by AsyncWrapper calling keepAliveCtx.cacheBlock()
   if (isAsync && !type.__asyncResolved) {
-    return true
+    return false
   }
 
   const { include, exclude } = props
@@ -374,17 +384,4 @@ export function deactivate(
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentAdded(instance)
   }
-}
-
-export function findParentKeepAlive(
-  instance: VaporComponentInstance,
-): KeepAliveInstance | null {
-  let parent = instance as GenericComponentInstance | null
-  while (parent) {
-    if (isKeepAlive(parent)) {
-      return parent as KeepAliveInstance
-    }
-    parent = parent.parent
-  }
-  return null
 }

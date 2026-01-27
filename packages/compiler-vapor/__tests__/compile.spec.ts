@@ -67,7 +67,7 @@ describe('compile', () => {
 
         expect(code).toMatchSnapshot()
         expect(code).contains(
-          JSON.stringify('<div :id="foo"><Comp></Comp>{{ bar }}</div>'),
+          JSON.stringify('<div :id=foo><Comp></Comp>{{ bar }}'),
         )
         expect(code).not.contains('effect')
       })
@@ -334,12 +334,9 @@ describe('compile', () => {
       expect(code).matchSnapshot()
       expect(code).not.contains('let r0')
       expect(code).not.contains('let r2')
-      expect(code).contains('let r1')
-      expect(code).contains('let r3')
-      expect(code).contains('let r4')
-      expect(code).contains('r1 = _setTemplateRef(n1, _bar, r1)')
-      expect(code).contains('r3 = _setTemplateRef(n3, _bar, r3)')
-      expect(code).contains('r4 = _setTemplateRef(n4, _bar, r4)')
+      expect(code).contains('_setTemplateRef(n1, _bar)')
+      expect(code).contains('_setTemplateRef(n3, _bar)')
+      expect(code).contains('_setTemplateRef(n4, _bar)')
     })
 
     test('should bump template var (t*) on conflict', () => {
@@ -353,9 +350,9 @@ describe('compile', () => {
       expect(code).matchSnapshot()
       expect(code).not.contains('const t0 =')
       expect(code).not.contains('const t2 =')
-      expect(code).contains('const t1 = _template("<div></div>")')
-      expect(code).contains('const t3 = _template("<span></span>")')
-      expect(code).contains('const t4 = _template("<p></p>")')
+      expect(code).contains('const t1 = _template("<div>")')
+      expect(code).contains('const t3 = _template("<span>")')
+      expect(code).contains('const t4 = _template("<p>")')
     })
 
     test('should bump placeholder var (p*) on conflict', () => {

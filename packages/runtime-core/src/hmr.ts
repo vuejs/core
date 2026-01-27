@@ -1,4 +1,4 @@
-/* eslint-disable no-restricted-globals */
+/* oxlint-disable no-restricted-globals */
 import { EffectFlags } from '@vue/reactivity'
 import {
   type ClassComponent,

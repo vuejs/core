@@ -733,6 +733,13 @@ export abstract class VueElementBase<
   /**
    * @internal
    */
+  _hasShadowRoot(): boolean {
+    return this._def.shadowRoot !== false
+  }
+
+  /**
+   * @internal
+   */
   _removeChildStyle(comp: ConcreteComponent): void {
     if (__DEV__) {
       this._styleChildren.delete(comp)

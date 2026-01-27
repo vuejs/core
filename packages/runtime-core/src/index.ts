@@ -154,6 +154,7 @@ export {
   resolveComponent,
   resolveDirective,
   resolveDynamicComponent,
+  NULL_DYNAMIC_COMPONENT,
 } from './helpers/resolveAssets'
 // For integration with runtime compiler
 export { registerRuntimeCompiler, isRuntimeOnly } from './component'
@@ -649,6 +650,7 @@ export {
   isMapEqual,
   isValidHtmlOrSvgAttribute,
   getAttributeMismatch,
+  isHydrating,
 } from './hydration'
 /**
  * @internal

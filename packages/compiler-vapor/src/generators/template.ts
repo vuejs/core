@@ -1,9 +1,5 @@
 import type { CodegenContext } from '../generate'
-import {
-  DynamicFlag,
-  type IRDynamicInfo,
-  type InsertionStateTypes,
-} from '../ir'
+import { DynamicFlag, type IRDynamicInfo } from '../ir'
 import { genDirectivesForElement } from './directive'
 import { genOperationWithInsertionState } from './operation'
 import {
@@ -71,20 +67,10 @@ export function genChildren(
 
   let offset = 0
   let prev: [variable: string, elementIndex: number] | undefined
-  let ifBranchCount = 0
-  let prependCount = 0
 
   for (const [index, child] of children.entries()) {
-    if (
-      child.operation &&
-      (child.operation as InsertionStateTypes).anchor === -1
-    ) {
-      prependCount++
-    }
     if (child.flags & DynamicFlag.NON_TEMPLATE) {
       offset--
-    } else if (child.ifBranch) {
-      ifBranchCount++
     }
 
     const id =
@@ -100,7 +86,8 @@ export function genChildren(
     }
 
     const elementIndex = index + offset
-    const logicalIndex = elementIndex - ifBranchCount + prependCount
+    const logicalIndex =
+      child.logicalIndex !== undefined ? String(child.logicalIndex) : undefined
     // p for "placeholder" variables that are meant for possible reuse by
     // other access paths
     const variable =
@@ -109,14 +96,14 @@ export function genChildren(
 
     if (prev) {
       if (elementIndex - prev[1] === 1) {
-        pushBlock(...genCall(helper('next'), prev[0], String(logicalIndex)))
+        pushBlock(...genCall(helper('next'), prev[0], logicalIndex))
       } else {
         pushBlock(
           ...genCall(
             helper('nthChild'),
             from,
             String(elementIndex),
-            String(logicalIndex),
+            logicalIndex,
           ),
         )
       }
@@ -126,20 +113,20 @@ export function genChildren(
           ...genCall(
             helper('child'),
             from,
-            logicalIndex !== 0 ? String(logicalIndex) : undefined,
+            child.logicalIndex !== 0 ? logicalIndex : undefined,
           ),
         )
       } else {
         // check if there's a node that we can reuse from
         let init = genCall(helper('child'), from)
         if (elementIndex === 1) {
-          init = genCall(helper('next'), init, String(logicalIndex))
+          init = genCall(helper('next'), init, logicalIndex)
         } else if (elementIndex > 1) {
           init = genCall(
             helper('nthChild'),
             from,
             String(elementIndex),
-            String(logicalIndex),
+            logicalIndex,
           )
         }
         pushBlock(...init)

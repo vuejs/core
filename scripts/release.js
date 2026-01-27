@@ -81,19 +81,6 @@ const packages = fs
     }
   })
 
-const isCorePackage = (/** @type {string} */ pkgName) => {
-  if (!pkgName) return
-
-  if (pkgName === 'vue' || pkgName === '@vue/compat') {
-    return true
-  }
-
-  return (
-    pkgName.startsWith('@vue') &&
-    packages.includes(pkgName.replace(/^@vue\//, ''))
-  )
-}
-
 const keepThePackageName = (/** @type {string} */ pkgName) => pkgName
 
 /** @type {string[]} */

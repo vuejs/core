@@ -12,15 +12,21 @@ import {
   watch,
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
+import { createComment, createTextNode } from './dom/node'
 import {
-  createComment,
-  createTextNode,
-  updateLastLogicalChild,
-} from './dom/node'
-import { type Block, findBlockNode, insert, remove } from './block'
+  type Block,
+  applyTransitionHooks,
+  findBlockNode,
+  insert,
+  remove,
+} from './block'
 import { warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
-import type { DynamicSlot } from './componentSlots'
+import {
+  type DynamicSlot,
+  currentSlotOwner,
+  setCurrentSlotOwner,
+} from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '../../shared/src/vaporFlags'
 import {
@@ -31,10 +37,11 @@ import {
   locateHydrationNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { applyTransitionHooks } from './components/Transition'
 import { ForFragment, VaporFragment } from './fragment'
 import {
+  type ChildItem,
   insertionAnchor,
+  insertionIndex,
   insertionParent,
   isLastInsertion,
   resetInsertionState,
@@ -92,6 +99,7 @@ export const createFor = (
 ): ForFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _insertionIndex = insertionIndex
   const _isLastInsertion = isLastInsertion
   if (isHydrating) {
     locateHydrationNode()
@@ -118,6 +126,8 @@ export const createFor = (
     deregister: (key: any) => void
     cleanup: () => void
   }[] = []
+
+  const scopeOwner = currentSlotOwner
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
@@ -155,11 +165,15 @@ export const createFor = (
           )
         }
 
-        if (_insertionParent) {
-          updateLastLogicalChild(_insertionParent!, parentAnchor)
+        // optimization: cache the fragment end anchor as $llc (last logical child)
+        // so that locateChildByLogicalIndex can skip the entire fragment
+        if (_insertionParent && isComment(parentAnchor, ']')) {
+          ;(parentAnchor as any as ChildItem).$idx = _insertionIndex || 0
+          _insertionParent.$llc = parentAnchor
         }
       }
     } else {
+      const prevOwner = setCurrentSlotOwner(scopeOwner)
       parent = parent || parentAnchor!.parentNode
       if (!oldLength) {
         // remove fallback nodes
@@ -387,6 +401,7 @@ export const createFor = (
           }
         }
       }
+      setCurrentSlotOwner(prevOwner)
     }
 
     if (!isFallback) {
@@ -604,6 +619,8 @@ function normalizeSource(source: any): ResolvedSource {
         values[i] = source[keys[i]]
       }
     }
+  } else {
+    values = []
   }
   return {
     values,

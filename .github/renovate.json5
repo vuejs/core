@@ -40,9 +40,8 @@
       matchPackageNames: [
         'simple-git-hooks',
         'lint-staged',
-        'typescript-eslint{/,}**',
-        'eslint{/,}**',
-        'prettier{/,}**',
+        'oxlint',
+        'oxfmt{/,}**',
       ],
     },
   ],

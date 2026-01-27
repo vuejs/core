@@ -25,10 +25,10 @@ jobs:
 
       - run: pnpm install
 
-      - name: Run eslint
+      - name: Run oxlint
         run: pnpm run lint --fix
 
-      - name: Run prettier
+      - name: Run oxfmt
         run: pnpm run format
 
       - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27

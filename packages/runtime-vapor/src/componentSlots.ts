@@ -75,10 +75,12 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
       for (const source of dynamicSources) {
         if (isFunction(source)) {
           const slot = resolveFunctionSource(source)
-          if (isArray(slot)) {
-            for (const s of slot) keys.push(String(s.name))
-          } else {
-            keys.push(String(slot.name))
+          if (slot) {
+            if (isArray(slot)) {
+              for (const s of slot) keys.push(String(s.name))
+            } else {
+              keys.push(String(slot.name))
+            }
           }
         } else {
           keys.push(...Object.keys(source))
@@ -157,7 +159,7 @@ export function getScopeOwner(): VaporComponentInstance | null {
  * 2. Elements inherit the slot owner's scopeId
  */
 export function withVaporCtx(fn: Function): BlockFn {
-  const owner = currentInstance as VaporComponentInstance
+  const owner = getScopeOwner()
   return (...args: any[]) => {
     const prevOwner = setCurrentSlotOwner(owner)
     try {

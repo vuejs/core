@@ -54,8 +54,7 @@ function hasMultipleChildren(node: ElementNode): boolean {
         // not has v-for
         !findDir(c, 'for') &&
         // if the first child has v-if, the rest should also have v-else-if/v-else
-        (index === 0 ? findDir(c, 'if') : hasElse(c)) &&
-        !hasMultipleChildren(c),
+        (index === 0 ? findDir(c, 'if') : hasElse(c)),
     )
   ) {
     return false

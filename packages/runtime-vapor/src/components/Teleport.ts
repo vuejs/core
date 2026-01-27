@@ -11,7 +11,13 @@ import {
   resolveTeleportTarget,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, type BlockFn, insert, remove } from '../block'
+import {
+  type Block,
+  type BlockFn,
+  applyTransitionHooks,
+  insert,
+  remove,
+} from '../block'
 import { createComment, createTextNode, querySelector } from '../dom/node'
 import {
   type LooseRawProps,
@@ -31,7 +37,6 @@ import {
   runWithoutHydration,
   setCurrentHydrationNode,
 } from '../dom/hydration'
-import { applyTransitionHooks } from './Transition'
 
 export const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -44,6 +49,11 @@ export const VaporTeleportImpl = {
 }
 
 export class TeleportFragment extends VaporFragment {
+  /**
+   * @internal marker for duck typing to avoid direct instanceof check
+   * which prevents tree-shaking of TeleportFragment
+   */
+  readonly __isTeleportFragment = true
   anchor?: Node
   private rawProps?: LooseRawProps
   private resolvedProps?: TeleportProps
@@ -97,24 +107,12 @@ export class TeleportFragment extends VaporFragment {
         this.rawSlots!.default && (this.rawSlots!.default as BlockFn)(),
       )
     })
-
     const nodes = this.nodes
-    // register updateCssVars to root fragments's update hooks so that
+
+    // register updateCssVars to nested fragments's update hooks so that
     // it will be called when root fragment changed
     if (this.parentComponent && this.parentComponent.ut) {
-      if (isFragment(nodes)) {
-        ;(nodes.onUpdated || (nodes.onUpdated = [])).push(() =>
-          updateCssVars(this),
-        )
-      } else if (isArray(nodes)) {
-        nodes.forEach(node => {
-          if (isFragment(node)) {
-            ;(node.onUpdated || (node.onUpdated = [])).push(() =>
-              updateCssVars(this),
-            )
-          }
-        })
-      }
+      this.registerUpdateCssVars(nodes)
     }
 
     if (__DEV__) {
@@ -125,6 +123,19 @@ export class TeleportFragment extends VaporFragment {
           node => isVaporComponent(node) && (node.parentTeleport = this),
         )
       }
+    }
+  }
+
+  private registerUpdateCssVars(block: Block) {
+    if (isFragment(block)) {
+      ;(block.onUpdated || (block.onUpdated = [])).push(() =>
+        updateCssVars(this),
+      )
+      this.registerUpdateCssVars(block.nodes)
+    } else if (isVaporComponent(block)) {
+      this.registerUpdateCssVars(block.block)
+    } else if (isArray(block)) {
+      block.forEach(node => this.registerUpdateCssVars(node))
     }
   }
 
@@ -253,6 +264,7 @@ export class TeleportFragment extends VaporFragment {
   }
 
   private hydrateDisabledTeleport(targetNode: Node | null): void {
+    if (!isHydrating) return
     let nextNode = this.placeholder!.nextSibling!
     setCurrentHydrationNode(nextNode)
     this.mountAnchor = this.anchor = locateTeleportEndAnchor(nextNode)!
@@ -263,6 +275,7 @@ export class TeleportFragment extends VaporFragment {
   }
 
   private mountChildren(target: Node): void {
+    if (!isHydrating) return
     target.appendChild((this.targetStart = createTextNode('')))
     target.appendChild(
       (this.mountAnchor = this.targetAnchor = createTextNode('')),
@@ -283,6 +296,7 @@ export class TeleportFragment extends VaporFragment {
   }
 
   hydrate = (): void => {
+    if (!isHydrating) return
     const target = (this.target = resolveTeleportTarget(
       this.resolvedProps!,
       querySelector,
@@ -330,14 +344,27 @@ export class TeleportFragment extends VaporFragment {
       this.hydrateDisabledTeleport(currentHydrationNode!)
     }
 
+    updateCssVars(this)
     advanceHydrationNode(this.anchor!)
   }
 }
 
+/**
+ * Use duck typing to check for VaporTeleport instead of direct reference
+ * to VaporTeleportImpl, allowing tree-shaking when Teleport is not used.
+ */
 export function isVaporTeleport(
   value: unknown,
 ): value is typeof VaporTeleportImpl {
-  return value === VaporTeleportImpl
+  return !!(value && (value as any).__isTeleport && (value as any).__vapor)
+}
+
+/**
+ * Use duck typing to check for TeleportFragment instead of instanceof,
+ * allowing tree-shaking when Teleport is not used.
+ */
+export function isTeleportFragment(value: unknown): value is TeleportFragment {
+  return !!(value && (value as any).__isTeleportFragment)
 }
 
 function locateTeleportEndAnchor(

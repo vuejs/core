@@ -1597,6 +1597,24 @@ describe('SSR hydration', () => {
     expect((container.firstChild as any).foo).toBe(msg.value)
   })
 
+  // #14274
+  test('should not render ref on custom element during hydration', () => {
+    const container = document.createElement('div')
+    container.innerHTML = '<my-element>hello</my-element>'
+    const root = ref()
+    const app = createSSRApp({
+      render: () =>
+        h('my-element', {
+          ref: root,
+          innerHTML: 'hello',
+        }),
+    })
+    app.mount(container)
+    expect(container.innerHTML).toBe('<my-element>hello</my-element>')
+    expect((container.firstChild as Element).hasAttribute('ref')).toBe(false)
+    expect(root.value).toBe(container.firstChild)
+  })
+
   // #5728
   test('empty text node in slot', () => {
     const Comp = {
@@ -1959,6 +1977,7 @@ describe('SSR hydration', () => {
       expect(container.innerHTML).toBe(
         `<div show="true"><!--[--><div><div><div>foo</div></div></div><div>1</div><!--]--></div>`,
       )
+      // oxlint-disable-next-line no-useless-catch
     } catch (e) {
       throw e
     } finally {

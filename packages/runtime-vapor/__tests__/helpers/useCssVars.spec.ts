@@ -1,6 +1,7 @@
 import {
   VaporTeleport,
   createComponent,
+  createFor,
   createIf,
   createPlainElement,
   defineVaporComponent,
@@ -296,6 +297,68 @@ describe('useVaporCssVars', () => {
     expect(host.children[0].outerHTML.includes('data-v-owner')).toBe(true)
   })
 
+  test('with teleport and nested fragment', async () => {
+    const state = reactive({ color: 'red' })
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+
+    const value = ref(true)
+    const Child = defineVaporComponent({
+      setup(_, { slots }) {
+        return slots.default!()
+      },
+    })
+
+    const Comp = defineVaporComponent({
+      setup() {
+        return createComponent(Child, null, {
+          default: () => {
+            return createComponent(Child, null, {
+              default: () => {
+                return createIf(
+                  () => value.value,
+                  () => {
+                    return template('<div></div>')()
+                  },
+                  () => {
+                    return template('<span></span>')()
+                  },
+                )
+              },
+            })
+          },
+        })
+      },
+    })
+
+    define({
+      setup() {
+        useVaporCssVars(() => state)
+        const n1 = createComponent(
+          VaporTeleport,
+          { to: () => target },
+          {
+            default: () => createComponent(Comp),
+          },
+        )
+        return n1
+      },
+    }).render()
+
+    await nextTick()
+    let el = target.children[0] as HTMLElement
+    expect(el.tagName).toBe('DIV')
+    expect(el.outerHTML.includes('data-v-owner')).toBe(true)
+    expect(el.style.getPropertyValue(`--color`)).toBe('red')
+
+    value.value = false
+    await nextTick()
+    el = target.children[0] as HTMLElement
+    expect(el.tagName).toBe('SPAN')
+    expect(el.outerHTML.includes('data-v-owner')).toBe(true)
+    expect(el.style.getPropertyValue(`--color`)).toBe('red')
+  })
+
   test('with string style', async () => {
     const state = reactive({ color: 'red' })
     const root = document.createElement('div')
@@ -409,5 +472,81 @@ describe('useVaporCssVars', () => {
     }).render({}, root)
 
     expect(colorInOnMount).toBe(`red`)
+  })
+
+  test('work with v-if false', () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+
+    define({
+      setup() {
+        useVaporCssVars(() => state)
+        return createIf(
+          () => false,
+          () => {
+            const n2 = template('<div class="red">Hi</div>')()
+            return n2
+          },
+          null as any,
+          true,
+        )
+      },
+    }).render({}, root)
+
+    expect(root.innerHTML).toBe(`<!--if-->`)
+  })
+
+  test('work with empty v-for', () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+
+    define({
+      setup() {
+        useVaporCssVars(() => state)
+        return createFor(
+          // empty source
+          () => [],
+          item => {
+            return template('<div class="red">Hi</div>')()
+          },
+          undefined,
+          4,
+        )
+      },
+    }).render({}, root)
+
+    expect(root.innerHTML).toBe(`<!--for-->`)
+  })
+
+  test('with v-if initial false then update css vars', async () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const toggle = ref(false)
+
+    define({
+      setup() {
+        useVaporCssVars(() => state)
+        return createIf(
+          () => toggle.value,
+          () => template('<div></div>')(),
+        )
+      },
+    }).render({}, root)
+
+    await nextTick()
+    expect(root.children.length).toBe(0)
+
+    // toggle v-if to true
+    toggle.value = true
+    await nextTick()
+    expect(root.children.length).toBe(1)
+    let el = root.children[0] as HTMLElement
+    expect(el.style.getPropertyValue(`--color`)).toBe('red')
+
+    // update css vars
+    state.color = 'green'
+    await nextTick()
+    el = root.children[0] as HTMLElement
+    expect(el.style.getPropertyValue(`--color`)).toBe('green')
   })
 })

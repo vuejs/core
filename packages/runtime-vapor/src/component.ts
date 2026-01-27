@@ -12,6 +12,7 @@ import {
   type GenericAppContext,
   type GenericComponentInstance,
   type LifecycleHook,
+  NULL_DYNAMIC_COMPONENT,
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
   type ShallowUnwrapRef,
@@ -92,18 +93,21 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
-  isComment,
   isHydrating,
-  locateEndAnchor,
   locateHydrationNode,
   locateNextNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { _next, createElement } from './dom/node'
-import { TeleportFragment, isVaporTeleport } from './components/Teleport'
+import { createComment, createElement, createTextNode } from './dom/node'
 import {
-  type KeepAliveInstance,
-  findParentKeepAlive,
+  type TeleportFragment,
+  isTeleportFragment,
+  isVaporTeleport,
+} from './components/Teleport'
+import type { KeepAliveInstance } from './components/KeepAlive'
+import {
+  currentKeepAliveCtx,
+  setCurrentKeepAliveCtx,
 } from './components/KeepAlive'
 import {
   insertionAnchor,
@@ -277,9 +281,9 @@ export function createComponent(
     currentInstance.vapor &&
     isKeepAlive(currentInstance)
   ) {
-    const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
-      component,
-    )
+    const cached = (
+      currentInstance as KeepAliveInstance
+    ).ctx.getCachedComponent(component)
     // @ts-expect-error
     if (cached) return cached
   }
@@ -291,6 +295,7 @@ export function createComponent(
       currentInstance as any,
       rawProps,
       rawSlots,
+      isSingleRoot,
     )
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
@@ -326,6 +331,16 @@ export function createComponent(
     once,
   )
 
+  // handle currentKeepAliveCtx for component boundary isolation
+  // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
+  // DynamicFragment can capture it
+  if (currentKeepAliveCtx && !isAsyncWrapper(instance)) {
+    currentKeepAliveCtx.processShapeFlag(instance)
+    // clear currentKeepAliveCtx so child components don't associate
+    // with parent's KeepAlive
+    setCurrentKeepAliveCtx(null)
+  }
+
   // reset currentSlotOwner to null to avoid affecting the child components
   const prevSlotOwner = setCurrentSlotOwner(null)
 
@@ -351,34 +366,7 @@ export function createComponent(
     component.__asyncHydrate &&
     !component.__asyncResolved
   ) {
-    // it may get unmounted before its inner component is loaded,
-    // so we need to give it a placeholder block that matches its
-    // adopted DOM
-    const el = currentHydrationNode!
-    if (isComment(el, '[')) {
-      const end = _next(locateEndAnchor(el)!)
-      const block = (instance.block = [el as Node])
-      let cur = el as Node
-      while (true) {
-        let n = _next(cur)
-        if (n && n !== end) {
-          block.push((cur = n))
-        } else {
-          break
-        }
-      }
-    } else {
-      instance.block = el
-    }
-    // also mark it as mounted to ensure it can be unmounted before
-    // its inner component is resolved
-    instance.isMounted = true
-
-    // advance current hydration node to the nextSibling
-    setCurrentHydrationNode(
-      isComment(el, '[') ? locateEndAnchor(el)! : el.nextSibling,
-    )
-    component.__asyncHydrate(el as Element, instance, () =>
+    component.__asyncHydrate(currentHydrationNode as Element, instance, () =>
       setupComponent(instance, component),
     )
   } else {
@@ -759,13 +747,19 @@ export function isVaporComponent(
  * element if the resolution fails.
  */
 export function createComponentWithFallback(
-  comp: VaporComponent | string,
+  comp: VaporComponent | typeof NULL_DYNAMIC_COMPONENT | string,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
   once?: boolean,
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
+  if (comp === NULL_DYNAMIC_COMPONENT) {
+    return (__DEV__
+      ? createComment('ndc')
+      : createTextNode('')) as any as HTMLElement
+  }
+
   if (!isString(comp)) {
     return createComponent(
       comp,
@@ -869,18 +863,17 @@ export function mountComponent(
   }
 
   if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-    findParentKeepAlive(instance)!.activate(instance, parent, anchor)
+    ;(instance.parent as KeepAliveInstance)!.ctx.activate(
+      instance,
+      parent,
+      anchor,
+    )
     return
   }
 
   // custom element style injection
   const { root, type } = instance as GenericComponentInstance
-  if (
-    root &&
-    root.ce &&
-    // @ts-expect-error _def is private
-    (root.ce as VaporElement)._def.shadowRoot !== false
-  ) {
+  if (root && root.ce && (root.ce as VaporElement)._hasShadowRoot()) {
     root.ce!._injectChildStyle(type)
   }
 
@@ -909,13 +902,15 @@ export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
 ): void {
+  // Skip unmount for kept-alive components - deactivate if called from remove()
   if (
-    parentNode &&
+    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.parent &&
-    instance.parent.vapor &&
-    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    instance.parent.vapor
   ) {
-    findParentKeepAlive(instance)!.deactivate(instance)
+    if (parentNode) {
+      ;(instance.parent as KeepAliveInstance)!.ctx.deactivate(instance)
+    }
     return
   }
 
@@ -966,7 +961,7 @@ export function getRootElement(
     return getRootElement(block.block, onDynamicFragment, recurse)
   }
 
-  if (isFragment(block) && !(block instanceof TeleportFragment)) {
+  if (isFragment(block) && !isTeleportFragment(block)) {
     if (block instanceof DynamicFragment && onDynamicFragment) {
       onDynamicFragment(block)
     }
@@ -1073,7 +1068,7 @@ function handleSetupResult(
         instance.block.length) ||
         // preventing attrs fallthrough on Teleport
         // consistent with VDOM Teleport behavior
-        instance.block instanceof TeleportFragment)
+        isTeleportFragment(instance.block))
     ) {
       warnExtraneousAttributes(instance.attrs)
     }

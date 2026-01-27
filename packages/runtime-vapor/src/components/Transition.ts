@@ -19,7 +19,12 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
-import type { Block, TransitionBlock, VaporTransitionHooks } from '../block'
+import {
+  type Block,
+  type TransitionBlock,
+  type VaporTransitionHooks,
+  registerTransitionHooks,
+} from '../block'
 import {
   type FunctionalVaporComponent,
   type VaporComponentInstance,
@@ -27,7 +32,11 @@ import {
 } from '../component'
 import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
-import { type VaporFragment, isFragment } from '../fragment'
+import {
+  type DynamicFragment,
+  type VaporFragment,
+  isFragment,
+} from '../fragment'
 import {
   currentHydrationNode,
   isHydrating,
@@ -35,6 +44,41 @@ import {
 } from '../dom/hydration'
 
 const displayName = 'VaporTransition'
+
+let registered = false
+export const ensureTransitionHooksRegistered = (): void => {
+  if (!registered) {
+    registered = true
+    registerTransitionHooks(
+      applyTransitionHooksImpl,
+      applyTransitionLeaveHooksImpl,
+    )
+  }
+}
+
+const hydrateTransitionImpl = () => {
+  if (!currentHydrationNode || !isTemplateNode(currentHydrationNode)) return
+  // replace <template> node with inner child
+  const {
+    content: { firstChild },
+    parentNode,
+  } = currentHydrationNode
+  if (firstChild) {
+    parentNode!.replaceChild(firstChild, currentHydrationNode)
+    setCurrentHydrationNode(firstChild)
+
+    if (firstChild instanceof HTMLElement || firstChild instanceof SVGElement) {
+      const originalDisplay = firstChild.style.display
+      firstChild.style.display = 'none'
+
+      return (hooks: TransitionHooks) => {
+        hooks.beforeEnter(firstChild)
+        firstChild.style.display = originalDisplay
+        queuePostFlushCb(() => hooks.enter(firstChild))
+      }
+    }
+  }
+}
 
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = displayName
@@ -45,32 +89,10 @@ const decorate = (t: typeof VaporTransition) => {
 
 export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
   /*@__PURE__*/ decorate((props, { slots }) => {
-    // wrapped <transition appear>
-    let resetDisplay: Function | undefined
-    if (
-      isHydrating &&
-      currentHydrationNode &&
-      isTemplateNode(currentHydrationNode)
-    ) {
-      // replace <template> node with inner child
-      const {
-        content: { firstChild },
-        parentNode,
-      } = currentHydrationNode
-      if (firstChild) {
-        if (
-          firstChild instanceof HTMLElement ||
-          firstChild instanceof SVGElement
-        ) {
-          const originalDisplay = firstChild.style.display
-          firstChild.style.display = 'none'
-          resetDisplay = () => (firstChild.style.display = originalDisplay)
-        }
+    // Register transition hooks on first use
+    ensureTransitionHooksRegistered()
 
-        parentNode!.replaceChild(firstChild, currentHydrationNode)
-        setCurrentHydrationNode(firstChild)
-      }
-    }
+    const performAppear = isHydrating ? hydrateTransitionImpl() : undefined
 
     const children = (slots.default && slots.default()) as any as Block
     if (!children) return []
@@ -82,7 +104,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     let resolvedProps: BaseTransitionProps<Element>
     renderEffect(() => (resolvedProps = resolveTransitionProps(props)))
 
-    const hooks = applyTransitionHooks(children, {
+    const hooks = applyTransitionHooksImpl(children, {
       state: useTransitionState(),
       // use proxy to keep props reference stable
       props: new Proxy({} as BaseTransitionProps<Element>, {
@@ -93,11 +115,8 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       instance: instance,
     } as VaporTransitionHooks)
 
-    if (resetDisplay && resolvedProps!.appear) {
-      const child = findTransitionBlock(children)!
-      hooks.beforeEnter(child)
-      resetDisplay()
-      queuePostFlushCb(() => hooks.enter(child))
+    if (resolvedProps!.appear && performAppear) {
+      performAppear(hooks)
     }
 
     return children
@@ -169,7 +188,7 @@ export function resolveTransitionHooks(
   return hooks
 }
 
-export function applyTransitionHooks(
+function applyTransitionHooksImpl(
   block: Block,
   hooks: VaporTransitionHooks,
 ): VaporTransitionHooks {
@@ -210,7 +229,7 @@ export function applyTransitionHooks(
   return resolvedHooks
 }
 
-export function applyTransitionLeaveHooks(
+function applyTransitionLeaveHooksImpl(
   block: Block,
   enterHooks: VaporTransitionHooks,
   afterLeaveCb: () => void,
@@ -268,9 +287,16 @@ export function findTransitionBlock(
     // transition can only be applied on Element child
     if (block instanceof Element) child = block
   } else if (isVaporComponent(block)) {
-    // should save hooks on unresolved async wrapper, so that it can be applied after resolved
-    if (isAsyncWrapper(block) && !block.type.__asyncResolved) {
-      child = block
+    if (isAsyncWrapper(block)) {
+      // for unresolved async wrapper, set transition hooks on inner fragment
+      if (!block.type.__asyncResolved) {
+        onFragment && onFragment(block.block! as DynamicFragment)
+      } else {
+        child = findTransitionBlock(
+          (block.block! as DynamicFragment).nodes,
+          onFragment,
+        )
+      }
     } else {
       // stop searching if encountering nested Transition component
       if (getComponentName(block.type) === displayName) return undefined
