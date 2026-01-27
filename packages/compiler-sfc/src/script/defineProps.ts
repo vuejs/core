@@ -374,7 +374,7 @@ function genDestructuredDefaultValue(
   }
 }
 
-// non-comprehensive, best-effort type infernece for a runtime value
+// non-comprehensive, best-effort type inference for a runtime value
 // this is used to catch default value / type declaration mismatches
 // when using props destructure.
 function inferValueType(node: Node): string | undefined {

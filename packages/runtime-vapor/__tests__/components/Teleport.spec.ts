@@ -1307,7 +1307,7 @@ function runSharedTests(deferMode: boolean): void {
       setup() {
         const n0 = template('<div id="tt"></div>')()
         const n4 = template('<div></div>')() as any
-        setInsertionState(n4, null, true)
+        setInsertionState(n4, null, 0, true)
         createComponent(
           VaporTeleport,
           { to: () => '#tt' },

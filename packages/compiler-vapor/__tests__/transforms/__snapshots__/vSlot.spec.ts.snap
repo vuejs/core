@@ -366,9 +366,9 @@ export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const _component_Bar = _resolveComponent("Bar")
   const n6 = t0()
-  _setInsertionState(n6, null)
+  _setInsertionState(n6, null, 0)
   const n0 = _createSlot("foo", null)
-  _setInsertionState(n6, null, true)
+  _setInsertionState(n6, null, 1, true)
   const n1 = _createIf(() => (true), () => {
     const n3 = _createComponentWithFallback(_component_Foo)
     return n3
@@ -592,7 +592,7 @@ export function render(_ctx) {
     "default": _withVaporCtx(() => {
       const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
         const n3 = t0()
-        _setInsertionState(n3, null, true)
+        _setInsertionState(n3, null, 0, true)
         const n2 = _createComponentWithFallback(_component_ChildComp)
         return n3
       })
@@ -614,7 +614,7 @@ export function render(_ctx) {
     "default": _withVaporCtx(() => {
       const n0 = _createIf(() => (_ctx.show), () => {
         const n3 = t0()
-        _setInsertionState(n3, null, true)
+        _setInsertionState(n3, null, 0, true)
         const n2 = _createComponentWithFallback(_component_ChildComp)
         return n3
       })
@@ -651,7 +651,7 @@ export function render(_ctx) {
     "default": _withVaporCtx(() => {
       const n0 = _createIf(() => (_ctx.show), () => {
         const n3 = t0()
-        _setInsertionState(n3, null, true)
+        _setInsertionState(n3, null, 0, true)
         const n2 = _createPlainElement("my-element")
         return n3
       })
@@ -689,10 +689,10 @@ export function render(_ctx) {
     "default": _withVaporCtx(() => {
       const n0 = _createIf(() => (_ctx.a), () => {
         const n6 = t1()
-        _setInsertionState(n6, null, true)
+        _setInsertionState(n6, null, 0, true)
         const n2 = _createIf(() => (_ctx.b), () => {
           const n5 = t0()
-          _setInsertionState(n5, null, true)
+          _setInsertionState(n5, null, 0, true)
           const n4 = _createComponentWithFallback(_component_ChildComp)
           return n5
         })

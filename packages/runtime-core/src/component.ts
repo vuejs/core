@@ -1339,6 +1339,10 @@ export interface ComponentCustomElementInterface {
   /**
    * @internal
    */
+  _isVueCE: boolean
+  /**
+   * @internal
+   */
   _injectChildStyle(type: ConcreteComponent): void
   /**
    * @internal
@@ -1365,4 +1369,8 @@ export interface ComponentCustomElementInterface {
    * @internal attached by the nested Teleport when shadowRoot is false.
    */
   _teleportTargets?: Set<RendererElement>
+  /**
+   * @internal check if shadow root is enabled
+   */
+  _hasShadowRoot(): boolean
 }

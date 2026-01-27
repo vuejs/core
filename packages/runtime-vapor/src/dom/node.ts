@@ -143,6 +143,14 @@ export function locateChildByLogicalIndex(
   let child = (parent.$llc || parent.firstChild) as ChildItem
   let fromIndex = child.$idx || 0
 
+  // if target index is less than cached index, start from the beginning.
+  // this can happen when child/nthChild/next updates $llc to a later node
+  // before an earlier dynamic node is hydrated
+  if (logicalIndex < fromIndex) {
+    child = parent.firstChild as ChildItem
+    fromIndex = 0
+  }
+
   while (child) {
     if (fromIndex === logicalIndex) {
       child.$idx = logicalIndex
@@ -160,15 +168,4 @@ export function locateChildByLogicalIndex(
   }
 
   return null
-}
-
-// use fragment end anchor as the logical child to avoid locateEndAnchor calls
-// in locateChildByLogicalIndex
-export function updateLastLogicalChild(
-  parent: InsertionParent,
-  child: Node,
-): void {
-  if (!isComment(child, ']')) return
-  ;(child as any as ChildItem).$idx = parent.$curIdx || 0
-  parent.$llc = child
 }

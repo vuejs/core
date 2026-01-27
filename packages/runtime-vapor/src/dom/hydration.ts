@@ -1,7 +1,6 @@
 import { MismatchTypes, isMismatchAllowed, warn } from '@vue/runtime-dom'
 import {
-  type ChildItem,
-  insertionAnchor,
+  insertionIndex,
   insertionParent,
   resetInsertionState,
   setInsertionState,
@@ -60,10 +59,6 @@ function performHydration<T>(
     ;(Node.prototype as any).$pns = undefined
     ;(Node.prototype as any).$idx = undefined
     ;(Node.prototype as any).$llc = undefined
-    ;(Node.prototype as any).$lpn = undefined
-    ;(Node.prototype as any).$lan = undefined
-    ;(Node.prototype as any).$lin = undefined
-    ;(Node.prototype as any).$curIdx = undefined
 
     isOptimized = true
   }
@@ -170,38 +165,15 @@ export function locateNextNode(node: Node): Node | null {
 
 function locateHydrationNodeImpl(): void {
   let node: Node | null
-  if (insertionAnchor !== undefined) {
-    const { $lpn: lastPrepend, $lan: lastAppend, firstChild } = insertionParent!
-    // prepend
-    if (insertionAnchor === 0) {
-      node = insertionParent!.$lpn = lastPrepend
-        ? locateNextNode(lastPrepend)
-        : firstChild
-    }
-    // insert
-    else if (insertionAnchor instanceof Node) {
-      const { $lin: lastInsertedNode } = insertionAnchor as ChildItem
-      node = (insertionAnchor as ChildItem).$lin = lastInsertedNode
-        ? locateNextNode(lastInsertedNode)
-        : insertionAnchor
-    }
-    // append
-    else {
-      node = insertionParent!.$lan = lastAppend
-        ? locateNextNode(lastAppend)
-        : insertionAnchor === null
-          ? firstChild
-          : locateChildByLogicalIndex(insertionParent!, insertionAnchor)!
-    }
 
-    insertionParent!.$llc = node
-    ;(node as ChildItem).$idx = insertionParent!.$curIdx =
-      insertionParent!.$curIdx === undefined ? 0 : insertionParent!.$curIdx + 1
+  if (insertionIndex !== undefined) {
+    // use logicalIndex to locate the node
+    node = locateChildByLogicalIndex(insertionParent!, insertionIndex)
+  } else if (insertionParent) {
+    // no logicalIndex: withHydration entry initialization
+    node = insertionParent.firstChild
   } else {
     node = currentHydrationNode
-    if (insertionParent && (!node || node.parentNode !== insertionParent)) {
-      node = insertionParent.firstChild
-    }
   }
 
   if (__DEV__ && !node) {

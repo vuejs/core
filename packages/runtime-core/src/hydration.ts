@@ -551,7 +551,7 @@ export function createHydrationFunctions(
               (isOn(key) && !isReservedProp(key)) ||
               // force hydrate v-bind with .prop modifiers
               key[0] === '.' ||
-              isCustomElement
+              (isCustomElement && !isReservedProp(key))
             ) {
               patchProp(el, key, null, props[key], undefined, parentComponent)
             }

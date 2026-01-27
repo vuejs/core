@@ -161,7 +161,7 @@ async function buildApp(isVapor) {
     build: {
       minify: !noMinify,
       outDir: path.resolve('./client/dist', mode),
-      rollupOptions: {
+      rolldownOptions: {
         onwarn(log, handler) {
           if (log.code === 'INVALID_ANNOTATION') return
           handler(log)

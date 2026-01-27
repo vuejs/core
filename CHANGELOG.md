@@ -1,3 +1,23 @@
+# [3.6.0-beta.4](https://github.com/vuejs/core/compare/v3.5.27...v3.6.0-beta.4) (2026-01-23)
+
+
+### Bug Fixes
+
+* **compile-vapor:** optimize always close tag on rightmost ([0db578b](https://github.com/vuejs/core/commit/0db578b1995d934dba9b36f0e6c50ed60e2cae94))
+* **compiler-vapor:** allow multiple children in Transition v-if branch elements ([#14317](https://github.com/vuejs/core/issues/14317)) ([212bee4](https://github.com/vuejs/core/commit/212bee43b921d80b164490b7cf47716ebed7ec62)), closes [#14316](https://github.com/vuejs/core/issues/14316)
+* **compiler-vapor:** do not escape quotes in root-level text nodes ([#14310](https://github.com/vuejs/core/issues/14310)) ([3fc8e4a](https://github.com/vuejs/core/commit/3fc8e4af5d61d69ef82fbee20cf78ada6ec4a99e)), closes [#14309](https://github.com/vuejs/core/issues/14309)
+* **compiler-vapor:** prevent end tag omission for scope boundary elements ([3d550db](https://github.com/vuejs/core/commit/3d550db31ab40293179e099469e39eaa74b5071d))
+* **keep-alive:** fix caching nested dynamic fragments ([#14307](https://github.com/vuejs/core/issues/14307)) ([bd9aa97](https://github.com/vuejs/core/commit/bd9aa970232ca0591d4c1bfb496b9427a6e777e2))
+* **runtime-core:** queue mounted hooks added during mount ([#14349](https://github.com/vuejs/core/issues/14349)) ([d3b1de3](https://github.com/vuejs/core/commit/d3b1de320a50b0696c537ec2a3a4a07e3507681b))
+* **runtime-dom:** ensure css vars deps tracking when component has no DOM on mount ([#14299](https://github.com/vuejs/core/issues/14299)) ([084389e](https://github.com/vuejs/core/commit/084389ed39855140054e96315e0dde95429d9429))
+* **runtime-vapor:** handle component scopeid on nested slot ([#14326](https://github.com/vuejs/core/issues/14326)) ([7324791](https://github.com/vuejs/core/commit/732479182ab01706d95d3108f95e93fd07a44d74))
+* **runtime-vapor:** prevent v-for crash on looping through null or undefined array ([#14328](https://github.com/vuejs/core/issues/14328)) ([e77b6e1](https://github.com/vuejs/core/commit/e77b6e1fb977c7c52b4d7c8e3f98e3aa6899c576))
+* **teleport:** apply css vars after hydration ([#14343](https://github.com/vuejs/core/issues/14343)) ([b117d11](https://github.com/vuejs/core/commit/b117d116ec1eb9b0d3029d9f77a665a2326cb87d))
+* **transition:** handle transition on pre-resolved async components ([#14314](https://github.com/vuejs/core/issues/14314)) ([9d30aff](https://github.com/vuejs/core/commit/9d30aff79e0125140b7f8d90b0d6e4cd125b7c66))
+* **vapor:** refined inline-block nesting check for html abbreviation ([9220643](https://github.com/vuejs/core/commit/92206430286d0b88c7364d14d5a83bbbf0a415ca))
+
+
+
 # [3.6.0-beta.3](https://github.com/vuejs/core/compare/v3.6.0-beta.2...v3.6.0-beta.3) (2026-01-12)
 
 
