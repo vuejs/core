@@ -36,7 +36,7 @@
     "packages/vue/jsx-runtime",
     "packages/runtime-dom/types/jsx.d.ts",
     "scripts/*",
-    "rollup.*.js"
+    "rolldown.dts.config.js"
   ],
   "exclude": ["packages-private/sfc-playground/src/vue-dev-proxy*"]
 }

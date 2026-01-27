@@ -1,5 +1,5 @@
 // @ts-check
-// these aliases are shared between vitest and rollup
+// these aliases are shared between vitest and rolldown
 import { readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'

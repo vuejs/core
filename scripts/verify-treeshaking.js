@@ -12,7 +12,7 @@ exec('pnpm', ['build', 'vue', '-f', 'global-runtime']).then(() => {
 
   if (devBuild.includes('__spreadValues')) {
     errors.push(
-      'dev build contains unexpected esbuild object spread helper.\n' +
+      'dev build contains unexpected object spread helper.\n' +
         'This means { ...obj } syntax is used in runtime code. This should be ' +
         'refactored to use the `extend` helper to avoid the extra code.',
     )

@@ -264,11 +264,6 @@ function flushJobs(seen?: CountMap) {
       jobs[flushIndex++] = undefined as any
 
       if (!(job.flags! & SchedulerJobFlags.DISPOSED)) {
-        // conditional usage of checkRecursiveUpdate must be determined out of
-        // try ... catch block since Rollup by default de-optimizes treeshaking
-        // inside try-catch. This can leave all warning code unshaked. Although
-        // they would get eventually shaken by a minifier like terser, some minifiers
-        // would fail to do that (e.g. https://github.com/evanw/esbuild/issues/1610)
         if (__DEV__ && checkRecursiveUpdates(seen!, job)) {
           continue
         }
