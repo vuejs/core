@@ -215,8 +215,6 @@ export function defineVaporComponent<
 /*@__NO_SIDE_EFFECTS__*/
 export function defineVaporComponent(comp: any, extraOptions?: any) {
   if (isFunction(comp)) {
-    // #8236: extend call and options.name access are considered side-effects
-    // by Rollup, so we have to wrap it in a pure-annotated IIFE.
     return /*@__PURE__*/ (() =>
       extend({ name: comp.name }, extraOptions, {
         setup: comp,

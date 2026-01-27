@@ -13,7 +13,6 @@ catalog:
 
 onlyBuiltDependencies:
   - '@swc/core'
-  - 'esbuild'
   - 'puppeteer'
   - 'simple-git-hooks'
   - 'unrs-resolver'

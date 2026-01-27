@@ -23,9 +23,6 @@ export enum SSRErrorCodes {
 }
 
 if (__TEST__) {
-  // esbuild cannot infer enum increments if first value is from another
-  // file, so we have to manually keep them in sync. this check ensures it
-  // errors out if there are collisions.
   if (SSRErrorCodes.X_SSR_UNSAFE_ATTR_NAME < DOMErrorCodes.__EXTEND_POINT__) {
     throw new Error(
       `SSRErrorCodes need to be updated to ${

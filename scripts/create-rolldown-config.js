@@ -175,9 +175,8 @@ export function createConfigsForPackage({
       }
     }
 
-    // the compat build needs both default AND named exports. This will cause
-    // Rollup to complain for non-ESM targets, so we use separate entries for
-    // esm vs. non-esm builds.
+    // the compat build needs both default AND named exports.
+    // we use separate entries for esm vs. non-esm builds.
     if (isCompatPackage && (isBrowserESMBuild || isBundlerESMBuild)) {
       entryFile = `esm-${entryFile}`
     }

@@ -136,7 +136,6 @@
     },
     {
       "files": [
-        "rollup*.config.js",
         "scripts/**",
         "./*.{js,ts}",
         "packages/*/*.js",

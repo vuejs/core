@@ -59,10 +59,6 @@
     'lru-cache',
 
     // pinned
-    // https://github.com/vuejs/core/commit/a012e39b373f1b6918e5c89856e8f902e1bfa14d
-    '@rollup/plugin-replace',
-
-    // pinned
     // only used in example for e2e tests
     'marked',
   ],

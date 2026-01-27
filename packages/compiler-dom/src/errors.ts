@@ -36,9 +36,6 @@ export enum DOMErrorCodes {
 }
 
 if (__TEST__) {
-  // esbuild cannot infer enum increments if first value is from another
-  // file, so we have to manually keep them in sync. this check ensures it
-  // errors out if there are collisions.
   if (DOMErrorCodes.X_V_HTML_NO_EXPRESSION < ErrorCodes.__EXTEND_POINT__) {
     throw new Error(
       `DOMErrorCodes need to be updated to ${
