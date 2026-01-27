@@ -75,9 +75,8 @@ export default targetPackages.map(
 function patchTypes(pkg) {
   return {
     name: 'patch-types',
-    // @ts-ignore
     renderChunk(code, chunk, outputOptions, meta) {
-      const s = meta?.magicString
+      const s = meta.magicString
       const { program: ast, errors } = parseSync('x.d.ts', code, {
         sourceType: 'module',
       })
@@ -155,50 +154,84 @@ function patchTypes(pkg) {
       // pass 2: remove exports
       for (const node of ast.body) {
         if (node.type === 'ExportNamedDeclaration' && !node.source) {
-          let removed = 0
+          // Precompute which specifiers are safe to remove.
+          /** @type {boolean[]} */
+          const removable = new Array(node.specifiers.length)
+          let keptCount = 0
           for (let i = 0; i < node.specifiers.length; i++) {
             const spec = node.specifiers[i]
             const localName =
               'name' in spec.local ? spec.local.name : spec.local.value
+            let canRemove = false
             if (
               spec.type === 'ExportSpecifier' &&
               shouldRemoveExport.has(localName)
             ) {
               assert(spec.exported.type === 'Identifier')
               const exported = spec.exported.name
-              if (exported !== localName) {
-                // this only happens if we have something like
-                //   type Foo
-                //   export { Foo as Bar }
-                continue
+              if (exported === localName) {
+                canRemove = true
               }
-              const next = node.specifiers[i + 1]
-              if (next) {
-                assert(typeof spec.start === 'number')
-                assert(typeof next.start === 'number')
-                // @ts-ignore
-                s.remove(spec.start, next.start)
-              } else {
-                // last one
-                const prev = node.specifiers[i - 1]
-                assert(typeof spec.start === 'number')
-                assert(typeof spec.end === 'number')
-                // @ts-ignore
-                s.remove(
-                  prev
-                    ? (assert(typeof prev.end === 'number'), prev.end)
-                    : spec.start,
-                  spec.end,
-                )
-              }
-              removed++
             }
+            removable[i] = canRemove
+            if (!canRemove) keptCount++
           }
-          if (removed === node.specifiers.length) {
+          if (keptCount === 0) {
             assert(typeof node.start === 'number')
             assert(typeof node.end === 'number')
             // @ts-ignore
             s.remove(node.start, node.end)
+            continue
+          }
+
+          // Next kept specifier index for each position (or -1).
+          /** @type {number[]} */
+          const nextKeptIndex = new Array(node.specifiers.length).fill(-1)
+          let nextKept = -1
+          for (let i = node.specifiers.length - 1; i >= 0; i--) {
+            if (!removable[i]) nextKept = i
+            nextKeptIndex[i] = nextKept
+          }
+
+          // Build removal ranges by consecutive removable runs.
+          /** @type {{ start: number, end: number }[]} */
+          const ranges = []
+          let i = 0
+          let prevKeptIndex = -1
+          while (i < node.specifiers.length) {
+            if (!removable[i]) {
+              prevKeptIndex = i
+              i++
+              continue
+            }
+            const runStart = i
+            while (i < node.specifiers.length && removable[i]) i++
+            const runEnd = i - 1
+
+            const first = node.specifiers[runStart]
+            const last = node.specifiers[runEnd]
+            assert(typeof first.start === 'number')
+            assert(typeof last.end === 'number')
+
+            const nextKept = nextKeptIndex[runEnd]
+            if (nextKept !== -1) {
+              const nextSpec = node.specifiers[nextKept]
+              assert(typeof nextSpec.start === 'number')
+              ranges.push({ start: first.start, end: nextSpec.start })
+            } else if (prevKeptIndex >= 0) {
+              const prev = node.specifiers[prevKeptIndex]
+              assert(typeof prev.end === 'number')
+              ranges.push({ start: prev.end, end: last.end })
+            } else {
+              ranges.push({ start: first.start, end: last.end })
+            }
+          }
+
+          // apply removals from back to front to keep ranges stable
+          ranges.sort((a, b) => b.start - a.start)
+          for (const range of ranges) {
+            // @ts-ignore
+            s.remove(range.start, range.end)
           }
         }
       }
