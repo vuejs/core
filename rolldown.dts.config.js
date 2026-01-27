@@ -2,7 +2,6 @@
 import assert from 'node:assert/strict'
 import { parseSync } from 'oxc-parser'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
-import MagicString from 'magic-string'
 import { dts } from 'rolldown-plugin-dts'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
@@ -43,6 +42,9 @@ export default targetPackages.map(
         file: `packages/${pkg}/dist/${pkg}.d.ts`,
         format: 'es',
       },
+      experimental: {
+        nativeMagicString: true,
+      },
       external: resolveExternal(pkg),
       plugins: [dts(), patchTypes(pkg), ...(pkg === 'vue' ? [copyMts()] : [])],
       onwarn(warning, warn) {
@@ -73,8 +75,9 @@ export default targetPackages.map(
 function patchTypes(pkg) {
   return {
     name: 'patch-types',
-    renderChunk(code, chunk) {
-      const s = new MagicString(code)
+    // @ts-ignore
+    renderChunk(code, chunk, outputOptions, meta) {
+      const s = meta?.magicString
       const { program: ast, errors } = parseSync('x.d.ts', code, {
         sourceType: 'module',
       })
@@ -100,6 +103,7 @@ function patchTypes(pkg) {
         if (isExported.has(name)) {
           const start = (parentDecl || node).start
           assert(typeof start === 'number')
+          // @ts-ignore
           s.prependLeft(start, `export `)
         }
       }
@@ -172,12 +176,14 @@ function patchTypes(pkg) {
               if (next) {
                 assert(typeof spec.start === 'number')
                 assert(typeof next.start === 'number')
+                // @ts-ignore
                 s.remove(spec.start, next.start)
               } else {
                 // last one
                 const prev = node.specifiers[i - 1]
                 assert(typeof spec.start === 'number')
                 assert(typeof spec.end === 'number')
+                // @ts-ignore
                 s.remove(
                   prev
                     ? (assert(typeof prev.end === 'number'), prev.end)
@@ -191,10 +197,12 @@ function patchTypes(pkg) {
           if (removed === node.specifiers.length) {
             assert(typeof node.start === 'number')
             assert(typeof node.end === 'number')
+            // @ts-ignore
             s.remove(node.start, node.end)
           }
         }
       }
+      // @ts-ignore
       code = s.toString()
 
       // append pkg specific types
