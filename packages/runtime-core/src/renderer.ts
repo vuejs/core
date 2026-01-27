@@ -2201,20 +2201,26 @@ function baseCreateRenderer(
     parentComponent,
     parentSuspense = null,
   ) => {
-    const { el: rawEl, vb, type, transition, children, shapeFlag } = vnode
-    const el = vb || rawEl
+    const { el, type, transition, children, shapeFlag } = vnode
+
+    if (isVaporComponent(type as ConcreteComponent) || type === VaporSlot) {
+      getVaporInterface(parentComponent, vnode).move(
+        vnode,
+        container,
+        anchor,
+        moveType,
+      )
+      return
+    }
+
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      if (isVaporComponent(type as ConcreteComponent)) {
-        getVaporInterface(parentComponent, vnode).move(vnode, container, anchor)
-      } else {
-        move(
-          vnode.component!.subTree,
-          container,
-          anchor,
-          moveType,
-          parentComponent,
-        )
-      }
+      move(
+        vnode.component!.subTree,
+        container,
+        anchor,
+        moveType,
+        parentComponent,
+      )
       return
     }
 
