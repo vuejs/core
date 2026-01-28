@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.5.27",
-  "packageManager": "pnpm@10.25.0",
+  "packageManager": "pnpm@10.28.2",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -71,7 +71,7 @@
     "@rollup/plugin-replace": "5.0.4",
     "@swc/core": "^1.15.4",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^24.10.4",
+    "@types/node": "^24.10.9",
     "@types/semver": "^7.7.1",
     "@types/serve-handler": "^6.1.4",
     "@vitest/coverage-v8": "^3.2.4",
@@ -86,7 +86,7 @@
     "estree-walker": "catalog:",
     "jsdom": "^27.3.0",
     "lint-staged": "^16.2.7",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "magic-string": "^0.30.21",
     "markdown-table": "^3.0.4",
     "marked": "13.0.3",
