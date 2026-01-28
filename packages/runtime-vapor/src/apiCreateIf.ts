@@ -30,7 +30,9 @@ export function createIf(
         : [__DEV__ ? createComment('if') : createTextNode()]
   } else {
     frag =
-      isHydrating || __DEV__ ? new DynamicFragment('if') : new DynamicFragment()
+      isHydrating || __DEV__
+        ? new DynamicFragment('if', true)
+        : new DynamicFragment('', true)
     renderEffect(() => (frag as DynamicFragment).update(condition() ? b1 : b2))
   }
 
