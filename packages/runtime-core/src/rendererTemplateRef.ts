@@ -22,7 +22,7 @@ import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { type SchedulerJob, SchedulerJobFlags } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
 import { type ComponentOptions, getComponentPublicInstance } from './component'
-import { knownTemplateRefs } from './helpers/useTemplateRef'
+import { hasTemplateRefKey, knownTemplateRefs } from './helpers/useTemplateRef'
 
 const pendingSetRefMap = new WeakMap<VNodeNormalizedRef, SchedulerJob>()
 /**
@@ -86,6 +86,9 @@ export function setRef(
     setupState === EMPTY_OBJ
       ? NO
       : (key: string) => {
+          if (hasTemplateRefKey(refs, key)) {
+            return false
+          }
           if (__DEV__) {
             if (hasOwn(rawSetupState, key) && !isRef(rawSetupState[key])) {
               warn(

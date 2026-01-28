@@ -1,9 +1,28 @@
 import { type ShallowRef, readonly, shallowRef } from '@vue/reactivity'
-import { getCurrentInstance } from '../component'
+import { type Data, getCurrentInstance } from '../component'
 import { warn } from '../warning'
 import { EMPTY_OBJ } from '@vue/shared'
 
 export const knownTemplateRefs: WeakSet<ShallowRef> = new WeakSet()
+
+const templateRefKeySet = Symbol(__DEV__ ? 'v_templateRefKeys' : '')
+
+const getTemplateRefKeySet = (refs: Data): Set<string> | undefined =>
+  (refs as any)[templateRefKeySet] as Set<string> | undefined
+
+export const registerTemplateRefKey = (refs: Data, key: string): void => {
+  let set = getTemplateRefKeySet(refs)
+  if (!set) {
+    set = new Set<string>()
+    Object.defineProperty(refs, templateRefKeySet, { value: set })
+  }
+  set.add(key)
+}
+
+export const hasTemplateRefKey = (refs: Data, key: string): boolean => {
+  const set = getTemplateRefKeySet(refs)
+  return !!set && set.has(key)
+}
 
 export type TemplateRef<T = unknown> = Readonly<ShallowRef<T | null>>
 
@@ -14,6 +33,7 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
   const r = shallowRef(null)
   if (i) {
     const refs = i.refs === EMPTY_OBJ ? (i.refs = {}) : i.refs
+    registerTemplateRefKey(refs, key)
     let desc: PropertyDescriptor | undefined
     if (
       __DEV__ &&
