@@ -246,8 +246,6 @@ export function inlineEnums() {
    */
   const enumData = JSON.parse(readFileSync(ENUM_CACHE_PATH, 'utf-8'))
 
-  const useNativeMagicString = true
-
   // 3. during transform:
   //    3.1 files w/ enum declaration: rewrite declaration as object literal
   //    3.2 files using enum: inject into rolldown define
@@ -256,22 +254,20 @@ export function inlineEnums() {
    */
   const plugin = {
     name: 'inline-enum',
-    // @ts-ignore
-    transform(code, id, meta) {
+    transform(code, id) {
       /**
-       * @type {import('rolldown').BindingMagicString | undefined}
+       * @type {MagicString | undefined}
        */
       let s
+
       if (id in enumData.declarations) {
-        // @ts-ignore
-        s = s || useNativeMagicString ? meta.magicString : new MagicString(code)
+        s = s || new MagicString(code)
         for (const declaration of enumData.declarations[id]) {
           const {
             range: [start, end],
             id,
             members,
           } = declaration
-          // @ts-ignore
           s.update(
             start,
             end,
@@ -300,15 +296,9 @@ export function inlineEnums() {
       }
 
       if (s) {
-        if (useNativeMagicString) {
-          return {
-            code: s,
-          }
-        } else {
-          return {
-            code: s.toString(),
-            map: s.generateMap(),
-          }
+        return {
+          code: s.toString(),
+          map: s.generateMap(),
         }
       }
     },

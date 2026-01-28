@@ -34,6 +34,7 @@
     "prebench-compare": "node scripts/build.js -pf esm-browser reactivity",
     "bench": "vitest bench --project=unit --outputJson=temp/bench.json",
     "bench-compare": "vitest bench --project=unit --compare=temp/bench.json",
+    "bench-builds": "node scripts/benchmark-builds.js -- --quiet --warmup 5 --runs 10",
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "dev-esm": "node scripts/dev.js -if esm-bundler-runtime",

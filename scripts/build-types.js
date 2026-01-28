@@ -57,9 +57,7 @@ await Promise.all(
   ),
 )
 
-console.log(
-  `bundled dts generated in ${(performance.now() - start).toFixed(2)}ms.`,
-)
+console.log(`dts built in ${(performance.now() - start).toFixed(2)}ms.`)
 
 function write(file, content) {
   const dir = path.dirname(file)

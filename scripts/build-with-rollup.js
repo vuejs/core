@@ -25,8 +25,9 @@ import path from 'node:path'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import pico from 'picocolors'
 import { cpus } from 'node:os'
+import { performance } from 'node:perf_hooks'
 import { targets as allTargets, exec, fuzzyMatchTarget } from './utils.js'
-import { scanEnums } from './inline-enums.js'
+import { scanEnums } from './inline-enums-rollup.js'
 import prettyBytes from 'pretty-bytes'
 import { spawnSync } from 'node:child_process'
 
@@ -120,7 +121,9 @@ async function run() {
  * @returns {Promise<void>} - A promise representing the build process.
  */
 async function buildAll(targets) {
+  const start = performance.now()
   await runParallel(cpus().length, targets, build)
+  console.log(`built in ${(performance.now() - start).toFixed(2)}ms.`)
 }
 
 /**

@@ -13,7 +13,7 @@ import { nodeResolve } from '@rollup/plugin-node-resolve'
 import esbuild from 'rollup-plugin-esbuild'
 import alias from '@rollup/plugin-alias'
 import { entries } from './scripts/aliases.js'
-import { inlineEnums } from './scripts/inline-enums.js'
+import { inlineEnums } from './scripts/inline-enums-rollup.js'
 import { minify as minifySwc } from '@swc/core'
 import { trimVaporExportsPlugin } from './scripts/trim-vapor-exports.js'
 
