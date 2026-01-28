@@ -92,7 +92,7 @@
     "marked": "13.0.3",
     "npm-run-all2": "^8.0.4",
     "picocolors": "^1.1.1",
-    "prettier": "^3.7.4",
+    "prettier": "^3.8.1",
     "pretty-bytes": "^7.1.0",
     "pug": "^3.0.3",
     "puppeteer": "~24.33.0",
@@ -108,7 +108,7 @@
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.8.1",
     "typescript": "~5.6.2",
-    "typescript-eslint": "^8.49.0",
+    "typescript-eslint": "^8.54.0",
     "vite": "catalog:",
     "vitest": "^3.2.4"
   }
