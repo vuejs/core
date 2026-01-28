@@ -1,6 +1,7 @@
 import {
   KeepAlive,
   type ShallowRef,
+  createApp,
   createVNode,
   defineComponent,
   h,
@@ -19,6 +20,8 @@ import {
   toDisplayString,
   useModel,
   useTemplateRef,
+  vShow,
+  withDirectives,
 } from '@vue/runtime-dom'
 import { makeInteropRender } from './_utils'
 import {
@@ -35,6 +38,7 @@ import {
   renderEffect,
   setText,
   template,
+  vaporInteropPlugin,
 } from '../src'
 
 const define = makeInteropRender()
@@ -231,7 +235,7 @@ describe('vdomInterop', () => {
     })
   })
 
-  describe('v-show', () => {
+  describe('directives', () => {
     test('apply v-show to vdom child', async () => {
       const VDomChild = {
         setup() {
@@ -259,6 +263,171 @@ describe('vdomInterop', () => {
       show.value = true
       await nextTick()
       expect(html()).toBe('<div style=""></div>')
+    })
+
+    test('apply v-show to vapor child', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div></div>', true)()
+        },
+      })
+
+      const show = ref(false)
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h('div', null, [
+              withDirectives(h(VaporChild as any), [[vShow, show.value]]),
+            ])
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe(
+        '<div><div style="display: none;"></div></div>',
+      )
+
+      show.value = true
+      await nextTick()
+      expect(root.innerHTML).toBe('<div><div style=""></div></div>')
+    })
+
+    test('apply custom directive to vapor child', async () => {
+      const vCustom = {
+        created: vi.fn(),
+        beforeMount: vi.fn(),
+        mounted: vi.fn(),
+        beforeUpdate: vi.fn(),
+        updated: vi.fn(),
+        beforeUnmount: vi.fn(),
+        unmounted: vi.fn(),
+      }
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div></div>', true)()
+        },
+      })
+
+      const count = ref(0)
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h('div', null, [
+              withDirectives(h(VaporChild as any), [[vCustom, count.value]]),
+            ])
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      // root > div (App root) > div (VaporChild root)
+      const el = root.querySelector('div')!.querySelector('div')!
+      expect(vCustom.created).toHaveBeenCalledTimes(1)
+      expect(vCustom.beforeMount).toHaveBeenCalledTimes(1)
+      expect(vCustom.mounted).toHaveBeenCalledTimes(1)
+      expect(vCustom.beforeUpdate).toHaveBeenCalledTimes(0)
+      expect(vCustom.updated).toHaveBeenCalledTimes(0)
+
+      expect(vCustom.created).toHaveBeenCalledWith(
+        el,
+        expect.objectContaining({ value: 0, oldValue: undefined }),
+        expect.any(Object),
+        null,
+      )
+      expect(vCustom.beforeMount).toHaveBeenCalledWith(
+        el,
+        expect.objectContaining({ value: 0, oldValue: undefined }),
+        expect.any(Object),
+        null,
+      )
+      expect(vCustom.mounted).toHaveBeenCalledWith(
+        el,
+        expect.objectContaining({ value: 0, oldValue: undefined }),
+        expect.any(Object),
+        null,
+      )
+
+      count.value++
+      await nextTick()
+      expect(vCustom.beforeUpdate).toHaveBeenCalledTimes(1)
+      expect(vCustom.updated).toHaveBeenCalledTimes(1)
+
+      expect(vCustom.beforeUpdate).toHaveBeenCalledWith(
+        el,
+        expect.objectContaining({ value: 1, oldValue: 0 }),
+        expect.any(Object),
+        expect.any(Object),
+      )
+      expect(vCustom.updated).toHaveBeenCalledWith(
+        el,
+        expect.objectContaining({ value: 1, oldValue: 0 }),
+        expect.any(Object),
+        expect.any(Object),
+      )
+
+      app.unmount()
+      expect(vCustom.beforeUnmount).toHaveBeenCalledTimes(1)
+      expect(vCustom.unmounted).toHaveBeenCalledTimes(1)
+
+      expect(vCustom.beforeUnmount).toHaveBeenCalledWith(
+        el,
+        expect.objectContaining({ value: 1, oldValue: 0 }),
+        expect.any(Object),
+        null,
+      )
+      expect(vCustom.unmounted).toHaveBeenCalledWith(
+        el,
+        expect.objectContaining({ value: 1, oldValue: 0 }),
+        expect.any(Object),
+        null,
+      )
+    })
+
+    test('warn on directive with non-element root vapor child', () => {
+      const calls: string[] = []
+      const vCustom = {
+        created: () => calls.push('created'),
+        beforeMount: () => calls.push('beforeMount'),
+        mounted: () => calls.push('mounted'),
+        beforeUpdate: () => calls.push('beforeUpdate'),
+        updated: () => calls.push('updated'),
+        beforeUnmount: () => calls.push('beforeUnmount'),
+        unmounted: () => calls.push('unmounted'),
+      }
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return [template('<div></div>')(), template('<div></div>')()]
+        },
+      })
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h('div', null, [withDirectives(h(VaporChild as any), [[vCustom]])])
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      if (__DEV__) {
+        expect(
+          `Runtime directive used on component with non-element root node.`,
+        ).toHaveBeenWarned()
+      }
+      expect(calls.length).toBe(0)
+      app.unmount()
     })
   })
 

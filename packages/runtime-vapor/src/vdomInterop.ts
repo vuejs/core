@@ -37,6 +37,7 @@ import {
   activate as vdomActivate,
   deactivate as vdomDeactivate,
   setRef as vdomSetRef,
+  warn,
 } from '@vue/runtime-dom'
 import {
   type LooseRawProps,
@@ -45,6 +46,7 @@ import {
   VaporComponentInstance,
   createComponent,
   getCurrentScopeId,
+  getRootElement,
   mountComponent,
   unmountComponent,
 } from './component'
@@ -97,7 +99,14 @@ const vaporInteropImpl: Omit<
   VaporInteropInterface,
   'vdomMount' | 'vdomUnmount' | 'vdomSlot' | 'vdomMountVNode'
 > = {
-  mount(vnode, container, anchor, parentComponent, parentSuspense) {
+  mount(
+    vnode,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    onBeforeMount,
+  ) {
     let selfAnchor = (vnode.anchor = createTextNode())
     if (isHydrating) {
       // avoid vdom hydration children mismatch by the selfAnchor, delay its insertion
@@ -160,16 +169,51 @@ const vaporInteropImpl: Omit<
       setParentSuspense(prevSuspense)
     }
 
+    const rootEl = getRootElement(instance)
+    if (rootEl) {
+      vnode.el = rootEl
+    }
+    // invoke directive hooks only when we have a valid root element
+    if (vnode.dirs) {
+      if (rootEl) {
+        onBeforeMount && onBeforeMount()
+      } else {
+        if (__DEV__) {
+          warn(
+            `Runtime directive used on component with non-element root node. ` +
+              `The directives will not function as intended.`,
+          )
+        }
+        vnode.dirs = null
+      }
+    }
+
     mountComponent(instance, container, selfAnchor)
+
     simpleSetCurrentInstance(prev)
     return instance
   },
 
-  update(n1, n2, shouldUpdate) {
+  update(n1, n2, shouldUpdate, onBeforeUpdate) {
     n2.component = n1.component
     n2.el = n2.anchor = n1.anchor
+
+    const instance = n2.component as any as VaporComponentInstance
+
+    const rootEl = getRootElement(instance)
+    if (rootEl) {
+      n2.el = rootEl
+    }
+    // invoke directive hooks only when we have a valid root element
+    if (n2.dirs) {
+      if (rootEl) {
+        onBeforeUpdate && onBeforeUpdate()
+      } else {
+        n2.dirs = null
+      }
+    }
+
     if (shouldUpdate) {
-      const instance = n2.component as any as VaporComponentInstance
       instance.rawPropsRef!.value = n2.props
       instance.rawSlotsRef!.value = n2.children
     }

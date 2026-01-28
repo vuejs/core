@@ -1221,14 +1221,39 @@ function baseCreateRenderer(
             anchor,
             parentComponent,
             parentSuspense,
+            () => {
+              if (n2.dirs) {
+                invokeDirectiveHook(n2, null, parentComponent, 'created')
+                invokeDirectiveHook(n2, null, parentComponent, 'beforeMount')
+              }
+            },
           )
+          if (n2.dirs) {
+            queuePostRenderEffect(
+              () => invokeDirectiveHook(n2, null, parentComponent, 'mounted'),
+              undefined,
+              parentSuspense,
+            )
+          }
         }
       } else {
         getVaporInterface(parentComponent, n2).update(
           n1,
           n2,
           shouldUpdateComponent(n1, n2, optimized),
+          () => {
+            if (n2.dirs) {
+              invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
+            }
+          },
         )
+        if (n2.dirs) {
+          queuePostRenderEffect(
+            () => invokeDirectiveHook(n2, n1, parentComponent, 'updated'),
+            undefined,
+            parentSuspense,
+          )
+        }
       }
     } else if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
@@ -2366,7 +2391,19 @@ function baseCreateRenderer(
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
       if (isVaporComponent(type as ConcreteComponent)) {
+        // invoke directive hooks for vapor components
+        if (dirs) {
+          invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
+        }
         getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
+        if (dirs) {
+          queuePostRenderEffect(
+            () =>
+              invokeDirectiveHook(vnode, null, parentComponent, 'unmounted'),
+            undefined,
+            parentSuspense,
+          )
+        }
         return
       } else {
         unmountComponent(vnode.component!, parentSuspense, doRemove)
