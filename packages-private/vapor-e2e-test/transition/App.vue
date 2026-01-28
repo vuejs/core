@@ -135,6 +135,29 @@ const click = () => {
   }
 }
 
+const UnmountBranch = defineVaporComponent({
+  name: 'UnmountBranch',
+  setup() {
+    onUnmounted(() => {
+      calls.unmount.push('UnmountBranch')
+    })
+    return template('<div>0</div>')()
+  },
+})
+const keepAliveUnmountRef = ref(null)
+window.getKeepAliveUnmountStorageContainer = () =>
+  keepAliveUnmountRef.value?.ctx?.getStorageContainer?.() ?? null
+const unmountIncludeRef = ref(['UnmountBranch'])
+const unmountToggle = ref(true)
+const unmountClick = () => {
+  unmountToggle.value = !unmountToggle.value
+  if (unmountToggle.value) {
+    unmountIncludeRef.value = ['UnmountBranch']
+  } else {
+    unmountIncludeRef.value = []
+  }
+}
+
 const CompA = defineVaporComponent({
   name: 'CompA',
   setup() {
@@ -692,6 +715,16 @@ const Comp2 = defineVaporComponent({
         </transition>
       </div>
       <button @click="click">button</button>
+    </div>
+    <div class="keep-alive-unmount-children">
+      <div id="container">
+        <transition>
+          <KeepAlive ref="keepAliveUnmountRef" :include="unmountIncludeRef">
+            <UnmountBranch v-if="unmountToggle"></UnmountBranch>
+          </KeepAlive>
+        </transition>
+      </div>
+      <button id="toggleBtn" @click="unmountClick">button</button>
     </div>
     <div class="keep-alive-update-include">
       <div>
