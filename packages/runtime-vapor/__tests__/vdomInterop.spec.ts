@@ -28,6 +28,7 @@ import {
   child,
   createComponent,
   createDynamicComponent,
+  createIf,
   createSlot,
   defineVaporAsyncComponent,
   defineVaporComponent,
@@ -1218,6 +1219,45 @@ describe('vdomInterop', () => {
       inputEl = host.firstChild as HTMLInputElement
       expect(inputEl.value).toBe('vapor')
       assertHookCalls(hooks, [2, 2, 3, 2, 1])
+    })
+
+    test('render vapor slot', async () => {
+      const show = ref(true)
+
+      const VDomComp = defineComponent({
+        setup(_, { slots }) {
+          return () => renderSlot(slots, 'default')
+        },
+      })
+      const App = defineVaporComponent({
+        setup() {
+          const n5 = createComponent(VaporKeepAlive, null, {
+            default: () =>
+              createIf(
+                () => show.value,
+                () =>
+                  createComponent(VDomComp as any, null, {
+                    default: () => template('slot text')(),
+                  }),
+              ),
+          })
+          return n5
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(App)
+        },
+      }).render()
+
+      expect(html()).toBe('slot text<!--if-->')
+      show.value = false
+      await nextTick()
+      expect(html()).toBe('<!--if-->')
+      show.value = true
+      await nextTick()
+      expect(html()).toBe('slot text<!--if-->')
     })
   })
 })

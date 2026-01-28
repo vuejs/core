@@ -19,6 +19,7 @@ import type {
 import { type Directive, validateDirectiveName } from './directives'
 import type {
   ElementNamespace,
+  MoveType,
   RootRenderFunction,
   UnmountComponentFn,
 } from './renderer'
@@ -191,7 +192,7 @@ export interface VaporInteropInterface {
   ): GenericComponentInstance // VaporComponentInstance
   update(n1: VNode, n2: VNode, shouldUpdate: boolean): void
   unmount(vnode: VNode, doRemove?: boolean): void
-  move(vnode: VNode, container: any, anchor: any): void
+  move(vnode: VNode, container: any, anchor: any, moveType: MoveType): void
   slot(
     n1: VNode | null,
     n2: VNode,

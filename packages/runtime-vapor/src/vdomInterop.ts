@@ -48,7 +48,13 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { type Block, type VaporTransitionHooks, insert, remove } from './block'
+import {
+  type Block,
+  type VaporTransitionHooks,
+  insert,
+  move,
+  remove,
+} from './block'
 import {
   EMPTY_OBJ,
   ShapeFlags,
@@ -213,9 +219,9 @@ const vaporInteropImpl: Omit<
     }
   },
 
-  move(vnode, container, anchor) {
-    insert(vnode.vb || (vnode.component as any), container, anchor)
-    insert(vnode.anchor as any, container, anchor)
+  move(vnode, container, anchor, moveType) {
+    move(vnode.vb || (vnode.component as any), container, anchor, moveType)
+    move(vnode.anchor as any, container, anchor, moveType)
   },
 
   hydrate(vnode, node, container, anchor, parentComponent, parentSuspense) {
