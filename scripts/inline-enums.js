@@ -254,6 +254,10 @@ export function inlineEnums() {
   const plugin = {
     name: 'inline-enum',
     transform(code, id, meta) {
+      if (!meta.magicString) {
+        throw new Error('meta.magicString is missing')
+      }
+
       /**
        * @type {import('rolldown').BindingMagicString | undefined}
        */
@@ -266,7 +270,6 @@ export function inlineEnums() {
             id,
             members,
           } = declaration
-          // @ts-ignore
           s.update(
             start,
             end,

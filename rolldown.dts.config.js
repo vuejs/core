@@ -76,6 +76,9 @@ function patchTypes(pkg) {
   return {
     name: 'patch-types',
     renderChunk(code, chunk, outputOptions, meta) {
+      if (!meta?.magicString) {
+        throw new Error('meta.magicString is missing')
+      }
       const s = meta.magicString
       const { program: ast, errors } = parseSync('x.d.ts', code, {
         sourceType: 'module',
@@ -102,7 +105,6 @@ function patchTypes(pkg) {
         if (isExported.has(name)) {
           const start = (parentDecl || node).start
           assert(typeof start === 'number')
-          // @ts-ignore
           s.prependLeft(start, `export `)
         }
       }
@@ -175,14 +177,12 @@ function patchTypes(pkg) {
               if (next) {
                 assert(typeof spec.start === 'number')
                 assert(typeof next.start === 'number')
-                // @ts-ignore
                 s.remove(spec.start, next.start)
               } else {
                 // last one
                 const prev = node.specifiers[i - 1]
                 assert(typeof spec.start === 'number')
                 assert(typeof spec.end === 'number')
-                // @ts-ignore
                 s.remove(
                   prev
                     ? (assert(typeof prev.end === 'number'), prev.end)
@@ -196,12 +196,10 @@ function patchTypes(pkg) {
           if (removed === node.specifiers.length) {
             assert(typeof node.start === 'number')
             assert(typeof node.end === 'number')
-            // @ts-ignore
             s.remove(node.start, node.end)
           }
         }
       }
-      // @ts-ignore
       code = s.toString()
 
       // append pkg specific types
