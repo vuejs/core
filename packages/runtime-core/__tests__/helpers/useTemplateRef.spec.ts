@@ -106,6 +106,30 @@ describe('useTemplateRef', () => {
     expect(tRef!.value).toBe(null)
   })
 
+  test('should not overwrite setup refs with same template ref key', async () => {
+    let foo
+    let fooRef
+    const Comp = {
+      setup() {
+        foo = ref('t1')
+        fooRef = useTemplateRef('foo')
+        return {
+          foo,
+          fooRef,
+        }
+      },
+      render() {
+        return h('input', { ref: 'foo' })
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await nextTick()
+
+    expect(foo!.value).toBe('t1')
+    expect(fooRef!.value).toBe(root.children[0])
+  })
+
   test('should work when used with direct ref value with ref_key', () => {
     let tRef: ShallowRef
     const key = 'refKey'
