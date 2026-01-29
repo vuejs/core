@@ -361,6 +361,9 @@ export function createConfigsForPackage({
       treeshake: {
         moduleSideEffects: false,
       },
+      experimental: {
+        nativeMagicString: true,
+      },
     }
   }
 

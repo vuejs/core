@@ -2,7 +2,6 @@
 import assert from 'node:assert/strict'
 import { parseSync } from 'oxc-parser'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
-import MagicString from 'magic-string'
 import { dts } from 'rolldown-plugin-dts'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
@@ -43,6 +42,9 @@ export default targetPackages.map(
         file: `packages/${pkg}/dist/${pkg}.d.ts`,
         format: 'es',
       },
+      experimental: {
+        nativeMagicString: true,
+      },
       external: resolveExternal(pkg),
       plugins: [dts(), patchTypes(pkg), ...(pkg === 'vue' ? [copyMts()] : [])],
       onwarn(warning, warn) {
@@ -73,8 +75,11 @@ export default targetPackages.map(
 function patchTypes(pkg) {
   return {
     name: 'patch-types',
-    renderChunk(code, chunk) {
-      const s = new MagicString(code)
+    renderChunk(code, chunk, outputOptions, meta) {
+      if (!meta?.magicString) {
+        throw new Error('meta.magicString is missing')
+      }
+      const s = meta.magicString
       const { program: ast, errors } = parseSync('x.d.ts', code, {
         sourceType: 'module',
       })

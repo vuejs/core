@@ -28,20 +28,15 @@
       groupName: 'build',
       matchPackageNames: [
         'vite',
-        'rolldown{/,}**',
+        'rolldown-plugin-dts',
         '@rolldown{/,}**',
-        'oxc{/,}**',
+        'oxc-*',
         '@vitejs{/,}**',
       ],
     },
     {
       groupName: 'lint',
-      matchPackageNames: [
-        'simple-git-hooks',
-        'lint-staged',
-        'oxlint',
-        'oxfmt{/,}**',
-      ],
+      matchPackageNames: ['simple-git-hooks', 'lint-staged', 'oxlint', 'oxfmt'],
     },
   ],
   ignoreDeps: [
