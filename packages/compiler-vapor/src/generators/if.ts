@@ -10,7 +10,7 @@ export function genIf(
   isNested = false,
 ): CodeFragment[] {
   const { helper } = context
-  const { condition, positive, negative, once } = oper
+  const { condition, positive, negative, once, index } = oper
   const [frag, push] = buildCodeFragment()
 
   const conditionExpr: CodeFragment[] = [
@@ -38,6 +38,8 @@ export function genIf(
       positiveArg,
       negativeArg,
       once && 'true',
+      // index is only used when the branch can change in Transition
+      index !== undefined && negative && String(index),
     ),
   )
 
