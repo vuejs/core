@@ -1,65 +1,60 @@
 {
-  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
-  extends: ['config:recommended', 'schedule:weekly', 'group:allNonMajor'],
-  labels: ['dependencies'],
-  ignorePaths: ['**/__tests__/**'],
-  rangeStrategy: 'bump',
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended", "schedule:weekly", "group:allNonMajor"],
+  labels: ["dependencies"],
+  ignorePaths: ["**/__tests__/**"],
+  rangeStrategy: "bump",
   packageRules: [
     {
-      matchDepTypes: ['peerDependencies'],
+      matchDepTypes: ["peerDependencies"],
       enabled: false,
     },
     {
-      groupName: 'test',
-      matchPackageNames: ['vitest', 'jsdom', 'puppeteer', '@vitest{/,}**'],
+      groupName: "test",
+      matchPackageNames: ["vitest", "jsdom", "puppeteer", "@vitest{/,}**"],
     },
     {
-      groupName: 'playground',
+      groupName: "playground",
       matchFileNames: [
-        'packages-private/sfc-playground/package.json',
-        'packages-private/template-explorer/package.json',
+        "packages-private/sfc-playground/package.json",
+        "packages-private/template-explorer/package.json",
       ],
     },
     {
-      groupName: 'compiler',
-      matchPackageNames: ['magic-string', '@babel{/,}**', 'postcss{/,}**'],
+      groupName: "compiler",
+      matchPackageNames: ["magic-string", "@babel{/,}**", "postcss{/,}**"],
     },
     {
-      groupName: 'build',
+      groupName: "build",
       matchPackageNames: [
-        'vite',
-        'rolldown{/,}**',
-        '@rolldown{/,}**',
-        'oxc{/,}**',
-        '@vitejs{/,}**',
+        "vite",
+        "rolldown-plugin-dts",
+        "@rolldown{/,}**",
+        "oxc-*",
+        "@vitejs{/,}**",
       ],
     },
     {
-      groupName: 'lint',
-      matchPackageNames: [
-        'simple-git-hooks',
-        'lint-staged',
-        'oxlint',
-        'oxfmt{/,}**',
-      ],
+      groupName: "lint",
+      matchPackageNames: ["simple-git-hooks", "lint-staged", "oxlint", "oxfmt"],
     },
   ],
   ignoreDeps: [
-    'vue',
+    "vue",
 
     // manually bumping
-    'node',
-    'typescript',
+    "node",
+    "typescript",
 
     // ESM only
-    'estree-walker',
+    "estree-walker",
 
     // pinned
     // https://github.com/vuejs/core/issues/10300#issuecomment-1940855364
-    'lru-cache',
+    "lru-cache",
 
     // pinned
     // only used in example for e2e tests
-    'marked',
+    "marked",
   ],
 }
