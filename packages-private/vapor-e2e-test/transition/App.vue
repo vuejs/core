@@ -289,6 +289,26 @@ const Comp2 = defineVaporComponent({
       </div>
       <button @click="toggle = !toggle">basic toggle</button>
     </div>
+    <div class="if-else-chain">
+      <div>
+        <transition>
+          <div v-if="count === 0" class="test">0</div>
+          <div v-else-if="count === 1" class="test">1</div>
+          <div v-else class="test">2</div>
+        </transition>
+      </div>
+      <button @click="count++">inc</button>
+    </div>
+    <div class="if-else-chain-out-in">
+      <div>
+        <transition mode="out-in">
+          <div v-if="count === 0" class="test">0</div>
+          <div v-else-if="count === 1" class="test">1</div>
+          <div v-else class="test">2</div>
+        </transition>
+      </div>
+      <button @click="count++">inc</button>
+    </div>
     <div class="if-named">
       <div>
         <transition name="test">

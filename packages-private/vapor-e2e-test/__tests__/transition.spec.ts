@@ -88,6 +88,84 @@ describe('vapor transition', () => {
     )
 
     test(
+      'if/else-if/else chain transition',
+      async () => {
+        const btnSelector = '.if-else-chain > button'
+        const containerSelector = '.if-else-chain > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe('<div class="test">0</div>')
+
+        expect(
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(`<div class="test v-leave-from v-leave-active">0</div>`)
+
+        await waitForInnerHTML(containerSelector, '<div class="test">1</div>')
+
+        expect(
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(`<div class="test v-leave-from v-leave-active">1</div>`)
+
+        await waitForInnerHTML(containerSelector, '<div class="test">2</div>')
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'if/else-if/else chain transition (out-in mode)',
+      async () => {
+        const btnSelector = '.if-else-chain-out-in > button'
+        const containerSelector = '.if-else-chain-out-in > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe('<div class="test">0</div>')
+
+        expect(
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(`<div class="test v-leave-from v-leave-active">0</div>`)
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test v-leave-active v-leave-to">0</div>',
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test v-enter-from v-enter-active">1</div>',
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test v-enter-active v-enter-to">1</div>',
+        )
+
+        await waitForInnerHTML(containerSelector, '<div class="test">1</div>')
+
+        expect(
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(`<div class="test v-leave-from v-leave-active">1</div>`)
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test v-leave-active v-leave-to">1</div>',
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test v-enter-from v-enter-active">2</div>',
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          '<div class="test v-enter-active v-enter-to">2</div>',
+        )
+
+        await waitForInnerHTML(containerSelector, '<div class="test">2</div>')
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
       'named transition',
       async () => {
         const btnSelector = '.if-named > button'
