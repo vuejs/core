@@ -3848,6 +3848,117 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
 }
 `;
 
+exports[`compiler: parse > Errors > X_COLON_BEFORE_DIRECTIVE > <div :v-foo="obj" /> 1`] = `
+{
+  "cached": 0,
+  "children": [
+    {
+      "children": [],
+      "codegenNode": undefined,
+      "isSelfClosing": true,
+      "loc": {
+        "end": {
+          "column": 21,
+          "line": 1,
+          "offset": 20,
+        },
+        "source": "<div :v-foo="obj" />",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [
+        {
+          "arg": {
+            "constType": 3,
+            "content": "v-foo",
+            "isStatic": true,
+            "loc": {
+              "end": {
+                "column": 12,
+                "line": 1,
+                "offset": 11,
+              },
+              "source": "v-foo",
+              "start": {
+                "column": 7,
+                "line": 1,
+                "offset": 6,
+              },
+            },
+            "type": 4,
+          },
+          "exp": {
+            "constType": 0,
+            "content": "obj",
+            "isStatic": false,
+            "loc": {
+              "end": {
+                "column": 17,
+                "line": 1,
+                "offset": 16,
+              },
+              "source": "obj",
+              "start": {
+                "column": 14,
+                "line": 1,
+                "offset": 13,
+              },
+            },
+            "type": 4,
+          },
+          "loc": {
+            "end": {
+              "column": 18,
+              "line": 1,
+              "offset": 17,
+            },
+            "source": ":v-foo="obj"",
+            "start": {
+              "column": 6,
+              "line": 1,
+              "offset": 5,
+            },
+          },
+          "modifiers": [],
+          "name": "bind",
+          "rawName": ":v-foo",
+          "type": 7,
+        },
+      ],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 21,
+      "line": 1,
+      "offset": 20,
+    },
+    "source": "<div :v-foo="obj" />",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<div :v-foo="obj" />",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]></svg> 1`] = `
 {
   "cached": [],
