@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
+    "dev-esbuild": "node scripts/dev-esbuild.js",
     "build": "node scripts/build.js",
     "build-rollup": "node scripts/build-with-rollup.js",
     "build-dts": "node scripts/build-types.js",
@@ -43,6 +44,7 @@
     "dev-sfc": "run-s dev-prepare-cjs dev-sfc-run",
     "dev-sfc-serve": "vite packages-private/sfc-playground",
     "dev-sfc-run": "run-p \"dev compiler-sfc -f esm-browser\" \"dev vue -if esm-browser-vapor\" \"dev vue -ipf esm-browser-vapor\" \"dev server-renderer -if esm-bundler\" dev-sfc-serve",
+    "dev-sfc-run-esbuild": "run-p \"dev-esbuild compiler-sfc -f esm-browser\" \"dev-esbuild vue -if esm-browser-vapor\" \"dev-esbuild vue -ipf esm-browser-vapor\" \"dev-esbuild server-renderer -if esm-bundler\" dev-sfc-serve",
     "dev-vapor": "pnpm -C packages-private/local-playground run dev",
     "serve": "serve",
     "open": "open http://localhost:3000/packages-private/template-explorer/local.html",
@@ -71,7 +73,7 @@
   "devDependencies": {
     "@babel/parser": "catalog:",
     "@babel/types": "catalog:",
-    "@rolldown/plugin-node-polyfills": "^1.0.0",
+    "@rolldown/plugin-node-polyfills": "^1.0.3",
     "@rollup/plugin-alias": "^6.0.0",
     "@rollup/plugin-commonjs": "^29.0.0",
     "@rollup/plugin-json": "^6.1.0",
