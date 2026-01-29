@@ -472,6 +472,29 @@ describe('component', () => {
     __DEV__ = true
   })
 
+  test('setup and render co-usage in production mode', () => {
+    __DEV__ = false
+    const { component: Child } = define({
+      setup: () => ({ foo: 'foo' }),
+      render() {
+        return template('<div> HI </div>', true)()
+      },
+    })
+
+    let exposed: Record<string, any> | null = {}
+    const { host } = define({
+      setup() {
+        let child = createComponent(Child, null, null, true)
+        exposed = child.exposed
+        return child
+      },
+    }).render()
+
+    expect(exposed.foo).toBe('foo')
+    expect(host.innerHTML).toBe('<div> HI </div>')
+    __DEV__ = true
+  })
+
   it('warn if functional vapor component not return a block', () => {
     // @ts-expect-error
     define(() => {
