@@ -1,7 +1,13 @@
 import type { SuspenseBoundary } from './components/Suspense'
-import type { VNode, VNodeNormalizedRef, VNodeNormalizedRefAtom } from './vnode'
+import type {
+  VNode,
+  VNodeNormalizedRef,
+  VNodeNormalizedRefAtom,
+  VNodeRef,
+} from './vnode'
 import {
   EMPTY_OBJ,
+  NO,
   ShapeFlags,
   hasOwn,
   isArray,
@@ -13,7 +19,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { warn } from './warning'
 import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
-import type { SchedulerJob } from './scheduler'
+import { type SchedulerJob, SchedulerJobFlags } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
 import { type ComponentOptions, getComponentPublicInstance } from './component'
 import {
@@ -21,6 +27,7 @@ import {
   knownTemplateRefs,
 } from './helpers/useTemplateRef'
 
+const pendingSetRefMap = new WeakMap<VNodeNormalizedRef, SchedulerJob>()
 /**
  * Function for handling a template ref
  */
@@ -80,7 +87,7 @@ export function setRef(
   const rawSetupState = toRaw(setupState)
   const canSetSetupRef =
     setupState === EMPTY_OBJ
-      ? () => false
+      ? NO
       : (key: string) => {
           if (__DEV__) {
             if (hasOwn(rawSetupState, key) && !isRef(rawSetupState[key])) {
@@ -103,15 +110,26 @@ export function setRef(
           return hasOwn(rawSetupState, key)
         }
 
+  const canSetRef = (ref: VNodeRef) => {
+    return !__DEV__ || !knownTemplateRefs.has(ref as any)
+  }
+
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
+    invalidatePendingSetRef(oldRawRef!)
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (canSetSetupRef(oldRef)) {
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
-      oldRef.value = null
+      if (canSetRef(oldRef)) {
+        oldRef.value = null
+      }
+
+      // this type assertion is valid since `oldRef` has already been asserted to be non-null
+      const oldRawRefAtom = oldRawRef as VNodeNormalizedRefAtom
+      if (oldRawRefAtom.k) refs[oldRawRefAtom.k] = null
     }
   }
 
@@ -128,7 +146,9 @@ export function setRef(
             ? canSetSetupRef(ref)
               ? setupState[ref]
               : refs[ref]
-            : ref.value
+            : canSetRef(ref) || !rawRef.k
+              ? ref.value
+              : refs[rawRef.k]
           if (isUnmount) {
             isArray(existing) && remove(existing, refValue)
           } else {
@@ -139,8 +159,11 @@ export function setRef(
                   setupState[ref] = refs[ref]
                 }
               } else {
-                ref.value = [refValue]
-                if (rawRef.k) refs[rawRef.k] = ref.value
+                const newVal = [refValue]
+                if (canSetRef(ref)) {
+                  ref.value = newVal
+                }
+                if (rawRef.k) refs[rawRef.k] = newVal
               }
             } else if (!existing.includes(refValue)) {
               existing.push(refValue)
@@ -152,7 +175,9 @@ export function setRef(
             setupState[ref] = value
           }
         } else if (_isRef) {
-          ref.value = value
+          if (canSetRef(ref)) {
+            ref.value = value
+          }
           if (rawRef.k) refs[rawRef.k] = value
         } else if (__DEV__) {
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
@@ -162,13 +187,27 @@ export function setRef(
         // #1789: for non-null values, set them after render
         // null values means this is unmount and it should not overwrite another
         // ref with the same key
-        ;(doSet as SchedulerJob).id = -1
-        queuePostRenderEffect(doSet, parentSuspense)
+        const job: SchedulerJob = () => {
+          doSet()
+          pendingSetRefMap.delete(rawRef)
+        }
+        job.id = -1
+        pendingSetRefMap.set(rawRef, job)
+        queuePostRenderEffect(job, parentSuspense)
       } else {
+        invalidatePendingSetRef(rawRef)
         doSet()
       }
     } else if (__DEV__) {
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
     }
+  }
+}
+
+function invalidatePendingSetRef(rawRef: VNodeNormalizedRef) {
+  const pendingSetRef = pendingSetRefMap.get(rawRef)
+  if (pendingSetRef) {
+    pendingSetRef.flags! |= SchedulerJobFlags.DISPOSED
+    pendingSetRefMap.delete(rawRef)
   }
 }
