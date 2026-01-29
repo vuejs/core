@@ -276,6 +276,31 @@ describe('useTemplateRef', () => {
     expect(foo!.value).toBe(root.children[0])
   })
 
+  test(`don't update setup ref for useTemplateRef key (compiled in prod mode)`, () => {
+    __DEV__ = false
+    try {
+      let foo: ReturnType<typeof ref>
+      let fooRef: ShallowRef
+      const Comp = {
+        setup() {
+          foo = ref('hello')
+          fooRef = useTemplateRef('foo')
+          return { foo }
+        },
+        render() {
+          return h('input', { ref: foo, ref_key: 'foo' })
+        },
+      }
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+
+      expect(foo!.value).toBe('hello')
+      expect(fooRef!.value).toBe(root.children[0])
+    } finally {
+      __DEV__ = true
+    }
+  })
+
   test('should work when used as direct ref value with ref_key and ref_for (compiled in prod mode)', () => {
     __DEV__ = false
     try {
