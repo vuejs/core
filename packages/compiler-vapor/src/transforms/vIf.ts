@@ -18,7 +18,7 @@ import {
 import { extend } from '@vue/shared'
 import { newBlock, wrapTemplate } from './utils'
 import { getSiblingIf } from './transformComment'
-import { isStaticExpression } from '../utils'
+import { isInTransition, isStaticExpression } from '../utils'
 
 export const transformVIf: NodeTransform = createStructuralDirectiveTransform(
   ['if', 'else', 'else-if'],
@@ -51,6 +51,7 @@ export function processIf(
         id,
         condition: dir.exp!,
         positive: branch,
+        index: isInTransition(context) ? context.root.nextIfIndex() : undefined,
         once:
           context.inVOnce ||
           isStaticExpression(dir.exp!, context.options.bindingMetadata),
@@ -118,6 +119,7 @@ export function processIf(
         id: -1,
         condition: dir.exp!,
         positive: branch,
+        index: isInTransition(context) ? context.root.nextIfIndex() : undefined,
         once:
           context.inVOnce ||
           isStaticExpression(dir.exp!, context.options.bindingMetadata),

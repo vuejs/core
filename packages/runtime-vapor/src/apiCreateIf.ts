@@ -15,6 +15,7 @@ export function createIf(
   b1: BlockFn,
   b2?: BlockFn,
   once?: boolean,
+  index?: number,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -29,9 +30,19 @@ export function createIf(
         ? b2()
         : [__DEV__ ? createComment('if') : createTextNode()]
   } else {
+    // DynamicFragment should be keyed for correct transition behavior
+    const keyed = index != null
     frag =
-      isHydrating || __DEV__ ? new DynamicFragment('if') : new DynamicFragment()
-    renderEffect(() => (frag as DynamicFragment).update(condition() ? b1 : b2))
+      isHydrating || __DEV__
+        ? new DynamicFragment('if', keyed)
+        : new DynamicFragment(undefined, keyed)
+    renderEffect(() => {
+      const ok = condition()
+      ;(frag as DynamicFragment).update(
+        ok ? b1 : b2,
+        keyed ? `${index}${ok ? 0 : 1}` : undefined,
+      )
+    })
   }
 
   if (!isHydrating) {

@@ -111,6 +111,7 @@ export class TransformContext<T extends AllNode = AllNode> {
 
   private globalId = 0
   private nextIdMap: Map<number, number> | null = null
+  private ifIndex = 0
 
   constructor(
     public ir: RootIRNode,
@@ -173,6 +174,10 @@ export class TransformContext<T extends AllNode = AllNode> {
     if (this.dynamic.id !== undefined) return this.dynamic.id
     this.dynamic.flags |= DynamicFlag.REFERENCED
     return (this.dynamic.id = this.increaseId())
+  }
+
+  nextIfIndex(): number {
+    return this.ifIndex++
   }
 
   pushTemplate(content: string): number {

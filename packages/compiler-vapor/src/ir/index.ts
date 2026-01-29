@@ -76,6 +76,7 @@ export interface IfIRNode extends BaseIRNode {
   positive: BlockIRNode
   negative?: BlockIRNode | IfIRNode
   once?: boolean
+  index?: number
   parent?: number
   anchor?: number
   logicalIndex?: number
