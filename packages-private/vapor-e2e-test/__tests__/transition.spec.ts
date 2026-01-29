@@ -957,70 +957,30 @@ describe('vapor transition', () => {
     )
 
     // #12860
-    // TODO: getCurrentInstance is no longer works inside Vapor components;
-    // need use an alternative method for testing here.
-    // Verified locally in the playground — no memory leak was observed.
-    test.todo(
+    test(
       'unmount children',
       async () => {
-        //     const unmountSpy = vi.fn()
-        //     let storageContainer: ElementHandle<HTMLDivElement>
-        //     const setStorageContainer = (container: any) =>
-        //       (storageContainer = container)
-        //     await page().exposeFunction('unmountSpy', unmountSpy)
-        //     await page().exposeFunction('setStorageContainer', setStorageContainer)
-        //     await page().evaluate(() => {
-        //       const { unmountSpy, setStorageContainer } = window as any
-        //       const { createApp, ref, h, onUnmounted, getCurrentInstance } = (
-        //         window as any
-        //       ).Vue
-        //       createApp({
-        //         template: `
-        //         <div id="container">
-        //           <transition>
-        //             <KeepAlive :include="includeRef">
-        //               <TrueBranch v-if="toggle"></TrueBranch>
-        //             </KeepAlive>
-        //           </transition>
-        //         </div>
-        //         <button id="toggleBtn" @click="click">button</button>
-        //       `,
-        //         components: {
-        //           TrueBranch: {
-        //             name: 'TrueBranch',
-        //             setup() {
-        //               const instance = getCurrentInstance()
-        //               onUnmounted(() => {
-        //                 unmountSpy()
-        //                 setStorageContainer(instance.__keepAliveStorageContainer)
-        //               })
-        //               const count = ref(0)
-        //               return () => h('div', count.value)
-        //             },
-        //           },
-        //         },
-        //         setup: () => {
-        //           const includeRef = ref(['TrueBranch'])
-        //           const toggle = ref(true)
-        //           const click = () => {
-        //             toggle.value = !toggle.value
-        //             if (toggle.value) {
-        //               includeRef.value = ['TrueBranch']
-        //             } else {
-        //               includeRef.value = []
-        //             }
-        //           }
-        //           return { toggle, click, unmountSpy, includeRef }
-        //         },
-        //       }).mount('#app')
-        //     })
-        //     await transitionFinish()
-        //     expect(await html('#container')).toBe('<div>0</div>')
-        //     await click('#toggleBtn')
-        //     await transitionFinish()
-        //     expect(await html('#container')).toBe('<!--v-if-->')
-        //     expect(unmountSpy).toBeCalledTimes(1)
-        //     expect(await storageContainer!.evaluate(x => x.innerHTML)).toBe(``)
+        const containerSelector = '.keep-alive-unmount-children > #container'
+        const btnSelector = '.keep-alive-unmount-children > #toggleBtn'
+
+        await waitForInnerHTML(containerSelector, '<div>0</div>')
+        expect(await html(containerSelector)).toBe('<div>0</div>')
+
+        await click(btnSelector)
+        await waitForInnerHTML(containerSelector, '')
+
+        const calls = await page().evaluate(() => {
+          return (window as any).getCalls('unmount')
+        })
+        expect(calls).toStrictEqual(['UnmountBranch'])
+
+        const storageInner = await page().evaluate(() => {
+          const container = (
+            window as any
+          ).getKeepAliveUnmountStorageContainer?.()
+          return container ? container.innerHTML : null
+        })
+        expect(storageInner).toBe('')
       },
       E2E_TIMEOUT,
     )
