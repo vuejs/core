@@ -20,6 +20,7 @@ import {
   def,
   getEscapedCssVarName,
   includeBooleanAttr,
+  isAssetUrlAttr,
   isBooleanAttr,
   isKnownHtmlAttr,
   isKnownSvgAttr,
@@ -879,7 +880,7 @@ function propHasMismatch(
         __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ &&
         isString(actual) &&
         isString(expected) &&
-        isAssetUrlLikeAttr(key) &&
+        isAssetUrlAttr(key) &&
         isSameAssetUrl(actual, expected, key)
       )
     ) {
@@ -949,17 +950,6 @@ function isMapEqual(a: Map<string, string>, b: Map<string, string>): boolean {
     }
   }
   return true
-}
-
-function isAssetUrlLikeAttr(key: string): boolean {
-  return (
-    key === 'src' ||
-    key === 'href' ||
-    key === 'xlink:href' ||
-    key === 'poster' ||
-    key === 'data' ||
-    key === 'srcset'
-  )
 }
 
 function isSameAssetUrl(
