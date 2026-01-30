@@ -1,3 +1,15 @@
+# [3.6.0-beta.5](https://github.com/vuejs/core/compare/v3.6.0-beta.4...v3.6.0-beta.5) (2026-01-30)
+
+
+### Bug Fixes
+
+* **runtime-vapor:** preserve slot owner to ensure correct scopeId inheritance for nested components within v-for loops with slots. ([#14353](https://github.com/vuejs/core/issues/14353)) ([cb2a17c](https://github.com/vuejs/core/commit/cb2a17c81dd761ad451ef56dc66a398e448f7acc))
+* **transition:** add key for transition if-branches ([#14374](https://github.com/vuejs/core/issues/14374)) ([e08308e](https://github.com/vuejs/core/commit/e08308e04354b663313bbefa5d7238422961c640)), closes [#14368](https://github.com/vuejs/core/issues/14368)
+* **vapor:** properly move vapor component / slot ([#14363](https://github.com/vuejs/core/issues/14363)) ([b0c04eb](https://github.com/vuejs/core/commit/b0c04eb6c2d18a36ca46bfef7a33bfb1798760e8))
+* **vapor:** support directives on vapor components in vdom parent ([#14355](https://github.com/vuejs/core/issues/14355)) ([9add6d7](https://github.com/vuejs/core/commit/9add6d7b4f4720e9d9092724d071971708cef47d))
+
+
+
 # [3.6.0-beta.4](https://github.com/vuejs/core/compare/v3.5.27...v3.6.0-beta.4) (2026-01-23)
 
 
