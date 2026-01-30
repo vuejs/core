@@ -48,7 +48,7 @@
   "dependencies": {
     "@babel/parser": "catalog:",
     "@vue/shared": "workspace:*",
-    "entities": "^7.0.0",
+    "entities": "^7.0.1",
     "estree-walker": "catalog:",
     "source-map-js": "catalog:"
   },
