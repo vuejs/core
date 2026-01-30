@@ -2236,6 +2236,55 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
     })
 
+    test('asset url attrs allow client contains server', () => {
+      try {
+        __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ = true
+
+        mountWithHydration(`<img src="/a.png">`, () =>
+          h('img', { src: 'http://localhost:3000/a.png' }),
+        )
+        mountWithHydration(`<a href="/a.png"></a>`, () =>
+          h('a', { href: 'http://localhost:3000/a.png' }),
+        )
+        mountWithHydration(`<video poster="/a.png"></video>`, () =>
+          h('video', { poster: 'http://localhost:3000/a.png' }),
+        )
+        mountWithHydration(`<object data="/a.png"></object>`, () =>
+          h('object', { data: 'http://localhost:3000/a.png' }),
+        )
+        mountWithHydration(
+          `<svg><use xlink:href="/sprite.svg#icon"></use></svg>`,
+          () =>
+            h('svg', [
+              h('use', {
+                'xlink:href': 'http://localhost:3000/sprite.svg#icon',
+              }),
+            ]),
+        )
+        mountWithHydration(`<img srcset="/a.png 1x, /b.png 2x">`, () =>
+          h('img', {
+            srcset:
+              'http://localhost:3000/a.png 1x, http://localhost:3000/b.png 2x',
+          }),
+        )
+        expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+      } finally {
+        __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ = false
+      }
+    })
+
+    test('asset url attrs still warn when client does not contain server', () => {
+      try {
+        __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ = true
+        mountWithHydration(`<img src="/a.png">`, () =>
+          h('img', { src: 'http://localhost:3000/b.png' }),
+        )
+        expect(`Hydration attribute mismatch`).toHaveBeenWarned()
+      } finally {
+        __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ = false
+      }
+    })
+
     test('attr special case: textarea value', () => {
       mountWithHydration(`<textarea>foo</textarea>`, () =>
         h('textarea', { value: 'foo' }),
