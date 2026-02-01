@@ -717,7 +717,8 @@ describe('compiler v-bind', () => {
       <svg :class="cls"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClass(n0, _ctx.cls))')
+    // should pass isSVG: true to the helper
+    expect(code).contains('_setClass(n0, _ctx.cls, true))')
   })
 
   test(':style w/ svg elements', () => {

@@ -602,7 +602,7 @@ const t0 = _template("<svg>", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClass(n0, _ctx.cls))
+  _renderEffect(() => _setClass(n0, _ctx.cls, true))
   return n0
 }"
 `;
