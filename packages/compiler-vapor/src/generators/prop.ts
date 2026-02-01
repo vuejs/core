@@ -177,11 +177,6 @@ function getRuntimeHelper(
   const tagName = tag.toUpperCase()
   const isSVG = isSVGTag(tag)
 
-  // 1. SVG: always attribute
-  if (isSVG) {
-    return extend({ isSVG: true }, helpers.setAttr)
-  }
-
   if (modifier) {
     if (modifier === '.') {
       return getSpecialHelper(key, tagName) || helpers.setDOMProp
@@ -190,10 +185,15 @@ function getRuntimeHelper(
     }
   }
 
-  // 2. special handling for value / style / class / textContent /  innerHTML
+  // 1. special handling for value / style / class / textContent /  innerHTML
   const helper = getSpecialHelper(key, tagName)
   if (helper) {
     return helper
+  }
+
+  // 2. SVG: always attribute
+  if (isSVG) {
+    return extend({ isSVG: true }, helpers.setAttr)
   }
 
   // 3. Aria DOM properties shared between all Elements in
