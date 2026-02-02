@@ -184,6 +184,8 @@ export function defineVaporComponent<
     TypeBlock,
     InferredProps
   > & {
+    // allow any custom options
+    [key: string]: any
     /**
      * @private for language-tools use only
      */
