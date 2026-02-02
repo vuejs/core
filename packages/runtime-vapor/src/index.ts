@@ -85,3 +85,4 @@ export type {
 } from './component'
 export type { VaporSlot } from './componentSlots'
 export type { VaporTransitionHooks, Block } from './block'
+export type { DynamicFragment } from './fragment'
