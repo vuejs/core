@@ -374,4 +374,20 @@ describe('compile', () => {
       expect(code).contains('const p3 = ')
     })
   })
+
+  describe('when an element cannot be used as a direct child element', () => {
+    test('table', () => {
+      const code = compile(`<table><tr><td>{{ msg }}</td></tr></table>`, {
+        bindingMetadata: {
+          _txt: BindingTypes.LITERAL_CONST,
+          _txt1: BindingTypes.SETUP_REF,
+        },
+      })
+      expect(code).matchSnapshot()
+      expect(code).contains('const t0 = _template("<tr><td> ")')
+      expect(code).contains('const t1 = _template("<table>", true)')
+      expect(code).contains('const n2 = t1()')
+      expect(code).contains('const n1 = t0()')
+    })
+  })
 })

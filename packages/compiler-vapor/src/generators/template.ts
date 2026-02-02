@@ -80,7 +80,10 @@ export function genChildren(
           : child.id
         : undefined
 
-    if (id === undefined && !child.hasDynamicChild) {
+    if (
+      (id === undefined && !child.hasDynamicChild) ||
+      child.template !== undefined
+    ) {
       push(...genSelf(child, context))
       continue
     }

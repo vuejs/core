@@ -443,3 +443,19 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`compile > when an element cannot be used as a direct child element > table 1`] = `
+"import { child as _child, txt as _txt2, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<tr><td> ")
+const t1 = _template("<table>", true)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n2 = t1()
+  const n1 = t0()
+  const n0 = _child(n1)
+  const x0 = _txt2(n0)
+  _insert(n1, n2)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
+  return n2
+}"
+`;
