@@ -56,7 +56,6 @@ function performHydration<T>(
     locateHydrationNode = locateHydrationNodeImpl
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
-    ;(Node.prototype as any).$pns = undefined
     ;(Node.prototype as any).$idx = undefined
     ;(Node.prototype as any).$llc = undefined
 
@@ -107,15 +106,9 @@ function locateNextSiblingOfParent(n: Node): Node | null {
   return n.parentNode.nextSibling || locateNextSiblingOfParent(n.parentNode)
 }
 
-export function advanceHydrationNode(
-  node: Node & { $pns?: Node | null },
-): void {
+export function advanceHydrationNode(node: Node): void {
   // if no next sibling, find the next node in the parent chain
-  const ret =
-    node.nextSibling ||
-    // pns is short for "parent next sibling"
-    node.$pns ||
-    (node.$pns = locateNextSiblingOfParent(node))
+  const ret = node.nextSibling || locateNextSiblingOfParent(node)
   if (ret) setCurrentHydrationNode(ret)
 }
 
