@@ -1059,6 +1059,12 @@ describe('expose typing', () => {
   expectType<string>(bar.exposeProxy!.b)
 })
 
+describe('Custom options', () => {
+  defineVaporComponent({
+    customOption: 'foo',
+  })
+})
+
 describe('VaporKeepAlive props', () => {
   ;<VaporKeepAlive include={['foo']} exclude={['bar']} max={10} />
 })
@@ -1082,6 +1088,7 @@ describe('TransitionGroup props', () => {
 declare const MyButton: DefineVaporComponent<
   {},
   string,
+  Readonly<ExtractPropTypes<{}>>,
   EmitsOptions,
   string,
   {},
@@ -1089,7 +1096,6 @@ declare const MyButton: DefineVaporComponent<
   Block,
   {},
   true,
-  Readonly<ExtractPropTypes<{}>>,
   VaporPublicProps & AllowedComponentProps & ComponentCustomProps,
   {},
   {}
