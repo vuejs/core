@@ -14,7 +14,7 @@ import {
 } from 'vue'
 import type { LooseRawProps, VaporComponent } from '../../src/component'
 import { makeRender } from '../_utils'
-import { VaporKeepAliveImpl as VaporKeepAlive } from '../../src/components/KeepAlive'
+import { VaporKeepAlive } from '../../src/components/KeepAlive'
 import {
   child,
   createComponent,

@@ -11,6 +11,7 @@ import {
   type VaporComponentInstance,
   VaporKeepAlive,
   type VaporPublicProps,
+  VaporTeleport,
   VaporTransition,
   VaporTransitionGroup,
   createApp,
@@ -1063,6 +1064,10 @@ describe('Custom options', () => {
   defineVaporComponent({
     customOption: 'foo',
   })
+})
+
+describe('VaporTeleport props', () => {
+  ;<VaporTeleport to="body" disabled defer />
 })
 
 describe('VaporKeepAlive props', () => {
