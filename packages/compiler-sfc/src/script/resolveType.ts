@@ -986,13 +986,23 @@ function importSourceToScope(
 }
 
 function resolveExt(filename: string, fs: FS) {
+  let moduleType: /*cjs*/ 'c' | /*mjs*/ 'm' | /*unknown*/ 'u' = 'u'
+  if (filename.endsWith('.mjs')) {
+    moduleType = 'm'
+  } else if (filename.endsWith('.cjs')) {
+    moduleType = 'c'
+  }
   // #8339 ts may import .js but we should resolve to corresponding ts or d.ts
-  filename = filename.replace(/\.js$/, '')
+  filename = filename.replace(/\.[cm]?jsx?$/, '')
   const tryResolve = (filename: string) => {
     if (fs.fileExists(filename)) return filename
   }
   return (
     tryResolve(filename) ||
+    (moduleType === 'm' &&
+      (tryResolve(filename + `.mts`) || tryResolve(filename + `.d.mts`))) ||
+    (moduleType === 'c' &&
+      (tryResolve(filename + `.cts`) || tryResolve(filename + `.d.cts`))) ||
     tryResolve(filename + `.ts`) ||
     tryResolve(filename + `.tsx`) ||
     tryResolve(filename + `.d.ts`) ||
