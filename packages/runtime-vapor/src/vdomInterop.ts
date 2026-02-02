@@ -255,9 +255,9 @@ const vaporInteropImpl: Omit<
       let slotBlock = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
       if (fallback) {
         const vaporFallback = createVaporFallback(fallback, parentComponent)
-        attachSlotFallback(slotBlock, vaporFallback)
+        const emptyFrag = attachSlotFallback(slotBlock, vaporFallback)
         if (!isValidBlock(slotBlock)) {
-          slotBlock = renderSlotFallback(slotBlock, vaporFallback)
+          slotBlock = renderSlotFallback(slotBlock, vaporFallback, emptyFrag)
         }
       }
       if (isFragment(slotBlock)) {
@@ -675,6 +675,7 @@ function renderVDOMSlot(
       const effectiveFallback = frag.fallback || fallback
       let slotContent: VNode | Block | undefined
       let isEmpty = true
+      let emptyFrag: VaporFragment | null = null
 
       if (slotsRef.value) {
         slotContent = renderSlot(
@@ -694,7 +695,7 @@ function renderVDOMSlot(
           isEmpty = children.length === 0
         } else {
           if (effectiveFallback && slotContent) {
-            attachSlotFallback(slotContent, () =>
+            emptyFrag = attachSlotFallback(slotContent, () =>
               effectiveFallback(internals, parentComponent),
             )
           }
@@ -707,8 +708,10 @@ function renderVDOMSlot(
         if (isVNode(slotContent)) {
           resolved = effectiveFallback(internals, parentComponent)
         } else if (slotContent) {
-          resolved = renderSlotFallback(slotContent, () =>
-            effectiveFallback(internals, parentComponent),
+          resolved = renderSlotFallback(
+            slotContent,
+            () => effectiveFallback(internals, parentComponent),
+            emptyFrag,
           )
         } else {
           resolved = effectiveFallback(internals, parentComponent)
