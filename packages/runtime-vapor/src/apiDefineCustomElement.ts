@@ -4,7 +4,6 @@ import {
   createVaporApp,
   createVaporSSRApp,
   defineVaporComponent,
-  isFragment,
 } from '.'
 import {
   type ComponentObjectPropsOptions,
@@ -30,6 +29,7 @@ import type {
   VaporRenderResult,
 } from './apiDefineComponent'
 import type { StaticSlots } from './componentSlots'
+import { isFragment } from './fragment'
 
 export type VaporElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VaporElement & P
