@@ -597,12 +597,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > :class w/ svg elements 1`] = `
-"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<svg>", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setAttr(n0, "class", _ctx.cls, true))
+  _renderEffect(() => _setClass(n0, _ctx.cls, true))
   return n0
 }"
 `;
@@ -614,6 +614,17 @@ const t0 = _template("<div>", true)
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => _setHtml(n0, _ctx.foo))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > :style w/ svg elements 1`] = `
+"import { setStyle as _setStyle, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<svg>", true, 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setStyle(n0, _ctx.style))
   return n0
 }"
 `;
