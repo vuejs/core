@@ -999,13 +999,13 @@ function resolveExt(filename: string, fs: FS) {
   }
   return (
     tryResolve(filename) ||
-    (moduleType === 'm' &&
-      (tryResolve(filename + `.mts`) || tryResolve(filename + `.d.mts`))) ||
-    (moduleType === 'c' &&
-      (tryResolve(filename + `.cts`) || tryResolve(filename + `.d.cts`))) ||
     tryResolve(filename + `.ts`) ||
     tryResolve(filename + `.tsx`) ||
     tryResolve(filename + `.d.ts`) ||
+    (moduleType !== 'c' &&
+      (tryResolve(filename + `.mts`) || tryResolve(filename + `.d.mts`))) ||
+    (moduleType !== 'm' &&
+      (tryResolve(filename + `.cts`) || tryResolve(filename + `.d.cts`))) ||
     tryResolve(joinPaths(filename, `index.ts`)) ||
     tryResolve(joinPaths(filename, `index.tsx`)) ||
     tryResolve(joinPaths(filename, `index.d.ts`))
