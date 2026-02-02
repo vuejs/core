@@ -72,7 +72,7 @@ export {
   applyDynamicModel,
 } from './directives/vModel'
 export { withVaporDirectives } from './directives/custom'
-export { isFragment, VaporFragment } from './fragment'
+export { isFragment, VaporFragment, DynamicFragment } from './fragment'
 export { VaporTransition } from './components/Transition'
 export { VaporTransitionGroup } from './components/TransitionGroup'
 
@@ -85,4 +85,3 @@ export type {
 } from './component'
 export type { VaporSlot } from './componentSlots'
 export type { VaporTransitionHooks, Block } from './block'
-export type { DynamicFragment } from './fragment'
