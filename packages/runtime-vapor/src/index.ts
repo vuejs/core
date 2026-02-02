@@ -19,15 +19,13 @@ export {
 } from './apiDefineCustomElement'
 
 // compiler-use only
-export { insert, prepend, remove, type Block } from './block'
+export { insert, prepend, remove } from './block'
 export { setInsertionState } from './insertionState'
 export {
   createComponent,
   createComponentWithFallback,
   createPlainElement,
   isVaporComponent,
-  type FunctionalVaporComponent,
-  type VaporComponentInstance,
 } from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot, withVaporCtx } from './componentSlots'
@@ -74,11 +72,16 @@ export {
   applyDynamicModel,
 } from './directives/vModel'
 export { withVaporDirectives } from './directives/custom'
-export { isFragment, VaporFragment } from './fragment'
+export { isFragment, VaporFragment, DynamicFragment } from './fragment'
 export { VaporTransition } from './components/Transition'
 export { VaporTransitionGroup } from './components/TransitionGroup'
 
 // types
-export type { VaporComponent } from './component'
+export type {
+  VaporComponent,
+  ObjectVaporComponent,
+  FunctionalVaporComponent,
+  VaporComponentInstance,
+} from './component'
 export type { VaporSlot } from './componentSlots'
-export type { VaporTransitionHooks } from './block'
+export type { VaporTransitionHooks, Block } from './block'

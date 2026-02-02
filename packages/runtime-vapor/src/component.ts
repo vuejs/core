@@ -631,6 +631,10 @@ export class VaporComponentInstance<
    */
   accessedAttrs: boolean = false
 
+  // type only
+  /** @deprecated only used for JSX to detect props types. */
+  $props!: Props
+
   constructor(
     comp: VaporComponent,
     rawProps?: RawProps | null,

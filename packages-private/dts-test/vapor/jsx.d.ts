@@ -4,10 +4,10 @@ declare global {
   namespace JSX {
     export type Element = VaporRenderResult
     export interface ElementClass {
-      props: {}
+      $props: {}
     }
     export interface ElementAttributesProperty {
-      props: {}
+      $props: {}
     }
     export interface IntrinsicElements extends NativeElements {
       [name: string]: any
