@@ -355,6 +355,8 @@ export function renderSlotFallback(
   fallback: BlockFn,
   emptyFragment?: VaporFragment | null,
 ): Block {
+  // emptyFragment comes from attachSlotFallback, but v-if/v-for updates can
+  // change which fragment is empty after update(); fall back to a fresh search.
   const frag = emptyFragment || findDeepestEmptyFragment(block)
   if (frag) {
     if (frag instanceof ForFragment) {
