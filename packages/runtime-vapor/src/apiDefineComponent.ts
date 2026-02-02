@@ -109,7 +109,7 @@ export function defineVaporComponent<
       emit: EmitFn<Emits>
       slots: Slots
       attrs: Record<string, any>
-      expose: (exposed?: Exposed) => void
+      expose: (exposed: Exposed) => void
     },
   ) => VaporRenderResult<TypeBlock> | void,
   extraOptions?: ObjectVaporComponent<
@@ -135,7 +135,7 @@ export function defineVaporComponent<
       emit: EmitFn<Emits>
       slots: Slots
       attrs: Record<string, any>
-      expose: (exposed?: Exposed) => void
+      expose: (exposed: Exposed) => void
     },
   ) => VaporRenderResult<TypeBlock> | void,
   extraOptions?: ObjectVaporComponent<
@@ -184,8 +184,6 @@ export function defineVaporComponent<
     TypeBlock,
     InferredProps
   > & {
-    // allow any custom options
-    [key: string]: any
     /**
      * @private for language-tools use only
      */

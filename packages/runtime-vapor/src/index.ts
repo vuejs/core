@@ -79,7 +79,6 @@ export { VaporTransitionGroup } from './components/TransitionGroup'
 // types
 export type {
   VaporComponent,
-  ObjectVaporComponent,
   FunctionalVaporComponent,
   VaporComponentInstance,
 } from './component'
