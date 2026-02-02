@@ -327,15 +327,6 @@ export class SlotFragment extends DynamicFragment {
       return
     }
 
-    if (this.current === render) {
-      // same slot render fn: avoid remounting, only refresh fallback
-      attachSlotFallback(this.nodes, fallback)
-      if (!isValidBlock(this.nodes)) {
-        renderSlotFallback(this.nodes, fallback)
-      }
-      return
-    }
-
     const wrapped = () => {
       const block = render()
       attachSlotFallback(block, fallback)

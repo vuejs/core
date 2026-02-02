@@ -698,7 +698,7 @@ function renderVDOMSlot(
               effectiveFallback(internals, parentComponent),
             )
           }
-          isEmpty = !isValidBlock(slotContent as Block)
+          isEmpty = !isValidBlock(slotContent)
         }
       }
 
@@ -738,9 +738,8 @@ function renderVDOMSlot(
           remove(currentBlock, parentNode)
           currentBlock = null
         }
-        const prevVNode = currentVNode
         internals.p(
-          prevVNode,
+          currentVNode,
           resolved,
           parentNode!,
           anchor,
@@ -759,13 +758,11 @@ function renderVDOMSlot(
           internals.um(currentVNode, parentComponent as any, null, true)
           currentVNode = null
         }
-        if (currentBlock !== resolved) {
-          if (currentBlock) {
-            remove(currentBlock, parentNode)
-          }
-          insert(resolved, parentNode!, anchor)
-          currentBlock = resolved
+        if (currentBlock) {
+          remove(currentBlock, parentNode)
         }
+        insert(resolved, parentNode!, anchor)
+        currentBlock = resolved
         frag.nodes = resolved as any
         return
       }
