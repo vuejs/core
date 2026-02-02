@@ -1,4 +1,4 @@
-import type { ObjectVaporComponent, VaporComponentInstance } from './component'
+import type { VaporComponentInstance, VaporComponentOptions } from './component'
 import {
   type IsKeyValues,
   type Prettify,
@@ -38,6 +38,11 @@ type VaporComponentInstanceConstructor<T extends VaporComponentInstance> = {
 export type DefineVaporComponent<
   RuntimePropsOptions = {},
   RuntimePropsKeys extends string = string,
+  InferredProps = string extends RuntimePropsKeys
+    ? ComponentObjectPropsOptions extends RuntimePropsOptions
+      ? {}
+      : ExtractPropTypes<RuntimePropsOptions>
+    : { [key in RuntimePropsKeys]?: any },
   Emits extends EmitsOptions = {},
   RuntimeEmitsKeys extends string = string,
   Slots extends StaticSlots = StaticSlots,
@@ -45,11 +50,6 @@ export type DefineVaporComponent<
   TypeBlock extends Block = Block,
   TypeRefs extends Record<string, unknown> = {},
   MakeDefaultsOptional extends boolean = true,
-  InferredProps = string extends RuntimePropsKeys
-    ? ComponentObjectPropsOptions extends RuntimePropsOptions
-      ? {}
-      : ExtractPropTypes<RuntimePropsOptions>
-    : { [key in RuntimePropsKeys]?: any },
   PublicProps = VaporPublicProps,
   ResolvedProps = InferredProps & EmitsToProps<Emits>,
   Defaults = ExtractDefaultPropTypes<RuntimePropsOptions>,
@@ -68,7 +68,7 @@ export type DefineVaporComponent<
     TypeRefs
   >
 > &
-  ObjectVaporComponent<
+  VaporComponentOptions<
     RuntimePropsOptions | RuntimePropsKeys[],
     Emits,
     RuntimeEmitsKeys,
@@ -108,7 +108,7 @@ export function defineVaporComponent<
       expose: (exposed: Exposed) => void
     },
   ) => VaporRenderResult<TypeBlock> | void,
-  extraOptions?: ObjectVaporComponent<
+  extraOptions?: VaporComponentOptions<
     (keyof Props)[],
     Emits,
     RuntimeEmitsKeys,
@@ -134,7 +134,7 @@ export function defineVaporComponent<
       expose: (exposed: Exposed) => void
     },
   ) => VaporRenderResult<TypeBlock> | void,
-  extraOptions?: ObjectVaporComponent<
+  extraOptions?: VaporComponentOptions<
     ComponentObjectPropsOptions<Props>,
     Emits,
     RuntimeEmitsKeys,
@@ -171,7 +171,7 @@ export function defineVaporComponent<
   TypeRefs extends Record<string, unknown> = {},
   TypeBlock extends Block = Block,
 >(
-  options: ObjectVaporComponent<
+  options: VaporComponentOptions<
     RuntimePropsOptions | RuntimePropsKeys[],
     ResolvedEmits,
     RuntimeEmitsKeys,
@@ -202,6 +202,7 @@ export function defineVaporComponent<
 ): DefineVaporComponent<
   RuntimePropsOptions,
   RuntimePropsKeys,
+  InferredProps,
   ResolvedEmits,
   RuntimeEmitsKeys,
   Slots,
@@ -210,8 +211,7 @@ export function defineVaporComponent<
   TypeRefs,
   // MakeDefaultsOptional - if TypeProps is provided, set to false to use
   // user props types verbatim
-  unknown extends TypeProps ? true : false,
-  InferredProps
+  unknown extends TypeProps ? true : false
 >
 
 /*@__NO_SIDE_EFFECTS__*/

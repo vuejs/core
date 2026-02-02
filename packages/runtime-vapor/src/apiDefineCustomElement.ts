@@ -17,9 +17,9 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import type {
-  ObjectVaporComponent,
   VaporComponent,
   VaporComponentInstance,
+  VaporComponentOptions,
 } from './component'
 import type { Block } from './block'
 import { withHydration } from './dom/hydration'
@@ -46,7 +46,7 @@ export function defineVaporCustomElement<Props, RawBindings = object>(
       expose: (exposed: Record<string, any>) => void
     },
   ) => RawBindings | VaporRenderResult,
-  options?: Pick<ObjectVaporComponent, 'name' | 'inheritAttrs' | 'emits'> &
+  options?: Pick<VaporComponentOptions, 'name' | 'inheritAttrs' | 'emits'> &
     CustomElementOptions & {
       props?: (keyof Props)[]
     },
@@ -61,7 +61,7 @@ export function defineVaporCustomElement<Props, RawBindings = object>(
       expose: (exposed: Record<string, any>) => void
     },
   ) => RawBindings | VaporRenderResult,
-  options?: Pick<ObjectVaporComponent, 'name' | 'inheritAttrs' | 'emits'> &
+  options?: Pick<VaporComponentOptions, 'name' | 'inheritAttrs' | 'emits'> &
     CustomElementOptions & {
       props?: ComponentObjectPropsOptions<Props>
     },
@@ -141,7 +141,7 @@ export function defineVaporCustomElement<
 /*@__NO_SIDE_EFFECTS__*/
 export function defineVaporCustomElement(
   options: any,
-  extraOptions?: Omit<ObjectVaporComponent, 'setup'> & CustomElementOptions,
+  extraOptions?: Omit<VaporComponentOptions, 'setup'> & CustomElementOptions,
   /**
    * @internal
    */
@@ -162,7 +162,7 @@ export function defineVaporCustomElement(
 /*@__NO_SIDE_EFFECTS__*/
 export const defineVaporSSRCustomElement = ((
   options: any,
-  extraOptions?: Omit<ObjectVaporComponent, 'setup'>,
+  extraOptions?: Omit<VaporComponentOptions, 'setup'>,
 ) => {
   // @ts-expect-error
   return defineVaporCustomElement(options, extraOptions, createVaporSSRApp)

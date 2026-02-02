@@ -20,12 +20,14 @@ import {
 } from '@vue/runtime-dom'
 import { type Block, move, remove } from '../block'
 import {
-  type ObjectVaporComponent,
   type VaporComponent,
   type VaporComponentInstance,
   isVaporComponent,
 } from '../component'
-import { defineVaporComponent } from '../apiDefineComponent'
+import {
+  type DefineVaporComponent,
+  defineVaporComponent,
+} from '../apiDefineComponent'
 import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
 import { createElement } from '../dom/node'
 import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
@@ -69,7 +71,11 @@ type CacheKey = VaporComponent | VNode['type']
 type Cache = Map<CacheKey, VaporComponentInstance | VaporFragment>
 type Keys = Set<CacheKey>
 
-const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
+export const VaporKeepAliveImpl: DefineVaporComponent<
+  {},
+  string,
+  KeepAliveProps
+> = defineVaporComponent({
   name: 'VaporKeepAlive',
   __isKeepAlive: true,
   props: {
@@ -283,9 +289,6 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
     return children
   },
 })
-
-export const VaporKeepAliveImpl: ObjectVaporComponent =
-  /*@__PURE__*/ KeepAliveImpl
 
 const shouldCache = (
   block: GenericComponentInstance | VaporFragment,

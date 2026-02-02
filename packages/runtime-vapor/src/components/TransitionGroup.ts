@@ -29,150 +29,157 @@ import {
   setTransitionHooksOnFragment,
 } from './Transition'
 import {
-  type ObjectVaporComponent,
   type VaporComponentInstance,
+  type VaporComponentOptions,
   isVaporComponent,
 } from '../component'
 import { isForBlock } from '../apiCreateFor'
 import { createElement } from '../dom/node'
 import { isFragment } from '../fragment'
+import {
+  type DefineVaporComponent,
+  defineVaporComponent,
+} from '../apiDefineComponent'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
 
-const decorate = <T extends ObjectVaporComponent>(t: T): T => {
+const decorate = <T extends VaporComponentOptions>(t: T): T => {
   delete (t.props! as any).mode
-  t.__vapor = true
   return t
 }
 
-const VaporTransitionGroupImpl: ObjectVaporComponent = {
-  name: 'VaporTransitionGroup',
+export const VaporTransitionGroup: DefineVaporComponent<
+  {},
+  string,
+  TransitionGroupProps
+> =
+  /*@__PURE__*/ decorate(
+    defineVaporComponent({
+      name: 'VaporTransitionGroup',
 
-  props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
-    tag: String,
-    moveClass: String,
-  }),
+      props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
+        tag: String,
+        moveClass: String,
+      }),
 
-  setup(props: TransitionGroupProps, { slots }) {
-    // Register transition hooks on first use
-    ensureTransitionHooksRegistered()
+      setup(props: TransitionGroupProps, { slots }) {
+        // Register transition hooks on first use
+        ensureTransitionHooksRegistered()
 
-    const instance = currentInstance as VaporComponentInstance
-    const state = useTransitionState()
+        const instance = currentInstance as VaporComponentInstance
+        const state = useTransitionState()
 
-    // use proxy to keep props reference stable
-    let cssTransitionProps = resolveTransitionProps(props)
-    const propsProxy = new Proxy({} as typeof cssTransitionProps, {
-      get(_, key) {
-        return cssTransitionProps[key as keyof typeof cssTransitionProps]
-      },
-    })
+        // use proxy to keep props reference stable
+        let cssTransitionProps = resolveTransitionProps(props)
+        const propsProxy = new Proxy({} as typeof cssTransitionProps, {
+          get(_, key) {
+            return cssTransitionProps[key as keyof typeof cssTransitionProps]
+          },
+        })
 
-    renderEffect(() => {
-      cssTransitionProps = resolveTransitionProps(props)
-    })
+        renderEffect(() => {
+          cssTransitionProps = resolveTransitionProps(props)
+        })
 
-    let prevChildren: TransitionBlock[]
-    let children: TransitionBlock[]
-    const slottedBlock = slots.default && slots.default()
+        let prevChildren: TransitionBlock[]
+        let children: TransitionBlock[]
+        const slottedBlock = slots.default && slots.default()
 
-    onBeforeUpdate(() => {
-      prevChildren = []
-      children = getTransitionBlocks(slottedBlock)
-      if (children) {
+        onBeforeUpdate(() => {
+          prevChildren = []
+          children = getTransitionBlocks(slottedBlock)
+          if (children) {
+            for (let i = 0; i < children.length; i++) {
+              const child = children[i]
+              if (isValidTransitionBlock(child)) {
+                prevChildren.push(child)
+                // disabled transition during enter, so the children will be
+                // inserted into the correct position immediately. this prevents
+                // `recordPosition` from getting incorrect positions in `onUpdated`
+                child.$transition!.disabled = true
+                positionMap.set(
+                  child,
+                  getTransitionElement(child).getBoundingClientRect(),
+                )
+              }
+            }
+          }
+        })
+
+        onUpdated(() => {
+          if (!prevChildren.length) {
+            return
+          }
+          const moveClass = props.moveClass || `${props.name || 'v'}-move`
+          const firstChild = getFirstConnectedChild(prevChildren)
+          if (
+            !firstChild ||
+            !hasCSSTransform(
+              firstChild as ElementWithTransition,
+              firstChild.parentNode as Node,
+              moveClass,
+            )
+          ) {
+            prevChildren = []
+            return
+          }
+
+          prevChildren.forEach(callPendingCbs)
+          prevChildren.forEach(child => {
+            child.$transition!.disabled = false
+            recordPosition(child)
+          })
+          const movedChildren = prevChildren.filter(applyTranslation)
+
+          // force reflow to put everything in position
+          forceReflow()
+
+          movedChildren.forEach(c =>
+            handleMovedChildren(
+              getTransitionElement(c) as ElementWithTransition,
+              moveClass,
+            ),
+          )
+          prevChildren = []
+        })
+
+        // store props and state on fragment for reusing during insert new items
+        setTransitionHooksOnFragment(slottedBlock, {
+          props: propsProxy,
+          state,
+          instance,
+        } as VaporTransitionHooks)
+
+        children = getTransitionBlocks(slottedBlock)
         for (let i = 0; i < children.length; i++) {
           const child = children[i]
           if (isValidTransitionBlock(child)) {
-            prevChildren.push(child)
-            // disabled transition during enter, so the children will be
-            // inserted into the correct position immediately. this prevents
-            // `recordPosition` from getting incorrect positions in `onUpdated`
-            child.$transition!.disabled = true
-            positionMap.set(
-              child,
-              getTransitionElement(child).getBoundingClientRect(),
-            )
+            if (child.$key != null) {
+              const hooks = resolveTransitionHooks(
+                child,
+                propsProxy,
+                state,
+                instance!,
+              )
+              setTransitionHooks(child, hooks)
+            } else if (__DEV__) {
+              warn(`<transition-group> children must be keyed`)
+            }
           }
         }
-      }
-    })
 
-    onUpdated(() => {
-      if (!prevChildren.length) {
-        return
-      }
-      const moveClass = props.moveClass || `${props.name || 'v'}-move`
-      const firstChild = getFirstConnectedChild(prevChildren)
-      if (
-        !firstChild ||
-        !hasCSSTransform(
-          firstChild as ElementWithTransition,
-          firstChild.parentNode as Node,
-          moveClass,
-        )
-      ) {
-        prevChildren = []
-        return
-      }
-
-      prevChildren.forEach(callPendingCbs)
-      prevChildren.forEach(child => {
-        child.$transition!.disabled = false
-        recordPosition(child)
-      })
-      const movedChildren = prevChildren.filter(applyTranslation)
-
-      // force reflow to put everything in position
-      forceReflow()
-
-      movedChildren.forEach(c =>
-        handleMovedChildren(
-          getTransitionElement(c) as ElementWithTransition,
-          moveClass,
-        ),
-      )
-      prevChildren = []
-    })
-
-    // store props and state on fragment for reusing during insert new items
-    setTransitionHooksOnFragment(slottedBlock, {
-      props: propsProxy,
-      state,
-      instance,
-    } as VaporTransitionHooks)
-
-    children = getTransitionBlocks(slottedBlock)
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i]
-      if (isValidTransitionBlock(child)) {
-        if (child.$key != null) {
-          const hooks = resolveTransitionHooks(
-            child,
-            propsProxy,
-            state,
-            instance!,
-          )
-          setTransitionHooks(child, hooks)
-        } else if (__DEV__) {
-          warn(`<transition-group> children must be keyed`)
+        const tag = props.tag
+        if (tag) {
+          const container = createElement(tag)
+          insert(slottedBlock, container)
+          return container
+        } else {
+          return slottedBlock
         }
-      }
-    }
-
-    const tag = props.tag
-    if (tag) {
-      const container = createElement(tag)
-      insert(slottedBlock, container)
-      return container
-    } else {
-      return slottedBlock
-    }
-  },
-}
-
-export const VaporTransitionGroup: ObjectVaporComponent =
-  /*@__PURE__*/ decorate(VaporTransitionGroupImpl)
+      },
+    }),
+  )
 
 function getTransitionBlocks(block: Block) {
   let children: TransitionBlock[] = []

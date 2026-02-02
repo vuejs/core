@@ -1,9 +1,9 @@
 import { createVaporApp, vaporInteropPlugin } from '../src'
 import { type App, type Component, createApp } from '@vue/runtime-dom'
 import type {
-  ObjectVaporComponent,
   VaporComponent,
   VaporComponentInstance,
+  VaporComponentOptions,
 } from '../src/component'
 import type { RawProps } from '../src/componentProps'
 import { compileScript, parse } from '@vue/compiler-sfc'
@@ -198,7 +198,7 @@ export function compile(
 export function compileToVaporRender(
   template: string,
   options?: CompilerOptions,
-): ObjectVaporComponent['render'] {
+): VaporComponentOptions['render'] {
   let { code } = compileVapor(template, {
     mode: 'module',
     prefixIdentifiers: true,
