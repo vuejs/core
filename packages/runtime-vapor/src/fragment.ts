@@ -43,6 +43,20 @@ import {
   setCurrentKeepAliveCtx,
 } from './components/KeepAlive'
 
+let dynamicFragmentId = 0
+
+export let currentDynamicFragment: DynamicFragment | null = null
+
+export function setCurrentDynamicFragment(
+  frag: DynamicFragment | null,
+): DynamicFragment | null {
+  try {
+    return currentDynamicFragment
+  } finally {
+    currentDynamicFragment = frag
+  }
+}
+
 export class VaporFragment<
   T extends Block = Block,
 > implements TransitionOptions {
@@ -50,6 +64,7 @@ export class VaporFragment<
   $transition?: VaporTransitionHooks | undefined
   nodes: T
   vnode?: VNode | null = null
+  cacheKey?: any
   anchor?: Node
   parentComponent?: GenericComponentInstance | null
   fallback?: BlockFn
@@ -82,6 +97,7 @@ export class ForFragment extends VaporFragment<Block[]> {
 }
 
 export class DynamicFragment extends VaporFragment {
+  id: number
   anchor!: Node
   scope: EffectScope | undefined
   current?: BlockFn
@@ -89,6 +105,7 @@ export class DynamicFragment extends VaporFragment {
   fallback?: BlockFn
   anchorLabel?: string
   keyed?: boolean
+  parentDynamicFragment: DynamicFragment | null
 
   // fallthrough attrs
   attrs?: Record<string, any>
@@ -102,9 +119,16 @@ export class DynamicFragment extends VaporFragment {
 
   constructor(anchorLabel?: string, keyed: boolean = false) {
     super([])
+    this.id = dynamicFragmentId++
     this.keyed = keyed
     this.slotOwner = currentSlotOwner
     this.keepAliveCtx = currentKeepAliveCtx
+    this.parentDynamicFragment =
+      this.keepAliveCtx &&
+      currentDynamicFragment &&
+      currentDynamicFragment.keepAliveCtx === this.keepAliveCtx
+        ? currentDynamicFragment
+        : null
     if (isHydrating) {
       this.anchorLabel = anchorLabel
       locateHydrationNode()
@@ -234,11 +258,18 @@ export class DynamicFragment extends VaporFragment {
       const prevOwner = setCurrentSlotOwner(this.slotOwner)
       // set currentKeepAliveCtx so nested DynamicFragments and components can capture it
       const prevCtx = setCurrentKeepAliveCtx(keepAliveCtx)
+      const shouldSetFrag = !!(
+        keepAliveCtx &&
+        (!currentDynamicFragment ||
+          currentDynamicFragment.keepAliveCtx !== keepAliveCtx)
+      )
+      const prevFrag = shouldSetFrag ? setCurrentDynamicFragment(this) : null
       // switch current instance to parent instance during update
       // ensure that the parent instance is correct for nested components
       const prev = parent && instance ? setCurrentInstance(instance) : undefined
       this.nodes = this.scope.run(render) || []
       if (prev !== undefined) setCurrentInstance(...prev)
+      if (shouldSetFrag) setCurrentDynamicFragment(prevFrag)
       setCurrentKeepAliveCtx(prevCtx)
       setCurrentSlotOwner(prevOwner)
 

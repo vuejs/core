@@ -107,6 +107,7 @@ import {
 import type { KeepAliveInstance } from './components/KeepAlive'
 import {
   currentKeepAliveCtx,
+  resolveKeepAliveKey,
   setCurrentKeepAliveCtx,
 } from './components/KeepAlive'
 import {
@@ -276,14 +277,16 @@ export function createComponent(
   }
 
   // keep-alive
+  let cacheKey
   if (
     currentInstance &&
     currentInstance.vapor &&
     isKeepAlive(currentInstance)
   ) {
+    cacheKey = resolveKeepAliveKey(component)
     const cached = (
       currentInstance as KeepAliveInstance
-    ).ctx.getCachedComponent(component)
+    ).ctx.getCachedComponent(component, cacheKey)
     // @ts-expect-error
     if (cached) return cached
   }
@@ -297,6 +300,9 @@ export function createComponent(
       rawSlots,
       isSingleRoot,
     )
+    if (cacheKey) {
+      frag.cacheKey = cacheKey
+    }
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
@@ -330,6 +336,9 @@ export function createComponent(
     appContext,
     once,
   )
+  if (cacheKey) {
+    instance.cacheKey = cacheKey
+  }
 
   // handle currentKeepAliveCtx for component boundary isolation
   // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
@@ -588,6 +597,7 @@ export class VaporComponentInstance<
 
   // for keep-alive
   shapeFlag?: number
+  cacheKey?: any
 
   // for v-once: caches props/attrs values to ensure they remain frozen
   // even when the component re-renders due to local state changes

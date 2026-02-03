@@ -9,6 +9,7 @@ import {
   devtoolsComponentAdded,
   getComponentName,
   isAsyncWrapper,
+  isVNode,
   matches,
   onBeforeUnmount,
   onMounted,
@@ -26,9 +27,14 @@ import {
   isVaporComponent,
 } from '../component'
 import { defineVaporComponent } from '../apiDefineComponent'
-import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
+import { ShapeFlags, invokeArrayFns, isArray, isObject } from '@vue/shared'
 import { createElement } from '../dom/node'
-import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
+import {
+  type VaporFragment,
+  currentDynamicFragment,
+  isDynamicFragment,
+  isFragment,
+} from '../fragment'
 import type { EffectScope } from '@vue/reactivity'
 
 export interface KeepAliveContext {
@@ -60,14 +66,91 @@ export interface KeepAliveInstance extends VaporComponentInstance {
     deactivate: (instance: VaporComponentInstance) => void
     getCachedComponent: (
       comp: VaporComponent,
+      key?: CacheKey,
     ) => VaporComponentInstance | VaporFragment | undefined
     getStorageContainer: () => ParentNode
   }
 }
 
-type CacheKey = VaporComponent | VNode['type']
+type CompositeKey = {
+  type: VaporComponent | VNode['type']
+  fragId: number
+  key: any
+}
+
+type CacheKey = VaporComponent | VNode['type'] | CompositeKey
 type Cache = Map<CacheKey, VaporComponentInstance | VaporFragment>
 type Keys = Set<CacheKey>
+
+const compositeKeyCache = new WeakMap<
+  object,
+  Map<number, Map<any, CompositeKey>>
+>()
+const compositeKeyCachePrimitive = new Map<
+  any,
+  Map<number, Map<any, CompositeKey>>
+>()
+
+function getOrCreate<K extends object, V>(
+  map: WeakMap<K, V>,
+  key: K,
+  init: () => V,
+): V
+function getOrCreate<K, V>(map: Map<K, V>, key: K, init: () => V): V
+function getOrCreate(
+  map: Map<any, any> | WeakMap<object, any>,
+  key: any,
+  init: () => any,
+): any {
+  let value = map.get(key)
+  if (!value) {
+    value = init()
+    map.set(key, value)
+  }
+  return value
+}
+
+function getCompositeKey(
+  type: VaporComponent | VNode['type'],
+  fragId: number,
+  key: any,
+): CompositeKey {
+  const isObjectType = isObject(type) || typeof type === 'function'
+  if (isObjectType) {
+    const perType = getOrCreate(
+      compositeKeyCache,
+      type as object,
+      () => new Map(),
+    )
+    const perFrag = getOrCreate(perType, fragId, () => new Map())
+    return getOrCreate(perFrag, key, () => ({ type, fragId, key }))
+  }
+  const perType = getOrCreate(compositeKeyCachePrimitive, type, () => new Map())
+  const perFrag = getOrCreate(perType, fragId, () => new Map())
+  return getOrCreate(perFrag, key, () => ({ type, fragId, key }))
+}
+
+export function resolveKeepAliveKey(
+  type: VaporComponent | VNode['type'],
+  key?: any,
+): CacheKey {
+  const frag = currentDynamicFragment
+  if (frag) {
+    let root = frag
+    while (root.parentDynamicFragment) root = root.parentDynamicFragment
+    let fragKey = key
+    if (fragKey === undefined) {
+      const current = root.current
+      if (isVNode(current)) {
+        fragKey = current.key || current.type
+      } else {
+        fragKey = current
+      }
+    }
+    return getCompositeKey(type, root.id, fragKey)
+  }
+  return type
+}
 
 const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
   name: 'VaporKeepAlive',
@@ -111,7 +194,7 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
     keepAliveInstance.ctx = {
       getStorageContainer: () => storageContainer,
-      getCachedComponent: comp => cache.get(comp),
+      getCachedComponent: (comp, key) => cache.get(key || comp),
       activate: (instance, parentNode, anchor) => {
         current = instance
         activate(instance, parentNode, anchor)
@@ -162,23 +245,21 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       }
       const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
-      innerCacheBlock(
-        interop ? innerBlock.vnode!.type : innerBlock.type,
-        innerBlock,
-      )
+      innerCacheBlock(getCacheKey(innerBlock, interop), innerBlock)
     }
 
     const processShapeFlag = (block: Block): boolean => {
       const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
 
+      const cacheKey = getCacheKey(innerBlock, interop)
       if (interop) {
-        if (cache.has(innerBlock.vnode!.type)) {
+        if (cache.has(cacheKey)) {
           innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
         }
         innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       } else {
-        if (cache.has(innerBlock!.type)) {
+        if (cache.has(cacheKey)) {
           innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
         }
         innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
@@ -234,9 +315,7 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
 
         // current instance will be unmounted as part of keep-alive's unmount
         if (current) {
-          const currentKey = isVaporComponent(current)
-            ? current.type
-            : current.vnode!.type
+          const currentKey = getCacheKey(current, !isVaporComponent(current))
           if (currentKey === key) {
             // call deactivated hook
             const da = instance.da
@@ -341,6 +420,21 @@ function getInnerBlock(block: Block): InnerBlockResult {
 
 function isInteropFragment(block: Block): block is VaporFragment {
   return !!(isFragment(block) && block.vnode)
+}
+
+function getCacheKey(
+  block: VaporComponentInstance | VaporFragment,
+  interop: boolean,
+): CacheKey {
+  if (interop) {
+    const frag = block as VaporFragment
+    if (frag.cacheKey) return frag.cacheKey
+    const { vnode } = frag
+    const key = vnode!.key
+    return resolveKeepAliveKey(vnode!.type, key)
+  }
+  const instance = block as VaporComponentInstance
+  return instance.cacheKey || instance.type
 }
 
 function getInstanceFromCache(

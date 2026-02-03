@@ -187,6 +187,53 @@ describe('VaporKeepAlive', () => {
     expect(root.innerHTML).toBe(`<div>changed</div><!--dynamic-component-->`)
   })
 
+  test('should cache same component across branches', async () => {
+    const toggle = ref(true)
+    const instanceA = ref<any>(null)
+    const instanceB = ref<any>(null)
+
+    const { html } = define({
+      setup() {
+        const setRefA = createTemplateRefSetter()
+        const setRefB = createTemplateRefSetter()
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => {
+                const n0 = createComponent(one)
+                setRefA(n0, instanceA)
+                return n0
+              },
+              () => {
+                const n1 = createComponent(one)
+                setRefB(n1, instanceB)
+                return n1
+              },
+            ),
+        })
+      },
+    }).render()
+
+    expect(html()).toBe(`<div>one</div><!--if-->`)
+
+    instanceA.value.setMsg('A')
+    await nextTick()
+    expect(html()).toBe(`<div>A</div><!--if-->`)
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe(`<div>one</div><!--if-->`)
+
+    instanceB.value.setMsg('B')
+    await nextTick()
+    expect(html()).toBe(`<div>B</div><!--if-->`)
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe(`<div>A</div><!--if-->`)
+  })
+
   test('should call correct lifecycle hooks', async () => {
     const toggle = ref(true)
     const viewRef = ref('one')

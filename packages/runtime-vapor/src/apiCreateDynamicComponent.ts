@@ -17,7 +17,10 @@ import {
 } from './insertionState'
 import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
-import type { KeepAliveInstance } from './components/KeepAlive'
+import {
+  type KeepAliveInstance,
+  resolveKeepAliveKey,
+} from './components/KeepAlive'
 
 export function createDynamicComponent(
   getter: () => any,
@@ -46,14 +49,19 @@ export function createDynamicComponent(
 
       // Handles VNodes passed from VDOM components (e.g., `h(VaporComp)` from slots)
       if (appContext.vapor && isVNode(value)) {
+        let cacheKey: ReturnType<typeof resolveKeepAliveKey> | undefined
         if (isKeepAlive(currentInstance)) {
+          cacheKey = resolveKeepAliveKey(value.type, value.key)
           const frag = (
             currentInstance as KeepAliveInstance
-          ).ctx.getCachedComponent(value.type as any) as VaporFragment
+          ).ctx.getCachedComponent(value.type as any, cacheKey) as VaporFragment
           if (frag) return frag
         }
 
         const frag = appContext.vapor.vdomMountVNode(value, currentInstance)
+        if (cacheKey) {
+          frag.cacheKey = cacheKey
+        }
         if (isHydrating) {
           frag.hydrate()
           if (_isLastInsertion) {
