@@ -112,14 +112,21 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
     return
   }
 
+  const literalValues = values.map(v => getLiteralExpressionValue(v))
+  const allLiteral = literalValues.every(v => v != null)
+  if (allLiteral && parentNode.type !== NodeTypes.ROOT) {
+    const text = literalValues.join('')
+    const isElementChild =
+      parentNode.type === NodeTypes.ELEMENT &&
+      parentNode.tagType === ElementTypes.ELEMENT
+    context.template += isElementChild ? escapeHtml(text) : text
+    return
+  }
+
   context.template += ' '
   const id = context.reference()
 
-  if (
-    values.length === 0 ||
-    (values.every(v => getLiteralExpressionValue(v) != null) &&
-      parentNode.type !== NodeTypes.ROOT)
-  ) {
+  if (values.length === 0) {
     return
   }
 
