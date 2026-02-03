@@ -105,7 +105,7 @@ export class DynamicFragment extends VaporFragment {
   fallback?: BlockFn
   anchorLabel?: string
   keyed?: boolean
-  parentDynamicFragment: DynamicFragment | null
+  rootDynamicFragment: DynamicFragment
 
   // fallthrough attrs
   attrs?: Record<string, any>
@@ -123,12 +123,12 @@ export class DynamicFragment extends VaporFragment {
     this.keyed = keyed
     this.slotOwner = currentSlotOwner
     this.keepAliveCtx = currentKeepAliveCtx
-    this.parentDynamicFragment =
+    this.rootDynamicFragment =
       this.keepAliveCtx &&
       currentDynamicFragment &&
       currentDynamicFragment.keepAliveCtx === this.keepAliveCtx
-        ? currentDynamicFragment
-        : null
+        ? currentDynamicFragment.rootDynamicFragment
+        : this
     if (isHydrating) {
       this.anchorLabel = anchorLabel
       locateHydrationNode()

@@ -136,8 +136,7 @@ export function resolveKeepAliveKey(
 ): CacheKey {
   const frag = currentDynamicFragment
   if (frag) {
-    let root = frag
-    while (root.parentDynamicFragment) root = root.parentDynamicFragment
+    const root = frag.rootDynamicFragment
     let fragKey = key
     if (fragKey === undefined) {
       const current = root.current
