@@ -73,6 +73,11 @@ export function genChildren(
       offset--
     }
 
+    if (child.flags & DynamicFlag.INSERT && child.template != null) {
+      push(...genSelf(child, context))
+      continue
+    }
+
     const id =
       child.flags & DynamicFlag.REFERENCED
         ? child.flags & DynamicFlag.INSERT
@@ -80,10 +85,7 @@ export function genChildren(
           : child.id
         : undefined
 
-    if (
-      (id === undefined && !child.hasDynamicChild) ||
-      child.template !== undefined
-    ) {
+    if (id === undefined && !child.hasDynamicChild) {
       push(...genSelf(child, context))
       continue
     }
