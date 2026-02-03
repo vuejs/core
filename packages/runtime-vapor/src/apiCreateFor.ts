@@ -526,6 +526,7 @@ export const createFor = (
       // watch may trigger before list patched
       // defer to post-flush so operMap is up to date
       queuePostFlushCb(() => {
+        activeKey = newValue
         activeOpers = operMap.get(newValue)
         if (activeOpers !== undefined) {
           for (const oper of activeOpers) {
