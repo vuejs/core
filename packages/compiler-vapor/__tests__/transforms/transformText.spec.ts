@@ -7,6 +7,7 @@ import {
   transformVBind,
   transformVIf,
   transformVOn,
+  transformVSlot,
 } from '../../src'
 
 import { makeCompile } from './_utils'
@@ -15,6 +16,7 @@ const compileWithTextTransform = makeCompile({
   nodeTransforms: [
     transformVIf,
     transformElement,
+    transformVSlot,
     transformChildren,
     transformText,
   ],
@@ -101,6 +103,12 @@ describe('compiler: text transform', () => {
         </div>`,
     )
     expect(code).includes(`_template("<div>2 foo1 1 1 1", true)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('slot literal interpolation', () => {
+    const { code } = compileWithTextTransform(`<Comp>{{ "Hello" }}</Comp>`)
+    expect(code).includes('const t0 = _template("Hello")')
     expect(code).toMatchSnapshot()
   })
 })
