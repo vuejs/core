@@ -31,3 +31,19 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`compiler: text transform > slot literal interpolation 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("Hello")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n1 = _createComponentWithFallback(_component_Comp, null, {
+    "default": () => {
+      const n0 = t0()
+      return n0
+    }
+  }, true)
+  return n1
+}"
+`;
