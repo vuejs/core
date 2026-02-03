@@ -19,8 +19,8 @@ const compileWithElementTransform = makeCompile({
   nodeTransforms: [
     transformVFor,
     transformElement,
-    transformChildren,
     transformText,
+    transformChildren,
   ],
   directiveTransforms: {
     bind: transformVBind,
@@ -1077,6 +1077,20 @@ describe('compiler: element transform', () => {
       { type: IRNodeTypes.INSERT_NODE, parent: 1, elements: [0] },
       { type: IRNodeTypes.INSERT_NODE, parent: 3, elements: [2] },
     ])
+  })
+
+  test('invalid table nesting with dynamic child', () => {
+    const { code } = compileWithElementTransform(
+      `<table>
+        <tr>
+          <td>{{ msg }}</td>
+        </tr>
+      </table>
+      <div></div>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_insert(n1, n2)')
+    expect(code).toContain('const n0 = _child(n1)')
   })
 
   test('empty template', () => {
