@@ -119,7 +119,7 @@ exports[`compiler: key > with dynamic key > v-else-if + key 1`] = `
 const t0 = _template("<div>", true)
 
 export function render(_ctx) {
-  const n0 = _createIf(() => ({ok: _ctx.ok}), () => {
+  const n0 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     return n2
   }, () => _createIf(() => (_ctx.foo), () => {

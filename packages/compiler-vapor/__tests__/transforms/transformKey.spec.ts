@@ -110,7 +110,7 @@ describe('compiler: key', () => {
 
     test('v-else-if + key', () => {
       const { code } = compileWithKey(
-        `<div v-if={ok} /><div v-else-if="foo" :key="id"></div>`,
+        `<div v-if="ok" /><div v-else-if="foo" :key="id"></div>`,
       )
       expect(code).toMatchSnapshot()
       expect(code).contains('_createKeyedFragment(')
