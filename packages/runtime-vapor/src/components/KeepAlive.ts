@@ -43,7 +43,7 @@ export interface KeepAliveContext {
   cacheBlock(): void
   cacheScope(key: any, scope: EffectScope): void
   getScope(key: any): EffectScope | undefined
-  setCurrentBranchKey(key: any): void
+  setCurrentBranchKey(key: any): any
 }
 
 export let currentKeepAliveCtx: KeepAliveContext | null = null
@@ -314,7 +314,11 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
         }
       },
       setCurrentBranchKey(key) {
-        currentBranchKey = key
+        try {
+          return currentBranchKey
+        } finally {
+          currentBranchKey = key
+        }
       },
     }
 
@@ -386,10 +390,7 @@ function resolveKey(
   branchKey?: any,
 ): CacheKey {
   if (key != null) {
-    if (branchKey !== undefined && key === branchKey) {
-      return getCompositeKey(type, branchKey)
-    }
-    return key as CacheKey
+    return getCompositeKey(type, key)
   }
   if (branchKey !== undefined) {
     return getCompositeKey(type, branchKey)
