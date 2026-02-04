@@ -92,15 +92,16 @@ exports[`compiler: transition > work with dynamic keyed children 1`] = `
 const t0 = _template("<h1>foo")
 
 export function render(_ctx) {
-  const n1 = _createComponent(_VaporTransition, null, {
+  const n2 = _createComponent(_VaporTransition, null, {
     "default": () => {
-      return _createKeyedFragment(() => _ctx.key, () => {
-        const n0 = t0()
-        return n0
+      const n0 = _createKeyedFragment(() => (_ctx.key), () => {
+        const n1 = t0()
+        return n1
       })
+      return n0
     }
   }, true)
-  return n1
+  return n2
 }"
 `;
 

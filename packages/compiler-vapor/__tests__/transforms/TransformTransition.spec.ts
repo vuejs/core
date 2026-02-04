@@ -2,6 +2,7 @@ import { makeCompile } from './_utils'
 import {
   transformChildren,
   transformElement,
+  transformKey,
   transformText,
   transformVBind,
   transformVIf,
@@ -15,6 +16,7 @@ const compileWithElementTransform = makeCompile({
   nodeTransforms: [
     transformText,
     transformVIf,
+    transformKey,
     transformElement,
     transformVSlot,
     transformChildren,
@@ -57,7 +59,7 @@ describe('compiler: transition', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains('_createKeyedFragment(() => _ctx.key')
+    expect(code).contains('_createKeyedFragment(() => (_ctx.key)')
   })
 
   function checkWarning(template: string, shouldWarn = true) {

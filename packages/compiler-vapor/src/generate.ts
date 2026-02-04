@@ -5,7 +5,7 @@ import type {
 } from '@vue/compiler-dom'
 import type { BlockIRNode, CoreHelper, RootIRNode, VaporHelper } from './ir'
 import { extend, remove } from '@vue/shared'
-import { genBlock, genBlockContent, genKeyedFragment } from './generators/block'
+import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
 import {
   type CodeFragment,
@@ -204,19 +204,7 @@ export function generate(
   if (ir.hasDeferredVShow) {
     push(NEWLINE, `const deferredApplyVShows = []`)
   }
-  if (ir.block.keyed && ir.block.keyExpr) {
-    push(
-      NEWLINE,
-      `return `,
-      ...genKeyedFragment(
-        genBlock(ir.block, context, [], true, true),
-        ir.block.keyExpr,
-        context,
-      ),
-    )
-  } else {
-    push(...genBlockContent(ir.block, context, true))
-  }
+  push(...genBlockContent(ir.block, context, true))
   push(INDENT_END, NEWLINE)
 
   if (!inline) {

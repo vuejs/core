@@ -28,6 +28,7 @@ import { transformSlotOutlet } from './transforms/transformSlotOutlet'
 import { transformVSlot } from './transforms/vSlot'
 import { transformTransition } from './transforms/transformTransition'
 import type { HackOptions } from './ir'
+import { transformKey } from './transforms/transformKey'
 
 export { wrapTemplate } from './transforms/utils'
 
@@ -81,6 +82,7 @@ export function getBaseTransformPreset(): TransformPreset {
       transformVOnce,
       transformVIf,
       transformVFor,
+      transformKey,
       transformSlotOutlet,
       transformTemplateRef,
       transformElement,

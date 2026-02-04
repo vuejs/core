@@ -216,4 +216,10 @@ describe('compiler: v-once', () => {
       once: true,
     })
   })
+
+  test('with key', () => {
+    const { ir, code } = compileWithOnce(`<div :key="foo" v-once />`)
+    expect(code).matchSnapshot()
+    expect(ir.block.dynamic.operation).toBe(undefined)
+  })
 })

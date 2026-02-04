@@ -2,6 +2,7 @@ import { makeCompile } from './_utils'
 import {
   transformChildren,
   transformElement,
+  transformKey,
   transformSlotOutlet,
   transformText,
   transformVFor,
@@ -14,6 +15,7 @@ const compileWithTransforms = makeCompile({
     transformText,
     transformVIf,
     transformVFor,
+    transformKey,
     transformVSlot,
     transformSlotOutlet,
     transformElement,
@@ -420,6 +422,42 @@ describe('compiler: logicalIndex', () => {
         expect(code).toContain('_setInsertionState(n7, null, 0)')
         expect(code).toContain('_setInsertionState(n7, null, 1)')
         expect(code).toContain('_setInsertionState(n7, null, 2, true)')
+        expect(code).toMatchSnapshot()
+      })
+    })
+
+    describe('key scenarios', () => {
+      test('key prepend', () => {
+        const { code } = compileWithTransforms(`
+          <div>
+            <div :key="id" />
+            <span>A</span>
+          </div>
+        `)
+        expect(code).toContain('_setInsertionState(n2, 0, 0, true)')
+        expect(code).toMatchSnapshot()
+      })
+
+      test('key append', () => {
+        const { code } = compileWithTransforms(`
+          <div>
+            <span>A</span>
+            <div :key="id" />
+          </div>
+        `)
+        expect(code).toMatchSnapshot()
+        expect(code).toContain('_setInsertionState(n2, null, 1, true)')
+      })
+
+      test('key in middle', () => {
+        const { code } = compileWithTransforms(`
+          <div>
+            <span>A</span>
+            <div :key="id" />
+            <span>B</span>
+          </div>
+        `)
+        expect(code).toContain('_setInsertionState(n3, n2, 1, true)')
         expect(code).toMatchSnapshot()
       })
     })

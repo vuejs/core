@@ -32,13 +32,13 @@ export enum IRNodeTypes {
 
   IF,
   FOR,
+  KEY,
 
   GET_TEXT_CHILD,
 }
 
 export interface BaseIRNode {
   type: IRNodeTypes
-  key?: SimpleExpressionNode | undefined
 }
 
 export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
@@ -53,8 +53,6 @@ export interface BlockIRNode extends BaseIRNode {
   effect: IREffect[]
   operation: OperationNode[]
   returns: number[]
-  keyed?: boolean
-  keyExpr?: SimpleExpressionNode
 }
 
 export interface RootIRNode {
@@ -101,6 +99,18 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   once: boolean
   component: boolean
   onlyChild: boolean
+  parent?: number
+  anchor?: number
+  logicalIndex?: number
+  append?: boolean
+  last?: boolean
+}
+
+export interface KeyIRNode extends BaseIRNode {
+  type: IRNodeTypes.KEY
+  id: number
+  value: SimpleExpressionNode
+  block: BlockIRNode
   parent?: number
   anchor?: number
   logicalIndex?: number
@@ -247,6 +257,7 @@ export type OperationNode =
   | DirectiveIRNode
   | IfIRNode
   | ForIRNode
+  | KeyIRNode
   | CreateComponentIRNode
   | SlotOutletIRNode
   | GetTextChildIRNode
@@ -309,6 +320,7 @@ export type VaporDirectiveNode = Overwrite<
 export type InsertionStateTypes =
   | IfIRNode
   | ForIRNode
+  | KeyIRNode
   | SlotOutletIRNode
   | CreateComponentIRNode
 
@@ -318,6 +330,7 @@ export function isBlockOperation(op: OperationNode): op is InsertionStateTypes {
     type === IRNodeTypes.CREATE_COMPONENT_NODE ||
     type === IRNodeTypes.SLOT_OUTLET_NODE ||
     type === IRNodeTypes.IF ||
+    type === IRNodeTypes.KEY ||
     type === IRNodeTypes.FOR
   )
 }
