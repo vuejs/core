@@ -16,11 +16,12 @@ export function provide<T, K = InjectionKey<T> | string | number>(
   key: K,
   value: K extends InjectionKey<infer V> ? V : T,
 ): void {
-  if (!currentInstance) {
-    if (__DEV__) {
+  if (__DEV__) {
+    if (!currentInstance || currentInstance.isMounted) {
       warn(`provide() can only be used inside setup().`)
     }
-  } else {
+  }
+  if (currentInstance) {
     let provides = currentInstance.provides
     // 检查当前实例是否继承了父实例的provides对象。如果没有，则创建一个新的provides对象，以父实例的provides对象为原型。
     // 这种方式确保在inject时可以从直接父组件获取注入项，并利用原型链完成工作。

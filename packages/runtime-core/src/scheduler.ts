@@ -38,36 +38,31 @@ export interface SchedulerJob extends Function {
   i?: ComponentInternalInstance
 }
 
-// 定义SchedulerJobs类型，可以是一个SchedulerJob实例或其数组
 export type SchedulerJobs = SchedulerJob | SchedulerJob[]
 
 const queue: SchedulerJob[] = []
 let flushIndex = -1
 
-const pendingPostFlushCbs: SchedulerJob[] = [] // 存储待执行的后置回调函数
-let activePostFlushCbs: SchedulerJob[] | null = null // 当前正在执行的后置回调函数队列
-let postFlushIndex = 0 // 后置回调函数执行的索引
+const pendingPostFlushCbs: SchedulerJob[] = []
+let activePostFlushCbs: SchedulerJob[] | null = null
+let postFlushIndex = 0
 
 const resolvedPromise = /*@__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
 
-const RECURSION_LIMIT = 100 // 递归调用限制
+const RECURSION_LIMIT = 100
 type CountMap = Map<SchedulerJob, number>
 
-/**
- * 将给定的函数fn安排在当前事件循环的下一个tick中执行。
- * 如果没有提供fn，则直接返回当前正在执行或已经解析的promise。
- *
- * @param fn 可选的函数，它将在下一个tick中被调用。默认为undefined。
- * @returns 返回一个Promise，该Promise在执行fn之后解析为fn的返回值（如果提供）。
- */
-export function nextTick<T = void, R = void>(
+export function nextTick(): Promise<void>
+export function nextTick<T, R>(
   this: T,
-  fn?: (this: T) => R,
-): Promise<Awaited<R>> {
-  // 获取当前正在刷新的 promise 或已解析的 promise。
+  fn: (this: T) => R | Promise<R>,
+): Promise<R>
+export function nextTick<T, R>(
+  this: T,
+  fn?: (this: T) => R | Promise<R>,
+): Promise<void | R> {
   const p = currentFlushPromise || resolvedPromise
-  // 如果提供了 fn，则在下一个 tick 中执行 fn，并返回 promise；否则，直接返回获取的 promise。
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
 
@@ -121,9 +116,6 @@ export function queueJob(job: SchedulerJob): void {
   }
 }
 
-/**
- * 需要刷新队列时调用，触发任务的执行
- */
 function queueFlush() {
   if (!currentFlushPromise) {
     currentFlushPromise = resolvedPromise.then(flushJobs)
@@ -142,18 +134,11 @@ export function queuePostFlushCb(cb: SchedulerJobs): void {
     // if cb is an array, it is a component lifecycle hook which can only be
     // triggered by a job, which is already deduped in the main queue, so
     // we can skip duplicate check here to improve perf
-    // 如果cb是数组，直接加入待执行队列，无需去重
     pendingPostFlushCbs.push(...cb)
   }
   queueFlush()
 }
 
-/**
- * 执行所有的前置回调函数
- * @param instance 当前组件实例，用于检查循环更新
- * @param seen 记录已执行的任务，防止循环更新
- * @param i
- */
 export function flushPreFlushCbs(
   instance?: ComponentInternalInstance,
   seen?: CountMap,
@@ -163,7 +148,6 @@ export function flushPreFlushCbs(
   if (__DEV__) {
     seen = seen || new Map()
   }
-  // 遍历队列中的任务，执行所有标记为前置的任务
   for (; i < queue.length; i++) {
     const cb = queue[i]
     if (cb && cb.flags! & SchedulerJobFlags.PRE) {
@@ -193,7 +177,6 @@ export function flushPostFlushCbs(seen?: CountMap): void {
     )
     pendingPostFlushCbs.length = 0
 
-    // 如果已有活跃的后置回调函数队列，将新的回调函数加入队列
     // #1947 already has active queue, nested flushPostFlushCbs call
     if (activePostFlushCbs) {
       activePostFlushCbs.push(...deduped)
@@ -205,7 +188,6 @@ export function flushPostFlushCbs(seen?: CountMap): void {
       seen = seen || new Map()
     }
 
-    // 执行所有的后置回调函数
     for (
       postFlushIndex = 0;
       postFlushIndex < activePostFlushCbs.length;
@@ -229,10 +211,6 @@ export function flushPostFlushCbs(seen?: CountMap): void {
 const getId = (job: SchedulerJob): number =>
   job.id == null ? (job.flags! & SchedulerJobFlags.PRE ? -1 : Infinity) : job.id
 
-/**
- * 执行队列中的所有任务
- * @param seen 记录已执行的任务，用于开发环境下的循环更新检查
- */
 function flushJobs(seen?: CountMap) {
   if (__DEV__) {
     seen = seen || new Map()
@@ -289,12 +267,6 @@ function flushJobs(seen?: CountMap) {
   }
 }
 
-/**
- * 检查是否发生了递归更新，防止无限循环更新
- * @param seen 记录已执行的任务次数
- * @param fn 当前执行的任务
- * @returns 如果检测到递归更新，则返回true，否则返回false
- */
 function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
   const count = seen.get(fn) || 0
   if (count > RECURSION_LIMIT) {

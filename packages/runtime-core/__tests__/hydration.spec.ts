@@ -82,6 +82,11 @@ describe('SSR hydration', () => {
     expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
   })
 
+  test('text w/ newlines', async () => {
+    mountWithHydration('<div>1\n2\n3</div>', () => h('div', '1\r\n2\r3'))
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+  })
+
   test('comment', () => {
     const { vnode, container } = mountWithHydration('<!---->', () => null)
     expect(vnode.el).toBe(container.firstChild)
@@ -1592,6 +1597,24 @@ describe('SSR hydration', () => {
     expect((container.firstChild as any).foo).toBe(msg.value)
   })
 
+  // #14274
+  test('should not render ref on custom element during hydration', () => {
+    const container = document.createElement('div')
+    container.innerHTML = '<my-element>hello</my-element>'
+    const root = ref()
+    const app = createSSRApp({
+      render: () =>
+        h('my-element', {
+          ref: root,
+          innerHTML: 'hello',
+        }),
+    })
+    app.mount(container)
+    expect(container.innerHTML).toBe('<my-element>hello</my-element>')
+    expect((container.firstChild as Element).hasAttribute('ref')).toBe(false)
+    expect(root.value).toBe(container.firstChild)
+  })
+
   // #5728
   test('empty text node in slot', () => {
     const Comp = {
@@ -2355,6 +2378,30 @@ describe('SSR hydration', () => {
       })
       app.mount(container)
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('with disabled teleport + undefined target', async () => {
+      const container = document.createElement('div')
+      const isOpen = ref(false)
+      const App = {
+        setup() {
+          return { isOpen }
+        },
+        template: `
+          <Teleport :to="undefined" :disabled="true">
+            <div v-if="isOpen">
+              Menu is open...
+            </div>
+          </Teleport>`,
+      }
+      container.innerHTML = await renderToString(h(App))
+      const app = createSSRApp(App)
+      app.mount(container)
+      isOpen.value = true
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><div> Menu is open... </div><!--teleport end-->`,
+      )
     })
 
     test('escape css var name', () => {

@@ -89,6 +89,7 @@ export type Reactive<T> = UnwrapNestedRefs<T> &
  * @see {@link https://vuejs.org/api/reactivity-core.html#reactive}
  */
 export function reactive<T extends object>(target: T): Reactive<T>
+/*@__NO_SIDE_EFFECTS__*/
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
   if (isReadonly(target)) {
@@ -137,6 +138,7 @@ export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
  * @param target - The source object.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowreactive}
  */
+/*@__NO_SIDE_EFFECTS__*/
 export function shallowReactive<T extends object>(
   target: T,
 ): ShallowReactive<T> {
@@ -202,6 +204,7 @@ export type DeepReadonly<T> = T extends Builtin
  * @param target - The source object.
  * @see {@link https://vuejs.org/api/reactivity-core.html#readonly}
  */
+/*@__NO_SIDE_EFFECTS__*/
 export function readonly<T extends object>(
   target: T,
 ): DeepReadonly<UnwrapNestedRefs<T>> {
@@ -244,6 +247,7 @@ export function readonly<T extends object>(
  * @param target - The source object.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowreadonly}
  */
+/*@__NO_SIDE_EFFECTS__*/
 export function shallowReadonly<T extends object>(target: T): Readonly<T> {
   return createReactiveObject(
     target,
@@ -328,6 +332,7 @@ function createReactiveObject(
  * @param value - The value to check.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isreactive}
  */
+/*@__NO_SIDE_EFFECTS__*/
 export function isReactive(value: unknown): boolean {
   if (isReadonly(value)) {
     return isReactive((value as Target)[ReactiveFlags.RAW])
@@ -346,10 +351,12 @@ export function isReactive(value: unknown): boolean {
  * @param value - The value to check.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isreadonly}
  */
+/*@__NO_SIDE_EFFECTS__*/
 export function isReadonly(value: unknown): boolean {
   return !!(value && (value as Target)[ReactiveFlags.IS_READONLY])
 }
 
+/*@__NO_SIDE_EFFECTS__*/
 export function isShallow(value: unknown): boolean {
   return !!(value && (value as Target)[ReactiveFlags.IS_SHALLOW])
 }
@@ -361,6 +368,7 @@ export function isShallow(value: unknown): boolean {
  * @param value - The value to check.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isproxy}
  */
+/*@__NO_SIDE_EFFECTS__*/
 export function isProxy(value: any): boolean {
   return value ? !!value[ReactiveFlags.RAW] : false
 }
@@ -388,6 +396,7 @@ export function isProxy(value: any): boolean {
  * @param observed - The object for which the "raw" value is requested.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#toraw}
  */
+/*@__NO_SIDE_EFFECTS__*/
 export function toRaw<T>(observed: T): T {
   const raw = observed && (observed as Target)[ReactiveFlags.RAW]
   return raw ? toRaw(raw) : observed
