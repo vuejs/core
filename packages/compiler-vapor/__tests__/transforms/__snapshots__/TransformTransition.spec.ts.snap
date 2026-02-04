@@ -56,7 +56,7 @@ export function render(_ctx) {
         }, () => {
           const n13 = t1()
           return n13
-        })
+        }, null, 2)
         return n14
       }, null, 1), null, 0)
       return [n0, n3, n7]
