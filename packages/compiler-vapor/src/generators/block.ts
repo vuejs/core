@@ -13,14 +13,16 @@ import type { CodegenContext } from '../generate'
 import { genEffects, genOperations } from './operation'
 import { genChildren, genSelf } from './template'
 import { toValidAssetId } from '@vue/compiler-dom'
+import { genExpression } from './expression'
 
 export function genBlock(
   oper: BlockIRNode,
   context: CodegenContext,
   args: CodeFragment[] = [],
   root?: boolean,
+  ignoreKeyed: boolean = false,
 ): CodeFragment[] {
-  return [
+  const blockFn: CodeFragment[] = [
     '(',
     ...args,
     ') => {',
@@ -29,6 +31,39 @@ export function genBlock(
     INDENT_END,
     NEWLINE,
     '}',
+  ]
+  if (!ignoreKeyed && oper.keyed && oper.keyExpr) {
+    return wrapWithKeyedFragment(blockFn, oper.keyExpr, context)
+  }
+  return blockFn
+}
+
+export function genKeyedFragment(
+  blockFn: CodeFragment[],
+  keyExpr: BlockIRNode['keyExpr'],
+  context: CodegenContext,
+): CodeFragment[] {
+  return genCall(
+    context.helper('createKeyedFragment'),
+    [`() => `, ...genExpression(keyExpr!, context)],
+    blockFn,
+  )
+}
+
+export function wrapWithKeyedFragment(
+  blockFn: CodeFragment[],
+  keyExpr: BlockIRNode['keyExpr'],
+  context: CodegenContext,
+): CodeFragment[] {
+  return [
+    `() => {`,
+    INDENT_START,
+    NEWLINE,
+    `return `,
+    ...genKeyedFragment(blockFn, keyExpr, context),
+    INDENT_END,
+    NEWLINE,
+    `}`,
   ]
 }
 

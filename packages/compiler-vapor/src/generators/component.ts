@@ -566,7 +566,7 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
   let propsName: string | undefined
   let exitScope: (() => void) | undefined
   let depth: number | undefined
-  const { props, key, node } = oper
+  const { props, node } = oper
   const idToPathMap: DestructureMap = props
     ? parseValueDestructure(props, context)
     : new Map<string, DestructureMapValue | null>()
@@ -597,23 +597,6 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     idMap,
   )
   exitScope && exitScope()
-
-  if (key) {
-    blockFn = [
-      `() => {`,
-      INDENT_START,
-      NEWLINE,
-      `return `,
-      ...genCall(
-        context.helper('createKeyedFragment'),
-        [`() => `, ...genExpression(key, context)],
-        blockFn,
-      ),
-      INDENT_END,
-      NEWLINE,
-      `}`,
-    ]
-  }
 
   if (node.type === NodeTypes.ELEMENT) {
     // wrap with withVaporCtx to track slot owner for:

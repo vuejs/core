@@ -738,3 +738,93 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`compiler: element transform > with dynamic key > <component is/> + key 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, createKeyedFragment as _createKeyedFragment } from 'vue';
+
+export function render(_ctx) {
+  return _createKeyedFragment(() => _ctx.id, () => {
+    const n0 = _createDynamicComponent(() => (_ctx.view), null, null, true)
+    return n0
+  })
+}"
+`;
+
+exports[`compiler: element transform > with dynamic key > component + key 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createKeyedFragment as _createKeyedFragment } from 'vue';
+
+export function render(_ctx) {
+  return _createKeyedFragment(() => _ctx.id, () => {
+    const _component_Foo = _resolveComponent("Foo")
+    const n0 = _createComponentWithFallback(_component_Foo, null, null, true)
+    return n0
+  })
+}"
+`;
+
+exports[`compiler: element transform > with dynamic key > element + key 1`] = `
+"import { createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  return _createKeyedFragment(() => _ctx.id, () => {
+    const n0 = t0()
+    return n0
+  })
+}"
+`;
+
+exports[`compiler: element transform > with dynamic key > v-for + key 1`] = `
+"import { createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n2 = t0()
+    return n2
+  }, (i) => (i))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > with dynamic key > v-if + key 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > with static key > <component is/> + key 1`] = `
+"import { createDynamicComponent as _createDynamicComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > with static key > component + key 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > with static key > element + key 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
