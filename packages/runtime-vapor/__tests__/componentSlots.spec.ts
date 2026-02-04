@@ -181,6 +181,50 @@ describe('component: slots', () => {
       expect(host.innerHTML).toBe('<div><h1>footer</h1><!--slot--></div>')
     })
 
+    test('slot props should be isolated per fragment in v-for', async () => {
+      const items = ref([0, 1, 2])
+
+      const Child = defineVaporComponent(() => {
+        const list = createFor(
+          () => items.value,
+          for_item0 => {
+            const n0 = template('<div></div>')()
+            insert(
+              createSlot('age-option', { age: () => for_item0.value }),
+              n0 as any as ParentNode,
+            )
+            return n0
+          },
+        )
+        return list
+      })
+
+      const { host } = define(() => {
+        return createComponent(Child, null, {
+          'age-option': (props: any) => {
+            const el = template('<span></span>')()
+            renderEffect(() => {
+              setElementText(el, toDisplayString(props.age))
+            })
+            return el
+          },
+        })
+      }).render()
+
+      expect(host.innerHTML).toBe(
+        '<div><span>0</span><!--slot--></div>' +
+          '<div><span>1</span><!--slot--></div>' +
+          '<div><span>2</span><!--slot--></div><!--for-->',
+      )
+
+      items.value = [3, 4]
+      await nextTick()
+      expect(host.innerHTML).toBe(
+        '<div><span>3</span><!--slot--></div>' +
+          '<div><span>4</span><!--slot--></div><!--for-->',
+      )
+    })
+
     test('dynamic slot props', async () => {
       let props: any
 

@@ -20,7 +20,7 @@ import {
   insert,
   remove,
 } from './block'
-import { warn } from '@vue/runtime-dom'
+import { queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import {
   type DynamicSlot,
@@ -522,12 +522,18 @@ export const createFor = (
           oper()
         }
       }
-      activeOpers = operMap.get(newValue)
-      if (activeOpers !== undefined) {
-        for (const oper of activeOpers) {
-          oper()
+
+      // watch may trigger before list patched
+      // defer to post-flush so operMap is up to date
+      queuePostFlushCb(() => {
+        activeKey = newValue
+        activeOpers = operMap.get(newValue)
+        if (activeOpers !== undefined) {
+          for (const oper of activeOpers) {
+            oper()
+          }
         }
-      }
+      })
     })
 
     selectors.push({ deregister, cleanup })
