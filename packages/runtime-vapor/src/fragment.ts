@@ -199,6 +199,9 @@ export class DynamicFragment extends VaporFragment {
       const prevOwner = setCurrentSlotOwner(this.slotOwner)
       // set currentKeepAliveCtx so nested DynamicFragments and components can capture it
       const prevCtx = setCurrentKeepAliveCtx(keepAliveCtx)
+      if (keepAliveCtx && this.keyed) {
+        keepAliveCtx.setCurrentBranchKey(this.current)
+      }
       // switch current instance to parent instance during update
       // ensure that the parent instance is correct for nested components
       const prev = parent && instance ? setCurrentInstance(instance) : undefined
@@ -207,7 +210,7 @@ export class DynamicFragment extends VaporFragment {
       setCurrentKeepAliveCtx(prevCtx)
       setCurrentSlotOwner(prevOwner)
 
-      // set key on nodes
+      // set key on blocks
       if (this.keyed) setKey(this.nodes, this.current)
 
       if (transition) {
@@ -485,12 +488,14 @@ function setKey(block: Block & { $key?: any }, key: any) {
   if (block instanceof Node) {
     block.$key = key
   } else if (isVaporComponent(block)) {
+    block.key = key
     setKey(block.block, key)
   } else if (isArray(block)) {
     for (const b of block) {
       setKey(b, key)
     }
   } else {
+    block.$key = key
     setKey(block.nodes, key)
   }
 }
