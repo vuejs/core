@@ -85,9 +85,13 @@ export type DefineVaporSetupFnComponent<
   ResolvedProps extends Record<string, any> = Props &
     EmitsToProps<Emits> &
     VaporPublicProps,
-> = new (
-  props?: ResolvedProps,
-) => VaporComponentInstance<ResolvedProps, Emits, Slots, Exposed, TypeBlock>
+> = new () => VaporComponentInstance<
+  ResolvedProps,
+  Emits,
+  Slots,
+  Exposed,
+  TypeBlock
+>
 
 // overload 1: direct setup function
 // (uses user defined props interface)
