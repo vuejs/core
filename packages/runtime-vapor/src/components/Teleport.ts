@@ -37,8 +37,9 @@ import {
   runWithoutHydration,
   setCurrentHydrationNode,
 } from '../dom/hydration'
+import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
 
-export const VaporTeleportImpl = {
+const VaporTeleportImpl = {
   name: 'VaporTeleport',
   __isTeleport: true,
   __vapor: true,
@@ -348,6 +349,9 @@ export class TeleportFragment extends VaporFragment {
     advanceHydrationNode(this.anchor!)
   }
 }
+
+export const VaporTeleport =
+  VaporTeleportImpl as unknown as DefineVaporSetupFnComponent<TeleportProps>
 
 /**
  * Use duck typing to check for VaporTeleport instead of direct reference

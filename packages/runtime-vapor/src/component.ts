@@ -127,7 +127,7 @@ export { currentInstance } from '@vue/runtime-dom'
 
 export type VaporComponent =
   | FunctionalVaporComponent
-  | ObjectVaporComponent
+  | VaporComponentOptions
   | DefineVaporComponent
 
 export type FunctionalVaporComponent<
@@ -145,13 +145,13 @@ export type FunctionalVaporComponent<
   },
 ) => VaporRenderResult) &
   Omit<
-    ObjectVaporComponent<ComponentPropsOptions<Props>, Emits, string, Slots>,
+    VaporComponentOptions<ComponentPropsOptions<Props>, Emits, string, Slots>,
     'setup'
   > & {
     displayName?: string
   } & SharedInternalOptions
 
-export interface ObjectVaporComponent<
+export interface VaporComponentOptions<
   Props = {},
   Emits extends EmitsOptions = {},
   RuntimeEmitsKeys extends string = string,
@@ -164,7 +164,10 @@ export interface ObjectVaporComponent<
 >
   extends
     ComponentInternalOptions,
-    AsyncComponentInternalOptions<ObjectVaporComponent, VaporComponentInstance>,
+    AsyncComponentInternalOptions<
+      VaporComponentOptions,
+      VaporComponentInstance
+    >,
     SharedInternalOptions {
   inheritAttrs?: boolean
   props?: Props

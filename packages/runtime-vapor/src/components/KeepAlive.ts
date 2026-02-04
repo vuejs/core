@@ -21,12 +21,14 @@ import {
 } from '@vue/runtime-dom'
 import { type Block, move, remove } from '../block'
 import {
-  type ObjectVaporComponent,
   type VaporComponent,
   type VaporComponentInstance,
   isVaporComponent,
 } from '../component'
-import { defineVaporComponent } from '../apiDefineComponent'
+import {
+  type DefineVaporComponent,
+  defineVaporComponent,
+} from '../apiDefineComponent'
 import {
   ShapeFlags,
   invokeArrayFns,
@@ -38,7 +40,7 @@ import { createElement } from '../dom/node'
 import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
 import type { EffectScope } from '@vue/reactivity'
 
-export interface KeepAliveContext {
+export interface VaporKeepAliveContext {
   processShapeFlag(block: Block): boolean
   cacheBlock(): void
   cacheScope(key: any, scope: EffectScope): void
@@ -46,11 +48,11 @@ export interface KeepAliveContext {
   setCurrentBranchKey(key: any): any
 }
 
-export let currentKeepAliveCtx: KeepAliveContext | null = null
+export let currentKeepAliveCtx: VaporKeepAliveContext | null = null
 
 export function setCurrentKeepAliveCtx(
-  ctx: KeepAliveContext | null,
-): KeepAliveContext | null {
+  ctx: VaporKeepAliveContext | null,
+): VaporKeepAliveContext | null {
   try {
     return currentKeepAliveCtx
   } finally {
@@ -106,7 +108,7 @@ function getCompositeKey(
   return composite
 }
 
-const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
+const VaporKeepAliveImpl = defineVaporComponent({
   name: 'VaporKeepAlive',
   __isKeepAlive: true,
   props: {
@@ -300,7 +302,7 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
       keptAliveScopes.clear()
     })
 
-    const keepAliveCtx: KeepAliveContext = {
+    const keepAliveCtx: VaporKeepAliveContext = {
       processShapeFlag,
       cacheBlock,
       cacheScope(key, scope) {
@@ -340,8 +342,8 @@ const KeepAliveImpl: ObjectVaporComponent = defineVaporComponent({
   },
 })
 
-export const VaporKeepAliveImpl: ObjectVaporComponent =
-  /*@__PURE__*/ KeepAliveImpl
+export const VaporKeepAlive: DefineVaporComponent<{}, string, KeepAliveProps> =
+  VaporKeepAliveImpl
 
 const shouldCache = (
   block: GenericComponentInstance | VaporFragment,

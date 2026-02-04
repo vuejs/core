@@ -9,8 +9,8 @@ export {
 export { defineVaporAsyncComponent } from './apiDefineAsyncComponent'
 export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
-export { VaporTeleportImpl as VaporTeleport } from './components/Teleport'
-export { VaporKeepAliveImpl as VaporKeepAlive } from './components/KeepAlive'
+export { VaporTeleport } from './components/Teleport'
+export { VaporKeepAlive } from './components/KeepAlive'
 export {
   defineVaporCustomElement,
   defineVaporSSRCustomElement,
@@ -78,6 +78,6 @@ export { VaporTransition } from './components/Transition'
 export { VaporTransitionGroup } from './components/TransitionGroup'
 
 // types
-export type { VaporComponent } from './component'
+export type { VaporComponent, VaporComponentOptions } from './component'
 export type { VaporSlot } from './componentSlots'
 export type { VaporTransitionHooks } from './block'

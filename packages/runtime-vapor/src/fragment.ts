@@ -38,7 +38,7 @@ import { isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import {
-  type KeepAliveContext,
+  type VaporKeepAliveContext,
   currentKeepAliveCtx,
   setCurrentKeepAliveCtx,
 } from './components/KeepAlive'
@@ -95,7 +95,7 @@ export class DynamicFragment extends VaporFragment {
   // set ref for async wrapper
   setAsyncRef?: (instance: VaporComponentInstance) => void
 
-  keepAliveCtx: KeepAliveContext | null
+  keepAliveCtx: VaporKeepAliveContext | null
 
   slotOwner: VaporComponentInstance | null
 
