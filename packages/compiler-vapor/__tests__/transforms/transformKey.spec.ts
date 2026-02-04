@@ -3,13 +3,13 @@ import {
   IRNodeTypes,
   transformChildren,
   transformElement,
+  transformKey,
   transformText,
   transformVFor,
   transformVIf,
   transformVSlot,
 } from '../../src'
 import { NodeTypes } from '@vue/compiler-dom'
-import { transformKey } from 'packages/compiler-vapor/src/transforms/transformKey'
 
 const compileWithKey = makeCompile({
   nodeTransforms: [
@@ -139,6 +139,12 @@ describe('compiler: key', () => {
 
     test('<component is/> + key', () => {
       const { code } = compileWithKey(`<component :is="view" key="1" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('static expression key', () => {
+      const { code } = compileWithKey(`<div :key="1" />`)
       expect(code).toMatchSnapshot()
       expect(code).not.contains('_createKeyedFragment(')
     })

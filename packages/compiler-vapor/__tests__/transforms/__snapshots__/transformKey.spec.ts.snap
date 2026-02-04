@@ -190,3 +190,13 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`compiler: key > with static key > static expression key 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
