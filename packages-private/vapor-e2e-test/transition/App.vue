@@ -666,6 +666,12 @@ const Comp2 = defineVaporComponent({
         <h1 style="position: absolute" :key="count">{{ count }}</h1>
       </Transition>
     </div>
+    <div class="reusable-keyed">
+      <button @click="count++">inc</button>
+      <MyTransition>
+        <h1 style="position: absolute" :key="count">{{ count }}</h1>
+      </MyTransition>
+    </div>
     <!-- keyed fragment end -->
 
     <!-- mode -->

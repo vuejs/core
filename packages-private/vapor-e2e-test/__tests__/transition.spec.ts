@@ -1705,6 +1705,42 @@ describe('vapor transition', () => {
   )
 
   test(
+    'should work with reusable Transition + keyed element',
+    async () => {
+      const btnSelector = '.reusable-keyed > button'
+      const containerSelector = '.reusable-keyed > h1'
+
+      await waitForInnerHTML(containerSelector, '0')
+
+      // change key
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).classNames,
+      ).toStrictEqual(['test-leave-from', 'test-leave-active'])
+
+      await nextFrame()
+      expect(await classList(containerSelector)).toStrictEqual([
+        'test-leave-active',
+        'test-leave-to',
+      ])
+      await waitForInnerHTML(containerSelector, '1')
+
+      // change key again
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).classNames,
+      ).toStrictEqual(['test-leave-from', 'test-leave-active'])
+
+      await nextFrame()
+      expect(await classList(containerSelector)).toStrictEqual([
+        'test-leave-active',
+        'test-leave-to',
+      ])
+
+      await waitForInnerHTML(containerSelector, '2')
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
     'should work with out-in mode',
     async () => {
       const btnSelector = '.out-in > button'
