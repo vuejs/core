@@ -49,7 +49,7 @@ export function createDynamicComponent(
         if (isKeepAlive(currentInstance)) {
           const frag = (
             currentInstance as KeepAliveInstance
-          ).ctx.getCachedComponent(value.type as any) as VaporFragment
+          ).ctx.getCachedComponent(value.type, value.key) as VaporFragment
           if (frag) return frag
         }
 
