@@ -20,7 +20,11 @@ import {
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
-import { DynamicFragment, type VaporFragment } from './fragment'
+import {
+  type DynamicFragment,
+  SlotFragment,
+  type VaporFragment,
+} from './fragment'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
 
@@ -190,7 +194,7 @@ export function createSlot(
     ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
 
-  let fragment: DynamicFragment
+  let fragment: SlotFragment
   if (isRef(rawSlots._)) {
     if (isHydrating) locateHydrationNode()
     fragment = instance.appContext.vapor!.vdomSlot(
@@ -201,10 +205,7 @@ export function createSlot(
       fallback,
     )
   } else {
-    fragment =
-      isHydrating || __DEV__
-        ? new DynamicFragment('slot')
-        : new DynamicFragment()
+    fragment = new SlotFragment()
     const isDynamicName = isFunction(name)
 
     // Calculate slotScopeIds once (for vdom interop)
@@ -242,7 +243,6 @@ export function createSlot(
 
       const slot = getSlot(rawSlots, slotName)
       if (slot) {
-        fragment.fallback = fallback
         // Create and cache bound slot to keep it stable and avoid unnecessary
         // updates when it resolves to the same slot. Cache per-fragment
         // (v-for creates multiple fragments) so each fragment keeps its own
@@ -265,9 +265,9 @@ export function createSlot(
           }
           boundMap.set(fragment, bound)
         }
-        fragment.update(bound)
+        fragment.updateSlot(bound, fallback)
       } else {
-        fragment.update(fallback)
+        fragment.updateSlot(undefined, fallback)
       }
     }
 

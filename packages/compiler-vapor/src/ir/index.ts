@@ -53,6 +53,8 @@ export interface BlockIRNode extends BaseIRNode {
   effect: IREffect[]
   operation: OperationNode[]
   returns: number[]
+  keyed?: boolean
+  keyExpr?: SimpleExpressionNode
 }
 
 export interface RootIRNode {

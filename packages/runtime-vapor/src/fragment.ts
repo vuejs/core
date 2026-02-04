@@ -86,7 +86,6 @@ export class DynamicFragment extends VaporFragment {
   scope: EffectScope | undefined
   current?: BlockFn
   pending?: { render?: BlockFn; key: any }
-  fallback?: BlockFn
   anchorLabel?: string
   keyed?: boolean
 
@@ -175,40 +174,6 @@ export class DynamicFragment extends VaporFragment {
 
     this.renderBranch(render, transition, parent, instance)
 
-    if (this.fallback) {
-      // Find the deepest invalid fragment
-      let invalidFragment: VaporFragment | null = null
-      if (isFragment(this.nodes)) {
-        setFragmentFallback(
-          this.nodes,
-          this.fallback,
-          (frag: VaporFragment) => {
-            if (!isValidBlock(frag.nodes)) {
-              invalidFragment = frag
-            }
-          },
-        )
-      }
-
-      // Check self validity (when no nested fragment or nested is valid)
-      if (!invalidFragment && !isValidBlock(this.nodes)) {
-        invalidFragment = this
-      }
-
-      if (invalidFragment) {
-        parent && remove(this.nodes, parent)
-        const scope = this.scope || (this.scope = new EffectScope())
-        scope.run(() => {
-          if (invalidFragment !== this) {
-            renderFragmentFallback(invalidFragment!)
-          } else {
-            this.nodes = this.fallback!() || []
-          }
-        })
-        parent && insert(this.nodes, parent, this.anchor)
-      }
-    }
-
     setActiveSub(prevSub)
 
     if (isHydrating) this.hydrate()
@@ -234,15 +199,22 @@ export class DynamicFragment extends VaporFragment {
       const prevOwner = setCurrentSlotOwner(this.slotOwner)
       // set currentKeepAliveCtx so nested DynamicFragments and components can capture it
       const prevCtx = setCurrentKeepAliveCtx(keepAliveCtx)
+      let prevBranchKey: any
+      if (keepAliveCtx && this.keyed) {
+        prevBranchKey = keepAliveCtx.setCurrentBranchKey(this.current)
+      }
       // switch current instance to parent instance during update
       // ensure that the parent instance is correct for nested components
       const prev = parent && instance ? setCurrentInstance(instance) : undefined
       this.nodes = this.scope.run(render) || []
       if (prev !== undefined) setCurrentInstance(...prev)
+      if (keepAliveCtx && this.keyed) {
+        keepAliveCtx.setCurrentBranchKey(prevBranchKey)
+      }
       setCurrentKeepAliveCtx(prevCtx)
       setCurrentSlotOwner(prevOwner)
 
-      // set key on nodes
+      // set key on blocks
       if (this.keyed) setKey(this.nodes, this.current)
 
       if (transition) {
@@ -297,7 +269,7 @@ export class DynamicFragment extends VaporFragment {
     // early return allows tree-shaking of hydration logic when not used
     if (!isHydrating) return
 
-    // avoid repeated hydration during fallback rendering
+    // avoid repeated hydration
     if (this.anchor) return
 
     if (this.anchorLabel === 'if') {
@@ -351,40 +323,27 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
-export function setFragmentFallback(
-  fragment: VaporFragment,
-  fallback: BlockFn,
-  onFragment?: (frag: VaporFragment) => void,
-): void {
-  if (fragment.fallback) {
-    const originalFallback = fragment.fallback
-    // if the original fallback also renders invalid blocks,
-    // this ensures proper fallback chaining
-    fragment.fallback = () => {
-      const fallbackNodes = originalFallback()
-      if (isValidBlock(fallbackNodes)) {
-        return fallbackNodes
-      }
-      return fallback()
+export class SlotFragment extends DynamicFragment {
+  constructor() {
+    super(isHydrating || __DEV__ ? 'slot' : undefined)
+  }
+
+  updateSlot(render?: BlockFn, fallback?: BlockFn, key: any = render): void {
+    if (!render || !fallback) {
+      this.update(render || fallback, key)
+      return
     }
-  } else {
-    fragment.fallback = fallback
-  }
 
-  if (onFragment) onFragment(fragment)
+    const wrapped = () => {
+      const block = render()
+      const emptyFrag = attachSlotFallback(block, fallback)
+      if (!isValidBlock(block)) {
+        return renderSlotFallback(block, fallback, emptyFrag)
+      }
+      return block
+    }
 
-  if (isFragment(fragment.nodes)) {
-    setFragmentFallback(fragment.nodes, fragment.fallback, onFragment)
-  }
-}
-
-function renderFragmentFallback(fragment: VaporFragment): void {
-  if (fragment instanceof ForFragment) {
-    fragment.nodes[0] = [fragment.fallback!() || []] as Block[]
-  } else if (fragment instanceof DynamicFragment) {
-    fragment.update(fragment.fallback)
-  } else {
-    // vdom slots
+    this.update(wrapped, key)
   }
 }
 
@@ -398,16 +357,149 @@ export function isDynamicFragment(
   return val instanceof DynamicFragment
 }
 
+export function renderSlotFallback(
+  block: Block,
+  fallback: BlockFn,
+  emptyFragment?: VaporFragment | null,
+): Block {
+  // emptyFragment comes from attachSlotFallback, but v-if/v-for updates can
+  // change which fragment is empty after update(); fall back to a fresh search.
+  const frag = emptyFragment || findDeepestEmptyFragment(block)
+  if (frag) {
+    if (frag instanceof ForFragment) {
+      frag.nodes[0] = [fallback() || []] as Block[]
+    } else if (frag instanceof DynamicFragment) {
+      frag.update(fallback)
+    }
+    return block
+  }
+  return fallback()
+}
+
+export function attachSlotFallback(
+  block: Block,
+  fallback: BlockFn,
+): VaporFragment | null {
+  const state = { emptyFrag: null as VaporFragment | null }
+  traverseForFallback(block, fallback, state)
+  return state.emptyFrag
+}
+
+// Tracks per-DynamicFragment fallback and whether update() has been wrapped.
+// We need this state to:
+// 1) avoid wrapping update() multiple times when attachSlotFallback is called repeatedly,
+// 2) allow fallback to be chained/updated as slot fallback propagates through nested fragments.
+const slotFallbackState = new WeakMap<
+  DynamicFragment,
+  { fallback: BlockFn; wrapped: boolean }
+>()
+
+// Slot fallback needs to propagate into nested fragments created by v-if/v-for.
+// We wrap DynamicFragment.update() once and store fallback state so that when a
+// nested branch turns empty later, it can render the slot fallback without
+// requiring the parent slot outlet to re-render.
+function traverseForFallback(
+  block: Block,
+  fallback: BlockFn,
+  state: { emptyFrag: VaporFragment | null },
+): void {
+  if (isVaporComponent(block)) {
+    if (block.block) traverseForFallback(block.block, fallback, state)
+    return
+  }
+
+  if (isArray(block)) {
+    for (const item of block) traverseForFallback(item, fallback, state)
+    return
+  }
+
+  // v-for fallback is handled by apiCreateFor; keep fallback on fragment
+  if (block instanceof ForFragment) {
+    block.fallback = chainFallback(block.fallback, fallback)
+    if (!isValidBlock(block.nodes)) state.emptyFrag = block
+    traverseForFallback(block.nodes, fallback, state)
+    return
+  }
+
+  // vdom slot fragment: store fallback on the fragment itself
+  if (block instanceof VaporFragment && block.insert) {
+    block.fallback = chainFallback(block.fallback, fallback)
+    if (!isValidBlock(block.nodes)) state.emptyFrag = block
+    traverseForFallback(block.nodes, fallback, state)
+    return
+  }
+
+  // DynamicFragment: chain/record fallback and wrap update() once for empty checks.
+  if (block instanceof DynamicFragment) {
+    let slotState = slotFallbackState.get(block)
+    if (slotState) {
+      slotState.fallback = chainFallback(slotState.fallback, fallback)
+    } else {
+      slotFallbackState.set(block, (slotState = { fallback, wrapped: false }))
+    }
+    if (!slotState.wrapped) {
+      slotState.wrapped = true
+      const original = block.update.bind(block)
+      block.update = (render?: BlockFn, key?: any) => {
+        original(render, key)
+        // attach to newly created nested fragments
+        const emptyFrag = attachSlotFallback(block.nodes, slotState!.fallback)
+        if (render !== slotState!.fallback && !isValidBlock(block.nodes)) {
+          renderSlotFallback(block, slotState!.fallback, emptyFrag)
+        }
+      }
+    }
+    if (!isValidBlock(block.nodes)) state.emptyFrag = block
+    traverseForFallback(block.nodes, fallback, state)
+  }
+}
+
+function findDeepestEmptyFragment(block: Block): VaporFragment | null {
+  let emptyFrag: VaporFragment | null = null
+  traverseForEmptyFragment(block, frag => (emptyFrag = frag))
+  return emptyFrag
+}
+
+function traverseForEmptyFragment(
+  block: Block,
+  onFound: (frag: VaporFragment) => void,
+): void {
+  if (isVaporComponent(block)) {
+    if (block.block) traverseForEmptyFragment(block.block, onFound)
+    return
+  }
+
+  if (isArray(block)) {
+    for (const item of block) traverseForEmptyFragment(item, onFound)
+    return
+  }
+
+  if (isFragment(block)) {
+    if (!isValidBlock(block.nodes)) onFound(block)
+    traverseForEmptyFragment(block.nodes, onFound)
+  }
+}
+
+function chainFallback(existing: BlockFn | undefined, next: BlockFn): BlockFn {
+  if (!existing) return next
+  return (...args: any[]) => {
+    const res = existing(...args)
+    return !isValidBlock(res) ? next(...args) : res
+  }
+}
+
 function setKey(block: Block & { $key?: any }, key: any) {
   if (block instanceof Node) {
     block.$key = key
   } else if (isVaporComponent(block)) {
+    block.key = key
     setKey(block.block, key)
   } else if (isArray(block)) {
     for (const b of block) {
       setKey(b, key)
     }
   } else {
+    block.$key = key
     setKey(block.nodes, key)
   }
 }

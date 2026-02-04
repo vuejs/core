@@ -110,7 +110,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, true)
+  }, true, 0)
   return n0
 }"
 `;
