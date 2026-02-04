@@ -3,12 +3,14 @@ import {
   hasChanged,
   isArray,
   isFunction,
+  isIntegerKey,
   isObject,
 } from '@vue/shared'
 import { Dep, getDepFromReactive } from './dep'
 import {
   type Builtin,
   type ShallowReactiveMarker,
+  type Target,
   isProxy,
   isReactive,
   isReadonly,
@@ -41,6 +43,7 @@ export interface Ref<T = any, S = T> {
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isref}
  */
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
+/*@__NO_SIDE_EFFECTS__*/
 export function isRef(r: any): r is Ref {
   return r ? r[ReactiveFlags.IS_REF] === true : false
 }
@@ -56,6 +59,7 @@ export function ref<T>(
   value: T,
 ): [T] extends [Ref] ? IfAny<T, Ref<T>, T> : Ref<UnwrapRef<T>, UnwrapRef<T> | T>
 export function ref<T = any>(): Ref<T | undefined>
+/*@__NO_SIDE_EFFECTS__*/
 export function ref(value?: unknown) {
   return createRef(value, false)
 }
@@ -91,6 +95,7 @@ export function shallowRef<T>(
     : ShallowRef<T>
   : ShallowRef<T>
 export function shallowRef<T = any>(): ShallowRef<T | undefined>
+/*@__NO_SIDE_EFFECTS__*/
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
@@ -275,7 +280,7 @@ export function proxyRefs<T extends object>(
   objectWithRefs: T,
 ): ShallowUnwrapRef<T> {
   return isReactive(objectWithRefs)
-    ? objectWithRefs
+    ? (objectWithRefs as ShallowUnwrapRef<T>)
     : new Proxy(objectWithRefs, shallowUnwrapHandlers)
 }
 
@@ -336,6 +341,7 @@ export type ToRefs<T = any> = {
  * @param object - Reactive object to be made into an object of linked refs.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#torefs}
  */
+/*@__NO_SIDE_EFFECTS__*/
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
     warn(`toRefs() expects a reactive object but received a plain one.`)
@@ -351,23 +357,52 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   public readonly [ReactiveFlags.IS_REF] = true
   public _value: T[K] = undefined!
 
+  private readonly _raw: T
+  private readonly _shallow: boolean
+
   constructor(
     private readonly _object: T,
     private readonly _key: K,
     private readonly _defaultValue?: T[K],
-  ) {}
+  ) {
+    this._raw = toRaw(_object)
+
+    let shallow = true
+    let obj = _object
+
+    // For an array with integer key, refs are not unwrapped
+    if (!isArray(_object) || !isIntegerKey(String(_key))) {
+      // Otherwise, check each proxy layer for unwrapping
+      do {
+        shallow = !isProxy(obj) || isShallow(obj)
+      } while (shallow && (obj = (obj as Target)[ReactiveFlags.RAW]))
+    }
+
+    this._shallow = shallow
+  }
 
   get value() {
-    const val = this._object[this._key]
+    let val = this._object[this._key]
+    if (this._shallow) {
+      val = unref(val)
+    }
     return (this._value = val === undefined ? this._defaultValue! : val)
   }
 
   set value(newVal) {
+    if (this._shallow && isRef(this._raw[this._key])) {
+      const nestedRef = this._object[this._key]
+      if (isRef(nestedRef)) {
+        nestedRef.value = newVal
+        return
+      }
+    }
+
     this._object[this._key] = newVal
   }
 
   get dep(): Dep | undefined {
-    return getDepFromReactive(toRaw(this._object), this._key)
+    return getDepFromReactive(this._raw, this._key)
   }
 }
 
@@ -443,6 +478,7 @@ export function toRef<T extends object, K extends keyof T>(
   key: K,
   defaultValue: T[K],
 ): ToRef<Exclude<T[K], undefined>>
+/*@__NO_SIDE_EFFECTS__*/
 export function toRef(
   source: Record<string, any> | MaybeRef,
   key?: string,
@@ -464,10 +500,7 @@ function propertyToRef(
   key: string,
   defaultValue?: unknown,
 ) {
-  const val = source[key]
-  return isRef(val)
-    ? val
-    : (new ObjectRefImpl(source, key, defaultValue) as any)
+  return new ObjectRefImpl(source, key, defaultValue) as any
 }
 
 /**
