@@ -57,13 +57,26 @@ for (const target of targets) {
     : `packages`
   const pkgBasePath = `../${pkgBase}/${target}`
   const pkg = require(`${pkgBasePath}/package.json`)
+  const isVueEsmBrowserVapor =
+    pkg.name === 'vue' && format === 'esm-browser-vapor'
   const outfile = resolve(
     __dirname,
-    `${pkgBasePath}/dist/${
-      target === 'vue-compat' ? `vue` : target
-    }.${postfix}.${prod ? `prod.` : ``}js`,
+    `${pkgBasePath}/dist/${target === 'vue-compat' ? `vue` : target}.${
+      isVueEsmBrowserVapor ? `runtime-with-vapor.esm-browser` : postfix
+    }.${prod ? `prod.` : ``}js`,
   )
   const relativeOutfile = relative(process.cwd(), outfile)
+
+  let entryFile = 'index.ts'
+  if (pkg.name === 'vue') {
+    if (format === 'esm-browser-vapor' || format === 'esm-bundler-runtime') {
+      entryFile = 'runtime-with-vapor.ts'
+    } else if (format === 'esm-bundler') {
+      entryFile = 'index-with-vapor.ts'
+    } else if (format.includes('runtime')) {
+      entryFile = 'runtime.ts'
+    }
+  }
 
   /** @type {string[]} */
   let external = []
@@ -122,7 +135,7 @@ for (const target of targets) {
         }
   /** @type {import('rolldown').WatchOptions} */
   const config = {
-    input: resolve(__dirname, `${pkgBasePath}/src/index.ts`),
+    input: resolve(__dirname, `${pkgBasePath}/src/${entryFile}`),
     output: {
       file: outfile,
       format: outputFormat,

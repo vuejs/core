@@ -7,6 +7,7 @@ import {
   transformText,
   transformVBind,
   transformVFor,
+  transformVIf,
   transformVOn,
 } from '../../src'
 import {
@@ -17,10 +18,11 @@ import {
 
 const compileWithElementTransform = makeCompile({
   nodeTransforms: [
+    transformVIf,
     transformVFor,
     transformElement,
-    transformChildren,
     transformText,
+    transformChildren,
   ],
   directiveTransforms: {
     bind: transformVBind,
@@ -1079,6 +1081,20 @@ describe('compiler: element transform', () => {
     ])
   })
 
+  test('invalid table nesting with dynamic child', () => {
+    const { code } = compileWithElementTransform(
+      `<table>
+        <tr>
+          <td>{{ msg }}</td>
+        </tr>
+      </table>
+      <div></div>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_insert(n1, n2)')
+    expect(code).toContain('const n0 = _child(n1)')
+  })
+
   test('empty template', () => {
     const { code } = compileWithElementTransform('')
     expect(code).toMatchSnapshot()
@@ -1224,6 +1240,67 @@ describe('compiler: element transform', () => {
       expect(code).toMatchSnapshot()
       expect(code).contains(JSON.stringify(template))
       expect([...ir.template.keys()]).toMatchObject([template])
+    })
+  })
+
+  describe('with dynamic key', () => {
+    test('component + key', () => {
+      const { code } = compileWithElementTransform(`<Foo :key="id" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_createKeyedFragment(() => _ctx.id')
+    })
+
+    test('element + key', () => {
+      const { code } = compileWithElementTransform(`<div :key="id"></div>`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_createKeyedFragment(() => _ctx.id')
+    })
+
+    test('<component is/> + key', () => {
+      const { code } = compileWithElementTransform(
+        `<component :is="view" :key="id" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_createKeyedFragment(() => _ctx.id')
+    })
+
+    test('v-if + key', () => {
+      const { code } = compileWithElementTransform(
+        `<div v-if="ok" :key="id"></div>`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('v-for + key', () => {
+      const { code } = compileWithElementTransform(
+        `<div v-for="i in list" :key="i"></div>`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+  })
+
+  // static keys will be ignored
+  describe('with static key', () => {
+    test('component + key', () => {
+      const { code } = compileWithElementTransform(`<Foo key="1" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('element + key', () => {
+      const { code } = compileWithElementTransform(`<div key="1"></div>`)
+      expect(code).toMatchSnapshot()
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('<component is/> + key', () => {
+      const { code } = compileWithElementTransform(
+        `<component :is="view" key="1" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).not.contains('_createKeyedFragment(')
     })
   })
 })

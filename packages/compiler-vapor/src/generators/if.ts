@@ -38,7 +38,8 @@ export function genIf(
       positiveArg,
       negativeArg,
       once && 'true',
-      // index is only used when the branch can change in Transition
+      // index is only used when the branch can change
+      // for transition keys and keep-alive caching
       index !== undefined && negative && String(index),
     ),
   )

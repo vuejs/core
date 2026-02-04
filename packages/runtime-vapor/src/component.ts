@@ -591,6 +591,7 @@ export class VaporComponentInstance<
 
   // for keep-alive
   shapeFlag?: number
+  key?: any
 
   // for v-once: caches props/attrs values to ensure they remain frozen
   // even when the component re-renders due to local state changes
