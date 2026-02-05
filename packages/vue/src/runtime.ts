@@ -9,6 +9,7 @@ if (__DEV__) {
 }
 
 export * from '@vue/runtime-dom'
+export * from '@vue/runtime-vapor'
 
 export const compile = (_template: string): RenderFunction => {
   if (__DEV__) {
