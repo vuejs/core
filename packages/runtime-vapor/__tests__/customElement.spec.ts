@@ -2125,7 +2125,7 @@ describe('defineVaporCustomElement', () => {
     })
   })
 
-  test('inherit slots', async () => {
+  test('inherit slots', () => {
     const Provider = defineVaporCustomElement({
       setup(props, { slots }) {
         return createPlainElement('a', props, slots)
