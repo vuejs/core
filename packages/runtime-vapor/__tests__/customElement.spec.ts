@@ -829,9 +829,9 @@ describe('defineVaporCustomElement', () => {
     test('over nested usage', async () => {
       const foo = ref('injected!')
       const Provider = defineVaporCustomElement({
-        setup() {
+        setup(props, { slots }) {
           provide('foo', foo)
-          return createPlainElement('my-consumer')
+          return createPlainElement('my-consumer', props, slots)
         },
       })
       customElements.define('my-provider', Provider)
@@ -2123,5 +2123,18 @@ describe('defineVaporCustomElement', () => {
       __vapor: true,
       name: 'Foo',
     })
+  })
+
+  test('inherit slots', async () => {
+    const Provider = defineVaporCustomElement({
+      setup(props, { slots }) {
+        return createPlainElement('a', props, slots)
+      },
+    })
+    customElements.define('my-provider', Provider)
+    container.innerHTML = `<my-provider><my-provider>`
+    const provider = container.childNodes[0] as VaporElement
+    const consumer = provider.shadowRoot!.childNodes[0] as VaporElement
+    expect(consumer.tagName).toBe('A')
   })
 })
