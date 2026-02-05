@@ -2126,15 +2126,15 @@ describe('defineVaporCustomElement', () => {
   })
 
   test('inherit slots', () => {
-    const Provider = defineVaporCustomElement({
+    const Comp = defineVaporCustomElement({
       setup(props, { slots }) {
         return createPlainElement('a', props, slots)
       },
     })
-    customElements.define('my-provider', Provider)
-    container.innerHTML = `<my-provider><my-provider>`
-    const provider = container.childNodes[0] as VaporElement
-    const consumer = provider.shadowRoot!.childNodes[0] as VaporElement
+    customElements.define('my-comp', Comp)
+    container.innerHTML = `<my-comp><my-comp>`
+    const comp = container.childNodes[0] as VaporElement
+    const consumer = comp.shadowRoot!.childNodes[0] as VaporElement
     expect(consumer.tagName).toBe('A')
   })
 })
