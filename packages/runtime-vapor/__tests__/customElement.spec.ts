@@ -829,9 +829,9 @@ describe('defineVaporCustomElement', () => {
     test('over nested usage', async () => {
       const foo = ref('injected!')
       const Provider = defineVaporCustomElement({
-        setup(props, { slots }) {
+        setup() {
           provide('foo', foo)
-          return createPlainElement('my-consumer', props, slots)
+          return createPlainElement('my-consumer')
         },
       })
       customElements.define('my-provider', Provider)
