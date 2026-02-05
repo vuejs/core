@@ -315,6 +315,7 @@ export * from '@vue/runtime-core'
 
 export * from './jsx'
 
+// VAPOR -----------------------------------------------------------------------
 // Everything below are exposed for vapor only and can change any time.
 // They are also trimmed from non-bundler builds.
 
@@ -362,6 +363,9 @@ export { svgNS } from './nodeOps'
  * @internal
  */
 export { xlinkNS } from './modules/attrs'
+/**
+ * @internal
+ */
 export {
   resolveTransitionProps,
   TransitionPropsValidators,
