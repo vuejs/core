@@ -415,7 +415,10 @@ function hydrateTeleport(
   // lookahead until we find the target anchor
   // we cannot rely on return value of hydrateChildren() because there
   // could be nested teleports
-  function hydrateAnchor(targetNode: Node | null) {
+  function hydrateAnchor(
+    target: TeleportTargetElement,
+    targetNode: Node | null,
+  ) {
     let targetAnchor = targetNode
     while (targetAnchor) {
       if (targetAnchor && targetAnchor.nodeType === 8) {
@@ -423,7 +426,7 @@ function hydrateTeleport(
           vnode.targetStart = targetAnchor
         } else if ((targetAnchor as Comment).data === 'teleport anchor') {
           vnode.targetAnchor = targetAnchor
-          ;(target as TeleportTargetElement)._lpa =
+          target._lpa =
             vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
           break
         }
@@ -457,7 +460,7 @@ function hydrateTeleport(
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       if (disabled) {
         hydrateDisabledTeleport(node, vnode)
-        hydrateAnchor(targetNode)
+        hydrateAnchor(target as TeleportTargetElement, targetNode)
         if (!vnode.targetAnchor) {
           prepareAnchor(
             target,
@@ -471,7 +474,7 @@ function hydrateTeleport(
         }
       } else {
         vnode.anchor = nextSibling(node)
-        hydrateAnchor(targetNode)
+        hydrateAnchor(target as TeleportTargetElement, targetNode)
         // #11400 if the HTML corresponding to Teleport is not embedded in the
         // correct position on the final page during SSR. the targetAnchor will
         // always be null, we need to manually add targetAnchor to ensure
