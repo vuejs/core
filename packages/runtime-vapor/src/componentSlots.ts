@@ -27,6 +27,7 @@ import {
 } from './fragment'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
+import { isInteropEnabled } from './vdominteropState'
 
 /**
  * Flag to indicate if we are executing a once slot.
@@ -195,7 +196,7 @@ export function createSlot(
     : EMPTY_OBJ
 
   let fragment: SlotFragment
-  if (isRef(rawSlots._)) {
+  if (isRef(rawSlots._) && isInteropEnabled) {
     if (isHydrating) locateHydrationNode()
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,

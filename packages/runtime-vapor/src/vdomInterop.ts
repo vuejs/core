@@ -91,6 +91,7 @@ import {
 } from './fragment'
 import type { NodeRef } from './apiTemplateRef'
 import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
+import { setInteropEnabled } from './vdominteropState'
 import {
   type KeepAliveInstance,
   activate,
@@ -794,6 +795,7 @@ function renderVDOMSlot(
 }
 
 export const vaporInteropPlugin: Plugin = app => {
+  setInteropEnabled()
   const internals = ensureRenderer().internals
   app._context.vapor = extend(vaporInteropImpl, {
     vdomMount: createVDOMComponent.bind(null, internals),
