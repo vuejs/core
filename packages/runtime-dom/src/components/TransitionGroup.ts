@@ -30,8 +30,8 @@ import {
 import { extend } from '@vue/shared'
 
 interface Position {
-  top: number
   left: number
+  top: number
 }
 
 const positionMap = new WeakMap<VNode, Position>()
@@ -150,10 +150,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
                 instance,
               ),
             )
-            positionMap.set(child, {
-              left: (child.el as HTMLElement).offsetLeft,
-              top: (child.el as HTMLElement).offsetTop,
-            })
+            positionMap.set(child, getRelativePosition(child.el as HTMLElement))
           }
         }
       }
@@ -193,11 +190,22 @@ function callPendingCbs(c: VNode) {
   }
 }
 
+function getRelativePosition(el: HTMLElement): Position {
+  if (!el.parentElement) {
+    return {
+      left: el.offsetLeft,
+      top: el.offsetTop,
+    }
+  }
+
+  return {
+    left: el.offsetLeft - el.parentElement.offsetLeft,
+    top: el.offsetTop - el.parentElement.offsetTop,
+  }
+}
+
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, {
-    left: (c.el as HTMLElement).offsetLeft,
-    top: (c.el as HTMLElement).offsetTop,
-  })
+  newPositionMap.set(c, getRelativePosition(c.el as HTMLElement))
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
