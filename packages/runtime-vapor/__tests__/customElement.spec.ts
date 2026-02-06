@@ -2124,4 +2124,17 @@ describe('defineVaporCustomElement', () => {
       name: 'Foo',
     })
   })
+
+  test('inherit slots', () => {
+    const Comp = defineVaporCustomElement({
+      setup(props, { slots }) {
+        return createPlainElement('a', props, slots)
+      },
+    })
+    customElements.define('my-comp', Comp)
+    container.innerHTML = `<my-comp><my-comp>`
+    const comp = container.childNodes[0] as VaporElement
+    const consumer = comp.shadowRoot!.childNodes[0] as VaporElement
+    expect(consumer.tagName).toBe('A')
+  })
 })
