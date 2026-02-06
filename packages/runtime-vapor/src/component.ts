@@ -834,8 +834,11 @@ export function createPlainElement(
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
       if (!isHydrating) insert(frag, el)
     } else {
-      const block = getSlot(rawSlots as RawSlots, 'default')!()
-      if (!isHydrating) insert(block, el)
+      let slot = getSlot(rawSlots as RawSlots, 'default')
+      if (slot) {
+        const block = slot()
+        if (!isHydrating) insert(block, el)
+      }
     }
     if (isHydrating) {
       setCurrentHydrationNode(nextNode)
