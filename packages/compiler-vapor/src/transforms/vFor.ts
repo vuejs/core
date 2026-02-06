@@ -52,7 +52,7 @@ export function processFor(
     node.tagType === ElementTypes.COMPONENT ||
     // template v-for with a single component child
     isTemplateWithSingleComponent(node)
-  context.node = node = wrapTemplate(node, ['for'])
+  context.node = node = wrapTemplate(node, ['for', 'key'])
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()
   const render: BlockIRNode = newBlock(node)

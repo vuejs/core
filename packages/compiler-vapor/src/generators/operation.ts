@@ -26,6 +26,7 @@ import { genCreateComponent } from './component'
 import { genSlotOutlet } from './slotOutlet'
 import { processExpressions } from './expression'
 import { genBuiltinDirective } from './directive'
+import { genKey } from './key'
 
 export function genOperations(
   opers: OperationNode[],
@@ -77,6 +78,8 @@ export function genOperation(
       return genIf(oper, context)
     case IRNodeTypes.FOR:
       return genFor(oper, context)
+    case IRNodeTypes.KEY:
+      return genKey(oper, context)
     case IRNodeTypes.CREATE_COMPONENT_NODE:
       return genCreateComponent(oper, context)
     case IRNodeTypes.SLOT_OUTLET_NODE:

@@ -74,7 +74,15 @@ export function wrapTemplate(node: ElementNode, dirs: string[]): TemplateNode {
   const reserved: Array<AttributeNode | DirectiveNode> = []
   const pass: Array<AttributeNode | DirectiveNode> = []
   node.props.forEach(prop => {
-    if (prop.type === NodeTypes.DIRECTIVE && dirs.includes(prop.name)) {
+    if (
+      prop.type === NodeTypes.DIRECTIVE &&
+      (dirs.includes(prop.name) ||
+        (prop.name === 'bind' &&
+          prop.arg &&
+          prop.arg.type === NodeTypes.SIMPLE_EXPRESSION &&
+          prop.arg.content === 'key' &&
+          dirs.includes('key')))
+    ) {
       reserved.push(prop)
     } else {
       pass.push(prop)

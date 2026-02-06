@@ -44,13 +44,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
-import {
-  findDir,
-  findProp,
-  isBuiltInComponent,
-  isStaticExpression,
-  propToExpression,
-} from '../utils'
+import { findProp, isBuiltInComponent } from '../utils'
 import { IMPORT_EXP_END, IMPORT_EXP_START } from '../generators/utils'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
@@ -93,7 +87,6 @@ export const transformElement: NodeTransform = (node, context) => {
       node.tagType === ElementTypes.COMPONENT || isCustomElement
 
     const isDynamicComponent = isComponentTag(node.tag)
-    maybeMarkKeyedBlock(node, context)
 
     const propsResult = buildProps(
       node,
@@ -201,45 +194,6 @@ function isSingleRoot(
   }
 
   return context.root === parent
-}
-
-// Dynamic key should become a keyed block (handled in genBlock).
-// Only apply to plain elements/components; skip v-for and v-if branches
-function maybeMarkKeyedBlock(
-  node: ElementNode,
-  context: TransformContext<RootNode | TemplateChildNode>,
-): void {
-  const keyProp = findProp(node, 'key')
-  const hasIf =
-    !!findDir(node, 'if') ||
-    !!findDir(node, 'else-if') ||
-    !!findDir(node, 'else', true)
-  const parent = context.parent?.node
-  const hasParentIf =
-    parent &&
-    parent.type === NodeTypes.ELEMENT &&
-    parent.tagType === ElementTypes.TEMPLATE &&
-    (!!findDir(parent, 'if') ||
-      !!findDir(parent, 'else-if') ||
-      !!findDir(parent, 'else', true))
-  if (
-    keyProp &&
-    keyProp.type === NodeTypes.DIRECTIVE &&
-    keyProp.exp &&
-    !context.inVFor &&
-    !hasIf &&
-    !hasParentIf &&
-    !context.block.keyed
-  ) {
-    const keyExpr = propToExpression(keyProp)
-    if (
-      keyExpr &&
-      !isStaticExpression(keyExpr, context.options.bindingMetadata)
-    ) {
-      context.block.keyed = true
-      context.block.keyExpr = keyExpr
-    }
-  }
 }
 
 function transformComponentElement(
