@@ -18,6 +18,7 @@ import {
 import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
 import type { KeepAliveInstance } from './components/KeepAlive'
+import { isInteropEnabled } from './vdominteropState'
 
 export function createDynamicComponent(
   getter: () => any,
@@ -45,7 +46,7 @@ export function createDynamicComponent(
       if (isBlock(value)) return value
 
       // Handles VNodes passed from VDOM components (e.g., `h(VaporComp)` from slots)
-      if (appContext.vapor && isVNode(value)) {
+      if (isInteropEnabled && appContext.vapor && isVNode(value)) {
         if (isKeepAlive(currentInstance)) {
           const frag = (
             currentInstance as KeepAliveInstance

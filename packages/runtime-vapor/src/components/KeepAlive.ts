@@ -39,6 +39,7 @@ import {
 import { createElement } from '../dom/node'
 import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
 import type { EffectScope } from '@vue/reactivity'
+import { isInteropEnabled } from '../vdominteropState'
 
 export interface VaporKeepAliveContext {
   processShapeFlag(block: Block): boolean
@@ -154,7 +155,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     keepAliveInstance.ctx = {
       getStorageContainer: () => storageContainer,
       getCachedComponent: (comp, key) => {
-        if (isVNode(comp)) {
+        if (isInteropEnabled && isVNode(comp)) {
           return cache.get(resolveKey(comp.type, comp.key, currentBranchKey))
         }
         return cache.get(resolveKey(comp, key, currentBranchKey))
@@ -219,7 +220,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
 
-      if (interop) {
+      if (interop && isInteropEnabled) {
         const cacheKey = getCacheKey(innerBlock, true, currentBranchKey)
         if (cache.has(cacheKey)) {
           innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
@@ -228,9 +229,11 @@ const VaporKeepAliveImpl = defineVaporComponent({
       } else {
         const cacheKey = getCacheKey(innerBlock, false, currentBranchKey)
         if (cache.has(cacheKey)) {
-          innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
+          ;(innerBlock as VaporComponentInstance)!.shapeFlag! |=
+            ShapeFlags.COMPONENT_KEPT_ALIVE
         }
-        innerBlock!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+        ;(innerBlock as VaporComponentInstance)!.shapeFlag! |=
+          ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
       }
       return true
     }
@@ -352,7 +355,7 @@ const shouldCache = (
 ) => {
   const isAsync = !interop && isAsyncWrapper(block as GenericComponentInstance)
   const type = (
-    interop
+    interop && isInteropEnabled
       ? (block as VaporFragment).vnode!.type
       : (block as GenericComponentInstance).type
   ) as GenericComponent & AsyncComponentInternalOptions
@@ -376,7 +379,7 @@ const resetCachedShapeFlag = (
 ) => {
   if (isVaporComponent(cached)) {
     resetShapeFlag(cached)
-  } else {
+  } else if (isInteropEnabled) {
     resetShapeFlag(cached.vnode)
   }
 }
@@ -405,7 +408,7 @@ function getCacheKey(
   interop: boolean,
   branchKey?: any,
 ): CacheKey {
-  if (interop) {
+  if (interop && isInteropEnabled) {
     const frag = block as VaporFragment
     return resolveKey(
       frag.vnode!.type,
@@ -420,7 +423,7 @@ function getCacheKey(
 function getInnerBlock(block: Block): InnerBlockResult {
   if (isVaporComponent(block)) {
     return [block, false]
-  } else if (isInteropFragment(block)) {
+  } else if (isInteropEnabled && isInteropFragment(block)) {
     return [block, true]
   } else if (isFragment(block)) {
     return getInnerBlock(block.nodes)
@@ -434,12 +437,14 @@ function isInteropFragment(block: Block): block is VaporFragment {
 
 function getInstanceFromCache(
   cached: VaporComponentInstance | VaporFragment,
-): GenericComponentInstance {
+): GenericComponentInstance | undefined {
   if (isVaporComponent(cached)) {
     return cached
   }
   // vdom interop
-  return cached.vnode!.component as GenericComponentInstance
+  if (isInteropEnabled) {
+    return cached.vnode!.component as GenericComponentInstance
+  }
 }
 
 export function activate(

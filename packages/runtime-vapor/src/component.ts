@@ -122,6 +122,7 @@ import type {
 import { DynamicFragment, isFragment } from './fragment'
 import type { VaporElement } from './apiDefineCustomElement'
 import { parentSuspense, setParentSuspense } from './components/Suspense'
+import { isInteropEnabled } from './vdominteropState'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -292,7 +293,7 @@ export function createComponent(
   }
 
   // vdom interop enabled and component is not an explicit vapor component
-  if (appContext.vapor && !component.__vapor) {
+  if (isInteropEnabled && appContext.vapor && !component.__vapor) {
     const frag = appContext.vapor.vdomMount(
       component as any,
       currentInstance as any,
