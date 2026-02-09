@@ -84,7 +84,7 @@
     "eslint": "^9.39.2",
     "eslint-plugin-import-x": "^4.16.1",
     "estree-walker": "catalog:",
-    "jsdom": "^27.4.0",
+    "jsdom": "^28.0.0",
     "lint-staged": "^16.2.7",
     "lodash": "^4.17.23",
     "magic-string": "^0.30.21",
