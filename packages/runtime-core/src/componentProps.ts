@@ -55,7 +55,13 @@ type DefaultFactory<T> = (props: Data) => T | null | undefined
 export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
-  default?: D | DefaultFactory<D> | null | undefined | object
+  default?:
+    | null
+    | (T extends Function
+        ? T extends infer F
+          ? F
+          : never
+        : DefaultFactory<D> | D)
   validator?(value: unknown, props: Data): boolean
   /**
    * @internal
