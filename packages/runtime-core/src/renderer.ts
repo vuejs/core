@@ -85,7 +85,8 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import type { TransitionHooks } from './components/BaseTransition'
+import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
+import type { ComponentCustomElementInterface } from './component'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -484,6 +485,8 @@ function baseCreateRenderer(
     // set ref
     if (ref != null && parentComponent) {
       setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
+    } else if (ref == null && n1 && n1.ref != null) {
+      setRef(n1.ref, null, parentSuspense, n1, true)
     }
   }
 
@@ -618,15 +621,28 @@ function baseCreateRenderer(
         optimized,
       )
     } else {
-      patchElement(
-        n1,
-        n2,
-        parentComponent,
-        parentSuspense,
-        namespace,
-        slotScopeIds,
-        optimized,
-      )
+      const customElement =
+        n1.el && (n1.el as ComponentCustomElementInterface)._isVueCE
+          ? (n1.el as ComponentCustomElementInterface)
+          : null
+      try {
+        if (customElement) {
+          customElement._beginPatch()
+        }
+        patchElement(
+          n1,
+          n2,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        )
+      } finally {
+        if (customElement) {
+          customElement._endPatch()
+        }
+      }
     }
   }
 
@@ -961,7 +977,8 @@ function baseCreateRenderer(
           // which also requires the correct parent container
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
+          oldVNode.shapeFlag &
+            (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE))
           ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
@@ -1079,7 +1096,8 @@ function baseCreateRenderer(
         dynamicChildren &&
         // #2715 the previous fragment could've been a BAILed one as a result
         // of renderSlot() with no valid children
-        n1.dynamicChildren
+        n1.dynamicChildren &&
+        n1.dynamicChildren.length === dynamicChildren.length
       ) {
         // a stable fragment (template root or <template v-for>) doesn't need to
         // patch children order, but it may contain dynamicChildren.
@@ -1208,12 +1226,12 @@ function baseCreateRenderer(
       }
     }
 
+    // avoid hydration for hmr updating
+    if (__DEV__ && isHmrUpdating) initialVNode.el = null
+
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      // avoid hydration for hmr updating
-      if (__DEV__ && isHmrUpdating) initialVNode.el = null
-
       parentSuspense &&
         parentSuspense.registerDep(instance, setupRenderEffect, optimized)
 
@@ -1222,6 +1240,7 @@ function baseCreateRenderer(
       if (!initialVNode.el) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
+        initialVNode.placeholder = placeholder.el
       }
     } else {
       setupRenderEffect(
@@ -1347,7 +1366,7 @@ function baseCreateRenderer(
           }
         } else {
           // custom element style injection
-          if (root.ce) {
+          if (root.ce && root.ce._hasShadowRoot()) {
             root.ce._injectChildStyle(type)
           }
 
@@ -1971,8 +1990,12 @@ function baseCreateRenderer(
       for (i = toBePatched - 1; i >= 0; i--) {
         const nextIndex = s2 + i
         const nextChild = c2[nextIndex] as VNode
+        const anchorVNode = c2[nextIndex + 1] as VNode
         const anchor =
-          nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
+          nextIndex + 1 < l2
+            ? // #13559, #14173 fallback to el placeholder for unresolved async component
+              anchorVNode.el || resolveAsyncComponentPlaceholder(anchorVNode)
+            : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
           patch(
@@ -2057,6 +2080,12 @@ function baseCreateRenderer(
           }
         }
         const performLeave = () => {
+          // #13153 move kept-alive node before v-show transition leave finishes
+          // it needs to call the leaving callback to ensure element's `display`
+          // is `none`
+          if (el!._isLeaving) {
+            el![leaveCbKey](true /* cancelled */)
+          }
           leave(el!, () => {
             remove()
             afterLeave && afterLeave()
@@ -2264,30 +2293,13 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const {
-      bum,
-      scope,
-      job,
-      subTree,
-      um,
-      m,
-      a,
-      parent,
-      slots: { __: slotCacheKeys },
-    } = instance
+    const { bum, scope, job, subTree, um, m, a } = instance
     invalidateMount(m)
     invalidateMount(a)
 
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
-    }
-
-    // remove slots content from parent renderCache
-    if (parent && isArray(slotCacheKeys)) {
-      slotCacheKeys.forEach(v => {
-        parent.renderCache[v] = undefined
-      })
     }
 
     if (
@@ -2324,24 +2336,6 @@ function baseCreateRenderer(
       instance.isUnmounted = true
     }, parentSuspense)
 
-    // A component with async dep inside a pending suspense is unmounted before
-    // its async dep resolves. This should remove the dep from the suspense, and
-    // cause the suspense to resolve immediately if that was the last dep.
-    if (
-      __FEATURE_SUSPENSE__ &&
-      parentSuspense &&
-      parentSuspense.pendingBranch &&
-      !parentSuspense.isUnmounted &&
-      instance.asyncDep &&
-      !instance.asyncResolved &&
-      instance.suspenseId === parentSuspense.pendingId
-    ) {
-      parentSuspense.deps--
-      if (parentSuspense.deps === 0) {
-        parentSuspense.resolve()
-      }
-    }
-
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       devtoolsComponentRemoved(instance)
     }
@@ -2377,9 +2371,11 @@ function baseCreateRenderer(
 
   let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
+    let instance
     if (vnode == null) {
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
+        instance = container._vnode.component
       }
     } else {
       patch(
@@ -2395,7 +2391,7 @@ function baseCreateRenderer(
     container._vnode = vnode
     if (!isFlushing) {
       isFlushing = true
-      flushPreFlushCbs()
+      flushPreFlushCbs(instance)
       flushPostFlushCbs()
       isFlushing = false
     }
@@ -2501,15 +2497,19 @@ export function traverseStaticChildren(
       }
       // #6852 also inherit for text nodes
       if (c2.type === Text) {
+        // avoid cached text nodes retaining detached dom nodes
+        if (c2.patchFlag === PatchFlags.CACHED) {
+          c2 = ch2[i] = cloneIfMounted(c2)
+        }
         c2.el = c1.el
       }
-      if (__DEV__) {
-        // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
-        // would have received .el during block patch)
-        if (c2.type === Comment && !c2.el) {
-          c2.el = c1.el
-        }
+      // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
+      // would have received .el during block patch)
+      if (c2.type === Comment && !c2.el) {
+        c2.el = c1.el
+      }
 
+      if (__DEV__) {
         c2.el && (c2.el.__vnode = c2)
       }
     }
@@ -2576,4 +2576,18 @@ export function invalidateMount(hooks: LifecycleHook): void {
     for (let i = 0; i < hooks.length; i++)
       hooks[i].flags! |= SchedulerJobFlags.DISPOSED
   }
+}
+
+function resolveAsyncComponentPlaceholder(anchorVnode: VNode) {
+  if (anchorVnode.placeholder) {
+    return anchorVnode.placeholder
+  }
+
+  // anchor vnode maybe is a wrapper component has single unresolved async component
+  const instance = anchorVnode.component
+  if (instance) {
+    return resolveAsyncComponentPlaceholder(instance.subTree)
+  }
+
+  return null
 }

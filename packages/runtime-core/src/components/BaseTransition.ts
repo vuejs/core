@@ -24,7 +24,7 @@ import { SchedulerJobFlags } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
 
-const leaveCbKey: unique symbol = Symbol('_leaveCb')
+export const leaveCbKey: unique symbol = Symbol('_leaveCb')
 const enterCbKey: unique symbol = Symbol('_enterCb')
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
@@ -204,7 +204,7 @@ const BaseTransitionImpl: ComponentOptions = {
       if (
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
-        !isSameVNodeType(innerChild, oldInnerChild) &&
+        !isSameVNodeType(oldInnerChild, innerChild) &&
         recursiveGetSubtree(instance).type !== Comment
       ) {
         let leavingHooks = resolveTransitionHooks(
@@ -413,7 +413,7 @@ export function resolveTransitionHooks(
         }
       }
       let called = false
-      const done = (el[enterCbKey] = (cancelled?) => {
+      el[enterCbKey] = (cancelled?) => {
         if (called) return
         called = true
         if (cancelled) {
@@ -425,7 +425,8 @@ export function resolveTransitionHooks(
           hooks.delayedLeave()
         }
         el[enterCbKey] = undefined
-      })
+      }
+      const done = el[enterCbKey]!.bind(null, false)
       if (hook) {
         callAsyncHook(hook, [el, done])
       } else {
@@ -443,7 +444,7 @@ export function resolveTransitionHooks(
       }
       callHook(onBeforeLeave, [el])
       let called = false
-      const done = (el[leaveCbKey] = (cancelled?) => {
+      el[leaveCbKey] = (cancelled?) => {
         if (called) return
         called = true
         remove()
@@ -456,7 +457,8 @@ export function resolveTransitionHooks(
         if (leavingVNodesCache[key] === vnode) {
           delete leavingVNodesCache[key]
         }
-      })
+      }
+      const done = el[leaveCbKey]!.bind(null, false)
       leavingVNodesCache[key] = vnode
       if (onLeave) {
         callAsyncHook(onLeave, [el, done])
@@ -501,9 +503,8 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
     return vnode
   }
-  // #7121 ensure get the child component subtree in case
-  // it's been replaced during HMR
-  if (__DEV__ && vnode.component) {
+  // #7121,#12465 get the component subtree if it's been mounted
+  if (vnode.component) {
     return vnode.component.subTree
   }
 

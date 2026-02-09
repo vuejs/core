@@ -119,9 +119,6 @@ export const TeleportImpl = {
         // Teleport *always* has Array children. This is enforced in both the
         // compiler and vnode children normalization.
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-          if (parentComponent && parentComponent.isCE) {
-            parentComponent.ce!._teleportTarget = container
-          }
           mountChildren(
             children as VNodeArrayChildren,
             container,
@@ -145,6 +142,15 @@ export const TeleportImpl = {
           } else if (namespace !== 'mathml' && isTargetMathML(target)) {
             namespace = 'mathml'
           }
+
+          // track CE teleport targets
+          if (parentComponent && parentComponent.isCE) {
+            ;(
+              parentComponent.ce!._teleportTargets ||
+              (parentComponent.ce!._teleportTargets = new Set())
+            ).add(target)
+          }
+
           if (!disabled) {
             mount(target, targetAnchor)
             updateCssVars(n2, false)
@@ -164,15 +170,16 @@ export const TeleportImpl = {
       }
 
       if (isTeleportDeferred(n2.props)) {
+        n2.el!.__isMounted = false
         queuePostRenderEffect(() => {
           mountToTarget()
-          n2.el!.__isMounted = true
+          delete n2.el!.__isMounted
         }, parentSuspense)
       } else {
         mountToTarget()
       }
     } else {
-      if (isTeleportDeferred(n2.props) && !n1.el!.__isMounted) {
+      if (isTeleportDeferred(n2.props) && n1.el!.__isMounted === false) {
         queuePostRenderEffect(() => {
           TeleportImpl.process(
             n1,
@@ -186,7 +193,6 @@ export const TeleportImpl = {
             optimized,
             internals,
           )
-          delete n1.el!.__isMounted
         }, parentSuspense)
         return
       }
@@ -406,50 +412,69 @@ function hydrateTeleport(
     optimized: boolean,
   ) => Node | null,
 ): Node | null {
+  // lookahead until we find the target anchor
+  // we cannot rely on return value of hydrateChildren() because there
+  // could be nested teleports
+  function hydrateAnchor(
+    target: TeleportTargetElement,
+    targetNode: Node | null,
+  ) {
+    let targetAnchor = targetNode
+    while (targetAnchor) {
+      if (targetAnchor && targetAnchor.nodeType === 8) {
+        if ((targetAnchor as Comment).data === 'teleport start anchor') {
+          vnode.targetStart = targetAnchor
+        } else if ((targetAnchor as Comment).data === 'teleport anchor') {
+          vnode.targetAnchor = targetAnchor
+          target._lpa =
+            vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
+          break
+        }
+      }
+      targetAnchor = nextSibling(targetAnchor)
+    }
+  }
+
+  function hydrateDisabledTeleport(node: Node, vnode: VNode) {
+    vnode.anchor = hydrateChildren(
+      nextSibling(node),
+      vnode,
+      parentNode(node)!,
+      parentComponent,
+      parentSuspense,
+      slotScopeIds,
+      optimized,
+    )
+  }
+
   const target = (vnode.target = resolveTarget<Element>(
     vnode.props,
     querySelector,
   ))
+  const disabled = isTeleportDisabled(vnode.props)
   if (target) {
-    const disabled = isTeleportDisabled(vnode.props)
     // if multiple teleports rendered to the same target element, we need to
     // pick up from where the last teleport finished instead of the first node
     const targetNode =
       (target as TeleportTargetElement)._lpa || target.firstChild
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       if (disabled) {
-        vnode.anchor = hydrateChildren(
-          nextSibling(node),
-          vnode,
-          parentNode(node)!,
-          parentComponent,
-          parentSuspense,
-          slotScopeIds,
-          optimized,
-        )
-        vnode.targetStart = targetNode
-        vnode.targetAnchor = targetNode && nextSibling(targetNode)
+        hydrateDisabledTeleport(node, vnode)
+        hydrateAnchor(target as TeleportTargetElement, targetNode)
+        if (!vnode.targetAnchor) {
+          prepareAnchor(
+            target,
+            vnode,
+            createText,
+            insert,
+            // if target is the same as the main view, insert anchors before current node
+            // to avoid hydrating mismatch
+            parentNode(node)! === target ? node : null,
+          )
+        }
       } else {
         vnode.anchor = nextSibling(node)
-
-        // lookahead until we find the target anchor
-        // we cannot rely on return value of hydrateChildren() because there
-        // could be nested teleports
-        let targetAnchor = targetNode
-        while (targetAnchor) {
-          if (targetAnchor && targetAnchor.nodeType === 8) {
-            if ((targetAnchor as Comment).data === 'teleport start anchor') {
-              vnode.targetStart = targetAnchor
-            } else if ((targetAnchor as Comment).data === 'teleport anchor') {
-              vnode.targetAnchor = targetAnchor
-              ;(target as TeleportTargetElement)._lpa =
-                vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
-              break
-            }
-          }
-          targetAnchor = nextSibling(targetAnchor)
-        }
-
+        hydrateAnchor(target as TeleportTargetElement, targetNode)
         // #11400 if the HTML corresponding to Teleport is not embedded in the
         // correct position on the final page during SSR. the targetAnchor will
         // always be null, we need to manually add targetAnchor to ensure
@@ -470,6 +495,12 @@ function hydrateTeleport(
       }
     }
     updateCssVars(vnode, disabled)
+  } else if (disabled) {
+    if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      hydrateDisabledTeleport(node, vnode)
+      vnode.targetStart = node
+      vnode.targetAnchor = nextSibling(node)
+    }
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
@@ -511,6 +542,7 @@ function prepareAnchor(
   vnode: TeleportVNode,
   createText: RendererOptions['createText'],
   insert: RendererOptions['insert'],
+  anchor: RendererNode | null = null,
 ) {
   const targetStart = (vnode.targetStart = createText(''))
   const targetAnchor = (vnode.targetAnchor = createText(''))
@@ -520,8 +552,8 @@ function prepareAnchor(
   targetStart[TeleportEndKey] = targetAnchor
 
   if (target) {
-    insert(targetStart, target)
-    insert(targetAnchor, target)
+    insert(targetStart, target, anchor)
+    insert(targetAnchor, target, anchor)
   }
 
   return targetAnchor

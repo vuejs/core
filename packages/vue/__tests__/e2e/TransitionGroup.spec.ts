@@ -298,6 +298,98 @@ describe('e2e: TransitionGroup', () => {
   )
 
   test(
+    'move while entering',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+              <transition-group name="toasts" tag="div" id="toasts">
+                <div class="toast" v-for="toast in list" :key="toast.id">
+                  {{ toast.text }} #{{ toast.id }}
+                </div>
+              </transition-group>
+              <button id="addBtn" @click="add">button</button>
+            `,
+          setup: () => {
+            const list = ref([])
+            let id = 0
+            const add = () => {
+              if (list.value.length > 3) {
+                list.value.splice(0, 1)
+              }
+              list.value.push({
+                id,
+                type: 'error',
+                text: 'Test message',
+              })
+              id++
+            }
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.innerHTML = `
+                #toasts {
+                  position: absolute;
+                  bottom: 0;
+                  left: 0;
+                }
+                #toasts > .toast {
+                  width: 150px;
+                  margin-bottom: 10px;
+                  height: 30px;
+                  color: white;
+                  background: black;
+                }
+                .toasts-leave-active {
+                  position: absolute;
+                }
+                .toasts-move { transition: transform ${duration}ms ease; }
+              `
+              document.body.appendChild(styleNode)
+            })
+
+            return { list, add }
+          },
+        }).mount('#app')
+      }, duration)
+
+      const overlapDelay = Math.max(10, Math.floor(duration / 2))
+      const { midTop, finalTop } = await page().evaluate(
+        ({ overlapDelay, duration, buffer }) => {
+          ;(document.querySelector('#addBtn') as any)!.click()
+          return new Promise<{ midTop: number; finalTop: number }>(resolve => {
+            setTimeout(() => {
+              ;(document.querySelector('#addBtn') as any)!.click()
+              Promise.resolve().then(() => {
+                const nodes = Array.from(
+                  document.querySelectorAll('#toasts .toast'),
+                ) as HTMLElement[]
+                const firstToast = nodes.find(node =>
+                  node.textContent?.includes('#0'),
+                )
+                const midTop = firstToast
+                  ? firstToast.getBoundingClientRect().top
+                  : NaN
+                setTimeout(() => {
+                  const finalTop = firstToast
+                    ? firstToast.getBoundingClientRect().top
+                    : NaN
+                  resolve({ midTop, finalTop })
+                }, duration + buffer)
+              })
+            }, overlapDelay)
+          })
+        },
+        { overlapDelay, duration, buffer },
+      )
+
+      expect(midTop).toBeGreaterThan(finalTop)
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
     'dynamic name',
     async () => {
       await page().evaluate(() => {
@@ -642,6 +734,62 @@ describe('e2e: TransitionGroup', () => {
       expect(await html('#container')).toBe(
         `<div class="test">foo</div>` + ` ` + `<div class="test">bar</div>`,
       )
+    },
+    E2E_TIMEOUT,
+  )
+
+  // #6105
+  test(
+    'with scale',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+            <div id="container">
+              <div class="scale" style="transform: scale(2) translateX(50%) translateY(50%)">
+                <transition-group tag="ul">
+                  <li v-for="item in items" :key="item">{{item}}</li>
+                </transition-group>
+                <button id="toggleBtn" @click="click">button</button>
+              </div>
+            </div>
+          `,
+          setup: () => {
+            const items = ref(['a', 'b', 'c'])
+            const click = () => {
+              items.value.reverse()
+            }
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.innerHTML = `.v-move {
+                transition: transform 0.5s ease;
+              }`
+              document.body.appendChild(styleNode)
+            })
+
+            return { items, click }
+          },
+        }).mount('#app')
+      })
+
+      const original_top = await page().$eval('ul li:nth-child(1)', node => {
+        return node.getBoundingClientRect().top
+      })
+      const new_top = await page().evaluate(() => {
+        const el = document.querySelector('ul li:nth-child(1)')
+        const p = new Promise(resolve => {
+          el!.addEventListener('transitionstart', () => {
+            const new_top = el!.getBoundingClientRect().top
+            resolve(new_top)
+          })
+        })
+        ;(document.querySelector('#toggleBtn') as any)!.click()
+        return p
+      })
+
+      expect(original_top).toBeLessThan(new_top as number)
     },
     E2E_TIMEOUT,
   )

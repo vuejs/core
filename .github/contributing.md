@@ -38,7 +38,6 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 ### Pull Request Checklist
 
 - Vue core has two primary work branches: `main` and `minor`.
-
   - If your pull request is a feature that adds new API surface, it should be submitted against the `minor` branch.
 
   - Otherwise, it should be submitted against the `main` branch.
@@ -46,12 +45,10 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 - [Make sure to tick the "Allow edits from maintainers" box](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork). This allows us to directly make minor edits / refactors and saves a lot of time.
 
 - If adding a new feature:
-
   - Add accompanying test case.
   - Provide a convincing reason to add this feature. Ideally, you should open a suggestion issue first and have it approved before working on it.
 
 - If fixing a bug:
-
   - If you are resolving a special issue, add `(fix #xxxx[,#xxxx])` (#xxxx is the issue id) in your PR title for a better release log, e.g. `update entities encoding/decoding (fix #3899)`.
   - Provide a detailed description of the bug in the PR. Live demo preferred.
   - Add appropriate test coverage if applicable. You can check the coverage of your code addition by running `nr test-coverage`.
@@ -69,9 +66,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 - The PR should fix the intended bug **only** and not introduce unrelated changes. This includes unnecessary refactors - a PR should focus on the fix and not code style, this makes it easier to trace changes in the future.
 
 - Consider the performance / size impact of the changes, and whether the bug being fixes justifies the cost. If the bug being fixed is a very niche edge case, we should try to minimize the size / perf cost to make it worthwhile.
-
   - Is the code perf-sensitive (e.g. in "hot paths" like component updates or the vdom patch function?)
-
     - If the branch is dev-only, performance is less of a concern.
 
   - Check how much extra bundle size the change introduces.
@@ -265,7 +260,6 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 - `vue`: The public facing "full build" which includes both the runtime AND the compiler.
 
 - Private utility packages:
-
   - `dts-test`: Contains type-only tests against generated dts files.
 
   - `sfc-playground`: The playground continuously deployed at https://play.vuejs.org. To run the playground locally, use [`nr dev-sfc`](#nr-dev-sfc).
