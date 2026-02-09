@@ -475,8 +475,9 @@ export function createPropsRestProxy(
   excludedKeys: string[],
 ): Record<string, any> {
   const ret: Record<string, any> = {}
+  const excludedKeySet = new Set(excludedKeys)
   for (const key in props) {
-    if (!excludedKeys.includes(key)) {
+    if (!excludedKeySet.has(key)) {
       Object.defineProperty(ret, key, {
         enumerable: true,
         get: () => props[key],

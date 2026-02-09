@@ -459,10 +459,11 @@ export class VueElement
   private _resolveProps(def: InnerComponentDef) {
     const { props } = def
     const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
+    const declaredPropKeySet = new Set(declaredPropKeys)
 
     // check if there are props set pre-upgrade or connect
     for (const key of Object.keys(this)) {
-      if (key[0] !== '_' && declaredPropKeys.includes(key)) {
+      if (key[0] !== '_' && declaredPropKeySet.has(key)) {
         this._setProp(key, this[key as keyof this])
       }
     }

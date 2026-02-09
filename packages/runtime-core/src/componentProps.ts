@@ -380,6 +380,7 @@ function setFullProps(
   const [options, needCastKeys] = instance.propsOptions
   let hasAttrsChanged = false
   let rawCastValues: Data | undefined
+  const needCastKeySet = needCastKeys ? new Set(needCastKeys) : null
   if (rawProps) {
     for (let key in rawProps) {
       // key, ref are reserved and never passed down
@@ -405,7 +406,7 @@ function setFullProps(
       // kebab -> camel conversion here we need to camelize the key.
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
-        if (!needCastKeys || !needCastKeys.includes(camelKey)) {
+        if (!needCastKeySet || !needCastKeySet.has(camelKey)) {
           props[camelKey] = value
         } else {
           ;(rawCastValues || (rawCastValues = {}))[camelKey] = value
