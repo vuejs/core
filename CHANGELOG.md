@@ -1,3 +1,23 @@
+## [3.5.28](https://github.com/vuejs/core/compare/v3.5.27...v3.5.28) (2026-02-09)
+
+
+### Bug Fixes
+
+* **transition:** avoid unexpected `cancelled` parameter in transition `done` callback ([#14391](https://github.com/vuejs/core/issues/14391)) ([6798853](https://github.com/vuejs/core/commit/67988530f6a3cfdd0d80bf967033cb9abf377174))
+* **compiler-sfc:** add resolution trying for `.mts/.cts` files ([#14402](https://github.com/vuejs/core/issues/14402)) ([c09d41f](https://github.com/vuejs/core/commit/c09d41ffe150903b1fcd69a6f6bdeea2d2c6c243)), closes [vuejs/router#2611](https://github.com/vuejs/router/issues/2611)
+* **compiler-sfc:** no params were generated when using withDefaults ([#12823](https://github.com/vuejs/core/issues/12823)) ([b0a1f05](https://github.com/vuejs/core/commit/b0a1f0504a67fb1a6a110a5d05cdec0b878dde29)), closes [#12822](https://github.com/vuejs/core/issues/12822)
+* **deps:** update all non-major dependencies ([#14235](https://github.com/vuejs/core/issues/14235)) ([e9a078f](https://github.com/vuejs/core/commit/e9a078fbef39f4ed66995935879635d75f21c6c8))
+* **reactivity:** add `__v_skip` flag to `EffectScope` to prevent reactive conversion ([#14359](https://github.com/vuejs/core/issues/14359)) ([48b7552](https://github.com/vuejs/core/commit/48b7552cce784725376a4fab078272676ce02d69)), closes [#14357](https://github.com/vuejs/core/issues/14357)
+* **runtime-core:** avoid retaining el on cached text vnodes during static traversal ([#14419](https://github.com/vuejs/core/issues/14419)) ([4ace79a](https://github.com/vuejs/core/commit/4ace79ac4c66a4f96cd330b47474ce117bc851ab)), closes [#14134](https://github.com/vuejs/core/issues/14134)
+* **runtime-core:** prevent child component updates when style remains unchanged ([#12825](https://github.com/vuejs/core/issues/12825)) ([57866b5](https://github.com/vuejs/core/commit/57866b5af1aff7ce1026b529443b81465c56f802)), closes [#12826](https://github.com/vuejs/core/issues/12826)
+* **runtime-core:** properly handle async component update before resolve ([#11619](https://github.com/vuejs/core/issues/11619)) ([e71c26c](https://github.com/vuejs/core/commit/e71c26c03d44c9c93569ed7ebfe7dabaf3bbdb06)), closes [#11617](https://github.com/vuejs/core/issues/11617)
+* **runtime-dom:** handle null/undefined handler in withModifiers ([#14362](https://github.com/vuejs/core/issues/14362)) ([261de54](https://github.com/vuejs/core/commit/261de547cd6685fc8862679941d93b530d504731)), closes [#14361](https://github.com/vuejs/core/issues/14361)
+* **teleport:** properly handling disabled teleport target anchor ([#14417](https://github.com/vuejs/core/issues/14417)) ([d7bcd85](https://github.com/vuejs/core/commit/d7bcd858883d90a1593b45cdc43f9fa55bc790bc)), closes [#14412](https://github.com/vuejs/core/issues/14412)
+* **transition-group:** correct move translation under scale via element rect ([#14360](https://github.com/vuejs/core/issues/14360)) ([0243a79](https://github.com/vuejs/core/commit/0243a792ac1cf8b0308f552927ed2ecd8627b839)), closes [#14356](https://github.com/vuejs/core/issues/14356)
+* **useTemplateRef:** don't update setup ref for useTemplateRef key ([#12756](https://github.com/vuejs/core/issues/12756)) ([fc40ca0](https://github.com/vuejs/core/commit/fc40ca0216a7028f6ec0195344c976423e239ef3)), closes [#12749](https://github.com/vuejs/core/issues/12749)
+
+
+
 ## [3.5.27](https://github.com/vuejs/core/compare/v3.5.26...v3.5.27) (2026-01-19)
 
 
