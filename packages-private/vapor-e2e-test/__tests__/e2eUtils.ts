@@ -7,15 +7,3 @@ export async function enterValue(locator: Locator, text: string) {
   await locator.fill(text)
   await userEvent.type(locator, '{enter}')
 }
-
-export function nextFrame() {
-  // this page is not same as Playwright's page
-  // how to wait for the next frame?
-  return page.evaluate(() => {
-    return new Promise(resolve => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(resolve)
-      })
-    })
-  })
-}

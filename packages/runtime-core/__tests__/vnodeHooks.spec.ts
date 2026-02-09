@@ -40,8 +40,8 @@ describe('renderer: vnode hooks', () => {
 
   test('should work on element', () => {
     const hooks: VNodeProps = {
-      onVnodeBeforeMount: vi.fn() as any,
-      onVnodeMounted: vi.fn() as any,
+      onVnodeBeforeMount: vi.fn<(vnode: VNode) => void>(),
+      onVnodeMounted: vi.fn<(vnode: VNode) => void>(),
       onVnodeBeforeUpdate: vi.fn(vnode => {
         expect((vnode.el as TestElement).children[0]).toMatchObject({
           type: TestNodeTypes.TEXT,
@@ -54,8 +54,8 @@ describe('renderer: vnode hooks', () => {
           text: 'bar',
         })
       }),
-      onVnodeBeforeUnmount: vi.fn() as any,
-      onVnodeUnmounted: vi.fn() as any,
+      onVnodeBeforeUnmount: vi.fn<(vnode: VNode) => void>(),
+      onVnodeUnmounted: vi.fn<(vnode: VNode) => void>(),
     }
 
     assertHooks(hooks, h('div', hooks, 'foo'), h('div', hooks, 'bar'))
@@ -65,8 +65,8 @@ describe('renderer: vnode hooks', () => {
     const Comp = (props: { msg: string }) => props.msg
 
     const hooks: VNodeProps = {
-      onVnodeBeforeMount: vi.fn() as any,
-      onVnodeMounted: vi.fn() as any,
+      onVnodeBeforeMount: vi.fn<(vnode: VNode) => void>(),
+      onVnodeMounted: vi.fn<(vnode: VNode) => void>(),
       onVnodeBeforeUpdate: vi.fn(vnode => {
         expect(vnode.el as TestElement).toMatchObject({
           type: TestNodeTypes.TEXT,
@@ -79,8 +79,8 @@ describe('renderer: vnode hooks', () => {
           text: 'bar',
         })
       }),
-      onVnodeBeforeUnmount: vi.fn() as any,
-      onVnodeUnmounted: vi.fn() as any,
+      onVnodeBeforeUnmount: vi.fn<(vnode: VNode) => void>(),
+      onVnodeUnmounted: vi.fn<(vnode: VNode) => void>(),
     }
 
     assertHooks(
