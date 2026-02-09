@@ -311,4 +311,27 @@ describe('compiler + runtime integration', () => {
     app.mount(root)
     expect(root.innerHTML).toBe('<div>60000000100000111</div>')
   })
+
+  test('Warning when use undeclared variable in template', () => {
+    const app = createApp({
+      template: `
+        <div @click="handler">handler</div>
+        <div>dddd{{dddd}}</div>
+        <div>no warn: {{message}}</div>
+      `,
+      setup() {
+        return {
+          message: 'hello',
+        }
+      },
+    })
+    const root = document.createElement('div')
+    app.mount(root)
+    expect(
+      `[Vue warn]: Property "handler" was accessed during render but is not defined on instance.`,
+    ).toHaveBeenWarned()
+    expect(
+      `[Vue warn]: Property "dddd" was accessed during render but is not defined on instance.`,
+    ).toHaveBeenWarned()
+  })
 })
