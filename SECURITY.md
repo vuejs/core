@@ -13,3 +13,4 @@ We would like to thank the following security researchers for responsibly disclo
 - Jeet Pal - [@jeetpal2007](https://github.com/jeetpal2007) | [Email](mailto:jeetpal2007@gmail.com) | [LinkedIn](https://in.linkedin.com/in/jeet-pal-22601a290)
 - Mix - [@mnixry](https://github.com/mnixry)
 - Aviv Keller - [@RedYetiDev](https://github.com/redyetidev) | [LinkedIn](https://www.linkedin.com/in/redyetidev) <redyetidev@gmail.com>
+- Ben Zimmermann - [@bzzimmy](https://github.com/bzzimmy) | [Email](mailto:kernelrocks@proton.me)
