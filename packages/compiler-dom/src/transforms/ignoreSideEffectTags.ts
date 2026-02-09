@@ -5,7 +5,8 @@ export const ignoreSideEffectTags: NodeTransform = (node, context) => {
   if (
     node.type === NodeTypes.ELEMENT &&
     node.tagType === ElementTypes.ELEMENT &&
-    (node.tag === 'script' || node.tag === 'style')
+    (node.tag === 'script' || node.tag === 'style') &&
+    !context.allowSideEffectTags
   ) {
     __DEV__ &&
       context.onError(
