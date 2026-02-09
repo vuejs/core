@@ -388,6 +388,10 @@ export function isVNode(value: any): value is VNode {
   return value ? value.__v_isVNode === true : false
 }
 
+export function isFragmentVNode(vnode: VNode): vnode is VNode {
+  return !!vnode && vnode.type === Fragment
+}
+
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   if (__DEV__ && n2.shapeFlag & ShapeFlags.COMPONENT && n1.component) {
     const dirtyInstances = hmrDirtyComponents.get(n2.type as ConcreteComponent)
