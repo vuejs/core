@@ -1,0 +1,47 @@
+<script src="../../dist/vue.global.js"></script>
+<script>
+    const { reactive, computed } = Vue
+
+    const AxisLabel = {
+        template: '<text>{{stat}} {{stat===false}} {{wode}}</text>',
+        props: {
+            stat: {
+                default: true,
+                type: Boolean
+            },
+            wode: {
+                default: false,
+                type: Boolean
+            }
+        },
+        setup(props) {
+            return {
+
+            }
+        },
+    }
+</script>
+
+
+<div id="demo">
+    <div class="zzz">
+        <input type="text" !value>
+        <axis-label !stat :nihao="false" wode></axis-label>
+    </div>
+</div>
+
+<script>
+    const { createApp } = Vue
+    createApp({
+        components: {
+            AxisLabel,
+        },
+        setup() {
+            return {}
+        },
+    }).mount('#demo')
+</script>
+
+<style>
+
+</style>
