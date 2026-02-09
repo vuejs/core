@@ -986,16 +986,35 @@ function importSourceToScope(
 }
 
 function resolveExt(filename: string, fs: FS) {
+  // Keep the import's module kind so we can mirror TS NodeNext fallback order.
+  let moduleType: /*cjs*/ 'c' | /*mjs*/ 'm' | /*unknown*/ 'u' = 'u'
+  if (filename.endsWith('.mjs')) {
+    moduleType = 'm'
+  } else if (filename.endsWith('.cjs')) {
+    moduleType = 'c'
+  }
   // #8339 ts may import .js but we should resolve to corresponding ts or d.ts
-  filename = filename.replace(/\.js$/, '')
+  filename = filename.replace(/\.[cm]?jsx?$/, '')
   const tryResolve = (filename: string) => {
     if (fs.fileExists(filename)) return filename
   }
-  return (
-    tryResolve(filename) ||
+  const resolveTs = () =>
     tryResolve(filename + `.ts`) ||
     tryResolve(filename + `.tsx`) ||
-    tryResolve(filename + `.d.ts`) ||
+    tryResolve(filename + `.d.ts`)
+  const resolveMts = () =>
+    tryResolve(filename + `.mts`) || tryResolve(filename + `.d.mts`)
+  const resolveCts = () =>
+    tryResolve(filename + `.cts`) || tryResolve(filename + `.d.cts`)
+
+  return (
+    tryResolve(filename) ||
+    // For explicit .mjs/.cjs imports, prefer .mts/.cts declarations first.
+    (moduleType === 'm'
+      ? resolveMts() || resolveTs()
+      : moduleType === 'c'
+        ? resolveCts() || resolveTs()
+        : resolveTs() || resolveMts() || resolveCts()) ||
     tryResolve(joinPaths(filename, `index.ts`)) ||
     tryResolve(joinPaths(filename, `index.tsx`)) ||
     tryResolve(joinPaths(filename, `index.d.ts`))
@@ -1178,12 +1197,18 @@ function parseFile(
   parserPlugins?: SFCScriptCompileOptions['babelParserPlugins'],
 ): Statement[] {
   const ext = extname(filename)
-  if (ext === '.ts' || ext === '.mts' || ext === '.tsx' || ext === '.mtsx') {
+  if (
+    ext === '.ts' ||
+    ext === '.mts' ||
+    ext === '.tsx' ||
+    ext === '.cts' ||
+    ext === '.mtsx'
+  ) {
     return babelParse(content, {
       plugins: resolveParserPlugins(
         ext.slice(1),
         parserPlugins,
-        /\.d\.m?ts$/.test(filename),
+        /\.d\.[cm]?ts$/.test(filename),
       ),
       sourceType: 'module',
     }).program.body

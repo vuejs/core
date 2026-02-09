@@ -265,9 +265,15 @@ function genRuntimePropFromType(
         // prop has corresponding static default value
         defaultString = `default: ${ctx.getString(prop.value)}`
       } else {
+        let paramsString = ''
+        if (prop.params.length) {
+          const start = prop.params[0].start
+          const end = prop.params[prop.params.length - 1].end
+          paramsString = ctx.getString({ start, end } as Node)
+        }
         defaultString = `${prop.async ? 'async ' : ''}${
           prop.kind !== 'method' ? `${prop.kind} ` : ''
-        }default() ${ctx.getString(prop.body)}`
+        }default(${paramsString}) ${ctx.getString(prop.body)}`
       }
     }
   }

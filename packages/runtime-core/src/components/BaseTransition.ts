@@ -462,7 +462,7 @@ export function baseResolveTransitionHooks(
         }
       }
       let called = false
-      const done = (el[enterCbKey] = (cancelled?) => {
+      el[enterCbKey] = (cancelled?) => {
         if (called) return
         called = true
         if (cancelled) {
@@ -474,7 +474,8 @@ export function baseResolveTransitionHooks(
           hooks.delayedLeave()
         }
         el[enterCbKey] = undefined
-      })
+      }
+      const done = el[enterCbKey]!.bind(null, false)
       if (hook) {
         callAsyncHook(hook, [el, done])
       } else {
@@ -492,7 +493,7 @@ export function baseResolveTransitionHooks(
       }
       callHook(onBeforeLeave, [el])
       let called = false
-      const done = (el[leaveCbKey] = (cancelled?) => {
+      el[leaveCbKey] = (cancelled?) => {
         if (called) return
         called = true
         remove()
@@ -503,8 +504,9 @@ export function baseResolveTransitionHooks(
         }
         el[leaveCbKey] = undefined
         unsetLeavingNodeCache(el)
-      })
+      }
       setLeavingNodeCache(el)
+      const done = el[leaveCbKey]!.bind(null, false)
       if (onLeave) {
         callAsyncHook(onLeave, [el, done])
       } else {

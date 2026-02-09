@@ -163,4 +163,16 @@ describe('runtime-dom: v-on directive', () => {
     triggerEvent(el2, 'click', e => (e.shiftKey = true))
     expect(fn).toBeCalledTimes(2)
   })
+
+  it('withModifiers should handle null or undefined handler', () => {
+    expect(() => {
+      const handler1 = withModifiers(null as any, ['ctrl'])
+      expect(handler1).toBe(null)
+    }).not.toThrow()
+
+    expect(() => {
+      const handler2 = withModifiers(undefined as any, ['shift'])
+      expect(handler2).toBe(undefined)
+    }).not.toThrow()
+  })
 })

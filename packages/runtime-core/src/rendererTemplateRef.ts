@@ -26,7 +26,7 @@ import {
   type Data,
   getComponentPublicInstance,
 } from './component'
-import { knownTemplateRefs } from './helpers/useTemplateRef'
+import { isTemplateRefKey, knownTemplateRefs } from './helpers/useTemplateRef'
 
 const pendingSetRefMap = new WeakMap<VNodeNormalizedRef, SchedulerJob>()
 /**
@@ -85,10 +85,16 @@ export function setRef(
   const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
-  const canSetSetupRef = createCanSetSetupRefChecker(setupState)
+  const canSetSetupRef = createCanSetSetupRefChecker(setupState, refs)
 
-  const canSetRef = (ref: VNodeRef) => {
-    return !__DEV__ || !knownTemplateRefs.has(ref as any)
+  const canSetRef = (ref: VNodeRef, key?: string) => {
+    if (__DEV__ && knownTemplateRefs.has(ref as any)) {
+      return false
+    }
+    if (key && isTemplateRefKey(refs, key)) {
+      return false
+    }
+    return true
   }
 
   // dynamic ref changed. unset old ref
@@ -100,12 +106,11 @@ export function setRef(
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
-      if (canSetRef(oldRef)) {
-        oldRef.value = null
-      }
-
       // this type assertion is valid since `oldRef` has already been asserted to be non-null
       const oldRawRefAtom = oldRawRef as VNodeNormalizedRefAtom
+      if (canSetRef(oldRef, oldRawRefAtom.k)) {
+        oldRef.value = null
+      }
       if (oldRawRefAtom.k) refs[oldRawRefAtom.k] = null
     }
   }
@@ -137,7 +142,7 @@ export function setRef(
                 }
               } else {
                 const newVal = [refValue]
-                if (canSetRef(ref)) {
+                if (canSetRef(ref, rawRef.k)) {
                   ref.value = newVal
                 }
                 if (rawRef.k) refs[rawRef.k] = newVal
@@ -152,7 +157,7 @@ export function setRef(
             setupState[ref] = value
           }
         } else if (_isRef) {
-          if (canSetRef(ref)) {
+          if (canSetRef(ref, rawRef.k)) {
             ref.value = value
           }
           if (rawRef.k) refs[rawRef.k] = value
@@ -182,6 +187,7 @@ export function setRef(
 
 export function createCanSetSetupRefChecker(
   setupState: Data,
+  refs: Data,
 ): (key: string) => boolean {
   const rawSetupState = toRaw(setupState)
   return setupState === undefined || setupState === EMPTY_OBJ
@@ -199,6 +205,12 @@ export function createCanSetSetupRefChecker(
             return false
           }
         }
+
+        // skip setting up ref if the key is from useTemplateRef
+        if (isTemplateRefKey(refs, key)) {
+          return false
+        }
+
         return hasOwn(rawSetupState, key)
       }
 }

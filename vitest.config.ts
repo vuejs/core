@@ -25,11 +25,6 @@ export default defineConfig({
   test: {
     globals: true,
     pool: 'threads',
-    poolOptions: {
-      forks: {
-        execArgv: ['--expose-gc'],
-      },
-    },
     setupFiles: 'scripts/setup-vitest.ts',
     sequence: {
       hooks: 'list',
@@ -55,13 +50,23 @@ export default defineConfig({
         'packages/runtime-vapor/src/components/Transition*',
       ],
     },
-    workspace: [
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit-gc',
+          pool: 'forks',
+          execArgv: ['--expose-gc'],
+          include: ['packages/reactivity/__tests__/gc.spec.ts'],
+        },
+      },
       {
         extends: true,
         test: {
           name: 'unit',
           exclude: [
             ...configDefaults.exclude,
+            'packages/reactivity/__tests__/gc.spec.ts',
             '**/e2e/**',
             '**/vapor-e2e-test/**',
             'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**',
@@ -83,11 +88,8 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'e2e',
-          poolOptions: {
-            threads: {
-              singleThread: !!process.env.CI,
-            },
-          },
+          environment: 'jsdom',
+          isolate: true,
           include: ['packages/vue/__tests__/e2e/*.spec.ts'],
         },
       },
@@ -95,11 +97,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'e2e-vapor',
-          poolOptions: {
-            threads: {
-              singleThread: !!process.env.CI,
-            },
-          },
+          isolate: true,
           include: ['packages-private/vapor-e2e-test/__tests__/*.spec.ts'],
         },
       },

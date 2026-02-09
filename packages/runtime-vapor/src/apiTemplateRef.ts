@@ -99,7 +99,9 @@ export function setRef(
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
 
-  const canSetSetupRef = __DEV__ ? createCanSetSetupRefChecker(setupState) : NO
+  const canSetSetupRef = __DEV__
+    ? createCanSetSetupRefChecker(setupState, refs)
+    : NO
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
