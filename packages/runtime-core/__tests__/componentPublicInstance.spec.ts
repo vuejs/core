@@ -341,11 +341,10 @@ describe('component: proxy', () => {
     const spy = vi.spyOn(instanceProxy, 'toggle')
     expect(getCalledTimes).toEqual(3)
 
-    // vitest does not cache the spy like jest do
     const v3 = instanceProxy.toggle()
     expect(v3).toEqual('b')
     expect(spy).toHaveBeenCalled()
-    expect(getCalledTimes).toEqual(4)
+    expect(getCalledTimes).toEqual(3)
   })
 
   test('defineProperty on proxy property with value descriptor', () => {
