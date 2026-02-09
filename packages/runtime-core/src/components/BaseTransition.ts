@@ -20,7 +20,7 @@ import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
-import { SchedulerJobFlags } from '../scheduler'
+import { SchedulerJobFlags, queueJob } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
 
@@ -224,7 +224,7 @@ const BaseTransitionImpl: ComponentOptions = {
             // #6835
             // it also needs to be updated when active is undefined
             if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
-              instance.update()
+              queueJob(instance.update)
             }
             delete leavingHooks.afterLeave
             oldInnerChild = undefined
