@@ -3,6 +3,7 @@ import {
   type Component,
   type ComponentInternalInstance,
   type DirectiveBinding,
+  ErrorCodes,
   Fragment,
   type FunctionalComponent,
   Static,
@@ -10,6 +11,7 @@ import {
   type VNode,
   type VNodeArrayChildren,
   type VNodeProps,
+  handleError,
   mergeProps,
   ssrUtils,
   warn,
@@ -200,6 +202,8 @@ function renderComponentSubTree(
           instance.data,
           instance.ctx,
         )
+      } catch (err) {
+        handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
       } finally {
         setCurrentRenderingInstance(prev)
       }
