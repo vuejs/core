@@ -1,6 +1,7 @@
 import {
   type WatchOptions as BaseWatchOptions,
   type DebuggerOptions,
+  type MultiWatchSources,
   type ReactiveMarker,
   type WatchCallback,
   type WatchEffect,
@@ -85,8 +86,6 @@ export function watchSyncEffect(
       : { flush: 'sync' },
   )
 }
-
-export type MultiWatchSources = (WatchSource<unknown> | object)[]
 
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
@@ -228,7 +227,7 @@ function doWatch(
     }
   }
 
-  const watchHandle = baseWatch(source, cb, baseWatchOptions)
+  const watchHandle = baseWatch(source, cb as any, baseWatchOptions)
 
   if (__SSR__ && isInSSRComponentSetup) {
     if (ssrCleanup) {
