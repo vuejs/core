@@ -81,7 +81,7 @@ export async function renderToString(
   vnode.appContext = input._context
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
-  const buffer = await renderComponentVNode(vnode)
+  const buffer = await renderComponentVNode(vnode, undefined, null)
 
   const result = await unrollBuffer(buffer as SSRBuffer)
 
