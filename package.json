@@ -81,7 +81,7 @@
     "enquirer": "^2.4.1",
     "esbuild": "^0.27.3",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.0",
     "eslint-plugin-import-x": "^4.16.1",
     "estree-walker": "catalog:",
     "jsdom": "^28.0.0",
