@@ -28,6 +28,7 @@ import {
   isReservedProp,
   isString,
   normalizeClass,
+  normalizeCssVarValue,
   normalizeStyle,
   stringifyStyle,
 } from '@vue/shared'
@@ -459,18 +460,22 @@ export function createHydrationFunctions(
         ) {
           clientText = clientText.slice(1)
         }
-        if (el.textContent !== clientText) {
+        const { textContent } = el
+        if (
+          textContent !== clientText &&
+          // innerHTML normalize \r\n or \r into a single \n in the DOM
+          textContent !== clientText.replace(/\r\n|\r/g, '\n')
+        ) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
                 `Hydration text content mismatch on`,
                 el,
-                `\n  - rendered on server: ${el.textContent}` +
-                  `\n  - expected on client: ${vnode.children as string}`,
+                `\n  - rendered on server: ${textContent}` +
+                  `\n  - expected on client: ${clientText}`,
               )
             logMismatchError()
           }
-
           el.textContent = vnode.children as string
         }
       }
@@ -502,7 +507,7 @@ export function createHydrationFunctions(
               (isOn(key) && !isReservedProp(key)) ||
               // force hydrate v-bind with .prop modifiers
               key[0] === '.' ||
-              isCustomElement
+              (isCustomElement && !isReservedProp(key))
             ) {
               patchProp(el, key, null, props[key], undefined, parentComponent)
             }
@@ -945,10 +950,8 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      expectedMap.set(
-        `--${getEscapedCssVarName(key, false)}`,
-        String(cssVars[key]),
-      )
+      const value = normalizeCssVarValue(cssVars[key])
+      expectedMap.set(`--${getEscapedCssVarName(key, false)}`, value)
     }
   }
   if (vnode === root && instance.parent) {

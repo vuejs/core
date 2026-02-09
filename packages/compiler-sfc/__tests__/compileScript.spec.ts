@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { BindingTypes } from '@vue/compiler-core'
 import {
   assertCode,
@@ -6,6 +7,15 @@ import {
   mockId,
 } from './utils'
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+
+vi.mock('../src/warn', () => ({
+  warn: vi.fn(),
+  warnOnce: vi.fn(),
+}))
+
+import { warnOnce } from '../src/warn'
+
+const warnOnceMock = vi.mocked(warnOnce)
 
 describe('SFC compile <script setup>', () => {
   test('should compile JS syntax', () => {
@@ -72,6 +82,77 @@ describe('SFC compile <script setup>', () => {
       z: BindingTypes.SETUP_MAYBE_REF,
     })
     assertCode(content)
+  })
+
+  test('demote const reactive binding to let when used in v-model', () => {
+    warnOnceMock.mockClear()
+    const { content, bindings } = compile(`
+      <script setup>
+      import { reactive } from 'vue'
+      const name = reactive({ first: 'john', last: 'doe' })
+      </script>
+
+      <template>
+        <MyComponent v-model="name" />
+      </template>
+    `)
+
+    expect(content).toMatch(
+      `let name = reactive({ first: 'john', last: 'doe' })`,
+    )
+    expect(bindings!.name).toBe(BindingTypes.SETUP_LET)
+    expect(warnOnceMock).toHaveBeenCalledTimes(1)
+    expect(warnOnceMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '`v-model` cannot update a `const` reactive binding',
+      ),
+    )
+    assertCode(content)
+  })
+
+  test('demote const reactive binding to let when used in v-model (inlineTemplate)', () => {
+    warnOnceMock.mockClear()
+    const { content, bindings } = compile(
+      `
+      <script setup>
+      import { reactive } from 'vue'
+      const name = reactive({ first: 'john', last: 'doe' })
+      </script>
+
+      <template>
+        <MyComponent v-model="name" />
+      </template>
+      `,
+      { inlineTemplate: true },
+    )
+
+    expect(content).toMatch(
+      `let name = reactive({ first: 'john', last: 'doe' })`,
+    )
+    expect(bindings!.name).toBe(BindingTypes.SETUP_LET)
+    expect(warnOnceMock).toHaveBeenCalledTimes(1)
+    expect(warnOnceMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '`v-model` cannot update a `const` reactive binding',
+      ),
+    )
+    assertCode(content)
+  })
+
+  test('v-model should error on literal const bindings', () => {
+    expect(() =>
+      compile(
+        `
+        <script setup>
+        const foo = 1
+        </script>
+        <template>
+          <input v-model="foo" />
+        </template>
+        `,
+        { inlineTemplate: true },
+      ),
+    ).toThrow('v-model cannot be used on a const binding')
   })
 
   describe('<script> and <script setup> co-usage', () => {
@@ -652,10 +733,10 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`return (_ctx, _push`)
       expect(content).toMatch(`ssrInterpolate`)
       expect(content).not.toMatch(`useCssVars`)
-      expect(content).toMatch(`"--${mockId}-count": (count.value)`)
-      expect(content).toMatch(`"--${mockId}-style\\\\.color": (style.color)`)
+      expect(content).toMatch(`":--${mockId}-count": (count.value)`)
+      expect(content).toMatch(`":--${mockId}-style\\\\.color": (style.color)`)
       expect(content).toMatch(
-        `"--${mockId}-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")`,
+        `":--${mockId}-height\\\\ \\\\+\\\\ \\\\\\"px\\\\\\"": (height.value + "px")`,
       )
       assertCode(content)
     })
@@ -912,6 +993,13 @@ describe('SFC compile <script setup>', () => {
     test('<script> and <script setup> must have same lang', () => {
       expect(() =>
         compile(`<script>foo()</script><script setup lang="ts">bar()</script>`),
+      ).toThrow(`<script> and <script setup> must have the same language type`)
+
+      // #13193 must check lang before parsing with babel
+      expect(() =>
+        compile(
+          `<script lang="ts">const a = 1</script><script setup lang="tsx">const Comp = () => <p>test</p></script>`,
+        ),
       ).toThrow(`<script> and <script setup> must have the same language type`)
     })
 
@@ -1542,5 +1630,20 @@ describe('compileScript', () => {
       `import { withAsyncContext as _withAsyncContext } from "npm:vue"\n`,
     )
     assertCode(content)
+  })
+
+  test('should not compile unrecognized language', () => {
+    const { content, lang, scriptAst } = compile(
+      `<script lang="coffee">
+      export default
+        data: ->
+          myVal: 0
+      </script>`,
+    )
+    expect(content).toMatch(`export default
+        data: ->
+          myVal: 0`)
+    expect(lang).toBe('coffee')
+    expect(scriptAst).not.toBeDefined()
   })
 })
