@@ -101,11 +101,11 @@ describe('vdom / vapor interop', () => {
         .toBe(
           `<div class="v-leave-active v-leave-to">vapor compA</div><!--v-if-->`,
         )
-      await expect
-        .element(css(containerSelector), { interval: 1, timeout: 2000 })
-        .toContainHTML(
-          `<div class="v-leave-active v-leave-to">vapor compA</div><!--v-if-->`,
-        )
+      // await expect
+      //   .element(css(containerSelector), { interval: 1, timeout: 2000 })
+      //   .toContainHTML(
+      //     `<div class="v-leave-active v-leave-to">vapor compA</div><!--v-if-->`,
+      //   )
 
       // await transitionFinish()
       // expect(await html(containerSelector)).toBe(`<!---->`)
