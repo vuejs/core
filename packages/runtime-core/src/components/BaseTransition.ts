@@ -413,7 +413,7 @@ export function resolveTransitionHooks(
         }
       }
       let called = false
-      const done = (el[enterCbKey] = (cancelled?) => {
+      el[enterCbKey] = (cancelled?) => {
         if (called) return
         called = true
         if (cancelled) {
@@ -425,7 +425,8 @@ export function resolveTransitionHooks(
           hooks.delayedLeave()
         }
         el[enterCbKey] = undefined
-      })
+      }
+      const done = el[enterCbKey]!.bind(null, false)
       if (hook) {
         callAsyncHook(hook, [el, done])
       } else {
@@ -443,7 +444,7 @@ export function resolveTransitionHooks(
       }
       callHook(onBeforeLeave, [el])
       let called = false
-      const done = (el[leaveCbKey] = (cancelled?) => {
+      el[leaveCbKey] = (cancelled?) => {
         if (called) return
         called = true
         remove()
@@ -456,7 +457,8 @@ export function resolveTransitionHooks(
         if (leavingVNodesCache[key] === vnode) {
           delete leavingVNodesCache[key]
         }
-      })
+      }
+      const done = el[leaveCbKey]!.bind(null, false)
       leavingVNodesCache[key] = vnode
       if (onLeave) {
         callAsyncHook(onLeave, [el, done])
