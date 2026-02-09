@@ -7,11 +7,11 @@ settings:
 catalogs:
   default:
     '@babel/parser':
-      specifier: ^7.28.6
-      version: 7.28.6
+      specifier: ^7.29.0
+      version: 7.29.0
     '@babel/types':
-      specifier: ^7.28.6
-      version: 7.28.6
+      specifier: ^7.29.0
+      version: 7.29.0
     '@vitejs/plugin-vue':
       specifier: ^6.0.3
       version: 6.0.3
@@ -34,10 +34,10 @@ importers:
     devDependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.28.6
+        version: 7.29.0
       '@babel/types':
         specifier: 'catalog:'
-        version: 7.28.6
+        version: 7.29.0
       '@rollup/plugin-alias':
         specifier: ^6.0.0
         version: 6.0.0(rollup@4.57.0)
@@ -248,7 +248,7 @@ importers:
     dependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.28.6
+        version: 7.29.0
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
@@ -264,7 +264,7 @@ importers:
     devDependencies:
       '@babel/types':
         specifier: 'catalog:'
-        version: 7.28.6
+        version: 7.29.0
 
   packages/compiler-dom:
     dependencies:
@@ -279,7 +279,7 @@ importers:
     dependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.28.6
+        version: 7.29.0
       '@vue/compiler-core':
         specifier: workspace:*
         version: link:../compiler-core
@@ -307,7 +307,7 @@ importers:
     devDependencies:
       '@babel/types':
         specifier: 'catalog:'
-        version: 7.28.6
+        version: 7.29.0
       '@vue/consolidate':
         specifier: ^1.0.0
         version: 1.0.0
@@ -427,7 +427,7 @@ importers:
     dependencies:
       '@babel/parser':
         specifier: 'catalog:'
-        version: 7.28.6
+        version: 7.29.0
       estree-walker:
         specifier: 'catalog:'
         version: 2.0.2
@@ -464,19 +464,10 @@ packages:
     resolution: {integrity: sha512-qSs4ifwzKJSV39ucNjsvc6WVHs6b7S03sOh2OcHF9UHfVPqWWALUsNUVzhSBiItjRZoLHx7nIarVjqKVusUZ1Q==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/parser@7.28.6':
-    resolution: {integrity: sha512-TeR9zWR18BvbfPmGbLampPMW+uW1NZnJlRuuHso8i87QZNq2JRF9i6RgxRqtEq+wQGsS19NNTWr2duhnE49mfQ==}
-    engines: {node: '>=6.0.0'}
-    hasBin: true
-
   '@babel/parser@7.29.0':
     resolution: {integrity: sha512-IyDgFV5GeDUVX4YdF/3CPULtVGSXXMLh1xVIgdCgxApktqnQV0r7/8Nqthg+8YLGaAtdyIlo2qIdZrbCv4+7ww==}
     engines: {node: '>=6.0.0'}
     hasBin: true
-
-  '@babel/types@7.28.6':
-    resolution: {integrity: sha512-0ZrskXVEHSWIqZM/sQZ4EV3jZJXRkio/WCxaqKZP1g//CEWEPSfeZFcms4XeKBCHU0ZKnIkdJeU/kF+eRp5lBg==}
-    engines: {node: '>=6.9.0'}
 
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
@@ -3489,18 +3480,9 @@ snapshots:
 
   '@babel/helper-validator-identifier@7.28.5': {}
 
-  '@babel/parser@7.28.6':
-    dependencies:
-      '@babel/types': 7.28.6
-
   '@babel/parser@7.29.0':
     dependencies:
       '@babel/types': 7.29.0
-
-  '@babel/types@7.28.6':
-    dependencies:
-      '@babel/helper-string-parser': 7.27.1
-      '@babel/helper-validator-identifier': 7.28.5
 
   '@babel/types@7.29.0':
     dependencies:
@@ -4324,7 +4306,7 @@ snapshots:
 
   babel-walk@3.0.0-canary-5:
     dependencies:
-      '@babel/types': 7.28.6
+      '@babel/types': 7.29.0
 
   balanced-match@1.0.2: {}
 
@@ -4490,8 +4472,8 @@ snapshots:
 
   constantinople@4.0.1:
     dependencies:
-      '@babel/parser': 7.28.6
-      '@babel/types': 7.28.6
+      '@babel/parser': 7.29.0
+      '@babel/types': 7.29.0
 
   content-disposition@0.5.2: {}
 
@@ -6266,8 +6248,8 @@ snapshots:
 
   with@7.0.2:
     dependencies:
-      '@babel/parser': 7.28.6
-      '@babel/types': 7.28.6
+      '@babel/parser': 7.29.0
+      '@babel/types': 7.29.0
       assert-never: 1.3.0
       babel-walk: 3.0.0-canary-5
 
