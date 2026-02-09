@@ -79,7 +79,7 @@ describe('watch', () => {
         throw 'oops in effect'
       },
       null,
-      { call },
+      { call, lazy: true }, // Ensure lazy behavior doesn't trigger extra errors
     )
 
     const source = ref(0)
@@ -91,7 +91,7 @@ describe('watch', () => {
         })
         throw 'oops in watch'
       },
-      { call },
+      { call, lazy: true }, // Here as well
     )
 
     expect(onError.mock.calls.length).toBe(1)
@@ -123,13 +123,17 @@ describe('watch', () => {
 
     scope.run(() => {
       source = ref(0)
-      watch(onCleanup => {
-        source.value
+      watch(
+        onCleanup => {
+          source.value
 
-        onCleanup(() => (dummy += 2))
-        onWatcherCleanup(() => (dummy += 3))
-        onWatcherCleanup(() => (dummy += 5))
-      })
+          onCleanup(() => (dummy += 2))
+          onWatcherCleanup(() => (dummy += 3))
+          onWatcherCleanup(() => (dummy += 5))
+        },
+        null,
+        { lazy: true },
+      )
     })
     expect(dummy).toBe(0)
 
@@ -163,7 +167,7 @@ describe('watch', () => {
           onWatcherCleanup(() => calls.push(`sync ${current}`))
         },
         null,
-        {},
+        { lazy: true },
       )
       // with scheduler
       watch(
@@ -172,7 +176,7 @@ describe('watch', () => {
           onWatcherCleanup(() => calls.push(`post ${current}`))
         },
         null,
-        { scheduler },
+        { scheduler, lazy: true }, // Make this lazy as well
       )
     })
 
@@ -211,6 +215,100 @@ describe('watch', () => {
     expect(dummy).toBe(1)
   })
 
+  test('with callback', () => {
+    let dummy: any
+    const source = ref(0)
+    watch(source, () => {
+      dummy = source.value
+    })
+    expect(dummy).toBe(undefined)
+    source.value++
+    expect(dummy).toBe(1)
+  })
+  test('lazy watcher should not run immediately', () => {
+    const source = ref(0)
+    let callCount = 0
+
+    const stop = watch(
+      source,
+      (newValue, oldValue) => {
+        callCount++
+      },
+      { lazy: true },
+    )
+
+    expect(callCount).toBe(0)
+    source.value++
+    expect(callCount).toBe(1)
+
+    source.value++
+    expect(callCount).toBe(2)
+
+    stop()
+  })
+  test('multiple watchers on the same source with { lazy: true }', async () => {
+    let dummy1: any
+    let dummy2: any
+    const source = ref(0)
+
+    const stop1 = watch(
+      () => source.value,
+      newVal => {
+        dummy1 = newVal
+      },
+      { lazy: true },
+    )
+
+    const stop2 = watch(
+      () => source.value,
+      newVal => {
+        dummy2 = newVal
+      },
+      { lazy: true },
+    )
+
+    expect(dummy1).toBeUndefined()
+    expect(dummy2).toBeUndefined()
+
+    source.value++
+
+    await nextTick()
+
+    expect(dummy1).toBe(1)
+    expect(dummy2).toBe(1)
+
+    stop1()
+    stop2()
+  })
+  test('lazy watcher with manual start', async () => {
+    let dummy: any
+    const source = ref(0)
+
+    const { start, stop } = watch(
+      () => source.value,
+      newVal => {
+        dummy = newVal
+      },
+      { lazy: true },
+    )
+
+    expect(dummy).toBeUndefined()
+
+    start()
+
+    source.value = 1
+
+    await nextTick()
+
+    expect(dummy).toBe(1)
+
+    source.value = 2
+
+    await nextTick()
+
+    expect(dummy).toBe(2)
+
+    stop()
   // #12033
   test('recursive sync watcher on computed', () => {
     const r = ref(0)
