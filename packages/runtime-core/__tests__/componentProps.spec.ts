@@ -413,6 +413,7 @@ describe('component props', () => {
         fn: { type: Function },
         skipCheck: { type: [Boolean, Function], skipCheck: true },
         empty: { type: [] },
+        foo: { type: Boolean },
       },
       setup() {
         return () => null
@@ -429,6 +430,7 @@ describe('component props', () => {
         fn: true,
         skipCheck: 'foo',
         empty: [1, 2, 3],
+        foo: Symbol(),
       }),
       nodeOps.createElement('div'),
     )
@@ -458,6 +460,9 @@ describe('component props', () => {
     ).not.toHaveBeenWarned()
     expect(
       `Prop type [] for prop "empty" won't match anything. Did you mean to use type Array instead?`,
+    ).toHaveBeenWarned()
+    expect(
+      `[Vue warn]: Invalid prop: type check failed for prop "foo". Expected Boolean, got Symbol`,
     ).toHaveBeenWarned()
   })
 
