@@ -548,4 +548,4 @@ export default {
       ],
     },
   ],
-}
+} as any

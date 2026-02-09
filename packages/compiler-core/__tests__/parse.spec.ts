@@ -1358,7 +1358,27 @@ describe('compiler: parse', () => {
         name: 'on',
         rawName: 'v-on.enter',
         arg: undefined,
-        modifiers: ['enter'],
+        modifiers: [
+          {
+            constType: 3,
+            content: 'enter',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 16,
+                line: 1,
+                offset: 15,
+              },
+              source: 'enter',
+              start: {
+                column: 11,
+                line: 1,
+                offset: 10,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
@@ -1377,7 +1397,46 @@ describe('compiler: parse', () => {
         name: 'on',
         rawName: 'v-on.enter.exact',
         arg: undefined,
-        modifiers: ['enter', 'exact'],
+        modifiers: [
+          {
+            constType: 3,
+            content: 'enter',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 16,
+                line: 1,
+                offset: 15,
+              },
+              source: 'enter',
+              start: {
+                column: 11,
+                line: 1,
+                offset: 10,
+              },
+            },
+            type: 4,
+          },
+          {
+            constType: 3,
+            content: 'exact',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 22,
+                line: 1,
+                offset: 21,
+              },
+              source: 'exact',
+              start: {
+                column: 17,
+                line: 1,
+                offset: 16,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
@@ -1406,7 +1465,46 @@ describe('compiler: parse', () => {
             source: 'click',
           },
         },
-        modifiers: ['enter', 'exact'],
+        modifiers: [
+          {
+            constType: 3,
+            content: 'enter',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 22,
+                line: 1,
+                offset: 21,
+              },
+              source: 'enter',
+              start: {
+                column: 17,
+                line: 1,
+                offset: 16,
+              },
+            },
+            type: 4,
+          },
+          {
+            constType: 3,
+            content: 'exact',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 28,
+                line: 1,
+                offset: 27,
+              },
+              source: 'exact',
+              start: {
+                column: 23,
+                line: 1,
+                offset: 22,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
@@ -1435,7 +1533,27 @@ describe('compiler: parse', () => {
             source: '[a.b]',
           },
         },
-        modifiers: ['camel'],
+        modifiers: [
+          {
+            constType: 3,
+            content: 'camel',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 22,
+                line: 1,
+                offset: 21,
+              },
+              source: 'camel',
+              start: {
+                column: 17,
+                line: 1,
+                offset: 16,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
@@ -1530,7 +1648,27 @@ describe('compiler: parse', () => {
             source: 'a',
           },
         },
-        modifiers: ['prop'],
+        modifiers: [
+          {
+            constType: 0,
+            content: 'prop',
+            isStatic: false,
+            loc: {
+              end: {
+                column: 1,
+                line: 1,
+                offset: 0,
+              },
+              source: '',
+              start: {
+                column: 1,
+                line: 1,
+                offset: 0,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
@@ -1569,7 +1707,27 @@ describe('compiler: parse', () => {
             source: 'a',
           },
         },
-        modifiers: ['sync'],
+        modifiers: [
+          {
+            constType: 3,
+            content: 'sync',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 13,
+                line: 1,
+                offset: 12,
+              },
+              source: 'sync',
+              start: {
+                column: 9,
+                line: 1,
+                offset: 8,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
@@ -1649,7 +1807,27 @@ describe('compiler: parse', () => {
             source: 'a',
           },
         },
-        modifiers: ['enter'],
+        modifiers: [
+          {
+            constType: 3,
+            content: 'enter',
+            isStatic: true,
+            loc: {
+              end: {
+                column: 14,
+                line: 1,
+                offset: 13,
+              },
+              source: 'enter',
+              start: {
+                column: 9,
+                line: 1,
+                offset: 8,
+              },
+            },
+            type: 4,
+          },
+        ],
         exp: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
@@ -1839,6 +2017,21 @@ describe('compiler: parse', () => {
         {
           type: NodeTypes.ELEMENT,
           children: [{ type: NodeTypes.TEXT, content: `{{ number ` }],
+        },
+      ])
+
+      const ast3 = baseParse(`<div v-pre><textarea>{{ foo </textarea></div>`, {
+        parseMode: 'html',
+      })
+      expect((ast3.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          children: [
+            {
+              type: NodeTypes.TEXT,
+              content: `{{ foo `,
+            },
+          ],
         },
       ])
     })
@@ -2078,6 +2271,11 @@ describe('compiler: parse', () => {
       expect(span.loc.start.offset).toBe(0)
       expect(span.loc.end.offset).toBe(27)
     })
+
+    test('correct loc when a line in attribute value ends with &', () => {
+      const [span] = baseParse(`<span v-if="foo &&\nbar"></span>`).children
+      expect(span.loc.end.line).toBe(2)
+    })
   })
 
   describe('decodeEntities option', () => {
@@ -2182,6 +2380,7 @@ describe('compiler: parse', () => {
     test('should remove leading newline character immediately following the pre element start tag', () => {
       const ast = parse(`<pre>\n  foo  bar  </pre>`, {
         isPreTag: tag => tag === 'pre',
+        isIgnoreNewlineTag: tag => tag === 'pre',
       })
       expect(ast.children).toHaveLength(1)
       const preElement = ast.children[0] as ElementNode

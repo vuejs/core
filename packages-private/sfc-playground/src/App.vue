@@ -2,7 +2,7 @@
 import Header from './Header.vue'
 import { Repl, useStore, SFCOptions, useVueImportMap } from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
-import { ref, watchEffect, onMounted, computed } from 'vue'
+import { ref, watchEffect, onMounted, computed, watch } from 'vue'
 
 const replRef = ref<InstanceType<typeof Repl>>()
 
@@ -13,6 +13,12 @@ window.addEventListener('resize', setVH)
 setVH()
 
 const useSSRMode = ref(false)
+
+const AUTO_SAVE_STORAGE_KEY = 'vue-sfc-playground-auto-save'
+const initAutoSave: boolean = JSON.parse(
+  localStorage.getItem(AUTO_SAVE_STORAGE_KEY) ?? 'true',
+)
+const autoSave = ref(initAutoSave)
 
 const { productionMode, vueVersion, importMap } = useVueImportMap({
   runtimeDev: import.meta.env.PROD
@@ -89,6 +95,11 @@ function toggleSSR() {
   useSSRMode.value = !useSSRMode.value
 }
 
+function toggleAutoSave() {
+  autoSave.value = !autoSave.value
+  localStorage.setItem(AUTO_SAVE_STORAGE_KEY, String(autoSave.value))
+}
+
 function reloadPage() {
   replRef.value?.reload()
 }
@@ -104,6 +115,34 @@ onMounted(() => {
   // @ts-expect-error process shim for old versions of @vue/compiler-sfc dependency
   window.process = { env: {} }
 })
+
+const isVaporSupported = ref(false)
+watch(
+  () => store.vueVersion,
+  (version, oldVersion) => {
+    const [major, minor] = (version || store.compiler.version)
+      .split('.')
+      .map((v: string) => parseInt(v, 10))
+    isVaporSupported.value = major > 3 || (major === 3 && minor >= 6)
+    if (oldVersion) reloadPage()
+  },
+  { immediate: true, flush: 'pre' },
+)
+
+const previewOptions = computed(() => ({
+  customCode: {
+    importCode: `import { initCustomFormatter${isVaporSupported.value ? ', vaporInteropPlugin' : ''} } from 'vue'`,
+    useCode: `
+      ${isVaporSupported.value ? 'app.use(vaporInteropPlugin)' : ''}
+      if (window.devtoolsFormatters) {
+        const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
+        window.devtoolsFormatters.splice(index, 1)
+        initCustomFormatter()
+      } else {
+        initCustomFormatter()
+      }`,
+  },
+}))
 </script>
 
 <template>
@@ -111,9 +150,12 @@ onMounted(() => {
     :store="store"
     :prod="productionMode"
     :ssr="useSSRMode"
+    :autoSave="autoSave"
+    :theme="theme"
     @toggle-theme="toggleTheme"
     @toggle-prod="toggleProdMode"
     @toggle-ssr="toggleSSR"
+    @toggle-autosave="toggleAutoSave"
     @reload-page="reloadPage"
   />
   <Repl
@@ -123,22 +165,15 @@ onMounted(() => {
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
     :ssr="useSSRMode"
+    :model-value="autoSave"
+    :editorOptions="{ autoSaveText: false }"
     :store="store"
     :showCompileOutput="true"
+    :showSsrOutput="useSSRMode"
+    :showOpenSourceMap="true"
     :autoResize="true"
     :clearConsole="false"
-    :preview-options="{
-      customCode: {
-        importCode: `import { initCustomFormatter } from 'vue'`,
-        useCode: `if (window.devtoolsFormatters) {
-    const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
-    window.devtoolsFormatters.splice(index, 1)
-    initCustomFormatter()
-  } else {
-    initCustomFormatter()
-  }`,
-      },
-    }"
+    :preview-options="previewOptions"
   />
 </template>
 
@@ -149,8 +184,9 @@ onMounted(() => {
 
 body {
   font-size: 13px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   margin: 0;
   --base: #444;
   --nav-height: 50px;

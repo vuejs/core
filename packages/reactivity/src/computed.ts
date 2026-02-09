@@ -3,14 +3,14 @@ import {
   type DebuggerEvent,
   type DebuggerOptions,
   EffectFlags,
-  type Link,
   type Subscriber,
   activeSub,
+  batch,
   refreshComputed,
 } from './effect'
 import type { Ref } from './ref'
 import { warn } from './warning'
-import { Dep, globalVersion } from './dep'
+import { Dep, type Link, globalVersion } from './dep'
 import { ReactiveFlags, TrackOpTypes } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
@@ -84,9 +84,13 @@ export class ComputedRefImpl<T = any> implements Subscriber {
    * @internal
    */
   isSSR: boolean
+  /**
+   * @internal
+   */
+  next?: Subscriber = undefined
+
   // for backwards compat
   effect: this = this
-
   // dev only
   onTrack?: (event: DebuggerEvent) => void
   // dev only
@@ -110,11 +114,15 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   /**
    * @internal
    */
-  notify(): void {
-    // avoid infinite self recursion
-    if (activeSub !== this) {
-      this.flags |= EffectFlags.DIRTY
-      this.dep.notify()
+  notify(): true | void {
+    this.flags |= EffectFlags.DIRTY
+    if (
+      !(this.flags & EffectFlags.NOTIFIED) &&
+      // avoid infinite self recursion
+      activeSub !== this
+    ) {
+      batch(this, true)
+      return true
     } else if (__DEV__) {
       // TODO warn
     }
@@ -186,6 +194,7 @@ export function computed<T, S = T>(
   options: WritableComputedOptions<T, S>,
   debugOptions?: DebuggerOptions,
 ): WritableComputedRef<T, S>
+/*@__NO_SIDE_EFFECTS__*/
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,

@@ -95,6 +95,10 @@ export function getCurrentWatcher(): ReactiveEffect<any> | undefined {
  * associated effect re-runs.
  *
  * @param cleanupFn - The callback function to attach to the effect's cleanup.
+ * @param failSilently - if `true`, will not throw warning when called without
+ * an active effect.
+ * @param owner - The effect that this cleanup function should be attached to.
+ * By default, the current active effect.
  */
 export function onWatcherCleanup(
   cleanupFn: () => void,
@@ -209,24 +213,16 @@ export function watch(
   const scope = getCurrentScope()
   const watchHandle: WatchHandle = () => {
     effect.stop()
-    if (scope) {
+    if (scope && scope.active) {
       remove(scope.effects, effect)
     }
   }
 
-  if (once) {
-    if (cb) {
-      const _cb = cb
-      cb = (...args) => {
-        _cb(...args)
-        watchHandle()
-      }
-    } else {
-      const _getter = getter
-      getter = () => {
-        _getter()
-        watchHandle()
-      }
+  if (once && cb) {
+    const _cb = cb
+    cb = (...args) => {
+      _cb(...args)
+      watchHandle()
     }
   }
 
@@ -268,11 +264,11 @@ export function watch(
                 : oldValue,
             boundCleanup,
           ]
+          oldValue = newValue
           call
             ? call(cb!, WatchErrorCodes.WATCH_CALLBACK, args)
             : // @ts-expect-error
               cb!(...args)
-          oldValue = newValue
         } finally {
           activeWatcher = currentWatcher
         }
@@ -335,17 +331,17 @@ export function watch(
 export function traverse(
   value: unknown,
   depth: number = Infinity,
-  seen?: Set<unknown>,
+  seen?: Map<unknown, number>,
 ): unknown {
   if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }
 
-  seen = seen || new Set()
-  if (seen.has(value)) {
+  seen = seen || new Map()
+  if ((seen.get(value) || 0) >= depth) {
     return value
   }
-  seen.add(value)
+  seen.set(value, depth)
   depth--
   if (isRef(value)) {
     traverse(value.value, depth, seen)

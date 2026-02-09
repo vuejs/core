@@ -1,5 +1,7 @@
 import {
   escapeHtml,
+  isArray,
+  isObject,
   isRenderableAttrValue,
   isSVGTag,
   stringifyStyle,
@@ -12,12 +14,13 @@ import {
   isString,
   makeMap,
   normalizeClass,
+  normalizeCssVarValue,
   normalizeStyle,
   propsToAttrMap,
 } from '@vue/shared'
 
 // leading comma for empty string ""
-const shouldIgnoreProp = /*#__PURE__*/ makeMap(
+const shouldIgnoreProp = /*@__PURE__*/ makeMap(
   `,key,ref,innerHTML,textContent,ref_key,ref_for`,
 )
 
@@ -26,16 +29,20 @@ export function ssrRenderAttrs(
   tag?: string,
 ): string {
   let ret = ''
-  for (const key in props) {
+  for (let key in props) {
     if (
       shouldIgnoreProp(key) ||
       isOn(key) ||
-      (tag === 'textarea' && key === 'value')
+      (tag === 'textarea' && key === 'value') ||
+      // force as property (not rendered in SSR)
+      key.startsWith('.')
     ) {
       continue
     }
     const value = props[key]
-    if (key === 'class') {
+    // force as attribute
+    if (key.startsWith('^')) key = key.slice(1)
+    if (key === 'class' || key === 'className') {
       ret += ` class="${ssrRenderClass(value)}"`
     } else if (key === 'style') {
       ret += ` style="${ssrRenderStyle(value)}"`
@@ -91,6 +98,22 @@ export function ssrRenderStyle(raw: unknown): string {
   if (isString(raw)) {
     return escapeHtml(raw)
   }
-  const styles = normalizeStyle(raw)
+  const styles = normalizeStyle(ssrResetCssVars(raw))
   return escapeHtml(stringifyStyle(styles))
+}
+
+function ssrResetCssVars(raw: unknown) {
+  if (!isArray(raw) && isObject(raw)) {
+    const res: Record<string, unknown> = {}
+    for (const key in raw) {
+      // `:` prefixed keys are coming from `ssrCssVars`
+      if (key.startsWith(':--')) {
+        res[key.slice(1)] = normalizeCssVarValue(raw[key])
+      } else {
+        res[key] = raw[key]
+      }
+    }
+    return res
+  }
+  return raw
 }

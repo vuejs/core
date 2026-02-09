@@ -5,6 +5,7 @@
 // smaller files and provides better tree-shaking.
 
 import esbuild from 'esbuild'
+import fs from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
@@ -52,11 +53,17 @@ const postfix = format.endsWith('-runtime')
   ? `runtime.${format.replace(/-runtime$/, '')}`
   : format
 
+const privatePackages = fs.readdirSync('packages-private')
+
 for (const target of targets) {
-  const pkg = require(`../packages/${target}/package.json`)
+  const pkgBase = privatePackages.includes(target)
+    ? `packages-private`
+    : `packages`
+  const pkgBasePath = `../${pkgBase}/${target}`
+  const pkg = require(`${pkgBasePath}/package.json`)
   const outfile = resolve(
     __dirname,
-    `../packages/${target}/dist/${
+    `${pkgBasePath}/dist/${
       target === 'vue-compat' ? `vue` : target
     }.${postfix}.${prod ? `prod.` : ``}js`,
   )
@@ -122,7 +129,7 @@ for (const target of targets) {
 
   esbuild
     .context({
-      entryPoints: [resolve(__dirname, `../packages/${target}/src/index.ts`)],
+      entryPoints: [resolve(__dirname, `${pkgBasePath}/src/index.ts`)],
       outfile,
       bundle: true,
       external,

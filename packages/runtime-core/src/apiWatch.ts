@@ -21,6 +21,7 @@ import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 import type { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from './helpers/useSsrContext'
+import type { ComponentPublicInstance } from './componentPublicInstance'
 
 export type {
   WatchHandle,
@@ -66,7 +67,9 @@ export function watchPostEffect(
   return doWatch(
     effect,
     null,
-    __DEV__ ? extend({}, options as any, { flush: 'post' }) : { flush: 'post' },
+    __DEV__
+      ? extend({}, options as WatchEffectOptions, { flush: 'post' })
+      : { flush: 'post' },
   )
 }
 
@@ -77,7 +80,9 @@ export function watchSyncEffect(
   return doWatch(
     effect,
     null,
-    __DEV__ ? extend({}, options as any, { flush: 'sync' }) : { flush: 'sync' },
+    __DEV__
+      ? extend({}, options as WatchEffectOptions, { flush: 'sync' })
+      : { flush: 'sync' },
   )
 }
 
@@ -170,20 +175,19 @@ function doWatch(
 
   if (__DEV__) baseWatchOptions.onWarn = warn
 
+  // immediate watcher or watchEffect
+  const runsImmediately = (cb && immediate) || (!cb && flush !== 'post')
   let ssrCleanup: (() => void)[] | undefined
   if (__SSR__ && isInSSRComponentSetup) {
     if (flush === 'sync') {
       const ctx = useSSRContext()!
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
-    } else if (!cb || immediate) {
-      // immediately watch or watchEffect
-      baseWatchOptions.once = true
-    } else {
-      return {
-        stop: NOOP,
-        resume: NOOP,
-        pause: NOOP,
-      } as WatchHandle
+    } else if (!runsImmediately) {
+      const watchStopHandle = () => {}
+      watchStopHandle.stop = NOOP
+      watchStopHandle.resume = NOOP
+      watchStopHandle.pause = NOOP
+      return watchStopHandle
     }
   }
 
@@ -226,7 +230,14 @@ function doWatch(
 
   const watchHandle = baseWatch(source, cb, baseWatchOptions)
 
-  if (__SSR__ && ssrCleanup) ssrCleanup.push(watchHandle)
+  if (__SSR__ && isInSSRComponentSetup) {
+    if (ssrCleanup) {
+      ssrCleanup.push(watchHandle)
+    } else if (runsImmediately) {
+      watchHandle()
+    }
+  }
+
   return watchHandle
 }
 
@@ -237,11 +248,11 @@ export function instanceWatch(
   value: WatchCallback | ObjectWatchOptionItem,
   options?: WatchOptions,
 ): WatchHandle {
-  const publicThis = this.proxy as any
+  const publicThis = this.proxy
   const getter = isString(source)
     ? source.includes('.')
-      ? createPathGetter(publicThis, source)
-      : () => publicThis[source]
+      ? createPathGetter(publicThis!, source)
+      : () => publicThis![source as keyof typeof publicThis]
     : source.bind(publicThis, publicThis)
   let cb
   if (isFunction(value)) {
@@ -256,12 +267,15 @@ export function instanceWatch(
   return res
 }
 
-export function createPathGetter(ctx: any, path: string) {
+export function createPathGetter(
+  ctx: ComponentPublicInstance,
+  path: string,
+): () => WatchSource | WatchSource[] | WatchEffect | object {
   const segments = path.split('.')
-  return (): any => {
+  return (): WatchSource | WatchSource[] | WatchEffect | object => {
     let cur = ctx
     for (let i = 0; i < segments.length && cur; i++) {
-      cur = cur[segments[i]]
+      cur = cur[segments[i] as keyof typeof cur]
     }
     return cur
   }
