@@ -86,7 +86,7 @@ export function renderList(
             : toReactive(source[i])
           : source[i],
         i,
-        undefined,
+        i,
         cached && cached[i],
       )
     }
@@ -96,12 +96,12 @@ export function renderList(
     }
     ret = new Array(source)
     for (let i = 0; i < source; i++) {
-      ret[i] = renderItem(i + 1, i, undefined, cached && cached[i])
+      ret[i] = renderItem(i + 1, i, i, cached && cached[i])
     }
   } else if (isObject(source)) {
     if (source[Symbol.iterator as any]) {
       ret = Array.from(source as Iterable<any>, (item, i) =>
-        renderItem(item, i, undefined, cached && cached[i]),
+        renderItem(item, i, i, cached && cached[i]),
       )
     } else {
       const keys = Object.keys(source)
