@@ -48,6 +48,8 @@ export function isRef(r: any): r is Ref {
   return r ? r[ReactiveFlags.IS_REF] === true : false
 }
 
+export type TypeRef<T> = Ref<UnwrapRef<T>, UnwrapRef<T> | T>
+
 /**
  * Takes an inner value and returns a reactive and mutable ref object, which
  * has a single property `.value` that points to the inner value.
@@ -57,7 +59,7 @@ export function isRef(r: any): r is Ref {
  */
 export function ref<T>(
   value: T,
-): [T] extends [Ref] ? IfAny<T, Ref<T>, T> : Ref<UnwrapRef<T>, UnwrapRef<T> | T>
+): [T] extends [Ref] ? IfAny<T, Ref<T>, T> : TypeRef<T>
 export function ref<T = any>(): Ref<T | undefined>
 /*@__NO_SIDE_EFFECTS__*/
 export function ref(value?: unknown) {
