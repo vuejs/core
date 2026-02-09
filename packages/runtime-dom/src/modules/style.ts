@@ -103,22 +103,24 @@ function setStyle(
 }
 
 const prefixes = ['Webkit', 'Moz', 'ms']
-const prefixCache: Record<string, string> = {}
+const prefixCache: Map<string, string> = new Map()
 
 function autoPrefix(style: CSSStyleDeclaration, rawName: string): string {
-  const cached = prefixCache[rawName]
+  const cached = prefixCache.get(rawName)
   if (cached) {
     return cached
   }
   let name = camelize(rawName)
   if (name !== 'filter' && name in style) {
-    return (prefixCache[rawName] = name)
+    prefixCache.set(rawName, name)
+    return name
   }
   name = capitalize(name)
   for (let i = 0; i < prefixes.length; i++) {
     const prefixed = prefixes[i] + name
     if (prefixed in style) {
-      return (prefixCache[rawName] = prefixed)
+      prefixCache.set(rawName, prefixed)
+      return prefixed
     }
   }
   return rawName

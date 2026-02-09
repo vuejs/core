@@ -17,7 +17,7 @@ type SSRRenderFunction = (
   parentInstance: ComponentInternalInstance,
 ) => void
 
-const compileCache: Record<string, SSRRenderFunction> = Object.create(null)
+const compileCache: Map<string, SSRRenderFunction> = new Map()
 
 export function ssrCompile(
   template: string,
@@ -62,7 +62,7 @@ export function ssrCompile(
     },
   )
 
-  const cached = compileCache[cacheKey]
+  const cached = compileCache.get(cacheKey)
   if (cached) {
     return cached
   }
@@ -89,5 +89,8 @@ export function ssrCompile(
     'vue/server-renderer': helpers,
   }
   const fakeRequire = (id: 'vue' | 'vue/server-renderer') => requireMap[id]
-  return (compileCache[cacheKey] = Function('require', code)(fakeRequire))
+
+  const ssrRenderFunction = Function('require', code)(fakeRequire)
+  compileCache.set(cacheKey, ssrRenderFunction)
+  return ssrRenderFunction
 }
