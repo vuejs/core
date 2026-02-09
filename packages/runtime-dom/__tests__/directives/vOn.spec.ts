@@ -163,4 +163,16 @@ describe('runtime-dom: v-on directive', () => {
     triggerEvent(el2, 'click', e => (e.shiftKey = true))
     expect(fn).toBeCalledTimes(2)
   })
+
+  it('it should support "enter" and "tab" key modifiers', () => {
+    const el = document.createElement('input')
+    const fn = vi.fn()
+
+    const enterHandler = withModifiers(fn, ['enter', 'tab'])
+    patchEvent(el, 'onKeyup', null, enterHandler, null)
+    triggerEvent(el, 'keyup', e => (e.key = 'Enter'))
+    expect(fn).toBeCalledTimes(1)
+    triggerEvent(el, 'keyup', e => (e.key = 'Tab'))
+    expect(fn).toBeCalledTimes(2)
+  })
 })
