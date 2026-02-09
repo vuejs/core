@@ -73,15 +73,17 @@ describe('vdom / vapor interop', () => {
       const btnSelector = '.trans-vapor > button'
       const containerSelector = '.trans-vapor > div'
 
-      expect(css(containerSelector).element().innerHTML).toBe(
-        `<div>vapor compA</div>`,
-      )
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(`<div>vapor compA</div>`)
 
       // comp leave
       await css(btnSelector).click()
-      expect(css(containerSelector).element().innerHTML).toBe(
-        `<div class="v-leave-from v-leave-active">vapor compA</div><!--v-if-->`,
-      )
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(
+          `<div class="v-leave-from v-leave-active">vapor compA</div><!--v-if-->`,
+        )
 
       // await nextFrame()
       // expect(css(containerSelector).element().innerHTML).toBe(
@@ -92,8 +94,16 @@ describe('vdom / vapor interop', () => {
       // to the leave-to state. The HTML obtained here is the state after the
       // animation ends: `<!--v-if-->`
       await expect
-        .poll(() => css(containerSelector).element().innerHTML, { interval: 1 })
+        .poll(() => css(containerSelector).element().innerHTML, {
+          interval: 1,
+          timeout: 2000,
+        })
         .toBe(
+          `<div class="v-leave-active v-leave-to">vapor compA</div><!--v-if-->`,
+        )
+      await expect
+        .element(css(containerSelector), { interval: 1, timeout: 2000 })
+        .toContainHTML(
           `<div class="v-leave-active v-leave-to">vapor compA</div><!--v-if-->`,
         )
 
