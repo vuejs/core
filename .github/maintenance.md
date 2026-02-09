@@ -47,7 +47,7 @@ Depending on the type of the PR, different considerations need to be taken into 
 
 - Performance: if a refactor PR claims to improve performance, there should be benchmarks showcasing said performance unless the improvement is self-explanatory.
 
-- Code quality / stylistic PRs: we should be conservative on merging this type PRs because (1) they can be subjective in many cases, and (2) they often come with large git diffs, causing merge conflicts with other pending PRs, and leading to unwanted noise when tracing changes through git history. Use your best judgement on this type of PRs on whether they are worth it.
+- Code quality / stylistic PRs: we should be conservative on merging this type of PRs because (1) they can be subjective in many cases, and (2) they often come with large git diffs, causing merge conflicts with other pending PRs, and leading to unwanted noise when tracing changes through git history. Use your best judgement on this type of PRs on whether they are worth it.
   - For PRs in this category that are approved, do not merge immediately. Group them before releasing a new minor, after all feature-oriented PRs are merged.
 
 ### Reviewing a Feature
@@ -82,7 +82,7 @@ Depending on the type of the PR, different considerations need to be taken into 
 - Potential Breakage
   - avoiding runtime behavior breakage is the highest priority
     - if not sure, use `ecosystem-ci` to verify!
-  - some fix inevitably cause behavior change, these must be discussed case-by-case
+  - some fixes inevitably cause behavior change, these must be discussed case-by-case
   - type level breakage (e.g upgrading TS) is possible between minors
 
 ## PR Merge Rules for Team Members
