@@ -986,6 +986,7 @@ function importSourceToScope(
 }
 
 function resolveExt(filename: string, fs: FS) {
+  // Keep the import's module kind so we can mirror TS NodeNext fallback order.
   let moduleType: /*cjs*/ 'c' | /*mjs*/ 'm' | /*unknown*/ 'u' = 'u'
   if (filename.endsWith('.mjs')) {
     moduleType = 'm'
@@ -997,15 +998,23 @@ function resolveExt(filename: string, fs: FS) {
   const tryResolve = (filename: string) => {
     if (fs.fileExists(filename)) return filename
   }
-  return (
-    tryResolve(filename) ||
+  const resolveTs = () =>
     tryResolve(filename + `.ts`) ||
     tryResolve(filename + `.tsx`) ||
-    tryResolve(filename + `.d.ts`) ||
-    (moduleType !== 'c' &&
-      (tryResolve(filename + `.mts`) || tryResolve(filename + `.d.mts`))) ||
-    (moduleType !== 'm' &&
-      (tryResolve(filename + `.cts`) || tryResolve(filename + `.d.cts`))) ||
+    tryResolve(filename + `.d.ts`)
+  const resolveMts = () =>
+    tryResolve(filename + `.mts`) || tryResolve(filename + `.d.mts`)
+  const resolveCts = () =>
+    tryResolve(filename + `.cts`) || tryResolve(filename + `.d.cts`)
+
+  return (
+    tryResolve(filename) ||
+    // For explicit .mjs/.cjs imports, prefer .mts/.cts declarations first.
+    (moduleType === 'm'
+      ? resolveMts() || resolveTs()
+      : moduleType === 'c'
+        ? resolveCts() || resolveTs()
+        : resolveTs() || resolveMts() || resolveCts()) ||
     tryResolve(joinPaths(filename, `index.ts`)) ||
     tryResolve(joinPaths(filename, `index.tsx`)) ||
     tryResolve(joinPaths(filename, `index.d.ts`))

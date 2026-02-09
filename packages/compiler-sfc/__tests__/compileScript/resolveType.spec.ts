@@ -1727,6 +1727,66 @@ describe('resolveType', () => {
         activeClass: ['String'],
       })
     })
+
+    test('prefer .mts over .ts for .mjs import', () => {
+      const files = {
+        '/foo.mjs': 'export {}',
+        '/foo.ts': 'export type Foo = number',
+        '/foo.mts': 'export type Foo = string',
+      }
+
+      const { props } = resolve(
+        `
+        import type { Foo } from './foo.mjs'
+        defineProps<{ value: Foo }>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        value: ['String'],
+      })
+    })
+
+    test('prefer .d.mts over .d.ts for .mjs import', () => {
+      const files = {
+        '/foo.mjs': 'export {}',
+        '/foo.d.ts': 'export type Foo = number',
+        '/foo.d.mts': 'export type Foo = string',
+      }
+
+      const { props } = resolve(
+        `
+        import type { Foo } from './foo.mjs'
+        defineProps<{ value: Foo }>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        value: ['String'],
+      })
+    })
+
+    test('prefer .d.cts over .d.ts for .cjs import', () => {
+      const files = {
+        '/foo.cjs': 'module.exports = {}',
+        '/foo.d.ts': 'export type Foo = number',
+        '/foo.d.cts': 'export type Foo = boolean',
+      }
+
+      const { props } = resolve(
+        `
+        import type { Foo } from './foo.cjs'
+        defineProps<{ value: Foo }>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        value: ['Boolean'],
+      })
+    })
   })
 })
 
