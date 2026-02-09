@@ -37,6 +37,7 @@ import type {
   AssignmentExpression,
   Identifier,
   Node,
+  TSTypeAnnotation,
   UpdateExpression,
 } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
@@ -358,9 +359,23 @@ export function processExpression(
       children.push(leadingText + (id.prefix || ``))
     }
     const source = rawExp.slice(start, end)
+    let typeAnnotation = ''
+    if (
+      context.isTS &&
+      id.typeAnnotation &&
+      id.typeAnnotation.type === 'TSTypeAnnotation'
+    ) {
+      const _typeAnnotation = id.typeAnnotation as TSTypeAnnotation
+      if (_typeAnnotation.start && _typeAnnotation.end) {
+        typeAnnotation = rawExp.slice(
+          _typeAnnotation.start - 1,
+          _typeAnnotation.end - 1,
+        )
+      }
+    }
     children.push(
       createSimpleExpression(
-        id.name,
+        `${id.name}${typeAnnotation}`,
         false,
         {
           start: advancePositionWithClone(node.loc.start, source, start),
