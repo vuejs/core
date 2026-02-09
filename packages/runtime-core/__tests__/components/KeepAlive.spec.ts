@@ -683,6 +683,16 @@ describe('KeepAlive', () => {
       await nextTick()
       assertHookCalls(one, [2, 2, 1, 1, 1])
       assertHookCalls(two, [1, 1, 1, 1, 0])
+
+      includeRef.value = ''
+      await nextTick()
+      assertHookCalls(one, [2, 2, 1, 1, 1])
+      assertHookCalls(two, [1, 1, 1, 1, 1])
+
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(one, [2, 2, 1, 1, 2])
+      assertHookCalls(two, [2, 2, 1, 1, 1])
     })
 
     test('on exclude change', async () => {
@@ -702,6 +712,16 @@ describe('KeepAlive', () => {
       await nextTick()
       assertHookCalls(one, [2, 2, 1, 1, 1])
       assertHookCalls(two, [1, 1, 1, 1, 0])
+
+      excludeRef.value = ''
+      await nextTick()
+      assertHookCalls(one, [2, 2, 1, 1, 1])
+      assertHookCalls(two, [1, 1, 1, 1, 0])
+
+      excludeRef.value = 'two'
+      await nextTick()
+      assertHookCalls(one, [2, 2, 1, 1, 1])
+      assertHookCalls(two, [1, 1, 1, 1, 1])
     })
 
     test('on include change + view switch', async () => {
