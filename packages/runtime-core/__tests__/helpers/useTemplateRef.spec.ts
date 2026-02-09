@@ -1,11 +1,14 @@
 import {
   type ShallowRef,
+  getCurrentInstance,
   h,
+  isReactive,
   nextTick,
   nodeOps,
   onMounted,
   ref,
   render,
+  serializeInner,
   useTemplateRef,
 } from '@vue/runtime-test'
 
@@ -69,6 +72,58 @@ describe('useTemplateRef', () => {
     await nextTick()
     expect(t2!.value).toBe(root.children[0])
     expect(t1!.value).toBe(null)
+  })
+
+  // #12731
+  test('should collect refs as reactive array in v-for', async () => {
+    let t1: any
+    const list = ref<number[]>([])
+    let currentInstance: any
+    const Comp = {
+      setup() {
+        t1 = useTemplateRef('refKey')
+        currentInstance = getCurrentInstance()!
+      },
+      render() {
+        return h('div', null, [
+          h('div', null, String(t1.value?.length)),
+          h(
+            'ul',
+            list.value.map(i =>
+              h(
+                'li',
+                {
+                  ref: 'refKey',
+                  ref_for: true,
+                },
+                i,
+              ),
+            ),
+          ),
+        ])
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(t1!.value).toBe(null)
+    expect(serializeInner(root)).toBe(
+      '<div><div>undefined</div><ul></ul></div>',
+    )
+
+    list.value.push(1)
+    await nextTick()
+    expect(isReactive(currentInstance.refs['refKey'])).toBe(true)
+    expect(t1!.value.length).toBe(1)
+    expect(serializeInner(root)).toBe(
+      '<div><div>1</div><ul><li>1</li></ul></div>',
+    )
+
+    list.value.push(2)
+    await nextTick()
+    expect(t1!.value.length).toBe(2)
+    expect(serializeInner(root)).toBe(
+      '<div><div>2</div><ul><li>1</li><li>2</li></ul></div>',
+    )
   })
 
   test('should warn on duplicate useTemplateRef', () => {
