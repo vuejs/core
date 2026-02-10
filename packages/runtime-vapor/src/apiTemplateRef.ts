@@ -11,6 +11,7 @@ import {
   callWithErrorHandling,
   createCanSetSetupRefChecker,
   isAsyncWrapper,
+  isTemplateRefKey,
   knownTemplateRefs,
   queuePostFlushCb,
   warn,
@@ -104,8 +105,14 @@ export function setRef(
     ? createCanSetSetupRefChecker(setupState, refs)
     : NO
 
-  const canSetRef = (ref: NodeRef) => {
-    return !__DEV__ || !knownTemplateRefs.has(ref as any)
+  const canSetRef = (ref: NodeRef, key?: string) => {
+    if (__DEV__ && knownTemplateRefs.has(ref as any)) {
+      return false
+    }
+    if (key && isTemplateRefKey(refs, key)) {
+      return false
+    }
+    return true
   }
 
   // dynamic ref changed. unset old ref
@@ -158,7 +165,7 @@ export function setRef(
                 existing = setupState[ref]
               }
             } else {
-              if (canSetRef(ref)) ref.value = existing
+              if (canSetRef(ref, refKey)) ref.value = existing
               if (refKey) refs[refKey] = existing
             }
           } else if (!existing.includes(refValue)) {
@@ -170,7 +177,7 @@ export function setRef(
             setupState[ref] = refValue
           }
         } else if (_isRef) {
-          if (canSetRef(ref)) ref.value = refValue
+          if (canSetRef(ref, refKey)) ref.value = refValue
           if (refKey) refs[refKey] = refValue
         } else if (__DEV__) {
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
@@ -188,7 +195,7 @@ export function setRef(
               setupState[ref] = null
             }
           } else if (_isRef) {
-            if (canSetRef(ref)) ref.value = null
+            if (canSetRef(ref, refKey)) ref.value = null
             if (refKey) refs[refKey] = null
           }
         })
