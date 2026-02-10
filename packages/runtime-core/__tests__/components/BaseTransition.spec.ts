@@ -1240,15 +1240,13 @@ describe('BaseTransition', () => {
         return () => (toggle.value ? [h(Home), h(About)] : null)
       },
     }
+
     render(h(App), root)
 
-    setTimeout(async () => {
-      toggle.value = true
+    toggle.value = true
+    await nextTick()
 
-      await nextTick()
-
-      expect(hooks.join('-')).eq(`beforeEnter-beforeLeave-leave-afterLeave`)
-    })
+    expect(hooks.join('-')).eq(`beforeEnter-beforeLeave-leave-afterLeave`)
   })
 
   // #12465
