@@ -20,6 +20,7 @@ export const V_ON_WITH_KEYS: unique symbol = Symbol(
 )
 
 export const V_SHOW: unique symbol = Symbol(__DEV__ ? `vShow` : ``)
+export const V_HTML: unique symbol = Symbol(__DEV__ ? `vHtml` : ``)
 
 export const TRANSITION: unique symbol = Symbol(__DEV__ ? `Transition` : ``)
 export const TRANSITION_GROUP: unique symbol = Symbol(
@@ -35,6 +36,7 @@ registerRuntimeHelpers({
   [V_ON_WITH_MODIFIERS]: `withModifiers`,
   [V_ON_WITH_KEYS]: `withKeys`,
   [V_SHOW]: `vShow`,
+  [V_HTML]: `vHtml`,
   [TRANSITION]: `Transition`,
   [TRANSITION_GROUP]: `TransitionGroup`,
 })

@@ -6,6 +6,7 @@ import {
 } from '@vue/compiler-core'
 import { transformVHtml } from '../../src/transforms/vHtml'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
+import { transformSlotOutlet } from '../../../compiler-core/src/transforms/transformSlotOutlet'
 import { createObjectMatcher } from '../../../compiler-core/__tests__/testUtils'
 import { PatchFlags } from '@vue/shared'
 import { DOMErrorCodes } from '../../src/errors'
@@ -13,7 +14,7 @@ import { DOMErrorCodes } from '../../src/errors'
 function transformWithVHtml(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
-    nodeTransforms: [transformElement],
+    nodeTransforms: [transformElement, transformSlotOutlet],
     directiveTransforms: {
       html: transformVHtml,
     },
@@ -62,6 +63,26 @@ describe('compiler: v-html transform', () => {
     })
     expect(onError.mock.calls).toMatchObject([
       [{ code: DOMErrorCodes.X_V_HTML_NO_EXPRESSION }],
+    ])
+  })
+
+  it('should raise error if uses on component', () => {
+    const onError = vi.fn()
+    transformWithVHtml(`<Comp v-html="'<div>foo</div>'"></Comp>`, {
+      onError,
+    })
+    expect(onError.mock.calls).toMatchObject([
+      [{ code: DOMErrorCodes.X_V_HTML_ON_INVALID_ELEMENT }],
+    ])
+  })
+
+  it('should raise error if uses on slot', () => {
+    const onError = vi.fn()
+    transformWithVHtml(`<slot v-html="'<div>foo</div>'"></slot>`, {
+      onError,
+    })
+    expect(onError.mock.calls).toMatchObject([
+      [{ code: DOMErrorCodes.X_V_HTML_ON_INVALID_ELEMENT }],
     ])
   })
 })

@@ -282,6 +282,7 @@ export {
 } from './directives/vModel'
 export { withModifiers, withKeys } from './directives/vOn'
 export { vShow } from './directives/vShow'
+export { vHtml } from './directives/vHtml'
 
 import { initVModelForSSR } from './directives/vModel'
 import { initVShowForSSR } from './directives/vShow'
