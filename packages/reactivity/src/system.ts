@@ -10,6 +10,7 @@ export interface ReactiveNode {
   subs?: Link
   subsTail?: Link
   flags: ReactiveFlags
+  cleanup?: () => void
 }
 
 export interface Link {
@@ -35,6 +36,7 @@ export const enum ReactiveFlags {
   Recursed = 1 << 3,
   Dirty = 1 << 4,
   Pending = 1 << 5,
+  CleanupScheduled = 1 << 6,
 }
 
 const notifyBuffer: (Effect | undefined)[] = []
@@ -137,6 +139,9 @@ export function unlink(
   if (prevSub !== undefined) {
     prevSub.nextSub = nextSub
   } else if ((dep.subs = nextSub) === undefined) {
+    if ((dep as ReactiveNode).cleanup !== undefined) {
+      ;(dep as ReactiveNode).cleanup!()
+    }
     let toRemove = dep.deps
     if (toRemove !== undefined) {
       do {
