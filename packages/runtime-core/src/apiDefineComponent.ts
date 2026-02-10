@@ -118,6 +118,7 @@ export type DefineSetupFnComponent<
   S extends SlotsType = SlotsType,
   Props = P & EmitsToProps<E>,
   PP = PublicProps,
+  Exposed extends string = string,
 > = new (
   props: Props & PP,
 ) => CreateComponentPublicInstanceWithMixins<
@@ -133,7 +134,10 @@ export type DefineSetupFnComponent<
   {},
   false,
   {},
-  S
+  S,
+  {},
+  {},
+  Exposed
 >
 
 type ToResolvedProps<Props, Emits extends EmitsOptions> = Readonly<Props> &
@@ -151,33 +155,51 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
+  Exposed extends Record<string, any> = Record<string, any>,
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>,
+    ctx: SetupContext<E, S, Exposed>,
   ) => RenderFunction | Promise<RenderFunction>,
-  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'expose'> & {
     props?: (keyof Props)[]
     emits?: E | EE[]
     slots?: S
+    expose?: (keyof Exposed)[]
   },
-): DefineSetupFnComponent<Props, E, S>
+): DefineSetupFnComponent<
+  Props,
+  E,
+  S,
+  Props & EmitsToProps<E>,
+  PublicProps,
+  Extract<keyof Exposed, string>
+>
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
+  Exposed extends Record<string, any> = Record<string, any>,
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>,
+    ctx: SetupContext<E, S, Exposed>,
   ) => RenderFunction | Promise<RenderFunction>,
-  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'expose'> & {
     props?: ComponentObjectPropsOptions<Props>
     emits?: E | EE[]
     slots?: S
+    expose?: (keyof Exposed)[]
   },
-): DefineSetupFnComponent<Props, E, S>
+): DefineSetupFnComponent<
+  Props,
+  E,
+  S,
+  Props & EmitsToProps<E>,
+  PublicProps,
+  Extract<keyof Exposed, string>
+>
 
 // overload 2: defineComponent with options object, infer props from options
 export function defineComponent<

@@ -1642,7 +1642,7 @@ describe('directive typing', () => {
   expectType<typeof vShow>(comp.directives!.vShow)
 })
 
-describe('expose typing', () => {
+describe('expose typing w/ options object', () => {
   const Comp = defineComponent({
     expose: ['a', 'b'],
     props: {
@@ -1656,6 +1656,41 @@ describe('expose typing', () => {
   expectType<Array<'a' | 'b'>>(Comp.expose!)
 
   const vm = new Comp()
+  // internal should still be exposed
+  vm.$props
+
+  expectType<number>(vm.a)
+  expectType<string>(vm.b)
+
+  // @ts-expect-error shouldn't be exposed
+  vm.c
+})
+
+describe('expose typing w/ setup function', () => {
+  const Comp = defineComponent(
+    (
+      props: { some: String },
+      {
+        expose,
+      }: SetupContext<EmitsOptions, SlotsType, { a: number; b: string }>,
+    ) => {
+      const a = 1
+      const b = '2'
+      const c = 3
+
+      expose({ a, b })
+
+      return () => h('div')
+    },
+    {
+      props: ['some'],
+      expose: ['a', 'b'],
+    },
+  )
+
+  expectType<Array<'a' | 'b'>>(Comp.expose!)
+
+  const vm = new Comp({ some: 'string' })
   // internal should still be exposed
   vm.$props
 
