@@ -1,6 +1,7 @@
 import {
   type GenericComponentInstance,
   MismatchTypes,
+  MoveType,
   type TeleportProps,
   type TeleportTargetElement,
   currentInstance,
@@ -16,6 +17,7 @@ import {
   type BlockFn,
   applyTransitionHooks,
   insert,
+  move,
   remove,
 } from '../block'
 import { createComment, createTextNode, querySelector } from '../dom/node'
@@ -60,6 +62,7 @@ export class TeleportFragment extends VaporFragment {
   private resolvedProps?: TeleportProps
   private rawSlots?: LooseRawSlots
   isDisabled?: boolean
+  private isMounted = false
 
   target?: ParentNode | null
   targetAnchor?: Node | null
@@ -81,6 +84,8 @@ export class TeleportFragment extends VaporFragment {
         : createTextNode()
 
     renderEffect(() => {
+      const prevTo = this.resolvedProps && this.resolvedProps.to
+      const wasDisabled = this.isDisabled
       // access the props to trigger tracking
       this.resolvedProps = extend(
         {},
@@ -89,8 +94,11 @@ export class TeleportFragment extends VaporFragment {
           rawPropsProxyHandlers,
         ) as any as TeleportProps,
       )
+
       this.isDisabled = isTeleportDisabled(this.resolvedProps!)
-      this.handlePropsUpdate()
+      if (wasDisabled !== this.isDisabled || prevTo !== this.resolvedProps.to) {
+        this.handlePropsUpdate()
+      }
     })
 
     if (!isHydrating) {
@@ -154,14 +162,26 @@ export class TeleportFragment extends VaporFragment {
   }
 
   private mount(parent: ParentNode, anchor: Node | null) {
-    if (this.$transition) {
+    // don't apply transitions during move teleports
+    // algin with Vue DOM teleport behavior
+    if (this.$transition && !this.isMounted) {
       applyTransitionHooks(this.nodes, this.$transition)
     }
-    insert(
-      this.nodes,
-      (this.mountContainer = parent),
-      (this.mountAnchor = anchor),
-    )
+    if (this.isMounted) {
+      move(
+        this.nodes,
+        (this.mountContainer = parent),
+        (this.mountAnchor = anchor),
+        MoveType.REORDER,
+      )
+    } else {
+      insert(
+        this.nodes,
+        (this.mountContainer = parent),
+        (this.mountAnchor = anchor),
+      )
+      this.isMounted = true
+    }
   }
 
   private mountToTarget(): void {
@@ -241,6 +261,8 @@ export class TeleportFragment extends VaporFragment {
       remove(this.nodes, this.mountContainer!)
       this.nodes = []
     }
+
+    this.isMounted = false
 
     // remove anchors
     if (this.targetStart) {
