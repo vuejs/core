@@ -814,6 +814,130 @@ describe('api: template ref', () => {
     expect(el2.value).toBe(null)
   })
 
+  test('should work when used with direct ref value with ref_key', () => {
+    let tRef: ShallowRef
+    const key = 'refKey'
+    const { host } = define({
+      setup() {
+        tRef = useTemplateRef(key)
+      },
+      render() {
+        const n0 = template('<div></div>')() as Element
+        createTemplateRefSetter()(n0, tRef!, false, key)
+        return n0
+      },
+    }).render()
+
+    expect('target is readonly').not.toHaveBeenWarned()
+    expect(tRef!.value).toBe(host.children[0])
+  })
+
+  test('should work when used with direct ref value with ref_key and ref_for', () => {
+    let tRef: ShallowRef
+    const key = 'refKey'
+    define({
+      setup() {
+        tRef = useTemplateRef(key)
+      },
+      render() {
+        const n0 = template('<div></div>')() as Element
+        const n1 = createFor(
+          () => [1, 2, 3],
+          x => {
+            const n2 = template('<span></span>')() as Element
+            createTemplateRefSetter()(n2, tRef!, true, key)
+            setElementText(n2, x)
+            return n2
+          },
+        )
+        insert(n1, n0 as ParentNode)
+        return n0
+      },
+    }).render()
+
+    expect('target is readonly').not.toHaveBeenWarned()
+    expect(tRef!.value).toHaveLength(3)
+  })
+
+  test('should not work when used with direct ref value without ref_key (in dev mode)', () => {
+    let tRef: ShallowRef
+    define({
+      setup() {
+        tRef = useTemplateRef('refKey')
+      },
+      render() {
+        const n0 = template('<div></div>')() as Element
+        createTemplateRefSetter()(n0, tRef!)
+        return n0
+      },
+    }).render()
+
+    expect(tRef!.value).toBeNull()
+  })
+
+  test('should work when used as direct ref value with ref_key and ref_for (compiled in prod mode)', () => {
+    __DEV__ = false
+    try {
+      let tRef: ShallowRef
+      const key = 'refKey'
+      define({
+        setup() {
+          tRef = useTemplateRef(key)
+        },
+        render() {
+          const n0 = template('<div></div>')() as Element
+          const n1 = createFor(
+            () => [1, 2, 3],
+            x => {
+              const n2 = template('<span></span>')() as Element
+              createTemplateRefSetter()(n2, tRef!, true, key)
+              setElementText(n2, x)
+              return n2
+            },
+          )
+          insert(n1, n0 as ParentNode)
+          return n0
+        },
+      }).render()
+
+      expect('target is readonly').not.toHaveBeenWarned()
+      expect(tRef!.value).toHaveLength(3)
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  test('should work when used as direct ref value with ref_for but without ref_key (compiled in prod mode)', () => {
+    __DEV__ = false
+    try {
+      let tRef: ShallowRef
+      define({
+        setup() {
+          tRef = useTemplateRef('refKey')
+        },
+        render() {
+          const n0 = template('<div></div>')() as Element
+          const n1 = createFor(
+            () => [1, 2, 3],
+            x => {
+              const n2 = template('<span></span>')() as Element
+              createTemplateRefSetter()(n2, tRef!, true)
+              setElementText(n2, x)
+              return n2
+            },
+          )
+          insert(n1, n0 as ParentNode)
+          return n0
+        },
+      }).render()
+
+      expect('target is readonly').not.toHaveBeenWarned()
+      expect(tRef!.value).toHaveLength(3)
+    } finally {
+      __DEV__ = true
+    }
+  })
+
   // TODO: can not reproduce in Vapor
   // // #2078
   // test('handling multiple merged refs', async () => {
