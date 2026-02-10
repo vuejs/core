@@ -96,7 +96,10 @@ export class TeleportFragment extends VaporFragment {
       )
 
       this.isDisabled = isTeleportDisabled(this.resolvedProps!)
-      if (wasDisabled !== this.isDisabled || prevTo !== this.resolvedProps.to) {
+      if (
+        wasDisabled !== this.isDisabled ||
+        (!this.isDisabled && prevTo !== this.resolvedProps.to)
+      ) {
         this.handlePropsUpdate()
       }
     })
