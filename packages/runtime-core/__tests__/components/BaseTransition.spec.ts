@@ -1202,6 +1202,55 @@ describe('BaseTransition', () => {
     expect(() => mount({}, () => () => h('div'), true)).not.toThrow()
   })
 
+  // #12091
+  test('ensure the correct order of hook execution during the mounted phase toggle', async () => {
+    const toggle = ref(false)
+    const visible = ref(true)
+    const hooks: string[] = []
+
+    const Home = {
+      setup() {
+        return () =>
+          h(
+            BaseTransition,
+            {
+              appear: true,
+              onBeforeEnter: () => hooks.push('beforeEnter'),
+              onEnter: () => hooks.push('enter'),
+              onEnterCancelled: () => hooks.push('enterCancelled'),
+              onAfterEnter: () => hooks.push('afterEnter'),
+              onBeforeLeave: () => hooks.push('beforeLeave'),
+              onLeave: () => hooks.push('leave'),
+              onAfterLeave: () => hooks.push('afterLeave'),
+            },
+            () => (visible.value ? h('div') : null),
+          )
+      },
+    }
+    const About = {
+      setup() {
+        visible.value = false
+        return () => null
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    const App = {
+      setup() {
+        return () => (toggle.value ? [h(Home), h(About)] : null)
+      },
+    }
+    render(h(App), root)
+
+    setTimeout(async () => {
+      toggle.value = true
+
+      await nextTick()
+
+      expect(hooks.join('-')).eq(`beforeEnter-beforeLeave-leave-afterLeave`)
+    })
+  })
+
   // #12465
   test('mode: "out-in" w/ KeepAlive + fallthrough attrs (prod mode)', async () => {
     __DEV__ = false
