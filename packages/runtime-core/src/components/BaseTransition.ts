@@ -26,7 +26,6 @@ type Hook<T = () => void> = T | T[]
 
 export const leaveCbKey: unique symbol = Symbol('_leaveCb')
 const enterCbKey: unique symbol = Symbol('_enterCb')
-const isLeavingKey: unique symbol = Symbol('_isLeaving')
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
   mode?: 'in-out' | 'out-in' | 'default'
@@ -97,7 +96,7 @@ export interface TransitionElement {
   // before it finishes.
   [enterCbKey]?: PendingCallback
   [leaveCbKey]?: PendingCallback
-  [isLeavingKey]?: boolean
+  _isLeaving?: boolean
 }
 
 export function useTransitionState(): TransitionState {
@@ -384,7 +383,7 @@ export function resolveTransitionHooks(
           return
         }
       }
-      el[isLeavingKey] = false
+      el._isLeaving = false
       // for same element (v-show)
       if (el[leaveCbKey]) {
         el[leaveCbKey](true /* cancelled */)
@@ -403,7 +402,7 @@ export function resolveTransitionHooks(
     },
 
     enter(el) {
-      if (el[isLeavingKey]) return
+      if (el._isLeaving) return
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled
@@ -440,7 +439,7 @@ export function resolveTransitionHooks(
 
     leave(el, remove) {
       const key = String(vnode.key)
-      el[isLeavingKey] = true
+      el._isLeaving = true
       if (el[enterCbKey]) {
         el[enterCbKey](true /* cancelled */)
       }
