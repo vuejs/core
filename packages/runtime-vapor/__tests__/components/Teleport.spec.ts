@@ -7,6 +7,7 @@ import {
 import {
   type VaporDirective,
   VaporTeleport,
+  VaporTransition,
   child,
   createIf,
   createTemplateRefSetter,
@@ -1328,5 +1329,54 @@ function runSharedTests(deferMode: boolean): void {
     const target = document.querySelector('#tt')!
     expect(target.innerHTML).toBe('content')
     app.unmount()
+  })
+
+  test('avoid unnecessary update and transition', async () => {
+    const target1 = document.createElement('div')
+    const target2 = document.createElement('div')
+
+    const target = shallowRef(target1)
+    const defer = ref(false)
+    const disabled = ref(false)
+    const beforeEnter = vi.fn()
+
+    define({
+      setup() {
+        const n4 = createComponent(
+          VaporTeleport,
+          {
+            defer: () => defer.value,
+            to: () => target.value,
+            disabled: () => disabled.value,
+          },
+          {
+            default: () =>
+              createComponent(
+                VaporTransition,
+                {
+                  onBeforeEnter: () => beforeEnter,
+                },
+                {
+                  default: () => template('<div>Teleport')(),
+                },
+              ),
+          },
+        )
+        return n4
+      },
+    }).render()
+
+    expect(beforeEnter).toHaveBeenCalledTimes(0)
+    defer.value = true
+    await nextTick()
+    expect(beforeEnter).toHaveBeenCalledTimes(0)
+
+    disabled.value = true
+    await nextTick()
+    expect(beforeEnter).toHaveBeenCalledTimes(0)
+
+    target.value = target2
+    await nextTick()
+    expect(beforeEnter).toHaveBeenCalledTimes(0)
   })
 }
