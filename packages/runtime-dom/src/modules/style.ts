@@ -75,7 +75,7 @@ function setStyle(
   if (isArray(val)) {
     val.forEach(v => setStyle(style, name, v))
   } else {
-    if (val == null) val = ''
+    if (typeof val === 'boolean' || val == null) val = ''
     if (__DEV__) {
       if (semicolonRE.test(val)) {
         warn(
