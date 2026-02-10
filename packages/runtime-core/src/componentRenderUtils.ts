@@ -3,6 +3,7 @@ import {
   type Data,
   type FunctionalComponent,
   getComponentName,
+  isStatefulComponent,
 } from './component'
 import {
   Comment,
@@ -57,7 +58,7 @@ export function renderComponentRoot(
     vnode,
     proxy,
     withProxy,
-    propsOptions: [propsOptions],
+    propsOptions: [propsOption],
     slots,
     attrs,
     emit,
@@ -70,6 +71,7 @@ export function renderComponentRoot(
     inheritAttrs,
   } = instance
   const prev = setCurrentRenderingInstance(instance)
+  const isStateful = isStatefulComponent(instance)
 
   let result
   let fallthroughAttrs
@@ -78,7 +80,7 @@ export function renderComponentRoot(
   }
 
   try {
-    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+    if (isStateful) {
       // withProxy is a proxy with a different `has` trap only for
       // runtime-compiled render functions using `with` block.
       const proxyToUse = withProxy || proxy
@@ -161,18 +163,14 @@ export function renderComponentRoot(
 
   if (fallthroughAttrs && inheritAttrs !== false) {
     const keys = Object.keys(fallthroughAttrs)
-    const { shapeFlag } = root
     if (keys.length) {
-      if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
-        if (propsOptions && keys.some(isModelListener)) {
+      if (isElementRoot(root)) {
+        if (propsOption && keys.some(isModelListener)) {
           // If a v-model listener (onUpdate:xxx) has a corresponding declared
           // prop, it indicates this component expects to handle v-model and
           // it should not fallthrough.
           // related: #1543, #1643, #1989
-          fallthroughAttrs = filterModelListeners(
-            fallthroughAttrs,
-            propsOptions,
-          )
+          fallthroughAttrs = filterModelListeners(fallthroughAttrs, propsOption)
         }
         root = cloneVNode(root, fallthroughAttrs, false, true)
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
@@ -217,8 +215,8 @@ export function renderComponentRoot(
   if (
     __COMPAT__ &&
     isCompatEnabled(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE, instance) &&
-    vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT &&
-    root.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)
+    isStateful &&
+    isElementRoot(root)
   ) {
     const { class: cls, style } = vnode.props || {}
     if (cls || style) {
