@@ -687,4 +687,4 @@ export {
 /**
  * @internal
  */
-export { knownTemplateRefs } from './helpers/useTemplateRef'
+export { knownTemplateRefs, isTemplateRefKey } from './helpers/useTemplateRef'

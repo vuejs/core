@@ -938,6 +938,51 @@ describe('api: template ref', () => {
     }
   })
 
+  // #12749
+  test(`don't update setup ref for useTemplateRef key`, () => {
+    let foo: ShallowRef
+    let bar: ReturnType<typeof ref>
+    const { host } = define({
+      setup() {
+        foo = useTemplateRef('bar')
+        bar = ref(null)
+        return { bar }
+      },
+      render() {
+        const n0 = template('<div></div>')() as Element
+        createTemplateRefSetter()(n0, 'bar')
+        return n0
+      },
+    }).render()
+
+    expect(bar!.value).toBe(null)
+    expect(foo!.value).toBe(host.children[0])
+  })
+
+  test(`don't update setup ref for useTemplateRef key (compiled in prod mode)`, () => {
+    __DEV__ = false
+    try {
+      let foo: ReturnType<typeof ref>
+      let fooRef: ShallowRef
+      const { host } = define({
+        setup() {
+          foo = ref('hello')
+          fooRef = useTemplateRef('foo')
+        },
+        render() {
+          const n0 = template('<div></div>')() as Element
+          createTemplateRefSetter()(n0, foo!, false, 'foo')
+          return n0
+        },
+      }).render()
+
+      expect(foo!.value).toBe('hello')
+      expect(fooRef!.value).toBe(host.children[0])
+    } finally {
+      __DEV__ = true
+    }
+  })
+
   // TODO: can not reproduce in Vapor
   // // #2078
   // test('handling multiple merged refs', async () => {
