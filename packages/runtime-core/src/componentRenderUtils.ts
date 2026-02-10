@@ -6,6 +6,7 @@ import {
 } from './component'
 import {
   Comment,
+  Fragment,
   type VNode,
   type VNodeArrayChildren,
   blockStack,
@@ -239,6 +240,11 @@ export function renderComponentRoot(
         true,
       )
     }
+  }
+
+  if (!__DEV__ && root.type === Fragment) {
+    const singleRoot = filterSingleRoot(root.children as VNodeArrayChildren)
+    if (singleRoot) root = singleRoot
   }
 
   // inherit directives
