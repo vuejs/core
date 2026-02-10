@@ -6,7 +6,7 @@
 
 - **`vue(.runtime).global(.prod).js`**:
   - For direct use via `<script src="...">` in the browser. Exposes the `Vue` global.
-  - Note that global builds are not [UMD](https://github.com/umdjs/umd) builds. They are built as [IIFEs](https://developer.mozilla.org/en-US/docs/Glossary/IIFE) and is only meant for direct use via `<script src="...">`.
+  - Note that global builds are not [UMD](https://github.com/umdjs/umd) builds. They are built as [IIFEs](https://developer.mozilla.org/en-US/docs/Glossary/IIFE) and are only meant for direct use via `<script src="...">`.
   - In-browser template compilation:
     - **`vue.global.js`** is the "full" build that includes both the compiler and the runtime so it supports compiling templates on the fly.
     - **`vue.runtime.global.js`** contains only the runtime and requires templates to be pre-compiled during a build step.
