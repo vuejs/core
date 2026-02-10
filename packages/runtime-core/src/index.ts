@@ -683,3 +683,8 @@ export {
   warnExtraneousAttributes,
   getFunctionalFallthrough,
 } from './componentRenderUtils'
+
+/**
+ * @internal
+ */
+export { knownTemplateRefs } from './helpers/useTemplateRef'

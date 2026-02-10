@@ -11,6 +11,7 @@ import {
   callWithErrorHandling,
   createCanSetSetupRefChecker,
   isAsyncWrapper,
+  knownTemplateRefs,
   queuePostFlushCb,
   warn,
 } from '@vue/runtime-dom'
@@ -102,6 +103,11 @@ export function setRef(
   const canSetSetupRef = __DEV__
     ? createCanSetSetupRefChecker(setupState, refs)
     : NO
+
+  const canSetRef = (ref: NodeRef) => {
+    return !__DEV__ || !knownTemplateRefs.has(ref as any)
+  }
+
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
@@ -110,7 +116,7 @@ export function setRef(
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
-      oldRef.value = null
+      if (canSetRef(oldRef)) oldRef.value = null
     }
   }
 
@@ -136,7 +142,9 @@ export function setRef(
             ? __DEV__ && canSetSetupRef(ref)
               ? setupState[ref]
               : refs[ref]
-            : ref.value
+            : canSetRef(ref) || !refKey
+              ? ref.value
+              : refs[refKey]
 
           if (!isArray(existing)) {
             existing = [refValue]
@@ -150,7 +158,7 @@ export function setRef(
                 existing = setupState[ref]
               }
             } else {
-              ref.value = existing
+              if (canSetRef(ref)) ref.value = existing
               if (refKey) refs[refKey] = existing
             }
           } else if (!existing.includes(refValue)) {
@@ -162,7 +170,7 @@ export function setRef(
             setupState[ref] = refValue
           }
         } else if (_isRef) {
-          ref.value = refValue
+          if (canSetRef(ref)) ref.value = refValue
           if (refKey) refs[refKey] = refValue
         } else if (__DEV__) {
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
@@ -180,7 +188,7 @@ export function setRef(
               setupState[ref] = null
             }
           } else if (_isRef) {
-            ref.value = null
+            if (canSetRef(ref)) ref.value = null
             if (refKey) refs[refKey] = null
           }
         })
