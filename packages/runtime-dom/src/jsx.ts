@@ -281,7 +281,7 @@ export type ClassValue =
   | null
   | undefined
   | string
-  | Record<string, boolean>
+  | Record<string, any>
   | Array<ClassValue>
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
