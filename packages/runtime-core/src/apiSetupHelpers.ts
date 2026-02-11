@@ -516,9 +516,19 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   unsetCurrentInstance()
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
-      setCurrentInstance(ctx)
+      const reset = setCurrentInstance(ctx)
+      // Defer cleanup so the async function's catch continuation
+      // still runs with the restored instance.
+      Promise.resolve().then(() => Promise.resolve().then(reset))
       throw e
     })
   }
-  return [awaitable, () => setCurrentInstance(ctx)]
+  return [
+    awaitable,
+    () => {
+      const reset = setCurrentInstance(ctx)
+      // Keep instance for the current continuation, then cleanup.
+      Promise.resolve().then(reset)
+    },
+  ]
 }

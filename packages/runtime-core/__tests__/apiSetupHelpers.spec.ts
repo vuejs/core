@@ -250,6 +250,34 @@ describe('SFC <script setup> helpers', () => {
       expect(serializeInner(root)).toBe('hello')
     })
 
+    test('should not leak instance to user microtasks after restore', async () => {
+      let leakedToUserMicrotask = false
+
+      const Comp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(() => Promise.resolve())
+          __temp = await __temp
+          __restore()
+
+          Promise.resolve().then(() => {
+            leakedToUserMicrotask = getCurrentInstance() !== null
+          })
+
+          return () => ''
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      render(
+        h(() => h(Suspense, () => h(Comp))),
+        root,
+      )
+
+      await new Promise(r => setTimeout(r))
+      expect(leakedToUserMicrotask).toBe(false)
+    })
+
     test('error handling', async () => {
       const spy = vi.fn()
 
@@ -295,6 +323,8 @@ describe('SFC <script setup> helpers', () => {
       expect(spy).toHaveBeenCalled()
       // should retain same instance before/after the await call
       expect(beforeInstance).toBe(afterInstance)
+      // instance scope should be fully restored/cleaned after async ticks
+      expect((beforeInstance!.scope as any)._on).toBe(0)
     })
 
     test('should not leak instance on multiple awaits', async () => {
