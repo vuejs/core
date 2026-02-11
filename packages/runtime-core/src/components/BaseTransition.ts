@@ -96,7 +96,6 @@ export interface TransitionElement {
   // before it finishes.
   [enterCbKey]?: PendingCallback
   [leaveCbKey]?: PendingCallback
-  _isLeaving?: boolean
 }
 
 export function useTransitionState(): TransitionState {
@@ -383,7 +382,6 @@ export function resolveTransitionHooks(
           return
         }
       }
-      el._isLeaving = false
       // for same element (v-show)
       if (el[leaveCbKey]) {
         el[leaveCbKey](true /* cancelled */)
@@ -402,7 +400,8 @@ export function resolveTransitionHooks(
     },
 
     enter(el) {
-      if (el._isLeaving) return
+      // prevent enter if leave is in progress
+      if (leavingVNodesCache[key] === vnode) return
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled
@@ -439,7 +438,6 @@ export function resolveTransitionHooks(
 
     leave(el, remove) {
       const key = String(vnode.key)
-      el._isLeaving = true
       if (el[enterCbKey]) {
         el[enterCbKey](true /* cancelled */)
       }

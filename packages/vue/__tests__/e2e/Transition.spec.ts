@@ -3341,6 +3341,123 @@ describe('e2e: Transition', () => {
     E2E_TIMEOUT,
   )
 
+  // #12091
+  test(
+    'prevent enter when leaving',
+    async () => {
+      const hooks: string[] = []
+      const pushHook = (hook: string) => hooks.push(hook)
+      await page().exposeFunction('pushHook', pushHook)
+      await page().evaluate(() => {
+        const { pushHook } = window as any
+        const { createApp, ref } = (window as any).Vue
+        const visible = ref(true)
+        createApp({
+          components: {
+            Comp: {
+              setup() {
+                visible.value = false
+                return () => null
+              },
+            },
+          },
+          template: `
+            <div id="content" v-if="toggle">
+              <div id="container">
+                <transition
+                  appear
+                  @before-enter="pushHook('beforeEnter')"
+                  @enter="pushHook('enter')"
+                  @enter-cancelled="pushHook('enterCancelled')"
+                  @after-enter="pushHook('afterEnter')"
+                  @before-leave="pushHook('beforeLeave')"
+                  @leave="pushHook('leave')"
+                  @after-leave="pushHook('afterLeave')"
+                >
+                  <div v-if="visible">content</div>
+                </transition>
+              </div>
+              <Comp />
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const toggle = ref(false)
+            const click = () => (toggle.value = !toggle.value)
+            return {
+              toggle,
+              click,
+              pushHook,
+              visible,
+            }
+          },
+        }).mount('#app')
+      })
+
+      await click('#toggleBtn')
+      await nextTick()
+      await transitionFinish()
+
+      expect(hooks).toStrictEqual([
+        'beforeEnter',
+        'beforeLeave',
+        'leave',
+        'afterLeave',
+      ])
+      expect(await html('#content')).toBe(
+        '<div id="container"><!--v-if--></div><!---->',
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  // #12091
+  // test('ensure the correct order of hook execution during the mounted phase toggle', async () => {
+  //   const toggle = ref(false)
+  //   const visible = ref(true)
+  //   const hooks: string[] = []
+
+  //   const Home = {
+  //     setup() {
+  //       return () =>
+  //         h(
+  //           BaseTransition,
+  //           {
+  //             appear: true,
+  //             onBeforeEnter: () => hooks.push('beforeEnter'),
+  //             onEnter: () => hooks.push('enter'),
+  //             onEnterCancelled: () => hooks.push('enterCancelled'),
+  //             onAfterEnter: () => hooks.push('afterEnter'),
+  //             onBeforeLeave: () => hooks.push('beforeLeave'),
+  //             onLeave: () => hooks.push('leave'),
+  //             onAfterLeave: () => hooks.push('afterLeave'),
+  //           },
+  //           () => (visible.value ? h('div') : null),
+  //         )
+  //     },
+  //   }
+  //   const About = {
+  //     setup() {
+  //       visible.value = false
+  //       return () => null
+  //     },
+  //   }
+
+  //   const root = nodeOps.createElement('div')
+  //   const App = {
+  //     setup() {
+  //       return () => (toggle.value ? [h(Home), h(About)] : null)
+  //     },
+  //   }
+
+  //   render(h(App), root)
+
+  //   toggle.value = true
+  //   await nextTick()
+
+  //   expect(hooks.join('-')).eq(`beforeEnter-beforeLeave-leave-afterLeave`)
+  // })
+
   // https://github.com/vuejs/core/issues/12181#issuecomment-2414380955
   describe('not leaking', async () => {
     test('switching VNodes', async () => {
