@@ -130,3 +130,16 @@ describe('should not error when assignment', () => {
   record2 = arr
   expectType<string>(record2[0])
 })
+
+describe('unwraps custom symbols', () => {
+  const customSymbol = Symbol('custom')
+  const obj = reactive({
+    [customSymbol]: ref(1),
+    foo: ref(2),
+    [Symbol.toStringTag]: ref(3),
+  })
+
+  expectType<number>(obj[customSymbol])
+  expectType<number>(obj.foo)
+  expectType<Ref<number, number>>(obj[Symbol.toStringTag])
+})
