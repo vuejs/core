@@ -13,6 +13,10 @@ export type LooseRequired<T> = { [P in keyof (T & Required<T>)]: T[P] }
 // https://stackoverflow.com/questions/49927523/disallow-call-with-any/49928360#49928360
 export type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N
 
+// https://stackoverflow.com/questions/52443276/how-to-exclude-getter-only-properties-from-type-in-typescript/52473108#52473108
+export type IfEquals<A, B, Y, N> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? Y : N
+
 export type IsKeyValues<T, K = string> = IfAny<
   T,
   false,
