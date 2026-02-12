@@ -102,7 +102,12 @@ export const vModelText: ModelDirective<
       return
     }
 
-    if (document.activeElement === el && el.type !== 'range') {
+    const rootNode = el.getRootNode()
+    if (
+      (rootNode instanceof Document || rootNode instanceof ShadowRoot) &&
+      rootNode.activeElement === el &&
+      el.type !== 'range'
+    ) {
       // #8546
       if (lazy && value === oldValue) {
         return
