@@ -333,7 +333,7 @@ export function isEmitListener(
   options: ObjectEmitsOptions | null,
   key: string,
 ): boolean {
-  if (!options || !isOn(key)) {
+  if (!options || !isString(key) || !isOn(key)) {
     return false
   }
 
