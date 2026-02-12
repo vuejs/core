@@ -31,7 +31,6 @@ import {
 } from '../apiDefineComponent'
 import {
   ShapeFlags,
-  getGlobalThis,
   invokeArrayFns,
   isArray,
   isFunction,
@@ -121,7 +120,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
   setup(props: KeepAliveProps, { slots, expose }) {
     let exposed!: Record<string, any>
     // for e2e test
-    if (__BROWSER__ && getGlobalThis().__VUE_VAPOR_E2E_TEST__ === true) {
+    if (__BROWSER__ && __TEST__) {
       exposed = {
         getStorageContainer: () => storageContainer,
       }
@@ -151,6 +150,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     if (__DEV__) {
       const rerender = keepAliveInstance.hmrRerender
       keepAliveInstance.hmrRerender = () => {
+        keepAliveInstance.exposed = null
         cache.forEach(cached => resetCachedShapeFlag(cached))
         cache.clear()
         keys.clear()
