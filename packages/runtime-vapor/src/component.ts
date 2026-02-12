@@ -1034,6 +1034,7 @@ function handleSetupResult(
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
         instance.devtoolsRawSetupState = setupResult
       }
+      instance.exposed || instance.expose(setupResult)
       instance.setupState = proxyRefs(setupResult)
       if (__DEV__) {
         instance.setupState = createDevSetupStateProxy(instance)
@@ -1041,14 +1042,26 @@ function handleSetupResult(
       devRender(instance)
     }
   } else {
-    // component has a render function but no setup function
-    // (typically components with only a template and no state)
-    if (setupResult === EMPTY_OBJ && component.render) {
-      instance.block = callWithErrorHandling(
-        component.render,
-        instance,
-        ErrorCodes.RENDER_FUNCTION,
-      )
+    // component has a render function with either:
+    // - no setup function (components with only a template)
+    // - setup returning non-block state for use in render
+    // support setup fn and render fn co-usage for expose
+    if (!isBlock(setupResult) && component.render) {
+      instance.exposed || instance.expose(setupResult)
+      instance.setupState = proxyRefs(setupResult)
+      instance.block =
+        callWithErrorHandling(
+          component.render,
+          instance,
+          ErrorCodes.RENDER_FUNCTION,
+          [
+            instance.setupState,
+            instance.props,
+            instance.emit,
+            instance.attrs,
+            instance.slots,
+          ],
+        ) || []
     } else {
       // in prod result can only be block
       instance.block = setupResult as Block
