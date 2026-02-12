@@ -114,6 +114,12 @@ describe('compiler sfc: transform asset url', () => {
     expect(code).toMatch(`"xlink:href": "#myCircle"`)
   })
 
+  // #9919
+  test('should transform subpath import paths', () => {
+    const { code } = compileWithAssetUrls(`<img src="#src/assets/vue.svg" />`)
+    expect(code).toContain(`_imports_0 from '#src/assets/vue.svg'`)
+  })
+
   test('should allow for full base URLs, with paths', () => {
     const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
       base: 'http://localhost:3000/src/',
