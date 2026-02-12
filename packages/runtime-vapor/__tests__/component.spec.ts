@@ -8,6 +8,7 @@ import {
   onUpdated,
   provide,
   ref,
+  toDisplayString,
   useAttrs,
   watch,
   watchEffect,
@@ -20,6 +21,7 @@ import {
   renderEffect,
   setInsertionState,
   template,
+  txt,
 } from '../src'
 import { makeRender } from './_utils'
 import type { VaporComponentInstance } from '../src/component'
@@ -509,6 +511,24 @@ describe('component', () => {
     expect(
       'Property "foo" was accessed during render but is not defined on instance.',
     ).toHaveBeenWarned()
+  })
+
+  test('display attrs', () => {
+    const App = defineVaporComponent({
+      props: {},
+      emits: [],
+      setup(props, { attrs }) {
+        const n0 = template('<div> ')() as any
+        const x0 = txt(n0) as any
+        renderEffect(() => setText(x0, toDisplayString(attrs)))
+        return n0
+      },
+    })
+    const { render } = define(App)
+    expect(render).not.toThrow(TypeError)
+    expect(
+      'Unhandled error during execution of setup function',
+    ).not.toHaveBeenWarned()
   })
 })
 
