@@ -2371,6 +2371,12 @@ describe('compiler: parse', () => {
       expect((ast.children[0] as TextNode).content).toBe(` foo bar baz `)
     })
 
+    // #7789
+    test('should condense consecutive whitespaces in texts full of whitespaces', () => {
+      const ast = parse(`          `)
+      expect((ast.children[0] as TextNode).content).toBe(` `)
+    })
+
     test('should remove leading newline character immediately following the pre element start tag', () => {
       const ast = parse(`<pre>\n  foo  bar  </pre>`, {
         isPreTag: tag => tag === 'pre',
@@ -2487,6 +2493,13 @@ describe('compiler: parse', () => {
       const content = `   foo  \n    bar     baz     `
       const ast = parse(content)
       expect((ast.children[0] as TextNode).content).toBe(content)
+    })
+
+    // #7789
+    test('should preserve consecutive whitespaces in texts full of whitespaces', () => {
+      const whitespaces = '           '
+      const ast = parse(`${whitespaces}`)
+      expect((ast.children[0] as TextNode).content).toBe(whitespaces)
     })
   })
 
