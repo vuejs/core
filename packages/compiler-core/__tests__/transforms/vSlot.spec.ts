@@ -1026,6 +1026,24 @@ describe('compiler: transform component slots', () => {
       expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })
 
+    test('implicit default slot before and after template', () => {
+      const source = `
+      <Comp>
+        <p/>
+        <template #header> Header </template>
+        <p/>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      expect(
+        `Extraneous children found when component already has explicitly named default slot.`,
+      ).not.toHaveBeenWarned()
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
     test('should not generate whitespace only default slot', () => {
       const source = `
       <Comp>
