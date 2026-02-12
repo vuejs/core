@@ -400,6 +400,8 @@ export function resolveTransitionHooks(
     },
 
     enter(el) {
+      // prevent enter if leave is in progress
+      if (leavingVNodesCache[key] === vnode) return
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled
