@@ -156,7 +156,7 @@ export function defineComponent<
     props: Props,
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
-  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'components'> & {
     props?: (keyof Props)[]
     emits?: E | EE[]
     slots?: S
@@ -172,7 +172,7 @@ export function defineComponent<
     props: Props,
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
-  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs' | 'components'> & {
     props?: ComponentObjectPropsOptions<Props>
     emits?: E | EE[]
     slots?: S
