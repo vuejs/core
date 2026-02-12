@@ -20,7 +20,7 @@
     "test-unit": "vitest --project unit*",
     "test-e2e": "node scripts/build.js vue -f global+esm-browser-vapor -d && vitest --project e2e",
     "test-e2e-vapor": "pnpm run prepare-e2e-vapor && vitest --project e2e-vapor",
-    "prepare-e2e-vapor": "node scripts/build.js -f cjs+esm-bundler+esm-bundler-runtime && pnpm run -C packages-private/vapor-e2e-test build",
+    "prepare-e2e-vapor": "__TEST__=true node scripts/build.js -f cjs+esm-bundler+esm-bundler-runtime && pnpm run -C packages-private/vapor-e2e-test build",
     "test-dts": "run-s build-dts test-dts-only",
     "test-dts-only": "tsc -p packages-private/dts-built-test/tsconfig.json && tsc -p ./packages-private/dts-test/tsconfig.test.json && tsc -p ./packages-private/dts-test/vapor/tsconfig.json",
     "test-coverage": "vitest --ui --project unit* --coverage.enabled=true",

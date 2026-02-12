@@ -117,7 +117,16 @@ const VaporKeepAliveImpl = defineVaporComponent({
     exclude: [String, RegExp, Array],
     max: [String, Number],
   },
-  setup(props: KeepAliveProps, { slots }) {
+  setup(props: KeepAliveProps, { slots, expose }) {
+    let exposed!: Record<string, any>
+    // for e2e test
+    if (__BROWSER__ && __TEST__) {
+      exposed = {
+        getStorageContainer: () => storageContainer,
+      }
+    }
+    expose(exposed)
+
     if (!slots.default) {
       return undefined
     }
@@ -141,6 +150,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     if (__DEV__) {
       const rerender = keepAliveInstance.hmrRerender
       keepAliveInstance.hmrRerender = () => {
+        keepAliveInstance.exposed = null
         cache.forEach(cached => resetCachedShapeFlag(cached))
         cache.clear()
         keys.clear()

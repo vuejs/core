@@ -146,7 +146,7 @@ const UnmountBranch = defineVaporComponent({
 })
 const keepAliveUnmountRef = ref(null)
 window.getKeepAliveUnmountStorageContainer = () =>
-  keepAliveUnmountRef.value?.ctx?.getStorageContainer?.() ?? null
+  keepAliveUnmountRef.value.getStorageContainer()
 const unmountIncludeRef = ref(['UnmountBranch'])
 const unmountToggle = ref(true)
 const unmountClick = () => {
