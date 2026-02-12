@@ -91,6 +91,18 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
   }
 }
 
+function createSetProtoMethod(method: string) {
+  return function (this: SetTypes, value: unknown) {
+    value = toRaw(value)
+    const target = (this as any)[ReactiveFlags.RAW]
+    const rawTarget = toRaw(target)
+    const result = target[method](value)
+    track(rawTarget, TrackOpTypes.ITERATE, ITERATE_KEY)
+    track(value as any, TrackOpTypes.ITERATE, ITERATE_KEY)
+    return result
+  }
+}
+
 type Instrumentations = Record<string | symbol, Function | number>
 
 function createInstrumentations(
@@ -257,6 +269,19 @@ function createInstrumentations(
     instrumentations[method] = createIterableMethod(method, readonly, shallow)
   })
 
+  const setProtoMethods = [
+    'difference',
+    'intersection',
+    'isDisjointFrom',
+    'isSubsetOf',
+    'isSupersetOf',
+    'symmetricDifference',
+    'union',
+  ] as const
+
+  setProtoMethods.forEach(method => {
+    instrumentations[method] = createSetProtoMethod(method)
+  })
   return instrumentations
 }
 
