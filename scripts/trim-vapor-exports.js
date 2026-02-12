@@ -19,20 +19,20 @@ export function trimVaporExportsPlugin(format, pkgName) {
     return []
   } else {
     return [
-      {
-        name: 'trim-vapor-exports',
-        transform: {
-          filter: {
-            id: {
-              include: /runtime-(core|dom)\/src\/index\.ts$/,
-            },
-          },
-          handler(code) {
-            const index = code.lastIndexOf('// VAPOR ---')
-            return code.slice(0, index)
-          },
-        },
-      },
+      // {
+      //   name: 'trim-vapor-exports',
+      //   transform: {
+      //     filter: {
+      //       id: {
+      //         include: /runtime-(core|dom)\/src\/index\.ts$/,
+      //       },
+      //     },
+      //     handler(code) {
+      //       const index = code.lastIndexOf('// VAPOR ---')
+      //       return code.slice(0, index)
+      //     },
+      //   },
+      // },
     ]
   }
 }
