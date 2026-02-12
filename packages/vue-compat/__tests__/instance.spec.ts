@@ -209,25 +209,50 @@ describe('INSTANCE_EVENT_HOOKS', () => {
   })
 })
 
-test('INSTANCE_EVENT_CHILDREN', () => {
-  const vm = new Vue({
-    template: `<child/><div><child v-for="i in 3"/></div>`,
-    components: {
-      child: {
-        template: 'foo',
-        data() {
-          return { n: 1 }
+describe('INSTANCE_CHILDREN', () => {
+  test('$children', () => {
+    const vm = new Vue({
+      template: `<child/><div><child v-for="i in 3"/></div>`,
+      components: {
+        child: {
+          template: 'foo',
+          data() {
+            return { n: 1 }
+          },
         },
       },
-    },
-  }).$mount()
-  expect(vm.$children.length).toBe(4)
-  vm.$children.forEach((c: any) => {
-    expect(c.n).toBe(1)
+    }).$mount()
+    expect(vm.$children.length).toBe(4)
+    vm.$children.forEach((c: any) => {
+      expect(c.n).toBe(1)
+    })
+    expect(
+      deprecationData[DeprecationTypes.INSTANCE_CHILDREN].message,
+    ).toHaveBeenWarned()
   })
-  expect(
-    deprecationData[DeprecationTypes.INSTANCE_CHILDREN].message,
-  ).toHaveBeenWarned()
+
+  test('$children inside functional component', () => {
+    const vm = new Vue({
+      template: `<child-func/><child-normal/><div><child-func v-for="i in 3"/></div>`,
+      compatConfig: { COMPONENT_FUNCTIONAL: 'suppress-warning' },
+      components: {
+        childFunc: {
+          functional: true,
+          render: (h: any) => h('div'),
+        },
+        childNormal: {
+          template: 'foo',
+        },
+      },
+    }).$mount()
+    expect(vm.$children.length).toBe(5)
+    vm.$children.forEach((c: any) => {
+      expect(c).toBeTruthy()
+    })
+    expect(
+      deprecationData[DeprecationTypes.INSTANCE_CHILDREN].message,
+    ).toHaveBeenWarned()
+  })
 })
 
 test('INSTANCE_LISTENERS', () => {
