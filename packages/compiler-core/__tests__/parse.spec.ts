@@ -3210,6 +3210,24 @@ describe('compiler: parse', () => {
             },
           ],
         },
+        {
+          code: '<template><div "></div></template>',
+          errors: [
+            {
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
+              loc: { offset: 15, line: 1, column: 16 },
+            },
+          ],
+        },
+        {
+          code: '<template><div foo "></div></template>',
+          errors: [
+            {
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
+              loc: { offset: 19, line: 1, column: 20 },
+            },
+          ],
+        },
       ],
       UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE: [
         {
