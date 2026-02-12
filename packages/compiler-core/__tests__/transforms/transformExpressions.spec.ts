@@ -613,6 +613,7 @@ describe('compiler: expression transform', () => {
       props: BindingTypes.PROPS,
       setup: BindingTypes.SETUP_MAYBE_REF,
       setupConst: BindingTypes.SETUP_CONST,
+      setupLet: BindingTypes.SETUP_LET,
       data: BindingTypes.DATA,
       options: BindingTypes.OPTIONS,
       reactive: BindingTypes.SETUP_REACTIVE_CONST,
@@ -656,6 +657,16 @@ describe('compiler: expression transform', () => {
       expect(code).toMatch(`_ctx.options`)
       expect(code).toMatch(`isNaN.value`)
       expect(code).toMatchSnapshot()
+    })
+
+    // #6822
+    test('no access this through function declaration', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="setupConst()" @keyup="setupLet()" @keydown="setup()"></div>`,
+      )
+      expect(code).toMatch(`$setup.setupConst.bind()`)
+      expect(code).toMatch(`$setup.setupLet.bind()`)
+      expect(code).toMatch(`$setup.setup.bind()`)
     })
 
     test('literal const handling', () => {
