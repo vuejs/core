@@ -31,6 +31,7 @@ import {
 } from '../apiDefineComponent'
 import {
   ShapeFlags,
+  getGlobalThis,
   invokeArrayFns,
   isArray,
   isFunction,
@@ -117,7 +118,16 @@ const VaporKeepAliveImpl = defineVaporComponent({
     exclude: [String, RegExp, Array],
     max: [String, Number],
   },
-  setup(props: KeepAliveProps, { slots }) {
+  setup(props: KeepAliveProps, { slots, expose }) {
+    let exposed!: Record<string, any>
+    // for e2e test
+    if (__BROWSER__ && getGlobalThis().__VUE_VAPOR_E2E_TEST__ === true) {
+      exposed = {
+        getStorageContainer: () => storageContainer,
+      }
+    }
+    expose(exposed)
+
     if (!slots.default) {
       return undefined
     }
