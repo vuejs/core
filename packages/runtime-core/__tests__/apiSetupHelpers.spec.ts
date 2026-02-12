@@ -1,6 +1,5 @@
 import {
   type ComponentInternalInstance,
-  type ComputedRef,
   type SetupContext,
   Suspense,
   computed,
@@ -26,6 +25,8 @@ import {
   withAsyncContext,
   withDefaults,
 } from '../src/apiSetupHelpers'
+import type { ComputedRefImpl } from '../../reactivity/src/computed'
+import { EffectFlags, type ReactiveEffectRunner, effect } from '@vue/reactivity'
 
 describe('SFC <script setup> helpers', () => {
   test('should warn runtime usage', () => {
@@ -426,7 +427,8 @@ describe('SFC <script setup> helpers', () => {
         resolve = r
       })
 
-      let c: ComputedRef
+      let c: ComputedRefImpl
+      let e: ReactiveEffectRunner
 
       const Comp = defineComponent({
         async setup() {
@@ -435,10 +437,11 @@ describe('SFC <script setup> helpers', () => {
           __temp = await __temp
           __restore()
 
-          c = computed(() => {})
+          c = computed(() => {}) as unknown as ComputedRefImpl
+          e = effect(() => c.value)
           // register the lifecycle after an await statement
           onMounted(resolve)
-          return () => ''
+          return () => c.value
         },
       })
 
@@ -447,10 +450,12 @@ describe('SFC <script setup> helpers', () => {
       app.mount(root)
 
       await ready
-      expect(c!.effect.active).toBe(true)
+      expect(e!.effect.flags & EffectFlags.ACTIVE).toBeTruthy()
+      expect(c!.flags & EffectFlags.TRACKING).toBeTruthy()
 
       app.unmount()
-      expect(c!.effect.active).toBe(false)
+      expect(e!.effect.flags & EffectFlags.ACTIVE).toBeFalsy()
+      expect(c!.flags & EffectFlags.TRACKING).toBeFalsy()
     })
   })
 })

@@ -36,7 +36,10 @@ import {
   isSuspense,
 } from './components/Suspense'
 import type { DirectiveBinding } from './directives'
-import type { TransitionHooks } from './components/BaseTransition'
+import {
+  type TransitionHooks,
+  setTransitionHooks,
+} from './components/BaseTransition'
 import { warn } from './warning'
 import {
   type Teleport,
@@ -63,9 +66,9 @@ export const Fragment = Symbol.for('v-fgt') as any as {
     $props: VNodeProps
   }
 }
-export const Text = Symbol.for('v-txt')
-export const Comment = Symbol.for('v-cmt')
-export const Static = Symbol.for('v-stc')
+export const Text: unique symbol = Symbol.for('v-txt')
+export const Comment: unique symbol = Symbol.for('v-cmt')
+export const Static: unique symbol = Symbol.for('v-stc')
 
 export type VNodeTypes =
   | string
@@ -89,10 +92,22 @@ export type VNodeRef =
     ) => void)
 
 export type VNodeNormalizedRefAtom = {
+  /**
+   * component instance
+   */
   i: ComponentInternalInstance
+  /**
+   * Actual ref
+   */
   r: VNodeRef
-  k?: string // setup ref key
-  f?: boolean // refInFor marker
+  /**
+   * setup ref key
+   */
+  k?: string
+  /**
+   * refInFor marker
+   */
+  f?: boolean
 }
 
 export type VNodeNormalizedRef =
@@ -109,7 +124,7 @@ export type VNodeHook =
 
 // https://github.com/microsoft/TypeScript/issues/33099
 export type VNodeProps = {
-  key?: string | number | symbol
+  key?: PropertyKey
   ref?: VNodeRef
   ref_for?: boolean
   ref_key?: string
@@ -159,7 +174,7 @@ export interface VNode<
 
   type: VNodeTypes
   props: (VNodeProps & ExtraProps) | null
-  key: string | number | symbol | null
+  key: PropertyKey | null
   ref: VNodeNormalizedRef | null
   /**
    * SFC only. This is assigned on vnode creation using currentScopeId
@@ -181,8 +196,10 @@ export interface VNode<
 
   // DOM
   el: HostNode | null
+  placeholder: HostNode | null // async component el placeholder
   anchor: HostNode | null // fragment anchor
   target: HostElement | null // teleport target
+  targetStart: HostNode | null // teleport target start anchor
   targetAnchor: HostNode | null // teleport target anchor
   /**
    * number of elements contained in a static vnode
@@ -211,7 +228,7 @@ export interface VNode<
   /**
    * @internal
    */
-  dynamicChildren: VNode[] | null
+  dynamicChildren: (VNode[] & { hasOnce?: boolean }) | null
 
   // application root node only
   appContext: AppContext | null
@@ -225,6 +242,10 @@ export interface VNode<
    * @internal attached by v-memo
    */
   memo?: any[]
+  /**
+   * @internal index for cleaning v-memo cache
+   */
+  cacheIndex?: number
   /**
    * @internal __COMPAT__ only
    */
@@ -240,8 +261,8 @@ export interface VNode<
 // can divide a template into nested blocks, and within each block the node
 // structure would be stable. This allows us to skip most children diffing
 // and only worry about the dynamic nodes (indicated by patch flags).
-export const blockStack: (VNode[] | null)[] = []
-export let currentBlock: VNode[] | null = null
+export const blockStack: VNode['dynamicChildren'][] = []
+export let currentBlock: VNode['dynamicChildren'] = null
 
 /**
  * Open a block.
@@ -259,11 +280,11 @@ export let currentBlock: VNode[] | null = null
  *
  * @private
  */
-export function openBlock(disableTracking = false) {
+export function openBlock(disableTracking = false): void {
   blockStack.push((currentBlock = disableTracking ? null : []))
 }
 
-export function closeBlock() {
+export function closeBlock(): void {
   blockStack.pop()
   currentBlock = blockStack[blockStack.length - 1] || null
 }
@@ -281,7 +302,7 @@ export let isBlockTreeEnabled = 1
  *
  * ``` js
  * _cache[1] || (
- *   setBlockTracking(-1),
+ *   setBlockTracking(-1, true),
  *   _cache[1] = createVNode(...),
  *   setBlockTracking(1),
  *   _cache[1]
@@ -290,8 +311,13 @@ export let isBlockTreeEnabled = 1
  *
  * @private
  */
-export function setBlockTracking(value: number) {
+export function setBlockTracking(value: number, inVOnce = false): void {
   isBlockTreeEnabled += value
+  if (value < 0 && currentBlock && inVOnce) {
+    // mark current block so it doesn't take fast path and skip possible
+    // nested components during unmount
+    currentBlock.hasOnce = true
+  }
 }
 
 function setupBlock(vnode: VNode) {
@@ -318,7 +344,7 @@ export function createElementBlock(
   patchFlag?: number,
   dynamicProps?: string[],
   shapeFlag?: number,
-) {
+): VNode {
   return setupBlock(
     createBaseVNode(
       type,
@@ -363,17 +389,16 @@ export function isVNode(value: any): value is VNode {
 }
 
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
-  if (
-    __DEV__ &&
-    n2.shapeFlag & ShapeFlags.COMPONENT &&
-    hmrDirtyComponents.has(n2.type as ConcreteComponent)
-  ) {
-    // #7042, ensure the vnode being unmounted during HMR
-    // bitwise operations to remove keep alive flags
-    n1.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    n2.shapeFlag &= ~ShapeFlags.COMPONENT_KEPT_ALIVE
-    // HMR only: if the component has been hot-updated, force a reload.
-    return false
+  if (__DEV__ && n2.shapeFlag & ShapeFlags.COMPONENT && n1.component) {
+    const dirtyInstances = hmrDirtyComponents.get(n2.type as ConcreteComponent)
+    if (dirtyInstances && dirtyInstances.has(n1.component)) {
+      // #7042, ensure the vnode being unmounted during HMR
+      // bitwise operations to remove keep alive flags
+      n1.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+      n2.shapeFlag &= ~ShapeFlags.COMPONENT_KEPT_ALIVE
+      // HMR only: if the component has been hot-updated, force a reload.
+      return false
+    }
   }
   return n1.type === n2.type && n1.key === n2.key
 }
@@ -391,7 +416,9 @@ let vnodeArgsTransformer:
  * It is *internal* but needs to be exposed for test-utils to pick up proper
  * typings
  */
-export function transformVNodeArgs(transformer?: typeof vnodeArgsTransformer) {
+export function transformVNodeArgs(
+  transformer?: typeof vnodeArgsTransformer,
+): void {
   vnodeArgsTransformer = transformer
 }
 
@@ -431,10 +458,10 @@ function createBaseVNode(
   children: unknown = null,
   patchFlag = 0,
   dynamicProps: string[] | null = null,
-  shapeFlag = type === Fragment ? 0 : ShapeFlags.ELEMENT,
+  shapeFlag: number = type === Fragment ? 0 : ShapeFlags.ELEMENT,
   isBlockNode = false,
   needFullChildrenNormalization = false,
-) {
+): VNode {
   const vnode = {
     __v_isVNode: true,
     __v_skip: true,
@@ -454,6 +481,7 @@ function createBaseVNode(
     el: null,
     anchor: null,
     target: null,
+    targetStart: null,
     targetAnchor: null,
     staticCount: 0,
     shapeFlag,
@@ -546,7 +574,7 @@ function _createVNode(
         currentBlock.push(cloned)
       }
     }
-    cloned.patchFlag |= PatchFlags.BAIL
+    cloned.patchFlag = PatchFlags.BAIL
     return cloned
   }
 
@@ -615,7 +643,9 @@ function _createVNode(
   )
 }
 
-export function guardReactiveProps(props: (Data & VNodeProps) | null) {
+export function guardReactiveProps(
+  props: (Data & VNodeProps) | null,
+): (Data & VNodeProps) | null {
   if (!props) return null
   return isProxy(props) || isInternalObject(props) ? extend({}, props) : props
 }
@@ -650,10 +680,11 @@ export function cloneVNode<T, U>(
     scopeId: vnode.scopeId,
     slotScopeIds: vnode.slotScopeIds,
     children:
-      __DEV__ && patchFlag === PatchFlags.HOISTED && isArray(children)
+      __DEV__ && patchFlag === PatchFlags.CACHED && isArray(children)
         ? (children as VNode[]).map(deepCloneVNode)
         : children,
     target: vnode.target,
+    targetStart: vnode.targetStart,
     targetAnchor: vnode.targetAnchor,
     staticCount: vnode.staticCount,
     shapeFlag: vnode.shapeFlag,
@@ -663,7 +694,7 @@ export function cloneVNode<T, U>(
     // fast paths only.
     patchFlag:
       extraProps && vnode.type !== Fragment
-        ? patchFlag === PatchFlags.HOISTED // hoisted node
+        ? patchFlag === PatchFlags.CACHED // hoisted node
           ? PatchFlags.FULL_PROPS
           : patchFlag | PatchFlags.FULL_PROPS
         : patchFlag,
@@ -681,6 +712,8 @@ export function cloneVNode<T, U>(
     suspense: vnode.suspense,
     ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
     ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
+    placeholder: vnode.placeholder,
+
     el: vnode.el,
     anchor: vnode.anchor,
     ctx: vnode.ctx,
@@ -691,7 +724,10 @@ export function cloneVNode<T, U>(
   // to clone the transition to ensure that the vnode referenced within
   // the transition hooks is fresh.
   if (transition && cloneTransition) {
-    cloned.transition = transition.clone(cloned as VNode)
+    setTransitionHooks(
+      cloned as VNode,
+      transition.clone(cloned as VNode) as TransitionHooks,
+    )
   }
 
   if (__COMPAT__) {
@@ -760,7 +796,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
       // #3666, avoid reference pollution when reusing vnode
       child.slice(),
     )
-  } else if (typeof child === 'object') {
+  } else if (isVNode(child)) {
     // already vnode, this should be the most common since compiled templates
     // always produce all-vnode children arrays
     return cloneIfMounted(child)
@@ -772,13 +808,13 @@ export function normalizeVNode(child: VNodeChild): VNode {
 
 // optimized normalization for template-compiled render fns
 export function cloneIfMounted(child: VNode): VNode {
-  return (child.el === null && child.patchFlag !== PatchFlags.HOISTED) ||
+  return (child.el === null && child.patchFlag !== PatchFlags.CACHED) ||
     child.memo
     ? child
     : cloneVNode(child)
 }
 
-export function normalizeChildren(vnode: VNode, children: unknown) {
+export function normalizeChildren(vnode: VNode, children: unknown): void {
   let type = 0
   const { shapeFlag } = vnode
   if (children == null) {
@@ -833,7 +869,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   vnode.shapeFlag |= type
 }
 
-export function mergeProps(...args: (Data & VNodeProps)[]) {
+export function mergeProps(...args: (Data & VNodeProps)[]): Data {
   const ret: Data = {}
   for (let i = 0; i < args.length; i++) {
     const toMerge = args[i]
@@ -869,7 +905,7 @@ export function invokeVNodeHook(
   instance: ComponentInternalInstance | null,
   vnode: VNode,
   prevVNode: VNode | null = null,
-) {
+): void {
   callWithAsyncErrorHandling(hook, instance, ErrorCodes.VNODE_HOOK, [
     vnode,
     prevVNode,

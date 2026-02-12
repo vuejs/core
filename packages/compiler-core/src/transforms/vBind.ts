@@ -2,16 +2,14 @@ import type { DirectiveTransform } from '../transform'
 import {
   type ExpressionNode,
   NodeTypes,
-  type SimpleExpressionNode,
   createObjectProperty,
   createSimpleExpression,
 } from '../ast'
 import { ErrorCodes, createCompilerError } from '../errors'
 import { camelize } from '@vue/shared'
 import { CAMELIZE } from '../runtimeHelpers'
-import { processExpression } from './transformExpression'
 
-// v-bind without arg is handled directly in ./transformElements.ts due to it affecting
+// v-bind without arg is handled directly in ./transformElement.ts due to its affecting
 // codegen for the entire props object. This transform here is only for v-bind
 // *with* args.
 export const transformBind: DirectiveTransform = (dir, _node, context) => {
@@ -39,39 +37,15 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
     }
   }
 
-  // same-name shorthand - :arg is expanded to :arg="arg"
-  if (!exp) {
-    if (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) {
-      // only simple expression is allowed for same-name shorthand
-      context.onError(
-        createCompilerError(
-          ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
-          arg.loc,
-        ),
-      )
-      return {
-        props: [
-          createObjectProperty(arg, createSimpleExpression('', true, loc)),
-        ],
-      }
-    }
-
-    const propName = camelize((arg as SimpleExpressionNode).content)
-    exp = dir.exp = createSimpleExpression(propName, false, arg.loc)
-    if (!__BROWSER__) {
-      exp = dir.exp = processExpression(exp, context)
-    }
-  }
-
   if (arg.type !== NodeTypes.SIMPLE_EXPRESSION) {
     arg.children.unshift(`(`)
     arg.children.push(`) || ""`)
   } else if (!arg.isStatic) {
-    arg.content = `${arg.content} || ""`
+    arg.content = arg.content ? `${arg.content} || ""` : `""`
   }
 
   // .sync is replaced by v-model:arg
-  if (modifiers.includes('camel')) {
+  if (modifiers.some(mod => mod.content === 'camel')) {
     if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
       if (arg.isStatic) {
         arg.content = camelize(arg.content)
@@ -85,16 +59,16 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
   }
 
   if (!context.inSSR) {
-    if (modifiers.includes('prop')) {
+    if (modifiers.some(mod => mod.content === 'prop')) {
       injectPrefix(arg, '.')
     }
-    if (modifiers.includes('attr')) {
+    if (modifiers.some(mod => mod.content === 'attr')) {
       injectPrefix(arg, '^')
     }
   }
 
   return {
-    props: [createObjectProperty(arg, exp)],
+    props: [createObjectProperty(arg, exp!)],
   }
 }
 

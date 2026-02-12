@@ -26,7 +26,7 @@
 * **reactivity-transform:** fix $$ escape edge cases ([e06d3b6](https://github.com/vuejs/core/commit/e06d3b614ea518e9cdf83fca9200fc816eb4e5a1)), closes [#6312](https://github.com/vuejs/core/issues/6312) [#6944](https://github.com/vuejs/core/issues/6944)
 * **reactivity-transform:** prohibit const assignment at compile time ([#6993](https://github.com/vuejs/core/issues/6993)) ([3427052](https://github.com/vuejs/core/commit/3427052229db3448252d938292a40e960a0f4b9c)), closes [#6992](https://github.com/vuejs/core/issues/6992)
 * **reactivity:** `triggerRef` working with `toRef` from reactive ([#7507](https://github.com/vuejs/core/issues/7507)) ([e64c9ae](https://github.com/vuejs/core/commit/e64c9ae957aa2606b55e8652bbde30a6ada59fb0))
-* **reactivity:** ensure watch(Effect) can run independent of unmounted instance if created in a detatched effectScope (fix [#7319](https://github.com/vuejs/core/issues/7319)) ([#7330](https://github.com/vuejs/core/issues/7330)) ([cd7c887](https://github.com/vuejs/core/commit/cd7c887b755810aedf83f3d458cb956d5b147f6f))
+* **reactivity:** ensure watch(Effect) can run independent of unmounted instance if created in a detached effectScope (fix [#7319](https://github.com/vuejs/core/issues/7319)) ([#7330](https://github.com/vuejs/core/issues/7330)) ([cd7c887](https://github.com/vuejs/core/commit/cd7c887b755810aedf83f3d458cb956d5b147f6f))
 * **reactivity:** track hasOwnProperty ([588bd44](https://github.com/vuejs/core/commit/588bd44f036b79d7dee5d23661aa7244f70e6beb)), closes [#2619](https://github.com/vuejs/core/issues/2619) [#2621](https://github.com/vuejs/core/issues/2621)
 * **runtime-core:** ensure prop type validation warning shows custom class names  ([#7198](https://github.com/vuejs/core/issues/7198)) ([620327d](https://github.com/vuejs/core/commit/620327d527593c6263a21500baddbae1ebc30db8))
 * **runtime-core:** fix keep-alive cache prune logic on vnodes with same type but different keys ([#7510](https://github.com/vuejs/core/issues/7510)) ([1fde49c](https://github.com/vuejs/core/commit/1fde49c0f57cc50fedf91366a274c9759d1d9a39)), closes [#7355](https://github.com/vuejs/core/issues/7355)
@@ -126,7 +126,7 @@
 * **transition/keep-alive:** fix unmount bug for component with out-in transition ([#6839](https://github.com/vuejs/core/issues/6839)) ([64e6d92](https://github.com/vuejs/core/commit/64e6d9221d353598b5f61c158c978d80e3b4628c)), closes [#6835](https://github.com/vuejs/core/issues/6835)
 * **types/reactivity-transform:** fix type when initial value is not used ([#6821](https://github.com/vuejs/core/issues/6821)) ([fdc5902](https://github.com/vuejs/core/commit/fdc5902cce0d077c722dfd422850ca69fd51be8e)), closes [#6820](https://github.com/vuejs/core/issues/6820)
 * **types:** `$watch` callback parameters type ([#6136](https://github.com/vuejs/core/issues/6136)) ([41d9c47](https://github.com/vuejs/core/commit/41d9c47300888fce9d4ff6a02f69d8a912cded8f)), closes [#6135](https://github.com/vuejs/core/issues/6135)
-* **types:** ensure createBlock() helper accepts Teleport and Supsense types (fix: [#2855](https://github.com/vuejs/core/issues/2855)) ([#5458](https://github.com/vuejs/core/issues/5458)) ([e5fc7dc](https://github.com/vuejs/core/commit/e5fc7dcc02f2dd3fa8172958259049031626375f))
+* **types:** ensure createBlock() helper accepts Teleport and Suspense types (fix: [#2855](https://github.com/vuejs/core/issues/2855)) ([#5458](https://github.com/vuejs/core/issues/5458)) ([e5fc7dc](https://github.com/vuejs/core/commit/e5fc7dcc02f2dd3fa8172958259049031626375f))
 * **types:** export `Raw` type ([#6380](https://github.com/vuejs/core/issues/6380)) ([e9172db](https://github.com/vuejs/core/commit/e9172db68b86fad2e0bb1de9e5d0dddbe3c2a25e)), closes [#7048](https://github.com/vuejs/core/issues/7048)
 * **types:** should unwrap tuple correctly ([#3820](https://github.com/vuejs/core/issues/3820)) ([e816812](https://github.com/vuejs/core/commit/e816812f10b9e3a375eef8dffd617d7f08b23c00)), closes [#3819](https://github.com/vuejs/core/issues/3819)
 * **types:** stricter type condition for `EventHandlers` ([#6855](https://github.com/vuejs/core/issues/6855)) ([bad3f3c](https://github.com/vuejs/core/commit/bad3f3ce46aad1f5fec47d1d02aee26af393bcff)), closes [#6899](https://github.com/vuejs/core/issues/6899)
@@ -714,7 +714,7 @@
 * **compiler-core:** avoid runtime dependency on @babel/types ([1045590](https://github.com/vuejs/core/commit/1045590d4bbaf4a2b05311f11b22a0b3d22cf609)), closes [#4531](https://github.com/vuejs/core/issues/4531)
 * **compiler-core:** pick last char when dynamic directive doesn't close ([#4507](https://github.com/vuejs/core/issues/4507)) ([5d262e0](https://github.com/vuejs/core/commit/5d262e08d5d5fb29f48ba5fa5b97a9a3e34b9d4b))
 * **compiler:** condense whitespaces in static class attributes ([#4432](https://github.com/vuejs/core/issues/4432)) ([b8653d3](https://github.com/vuejs/core/commit/b8653d390a555e1ee3f92a1c49cfd8800c67e46a)), closes [#4251](https://github.com/vuejs/core/issues/4251)
-* **runtime-dom:** style patching shoud always preserve v-show display property ([d534515](https://github.com/vuejs/core/commit/d53451583684c37bda7d30bff912216e1a58126f)), closes [#4424](https://github.com/vuejs/core/issues/4424)
+* **runtime-dom:** style patching should always preserve v-show display property ([d534515](https://github.com/vuejs/core/commit/d53451583684c37bda7d30bff912216e1a58126f)), closes [#4424](https://github.com/vuejs/core/issues/4424)
 * **type:** fix prop type infer ([#4530](https://github.com/vuejs/core/issues/4530)) ([4178d5d](https://github.com/vuejs/core/commit/4178d5d7d9549a0a1d19663bc2f92c8ac6a731b2)), closes [#4525](https://github.com/vuejs/core/issues/4525)
 
 
@@ -741,7 +741,7 @@
 
 * **compiler-sfc:** ensure script setup generates type-valid ts output ([bacb201](https://github.com/vuejs/core/commit/bacb2012acb4045a2db6988ba4545a7655d6ca14)), closes [#4455](https://github.com/vuejs/core/issues/4455)
 * **compiler-sfc:** generate matching prop types when withDefaults is used ([#4466](https://github.com/vuejs/core/issues/4466)) ([8580796](https://github.com/vuejs/core/commit/85807967dc874e6ea6b20f341875beda938e3058)), closes [#4455](https://github.com/vuejs/core/issues/4455)
-* **compiler:** generate function ref for script setup if inline is ture. ([#4492](https://github.com/vuejs/core/issues/4492)) ([4cd282b](https://github.com/vuejs/core/commit/4cd282b0a17589ef9ca2649e7beb0bdee4a73c57))
+* **compiler:** generate function ref for script setup if inline is true. ([#4492](https://github.com/vuejs/core/issues/4492)) ([4cd282b](https://github.com/vuejs/core/commit/4cd282b0a17589ef9ca2649e7beb0bdee4a73c57))
 * **compiler:** report invalid directive name error ([#4494](https://github.com/vuejs/core/issues/4494)) ([#4495](https://github.com/vuejs/core/issues/4495)) ([c00925e](https://github.com/vuejs/core/commit/c00925ed5c409b57a1540b79c595b7f8117e2d4c))
 * **types:** include ref-macros.d.ts in npm dist files ([d7f1b77](https://github.com/vuejs/core/commit/d7f1b771f80ab9014a4701913b50458fd251a117)), closes [#4433](https://github.com/vuejs/core/issues/4433)
 
@@ -798,7 +798,7 @@
 ### Bug Fixes
 
 * **compiler-sfc:** fix import usage check for lowercase imported components ([57f1081](https://github.com/vuejs/core/commit/57f10812cc7f1e9f6c92736c36aba577943996fd)), closes [#4358](https://github.com/vuejs/core/issues/4358)
-* **runtime-core:** ensure consistent arguments for tempalte and render funtion slot usage ([644971e](https://github.com/vuejs/core/commit/644971ec06642817cf7e720ad4980182d2140f53)), closes [#4367](https://github.com/vuejs/core/issues/4367)
+* **runtime-core:** ensure consistent arguments for template and render function slot usage ([644971e](https://github.com/vuejs/core/commit/644971ec06642817cf7e720ad4980182d2140f53)), closes [#4367](https://github.com/vuejs/core/issues/4367)
 * **runtime-core:** fix child component double update on props change ([c1f564e](https://github.com/vuejs/core/commit/c1f564e1dc40eda9af657c30cd787a8d770dde0f)), closes [#4365](https://github.com/vuejs/core/issues/4365)
 
 

@@ -6,6 +6,7 @@ import {
   h,
   nextTick,
   nodeOps,
+  ref,
   render,
   serializeInner,
   triggerEvent,
@@ -27,6 +28,8 @@ function compileToFunction(template: string) {
   render._rc = true // isRuntimeCompiled
   return render
 }
+
+const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
 describe('hot module replacement', () => {
   test('inject global runtime', () => {
@@ -415,6 +418,58 @@ describe('hot module replacement', () => {
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 
+  // #6930
+  test('reload: avoid infinite recursion', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-child-6930'
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      data() {
+        return { count: 0 }
+      },
+      expose: ['count'],
+      unmounted: unmountSpy,
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      setup() {
+        const com1 = ref()
+        const changeRef1 = (value: any) => (com1.value = value)
+
+        const com2 = ref()
+        const changeRef2 = (value: any) => (com2.value = value)
+
+        return () => [
+          h(Child, { ref: changeRef1 }),
+          h(Child, { ref: changeRef2 }),
+          com1.value?.count,
+        ]
+      },
+    }
+
+    render(h(Parent), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>0</div><div>0</div>0`)
+
+    reload(childId, {
+      __hmrId: childId,
+      data() {
+        return { count: 1 }
+      },
+      mounted: mountSpy,
+      render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
+    })
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>1`)
+    expect(unmountSpy).toHaveBeenCalledTimes(2)
+    expect(mountSpy).toHaveBeenCalledTimes(2)
+  })
+
   // #1156 - static nodes should retain DOM element reference across updates
   // when HMR is active
   test('static el reference', async () => {
@@ -755,6 +810,287 @@ describe('hot module replacement', () => {
     )
     expect(serializeInner(root)).toBe(
       `<div><div>1<p>3</p></div></div><div><div>1<p>3</p></div></div><p>2</p>`,
+    )
+  })
+
+  // #11248
+  test('reload async component with multiple instances', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-child-id'
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      data() {
+        return { count: 0 }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    }
+    const Comp = runtimeTest.defineAsyncComponent(() => Promise.resolve(Child))
+    const appId = 'test-app-id'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      render: () => [h(Comp), h(Comp)],
+    }
+    createRecord(appId, App)
+
+    render(h(App), root)
+
+    await timeout()
+
+    expect(serializeInner(root)).toBe(`<div>0</div><div>0</div>`)
+
+    // change count to 1
+    reload(childId, {
+      __hmrId: childId,
+      data() {
+        return { count: 1 }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+
+    await timeout()
+
+    expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
+  })
+
+  test('reload async child wrapped in Suspense + KeepAlive', async () => {
+    const id = 'async-child-reload'
+    const AsyncChild: ComponentOptions = {
+      __hmrId: id,
+      async setup() {
+        await nextTick()
+        return () => 'foo'
+      },
+    }
+    createRecord(id, AsyncChild)
+
+    const appId = 'test-app-id'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      components: { AsyncChild },
+      render: compileToFunction(`
+        <div>
+        <Suspense>
+          <KeepAlive>
+            <AsyncChild />
+          </KeepAlive>
+        </Suspense>
+      </div>
+      `),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div><!----></div>')
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>foo</div>')
+
+    reload(id, {
+      __hmrId: id,
+      async setup() {
+        await nextTick()
+        return () => 'bar'
+      },
+    })
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>bar</div>')
+  })
+
+  test('multi reload child wrapped in Suspense + KeepAlive', async () => {
+    const id = 'test-child-reload-3'
+    const Child: ComponentOptions = {
+      __hmrId: id,
+      setup() {
+        const count = ref(0)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    }
+    createRecord(id, Child)
+
+    const appId = 'test-app-id'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      components: { Child },
+      render: compileToFunction(`
+        <KeepAlive>
+          <Suspense>
+            <Child />
+          </Suspense>
+        </KeepAlive>
+      `),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div>0</div>')
+    await timeout()
+    reload(id, {
+      __hmrId: id,
+      setup() {
+        const count = ref(1)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>1</div>')
+
+    reload(id, {
+      __hmrId: id,
+      setup() {
+        const count = ref(2)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>2</div>')
+  })
+
+  test('rerender for nested component', () => {
+    const id = 'child-nested-rerender'
+    const Foo: ComponentOptions = {
+      __hmrId: id,
+      render() {
+        return this.$slots.default()
+      },
+    }
+    createRecord(id, Foo)
+
+    const parentId = 'parent-nested-rerender'
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      render() {
+        return h(Foo, null, {
+          default: () => this.$slots.default(),
+          _: 3 /* FORWARDED */,
+        })
+      },
+    }
+
+    const appId = 'app-nested-rerender'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      render: () =>
+        h(Parent, null, {
+          default: () => [
+            h(Foo, null, {
+              default: () => ['foo'],
+            }),
+          ],
+        }),
+    }
+    createRecord(parentId, App)
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('foo')
+
+    rerender(id, () => 'bar')
+    expect(serializeInner(root)).toBe('bar')
+  })
+
+  // https://github.com/vitejs/vite-plugin-vue/issues/599
+  // Both Outer and Inner are reloaded when './server.js' changes
+  test('reload nested components from single update', async () => {
+    const innerId = 'nested-reload-inner'
+    const outerId = 'nested-reload-outer'
+
+    let Inner = {
+      __hmrId: innerId,
+      render() {
+        return h('div', 'foo')
+      },
+    }
+    let Outer = {
+      __hmrId: outerId,
+      render() {
+        return h(Inner)
+      },
+    }
+
+    createRecord(innerId, Inner)
+    createRecord(outerId, Outer)
+
+    const App = {
+      render: () => h(Outer),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div>foo</div>')
+
+    Inner = {
+      __hmrId: innerId,
+      render() {
+        return h('div', 'bar')
+      },
+    }
+    Outer = {
+      __hmrId: outerId,
+      render() {
+        return h(Inner)
+      },
+    }
+
+    // trigger reload for both Outer and Inner
+    reload(outerId, Outer)
+    reload(innerId, Inner)
+    await nextTick()
+
+    expect(serializeInner(root)).toBe('<div>bar</div>')
+  })
+
+  // #14127
+  test('update cached text nodes', async () => {
+    const root = nodeOps.createElement('div')
+    const appId = 'test-cached-text-nodes'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      data() {
+        return {
+          count: 0,
+        }
+      },
+      render: compileToFunction(
+        `{{count}}
+        <button @click="count++">++</button> 
+        static text`,
+      ),
+    }
+    createRecord(appId, App)
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`0 <button>++</button> static text`)
+
+    // trigger count update
+    triggerEvent((root as any).children[2], 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe(`1 <button>++</button> static text`)
+
+    // trigger HMR update
+    rerender(
+      appId,
+      compileToFunction(
+        `{{count}}
+        <button @click="count++">++</button> 
+        static text updated`,
+      ),
+    )
+    expect(serializeInner(root)).toBe(
+      `1 <button>++</button> static text updated`,
+    )
+
+    // trigger HMR update again
+    rerender(
+      appId,
+      compileToFunction(
+        `{{count}}
+        <button @click="count++">++</button> 
+        static text updated2`,
+      ),
+    )
+    expect(serializeInner(root)).toBe(
+      `1 <button>++</button> static text updated2`,
     )
   })
 })

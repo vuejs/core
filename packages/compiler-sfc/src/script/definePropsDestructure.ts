@@ -10,6 +10,7 @@ import type {
 import { walk } from 'estree-walker'
 import {
   BindingTypes,
+  TS_NODE_TYPES,
   extractIdentifiers,
   isFunctionType,
   isInDestructureAssignment,
@@ -22,22 +23,16 @@ import { genPropsAccessExp } from '@vue/shared'
 import { isCallOf, resolveObjectKey } from './utils'
 import type { ScriptCompileContext } from './context'
 import { DEFINE_PROPS } from './defineProps'
-import { warnOnce } from '../warn'
 
 export function processPropsDestructure(
   ctx: ScriptCompileContext,
   declId: ObjectPattern,
-) {
-  if (!ctx.options.propsDestructure) {
+): void {
+  if (ctx.options.propsDestructure === 'error') {
+    ctx.error(`Props destructure is explicitly prohibited via config.`, declId)
+  } else if (ctx.options.propsDestructure === false) {
     return
   }
-
-  warnOnce(
-    `This project is using reactive props destructure, which is an experimental ` +
-      `feature. It may receive breaking changes or be removed in the future, so ` +
-      `use at your own risk.\n` +
-      `To stay updated, follow the RFC at https://github.com/vuejs/rfcs/discussions/502.`,
-  )
 
   ctx.propsDestructureDecl = declId
 
@@ -103,12 +98,12 @@ type Scope = Record<string, boolean>
 export function transformDestructuredProps(
   ctx: ScriptCompileContext,
   vueImportAliases: Record<string, string>,
-) {
-  if (!ctx.options.propsDestructure) {
+): void {
+  if (ctx.options.propsDestructure === false) {
     return
   }
 
-  const rootScope: Scope = {}
+  const rootScope: Scope = Object.create(null)
   const scopeStack: Scope[] = [rootScope]
   let currentScope: Scope = rootScope
   const excludedIds = new WeakSet<Identifier>()
@@ -152,11 +147,6 @@ export function transformDestructuredProps(
       ) {
         if (stmt.declare || !stmt.id) continue
         registerLocalBinding(stmt.id)
-      } else if (
-        (stmt.type === 'ForOfStatement' || stmt.type === 'ForInStatement') &&
-        stmt.left.type === 'VariableDeclaration'
-      ) {
-        walkVariableDeclaration(stmt.left)
       } else if (
         stmt.type === 'ExportNamedDeclaration' &&
         stmt.declaration &&
@@ -239,16 +229,14 @@ export function transformDestructuredProps(
   const ast = ctx.scriptSetupAst!
   walkScope(ast, true)
   walk(ast, {
-    enter(node: Node, parent?: Node) {
+    enter(node: Node, parent: Node | null) {
       parent && parentStack.push(parent)
 
       // skip type nodes
       if (
         parent &&
         parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSTypeAssertion'
+        !TS_NODE_TYPES.includes(parent.type)
       ) {
         return this.skip()
       }
@@ -276,6 +264,23 @@ export function transformDestructuredProps(
         return
       }
 
+      // for loops: loop variable should be scoped to the loop
+      if (
+        node.type === 'ForOfStatement' ||
+        node.type === 'ForInStatement' ||
+        node.type === 'ForStatement'
+      ) {
+        pushScope()
+        const varDecl = node.type === 'ForStatement' ? node.init : node.left
+        if (varDecl && varDecl.type === 'VariableDeclaration') {
+          walkVariableDeclaration(varDecl)
+        }
+        if (node.body.type === 'BlockStatement') {
+          walkScope(node.body)
+        }
+        return
+      }
+
       // non-function block scopes
       if (node.type === 'BlockStatement' && !isFunctionType(parent!)) {
         pushScope()
@@ -294,11 +299,15 @@ export function transformDestructuredProps(
         }
       }
     },
-    leave(node: Node, parent?: Node) {
+    leave(node: Node, parent: Node | null) {
       parent && parentStack.pop()
       if (
         (node.type === 'BlockStatement' && !isFunctionType(parent!)) ||
-        isFunctionType(node)
+        isFunctionType(node) ||
+        node.type === 'CatchClause' ||
+        node.type === 'ForOfStatement' ||
+        node.type === 'ForInStatement' ||
+        node.type === 'ForStatement'
       ) {
         popScope()
       }

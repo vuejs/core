@@ -64,7 +64,7 @@ const props = defineProps({ foo: String })
 </script>
     `)
     assertCode(content)
-    expect(content).toMatch(`export default /*#__PURE__*/_defineComponent({
+    expect(content).toMatch(`export default /*@__PURE__*/_defineComponent({
   props: { foo: String },
   setup(__props, { expose: __expose }) {`)
   })
@@ -261,6 +261,51 @@ const props = defineProps({ foo: String })
     })
   })
 
+  test('w/ extends intersection type', () => {
+    const { content, bindings } = compile(`
+    <script setup lang="ts">
+      type Foo = {
+        x?: number;
+      };
+      interface Props extends Foo {
+        z: number
+        y: string
+      }
+      defineProps<Props>()
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(`z: { type: Number, required: true }`)
+    expect(content).toMatch(`y: { type: String, required: true }`)
+    expect(content).toMatch(`x: { type: Number, required: false }`)
+    expect(bindings).toStrictEqual({
+      x: BindingTypes.PROPS,
+      y: BindingTypes.PROPS,
+      z: BindingTypes.PROPS,
+    })
+  })
+
+  test('w/ intersection type', () => {
+    const { content, bindings } = compile(`
+    <script setup lang="ts">
+      type Foo = {
+        x?: number;
+      };
+      type Bar = {
+        y: string;
+      };
+      defineProps<Foo & Bar>()
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(`y: { type: String, required: true }`)
+    expect(content).toMatch(`x: { type: Number, required: false }`)
+    expect(bindings).toStrictEqual({
+      x: BindingTypes.PROPS,
+      y: BindingTypes.PROPS,
+    })
+  })
+
   test('w/ exported interface', () => {
     const { content, bindings } = compile(`
     <script setup lang="ts">
@@ -342,12 +387,14 @@ const props = defineProps({ foo: String })
       qux?(): number;
       quux?(): void
       quuxx?: Promise<string>;
+      quuux?: number;
       fred?: string
     }>(), {
       foo: 'hi',
       qux() { return 1 },
       ['quux']() { },
       async quuxx() { return await Promise.resolve('hi') },
+      quuux(a, [b, ...c], {d, ...e}, ...f) { return 1 },
       get fred() { return 'fred' }
     })
     </script>
@@ -368,6 +415,9 @@ const props = defineProps({ foo: String })
       `quuxx: { type: Promise, required: false, async default() { return await Promise.resolve('hi') } }`,
     )
     expect(content).toMatch(
+      `quuux: { type: Number, required: false, default(a, [b, ...c], {d, ...e}, ...f) { return 1 } }`,
+    )
+    expect(content).toMatch(
       `fred: { type: String, required: false, get default() { return 'fred' } }`,
     )
     expect(content).toMatch(`const props = __props`)
@@ -378,6 +428,7 @@ const props = defineProps({ foo: String })
       qux: BindingTypes.PROPS,
       quux: BindingTypes.PROPS,
       quuxx: BindingTypes.PROPS,
+      quuux: BindingTypes.PROPS,
       fred: BindingTypes.PROPS,
       props: BindingTypes.SETUP_CONST,
     })
@@ -591,15 +642,37 @@ const props = defineProps({ foo: String })
 
   // #8289
   test('destructure without enabling reactive destructure', () => {
-    const { content } = compile(
+    const { content, bindings } = compile(
       `<script setup lang="ts">
       const { foo } = defineProps<{
         foo: Foo
       }>()
       </script>`,
+      {
+        propsDestructure: false,
+      },
     )
     expect(content).toMatch(`const { foo } = __props`)
+    expect(content).toMatch(`return { foo }`)
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.SETUP_CONST,
+    })
     assertCode(content)
+  })
+
+  test('prohibiting reactive destructure', () => {
+    expect(() =>
+      compile(
+        `<script setup lang="ts">
+      const { foo } = defineProps<{
+        foo: Foo
+      }>()
+      </script>`,
+        {
+          propsDestructure: 'error',
+        },
+      ),
+    ).toThrow()
   })
 
   describe('errors', () => {

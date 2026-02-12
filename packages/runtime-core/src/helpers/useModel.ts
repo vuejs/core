@@ -7,10 +7,16 @@ import type { NormalizedProps } from '../componentProps'
 import { watchSyncEffect } from '../apiWatch'
 
 export function useModel<
-  M extends string | number | symbol,
+  M extends PropertyKey,
   T extends Record<string, any>,
   K extends keyof T,
->(props: T, name: K, options?: DefineModelOptions<T[K]>): ModelRef<T[K], M>
+  G = T[K],
+  S = T[K],
+>(
+  props: T,
+  name: K,
+  options?: DefineModelOptions<T[K], G, S>,
+): ModelRef<T[K], M, G, S>
 export function useModel(
   props: Record<string, any>,
   name: string,
@@ -22,29 +28,42 @@ export function useModel(
     return ref() as any
   }
 
-  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[name]) {
+  const camelizedName = camelize(name)
+  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[camelizedName]) {
     warn(`useModel() called with prop "${name}" which is not declared.`)
     return ref() as any
   }
 
-  const camelizedName = camelize(name)
   const hyphenatedName = hyphenate(name)
+  const modifiers = getModelModifiers(props, camelizedName)
 
   const res = customRef((track, trigger) => {
     let localValue: any
+    let prevSetValue: any = EMPTY_OBJ
+    let prevEmittedValue: any
+
     watchSyncEffect(() => {
-      const propValue = props[name]
+      const propValue = props[camelizedName]
       if (hasChanged(localValue, propValue)) {
         localValue = propValue
         trigger()
       }
     })
+
     return {
       get() {
         track()
         return options.get ? options.get(localValue) : localValue
       },
+
       set(value) {
+        const emittedValue = options.set ? options.set(value) : value
+        if (
+          !hasChanged(emittedValue, localValue) &&
+          !(prevSetValue !== EMPTY_OBJ && hasChanged(value, prevSetValue))
+        ) {
+          return
+        }
         const rawProps = i.vnode!.props
         if (
           !(
@@ -56,19 +75,30 @@ export function useModel(
             (`onUpdate:${name}` in rawProps ||
               `onUpdate:${camelizedName}` in rawProps ||
               `onUpdate:${hyphenatedName}` in rawProps)
-          ) &&
-          hasChanged(value, localValue)
+          )
         ) {
+          // no v-model, local update
           localValue = value
           trigger()
         }
-        i.emit(`update:${name}`, options.set ? options.set(value) : value)
+
+        i.emit(`update:${name}`, emittedValue)
+        // #10279: if the local value is converted via a setter but the value
+        // emitted to parent was the same, the parent will not trigger any
+        // updates and there will be no prop sync. However the local input state
+        // may be out of sync, so we need to force an update here.
+        if (
+          hasChanged(value, emittedValue) &&
+          hasChanged(value, prevSetValue) &&
+          !hasChanged(emittedValue, prevEmittedValue)
+        ) {
+          trigger()
+        }
+        prevSetValue = value
+        prevEmittedValue = emittedValue
       },
     }
   })
-
-  const modifierKey =
-    name === 'modelValue' ? 'modelModifiers' : `${name}Modifiers`
 
   // @ts-expect-error
   res[Symbol.iterator] = () => {
@@ -76,7 +106,7 @@ export function useModel(
     return {
       next() {
         if (i < 2) {
-          return { value: i++ ? props[modifierKey] || {} : res, done: false }
+          return { value: i++ ? modifiers || EMPTY_OBJ : res, done: false }
         } else {
           return { done: true }
         }
@@ -85,4 +115,15 @@ export function useModel(
   }
 
   return res
+}
+
+export const getModelModifiers = (
+  props: Record<string, any>,
+  modelName: string,
+): Record<string, boolean> | undefined => {
+  return modelName === 'modelValue' || modelName === 'model-value'
+    ? props.modelModifiers
+    : props[`${modelName}Modifiers`] ||
+        props[`${camelize(modelName)}Modifiers`] ||
+        props[`${hyphenate(modelName)}Modifiers`]
 }

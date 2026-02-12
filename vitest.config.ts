@@ -1,6 +1,5 @@
 import { configDefaults, defineConfig } from 'vitest/config'
 import { entries } from './scripts/aliases.js'
-import codspeedPlugin from '@codspeed/vitest-plugin'
 
 export default defineConfig({
   define: {
@@ -22,26 +21,62 @@ export default defineConfig({
   resolve: {
     alias: entries,
   },
-  plugins: [codspeedPlugin()],
   test: {
     globals: true,
+    pool: 'threads',
     setupFiles: 'scripts/setup-vitest.ts',
-    environmentMatchGlobs: [
-      ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom'],
-    ],
     sequence: {
       hooks: 'list',
     },
     coverage: {
-      provider: 'istanbul',
+      provider: 'v8',
       reporter: ['text', 'html'],
+      include: ['packages/*/src/**'],
       exclude: [
-        ...configDefaults.coverage.exclude!,
-        // DOM transitions are tested via e2e so no coverage is collected
-        'packages/runtime-dom/src/components/Transition*',
-        // mostly entries
+        // entries that are not really used during tests
         'packages/vue-compat/**',
+        'packages/vue/src/dev.ts',
+        'packages/vue/src/runtime.ts',
+        // not testable during unit tests
+        'packages/runtime-core/src/profiling.ts',
+        'packages/runtime-core/src/featureFlags.ts',
+        'packages/runtime-core/src/customFormatter.ts',
+        // tested via e2e so no coverage is collected
+        'packages/runtime-core/src/hydrationStrategies.ts',
+        'packages/runtime-dom/src/components/Transition*',
       ],
     },
+
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          exclude: [
+            ...configDefaults.exclude,
+            '**/e2e/**',
+            '**/{vue,vue-compat,runtime-dom}/**',
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'unit-jsdom',
+          include: ['packages/{vue,vue-compat,runtime-dom}/**/*.{test,spec}.*'],
+          exclude: [...configDefaults.exclude, '**/e2e/**'],
+          environment: 'jsdom',
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'e2e',
+          environment: 'jsdom',
+          isolate: true,
+          include: ['packages/vue/__tests__/e2e/*.spec.ts'],
+        },
+      },
+    ],
   },
 })

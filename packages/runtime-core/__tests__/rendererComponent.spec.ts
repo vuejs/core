@@ -6,6 +6,7 @@ import {
   inject,
   nextTick,
   nodeOps,
+  onMounted,
   provide,
   ref,
   render,
@@ -236,6 +237,105 @@ describe('renderer: component', () => {
     expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
   })
 
+  test('child only updates once when triggered in multiple ways', async () => {
+    const a = ref(0)
+    const calls: string[] = []
+
+    const Parent = {
+      setup() {
+        return () => {
+          calls.push('render parent')
+          return h(Child, { count: a.value }, () => a.value)
+        }
+      },
+    }
+
+    const Child = {
+      props: ['count'],
+      setup(props: any) {
+        return () => {
+          calls.push('render child')
+          return `${props.count} - ${a.value}`
+        }
+      },
+    }
+
+    render(h(Parent), nodeOps.createElement('div'))
+    expect(calls).toEqual(['render parent', 'render child'])
+
+    // This will trigger child rendering directly, as well as via a prop change
+    a.value++
+    await nextTick()
+    expect(calls).toEqual([
+      'render parent',
+      'render child',
+      'render parent',
+      'render child',
+    ])
+  })
+
+  // #7745
+  test(`an earlier update doesn't lead to excessive subsequent updates`, async () => {
+    const globalCount = ref(0)
+    const parentCount = ref(0)
+    const calls: string[] = []
+
+    const Root = {
+      setup() {
+        return () => {
+          calls.push('render root')
+          return h(Parent, { count: globalCount.value })
+        }
+      },
+    }
+
+    const Parent = {
+      props: ['count'],
+      setup(props: any) {
+        return () => {
+          calls.push('render parent')
+          return [
+            `${globalCount.value} - ${props.count}`,
+            h(Child, { count: parentCount.value }),
+          ]
+        }
+      },
+    }
+
+    const Child = {
+      props: ['count'],
+      setup(props: any) {
+        watch(
+          () => props.count,
+          () => {
+            calls.push('child watcher')
+            globalCount.value = props.count
+          },
+        )
+
+        return () => {
+          calls.push('render child')
+        }
+      },
+    }
+
+    render(h(Root), nodeOps.createElement('div'))
+    expect(calls).toEqual(['render root', 'render parent', 'render child'])
+
+    parentCount.value++
+    await nextTick()
+    expect(calls).toEqual([
+      'render root',
+      'render parent',
+      'render child',
+      'render parent',
+      'child watcher',
+      'render child',
+      'render root',
+      'render parent',
+    ])
+  })
+
   // #2521
   test('should pause tracking deps when initializing legacy options', async () => {
     let childInstance = null as any
@@ -374,5 +474,56 @@ describe('renderer: component', () => {
     expect(
       `Property '$attrs' was accessed via 'this'. Avoid using 'this' in templates.`,
     ).toHaveBeenWarned()
+  })
+
+  test('should not update child component if style is not changed', async () => {
+    const text = ref(0)
+    const spy = vi.fn()
+
+    const ClientOnly = {
+      setup(_: any, { slots }: SetupContext) {
+        const mounted = ref(false)
+        onMounted(() => {
+          mounted.value = true
+        })
+        return () => {
+          if (mounted.value) {
+            return slots.default!()
+          }
+        }
+      },
+    }
+
+    const App = {
+      render() {
+        return h(ClientOnly, null, {
+          default: () => [
+            h('span', null, [text.value]),
+            h(Comp, { style: { width: '100%' } }),
+          ],
+        })
+      },
+    }
+
+    const Comp = {
+      render(this: any) {
+        spy()
+        return null
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<!---->`)
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(`<span>0</span><!---->`)
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    text.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<span>1</span><!---->`)
+    // expect Comp to not be re-rendered
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 })

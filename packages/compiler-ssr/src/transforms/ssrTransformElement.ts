@@ -28,6 +28,7 @@ import {
   createSequenceExpression,
   createSimpleExpression,
   createTemplateLiteral,
+  findDir,
   hasDynamicKeyVBind,
   isStaticArgOf,
   isStaticExp,
@@ -87,6 +88,17 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     const hasCustomDir = node.props.some(
       p => p.type === NodeTypes.DIRECTIVE && !isBuiltInDirective(p.name),
     )
+
+    // v-show has a higher priority in ssr
+    const vShowPropIndex = node.props.findIndex(
+      i => i.type === NodeTypes.DIRECTIVE && i.name === 'show',
+    )
+    if (vShowPropIndex !== -1) {
+      const vShowProp = node.props[vShowPropIndex]
+      node.props.splice(vShowPropIndex, 1)
+      node.props.push(vShowProp)
+    }
+
     const needMergeProps = hasDynamicVBind || hasCustomDir
     if (needMergeProps) {
       const { props, directives } = buildProps(
@@ -110,8 +122,13 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             | InterpolationNode
             | undefined
           // If interpolation, this is dynamic <textarea> content, potentially
-          // injected by v-model and takes higher priority than v-bind value
-          if (!existingText || existingText.type !== NodeTypes.INTERPOLATION) {
+          // injected by v-model and takes higher priority than v-bind value.
+          // Additionally, directives with content overrides (v-text/v-html)
+          // have higher priority than the merged props.
+          if (
+            !hasContentOverrideDirective(node) &&
+            (!existingText || existingText.type !== NodeTypes.INTERPOLATION)
+          ) {
             // <textarea> with dynamic v-bind. We don't know if the final props
             // will contain .value, so we will have to do something special:
             // assign the merged props to a temp variable, and check whether
@@ -162,6 +179,28 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                 ]),
               ]),
             ]
+          }
+        } else if (directives.length && !node.children.length) {
+          // v-text/v-html have higher priority than the merged props
+          if (!hasContentOverrideDirective(node)) {
+            const tempId = `_temp${context.temps++}`
+            propsExp.arguments = [
+              createAssignmentExpression(
+                createSimpleExpression(tempId, false),
+                mergedProps,
+              ),
+            ]
+            rawChildrenMap.set(
+              node,
+              createConditionalExpression(
+                createSimpleExpression(`"textContent" in ${tempId}`, false),
+                createCallExpression(context.helper(SSR_INTERPOLATE), [
+                  createSimpleExpression(`${tempId}.textContent`, false),
+                ]),
+                createSimpleExpression(`${tempId}.innerHTML ?? ''`, false),
+                false,
+              ),
+            )
           }
         }
 
@@ -414,10 +453,14 @@ function findVModel(node: PlainElementNode): DirectiveNode | undefined {
   ) as DirectiveNode | undefined
 }
 
+function hasContentOverrideDirective(node: PlainElementNode): boolean {
+  return !!findDir(node, 'text') || !!findDir(node, 'html')
+}
+
 export function ssrProcessElement(
   node: PlainElementNode,
   context: SSRTransformContext,
-) {
+): void {
   const isVoidTag = context.options.isVoidTag || NO
   const elementsToAdd = node.ssrCodegenNode!.elements
   for (let j = 0; j < elementsToAdd.length; j++) {

@@ -6,7 +6,7 @@ export function patchProp(
   key: string,
   prevValue: any,
   nextValue: any,
-) {
+): void {
   logNodeOp({
     type: NodeOpTypes.PATCH,
     targetNode: el,

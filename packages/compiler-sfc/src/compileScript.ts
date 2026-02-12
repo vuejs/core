@@ -18,12 +18,17 @@ import type {
   Declaration,
   ExportSpecifier,
   Identifier,
+  LVal,
   Node,
   ObjectPattern,
   Statement,
 } from '@babel/types'
 import { walk } from 'estree-walker'
-import type { RawSourceMap } from 'source-map-js'
+import {
+  type RawSourceMap,
+  SourceMapConsumer,
+  SourceMapGenerator,
+} from 'source-map-js'
 import {
   normalScriptDefaultVar,
   processNormalScript,
@@ -49,11 +54,20 @@ import {
 } from './script/defineEmits'
 import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
-import { processDefineSlots } from './script/defineSlots'
+import { DEFINE_SLOTS, processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
+import {
+  getImportedName,
+  isCallOf,
+  isJS,
+  isLiteralNode,
+  isTS,
+} from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
-import { isImportUsed } from './script/importUsageCheck'
+import {
+  isImportUsed,
+  resolveTemplateVModelIdentifiers,
+} from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
 
 export interface SFCScriptCompileOptions {
@@ -106,10 +120,11 @@ export interface SFCScriptCompileOptions {
    */
   hoistStatic?: boolean
   /**
-   * (**Experimental**) Enable reactive destructure for `defineProps`
-   * @default false
+   * Set to `false` to disable reactive destructure for `defineProps` (pre-3.5
+   * behavior), or set to `'error'` to throw hard error on props destructures.
+   * @default true
    */
-  propsDestructure?: boolean
+  propsDestructure?: boolean | 'error'
   /**
    * File system access methods to be used when resolving types
    * imported in SFC macros. Defaults to ts.sys in Node.js, can be overwritten
@@ -135,6 +150,16 @@ export interface ImportBinding {
   isUsedInTemplate: boolean
 }
 
+const MACROS = [
+  DEFINE_PROPS,
+  DEFINE_EMITS,
+  DEFINE_EXPOSE,
+  DEFINE_OPTIONS,
+  DEFINE_SLOTS,
+  DEFINE_MODEL,
+  WITH_DEFAULTS,
+]
+
 /**
  * Compile `<script setup>`
  * It requires the whole SFC descriptor because we need to handle and merge
@@ -152,34 +177,42 @@ export function compileScript(
     )
   }
 
-  const ctx = new ScriptCompileContext(sfc, options)
   const { script, scriptSetup, source, filename } = sfc
   const hoistStatic = options.hoistStatic !== false && !script
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
+  const isJSOrTS =
+    isJS(scriptLang, scriptSetupLang) || isTS(scriptLang, scriptSetupLang)
 
-  let refBindings: string[] | undefined
-
-  if (!scriptSetup) {
-    if (!script) {
-      throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
-    }
-    // normal <script> only
-    return processNormalScript(ctx, scopeId)
-  }
-
-  if (script && scriptLang !== scriptSetupLang) {
+  if (script && scriptSetup && scriptLang !== scriptSetupLang) {
     throw new Error(
       `[@vue/compiler-sfc] <script> and <script setup> must have the same ` +
         `language type.`,
     )
   }
 
-  if (scriptSetupLang && !ctx.isJS && !ctx.isTS) {
+  if (!scriptSetup) {
+    if (!script) {
+      throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
+    }
+
+    // normal <script> only
+    if (script.lang && !isJSOrTS) {
+      // do not process non js/ts script blocks
+      return script
+    }
+
+    const ctx = new ScriptCompileContext(sfc, options)
+    return processNormalScript(ctx, scopeId)
+  }
+
+  if (scriptSetupLang && !isJSOrTS) {
     // do not process non js/ts script blocks
     return scriptSetup
   }
+
+  const ctx = new ScriptCompileContext(sfc, options)
 
   // metadata that needs to be returned
   // const ctx.bindingMetadata: BindingMetadata = {}
@@ -317,15 +350,18 @@ export function compileScript(
         const imported = getImportedName(specifier)
         const source = node.source.value
         const existing = ctx.userImports[local]
-        if (
-          source === 'vue' &&
-          (imported === DEFINE_PROPS ||
-            imported === DEFINE_EMITS ||
-            imported === DEFINE_EXPOSE)
-        ) {
-          warnOnce(
-            `\`${imported}\` is a compiler macro and no longer needs to be imported.`,
-          )
+        if (source === 'vue' && MACROS.includes(imported)) {
+          if (local === imported) {
+            warnOnce(
+              `\`${imported}\` is a compiler macro and no longer needs to be imported.`,
+            )
+          } else {
+            ctx.error(
+              `\`${imported}\` is a compiler macro and cannot be aliased to ` +
+                `a different name.`,
+              specifier,
+            )
+          }
           removeSpecifier(i)
         } else if (existing) {
           if (existing.source === source && existing.imported === imported) {
@@ -524,7 +560,7 @@ export function compileScript(
           }
 
           // defineProps
-          const isDefineProps = processDefineProps(ctx, init, decl.id)
+          const isDefineProps = processDefineProps(ctx, init, decl.id as LVal)
           if (ctx.propsDestructureRestId) {
             setupBindings[ctx.propsDestructureRestId] =
               BindingTypes.SETUP_REACTIVE_CONST
@@ -532,10 +568,10 @@ export function compileScript(
 
           // defineEmits
           const isDefineEmits =
-            !isDefineProps && processDefineEmits(ctx, init, decl.id)
+            !isDefineProps && processDefineEmits(ctx, init, decl.id as LVal)
           !isDefineEmits &&
-            (processDefineSlots(ctx, init, decl.id) ||
-              processDefineModel(ctx, init, decl.id))
+            (processDefineSlots(ctx, init, decl.id as LVal) ||
+              processDefineModel(ctx, init, decl.id as LVal))
 
           if (
             isDefineProps &&
@@ -587,6 +623,7 @@ export function compileScript(
         setupBindings,
         vueImportAliases,
         hoistStatic,
+        !!ctx.propsDestructureDecl,
       )
     }
 
@@ -603,7 +640,7 @@ export function compileScript(
     ) {
       const scope: Statement[][] = [scriptSetupAst.body]
       walk(node, {
-        enter(child: Node, parent: Node | undefined) {
+        enter(child: Node, parent: Node | null) {
           if (isFunctionType(child)) {
             this.skip()
           }
@@ -725,10 +762,53 @@ export function compileScript(
   for (const key in setupBindings) {
     ctx.bindingMetadata[key] = setupBindings[key]
   }
-  // known ref bindings
-  if (refBindings) {
-    for (const key of refBindings) {
-      ctx.bindingMetadata[key] = BindingTypes.SETUP_REF
+
+  // #11265, https://github.com/vitejs/rolldown-vite/issues/432
+  // 6.1 demote `const foo = reactive()` to `let` when used as v-model target.
+  // In non-inline template compilation, v-model assigns via `$setup.foo = $event`,
+  // which requires a SETUP_LET binding (getter + setter) to keep script state in sync.
+  // In inline mode, it generates `foo = $event`, which also requires `let`.
+  if (sfc.template && !sfc.template.src && sfc.template.ast) {
+    const vModelIds = resolveTemplateVModelIdentifiers(sfc)
+    if (vModelIds.size) {
+      const toDemote = new Set<string>()
+      for (const id of vModelIds) {
+        if (setupBindings[id] === BindingTypes.SETUP_REACTIVE_CONST) {
+          toDemote.add(id)
+        }
+      }
+
+      if (toDemote.size) {
+        for (const node of scriptSetupAst.body) {
+          if (
+            node.type === 'VariableDeclaration' &&
+            node.kind === 'const' &&
+            !node.declare
+          ) {
+            const demotedInDecl: string[] = []
+            for (const decl of node.declarations) {
+              if (decl.id.type === 'Identifier' && toDemote.has(decl.id.name)) {
+                demotedInDecl.push(decl.id.name)
+              }
+            }
+            if (demotedInDecl.length) {
+              ctx.s.overwrite(
+                node.start! + startOffset,
+                node.start! + startOffset + 'const'.length,
+                'let',
+              )
+              for (const id of demotedInDecl) {
+                setupBindings[id] = BindingTypes.SETUP_LET
+                ctx.bindingMetadata[id] = BindingTypes.SETUP_LET
+                warnOnce(
+                  `\`v-model\` cannot update a \`const\` reactive binding \`${id}\`. ` +
+                    `The compiler has transformed it to \`let\` to make the update work.`,
+                )
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -802,8 +882,11 @@ export function compileScript(
     args += `, { ${destructureElements.join(', ')} }`
   }
 
+  let templateMap
   // 9. generate return statement
   let returned
+  // ensure props bindings register before compile template in inline mode
+  const propsDecl = genRuntimeProps(ctx)
   if (
     !options.inlineTemplate ||
     (!sfc.template && ctx.hasDefaultExportRender)
@@ -851,7 +934,7 @@ export function compileScript(
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, ast, preamble, tips, errors } = compileTemplate({
+      const { code, ast, preamble, tips, errors, map } = compileTemplate({
         filename,
         ast: sfc.template.ast,
         source: sfc.template.content,
@@ -869,6 +952,7 @@ export function compileScript(
           bindingMetadata: ctx.bindingMetadata,
         },
       })
+      templateMap = map
       if (tips.length) {
         tips.forEach(warnOnce)
       }
@@ -935,7 +1019,6 @@ export function compileScript(
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
 
-  const propsDecl = genRuntimeProps(ctx)
   if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
 
   const emitsDecl = genRuntimeEmits(ctx)
@@ -964,7 +1047,7 @@ export function compileScript(
       (definedOptions ? `\n  ...${definedOptions},` : '')
     ctx.s.prependLeft(
       startOffset,
-      `\n${genDefaultAs} /*#__PURE__*/${ctx.helper(
+      `\n${genDefaultAs} /*@__PURE__*/${ctx.helper(
         `defineComponent`,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
@@ -977,7 +1060,7 @@ export function compileScript(
       // export default Object.assign(__default__, { ... })
       ctx.s.prependLeft(
         startOffset,
-        `\n${genDefaultAs} /*#__PURE__*/Object.assign(${
+        `\n${genDefaultAs} /*@__PURE__*/Object.assign(${
           defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`,
@@ -1007,19 +1090,28 @@ export function compileScript(
     )
   }
 
+  const content = ctx.s.toString()
+  let map =
+    options.sourceMap !== false
+      ? (ctx.s.generateMap({
+          source: filename,
+          hires: true,
+          includeContent: true,
+        }) as unknown as RawSourceMap)
+      : undefined
+  // merge source maps of the script setup and template in inline mode
+  if (templateMap && map) {
+    const offset = content.indexOf(returned)
+    const templateLineOffset =
+      content.slice(0, offset).split(/\r?\n/).length - 1
+    map = mergeSourceMaps(map, templateMap, templateLineOffset)
+  }
   return {
     ...scriptSetup,
     bindings: ctx.bindingMetadata,
     imports: ctx.userImports,
-    content: ctx.s.toString(),
-    map:
-      options.sourceMap !== false
-        ? (ctx.s.generateMap({
-            source: filename,
-            hires: true,
-            includeContent: true,
-          }) as unknown as RawSourceMap)
-        : undefined,
+    content,
+    map,
     scriptAst: scriptAst?.body,
     scriptSetupAst: scriptSetupAst?.body,
     deps: ctx.deps ? [...ctx.deps] : undefined,
@@ -1040,6 +1132,7 @@ function walkDeclaration(
   bindings: Record<string, BindingTypes>,
   userImportAliases: Record<string, string>,
   hoistStatic: boolean,
+  isPropsDestructureEnabled = false,
 ): boolean {
   let isAllLiteral = false
 
@@ -1054,13 +1147,16 @@ function walkDeclaration(
     // export const foo = ...
     for (const { id, init: _init } of node.declarations) {
       const init = _init && unwrapTSNode(_init)
-      const isDefineCall = !!(
+      const isConstMacroCall =
         isConst &&
         isCallOf(
           init,
-          c => c === DEFINE_PROPS || c === DEFINE_EMITS || c === WITH_DEFAULTS,
+          c =>
+            c === DEFINE_PROPS ||
+            c === DEFINE_EMITS ||
+            c === WITH_DEFAULTS ||
+            c === DEFINE_SLOTS,
         )
-      )
       if (id.type === 'Identifier') {
         let bindingType
         const userReactiveBinding = userImportAliases['reactive']
@@ -1077,7 +1173,7 @@ function walkDeclaration(
         } else if (
           // if a declaration is a const literal, we can mark it so that
           // the generated render fn code doesn't need to unref() it
-          isDefineCall ||
+          isConstMacroCall ||
           (isConst && canNeverBeRef(init!, userReactiveBinding))
         ) {
           bindingType = isCallOf(init, DEFINE_PROPS)
@@ -1093,6 +1189,7 @@ function walkDeclaration(
                 m === userImportAliases['shallowRef'] ||
                 m === userImportAliases['customRef'] ||
                 m === userImportAliases['toRef'] ||
+                m === userImportAliases['useTemplateRef'] ||
                 m === DEFINE_MODEL,
             )
           ) {
@@ -1105,13 +1202,13 @@ function walkDeclaration(
         }
         registerBinding(bindings, id, bindingType)
       } else {
-        if (isCallOf(init, DEFINE_PROPS)) {
+        if (isCallOf(init, DEFINE_PROPS) && isPropsDestructureEnabled) {
           continue
         }
         if (id.type === 'ObjectPattern') {
-          walkObjectPattern(id, bindings, isConst, isDefineCall)
+          walkObjectPattern(id, bindings, isConst, isConstMacroCall)
         } else if (id.type === 'ArrayPattern') {
-          walkArrayPattern(id, bindings, isConst, isDefineCall)
+          walkArrayPattern(id, bindings, isConst, isConstMacroCall)
         }
       }
     }
@@ -1271,4 +1368,43 @@ function isStaticNode(node: Node): boolean {
       return true
   }
   return false
+}
+
+export function mergeSourceMaps(
+  scriptMap: RawSourceMap,
+  templateMap: RawSourceMap,
+  templateLineOffset: number,
+): RawSourceMap {
+  const generator = new SourceMapGenerator()
+  const addMapping = (map: RawSourceMap, lineOffset = 0) => {
+    const consumer = new SourceMapConsumer(map)
+    ;(consumer as any).sources.forEach((sourceFile: string) => {
+      ;(generator as any)._sources.add(sourceFile)
+      const sourceContent = consumer.sourceContentFor(sourceFile)
+      if (sourceContent != null) {
+        generator.setSourceContent(sourceFile, sourceContent)
+      }
+    })
+    consumer.eachMapping(m => {
+      if (m.originalLine == null) return
+      generator.addMapping({
+        generated: {
+          line: m.generatedLine + lineOffset,
+          column: m.generatedColumn,
+        },
+        original: {
+          line: m.originalLine,
+          column: m.originalColumn!,
+        },
+        source: m.source,
+        name: m.name,
+      })
+    })
+  }
+
+  addMapping(scriptMap)
+  addMapping(templateMap, templateLineOffset)
+  ;(generator as any)._sourceRoot = scriptMap.sourceRoot
+  ;(generator as any)._file = scriptMap.file
+  return (generator as any).toJSON()
 }

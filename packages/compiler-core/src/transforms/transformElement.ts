@@ -23,7 +23,6 @@ import {
   createVNodeCall,
 } from '../ast'
 import {
-  PatchFlagNames,
   PatchFlags,
   camelize,
   capitalize,
@@ -57,7 +56,7 @@ import {
   toValidAssetId,
 } from '../utils'
 import { buildSlots } from './vSlot'
-import { getConstantType } from './hoistStatic'
+import { getConstantType } from './cacheStatic'
 import { BindingTypes } from '../options'
 import {
   CompilerDeprecationTypes,
@@ -101,8 +100,7 @@ export const transformElement: NodeTransform = (node, context) => {
 
     let vnodeProps: VNodeCall['props']
     let vnodeChildren: VNodeCall['children']
-    let vnodePatchFlag: VNodeCall['patchFlag']
-    let patchFlag: number = 0
+    let patchFlag: VNodeCall['patchFlag'] | 0 = 0
     let vnodeDynamicProps: VNodeCall['dynamicProps']
     let dynamicPropNames: string[] | undefined
     let vnodeDirectives: VNodeCall['directives']
@@ -117,7 +115,7 @@ export const transformElement: NodeTransform = (node, context) => {
         // updates inside get proper isSVG flag at runtime. (#639, #643)
         // This is technically web-specific, but splitting the logic out of core
         // leads to too much unnecessary complexity.
-        (tag === 'svg' || tag === 'foreignObject'))
+        (tag === 'svg' || tag === 'foreignObject' || tag === 'math'))
 
     // props
     if (props.length > 0) {
@@ -206,27 +204,8 @@ export const transformElement: NodeTransform = (node, context) => {
     }
 
     // patchFlag & dynamicPropNames
-    if (patchFlag !== 0) {
-      if (__DEV__) {
-        if (patchFlag < 0) {
-          // special flags (negative and mutually exclusive)
-          vnodePatchFlag =
-            patchFlag + ` /* ${PatchFlagNames[patchFlag as PatchFlags]} */`
-        } else {
-          // bitwise flags
-          const flagNames = Object.keys(PatchFlagNames)
-            .map(Number)
-            .filter(n => n > 0 && patchFlag & n)
-            .map(n => PatchFlagNames[n as PatchFlags])
-            .join(`, `)
-          vnodePatchFlag = patchFlag + ` /* ${flagNames} */`
-        }
-      } else {
-        vnodePatchFlag = String(patchFlag)
-      }
-      if (dynamicPropNames && dynamicPropNames.length) {
-        vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)
-      }
+    if (dynamicPropNames && dynamicPropNames.length) {
+      vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)
     }
 
     node.codegenNode = createVNodeCall(
@@ -234,7 +213,7 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeTag,
       vnodeProps,
       vnodeChildren,
-      vnodePatchFlag,
+      patchFlag === 0 ? undefined : patchFlag,
       vnodeDynamicProps,
       vnodeDirectives,
       !!shouldUseBlock,
@@ -249,7 +228,7 @@ export function resolveComponentType(
   node: ComponentNode,
   context: TransformContext,
   ssr = false,
-) {
+): string | symbol | CallExpression {
   let { tag } = node
 
   // 1. dynamic component
@@ -271,7 +250,7 @@ export function resolveComponentType(
         exp = isProp.exp
         if (!exp) {
           // #10469 handle :is shorthand
-          exp = createSimpleExpression(`is`, false, isProp.loc)
+          exp = createSimpleExpression(`is`, false, isProp.arg!.loc)
           if (!__BROWSER__) {
             exp = isProp.exp = processExpression(exp, context)
           }
@@ -395,7 +374,7 @@ export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
 export function buildProps(
   node: ElementNode,
   context: TransformContext,
-  props: ElementNode['props'] = node.props,
+  props: ElementNode['props'] | undefined = node.props,
   isComponent: boolean,
   isDynamicComponent: boolean,
   ssr = false,
@@ -615,11 +594,9 @@ export function buildProps(
         hasDynamicKeys = true
         if (exp) {
           if (isVBind) {
-            // #10696 in case a v-bind object contains ref
-            pushRefVForMarker()
-            // have to merge early for compat build check
-            pushMergeArg()
             if (__COMPAT__) {
+              // have to merge early for compat build check
+              pushMergeArg()
               // 2.x v-bind object order compat
               if (__DEV__) {
                 const hasOverridableKeys = mergeArgs.some(arg => {
@@ -662,6 +639,9 @@ export function buildProps(
               }
             }
 
+            // #10696 in case a v-bind object contains ref
+            pushRefVForMarker()
+            pushMergeArg()
             mergeArgs.push(exp)
           } else {
             // v-on="obj" -> toHandlers(obj)
@@ -686,7 +666,7 @@ export function buildProps(
       }
 
       // force hydration for v-bind with .prop modifier
-      if (isVBind && modifiers.includes('prop')) {
+      if (isVBind && modifiers.some(mod => mod.content === 'prop')) {
         patchFlag |= PatchFlags.NEED_HYDRATION
       }
 

@@ -13,5 +13,5 @@ export const computed: typeof _computed = (
       ;(c as unknown as ComputedRefImpl<any>)._warnRecursive = true
     }
   }
-  return c
+  return c as any
 }

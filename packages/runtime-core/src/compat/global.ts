@@ -102,11 +102,11 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
   /**
    * @deprecated Vue 3 no longer needs set() for adding new properties.
    */
-  set(target: any, key: string | number | symbol, value: any): void
+  set(target: any, key: PropertyKey, value: any): void
   /**
    * @deprecated Vue 3 no longer needs delete() for property deletions.
    */
-  delete(target: any, key: string | number | symbol): void
+  delete(target: any, key: PropertyKey): void
   /**
    * @deprecated use `reactive` instead.
    */
@@ -333,7 +333,7 @@ export function installAppCompatProperties(
   app: App,
   context: AppContext,
   render: RootRenderFunction<any>,
-) {
+): void {
   installFilterMethod(app, context)
   installLegacyOptionMergeStrats(app.config)
 
@@ -536,7 +536,7 @@ function installCompatMount(
         if (__DEV__) {
           for (let i = 0; i < container.attributes.length; i++) {
             const attr = container.attributes[i]
-            if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+            if (attr.name !== 'v-cloak' && /^(?:v-|:|@)/.test(attr.name)) {
               warnDeprecation(DeprecationTypes.GLOBAL_MOUNT_CONTAINER, null)
               break
             }
@@ -548,7 +548,7 @@ function installCompatMount(
       }
 
       // clear content before mounting
-      container.innerHTML = ''
+      container.textContent = ''
 
       // TODO hydration
       render(vnode, container, namespace)
@@ -622,11 +622,9 @@ function defineReactive(obj: any, key: string, val: any) {
   if (isObject(val) && !isReactive(val) && !patched.has(val)) {
     const reactiveVal = reactive(val)
     if (isArray(val)) {
-      methodsToPatch.forEach(m => {
-        // @ts-expect-error
+      methodsToPatch.forEach((m: any) => {
         val[m] = (...args: any[]) => {
-          // @ts-expect-error
-          Array.prototype[m].call(reactiveVal, ...args)
+          Array.prototype[m].apply(reactiveVal, args)
         }
       })
     } else {
