@@ -57,7 +57,10 @@ const VaporTransitionGroupImpl = defineVaporComponent({
     moveClass: String,
   }),
 
-  setup(props: TransitionGroupProps, { slots }) {
+  setup(props: TransitionGroupProps, { slots, expose }) {
+    // @ts-expect-error
+    expose()
+
     // Register transition hooks on first use
     ensureTransitionHooksRegistered()
 

@@ -88,7 +88,10 @@ const decorate = (t: typeof VaporTransition) => {
 }
 
 export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
-  /*@__PURE__*/ decorate((props, { slots }) => {
+  /*@__PURE__*/ decorate((props, { slots, expose }) => {
+    // @ts-expect-error
+    expose()
+
     // Register transition hooks on first use
     ensureTransitionHooksRegistered()
 
