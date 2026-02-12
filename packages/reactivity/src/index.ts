@@ -36,6 +36,7 @@ export {
   type Raw,
   type DeepReadonly,
   type ShallowReactive,
+  type IsShallowReactive,
   type UnwrapNestedRefs,
   type Reactive,
   type ReactiveMarker,
