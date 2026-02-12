@@ -1,7 +1,6 @@
 import {
   EMPTY_ARR,
   NO,
-  YES,
   camelize,
   hasOwn,
   isArray,
@@ -98,9 +97,12 @@ export function getPropsProxyHandlers(
       : NO
   ) as (key: string | symbol) => key is string
   const isAttr = propsOptions
-    ? (key: string) =>
-        key !== '$' && !isProp(key) && !isEmitListener(emitsOptions, key)
-    : YES
+    ? (key: string | symbol) =>
+        isString(key) &&
+        key !== '$' &&
+        !isProp(key) &&
+        !isEmitListener(emitsOptions, key)
+    : (key: string | symbol) => isString(key)
 
   const getProp = (instance: VaporComponentInstance, key: string | symbol) => {
     // this enables direct watching of props and prevents `Invalid watch source` DEV warnings.
@@ -200,13 +202,13 @@ export function getPropsProxyHandlers(
     })
   }
 
-  const getAttr = (target: RawProps, key: string) => {
-    if (!isProp(key) && !isEmitListener(emitsOptions, key)) {
+  const getAttr = (target: RawProps, key: string | symbol) => {
+    if (isString(key) && !isProp(key) && !isEmitListener(emitsOptions, key)) {
       return getAttrFromRawProps(target, key)
     }
   }
 
-  const hasAttr = (target: RawProps, key: string) => {
+  const hasAttr = (target: RawProps, key: string | symbol) => {
     if (isAttr(key)) {
       return hasAttrFromRawProps(target, key)
     } else {
@@ -215,15 +217,15 @@ export function getPropsProxyHandlers(
   }
 
   const getOnceAttr = withOnceCache((instance, key) =>
-    getAttr(instance.rawProps, key as string),
+    getAttr(instance.rawProps, key),
   )
   const attrsHandlers = {
-    get: (target, key: string) =>
+    get: (target, key: string | symbol) =>
       once ? getOnceAttr(target, key) : getAttr(target.rawProps, key),
-    has: (target, key: string) => hasAttr(target.rawProps, key),
+    has: (target, key: string | symbol) => hasAttr(target.rawProps, key),
     ownKeys: target => getKeysFromRawProps(target.rawProps).filter(isAttr),
-    getOwnPropertyDescriptor(target, key: string) {
-      if (hasAttr(target.rawProps, key)) {
+    getOwnPropertyDescriptor(target, key: string | symbol) {
+      if (isString(key) && hasAttr(target.rawProps, key)) {
         return {
           configurable: true,
           enumerable: true,
