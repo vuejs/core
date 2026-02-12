@@ -278,6 +278,58 @@ describe('SFC <script setup> helpers', () => {
       expect(leakedToUserMicrotask).toBe(false)
     })
 
+    test('should not leak sibling instance in concurrent restores', async () => {
+      let resolveOne: () => void
+      let resolveTwo: () => void
+      let done!: () => void
+      let pending = 2
+      const ready = new Promise<void>(r => {
+        done = r
+      })
+      const seenUid: Record<'one' | 'two', number | null> = {
+        one: null,
+        two: null,
+      }
+
+      const makeComp = (name: 'one' | 'two', wait: Promise<void>) =>
+        defineComponent({
+          async setup() {
+            let __temp: any, __restore: any
+            ;[__temp, __restore] = withAsyncContext(() => wait)
+            __temp = await __temp
+            __restore()
+
+            Promise.resolve().then(() => {
+              seenUid[name] = getCurrentInstance()?.uid ?? null
+              if (--pending === 0) done()
+            })
+
+            return () => ''
+          },
+        })
+
+      const oneReady = new Promise<void>(r => {
+        resolveOne = r
+      })
+      const twoReady = new Promise<void>(r => {
+        resolveTwo = r
+      })
+      const CompOne = makeComp('one', oneReady)
+      const CompTwo = makeComp('two', twoReady)
+
+      const root = nodeOps.createElement('div')
+      render(
+        h(() => h(Suspense, () => h('div', [h(CompOne), h(CompTwo)]))),
+        root,
+      )
+
+      resolveOne!()
+      resolveTwo!()
+      await ready
+      expect(seenUid.one).toBeNull()
+      expect(seenUid.two).toBeNull()
+    })
+
     test('error handling', async () => {
       const spy = vi.fn()
 

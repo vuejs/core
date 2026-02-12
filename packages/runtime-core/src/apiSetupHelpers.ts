@@ -514,21 +514,31 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   }
   let awaitable = getAwaitable()
   unsetCurrentInstance()
+
+  // Never restore a captured "prev" instance here: in concurrent async setup
+  // continuations it may belong to a sibling component and cause leaks.
+  // We only need to balance ctx.scope.on() from setCurrentInstance(ctx),
+  // then clear global currentInstance for user microtasks.
+  const cleanup = () => {
+    if (getCurrentInstance() !== ctx) ctx.scope.off()
+    unsetCurrentInstance()
+  }
+
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
-      const reset = setCurrentInstance(ctx)
+      setCurrentInstance(ctx)
       // Defer cleanup so the async function's catch continuation
       // still runs with the restored instance.
-      Promise.resolve().then(() => Promise.resolve().then(reset))
+      Promise.resolve().then(() => Promise.resolve().then(cleanup))
       throw e
     })
   }
   return [
     awaitable,
     () => {
-      const reset = setCurrentInstance(ctx)
+      setCurrentInstance(ctx)
       // Keep instance for the current continuation, then cleanup.
-      Promise.resolve().then(reset)
+      Promise.resolve().then(cleanup)
     },
   ]
 }
