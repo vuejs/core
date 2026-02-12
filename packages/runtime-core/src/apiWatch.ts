@@ -8,9 +8,17 @@ import {
   type WatchHandle,
   type WatchSource,
   WatcherEffect,
+  traverse,
 } from '@vue/reactivity'
 import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
-import { EMPTY_OBJ, NOOP, extend, isFunction, isString } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  NOOP,
+  extend,
+  isArray,
+  isFunction,
+  isString,
+} from '@vue/shared'
 import {
   type ComponentInternalInstance,
   type GenericComponentInstance,
@@ -21,6 +29,11 @@ import {
 import { callWithAsyncErrorHandling } from './errorHandling'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
+import {
+  DeprecationTypes,
+  checkCompatEnabled,
+  isCompatEnabled,
+} from './compat/compatConfig'
 import type { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from './helpers/useSsrContext'
 import type { ComponentPublicInstance } from './componentPublicInstance'
@@ -275,6 +288,22 @@ function doWatch(
   return stop
 }
 
+export function createCompatWatchGetter(
+  baseGetter: () => any,
+  instance: ComponentInternalInstance,
+) {
+  return (): any => {
+    const val = baseGetter()
+    if (
+      isArray(val) &&
+      checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
+    ) {
+      traverse(val, 1)
+    }
+    return val
+  }
+}
+
 // this.$watch
 export function instanceWatch(
   this: ComponentInternalInstance,
@@ -283,7 +312,7 @@ export function instanceWatch(
   options?: WatchOptions,
 ): WatchHandle {
   const publicThis = this.proxy
-  const getter = isString(source)
+  let getter = isString(source)
     ? source.includes('.')
       ? createPathGetter(publicThis!, source)
       : () => publicThis![source as keyof typeof publicThis]
@@ -295,6 +324,19 @@ export function instanceWatch(
     cb = value.handler as Function
     options = value
   }
+
+  if (
+    __COMPAT__ &&
+    isString(source) &&
+    isCompatEnabled(DeprecationTypes.WATCH_ARRAY, this)
+  ) {
+    const deep = options && options.deep
+    if (!deep) {
+      options = extend({ compatWatchArray: true }, options)
+      getter = createCompatWatchGetter(getter, this)
+    }
+  }
+
   const prev = setCurrentInstance(this)
   const res = doWatch(getter, cb.bind(publicThis), options)
   setCurrentInstance(...prev)
