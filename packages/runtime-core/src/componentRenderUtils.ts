@@ -15,7 +15,14 @@ import {
   normalizeVNode,
 } from './vnode'
 import { ErrorCodes, handleError } from './errorHandling'
-import { PatchFlags, ShapeFlags, isModelListener, isOn } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isModelListener,
+  isObject,
+  isOn,
+  looseEqual,
+} from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import type { NormalizedProps } from './componentProps'
@@ -190,7 +197,7 @@ export function renderComponentRoot(
             `Extraneous non-props attributes (` +
               `${extraAttrs.join(', ')}) ` +
               `were passed to component but could not be automatically inherited ` +
-              `because component renders fragment or text root nodes.`,
+              `because component renders fragment or text or teleport root nodes.`,
           )
         }
         if (eventAttrs.length) {
@@ -399,7 +406,7 @@ export function shouldUpdateComponent(
       for (let i = 0; i < dynamicProps.length; i++) {
         const key = dynamicProps[i]
         if (
-          nextProps![key] !== prevProps![key] &&
+          hasPropValueChanged(nextProps!, prevProps!, key) &&
           !isEmitListener(emits, key)
         ) {
           return true
@@ -441,13 +448,26 @@ function hasPropsChanged(
   for (let i = 0; i < nextKeys.length; i++) {
     const key = nextKeys[i]
     if (
-      nextProps[key] !== prevProps[key] &&
+      hasPropValueChanged(nextProps, prevProps, key) &&
       !isEmitListener(emitsOptions, key)
     ) {
       return true
     }
   }
   return false
+}
+
+function hasPropValueChanged(
+  nextProps: Data,
+  prevProps: Data,
+  key: string,
+): boolean {
+  const nextProp = nextProps[key]
+  const prevProp = prevProps[key]
+  if (key === 'style' && isObject(nextProp) && isObject(prevProp)) {
+    return !looseEqual(nextProp, prevProp)
+  }
+  return nextProp !== prevProp
 }
 
 export function updateHOCHostEl(

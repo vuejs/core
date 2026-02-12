@@ -418,6 +418,7 @@ export interface CacheExpression extends Node {
   index: number
   value: JSChildNode
   needPauseTracking: boolean
+  inVOnce: boolean
   needArraySpread: boolean
 }
 
@@ -481,7 +482,7 @@ export interface DirectiveArguments extends ArrayExpression {
 
 export interface DirectiveArgumentNode extends ArrayExpression {
   elements: // dir, exp, arg, modifiers
-  | [string]
+    | [string]
     | [string, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode, ObjectExpression]
@@ -491,7 +492,7 @@ export interface DirectiveArgumentNode extends ArrayExpression {
 export interface RenderSlotCall extends CallExpression {
   callee: typeof RENDER_SLOT
   arguments: // $slots, name, props, fallback
-  | [string, string | ExpressionNode]
+    | [string, string | ExpressionNode]
     | [string, string | ExpressionNode, PropsExpression]
     | [
         string,
@@ -774,12 +775,14 @@ export function createCacheExpression(
   index: number,
   value: JSChildNode,
   needPauseTracking: boolean = false,
+  inVOnce: boolean = false,
 ): CacheExpression {
   return {
     type: NodeTypes.JS_CACHE_EXPRESSION,
     index,
     value,
     needPauseTracking: needPauseTracking,
+    inVOnce,
     needArraySpread: false,
     loc: locStub,
   }

@@ -333,6 +333,30 @@ describe('component props', () => {
     })
   })
 
+  //#12011
+  test('replace camelize with hyphenate to handle props key', () => {
+    const Comp = {
+      props: {
+        hasB4BProp: { type: Boolean, required: true },
+      },
+      setup() {
+        return () => null
+      },
+    }
+    render(
+      h('div', {}, [
+        h(Comp, {
+          'has-b-4-b-prop': true,
+        }),
+        h(Comp, {
+          'has-b4-b-prop': true,
+        }),
+      ]),
+      nodeOps.createElement('div'),
+    )
+    expect(`Missing required prop: "hasB4BProp"`).not.toHaveBeenWarned()
+  })
+
   test('warn props mutation', () => {
     let instance: ComponentInternalInstance
     let setupProps: any

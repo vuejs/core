@@ -18,7 +18,7 @@ You are already familiar with your codebase, but we are not. It is extremely tim
 
 The problematic behavior may very well be caused by your code rather than by a bug in Vue.
 
-A minimal reproduction means it demonstrates the bug, and the bug only. It should only contain the bare minimum amount of code that can reliably cause the bug. Try your best to get rid of anything that aren't directly related to the problem.
+A minimal reproduction means it demonstrates the bug, and the bug only. It should only contain the bare minimum amount of code that can reliably cause the bug. Try your best to get rid of anything that isn't directly related to the problem.
 
 ### How to create a repro
 

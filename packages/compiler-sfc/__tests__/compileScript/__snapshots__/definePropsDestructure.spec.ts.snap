@@ -192,6 +192,51 @@ return () => {}
 }"
 `;
 
+exports[`sfc reactive props destructure > for-of loop variable shadowing 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Props {
+        msg: string;
+        input: string[];
+      }
+      
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    msg: { type: String, required: true },
+    input: { type: Array, required: true }
+  },
+  setup(__props: any) {
+
+      
+      for (const msg of __props.input) {
+        console.log('MESSAGE', msg);
+      }
+      console.log('NOT FAIL', { msg: __props.msg });
+      
+return () => {}
+}
+
+})"
+`;
+
+exports[`sfc reactive props destructure > handle function parameters with same name as destructured props 1`] = `
+"
+export default {
+  setup(__props) {
+
+    
+    function test(value) {
+      try {
+      } catch {
+      }
+    }
+    console.log(__props.value)
+    
+return () => {}
+}
+
+}"
+`;
+
 exports[`sfc reactive props destructure > multi-variable declaration 1`] = `
 "
 export default {
@@ -290,6 +335,28 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`sfc reactive props destructure > regular for loop variable shadowing 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    i: { type: Number, required: true },
+    len: { type: Number, required: true }
+  },
+  setup(__props: any) {
+
+      
+      for (let i = 0; i < __props.len; i++) {
+        console.log('INDEX', i);
+      }
+      console.log('AFTER', { i: __props.i });
+      
+return () => {}
+}
+
+})"
+`;
+
 exports[`sfc reactive props destructure > rest spread 1`] = `
 "import { createPropsRestProxy as _createPropsRestProxy } from 'vue'
 
@@ -319,4 +386,23 @@ return { rest }
 }
 
 }"
+`;
+
+exports[`sfc reactive props destructure > with TSInstantiationExpression 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type Foo = <T extends string | number>(data: T) => void
+      
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    value: { type: Function }
+  },
+  setup(__props: any) {
+
+      
+      const foo = __props.value<123>
+      
+return () => {}
+}
+
+})"
 `;

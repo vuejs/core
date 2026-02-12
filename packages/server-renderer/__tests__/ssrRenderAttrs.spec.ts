@@ -154,7 +154,7 @@ describe('ssr: renderClass', () => {
       ssrRenderAttrs({
         className: ['foo', 'bar'],
       }),
-    ).toBe(` class="foo,bar"`)
+    ).toBe(` class="foo bar"`)
   })
 })
 
@@ -202,5 +202,20 @@ describe('ssr: renderStyle', () => {
         color: `"><script`,
       }),
     ).toBe(`color:&quot;&gt;&lt;script;`)
+  })
+
+  test('useCssVars handling', () => {
+    expect(
+      ssrRenderStyle({
+        fontSize: null,
+        ':--v1': undefined,
+        ':--v2': null,
+        ':--v3': '',
+        ':--v4': '  ',
+        ':--v5': 'foo',
+        ':--v6': 0,
+        '--foo': 1,
+      }),
+    ).toBe(`--v1:initial;--v2:initial;--v3: ;--v4:  ;--v5:foo;--v6:0;--foo:1;`)
   })
 })

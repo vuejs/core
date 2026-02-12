@@ -45,6 +45,12 @@ type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
   Modifiers
 >
 
+function castValue(value: string, trim?: boolean, number?: boolean | null) {
+  if (trim) value = value.trim()
+  if (number) value = looseToNumber(value)
+  return value
+}
+
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
@@ -57,18 +63,11 @@ export const vModelText: ModelDirective<
       number || (vnode.props && vnode.props.type === 'number')
     addEventListener(el, lazy ? 'change' : 'input', e => {
       if ((e.target as any).composing) return
-      let domValue: string | number = el.value
-      if (trim) {
-        domValue = domValue.trim()
-      }
-      if (castToNumber) {
-        domValue = looseToNumber(domValue)
-      }
-      el[assignKey](domValue)
+      el[assignKey](castValue(el.value, trim, castToNumber))
     })
-    if (trim) {
+    if (trim || castToNumber) {
       addEventListener(el, 'change', () => {
-        el.value = el.value.trim()
+        el.value = castValue(el.value, trim, castToNumber)
       })
     }
     if (!lazy) {
@@ -160,7 +159,7 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
 
 function setChecked(
   el: HTMLInputElement,
-  { value }: DirectiveBinding,
+  { value, oldValue }: DirectiveBinding,
   vnode: VNode,
 ) {
   // store the v-model value on the element so it can be accessed by the
@@ -173,6 +172,7 @@ function setChecked(
   } else if (isSet(value)) {
     checked = value.has(vnode.props!.value)
   } else {
+    if (value === oldValue) return
     checked = looseEqual(value, getCheckboxValue(el, true))
   }
 

@@ -93,6 +93,12 @@ export class Dep {
    */
   sc: number = 0
 
+  /**
+   * @internal
+   */
+  readonly __v_skip = true
+  // TODO isolatedDeclarations ReactiveFlags.SKIP
+
   constructor(public computed?: ComputedRefImpl | undefined) {
     if (__DEV__) {
       this.subsHead = undefined
@@ -340,7 +346,7 @@ export function trigger(
       })
     } else {
       // schedule runs for SET | ADD | DELETE
-      if (key !== void 0) {
+      if (key !== void 0 || depsMap.has(void 0)) {
         run(depsMap.get(key))
       }
 
