@@ -50,6 +50,7 @@ import {
 } from '../runtimeHelpers'
 import {
   findProp,
+  isCommentOrWhitespace,
   isCoreComponent,
   isStaticArgOf,
   isStaticExp,
@@ -154,11 +155,14 @@ export const transformElement: NodeTransform = (node, context) => {
         shouldUseBlock = true
         // 2. Force keep-alive to always be updated, since it uses raw children.
         patchFlag |= PatchFlags.DYNAMIC_SLOTS
-        if (__DEV__ && node.children.length > 1) {
+        // filter out potential comment nodes
+        const children = node.children.filter(c => !isCommentOrWhitespace(c))
+        // warn if <KeepAlive> has multiple children
+        if (__DEV__ && children.length > 1) {
           context.onError(
             createCompilerError(ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN, {
-              start: node.children[0].loc.start,
-              end: node.children[node.children.length - 1].loc.end,
+              start: children[0].loc.start,
+              end: children[children.length - 1].loc.end,
               source: '',
             }),
           )

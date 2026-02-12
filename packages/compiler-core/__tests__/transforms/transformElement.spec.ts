@@ -1381,4 +1381,78 @@ describe('compiler: element transform', () => {
       ],
     })
   })
+
+  describe('<KeepAlive> multiple children', () => {
+    function checkWarning(
+      template: string,
+      shouldWarn: boolean,
+      message = '<KeepAlive> expects exactly one child component.',
+    ) {
+      const spy = vi.fn()
+
+      parseWithBind(template.trim(), {
+        onError: err => {
+          spy(err.message)
+        },
+      })
+
+      if (shouldWarn) expect(spy).toHaveBeenCalledWith(message)
+      else expect(spy).not.toHaveBeenCalled()
+    }
+
+    test('does not warn if has one child', () => {
+      checkWarning(
+        `<KeepAlive>
+           <component :is="activeComponent"/>
+         </KeepAlive>`,
+        false,
+      )
+    })
+
+    test('does not warn if has one component child and multiple comment children', () => {
+      checkWarning(
+        `<KeepAlive>
+            <!-- this should be ignored -->
+            <component :is="activeComponent"/>
+            <!-- this should be ignored -->
+         </KeepAlive>`,
+        false,
+      )
+    })
+
+    test('warn if has multiple children', () => {
+      checkWarning(
+        `<KeepAlive>
+          <component :is="activeComponent"/>
+          <component :is="activeComponent2"/>
+         </KeepAlive>`,
+        true,
+      )
+    })
+
+    test('warn if has multiple component child and multiple comment children', () => {
+      checkWarning(
+        `<KeepAlive>
+          <!-- this should be ignored -->
+           <component :is="activeComponent"/>
+           <component :is="activeComponent2"/>
+          <!-- this should be ignored -->
+         </KeepAlive>`,
+        true,
+      )
+    })
+
+    test('should ignore comments', () => {
+      expect(
+        baseCompile(
+          `<KeepAlive>
+          <!--this should be ignored -->
+          <component :is="activeComponent"/>
+          <!--this should be ignored -->
+          </KeepAlive>`,
+          { prefixIdentifiers: true },
+        ).code,
+      ).toMatchSnapshot()
+    })
+  })
 })
