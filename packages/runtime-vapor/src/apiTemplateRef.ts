@@ -26,6 +26,7 @@ import {
   remove,
 } from '@vue/shared'
 import { DynamicFragment, isFragment } from './fragment'
+import { isTeleportFragment } from './components/Teleport'
 
 export type NodeRef =
   | string
@@ -210,6 +211,8 @@ export function setRef(
 const getRefValue = (el: RefEl) => {
   if (isVaporComponent(el)) {
     return getExposed(el) || el
+  } else if (isTeleportFragment(el)) {
+    return EMPTY_OBJ
   } else if (el instanceof DynamicFragment) {
     return getRefValue(el.nodes as RefEl)
   }
