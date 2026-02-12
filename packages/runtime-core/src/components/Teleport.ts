@@ -164,7 +164,7 @@ export const TeleportImpl = {
         }
       }
 
-      if (disabled) {
+      if (disabled || !target) {
         mount(container, mainAnchor)
         updateCssVars(n2, true)
       }
