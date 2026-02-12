@@ -1,3 +1,28 @@
+# [3.6.0-beta.6](https://github.com/vuejs/core/compare/v3.6.0-beta.5...v3.6.0-beta.6) (2026-02-12)
+
+
+### Bug Fixes
+
+* **compiler-vapor:** always keyed if fragment when the branch can change ([9f7d73d](https://github.com/vuejs/core/commit/9f7d73d701faa0a0f9c46479ffdd93995cf71653))
+* **compiler-vapor:** handle invalid table nesting with dynamic child ([#14394](https://github.com/vuejs/core/issues/14394)) ([cd00cb8](https://github.com/vuejs/core/commit/cd00cb814561c8ba7f124eeea932752dcfdf9120)), closes [#14392](https://github.com/vuejs/core/issues/14392)
+* **compiler-vapor:** keep literal interpolation in component slot templates ([#14405](https://github.com/vuejs/core/issues/14405)) ([c18e1e2](https://github.com/vuejs/core/commit/c18e1e2b0be6f06209f8487ca6f0d271deb06e2e))
+* **compiler-vapor:** properly handling of class and style bindings on SVG ([#14383](https://github.com/vuejs/core/issues/14383)) ([3019448](https://github.com/vuejs/core/commit/301944831babdc1eff121319e5f49c3c39fb3b85)), closes [#14382](https://github.com/vuejs/core/issues/14382)
+* **runtime-vapor:** guard attrs proxy traps for symbol keys ([#14447](https://github.com/vuejs/core/issues/14447)) ([1219d7d](https://github.com/vuejs/core/commit/1219d7d0d6691a2d4eed20434ffa355211915290))
+* **runtime-vapor:** guard default slot for createPlainElement ([#14422](https://github.com/vuejs/core/issues/14422)) ([6a64941](https://github.com/vuejs/core/commit/6a6494190cb2117edcd4f35cf6edb6f9db5a7b11))
+* **runtime-vapor:** isolate slotProps per fragment in v-for slots ([#14406](https://github.com/vuejs/core/issues/14406)) ([9db9f1e](https://github.com/vuejs/core/commit/9db9f1e1740285b40d31438de463afc7bb17f3ea)), closes [#14397](https://github.com/vuejs/core/issues/14397)
+* **runtime-vapor:** stabilize KeepAlive cache keys with branch-scoped composite keys ([d207e9e](https://github.com/vuejs/core/commit/d207e9ee17ebd4f02dbc563c356194283cd116a3))
+* **runtime-vapor:** update setCurrentBranchKey to return previous key and handle context correctly ([c9e52bc](https://github.com/vuejs/core/commit/c9e52bc0cc89a3fe7316139c69e1d07d35ea0693))
+* **teleport:** ignore to prop changes while disabled ([#14438](https://github.com/vuejs/core/issues/14438)) ([102b32b](https://github.com/vuejs/core/commit/102b32b8fa457f4d9676db82bb6b2c53429e4125))
+* **teleport:** optimize props handling and prevent unnecessary updates ([#14440](https://github.com/vuejs/core/issues/14440)) ([90ea8ce](https://github.com/vuejs/core/commit/90ea8ce6634a7dfeac44438dc7de1eff3286e652)), closes [#14438](https://github.com/vuejs/core/issues/14438)
+* **templateRef:** don't update setup ref for useTemplateRef key ([#14444](https://github.com/vuejs/core/issues/14444)) ([ccd1ddf](https://github.com/vuejs/core/commit/ccd1ddf87d275c2cb057e5ee3e71e554206a34ba))
+* **templateRef:** avoid setting direct ref of useTemplateRef in dev ([#14442](https://github.com/vuejs/core/issues/14442)) ([78eb86c](https://github.com/vuejs/core/commit/78eb86ccd227c831d499c89754e2842549cf0158))
+
+### Features
+
+* **compiler-vapor:** add keyed block handling for dynamic keys ([862ab17](https://github.com/vuejs/core/commit/862ab176e3a64a78a98be96581924c051dd5abc3))
+
+
+
 # [3.6.0-beta.5](https://github.com/vuejs/core/compare/v3.6.0-beta.4...v3.6.0-beta.5) (2026-01-30)
 
 ### Bug Fixes

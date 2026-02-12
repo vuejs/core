@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-core",
-  "version": "3.6.0-beta.5",
+  "version": "3.6.0-beta.6",
   "description": "@vue/compiler-core",
   "main": "index.js",
   "module": "dist/compiler-core.esm-bundler.js",
