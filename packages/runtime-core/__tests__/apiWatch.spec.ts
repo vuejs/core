@@ -2061,4 +2061,71 @@ describe('api: watch', () => {
     createApp(App).mount(root)
     expect(onCleanup).toBeCalledTimes(0)
   })
+  it('watch: should trigger cleanup even if manually skipped in callback (current behavior)', async () => {
+    const state = ref({ id: 1 })
+    let cleanupCount = 0
+    let effectCount = 0
+
+    watch(
+      state,
+      (newVal, oldVal, onCleanup) => {
+        // Even if we skip the logic here, the scheduler has already fired the cleanup
+        if (JSON.stringify(newVal) === JSON.stringify(oldVal)) {
+          return
+        }
+
+        effectCount++
+        onCleanup(() => {
+          cleanupCount++
+        })
+      },
+      { deep: true },
+    )
+
+    state.value = { id: 2 }
+    await nextTick()
+    expect(effectCount).toBe(1)
+    expect(cleanupCount).toBe(0)
+
+    // Trigger with semantically identical value
+    state.value = { id: 2 }
+    await nextTick()
+
+    // Assert current behavior: cleanup fires even if we return early in the callback
+    expect(cleanupCount).toBe(1)
+    expect(effectCount).toBe(1)
+  })
+
+  it('watch: should respect custom equality check via "equals" option', async () => {
+    const state = ref({ id: 1 })
+    let cleanupCount = 0
+    let callbackCount = 0
+
+    watch(
+      state,
+      (newVal, oldVal, onCleanup) => {
+        callbackCount++
+        onCleanup(() => {
+          cleanupCount++
+        })
+      },
+      {
+        deep: true,
+        equals: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+      },
+    )
+
+    state.value = { id: 2 }
+    await nextTick()
+    expect(callbackCount).toBe(1)
+    expect(cleanupCount).toBe(0)
+
+    // Trigger with semantically identical value
+    state.value = { id: 2 }
+    await nextTick()
+
+    // With the fix, these should remain unchanged
+    expect(callbackCount).toBe(1)
+    expect(cleanupCount).toBe(0)
+  })
 })
