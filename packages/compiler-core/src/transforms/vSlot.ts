@@ -128,6 +128,7 @@ export function buildSlots(
   const { children, loc } = node
   const slotsProperties: Property[] = []
   const dynamicSlots: (ConditionalExpression | CallExpression)[] = []
+  const slotOrder: string[] = []
 
   // If the slot is inside a v-for or another v-slot, force it to be dynamic
   // since it likely uses a scope variable.
@@ -217,6 +218,7 @@ export function buildSlots(
     let vElse: DirectiveNode | undefined
     if ((vIf = findDir(slotElement, 'if'))) {
       hasDynamicSlots = true
+      if (staticSlotName) slotOrder.push(staticSlotName)
       dynamicSlots.push(
         createConditionalExpression(
           vIf.exp!,
@@ -238,6 +240,7 @@ export function buildSlots(
       }
       if (prev && isTemplateNode(prev) && findDir(prev, /^(?:else-)?if$/)) {
         __TEST__ && assert(dynamicSlots.length > 0)
+        if (staticSlotName) slotOrder.push(staticSlotName)
         // attach this slot to previous conditional
         let conditional = dynamicSlots[
           dynamicSlots.length - 1
@@ -305,6 +308,8 @@ export function buildSlots(
           hasNamedDefaultSlot = true
         }
       }
+
+      if (staticSlotName) slotOrder.push(staticSlotName)
       slotsProperties.push(createObjectProperty(slotName, slotFunction))
     }
   }
@@ -366,11 +371,26 @@ export function buildSlots(
     ),
     loc,
   ) as SlotsExpression
-  if (dynamicSlots.length) {
-    slots = createCallExpression(context.helper(CREATE_SLOTS), [
+
+  if (dynamicSlots.length > 0) {
+    const createSlotsArgs: CallExpression['arguments'] = [
       slots,
       createArrayExpression(dynamicSlots),
-    ]) as SlotsExpression
+    ]
+    // #14425
+    // Pass slot names to preserve the template ordering
+    if (slotsProperties.length > 0) {
+      createSlotsArgs.push(
+        createArrayExpression(
+          slotOrder.map(name => createSimpleExpression(name, true)),
+        ),
+      )
+    }
+
+    slots = createCallExpression(
+      context.helper(CREATE_SLOTS),
+      createSlotsArgs,
+    ) as SlotsExpression
   }
 
   return {
