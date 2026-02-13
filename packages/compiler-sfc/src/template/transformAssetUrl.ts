@@ -43,6 +43,11 @@ export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
     img: ['src'],
     image: ['xlink:href', 'href'],
     use: ['xlink:href', 'href'],
+    audio: ['src'],
+    object: ['data'],
+    embed: ['src'],
+    track: ['src'],
+    link: ['href'],
   },
 }
 
