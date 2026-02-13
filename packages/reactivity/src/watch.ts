@@ -42,7 +42,7 @@ export type WatchCallback<V = any, OV = any> = (
   value: V,
   oldValue: OV,
   onCleanup: OnCleanup,
-) => any
+) => void
 
 export type OnCleanup = (cleanupFn: () => void) => void
 
