@@ -100,6 +100,16 @@ describe('compiler sfc: transform asset url', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('with preserveLeadingTilde: true', () => {
+    const { code } = compileWithAssetUrls(
+      `<img src="~/app/bar.png"/>` + `<img src="~app/bar.png"/>`,
+      {
+        preserveLeadingTilde: true,
+      },
+    )
+    expect(code).toMatchSnapshot()
+  })
+
   // vitejs/vite#298
   test('should not transform hash fragments', () => {
     const { code } = compileWithAssetUrls(

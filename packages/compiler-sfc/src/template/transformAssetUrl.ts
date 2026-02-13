@@ -32,11 +32,18 @@ export interface AssetURLOptions {
    */
   includeAbsolute?: boolean
   tags?: AssetURLTagConfig
+  /**
+   * Whether to preserve the leading tilde (~) in asset URLs.
+   * Nuxt uses ~ as alias for the /app directory.
+   * see #13460
+   */
+  preserveLeadingTilde?: boolean
 }
 
 export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
   base: null,
   includeAbsolute: false,
+  preserveLeadingTilde: false,
   tags: {
     video: ['src', 'poster'],
     source: ['src'],
@@ -113,12 +120,12 @@ export const transformAssetUrl: NodeTransform = (
         return
       }
 
-      const url = parseUrl(attr.value.content)
+      const url = parseUrl(attr.value.content, options.preserveLeadingTilde)
       if (options.base && attr.value.content[0] === '.') {
         // explicit base - directly rewrite relative urls into absolute url
         // to avoid generating extra imports
         // Allow for full hostnames provided in options.base
-        const base = parseUrl(options.base)
+        const base = parseUrl(options.base, options.preserveLeadingTilde)
         const protocol = base.protocol || ''
         const host = base.host ? protocol + '//' + base.host : ''
         const basePath = base.path || '/'
