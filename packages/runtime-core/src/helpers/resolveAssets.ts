@@ -90,7 +90,16 @@ function resolveAsset(
         Component,
         false /* do not include inferred name to avoid breaking existing code */,
       )
+
+      // if has same name child component should not return self
+      const hasSameNameComponent = !!(
+        selfName &&
+        instance.components &&
+        instance.components[selfName]
+      )
+
       if (
+        !hasSameNameComponent &&
         selfName &&
         (selfName === name ||
           selfName === camelize(name) ||
