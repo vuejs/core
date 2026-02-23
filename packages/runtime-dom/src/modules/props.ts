@@ -56,18 +56,24 @@ export function patchDOMProp(
 
   let needRemove = false
   if (value === '' || value == null) {
-    const type = typeof el[key]
-    if (type === 'boolean') {
-      // e.g. <select multiple> compiles to { multiple: '' }
-      value = includeBooleanAttr(value)
-    } else if (value == null && type === 'string') {
-      // e.g. <div :id="null">
-      value = ''
-      needRemove = true
-    } else if (type === 'number') {
-      // e.g. <img :width="null">
-      value = 0
-      needRemove = true
+    if (tag.includes('-')) {
+      // so we avoid coercing the value based on the existing property type
+      // and preserve the value as-is
+      needRemove = value == null
+    } else {
+      const type = typeof el[key]
+      if (type === 'boolean') {
+        // e.g. <select multiple> compiles to { multiple: '' }
+        value = includeBooleanAttr(value)
+      } else if (value == null && type === 'string') {
+        // e.g. <div :id="null">
+        value = ''
+        needRemove = true
+      } else if (type === 'number') {
+        // e.g. <img :width="null">
+        value = 0
+        needRemove = true
+      }
     }
   } else {
     if (
