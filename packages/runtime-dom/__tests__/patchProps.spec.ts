@@ -65,7 +65,7 @@ describe('runtime-dom: props patching', () => {
     expect(el.value).toBe('foo')
     expect(el.setterCalled).toBe(1)
     patchProp(el, 'value', null, null)
-    expect(el.value).toBe('')
+    expect(el.value).toBe('null')
     expect(el.setterCalled).toBe(2)
     expect(el.getAttribute('value')).toBe(null)
     const obj = {}
@@ -74,6 +74,36 @@ describe('runtime-dom: props patching', () => {
     expect(el.setterCalled).toBe(3)
   })
 
+  // #14209
+  test('nullish value handling for custom element props', () => {
+    class TestElement extends HTMLElement {
+      myNumber = 1
+      myBool = true
+      myString = 'hello'
+    }
+    window.customElements.define('ce-nullish-test', TestElement)
+    const el = document.createElement('ce-nullish-test') as TestElement
+
+    // setting null on a number prop should preserve null, not coerce to 0
+    patchProp(el, '.myNumber', null, null)
+    expect(el.myNumber).toBe(null)
+    expect(el.getAttribute('myNumber')).toBe(null)
+
+    // setting null on a boolean prop should preserve null, not coerce to false
+    patchProp(el, '.myBool', null, null)
+    expect(el.myBool).toBe(null)
+
+    // setting null on a string prop should preserve null, not coerce to ''
+    patchProp(el, '.myString', null, null)
+    expect(el.myString).toBe(null)
+
+    // setting '' on a boolean prop should preserve '', not coerce to true
+    el.myBool = true
+    patchProp(el, '.myBool', null, '')
+    expect(el.myBool).toBe('')
+  })
+
+  
   // For <input type="text">, setting el.value won't create a `value` attribute
   // so we need to add tests for other elements
   test('value for non-text input', () => {
