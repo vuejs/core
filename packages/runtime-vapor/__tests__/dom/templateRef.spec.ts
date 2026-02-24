@@ -695,6 +695,48 @@ describe('api: template ref', () => {
     expect(html()).toBe('<div>changed</div><!--dynamic-component-->')
   })
 
+  test('components that change their dynamics', async () => {
+    const Child1 = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ setMsg: () => (msg.value = 'one') })
+        const n0 = template(`<div>1`)() as any
+        return n0
+      },
+    })
+    const Child2 = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ setMsg: () => (msg.value = 'two') })
+        const n0 = template(`<div>2`)() as any
+        return n0
+      },
+    })
+
+    const view = shallowRef(Child1)
+    const refKey = ref<any>(null)
+    const msg = ref('')
+
+    const { html } = define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        const n0 = createDynamicComponent(() => view.value) as any
+        setRef(n0, refKey)
+        return n0
+      },
+    }).render()
+
+    expect(refKey.value).toBeDefined()
+
+    expect(html()).toBe('<div>1</div><!--dynamic-component-->')
+    refKey.value.setMsg()
+    expect(msg.value).toBe('one')
+
+    view.value = Child2
+    await nextTick()
+    expect(html()).toBe('<div>2</div><!--dynamic-component-->')
+    refKey.value.setMsg()
+    expect(msg.value).toBe('two')
+  })
+
   test('should not attempt to set when variable name is same as key', () => {
     let tRef: ShallowRef
     const key = 'refKey'

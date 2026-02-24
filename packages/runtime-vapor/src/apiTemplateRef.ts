@@ -25,7 +25,7 @@ import {
   isString,
   remove,
 } from '@vue/shared'
-import { DynamicFragment, isFragment } from './fragment'
+import { DynamicFragment, isDynamicFragment, isFragment } from './fragment'
 
 export type NodeRef =
   | string
@@ -58,6 +58,11 @@ export function createTemplateRefSetter(): setRefFn {
   const instance = currentInstance as VaporComponentInstance
   const oldRefMap = new WeakMap<RefEl, NodeRef | undefined>()
   return (el, ref, refFor, refKey) => {
+    if (isDynamicFragment(el)) {
+      ;(el.onUpdated || (el.onUpdated = [])).push(() => {
+        setRef(instance, el, ref, oldRefMap.get(el), refFor, refKey)
+      })
+    }
     const oldRef = setRef(instance, el, ref, oldRefMap.get(el), refFor, refKey)
     oldRefMap.set(el, oldRef)
     return oldRef
@@ -116,7 +121,7 @@ export function setRef(
   }
 
   // dynamic ref changed. unset old ref
-  if (oldRef != null && oldRef !== ref) {
+  if ((oldRef != null && oldRef !== ref) || isDynamicFragment(el)) {
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (__DEV__ && canSetSetupRef(oldRef)) {
