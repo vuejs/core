@@ -121,7 +121,7 @@ export function setRef(
   }
 
   // dynamic ref changed. unset old ref
-  if ((oldRef != null && oldRef !== ref) || isDynamicFragment(el)) {
+  if (oldRef != null && (oldRef !== ref || isDynamicFragment(el))) {
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (__DEV__ && canSetSetupRef(oldRef)) {
