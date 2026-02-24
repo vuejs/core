@@ -127,7 +127,7 @@ import { isInteropEnabled } from './vdomInteropState'
 export { currentInstance } from '@vue/runtime-dom'
 
 export type VaporComponent =
-  | FunctionalVaporComponent
+  | FunctionalVaporComponent<any>
   | VaporComponentOptions
   | DefineVaporComponent
 
@@ -137,7 +137,7 @@ export type FunctionalVaporComponent<
   Slots extends StaticSlots = StaticSlots,
   Exposed extends Record<string, any> = Record<string, any>,
 > = ((
-  props: Readonly<Props & EmitsToProps<Emits>>,
+  props: Props & EmitsToProps<Emits>,
   ctx: {
     emit: EmitFn<Emits>
     slots: Slots
