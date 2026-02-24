@@ -49,7 +49,9 @@ export function ssrRenderAttrs(
     } else if (key === 'className') {
       // className should not go through ssrRenderClass which normalizes non-string
       // values into strings. it should coerce directly into strings
-      ret += ` class="${escapeHtml(String(value))}"`
+      if (value != null) {
+        ret += ` class="${escapeHtml(String(value))}"`
+      }
     } else {
       ret += ssrRenderDynamicAttr(key, value, tag)
     }
