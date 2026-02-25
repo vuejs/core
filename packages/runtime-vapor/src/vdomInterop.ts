@@ -91,7 +91,7 @@ import {
 } from './fragment'
 import type { NodeRef } from './apiTemplateRef'
 import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
-import { setInteropEnabled } from './vdominteropState'
+import { setInteropEnabled } from './vdomInteropState'
 import {
   type KeepAliveInstance,
   activate,

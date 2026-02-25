@@ -225,8 +225,5 @@ function createInnerComp(
     appContext,
   )
 
-  // set ref
-  frag && frag.setAsyncRef && frag.setAsyncRef(instance)
-
   return instance
 }

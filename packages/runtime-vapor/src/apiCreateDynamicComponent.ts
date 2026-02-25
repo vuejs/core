@@ -18,7 +18,7 @@ import {
 import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
 import type { KeepAliveInstance } from './components/KeepAlive'
-import { isInteropEnabled } from './vdominteropState'
+import { isInteropEnabled } from './vdomInteropState'
 
 export function createDynamicComponent(
   getter: () => any,

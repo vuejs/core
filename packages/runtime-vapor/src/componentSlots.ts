@@ -27,7 +27,7 @@ import {
 } from './fragment'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
-import { isInteropEnabled } from './vdominteropState'
+import { isInteropEnabled } from './vdomInteropState'
 
 /**
  * Flag to indicate if we are executing a once slot.

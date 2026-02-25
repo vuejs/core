@@ -39,7 +39,7 @@ import {
 import { createElement } from '../dom/node'
 import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
 import type { EffectScope } from '@vue/reactivity'
-import { isInteropEnabled } from '../vdominteropState'
+import { isInteropEnabled } from '../vdomInteropState'
 
 export interface VaporKeepAliveContext {
   processShapeFlag(block: Block): boolean

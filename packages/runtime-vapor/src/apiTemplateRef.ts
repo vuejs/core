@@ -25,14 +25,24 @@ import {
   isString,
   remove,
 } from '@vue/shared'
-import { DynamicFragment, isFragment } from './fragment'
 import { isTeleportFragment } from './components/Teleport'
+import {
+  type DynamicFragment,
+  type VaporFragment,
+  isDynamicFragment,
+  isFragment,
+} from './fragment'
+import { isInteropEnabled } from './vdomInteropState'
 
 export type NodeRef =
   | string
   | Ref
   | ((ref: Element | VaporComponentInstance, refs: Record<string, any>) => void)
-export type RefEl = Element | VaporComponentInstance
+export type RefEl =
+  | Element
+  | VaporComponentInstance
+  | DynamicFragment
+  | VaporFragment
 
 export type setRefFn = (
   el: RefEl,
@@ -58,7 +68,25 @@ function ensureCleanup(el: RefEl): { fn: () => void } {
 export function createTemplateRefSetter(): setRefFn {
   const instance = currentInstance as VaporComponentInstance
   const oldRefMap = new WeakMap<RefEl, NodeRef | undefined>()
+  const setRefMap = new WeakMap<DynamicFragment, () => void>()
+
   return (el, ref, refFor, refKey) => {
+    // Re-apply refs after DynamicFragment updates.
+    if (isDynamicFragment(el) || (isVaporComponent(el) && isAsyncWrapper(el))) {
+      const frag = isDynamicFragment(el)
+        ? (el as DynamicFragment)
+        : ((el as VaporComponentInstance).block as DynamicFragment)
+      const doSet = () =>
+        oldRefMap.set(
+          el,
+          setRef(instance, el, ref, oldRefMap.get(el), refFor, refKey),
+        )
+      const prevSet = setRefMap.get(frag)
+      if (prevSet && frag.onUpdated) remove(frag.onUpdated, prevSet)
+      ;(frag.onUpdated || (frag.onUpdated = [])).push(doSet)
+      setRefMap.set(frag, doSet)
+    }
+
     const oldRef = setRef(instance, el, ref, oldRefMap.get(el), refFor, refKey)
     oldRefMap.set(el, oldRef)
     return oldRef
@@ -68,7 +96,7 @@ export function createTemplateRefSetter(): setRefFn {
 /**
  * Function for handling a template ref
  */
-export function setRef(
+function setRef(
   instance: VaporComponentInstance,
   el: RefEl,
   ref: NodeRef,
@@ -79,22 +107,17 @@ export function setRef(
   if (!instance || instance.isUnmounted) return
 
   // vdom interop
-  if (isFragment(el) && el.setRef) {
+  if (isInteropEnabled && isFragment(el) && el.setRef) {
     el.setRef(instance, ref, refFor, refKey)
     return
   }
 
   if (isVaporComponent(el) && isAsyncWrapper(el)) {
-    const frag = el.block as DynamicFragment
-    // async component not resolved yet, register ref setter
-    // it will be called when the async component is resolved
-    if (!el.type.__asyncResolved) {
-      frag.setAsyncRef = i => setRef(instance, i, ref, oldRef, refFor)
-      return
-    }
+    // unresolved: handled in DynamicFragment's updated hook
+    if (!el.type.__asyncResolved) return
 
-    // set ref to the inner component instead
-    el = frag.nodes as VaporComponentInstance
+    // resolved: set ref to the inner component
+    el = (el.block as DynamicFragment).nodes as VaporComponentInstance
   }
 
   const setupState: any = __DEV__ ? instance.setupState || {} : null
@@ -125,12 +148,28 @@ export function setRef(
       }
     } else if (isRef(oldRef)) {
       if (canSetRef(oldRef)) oldRef.value = null
+    } else if (isFunction(oldRef) && isDynamicFragment(el)) {
+      callWithErrorHandling(oldRef, instance, ErrorCodes.FUNCTION_REF, [
+        null,
+        refs,
+      ])
+    }
+  } else if (oldRef != null && isDynamicFragment(el)) {
+    if (isFunction(oldRef)) {
+      callWithErrorHandling(oldRef, instance, ErrorCodes.FUNCTION_REF, [
+        null,
+        refs,
+      ])
+    } else if (refFor) {
+      // For dynamic ref-for branches, remove only this branch's previous value.
+      const cleanup = refCleanups.get(el)
+      if (cleanup) cleanup.fn()
     }
   }
 
   if (isFunction(ref)) {
     const invokeRefSetter = (value?: Element | Record<string, any> | null) => {
-      callWithErrorHandling(ref, currentInstance, ErrorCodes.FUNCTION_REF, [
+      callWithErrorHandling(ref, instance, ErrorCodes.FUNCTION_REF, [
         value,
         refs,
       ])
@@ -212,8 +251,9 @@ const getRefValue = (el: RefEl) => {
   if (isVaporComponent(el)) {
     return getExposed(el) || el
   } else if (isTeleportFragment(el)) {
-    return EMPTY_OBJ
-  } else if (el instanceof DynamicFragment) {
+    return null
+  } else if (isDynamicFragment(el)) {
+    if (isArray(el.nodes)) return null
     return getRefValue(el.nodes as RefEl)
   }
   return el
