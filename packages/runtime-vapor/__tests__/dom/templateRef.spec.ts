@@ -824,15 +824,15 @@ describe('api: template ref', () => {
       },
     }).render()
 
-    expect(frag.onUpdated?.length || 0).toBe(1)
+    expect(frag.onUpdated.length).toBe(1)
 
     useA.value = false
     await nextTick()
-    expect(frag.onUpdated?.length || 0).toBe(1)
+    expect(frag.onUpdated.length).toBe(1)
 
     view.value = 1
     await nextTick()
-    expect(frag.onUpdated?.length || 0).toBe(1)
+    expect(frag.onUpdated.length).toBe(1)
   })
 
   test('dynamic component function ref should cleanup old branch with null', async () => {

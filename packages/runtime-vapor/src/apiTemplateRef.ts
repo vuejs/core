@@ -250,6 +250,7 @@ const getRefValue = (el: RefEl) => {
   if (isVaporComponent(el)) {
     return getExposed(el) || el
   } else if (isDynamicFragment(el)) {
+    if (isArray(el.nodes)) return null
     return getRefValue(el.nodes as RefEl)
   }
   return el
