@@ -5,7 +5,6 @@ import {
   createAsyncComponentContext,
   currentInstance,
   handleError,
-  isAsyncWrapper,
   markAsyncBoundary,
   performAsyncHydrate,
   useAsyncComponentState,
@@ -16,7 +15,6 @@ import {
   type VaporComponent,
   type VaporComponentInstance,
   createComponent,
-  isVaporComponent,
 } from './component'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
@@ -228,10 +226,4 @@ function createInnerComp(
   )
 
   return instance
-}
-
-export const isUnresolvedAsyncWrapper = (
-  el: VaporComponentInstance,
-): boolean => {
-  return isVaporComponent(el) && isAsyncWrapper(el) && !el.type.__asyncResolved
 }

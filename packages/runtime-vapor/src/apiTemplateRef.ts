@@ -31,7 +31,6 @@ import {
   isDynamicFragment,
   isFragment,
 } from './fragment'
-import { isUnresolvedAsyncWrapper } from './apiDefineAsyncComponent'
 import { isInteropEnabled } from './vdomInteropState'
 
 export type NodeRef =
@@ -71,14 +70,11 @@ export function createTemplateRefSetter(): setRefFn {
   const setRefMap = new WeakMap<DynamicFragment, () => void>()
 
   return (el, ref, refFor, refKey) => {
-    const isUnresolvedComp = isUnresolvedAsyncWrapper(
-      el as VaporComponentInstance,
-    )
-    // Re-apply refs after DynamicFragment updates
-    if (isDynamicFragment(el) || isUnresolvedComp) {
-      const frag = isUnresolvedComp
-        ? ((el as VaporComponentInstance).block as DynamicFragment)
-        : (el as DynamicFragment)
+    // Re-apply refs after DynamicFragment updates.
+    if (isDynamicFragment(el) || (isVaporComponent(el) && isAsyncWrapper(el))) {
+      const frag = isDynamicFragment(el)
+        ? (el as DynamicFragment)
+        : ((el as VaporComponentInstance).block as DynamicFragment)
       const doSet = () =>
         oldRefMap.set(
           el,
@@ -143,7 +139,7 @@ function setRef(
   }
 
   // dynamic ref changed. unset old ref
-  if (oldRef != null && (oldRef !== ref || isDynamicFragment(el))) {
+  if (oldRef != null && oldRef !== ref) {
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (__DEV__ && canSetSetupRef(oldRef)) {
@@ -156,6 +152,17 @@ function setRef(
         null,
         refs,
       ])
+    }
+  } else if (oldRef != null && isDynamicFragment(el)) {
+    if (isFunction(oldRef)) {
+      callWithErrorHandling(oldRef, currentInstance, ErrorCodes.FUNCTION_REF, [
+        null,
+        refs,
+      ])
+    } else if (refFor) {
+      // For dynamic ref-for branches, remove only this branch's previous value.
+      const cleanup = refCleanups.get(el)
+      if (cleanup) cleanup.fn()
     }
   }
 

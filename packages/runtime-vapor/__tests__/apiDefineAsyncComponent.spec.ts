@@ -743,6 +743,67 @@ describe('api: defineAsyncComponent', () => {
     expect(refB.value).toBe(null)
   })
 
+  test('template ref forwarding should not keep stale ref callbacks after resolve', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const Foo = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const refA = ref<any>(null)
+    const refB = ref<any>(null)
+    const useA = ref(true)
+    const root = document.createElement('div')
+    let asyncWrapper: any
+
+    const { mount } = define({
+      setup() {
+        return { refA, refB, useA }
+      },
+      render() {
+        const setTemplateRef = createTemplateRefSetter()
+        const n0 = (asyncWrapper = createComponent(Foo, null, null, true))
+        renderEffect(() => {
+          setTemplateRef(n0, useA.value ? 'refA' : 'refB')
+        })
+        return n0
+      },
+    }).create()
+
+    mount(root)
+    expect(root.innerHTML).toBe('<!--async component-->')
+    expect(refA.value).toBe(null)
+    expect(refB.value).toBe(null)
+
+    resolve!({
+      setup: (props, { expose }) => {
+        expose({
+          id: 'foo',
+        })
+        return template('resolved')()
+      },
+    })
+    await timeout()
+
+    expect(root.innerHTML).toBe('resolved<!--async component-->')
+    expect(refA.value.id).toBe('foo')
+    expect(refB.value).toBe(null)
+
+    useA.value = false
+    await nextTick()
+    expect(refA.value).toBe(null)
+    expect(refB.value.id).toBe('foo')
+
+    const onUpdated = asyncWrapper.block.onUpdated
+    if (onUpdated) onUpdated.forEach((hook: any) => hook())
+    await nextTick()
+
+    expect(refA.value).toBe(null)
+    expect(refB.value.id).toBe('foo')
+  })
+
   test('the forwarded template ref should always exist when doing multi patching', async () => {
     let resolve: (comp: VaporComponent) => void
     const Foo = defineVaporAsyncComponent(

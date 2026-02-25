@@ -876,6 +876,91 @@ describe('api: template ref', () => {
     })
   })
 
+  test('dynamic component function ref should cleanup previous callback when ref changes', async () => {
+    const One = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'one' })
+        return template('<div>one</div>')()
+      },
+    })
+
+    const useA = ref(true)
+    const fnA = vi.fn()
+    const fnB = vi.fn()
+
+    define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        const n0 = createDynamicComponent(() => One) as any
+        renderEffect(() => {
+          setRef(n0, useA.value ? (fnA as any) : (fnB as any))
+        })
+        return n0
+      },
+    }).render()
+
+    expect(fnA.mock.calls[fnA.mock.calls.length - 1][0]).toMatchObject({
+      name: 'one',
+    })
+    expect(fnB).toHaveBeenCalledTimes(0)
+
+    useA.value = false
+    await nextTick()
+
+    const fnAArgs = fnA.mock.calls.map(args => args[0])
+    expect(fnAArgs).toContain(null)
+    expect(fnB.mock.calls[fnB.mock.calls.length - 1][0]).toMatchObject({
+      name: 'one',
+    })
+  })
+
+  test('dynamic component ref_for should keep sibling refs when one branch updates', async () => {
+    const One = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'one' })
+        return template('<div>one</div>')()
+      },
+    })
+
+    const Two = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'two' })
+        return template('<div>two</div>')()
+      },
+    })
+
+    const views: VaporComponent[] = [One, Two]
+    const view = ref(0)
+    const listRef = ref<any[]>([])
+
+    define({
+      setup() {
+        return { listRef }
+      },
+      render() {
+        const n0 = template('<div></div>')() as Element
+        const setRef = createTemplateRefSetter()
+        const n1 = createDynamicComponent(() => views[view.value]) as any
+        const n2 = createDynamicComponent(() => One) as any
+        setRef(n1, listRef as any, true)
+        setRef(n2, listRef as any, true)
+        insert(n1, n0 as ParentNode)
+        insert(n2, n0 as ParentNode)
+        return n0
+      },
+    }).render()
+
+    await nextTick()
+    expect(listRef.value).toHaveLength(2)
+    expect(listRef.value.filter(i => i?.name === 'one')).toHaveLength(2)
+
+    view.value = 1
+    await nextTick()
+    expect(listRef.value).toHaveLength(2)
+    expect(listRef.value.filter(i => i?.name === 'one')).toHaveLength(1)
+    expect(listRef.value.some(i => i?.name === 'two')).toBe(true)
+  })
+
   test('should not attempt to set when variable name is same as key', () => {
     let tRef: ShallowRef
     const key = 'refKey'
