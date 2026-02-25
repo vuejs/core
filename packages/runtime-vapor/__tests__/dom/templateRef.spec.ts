@@ -737,6 +737,145 @@ describe('api: template ref', () => {
     expect(msg.value).toBe('two')
   })
 
+  test('useTemplateRef should update when switching dynamic components', async () => {
+    const One = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'one' })
+        return template('<div>one</div>')()
+      },
+    })
+
+    const Two = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'two' })
+        return template('<div>two</div>')()
+      },
+    })
+
+    const views: VaporComponent[] = [One, Two]
+    const view = ref(0)
+    const refNames: string[] = []
+    let compRef: ShallowRef
+
+    const { html } = define({
+      setup() {
+        compRef = useTemplateRef('compRef')
+        watchEffect(() => {
+          const value = compRef.value as { name?: string } | null
+          if (value?.name) {
+            refNames.push(value.name)
+          }
+        })
+
+        const setRef = createTemplateRefSetter()
+        const n0 = createDynamicComponent(() => views[view.value]) as any
+        setRef(n0, compRef, false, 'compRef')
+        return n0
+      },
+    }).render()
+
+    await nextTick()
+    const one = compRef!.value
+    expect(one).toMatchObject({ name: 'one' })
+    expect(html()).toBe('<div>one</div><!--dynamic-component-->')
+
+    view.value = 1
+    await nextTick()
+    const two = compRef!.value
+    expect(two).toMatchObject({ name: 'two' })
+    expect(two).not.toBe(one)
+    expect(html()).toBe('<div>two</div><!--dynamic-component-->')
+
+    view.value = 0
+    await nextTick()
+    expect(compRef!.value).toMatchObject({ name: 'one' })
+    expect(compRef!.value).not.toBe(two)
+    expect(refNames).toContain('two')
+  })
+
+  test('dynamic component should not register duplicate onUpdated handlers for refs', async () => {
+    const One = defineVaporComponent({
+      setup() {
+        return template('<div>one</div>')()
+      },
+    })
+
+    const Two = defineVaporComponent({
+      setup() {
+        return template('<div>two</div>')()
+      },
+    })
+
+    const views: VaporComponent[] = [One, Two]
+    const view = ref(0)
+    const useA = ref(true)
+    const refA = ref<any>(null)
+    const refB = ref<any>(null)
+    let frag: any
+
+    define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        frag = createDynamicComponent(() => views[view.value]) as any
+        renderEffect(() => {
+          setRef(frag, useA.value ? refA : refB)
+        })
+        return frag
+      },
+    }).render()
+
+    expect(frag.onUpdated?.length || 0).toBe(1)
+
+    useA.value = false
+    await nextTick()
+    expect(frag.onUpdated?.length || 0).toBe(1)
+
+    view.value = 1
+    await nextTick()
+    expect(frag.onUpdated?.length || 0).toBe(1)
+  })
+
+  test('dynamic component function ref should cleanup old branch with null', async () => {
+    const One = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'one' })
+        return template('<div>one</div>')()
+      },
+    })
+
+    const Two = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'two' })
+        return template('<div>two</div>')()
+      },
+    })
+
+    const views: VaporComponent[] = [One, Two]
+    const view = ref(0)
+    const fnRef = vi.fn()
+
+    define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        const n0 = createDynamicComponent(() => views[view.value]) as any
+        setRef(n0, fnRef as any)
+        return n0
+      },
+    }).render()
+
+    expect(fnRef).toHaveBeenCalledTimes(1)
+    expect(fnRef.mock.calls[0][0]).toMatchObject({ name: 'one' })
+
+    view.value = 1
+    await nextTick()
+
+    const callArgs = fnRef.mock.calls.map(args => args[0])
+    expect(callArgs).toContain(null)
+    expect(fnRef.mock.calls[fnRef.mock.calls.length - 1][0]).toMatchObject({
+      name: 'two',
+    })
+  })
+
   test('should not attempt to set when variable name is same as key', () => {
     let tRef: ShallowRef
     const key = 'refKey'

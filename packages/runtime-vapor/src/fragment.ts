@@ -92,9 +92,6 @@ export class DynamicFragment extends VaporFragment {
   // fallthrough attrs
   attrs?: Record<string, any>
 
-  // set ref for async wrapper
-  setAsyncRef?: (instance: VaporComponentInstance) => void
-
   keepAliveCtx: VaporKeepAliveContext | null
 
   slotOwner: VaporComponentInstance | null
