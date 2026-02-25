@@ -148,14 +148,14 @@ function setRef(
     } else if (isRef(oldRef)) {
       if (canSetRef(oldRef)) oldRef.value = null
     } else if (isFunction(oldRef) && isDynamicFragment(el)) {
-      callWithErrorHandling(oldRef, currentInstance, ErrorCodes.FUNCTION_REF, [
+      callWithErrorHandling(oldRef, instance, ErrorCodes.FUNCTION_REF, [
         null,
         refs,
       ])
     }
   } else if (oldRef != null && isDynamicFragment(el)) {
     if (isFunction(oldRef)) {
-      callWithErrorHandling(oldRef, currentInstance, ErrorCodes.FUNCTION_REF, [
+      callWithErrorHandling(oldRef, instance, ErrorCodes.FUNCTION_REF, [
         null,
         refs,
       ])
@@ -168,7 +168,7 @@ function setRef(
 
   if (isFunction(ref)) {
     const invokeRefSetter = (value?: Element | Record<string, any> | null) => {
-      callWithErrorHandling(ref, currentInstance, ErrorCodes.FUNCTION_REF, [
+      callWithErrorHandling(ref, instance, ErrorCodes.FUNCTION_REF, [
         value,
         refs,
       ])
