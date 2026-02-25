@@ -17,7 +17,7 @@ export namespace JSX {
   }
   export interface IntrinsicElements extends NativeElements {
     // allow arbitrary elements
-    // @ts-expect-error suppress ts:2374 = Duplicate string index signature.
+    // @ts-ignore suppress ts:2374 = Duplicate string index signature.
     [name: string]: any
   }
   export interface IntrinsicAttributes extends ReservedProps {}

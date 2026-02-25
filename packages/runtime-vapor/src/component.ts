@@ -122,7 +122,7 @@ import type {
 import { DynamicFragment, isFragment } from './fragment'
 import type { VaporElement } from './apiDefineCustomElement'
 import { parentSuspense, setParentSuspense } from './components/Suspense'
-import { isInteropEnabled } from './vdominteropState'
+import { isInteropEnabled } from './vdomInteropState'
 
 export { currentInstance } from '@vue/runtime-dom'
 
