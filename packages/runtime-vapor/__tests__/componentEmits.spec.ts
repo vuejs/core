@@ -7,9 +7,15 @@ import {
   isEmitListener,
   nextTick,
   onBeforeUnmount,
+  ref,
   toHandlers,
 } from '@vue/runtime-dom'
-import { createComponent, defineVaporComponent } from '../src'
+import {
+  createComponent,
+  createIf,
+  defineVaporComponent,
+  template,
+} from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender()
@@ -443,5 +449,40 @@ describe('component: emit', () => {
     render(props as any)
 
     expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('should re-queue when child emit mutates parent state during update', async () => {
+    const show = ref(false)
+    const calls: string[] = []
+
+    const { component: Child } = define({
+      emits: ['change'],
+      setup(_: any, { emit }: any) {
+        emit('change')
+        return template('<p>child</p>')()
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        const onChange = () => {
+          calls.push(`change:${show.value}`)
+          show.value = false
+        }
+        return createIf(
+          () => show.value,
+          () =>
+            createComponent(Child, {
+              onChange: () => onChange,
+            }),
+        )
+      },
+    }).render()
+
+    show.value = true
+    await nextTick()
+
+    expect(calls).toEqual(['change:true'])
+    expect(host.innerHTML).toBe('<!--if-->')
   })
 })
