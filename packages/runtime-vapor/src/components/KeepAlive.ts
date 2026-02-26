@@ -120,7 +120,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
   setup(props: KeepAliveProps, { slots, expose }) {
     let exposed!: Record<string, any>
     // for e2e test
-    if (__BROWSER__ && __TEST__) {
+    if (__E2E_TEST__) {
       exposed = {
         getStorageContainer: () => storageContainer,
       }

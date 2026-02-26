@@ -551,7 +551,7 @@ export function deactivate(
   }
 
   // for e2e test
-  if (__DEV__ && __BROWSER__) {
+  if (__E2E_TEST__) {
     ;(instance as any).__keepAliveStorageContainer = container
   }
 }
