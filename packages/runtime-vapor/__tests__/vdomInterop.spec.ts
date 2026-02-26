@@ -1579,7 +1579,6 @@ describe('vdomInterop', () => {
 
       await new Promise(resolve => setTimeout(resolve, duration + 1))
       await nextTick()
-      await nextTick()
 
       expect(html()).toContain('<div>slot async</div>')
     })
@@ -1623,7 +1622,6 @@ describe('vdomInterop', () => {
       expect(html()).toContain('loading')
 
       await new Promise(resolve => setTimeout(resolve, duration + 1))
-      await nextTick()
       await nextTick()
 
       expect(html()).toContain('<button>vnode async</button>')
