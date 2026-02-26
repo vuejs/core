@@ -2,6 +2,7 @@ import {
   type App,
   type ComponentInternalInstance,
   type ConcreteComponent,
+  type FunctionalComponent,
   type HydrationRenderer,
   type KeepAliveContext,
   MoveType,
@@ -473,9 +474,11 @@ function createVDOMComponent(
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
 ): VaporFragment {
+  const useBridge = shouldUseRendererBridge(component)
+  const comp = useBridge ? ensureRendererBridge(component) : component
   const frag = new VaporFragment([])
   const vnode = (frag.vnode = createVNode(
-    component,
+    comp,
     rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
   ))
 
@@ -485,7 +488,7 @@ function createVDOMComponent(
   }
 
   const wrapper = new VaporComponentInstance(
-    { props: component.props },
+    useBridge ? (comp as any) : { props: component.props },
     rawProps as RawProps,
     rawSlots as RawSlots,
     parentComponent ? parentComponent.appContext : undefined,
@@ -617,6 +620,40 @@ function createVDOMComponent(
   }
 
   return frag
+}
+
+const rendererBridgeCache = new WeakMap<
+  ConcreteComponent,
+  FunctionalComponent
+>()
+
+/**
+ * Teleport/Suspense are renderer primitives (`__isTeleport` / `__isSuspense`),
+ * not regular components with their own render pipeline.
+ *
+ * We wrap them with a tiny functional bridge so they can pass through the
+ * interop component mount path while preserving built-in vnode semantics.
+ */
+function shouldUseRendererBridge(
+  component: ConcreteComponent & {
+    __isTeleport?: boolean
+    __isSuspense?: boolean
+  },
+): boolean {
+  return !!(component.__isTeleport || component.__isSuspense)
+}
+
+function ensureRendererBridge(
+  component: ConcreteComponent,
+): FunctionalComponent {
+  let bridge = rendererBridgeCache.get(component)
+  if (!bridge) {
+    rendererBridgeCache.set(
+      component,
+      (bridge = (props, { slots }) => createVNode(component, props, slots)),
+    )
+  }
+  return bridge
 }
 
 /**

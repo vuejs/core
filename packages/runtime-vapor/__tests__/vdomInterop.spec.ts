@@ -1,6 +1,8 @@
 import {
   KeepAlive,
   type ShallowRef,
+  Suspense,
+  Teleport,
   createApp,
   createVNode,
   defineComponent,
@@ -1427,6 +1429,67 @@ describe('vdomInterop', () => {
       show.value = true
       await nextTick()
       expect(html()).toBe('slot text<!--if-->')
+    })
+  })
+
+  describe('Teleport', () => {
+    test('mounts VDOM Teleport from createDynamicComponent', async () => {
+      const target = document.createElement('div')
+      target.id = 'interop-teleport-target'
+      document.body.appendChild(target)
+
+      try {
+        const VaporChild = defineVaporComponent({
+          setup() {
+            return createDynamicComponent(
+              () => Teleport,
+              { to: () => '#interop-teleport-target' },
+              {
+                default: () => template('<span>teleported</span>')(),
+              },
+              true,
+            )
+          },
+        })
+
+        define({
+          setup() {
+            return () => h(VaporChild as any)
+          },
+        }).render()
+
+        await nextTick()
+        expect(target.innerHTML).toContain('<span>teleported</span>')
+      } finally {
+        target.remove()
+      }
+    })
+  })
+
+  describe('Suspense', () => {
+    test('mounts VDOM Suspense from createDynamicComponent', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createDynamicComponent(
+            () => Suspense,
+            null,
+            {
+              default: () => template('<span>resolved</span>')(),
+              fallback: () => template('<span>fallback</span>')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      await nextTick()
+      expect(html()).toContain('<span>resolved</span>')
     })
   })
 })
