@@ -1,6 +1,7 @@
 import {
   KeepAlive,
   type ShallowRef,
+  Teleport,
   createApp,
   createVNode,
   defineComponent,
@@ -1427,6 +1428,40 @@ describe('vdomInterop', () => {
       show.value = true
       await nextTick()
       expect(html()).toBe('slot text<!--if-->')
+    })
+  })
+
+  describe('Teleport', () => {
+    test('mounts VDOM Teleport from createDynamicComponent', async () => {
+      const target = document.createElement('div')
+      target.id = 'interop-teleport-target'
+      document.body.appendChild(target)
+
+      try {
+        const VaporChild = defineVaporComponent({
+          setup() {
+            return createDynamicComponent(
+              () => Teleport,
+              { to: () => '#interop-teleport-target' },
+              {
+                default: () => template('<span>teleported</span>')(),
+              },
+              true,
+            )
+          },
+        })
+
+        define({
+          setup() {
+            return () => h(VaporChild as any)
+          },
+        }).render()
+
+        await nextTick()
+        expect(target.innerHTML).toContain('<span>teleported</span>')
+      } finally {
+        target.remove()
+      }
     })
   })
 })
