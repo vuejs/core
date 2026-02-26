@@ -70,6 +70,7 @@ export function ssrRenderSlotInner(
           push,
           validSlotContent,
           parentComponent,
+          null,
           slotScopeId,
         )
       } else if (fallbackRenderFn) {
