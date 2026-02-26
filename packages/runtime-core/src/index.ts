@@ -538,7 +538,7 @@ export { baseEmit, isEmitListener } from './componentEmits'
 /**
  * @internal
  */
-export { queueJob, flushOnAppMount } from './scheduler'
+export { queueJob, flushOnAppMount, SchedulerJobFlags } from './scheduler'
 /**
  * @internal
  */

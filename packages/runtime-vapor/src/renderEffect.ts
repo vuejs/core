@@ -1,6 +1,7 @@
 import { EffectFlags, type EffectScope, ReactiveEffect } from '@vue/reactivity'
 import {
   type SchedulerJob,
+  SchedulerJobFlags,
   currentInstance,
   queueJob,
   queuePostFlushCb,
@@ -53,6 +54,12 @@ export class RenderEffect extends ReactiveEffect {
 
     this.job = job
     this.i = instance
+
+    // Allow self re-queue when render/hook logic mutates reactive state.
+    // Safe in Vapor because updates are always async via queueJob(), and
+    // isUpdating prevents duplicate bu/u hooks on re-entry.
+    this.flags |= EffectFlags.ALLOW_RECURSE
+    this.job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
   }
 
   fn(): void {
