@@ -8,13 +8,37 @@ import sirv from 'sirv'
 import { expect } from 'vitest'
 const { page, html, transitionStart, waitForInnerHTML } = setupPuppeteer()
 
+function toSlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function resolveCaseId(testName: string) {
+  const parts = testName
+    .split(' > ')
+    .map(item => item.trim())
+    .filter(Boolean)
+  const testTitle = parts[parts.length - 1]
+  if (!testTitle) {
+    throw new Error(`[transition-group] Invalid test name: "${testName}"`)
+  }
+  const suiteParts = parts.slice(1, -1)
+  const folderParts = suiteParts.length ? suiteParts : [parts[0]]
+  const folderPath = folderParts.map(toSlug).join('/')
+  return `${folderPath}/${toSlug(testTitle)}`
+}
+
 describe('vapor transition-group', () => {
   let server: any
-  const port = '8196'
+  let port = 0
   beforeAll(() => {
     server = connect()
       .use(sirv(path.resolve(import.meta.dirname, '../dist')))
-      .listen(port)
+      .listen(0)
+    port = server.address().port
     process.on('SIGTERM', () => server && server.close())
   })
 
@@ -23,7 +47,9 @@ describe('vapor transition-group', () => {
   })
 
   beforeEach(async () => {
-    const baseUrl = `http://localhost:${port}/transition-group/`
+    const testName = expect.getState().currentTestName || ''
+    const caseId = resolveCaseId(testName)
+    const baseUrl = `http://localhost:${port}/transition-group/?case=${caseId}`
     await page().goto(baseUrl)
     await page().waitForSelector('#app')
   })
@@ -408,38 +434,40 @@ describe('vapor transition-group', () => {
     E2E_TIMEOUT,
   )
 
-  test('interop: render vdom component', async () => {
-    const btnSelector = '.interop > button'
-    const containerSelector = '.interop > div'
+  describe('interop', () => {
+    test('render vdom component', async () => {
+      const btnSelector = '.interop > button'
+      const containerSelector = '.interop > div'
 
-    expect(await html(containerSelector)).toBe(
-      `<div><div>a</div></div>` +
-        `<div><div>b</div></div>` +
-        `<div><div>c</div></div>`,
-    )
+      expect(await html(containerSelector)).toBe(
+        `<div><div>a</div></div>` +
+          `<div><div>b</div></div>` +
+          `<div><div>c</div></div>`,
+      )
 
-    expect(
-      (await transitionStart(btnSelector, containerSelector)).innerHTML,
-    ).toBe(
-      `<div class="test-leave-from test-leave-active"><div>a</div></div>` +
-        `<div class="test-move" style=""><div>b</div></div>` +
-        `<div class="test-move" style=""><div>c</div></div>` +
-        `<div class="test-enter-from test-enter-active"><div>d</div></div>`,
-    )
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<div class="test-leave-from test-leave-active"><div>a</div></div>` +
+          `<div class="test-move" style=""><div>b</div></div>` +
+          `<div class="test-move" style=""><div>c</div></div>` +
+          `<div class="test-enter-from test-enter-active"><div>d</div></div>`,
+      )
 
-    await waitForInnerHTML(
-      containerSelector,
-      `<div class="test-leave-active test-leave-to"><div>a</div></div>` +
-        `<div class="test-move" style=""><div>b</div></div>` +
-        `<div class="test-move" style=""><div>c</div></div>` +
-        `<div class="test-enter-active test-enter-to"><div>d</div></div>`,
-    )
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test-leave-active test-leave-to"><div>a</div></div>` +
+          `<div class="test-move" style=""><div>b</div></div>` +
+          `<div class="test-move" style=""><div>c</div></div>` +
+          `<div class="test-enter-active test-enter-to"><div>d</div></div>`,
+      )
 
-    await waitForInnerHTML(
-      containerSelector,
-      `<div class="" style=""><div>b</div></div>` +
-        `<div class="" style=""><div>c</div></div>` +
-        `<div class=""><div>d</div></div>`,
-    )
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="" style=""><div>b</div></div>` +
+          `<div class="" style=""><div>c</div></div>` +
+          `<div class=""><div>d</div></div>`,
+      )
+    })
   })
 })
