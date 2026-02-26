@@ -1467,6 +1467,168 @@ describe('vdomInterop', () => {
   })
 
   describe('Suspense', () => {
+    test('renders async vapor child inside VDOM Suspense', async () => {
+      const duration = 5
+
+      const VaporAsyncChild = defineVaporComponent({
+        async setup() {
+          await new Promise(resolve => setTimeout(resolve, duration))
+          return template('<div><button>click</button></div>')()
+        },
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            Suspense as any,
+            null,
+            {
+              default: () => createComponent(VaporAsyncChild, null, null, true),
+              fallback: () => template('loading')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+
+      expect(html()).toContain('loading')
+
+      await new Promise(resolve => setTimeout(resolve, duration + 1))
+      await nextTick()
+
+      expect(html()).toContain('<div><button>click</button></div>')
+    })
+
+    test('renders async VDOM child inside VDOM Suspense', async () => {
+      const duration = 5
+
+      const VDomAsyncChild = defineComponent({
+        async setup() {
+          await new Promise(resolve => setTimeout(resolve, duration))
+          return () => h('div', [h('button', 'click')])
+        },
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            Suspense as any,
+            null,
+            {
+              default: () =>
+                createComponent(VDomAsyncChild as any, null, null, true),
+              fallback: () => template('loading')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+
+      expect(html()).toContain('loading')
+
+      await new Promise(resolve => setTimeout(resolve, duration + 1))
+      await nextTick()
+
+      expect(html()).toContain('<div><button>click</button></div>')
+    })
+
+    test('renders async VDOM child from vapor slot outlet inside VDOM Suspense', async () => {
+      const duration = 5
+
+      const VaporSlotOutlet = defineVaporComponent({
+        setup() {
+          return createSlot('default')
+        },
+      })
+
+      const VDomAsyncChild = defineComponent({
+        async setup() {
+          await new Promise(resolve => setTimeout(resolve, duration))
+          return () => h('div', 'slot async')
+        },
+      })
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(Suspense, null, {
+              default: () =>
+                h(VaporSlotOutlet as any, null, {
+                  default: () => [h(VDomAsyncChild as any)],
+                }),
+              fallback: () => h('div', 'loading'),
+            })
+        },
+      })
+
+      const { html } = define(App).render()
+
+      expect(html()).toContain('loading')
+
+      await new Promise(resolve => setTimeout(resolve, duration + 1))
+      await nextTick()
+      await nextTick()
+
+      expect(html()).toContain('<div>slot async</div>')
+    })
+
+    test('renders async VDOM vnode via createDynamicComponent inside VDOM Suspense', async () => {
+      const duration = 5
+
+      const VDomAsyncChild = defineComponent({
+        async setup() {
+          await new Promise(resolve => setTimeout(resolve, duration))
+          return () => h('button', 'vnode async')
+        },
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            Suspense as any,
+            null,
+            {
+              default: () =>
+                createDynamicComponent(
+                  () => h(VDomAsyncChild as any),
+                  null,
+                  null,
+                  true,
+                ),
+              fallback: () => template('loading')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+
+      expect(html()).toContain('loading')
+
+      await new Promise(resolve => setTimeout(resolve, duration + 1))
+      await nextTick()
+      await nextTick()
+
+      expect(html()).toContain('<button>vnode async</button>')
+    })
+
     test('mounts VDOM Suspense from createDynamicComponent', async () => {
       const VaporChild = defineVaporComponent({
         setup() {

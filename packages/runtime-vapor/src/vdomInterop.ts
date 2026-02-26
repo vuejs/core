@@ -100,7 +100,10 @@ import {
   deactivate,
   setCurrentKeepAliveCtx,
 } from './components/KeepAlive'
-import { setParentSuspense } from './components/Suspense'
+import {
+  parentSuspense as currentParentSuspense,
+  setParentSuspense,
+} from './components/Suspense'
 
 export const interopKey: unique symbol = Symbol(`interop`)
 
@@ -246,10 +249,21 @@ const vaporInteropImpl: Omit<
   /**
    * vapor slot in vdom
    */
-  slot(n1: VNode, n2: VNode, container, anchor, parentComponent) {
+  slot(
+    n1: VNode,
+    n2: VNode,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+  ) {
     if (!n1) {
       const prev = currentInstance
+      let prevSuspense: SuspenseBoundary | null = null
       simpleSetCurrentInstance(parentComponent)
+      if (__FEATURE_SUSPENSE__ && parentSuspense) {
+        prevSuspense = setParentSuspense(parentSuspense)
+      }
       // mount
       let selfAnchor: Node | undefined
       const { slot, fallback } = n2.vs!
@@ -265,6 +279,9 @@ const vaporInteropImpl: Omit<
       if (isFragment(slotBlock)) {
         // use fragment's anchor when possible
         selfAnchor = slotBlock.anchor
+      }
+      if (__FEATURE_SUSPENSE__ && parentSuspense) {
+        setParentSuspense(prevSuspense)
       }
       simpleSetCurrentInstance(prev)
       if (!selfAnchor) selfAnchor = createTextNode()
@@ -374,6 +391,11 @@ function mountVNode(
   vnode: VNode,
   parentComponent: VaporComponentInstance | null,
 ): VaporFragment {
+  const suspense =
+    currentParentSuspense ||
+    (parentComponent &&
+      (parentComponent.suspense as SuspenseBoundary | null)) ||
+    null
   const frag = new VaporFragment([])
   frag.vnode = vnode
 
@@ -437,7 +459,7 @@ function mountVNode(
           parentNode,
           anchor,
           parentComponent as any,
-          null, // parentSuspense
+          suspense,
           undefined, // namespace
           vnode.slotScopeIds,
         )
@@ -474,6 +496,11 @@ function createVDOMComponent(
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
 ): VaporFragment {
+  const suspense =
+    currentParentSuspense ||
+    (parentComponent &&
+      (parentComponent.suspense as SuspenseBoundary | null)) ||
+    null
   const useBridge = shouldUseRendererBridge(component)
   const comp = useBridge ? ensureRendererBridge(component) : component
   const frag = new VaporFragment([])
@@ -572,7 +599,7 @@ function createVDOMComponent(
           parentNode,
           anchor,
           parentComponent as any,
-          null,
+          suspense,
           undefined,
           false,
         )
@@ -667,6 +694,9 @@ function renderVDOMSlot(
   parentComponent: VaporComponentInstance,
   fallback?: VaporSlot,
 ): VaporFragment {
+  const suspense =
+    currentParentSuspense ||
+    (parentComponent.suspense as SuspenseBoundary | null)
   const frag = new VaporFragment([])
 
   if (fallback && !frag.fallback) frag.fallback = fallback
@@ -785,7 +815,7 @@ function renderVDOMSlot(
           parentNode!,
           anchor,
           parentComponent as any,
-          null, // parentSuspense
+          suspense,
           undefined, // namespace
           resolved.slotScopeIds, // pass slotScopeIds for :slotted styles
         )
