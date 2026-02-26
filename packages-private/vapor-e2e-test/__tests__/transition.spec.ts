@@ -959,6 +959,31 @@ describe('vapor transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    test(
+      'prevent enter when leaving',
+      async () => {
+        const sectionSelector = '.if-prevent-enter-when-leaving'
+        const btnSelector = `${sectionSelector} > button`
+        const containerSelector = `${sectionSelector} .container`
+
+        await click(btnSelector)
+        await waitForInnerHTML(containerSelector, '')
+        await nextTick()
+
+        const calls = await page().evaluate(() => {
+          return (window as any).getCalls('preventEnterWhenLeaving')
+        })
+        expect(calls).toStrictEqual([
+          'beforeEnter',
+          'beforeLeave',
+          'leave',
+          'afterLeave',
+        ])
+        expect(await html(containerSelector)).toBe('')
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with KeepAlive', () => {

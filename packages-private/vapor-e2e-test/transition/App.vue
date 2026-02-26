@@ -40,6 +40,7 @@ let calls = {
   withAppear: [],
   cssFalse: [],
   ifInOut: [],
+  preventEnterWhenLeaving: [],
 
   show: [],
   showLeaveCancel: [],
@@ -51,6 +52,22 @@ let calls = {
 }
 window.getCalls = key => calls[key]
 window.resetCalls = key => (calls[key] = [])
+
+const preventEnterToggle = ref(false)
+const preventEnterVisible = ref(true)
+const togglePreventEnter = () => {
+  preventEnterToggle.value = !preventEnterToggle.value
+  if (preventEnterToggle.value) {
+    preventEnterVisible.value = true
+  }
+}
+
+const PreventEnterComp = defineVaporComponent({
+  setup() {
+    preventEnterVisible.value = false
+    return []
+  },
+})
 
 const activeComponent = shallowRef(VaporCompB)
 function toggleComponent() {
@@ -549,6 +566,36 @@ const Comp2 = defineVaporComponent({
         </transition>
       </div>
       <button @click="changeViewInOut">button</button>
+    </div>
+    <div class="if-prevent-enter-when-leaving">
+      <div class="content" v-if="preventEnterToggle">
+        <div class="container">
+          <transition
+            appear
+            @before-enter="
+              () => calls.preventEnterWhenLeaving.push('beforeEnter')
+            "
+            @enter="() => calls.preventEnterWhenLeaving.push('enter')"
+            @enter-cancelled="
+              () => calls.preventEnterWhenLeaving.push('enterCancelled')
+            "
+            @after-enter="
+              () => calls.preventEnterWhenLeaving.push('afterEnter')
+            "
+            @before-leave="
+              () => calls.preventEnterWhenLeaving.push('beforeLeave')
+            "
+            @leave="() => calls.preventEnterWhenLeaving.push('leave')"
+            @after-leave="
+              () => calls.preventEnterWhenLeaving.push('afterLeave')
+            "
+          >
+            <div v-if="preventEnterVisible">content</div>
+          </transition>
+        </div>
+        <PreventEnterComp />
+      </div>
+      <button @click="togglePreventEnter">button</button>
     </div>
     <!-- work with vif end -->
 
