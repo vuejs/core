@@ -205,6 +205,7 @@ export interface VaporInteropInterface {
     container: any,
     anchor: any,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
   ): void
   hydrate(
     vnode: VNode,

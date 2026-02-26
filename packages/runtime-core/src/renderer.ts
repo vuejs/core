@@ -465,6 +465,7 @@ function baseCreateRenderer(
           container,
           anchor,
           parentComponent,
+          parentSuspense,
         )
         break
       default:
