@@ -1,134 +1,40 @@
-<script setup vapor>
-import { ref } from 'vue'
-import VdomComp from './components/VdomComp.vue'
-import MyTransitionGroup from './components/MyTransitionGroup.vue'
+<script setup vapor lang="ts">
+import type { Component } from 'vue'
 
-const items = ref(['a', 'b', 'c'])
-const enterClick = () => items.value.push('d', 'e')
-const leaveClick = () => (items.value = ['b'])
-const enterLeaveClick = () => (items.value = ['b', 'c', 'd'])
-const appear = ref(false)
-window.setAppear = () => (appear.value = true)
-const moveClick = () => (items.value = ['d', 'b', 'a'])
+type CaseModule = { default: Component }
+const caseModules = import.meta.glob<CaseModule>('./cases/**/*.vue', {
+  eager: true,
+})
 
-const name = ref('invalid')
-const dynamicClick = () => (items.value = ['b', 'c', 'a'])
-const changeName = () => {
-  name.value = 'group'
-  items.value = ['a', 'b', 'c']
+const params = new URLSearchParams(window.location.search)
+const caseId = params.get('case')
+if (!caseId) {
+  throw new Error(
+    '[transition-group] Missing "case" query param. Example: /transition-group/?case=vapor-transition-group/enter',
+  )
 }
 
-let calls = []
-window.getCalls = () => {
-  const ret = calls.slice()
-  calls = []
-  return ret
+const moduleKey = `./cases/${caseId}.vue`
+const selectedCase = caseModules[moduleKey]
+if (!selectedCase) {
+  const availableCases = Object.keys(caseModules)
+    .map(path => path.slice('./cases/'.length, -'.vue'.length))
+    .sort()
+    .join(', ')
+  throw new Error(
+    `[transition-group] Unknown case "${caseId}". Available cases: ${availableCases}`,
+  )
 }
-const eventsClick = () => (items.value = ['b', 'c', 'd'])
 
-const interopClick = () => (items.value = ['b', 'c', 'd'])
+const currentCase = selectedCase.default
 </script>
 
 <template>
   <div class="transition-group-container">
-    <div class="enter">
-      <button @click="enterClick">enter button</button>
-      <div>
-        <transition-group name="test">
-          <div v-for="item in items" :key="item" class="test">{{ item }}</div>
-        </transition-group>
-      </div>
-    </div>
-    <div class="leave">
-      <button @click="leaveClick">leave button</button>
-      <div>
-        <transition-group name="test">
-          <div v-for="item in items" :key="item" class="test">{{ item }}</div>
-        </transition-group>
-      </div>
-    </div>
-    <div class="enter-leave">
-      <button @click="enterLeaveClick">enter-leave button</button>
-      <div>
-        <transition-group name="test">
-          <div v-for="item in items" :key="item" class="test">{{ item }}</div>
-        </transition-group>
-      </div>
-    </div>
-    <div class="appear">
-      <button @click="enterClick">appear button</button>
-      <div v-if="appear">
-        <transition-group
-          appear
-          appear-from-class="test-appear-from"
-          appear-to-class="test-appear-to"
-          appear-active-class="test-appear-active"
-          name="test"
-        >
-          <div v-for="item in items" :key="item" class="test">{{ item }}</div>
-        </transition-group>
-      </div>
-    </div>
-    <div class="move">
-      <button @click="moveClick">move button</button>
-      <div>
-        <transition-group name="group">
-          <div v-for="item in items" :key="item" class="test">{{ item }}</div>
-        </transition-group>
-      </div>
-    </div>
-    <div class="dynamic-name">
-      <button class="toggleBtn" @click="dynamicClick">dynamic button</button>
-      <button class="changeNameBtn" @click="changeName">change name</button>
-      <div>
-        <transition-group :name="name">
-          <div v-for="item in items" :key="item">{{ item }}</div>
-        </transition-group>
-      </div>
-    </div>
-    <div class="events">
-      <button @click="eventsClick">events button</button>
-      <div v-if="appear">
-        <transition-group
-          name="test"
-          appear
-          appear-from-class="test-appear-from"
-          appear-to-class="test-appear-to"
-          appear-active-class="test-appear-active"
-          @beforeEnter="() => calls.push('beforeEnter')"
-          @enter="() => calls.push('onEnter')"
-          @afterEnter="() => calls.push('afterEnter')"
-          @beforeLeave="() => calls.push('beforeLeave')"
-          @leave="() => calls.push('onLeave')"
-          @afterLeave="() => calls.push('afterLeave')"
-          @beforeAppear="() => calls.push('beforeAppear')"
-          @appear="() => calls.push('onAppear')"
-          @afterAppear="() => calls.push('afterAppear')"
-        >
-          <div v-for="item in items" :key="item" class="test">{{ item }}</div>
-        </transition-group>
-      </div>
-    </div>
-    <div class="reusable-transition-group">
-      <button @click="moveClick">reusable button</button>
-      <div>
-        <MyTransitionGroup name="group">
-          <div v-for="item in items" :key="item" class="test">{{ item }}</div>
-        </MyTransitionGroup>
-      </div>
-    </div>
-    <div class="interop">
-      <button @click="interopClick">interop button</button>
-      <div>
-        <transition-group name="test">
-          <VdomComp v-for="item in items" :key="item">
-            <div>{{ item }}</div>
-          </VdomComp>
-        </transition-group>
-      </div>
-    </div>
+    <component :is="currentCase" />
   </div>
 </template>
+
 <style>
 .transition-group-container > div {
   padding: 15px;

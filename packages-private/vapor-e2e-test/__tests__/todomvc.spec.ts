@@ -23,11 +23,12 @@ describe('e2e: todomvc', () => {
   } = setupPuppeteer()
 
   let server: any
-  const port = '8194'
+  let port = 0
   beforeAll(() => {
     server = connect()
       .use(sirv(path.resolve(import.meta.dirname, '../dist')))
-      .listen(port)
+      .listen(0)
+    port = server.address().port
     process.on('SIGTERM', () => server && server.close())
   })
 
