@@ -10,6 +10,7 @@ import {
   setStyle,
   template,
   useVaporCssVars,
+  withVaporCtx,
 } from '@vue/runtime-vapor'
 import { nextTick, onMounted, reactive, ref } from '@vue/runtime-core'
 import { makeRender } from '../_utils'
@@ -209,7 +210,7 @@ describe('useVaporCssVars', () => {
       setup() {
         useVaporCssVars(() => state)
         return createComponent(Child, null, {
-          default: () =>
+          default: withVaporCtx(() =>
             createComponent(
               VaporTeleport,
               { to: () => target },
@@ -217,6 +218,7 @@ describe('useVaporCssVars', () => {
                 default: () => template('<div></div>', true)(),
               },
             ),
+          ),
         })
       },
     }).render()
@@ -231,6 +233,63 @@ describe('useVaporCssVars', () => {
     for (const c of [].slice.call(target.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('green')
     }
+  })
+
+  test('with teleport in child slot should keep slot owner css vars across branch switches', async () => {
+    const parentState = reactive({ parent: 'red' })
+    const childState = reactive({ child: 'blue' })
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const show = ref(true)
+
+    const Child = defineVaporComponent({
+      setup(_, { slots }) {
+        useVaporCssVars(() => childState)
+        return slots.default!()
+      },
+    })
+
+    define({
+      setup() {
+        useVaporCssVars(() => parentState)
+        return createComponent(Child, null, {
+          default: withVaporCtx(() =>
+            createComponent(
+              VaporTeleport,
+              { to: () => target },
+              {
+                default: () =>
+                  createIf(
+                    () => show.value,
+                    () => template('<div></div>', true)(),
+                    () => template('<span></span>', true)(),
+                  ),
+              },
+            ),
+          ),
+        })
+      },
+    }).render()
+
+    await nextTick()
+    let el = target.children[0] as HTMLElement
+    expect(el.tagName).toBe('DIV')
+    expect(el.style.getPropertyValue(`--parent`)).toBe('red')
+    expect(el.style.getPropertyValue(`--child`)).toBe('')
+
+    show.value = false
+    await nextTick()
+    el = target.children[0] as HTMLElement
+    expect(el.tagName).toBe('SPAN')
+    expect(el.style.getPropertyValue(`--parent`)).toBe('red')
+    expect(el.style.getPropertyValue(`--child`)).toBe('')
+
+    show.value = true
+    await nextTick()
+    el = target.children[0] as HTMLElement
+    expect(el.tagName).toBe('DIV')
+    expect(el.style.getPropertyValue(`--parent`)).toBe('red')
+    expect(el.style.getPropertyValue(`--child`)).toBe('')
   })
 
   test('with teleport(change subTree)', async () => {

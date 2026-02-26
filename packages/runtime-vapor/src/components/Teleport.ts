@@ -4,7 +4,6 @@ import {
   MoveType,
   type TeleportProps,
   type TeleportTargetElement,
-  currentInstance,
   isMismatchAllowed,
   isTeleportDeferred,
   isTeleportDisabled,
@@ -40,6 +39,7 @@ import {
   setCurrentHydrationNode,
 } from '../dom/hydration'
 import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
+import { getScopeOwner } from '../componentSlots'
 
 const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -76,7 +76,7 @@ export class TeleportFragment extends VaporFragment {
     super([])
     this.rawProps = props
     this.rawSlots = slots
-    this.parentComponent = currentInstance
+    this.parentComponent = getScopeOwner()
     this.anchor = isHydrating
       ? undefined
       : __DEV__
