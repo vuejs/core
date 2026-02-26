@@ -688,3 +688,7 @@ export {
  * @internal
  */
 export { knownTemplateRefs, isTemplateRefKey } from './helpers/useTemplateRef'
+/**
+ * @internal
+ */
+export { setCurrentRenderingInstance } from './componentRenderContext'

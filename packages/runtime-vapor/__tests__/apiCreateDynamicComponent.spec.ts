@@ -1,13 +1,17 @@
 import { ref, shallowRef } from '@vue/reactivity'
 import { nextTick, resolveDynamicComponent } from '@vue/runtime-dom'
 import {
+  createComponent,
   createComponentWithFallback,
   createDynamicComponent,
+  createSlot,
   defineVaporComponent,
+  insert,
   renderEffect,
   setHtml,
   setInsertionState,
   template,
+  withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
 
@@ -177,6 +181,49 @@ describe('api: createDynamicComponent', () => {
     await nextTick()
     expect(html()).toBe(
       '<div><span>hi</span><!--slot--></div><!--dynamic-component-->',
+    )
+  })
+
+  test('resolves slot owner local components after dynamic updates', async () => {
+    const current = shallowRef('Foo')
+    const Foo = defineVaporComponent({
+      setup() {
+        return template('<span>foo</span>')()
+      },
+    })
+    const Child = defineVaporComponent({
+      setup() {
+        const n0 = template('<section></section>')()
+        insert(createSlot('default'), n0 as ParentNode)
+        return n0
+      },
+    })
+
+    const { html } = define({
+      components: { Foo },
+      setup() {
+        return createComponent(Child, null, {
+          default: withVaporCtx(() =>
+            createDynamicComponent(() => current.value),
+          ),
+        })
+      },
+    }).render()
+
+    expect(html()).toBe(
+      '<section><span>foo</span><!--dynamic-component--><!--slot--></section>',
+    )
+
+    current.value = 'div'
+    await nextTick()
+    expect(html()).toBe(
+      '<section><div></div><!--dynamic-component--><!--slot--></section>',
+    )
+
+    current.value = 'Foo'
+    await nextTick()
+    expect(html()).toBe(
+      '<section><span>foo</span><!--dynamic-component--><!--slot--></section>',
     )
   })
 

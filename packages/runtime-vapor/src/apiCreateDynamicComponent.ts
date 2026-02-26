@@ -1,14 +1,20 @@
 import {
+  type ComponentInternalInstance,
   currentInstance,
   isKeepAlive,
   isVNode,
   resolveDynamicComponent,
+  setCurrentRenderingInstance,
 } from '@vue/runtime-dom'
 import { insert, isBlock } from './block'
-import { createComponentWithFallback, emptyContext } from './component'
+import {
+  type VaporComponentInstance,
+  createComponentWithFallback,
+  emptyContext,
+} from './component'
 import { renderEffect } from './renderEffect'
 import type { RawProps } from './componentProps'
-import type { RawSlots } from './componentSlots'
+import { type RawSlots, getScopeOwner } from './componentSlots'
 import {
   insertionAnchor,
   insertionParent,
@@ -37,6 +43,7 @@ export function createDynamicComponent(
       ? new DynamicFragment('dynamic-component')
       : new DynamicFragment()
 
+  const scopeOwner = getScopeOwner()
   const renderFn = () => {
     const value = getter()
     const appContext =
@@ -65,7 +72,7 @@ export function createDynamicComponent(
       }
 
       return createComponentWithFallback(
-        resolveDynamicComponent(value) as any,
+        withScopeOwner(scopeOwner, () => resolveDynamicComponent(value)),
         rawProps,
         rawSlots,
         isSingleRoot,
@@ -86,4 +93,15 @@ export function createDynamicComponent(
     }
   }
   return frag
+}
+
+function withScopeOwner(owner: VaporComponentInstance | null, fn: () => any) {
+  const prev = setCurrentRenderingInstance(
+    owner as ComponentInternalInstance | null,
+  )
+  try {
+    return fn()
+  } finally {
+    setCurrentRenderingInstance(prev)
+  }
 }
