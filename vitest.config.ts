@@ -5,6 +5,7 @@ export default defineConfig({
   define: {
     __DEV__: process.env.MODE !== 'benchmark',
     __TEST__: true,
+    __E2E_TEST__: false,
     __VERSION__: '"test"',
     __BROWSER__: false,
     __GLOBAL__: false,

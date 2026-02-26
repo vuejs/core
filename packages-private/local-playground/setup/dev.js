@@ -40,6 +40,7 @@ export function DevPlugin({ browser = false } = {}) {
           __DEV__: `true`,
           // this is only used during Vue's internal tests
           __TEST__: `false`,
+          __E2E_TEST__: `false`,
           // If the build is expected to run directly in the browser (global / esm builds)
           __BROWSER__: String(browser),
           __GLOBAL__: String(false),
