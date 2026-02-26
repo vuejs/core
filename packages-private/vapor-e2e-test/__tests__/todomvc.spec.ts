@@ -1,10 +1,8 @@
-import path from 'node:path'
 import {
   E2E_TIMEOUT,
   setupPuppeteer,
 } from '../../../packages/vue/__tests__/e2e/e2eUtils'
-import connect from 'connect'
-import sirv from 'sirv'
+import { startE2ETestServer } from './server'
 
 describe('e2e: todomvc', () => {
   const {
@@ -22,14 +20,11 @@ describe('e2e: todomvc', () => {
     timeout,
   } = setupPuppeteer()
 
-  let server: any
+  let server: Awaited<ReturnType<typeof startE2ETestServer>>
   let port = 0
-  beforeAll(() => {
-    server = connect()
-      .use(sirv(path.resolve(import.meta.dirname, '../dist')))
-      .listen(0)
-    port = server.address().port
-    process.on('SIGTERM', () => server && server.close())
+  beforeAll(async () => {
+    server = await startE2ETestServer('todomvc', import.meta.dirname)
+    port = server.port
   })
 
   afterAll(() => {
