@@ -676,6 +676,7 @@ describe('SSR hydration', () => {
     )
     expect(teleportContainer.innerHTML).toBe('<span>Teleported Comp1</span>')
     expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(`Hydration completed but contains mismatches.`).toHaveBeenErrored()
 
     toggle.value = false
     await nextTick()
@@ -2561,6 +2562,9 @@ describe('SSR hydration', () => {
         '<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
       )
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenErrored()
     })
 
     test('fragment too many children', () => {
