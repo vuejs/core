@@ -162,8 +162,8 @@ export function getScopeOwner(): VaporComponentInstance | null {
  * Wrap a slot function to track the slot owner.
  *
  * This ensures:
- * 1. createSlot gets rawSlots from the correct component (slot owner)
- * 2. Elements inherit the slot owner's scopeId
+ * 1. createSlot gets rawSlots from the correct instance (slot owner)
+ * 2. elements inherit the slot owner's scopeId
  */
 export function withVaporCtx(fn: Function): BlockFn {
   const owner = getScopeOwner()
