@@ -1,3 +1,24 @@
+# [3.6.0-beta.7](https://github.com/vuejs/core/compare/v3.5.29...v3.6.0-beta.7) (2026-02-27)
+
+
+### Bug Fixes
+
+* **runtime-vapor:** allow renderEffect to self re-queue on sync state mutation ([#14477](https://github.com/vuejs/core/issues/14477)) ([e0003aa](https://github.com/vuejs/core/commit/e0003aab5d2e5b11c15a7b02b8ce19d89a9b9ecc))
+* **runtime-vapor:** apply template ref on dynamic fragment ([#14471](https://github.com/vuejs/core/issues/14471)) ([2fb57c4](https://github.com/vuejs/core/commit/2fb57c412f923bae9b840c4c018426d90a2e0e3f))
+* **runtime-vapor:** avoid exposing built-in components internals via template ref ([#14448](https://github.com/vuejs/core/issues/14448)) ([3badf50](https://github.com/vuejs/core/commit/3badf505cab395d2641b33b91cb50f26d61fac6c))
+* **runtime-vapor:** preserve slot owner rendering context in resolveDynamicComponent ([#14475](https://github.com/vuejs/core/issues/14475)) ([a779531](https://github.com/vuejs/core/commit/a7795310f62a801082e71c776fba30ac044e7009)), closes [#14474](https://github.com/vuejs/core/issues/14474)
+* **runtime-vapor:** preserve slot-owner css vars for teleported slot content ([#14476](https://github.com/vuejs/core/issues/14476)) ([24f20e8](https://github.com/vuejs/core/commit/24f20e8a3f5a18c214c812ade6b18e6498a4ba96)), closes [#14473](https://github.com/vuejs/core/issues/14473)
+* **runtime-vapor:** restore KeepAlive branch key even for falsy previous values ([4859f89](https://github.com/vuejs/core/commit/4859f8901dcbf8295bb52228a02b9c4deb9781ef))
+* **runtime-vapor:** widen FunctionalVaporComponent props typing ([#14470](https://github.com/vuejs/core/issues/14470)) ([74645bb](https://github.com/vuejs/core/commit/74645bb0fb972b8f00f5ed818fa2d514a8ad5f3a)), closes [#14467](https://github.com/vuejs/core/issues/14467)
+
+
+### Features
+
+* **vapor:** support rendering vdom suspense in vapor ([#14485](https://github.com/vuejs/core/issues/14485)) ([f0367b0](https://github.com/vuejs/core/commit/f0367b0e0c46f9cf1a65d6d3fe5b82f79b81f175))
+* **vapor:** support rendering vdom teleport in vapor ([#14484](https://github.com/vuejs/core/issues/14484)) ([9923f11](https://github.com/vuejs/core/commit/9923f11a765b6fa0923583743091030b5a183611)), closes [#14481](https://github.com/vuejs/core/issues/14481)
+
+
+
 # [3.6.0-beta.6](https://github.com/vuejs/core/compare/v3.6.0-beta.5...v3.6.0-beta.6) (2026-02-12)
 
 
