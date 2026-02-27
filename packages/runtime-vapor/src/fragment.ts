@@ -195,16 +195,16 @@ export class DynamicFragment extends VaporFragment {
       const prevSlotOwner = setCurrentSlotOwner(this.slotOwner)
       // set currentKeepAliveCtx so nested DynamicFragments and components can capture it
       const prevKeepAliveCtx = setCurrentKeepAliveCtx(keepAliveCtx)
-      const prevBranchKey =
-        keepAliveCtx && this.keyed
-          ? keepAliveCtx.setCurrentBranchKey(this.current)
-          : undefined
+      const needBranchKey = keepAliveCtx && this.keyed
+      const prevBranchKey = needBranchKey
+        ? keepAliveCtx.setCurrentBranchKey(this.current)
+        : undefined
       const prevInstance = setCurrentInstance(instance)
       try {
         this.nodes = this.scope.run(render) || []
       } finally {
         setCurrentInstance(...prevInstance)
-        if (prevBranchKey) keepAliveCtx!.setCurrentBranchKey(prevBranchKey)
+        if (needBranchKey) keepAliveCtx.setCurrentBranchKey(prevBranchKey)
         setCurrentKeepAliveCtx(prevKeepAliveCtx)
         setCurrentSlotOwner(prevSlotOwner)
       }
