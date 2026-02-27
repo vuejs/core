@@ -173,7 +173,6 @@ export const createFor = (
         }
       }
     } else {
-      const prevOwner = setCurrentSlotOwner(slotOwner)
       parent = parent || parentAnchor!.parentNode
       if (!oldLength) {
         // remove fallback nodes
@@ -401,7 +400,6 @@ export const createFor = (
           }
         }
       }
-      setCurrentSlotOwner(prevOwner)
     }
 
     if (!isFallback) {
@@ -500,7 +498,15 @@ export const createFor = (
   if (flags & VaporVForFlags.ONCE) {
     renderList()
   } else {
-    renderEffect(renderList)
+    renderEffect(() => {
+      if (!isMounted) return renderList()
+      const prevOwner = setCurrentSlotOwner(slotOwner)
+      try {
+        renderList()
+      } finally {
+        setCurrentSlotOwner(prevOwner)
+      }
+    })
   }
 
   if (!isHydrating) {
