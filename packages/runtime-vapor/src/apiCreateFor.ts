@@ -127,7 +127,7 @@ export const createFor = (
     cleanup: () => void
   }[] = []
 
-  const scopeOwner = currentSlotOwner
+  const slotOwner = currentSlotOwner
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
@@ -173,7 +173,7 @@ export const createFor = (
         }
       }
     } else {
-      const prevOwner = setCurrentSlotOwner(scopeOwner)
+      const prevOwner = setCurrentSlotOwner(slotOwner)
       parent = parent || parentAnchor!.parentNode
       if (!oldLength) {
         // remove fallback nodes
