@@ -35,6 +35,7 @@ import {
   createDynamicComponent,
   createIf,
   createSlot,
+  createTemplateRefSetter,
   defineVaporAsyncComponent,
   defineVaporComponent,
   renderEffect,
@@ -732,6 +733,39 @@ describe('vdomInterop', () => {
       elRef!.value.foo = 'bar'
       await nextTick()
       expect(html()).toBe('bar')
+    })
+
+    it('dynamic component includes vdom component', async () => {
+      const VdomChild = defineComponent({
+        setup(_, { expose }) {
+          expose({ name: 'vdomChild' })
+          return () => h('div', 'vdom child')
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return { vdomRef }
+        },
+        render() {
+          const setRef = createTemplateRefSetter()
+          const n0 = createDynamicComponent(() => VdomChild)
+          setRef(n0, vdomRef, false, 'vdomRef')
+          return n0
+        },
+      })
+
+      const vdomRef = ref<any>(null)
+
+      define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      await nextTick()
+      expect(vdomRef.value).toBeDefined()
+      expect(vdomRef.value.name).toBe('vdomChild')
     })
   })
 

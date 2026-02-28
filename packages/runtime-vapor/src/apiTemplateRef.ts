@@ -107,10 +107,14 @@ function setRef(
   if (!instance || instance.isUnmounted) return
 
   // vdom interop
-  if (isInteropEnabled && isFragment(el) && el.setRef) {
-    el.setRef(instance, ref, refFor, refKey)
-    return
+  const handleVdomRef = (target: any): boolean => {
+    if (isInteropEnabled && isFragment(target) && target.setRef) {
+      target.setRef(instance, ref, refFor, refKey)
+      return true
+    }
+    return false
   }
+  if (handleVdomRef(el)) return
 
   if (isVaporComponent(el) && isAsyncWrapper(el)) {
     // unresolved: handled in DynamicFragment's updated hook
@@ -122,6 +126,8 @@ function setRef(
 
   const setupState: any = __DEV__ ? instance.setupState || {} : null
   const refValue = getRefValue(el)
+  if (handleVdomRef(refValue)) return
+
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
 
