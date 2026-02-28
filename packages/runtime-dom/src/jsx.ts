@@ -283,6 +283,7 @@ export type ClassValue =
   | string
   | Record<string, any>
   | Array<ClassValue>
+  | unknown
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string | undefined
