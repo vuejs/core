@@ -1,18 +1,18 @@
 {
   "name": "@vue/runtime-pure-vapor",
   "version": "3.6.0-beta.7",
-  "description": "@vue/runtime-vapor",
+  "description": "@vue/runtime-pure-vapor",
   "main": "index.js",
-  "module": "dist/runtime-vapor.esm-bundler.js",
-  "types": "dist/runtime-vapor.d.ts",
+  "module": "dist/runtime-pure-vapor.esm-bundler.js",
+  "types": "dist/runtime-pure-vapor.d.ts",
   "files": [
     "index.js",
     "dist"
   ],
   "exports": {
     ".": {
-      "types": "./dist/runtime-vapor.d.ts",
-      "default": "./dist/runtime-vapor.esm-bundler.js"
+      "types": "./dist/runtime-pure-vapor.d.ts",
+      "default": "./dist/runtime-pure-vapor.esm-bundler.js"
     },
     "./*": "./*"
   },
@@ -26,7 +26,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuejs/core.git",
-    "directory": "packages/runtime-vapor"
+    "directory": "packages/runtime-pure-vapor"
   },
   "keywords": [
     "vue"
@@ -36,7 +36,7 @@
   "bugs": {
     "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/core/tree/dev/packages/runtime-vapor#readme",
+  "homepage": "https://github.com/vuejs/core/tree/dev/packages/runtime-pure-vapor#readme",
   "dependencies": {
     "@vue/shared": "workspace:*",
     "@vue/reactivity": "workspace:*"
