@@ -96,6 +96,15 @@ export class EffectScope implements ReactiveNode {
     }
     cleanup(this)
   }
+
+  /**
+   * Registers a cleanup function to be called when the effect scope is stopped.
+   *
+   * @param {() => void} fn - The cleanup function to be registered.
+   */
+  onDispose(fn: () => void): void {
+    this.cleanups[this.cleanupsLength++] = fn
+  }
 }
 
 /**
@@ -137,7 +146,7 @@ export function setCurrentScope(scope?: EffectScope): EffectScope | undefined {
  */
 export function onScopeDispose(fn: () => void, failSilently = false): void {
   if (activeEffectScope !== undefined) {
-    activeEffectScope.cleanups[activeEffectScope.cleanupsLength++] = fn
+    activeEffectScope.onDispose(fn)
   } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
