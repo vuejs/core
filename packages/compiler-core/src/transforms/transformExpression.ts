@@ -153,7 +153,10 @@ export function processExpression(
         localVars[raw]
       ) {
         return raw
-      } else if (type === BindingTypes.SETUP_REF) {
+      } else if (
+        type === BindingTypes.SETUP_REF ||
+        type === BindingTypes.SETUP_COMPUTED
+      ) {
         return `${raw}.value`
       } else if (type === BindingTypes.SETUP_MAYBE_REF) {
         // const binding that may or may not be ref

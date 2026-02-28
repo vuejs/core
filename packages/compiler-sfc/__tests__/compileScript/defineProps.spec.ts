@@ -635,7 +635,7 @@ const props = defineProps({ foo: String })
     </script>
   `)
     expect(bindings).toStrictEqual({
-      bar: BindingTypes.SETUP_REF,
+      bar: BindingTypes.SETUP_COMPUTED,
       computed: BindingTypes.SETUP_CONST,
     })
   })
