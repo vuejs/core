@@ -573,6 +573,45 @@ describe('compiler: element transform', () => {
         props: [[{ key: { content: 'is' }, values: [{ content: 'foo' }] }]],
       })
     })
+
+    test('normal component with dynamic :is prop', () => {
+      const { code, ir, helpers } = compileWithElementTransform(
+        `<custom-input :is="'foo'" />`,
+        {
+          isNativeTag: () => false,
+        },
+      )
+      expect(code).toMatchSnapshot()
+      expect(helpers).toContain('resolveComponent')
+      expect(helpers).not.toContain('resolveDynamicComponent')
+      expect(code).toContain(
+        '_createComponentWithFallback(_component_custom_input, { is: () => ("foo") }, null, true)',
+      )
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'custom-input',
+        asset: true,
+        root: true,
+        props: [[{ key: { content: 'is' } }]],
+      })
+    })
+
+    test('component keeps both :is and is props', () => {
+      const { code } = compileWithElementTransform(
+        `<Comp :is="'Parent'" /><Comp is="Parent" />`,
+        {
+          bindingMetadata: {
+            Comp: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+      expect(code).toMatchSnapshot()
+      expect(
+        code.match(
+          /_createComponent\(_ctx\.Comp, \{ is: \(\) => \("Parent"\) \}\)/g,
+        )?.length,
+      ).toBe(2)
+    })
   })
 
   test('checkbox with static indeterminate', () => {

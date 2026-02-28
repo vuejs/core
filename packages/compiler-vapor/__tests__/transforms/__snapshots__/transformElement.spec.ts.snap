@@ -409,6 +409,16 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > dynamic component > component keeps both :is and is props 1`] = `
+"import { createComponent as _createComponent } from 'vue';
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = _createComponent(_ctx.Comp, { is: () => ("Parent") })
+  const n1 = _createComponent(_ctx.Comp, { is: () => ("Parent") })
+  return [n0, n1]
+}"
+`;
+
 exports[`compiler: element transform > dynamic component > dynamic binding 1`] = `
 "import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
@@ -423,6 +433,16 @@ exports[`compiler: element transform > dynamic component > dynamic binding short
 
 export function render(_ctx) {
   const n0 = _createDynamicComponent(() => (_ctx.is), null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > dynamic component > normal component with dynamic :is prop 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_custom_input = _resolveComponent("custom-input")
+  const n0 = _createComponentWithFallback(_component_custom_input, { is: () => ("foo") }, null, true)
   return n0
 }"
 `;

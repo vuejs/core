@@ -477,14 +477,13 @@ export function buildProps(
       }
     }
 
-    // exclude `is` prop for <component>
+    // exclude `is` prop only for <component>
     if (
-      (isDynamicComponent &&
-        prop.type === NodeTypes.ATTRIBUTE &&
-        prop.name === 'is') ||
-      (prop.type === NodeTypes.DIRECTIVE &&
-        prop.name === 'bind' &&
-        isStaticArgOf(prop.arg, 'is'))
+      isDynamicComponent &&
+      ((prop.type === NodeTypes.ATTRIBUTE && prop.name === 'is') ||
+        (prop.type === NodeTypes.DIRECTIVE &&
+          prop.name === 'bind' &&
+          isStaticArgOf(prop.arg, 'is')))
     ) {
       continue
     }
