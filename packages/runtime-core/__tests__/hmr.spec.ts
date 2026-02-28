@@ -1040,4 +1040,57 @@ describe('hot module replacement', () => {
 
     expect(serializeInner(root)).toBe('<div>bar</div>')
   })
+
+  // #14127
+  test('update cached text nodes', async () => {
+    const root = nodeOps.createElement('div')
+    const appId = 'test-cached-text-nodes'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      data() {
+        return {
+          count: 0,
+        }
+      },
+      render: compileToFunction(
+        `{{count}}
+        <button @click="count++">++</button> 
+        static text`,
+      ),
+    }
+    createRecord(appId, App)
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`0 <button>++</button> static text`)
+
+    // trigger count update
+    triggerEvent((root as any).children[2], 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe(`1 <button>++</button> static text`)
+
+    // trigger HMR update
+    rerender(
+      appId,
+      compileToFunction(
+        `{{count}}
+        <button @click="count++">++</button> 
+        static text updated`,
+      ),
+    )
+    expect(serializeInner(root)).toBe(
+      `1 <button>++</button> static text updated`,
+    )
+
+    // trigger HMR update again
+    rerender(
+      appId,
+      compileToFunction(
+        `{{count}}
+        <button @click="count++">++</button> 
+        static text updated2`,
+      ),
+    )
+    expect(serializeInner(root)).toBe(
+      `1 <button>++</button> static text updated2`,
+    )
+  })
 })

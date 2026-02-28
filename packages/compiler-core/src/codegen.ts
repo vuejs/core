@@ -119,8 +119,10 @@ enum NewlineType {
   Unknown = -3,
 }
 
-export interface CodegenContext
-  extends Omit<Required<CodegenOptions>, 'bindingMetadata' | 'inline'> {
+export interface CodegenContext extends Omit<
+  Required<CodegenOptions>,
+  'bindingMetadata' | 'inline'
+> {
   source: string
   code: string
   line: number
