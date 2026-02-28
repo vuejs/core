@@ -1,5 +1,6 @@
 import {
   type IfAny,
+  type IfEquals,
   hasChanged,
   isArray,
   isFunction,
@@ -519,8 +520,19 @@ function propertyToRef(
 export interface RefUnwrapBailTypes {}
 
 export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: DistributeRef<T[K]>
+  [K in keyof Pick<T, MutableKeys<T>>]: DistributeRef<T[K]>
+} & {
+  readonly [K in keyof Omit<T, MutableKeys<T>>]: DistributeRef<T[K]>
 }
+
+type MutableKeys<T> = {
+  [K in keyof T]-?: IfEquals<
+    { [P in keyof T[K]]: T[K][P] },
+    { -readonly [P in keyof T[K]]: T[K][P] },
+    K,
+    never
+  >
+}[keyof T]
 
 type DistributeRef<T> = T extends Ref<infer V, unknown> ? V : T
 
