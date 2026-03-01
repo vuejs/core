@@ -1,0 +1,1 @@
+这是 vue3的官方仓库fork过来的，目的是开发一个pure_vapor的项目，它移除传统Vue3和vapor 的runtime, 新增 runtime-pure-vapor包，然后从vue文件夹中构建出来一个只支持vapor模式的包。 runtime-pure-vapor 的文件夹已经创建好了。 对runtime-pure-vapor的要求有：1、只兼容 vapor模式编译后的产物，不需要考虑传统的vdom的vue模板编译产物。 2、不需要考虑ssr 功能。 3、只开发vapor模式下所有涉及到的的函数，4、需要有和runtime-vapor 一致的type 类型声明的导出。
