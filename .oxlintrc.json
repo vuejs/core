@@ -99,7 +99,9 @@
       }
     },
     {
-      "files": ["packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**"],
+      "files": [
+        "packages/{vue,vue-compat,runtime-dom,runtime-vapor,runtime-pure-vapor}/**"
+      ],
       "rules": {
         "no-restricted-globals": ["error", "module", "require"]
       }
