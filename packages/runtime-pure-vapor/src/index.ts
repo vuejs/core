@@ -83,3 +83,13 @@ export type { VaporComponent, VaporComponentOptions } from './component'
 export type { VaporSlot } from './componentSlots'
 export type { VaporTransitionHooks } from './block'
 export type { VaporKeepAliveContext } from './components/KeepAlive'
+
+// 以下为 runtime-core 中同步进来的变量和类型
+
+export {
+  type RenderFunction,
+  warn,
+  registerRuntimeCompiler,
+} from './core/index'
+
+export type { InternalRenderFunction } from './core/component'

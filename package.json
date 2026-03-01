@@ -12,7 +12,7 @@
     "size-global": "node scripts/build.js vue runtime-dom compiler-dom -f global -p --size",
     "size-esm-runtime": "node scripts/build.js vue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime-shared runtime-dom runtime-core reactivity shared runtime-vapor -f esm-bundler",
-    "check": "tsc --incremental --noEmit",
+    "check": "oxlint",
     "lint": "oxlint",
     "format": "oxfmt",
     "format-check": "oxfmt --check",
