@@ -626,6 +626,7 @@ function createVDOMComponent(
     refFor: boolean,
     refKey: string | undefined,
   ): void => {
+    const oldRawRef = rawRef
     rawRef = normalizeRef(
       {
         ref: ref as any,
@@ -635,8 +636,12 @@ function createVDOMComponent(
       instance as any,
     )
 
-    if (isMounted && rawRef) {
-      vdomSetRef(rawRef, null, null, vnode)
+    if (isMounted) {
+      if (rawRef) {
+        vdomSetRef(rawRef, oldRawRef, null, vnode)
+      } else if (oldRawRef) {
+        vdomSetRef(oldRawRef, null, null, vnode, true)
+      }
     }
   }
 
