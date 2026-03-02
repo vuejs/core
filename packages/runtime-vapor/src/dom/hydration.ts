@@ -1,4 +1,9 @@
-import { MismatchTypes, isMismatchAllowed, warn } from '@vue/runtime-dom'
+import {
+  MismatchTypes,
+  isMismatchAllowed,
+  isHydrating as isVdomHydrating,
+  warn,
+} from '@vue/runtime-dom'
 import {
   insertionIndex,
   insertionParent,
@@ -27,7 +32,7 @@ export let currentHydrationNode: Node | null = null
 
 export let isHydrating = false
 function setIsHydrating(value: boolean) {
-  if (!isHydratingEnabled) return false
+  if (!isHydratingEnabled && !isVdomHydrating) return false
   try {
     return isHydrating
   } finally {
