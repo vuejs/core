@@ -7,7 +7,6 @@ export {
   type VaporRenderResult,
 } from './apiDefineComponent'
 export { defineVaporAsyncComponent } from './apiDefineAsyncComponent'
-export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
 export { VaporTeleport } from './components/Teleport'
 export { VaporKeepAlive } from './components/KeepAlive'

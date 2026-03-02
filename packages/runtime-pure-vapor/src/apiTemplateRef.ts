@@ -32,7 +32,6 @@ import {
   isDynamicFragment,
   isFragment,
 } from './fragment'
-import { isInteropEnabled } from './vdomInteropState'
 
 export type NodeRef =
   | string
@@ -105,12 +104,6 @@ function setRef(
   refKey?: string,
 ): NodeRef | undefined {
   if (!instance || instance.isUnmounted) return
-
-  // vdom interop
-  if (isInteropEnabled && isFragment(el) && el.setRef) {
-    el.setRef(instance, ref, refFor, refKey)
-    return
-  }
 
   if (isVaporComponent(el) && isAsyncWrapper(el)) {
     // unresolved: handled in DynamicFragment's updated hook
