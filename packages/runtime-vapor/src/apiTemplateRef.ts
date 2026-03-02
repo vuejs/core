@@ -114,7 +114,7 @@ function setRef(
     }
     return false
   }
-  if (handleVdomRef(el)) return
+  if (handleVdomRef(el)) return ref
 
   if (isVaporComponent(el) && isAsyncWrapper(el)) {
     // unresolved: handled in DynamicFragment's updated hook
@@ -126,7 +126,7 @@ function setRef(
 
   const setupState: any = __DEV__ ? instance.setupState || {} : null
   const refValue = getRefValue(el)
-  if (handleVdomRef(refValue)) return
+  if (handleVdomRef(refValue)) return ref
 
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
