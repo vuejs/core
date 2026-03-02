@@ -1,14 +1,12 @@
 {
   // Use the project's typescript version
   "typescript.tsdk": "node_modules/typescript/lib",
-
   "cSpell.enabledFileTypes": {
     "markdown": true,
     "plaintext": true,
     "text": true,
     "yml": true
   },
-
   "prettier.enable": false,
   "eslint.enable": false,
   "oxc.enable": true,
@@ -17,7 +15,7 @@
   },
   // Use Oxc to format TypeScript, JavaScript and JSON files
   "[typescript]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
+    "editor.defaultFormatter": "vscode.typescript-language-features"
   },
   "[javascript]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
