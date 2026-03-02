@@ -1,4 +1,9 @@
-import { MismatchTypes, isMismatchAllowed, warn } from '@vue/runtime-dom'
+import {
+  MismatchTypes,
+  isMismatchAllowed,
+  isHydrating as isVdomHydrating,
+  warn,
+} from '@vue/runtime-dom'
 import {
   insertionIndex,
   insertionParent,
@@ -27,7 +32,7 @@ export let currentHydrationNode: Node | null = null
 
 export let isHydrating = false
 function setIsHydrating(value: boolean) {
-  if (!isHydratingEnabled) return false
+  if (!isHydratingEnabled && !isVdomHydrating) return false
   try {
     return isHydrating
   } finally {
@@ -41,17 +46,6 @@ export function runWithoutHydration(fn: () => any): any {
     return fn()
   } finally {
     setIsHydrating(prev)
-  }
-}
-
-export function runWithHydration(fn: () => any): any {
-  // temporarily enable hydration capability for createSSRApp + vdomInterop
-  const prev = isHydratingEnabled
-  setIsHydratingEnabled(true)
-  try {
-    return fn()
-  } finally {
-    setIsHydratingEnabled(prev)
   }
 }
 

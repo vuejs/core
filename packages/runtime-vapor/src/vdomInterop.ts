@@ -81,7 +81,6 @@ import {
   isComment,
   isHydrating,
   locateHydrationNode,
-  runWithHydration,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
@@ -307,11 +306,9 @@ const vaporInteropImpl: Omit<
     // In CSR (createApp/createVaporApp + vaporInteropPlugin), both are false,
     // so this logic is tree-shaken.
     if (!isHydrating && !isVdomHydrating) return node
-    runWithHydration(() => {
-      vaporHydrateNode(node, () =>
-        this.mount(vnode, container, anchor, parentComponent, parentSuspense),
-      )
-    })
+    vaporHydrateNode(node, () =>
+      this.mount(vnode, container, anchor, parentComponent, parentSuspense),
+    )
     return _next(node)
   },
 
@@ -319,17 +316,15 @@ const vaporInteropImpl: Omit<
     if (!isHydrating && !isVdomHydrating) return node
     const { slot } = vnode.vs!
     const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
-    runWithHydration(() => {
-      vaporHydrateNode(node, () => {
-        vnode.vb = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
-        vnode.anchor = vnode.el = currentHydrationNode!
+    vaporHydrateNode(node, () => {
+      vnode.vb = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
+      vnode.anchor = vnode.el = currentHydrationNode!
 
-        if (__DEV__ && !vnode.anchor) {
-          throw new Error(
-            `Failed to locate slot anchor. this is likely a Vue internal bug.`,
-          )
-        }
-      })
+      if (__DEV__ && !vnode.anchor) {
+        throw new Error(
+          `Failed to locate slot anchor. this is likely a Vue internal bug.`,
+        )
+      }
     })
     return vnode.anchor as Node
   },
