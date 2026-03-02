@@ -17,6 +17,7 @@ import { isString } from '@vue/shared'
 import type { VaporComponentInstance } from '../src/component'
 import type { TeleportFragment } from '../src/components/Teleport'
 import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from './_utils'
+import { setIsHydratingEnabled } from '../src/dom/hydration'
 
 const formatHtml = (raw: string) => {
   return raw
@@ -4926,6 +4927,10 @@ describe('data-allow-mismatch', () => {
 })
 
 describe('VDOM interop', () => {
+  // Previous tests (e.g. createVaporSSRApp) leave isHydratingEnabled = true.
+  beforeEach(() => {
+    setIsHydratingEnabled(false)
+  })
   test('basic render vapor component', async () => {
     const data = ref(true)
     const { container } = await testWithVDOMApp(
@@ -5019,6 +5024,40 @@ describe('VDOM interop', () => {
       "
     `,
     )
+  })
+
+  test('nested components (VDOM -> Vapor) should not duplicate', async () => {
+    const { container } = await testWithVDOMApp(
+      `<script setup>const components = _components;</script>
+          <template>
+            <components.VaporChild/>
+          </template>`,
+      {
+        VaporChild: {
+          code: `<script vapor>
+                import { ref } from 'vue'
+                const show = ref(true)
+              </script>
+              <template>
+                <template v-if="show">
+                  <div>1</div>
+                  <div>2</div>
+                </template>
+              </template>`,
+          vapor: true,
+        },
+      },
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+        "
+        <!--[--><div>1</div><div>2</div><!--]-->
+        <!--if-->"
+      `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
   })
 
   test('nested components (VDOM -> Vapor -> VDOM (with slot fallback))', async () => {

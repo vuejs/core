@@ -44,6 +44,17 @@ export function runWithoutHydration(fn: () => any): any {
   }
 }
 
+export function runWithHydration(fn: () => any): any {
+  // temporarily enable hydration capability for createSSRApp + vdomInterop
+  const prev = isHydratingEnabled
+  setIsHydratingEnabled(true)
+  try {
+    return fn()
+  } finally {
+    setIsHydratingEnabled(prev)
+  }
+}
+
 let isOptimized = false
 
 function performHydration<T>(
