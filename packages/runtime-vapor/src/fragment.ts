@@ -82,7 +82,8 @@ export class ForFragment extends VaporFragment<Block[]> {
 }
 
 export class DynamicFragment extends VaporFragment {
-  anchor!: Node
+  // @ts-expect-error - assigned in hydrate()
+  anchor: Node
   scope: EffectScope | undefined
   current?: BlockFn
   pending?: { render?: BlockFn; key: any }
