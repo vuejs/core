@@ -14,17 +14,17 @@
 ### 1. 基础 DOM 操作
 - [x] `createTextNode` - 创建文本节点 
 - [x] `createComment` - 创建注释节点 
-- `insert` - 插入节点
-- `prepend` - 前置插入节点
-- `remove` - 移除节点
 - [x] `txt` - 获取文本
 - [x] `child` - 获取子节点
 - [x] `nthChild` - 获取第 n 个子节点
 - [x] `next` - 获取下一个节点
 
 ### 2. 块操作
-- `Block` - 块类型定义
-- `setInsertionState` - 设置插入状态
+- [x] `Block` - 块类型定义
+- [x] `setInsertionState` - 设置插入状态
+- [x] `insert` - 插入节点
+- [x] `prepend` - 前置插入节点
+- [x] `remove` - 移除节点
 
 ### 3. 属性操作
 - `setText` - 设置文本

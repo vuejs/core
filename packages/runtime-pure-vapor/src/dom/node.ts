@@ -15,6 +15,15 @@ export function createComment(data: string): Comment {
   return document.createComment(data)
 }
 
+type Anchor = Comment & {
+  // cached matching fragment end to avoid repeated traversal
+  // on nested fragments
+  $fe?: Anchor
+}
+/** 从水合移过来的函数，似乎有用 */
+export const isComment = (node: Node, data: string): node is Anchor =>
+  node.nodeType === 8 && (node as Comment).data === data
+
 /*@__NO_SIDE_EFFECTS__*/
 export function querySelector(selectors: string): Element | null {
   return document.querySelector(selectors)

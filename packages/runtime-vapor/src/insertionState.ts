@@ -1,30 +1,31 @@
-import { isHydrating } from './dom/hydration'
+/**
+ * 在创建需要插入的块（组件、插槽、条件渲染、列表渲染）之前，调用 setInsertionState() 记录插入上下文
+- 根据是否在 hydration 模式，决定使用逻辑索引还是锚点进行定位
+- 插入完成后调用 resetInsertionState() 清理状态
+ */
 export type ChildItem = ChildNode & {
-  // logical index, used during hydration to locate the node
+  // 逻辑索引，在 hydration 期间用于定位节点
   $idx: number
 }
 
 export type InsertionParent = ParentNode & {
-  // cache the first child for potential consecutive prepends
+  // 缓存第一个子节点，用于可能的连续前置插入
   $fc?: Node | null
 
-  // last located logical child
+  // 最后定位的逻辑子节点
   $llc?: Node | null
 }
 export let insertionParent: InsertionParent | undefined
 export let insertionAnchor: Node | 0 | undefined | null
-// logical index for hydration
-export let insertionIndex: number | undefined
 
-// indicates whether the insertion is the last one in the parent.
-// if true, means no more nodes need to be hydrated after this insertion,
-// advancing current hydration node to parent nextSibling
+// 指示该插入是否是父节点中的最后一个。
+// 如果为 true，表示在此插入之后不再需要 hydrate 更多节点，
+// 将当前 hydration 节点推进到父节点的 nextSibling
 export let isLastInsertion: boolean | undefined
 
 /**
- * This function is called before a block type that requires insertion
- * (component, slot outlet, if, for) is created. The state is used for actual
- * insertion on client-side render, and used for node adoption during hydration.
+ * 此函数在需要插入的块类型（组件、插槽出口、if、for）创建之前被调用。
+ * 不需要逻辑位置了，保留以避免大量修改。
  */
 export function setInsertionState(
   parent: ParentNode & { $fc?: Node | null },
@@ -34,17 +35,11 @@ export function setInsertionState(
 ): void {
   insertionParent = parent
   isLastInsertion = last
-  insertionIndex = logicalIndex
 
   if (anchor !== undefined) {
-    if (isHydrating) {
-      // hydration uses logicalIndex, not anchor
-      insertionAnchor = undefined
-    } else {
-      insertionAnchor = anchor
-      if (anchor === 0 && !parent.$fc) {
-        parent.$fc = parent.firstChild
-      }
+    insertionAnchor = anchor
+    if (anchor === 0 && !parent.$fc) {
+      parent.$fc = parent.firstChild
     }
   } else {
     insertionAnchor = undefined
@@ -52,9 +47,5 @@ export function setInsertionState(
 }
 
 export function resetInsertionState(): void {
-  insertionParent =
-    insertionAnchor =
-    insertionIndex =
-    isLastInsertion =
-      undefined
+  insertionParent = insertionAnchor = isLastInsertion = undefined
 }
