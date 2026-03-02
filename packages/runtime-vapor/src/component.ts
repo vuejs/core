@@ -640,7 +640,8 @@ export class VaporComponentInstance<
   /**
    * @deprecated only used for JSX to detect props types.
    */
-  $props!: Props
+  // @ts-expect-error
+  $props: Props
 
   constructor(
     comp: VaporComponent,
