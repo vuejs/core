@@ -81,6 +81,45 @@ describe('api: template ref', () => {
     expect(fooEl.value).toBe(null)
   })
 
+  it('dynamic ref can be null or undefined without warning', async () => {
+    const t0 = template('<div></div>')
+    const el = ref(null)
+    const refKey = ref<any>('foo')
+
+    const { render } = define({
+      setup() {
+        return {
+          foo: el,
+        }
+      },
+      render() {
+        const n0 = t0()
+        const setRef = createTemplateRefSetter()
+        renderEffect(() => {
+          setRef(n0 as Element, refKey.value)
+        })
+        return n0
+      },
+    })
+
+    const { host } = render()
+    expect(el.value).toBe(host.children[0])
+
+    refKey.value = null
+    await nextTick()
+    expect(el.value).toBe(null)
+    expect('Invalid template ref type:').not.toHaveBeenWarned()
+
+    refKey.value = 'foo'
+    await nextTick()
+    expect(el.value).toBe(host.children[0])
+
+    refKey.value = undefined
+    await nextTick()
+    expect(el.value).toBe(null)
+    expect('Invalid template ref type:').not.toHaveBeenWarned()
+  })
+
   it('string ref unmount', async () => {
     const t0 = template('<div></div>')
     const el = ref(null)
