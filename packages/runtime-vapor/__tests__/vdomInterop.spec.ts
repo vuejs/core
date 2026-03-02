@@ -736,6 +736,7 @@ describe('vdomInterop', () => {
     })
 
     it('dynamic component includes vdom component', async () => {
+      const vdomRef = ref<any>(null)
       const VdomChild = defineComponent({
         setup(_, { expose }) {
           expose({ name: 'vdomChild' })
@@ -755,8 +756,6 @@ describe('vdomInterop', () => {
         },
       })
 
-      const vdomRef = ref<any>(null)
-
       define({
         setup() {
           return () => h(VaporChild as any)
@@ -766,6 +765,47 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(vdomRef.value).toBeDefined()
       expect(vdomRef.value.name).toBe('vdomChild')
+    })
+
+    it('dynamic component includes vdom component should cleanup old ref', async () => {
+      const VdomChild = defineComponent({
+        setup(_, { expose }) {
+          expose({ name: 'vdomChild' })
+          return () => h('div', 'vdom child')
+        },
+      })
+
+      const useA = ref(true)
+      const refA = ref<any>(null)
+      const refB = ref<any>(null)
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          const setRef = createTemplateRefSetter()
+          const n0 = createDynamicComponent(() => VdomChild)
+          renderEffect(() => {
+            setRef(n0, useA.value ? refA : refB, false, 'vdomRef')
+          })
+          return n0
+        },
+      })
+
+      define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      await nextTick()
+      expect(refA.value).toBeDefined()
+      expect(refA.value.name).toBe('vdomChild')
+      expect(refB.value).toBe(null)
+
+      useA.value = false
+      await nextTick()
+      expect(refA.value).toBe(null)
+      expect(refB.value).toBeDefined()
+      expect(refB.value.name).toBe('vdomChild')
     })
   })
 
