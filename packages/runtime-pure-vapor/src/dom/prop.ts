@@ -1,17 +1,48 @@
+/**
+### 核心功能
+1. 属性设置
+   
+   - setProp : 通用属性设置函数，自动判断是设置 DOM 属性还是 HTML 特性
+   - setAttr : 设置 HTML 特性（attribute）
+   - setDOMProp : 设置 DOM 属性（property）
+2. 特殊属性处理
+   
+   - setClass : 处理 class 属性，支持增量更新
+   - setStyle : 处理 style 属性，支持增量更新
+   - setValue : 处理表单元素的 value 属性
+   - setText : 设置文本节点内容
+   - setElementText : 设置元素的文本内容
+   - setHtml : 设置元素的 HTML 内容
+3. 动态属性处理
+   
+   - setDynamicProps : 批量设置动态属性
+   - setDynamicProp : 设置单个动态属性，根据 key 类型调用相应的处理函数
+4. Block 级别操作
+   
+   - setBlockText : 为 Block 设置文本
+   - setBlockHtml : 为 Block 设置 HTML
+5. 性能优化
+   
+   - optimizePropertyLookup : 优化 Element 和 Text 节点上的属性查找，通过在原型上预定义缓存属性
+### 设计特点
+- 缓存机制 : 使用 $ 前缀的属性（如 $cls 、 $sty 、 $txt ）缓存之前的值，避免不必要的 DOM 操作
+- 增量更新 : class 和 style 支持增量更新，只更新变化的部分
+- 智能判断 : 根据元素类型和属性名称自动决定使用属性还是特性
+- 错误处理 : 对某些会抛出错误的属性进行 try-catch 保护
+- 特殊处理 : 支持自定义元素、v-model 的 true-value/false-value 等特殊情况
+ */
+
 import {
   type NormalizedStyle,
   camelize,
   canSetValueDirectly,
-  getEscapedCssVarName,
   includeBooleanAttr,
   isArray,
   isOn,
   isString,
   normalizeClass,
-  normalizeCssVarValue,
   normalizeStyle,
   parseStringStyle,
-  stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
 import { on } from './event'
@@ -41,8 +72,7 @@ import {
   isApplyingFallthroughProps,
   isVaporComponent,
 } from '../component'
-import { isHydrating, logMismatchError } from './hydration'
-import { type Block, normalizeBlock } from '../block'
+import type { Block } from '../block'
 import type { VaporElement } from '../apiDefineCustomElement'
 
 type TargetElement = Element & {
@@ -76,23 +106,14 @@ export function setAttr(
     return
   }
 
-  // special case for <input v-model type="checkbox"> with
+  // 特殊情况：<input v-model type="checkbox"> 配合
   // :true-value & :false-value
-  // store value as dom properties since non-string values will be
-  // stringified.
+  // 将值存储为 DOM 属性，因为非字符串值会被
+  // 转换为字符串。
   if (key === 'true-value') {
     ;(el as any)._trueValue = value
   } else if (key === 'false-value') {
     ;(el as any)._falseValue = value
-  }
-
-  if (
-    (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-    isHydrating &&
-    !attributeHasMismatch(el, key, value)
-  ) {
-    el[`$${key}`] = value
-    return
   }
 
   if (value !== el[`$${key}`]) {
@@ -124,16 +145,6 @@ export function setDOMProp(
     return
   }
 
-  if (
-    (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-    isHydrating &&
-    !attributeHasMismatch(el, key, value) &&
-    !shouldForceHydrate(el, key) &&
-    !forceHydrate
-  ) {
-    return
-  }
-
   const prev = el[key]
   if (value === prev) {
     return
@@ -155,13 +166,13 @@ export function setDOMProp(
     }
   }
 
-  // some properties perform value validation and throw,
-  // some properties has getter, no setter, will error in 'use strict'
-  // eg. <select :type="null"></select> <select :willValidate="null"></select>
+  // 某些属性会执行值验证并抛出错误，
+  // 某些属性只有 getter 没有 setter，在 'use strict' 模式下会报错
+  // 例如：<select :type="null"></select> <select :willValidate="null"></select>
   try {
     el[key] = value
   } catch (e: any) {
-    // do not warn if value is auto-coerced from nullish values
+    // 如果值是从 null/undefined 自动转换的，则不警告
     if (__DEV__ && !needRemove) {
       warn(
         `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
@@ -182,14 +193,6 @@ export function setClass(
     setClassIncremental(el, value)
   } else {
     value = normalizeClass(value)
-    if (
-      (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      isHydrating &&
-      !classHasMismatch(el, value, false)
-    ) {
-      el.$cls = value
-      return
-    }
 
     if (value !== el.$cls) {
       if (isSVG) {
@@ -205,15 +208,6 @@ function setClassIncremental(el: any, value: any): void {
   const cacheKey = `$clsi${isApplyingFallthroughProps ? '$' : ''}`
   const normalizedValue = normalizeClass(value)
 
-  if (
-    (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-    isHydrating &&
-    !classHasMismatch(el, normalizedValue, true)
-  ) {
-    el[cacheKey] = normalizedValue
-    return
-  }
-
   const prev = el[cacheKey]
   if ((value = el[cacheKey] = normalizedValue) !== prev) {
     const nextList = value.split(/\s+/)
@@ -228,71 +222,21 @@ function setClassIncremental(el: any, value: any): void {
   }
 }
 
-/**
- * dev only
- * defer style matching checks until hydration completes (instance.block is set) if
- * the component uses style v-bind or the element contains CSS variables, to correctly
- * verify if the element is the component root.
- */
-function shouldDeferCheckStyleMismatch(el: TargetElement): boolean {
-  return (
-    __DEV__ &&
-    (!!currentInstance!.getCssVars ||
-      Object.values((el as HTMLElement).style).some(v => v.startsWith('--')))
-  )
-}
-
 export function setStyle(el: TargetElement, value: any): void {
   if (el.$root) {
     setStyleIncremental(el, value)
   } else {
     const normalizedValue = normalizeStyle(value)
-    if (
-      (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      isHydrating
-    ) {
-      if (shouldDeferCheckStyleMismatch(el)) {
-        const instance = currentInstance as VaporComponentInstance
-        queuePostFlushCb(() => {
-          if (!styleHasMismatch(el, value, normalizedValue, false, instance)) {
-            el.$sty = normalizedValue
-            return
-          }
-          patchStyle(el, el.$sty, (el.$sty = normalizedValue))
-        })
-        return
-      } else if (!styleHasMismatch(el, value, normalizedValue, false)) {
-        el.$sty = normalizedValue
-        return
-      }
-    }
 
     patchStyle(el, el.$sty, (el.$sty = normalizedValue))
   }
 }
 
-function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
+function setStyleIncremental(el: any, value: any): void {
   const cacheKey = `$styi${isApplyingFallthroughProps ? '$' : ''}`
   const normalizedValue = isString(value)
     ? parseStringStyle(value)
     : (normalizeStyle(value) as NormalizedStyle | undefined)
-
-  if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
-    if (shouldDeferCheckStyleMismatch(el)) {
-      const instance = currentInstance as VaporComponentInstance
-      queuePostFlushCb(() => {
-        if (!styleHasMismatch(el, value, normalizedValue, true, instance)) {
-          el[cacheKey] = normalizedValue
-          return
-        }
-        patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
-      })
-      return
-    } else if (!styleHasMismatch(el, value, normalizedValue, true)) {
-      el[cacheKey] = normalizedValue
-      return
-    }
-  }
 
   patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
 }
@@ -306,22 +250,12 @@ export function setValue(
     return
   }
 
-  // store value as _value as well since
-  // non-string values will be stringified.
+  // 将值也存储为 _value，因为
+  // 非字符串值会被转换为字符串。
   el._value = value
 
-  if (
-    (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-    isHydrating &&
-    !attributeHasMismatch(el, 'value', getClientText(el, value)) &&
-    !shouldForceHydrate(el, 'value') &&
-    !forceHydrate
-  ) {
-    return
-  }
-
-  // #4956: <option> value will fallback to its text content so we need to
-  // compare against its attribute value instead.
+  // #4956: <option> 的 value 会回退到其文本内容，所以我们需要
+  // 比较其属性值而不是 value 属性。
   const oldValue = el.tagName === 'OPTION' ? el.getAttribute('value') : el.value
   const newValue = value == null ? '' : value
   if (oldValue !== newValue) {
@@ -333,59 +267,24 @@ export function setValue(
 }
 
 /**
- * Only called on text nodes!
- * Compiler should also ensure value passed here is already converted by
- * `toDisplayString`
+ * 仅在文本节点上调用！
+ * 编译器还应确保传递给此处的值已经通过
+ * `toDisplayString` 转换
  */
 export function setText(el: Text & { $txt?: string }, value: string): void {
-  if (isHydrating) {
-    const clientText = getClientText(el.parentNode!, value)
-    if (el.nodeValue == clientText) {
-      el.$txt = clientText
-      return
-    }
-
-    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      warn(
-        `Hydration text mismatch in`,
-        el.parentNode,
-        `\n  - rendered on server: ${JSON.stringify((el as Text).data)}` +
-          `\n  - expected on client: ${JSON.stringify(value)}`,
-      )
-    logMismatchError()
-  }
-
   if (el.$txt !== value) {
     el.nodeValue = el.$txt = value
   }
 }
 
 /**
- * Used by setDynamicProps only, so need to guard with `toDisplayString`
+ * 仅由 setDynamicProps 使用，因此需要用 `toDisplayString` 保护
  */
 export function setElementText(
   el: Node & { $txt?: string },
   value: unknown,
 ): void {
   value = toDisplayString(value)
-  if (isHydrating) {
-    let clientText = getClientText(el, value as string)
-    if (el.textContent === clientText) {
-      el.$txt = clientText
-      return
-    }
-
-    if (!isMismatchAllowed(el as Element, MismatchTypes.TEXT)) {
-      ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-        warn(
-          `Hydration text content mismatch on`,
-          el,
-          `\n  - rendered on server: ${el.textContent}` +
-            `\n  - expected on client: ${clientText}`,
-        )
-      logMismatchError()
-    }
-  }
 
   if (el.$txt !== value) {
     el.textContent = el.$txt = value as string
@@ -403,7 +302,7 @@ export function setBlockText(
 }
 
 /**
- * dev only
+ * 仅在开发环境使用
  */
 function warnCannotSetProp(prop: string): void {
   warn(
@@ -502,7 +401,7 @@ export function setDynamicProp(
   } else if (isOn(key)) {
     on(el, key[2].toLowerCase() + key.slice(3), value, { effect: true })
   } else if (
-    // force hydrate v-bind with .prop modifiers
+    // 使用 .prop 修饰符强制水合 v-bind
     (forceHydrate = key[0] === '.')
       ? ((key = key.slice(1)), true)
       : key[0] === '^'
@@ -519,7 +418,7 @@ export function setDynamicProp(
       setDOMProp(el, key, value, forceHydrate)
     }
   } else if (
-    // custom elements
+    // 自定义元素
     (el as VaporElement)._isVueCE &&
     (/[A-Z]/.test(key) || !isString(value))
   ) {
@@ -533,7 +432,7 @@ export function setDynamicProp(
 let isOptimized = false
 
 /**
- * Optimize property lookup for cache properties on Element and Text nodes
+ * 优化 Element 和 Text 节点上缓存属性的属性查找
  */
 export function optimizePropertyLookup(): void {
   if (isOptimized) return
@@ -544,147 +443,9 @@ export function optimizePropertyLookup(): void {
   proto.$fc = proto.$evtclick = undefined
   proto.$root = false
   proto.$html = proto.$cls = proto.$sty = ''
-  // Initialize $txt to undefined instead of empty string to ensure setText()
-  // properly updates the text node even when the value is empty string.
-  // This prevents issues where setText(node, '') would be skipped because
-  // $txt === '' would return true, leaving the original nodeValue unchanged.
+  // 将 $txt 初始化为 undefined 而不是空字符串，以确保 setText()
+  // 即使值为空字符串也能正确更新文本节点。
+  // 这可以防止出现 setText(node, '') 被跳过的情况，
+  // 因为 $txt === '' 会返回 true，导致原始 nodeValue 保持不变。
   ;(Text.prototype as any).$txt = undefined
-}
-
-function classHasMismatch(
-  el: TargetElement | any,
-  expected: string,
-  isIncremental: boolean,
-): boolean {
-  const actual = el.getAttribute('class')
-  const actualClassSet = toClassSet(actual || '')
-  const expectedClassSet = toClassSet(expected)
-
-  let hasMismatch: boolean = false
-  if (isIncremental) {
-    if (expected) {
-      hasMismatch = Array.from(expectedClassSet).some(
-        cls => !actualClassSet.has(cls),
-      )
-    }
-  } else {
-    hasMismatch = !isSetEqual(actualClassSet, expectedClassSet)
-  }
-
-  if (hasMismatch) {
-    warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)
-    logMismatchError()
-    return true
-  }
-
-  return false
-}
-
-function styleHasMismatch(
-  el: TargetElement | any,
-  value: any,
-  normalizedValue: string | NormalizedStyle | undefined,
-  isIncremental: boolean,
-  instance = currentInstance,
-): boolean {
-  const actual = el.getAttribute('style')
-  const actualStyleMap = toStyleMap(actual || '')
-  const expected = isString(value) ? value : stringifyStyle(normalizedValue)
-  const expectedStyleMap = toStyleMap(expected)
-
-  // If `v-show=false`, `display: 'none'` should be added to expected
-  if (el[vShowHidden]) {
-    expectedStyleMap.set('display', 'none')
-  }
-
-  // handle css vars
-  if (instance) {
-    resolveCssVars(instance as VaporComponentInstance, el, expectedStyleMap)
-  }
-
-  let hasMismatch: boolean = false
-  if (isIncremental) {
-    if (expected) {
-      // check if the expected styles are present in the actual styles
-      hasMismatch = Array.from(expectedStyleMap.entries()).some(
-        ([key, val]) => actualStyleMap.get(key) !== val,
-      )
-    }
-  } else {
-    hasMismatch = !isMapEqual(actualStyleMap, expectedStyleMap)
-  }
-
-  if (hasMismatch) {
-    warnPropMismatch(el, 'style', MismatchTypes.STYLE, actual, expected)
-    logMismatchError()
-    return true
-  }
-
-  return false
-}
-
-/**
- * dev only
- */
-function resolveCssVars(
-  instance: VaporComponentInstance,
-  block: Block,
-  expectedMap: Map<string, string>,
-): void {
-  if (!instance.isMounted) return
-  const rootBlocks = normalizeBlock(instance)
-  if (
-    (instance as GenericComponentInstance).getCssVars &&
-    normalizeBlock(block).every(b => rootBlocks.includes(b))
-  ) {
-    const cssVars = (instance as GenericComponentInstance).getCssVars!()
-    for (const key in cssVars) {
-      const value = normalizeCssVarValue(cssVars[key])
-      expectedMap.set(`--${getEscapedCssVarName(key, false)}`, value)
-    }
-  }
-
-  if (
-    normalizeBlock(block).every(b => rootBlocks.includes(b)) &&
-    instance.parent
-  ) {
-    resolveCssVars(
-      instance.parent as VaporComponentInstance,
-      instance.block,
-      expectedMap,
-    )
-  }
-}
-
-function attributeHasMismatch(el: any, key: string, value: any): boolean {
-  if (isValidHtmlOrSvgAttribute(el, key)) {
-    const { actual, expected } = getAttributeMismatch(el, key, value)
-    if (actual !== expected) {
-      warnPropMismatch(el, key, MismatchTypes.ATTRIBUTE, actual, expected)
-      logMismatchError()
-      return true
-    }
-  }
-  return false
-}
-
-function getClientText(el: Node, value: string): string {
-  if (
-    value[0] === '\n' &&
-    ((el as Element).tagName === 'PRE' ||
-      (el as Element).tagName === 'TEXTAREA')
-  ) {
-    value = value.slice(1)
-  }
-  return value
-}
-
-function shouldForceHydrate(el: Element, key: string): boolean {
-  const { tagName } = el
-  return (
-    ((tagName === 'INPUT' || tagName === 'OPTION') &&
-      (key.endsWith('value') || key === 'indeterminate')) ||
-    // force hydrate custom element dynamic props
-    tagName.includes('-')
-  )
 }

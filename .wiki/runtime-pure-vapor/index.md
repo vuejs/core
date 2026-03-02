@@ -11,7 +11,7 @@
 
 ## 一、需要实现的函数（按开发顺序）
 
-### 1. 基础 DOM 操作
+### 1. 基础 DOM 操作 node.ts
 - [x] `createTextNode` - 创建文本节点 
 - [x] `createComment` - 创建注释节点 
 - [x] `txt` - 获取文本
@@ -19,26 +19,26 @@
 - [x] `nthChild` - 获取第 n 个子节点
 - [x] `next` - 获取下一个节点
 
-### 2. 块操作
+### 2. 块操作 block.ts
 - [x] `Block` - 块类型定义
 - [x] `setInsertionState` - 设置插入状态
 - [x] `insert` - 插入节点
 - [x] `prepend` - 前置插入节点
 - [x] `remove` - 移除节点
 
-### 3. 属性操作
-- `setText` - 设置文本
-- `setBlockText` - 设置块文本
-- `setHtml` - 设置 HTML
-- `setBlockHtml` - 设置块 HTML
-- `setClass` - 设置类
-- `setStyle` - 设置样式
-- `setAttr` - 设置属性
-- `setValue` - 设置值
-- `setProp` - 设置属性
-- `setDOMProp` - 设置 DOM 属性
-- `setDynamicProps` - 设置动态属性
-- `setElementText` - 设置元素文本
+### 3. 属性操作 prop.ts
+- [x] `setText` - 设置文本
+- [x] `setBlockText` - 设置块文本
+- [x] `setHtml` - 设置 HTML
+- [x] `setBlockHtml` - 设置块 HTML
+- [x] `setClass` - 设置类
+- [x] `setStyle` - 设置样式
+- [x] `setAttr` - 设置属性
+- [x] `setValue` - 设置值
+- [x] `setProp` - 设置属性
+- [x] `setDOMProp` - 设置 DOM 属性
+- [x] `setDynamicProps` - 设置动态属性
+- [x] `setElementText` - 设置元素文本
 
 ### 4. 事件系统
 - `on` - 绑定事件
