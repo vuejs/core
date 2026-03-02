@@ -177,6 +177,9 @@ function setRef(
     }
   }
 
+  // dynamic ref can become null / undefined and should only clear old ref
+  if (ref == null) return ref
+
   if (isFunction(ref)) {
     const invokeRefSetter = (value?: Element | Record<string, any> | null) => {
       callWithErrorHandling(ref, instance, ErrorCodes.FUNCTION_REF, [
