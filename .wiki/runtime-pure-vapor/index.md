@@ -40,12 +40,12 @@
 - [x] `setDynamicProps` - 设置动态属性
 - [x] `setElementText` - 设置元素文本
 
-### 4. 事件系统
-- `on` - 绑定事件
-- `delegate` - 事件委托
-- `delegateEvents` - 委托事件
-- `setDynamicEvents` - 设置动态事件
-- `createInvoker` - 创建事件调用器
+### 4. 事件系统 event.ts
+- [x] `on` - 绑定事件
+- [x] `delegate` - 事件委托
+- [x] `delegateEvents` - 委托事件
+- [x] `setDynamicEvents` - 设置动态事件
+- [x] `createInvoker` - 创建事件调用器 [遗留有 currentInstance]
 
 ### 5. 渲染系统
 - `renderEffect` - 渲染效果
