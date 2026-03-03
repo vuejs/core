@@ -5377,6 +5377,48 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate static VNode chunk rendered via createDynamicComponent', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { createStaticVNode } from 'vue'
+        const data = _data
+        const StaticChunk = createStaticVNode(
+          '<div>first static</div><div>second static</div>',
+          2,
+        )
+      </script>
+      <template>
+        <div>
+          <component :is="StaticChunk" />
+        </div>
+        <span>{{ data }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div><div>first static</div><div>second static</div><!--dynamic-component--></div><span>foo</span><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div><div>first static</div><div>second static</div><!--dynamic-component--></div><span>bar</span><!--]-->
+      "
+    `,
+    )
+  })
+
   test('hydrate VDOM slot content', async () => {
     const data = ref('foo')
     const { container } = await testWithVaporApp(
