@@ -385,7 +385,7 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
 
 let vdomHydrateNode: HydrationRenderer['hydrateNode'] | undefined
 
-function resolveVNodeBlockNodes(vnode: VNode): Block {
+function resolveVNodeNodes(vnode: VNode): Block {
   // Static/Fragment VNodes represent a contiguous node range [el..anchor].
   // Return the full range so Vapor block helpers (insert/remove/move)
   // operate on the same boundaries as runtime-core. Single-node VNodes
@@ -445,7 +445,7 @@ function mountVNode(
     hydrateVNode(vnode, parentComponent as any)
     onScopeDispose(unmount, true)
     isMounted = true
-    frag.nodes = resolveVNodeBlockNodes(vnode)
+    frag.nodes = resolveVNodeNodes(vnode)
   }
 
   frag.insert = (parentNode, anchor, transition) => {
@@ -495,7 +495,7 @@ function mountVNode(
       }
       simpleSetCurrentInstance(prev)
     }
-    frag.nodes = resolveVNodeBlockNodes(vnode)
+    frag.nodes = resolveVNodeNodes(vnode)
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
 
@@ -585,7 +585,7 @@ function createVDOMComponent(
     )
     onScopeDispose(unmount, true)
     isMounted = true
-    frag.nodes = resolveVNodeBlockNodes(vnode)
+    frag.nodes = resolveVNodeNodes(vnode)
   }
 
   vnode.scopeId = getCurrentScopeId() || null
@@ -635,7 +635,7 @@ function createVDOMComponent(
       simpleSetCurrentInstance(prev)
     }
 
-    frag.nodes = resolveVNodeBlockNodes(vnode)
+    frag.nodes = resolveVNodeNodes(vnode)
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
 
