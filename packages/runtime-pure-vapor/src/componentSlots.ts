@@ -16,11 +16,6 @@ import {
   resetInsertionState,
 } from './insertionState'
 import {
-  advanceHydrationNode,
-  isHydrating,
-  locateHydrationNode,
-} from './dom/hydration'
-import {
   type DynamicFragment,
   SlotFragment,
   type VaporFragment,
@@ -187,7 +182,7 @@ export function createSlot(
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
-  if (!isHydrating) resetInsertionState()
+  resetInsertionState()
 
   const instance = getScopeOwner()!
   const rawSlots = instance.rawSlots
@@ -197,7 +192,6 @@ export function createSlot(
 
   let fragment: SlotFragment
   if (isRef(rawSlots._) && isInteropEnabled) {
-    if (isHydrating) locateHydrationNode()
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,
@@ -280,23 +274,14 @@ export function createSlot(
     }
   }
 
-  if (!isHydrating) {
-    if (!noSlotted) {
-      const scopeId = instance.type.__scopeId
-      if (scopeId) {
-        setScopeId(fragment, [`${scopeId}-s`])
-      }
-    }
-
-    if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
-  } else {
-    if (fragment.insert) {
-      ;(fragment as VaporFragment).hydrate!()
-    }
-    if (_isLastInsertion) {
-      advanceHydrationNode(_insertionParent!)
+  if (!noSlotted) {
+    const scopeId = instance.type.__scopeId
+    if (scopeId) {
+      setScopeId(fragment, [`${scopeId}-s`])
     }
   }
+
+  if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
 
   return fragment
 }

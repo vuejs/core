@@ -37,11 +37,6 @@ import {
   type VaporFragment,
   isFragment,
 } from '../fragment'
-import {
-  currentHydrationNode,
-  isHydrating,
-  setCurrentHydrationNode,
-} from '../dom/hydration'
 
 const displayName = 'VaporTransition'
 
@@ -56,30 +51,6 @@ export const ensureTransitionHooksRegistered = (): void => {
   }
 }
 
-const hydrateTransitionImpl = () => {
-  if (!currentHydrationNode || !isTemplateNode(currentHydrationNode)) return
-  // replace <template> node with inner child
-  const {
-    content: { firstChild },
-    parentNode,
-  } = currentHydrationNode
-  if (firstChild) {
-    parentNode!.replaceChild(firstChild, currentHydrationNode)
-    setCurrentHydrationNode(firstChild)
-
-    if (firstChild instanceof HTMLElement || firstChild instanceof SVGElement) {
-      const originalDisplay = firstChild.style.display
-      firstChild.style.display = 'none'
-
-      return (hooks: TransitionHooks) => {
-        hooks.beforeEnter(firstChild)
-        firstChild.style.display = originalDisplay
-        queuePostFlushCb(() => hooks.enter(firstChild))
-      }
-    }
-  }
-}
-
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = displayName
   t.props = TransitionPropsValidators
@@ -89,41 +60,37 @@ const decorate = (t: typeof VaporTransition) => {
 
 export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
   /*@__PURE__*/ decorate((props, { slots, expose }) => {
-    // @ts-expect-error
-    expose()
+  // @ts-expect-error
+  expose()
 
-    // Register transition hooks on first use
-    ensureTransitionHooksRegistered()
+  // Register transition hooks on first use
+  ensureTransitionHooksRegistered()
 
-    const performAppear = isHydrating ? hydrateTransitionImpl() : undefined
+  const children = (slots.default && slots.default()) as any as Block
+  if (!children) return []
 
-    const children = (slots.default && slots.default()) as any as Block
-    if (!children) return []
+  const instance = currentInstance! as VaporComponentInstance
+  const { mode } = props
+  checkTransitionMode(mode)
 
-    const instance = currentInstance! as VaporComponentInstance
-    const { mode } = props
-    checkTransitionMode(mode)
+  let resolvedProps: BaseTransitionProps<Element>
+  renderEffect(() => (resolvedProps = resolveTransitionProps(props)))
 
-    let resolvedProps: BaseTransitionProps<Element>
-    renderEffect(() => (resolvedProps = resolveTransitionProps(props)))
+  const hooks = applyTransitionHooksImpl(children, {
+    state: useTransitionState(),
+    // use proxy to keep props reference stable
+    props: new Proxy({} as BaseTransitionProps<Element>, {
+      get(_, key) {
+        return resolvedProps[key as keyof BaseTransitionProps<Element>]
+      },
+    }),
+    instance: instance,
+  } as VaporTransitionHooks)
 
-    const hooks = applyTransitionHooksImpl(children, {
-      state: useTransitionState(),
-      // use proxy to keep props reference stable
-      props: new Proxy({} as BaseTransitionProps<Element>, {
-        get(_, key) {
-          return resolvedProps[key as keyof BaseTransitionProps<Element>]
-        },
-      }),
-      instance: instance,
-    } as VaporTransitionHooks)
 
-    if (resolvedProps!.appear && performAppear) {
-      performAppear(hooks)
-    }
 
-    return children
-  })
+  return children
+})
 
 const getTransitionHooksContext = (
   key: string,
@@ -148,7 +115,7 @@ const getTransitionHooksContext = (
       const leavingNode = leavingNodes.get(key)
       if (leavingNode && (leavingNode as TransitionElement)[leaveCbKey]) {
         // force early removal (not cancelled)
-        ;(leavingNode as TransitionElement)[leaveCbKey]!()
+        ; (leavingNode as TransitionElement)[leaveCbKey]!()
       }
     },
     cloneHooks: block => {
@@ -317,7 +284,7 @@ export function findTransitionBlock(
         // warn more than one non-comment child
         warn(
           '<transition> can only be used on a single element or component. ' +
-            'Use <transition-group> for lists.',
+          'Use <transition-group> for lists.',
         )
         break
       }

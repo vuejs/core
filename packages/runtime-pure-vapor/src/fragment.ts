@@ -27,13 +27,6 @@ import {
   isVaporComponent,
 } from './component'
 import type { NodeRef } from './apiTemplateRef'
-import {
-  currentHydrationNode,
-  isComment,
-  isHydrating,
-  locateFragmentEndAnchor,
-  locateHydrationNode,
-} from './dom/hydration'
 import { isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
@@ -101,19 +94,13 @@ export class DynamicFragment extends VaporFragment {
     this.keyed = keyed
     this.slotOwner = currentSlotOwner
     this.keepAliveCtx = currentKeepAliveCtx
-    if (isHydrating) {
-      this.anchorLabel = anchorLabel
-      locateHydrationNode()
-    } else {
-      this.anchor =
-        __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
-      if (__DEV__) this.anchorLabel = anchorLabel
-    }
+    this.anchor =
+      __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+    if (__DEV__) this.anchorLabel = anchorLabel
   }
 
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
-      if (isHydrating) this.hydrate(true)
       return
     }
 
@@ -131,7 +118,7 @@ export class DynamicFragment extends VaporFragment {
 
     const instance = currentInstance
     const prevSub = setActiveSub()
-    const parent = isHydrating ? null : this.anchor.parentNode
+    const parent = this.anchor.parentNode
     // teardown previous branch
     if (this.scope) {
       let retainScope = false
@@ -172,8 +159,6 @@ export class DynamicFragment extends VaporFragment {
     this.renderBranch(render, transition, parent, instance)
 
     setActiveSub(prevSub)
-
-    if (isHydrating) this.hydrate()
   }
 
   renderBranch(
@@ -259,68 +244,11 @@ export class DynamicFragment extends VaporFragment {
       this.nodes = []
     }
   }
-
-  hydrate = (isEmpty = false): void => {
-    // early return allows tree-shaking of hydration logic when not used
-    if (!isHydrating) return
-
-    // avoid repeated hydration
-    if (this.anchor) return
-
-    if (this.anchorLabel === 'if') {
-      // reuse the empty comment node as the anchor for empty if
-      // e.g. `<div v-if="false"></div>` -> `<!---->`
-      if (isEmpty) {
-        this.anchor = locateFragmentEndAnchor('')!
-        if (__DEV__ && !this.anchor) {
-          throw new Error(
-            'Failed to locate if anchor. this is likely a Vue internal bug.',
-          )
-        } else {
-          if (__DEV__) {
-            ;(this.anchor as Comment).data = this.anchorLabel
-          }
-          return
-        }
-      }
-    } else if (this.anchorLabel === 'slot') {
-      // reuse the empty comment node for empty slot
-      // e.g. `<slot v-if="false"></slot>`
-      if (isEmpty && isComment(currentHydrationNode!, '')) {
-        this.anchor = currentHydrationNode!
-        if (__DEV__) {
-          ;(this.anchor as Comment).data = this.anchorLabel!
-        }
-        return
-      }
-
-      // reuse the vdom fragment end anchor
-      this.anchor = locateFragmentEndAnchor()!
-      if (__DEV__ && !this.anchor) {
-        throw new Error(
-          'Failed to locate slot anchor. this is likely a Vue internal bug.',
-        )
-      } else {
-        return
-      }
-    }
-
-    const { parentNode: pn, nextNode } = findBlockNode(this.nodes)!
-    // create an anchor
-    queuePostFlushCb(() => {
-      pn!.insertBefore(
-        (this.anchor = __DEV__
-          ? createComment(this.anchorLabel!)
-          : createTextNode()),
-        nextNode,
-      )
-    })
-  }
 }
 
 export class SlotFragment extends DynamicFragment {
   constructor() {
-    super(isHydrating || __DEV__ ? 'slot' : undefined)
+    super(__DEV__ ? 'slot' : undefined)
   }
 
   updateSlot(render?: BlockFn, fallback?: BlockFn, key: any = render): void {

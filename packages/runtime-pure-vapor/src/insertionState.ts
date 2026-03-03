@@ -1,4 +1,3 @@
-import { isHydrating } from './dom/hydration'
 export type ChildItem = ChildNode & {
   // logical index, used during hydration to locate the node
   $idx: number
@@ -37,14 +36,9 @@ export function setInsertionState(
   insertionIndex = logicalIndex
 
   if (anchor !== undefined) {
-    if (isHydrating) {
-      // hydration uses logicalIndex, not anchor
-      insertionAnchor = undefined
-    } else {
-      insertionAnchor = anchor
-      if (anchor === 0 && !parent.$fc) {
-        parent.$fc = parent.firstChild
-      }
+    insertionAnchor = anchor
+    if (anchor === 0 && !parent.$fc) {
+      parent.$fc = parent.firstChild
     }
   } else {
     insertionAnchor = undefined
@@ -56,5 +50,5 @@ export function resetInsertionState(): void {
     insertionAnchor =
     insertionIndex =
     isLastInsertion =
-      undefined
+    undefined
 }

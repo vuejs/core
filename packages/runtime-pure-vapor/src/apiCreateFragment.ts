@@ -1,5 +1,4 @@
 import { type Block, type BlockFn, insert } from './block'
-import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import { DynamicFragment } from './fragment'
 import {
   insertionAnchor,
@@ -22,8 +21,7 @@ import { renderEffect } from './renderEffect'
 export function createKeyedFragment(key: () => any, render: BlockFn): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  const _isLastInsertion = isLastInsertion
-  if (!isHydrating) resetInsertionState()
+  resetInsertionState()
 
   const frag = __DEV__
     ? new DynamicFragment('keyed', true)
@@ -31,12 +29,6 @@ export function createKeyedFragment(key: () => any, render: BlockFn): Block {
 
   renderEffect(() => frag.update(render, key()))
 
-  if (!isHydrating) {
-    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
-  } else {
-    if (_isLastInsertion) {
-      advanceHydrationNode(_insertionParent!)
-    }
-  }
+  if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
   return frag
 }
