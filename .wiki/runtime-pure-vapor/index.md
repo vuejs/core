@@ -70,8 +70,8 @@
 - `withVaporCtx` - 使用 Vapor 上下文
 
 ### 8. 模板操作
-- [x] `template` - 从字符串生成模板 template.ts
-- `createTemplateRefSetter` - 创建模板引用设置器  apiTemplateRef.ts 【依赖 core,dom】
+- `template` - 模板操作
+- `createTemplateRefSetter` - 创建模板引用设置器
 
 ### 9. CSS 变量
 - `useVaporCssVars` - 使用 Vapor CSS 变量
