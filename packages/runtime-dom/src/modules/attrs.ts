@@ -81,13 +81,12 @@ export function compatCoerceAttr(
     value === false &&
     !(el.tagName === 'INPUT' && key === 'value') &&
     !isSpecialBooleanAttr(key) &&
-    compatUtils.isCompatEnabled(DeprecationTypes.ATTR_FALSE_VALUE, instance)
-  ) {
-    compatUtils.warnDeprecation(
+    compatUtils.softAssertCompatEnabled(
       DeprecationTypes.ATTR_FALSE_VALUE,
       instance,
       key,
     )
+  ) {
     el.removeAttribute(key)
     return true
   }
