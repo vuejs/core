@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defer, wrap } from '../profiling'
 import { nextTick } from 'vue'
 
@@ -92,10 +92,7 @@ describe('benchmark/profiling', () => {
     })
 
     it('should use requestIdleCallback', async () => {
-      const requestIdleCallbackSpy = vi.spyOn(
-        globalThis,
-        'requestIdleCallback',
-      )
+      const requestIdleCallbackSpy = vi.spyOn(globalThis, 'requestIdleCallback')
       await defer()
       expect(requestIdleCallbackSpy).toHaveBeenCalled()
     })
@@ -495,7 +492,9 @@ describe('benchmark/profiling', () => {
 
       await wrapped()
 
-      expect(globalThis.times['test-with-dashes_and_underscores.dots']).toBeDefined()
+      expect(
+        globalThis.times['test-with-dashes_and_underscores.dots'],
+      ).toBeDefined()
     })
 
     it('should update DOM correctly with special characters in message', async () => {
