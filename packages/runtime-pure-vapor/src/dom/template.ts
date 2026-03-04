@@ -1,5 +1,5 @@
 import { type Namespace, Namespaces } from '@vue/shared'
-import { _child, createTextNode } from './node'
+import { child, createTextNode } from './node'
 
 let t: HTMLTemplateElement
 
@@ -15,10 +15,10 @@ export function template(html: string, root?: boolean, ns?: Namespace) {
       if (ns) {
         const tag = ns === Namespaces.SVG ? 'svg' : 'math'
         t.innerHTML = `<${tag}>${html}</${tag}>`
-        node = _child(_child(t.content) as ParentNode)
+        node = child(child(t.content) as ParentNode)
       } else {
         t.innerHTML = html
-        node = _child(t.content)
+        node = child(t.content)
       }
     }
     const ret = node.cloneNode(true)
