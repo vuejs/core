@@ -12,7 +12,7 @@ export function ssrRenderDynamicModel(
   type: unknown,
   model: unknown,
   value: unknown,
-) {
+): string {
   switch (type) {
     case 'radio':
       return looseEqual(model, value) ? ' checked' : ''
@@ -30,7 +30,7 @@ export function ssrRenderDynamicModel(
 export function ssrGetDynamicModelProps(
   existingProps: any = {},
   model: unknown,
-) {
+): { checked: true } | { value: any } | null {
   const { type, value } = existingProps
   switch (type) {
     case 'radio':

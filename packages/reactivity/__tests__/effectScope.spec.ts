@@ -176,7 +176,7 @@ describe('reactivity/effect/scope', () => {
 
     expect('[Vue warn] cannot run an inactive effect scope.').toHaveBeenWarned()
 
-    expect(scope.effects.length).toBe(1)
+    expect(scope.effects.length).toBe(0)
 
     counter.num = 7
     expect(dummy).toBe(0)
@@ -248,16 +248,15 @@ describe('reactivity/effect/scope', () => {
       watchEffect(() => {
         watchEffectSpy()
         r.value
+        c.value
       })
     })
 
-    c!.value // computed is lazy so trigger collection
     expect(computedSpy).toHaveBeenCalledTimes(1)
     expect(watchSpy).toHaveBeenCalledTimes(0)
     expect(watchEffectSpy).toHaveBeenCalledTimes(1)
 
     r.value++
-    c!.value
     await nextTick()
     expect(computedSpy).toHaveBeenCalledTimes(2)
     expect(watchSpy).toHaveBeenCalledTimes(1)
@@ -266,7 +265,6 @@ describe('reactivity/effect/scope', () => {
     scope.stop()
 
     r.value++
-    c!.value
     await nextTick()
     // should not trigger anymore
     expect(computedSpy).toHaveBeenCalledTimes(2)
@@ -296,5 +294,126 @@ describe('reactivity/effect/scope', () => {
       childScope.off()
       expect(getCurrentScope()).toBe(parentScope)
     })
+  })
+
+  it('should pause/resume EffectScope', async () => {
+    const counter = reactive({ num: 0 })
+    const fnSpy = vi.fn(() => counter.num)
+    const scope = new EffectScope()
+    scope.run(() => {
+      effect(fnSpy)
+    })
+
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+
+    counter.num++
+    await nextTick()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+
+    scope.pause()
+    counter.num++
+    await nextTick()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+
+    counter.num++
+    await nextTick()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+
+    scope.resume()
+    expect(fnSpy).toHaveBeenCalledTimes(3)
+  })
+
+  test('removing a watcher while stopping its effectScope', async () => {
+    const count = ref(0)
+    const scope = effectScope()
+    let watcherCalls = 0
+    let cleanupCalls = 0
+
+    scope.run(() => {
+      const stop1 = watch(count, () => {
+        watcherCalls++
+      })
+      watch(count, (val, old, onCleanup) => {
+        watcherCalls++
+        onCleanup(() => {
+          cleanupCalls++
+          stop1()
+        })
+      })
+      watch(count, () => {
+        watcherCalls++
+      })
+    })
+
+    expect(watcherCalls).toBe(0)
+    expect(cleanupCalls).toBe(0)
+
+    count.value++
+    await nextTick()
+    expect(watcherCalls).toBe(3)
+    expect(cleanupCalls).toBe(0)
+
+    scope.stop()
+    count.value++
+    await nextTick()
+    expect(watcherCalls).toBe(3)
+    expect(cleanupCalls).toBe(1)
+
+    expect(scope.effects.length).toBe(0)
+    expect(scope.cleanups.length).toBe(0)
+  })
+
+  it('should still trigger updates after stopping scope stored in reactive object', () => {
+    const rs = ref({
+      stage: 0,
+      scope: null as any,
+    })
+
+    let renderCount = 0
+    effect(() => {
+      renderCount++
+      return rs.value.stage
+    })
+
+    const handleBegin = () => {
+      const status = rs.value
+      status.stage = 1
+      status.scope = effectScope()
+      status.scope.run(() => {
+        watch([() => status.stage], () => {})
+      })
+    }
+
+    const handleExit = () => {
+      const status = rs.value
+      status.stage = 0
+      const watchScope = status.scope
+      status.scope = null
+      if (watchScope) {
+        watchScope.stop()
+      }
+    }
+
+    expect(rs.value.stage).toBe(0)
+    expect(renderCount).toBe(1)
+
+    // 1. Click begin
+    handleBegin()
+    expect(rs.value.stage).toBe(1)
+    expect(renderCount).toBe(2)
+
+    // 2. Click add
+    rs.value.stage++
+    expect(rs.value.stage).toBe(2)
+    expect(renderCount).toBe(3)
+
+    // 3. Click end
+    handleExit()
+    expect(rs.value.stage).toBe(0)
+    expect(renderCount).toBe(4)
+
+    handleBegin()
+    expect(rs.value.stage).toBe(1)
+    expect(renderCount).toBe(5)
   })
 })

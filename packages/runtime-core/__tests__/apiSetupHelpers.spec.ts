@@ -1,6 +1,5 @@
 import {
   type ComponentInternalInstance,
-  type ComputedRef,
   type SetupContext,
   Suspense,
   computed,
@@ -26,6 +25,8 @@ import {
   withAsyncContext,
   withDefaults,
 } from '../src/apiSetupHelpers'
+import type { ComputedRefImpl } from '../../reactivity/src/computed'
+import { EffectFlags, type ReactiveEffectRunner, effect } from '@vue/reactivity'
 
 describe('SFC <script setup> helpers', () => {
   test('should warn runtime usage', () => {
@@ -249,6 +250,86 @@ describe('SFC <script setup> helpers', () => {
       expect(serializeInner(root)).toBe('hello')
     })
 
+    test('should not leak instance to user microtasks after restore', async () => {
+      let leakedToUserMicrotask = false
+
+      const Comp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(() => Promise.resolve())
+          __temp = await __temp
+          __restore()
+
+          Promise.resolve().then(() => {
+            leakedToUserMicrotask = getCurrentInstance() !== null
+          })
+
+          return () => ''
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      render(
+        h(() => h(Suspense, () => h(Comp))),
+        root,
+      )
+
+      await new Promise(r => setTimeout(r))
+      expect(leakedToUserMicrotask).toBe(false)
+    })
+
+    test('should not leak sibling instance in concurrent restores', async () => {
+      let resolveOne: () => void
+      let resolveTwo: () => void
+      let done!: () => void
+      let pending = 2
+      const ready = new Promise<void>(r => {
+        done = r
+      })
+      const seenUid: Record<'one' | 'two', number | null> = {
+        one: null,
+        two: null,
+      }
+
+      const makeComp = (name: 'one' | 'two', wait: Promise<void>) =>
+        defineComponent({
+          async setup() {
+            let __temp: any, __restore: any
+            ;[__temp, __restore] = withAsyncContext(() => wait)
+            __temp = await __temp
+            __restore()
+
+            Promise.resolve().then(() => {
+              seenUid[name] = getCurrentInstance()?.uid ?? null
+              if (--pending === 0) done()
+            })
+
+            return () => ''
+          },
+        })
+
+      const oneReady = new Promise<void>(r => {
+        resolveOne = r
+      })
+      const twoReady = new Promise<void>(r => {
+        resolveTwo = r
+      })
+      const CompOne = makeComp('one', oneReady)
+      const CompTwo = makeComp('two', twoReady)
+
+      const root = nodeOps.createElement('div')
+      render(
+        h(() => h(Suspense, () => h('div', [h(CompOne), h(CompTwo)]))),
+        root,
+      )
+
+      resolveOne!()
+      resolveTwo!()
+      await ready
+      expect(seenUid.one).toBeNull()
+      expect(seenUid.two).toBeNull()
+    })
+
     test('error handling', async () => {
       const spy = vi.fn()
 
@@ -294,6 +375,8 @@ describe('SFC <script setup> helpers', () => {
       expect(spy).toHaveBeenCalled()
       // should retain same instance before/after the await call
       expect(beforeInstance).toBe(afterInstance)
+      // instance scope should be fully restored/cleaned after async ticks
+      expect((beforeInstance!.scope as any)._on).toBe(0)
     })
 
     test('should not leak instance on multiple awaits', async () => {
@@ -426,7 +509,8 @@ describe('SFC <script setup> helpers', () => {
         resolve = r
       })
 
-      let c: ComputedRef
+      let c: ComputedRefImpl
+      let e: ReactiveEffectRunner
 
       const Comp = defineComponent({
         async setup() {
@@ -435,10 +519,11 @@ describe('SFC <script setup> helpers', () => {
           __temp = await __temp
           __restore()
 
-          c = computed(() => {})
+          c = computed(() => {}) as unknown as ComputedRefImpl
+          e = effect(() => c.value)
           // register the lifecycle after an await statement
           onMounted(resolve)
-          return () => ''
+          return () => c.value
         },
       })
 
@@ -447,10 +532,12 @@ describe('SFC <script setup> helpers', () => {
       app.mount(root)
 
       await ready
-      expect(c!.effect.active).toBe(true)
+      expect(e!.effect.flags & EffectFlags.ACTIVE).toBeTruthy()
+      expect(c!.flags & EffectFlags.TRACKING).toBeTruthy()
 
       app.unmount()
-      expect(c!.effect.active).toBe(false)
+      expect(e!.effect.flags & EffectFlags.ACTIVE).toBeFalsy()
+      expect(c!.flags & EffectFlags.TRACKING).toBeFalsy()
     })
   })
 })

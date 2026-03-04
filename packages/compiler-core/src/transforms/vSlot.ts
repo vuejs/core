@@ -26,9 +26,11 @@ import {
   assert,
   findDir,
   hasScopeRef,
+  isCommentOrWhitespace,
   isStaticExp,
   isTemplateNode,
   isVSlot,
+  isWhitespaceText,
 } from '../utils'
 import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
 import { createForLoopParams, finalizeForParseResult } from './vFor'
@@ -131,9 +133,17 @@ export function buildSlots(
   // since it likely uses a scope variable.
   let hasDynamicSlots = context.scopes.vSlot > 0 || context.scopes.vFor > 0
   // with `prefixIdentifiers: true`, this can be further optimized to make
-  // it dynamic only when the slot actually uses the scope variables.
+  // it dynamic when
+  // 1. the slot arg or exp uses the scope variables.
+  // 2. the slot children use the scope variables.
   if (!__BROWSER__ && !context.ssr && context.prefixIdentifiers) {
-    hasDynamicSlots = hasScopeRef(node, context.identifiers)
+    hasDynamicSlots =
+      node.props.some(
+        prop =>
+          isVSlot(prop) &&
+          (hasScopeRef(prop.arg, context.identifiers) ||
+            hasScopeRef(prop.exp, context.identifiers)),
+      ) || children.some(child => hasScopeRef(child, context.identifiers))
   }
 
   // 1. Check for slot with slotProps on component itself.
@@ -215,21 +225,18 @@ export function buildSlots(
         ),
       )
     } else if (
-      (vElse = findDir(slotElement, /^else(-if)?$/, true /* allowEmpty */))
+      (vElse = findDir(slotElement, /^else(?:-if)?$/, true /* allowEmpty */))
     ) {
       // find adjacent v-if
       let j = i
       let prev
       while (j--) {
         prev = children[j]
-        if (prev.type !== NodeTypes.COMMENT) {
+        if (!isCommentOrWhitespace(prev)) {
           break
         }
       }
-      if (prev && isTemplateNode(prev) && findDir(prev, 'if')) {
-        // remove node
-        children.splice(i, 1)
-        i--
+      if (prev && isTemplateNode(prev) && findDir(prev, /^(?:else-)?if$/)) {
         __TEST__ && assert(dynamicSlots.length > 0)
         // attach this slot to previous conditional
         let conditional = dynamicSlots[
@@ -322,7 +329,7 @@ export function buildSlots(
       // #3766
       // with whitespace: 'preserve', whitespaces between slots will end up in
       // implicitDefaultChildren. Ignore if all implicit children are whitespaces.
-      implicitDefaultChildren.some(node => isNonWhitespaceContent(node))
+      !implicitDefaultChildren.every(isWhitespaceText)
     ) {
       // implicit default slot (mixed with named slots)
       if (hasNamedDefaultSlot) {
@@ -345,7 +352,6 @@ export function buildSlots(
     : hasForwardedSlots(node.children)
       ? SlotFlags.FORWARDED
       : SlotFlags.STABLE
-
   let slots = createObjectExpression(
     slotsProperties.concat(
       createObjectProperty(
@@ -414,12 +420,4 @@ function hasForwardedSlots(children: TemplateChildNode[]): boolean {
     }
   }
   return false
-}
-
-function isNonWhitespaceContent(node: TemplateChildNode): boolean {
-  if (node.type !== NodeTypes.TEXT && node.type !== NodeTypes.TEXT_CALL)
-    return true
-  return node.type === NodeTypes.TEXT
-    ? !!node.content.trim()
-    : isNonWhitespaceContent(node.content)
 }

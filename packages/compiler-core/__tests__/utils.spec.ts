@@ -1,5 +1,10 @@
-import type { TransformContext } from '../src'
-import type { Position } from '../src/ast'
+import { babelParse, walkIdentifiers } from '@vue/compiler-sfc'
+import {
+  type ExpressionNode,
+  type TransformContext,
+  isReferencedIdentifier,
+} from '../src'
+import { type Position, createSimpleExpression } from '../src/ast'
 import {
   advancePositionWithClone,
   isMemberExpressionBrowser,
@@ -41,7 +46,8 @@ describe('advancePositionWithClone', () => {
 })
 
 describe('isMemberExpression', () => {
-  function commonAssertions(fn: (str: string) => boolean) {
+  function commonAssertions(raw: (exp: ExpressionNode) => boolean) {
+    const fn = (str: string) => raw(createSimpleExpression(str))
     // should work
     expect(fn('obj.foo')).toBe(true)
     expect(fn('obj[foo]')).toBe(true)
@@ -78,13 +84,16 @@ describe('isMemberExpression', () => {
 
   test('browser', () => {
     commonAssertions(isMemberExpressionBrowser)
-    expect(isMemberExpressionBrowser('123[a]')).toBe(false)
+    expect(isMemberExpressionBrowser(createSimpleExpression('123[a]'))).toBe(
+      false,
+    )
   })
 
   test('node', () => {
     const ctx = { expressionPlugins: ['typescript'] } as any as TransformContext
-    const fn = (str: string) => isMemberExpressionNode(str, ctx)
-    commonAssertions(fn)
+    const fn = (str: string) =>
+      isMemberExpressionNode(createSimpleExpression(str), ctx)
+    commonAssertions(exp => isMemberExpressionNode(exp, ctx))
 
     // TS-specific checks
     expect(fn('foo as string')).toBe(true)
@@ -110,4 +119,19 @@ test('toValidAssetId', () => {
   expect(toValidAssetId('test-测试-1', 'component')).toBe(
     '_component_test_2797935797_1',
   )
+})
+
+describe('isReferencedIdentifier', () => {
+  test('identifiers in function parameters should not be inferred as references', () => {
+    expect.assertions(4)
+    const ast = babelParse(`(({ title }) => [])`)
+    walkIdentifiers(
+      ast.program.body[0],
+      (node, parent, parentStack, isReference) => {
+        expect(isReference).toBe(false)
+        expect(isReferencedIdentifier(node, parent, parentStack)).toBe(false)
+      },
+      true,
+    )
+  })
 })

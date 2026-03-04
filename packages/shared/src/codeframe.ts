@@ -3,7 +3,7 @@ const range: number = 2
 export function generateCodeFrame(
   source: string,
   start = 0,
-  end = source.length,
+  end: number = source.length,
 ): string {
   // Ensure start and end are within the source length
   start = Math.max(0, Math.min(start, source.length))

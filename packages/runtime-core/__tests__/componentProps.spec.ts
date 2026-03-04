@@ -333,6 +333,30 @@ describe('component props', () => {
     })
   })
 
+  //#12011
+  test('replace camelize with hyphenate to handle props key', () => {
+    const Comp = {
+      props: {
+        hasB4BProp: { type: Boolean, required: true },
+      },
+      setup() {
+        return () => null
+      },
+    }
+    render(
+      h('div', {}, [
+        h(Comp, {
+          'has-b-4-b-prop': true,
+        }),
+        h(Comp, {
+          'has-b4-b-prop': true,
+        }),
+      ]),
+      nodeOps.createElement('div'),
+    )
+    expect(`Missing required prop: "hasB4BProp"`).not.toHaveBeenWarned()
+  })
+
   test('warn props mutation', () => {
     let instance: ComponentInternalInstance
     let setupProps: any
@@ -536,6 +560,96 @@ describe('component props', () => {
     )
     expect(setupProps).toMatchObject(props)
     expect(renderProxy.$props).toMatchObject(props)
+  })
+
+  test('merging props from global mixins and extends', () => {
+    let renderProxy: any
+    let extendedRenderProxy: any
+
+    const defaultProp = ' from global'
+    const props = {
+      globalProp: {
+        type: String,
+        default: defaultProp,
+      },
+    }
+    const globalMixin = {
+      props,
+    }
+    const Comp = {
+      render(this: any) {
+        renderProxy = this
+        return h('div', ['Comp', this.globalProp])
+      },
+    }
+    const ExtendedComp = {
+      extends: Comp,
+      render(this: any) {
+        extendedRenderProxy = this
+        return h('div', ['ExtendedComp', this.globalProp])
+      },
+    }
+
+    const app = createApp(
+      {
+        render: () => [h(ExtendedComp), h(Comp)],
+      },
+      {},
+    )
+    app.mixin(globalMixin)
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    expect(serializeInner(root)).toMatch(
+      `<div>ExtendedComp from global</div><div>Comp from global</div>`,
+    )
+    expect(renderProxy.$props).toMatchObject({ globalProp: defaultProp })
+    expect(extendedRenderProxy.$props).toMatchObject({
+      globalProp: defaultProp,
+    })
+  })
+
+  test('merging props for a component that is also used as a mixin', () => {
+    const CompA = {
+      render(this: any) {
+        return this.foo
+      },
+    }
+
+    const mixin = {
+      props: {
+        foo: {
+          default: 'from mixin',
+        },
+      },
+    }
+
+    const CompB = {
+      mixins: [mixin, CompA],
+      render(this: any) {
+        return this.foo
+      },
+    }
+
+    const app = createApp({
+      render() {
+        return [h(CompA), ', ', h(CompB)]
+      },
+    })
+
+    app.mixin({
+      props: {
+        foo: {
+          default: 'from global mixin',
+        },
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    expect(serializeInner(root)).toMatch(`from global mixin, from mixin`)
   })
 
   test('props type support BigInt', () => {

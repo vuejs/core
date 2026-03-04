@@ -1,4 +1,4 @@
-export const version = __VERSION__
+export const version: string = __VERSION__
 
 // API
 export { parse } from './parse'
@@ -18,7 +18,7 @@ import {
   errorMessages as coreErrorMessages,
 } from '@vue/compiler-dom'
 
-export const errorMessages = {
+export const errorMessages: Record<number, string> = {
   ...coreErrorMessages,
   ...DOMErrorMessages,
 }

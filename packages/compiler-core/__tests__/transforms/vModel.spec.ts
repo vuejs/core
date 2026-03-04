@@ -399,7 +399,7 @@ describe('compiler: transform v-model', () => {
       prefixIdentifiers: true,
       cacheHandlers: true,
     })
-    expect(root.cached).toBe(1)
+    expect(root.cached.length).toBe(1)
     const codegen = (root.children[0] as PlainElementNode)
       .codegenNode as VNodeCall
     // should not list cached prop in dynamicProps
@@ -417,7 +417,7 @@ describe('compiler: transform v-model', () => {
         cacheHandlers: true,
       },
     )
-    expect(root.cached).toBe(0)
+    expect(root.cached.length).toBe(0)
     const codegen = (
       (root.children[0] as ForNode).children[0] as PlainElementNode
     ).codegenNode as VNodeCall
@@ -433,7 +433,7 @@ describe('compiler: transform v-model', () => {
       cacheHandlers: true,
     })
     expect(root.cached).not.toBe(2)
-    expect(root.cached).toBe(1)
+    expect(root.cached.length).toBe(1)
   })
 
   test('should mark update handler dynamic if it refers slot scope variables', () => {
@@ -579,6 +579,23 @@ describe('compiler: transform v-model', () => {
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
           code: ErrorCodes.X_V_MODEL_ON_PROPS,
+        }),
+      )
+    })
+
+    test('used on const binding', () => {
+      const onError = vi.fn()
+      parseWithVModel('<div v-model="c" />', {
+        onError,
+        bindingMetadata: {
+          c: BindingTypes.LITERAL_CONST,
+        },
+      })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_MODEL_ON_CONST,
         }),
       )
     })

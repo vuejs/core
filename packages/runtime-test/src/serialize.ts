@@ -23,7 +23,7 @@ export function serializeInner(
   node: TestElement,
   indent: number = 0,
   depth: number = 0,
-) {
+): string {
   const newLine = indent ? `\n` : ``
   return node.children.length
     ? newLine +

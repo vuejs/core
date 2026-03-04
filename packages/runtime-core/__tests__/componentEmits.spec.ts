@@ -3,6 +3,7 @@
 
 import {
   type ComponentPublicInstance,
+  createApp,
   defineComponent,
   h,
   nextTick,
@@ -155,12 +156,12 @@ describe('component: emit', () => {
       render() {},
       created() {
         // @ts-expect-error
-        this.$emit('bar')
+        this.$emit('bar-baz')
       },
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "bar" but it is neither declared`,
+      `Component emitted event "bar-baz" but it is neither declared in the emits option nor as an "onBarBaz" prop`,
     ).toHaveBeenWarned()
   })
 
@@ -172,12 +173,12 @@ describe('component: emit', () => {
       render() {},
       created() {
         // @ts-expect-error
-        this.$emit('bar')
+        this.$emit('bar-baz')
       },
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "bar" but it is neither declared`,
+      `Component emitted event "bar-baz" but it is neither declared in the emits option nor as an "onBarBaz" prop`,
     ).toHaveBeenWarned()
   })
 
@@ -194,6 +195,22 @@ describe('component: emit', () => {
     render(h(Foo), nodeOps.createElement('div'))
     expect(
       `Component emitted event "foo" but it is neither declared`,
+    ).not.toHaveBeenWarned()
+  })
+
+  test('should not warn if has equivalent onXXX prop with kebab-cased event', () => {
+    const Foo = defineComponent({
+      props: ['onFooBar'],
+      emits: [],
+      render() {},
+      created() {
+        // @ts-expect-error
+        this.$emit('foo-bar')
+      },
+    })
+    render(h(Foo), nodeOps.createElement('div'))
+    expect(
+      `Component emitted event "foo-bar" but it is neither declared`,
     ).not.toHaveBeenWarned()
   })
 
@@ -356,6 +373,83 @@ describe('component: emit', () => {
     expect(fn2).toHaveBeenCalledWith('two')
   })
 
+  test('.trim modifier should work with v-model on component for kebab-cased props and camelCased emit', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:firstName', ' one ')
+      },
+    })
+
+    const fn1 = vi.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        'first-name': null,
+        'first-nameModifiers': { trim: true },
+        'onUpdate:first-name': fn1,
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith('one')
+  })
+
+  test('.trim modifier should work with v-model on component for camelCased props and kebab-cased emit', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:model-value', ' one ')
+        this.$emit('update:first-name', ' two ')
+      },
+    })
+
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { trim: true },
+        'onUpdate:modelValue': fn1,
+
+        firstName: null,
+        firstNameModifiers: { trim: true },
+        'onUpdate:firstName': fn2,
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith('one')
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith('two')
+  })
+
+  test('.trim modifier should work with v-model on component for mixed cased props and emit', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:base-URL', ' one ')
+      },
+    })
+
+    const fn1 = vi.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        'base-URL': null,
+        'base-URLModifiers': { trim: true },
+        'onUpdate:base-URL': fn1,
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith('one')
+  })
+
   test('.trim and .number modifiers should work with v-model on component', () => {
     const Foo = defineComponent({
       render() {},
@@ -504,5 +598,46 @@ describe('component: emit', () => {
     expect(renderFn).toHaveBeenCalledTimes(0)
     render(h(ComponentC), el)
     expect(renderFn).toHaveBeenCalledTimes(1)
+  })
+
+  test('merging emits for a component that is also used as a mixin', () => {
+    const render = () => h('div')
+    const CompA = {
+      render,
+    }
+    const validateByMixin = vi.fn(() => true)
+    const validateByGlobalMixin = vi.fn(() => true)
+
+    const mixin = {
+      emits: {
+        one: validateByMixin,
+      },
+    }
+
+    const CompB = defineComponent({
+      mixins: [mixin, CompA],
+      created(this) {
+        this.$emit('one', 1)
+      },
+      render,
+    })
+
+    const app = createApp({
+      render() {
+        return [h(CompA), h(CompB)]
+      },
+    })
+
+    app.mixin({
+      emits: {
+        one: validateByGlobalMixin,
+        two: null,
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(validateByMixin).toHaveBeenCalledTimes(1)
+    expect(validateByGlobalMixin).not.toHaveBeenCalled()
   })
 })

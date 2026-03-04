@@ -13,21 +13,27 @@ import {
   type ForNode,
   type InterpolationNode,
   NodeTypes,
+  type RootNode,
   type SimpleExpressionNode,
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { type CompilerOptions, generate } from '../../src'
 import { FRAGMENT, RENDER_LIST, RENDER_SLOT } from '../../src/runtimeHelpers'
-import { PatchFlagNames, PatchFlags } from '@vue/shared'
-import { createObjectMatcher, genFlagText } from '../testUtils'
+import { PatchFlags } from '@vue/shared'
+import { createObjectMatcher } from '../testUtils'
+import { transformVBindShorthand } from '../../src/transforms/transformVBindShorthand'
 
 export function parseWithForTransform(
   template: string,
   options: CompilerOptions = {},
-) {
+): {
+  root: RootNode
+  node: ForNode & { codegenNode: ForCodegenNode }
+} {
   const ast = parse(template, options)
   transform(ast, {
     nodeTransforms: [
+      transformVBindShorthand,
       transformIf,
       transformFor,
       ...(options.prefixIdentifiers ? [transformExpression] : []),
@@ -696,10 +702,10 @@ describe('compiler: v-for', () => {
         tag: FRAGMENT,
         disableTracking,
         patchFlag: !disableTracking
-          ? genFlagText(PatchFlags.STABLE_FRAGMENT)
+          ? PatchFlags.STABLE_FRAGMENT
           : keyed
-            ? genFlagText(PatchFlags.KEYED_FRAGMENT)
-            : genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+            ? PatchFlags.KEYED_FRAGMENT
+            : PatchFlags.UNKEYED_FRAGMENT,
         children: {
           type: NodeTypes.JS_CALL_EXPRESSION,
           callee: RENDER_LIST,
@@ -822,7 +828,7 @@ describe('compiler: v-for', () => {
               constType: ConstantTypes.NOT_CONSTANT,
             },
           },
-          patchFlag: genFlagText(PatchFlags.TEXT),
+          patchFlag: PatchFlags.TEXT,
         },
       })
       expect(generate(root).code).toMatchSnapshot()
@@ -846,7 +852,7 @@ describe('compiler: v-for', () => {
             { type: NodeTypes.TEXT, content: `hello` },
             { type: NodeTypes.ELEMENT, tag: `span` },
           ],
-          patchFlag: genFlagText(PatchFlags.STABLE_FRAGMENT),
+          patchFlag: PatchFlags.STABLE_FRAGMENT,
         },
       })
       expect(generate(root).code).toMatchSnapshot()
@@ -950,7 +956,7 @@ describe('compiler: v-for', () => {
             { type: NodeTypes.TEXT, content: `hello` },
             { type: NodeTypes.ELEMENT, tag: `span` },
           ],
-          patchFlag: genFlagText(PatchFlags.STABLE_FRAGMENT),
+          patchFlag: PatchFlags.STABLE_FRAGMENT,
         },
       })
       expect(generate(root).code).toMatchSnapshot()
@@ -971,7 +977,7 @@ describe('compiler: v-for', () => {
           }),
           isBlock: true,
           disableTracking: true,
-          patchFlag: genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+          patchFlag: PatchFlags.UNKEYED_FRAGMENT,
           children: {
             type: NodeTypes.JS_CALL_EXPRESSION,
             callee: RENDER_LIST,
@@ -1009,7 +1015,7 @@ describe('compiler: v-for', () => {
           }),
           isBlock: true,
           disableTracking: true,
-          patchFlag: genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+          patchFlag: PatchFlags.UNKEYED_FRAGMENT,
           children: {
             type: NodeTypes.JS_CALL_EXPRESSION,
             callee: RENDER_LIST,
@@ -1048,9 +1054,7 @@ describe('compiler: v-for', () => {
       const {
         node: { codegenNode },
       } = parseWithForTransform('<div v-for="key in keys" :key>test</div>')
-      expect(codegenNode.patchFlag).toBe(
-        `${PatchFlags.KEYED_FRAGMENT} /* ${PatchFlagNames[PatchFlags.KEYED_FRAGMENT]} */`,
-      )
+      expect(codegenNode.patchFlag).toBe(PatchFlags.KEYED_FRAGMENT)
     })
 
     test('template v-for key w/ :key shorthand on template injected to the child', () => {
