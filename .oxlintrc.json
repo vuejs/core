@@ -1,6 +1,5 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [],
   "categories": {
     "correctness": "off"
   },
@@ -31,10 +30,6 @@
           "module",
           "require"
         ],
-        "oxc/no-const-enum": "error",
-        "oxc/no-rest-spread-properties": "error",
-        "oxc/no-async-await": "error",
-        "oxc/no-optional-chaining": "error",
         "sort-imports": [
           "error",
           {
@@ -50,47 +45,7 @@
           }
         ],
         "@typescript-eslint/no-import-type-side-effects": "error"
-      },
-      "plugins": ["typescript"]
-    },
-    {
-      "files": [
-        "**/__tests__/**",
-        "packages-private/dts-test/**",
-        "packages-private/dts-build-test/**"
-      ],
-      "rules": {
-        "no-console": "off",
-        "no-restricted-globals": "off",
-        "no-unused-expressions": "off",
-        "no-unused-vars": "off",
-        "no-unsafe-optional-chaining": "off",
-        "no-constant-condition": "off",
-        "vitest/no-conditional-tests": "off",
-        "typescript/no-this-alias": "off",
-        "vitest/warn-todo": "off",
-        "typescript/no-non-null-asserted-optional-chain": "off"
-      },
-      "globals": {
-        "suite": "writable",
-        "test": "writable",
-        "describe": "writable",
-        "it": "writable",
-        "expectTypeOf": "writable",
-        "assertType": "writable",
-        "expect": "writable",
-        "assert": "writable",
-        "chai": "writable",
-        "vitest": "writable",
-        "vi": "writable",
-        "beforeAll": "writable",
-        "afterAll": "writable",
-        "beforeEach": "writable",
-        "afterEach": "writable",
-        "onTestFailed": "writable",
-        "onTestFinished": "writable"
-      },
-      "plugins": ["vitest", "typescript"]
+      }
     },
     {
       "files": ["packages/shared/**"],
@@ -99,13 +54,14 @@
       }
     },
     {
-      "files": ["packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**"],
+      "files": ["packages/{vue,vue-compat,runtime-*}/**"],
       "rules": {
-        "no-restricted-globals": ["error", "module", "require"]
+        "no-restricted-globals": ["error", "module", "require"],
+        "oxc/no-optional-chaining": "error"
       }
     },
     {
-      "files": ["packages/{compiler-sfc,compiler-ssr,server-renderer}/**"],
+      "files": ["packages/{compiler-*,server-renderer}/**"],
       "rules": {
         "no-restricted-globals": ["error", "window", "document"],
         "oxc/no-const-enum": "error"
@@ -132,6 +88,39 @@
             "args": "none"
           }
         ]
+      }
+    },
+    {
+      "files": [
+        "**/__tests__/**",
+        "packages-private/dts-test/**",
+        "packages-private/dts-build-test/**"
+      ],
+      "rules": {
+        "no-console": "off",
+        "no-restricted-globals": "off",
+        "no-unused-vars": "off",
+        "oxc/no-optional-chaining": "off",
+        "no-restricted-syntax": "off"
+      },
+      "globals": {
+        "suite": "writable",
+        "test": "writable",
+        "describe": "writable",
+        "it": "writable",
+        "expectTypeOf": "writable",
+        "assertType": "writable",
+        "expect": "writable",
+        "assert": "writable",
+        "chai": "writable",
+        "vitest": "writable",
+        "vi": "writable",
+        "beforeAll": "writable",
+        "afterAll": "writable",
+        "beforeEach": "writable",
+        "afterEach": "writable",
+        "onTestFailed": "writable",
+        "onTestFinished": "writable"
       }
     },
     {
