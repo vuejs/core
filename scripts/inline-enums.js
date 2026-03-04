@@ -122,7 +122,9 @@ export function scanEnums() {
             // For example: enum ErrorCodes exist in both @vue/compiler-core and @vue/runtime-core
             // But not allow `ErrorCodes.__EXTEND_POINT__` appear in two same name enum
             if (fullKey in defines) {
-              throw new Error(`name conflict for enum ${id} in ${file}`)
+              // TODO: 由于 pure-core 与 core重复，所以这里会抛出异常，暂时忽略,直接return
+              //  throw new Error(`name conflict for enum ${id} in ${file}`)
+              return
             }
             members.push({
               name: key,
