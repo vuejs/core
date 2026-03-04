@@ -116,8 +116,12 @@ describe('compiler sfc: transform asset url', () => {
 
   // #9919
   test('should transform subpath import paths', () => {
-    const { code } = compileWithAssetUrls(`<img src="#src/assets/vue.svg" />`)
+    const { code } = compileWithAssetUrls(
+      `<img src="#src/assets/vue.svg" />` +
+        `<img src="#/src/assets/vue.svg" />`,
+    )
     expect(code).toContain(`_imports_0 from '#src/assets/vue.svg'`)
+    expect(code).toContain(`_imports_1 from '#/src/assets/vue.svg'`)
   })
 
   test('should allow for full base URLs, with paths', () => {
