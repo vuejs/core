@@ -328,7 +328,12 @@ const vaporInteropImpl: Omit<
         )
       }
     })
-    return vnode.anchor as Node
+    // For fragment-wrapped slot content (`<!--[-->...<!--]-->`), return the
+    // node after the end anchor to avoid hydrateChildren() treating `<!--]-->`
+    // as an extra child of the current container.
+    return isComment(node, '[')
+      ? (vnode.anchor as Node).nextSibling
+      : (vnode.anchor as Node)
   },
 
   setTransitionHooks(component, hooks) {
