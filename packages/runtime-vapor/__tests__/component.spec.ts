@@ -162,6 +162,35 @@ describe('component', () => {
     expect(host.innerHTML).toBe('<div>1</div><div>1</div>')
   })
 
+  it('events in dynamic props', async () => {
+    const { component: Child } = define({
+      props: ['count'],
+      setup(props: any, { emit }) {
+        emit('update', props.count + 1)
+        const n0 = template('<div></div>')()
+        renderEffect(() => setElementText(n0, props.count))
+        return n0
+      },
+    })
+
+    const count = ref(0)
+    const { host } = define({
+      setup() {
+        const n0 = createComponent(Child, {
+          $: [
+            () => ({
+              count: count.value,
+            }),
+            { onUpdate: () => (val: number) => (count.value = val) },
+          ],
+        })
+        return n0
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>1</div>')
+  })
+
   it('child only updates once when triggered in multiple ways', async () => {
     const a = ref(0)
     const calls: string[] = []
