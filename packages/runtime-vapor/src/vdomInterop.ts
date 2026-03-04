@@ -390,23 +390,45 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
 
 let vdomHydrateNode: HydrationRenderer['hydrateNode'] | undefined
 
-function resolveVNodeNodes(vnode: VNode): Block {
-  // Static/Fragment VNodes represent a contiguous node range [el..anchor].
-  // Return the full range so Vapor block helpers (insert/remove/move)
-  // operate on the same boundaries as runtime-core. Single-node VNodes
-  // fall back to `el` below.
-  const { type, el, anchor } = vnode
+// Static/Fragment vnodes always represent a contiguous range [el..anchor].
+// For component vnodes, only treat them as a range when their hydrated subTree
+// is Static/Fragment (multi-root component case).
+function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
+  const { type, shapeFlag, el, anchor } = vnode
   if ((type === Static || type === Fragment) && el && anchor && anchor !== el) {
-    const range: Node[] = []
-    let n: Node | null = el as Node
+    return [el as Node, anchor as Node]
+  }
+  if (!(shapeFlag & ShapeFlags.COMPONENT)) {
+    return
+  }
+
+  const subTree = vnode.component && vnode.component.subTree
+  const subEl = subTree && subTree.el
+  const subAnchor = subTree && subTree.anchor
+  if (
+    subTree &&
+    (subTree.type === Static || subTree.type === Fragment) &&
+    subEl &&
+    subAnchor &&
+    subAnchor !== subEl
+  ) {
+    return [subEl as Node, subAnchor as Node]
+  }
+}
+
+function resolveVNodeNodes(vnode: VNode): Block {
+  const vnodeRange = resolveVNodeRange(vnode)
+  if (vnodeRange) {
+    const nodeRange: Node[] = []
+    let n: Node | null = vnodeRange[0]
     while (n) {
-      range.push(n)
-      if (n === anchor) break
+      nodeRange.push(n)
+      if (n === vnodeRange[1]) break
       n = n.nextSibling
     }
-    return range
+    return nodeRange
   }
-  return el as Block
+  return vnode.el as Block
 }
 
 /**
@@ -447,7 +469,14 @@ function mountVNode(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    hydrateVNode(vnode, parentComponent as any)
+    hydrateVNode(
+      vnode,
+      parentComponent as any,
+      // In the current hydration cursor, component and Static VNodes can be
+      // prefixed by an outer fragment start marker (`<!--[-->`). Skip it so
+      // runtime-core hydrateNode() starts from the first real node of this vnode.
+      vnode.type === Static || !!(vnode.shapeFlag & ShapeFlags.COMPONENT),
+    )
     onScopeDispose(unmount, true)
     isMounted = true
     frag.nodes = resolveVNodeNodes(vnode)
