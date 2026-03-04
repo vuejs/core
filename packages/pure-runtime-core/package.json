@@ -1,24 +1,24 @@
 {
-  "name": "@vue/runtime-core",
+  "name": "@vue/pure-runtime-core",
   "version": "3.6.0-beta.7",
-  "description": "@vue/runtime-core",
+  "description": "@vue/pure-runtime-core",
   "main": "index.js",
-  "module": "dist/runtime-core.esm-bundler.js",
-  "types": "dist/runtime-core.d.ts",
+  "module": "dist/pure-runtime-core.esm-bundler.js",
+  "types": "dist/pure-runtime-core.d.ts",
   "files": [
     "index.js",
     "dist"
   ],
   "exports": {
     ".": {
-      "types": "./dist/runtime-core.d.ts",
+      "types": "./dist/pure-runtime-core.d.ts",
       "node": {
-        "production": "./dist/runtime-core.cjs.prod.js",
-        "development": "./dist/runtime-core.cjs.js",
+        "production": "./dist/pure-runtime-core.cjs.prod.js",
+        "development": "./dist/pure-runtime-core.cjs.js",
         "default": "./index.js"
       },
-      "module": "./dist/runtime-core.esm-bundler.js",
-      "import": "./dist/runtime-core.esm-bundler.js",
+      "module": "./dist/pure-runtime-core.esm-bundler.js",
+      "import": "./dist/pure-runtime-core.esm-bundler.js",
       "require": "./index.js"
     },
     "./*": "./*"
@@ -34,7 +34,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuejs/core.git",
-    "directory": "packages/runtime-core"
+    "directory": "packages/pure-runtime-core"
   },
   "keywords": [
     "vue"
@@ -44,7 +44,7 @@
   "bugs": {
     "url": "https://github.com/vuejs/core/issues"
   },
-  "homepage": "https://github.com/vuejs/core/tree/main/packages/runtime-core#readme",
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/pure-runtime-core#readme",
   "dependencies": {
     "@vue/shared": "workspace:*",
     "@vue/reactivity": "workspace:*"

@@ -100,7 +100,7 @@
     },
     {
       "files": [
-        "packages/{vue,vue-compat,runtime-dom,runtime-vapor,runtime-pure-core,runtime-pure-dom,runtime-pure-vapor}/**"
+        "packages/{vue,vue-compat,runtime-dom,runtime-vapor,pure-vue,pure-runtime-core,pure-runtime-dom,pure-runtime-vapor}/**"
       ],
       "rules": {
         "no-restricted-globals": ["error", "module", "require"]
@@ -142,6 +142,7 @@
         "./*.{js,ts}",
         "packages/*/*.js",
         "packages/vue/*/*.js",
+        "packages/pure-vue/*/*.js",
         "packages-private/benchmark/*",
         "packages-private/e2e-utils/*"
       ],

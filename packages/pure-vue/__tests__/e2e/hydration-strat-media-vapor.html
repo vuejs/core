@@ -1,0 +1,57 @@
+<div>resize the window width to < 500px to hydrate</div>
+<div id="app"><button>0</button></div>
+
+<script type="module">
+  import {
+    createVaporSSRApp,
+    defineVaporAsyncComponent,
+    ref,
+    onMounted,
+    hydrateOnMediaQuery,
+    delegateEvents,
+    template,
+    createComponent,
+    child,
+    renderEffect,
+    setText,
+  } from '../../dist/vue.runtime-with-vapor.esm-browser.js'
+
+  delegateEvents('click')
+
+  window.isHydrated = false
+  const Comp = {
+    props: {
+      value: Boolean,
+    },
+    setup(props) {
+      const count = ref(0)
+      onMounted(() => {
+        console.log('hydrated')
+        window.isHydrated = true
+      })
+
+      props.value
+      const n0 = template('<button> </button>', true)()
+      const x0 = child(n0)
+      n0.$evtclick = () => count.value++
+      renderEffect(() => setText(x0, count.value))
+      return n0
+    },
+  }
+
+  const AsyncComp = defineVaporAsyncComponent({
+    loader: () => Promise.resolve(Comp),
+    hydrate: hydrateOnMediaQuery('(max-width:500px)'),
+  })
+
+  createVaporSSRApp({
+    setup() {
+      onMounted(() => {
+        window.isRootMounted = true
+      })
+
+      const show = (window.show = ref(true))
+      return createComponent(AsyncComp, { value: () => show.value })
+    },
+  }).mount('#app')
+</script>
