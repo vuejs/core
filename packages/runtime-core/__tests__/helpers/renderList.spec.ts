@@ -1,4 +1,10 @@
-import { isReactive, reactive, shallowReactive } from '../../src/index'
+import {
+  effect,
+  isReactive,
+  reactive,
+  readonly,
+  shallowReactive,
+} from '../../src/index'
 import { renderList } from '../../src/helpers/renderList'
 
 describe('renderList', () => {
@@ -64,5 +70,32 @@ describe('renderList', () => {
 
     const shallowReactiveArray = shallowReactive([{ foo: 1 }])
     expect(renderList(shallowReactiveArray, isReactive)).toEqual([false])
+  })
+
+  it('should not allow mutation', () => {
+    const arr = readonly(reactive([{ foo: 1 }]))
+    expect(
+      renderList(arr, item => {
+        ;(item as any).foo = 0
+        return item.foo
+      }),
+    ).toEqual([1])
+    expect(
+      `Set operation on key "foo" failed: target is readonly.`,
+    ).toHaveBeenWarned()
+  })
+
+  it('should trigger effect for deep mutations in readonly reactive arrays', () => {
+    const arr = reactive([{ foo: 1 }])
+    const readonlyArr = readonly(arr)
+
+    let dummy
+    effect(() => {
+      dummy = renderList(readonlyArr, item => item.foo)
+    })
+    expect(dummy).toEqual([1])
+
+    arr[0].foo = 2
+    expect(dummy).toEqual([2])
   })
 })

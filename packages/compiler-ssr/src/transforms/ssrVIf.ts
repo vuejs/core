@@ -17,7 +17,7 @@ import {
 
 // Plugin for the first transform pass, which simply constructs the AST node
 export const ssrTransformIf: NodeTransform = createStructuralDirectiveTransform(
-  /^(if|else|else-if)$/,
+  /^(?:if|else|else-if)$/,
   processIf,
 )
 
