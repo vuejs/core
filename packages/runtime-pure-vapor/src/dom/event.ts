@@ -6,7 +6,6 @@ import {
   currentInstance,
 } from '@vue/runtime-dom'
 
-/** 返回一个移除事件监听器的函数 */
 export function addEventListener(
   el: Element,
   event: string,
@@ -59,7 +58,7 @@ type DelegatedHandler = {
 }
 
 /**
- * 事件委托，借鉴自 solid
+ * Event delegation borrowed from solid
  */
 const delegatedEvents = /*@__PURE__*/ Object.create(null)
 
@@ -122,7 +121,7 @@ export function setDynamicEvents(
 export function createInvoker(
   handler: (...args: any[]) => any,
 ): (...args: any[]) => any {
-  const i = currentInstance // TODO: 依赖了实例，是否要去掉
+  const i = currentInstance
   return (...args: any[]) =>
     callWithAsyncErrorHandling(
       handler,

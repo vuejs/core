@@ -21,6 +21,7 @@ import {
 import type { RawProps } from './componentProps'
 import { getGlobalThis } from '@vue/shared'
 import { optimizePropertyLookup } from './dom/prop'
+import { setIsHydratingEnabled, withHydration } from './dom/hydration'
 
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
 
@@ -47,6 +48,30 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
     )
   mountComponent(instance, container)
   flushOnAppMount()
+
+  return instance!
+}
+
+let _hydrateApp: CreateAppFunction<ParentNode, VaporComponent>
+
+const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
+  optimizePropertyLookup()
+
+  let instance: VaporComponentInstance
+  withHydration(container, () => {
+    instance =
+      (app._ceComponent as VaporComponentInstance) ||
+      createComponent(
+        app._component,
+        app._props as RawProps,
+        null,
+        false,
+        false,
+        app._context,
+      )
+    mountComponent(instance, container)
+    flushOnAppMount()
+  })
 
   return instance!
 }
@@ -89,6 +114,19 @@ export const createVaporApp: CreateAppFunction<ParentNode, VaporComponent> = (
   prepareApp()
   if (!_createApp) _createApp = createAppAPI(mountApp, unmountApp, getExposed)
   const app = _createApp(comp, props)
+  postPrepareApp(app)
+  return app
+}
+
+export const createVaporSSRApp: CreateAppFunction<
+  ParentNode,
+  VaporComponent
+> = (comp, props) => {
+  setIsHydratingEnabled(true)
+  prepareApp()
+  if (!_hydrateApp)
+    _hydrateApp = createAppAPI(hydrateApp, unmountApp, getExposed)
+  const app = _hydrateApp(comp, props)
   postPrepareApp(app)
   return app
 }

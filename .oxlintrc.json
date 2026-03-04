@@ -100,7 +100,7 @@
     },
     {
       "files": [
-        "packages/{vue,vue-compat,runtime-dom,runtime-vapor,runtime-pure-vapor}/**"
+        "packages/{vue,vue-compat,runtime-dom,runtime-vapor,runtime-pure-core,runtime-pure-dom,runtime-pure-vapor}/**"
       ],
       "rules": {
         "no-restricted-globals": ["error", "module", "require"]

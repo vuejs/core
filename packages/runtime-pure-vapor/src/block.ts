@@ -1,35 +1,3 @@
-/** 这是 Vue.js Vapor 模式（纯编译时渲染模式）的核心模块，负责管理 Block（块） 的生命周期操作。
-
-### 核心功能
-1. Block 类型定义
-   
-   - Block 可以是 DOM 节点、片段(Fragment)、动态片段、组件实例或 Block 数组
-   - TransitionBlock 支持过渡动画的 Block 类型
-2. 核心操作方法
-   
-   - insert() - 将 Block 插入到父节点中（支持过渡动画）
-   - move() - 移动 Block 到新的位置（支持过渡动画）
-   - remove() - 移除 Block（支持过渡动画）
-   - prepend() - 在父节点开头插入多个 Block
-3. 辅助功能
-   
-   - isBlock() / isValidBlock() - 类型检查
-   - normalizeBlock() - 将 Block 规范化为一组 DOM 节点（仅开发/测试使用）
-   - findBlockNode() - 查找 Block 的父节点和下一个兄弟节点
-   - isFragmentBlock() - 判断是否为片段类型的 Block
-4. CSS Scoped 支持
-   
-   - setScopeId() - 为 Block 设置 CSS scoped 属性
-   - setComponentScopeId() - 为组件实例设置 scopeId，支持继承父级 scopeId
-5. 过渡动画钩子注册
-   
-   - registerTransitionHooks() - 注册过渡钩子（用于 tree-shaking）
-   - applyTransitionHooks() / applyTransitionLeaveHooks() - 应用过渡钩子
-### 设计特点
-- 递归处理：支持嵌套的组件和片段结构
-- 过渡动画集成：与 Vue 的 Transition 组件深度集成
-- Tree-shaking 友好：过渡钩子采用注册模式，未使用时可以被 tree-shaking 
-*/
 import { isArray } from '@vue/shared'
 import {
   type VaporComponentInstance,
@@ -37,8 +5,8 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { child } from './dom/node'
-import { isComment } from './dom/node'
+import { _child } from './dom/node'
+import { isComment, isHydrating } from './dom/hydration'
 import {
   MoveType,
   type TransitionHooks,
@@ -59,7 +27,7 @@ export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
   props: TransitionProps
   instance: VaporComponentInstance
-  // 标记过渡钩子为禁用状态
+  // mark transition hooks as disabled
   disabled?: boolean
 }
 
@@ -101,7 +69,7 @@ export function isValidBlock(block: Block): boolean {
   } else if (isArray(block)) {
     return block.length > 0 && block.some(isValidBlock)
   } else {
-    // 片段
+    // fragment
     return isValidBlock(block.nodes)
   }
 }
@@ -112,22 +80,24 @@ export function insert(
   anchor: Node | null | 0 = null, // 0 means prepend
   parentSuspense?: any, // TODO Suspense
 ): void {
-  anchor = anchor === 0 ? parent.$fc || child(parent) : anchor
+  anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
   if (block instanceof Node) {
-    // 仅在元素节点上应用过渡效果
-    if (
-      block instanceof Element &&
-      (block as TransitionBlock).$transition &&
-      !(block as TransitionBlock).$transition!.disabled
-    ) {
-      performTransitionEnter(
-        block,
-        (block as TransitionBlock).$transition as TransitionHooks,
-        () => parent.insertBefore(block, anchor as Node),
-        parentSuspense,
-      )
-    } else {
-      parent.insertBefore(block, anchor)
+    if (!isHydrating) {
+      // only apply transition on Element nodes
+      if (
+        block instanceof Element &&
+        (block as TransitionBlock).$transition &&
+        !(block as TransitionBlock).$transition!.disabled
+      ) {
+        performTransitionEnter(
+          block,
+          (block as TransitionBlock).$transition as TransitionHooks,
+          () => parent.insertBefore(block, anchor as Node),
+          parentSuspense,
+        )
+      } else {
+        parent.insertBefore(block, anchor)
+      }
     }
   } else if (isVaporComponent(block)) {
     if (block.isMounted && !block.isDeactivated) {
@@ -144,7 +114,7 @@ export function insert(
       insert(block.anchor, parent, anchor)
       anchor = block.anchor
     }
-    // 片段
+    // fragment
     if (block.insert) {
       block.insert(parent, anchor, (block as TransitionBlock).$transition)
     } else {
@@ -161,9 +131,9 @@ export function move(
   parentComponent?: VaporComponentInstance,
   parentSuspense?: any, // TODO Suspense
 ): void {
-  anchor = anchor === 0 ? parent.$fc || child(parent) : anchor
+  anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
   if (block instanceof Node) {
-    // 仅在元素节点上应用过渡效果
+    // only apply transition on Element nodes
     if (
       block instanceof Element &&
       (block as TransitionBlock).$transition &&
@@ -183,8 +153,8 @@ export function move(
           block,
           (block as TransitionBlock).$transition as TransitionHooks,
           () => {
-            // 如果组件在离开动画完成后被卸载，移除该块
-            // 以避免保留一个已分离的节点
+            // if the component is unmounted after leave finish, remove the block
+            // to avoid retaining a detached node.
             if (
               moveType === MoveType.LEAVE &&
               parentComponent &&
@@ -231,7 +201,7 @@ export function move(
       )
       anchor = block.anchor
     }
-    // 片段
+    // fragment
     if (block.insert) {
       block.insert(parent, anchor, (block as TransitionBlock).$transition)
     } else {
@@ -270,7 +240,7 @@ export function remove(block: Block, parent?: ParentNode): void {
       remove(block[i], parent)
     }
   } else {
-    // 片段
+    // fragment
     if (block.remove) {
       block.remove(parent, (block as TransitionBlock).$transition)
     } else {
@@ -284,11 +254,13 @@ export function remove(block: Block, parent?: ParentNode): void {
 }
 
 /**
- * 仅用于开发/测试
+ * dev / test only
  */
 export function normalizeBlock(block: Block): Node[] {
   if (!__DEV__ && !__TEST__) {
-    throw new Error('normalizeBlock 不应在生产代码路径中使用')
+    throw new Error(
+      'normalizeBlock should not be used in production code paths',
+    )
   }
   const nodes: Node[] = []
   if (block instanceof Node) {
@@ -314,8 +286,8 @@ export function findBlockNode(block: Block): {
 } {
   let { parentNode, nextSibling: nextNode } = findLastChild(block)!
 
-  // 如果节点作为片段渲染，且当前 nextNode 是片段的结束锚点，
-  // 需要移动到下一个节点
+  // if nodes render as a fragment and the current nextNode is fragment
+  // end anchor, need to move to the next node
   if (nextNode && isComment(nextNode, ']') && isFragmentBlock(block)) {
     nextNode = nextNode.nextSibling
   }
@@ -370,21 +342,21 @@ export function setComponentScopeId(instance: VaporComponentInstance): void {
   const { parent, scopeId } = instance
   if (!parent || !scopeId) return
 
-  // 防止在多根片段上设置 scopeId
+  // prevent setting scopeId on multi-root fragments
   if (isArray(instance.block) && instance.block.length > 1) return
 
   const scopeIds: string[] = []
   const parentScopeId = parent && parent.type.__scopeId
-  // 如果父级 scopeId 与当前 scopeId 不同，这意味着 scopeId
-  // 是从插槽所有者继承的，因此我们需要将其设置到组件的
-  // scopeIds 中。`parentScopeId-s` 在 createSlot 中处理
+  // if parent scopeId is different from scopeId, this means scopeId
+  // is inherited from slot owner, so we need to set it to the component
+  // scopeIds. the `parentScopeId-s` is handled in createSlot
   if (parentScopeId !== scopeId) {
     scopeIds.push(scopeId)
   } else {
     if (parentScopeId) scopeIds.push(parentScopeId)
   }
 
-  // 从 vdom 父级继承 scopeId
+  // inherit scopeId from vdom parent
   if (
     parent.subTree &&
     (parent.subTree.component as any) === instance &&
@@ -400,8 +372,8 @@ export function setComponentScopeId(instance: VaporComponentInstance): void {
   }
 }
 
-// 过渡钩子注册表，用于 tree-shaking
-// 这些由 Transition 组件在使用时注册
+// Transition hooks registry for tree-shaking
+// These are registered by Transition component when it's used
 type ApplyTransitionHooksFn = (
   block: Block,
   hooks: VaporTransitionHooks,

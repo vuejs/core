@@ -1,8 +1,10 @@
 import {
   type GenericComponentInstance,
+  MismatchTypes,
   MoveType,
   type TeleportProps,
   type TeleportTargetElement,
+  isMismatchAllowed,
   isTeleportDeferred,
   isTeleportDisabled,
   queuePostFlushCb,
@@ -27,6 +29,15 @@ import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend, isArray } from '@vue/shared'
 import { VaporFragment, isFragment } from '../fragment'
+import {
+  advanceHydrationNode,
+  currentHydrationNode,
+  isComment,
+  isHydrating,
+  logMismatchError,
+  runWithoutHydration,
+  setCurrentHydrationNode,
+} from '../dom/hydration'
 import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
 import { getScopeOwner } from '../componentSlots'
 
@@ -66,9 +77,11 @@ export class TeleportFragment extends VaporFragment {
     this.rawProps = props
     this.rawSlots = slots
     this.parentComponent = getScopeOwner()
-    this.anchor = __DEV__
-      ? createComment('teleport end')
-      : createTextNode()
+    this.anchor = isHydrating
+      ? undefined
+      : __DEV__
+        ? createComment('teleport end')
+        : createTextNode()
 
     renderEffect(() => {
       const prevTo = this.resolvedProps && this.resolvedProps.to
@@ -91,7 +104,9 @@ export class TeleportFragment extends VaporFragment {
       }
     })
 
-    this.initChildren()
+    if (!isHydrating) {
+      this.initChildren()
+    }
   }
 
   get parent(): ParentNode | null {
@@ -125,7 +140,7 @@ export class TeleportFragment extends VaporFragment {
 
   private registerUpdateCssVars(block: Block) {
     if (isFragment(block)) {
-      ; (block.onUpdated || (block.onUpdated = [])).push(() =>
+      ;(block.onUpdated || (block.onUpdated = [])).push(() =>
         updateCssVars(this),
       )
       this.registerUpdateCssVars(block.nodes)
@@ -138,7 +153,7 @@ export class TeleportFragment extends VaporFragment {
 
   private handleChildrenUpdate(children: Block): void {
     // not mounted yet
-    if (!this.parent) {
+    if (!this.parent || isHydrating) {
       this.nodes = children
       return
     }
@@ -190,7 +205,7 @@ export class TeleportFragment extends VaporFragment {
 
       // track CE teleport targets
       if (this.parentComponent && this.parentComponent.isCE) {
-        ; (
+        ;(
           this.parentComponent.ce!._teleportTargets ||
           (this.parentComponent.ce!._teleportTargets = new Set())
         ).add(target)
@@ -209,7 +224,7 @@ export class TeleportFragment extends VaporFragment {
 
   private handlePropsUpdate(): void {
     // not mounted yet
-    if (!this.parent) return
+    if (!this.parent || isHydrating) return
 
     // mount into main container
     if (this.isDisabled) {
@@ -232,6 +247,7 @@ export class TeleportFragment extends VaporFragment {
   }
 
   insert = (container: ParentNode, anchor: Node | null): void => {
+    if (isHydrating) return
 
     // insert anchors in the main view
     this.placeholder = __DEV__
@@ -273,6 +289,90 @@ export class TeleportFragment extends VaporFragment {
     this.mountAnchor = undefined
   }
 
+  private hydrateDisabledTeleport(targetNode: Node | null): void {
+    if (!isHydrating) return
+    let nextNode = this.placeholder!.nextSibling!
+    setCurrentHydrationNode(nextNode)
+    this.mountAnchor = this.anchor = locateTeleportEndAnchor(nextNode)!
+    this.mountContainer = this.anchor.parentNode
+    this.targetStart = targetNode
+    this.targetAnchor = targetNode && targetNode.nextSibling
+    this.initChildren()
+  }
+
+  private mountChildren(target: Node): void {
+    if (!isHydrating) return
+    target.appendChild((this.targetStart = createTextNode('')))
+    target.appendChild(
+      (this.mountAnchor = this.targetAnchor = createTextNode('')),
+    )
+
+    if (!isMismatchAllowed(target as Element, MismatchTypes.CHILDREN)) {
+      if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
+        warn(
+          `Hydration children mismatch on`,
+          target,
+          `\nServer rendered element contains fewer child nodes than client nodes.`,
+        )
+      }
+      logMismatchError()
+    }
+
+    runWithoutHydration(this.initChildren.bind(this))
+  }
+
+  hydrate = (): void => {
+    if (!isHydrating) return
+    const target = (this.target = resolveTeleportTarget(
+      this.resolvedProps!,
+      querySelector,
+    ))
+    const disabled = isTeleportDisabled(this.resolvedProps!)
+    this.placeholder = currentHydrationNode!
+    if (target) {
+      const targetNode =
+        (target as TeleportTargetElement)._lpa || target.firstChild
+      if (disabled) {
+        this.hydrateDisabledTeleport(targetNode)
+      } else {
+        this.anchor = locateTeleportEndAnchor()!
+        this.mountContainer = target
+        let targetAnchor = targetNode
+        while (targetAnchor) {
+          if (targetAnchor && targetAnchor.nodeType === 8) {
+            if ((targetAnchor as Comment).data === 'teleport start anchor') {
+              this.targetStart = targetAnchor
+            } else if ((targetAnchor as Comment).data === 'teleport anchor') {
+              this.mountAnchor = this.targetAnchor = targetAnchor
+              ;(target as TeleportTargetElement)._lpa =
+                this.targetAnchor && this.targetAnchor.nextSibling
+              break
+            }
+          }
+          targetAnchor = targetAnchor.nextSibling
+        }
+
+        if (targetNode) {
+          setCurrentHydrationNode(targetNode.nextSibling)
+        }
+
+        // if the HTML corresponding to Teleport is not embedded in the
+        // correct position on the final page during SSR. the targetAnchor will
+        // always be null, we need to manually add targetAnchor to ensure
+        // Teleport it can properly unmount or move
+        if (!this.targetAnchor) {
+          this.mountChildren(target)
+        } else {
+          this.initChildren()
+        }
+      }
+    } else if (disabled) {
+      this.hydrateDisabledTeleport(currentHydrationNode!)
+    }
+
+    updateCssVars(this)
+    advanceHydrationNode(this.anchor!)
+  }
 }
 
 export const VaporTeleport =
@@ -294,6 +394,18 @@ export function isVaporTeleport(
  */
 export function isTeleportFragment(value: unknown): value is TeleportFragment {
   return !!(value && (value as any).__isTeleportFragment)
+}
+
+function locateTeleportEndAnchor(
+  node: Node = currentHydrationNode!,
+): Node | null {
+  while (node) {
+    if (isComment(node, 'teleport end')) {
+      return node
+    }
+    node = node.nextSibling as Node
+  }
+  return null
 }
 
 function updateCssVars(frag: TeleportFragment) {

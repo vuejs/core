@@ -1,2 +1,2 @@
 export * from './runtime'
-export * from '@vue/runtime-pure-vapor'
+export * from '@vue/runtime-vapor'

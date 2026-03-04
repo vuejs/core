@@ -18,8 +18,10 @@ import { type RawSlots, getScopeOwner } from './componentSlots'
 import {
   insertionAnchor,
   insertionParent,
+  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
+import { advanceHydrationNode, isHydrating } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import { isInteropEnabled } from './vdomInteropState'
@@ -33,11 +35,13 @@ export function createDynamicComponent(
 ): VaporFragment {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  resetInsertionState()
+  const _isLastInsertion = isLastInsertion
+  if (!isHydrating) resetInsertionState()
 
-  const frag = __DEV__
-    ? new DynamicFragment('dynamic-component')
-    : new DynamicFragment()
+  const frag =
+    isHydrating || __DEV__
+      ? new DynamicFragment('dynamic-component')
+      : new DynamicFragment()
 
   const scopeOwner = getScopeOwner()
   const renderFn = () => {
@@ -58,6 +62,12 @@ export function createDynamicComponent(
         }
 
         const frag = appContext.vapor.vdomMountVNode(value, currentInstance)
+        if (isHydrating) {
+          frag.hydrate()
+          if (_isLastInsertion) {
+            advanceHydrationNode(_insertionParent!)
+          }
+        }
         return frag
       }
 
@@ -75,7 +85,13 @@ export function createDynamicComponent(
   if (once) renderFn()
   else renderEffect(renderFn)
 
-  if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+  } else {
+    if (_isLastInsertion) {
+      advanceHydrationNode(_insertionParent!)
+    }
+  }
   return frag
 }
 

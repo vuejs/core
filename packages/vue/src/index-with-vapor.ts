@@ -1,3 +1,3 @@
 // for type generation only
 export * from './index'
-export * from '@vue/runtime-pure-vapor'
+export * from '@vue/runtime-vapor'

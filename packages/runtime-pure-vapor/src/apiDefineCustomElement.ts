@@ -2,6 +2,7 @@ import { extend, isPlainObject } from '@vue/shared'
 import {
   createComponent,
   createVaporApp,
+  createVaporSSRApp,
   defineVaporComponent,
 } from '.'
 import {
@@ -21,6 +22,7 @@ import type {
   VaporComponentOptions,
 } from './component'
 import type { Block } from './block'
+import { withHydration } from './dom/hydration'
 import type {
   DefineVaporComponent,
   DefineVaporSetupFnComponent,
@@ -30,7 +32,7 @@ import type { StaticSlots } from './componentSlots'
 import { isFragment } from './fragment'
 
 export type VaporElementConstructor<P = {}> = {
-  new(initialProps?: Record<string, any>): VaporElement & P
+  new (initialProps?: Record<string, any>): VaporElement & P
 }
 
 // overload 1: direct setup function
@@ -69,7 +71,7 @@ export function defineVaporCustomElement<Props, RawBindings = object>(
 export function defineVaporCustomElement<
   // props
   RuntimePropsOptions extends ComponentObjectPropsOptions =
-  ComponentObjectPropsOptions,
+    ComponentObjectPropsOptions,
   RuntimePropsKeys extends string = string,
   // emits
   RuntimeEmitsOptions extends EmitsOptions = {},
@@ -77,10 +79,10 @@ export function defineVaporCustomElement<
   Slots extends StaticSlots = StaticSlots,
   // resolved types
   InferredProps = string extends RuntimePropsKeys
-  ? ComponentObjectPropsOptions extends RuntimePropsOptions
-  ? {}
-  : ExtractPropTypes<RuntimePropsOptions>
-  : { [key in RuntimePropsKeys]?: any },
+    ? ComponentObjectPropsOptions extends RuntimePropsOptions
+      ? {}
+      : ExtractPropTypes<RuntimePropsOptions>
+    : { [key in RuntimePropsKeys]?: any },
   ResolvedProps = InferredProps & EmitsToProps<RuntimeEmitsOptions>,
 >(
   options: CustomElementOptions & {
@@ -104,8 +106,8 @@ export function defineVaporCustomElement<
 // `defineVaporComponent`
 export function defineVaporCustomElement<
   T extends
-  | DefineVaporComponent<any, any, any, any, any, any, any, any, any, any>
-  | DefineVaporSetupFnComponent<any, any, any, any, any>,
+    | DefineVaporComponent<any, any, any, any, any, any, any, any, any, any>
+    | DefineVaporSetupFnComponent<any, any, any, any, any>,
 >(
   options: T,
   extraOptions?: CustomElementOptions,
@@ -122,18 +124,18 @@ export function defineVaporCustomElement<
     any,
     any
   >
-  ? ComponentObjectPropsOptions extends RuntimePropsOptions
-  ? {}
-  : ExtractPropTypes<RuntimePropsOptions>
-  : T extends DefineVaporSetupFnComponent<
-    infer P extends Record<string, any>,
-    any,
-    any,
-    any,
-    any
-  >
-  ? P
-  : unknown
+    ? ComponentObjectPropsOptions extends RuntimePropsOptions
+      ? {}
+      : ExtractPropTypes<RuntimePropsOptions>
+    : T extends DefineVaporSetupFnComponent<
+          infer P extends Record<string, any>,
+          any,
+          any,
+          any,
+          any
+        >
+      ? P
+      : unknown
 >
 
 /*@__NO_SIDE_EFFECTS__*/
@@ -157,6 +159,15 @@ export function defineVaporCustomElement(
   return VaporCustomElement
 }
 
+/*@__NO_SIDE_EFFECTS__*/
+export const defineVaporSSRCustomElement = ((
+  options: any,
+  extraOptions?: Omit<VaporComponentOptions, 'setup'>,
+) => {
+  // @ts-expect-error
+  return defineVaporCustomElement(options, extraOptions, createVaporSSRApp)
+}) as typeof defineVaporCustomElement
+
 type VaporInnerComponentDef = VaporComponent & CustomElementOptions
 
 export class VaporElement extends VueElementBase<
@@ -172,7 +183,19 @@ export class VaporElement extends VueElementBase<
     super(def, props, createAppFn)
   }
 
-
+  protected _needsHydration(): boolean {
+    if (this.shadowRoot && this._createApp !== createVaporApp) {
+      return true
+    } else {
+      if (__DEV__ && this.shadowRoot) {
+        warn(
+          `Custom element has pre-rendered declarative shadow root but is not ` +
+            `defined as hydratable. Use \`defineVaporSSRCustomElement\`.`,
+        )
+      }
+    }
+    return false
+  }
   protected _mount(def: VaporInnerComponentDef): void {
     if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && !def.name) {
       def.name = 'VaporElement'
@@ -184,7 +207,12 @@ export class VaporElement extends VueElementBase<
       this._def.configureApp(this._app)
     }
 
-    this._createComponent()
+    // create component in hydration context
+    if (this.shadowRoot && this._createApp === createVaporSSRApp) {
+      withHydration(this._root, this._createComponent.bind(this))
+    } else {
+      this._createComponent()
+    }
 
     this._app!.mount(this._root)
 

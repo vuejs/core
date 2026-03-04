@@ -1,5 +1,6 @@
+import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
 import { type Namespace, Namespaces } from '@vue/shared'
-import { child, createTextNode } from './node'
+import { _child, createTextNode } from './node'
 
 let t: HTMLTemplateElement
 
@@ -7,6 +8,15 @@ let t: HTMLTemplateElement
 export function template(html: string, root?: boolean, ns?: Namespace) {
   let node: Node
   return (): Node & { $root?: true } => {
+    if (isHydrating) {
+      // do not cache the adopted node in node because it contains child nodes
+      // this avoids duplicate rendering of children
+      const adopted = adoptTemplate(currentHydrationNode!, html)!
+      if (root) (adopted as any).$root = true
+      return adopted
+    }
+
+    // fast path for text nodes
     if (html[0] !== '<') {
       return createTextNode(html)
     }
@@ -15,10 +25,10 @@ export function template(html: string, root?: boolean, ns?: Namespace) {
       if (ns) {
         const tag = ns === Namespaces.SVG ? 'svg' : 'math'
         t.innerHTML = `<${tag}>${html}</${tag}>`
-        node = child(child(t.content) as ParentNode)
+        node = _child(_child(t.content) as ParentNode)
       } else {
         t.innerHTML = html
-        node = child(t.content)
+        node = _child(t.content)
       }
     }
     const ret = node.cloneNode(true)
