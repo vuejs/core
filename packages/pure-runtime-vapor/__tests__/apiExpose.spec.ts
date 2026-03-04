@@ -2,7 +2,7 @@ import { ref, shallowRef } from '@vue/reactivity'
 import { type VaporComponentInstance, createComponent } from '../src/component'
 import { createTemplateRefSetter } from '../src/apiTemplateRef'
 import { makeRender } from './_utils'
-import { currentInstance } from '@vue/runtime-dom'
+import { currentInstance } from '@vue/pure-runtime-dom'
 import { defineVaporComponent } from '../src/apiDefineComponent'
 
 const define = makeRender()

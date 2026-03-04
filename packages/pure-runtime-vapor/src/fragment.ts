@@ -20,7 +20,7 @@ import {
   queuePostFlushCb,
   setCurrentInstance,
   warnExtraneousAttributes,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import {
   type VaporComponentInstance,
   applyFallthroughProps,

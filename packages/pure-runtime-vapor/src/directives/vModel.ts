@@ -8,7 +8,7 @@ import {
   vModelSetSelected,
   vModelTextInit,
   vModelTextUpdate,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { renderEffect } from '../renderEffect'
 import { looseEqual } from '@vue/shared'
 import { addEventListener } from '../dom/event'

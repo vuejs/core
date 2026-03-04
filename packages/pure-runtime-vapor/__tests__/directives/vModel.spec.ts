@@ -15,7 +15,7 @@ import {
   template,
 } from '../../src'
 import { makeRender } from '../_utils'
-import { nextTick } from '@vue/runtime-dom'
+import { nextTick } from '@vue/pure-runtime-dom'
 
 const define = makeRender()
 

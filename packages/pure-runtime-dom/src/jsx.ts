@@ -1524,7 +1524,7 @@ type EventHandlers<E> = {
     : (payload: E[K]) => void
 }
 
-import type { VNodeRef } from '@vue/runtime-core'
+import type { VNodeRef } from '@vue/pure-runtime-core'
 
 export interface ReservedProps {
   key?: PropertyKey | undefined

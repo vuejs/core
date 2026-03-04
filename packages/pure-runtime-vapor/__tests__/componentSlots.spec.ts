@@ -28,7 +28,7 @@ import {
   ref,
   renderSlot,
   toDisplayString,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'

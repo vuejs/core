@@ -10,7 +10,7 @@ import {
   watchEffect,
   watchPostEffect,
   watchSyncEffect,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { renderEffect, template } from '../src'
 import { onEffectCleanup } from '@vue/reactivity'
 import { makeRender } from './_utils'

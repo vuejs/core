@@ -11,7 +11,7 @@ import {
   setText,
   template,
 } from '../src'
-import { nextTick, reactive, ref, watchEffect } from '@vue/runtime-dom'
+import { nextTick, reactive, ref, watchEffect } from '@vue/pure-runtime-dom'
 import { makeRender } from './_utils'
 
 const define = makeRender()

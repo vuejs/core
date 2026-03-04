@@ -11,7 +11,7 @@ import {
   toDisplayString,
   useHost,
   useShadowRoot,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import {
   VaporTeleport,
   child,

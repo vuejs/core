@@ -1,4 +1,8 @@
-import { type DirectiveModifiers, onScopeDispose, warn } from '@vue/runtime-dom'
+import {
+  type DirectiveModifiers,
+  onScopeDispose,
+  warn,
+} from '@vue/pure-runtime-dom'
 import {
   type VaporComponentInstance,
   getRootElement,

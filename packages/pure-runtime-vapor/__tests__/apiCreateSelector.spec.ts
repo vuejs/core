@@ -1,7 +1,7 @@
 import { ref } from '@vue/reactivity'
 import { makeRender } from './_utils'
 import { createFor } from '../src'
-import { nextTick } from '@vue/runtime-dom'
+import { nextTick } from '@vue/pure-runtime-dom'
 
 const define = makeRender()
 

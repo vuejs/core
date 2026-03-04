@@ -4,7 +4,7 @@ import {
   ErrorCodes,
   callWithAsyncErrorHandling,
   currentInstance,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 
 export function addEventListener(
   el: Element,

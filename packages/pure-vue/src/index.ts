@@ -10,8 +10,8 @@ import {
   type RenderFunction,
   registerRuntimeCompiler,
   warn,
-} from '@vue/runtime-dom'
-import * as runtimeDom from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
+import * as runtimeDom from '@vue/pure-runtime-dom'
 import {
   NOOP,
   extend,
@@ -104,4 +104,4 @@ function compileToFunction(
 registerRuntimeCompiler(compileToFunction)
 
 export { compileToFunction as compile }
-export * from '@vue/runtime-dom'
+export * from '@vue/pure-runtime-dom'

@@ -36,7 +36,7 @@ import {
   unregisterHMR,
   warn,
   warnExtraneousAttributes,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import {
   type Block,
   insert,
@@ -124,7 +124,7 @@ import type { VaporElement } from './apiDefineCustomElement'
 import { parentSuspense, setParentSuspense } from './components/Suspense'
 import { isInteropEnabled } from './vdomInteropState'
 
-export { currentInstance } from '@vue/runtime-dom'
+export { currentInstance } from '@vue/pure-runtime-dom'
 
 export type VaporComponent =
   | FunctionalVaporComponent<any>

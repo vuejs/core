@@ -1,5 +1,5 @@
 import { capitalize, hyphenate, isArray, isString } from '@vue/shared'
-import { camelize, warn } from '@vue/runtime-core'
+import { camelize, warn } from '@vue/pure-runtime-core'
 import {
   type VShowElement,
   vShowHidden,

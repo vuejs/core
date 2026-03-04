@@ -18,7 +18,7 @@ import {
   resetShapeFlag,
   warn,
   watch,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { type Block, move, remove } from '../block'
 import {
   type VaporComponent,

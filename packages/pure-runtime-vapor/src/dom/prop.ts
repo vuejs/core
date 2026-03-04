@@ -35,7 +35,7 @@ import {
   warn,
   warnPropMismatch,
   xlinkNS,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import {
   type VaporComponentInstance,
   isApplyingFallthroughProps,
@@ -344,7 +344,6 @@ export function setText(el: Text & { $txt?: string }, value: string): void {
       el.$txt = clientText
       return
     }
-
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       warn(
         `Hydration text mismatch in`,

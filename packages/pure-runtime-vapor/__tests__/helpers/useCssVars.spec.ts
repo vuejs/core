@@ -12,7 +12,7 @@ import {
   useVaporCssVars,
   withVaporCtx,
 } from '@vue/runtime-vapor'
-import { nextTick, onMounted, reactive, ref } from '@vue/runtime-core'
+import { nextTick, onMounted, reactive, ref } from '@vue/pure-runtime-core'
 import { makeRender } from '../_utils'
 import type { VaporComponent } from '../../src/component'
 

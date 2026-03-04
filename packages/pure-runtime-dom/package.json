@@ -50,7 +50,7 @@
   "homepage": "https://github.com/vuejs/core/tree/main/packages/pure-runtime-dom#readme",
   "dependencies": {
     "@vue/shared": "workspace:*",
-    "@vue/runtime-core": "workspace:*",
+    "@vue/pure-runtime-core": "workspace:*",
     "@vue/reactivity": "workspace:*",
     "csstype": "^3.2.3"
   },

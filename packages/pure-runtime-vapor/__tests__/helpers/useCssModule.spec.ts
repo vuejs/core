@@ -1,4 +1,4 @@
-import { useCssModule } from '@vue/runtime-dom'
+import { useCssModule } from '@vue/pure-runtime-dom'
 import { makeRender } from '../_utils'
 import { defineVaporComponent, template } from '@vue/runtime-vapor'
 

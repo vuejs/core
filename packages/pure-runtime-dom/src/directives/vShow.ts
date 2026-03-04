@@ -1,4 +1,4 @@
-import type { ObjectDirective } from '@vue/runtime-core'
+import type { ObjectDirective } from '@vue/pure-runtime-core'
 
 export const vShowOriginalDisplay: unique symbol = Symbol('_vod')
 

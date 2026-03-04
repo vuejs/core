@@ -5,7 +5,7 @@ import {
   ref,
   watch,
   watchEffect,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import {
   createComponent,
   createInvoker,

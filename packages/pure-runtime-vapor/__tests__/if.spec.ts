@@ -7,7 +7,7 @@ import {
   // @ts-expect-error
   withDirectives,
 } from '../src'
-import { nextTick, ref } from '@vue/runtime-dom'
+import { nextTick, ref } from '@vue/pure-runtime-dom'
 import type { Mock } from 'vitest'
 import { makeRender } from './_utils'
 import { unmountComponent } from '../src/component'

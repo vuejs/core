@@ -6,7 +6,7 @@ import {
   ref,
   watch,
   withDirectives,
-} from '@vue/runtime-core'
+} from '@vue/pure-runtime-core'
 import { Transition, render, vShow } from '@vue/runtime-dom'
 
 const withVShow = (node: VNode, exp: any) =>

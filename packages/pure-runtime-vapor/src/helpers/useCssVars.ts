@@ -3,7 +3,7 @@ import {
   baseUseCssVars,
   currentInstance,
   setVarsOnNode,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { type VaporComponentInstance, isVaporComponent } from '../component'
 import { isArray } from '@vue/shared'
 import type { Block } from '../block'

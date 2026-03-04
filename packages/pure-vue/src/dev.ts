@@ -1,4 +1,4 @@
-import { initCustomFormatter } from '@vue/runtime-dom'
+import { initCustomFormatter } from '@vue/pure-runtime-dom'
 
 export function initDev(): void {
   if (__BROWSER__) {

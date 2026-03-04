@@ -10,7 +10,7 @@ import {
   queuePostFlushCb,
   resolveTeleportTarget,
   warn,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import {
   type Block,
   type BlockFn,

@@ -12,7 +12,12 @@ import {
   template,
   useVaporCssVars,
 } from '../src'
-import { defineAsyncComponent, nextTick, reactive, ref } from '@vue/runtime-dom'
+import {
+  defineAsyncComponent,
+  nextTick,
+  reactive,
+  ref,
+} from '@vue/pure-runtime-dom'
 import { isString } from '@vue/shared'
 import type { VaporComponentInstance } from '../src/component'
 import type { TeleportFragment } from '../src/components/Teleport'

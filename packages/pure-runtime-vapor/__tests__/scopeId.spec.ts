@@ -1,4 +1,4 @@
-import { createApp, h, nextTick, ref } from '@vue/runtime-dom'
+import { createApp, h, nextTick, ref } from '@vue/pure-runtime-dom'
 import {
   createComponent,
   createDynamicComponent,

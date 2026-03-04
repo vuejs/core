@@ -22,7 +22,7 @@ import {
   shallowRef,
   useTemplateRef,
   watchEffect,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { setElementText, setText } from '../../src/dom/prop'
 import type { VaporComponent } from '../../src/component'
 

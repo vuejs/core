@@ -4,7 +4,7 @@ import {
   ErrorCodes,
   callWithAsyncErrorHandling,
   warn,
-} from '@vue/runtime-core'
+} from '@vue/pure-runtime-core'
 
 interface Invoker extends EventListener {
   value: EventValue

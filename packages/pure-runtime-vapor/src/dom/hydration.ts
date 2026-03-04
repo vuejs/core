@@ -1,4 +1,4 @@
-import { MismatchTypes, isMismatchAllowed, warn } from '@vue/runtime-dom'
+import { MismatchTypes, isMismatchAllowed, warn } from '@vue/pure-runtime-dom'
 import {
   insertionIndex,
   insertionParent,

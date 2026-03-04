@@ -5,7 +5,7 @@ import {
   type VNode,
   nextTick,
   warn,
-} from '@vue/runtime-core'
+} from '@vue/pure-runtime-core'
 import { addEventListener } from '../modules/events'
 import {
   invokeArrayFns,

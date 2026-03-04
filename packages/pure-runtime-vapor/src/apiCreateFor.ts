@@ -20,7 +20,7 @@ import {
   insert,
   remove,
 } from './block'
-import { queuePostFlushCb, warn } from '@vue/runtime-dom'
+import { queuePostFlushCb, warn } from '@vue/pure-runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import {
   type DynamicSlot,

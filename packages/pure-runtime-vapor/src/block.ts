@@ -15,7 +15,7 @@ import {
   getInheritedScopeIds,
   performTransitionEnter,
   performTransitionLeave,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import {
   type DynamicFragment,
   type VaporFragment,

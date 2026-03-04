@@ -13,7 +13,7 @@ import {
   resolveTransitionProps,
   useTransitionState,
   warn,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { extend, isArray } from '@vue/shared'
 import {
   type Block,

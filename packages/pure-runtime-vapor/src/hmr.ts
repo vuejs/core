@@ -3,7 +3,7 @@ import {
   popWarningContext,
   pushWarningContext,
   setCurrentInstance,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { insert, normalizeBlock, remove } from './block'
 import {
   type VaporComponent,

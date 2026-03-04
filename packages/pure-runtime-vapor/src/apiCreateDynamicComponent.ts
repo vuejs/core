@@ -5,7 +5,7 @@ import {
   isVNode,
   resolveDynamicComponent,
   setCurrentRenderingInstance,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { insert, isBlock } from './block'
 import {
   type VaporComponentInstance,

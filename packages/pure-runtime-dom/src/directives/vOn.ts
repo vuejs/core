@@ -5,7 +5,7 @@ import {
   type LegacyConfig,
   compatUtils,
   getCurrentInstance,
-} from '@vue/runtime-core'
+} from '@vue/pure-runtime-core'
 import { hyphenate, isArray } from '@vue/shared'
 
 const systemModifiers = ['ctrl', 'shift', 'alt', 'meta'] as const

@@ -1,5 +1,5 @@
 import { ref, shallowRef } from '@vue/reactivity'
-import { nextTick, resolveDynamicComponent } from '@vue/runtime-dom'
+import { nextTick, resolveDynamicComponent } from '@vue/pure-runtime-dom'
 import {
   createComponent,
   createComponentWithFallback,

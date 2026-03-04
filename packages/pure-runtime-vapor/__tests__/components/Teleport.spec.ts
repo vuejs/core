@@ -31,7 +31,7 @@ import {
   shallowRef,
 } from 'vue'
 
-import type { HMRRuntime } from '@vue/runtime-dom'
+import type { HMRRuntime } from '@vue/pure-runtime-dom'
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
 

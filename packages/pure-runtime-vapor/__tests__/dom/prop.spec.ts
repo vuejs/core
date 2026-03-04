@@ -14,7 +14,7 @@ import {
 } from '../../src/dom/prop'
 import { setStyle } from '../../src/dom/prop'
 import { VaporComponentInstance, createComponent } from '../../src/component'
-import { ref, setCurrentInstance, svgNS, xlinkNS } from '@vue/runtime-dom'
+import { ref, setCurrentInstance, svgNS, xlinkNS } from '@vue/pure-runtime-dom'
 import { makeRender } from '../_utils'
 import {
   createDynamicComponent,

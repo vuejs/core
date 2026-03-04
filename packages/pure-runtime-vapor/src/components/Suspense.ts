@@ -1,4 +1,4 @@
-import type { SuspenseBoundary } from '@vue/runtime-dom'
+import type { SuspenseBoundary } from '@vue/pure-runtime-dom'
 
 export let parentSuspense: SuspenseBoundary | null = null
 

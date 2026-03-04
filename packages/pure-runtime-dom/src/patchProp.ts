@@ -12,7 +12,7 @@ import {
   isString,
   shouldSetAsAttr,
 } from '@vue/shared'
-import type { RendererOptions } from '@vue/runtime-core'
+import type { RendererOptions } from '@vue/pure-runtime-core'
 import type { VueElement } from './apiCustomElement'
 
 type DOMRendererOptions = RendererOptions<Node, Element>

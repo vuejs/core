@@ -17,7 +17,7 @@ import {
   normalizeContainer,
   setDevtoolsHook,
   warn,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import type { RawProps } from './componentProps'
 import { getGlobalThis } from '@vue/shared'
 import { optimizePropertyLookup } from './dom/prop'

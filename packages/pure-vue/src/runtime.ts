@@ -2,13 +2,13 @@
 // `dist/vue.esm-bundler.js` which is used by default for bundlers.
 import { NOOP } from '@vue/shared'
 import { initDev } from './dev'
-import { type RenderFunction, warn } from '@vue/runtime-dom'
+import { type RenderFunction, warn } from '@vue/pure-runtime-dom'
 
 if (__DEV__) {
   initDev()
 }
 
-export * from '@vue/runtime-dom'
+export * from '@vue/pure-runtime-dom'
 
 export const compile = (_template: string): RenderFunction => {
   if (__DEV__) {

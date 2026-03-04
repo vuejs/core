@@ -40,7 +40,7 @@ import {
   deactivate as vdomDeactivate,
   setRef as vdomSetRef,
   warn,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import {
   type LooseRawProps,
   type LooseRawSlots,

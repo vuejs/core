@@ -5,7 +5,7 @@ import {
   defineVaporComponent,
   withVaporDirectives,
 } from '../../src'
-import { nextTick, watchEffect } from '@vue/runtime-dom'
+import { nextTick, watchEffect } from '@vue/pure-runtime-dom'
 import type { Mock } from 'vitest'
 
 describe('custom directive', () => {

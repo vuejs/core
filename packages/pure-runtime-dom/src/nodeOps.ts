@@ -1,5 +1,5 @@
-import { warn } from '@vue/runtime-core'
-import type { RendererOptions } from '@vue/runtime-core'
+import { warn } from '@vue/pure-runtime-core'
+import type { RendererOptions } from '@vue/pure-runtime-core'
 import type {
   TrustedHTML,
   TrustedTypePolicy,

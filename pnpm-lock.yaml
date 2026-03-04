@@ -279,7 +279,7 @@ importers:
         specifier: 'catalog:'
         version: 8.0.0-beta.15(@types/node@24.10.13)(esbuild@0.27.3)(sass@1.97.3)(yaml@2.8.2)
       vue:
-        specifier: workspace:*
+        specifier: workspace:pure-vue
         version: link:../../packages/vue
 
   packages-private/vite-debug:
@@ -416,6 +416,70 @@ importers:
         specifier: 'catalog:'
         version: 1.2.1
 
+  packages/pure-runtime-core:
+    dependencies:
+      '@vue/reactivity':
+        specifier: workspace:*
+        version: link:../reactivity
+      '@vue/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/pure-runtime-dom:
+    dependencies:
+      '@vue/reactivity':
+        specifier: workspace:*
+        version: link:../reactivity
+      '@vue/runtime-core':
+        specifier: workspace:*
+        version: link:../runtime-core
+      '@vue/shared':
+        specifier: workspace:*
+        version: link:../shared
+      csstype:
+        specifier: ^3.2.3
+        version: 3.2.3
+    devDependencies:
+      '@types/trusted-types':
+        specifier: ^2.0.7
+        version: 2.0.7
+
+  packages/pure-runtime-vapor:
+    dependencies:
+      '@vue/reactivity':
+        specifier: workspace:*
+        version: link:../reactivity
+      '@vue/runtime-dom':
+        specifier: workspace:*
+        version: link:../runtime-dom
+      '@vue/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/pure-vue:
+    dependencies:
+      '@vue/compiler-dom':
+        specifier: workspace:*
+        version: link:../compiler-dom
+      '@vue/compiler-sfc':
+        specifier: workspace:*
+        version: link:../compiler-sfc
+      '@vue/pure-runtime-dom':
+        specifier: workspace:*
+        version: link:../pure-runtime-dom
+      '@vue/pure-runtime-vapor':
+        specifier: workspace:*
+        version: link:../pure-runtime-vapor
+      '@vue/server-renderer':
+        specifier: workspace:*
+        version: link:../server-renderer
+      '@vue/shared':
+        specifier: workspace:*
+        version: link:../shared
+      typescript:
+        specifier: '*'
+        version: 5.6.3
+
   packages/reactivity:
     dependencies:
       '@vue/shared':
@@ -449,46 +513,6 @@ importers:
       '@types/trusted-types':
         specifier: ^2.0.7
         version: 2.0.7
-
-  packages/runtime-pure-core:
-    dependencies:
-      '@vue/reactivity':
-        specifier: workspace:*
-        version: link:../reactivity
-      '@vue/shared':
-        specifier: workspace:*
-        version: link:../shared
-
-  packages/runtime-pure-dom:
-    dependencies:
-      '@vue/reactivity':
-        specifier: workspace:*
-        version: link:../reactivity
-      '@vue/runtime-core':
-        specifier: workspace:*
-        version: link:../runtime-core
-      '@vue/shared':
-        specifier: workspace:*
-        version: link:../shared
-      csstype:
-        specifier: ^3.2.3
-        version: 3.2.3
-    devDependencies:
-      '@types/trusted-types':
-        specifier: ^2.0.7
-        version: 2.0.7
-
-  packages/runtime-pure-vapor:
-    dependencies:
-      '@vue/reactivity':
-        specifier: workspace:*
-        version: link:../reactivity
-      '@vue/runtime-dom':
-        specifier: workspace:*
-        version: link:../runtime-dom
-      '@vue/shared':
-        specifier: workspace:*
-        version: link:../shared
 
   packages/runtime-test:
     dependencies:

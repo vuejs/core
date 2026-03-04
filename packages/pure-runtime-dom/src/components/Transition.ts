@@ -7,7 +7,7 @@ import {
   assertNumber,
   compatUtils,
   h,
-} from '@vue/runtime-core'
+} from '@vue/pure-runtime-core'
 import { extend, isArray, isObject, toNumber } from '@vue/shared'
 
 const TRANSITION = 'transition'

@@ -31,7 +31,7 @@ import {
   unref,
   useInstanceOption,
   warn,
-} from '@vue/runtime-core'
+} from '@vue/pure-runtime-core'
 import {
   camelize,
   extend,

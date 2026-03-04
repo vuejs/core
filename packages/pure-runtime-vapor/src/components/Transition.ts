@@ -18,7 +18,7 @@ import {
   resolveTransitionProps,
   useTransitionState,
   warn,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import {
   type Block,
   type TransitionBlock,

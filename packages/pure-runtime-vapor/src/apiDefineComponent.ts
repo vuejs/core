@@ -18,7 +18,7 @@ import type {
   ReservedProps,
   TypeEmitsToOptions,
   VNode,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import type { StaticSlots } from './componentSlots'
 import type { Block } from './block'
 

@@ -42,6 +42,6 @@
     "@vue/reactivity": "workspace:*"
   },
   "peerDependencies": {
-    "@vue/runtime-dom": "workspace:*"
+    "@vue/pure-runtime-dom": "workspace:*"
   }
 }

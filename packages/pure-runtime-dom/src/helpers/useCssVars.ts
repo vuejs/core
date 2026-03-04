@@ -10,7 +10,7 @@ import {
   queuePostFlushCb,
   warn,
   watch,
-} from '@vue/runtime-core'
+} from '@vue/pure-runtime-core'
 import { NOOP, ShapeFlags, extend, normalizeCssVarValue } from '@vue/shared'
 
 export const CSS_VAR_TEXT: unique symbol = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')

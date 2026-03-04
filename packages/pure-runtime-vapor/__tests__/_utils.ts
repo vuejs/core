@@ -1,5 +1,5 @@
 import { createVaporApp, vaporInteropPlugin } from '../src'
-import { type App, type Component, createApp } from '@vue/runtime-dom'
+import { type App, type Component, createApp } from '@vue/pure-runtime-dom'
 import type {
   VaporComponent,
   VaporComponentInstance,
@@ -8,7 +8,7 @@ import type {
 import type { RawProps } from '../src/componentProps'
 import { compileScript, parse } from '@vue/compiler-sfc'
 import * as runtimeVapor from '../src'
-import * as runtimeDom from '@vue/runtime-dom'
+import * as runtimeDom from '@vue/pure-runtime-dom'
 import * as VueServerRenderer from '@vue/server-renderer'
 import {
   type CompilerOptions,

@@ -8,7 +8,7 @@ import {
   setCurrentInstance,
   startMeasure,
   warn,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { type VaporComponentInstance, isVaporComponent } from './component'
 import { inOnceSlot } from './componentSlots'
 import { invokeArrayFns } from '@vue/shared'

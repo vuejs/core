@@ -1,4 +1,4 @@
-import { nextTick, onActivated, ref } from '@vue/runtime-dom'
+import { nextTick, onActivated, ref } from '@vue/pure-runtime-dom'
 import { type VaporComponent, createComponent } from '../src/component'
 import { defineVaporAsyncComponent } from '../src/apiDefineAsyncComponent'
 import { makeRender } from './_utils'

@@ -6,7 +6,7 @@ import {
   useAttrs,
   useSlots,
   withAsyncContext,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { makeRender } from './_utils'
 import type { VaporComponentInstance } from '../src/component'
 

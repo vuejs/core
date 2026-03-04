@@ -18,7 +18,7 @@ import {
   provide,
   reactive,
   ref,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import {
   createComponent,
   createFor,

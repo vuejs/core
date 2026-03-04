@@ -6,7 +6,7 @@ import {
   currentInstance,
   isAsyncWrapper,
   isRef,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 import {

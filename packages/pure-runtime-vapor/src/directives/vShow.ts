@@ -5,7 +5,7 @@ import {
   vShowOriginalDisplay,
   warn,
   warnPropMismatch,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { renderEffect } from '../renderEffect'
 import { isVaporComponent } from '../component'
 import type { Block, TransitionBlock } from '../block'

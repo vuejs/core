@@ -9,7 +9,7 @@ import {
   type ComponentInternalInstance,
   DeprecationTypes,
   compatUtils,
-} from '@vue/runtime-core'
+} from '@vue/pure-runtime-core'
 
 export const xlinkNS = 'http://www.w3.org/1999/xlink'
 

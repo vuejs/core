@@ -1,4 +1,4 @@
-import { type ObjectEmitsOptions, baseEmit } from '@vue/runtime-dom'
+import { type ObjectEmitsOptions, baseEmit } from '@vue/pure-runtime-dom'
 import type { VaporComponent, VaporComponentInstance } from './component'
 import { EMPTY_OBJ, hasOwn, isArray, isOn } from '@vue/shared'
 import { type RawProps, resolveSource } from './componentProps'

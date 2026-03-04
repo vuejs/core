@@ -1,7 +1,7 @@
 {
   "name": "pure-vue",
   "version": "3.6.0-beta.7",
-  "description": "The progressive JavaScript framework for building modern web UI.",
+  "description": "纯vapor的vue框架.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
   "types": "dist/vue.d.ts",

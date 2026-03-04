@@ -27,7 +27,7 @@ import {
   toRaw,
   useTransitionState,
   warn,
-} from '@vue/runtime-core'
+} from '@vue/pure-runtime-core'
 import { extend } from '@vue/shared'
 
 interface Position {

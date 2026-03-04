@@ -3,7 +3,7 @@ import { template } from '../../src/dom/template'
 import { child } from '../../src/dom/node'
 import { setClass } from '../../src/dom/prop'
 import { renderEffect } from '../../src'
-import { nextTick, ref } from '@vue/runtime-dom'
+import { nextTick, ref } from '@vue/pure-runtime-dom'
 
 const define = makeRender()
 

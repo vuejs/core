@@ -17,7 +17,7 @@ import {
   isRuntimeOnly,
   setIsHydratingEnabled,
   warn,
-} from '@vue/runtime-core'
+} from '@vue/pure-runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
 export { nodeOps, patchProp }
@@ -50,7 +50,7 @@ declare module '@vue/reactivity' {
   }
 }
 
-declare module '@vue/runtime-core' {
+declare module '@vue/pure-runtime-core' {
   interface GlobalComponents {
     Transition: DefineComponent<TransitionProps>
     TransitionGroup: DefineComponent<TransitionGroupProps>
@@ -311,7 +311,7 @@ export const initDirectivesForSSR: () => void = __SSR__
 
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types
-export * from '@vue/runtime-core'
+export * from '@vue/pure-runtime-core'
 
 export * from './jsx'
 

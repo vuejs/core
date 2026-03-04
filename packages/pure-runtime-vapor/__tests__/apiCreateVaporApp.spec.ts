@@ -16,7 +16,7 @@ import {
   resolveComponent,
   resolveDirective,
   warn,
-} from '@vue/runtime-dom'
+} from '@vue/pure-runtime-dom'
 import { makeRender } from './_utils'
 import type { VaporComponent } from '../src/component'
 
