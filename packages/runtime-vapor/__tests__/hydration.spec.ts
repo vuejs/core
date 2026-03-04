@@ -23,6 +23,7 @@ const formatHtml = (raw: string) => {
   return raw
     .replace(/<!--\[/g, '\n<!--[')
     .replace(/]-->/g, ']-->\n')
+    .replace(/<!--teleport (start|end)-->/g, '\n<!--teleport $1-->\n')
     .replace(/\n{2,}/g, '\n')
 }
 
@@ -5518,21 +5519,24 @@ describe('VDOM interop', () => {
   })
 
   test('hydrate multi-root VNode component via createDynamicComponent and switch branch', async () => {
-    const showMulti = ref(true)
+    const data = ref({
+      showMulti: true,
+      tail: 'tail',
+    })
     const { container } = await testWithVaporApp(
       `<script setup>
         import { computed, h } from 'vue'
-        const showMulti = _data
+        const data = _data
         const components = _components
         const vnode = computed(() =>
-          showMulti.value
+          data.value.showMulti
             ? h(components.VdomMultiRoot)
             : h('p', null, 'fallback')
         )
       </script>
       <template>
         <component :is="vnode" />
-        <span>tail</span>
+        <span>{{ data.tail }}</span>
       </template>`,
       {
         VdomMultiRoot: {
@@ -5540,7 +5544,7 @@ describe('VDOM interop', () => {
           vapor: false,
         },
       },
-      showMulti,
+      data,
     )
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
@@ -5555,7 +5559,7 @@ describe('VDOM interop', () => {
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
 
-    showMulti.value = false
+    data.value.showMulti = false
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
@@ -5567,7 +5571,7 @@ describe('VDOM interop', () => {
     `,
     )
 
-    showMulti.value = true
+    data.value.showMulti = true
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
@@ -5578,6 +5582,16 @@ describe('VDOM interop', () => {
       "
     `,
     )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[-->
+      <!--[--><div>first</div><div>second</div><!--dynamic-component--><!--]-->
+      <span>tail-updated</span><!--]-->
+      "
+    `)
   })
 
   test('hydrate vapor slot in vdom component with empty slot and sibling nodes', async () => {
@@ -5631,13 +5645,16 @@ describe('VDOM interop', () => {
   })
 
   test('hydrate static/fragment VNode via createDynamicComponent and switch type', async () => {
-    const useStatic = ref(true)
+    const data = ref({
+      useStatic: true,
+      tail: 'tail',
+    })
     const { container } = await testWithVaporApp(
       `<script setup>
         import { Fragment, computed, createStaticVNode, h } from 'vue'
-        const useStatic = _data
+        const data = _data
         const vnode = computed(() =>
-          useStatic.value
+          data.value.useStatic
             ? createStaticVNode(
                 '<div>first static</div><div>second static</div>',
                 2,
@@ -5650,10 +5667,10 @@ describe('VDOM interop', () => {
       </script>
       <template>
         <component :is="vnode" />
-        <span>tail</span>
+        <span>{{ data.tail }}</span>
       </template>`,
       undefined,
-      useStatic,
+      data,
     )
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
@@ -5666,7 +5683,7 @@ describe('VDOM interop', () => {
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
 
-    useStatic.value = false
+    data.value.useStatic = false
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
@@ -5676,7 +5693,7 @@ describe('VDOM interop', () => {
     `,
     )
 
-    useStatic.value = true
+    data.value.useStatic = true
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
@@ -5685,6 +5702,539 @@ describe('VDOM interop', () => {
       "
     `,
     )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>first static</div><div>second static</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate Teleport VNode via createDynamicComponent and switch branch', async () => {
+    const data = ref({
+      showTeleport: true,
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { Teleport, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showTeleport
+            ? h(Teleport, { to: '#target', disabled: true }, [
+                h('div', null, 'teleported'),
+              ])
+            : h('p', null, 'fallback')
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+        <span>{{ data.tail }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[-->
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.showTeleport = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.showTeleport = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[-->
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[-->
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate enabled Teleport VNode via createDynamicComponent and switch branch', async () => {
+    const data = ref({
+      showTeleport: true,
+      tail: 'tail',
+    })
+    const code = `<script setup>
+        import { Teleport, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showTeleport
+            ? h(Teleport, { to: '#target' }, [h('div', null, 'teleported')])
+            : h('p', null, 'fallback')
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+        <span>{{ data.tail }}</span>
+      </template>`
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const ssrCtx: Record<string, any> = {}
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+      ssrCtx,
+    )
+
+    const target = document.createElement('div')
+    target.id = 'target'
+    target.innerHTML = ssrCtx.teleports['#target']
+    document.body.appendChild(target)
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    const app = createVaporSSRApp(clientComp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--teleport start-->
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+    expect(formatHtml(target.innerHTML)).toMatchInlineSnapshot(
+      `"<!--teleport start anchor--><div>teleported</div><!--teleport anchor-->"`,
+    )
+
+    data.value.showTeleport = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+    expect(formatHtml(target.innerHTML)).toMatchInlineSnapshot(`""`)
+
+    data.value.showTeleport = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--teleport start-->
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+    expect(formatHtml(target.innerHTML)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`,
+    )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[-->
+      <!--teleport start-->
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate Suspense VNode via createDynamicComponent and switch branch', async () => {
+    const data = ref({
+      showSuspense: true,
+      msg: 'foo',
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { Suspense, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showSuspense
+            ? h(Suspense, null, {
+                default: () => h('div', null, data.value.msg),
+                fallback: () => h('div', null, 'pending'),
+              })
+            : h('p', null, 'fallback')
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+        <span>{{ data.tail }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>foo</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value.msg = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>bar</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    data.value.showSuspense = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    data.value.showSuspense = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>bar</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>bar</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate async Suspense VNode via createDynamicComponent and show fallback', async () => {
+    const data = ref({
+      showSuspense: true,
+      tail: 'tail',
+    })
+
+    const appCode = `<script setup>
+      import { Suspense, computed, h } from 'vue'
+      const data = _data
+      const components = _components
+      const vnode = computed(() =>
+        data.value.showSuspense
+          ? h(Suspense, { timeout: 0 }, {
+              default: () => h(components.AsyncComp),
+              fallback: () => h('div', null, 'pending'),
+            })
+          : h('p', null, 'fallback')
+      )
+    </script>
+    <template>
+      <component :is="vnode" />
+      <span>{{ data.tail }}</span>
+    </template>`
+
+    const AsyncResolvedComp = {
+      render: () => runtimeDom.h('div', null, 'async resolved'),
+    }
+
+    let serverResolve: (comp: any) => void
+    const ServerAsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          serverResolve = r
+        }),
+    )
+
+    const SSRApp = compile(
+      appCode,
+      data,
+      { AsyncComp: ServerAsyncComp },
+      {
+        vapor: true,
+        ssr: true,
+      },
+    )
+
+    const htmlPromise = VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRApp),
+    )
+    serverResolve!(AsyncResolvedComp)
+    const html = await htmlPromise
+
+    let clientResolve: (comp: any) => void
+    const ClientAsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          clientResolve = r
+        }),
+    )
+    const App = compile(
+      appCode,
+      data,
+      { AsyncComp: ClientAsyncComp },
+      {
+        vapor: true,
+        ssr: false,
+      },
+    )
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const app = createVaporSSRApp(App)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>async resolved</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.showSuspense = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>async resolved</div><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.showSuspense = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>async resolved</div><div>pending</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    clientResolve!(AsyncResolvedComp)
+    await new Promise(r => setTimeout(r))
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>async resolved</div><div>async resolved</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>async resolved</div><div>async resolved</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate Suspense VNode via createDynamicComponent under KeepAlive', async () => {
+    const data = ref({
+      msg: 'foo',
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { KeepAlive, Suspense, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          h(Suspense, null, {
+            default: () => h('div', null, data.value.msg),
+            fallback: () => h('div', null, 'pending'),
+          })
+        )
+      </script>
+      <template>
+        <KeepAlive>
+          <component :is="vnode" />
+        </KeepAlive>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>foo</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>foo</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate Teleport VNode via createDynamicComponent under Transition', async () => {
+    const data = ref({
+      showTeleport: true,
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { Teleport, Transition, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showTeleport
+            ? h(Teleport, { to: '#target', disabled: true }, [
+                h('div', null, 'teleported'),
+              ])
+            : h('p', null, 'fallback')
+        )
+      </script>
+      <template>
+        <Transition>
+          <component :is="vnode" />
+        </Transition>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[-->
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.showTeleport = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><p class="v-enter-from v-enter-active">fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.showTeleport = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><p class="v-enter-from v-leave-from v-leave-active">fallback</p>
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><p class="v-enter-from v-leave-from v-leave-active">fallback</p>
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate interop dynamic component under KeepAlive', async () => {
+    const data = ref({
+      show: true,
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { KeepAlive, computed, h } from 'vue'
+        const data = _data
+        const components = _components
+        const vnode = computed(() => h(components.Counter))
+      </script>
+      <template>
+        <KeepAlive>
+          <component v-if="data.show" :is="vnode" />
+        </KeepAlive>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      {
+        Counter: {
+          code: `<script setup>
+            import { ref } from 'vue'
+            const count = ref(0)
+          </script>
+          <template><button @click="count++">{{ count }}</button></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    const getButton = () =>
+      container.querySelector('button') as HTMLButtonElement
+
+    expect(getButton().textContent).toBe('0')
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    triggerEvent('click', getButton())
+    await nextTick()
+    expect(getButton().textContent).toBe('1')
+
+    data.value.show = false
+    await nextTick()
+    expect(container.querySelector('button')).toBeNull()
+
+    data.value.show = true
+    await nextTick()
+    expect(getButton().textContent).toBe('1')
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><button>1</button><!--dynamic-component--><!--if--><span>tail-updated</span><!--]-->
+      "
+    `)
   })
 
   test('hydrate VDOM slot content', async () => {
