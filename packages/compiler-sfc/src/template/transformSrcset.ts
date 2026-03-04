@@ -5,6 +5,8 @@ import {
   type NodeTransform,
   NodeTypes,
   type SimpleExpressionNode,
+  type SourceLocation,
+  type TransformContext,
   createCompoundExpression,
   createSimpleExpression,
 } from '@vue/compiler-core'
@@ -28,6 +30,36 @@ interface ImageCandidate {
 
 // http://w3c.github.io/html/semantics-embedded-content.html#ref-for-image-candidate-string-5
 const escapedSpaceCharacters = /( |\\t|\\n|\\f|\\r)+/g
+
+function resolveImportSource(url: string): string | null {
+  const { path, hash } = parseUrl(url)
+  return path || hash || null
+}
+
+function getOrCreateImportExpression(
+  source: string,
+  loc: SourceLocation,
+  context: TransformContext,
+): SimpleExpressionNode {
+  const existingImportsIndex = context.imports.findIndex(i => i.path === source)
+  if (existingImportsIndex > -1) {
+    return createSimpleExpression(
+      `_imports_${existingImportsIndex}`,
+      false,
+      loc,
+      ConstantTypes.CAN_STRINGIFY,
+    )
+  }
+
+  const exp = createSimpleExpression(
+    `_imports_${context.imports.length}`,
+    false,
+    loc,
+    ConstantTypes.CAN_STRINGIFY,
+  )
+  context.imports.push({ exp, path: source })
+  return exp
+}
 
 export const createSrcsetTransformWithOptions = (
   options: Required<AssetURLOptions>,
@@ -109,28 +141,13 @@ export const transformSrcset: NodeTransform = (
           const compoundExpression = createCompoundExpression([], attr.loc)
           imageCandidates.forEach(({ url, descriptor }, index) => {
             if (shouldProcessUrl(url)) {
-              const { path } = parseUrl(url)
-              let exp: SimpleExpressionNode
-              if (path) {
-                const existingImportsIndex = context.imports.findIndex(
-                  i => i.path === path,
+              const source = resolveImportSource(url)
+              if (source) {
+                const exp = getOrCreateImportExpression(
+                  source,
+                  attr.loc,
+                  context,
                 )
-                if (existingImportsIndex > -1) {
-                  exp = createSimpleExpression(
-                    `_imports_${existingImportsIndex}`,
-                    false,
-                    attr.loc,
-                    ConstantTypes.CAN_STRINGIFY,
-                  )
-                } else {
-                  exp = createSimpleExpression(
-                    `_imports_${context.imports.length}`,
-                    false,
-                    attr.loc,
-                    ConstantTypes.CAN_STRINGIFY,
-                  )
-                  context.imports.push({ exp, path })
-                }
                 compoundExpression.children.push(exp)
               }
             } else {

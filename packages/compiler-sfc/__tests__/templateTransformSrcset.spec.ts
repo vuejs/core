@@ -106,4 +106,16 @@ describe('compiler sfc: transform srcset', () => {
     ).code
     expect(code).toMatchSnapshot()
   })
+
+  test('should transform subpath import paths starting with #', () => {
+    const code = compileWithSrcset(
+      `<img srcset="#src/assets/vue.svg" />` +
+        `<img srcset="#/src/assets/vue.svg 2x" />`,
+    ).code
+
+    expect(code).toContain(`_imports_0 from '#src/assets/vue.svg'`)
+    expect(code).toContain(`_imports_1 from '#/src/assets/vue.svg'`)
+    expect(code).toContain(`const _hoisted_1 = _imports_0`)
+    expect(code).toContain(`const _hoisted_2 = _imports_1 + ' 2x'`)
+  })
 })
