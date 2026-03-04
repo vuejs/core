@@ -5517,6 +5517,176 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate multi-root VNode component via createDynamicComponent and switch branch', async () => {
+    const showMulti = ref(true)
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { computed, h } from 'vue'
+        const showMulti = _data
+        const components = _components
+        const vnode = computed(() =>
+          showMulti.value
+            ? h(components.VdomMultiRoot)
+            : h('p', null, 'fallback')
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+        <span>tail</span>
+      </template>`,
+      {
+        VdomMultiRoot: {
+          code: `<template><div>first</div><div>second</div></template>`,
+          vapor: false,
+        },
+      },
+      showMulti,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><!--dynamic-component--><div>first</div><div>second</div><!--]-->
+      <span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    showMulti.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><p>fallback</p><!--dynamic-component--><!--]-->
+      <span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    showMulti.value = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><div>first</div><div>second</div><!--dynamic-component--><!--]-->
+      <span>tail</span><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate vapor slot in vdom component with empty slot and sibling nodes', async () => {
+    const msg = ref('Hello World!')
+    const { container } = await testWithVaporApp(
+      `<script setup vapor>
+        const msg = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Comp />
+        <h1>{{ msg }}</h1>
+      </template>`,
+      {
+        Comp: {
+          code: `
+          <template>
+            <div>
+              <slot />
+            </div>
+          </template>`,
+          vapor: false,
+        },
+      },
+      msg,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>
+      <!--[--><!--]-->
+      </div><h1>Hello World!</h1><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    msg.value = 'Hi Vapor'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>
+      <!--[--><!--]-->
+      </div><h1>Hi Vapor</h1><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate static/fragment VNode via createDynamicComponent and switch type', async () => {
+    const useStatic = ref(true)
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { Fragment, computed, createStaticVNode, h } from 'vue'
+        const useStatic = _data
+        const vnode = computed(() =>
+          useStatic.value
+            ? createStaticVNode(
+                '<div>first static</div><div>second static</div>',
+                2,
+              )
+            : h(Fragment, null, [
+                h('div', null, 'first fragment'),
+                h('div', null, 'second fragment'),
+              ])
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+        <span>tail</span>
+      </template>`,
+      undefined,
+      useStatic,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>first static</div><div>second static</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    useStatic.value = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>first fragment</div><div>second fragment</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    useStatic.value = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>first static</div><div>second static</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+  })
+
   test('hydrate VDOM slot content', async () => {
     const data = ref('foo')
     const { container } = await testWithVaporApp(
