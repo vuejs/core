@@ -395,6 +395,10 @@ let vdomHydrateNode: HydrationRenderer['hydrateNode'] | undefined
 // is Static/Fragment (multi-root component case).
 function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
   const { type, shapeFlag, el, anchor } = vnode
+  if (shapeFlag & ShapeFlags.TELEPORT && el && anchor && anchor !== el) {
+    return [el as Node, anchor as Node]
+  }
+
   if ((type === Static || type === Fragment) && el && anchor && anchor !== el) {
     return [el as Node, anchor as Node]
   }
@@ -472,10 +476,14 @@ function mountVNode(
     hydrateVNode(
       vnode,
       parentComponent as any,
-      // In the current hydration cursor, component and Static VNodes can be
-      // prefixed by an outer fragment start marker (`<!--[-->`). Skip it so
-      // runtime-core hydrateNode() starts from the first real node of this vnode.
-      vnode.type === Static || !!(vnode.shapeFlag & ShapeFlags.COMPONENT),
+      // In the current hydration cursor, component / Teleport / Suspense / Static
+      // VNodes can be prefixed by an outer fragment start marker (`<!--[-->`).
+      // Skip it so runtime-core hydrateNode() starts from this vnode's first real node.
+      vnode.type === Static ||
+        !!(
+          vnode.shapeFlag &
+          (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE)
+        ),
     )
     onScopeDispose(unmount, true)
     isMounted = true
