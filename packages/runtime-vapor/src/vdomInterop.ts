@@ -2,6 +2,7 @@ import {
   type App,
   type ComponentInternalInstance,
   type ConcreteComponent,
+  Fragment,
   type FunctionalComponent,
   type HydrationRenderer,
   type KeepAliveContext,
@@ -12,6 +13,7 @@ import {
   type RendererNode,
   type ShallowRef,
   type Slots,
+  Static,
   type SuspenseBoundary,
   type TransitionHooks,
   type VNode,
@@ -383,6 +385,25 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
 
 let vdomHydrateNode: HydrationRenderer['hydrateNode'] | undefined
 
+function resolveVNodeNodes(vnode: VNode): Block {
+  // Static/Fragment VNodes represent a contiguous node range [el..anchor].
+  // Return the full range so Vapor block helpers (insert/remove/move)
+  // operate on the same boundaries as runtime-core. Single-node VNodes
+  // fall back to `el` below.
+  const { type, el, anchor } = vnode
+  if ((type === Static || type === Fragment) && el && anchor && anchor !== el) {
+    const range: Node[] = []
+    let n: Node | null = el as Node
+    while (n) {
+      range.push(n)
+      if (n === anchor) break
+      n = n.nextSibling
+    }
+    return range
+  }
+  return el as Block
+}
+
 /**
  * Mount VNode in vapor
  */
@@ -393,7 +414,7 @@ function mountVNode(
 ): VaporFragment {
   const suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
-  const frag = new VaporFragment([])
+  const frag = new VaporFragment<Block>([])
   frag.vnode = vnode
 
   let isMounted = false
@@ -424,7 +445,7 @@ function mountVNode(
     hydrateVNode(vnode, parentComponent as any)
     onScopeDispose(unmount, true)
     isMounted = true
-    frag.nodes = vnode.el as any
+    frag.nodes = resolveVNodeNodes(vnode)
   }
 
   frag.insert = (parentNode, anchor, transition) => {
@@ -474,7 +495,7 @@ function mountVNode(
       }
       simpleSetCurrentInstance(prev)
     }
-    frag.nodes = vnode.el as any
+    frag.nodes = resolveVNodeNodes(vnode)
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
 
@@ -497,7 +518,7 @@ function createVDOMComponent(
     currentParentSuspense || (parentComponent && parentComponent.suspense)
   const useBridge = shouldUseRendererBridge(component)
   const comp = useBridge ? ensureRendererBridge(component) : component
-  const frag = new VaporFragment([])
+  const frag = new VaporFragment<Block>([])
   const vnode = (frag.vnode = createVNode(
     comp,
     rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
@@ -564,7 +585,7 @@ function createVDOMComponent(
     )
     onScopeDispose(unmount, true)
     isMounted = true
-    frag.nodes = vnode.el as any
+    frag.nodes = resolveVNodeNodes(vnode)
   }
 
   vnode.scopeId = getCurrentScopeId() || null
@@ -614,7 +635,7 @@ function createVDOMComponent(
       simpleSetCurrentInstance(prev)
     }
 
-    frag.nodes = vnode.el as any
+    frag.nodes = resolveVNodeNodes(vnode)
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
 
