@@ -119,7 +119,8 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
 
     if (isRef(res)) {
       // ref unwrapping - skip unwrap for Array + integer key.
-      return targetIsArray && isIntegerKey(key) ? res : res.value
+      const value = targetIsArray && isIntegerKey(key) ? res : res.value
+      return isReadonly && isObject(value) ? readonly(value) : value
     }
 
     if (isObject(res)) {
@@ -145,13 +146,14 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     receiver: object,
   ): boolean {
     let oldValue = target[key]
+    const isArrayWithIntegerKey = isArray(target) && isIntegerKey(key)
     if (!this._isShallow) {
       const isOldValueReadonly = isReadonly(oldValue)
       if (!isShallow(value) && !isReadonly(value)) {
         oldValue = toRaw(oldValue)
         value = toRaw(value)
       }
-      if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
+      if (!isArrayWithIntegerKey && isRef(oldValue) && !isRef(value)) {
         if (isOldValueReadonly) {
           if (__DEV__) {
             warn(
@@ -169,10 +171,9 @@ class MutableReactiveHandler extends BaseReactiveHandler {
       // in shallow mode, objects are set as-is regardless of reactive or not
     }
 
-    const hadKey =
-      isArray(target) && isIntegerKey(key)
-        ? Number(key) < target.length
-        : hasOwn(target, key)
+    const hadKey = isArrayWithIntegerKey
+      ? Number(key) < target.length
+      : hasOwn(target, key)
     const result = Reflect.set(
       target,
       key,

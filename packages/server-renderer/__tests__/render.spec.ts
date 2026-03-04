@@ -1229,5 +1229,23 @@ function testRender(type: string, render: typeof renderToString) {
       // during the render phase
       expect(getterSpy).toHaveBeenCalledTimes(2)
     })
+
+    test('props modifiers in render attrs', async () => {
+      const app = createApp({
+        setup() {
+          return () =>
+            h(
+              'div',
+              {
+                '^attr': 'attr',
+                '.prop': 'prop',
+              },
+              'Functional Component',
+            )
+        },
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div attr="attr">Functional Component</div>`)
+    })
   })
 }

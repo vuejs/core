@@ -29,6 +29,7 @@ import {
   createGetCanonicalFileName,
   getId,
   getImportedName,
+  getStringLiteralKey,
   joinPaths,
   normalizePath,
 } from './utils'
@@ -73,6 +74,7 @@ export type SimpleTypeResolveContext = Pick<
 
   // utils
   | 'error'
+  | 'warn'
   | 'helper'
   | 'getString'
 
@@ -94,7 +96,12 @@ export type SimpleTypeResolveContext = Pick<
     options: SimpleTypeResolveOptions
   }
 
-export type TypeResolveContext = ScriptCompileContext | SimpleTypeResolveContext
+export type TypeResolveContext = (
+  | ScriptCompileContext
+  | SimpleTypeResolveContext
+) & {
+  silentOnExtendsFailure?: boolean
+}
 
 type Import = Pick<ImportBinding, 'source' | 'imported'>
 
@@ -336,13 +343,9 @@ function typeElementsToMap(
         Object.assign(scope.types, typeParameters)
       }
       ;(e as MaybeWithScope)._ownerScope = scope
-      const name = getId(e.key)
-      if (name && !e.computed) {
+      const name = getStringLiteralKey(e)
+      if (name !== null) {
         res.props[name] = e as ResolvedElements['props'][string]
-      } else if (e.key.type === 'TemplateLiteral') {
-        for (const key of resolveTemplateKeys(ctx, e.key, scope)) {
-          res.props[key] = e as ResolvedElements['props'][string]
-        }
       } else {
         ctx.error(
           `Unsupported computed key in type referenced by a macro`,
@@ -432,16 +435,21 @@ function resolveInterfaceMembers(
           ;(base.calls || (base.calls = [])).push(...calls)
         }
       } catch (e) {
-        ctx.error(
-          `Failed to resolve extends base type.\nIf this previously worked in 3.2, ` +
-            `you can instruct the compiler to ignore this extend by adding ` +
-            `/* @vue-ignore */ before it, for example:\n\n` +
-            `interface Props extends /* @vue-ignore */ Base {}\n\n` +
-            `Note: both in 3.2 or with the ignore, the properties in the base ` +
-            `type are treated as fallthrough attrs at runtime.`,
-          ext,
-          scope,
-        )
+        // when called from inferRuntimeType context, silently ignore extends
+        // resolution failure so that properties defined in the interface can
+        // still be correctly resolved
+        if (!ctx.silentOnExtendsFailure) {
+          ctx.error(
+            `Failed to resolve extends base type.\nIf this previously worked in 3.2, ` +
+              `you can instruct the compiler to ignore this extend by adding ` +
+              `/* @vue-ignore */ before it, for example:\n\n` +
+              `interface Props extends /* @vue-ignore */ Base {}\n\n` +
+              `Note: both in 3.2 or with the ignore, the properties in the base ` +
+              `type are treated as fallthrough attrs at runtime.`,
+            ext,
+            scope,
+          )
+        }
       }
     }
   }
@@ -853,7 +861,7 @@ export function registerTS(_loadTS: () => typeof TS): void {
       ) {
         throw new Error(
           'Failed to load TypeScript, which is required for resolving imported types. ' +
-            'Please make sure "typescript" is installed as a project dependency.',
+            'Please make sure "TypeScript" is installed as a project dependency.',
         )
       } else {
         throw new Error(
@@ -951,7 +959,7 @@ function importSourceToScope(
         if (!ts) {
           return ctx.error(
             `Failed to resolve import source ${JSON.stringify(source)}. ` +
-              `typescript is required as a peer dep for vue in order ` +
+              `TypeScript is required as a peer dep for vue in order ` +
               `to support resolving types from module imports.`,
             node,
             scope,
@@ -978,16 +986,35 @@ function importSourceToScope(
 }
 
 function resolveExt(filename: string, fs: FS) {
+  // Keep the import's module kind so we can mirror TS NodeNext fallback order.
+  let moduleType: /*cjs*/ 'c' | /*mjs*/ 'm' | /*unknown*/ 'u' = 'u'
+  if (filename.endsWith('.mjs')) {
+    moduleType = 'm'
+  } else if (filename.endsWith('.cjs')) {
+    moduleType = 'c'
+  }
   // #8339 ts may import .js but we should resolve to corresponding ts or d.ts
-  filename = filename.replace(/\.js$/, '')
+  filename = filename.replace(/\.[cm]?jsx?$/, '')
   const tryResolve = (filename: string) => {
     if (fs.fileExists(filename)) return filename
   }
-  return (
-    tryResolve(filename) ||
+  const resolveTs = () =>
     tryResolve(filename + `.ts`) ||
     tryResolve(filename + `.tsx`) ||
-    tryResolve(filename + `.d.ts`) ||
+    tryResolve(filename + `.d.ts`)
+  const resolveMts = () =>
+    tryResolve(filename + `.mts`) || tryResolve(filename + `.d.mts`)
+  const resolveCts = () =>
+    tryResolve(filename + `.cts`) || tryResolve(filename + `.d.cts`)
+
+  return (
+    tryResolve(filename) ||
+    // For explicit .mjs/.cjs imports, prefer .mts/.cts declarations first.
+    (moduleType === 'm'
+      ? resolveMts() || resolveTs()
+      : moduleType === 'c'
+        ? resolveCts() || resolveTs()
+        : resolveTs() || resolveMts() || resolveCts()) ||
     tryResolve(joinPaths(filename, `index.ts`)) ||
     tryResolve(joinPaths(filename, `index.tsx`)) ||
     tryResolve(joinPaths(filename, `index.d.ts`))
@@ -1029,6 +1056,14 @@ function resolveWithTS(
     if (configs.length === 1) {
       matchedConfig = configs[0]
     } else {
+      const [major, minor] = ts.versionMajorMinor.split('.').map(Number)
+      const getPattern = (base: string, p: string) => {
+        // ts 5.5+ supports ${configDir} in paths
+        const supportsConfigDir = major > 5 || (major === 5 && minor >= 5)
+        return p.startsWith('${configDir}') && supportsConfigDir
+          ? normalizePath(p.replace('${configDir}', dirname(configPath!)))
+          : joinPaths(base, p)
+      }
       // resolve which config matches the current file
       for (const c of configs) {
         const base = normalizePath(
@@ -1039,11 +1074,11 @@ function resolveWithTS(
         const excluded: string[] | undefined = c.config.raw?.exclude
         if (
           (!included && (!base || containingFile.startsWith(base))) ||
-          included?.some(p => isMatch(containingFile, joinPaths(base, p)))
+          included?.some(p => isMatch(containingFile, getPattern(base, p)))
         ) {
           if (
             excluded &&
-            excluded.some(p => isMatch(containingFile, joinPaths(base, p)))
+            excluded.some(p => isMatch(containingFile, getPattern(base, p)))
           ) {
             continue
           }
@@ -1162,12 +1197,18 @@ function parseFile(
   parserPlugins?: SFCScriptCompileOptions['babelParserPlugins'],
 ): Statement[] {
   const ext = extname(filename)
-  if (ext === '.ts' || ext === '.mts' || ext === '.tsx' || ext === '.mtsx') {
+  if (
+    ext === '.ts' ||
+    ext === '.mts' ||
+    ext === '.tsx' ||
+    ext === '.cts' ||
+    ext === '.mtsx'
+  ) {
     return babelParse(content, {
       plugins: resolveParserPlugins(
         ext.slice(1),
         parserPlugins,
-        /\.d\.m?ts$/.test(filename),
+        /\.d\.[cm]?ts$/.test(filename),
       ),
       sourceType: 'module',
     }).program.body
@@ -1296,7 +1337,12 @@ function recordTypes(
         }
       } else if (stmt.type === 'TSModuleDeclaration' && stmt.global) {
         for (const s of (stmt.body as TSModuleBlock).body) {
-          recordType(s, types, declares)
+          if (s.type === 'ExportNamedDeclaration' && s.declaration) {
+            // Handle export declarations inside declare global
+            recordType(s.declaration, types, declares)
+          } else {
+            recordType(s, types, declares)
+          }
         }
       }
     } else {
@@ -1378,6 +1424,18 @@ function recordType(
     case 'TSInterfaceDeclaration':
     case 'TSEnumDeclaration':
     case 'TSModuleDeclaration': {
+      // Handle `declare global { ... }` blocks by recursively processing their contents
+      if (node.type === 'TSModuleDeclaration' && node.global) {
+        const body = node.body as TSModuleBlock
+        for (const s of body.body) {
+          if (s.type === 'ExportNamedDeclaration' && s.declaration) {
+            recordType(s.declaration, types, declares)
+          } else {
+            recordType(s, types, declares)
+          }
+        }
+        break
+      }
       const id = overwriteId || getId(node.id)
       let existing = types[id]
       if (existing) {
@@ -1502,6 +1560,17 @@ export function inferRuntimeType(
   isKeyOf = false,
   typeParameters?: Record<string, Node>,
 ): string[] {
+  if (
+    node.leadingComments &&
+    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
+  ) {
+    return [UNKNOWN_TYPE]
+  }
+
+  // set flag to silence extends resolution errors in this context
+  const prevSilent = ctx.silentOnExtendsFailure
+  ctx.silentOnExtendsFailure = true
+
   try {
     switch (node.type) {
       case 'TSStringKeyword':
@@ -1768,6 +1837,47 @@ export function inferRuntimeType(
           typeParameters,
         ).filter(t => t !== UNKNOWN_TYPE)
       }
+      case 'TSMappedType': {
+        // only support { [K in keyof T]: T[K] }
+        const { typeAnnotation, typeParameter } = node
+        if (
+          typeAnnotation &&
+          typeAnnotation.type === 'TSIndexedAccessType' &&
+          typeParameter &&
+          typeParameter.constraint &&
+          typeParameters
+        ) {
+          const constraint = typeParameter.constraint
+          if (
+            constraint.type === 'TSTypeOperator' &&
+            constraint.operator === 'keyof' &&
+            constraint.typeAnnotation &&
+            constraint.typeAnnotation.type === 'TSTypeReference' &&
+            constraint.typeAnnotation.typeName.type === 'Identifier'
+          ) {
+            const typeName = constraint.typeAnnotation.typeName.name
+            const index = typeAnnotation.indexType
+            const obj = typeAnnotation.objectType
+            if (
+              obj &&
+              obj.type === 'TSTypeReference' &&
+              obj.typeName.type === 'Identifier' &&
+              obj.typeName.name === typeName &&
+              index &&
+              index.type === 'TSTypeReference' &&
+              index.typeName.type === 'Identifier' &&
+              index.typeName.name === typeParameter.name
+            ) {
+              const targetType = typeParameters[typeName]
+              if (targetType) {
+                return inferRuntimeType(ctx, targetType, scope)
+              }
+            }
+          }
+        }
+
+        return [UNKNOWN_TYPE]
+      }
 
       case 'TSEnumDeclaration':
         return inferEnumType(node)
@@ -1828,6 +1938,8 @@ export function inferRuntimeType(
     }
   } catch (e) {
     // always soft fail on failed runtime type inference
+  } finally {
+    ctx.silentOnExtendsFailure = prevSilent
   }
   return [UNKNOWN_TYPE] // no runtime check
 }
@@ -1840,13 +1952,25 @@ function flattenTypes(
   typeParameters: Record<string, Node> | undefined = undefined,
 ): string[] {
   if (types.length === 1) {
-    return inferRuntimeType(ctx, types[0], scope, isKeyOf, typeParameters)
+    return inferRuntimeType(
+      ctx,
+      types[0],
+      (types[0] as MaybeWithScope)._ownerScope || scope,
+      isKeyOf,
+      typeParameters,
+    )
   }
   return [
     ...new Set(
       ([] as string[]).concat(
         ...types.map(t =>
-          inferRuntimeType(ctx, t, scope, isKeyOf, typeParameters),
+          inferRuntimeType(
+            ctx,
+            t,
+            (t as MaybeWithScope)._ownerScope || scope,
+            isKeyOf,
+            typeParameters,
+          ),
         ),
       ),
     ),
@@ -1968,8 +2092,7 @@ function findStaticPropertyType(node: TSTypeLiteral, key: string) {
   const prop = node.members.find(
     m =>
       m.type === 'TSPropertySignature' &&
-      !m.computed &&
-      getId(m.key) === key &&
+      getStringLiteralKey(m) === key &&
       m.typeAnnotation,
   )
   return prop && prop.typeAnnotation!.typeAnnotation

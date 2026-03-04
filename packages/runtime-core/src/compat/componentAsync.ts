@@ -35,7 +35,7 @@ export function convertLegacyAsyncComponent(
   let resolve: (res: LegacyAsyncReturnValue) => void
   let reject: (reason?: any) => void
   const fallbackPromise = new Promise<Component>((r, rj) => {
-    ;(resolve = r), (reject = rj)
+    ;((resolve = r), (reject = rj))
   })
 
   const res = comp(resolve!, reject!)

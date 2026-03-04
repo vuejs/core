@@ -3341,6 +3341,76 @@ describe('e2e: Transition', () => {
     E2E_TIMEOUT,
   )
 
+  // #12091
+  test(
+    'prevent enter when leaving',
+    async () => {
+      const hooks: string[] = []
+      const pushHook = (hook: string) => hooks.push(hook)
+      await page().exposeFunction('pushHook', pushHook)
+      await page().evaluate(() => {
+        const { pushHook } = window as any
+        const { createApp, ref } = (window as any).Vue
+        const visible = ref(true)
+        createApp({
+          components: {
+            Comp: {
+              setup() {
+                visible.value = false
+                return () => null
+              },
+            },
+          },
+          template: `
+            <div id="content" v-if="toggle">
+              <div id="container">
+                <transition
+                  appear
+                  @before-enter="pushHook('beforeEnter')"
+                  @enter="pushHook('enter')"
+                  @enter-cancelled="pushHook('enterCancelled')"
+                  @after-enter="pushHook('afterEnter')"
+                  @before-leave="pushHook('beforeLeave')"
+                  @leave="pushHook('leave')"
+                  @after-leave="pushHook('afterLeave')"
+                >
+                  <div v-if="visible">content</div>
+                </transition>
+              </div>
+              <Comp />
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const toggle = ref(false)
+            const click = () => (toggle.value = !toggle.value)
+            return {
+              toggle,
+              click,
+              pushHook,
+              visible,
+            }
+          },
+        }).mount('#app')
+      })
+
+      await click('#toggleBtn')
+      await nextTick()
+      await transitionFinish()
+
+      expect(hooks).toStrictEqual([
+        'beforeEnter',
+        'beforeLeave',
+        'leave',
+        'afterLeave',
+      ])
+      expect(await html('#content')).toBe(
+        '<div id="container"><!--v-if--></div><!---->',
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
   // https://github.com/vuejs/core/issues/12181#issuecomment-2414380955
   describe('not leaking', async () => {
     test('switching VNodes', async () => {

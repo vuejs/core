@@ -98,8 +98,10 @@ export type DefineProps<T, BKeys extends keyof T> = Readonly<T> & {
 }
 
 type BooleanKey<T, K extends keyof T = keyof T> = K extends any
-  ? [T[K]] extends [boolean | undefined]
-    ? K
+  ? T[K] extends boolean | undefined
+    ? T[K] extends never | undefined
+      ? never
+      : K
     : never
   : never
 
@@ -319,7 +321,14 @@ type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, T[K]>
 }
 
-type NativeType = null | number | string | boolean | symbol | Function
+type NativeType =
+  | null
+  | undefined
+  | number
+  | string
+  | boolean
+  | symbol
+  | Function
 
 type InferDefault<P, T> =
   | ((props: P) => T & {})
@@ -505,11 +514,31 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   }
   let awaitable = getAwaitable()
   unsetCurrentInstance()
+
+  // Never restore a captured "prev" instance here: in concurrent async setup
+  // continuations it may belong to a sibling component and cause leaks.
+  // We only need to balance ctx.scope.on() from setCurrentInstance(ctx),
+  // then clear global currentInstance for user microtasks.
+  const cleanup = () => {
+    if (getCurrentInstance() !== ctx) ctx.scope.off()
+    unsetCurrentInstance()
+  }
+
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
       setCurrentInstance(ctx)
+      // Defer cleanup so the async function's catch continuation
+      // still runs with the restored instance.
+      Promise.resolve().then(() => Promise.resolve().then(cleanup))
       throw e
     })
   }
-  return [awaitable, () => setCurrentInstance(ctx)]
+  return [
+    awaitable,
+    () => {
+      setCurrentInstance(ctx)
+      // Keep instance for the current continuation, then cleanup.
+      Promise.resolve().then(cleanup)
+    },
+  ]
 }
