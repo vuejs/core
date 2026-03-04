@@ -6,4 +6,4 @@ if (__DEV__) {
   initDev()
 }
 
-export * from '@vue/runtime-dom'
+export * from '@vue/runtime-pure-core'

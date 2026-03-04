@@ -1,0 +1,52 @@
+{
+  "name": "@vue/runtime-pure-core",
+  "version": "3.6.0-beta.7",
+  "description": "@vue/runtime-pure-core",
+  "main": "index.js",
+  "module": "dist/runtime-pure-core.esm-bundler.js",
+  "types": "dist/runtime-pure-core.d.ts",
+  "files": [
+    "index.js",
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/runtime-pure-core.d.ts",
+      "node": {
+        "production": "./dist/runtime-pure-core.cjs.prod.js",
+        "development": "./dist/runtime-pure-core.cjs.js",
+        "default": "./index.js"
+      },
+      "module": "./dist/runtime-pure-core.esm-bundler.js",
+      "import": "./dist/runtime-pure-core.esm-bundler.js",
+      "require": "./index.js"
+    },
+    "./*": "./*"
+  },
+  "buildOptions": {
+    "name": "VueRuntimeCore",
+    "formats": [
+      "esm-bundler",
+      "cjs"
+    ]
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/core.git",
+    "directory": "packages/runtime-pure-core"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/core/issues"
+  },
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/runtime-pure-core#readme",
+  "dependencies": {
+    "@vue/shared": "workspace:*",
+    "@vue/reactivity": "workspace:*"
+  }
+}
