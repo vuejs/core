@@ -627,7 +627,7 @@ describe('api: createApp', () => {
       },
     })
 
-    app.runWithContext(() => {
+    app.scope.run(() => {
       onScopeDispose(spy)
     })
 

@@ -95,6 +95,14 @@ export interface App<HostElement = any> {
    */
   runWithContext<T>(fn: () => T): T
 
+  /**
+   * The app-level effect scope. Can be used to explicitly register effects
+   * (e.g. `watch`, `computed`) that should be tied to the app lifecycle.
+   * Effects registered via `app.scope.run()` will be stopped when the app
+   * is unmounted.
+   */
+  readonly scope: EffectScope
+
   // internal, but we need to expose these for the server-renderer and devtools
   _uid: number
   _component: ConcreteComponent
@@ -102,7 +110,6 @@ export interface App<HostElement = any> {
   _container: HostElement | null
   _context: AppContext
   _instance: ComponentInternalInstance | null
-  _scope: EffectScope
 
   /**
    * @internal custom element vnode
@@ -281,9 +288,12 @@ export function createAppAPI<HostElement>(
       _container: null,
       _context: context,
       _instance: null,
-      _scope: scope,
 
       version,
+
+      get scope() {
+        return scope
+      },
 
       get config() {
         return context.config
@@ -477,7 +487,7 @@ export function createAppAPI<HostElement>(
         const lastApp = currentApp
         currentApp = app
         try {
-          return app._scope.run(fn)!
+          return fn()
         } finally {
           currentApp = lastApp
         }
