@@ -168,7 +168,10 @@ function resolveOrRegisterImport(
   name: string
   exp: SimpleExpressionNode
 } {
-  const existingIndex = context.imports.findIndex(i => i.path === source)
+  const normalizedSource = decodeURIComponent(source)
+  const existingIndex = context.imports.findIndex(
+    i => i.path === normalizedSource,
+  )
   if (existingIndex > -1) {
     return {
       name: `_imports_${existingIndex}`,
@@ -188,7 +191,7 @@ function resolveOrRegisterImport(
   // so we decode it back in case it is encoded
   context.imports.push({
     exp,
-    path: decodeURIComponent(source),
+    path: normalizedSource,
   })
 
   return { name, exp }

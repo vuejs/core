@@ -41,7 +41,10 @@ function getOrCreateImportExpression(
   loc: SourceLocation,
   context: TransformContext,
 ): SimpleExpressionNode {
-  const existingImportsIndex = context.imports.findIndex(i => i.path === source)
+  const normalizedSource = decodeURIComponent(source)
+  const existingImportsIndex = context.imports.findIndex(
+    i => i.path === normalizedSource,
+  )
   if (existingImportsIndex > -1) {
     return createSimpleExpression(
       `_imports_${existingImportsIndex}`,
@@ -57,7 +60,7 @@ function getOrCreateImportExpression(
     loc,
     ConstantTypes.CAN_STRINGIFY,
   )
-  context.imports.push({ exp, path: source })
+  context.imports.push({ exp, path: normalizedSource })
   return exp
 }
 
