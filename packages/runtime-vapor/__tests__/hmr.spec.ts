@@ -1159,6 +1159,127 @@ describe('hot module replacement', () => {
     expect(root.innerHTML).toBe(`<div>child changed</div><!--if-->`)
   })
 
+  test('child reload with multiple instances in dynamic branch should keep parent reload stable', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-dynamic-multi-child-reload'
+    const parentId = 'test-dynamic-multi-parent-reload'
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      setup() {
+        const msg = ref('child')
+        return { msg }
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const { mount, component: Parent } = define({
+      __hmrId: parentId,
+      components: { Child },
+      setup() {
+        const ok = ref(true)
+        return { ok }
+      },
+      render: compileToFunction(
+        `<template v-if="ok"><Child/><Child/></template>`,
+      ),
+    }).create()
+    createRecord(parentId, Parent as any)
+
+    mount(root)
+    expect(root.textContent).toBe(`childchild`)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      setup() {
+        const msg = ref('child changed')
+        return { msg }
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
+    })
+    expect(root.textContent).toBe(`child changedchild changed`)
+
+    reload(parentId, {
+      __vapor: true,
+      __hmrId: parentId,
+      components: { Child },
+      setup() {
+        const ok = ref(true)
+        return { ok }
+      },
+      render: compileToFunction(
+        `<template v-if="ok"><Child/><Child/></template>`,
+      ),
+    })
+
+    await nextTick()
+    expect(root.textContent).toBe(`child changedchild changed`)
+  })
+
+  test('child reload in teleport dynamic branch should not break subsequent parent reload', async () => {
+    const root = document.createElement('div')
+    const target = document.createElement('div')
+    document.body.appendChild(root)
+    document.body.appendChild(target)
+    const childId = 'test-teleport-dynamic-child-reload'
+    const parentId = 'test-teleport-dynamic-parent-reload'
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      setup() {
+        const msg = ref('child')
+        return { msg }
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const { mount, component: Parent } = define({
+      __hmrId: parentId,
+      components: { Child },
+      setup() {
+        const ok = ref(true)
+        return { ok, target }
+      },
+      render: compileToFunction(
+        `<teleport :to="target"><template v-if="ok"><Child/><span>sibling</span></template></teleport>`,
+      ),
+    }).create()
+    createRecord(parentId, Parent as any)
+
+    mount(root)
+    expect(target.textContent).toBe(`childsibling`)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      setup() {
+        const msg = ref('child changed')
+        return { msg }
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
+    })
+    expect(target.textContent).toBe(`child changedsibling`)
+
+    reload(parentId, {
+      __vapor: true,
+      __hmrId: parentId,
+      components: { Child },
+      setup() {
+        const ok = ref(true)
+        return { ok, target }
+      },
+      render: compileToFunction(
+        `<teleport :to="target"><template v-if="ok"><Child/><span>sibling</span></template></teleport>`,
+      ),
+    })
+
+    await nextTick()
+    expect(target.textContent).toBe(`child changedsibling`)
+  })
+
   // Vapor router-view has no render function (setup-only).
   // When HMR rerender is triggered, the setup function is re-executed.
   // Ensure provide() warning is suppressed.
