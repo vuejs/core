@@ -1329,6 +1329,47 @@ describe('vdomInterop', () => {
       // fn should be called once
       expect(fn).toHaveBeenCalledTimes(1)
     })
+
+    it('should update attrs passed from vapor parent to vdom child', async () => {
+      const msg = ref('foo')
+
+      const VDomChild = defineComponent({
+        setup(_, { attrs }) {
+          return () =>
+            h(
+              'div',
+              {
+                'data-msg': attrs['data-msg'] as string,
+              },
+              attrs['data-msg'] as string,
+            )
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            {
+              'data-msg': () => msg.value,
+            },
+            null,
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div data-msg="foo">foo</div>')
+      msg.value = 'bar'
+      await nextTick()
+      expect(html()).toBe('<div data-msg="bar">bar</div>')
+    })
   })
 
   describe('async component', () => {
