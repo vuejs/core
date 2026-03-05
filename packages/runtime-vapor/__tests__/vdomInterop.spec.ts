@@ -1504,6 +1504,34 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(html()).toBe('slot text<!--if-->')
     })
+
+    test('unmounting vapor slot should remove vnode slot content', async () => {
+      const show = ref(true)
+
+      const VaporSlotOutlet = defineVaporComponent({
+        setup() {
+          return createSlot('default')
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h('div', null, [
+              show.value
+                ? h(VaporSlotOutlet as any, null, {
+                    default: () => [h('span', 'slot vnode')],
+                  })
+                : null,
+            ])
+        },
+      }).render()
+
+      expect(html()).toBe('<div><span>slot vnode</span></div>')
+      show.value = false
+      await nextTick()
+      expect(html()).toBe('<div><!----></div>')
+    })
   })
 
   describe('Teleport', () => {
