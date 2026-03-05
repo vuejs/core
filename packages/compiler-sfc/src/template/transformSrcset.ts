@@ -110,7 +110,7 @@ export const transformSrcset: NodeTransform = (
           imageCandidates.forEach(({ url, descriptor }, index) => {
             if (shouldProcessUrl(url)) {
               const { path, hash } = parseUrl(url)
-              const source = path || hash
+              const source = path ? path : hash
               if (source) {
                 const normalizedSource = decodeURIComponent(source)
                 const existingImportsIndex = context.imports.findIndex(
@@ -132,6 +132,14 @@ export const transformSrcset: NodeTransform = (
                     ConstantTypes.CAN_STRINGIFY,
                   )
                   context.imports.push({ exp, path: normalizedSource })
+                }
+                if (path && hash) {
+                  exp = createSimpleExpression(
+                    `${exp.content} + '${hash}'`,
+                    false,
+                    attr.loc,
+                    ConstantTypes.CAN_STRINGIFY,
+                  )
                 }
                 compoundExpression.children.push(exp)
               }

@@ -118,4 +118,17 @@ describe('compiler sfc: transform srcset', () => {
     expect(code).toContain(`const _hoisted_1 = _imports_0`)
     expect(code).toContain(`const _hoisted_2 = _imports_1 + ' 2x'`)
   })
+
+  test('should preserve svg fragments in srcset URLs', () => {
+    const code = compileWithSrcset(
+      `<img srcset="./icons.svg#icon-heart" />` +
+        `<img srcset="./icons.svg#icon-star 2x" />`,
+    ).code
+
+    expect(code).toContain(`_imports_0 from './icons.svg'`)
+    expect(code).toContain(`const _hoisted_1 = _imports_0 + '#icon-heart'`)
+    expect(code).toContain(
+      `const _hoisted_2 = _imports_0 + '#icon-star' + ' 2x'`,
+    )
+  })
 })
