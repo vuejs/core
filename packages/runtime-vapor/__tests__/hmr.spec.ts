@@ -1,5 +1,6 @@
 import {
   type HMRRuntime,
+  inject,
   computed,
   createApp,
   h,
@@ -15,6 +16,7 @@ import {
 import { compileToVaporRender as compileToFunction, makeRender } from './_utils'
 import {
   createComponent,
+  createVaporApp,
   createSlot,
   createTemplateRefSetter,
   defineVaporAsyncComponent,
@@ -176,6 +178,39 @@ describe('hot module replacement', () => {
     expect(root.innerHTML).toBe(`<div>1</div>`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
+  })
+
+  test('reload root vapor component should preserve appContext provide/inject', async () => {
+    const root = document.createElement('div')
+    const appId = 'test-root-reload-app-context'
+
+    const Child = defineVaporComponent({
+      setup() {
+        const msg = inject('msg')
+        return { msg }
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
+    })
+
+    const App = defineVaporComponent({
+      __hmrId: appId,
+      render: () => createComponent(Child),
+    })
+    createRecord(appId, App as any)
+
+    const app = createVaporApp(App)
+    app.provide('msg', 'app-injected')
+    app.mount(root)
+    expect(root.innerHTML).toBe(`<div>app-injected</div>`)
+
+    reload(appId, {
+      __vapor: true,
+      __hmrId: appId,
+      render: () => createComponent(Child),
+    })
+
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>app-injected</div>`)
   })
 
   test('reload KeepAlive slot', async () => {
