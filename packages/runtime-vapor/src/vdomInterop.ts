@@ -791,7 +791,7 @@ function renderVDOMSlot(
       if (currentBlock) {
         remove(currentBlock, parentNode)
       } else if (currentVNode) {
-        internals.um(currentVNode, parentComponent as any, null)
+        internals.um(currentVNode, parentComponent as any, null, true)
       }
     }
 
