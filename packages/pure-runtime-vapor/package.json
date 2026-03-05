@@ -3,16 +3,16 @@
   "version": "3.6.0-beta.7",
   "description": "@vue/pure-runtime-vapor",
   "main": "index.js",
-  "module": "dist/pure-runtime-vapor.esm-bundler.js",
-  "types": "dist/pure-runtime-vapor.d.ts",
+  "module": "dist/runtime-vapor.esm-bundler.js",
+  "types": "dist/runtime-vapor.d.ts",
   "files": [
     "index.js",
     "dist"
   ],
   "exports": {
     ".": {
-      "types": "./dist/pure-runtime-vapor.d.ts",
-      "default": "./dist/pure-runtime-vapor.esm-bundler.js"
+      "types": "./dist/runtime-vapor.d.ts",
+      "default": "./dist/runtime-vapor.esm-bundler.js"
     },
     "./*": "./*"
   },

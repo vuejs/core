@@ -3,23 +3,23 @@
   "version": "3.6.0-beta.7",
   "description": "@vue/pure-runtime-dom",
   "main": "index.js",
-  "module": "dist/pure-runtime-dom.esm-bundler.js",
-  "types": "dist/pure-runtime-dom.d.ts",
-  "unpkg": "dist/pure-runtime-dom.global.js",
+  "module": "dist/runtime-dom.esm-bundler.js",
+  "types": "dist/runtime-dom.d.ts",
+  "unpkg": "dist/runtime-dom.global.js",
   "files": [
     "index.js",
     "dist"
   ],
   "exports": {
     ".": {
-      "types": "./dist/pure-runtime-dom.d.ts",
+      "types": "./dist/runtime-dom.d.ts",
       "node": {
-        "production": "./dist/pure-runtime-dom.cjs.prod.js",
-        "development": "./dist/pure-runtime-dom.cjs.js",
+        "production": "./dist/runtime-dom.cjs.prod.js",
+        "development": "./dist/runtime-dom.cjs.js",
         "default": "./index.js"
       },
-      "module": "./dist/pure-runtime-dom.esm-bundler.js",
-      "import": "./dist/pure-runtime-dom.esm-bundler.js",
+      "module": "./dist/runtime-dom.esm-bundler.js",
+      "import": "./dist/runtime-dom.esm-bundler.js",
       "require": "./index.js"
     },
     "./*": "./*"

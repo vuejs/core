@@ -11,14 +11,14 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/pure-runtime-core.d.ts",
+      "types": "./dist/runtime-core.d.ts",
       "node": {
-        "production": "./dist/pure-runtime-core.cjs.prod.js",
-        "development": "./dist/pure-runtime-core.cjs.js",
+        "production": "./dist/runtime-core.cjs.prod.js",
+        "development": "./dist/runtime-core.cjs.js",
         "default": "./index.js"
       },
-      "module": "./dist/pure-runtime-core.esm-bundler.js",
-      "import": "./dist/pure-runtime-core.esm-bundler.js",
+      "module": "./dist/runtime-core.esm-bundler.js",
+      "import": "./dist/runtime-core.esm-bundler.js",
       "require": "./index.js"
     },
     "./*": "./*"

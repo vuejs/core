@@ -50,7 +50,10 @@ export function createConfigsForPackage({
   const resolve = (/** @type {string} */ p) => path.resolve(packageDir, p)
   const pkg = require(resolve(`package.json`))
   const packageOptions = pkg.buildOptions || {}
-  const name = packageOptions.filename || path.basename(packageDir)
+  let name = packageOptions.filename || path.basename(packageDir)
+  if (name.startsWith('pure-')) {
+    name = name.slice(5)
+  }
 
   const banner = `/**
   * ${pkg.name} v${masterVersion}
@@ -167,7 +170,7 @@ export function createConfigsForPackage({
     }
 
     let entryFile = 'index.ts'
-    if (pkg.name === 'vue') {
+    if (pkg.name === 'vue' || pkg.name === 'pure-vue') {
       if (format === 'esm-browser-vapor' || format === 'esm-bundler-runtime') {
         entryFile = 'runtime-with-vapor.ts'
       } else if (format === 'esm-bundler') {

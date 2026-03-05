@@ -268,7 +268,7 @@ importers:
         version: 3.4.38
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
-        version: 6.0.4(vite@8.0.0-beta.15(@types/node@24.10.13)(esbuild@0.27.3)(sass@1.97.3)(yaml@2.8.2))(vue@packages+vue)
+        version: 6.0.4(vite@8.0.0-beta.15(@types/node@24.10.13)(esbuild@0.27.3)(sass@1.97.3)(yaml@2.8.2))(vue@packages+pure-vue)
       connect:
         specifier: ^3.7.0
         version: 3.7.0
@@ -279,8 +279,8 @@ importers:
         specifier: 'catalog:'
         version: 8.0.0-beta.15(@types/node@24.10.13)(esbuild@0.27.3)(sass@1.97.3)(yaml@2.8.2)
       vue:
-        specifier: workspace:pure-vue
-        version: link:../../packages/vue
+        specifier: workspace:pure-vue@*
+        version: link:../../packages/pure-vue
 
   packages-private/vite-debug:
     devDependencies:
@@ -427,12 +427,12 @@ importers:
 
   packages/pure-runtime-dom:
     dependencies:
+      '@vue/pure-runtime-core':
+        specifier: workspace:*
+        version: link:../pure-runtime-core
       '@vue/reactivity':
         specifier: workspace:*
         version: link:../reactivity
-      '@vue/runtime-core':
-        specifier: workspace:*
-        version: link:../runtime-core
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
@@ -446,12 +446,12 @@ importers:
 
   packages/pure-runtime-vapor:
     dependencies:
+      '@vue/pure-runtime-dom':
+        specifier: workspace:*
+        version: link:../pure-runtime-dom
       '@vue/reactivity':
         specifier: workspace:*
         version: link:../reactivity
-      '@vue/runtime-dom':
-        specifier: workspace:*
-        version: link:../runtime-dom
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
@@ -5382,6 +5382,12 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-rc.2
       vite: 8.0.0-beta.15(@types/node@24.10.13)(esbuild@0.27.3)(sass@1.97.3)(yaml@2.8.2)
       vue: 3.6.0-beta.7(typescript@5.6.3)
+
+  '@vitejs/plugin-vue@6.0.4(vite@8.0.0-beta.15(@types/node@24.10.13)(esbuild@0.27.3)(sass@1.97.3)(yaml@2.8.2))(vue@packages+pure-vue)':
+    dependencies:
+      '@rolldown/pluginutils': 1.0.0-rc.2
+      vite: 8.0.0-beta.15(@types/node@24.10.13)(esbuild@0.27.3)(sass@1.97.3)(yaml@2.8.2)
+      vue: link:packages/pure-vue
 
   '@vitejs/plugin-vue@6.0.4(vite@8.0.0-beta.15(@types/node@24.10.13)(esbuild@0.27.3)(sass@1.97.3)(yaml@2.8.2))(vue@packages+vue)':
     dependencies:

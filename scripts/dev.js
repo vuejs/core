@@ -61,14 +61,14 @@ for (const target of targets) {
     pkg.name === 'vue' && format === 'esm-browser-vapor'
   const outfile = resolve(
     __dirname,
-    `${pkgBasePath}/dist/${target === 'vue-compat' ? `vue` : target}.${
+    `${pkgBasePath}/dist/${target === 'vue-compat' || target === 'pure-vue' ? `vue` : target}.${
       isVueEsmBrowserVapor ? `runtime-with-vapor.esm-browser` : postfix
     }.${prod ? `prod.` : ``}js`,
   )
   const relativeOutfile = relative(process.cwd(), outfile)
 
   let entryFile = 'index.ts'
-  if (pkg.name === 'vue') {
+  if (pkg.name === 'vue' || pkg.name === 'pure-vue') {
     if (format === 'esm-browser-vapor' || format === 'esm-bundler-runtime') {
       entryFile = 'runtime-with-vapor.ts'
     } else if (format === 'esm-bundler') {

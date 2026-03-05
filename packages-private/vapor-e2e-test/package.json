@@ -13,6 +13,6 @@
     "connect": "^3.7.0",
     "sirv": "^2.0.4",
     "vite": "catalog:",
-    "vue": "workspace:pure-vue"
+    "vue": "workspace:pure-vue@*"
   }
 }
