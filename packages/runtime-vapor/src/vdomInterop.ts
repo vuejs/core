@@ -584,12 +584,31 @@ function createVDOMComponent(
     // ensure props are shallow reactive to align with VDOM behavior.
     instance.props = shallowReactive(wrapper.props)
 
-    const attrs = (instance.attrs = createInternalObject())
-    for (const key in wrapper.attrs) {
-      if (!isEmitListener(instance.emitsOptions, key)) {
-        attrs[key] = wrapper.attrs[key]
-      }
-    }
+    const attrs = createInternalObject()
+    const isFilteredEmit = (key: string | symbol): boolean =>
+      typeof key === 'string' && isEmitListener(instance.emitsOptions, key)
+    instance.attrs = new Proxy(attrs, {
+      get(_, key: string | symbol) {
+        if (isFilteredEmit(key)) return
+        return wrapper.attrs[key as any]
+      },
+      has(_, key: string | symbol) {
+        return !isFilteredEmit(key) && key in wrapper.attrs
+      },
+      ownKeys() {
+        return Reflect.ownKeys(wrapper.attrs).filter(
+          key => !isFilteredEmit(key),
+        )
+      },
+      getOwnPropertyDescriptor(_, key: string | symbol) {
+        if (!isFilteredEmit(key) && key in wrapper.attrs) {
+          return {
+            enumerable: true,
+            configurable: true,
+          }
+        }
+      },
+    })
 
     instance.slots =
       wrapper.slots === EMPTY_OBJ
