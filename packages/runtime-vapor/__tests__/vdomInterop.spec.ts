@@ -88,6 +88,40 @@ describe('vdomInterop', () => {
 
       expect(html()).toBe('<div class="foo bar"></div>')
     })
+
+    test('should not pass reserved props into vapor attrs on update', async () => {
+      const msg = ref('foo')
+      const onVnodeMounted = vi.fn()
+
+      const VaporChild = defineVaporComponent({
+        setup(_, { attrs }) {
+          const n0 = template(' ')() as any
+          renderEffect(() => {
+            setText(
+              n0,
+              `${String(attrs.msg)}|${String('onVnodeMounted' in attrs)}`,
+            )
+          })
+          return n0
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, {
+              msg: msg.value,
+              onVnodeMounted,
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('foo|false')
+
+      msg.value = 'bar'
+      await nextTick()
+      expect(html()).toBe('bar|false')
+    })
   })
 
   describe('v-model', () => {
