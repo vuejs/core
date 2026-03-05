@@ -364,10 +364,18 @@ const vaporSlotPropsProxyHandler: ProxyHandler<
     return target.value[key]
   },
   has(target, key: any) {
-    return target.value[key]
+    return key in target.value
   },
   ownKeys(target) {
-    return Object.keys(target.value)
+    return Reflect.ownKeys(target.value)
+  },
+  getOwnPropertyDescriptor(target, key: any) {
+    if (key in target.value) {
+      return {
+        enumerable: true,
+        configurable: true,
+      }
+    }
   },
 }
 

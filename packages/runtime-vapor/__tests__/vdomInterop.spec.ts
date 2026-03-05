@@ -555,6 +555,43 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<div><span>hello</span></div>')
     })
 
+    test('slots.default() with falsy slot props should keep has/ownKeys semantics', () => {
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () =>
+            h('div', null, slots.default!({ flag: false, count: 0, text: '' }))
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: (props: Record<string, any>) => {
+                const n0 = document.createTextNode(
+                  `${'flag' in props}/${'count' in props}/${'text' in props}|` +
+                    `${Object.keys(props).join(',')}|` +
+                    `${String(props.flag)},${String(props.count)},${String(props.text)}`,
+                )
+                return [n0]
+              },
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>true/true/true|flag,count,text|false,0,</div>')
+    })
+
     test('named slot with slots[name]() invocation', () => {
       const VDomChild = defineComponent({
         setup(_, { slots }) {
