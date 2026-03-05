@@ -51,6 +51,8 @@ export function hmrReload(
     instance.rawProps,
     instance.rawSlots,
     instance.isSingleRoot,
+    undefined,
+    instance.appContext,
   )
   setCurrentInstance(...prev)
   mountComponent(newInstance, parent, anchor)
