@@ -109,6 +109,16 @@ import {
 
 export const interopKey: unique symbol = Symbol(`interop`)
 
+function filterReservedProps(props: VNode['props']): VNode['props'] {
+  const filtered: VNode['props'] = {}
+  for (const key in props) {
+    if (!isReservedProp(key)) {
+      filtered[key] = props[key]
+    }
+  }
+  return filtered
+}
+
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: Omit<
   VaporInteropInterface,
@@ -133,15 +143,7 @@ const vaporInteropImpl: Omit<
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
-    // filter out reserved props
-    const props: VNode['props'] = {}
-    for (const key in vnode.props) {
-      if (!isReservedProp(key)) {
-        props[key] = vnode.props[key]
-      }
-    }
-
-    const propsRef = shallowRef(props)
+    const propsRef = shallowRef(filterReservedProps(vnode.props))
     const slotsRef = shallowRef(vnode.children)
 
     let prevSuspense: SuspenseBoundary | null = null
@@ -229,7 +231,7 @@ const vaporInteropImpl: Omit<
     }
 
     if (shouldUpdate) {
-      instance.rawPropsRef!.value = n2.props
+      instance.rawPropsRef!.value = filterReservedProps(n2.props)
       instance.rawSlotsRef!.value = n2.children
     }
   },
