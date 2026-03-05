@@ -1112,7 +1112,6 @@ describe('hot module replacement', () => {
     reload(parentId, {
       __vapor: true,
       __hmrId: parentId,
-      // @ts-expect-error
       components: { Child },
       setup() {
         const ok = ref(true)
