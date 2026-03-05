@@ -4,16 +4,18 @@ import {
   pushWarningContext,
   setCurrentInstance,
 } from '@vue/runtime-dom'
-import { insert, normalizeBlock, remove } from './block'
+import { type Block, insert, normalizeBlock, remove } from './block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
   createComponent,
   devRender,
+  isVaporComponent,
   mountComponent,
   unmountComponent,
 } from './component'
 import { isArray } from '@vue/shared'
+import { isFragment } from './fragment'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
   const normalized = normalizeBlock(instance.block)
@@ -71,16 +73,11 @@ function updateParentBlockOnHmrReload(
   newInstance: VaporComponentInstance,
 ): void {
   if (parentInstance) {
-    if (parentInstance.block === instance) {
-      parentInstance.block = newInstance
-    } else if (isArray(parentInstance.block)) {
-      for (let i = 0; i < parentInstance.block.length; i++) {
-        if (parentInstance.block[i] === instance) {
-          parentInstance.block[i] = newInstance
-          break
-        }
-      }
-    }
+    parentInstance.block = replaceBlockInstance(
+      parentInstance.block,
+      instance,
+      newInstance,
+    )
   }
 }
 
@@ -98,15 +95,33 @@ export function updateParentTeleportOnHmrReload(
   const teleport = instance.parentTeleport
   if (teleport) {
     newInstance.parentTeleport = teleport
-    if (teleport.nodes === instance) {
-      teleport.nodes = newInstance
-    } else if (isArray(teleport.nodes)) {
-      for (let i = 0; i < teleport.nodes.length; i++) {
-        if (teleport.nodes[i] === instance) {
-          teleport.nodes[i] = newInstance
-          break
-        }
-      }
-    }
+    teleport.nodes = replaceBlockInstance(teleport.nodes, instance, newInstance)
   }
+}
+
+function replaceBlockInstance(
+  block: Block,
+  instance: VaporComponentInstance,
+  newInstance: VaporComponentInstance,
+): Block {
+  if (block === instance) return newInstance
+
+  if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      block[i] = replaceBlockInstance(block[i], instance, newInstance)
+    }
+    return block
+  }
+
+  if (isVaporComponent(block)) {
+    block.block = replaceBlockInstance(block.block, instance, newInstance)
+    return block
+  }
+
+  if (isFragment(block)) {
+    block.nodes = replaceBlockInstance(block.nodes, instance, newInstance)
+    return block
+  }
+
+  return block
 }
