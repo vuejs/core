@@ -1,9 +1,9 @@
 import {
   type HMRRuntime,
-  inject,
   computed,
   createApp,
   h,
+  inject,
   nextTick,
   onActivated,
   onDeactivated,
@@ -16,9 +16,9 @@ import {
 import { compileToVaporRender as compileToFunction, makeRender } from './_utils'
 import {
   createComponent,
-  createVaporApp,
   createSlot,
   createTemplateRefSetter,
+  createVaporApp,
   defineVaporAsyncComponent,
   defineVaporComponent,
   delegateEvents,
