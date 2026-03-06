@@ -149,7 +149,13 @@ export class DynamicFragment extends VaporFragment {
         this.scope.stop()
       }
       const mode = transition && transition.mode
-      if (mode) {
+
+      if (
+        mode &&
+        // in-out only works when there is an incoming branch to trigger
+        // delayedLeave; otherwise the current branch should leave immediately.
+        (mode !== 'in-out' || (mode === 'in-out' && render))
+      ) {
         applyTransitionLeaveHooks(this.nodes, transition, () => {
           const pending = this.pending
           if (pending) {

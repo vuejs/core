@@ -1790,6 +1790,98 @@ describe('vapor transition', () => {
 
   describe('mode', () => {
     test(
+      'in-out mode with v-if',
+      async () => {
+        const btnSelector = '.in-out-if > button'
+        const containerSelector = '.in-out-if > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(`<div>text1</div>`)
+
+        expect(
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(`<div class="v-leave-from v-leave-active">text1</div>`)
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="v-leave-active v-leave-to">text1</div>`,
+        )
+
+        await waitForInnerHTML(containerSelector, ``)
+
+        expect(
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(`<div class="v-enter-from v-enter-active">text1</div>`)
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="v-enter-active v-enter-to">text1</div>`,
+        )
+
+        await waitForInnerHTML(containerSelector, `<div class="">text1</div>`)
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'out-in mode with if/else-if',
+      async () => {
+        const btnSelector = '.out-in-if-else-if > button'
+        const containerSelector = '.out-in-if-else-if > div'
+        const childSelector = `${containerSelector} > div`
+
+        expect(await html(containerSelector)).toBe(`<div>text2</div>`)
+
+        await click(btnSelector)
+        await nextTick()
+        expect(await html(containerSelector)).toBe(`<div>text2</div>`)
+
+        expect(
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(`<div class="v-leave-from v-leave-active">text2</div>`)
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="v-leave-active v-leave-to">text2</div>`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="v-enter-from v-enter-active">text1</div>`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="v-enter-active v-enter-to">text1</div>`,
+        )
+
+        await waitForInnerHTML(containerSelector, `<div class="">text1</div>`)
+
+        expect(
+          (await transitionStart(btnSelector, childSelector)).outerHTML,
+        ).toBe(`<div class="v-leave-from v-leave-active">text1</div>`)
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="v-leave-active v-leave-to">text1</div>`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="v-enter-from v-enter-active">text2</div>`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="v-enter-active v-enter-to">text2</div>`,
+        )
+
+        await waitForInnerHTML(containerSelector, `<div class="">text2</div>`)
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
       'should work with out-in mode',
       async () => {
         const btnSelector = '.out-in > button'
