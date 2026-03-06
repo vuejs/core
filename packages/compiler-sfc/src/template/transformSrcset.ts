@@ -109,12 +109,14 @@ export const transformSrcset: NodeTransform = (
           const compoundExpression = createCompoundExpression([], attr.loc)
           imageCandidates.forEach(({ url, descriptor }, index) => {
             if (shouldProcessUrl(url)) {
-              const { path } = parseUrl(url)
-              let exp: SimpleExpressionNode
-              if (path) {
+              const { path, hash } = parseUrl(url)
+              const source = path ? path : hash
+              if (source) {
+                const normalizedSource = decodeURIComponent(source)
                 const existingImportsIndex = context.imports.findIndex(
-                  i => i.path === path,
+                  i => i.path === normalizedSource,
                 )
+                let exp: SimpleExpressionNode
                 if (existingImportsIndex > -1) {
                   exp = createSimpleExpression(
                     `_imports_${existingImportsIndex}`,
@@ -129,7 +131,15 @@ export const transformSrcset: NodeTransform = (
                     attr.loc,
                     ConstantTypes.CAN_STRINGIFY,
                   )
-                  context.imports.push({ exp, path })
+                  context.imports.push({ exp, path: normalizedSource })
+                }
+                if (path && hash) {
+                  exp = createSimpleExpression(
+                    `${exp.content} + '${hash}'`,
+                    false,
+                    attr.loc,
+                    ConstantTypes.CAN_STRINGIFY,
+                  )
                 }
                 compoundExpression.children.push(exp)
               }
