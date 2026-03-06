@@ -80,7 +80,6 @@ import { optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
   currentHydrationNode,
-  currentHydrationStartNode,
   isComment,
   isHydrating,
   setCurrentHydrationNode,
@@ -483,20 +482,6 @@ function mountVNode(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    // The hydration cursor may be sitting on a fragment start anchor
-    // (`<!--[-->`) from the parent's multi-root wrapper or VDOM slot.
-    // Skip it so runtime-core hydrateNode() receives the actual first
-    // DOM node. For Fragment VNodes (whose own SSR output also starts
-    // with `<!--[-->`), only skip when the next sibling is also
-    // `<!--[-->`, confirming nested anchors (outer = parent's, inner =
-    // Fragment's own).
-    if (
-      isOuterFragmentAnchor() &&
-      (vnode.type !== Fragment ||
-        isComment(currentHydrationNode!.nextSibling!, '['))
-    ) {
-      setCurrentHydrationNode(currentHydrationNode!.nextSibling!)
-    }
     hydrateVNode(vnode, parentComponent as any)
     onScopeDispose(unmount, true)
     isMounted = true
@@ -650,11 +635,6 @@ function createVDOMComponent(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    // For multi-root components, skip the VDOM fragment start anchor
-    // so that VDOM hydration receives this component's actual first DOM node
-    if (!isSingleRoot && isOuterFragmentAnchor()) {
-      setCurrentHydrationNode(currentHydrationNode!.nextSibling!)
-    }
     hydrateVNode(vnode, parentComponent as any)
     onScopeDispose(unmount, true)
     isMounted = true
@@ -966,21 +946,6 @@ export const vaporInteropPlugin: Plugin = app => {
     optimizePropertyLookup()
     return mount(...args)
   }) satisfies App['mount']
-}
-
-/**
- * Check if the current hydration node is a VDOM fragment start anchor
- * (`<!--[-->`) belonging to the parent rather than the VDOM component
- * itself
- */
-function isOuterFragmentAnchor(): boolean {
-  return (
-    isComment(currentHydrationNode!, '[') &&
-    // first child of parent
-    (!currentHydrationNode!.previousSibling ||
-      // matches the parent component's hydration start node
-      currentHydrationNode === currentHydrationStartNode)
-  )
 }
 
 function hydrateVNode(

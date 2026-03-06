@@ -94,6 +94,7 @@ import {
   advanceHydrationNode,
   currentHydrationNode,
   currentHydrationStartNode,
+  isComment,
   isHydrating,
   locateHydrationNode,
   locateNextNode,
@@ -308,6 +309,16 @@ export function createComponent(
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
+      // For multi-root VDOM components, consume the outer <!--[-->
+      // anchor so VDOM hydration starts at the actual first DOM node.
+      if (
+        !isSingleRoot &&
+        isComment(currentHydrationNode!, '[') &&
+        (!currentHydrationNode!.previousSibling ||
+          currentHydrationNode === currentHydrationStartNode)
+      ) {
+        setCurrentHydrationNode(currentHydrationNode!.nextSibling!)
+      }
       frag.hydrate()
       if (_isLastInsertion) {
         advanceHydrationNode(_insertionParent!)
