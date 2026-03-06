@@ -20,6 +20,8 @@ describe('resolveType', () => {
       foo: number // property
       bar(): void // method
       'baz': string // string literal key
+      [\`qux\`]: boolean // template literal key
+      123: symbol // numeric literal key
       (e: 'foo'): void // call signature
       (e: 'bar'): void
     }>()`)
@@ -27,6 +29,8 @@ describe('resolveType', () => {
       foo: ['Number'],
       bar: ['Function'],
       baz: ['String'],
+      qux: ['Boolean'],
+      123: ['Symbol'],
     })
     expect(calls?.length).toBe(2)
   })
@@ -195,7 +199,7 @@ describe('resolveType', () => {
     type T = 'foo' | 'bar'
     type S = 'x' | 'y'
     defineProps<{
-      [\`_\${T}_\${S}_\`]: string
+      [K in \`_\${T}_\${S}_\`]: string
     }>()
     `).props,
     ).toStrictEqual({
@@ -1132,6 +1136,64 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('relative import with indexed access type', () => {
+      const files = {
+        '/foo.ts': `
+          type Booleanish = boolean | 'true' | 'false';
+          export interface InputHTMLAttributes {
+            required?: Booleanish | undefined;
+          }
+        `,
+      }
+      const { props, deps } = resolve(
+        `
+        import { InputHTMLAttributes } from './foo.ts'
+        type ImportedType = InputHTMLAttributes['required']
+        defineProps<{
+          required: ImportedType,
+        }>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        required: ['Boolean', 'String', 'Unknown'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('relative import with indexed access type with unresolvable extends', () => {
+      const files = {
+        '/foo.ts': `
+          type EventHandlers<E> = {
+            [K in keyof E]?: E[K] extends (...args: any) => any 
+            ? E[K] 
+            : (payload: E[K]) => void;
+          };
+          export interface Events {
+            onCopy: ClipboardEvent;
+          }
+          type Booleanish = boolean | 'true' | 'false';
+          export interface InputHTMLAttributes extends EventHandlers<Events>{
+            required?: Booleanish | undefined;
+          }
+        `,
+      }
+      const { props, deps } = resolve(
+        `
+        import { InputHTMLAttributes } from './foo.ts'
+        type ImportedType = InputHTMLAttributes['required']
+        defineProps<{
+          required: ImportedType,
+        }>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        required: ['Boolean', 'String', 'Unknown'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
     // #8339
     test('relative, .js import', () => {
       const files = {
@@ -1463,6 +1525,26 @@ describe('resolveType', () => {
       })
     })
 
+    test('declare global with indexed access type', () => {
+      const files = {
+        '/global.d.ts': `
+          declare global {
+            type Options = {
+              code: {
+                selected: boolean
+              }
+            }
+          }`,
+      }
+      const { props } = resolve(`defineProps<Options["code"]>()`, files, {
+        globalTypeFiles: Object.keys(files),
+      })
+
+      expect(props).toStrictEqual({
+        selected: ['Boolean'],
+      })
+    })
+
     // #9871
     test('shared generics with different args', () => {
       const files = {
@@ -1608,6 +1690,101 @@ describe('resolveType', () => {
       expect(props).toStrictEqual({
         foo: ['Number'],
         bar: ['String'],
+      })
+    })
+
+    // https://github.com/vuejs/router/issues/2611
+    test('modular js extension', () => {
+      const files = {
+        '/mts.mjs': 'export {}',
+        '/mts.d.mts': 'export type LinkProps = { activeClass: string }',
+        '/tsx.jsx': 'export {}',
+        '/tsx.d.ts': 'export type Foo = number',
+        '/mtsTyped.mjs': 'export {}',
+        '/mtsTyped.d.ts': 'export type Bar = string',
+        '/cts.cjs': 'module.exports = {}',
+        '/cts.d.cts': `export type Baz = boolean`,
+      }
+
+      let props!: Record<string, string[]>
+      expect(() => {
+        props = resolve(
+          `
+        import type { LinkProps } from './mts.mjs'
+        import { Foo } from './tsx.jsx'
+        import { Bar } from './mtsTyped.mjs'
+        import type { Baz } from './cts.cjs'
+        defineProps<LinkProps & { foo: Foo; bar: Bar; baz: Baz }>()
+        `,
+          files,
+        ).props
+      }).not.toThrow()
+      expect(props).not.toBe(undefined)
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String'],
+        baz: ['Boolean'],
+        activeClass: ['String'],
+      })
+    })
+
+    test('prefer .mts over .ts for .mjs import', () => {
+      const files = {
+        '/foo.mjs': 'export {}',
+        '/foo.ts': 'export type Foo = number',
+        '/foo.mts': 'export type Foo = string',
+      }
+
+      const { props } = resolve(
+        `
+        import type { Foo } from './foo.mjs'
+        defineProps<{ value: Foo }>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        value: ['String'],
+      })
+    })
+
+    test('prefer .d.mts over .d.ts for .mjs import', () => {
+      const files = {
+        '/foo.mjs': 'export {}',
+        '/foo.d.ts': 'export type Foo = number',
+        '/foo.d.mts': 'export type Foo = string',
+      }
+
+      const { props } = resolve(
+        `
+        import type { Foo } from './foo.mjs'
+        defineProps<{ value: Foo }>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        value: ['String'],
+      })
+    })
+
+    test('prefer .d.cts over .d.ts for .cjs import', () => {
+      const files = {
+        '/foo.cjs': 'module.exports = {}',
+        '/foo.d.ts': 'export type Foo = number',
+        '/foo.d.cts': 'export type Foo = boolean',
+      }
+
+      const { props } = resolve(
+        `
+        import type { Foo } from './foo.cjs'
+        defineProps<{ value: Foo }>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        value: ['Boolean'],
       })
     })
   })
