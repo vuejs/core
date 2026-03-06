@@ -2142,7 +2142,22 @@ function baseCreateRenderer(
       return
     }
 
-    const shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
+    let shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
+    // #5407
+    let root: VNode | undefined = undefined
+    if (
+      __DEV__ &&
+      vnode.patchFlag > 0 &&
+      vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+    ) {
+      const singleRoot = filterSingleRoot(vnode.children as VNodeArrayChildren)
+      if (singleRoot) {
+        root = singleRoot
+        shouldInvokeDirs =
+          singleRoot.shapeFlag & ShapeFlags.ELEMENT && singleRoot.dirs
+      }
+    }
+
     const shouldInvokeVnodeHook = !isAsyncWrapper(vnode)
 
     let vnodeHook: VNodeHook | undefined | null
@@ -2162,7 +2177,12 @@ function baseCreateRenderer(
       }
 
       if (shouldInvokeDirs) {
-        invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
+        invokeDirectiveHook(
+          root || vnode,
+          null,
+          parentComponent,
+          'beforeUnmount',
+        )
       }
 
       if (shapeFlag & ShapeFlags.TELEPORT) {
@@ -2215,7 +2235,7 @@ function baseCreateRenderer(
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
         shouldInvokeDirs &&
-          invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
+          invokeDirectiveHook(root || vnode, null, parentComponent, 'unmounted')
       }, parentSuspense)
     }
   }
