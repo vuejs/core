@@ -5027,6 +5027,51 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('nested components (VDOM -> Vapor(multi-root) -> VDOM) with preceding sibling', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <p>before</p>
+        <components.VaporChild/>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><components.VdomChild/><div>second</div></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template><span>{{ data }}</span></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--[--><span>foo</span><div>second</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--[--><span>bar</span><div>second</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+  })
+
   test('nested components (VDOM -> Vapor) should not duplicate', async () => {
     const { container } = await testWithVDOMApp(
       `<script setup>const components = _components;</script>
@@ -6409,6 +6454,118 @@ describe('VDOM interop', () => {
       <!--[--><div>Before</div>
       <!--[--><span>Updated</span><span>Again</span><!--]-->
       <div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate handwritten multi-root VDOM component as first child in multi-root Vapor', async () => {
+    const MultiRootVDOM = {
+      setup() {
+        return () => [
+          runtimeDom.h('span', 'Hello'),
+          runtimeDom.h('span', 'World'),
+        ]
+      },
+    }
+
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const MultiRootVDOM = _data.MultiRootVDOM
+      </script>
+      <template>
+        <MultiRootVDOM />
+        <div>After</div>
+      </template>`,
+      {},
+      { MultiRootVDOM },
+    )
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><span>Hello</span><span>World</span><!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('hydrate SFC multi-root VDOM component inside multi-root Vapor', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const data = _data; const components = _components;
+      </script>
+      <template>
+        <div>Before</div>
+        <components.VdomMultiRoot />
+        <div>After</div>
+      </template>`,
+      {
+        VdomMultiRoot: {
+          code: `<script setup>const data = _data;</script><template><div>first {{ data }}</div><div>second {{ data }}</div></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><div>first foo</div><div>second foo</div><!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><div>first bar</div><div>second bar</div><!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate handwritten multi-root VDOM via createDynamicComponent with siblings', async () => {
+    const MultiRootVDOM = {
+      setup() {
+        return () => [
+          runtimeDom.h('span', 'Hello'),
+          runtimeDom.h('span', 'World'),
+        ]
+      },
+    }
+
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const MultiRootVDOM = _data.MultiRootVDOM
+        const vnode = h(MultiRootVDOM)
+      </script>
+      <template>
+        <component :is="vnode" />
+        <div>After</div>
+      </template>`,
+      {},
+      { MultiRootVDOM },
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><span>Hello</span><span>World</span><!--]-->
+      <!--dynamic-component--><div>After</div><!--]-->
       "
     `,
     )

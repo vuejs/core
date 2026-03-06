@@ -647,14 +647,20 @@ function createVDOMComponent(
 
   frag.hydrate = () => {
     if (!isHydrating) return
+
     hydrateVNode(
       vnode,
       parentComponent as any,
-      // skip fragment start anchor for multi-root component to avoid mismatch
-      // `!previousSibling` means the hydration node is at the first child of
-      // the container (the parent fragment's opening `<!--[-->`), which should
-      // be skipped. Otherwise the `<!--[-->` belongs to this component itself.
-      !isSingleRoot && !currentHydrationNode!.previousSibling,
+      // Skip fragment start anchor (`<!--[-->`) for multi-root component to avoid
+      // mismatch. For the first child inside a multi-root parent, hydration starts
+      // at the parent fragment anchor (`<!--[-->`). Skip it so VDOM hydration
+      // receives the actual first node of this component.
+      !isSingleRoot &&
+        (!currentHydrationNode!.previousSibling ||
+          !!(
+            parentComponent &&
+            currentHydrationNode === parentComponent.hydrationStartNode
+          )),
     )
     onScopeDispose(unmount, true)
     isMounted = true

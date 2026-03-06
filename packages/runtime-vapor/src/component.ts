@@ -248,8 +248,10 @@ export function createComponent(
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
+  let hydrationStartNode: Node | null = null
   if (isHydrating) {
     locateHydrationNode()
+    hydrationStartNode = currentHydrationNode
   } else {
     resetInsertionState()
   }
@@ -334,6 +336,7 @@ export function createComponent(
     appContext,
     once,
   )
+  instance.hydrationStartNode = hydrationStartNode
 
   // handle currentKeepAliveCtx for component boundary isolation
   // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
@@ -628,6 +631,7 @@ export class VaporComponentInstance<
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
+  hydrationStartNode?: Node | null
 
   /**
    * dev only flag to track whether $attrs was used during render.
