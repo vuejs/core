@@ -6570,4 +6570,90 @@ describe('VDOM interop', () => {
     `,
     )
   })
+
+  test('hydrate multi-root VDOM via mountVNode as non-first child', async () => {
+    const MultiRootVDOM = {
+      setup() {
+        return () => [
+          runtimeDom.h('span', 'Hello'),
+          runtimeDom.h('span', 'World'),
+        ]
+      },
+    }
+
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const MultiRootVDOM = _data.MultiRootVDOM
+        const vnode = h(MultiRootVDOM)
+      </script>
+      <template>
+        <div>Before</div>
+        <component :is="vnode" />
+        <div>After</div>
+      </template>`,
+      {},
+      { MultiRootVDOM },
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><span>Hello</span><span>World</span><!--]-->
+      <!--dynamic-component--><div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate Fragment VNode as first child of multi-root Vapor via createDynamicComponent', async () => {
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { Fragment, h } from 'vue'
+        const FragmentChunk = h(Fragment, null, [
+          h('div', null, 'first fragment'),
+          h('div', null, 'second fragment'),
+        ])
+      </script>
+      <template>
+        <component :is="FragmentChunk" />
+        <div>After</div>
+      </template>`,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><div>first fragment</div><div>second fragment</div><!--]-->
+      <!--dynamic-component--><div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate Element VNode as first child of multi-root Vapor via createDynamicComponent', async () => {
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const elementVNode = h('span', null, 'hello')
+      </script>
+      <template>
+        <component :is="elementVNode" />
+        <div>After</div>
+      </template>`,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>hello</span><!--dynamic-component--><div>After</div><!--]-->
+      "
+    `,
+    )
+  })
 })

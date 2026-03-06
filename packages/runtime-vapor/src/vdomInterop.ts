@@ -80,9 +80,9 @@ import { optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
   currentHydrationNode,
+  currentHydrationStartNode,
   isComment,
   isHydrating,
-  locateHydrationNode,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
@@ -483,18 +483,21 @@ function mountVNode(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    hydrateVNode(
-      vnode,
-      parentComponent as any,
-      // In the current hydration cursor, component / Teleport / Suspense / Static
-      // VNodes can be prefixed by an outer fragment start marker (`<!--[-->`).
-      // Skip it so runtime-core hydrateNode() starts from this vnode's first real node.
-      vnode.type === Static ||
-        !!(
-          vnode.shapeFlag &
-          (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE)
-        ),
-    )
+    // The hydration cursor may be sitting on a fragment start anchor
+    // (`<!--[-->`) from the parent's multi-root wrapper or VDOM slot.
+    // Skip it so runtime-core hydrateNode() receives the actual first
+    // DOM node. For Fragment VNodes (whose own SSR output also starts
+    // with `<!--[-->`), only skip when the next sibling is also
+    // `<!--[-->`, confirming nested anchors (outer = parent's, inner =
+    // Fragment's own).
+    if (
+      isOuterFragmentAnchor() &&
+      (vnode.type !== Fragment ||
+        isComment(currentHydrationNode!.nextSibling!, '['))
+    ) {
+      setCurrentHydrationNode(currentHydrationNode!.nextSibling!)
+    }
+    hydrateVNode(vnode, parentComponent as any)
     onScopeDispose(unmount, true)
     isMounted = true
     frag.nodes = resolveVNodeNodes(vnode)
@@ -647,21 +650,12 @@ function createVDOMComponent(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-
-    hydrateVNode(
-      vnode,
-      parentComponent as any,
-      // Skip fragment start anchor (`<!--[-->`) for multi-root component to avoid
-      // mismatch. For the first child inside a multi-root parent, hydration starts
-      // at the parent fragment anchor (`<!--[-->`). Skip it so VDOM hydration
-      // receives the actual first node of this component.
-      !isSingleRoot &&
-        (!currentHydrationNode!.previousSibling ||
-          !!(
-            parentComponent &&
-            currentHydrationNode === parentComponent.hydrationStartNode
-          )),
-    )
+    // For multi-root components, skip the VDOM fragment start anchor
+    // so that VDOM hydration receives this component's actual first DOM node
+    if (!isSingleRoot && isOuterFragmentAnchor()) {
+      setCurrentHydrationNode(currentHydrationNode!.nextSibling!)
+    }
+    hydrateVNode(vnode, parentComponent as any)
     onScopeDispose(unmount, true)
     isMounted = true
     frag.nodes = resolveVNodeNodes(vnode)
@@ -974,18 +968,26 @@ export const vaporInteropPlugin: Plugin = app => {
   }) satisfies App['mount']
 }
 
+/**
+ * Check if the current hydration node is a VDOM fragment start anchor
+ * (`<!--[-->`) belonging to the parent rather than the VDOM component
+ * itself
+ */
+function isOuterFragmentAnchor(): boolean {
+  return (
+    isComment(currentHydrationNode!, '[') &&
+    // first child of parent
+    (!currentHydrationNode!.previousSibling ||
+      // matches the parent component's hydration start node
+      currentHydrationNode === currentHydrationStartNode)
+  )
+}
+
 function hydrateVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
-  skipFragmentAnchor: boolean = false,
 ) {
-  locateHydrationNode()
-
-  let node = currentHydrationNode!
-  if (skipFragmentAnchor && isComment(node, '[')) {
-    setCurrentHydrationNode((node = node.nextSibling!))
-  }
-
+  const node = currentHydrationNode!
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
   const nextNode = vdomHydrateNode(
     node,

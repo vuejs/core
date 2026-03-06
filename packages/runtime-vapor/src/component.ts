@@ -93,10 +93,12 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
+  currentHydrationStartNode,
   isHydrating,
   locateHydrationNode,
   locateNextNode,
   setCurrentHydrationNode,
+  setCurrentHydrationStartNode,
 } from './dom/hydration'
 import { createComment, createElement, createTextNode } from './dom/node'
 import {
@@ -329,6 +331,11 @@ export function createComponent(
     return frag as any
   }
 
+  const prevHydrationStartNode = currentHydrationStartNode
+  if (isHydrating) {
+    setCurrentHydrationStartNode(hydrationStartNode)
+  }
+
   const instance = new VaporComponentInstance(
     component,
     rawProps as RawProps,
@@ -336,7 +343,6 @@ export function createComponent(
     appContext,
     once,
   )
-  instance.hydrationStartNode = hydrationStartNode
 
   // handle currentKeepAliveCtx for component boundary isolation
   // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
@@ -399,6 +405,10 @@ export function createComponent(
 
   if (isHydrating && _insertionAnchor !== undefined) {
     advanceHydrationNode(_insertionParent!)
+  }
+
+  if (isHydrating) {
+    setCurrentHydrationStartNode(prevHydrationStartNode)
   }
 
   return instance
@@ -631,7 +641,6 @@ export class VaporComponentInstance<
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
-  hydrationStartNode?: Node | null
 
   /**
    * dev only flag to track whether $attrs was used during render.
