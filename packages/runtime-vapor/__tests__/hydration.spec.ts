@@ -6361,7 +6361,7 @@ describe('VDOM interop', () => {
   })
 
   test('hydrate handwritten multi-root VDOM component inside multi-root Vapor component', async () => {
-    // Handwritten VDOM component (setup + render fn) that returns a Fragment (multi-root)
+    // Handwritten VDOM component that returns a Fragment (multi-root)
     const MultiRootVDOM = {
       setup() {
         return () => [
