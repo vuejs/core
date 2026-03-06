@@ -6361,12 +6361,15 @@ describe('VDOM interop', () => {
   })
 
   test('hydrate handwritten multi-root VDOM component inside multi-root Vapor component', async () => {
+    const first = ref('Hello')
+    const second = ref('World')
+
     // Handwritten VDOM component that returns a Fragment (multi-root)
     const MultiRootVDOM = {
       setup() {
         return () => [
-          runtimeDom.h('span', 'Hello'),
-          runtimeDom.h('span', 'World'),
+          runtimeDom.h('span', first.value),
+          runtimeDom.h('span', second.value),
         ]
       },
     }
@@ -6395,5 +6398,19 @@ describe('VDOM interop', () => {
     `,
     )
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    first.value = 'Updated'
+    second.value = 'Again'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><span>Updated</span><span>Again</span><!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
   })
 })
