@@ -570,7 +570,7 @@ describe('scheduler', () => {
     expect(job2).toHaveBeenCalledTimes(1)
   })
 
-  test(`jobs won't be left on queue after an post job error`, async () => {
+  test(`jobs won't be left on queue after a post job error`, async () => {
     const job1: SchedulerJob = vi.fn(() => {
       queueJob(job2, 2)
       queuePostFlushCb(job3, 1)
