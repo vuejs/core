@@ -265,19 +265,32 @@ function applyTransitionLeaveHooksImpl(
       earlyRemove,
       delayedLeave,
     ) => {
-      state.leavingNodes.set(String(leavingBlock.$key), leavingBlock)
+      const leavingKey = String(leavingBlock.$key)
+      state.leavingNodes.set(leavingKey, leavingBlock)
+      // Bind cleanup to this specific handoff so an older leave callback
+      // cannot clear a newer delayedLeave during rapid toggles.
+      const delayedLeaveCb = () => {
+        delayedLeave()
+        leavingBlock.$transition = undefined
+        if (enterHooks.delayedLeave === delayedLeaveCb) {
+          delete enterHooks.delayedLeave
+        }
+      }
       // early removal callback
       block[leaveCbKey] = () => {
         earlyRemove()
         block[leaveCbKey] = undefined
         leavingBlock.$transition = undefined
-        delete enterHooks.delayedLeave
+        // Same-key in-out switches early-remove the previous leaving block.
+        // Clear the cache entry so the next enter isn't skipped as "still leaving".
+        if (state.leavingNodes.get(leavingKey) === leavingBlock) {
+          state.leavingNodes.delete(leavingKey)
+        }
+        if (enterHooks.delayedLeave === delayedLeaveCb) {
+          delete enterHooks.delayedLeave
+        }
       }
-      enterHooks.delayedLeave = () => {
-        delayedLeave()
-        leavingBlock.$transition = undefined
-        delete enterHooks.delayedLeave
-      }
+      enterHooks.delayedLeave = delayedLeaveCb
     }
   }
 }
