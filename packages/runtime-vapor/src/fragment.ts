@@ -154,7 +154,10 @@ export class DynamicFragment extends VaporFragment {
         mode &&
         // in-out only works when there is an incoming branch to trigger
         // delayedLeave; otherwise the current branch should leave immediately.
-        (mode !== 'in-out' || (mode === 'in-out' && render))
+        (mode !== 'in-out' || (mode === 'in-out' && render)) &&
+        // out-in only needs to defer when the current branch actually has
+        // a rendered child to leave before mounting the next one.
+        (mode !== 'out-in' || isValidBlock(this.nodes))
       ) {
         applyTransitionLeaveHooks(this.nodes, transition, () => {
           const pending = this.pending
