@@ -218,25 +218,34 @@ export function flushPostFlushCbs(seen?: CountMap): void {
       seen = seen || new Map()
     }
 
-    while (postFlushIndex < activePostJobs.length) {
-      const cb = activePostJobs[postFlushIndex++]
-      if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
-        continue
-      }
-      if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
-        cb.flags! &= ~SchedulerJobFlags.QUEUED
-      }
-      if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) {
-        try {
-          cb()
-        } finally {
+    try {
+      while (postFlushIndex < activePostJobs.length) {
+        const cb = activePostJobs[postFlushIndex++]
+        if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
+          continue
+        }
+        if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
           cb.flags! &= ~SchedulerJobFlags.QUEUED
         }
+        if (!(cb.flags! & SchedulerJobFlags.DISPOSED)) {
+          try {
+            cb()
+          } finally {
+            if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+              cb.flags! &= ~SchedulerJobFlags.QUEUED
+            }
+          }
+        }
       }
-    }
+    } finally {
+      // If there was an error we still need to clear the QUEUED flags
+      while (postFlushIndex < activePostJobs.length) {
+        activePostJobs[postFlushIndex++].flags! &= ~SchedulerJobFlags.QUEUED
+      }
 
-    activePostJobs = null
-    postFlushIndex = 0
+      activePostJobs = null
+      postFlushIndex = 0
+    }
   }
 }
 
