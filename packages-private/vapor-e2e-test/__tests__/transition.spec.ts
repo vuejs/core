@@ -1823,6 +1823,53 @@ describe('vapor transition', () => {
       E2E_TIMEOUT,
     )
 
+    // #14539
+    test(
+      'in-out mode with if/else rapid toggles',
+      async () => {
+        const btnSelector = '.in-out-if-else-rapid > button'
+        const containerSelector = '.in-out-if-else-rapid > div'
+
+        expect(await html(containerSelector)).toBe(`<div>2</div>`)
+
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).innerHTML,
+        ).toBe(`<div>2</div><div class="v-enter-from v-enter-active">1</div>`)
+
+        await nextTick()
+        await click(btnSelector)
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="v-enter-active v-enter-to">1</div><div class="v-enter-from v-enter-active">2</div>`,
+        )
+
+        await click(btnSelector)
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="v-enter-from v-enter-active">2</div><div class="v-enter-from v-enter-active">1</div>`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="v-enter-active v-enter-to">2</div><div class="v-enter-active v-enter-to">1</div>`,
+        )
+        await waitForInnerHTML(containerSelector, `<div class="">1</div>`)
+
+        await click(btnSelector)
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="">1</div><div class="v-enter-from v-enter-active">2</div>`,
+        )
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="">1</div><div class="v-enter-active v-enter-to">2</div>`,
+        )
+
+        await waitForInnerHTML(containerSelector, `<div class="">2</div>`)
+      },
+      E2E_TIMEOUT,
+    )
+
     test(
       'out-in mode with if/else-if',
       async () => {
