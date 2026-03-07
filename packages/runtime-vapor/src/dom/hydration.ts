@@ -30,6 +30,12 @@ export function setIsHydratingEnabled(value: boolean): void {
 
 export let currentHydrationNode: Node | null = null
 
+export let currentHydrationStartNode: Node | null = null
+
+export function setCurrentHydrationStartNode(node: Node | null): void {
+  currentHydrationStartNode = node
+}
+
 export let isHydrating = false
 function setIsHydrating(value: boolean) {
   if (!isHydratingEnabled && !isVdomHydrating) return false

@@ -93,10 +93,13 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
+  currentHydrationStartNode,
+  isComment,
   isHydrating,
   locateHydrationNode,
   locateNextNode,
   setCurrentHydrationNode,
+  setCurrentHydrationStartNode,
 } from './dom/hydration'
 import { createComment, createElement, createTextNode } from './dom/node'
 import {
@@ -248,8 +251,10 @@ export function createComponent(
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
+  let hydrationStartNode: Node | null = null
   if (isHydrating) {
     locateHydrationNode()
+    hydrationStartNode = currentHydrationNode
   } else {
     resetInsertionState()
   }
@@ -299,11 +304,20 @@ export function createComponent(
       currentInstance as any,
       rawProps,
       rawSlots,
-      isSingleRoot,
     )
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
+      // For multi-root VDOM components, consume the outer <!--[-->
+      // anchor so VDOM hydration starts at the actual first DOM node.
+      if (
+        !isSingleRoot &&
+        isComment(currentHydrationNode!, '[') &&
+        (!currentHydrationNode!.previousSibling ||
+          currentHydrationNode === currentHydrationStartNode)
+      ) {
+        setCurrentHydrationNode(currentHydrationNode!.nextSibling!)
+      }
       frag.hydrate()
       if (_isLastInsertion) {
         advanceHydrationNode(_insertionParent!)
@@ -325,6 +339,11 @@ export function createComponent(
     }
 
     return frag as any
+  }
+
+  const prevHydrationStartNode = currentHydrationStartNode
+  if (isHydrating) {
+    setCurrentHydrationStartNode(hydrationStartNode)
   }
 
   const instance = new VaporComponentInstance(
@@ -396,6 +415,10 @@ export function createComponent(
 
   if (isHydrating && _insertionAnchor !== undefined) {
     advanceHydrationNode(_insertionParent!)
+  }
+
+  if (isHydrating) {
+    setCurrentHydrationStartNode(prevHydrationStartNode)
   }
 
   return instance

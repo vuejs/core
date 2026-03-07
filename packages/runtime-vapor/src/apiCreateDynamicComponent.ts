@@ -1,5 +1,6 @@
 import {
   type ComponentInternalInstance,
+  Fragment,
   currentInstance,
   isKeepAlive,
   isVNode,
@@ -21,7 +22,13 @@ import {
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-import { advanceHydrationNode, isHydrating } from './dom/hydration'
+import {
+  advanceHydrationNode,
+  currentHydrationNode,
+  isComment,
+  isHydrating,
+  setCurrentHydrationNode,
+} from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import { isInteropEnabled } from './vdomInteropState'
@@ -63,6 +70,19 @@ export function createDynamicComponent(
 
         const frag = appContext.vapor.vdomMountVNode(value, currentInstance)
         if (isHydrating) {
+          // Consume the outer <!--[--> anchor so VDOM hydration
+          // starts at the actual first DOM node. For Fragment VNodes
+          // (whose SSR also starts with <!--[-->), only skip when
+          // nested anchors are detected (nextSibling is also <!--[-->).
+          if (
+            !isSingleRoot &&
+            isComment(currentHydrationNode!, '[') &&
+            !currentHydrationNode!.previousSibling &&
+            (value.type !== Fragment ||
+              isComment(currentHydrationNode!.nextSibling!, '['))
+          ) {
+            setCurrentHydrationNode(currentHydrationNode!.nextSibling!)
+          }
           frag.hydrate()
           if (_isLastInsertion) {
             advanceHydrationNode(_insertionParent!)

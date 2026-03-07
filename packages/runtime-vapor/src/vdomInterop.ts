@@ -82,7 +82,6 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
-  locateHydrationNode,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
@@ -483,18 +482,7 @@ function mountVNode(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    hydrateVNode(
-      vnode,
-      parentComponent as any,
-      // In the current hydration cursor, component / Teleport / Suspense / Static
-      // VNodes can be prefixed by an outer fragment start marker (`<!--[-->`).
-      // Skip it so runtime-core hydrateNode() starts from this vnode's first real node.
-      vnode.type === Static ||
-        !!(
-          vnode.shapeFlag &
-          (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE)
-        ),
-    )
+    hydrateVNode(vnode, parentComponent as any)
     onScopeDispose(unmount, true)
     isMounted = true
     frag.nodes = resolveVNodeNodes(vnode)
@@ -564,7 +552,6 @@ function createVDOMComponent(
   parentComponent: VaporComponentInstance | null,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
-  isSingleRoot?: boolean,
 ): VaporFragment {
   const suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
@@ -647,13 +634,7 @@ function createVDOMComponent(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    hydrateVNode(
-      vnode,
-      parentComponent as any,
-      // skip fragment start anchor for multi-root component
-      // to avoid mismatch
-      !isSingleRoot,
-    )
+    hydrateVNode(vnode, parentComponent as any)
     onScopeDispose(unmount, true)
     isMounted = true
     frag.nodes = resolveVNodeNodes(vnode)
@@ -969,15 +950,8 @@ export const vaporInteropPlugin: Plugin = app => {
 function hydrateVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
-  skipFragmentAnchor: boolean = false,
 ) {
-  locateHydrationNode()
-
-  let node = currentHydrationNode!
-  if (skipFragmentAnchor && isComment(node, '[')) {
-    setCurrentHydrationNode((node = node.nextSibling!))
-  }
-
+  const node = currentHydrationNode!
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
   const nextNode = vdomHydrateNode(
     node,
