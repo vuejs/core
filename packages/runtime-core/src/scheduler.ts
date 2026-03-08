@@ -135,9 +135,18 @@ function queueJobWorker(
   return false
 }
 
+const doFlushJobs = () => {
+  try {
+    flushJobs()
+  } catch (e) {
+    currentFlushPromise = null
+    throw e
+  }
+}
+
 function queueFlush() {
   if (!currentFlushPromise) {
-    currentFlushPromise = resolvedPromise.then(flushJobs)
+    currentFlushPromise = resolvedPromise.then(doFlushJobs)
   }
 }
 
@@ -301,15 +310,13 @@ function flushJobs(seen?: CountMap) {
     flushIndex = 0
     jobsLength = 0
 
-    try {
-      flushPostFlushCbs(seen)
-    } finally {
-      // If new jobs have been added to either queue, keep flushing
-      if (jobsLength || postJobs.length) {
-        flushJobs(seen)
-      } else {
-        currentFlushPromise = null
-      }
+    flushPostFlushCbs(seen)
+
+    // If new jobs have been added to either queue, keep flushing
+    if (jobsLength || postJobs.length) {
+      flushJobs(seen)
+    } else {
+      currentFlushPromise = null
     }
   }
 }

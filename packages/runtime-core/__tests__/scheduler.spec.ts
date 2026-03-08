@@ -632,25 +632,6 @@ describe('scheduler', () => {
     expect(job2).toHaveBeenCalledTimes(1)
   })
 
-  test(`jobs won't be left on queue after a post job error`, async () => {
-    const job1: SchedulerJob = vi.fn(() => {
-      queueJob(job2, 2)
-      queuePostFlushCb(job3, 1)
-      throw new Error('test')
-    })
-    const job2: SchedulerJob = vi.fn()
-    const job3: SchedulerJob = vi.fn()
-
-    queuePostFlushCb(job1, 1)
-
-    try {
-      await nextTick()
-    } catch {}
-
-    expect(job2.flags! & SchedulerJobFlags.QUEUED).toBeFalsy()
-    expect(job3.flags! & SchedulerJobFlags.QUEUED).toBeFalsy()
-  })
-
   test('should prevent self-triggering jobs by default', async () => {
     let count = 0
     const job = () => {
