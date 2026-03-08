@@ -1,6 +1,7 @@
 import {
   type SchedulerJob,
   SchedulerJobFlags,
+  flushOnAppMount,
   flushPostFlushCbs,
   flushPreFlushCbs,
   nextTick,
@@ -501,6 +502,67 @@ describe('scheduler', () => {
     await nextTick()
   })
 
+  test('flushOnAppMount error recovery', () => {
+    const err = new Error('test')
+    let shouldThrow = true
+
+    const job1: SchedulerJob = vi.fn(() => {
+      if (shouldThrow) {
+        shouldThrow = false
+        throw err
+      }
+    })
+
+    queuePostFlushCb(job1)
+
+    try {
+      flushOnAppMount()
+    } catch (e: any) {
+      expect(e).toBe(err)
+    }
+
+    expect(job1).toHaveBeenCalledTimes(1)
+
+    queuePostFlushCb(job1)
+
+    flushOnAppMount()
+
+    expect(job1).toHaveBeenCalledTimes(2)
+  })
+
+  test('pre jobs can be re-queued after an error', () => {
+    const err = new Error('test')
+    let shouldThrow = true
+
+    const job1: SchedulerJob = vi.fn(() => {
+      if (shouldThrow) {
+        shouldThrow = false
+        throw err
+      }
+    })
+    const job2: SchedulerJob = vi.fn()
+
+    queueJob(job1, undefined, true)
+    queueJob(job2, undefined, true)
+
+    try {
+      flushPreFlushCbs()
+    } catch (e: any) {
+      expect(e).toBe(err)
+    }
+
+    expect(job1).toHaveBeenCalledTimes(1)
+    expect(job2).toHaveBeenCalledTimes(0)
+
+    queueJob(job1, undefined, true)
+    queueJob(job2, undefined, true)
+
+    flushPreFlushCbs()
+
+    expect(job1).toHaveBeenCalledTimes(2)
+    expect(job2).toHaveBeenCalledTimes(1)
+  })
+
   test('jobs can be re-queued after an error', async () => {
     const err = new Error('test')
     let shouldThrow = true
@@ -530,6 +592,39 @@ describe('scheduler', () => {
 
     queueJob(job1, 1)
     queueJob(job2, 2)
+
+    await nextTick()
+
+    expect(job1).toHaveBeenCalledTimes(2)
+    expect(job2).toHaveBeenCalledTimes(1)
+  })
+
+  test('post jobs can be re-queued after an error', async () => {
+    const err = new Error('test')
+    let shouldThrow = true
+
+    const job1: SchedulerJob = vi.fn(() => {
+      if (shouldThrow) {
+        shouldThrow = false
+        throw err
+      }
+    })
+    const job2: SchedulerJob = vi.fn()
+
+    queuePostFlushCb(job1, 1)
+    queuePostFlushCb(job2, 2)
+
+    try {
+      await nextTick()
+    } catch (e: any) {
+      expect(e).toBe(err)
+    }
+
+    expect(job1).toHaveBeenCalledTimes(1)
+    expect(job2).toHaveBeenCalledTimes(0)
+
+    queuePostFlushCb(job1, 1)
+    queuePostFlushCb(job2, 2)
 
     await nextTick()
 
@@ -628,6 +723,31 @@ describe('scheduler', () => {
     job2.flags = SchedulerJobFlags.ALLOW_RECURSE
 
     queueJob(job2, 2)
+
+    await nextTick()
+
+    expect(job2).toHaveBeenCalledTimes(2)
+  })
+
+  test(`recursive post jobs can't be re-queued by other jobs`, async () => {
+    let recurse = true
+
+    const job1: SchedulerJob = () => {
+      if (recurse) {
+        // job2 is already queued, so this shouldn't do anything
+        queuePostFlushCb(job2, 2)
+        recurse = false
+      }
+    }
+    const job2: SchedulerJob = vi.fn(() => {
+      if (recurse) {
+        queuePostFlushCb(job1, 1)
+        queuePostFlushCb(job2, 2)
+      }
+    })
+    job2.flags = SchedulerJobFlags.ALLOW_RECURSE
+
+    queuePostFlushCb(job2, 2)
 
     await nextTick()
 
