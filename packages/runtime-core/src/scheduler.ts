@@ -306,10 +306,11 @@ function flushJobs(seen?: CountMap) {
 
     flushPostFlushCbs(seen)
 
-    currentFlushPromise = null
     // If new jobs have been added to either queue, keep flushing
     if (jobsLength || postJobs.length) {
       flushJobs(seen)
+    } else {
+      currentFlushPromise = null
     }
   }
 }
