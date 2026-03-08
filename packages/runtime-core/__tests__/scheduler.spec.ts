@@ -1,6 +1,7 @@
 import {
   type SchedulerJob,
   SchedulerJobFlags,
+  flushOnAppMount,
   flushPostFlushCbs,
   flushPreFlushCbs,
   nextTick,
@@ -499,6 +500,67 @@ describe('scheduler', () => {
 
     // this one should no longer error
     await nextTick()
+  })
+
+  test('flushOnAppMount error recovery', () => {
+    const err = new Error('test')
+    let shouldThrow = true
+
+    const job1: SchedulerJob = vi.fn(() => {
+      if (shouldThrow) {
+        shouldThrow = false
+        throw err
+      }
+    })
+
+    queuePostFlushCb(job1)
+
+    try {
+      flushOnAppMount()
+    } catch (e: any) {
+      expect(e).toBe(err)
+    }
+
+    expect(job1).toHaveBeenCalledTimes(1)
+
+    queuePostFlushCb(job1)
+
+    flushOnAppMount()
+
+    expect(job1).toHaveBeenCalledTimes(2)
+  })
+
+  test('pre jobs can be re-queued after an error', () => {
+    const err = new Error('test')
+    let shouldThrow = true
+
+    const job1: SchedulerJob = vi.fn(() => {
+      if (shouldThrow) {
+        shouldThrow = false
+        throw err
+      }
+    })
+    const job2: SchedulerJob = vi.fn()
+
+    queueJob(job1, undefined, true)
+    queueJob(job2, undefined, true)
+
+    try {
+      flushPreFlushCbs()
+    } catch (e: any) {
+      expect(e).toBe(err)
+    }
+
+    expect(job1).toHaveBeenCalledTimes(1)
+    expect(job2).toHaveBeenCalledTimes(0)
+
+    queueJob(job1, undefined, true)
+    queueJob(job2, undefined, true)
+
+    flushPreFlushCbs()
+
+    expect(job1).toHaveBeenCalledTimes(2)
+    expect(job2).toHaveBeenCalledTimes(1)
   })
 
   test('jobs can be re-queued after an error', async () => {

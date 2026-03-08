@@ -186,9 +186,12 @@ export function flushPreFlushCbs(
     if (cb.flags! & SchedulerJobFlags.ALLOW_RECURSE) {
       cb.flags! &= ~SchedulerJobFlags.QUEUED
     }
-    cb()
-    if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
-      cb.flags! &= ~SchedulerJobFlags.QUEUED
+    try {
+      cb()
+    } finally {
+      if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+        cb.flags! &= ~SchedulerJobFlags.QUEUED
+      }
     }
   }
 }
@@ -247,9 +250,12 @@ let isFlushing = false
 export function flushOnAppMount(instance?: GenericComponentInstance): void {
   if (!isFlushing) {
     isFlushing = true
-    flushPreFlushCbs(instance)
-    flushPostFlushCbs()
-    isFlushing = false
+    try {
+      flushPreFlushCbs(instance)
+      flushPostFlushCbs()
+    } finally {
+      isFlushing = false
+    }
   }
 }
 
