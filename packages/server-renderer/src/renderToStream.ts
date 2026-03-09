@@ -87,7 +87,8 @@ export function renderToSimpleStream<T extends SimpleReadable>(
     }
   }
 
-  Promise.resolve(renderComponentVNode(vnode))
+  Promise.resolve()
+    .then(() => renderComponentVNode(vnode))
     .then(buffer => unrollBuffer(buffer, stream))
     .then(() => resolveTeleports(context))
     .then(() => stream.push(null))
