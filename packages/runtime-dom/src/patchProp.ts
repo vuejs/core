@@ -60,8 +60,8 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   } else if (
     // #11081 force set props for possible async custom element
     (el as VueElement)._isVueCE &&
-    // #12408 check if it's hyphen prop or it's async custom element
-    (camelize(key) in el ||
+    // #12408 check if it's declared prop or it's async custom element
+    (shouldSetAsPropForVueCE(el as VueElement, key) ||
       // @ts-expect-error _def is private
       ((el as VueElement)._def.__asyncLoader &&
         (/[A-Z]/.test(key) || !isString(nextValue))))
@@ -145,4 +145,17 @@ function shouldSetAsProp(
   }
 
   return key in el
+}
+
+function shouldSetAsPropForVueCE(el: VueElement, key: string) {
+  const props = // @ts-expect-error _def is private
+  el._def.props as Record<string, unknown> | string[] | undefined
+  if (!props) {
+    return false
+  }
+
+  const camelKey = camelize(key)
+  return Array.isArray(props)
+    ? props.some(prop => camelize(prop) === camelKey)
+    : Object.keys(props).some(prop => camelize(prop) === camelKey)
 }
