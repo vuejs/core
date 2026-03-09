@@ -610,7 +610,7 @@ export class VueElement
   private _applyStyles(
     styles: string[] | undefined,
     owner?: ConcreteComponent,
-    parentComp?: ConcreteComponent & CustomElementOptions,
+    parentComp?: ConcreteComponent,
   ) {
     if (!styles) return
     if (owner) {
