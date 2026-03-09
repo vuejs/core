@@ -632,6 +632,25 @@ describe('scheduler', () => {
     expect(job2).toHaveBeenCalledTimes(1)
   })
 
+  test('post job error should not leave newly queued main jobs pending', async () => {
+    const calls: string[] = []
+
+    const job2: SchedulerJob = () => {
+      calls.push('job2')
+    }
+
+    const job1: SchedulerJob = () => {
+      queueJob(job2, 2)
+      throw new Error('test')
+    }
+
+    queuePostFlushCb(job1, 1)
+
+    await expect(nextTick()).rejects.toThrow('test')
+    await nextTick()
+    expect(calls).toEqual(['job2'])
+  })
+
   test('should prevent self-triggering jobs by default', async () => {
     let count = 0
     const job = () => {

@@ -140,6 +140,11 @@ const doFlushJobs = () => {
     flushJobs()
   } catch (e) {
     currentFlushPromise = null
+    // If a nested pre/post flush throws after queueing more work, defer the
+    // leftovers to a fresh microtask
+    if (jobsLength || postJobs.length) {
+      queueFlush()
+    }
     throw e
   }
 }
