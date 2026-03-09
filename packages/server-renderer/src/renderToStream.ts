@@ -43,7 +43,7 @@ async function unrollBuffer(
 
 function unrollBufferSync(buffer: SSRBuffer, stream: SimpleReadable) {
   for (let i = 0; i < buffer.length; i++) {
-    let item = buffer[i]
+    const item = buffer[i]
     if (isString(item)) {
       stream.push(item)
     } else {
@@ -78,7 +78,9 @@ export function renderToSimpleStream<T extends SimpleReadable>(
       for (const unwatch of context.__watcherHandles) {
         unwatch()
       }
+      context.__watcherHandles.length = 0
     }
+
     if (context.__instanceScopes) {
       for (const scope of context.__instanceScopes) {
         scope.stop()
@@ -87,15 +89,29 @@ export function renderToSimpleStream<T extends SimpleReadable>(
     }
   }
 
+  let cleaned = false
+  const finalize = () => {
+    if (cleaned) return
+    cleaned = true
+    cleanup()
+  }
+
   Promise.resolve()
     .then(() => renderComponentVNode(vnode))
     .then(buffer => unrollBuffer(buffer, stream))
     .then(() => resolveTeleports(context))
-    .then(() => stream.push(null))
+    .then(() => {
+      finalize()
+      return stream.push(null)
+    })
     .catch(error => {
+      try {
+        finalize()
+      } catch (cleanupError) {
+        error = cleanupError
+      }
       stream.destroy(error)
     })
-    .finally(cleanup)
 
   return stream
 }
