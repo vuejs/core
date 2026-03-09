@@ -1,3 +1,14 @@
+## [3.5.29](https://github.com/vuejs/core/compare/v3.5.28...v3.5.29) (2026-02-24)
+
+
+### Bug Fixes
+
+* **runtime-core:** prevent instance leak in withAsyncContext ([#14445](https://github.com/vuejs/core/issues/14445)) ([702284f](https://github.com/vuejs/core/commit/702284f6a7d0dd6d4e648142e7977a3eb02d77f5)), closes [nuxt/nuxt#33644](https://github.com/nuxt/nuxt/issues/33644)
+* **server-renderer:** render className as escaped string ([#14469](https://github.com/vuejs/core/issues/14469)) ([da6690c](https://github.com/vuejs/core/commit/da6690cae359ec3576403c18040a1a5f017a63b1))
+* **transition:** prevent enter if leave is in progress ([#14443](https://github.com/vuejs/core/issues/14443)) ([df059f8](https://github.com/vuejs/core/commit/df059f890460e4c703b62a54f410627ff29c489b)), closes [#12091](https://github.com/vuejs/core/issues/12091) [#12133](https://github.com/vuejs/core/issues/12133)
+
+
+
 ## [3.5.28](https://github.com/vuejs/core/compare/v3.5.27...v3.5.28) (2026-02-09)
 
 
