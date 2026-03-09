@@ -61,9 +61,13 @@ expectType<JSX.Element>(
   />,
 )
 
-// allow class passthrough from attrs
+// allow class/style passthrough from attrs
 const attrs = useAttrs()
 expectType<JSX.Element>(<div class={attrs.class} />)
+expectType<JSX.Element>(<div style={attrs.style} />)
+
+// @ts-expect-error invalid class value
+;<div class={0} />
 
 // #7955
 expectType<JSX.Element>(<div style={[undefined, '', null, false]} />)
