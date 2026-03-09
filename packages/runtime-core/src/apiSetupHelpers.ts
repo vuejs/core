@@ -12,7 +12,9 @@ import {
   type SetupContext,
   createSetupContext,
   getCurrentInstance,
+  isInSSRComponentSetup,
   setCurrentInstance,
+  setInSSRSetupState,
   unsetCurrentInstance,
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
@@ -506,6 +508,7 @@ export function createPropsRestProxy(
  */
 export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   const ctx = getCurrentInstance()!
+  const inSSRSetup = isInSSRComponentSetup
   if (__DEV__ && !ctx) {
     warn(
       `withAsyncContext called without active current instance. ` +
@@ -514,6 +517,16 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   }
   let awaitable = getAwaitable()
   unsetCurrentInstance()
+  if (inSSRSetup) {
+    setInSSRSetupState(false)
+  }
+
+  const restore = () => {
+    setCurrentInstance(ctx)
+    if (inSSRSetup) {
+      setInSSRSetupState(true)
+    }
+  }
 
   // Never restore a captured "prev" instance here: in concurrent async setup
   // continuations it may belong to a sibling component and cause leaks.
@@ -522,11 +535,14 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   const cleanup = () => {
     if (getCurrentInstance() !== ctx) ctx.scope.off()
     unsetCurrentInstance()
+    if (inSSRSetup) {
+      setInSSRSetupState(false)
+    }
   }
 
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
-      setCurrentInstance(ctx)
+      restore()
       // Defer cleanup so the async function's catch continuation
       // still runs with the restored instance.
       Promise.resolve().then(() => Promise.resolve().then(cleanup))
@@ -536,7 +552,7 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   return [
     awaitable,
     () => {
-      setCurrentInstance(ctx)
+      restore()
       // Keep instance for the current continuation, then cleanup.
       Promise.resolve().then(cleanup)
     },
