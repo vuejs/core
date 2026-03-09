@@ -8,8 +8,9 @@ import {
 import selectorParser from 'postcss-selector-parser'
 import { warn } from '../warn'
 
-const animationNameRE = /^(-\w+-)?animation-name$/
-const animationRE = /^(-\w+-)?animation$/
+const animationNameRE = /^(?:-\w+-)?animation-name$/
+const animationRE = /^(?:-\w+-)?animation$/
+const keyframesRE = /^(?:-\w+-)?keyframes$/
 
 const scopedPlugin: PluginCreator<string> = (id = '') => {
   const keyframes = Object.create(null)
@@ -21,10 +22,7 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
       processRule(id, rule)
     },
     AtRule(node) {
-      if (
-        /-?keyframes$/.test(node.name) &&
-        !node.params.endsWith(`-${shortId}`)
-      ) {
+      if (keyframesRE.test(node.name) && !node.params.endsWith(`-${shortId}`)) {
         // register keyframes
         keyframes[node.params] = node.params = node.params + '-' + shortId
       }
@@ -72,7 +70,7 @@ function processRule(id: string, rule: Rule) {
     processedRules.has(rule) ||
     (rule.parent &&
       rule.parent.type === 'atrule' &&
-      /-?keyframes$/.test((rule.parent as AtRule).name))
+      keyframesRE.test((rule.parent as AtRule).name))
   ) {
     return
   }
@@ -102,7 +100,6 @@ function rewriteSelector(
   slotted = false,
 ) {
   let node: selectorParser.Node | null = null
-  let starNode: selectorParser.Node | null = null
   let shouldInject = !deep
   // find the last child node to insert attribute selector
   selector.each(n => {
@@ -217,21 +214,17 @@ function rewriteSelector(
           return false
         }
       }
-      // store the universal selector so it can be rewritten later
-      // .foo * -> .foo[xxxxxxx] [xxxxxxx]
-      starNode = n
+      // .foo * -> .foo[xxxxxxx] *
+      if (node) return
     }
 
     if (
-      (n.type !== 'pseudo' &&
-        n.type !== 'combinator' &&
-        n.type !== 'universal') ||
+      (n.type !== 'pseudo' && n.type !== 'combinator') ||
       (n.type === 'pseudo' &&
         (n.value === ':is' || n.value === ':where') &&
         !node)
     ) {
       node = n
-      starNode = null
     }
   })
 
@@ -279,20 +272,6 @@ function rewriteSelector(
         quoteMark: `"`,
       }),
     )
-    // Used for trailing universal selectors (#12906)
-    // `.foo * {}` -> `.foo[xxxxxxx] [xxxxxxx] {}`
-    if (starNode) {
-      selector.insertBefore(
-        starNode,
-        selectorParser.attribute({
-          attribute: idToAdd,
-          value: idToAdd,
-          raws: {},
-          quoteMark: `"`,
-        }),
-      )
-      selector.removeChild(starNode)
-    }
   }
 }
 

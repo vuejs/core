@@ -259,7 +259,9 @@ export type {
   ConcreteComponent,
   FunctionalComponent,
   ComponentInternalInstance,
+  Attrs,
   SetupContext,
+  AllowedAttrs,
   ComponentCustomProps,
   AllowedComponentProps,
   GlobalComponents,
@@ -327,6 +329,7 @@ export type {
   DirectiveHook,
   ObjectDirective,
   FunctionDirective,
+  DirectiveModifiers,
   DirectiveArguments,
 } from './directives'
 export type { SuspenseBoundary } from './components/Suspense'

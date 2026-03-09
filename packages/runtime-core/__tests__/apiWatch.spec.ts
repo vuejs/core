@@ -1595,7 +1595,7 @@ describe('api: watch', () => {
 
     num.value++
     await nextTick()
-    // would not be calld when value>1
+    // would not be called when value>1
     expect(spy1).toHaveBeenCalledTimes(1)
     expect(spy2).toHaveBeenCalledTimes(1)
   })
@@ -1687,6 +1687,57 @@ describe('api: watch', () => {
     arr.value.pop()
     await nextTick()
     expect(cb).toHaveBeenCalledTimes(4)
+  })
+
+  test('watching the same object at different depths', async () => {
+    const arr1: any[] = reactive([[[{ foo: {} }]]])
+    const arr2 = arr1[0]
+    const arr3 = arr2[0]
+    const obj = arr3[0]
+    arr1.push(arr3)
+
+    const cb1 = vi.fn()
+    const cb2 = vi.fn()
+    const cb3 = vi.fn()
+    const cb4 = vi.fn()
+    watch(arr1, cb1, { deep: 1 })
+    watch(arr1, cb2, { deep: 2 })
+    watch(arr1, cb3, { deep: 3 })
+    watch(arr1, cb4, { deep: 4 })
+
+    await nextTick()
+    expect(cb1).toHaveBeenCalledTimes(0)
+    expect(cb2).toHaveBeenCalledTimes(0)
+    expect(cb3).toHaveBeenCalledTimes(0)
+    expect(cb4).toHaveBeenCalledTimes(0)
+
+    obj.foo = {}
+    await nextTick()
+    expect(cb1).toHaveBeenCalledTimes(0)
+    expect(cb2).toHaveBeenCalledTimes(0)
+    expect(cb3).toHaveBeenCalledTimes(1)
+    expect(cb4).toHaveBeenCalledTimes(1)
+
+    obj.foo.bar = 1
+    await nextTick()
+    expect(cb1).toHaveBeenCalledTimes(0)
+    expect(cb2).toHaveBeenCalledTimes(0)
+    expect(cb3).toHaveBeenCalledTimes(1)
+    expect(cb4).toHaveBeenCalledTimes(2)
+
+    arr3.push(obj.foo)
+    await nextTick()
+    expect(cb1).toHaveBeenCalledTimes(0)
+    expect(cb2).toHaveBeenCalledTimes(1)
+    expect(cb3).toHaveBeenCalledTimes(2)
+    expect(cb4).toHaveBeenCalledTimes(3)
+
+    obj.foo.bar = 2
+    await nextTick()
+    expect(cb1).toHaveBeenCalledTimes(0)
+    expect(cb2).toHaveBeenCalledTimes(1)
+    expect(cb3).toHaveBeenCalledTimes(3)
+    expect(cb4).toHaveBeenCalledTimes(4)
   })
 
   test('pause / resume', async () => {
@@ -1874,7 +1925,7 @@ describe('api: watch', () => {
     expect(foo.value.a).toBe(2)
   })
 
-  test('watch immediate error in effect scope should be catched by onErrorCaptured', async () => {
+  test('watch immediate error in effect scope should be caught by onErrorCaptured', async () => {
     const warn = vi.spyOn(console, 'warn')
     warn.mockImplementation(() => {})
     const ERROR_IN_SCOPE = 'ERROR_IN_SCOPE'

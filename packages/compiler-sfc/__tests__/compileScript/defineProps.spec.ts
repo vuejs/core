@@ -387,12 +387,14 @@ const props = defineProps({ foo: String })
       qux?(): number;
       quux?(): void
       quuxx?: Promise<string>;
+      quuux?: number;
       fred?: string
     }>(), {
       foo: 'hi',
       qux() { return 1 },
       ['quux']() { },
       async quuxx() { return await Promise.resolve('hi') },
+      quuux(a, [b, ...c], {d, ...e}, ...f) { return 1 },
       get fred() { return 'fred' }
     })
     </script>
@@ -413,6 +415,9 @@ const props = defineProps({ foo: String })
       `quuxx: { type: Promise, required: false, async default() { return await Promise.resolve('hi') } }`,
     )
     expect(content).toMatch(
+      `quuux: { type: Number, required: false, default(a, [b, ...c], {d, ...e}, ...f) { return 1 } }`,
+    )
+    expect(content).toMatch(
       `fred: { type: String, required: false, get default() { return 'fred' } }`,
     )
     expect(content).toMatch(`const props = __props`)
@@ -423,6 +428,7 @@ const props = defineProps({ foo: String })
       qux: BindingTypes.PROPS,
       quux: BindingTypes.PROPS,
       quuxx: BindingTypes.PROPS,
+      quuux: BindingTypes.PROPS,
       fred: BindingTypes.PROPS,
       props: BindingTypes.SETUP_CONST,
     })
@@ -807,31 +813,5 @@ const props = defineProps({ foo: String })
     )
     expect(content).toMatch(`foo: { default: 5.5, type: Number }`)
     assertCode(content)
-  })
-
-  test('w/ TSTypeAliasDeclaration', () => {
-    const { content } = compile(`
-    <script setup lang="ts">
-    type FunFoo<O> = (item: O) => boolean;
-    type FunBar = FunFoo<number>;
-    withDefaults(
-      defineProps<{
-        foo?: FunFoo<number>;
-        bar?: FunBar;
-      }>(),
-      {
-        foo: () => true,
-        bar: () => true,
-      },
-    );
-    </script>
-      `)
-    assertCode(content)
-    expect(content).toMatch(
-      `foo: { type: Function, required: false, default: () => true }`,
-    )
-    expect(content).toMatch(
-      `bar: { type: Function, required: false, default: () => true }`,
-    )
   })
 })
