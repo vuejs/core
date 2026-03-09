@@ -81,19 +81,27 @@ export async function renderToString(
   vnode.appContext = input._context
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
-  const buffer = await renderComponentVNode(vnode)
+  try {
+    const buffer = await renderComponentVNode(vnode)
 
-  const result = await unrollBuffer(buffer as SSRBuffer)
+    const result = await unrollBuffer(buffer as SSRBuffer)
 
-  await resolveTeleports(context)
+    await resolveTeleports(context)
 
-  if (context.__watcherHandles) {
-    for (const unwatch of context.__watcherHandles) {
-      unwatch()
+    return result
+  } finally {
+    if (context.__watcherHandles) {
+      for (const unwatch of context.__watcherHandles) {
+        unwatch()
+      }
+    }
+    if (context.__instanceScopes) {
+      for (const scope of context.__instanceScopes) {
+        scope.stop()
+      }
+      context.__instanceScopes.length = 0
     }
   }
-
-  return result
 }
 
 export async function resolveTeleports(context: SSRContext): Promise<void> {

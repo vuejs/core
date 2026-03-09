@@ -73,20 +73,28 @@ export function renderToSimpleStream<T extends SimpleReadable>(
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
 
+  const cleanup = () => {
+    if (context.__watcherHandles) {
+      for (const unwatch of context.__watcherHandles) {
+        unwatch()
+      }
+    }
+    if (context.__instanceScopes) {
+      for (const scope of context.__instanceScopes) {
+        scope.stop()
+      }
+      context.__instanceScopes.length = 0
+    }
+  }
+
   Promise.resolve(renderComponentVNode(vnode))
     .then(buffer => unrollBuffer(buffer, stream))
     .then(() => resolveTeleports(context))
-    .then(() => {
-      if (context.__watcherHandles) {
-        for (const unwatch of context.__watcherHandles) {
-          unwatch()
-        }
-      }
-    })
     .then(() => stream.push(null))
     .catch(error => {
       stream.destroy(error)
     })
+    .finally(cleanup)
 
   return stream
 }

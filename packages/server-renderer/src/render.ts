@@ -11,6 +11,7 @@ import {
   type VNodeArrayChildren,
   type VNodeProps,
   mergeProps,
+  ssrContextKey,
   ssrUtils,
   warn,
 } from 'vue'
@@ -55,6 +56,10 @@ export type SSRContext = {
    * @internal
    */
   __watcherHandles?: (() => void)[]
+  /**
+   * @internal
+   */
+  __instanceScopes?: { stop: () => void }[]
 }
 
 // Each component has a buffer array.
@@ -98,6 +103,14 @@ export function renderComponentVNode(
     parentComponent,
     null,
   ))
+  const context = instance.appContext.provides[ssrContextKey as any] as
+    | SSRContext
+    | undefined
+  if (context) {
+    ;(context.__instanceScopes || (context.__instanceScopes = [])).push(
+      instance.scope,
+    )
+  }
   if (__DEV__) pushWarningContext(vnode)
   const res = setupComponent(instance, true /* isSSR */)
   if (__DEV__) popWarningContext()
