@@ -416,7 +416,7 @@ describe('renderer: fragment', () => {
     const root = nodeOps.createElement('div')
 
     const renderFn = () => {
-      return openBlock(true), createBlock(Fragment, null)
+      return (openBlock(true), createBlock(Fragment, null))
     }
 
     render(renderFn(), root)
