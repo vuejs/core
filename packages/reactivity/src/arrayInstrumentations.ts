@@ -322,7 +322,7 @@ function reduce(
       wrappedFn = function (this: unknown, acc, item, index) {
         if (wrapInitialAccumulator) {
           wrapInitialAccumulator = false
-          acc = toReactive(acc)
+          acc = toWrapped(self, acc)
         }
         return fn.call(this, acc, toWrapped(self, item), index, self)
       }
@@ -333,7 +333,7 @@ function reduce(
     }
   }
   const result = (arr[method] as any)(wrappedFn, ...args)
-  return wrapInitialAccumulator ? toReactive(result) : result
+  return wrapInitialAccumulator ? toWrapped(self, result) : result
 }
 
 // instrument identity-sensitive methods to account for reactive proxies
