@@ -71,6 +71,7 @@ export const transformSrcset: NodeTransform = (
 
           const shouldProcessUrl = (url: string) => {
             return (
+              url &&
               !isExternalUrl(url) &&
               !isDataUrl(url) &&
               (options.includeAbsolute || isRelativeUrl(url))
