@@ -21,7 +21,6 @@ import { type CompilerOptions, generate } from '../../src'
 import { FRAGMENT, RENDER_LIST, RENDER_SLOT } from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher } from '../testUtils'
-import { transformVBindShorthand } from '../../src/transforms/transformVBindShorthand'
 
 export function parseWithForTransform(
   template: string,
@@ -33,7 +32,6 @@ export function parseWithForTransform(
   const ast = parse(template, options)
   transform(ast, {
     nodeTransforms: [
-      transformVBindShorthand,
       transformIf,
       transformFor,
       ...(options.prefixIdentifiers ? [transformExpression] : []),

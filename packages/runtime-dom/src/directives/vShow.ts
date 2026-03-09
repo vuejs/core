@@ -9,9 +9,7 @@ export interface VShowElement extends HTMLElement {
   [vShowHidden]: boolean
 }
 
-export const vShow: ObjectDirective<VShowElement> & { name: 'show' } = {
-  // used for prop mismatch check during hydration
-  name: 'show',
+export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
   beforeMount(el, { value }, { transition }) {
     el[vShowOriginalDisplay] =
       el.style.display === 'none' ? '' : el.style.display
@@ -45,6 +43,10 @@ export const vShow: ObjectDirective<VShowElement> & { name: 'show' } = {
   beforeUnmount(el, { value }) {
     setDisplay(el, value)
   },
+}
+
+if (__DEV__) {
+  vShow.name = 'show'
 }
 
 function setDisplay(el: VShowElement, value: unknown): void {

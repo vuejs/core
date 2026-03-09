@@ -1,7 +1,5 @@
 import {
   escapeHtml,
-  isArray,
-  isObject,
   isRenderableAttrValue,
   isSVGTag,
   stringifyStyle,
@@ -14,7 +12,6 @@ import {
   isString,
   makeMap,
   normalizeClass,
-  normalizeCssVarValue,
   normalizeStyle,
   propsToAttrMap,
 } from '@vue/shared'
@@ -29,29 +26,21 @@ export function ssrRenderAttrs(
   tag?: string,
 ): string {
   let ret = ''
-  for (let key in props) {
+  for (const key in props) {
     if (
       shouldIgnoreProp(key) ||
       isOn(key) ||
-      (tag === 'textarea' && key === 'value') ||
-      // force as property (not rendered in SSR)
-      key.startsWith('.')
+      (tag === 'textarea' && key === 'value')
     ) {
       continue
     }
     const value = props[key]
-    // force as attribute
-    if (key.startsWith('^')) key = key.slice(1)
     if (key === 'class') {
       ret += ` class="${ssrRenderClass(value)}"`
     } else if (key === 'style') {
       ret += ` style="${ssrRenderStyle(value)}"`
     } else if (key === 'className') {
-      // className should not go through ssrRenderClass which normalizes non-string
-      // values into strings. it should coerce directly into strings
-      if (value != null) {
-        ret += ` class="${escapeHtml(String(value))}"`
-      }
+      ret += ` class="${String(value)}"`
     } else {
       ret += ssrRenderDynamicAttr(key, value, tag)
     }
@@ -104,22 +93,6 @@ export function ssrRenderStyle(raw: unknown): string {
   if (isString(raw)) {
     return escapeHtml(raw)
   }
-  const styles = normalizeStyle(ssrResetCssVars(raw))
+  const styles = normalizeStyle(raw)
   return escapeHtml(stringifyStyle(styles))
-}
-
-function ssrResetCssVars(raw: unknown) {
-  if (!isArray(raw) && isObject(raw)) {
-    const res: Record<string, unknown> = {}
-    for (const key in raw) {
-      // `:` prefixed keys are coming from `ssrCssVars`
-      if (key.startsWith(':--')) {
-        res[key.slice(1)] = normalizeCssVarValue(raw[key])
-      } else {
-        res[key] = raw[key]
-      }
-    }
-    return res
-  }
-  return raw
 }

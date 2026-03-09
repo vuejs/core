@@ -15,17 +15,13 @@
   } = Vue
 
   const Comp = {
-    props: {
-      value: Boolean,
-    },
-    setup(props) {
+    setup() {
       const count = ref(0)
       onMounted(() => {
         console.log('hydrated')
         window.isHydrated = true
       })
       return () => {
-        props.value
         return h('button', { onClick: () => count.value++ }, count.value)
       }
     },
@@ -41,9 +37,7 @@
       onMounted(() => {
         window.isRootMounted = true
       })
-
-      const show = (window.show = ref(true))
-      return () => h(AsyncComp, { value: show.value })
+      return () => h(AsyncComp)
     },
   }).mount('#app')
 </script>

@@ -8,9 +8,8 @@ import {
 import selectorParser from 'postcss-selector-parser'
 import { warn } from '../warn'
 
-const animationNameRE = /^(?:-\w+-)?animation-name$/
-const animationRE = /^(?:-\w+-)?animation$/
-const keyframesRE = /^(?:-\w+-)?keyframes$/
+const animationNameRE = /^(-\w+-)?animation-name$/
+const animationRE = /^(-\w+-)?animation$/
 
 const scopedPlugin: PluginCreator<string> = (id = '') => {
   const keyframes = Object.create(null)
@@ -22,7 +21,10 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
       processRule(id, rule)
     },
     AtRule(node) {
-      if (keyframesRE.test(node.name) && !node.params.endsWith(`-${shortId}`)) {
+      if (
+        /-?keyframes$/.test(node.name) &&
+        !node.params.endsWith(`-${shortId}`)
+      ) {
         // register keyframes
         keyframes[node.params] = node.params = node.params + '-' + shortId
       }
@@ -70,7 +72,7 @@ function processRule(id: string, rule: Rule) {
     processedRules.has(rule) ||
     (rule.parent &&
       rule.parent.type === 'atrule' &&
-      keyframesRE.test((rule.parent as AtRule).name))
+      /-?keyframes$/.test((rule.parent as AtRule).name))
   ) {
     return
   }

@@ -125,9 +125,7 @@ export interface ComponentOptionsBase<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
->
-  extends
-    LegacyOptions<Props, D, C, M, Mixin, Extends, I, II, Provide>,
+> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II, Provide>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -418,20 +416,20 @@ interface LegacyOptions<
   extends?: Extends
 
   // lifecycle
-  beforeCreate?(): any
-  created?(): any
-  beforeMount?(): any
-  mounted?(): any
-  beforeUpdate?(): any
-  updated?(): any
-  activated?(): any
-  deactivated?(): any
+  beforeCreate?(): void
+  created?(): void
+  beforeMount?(): void
+  mounted?(): void
+  beforeUpdate?(): void
+  updated?(): void
+  activated?(): void
+  deactivated?(): void
   /** @deprecated use `beforeUnmount` instead */
-  beforeDestroy?(): any
-  beforeUnmount?(): any
+  beforeDestroy?(): void
+  beforeUnmount?(): void
   /** @deprecated use `unmounted` instead */
-  destroyed?(): any
-  unmounted?(): any
+  destroyed?(): void
+  unmounted?(): void
   renderTracked?: DebuggerHook
   renderTriggered?: DebuggerHook
   errorCaptured?: ErrorCapturedHook
@@ -446,8 +444,8 @@ interface LegacyOptions<
    * #3468
    *
    * type-only, used to assist Mixin's type inference,
-   * TypeScript will try to simplify the inferred `Mixin` type,
-   * with the `__differentiator`, TypeScript won't be able to combine different mixins,
+   * typescript will try to simplify the inferred `Mixin` type,
+   * with the `__differentiator`, typescript won't be able to combine different mixins,
    * because the `__differentiator` will be different
    */
   __differentiator?: keyof D | keyof C | keyof M
@@ -758,7 +756,6 @@ export function applyOptions(instance: ComponentInternalInstance): void {
         Object.defineProperty(exposed, key, {
           get: () => publicThis[key],
           set: val => (publicThis[key] = val),
-          enumerable: true,
         })
       })
     } else if (!instance.exposed) {
@@ -854,7 +851,7 @@ export function createWatcher(
 ): void {
   let getter = key.includes('.')
     ? createPathGetter(publicThis, key)
-    : () => publicThis[key as keyof typeof publicThis]
+    : () => (publicThis as any)[key]
 
   const options: WatchOptions = {}
   if (__COMPAT__) {
@@ -1196,7 +1193,7 @@ export type ComponentOptionsWithoutProps<
       S,
       LC,
       Directives,
-      string
+      Exposed
     >
   >
 
@@ -1258,7 +1255,7 @@ export type ComponentOptionsWithArrayProps<
       S,
       LC,
       Directives,
-      string
+      Exposed
     >
   >
 

@@ -4,7 +4,6 @@ import {
   type IfBranchNode,
   type NodeTransform,
   NodeTypes,
-  isCommentOrWhitespace,
 } from '@vue/compiler-core'
 import { TRANSITION } from '../runtimeHelpers'
 import { DOMErrorCodes, createDOMCompilerError } from '../errors'
@@ -35,7 +34,7 @@ export const transformTransition: NodeTransform = (node, context) => {
           )
         }
 
-        // check if it's a single child w/ v-show
+        // check if it's s single child w/ v-show
         // if yes, inject "persisted: true" to the transition props
         const child = node.children[0]
         if (child.type === NodeTypes.ELEMENT) {
@@ -57,9 +56,11 @@ export const transformTransition: NodeTransform = (node, context) => {
 }
 
 function hasMultipleChildren(node: ComponentNode | IfBranchNode): boolean {
-  // filter out potential comment nodes (#1352) and whitespace (#4637)
+  // #1352 filter out potential comment nodes.
   const children = (node.children = node.children.filter(
-    c => !isCommentOrWhitespace(c),
+    c =>
+      c.type !== NodeTypes.COMMENT &&
+      !(c.type === NodeTypes.TEXT && !c.content.trim()),
   ))
   const child = children[0]
   return (

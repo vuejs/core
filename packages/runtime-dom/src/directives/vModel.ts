@@ -45,12 +45,6 @@ type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
   Modifiers
 >
 
-function castValue(value: string, trim?: boolean, number?: boolean | null) {
-  if (trim) value = value.trim()
-  if (number) value = looseToNumber(value)
-  return value
-}
-
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
@@ -63,11 +57,18 @@ export const vModelText: ModelDirective<
       number || (vnode.props && vnode.props.type === 'number')
     addEventListener(el, lazy ? 'change' : 'input', e => {
       if ((e.target as any).composing) return
-      el[assignKey](castValue(el.value, trim, castToNumber))
+      let domValue: string | number = el.value
+      if (trim) {
+        domValue = domValue.trim()
+      }
+      if (castToNumber) {
+        domValue = looseToNumber(domValue)
+      }
+      el[assignKey](domValue)
     })
-    if (trim || castToNumber) {
+    if (trim) {
       addEventListener(el, 'change', () => {
-        el.value = castValue(el.value, trim, castToNumber)
+        el.value = el.value.trim()
       })
     }
     if (!lazy) {

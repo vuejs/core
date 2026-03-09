@@ -264,11 +264,11 @@ export function watch(
                 : oldValue,
             boundCleanup,
           ]
-          oldValue = newValue
           call
             ? call(cb!, WatchErrorCodes.WATCH_CALLBACK, args)
             : // @ts-expect-error
               cb!(...args)
+          oldValue = newValue
         } finally {
           activeWatcher = currentWatcher
         }
@@ -331,17 +331,17 @@ export function watch(
 export function traverse(
   value: unknown,
   depth: number = Infinity,
-  seen?: Map<unknown, number>,
+  seen?: Set<unknown>,
 ): unknown {
   if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }
 
-  seen = seen || new Map()
-  if ((seen.get(value) || 0) >= depth) {
+  seen = seen || new Set()
+  if (seen.has(value)) {
     return value
   }
-  seen.set(value, depth)
+  seen.add(value)
   depth--
   if (isRef(value)) {
     traverse(value.value, depth, seen)

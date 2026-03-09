@@ -1,5 +1,6 @@
 import { isFunction } from '@vue/shared'
-import { currentInstance, getCurrentInstance } from './component'
+import { currentInstance } from './component'
+import { currentRenderingInstance } from './componentRenderContext'
 import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
 
@@ -11,12 +12,11 @@ export function provide<T, K = InjectionKey<T> | string | number>(
   key: K,
   value: K extends InjectionKey<infer V> ? V : T,
 ): void {
-  if (__DEV__) {
-    if (!currentInstance || currentInstance.isMounted) {
+  if (!currentInstance) {
+    if (__DEV__) {
       warn(`provide() can only be used inside setup().`)
     }
-  }
-  if (currentInstance) {
+  } else {
     let provides = currentInstance.provides
     // by default an instance inherits its parent's provides object
     // but when it needs to provide values of its own, it creates its
@@ -51,7 +51,7 @@ export function inject(
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component
-  const instance = getCurrentInstance()
+  const instance = currentInstance || currentRenderingInstance
 
   // also support looking up from app-level provides w/ `app.runWithContext()`
   if (instance || currentApp) {
@@ -59,12 +59,10 @@ export function inject(
     // to support `app.use` plugins,
     // fallback to appContext's `provides` if the instance is at root
     // #11488, in a nested createApp, prioritize using the provides from currentApp
-    // #13212, for custom elements we must get injected values from its appContext
-    // as it already inherits the provides object from the parent element
-    let provides = currentApp
+    const provides = currentApp
       ? currentApp._context.provides
       : instance
-        ? instance.parent == null || instance.ce
+        ? instance.parent == null
           ? instance.vnode.appContext && instance.vnode.appContext.provides
           : instance.parent.provides
         : undefined
@@ -90,5 +88,5 @@ export function inject(
  * user. One example is `useRoute()` in `vue-router`.
  */
 export function hasInjectionContext(): boolean {
-  return !!(getCurrentInstance() || currentApp)
+  return !!(currentInstance || currentRenderingInstance || currentApp)
 }

@@ -28,7 +28,6 @@ import {
   isReservedProp,
   isString,
   normalizeClass,
-  normalizeCssVarValue,
   normalizeStyle,
   stringifyStyle,
 } from '@vue/shared'
@@ -399,11 +398,9 @@ export function createHydrationFunctions(
           parentComponent.vnode.props.appear
 
         const content = (el as HTMLTemplateElement).content
-          .firstChild as Element & { $cls?: string }
+          .firstChild as Element
 
         if (needCallTransitionHooks) {
-          const cls = content.getAttribute('class')
-          if (cls) content.$cls = cls
           transition!.beforeEnter(content)
         }
 
@@ -460,22 +457,18 @@ export function createHydrationFunctions(
         ) {
           clientText = clientText.slice(1)
         }
-        const { textContent } = el
-        if (
-          textContent !== clientText &&
-          // innerHTML normalize \r\n or \r into a single \n in the DOM
-          textContent !== clientText.replace(/\r\n|\r/g, '\n')
-        ) {
+        if (el.textContent !== clientText) {
           if (!isMismatchAllowed(el, MismatchTypes.TEXT)) {
             ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
                 `Hydration text content mismatch on`,
                 el,
-                `\n  - rendered on server: ${textContent}` +
-                  `\n  - expected on client: ${clientText}`,
+                `\n  - rendered on server: ${el.textContent}` +
+                  `\n  - expected on client: ${vnode.children as string}`,
               )
             logMismatchError()
           }
+
           el.textContent = vnode.children as string
         }
       }
@@ -507,7 +500,7 @@ export function createHydrationFunctions(
               (isOn(key) && !isReservedProp(key)) ||
               // force hydrate v-bind with .prop modifiers
               key[0] === '.' ||
-              (isCustomElement && !isReservedProp(key))
+              isCustomElement
             ) {
               patchProp(el, key, null, props[key], undefined, parentComponent)
             }
@@ -793,7 +786,7 @@ export function createHydrationFunctions(
  * Dev only
  */
 function propHasMismatch(
-  el: Element & { $cls?: string },
+  el: Element,
   key: string,
   clientValue: any,
   vnode: VNode,
@@ -806,12 +799,7 @@ function propHasMismatch(
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
-    if (el.$cls) {
-      actual = el.$cls
-      delete el.$cls
-    } else {
-      actual = el.getAttribute('class')
-    }
+    actual = el.getAttribute('class')
     expected = normalizeClass(clientValue)
     if (!isSetEqual(toClassSet(actual || ''), toClassSet(expected))) {
       mismatchType = MismatchTypes.CLASS
@@ -950,8 +938,10 @@ function resolveCssVars(
   ) {
     const cssVars = instance.getCssVars()
     for (const key in cssVars) {
-      const value = normalizeCssVarValue(cssVars[key])
-      expectedMap.set(`--${getEscapedCssVarName(key, false)}`, value)
+      expectedMap.set(
+        `--${getEscapedCssVarName(key, false)}`,
+        String(cssVars[key]),
+      )
     }
   }
   if (vnode === root && instance.parent) {
@@ -1000,6 +990,6 @@ function isMismatchAllowed(
     if (allowedType === MismatchTypes.TEXT && list.includes('children')) {
       return true
     }
-    return list.includes(MismatchTypeString[allowedType])
+    return allowedAttr.split(',').includes(MismatchTypeString[allowedType])
   }
 }

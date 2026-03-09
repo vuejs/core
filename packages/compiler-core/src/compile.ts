@@ -22,7 +22,6 @@ import { transformModel } from './transforms/vModel'
 import { transformFilter } from './compat/transformFilter'
 import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
 import { transformMemo } from './transforms/vMemo'
-import { transformVBindShorthand } from './transforms/transformVBindShorthand'
 
 export type TransformPreset = [
   NodeTransform[],
@@ -34,7 +33,6 @@ export function getBaseTransformPreset(
 ): TransformPreset {
   return [
     [
-      transformVBindShorthand,
       transformOnce,
       transformIf,
       transformMemo,

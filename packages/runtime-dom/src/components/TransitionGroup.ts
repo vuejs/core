@@ -29,13 +29,8 @@ import {
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
-interface Position {
-  top: number
-  left: number
-}
-
-const positionMap = new WeakMap<VNode, Position>()
-const newPositionMap = new WeakMap<VNode, Position>()
+const positionMap = new WeakMap<VNode, DOMRect>()
+const newPositionMap = new WeakMap<VNode, DOMRect>()
 const moveCbKey = Symbol('_moveCb')
 const enterCbKey = Symbol('_enterCb')
 
@@ -86,7 +81,6 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
           moveClass,
         )
       ) {
-        prevChildren = []
         return
       }
 
@@ -97,7 +91,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
-      forceReflow(instance.vnode.el as Node)
+      forceReflow()
 
       movedChildren.forEach(c => {
         const el = c.el as ElementWithTransition
@@ -108,7 +102,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
           if (e && e.target !== el) {
             return
           }
-          if (!e || e.propertyName.endsWith('transform')) {
+          if (!e || /transform$/.test(e.propertyName)) {
             el.removeEventListener('transitionend', cb)
             ;(el as any)[moveCbKey] = null
             removeTransitionClass(el, moveClass)
@@ -116,7 +110,6 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
         })
         el.addEventListener('transitionend', cb)
       })
-      prevChildren = []
     })
 
     return () => {
@@ -150,7 +143,10 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
                 instance,
               ),
             )
-            positionMap.set(child, getPosition(child.el as HTMLElement))
+            positionMap.set(
+              child,
+              (child.el as Element).getBoundingClientRect(),
+            )
           }
         }
       }
@@ -191,7 +187,7 @@ function callPendingCbs(c: VNode) {
 }
 
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, getPosition(c.el as HTMLElement))
+  newPositionMap.set(c, (c.el as Element).getBoundingClientRect())
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
@@ -200,31 +196,10 @@ function applyTranslation(c: VNode): VNode | undefined {
   const dx = oldPos.left - newPos.left
   const dy = oldPos.top - newPos.top
   if (dx || dy) {
-    const el = c.el as HTMLElement
-    const s = el.style
-    const rect = el.getBoundingClientRect()
-    let scaleX = 1
-    let scaleY = 1
-    if (el.offsetWidth) scaleX = rect.width / el.offsetWidth
-    if (el.offsetHeight) scaleY = rect.height / el.offsetHeight
-    if (!Number.isFinite(scaleX) || scaleX === 0) scaleX = 1
-    if (!Number.isFinite(scaleY) || scaleY === 0) scaleY = 1
-    // Avoid division noise when scale is effectively 1.
-    if (Math.abs(scaleX - 1) < 0.01) scaleX = 1
-    if (Math.abs(scaleY - 1) < 0.01) scaleY = 1
-    s.transform = s.webkitTransform = `translate(${dx / scaleX}px,${
-      dy / scaleY
-    }px)`
+    const s = (c.el as HTMLElement).style
+    s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
     s.transitionDuration = '0s'
     return c
-  }
-}
-
-function getPosition(el: HTMLElement): Position {
-  const rect = el.getBoundingClientRect()
-  return {
-    left: rect.left,
-    top: rect.top,
   }
 }
 

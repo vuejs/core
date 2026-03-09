@@ -17,7 +17,6 @@ import {
   helperNameMap,
 } from '../../src/runtimeHelpers'
 import { transformExpression } from '../../src/transforms/transformExpression'
-import { transformVBindShorthand } from '../../src/transforms/transformVBindShorthand'
 
 function parseWithVBind(
   template: string,
@@ -26,7 +25,6 @@ function parseWithVBind(
   const ast = parse(template)
   transform(ast, {
     nodeTransforms: [
-      transformVBindShorthand,
       ...(options.prefixIdentifiers ? [transformExpression] : []),
       transformElement,
     ],
@@ -110,27 +108,6 @@ describe('compiler: transform v-bind', () => {
         isStatic: false,
       },
     })
-  })
-
-  test('no expression (shorthand) in-DOM templates', () => {
-    try {
-      __BROWSER__ = true
-      // :id in in-DOM templates will be parsed into :id="" by browser
-      const node = parseWithVBind(`<div :id="" />`)
-      const props = (node.codegenNode as VNodeCall).props as ObjectExpression
-      expect(props.properties[0]).toMatchObject({
-        key: {
-          content: `id`,
-          isStatic: true,
-        },
-        value: {
-          content: `id`,
-          isStatic: false,
-        },
-      })
-    } finally {
-      __BROWSER__ = false
-    }
   })
 
   test('dynamic arg', () => {

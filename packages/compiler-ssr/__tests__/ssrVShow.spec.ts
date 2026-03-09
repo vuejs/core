@@ -11,9 +11,9 @@ describe('ssr: v-show', () => {
       const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, {
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps({
           style: (_ctx.foo) ? null : { display: "none" }
-        }))}></div>\`)
+        }, _attrs))}></div>\`)
       }"
     `)
   })
@@ -90,24 +90,6 @@ describe('ssr: v-show', () => {
         }"></div></div>\`)
       }"
     `)
-  })
-
-  test('with style + display', () => {
-    expect(compileWithWrapper(`<div v-show="foo" style="display:flex" />`).code)
-      .toMatchInlineSnapshot(`
-        "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
-
-        return function ssrRender(_ctx, _push, _parent, _attrs) {
-          _push(\`<div\${
-            _ssrRenderAttrs(_attrs)
-          }><div style="\${
-            _ssrRenderStyle([
-              {"display":"flex"},
-              (_ctx.foo) ? null : { display: "none" }
-            ])
-          }"></div></div>\`)
-        }"
-      `)
   })
 
   test('with v-bind', () => {

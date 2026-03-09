@@ -10,16 +10,14 @@ import {
   warn,
   watch,
 } from '@vue/runtime-core'
-import { NOOP, ShapeFlags, normalizeCssVarValue } from '@vue/shared'
+import { NOOP, ShapeFlags } from '@vue/shared'
 
 export const CSS_VAR_TEXT: unique symbol = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
 /**
  * Runtime helper for SFC's CSS variable injection feature.
  * @private
  */
-export function useCssVars(
-  getter: (ctx: any) => Record<string, unknown>,
-): void {
+export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
   if (!__BROWSER__ && !__TEST__) return
 
   const instance = getCurrentInstance()
@@ -66,7 +64,7 @@ export function useCssVars(
   })
 }
 
-function setVarsOnVNode(vnode: VNode, vars: Record<string, unknown>) {
+function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
   if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     const suspense = vnode.suspense!
     vnode = suspense.activeBranch!
@@ -96,14 +94,13 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, unknown>) {
   }
 }
 
-function setVarsOnNode(el: Node, vars: Record<string, unknown>) {
+function setVarsOnNode(el: Node, vars: Record<string, string>) {
   if (el.nodeType === 1) {
     const style = (el as HTMLElement).style
     let cssText = ''
     for (const key in vars) {
-      const value = normalizeCssVarValue(vars[key])
-      style.setProperty(`--${key}`, value)
-      cssText += `--${key}: ${value};`
+      style.setProperty(`--${key}`, vars[key])
+      cssText += `--${key}: ${vars[key]};`
     }
     ;(style as any)[CSS_VAR_TEXT] = cssText
   }

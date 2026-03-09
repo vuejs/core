@@ -4,8 +4,6 @@ import {
   isReadonly,
   isRef,
   isShallow,
-  pauseTracking,
-  resetTracking,
   toRaw,
 } from '@vue/reactivity'
 import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
@@ -36,16 +34,13 @@ export function initCustomFormatter(): void {
       if (obj.__isVue) {
         return ['div', vueStyle, `VueInstance`]
       } else if (isRef(obj)) {
-        // avoid tracking during debugger accessing
-        pauseTracking()
-        const value = obj.value
-        resetTracking()
         return [
           'div',
           {},
           ['span', vueStyle, genRefFlag(obj)],
           '<',
-          formatValue(value),
+          // avoid debugger accessing value affecting behavior
+          formatValue('_value' in obj ? obj._value : obj),
           `>`,
         ]
       } else if (isReactive(obj)) {

@@ -114,7 +114,7 @@ export function processDefineModel(
   return true
 }
 
-export function genModelProps(ctx: ScriptCompileContext): string | undefined {
+export function genModelProps(ctx: ScriptCompileContext) {
   if (!ctx.hasDefineModelCall) return
 
   const isProd = !!ctx.options.isProd

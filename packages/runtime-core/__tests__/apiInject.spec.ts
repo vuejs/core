@@ -6,7 +6,6 @@ import {
   hasInjectionContext,
   inject,
   nextTick,
-  onMounted,
   provide,
   reactive,
   readonly,
@@ -371,48 +370,6 @@ describe('api: provide/inject', () => {
       createApp({}).runWithContext(() => {
         expect(hasInjectionContext()).toBe(true)
       })
-    })
-  })
-
-  describe('warnings for incorrect usage', () => {
-    it('should warn when inject() is called outside setup', () => {
-      inject('foo', 'bar')
-      expect(`inject() can only be used`).toHaveBeenWarned()
-    })
-
-    it('should warn when provide() is called outside setup', () => {
-      provide('foo', 'bar')
-      expect(`provide() can only be used`).toHaveBeenWarned()
-    })
-
-    it('should warn when provide() is called from a render function', () => {
-      const Provider = {
-        setup() {
-          return () => {
-            provide('foo', 'bar')
-          }
-        },
-      }
-
-      const root = nodeOps.createElement('div')
-      render(h(Provider), root)
-      expect(`provide() can only be used`).toHaveBeenWarned()
-    })
-
-    it('should warn when provide() is called from onMounted', () => {
-      const Provider = {
-        setup() {
-          onMounted(() => {
-            provide('foo', 'bar')
-          })
-
-          return () => null
-        },
-      }
-
-      const root = nodeOps.createElement('div')
-      render(h(Provider), root)
-      expect(`provide() can only be used`).toHaveBeenWarned()
     })
   })
 })

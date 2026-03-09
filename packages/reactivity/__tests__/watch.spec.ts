@@ -277,16 +277,4 @@ describe('watch', () => {
 
     expect(dummy).toEqual([1, 2, 3])
   })
-
-  test('watch with immediate reset and sync flush', () => {
-    const value = ref(false)
-
-    watch(value, () => {
-      value.value = false
-    })
-
-    value.value = true
-    value.value = true
-    expect(value.value).toBe(false)
-  })
 })

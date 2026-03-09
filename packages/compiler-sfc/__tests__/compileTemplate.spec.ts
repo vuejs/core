@@ -6,7 +6,6 @@ import {
 } from '../src/compileTemplate'
 import { type SFCTemplateBlock, parse } from '../src/parse'
 import { compileScript } from '../src'
-import { getPositionInCode } from './utils'
 
 function compile(opts: Omit<SFCTemplateCompileOptions, 'id'>) {
   return compileTemplate({
@@ -156,35 +155,6 @@ test('source map', () => {
   expect(
     consumer.originalPositionFor(getPositionInCode(code, 'foobar')),
   ).toMatchObject(getPositionInCode(template.content, `foobar`))
-})
-
-test('source map: v-if generated comment should not have original position', () => {
-  const template = parse(
-    `
-      <template>
-        <div v-if="true"></div>
-      </template>
-    `,
-    { filename: 'example.vue', sourceMap: true },
-  ).descriptor.template!
-
-  const { code, map } = compile({
-    filename: 'example.vue',
-    source: template.content,
-  })
-
-  expect(map!.sources).toEqual([`example.vue`])
-  expect(map!.sourcesContent).toEqual([template.content])
-
-  const consumer = new SourceMapConsumer(map as RawSourceMap)
-  const commentNode = code.match(/_createCommentVNode\("v-if", true\)/)
-  expect(commentNode).not.toBeNull()
-  const commentPosition = getPositionInCode(code, commentNode![0])
-  const originalPosition = consumer.originalPositionFor(commentPosition)
-  // the comment node should not be mapped to the original source
-  expect(originalPosition.column).toBeNull()
-  expect(originalPosition.line).toBeNull()
-  expect(originalPosition.source).toBeNull()
 })
 
 test('should work w/ AST from descriptor', () => {
@@ -513,21 +483,35 @@ test('non-identifier expression in legacy filter syntax', () => {
   }).not.toThrow()
 })
 
-test('prefixing props edge case in inline mode', () => {
-  const src = `
-  <script setup lang="ts">
-    defineProps<{ Foo: { Bar: unknown } }>()
-  </script>
-  <template>
-    <Foo.Bar/>
-  </template>
-  `
-  const { descriptor } = parse(src)
-  const { content } = compileScript(descriptor, {
-    id: 'xxx',
-    inlineTemplate: true,
-  })
+interface Pos {
+  line: number
+  column: number
+  name?: string
+}
 
-  expect(content).toMatchSnapshot()
-  expect(content).toMatch(`__props["Foo"]).Bar`)
-})
+function getPositionInCode(
+  code: string,
+  token: string,
+  expectName: string | boolean = false,
+): Pos {
+  const generatedOffset = code.indexOf(token)
+  let line = 1
+  let lastNewLinePos = -1
+  for (let i = 0; i < generatedOffset; i++) {
+    if (code.charCodeAt(i) === 10 /* newline char code */) {
+      line++
+      lastNewLinePos = i
+    }
+  }
+  const res: Pos = {
+    line,
+    column:
+      lastNewLinePos === -1
+        ? generatedOffset
+        : generatedOffset - lastNewLinePos - 1,
+  }
+  if (expectName) {
+    res.name = typeof expectName === 'string' ? expectName : token
+  }
+  return res
+}

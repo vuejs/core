@@ -167,25 +167,12 @@ describe('component: proxy', () => {
       data() {
         return {
           foo: 0,
-          $foo: 0,
         }
-      },
-      computed: {
-        cmp: () => {
-          throw new Error('value of cmp should not be accessed')
-        },
-        $cmp: () => {
-          throw new Error('value of $cmp should not be read')
-        },
       },
       setup() {
         return {
           bar: 1,
         }
-      },
-      __cssModules: {
-        $style: {},
-        cssStyles: {},
       },
       mounted() {
         instanceProxy = this
@@ -194,7 +181,6 @@ describe('component: proxy', () => {
 
     const app = createApp(Comp, { msg: 'hello' })
     app.config.globalProperties.global = 1
-    app.config.globalProperties.$global = 1
 
     app.mount(nodeOps.createElement('div'))
 
@@ -202,20 +188,12 @@ describe('component: proxy', () => {
     expect('msg' in instanceProxy).toBe(true)
     // data
     expect('foo' in instanceProxy).toBe(true)
-    expect('$foo' in instanceProxy).toBe(false)
-    // setupState
-    expect('bar' in instanceProxy).toBe(true)
     // ctx
-    expect('cmp' in instanceProxy).toBe(true)
-    expect('$cmp' in instanceProxy).toBe(true)
+    expect('bar' in instanceProxy).toBe(true)
     // public properties
     expect('$el' in instanceProxy).toBe(true)
-    // CSS modules
-    expect('$style' in instanceProxy).toBe(true)
-    expect('cssStyles' in instanceProxy).toBe(true)
     // global properties
     expect('global' in instanceProxy).toBe(true)
-    expect('$global' in instanceProxy).toBe(true)
 
     // non-existent
     expect('$foobar' in instanceProxy).toBe(false)
@@ -224,15 +202,11 @@ describe('component: proxy', () => {
     // #4962 triggering getter should not cause non-existent property to
     // pass the has check
     instanceProxy.baz
-    instanceProxy.$baz
     expect('baz' in instanceProxy).toBe(false)
-    expect('$baz' in instanceProxy).toBe(false)
 
     // set non-existent (goes into proxyTarget sink)
     instanceProxy.baz = 1
     expect('baz' in instanceProxy).toBe(true)
-    instanceProxy.$baz = 1
-    expect('$baz' in instanceProxy).toBe(true)
 
     // dev mode ownKeys check for console inspection
     // should only expose own keys
@@ -240,10 +214,7 @@ describe('component: proxy', () => {
       'msg',
       'bar',
       'foo',
-      'cmp',
-      '$cmp',
       'baz',
-      '$baz',
     ])
   })
 
@@ -341,10 +312,11 @@ describe('component: proxy', () => {
     const spy = vi.spyOn(instanceProxy, 'toggle')
     expect(getCalledTimes).toEqual(3)
 
+    // vitest does not cache the spy like jest do
     const v3 = instanceProxy.toggle()
     expect(v3).toEqual('b')
     expect(spy).toHaveBeenCalled()
-    expect(getCalledTimes).toEqual(3)
+    expect(getCalledTimes).toEqual(4)
   })
 
   test('defineProperty on proxy property with value descriptor', () => {

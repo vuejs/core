@@ -106,19 +106,7 @@ function shouldSetAsProp(
   // them as attributes.
   // Note that `contentEditable` doesn't have this problem: its DOM
   // property is also enumerated string values.
-  if (
-    key === 'spellcheck' ||
-    key === 'draggable' ||
-    key === 'translate' ||
-    key === 'autocorrect'
-  ) {
-    return false
-  }
-
-  // #13946 iframe.sandbox should always be set as attribute since setting
-  // the property to null results in 'null' string, and setting to empty string
-  // enables the most restrictive sandbox mode instead of no sandboxing.
-  if (key === 'sandbox' && el.tagName === 'IFRAME') {
+  if (key === 'spellcheck' || key === 'draggable' || key === 'translate') {
     return false
   }
 
@@ -161,7 +149,7 @@ function shouldSetAsProp(
 
 function shouldSetAsPropForVueCE(el: VueElement, key: string) {
   const props = // @ts-expect-error _def is private
-  el._def.props as Record<string, unknown> | string[] | undefined
+    el._def.props as Record<string, unknown> | string[] | undefined
   if (!props) {
     return false
   }

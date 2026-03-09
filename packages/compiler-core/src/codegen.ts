@@ -119,10 +119,8 @@ enum NewlineType {
   Unknown = -3,
 }
 
-export interface CodegenContext extends Omit<
-  Required<CodegenOptions>,
-  'bindingMetadata' | 'inline'
-> {
+export interface CodegenContext
+  extends Omit<Required<CodegenOptions>, 'bindingMetadata' | 'inline'> {
   source: string
   code: string
   line: number
@@ -190,9 +188,7 @@ function createCodegenContext(
               name = content
             }
           }
-          if (node.loc.source) {
-            addMapping(node.loc.start, name)
-          }
+          addMapping(node.loc.start, name)
         }
         if (newlineIndex === NewlineType.Unknown) {
           // multiple newlines, full iteration
@@ -229,7 +225,7 @@ function createCodegenContext(
             context.column = code.length - newlineIndex
           }
         }
-        if (node && node.loc !== locStub && node.loc.source) {
+        if (node && node.loc !== locStub) {
           addMapping(node.loc.end)
         }
       }

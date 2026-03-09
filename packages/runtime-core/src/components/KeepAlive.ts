@@ -187,11 +187,6 @@ const KeepAliveImpl: ComponentOptions = {
         // Update components tree
         devtoolsComponentAdded(instance)
       }
-
-      // for e2e test
-      if (__DEV__ && __BROWSER__) {
-        ;(instance as any).__keepAliveStorageContainer = storageContainer
-      }
     }
 
     function unmount(vnode: VNode) {
@@ -202,13 +197,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     function pruneCache(filter: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
-        // for async components, name check should be based in its loaded
-        // inner component if available
-        const name = getComponentName(
-          isAsyncWrapper(vnode)
-            ? (vnode.type as ComponentOptions).__asyncResolved || {}
-            : (vnode.type as ConcreteComponent),
-        )
+        const name = getComponentName(vnode.type as ConcreteComponent)
         if (name && !filter(name)) {
           pruneCacheEntry(key)
         }

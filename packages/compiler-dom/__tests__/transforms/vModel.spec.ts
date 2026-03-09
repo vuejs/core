@@ -3,7 +3,6 @@ import {
   generate,
   baseParse as parse,
   transform,
-  transformVBindShorthand,
 } from '@vue/compiler-core'
 import { transformModel } from '../../src/transforms/vModel'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
@@ -19,7 +18,7 @@ import {
 function transformWithModel(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
-    nodeTransforms: [transformVBindShorthand, transformElement],
+    nodeTransforms: [transformElement],
     directiveTransforms: {
       model: transformModel,
     },
@@ -59,14 +58,6 @@ describe('compiler: transform v-model', () => {
 
   test('simple expression for input (dynamic type)', () => {
     const root = transformWithModel('<input :type="foo" v-model="model" />')
-
-    expect(root.helpers).toContain(V_MODEL_DYNAMIC)
-    expect(generate(root).code).toMatchSnapshot()
-  })
-
-  // #13169
-  test('input with v-bind shorthand type after v-model should use dynamic model', () => {
-    const root = transformWithModel('<input v-model="model" :type/>')
 
     expect(root.helpers).toContain(V_MODEL_DYNAMIC)
     expect(generate(root).code).toMatchSnapshot()

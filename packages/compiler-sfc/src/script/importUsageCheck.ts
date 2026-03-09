@@ -4,7 +4,6 @@ import {
   NodeTypes,
   type SimpleExpressionNode,
   type TemplateChildNode,
-  isSimpleIdentifier,
   parserOptions,
   walkIdentifiers,
 } from '@vue/compiler-dom'
@@ -20,38 +19,16 @@ export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
   return resolveTemplateUsedIdentifiers(sfc).has(local)
 }
 
-const templateAnalysisCache = createCache<{
-  usedIds?: Set<string>
-  vModelIds: Set<string>
-}>()
-
-export function resolveTemplateVModelIdentifiers(
-  sfc: SFCDescriptor,
-): Set<string> {
-  return resolveTemplateAnalysisResult(sfc, false).vModelIds
-}
+const templateUsageCheckCache = createCache<Set<string>>()
 
 function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
-  return resolveTemplateAnalysisResult(sfc).usedIds!
-}
-
-function resolveTemplateAnalysisResult(
-  sfc: SFCDescriptor,
-  collectUsedIds = true,
-): {
-  usedIds?: Set<string>
-  vModelIds: Set<string>
-} {
   const { content, ast } = sfc.template!
-  const cached = templateAnalysisCache.get(content)
-  if (cached && (!collectUsedIds || cached.usedIds)) {
+  const cached = templateUsageCheckCache.get(content)
+  if (cached) {
     return cached
   }
 
-  // When `collectUsedIds` is false we skip the expensive identifier extraction
-  // and only collect `vModelIds`.
-  const ids = collectUsedIds ? new Set<string>() : undefined
-  const vModelIds = new Set<string>()
+  const ids = new Set<string>()
 
   ast!.children.forEach(walk)
 
@@ -64,56 +41,31 @@ function resolveTemplateAnalysisResult(
           !parserOptions.isNativeTag!(tag) &&
           !parserOptions.isBuiltInComponent!(tag)
         ) {
-          if (ids) {
-            ids.add(camelize(tag))
-            ids.add(capitalize(camelize(tag)))
-          }
+          ids.add(camelize(tag))
+          ids.add(capitalize(camelize(tag)))
         }
         for (let i = 0; i < node.props.length; i++) {
           const prop = node.props[i]
           if (prop.type === NodeTypes.DIRECTIVE) {
-            if (ids) {
-              if (!isBuiltInDirective(prop.name)) {
-                ids.add(`v${capitalize(camelize(prop.name))}`)
-              }
-            }
-
-            // collect v-model target identifiers (simple identifiers only)
-            if (prop.name === 'model') {
-              const exp = prop.exp
-              if (exp && exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-                const expString = exp.content.trim()
-                if (
-                  isSimpleIdentifier(expString) &&
-                  expString !== 'undefined'
-                ) {
-                  vModelIds.add(expString)
-                }
-              }
+            if (!isBuiltInDirective(prop.name)) {
+              ids.add(`v${capitalize(camelize(prop.name))}`)
             }
 
             // process dynamic directive arguments
-            if (
-              ids &&
-              prop.arg &&
-              !(prop.arg as SimpleExpressionNode).isStatic
-            ) {
+            if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
               extractIdentifiers(ids, prop.arg)
             }
 
-            if (ids) {
-              if (prop.name === 'for') {
-                extractIdentifiers(ids, prop.forParseResult!.source)
-              } else if (prop.exp) {
-                extractIdentifiers(ids, prop.exp)
-              } else if (prop.name === 'bind' && !prop.exp) {
-                // v-bind shorthand name as identifier
-                ids.add(camelize((prop.arg as SimpleExpressionNode).content))
-              }
+            if (prop.name === 'for') {
+              extractIdentifiers(ids, prop.forParseResult!.source)
+            } else if (prop.exp) {
+              extractIdentifiers(ids, prop.exp)
+            } else if (prop.name === 'bind' && !prop.exp) {
+              // v-bind shorthand name as identifier
+              ids.add(camelize((prop.arg as SimpleExpressionNode).content))
             }
           }
           if (
-            ids &&
             prop.type === NodeTypes.ATTRIBUTE &&
             prop.name === 'ref' &&
             prop.value?.content
@@ -124,14 +76,13 @@ function resolveTemplateAnalysisResult(
         node.children.forEach(walk)
         break
       case NodeTypes.INTERPOLATION:
-        if (ids) extractIdentifiers(ids, node.content)
+        extractIdentifiers(ids, node.content)
         break
     }
   }
 
-  const result = { usedIds: ids, vModelIds }
-  templateAnalysisCache.set(content, result)
-  return result
+  templateUsageCheckCache.set(content, ids)
+  return ids
 }
 
 function extractIdentifiers(ids: Set<string>, node: ExpressionNode) {

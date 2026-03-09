@@ -9,7 +9,6 @@ import type { BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
 import type { TypeScope } from './resolveType'
 import { warn } from '../warn'
-import { isJS, isTS } from './utils'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -88,8 +87,16 @@ export class ScriptCompileContext {
     const scriptLang = script && script.lang
     const scriptSetupLang = scriptSetup && scriptSetup.lang
 
-    this.isJS = isJS(scriptLang, scriptSetupLang)
-    this.isTS = isTS(scriptLang, scriptSetupLang)
+    this.isJS =
+      scriptLang === 'js' ||
+      scriptLang === 'jsx' ||
+      scriptSetupLang === 'js' ||
+      scriptSetupLang === 'jsx'
+    this.isTS =
+      scriptLang === 'ts' ||
+      scriptLang === 'tsx' ||
+      scriptSetupLang === 'ts' ||
+      scriptSetupLang === 'tsx'
 
     const customElement = options.customElement
     const filename = this.descriptor.filename
@@ -188,13 +195,7 @@ export function resolveParserPlugins(
     // should remove the jsx from user options
     userPlugins = userPlugins.filter(p => p !== 'jsx')
   }
-  if (
-    lang === 'ts' ||
-    lang === 'mts' ||
-    lang === 'tsx' ||
-    lang === 'cts' ||
-    lang === 'mtsx'
-  ) {
+  if (lang === 'ts' || lang === 'mts' || lang === 'tsx' || lang === 'mtsx') {
     plugins.push(['typescript', { dts }], 'explicitResourceManagement')
     if (!userPlugins || !userPlugins.includes('decorators')) {
       plugins.push('decorators-legacy')

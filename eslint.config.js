@@ -1,6 +1,5 @@
 import importX from 'eslint-plugin-import-x'
 import tseslint from 'typescript-eslint'
-import { defineConfig } from 'eslint/config'
 import vitest from '@vitest/eslint-plugin'
 import { builtinModules } from 'node:module'
 
@@ -13,7 +12,7 @@ const banConstEnum = {
     'Please use non-const enums. This project automatically inlines enums.',
 }
 
-export default defineConfig(
+export default tseslint.config(
   {
     files: ['**/*.js', '**/*.ts', '**/*.tsx'],
     extends: [tseslint.configs.base],
@@ -61,10 +60,7 @@ export default defineConfig(
       ],
       // This rule enforces the preference for using '@ts-expect-error' comments in TypeScript
       // code to indicate intentional type errors, improving code clarity and maintainability.
-      '@typescript-eslint/ban-ts-comment': [
-        'error',
-        { minimumDescriptionLength: 0 },
-      ],
+      '@typescript-eslint/prefer-ts-expect-error': 'error',
       // Enforce the use of 'import type' for importing types
       '@typescript-eslint/consistent-type-imports': [
         'error',

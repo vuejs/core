@@ -37,7 +37,6 @@ export function renderSlot(
       isAsyncWrapper(currentRenderingInstance!.parent) &&
       currentRenderingInstance!.parent.ce)
   ) {
-    const hasProps = Object.keys(props).length > 0
     // in custom element mode, render <slot/> as actual slot outlets
     // wrap it with a fragment because in shadowRoot: false mode the slot
     // element gets replaced by injected content
@@ -48,7 +47,7 @@ export function renderSlot(
         Fragment,
         null,
         [createVNode('slot', props, fallback && fallback())],
-        hasProps ? PatchFlags.BAIL : PatchFlags.STABLE_FRAGMENT,
+        PatchFlags.STABLE_FRAGMENT,
       )
     )
   }

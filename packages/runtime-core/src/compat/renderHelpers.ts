@@ -87,7 +87,7 @@ type LegacyScopedSlotsData = Array<
   | LegacyScopedSlotsData
 >
 
-export function legacyResolveScopedSlots(
+export function legacyresolveScopedSlots(
   fns: LegacyScopedSlotsData,
   raw?: Record<string, Slot>,
   // the following are added in 2.6

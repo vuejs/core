@@ -157,7 +157,7 @@ export function defineComponent<
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
-    props?: (keyof NoInfer<Props>)[]
+    props?: (keyof Props)[]
     emits?: E | EE[]
     slots?: S
   },
@@ -183,8 +183,8 @@ export function defineComponent<
 export function defineComponent<
   // props
   TypeProps,
-  RuntimePropsOptions extends ComponentObjectPropsOptions =
-    ComponentObjectPropsOptions,
+  RuntimePropsOptions extends
+    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
   RuntimePropsKeys extends string = string,
   // emits
   TypeEmits extends ComponentTypeEmits = {},
@@ -272,7 +272,7 @@ export function defineComponent<
         Slots,
         LocalComponents,
         Directives,
-        string
+        Exposed
       >
     >,
 ): DefineComponent<
@@ -301,7 +301,7 @@ export function defineComponent<
 >
 
 // implementation, close to no-op
-/*@__NO_SIDE_EFFECTS__*/
+/*! #__NO_SIDE_EFFECTS__ */
 export function defineComponent(
   options: unknown,
   extraOptions?: ComponentOptions,

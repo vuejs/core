@@ -37,7 +37,7 @@ import {
   helperNameMap,
 } from './runtimeHelpers'
 import { isVSlot } from './utils'
-import { cacheStatic, getSingleElementRoot } from './transforms/cacheStatic'
+import { cacheStatic, isSingleElementRoot } from './transforms/cacheStatic'
 import type { CompilerCompatOptions } from './compat/compatConfig'
 
 // There are two types of transforms:
@@ -82,8 +82,7 @@ export interface ImportItem {
 }
 
 export interface TransformContext
-  extends
-    Required<Omit<TransformOptions, keyof CompilerCompatOptions>>,
+  extends Required<Omit<TransformOptions, keyof CompilerCompatOptions>>,
     CompilerCompatOptions {
   selfName: string | null
   root: RootNode
@@ -357,12 +356,12 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
   const { helper } = context
   const { children } = root
   if (children.length === 1) {
-    const singleElementRootChild = getSingleElementRoot(root)
+    const child = children[0]
     // if the single child is an element, turn it into a block.
-    if (singleElementRootChild && singleElementRootChild.codegenNode) {
+    if (isSingleElementRoot(root, child) && child.codegenNode) {
       // single element root is never hoisted so codegenNode will never be
       // SimpleExpressionNode
-      const codegenNode = singleElementRootChild.codegenNode
+      const codegenNode = child.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
         convertToBlock(codegenNode, context)
       }
@@ -371,7 +370,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       // - single <slot/>, IfNode, ForNode: already blocks.
       // - single text node: always patched.
       // root codegen falls through via genNode()
-      root.codegenNode = children[0]
+      root.codegenNode = child
     }
   } else if (children.length > 1) {
     // root has multiple nodes - return a fragment block.
