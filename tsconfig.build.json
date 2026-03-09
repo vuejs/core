@@ -17,7 +17,6 @@
     "packages/runtime-dom/src",
     "packages/reactivity/src",
     "packages/shared/src",
-    "packages/global.d.ts",
     "packages/compiler-sfc/src",
     "packages/compiler-ssr/src",
     "packages/server-renderer/src"
