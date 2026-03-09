@@ -949,6 +949,52 @@ describe('defineCustomElement', () => {
       ])
     })
 
+    test('inject nested child component styles after HMR removes parent styles', async () => {
+      const Bar = defineComponent({
+        __hmrId: 'nested-child-style-hmr-bar',
+        styles: [`div { color: green; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const WrapperBar = defineComponent({
+        __hmrId: 'nested-child-style-hmr-wrapper',
+        styles: [`div { color: blue; }`],
+        render() {
+          return h(Bar)
+        },
+      })
+      const Foo = defineCustomElement({
+        styles: [`div { color: red; }`],
+        render() {
+          return h(WrapperBar)
+        },
+      })
+      customElements.define('my-el-with-hmr-nested-child-styles', Foo)
+      container.innerHTML = `<my-el-with-hmr-nested-child-styles></my-el-with-hmr-nested-child-styles>`
+      const el = container.childNodes[0] as VueElement
+
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: red; }`,
+      ])
+
+      __VUE_HMR_RUNTIME__.reload(WrapperBar.__hmrId!, {
+        ...WrapperBar,
+        styles: undefined,
+      } as any)
+      await nextTick()
+      assertStyles(el, [`div { color: green; }`, `div { color: red; }`])
+
+      __VUE_HMR_RUNTIME__.reload(Bar.__hmrId!, {
+        ...Bar,
+        styles: [`div { color: yellow; }`],
+      } as any)
+      await nextTick()
+      assertStyles(el, [`div { color: yellow; }`, `div { color: red; }`])
+    })
+
     test('inject child component styles when parent has no styles', async () => {
       const Baz = () => h(Bar)
       const Bar = defineComponent({
