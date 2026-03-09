@@ -159,6 +159,50 @@ describe('ssr: watch', () => {
     expect(beforeAwaitTriggered).toBe(false)
     expect(afterAwaitTriggered).toBe(false)
   })
+
+  test('should not run non-immediate watchers registered after async context restore on rejection', async () => {
+    const text = ref('start')
+    let beforeAwaitTriggered = false
+    let afterAwaitTriggered = false
+
+    const App = defineComponent({
+      async setup() {
+        let __temp: any, __restore: any
+
+        watch(text, () => {
+          beforeAwaitTriggered = true
+        })
+
+        try {
+          ;[__temp, __restore] = withAsyncContext(() =>
+            Promise.reject(new Error('failed')),
+          )
+          __temp = await __temp
+          __restore()
+        } catch {}
+
+        watch(text, () => {
+          afterAwaitTriggered = true
+        })
+
+        text.value = 'changed'
+        expect(beforeAwaitTriggered).toBe(false)
+        expect(afterAwaitTriggered).toBe(false)
+
+        return () => h('div', null, text.value)
+      },
+    })
+
+    const app = createSSRApp(App)
+    const ctx: SSRContext = {}
+    const html = await renderToString(app, ctx)
+
+    expect(ctx.__watcherHandles).toBeUndefined()
+    expect(html).toMatch('changed')
+    await nextTick()
+    expect(beforeAwaitTriggered).toBe(false)
+    expect(afterAwaitTriggered).toBe(false)
+  })
 })
 
 describe('ssr: watchEffect', () => {
