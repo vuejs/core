@@ -72,6 +72,14 @@ describe('compiler sfc: transform srcset', () => {
     ).toMatchSnapshot()
   })
 
+  test('transform empty srcset w/ includeAbsolute: true', () => {
+    expect(
+      compileWithSrcset(`<img srcset=" " />`, {
+        includeAbsolute: true,
+      }).code,
+    ).toMatchSnapshot()
+  })
+
   test('transform srcset w/ stringify', () => {
     const code = compileWithSrcset(
       `<div>${src}</div>`,

@@ -1722,6 +1722,107 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #13153
+    test(
+      'move kept-alive node before v-show transition leave finishes',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, ref } = (window as any).Vue
+          const show = ref(true)
+          createApp({
+            template: `
+            <div id="container">
+              <KeepAlive :include="['Comp1', 'Comp2']">
+                <component :is="state === 1 ? 'Comp1' : 'Comp2'"/>
+              </KeepAlive>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const state = ref(1)
+              const click = () => (state.value = state.value === 1 ? 2 : 1)
+              return { state, click }
+            },
+            components: {
+              Comp1: {
+                components: {
+                  Item: {
+                    name: 'Item',
+                    setup() {
+                      return { show }
+                    },
+                    template: `
+                      <Transition name="test">
+                        <div v-show="show" >
+                          <h2>{{ show ? "I should show" : "I shouldn't show " }}</h2>
+                        </div>
+                      </Transition>
+                    `,
+                  },
+                },
+                name: 'Comp1',
+                setup() {
+                  const toggle = () => (show.value = !show.value)
+                  return { show, toggle }
+                },
+                template: `
+                  <Item />
+                  <h2>This is page1</h2>
+                  <button id="changeShowBtn" @click="toggle">{{ show }}</button>
+                `,
+              },
+              Comp2: {
+                name: 'Comp2',
+                template: `<h2>This is page2</h2>`,
+              },
+            },
+          }).mount('#app')
+        })
+
+        expect(await html('#container')).toBe(
+          `<div><h2>I should show</h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">true</button>`,
+        )
+
+        // trigger v-show transition leave
+        await click('#changeShowBtn')
+        await nextTick()
+        expect(await html('#container')).toBe(
+          `<div class="test-leave-from test-leave-active"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+
+        // switch to page2, before leave finishes
+        // expect v-show element's display to be none
+        await click('#toggleBtn')
+        await nextTick()
+        expect(await html('#container')).toBe(
+          `<div class="test-leave-from test-leave-active" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page2</h2>`,
+        )
+
+        // switch back to page1
+        // expect v-show element's display to be none
+        await click('#toggleBtn')
+        await nextTick()
+        expect(await html('#container')).toBe(
+          `<div class="test-enter-from test-enter-active" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          `<div class="" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with Suspense', () => {
@@ -3235,6 +3336,76 @@ describe('e2e: Transition', () => {
       await transitionFinish()
       expect(await html('#container')).toBe(
         '<!-- Broken! --><div class="test"><div>content</div></div>',
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  // #12091
+  test(
+    'prevent enter when leaving',
+    async () => {
+      const hooks: string[] = []
+      const pushHook = (hook: string) => hooks.push(hook)
+      await page().exposeFunction('pushHook', pushHook)
+      await page().evaluate(() => {
+        const { pushHook } = window as any
+        const { createApp, ref } = (window as any).Vue
+        const visible = ref(true)
+        createApp({
+          components: {
+            Comp: {
+              setup() {
+                visible.value = false
+                return () => null
+              },
+            },
+          },
+          template: `
+            <div id="content" v-if="toggle">
+              <div id="container">
+                <transition
+                  appear
+                  @before-enter="pushHook('beforeEnter')"
+                  @enter="pushHook('enter')"
+                  @enter-cancelled="pushHook('enterCancelled')"
+                  @after-enter="pushHook('afterEnter')"
+                  @before-leave="pushHook('beforeLeave')"
+                  @leave="pushHook('leave')"
+                  @after-leave="pushHook('afterLeave')"
+                >
+                  <div v-if="visible">content</div>
+                </transition>
+              </div>
+              <Comp />
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const toggle = ref(false)
+            const click = () => (toggle.value = !toggle.value)
+            return {
+              toggle,
+              click,
+              pushHook,
+              visible,
+            }
+          },
+        }).mount('#app')
+      })
+
+      await click('#toggleBtn')
+      await nextTick()
+      await transitionFinish()
+
+      expect(hooks).toStrictEqual([
+        'beforeEnter',
+        'beforeLeave',
+        'leave',
+        'afterLeave',
+      ])
+      expect(await html('#content')).toBe(
+        '<div id="container"><!--v-if--></div><!---->',
       )
     },
     E2E_TIMEOUT,

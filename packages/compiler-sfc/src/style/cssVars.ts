@@ -40,7 +40,8 @@ function genVarName(
   isSSR = false,
 ): string {
   if (isProd) {
-    return hash(id + raw)
+    // hash must not start with a digit to comply with CSS custom property naming rules
+    return hash(id + raw).replace(/^\d/, r => `v${r}`)
   } else {
     // escape ASCII Punctuation & Symbols
     // #7823 need to double-escape in SSR because the attributes are rendered

@@ -8,14 +8,14 @@ It can also be used as a reference for implementing a custom renderer.
 import { h, render, nodeOps, dumpOps } from '@vue/runtime-test'
 
 const App = {
-  data () {
+  data() {
     return {
-      msg: 'Hello World!'
+      msg: 'Hello World!',
     }
-  }
-  render () {
+  },
+  render() {
     return h('div', this.msg)
-  }
+  },
 }
 
 // root is of type `TestElement` as defined in src/nodeOps.ts

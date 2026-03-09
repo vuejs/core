@@ -17,6 +17,7 @@ import {
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
+export { nodeOps, patchProp }
 // Importing from the compiler, will be tree-shaken in prod
 import {
   NOOP,
@@ -32,14 +33,14 @@ import type { TransitionGroupProps } from './components/TransitionGroup'
 import type { vShow } from './directives/vShow'
 import type { VOnDirective } from './directives/vOn'
 import type { VModelDirective } from './directives/vModel'
+import type { ClassValue, StyleValue } from './jsx'
 
 /**
  * This is a stub implementation to prevent the need to use dom types.
  *
  * To enable proper types, add `"dom"` to `"lib"` in your `tsconfig.json`.
  */
-type DomStub = {}
-type DomType<T> = typeof globalThis extends { window: unknown } ? T : DomStub
+type DomType<T> = typeof globalThis extends { window: unknown } ? T : never
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
@@ -48,6 +49,11 @@ declare module '@vue/reactivity' {
 }
 
 declare module '@vue/runtime-core' {
+  interface AllowedAttrs {
+    class?: ClassValue
+    style?: StyleValue
+  }
+
   interface GlobalComponents {
     Transition: DefineComponent<TransitionProps>
     TransitionGroup: DefineComponent<TransitionGroupProps>
@@ -119,7 +125,7 @@ export const createApp = ((...args) => {
       if (__COMPAT__ && __DEV__ && container.nodeType === 1) {
         for (let i = 0; i < (container as Element).attributes.length; i++) {
           const attr = (container as Element).attributes[i]
-          if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+          if (attr.name !== 'v-cloak' && /^(?:v-|:|@)/.test(attr.name)) {
             compatUtils.warnDeprecation(
               DeprecationTypes.GLOBAL_MOUNT_CONTAINER,
               null,

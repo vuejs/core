@@ -172,6 +172,19 @@ describe('reactivity/readonly', () => {
       expect(dummy).toBe(1)
       expect(`target is readonly`).toHaveBeenWarnedTimes(2)
     })
+
+    it('should maintain identity when iterating readonly ref array', () => {
+      const list = readonly(ref([{}, {}, {}]))
+      const computedList = computed(() => {
+        const newList: any[] = []
+        list.value.forEach(x => newList.push(x))
+        return newList
+      })
+
+      expect(list.value[0]).toBe(computedList.value[0])
+      expect(isReadonly(computedList.value[0])).toBe(true)
+      expect(isReactive(computedList.value[0])).toBe(true)
+    })
   })
 
   const maps = [Map, WeakMap]
@@ -498,9 +511,10 @@ describe('reactivity/readonly', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
-    expect(() => {
-      obj.ror = true
-    }).toThrow()
+    obj.ror = true
+    expect(
+      `Set operation on key "ror" failed: target is readonly.`,
+    ).toHaveBeenWarned()
     expect(obj.ror).toBe(false)
   })
 
@@ -520,6 +534,16 @@ describe('reactivity/readonly', () => {
     obj.r = ro
     expect(obj.r).toBe(ro)
     expect(r.value).toBe(ro)
+  })
+
+  test('should keep nested ref readonly', () => {
+    const items = ref(['one', 'two', 'three'])
+    const obj = {
+      o: readonly({
+        items,
+      }),
+    }
+    expect(isReadonly(obj.o.items)).toBe(true)
   })
 })
 
