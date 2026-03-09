@@ -86,7 +86,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
-import type { VueElement } from '@vue/runtime-dom'
+import type { ComponentCustomElementInterface } from './component'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -500,27 +500,7 @@ function baseCreateRenderer(
     } else {
       const el = (n2.el = n1.el!)
       if (n2.children !== n1.children) {
-        // We don't inherit el for cached text nodes in `traverseStaticChildren`
-        // to avoid retaining detached DOM nodes. However, the text node may be
-        // changed during HMR. In this case we need to replace the old text node
-        // with the new one.
-        if (
-          __DEV__ &&
-          isHmrUpdating &&
-          n2.patchFlag === PatchFlags.CACHED &&
-          '__elIndex' in n1
-        ) {
-          const childNodes = __TEST__
-            ? container.children
-            : container.childNodes
-          const newChild = hostCreateText(n2.children as string)
-          const oldChild =
-            childNodes[((n2 as any).__elIndex = (n1 as any).__elIndex)]
-          hostInsert(newChild, container, oldChild)
-          hostRemove(oldChild)
-        } else {
-          hostSetText(el, n2.children as string)
-        }
+        hostSetText(el, n2.children as string)
       }
     }
   }
@@ -641,9 +621,10 @@ function baseCreateRenderer(
         optimized,
       )
     } else {
-      const customElement = !!(n1.el && (n1.el as VueElement)._isVueCE)
-        ? (n1.el as VueElement)
-        : null
+      const customElement =
+        n1.el && (n1.el as ComponentCustomElementInterface)._isVueCE
+          ? (n1.el as ComponentCustomElementInterface)
+          : null
       try {
         if (customElement) {
           customElement._beginPatch()
@@ -1385,11 +1366,7 @@ function baseCreateRenderer(
           }
         } else {
           // custom element style injection
-          if (
-            root.ce &&
-            // @ts-expect-error _def is private
-            (root.ce as VueElement)._def.shadowRoot !== false
-          ) {
+          if (root.ce && root.ce._hasShadowRoot()) {
             root.ce._injectChildStyle(type)
           }
 
@@ -1486,9 +1463,9 @@ function baseCreateRenderer(
             // and continue the rest of operations once the deps are resolved
             nonHydratedAsyncRoot.asyncDep!.then(() => {
               // the instance may be destroyed during the time period
-              if (!instance.isUnmounted) {
-                componentUpdateFn()
-              }
+              queuePostRenderEffect(() => {
+                if (!instance.isUnmounted) update()
+              }, parentSuspense)
             })
             return
           }
@@ -2521,15 +2498,10 @@ export function traverseStaticChildren(
       // #6852 also inherit for text nodes
       if (c2.type === Text) {
         // avoid cached text nodes retaining detached dom nodes
-        if (c2.patchFlag !== PatchFlags.CACHED) {
-          c2.el = c1.el
-        } else {
-          // cache the child index for HMR updates
-          ;(c2 as any).__elIndex =
-            i +
-            // take fragment start anchor into account
-            (n1.type === Fragment ? 1 : 0)
+        if (c2.patchFlag === PatchFlags.CACHED) {
+          c2 = ch2[i] = cloneIfMounted(c2)
         }
+        c2.el = c1.el
       }
       // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
       // would have received .el during block patch)

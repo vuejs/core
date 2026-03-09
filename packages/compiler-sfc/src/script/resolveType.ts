@@ -74,6 +74,7 @@ export type SimpleTypeResolveContext = Pick<
 
   // utils
   | 'error'
+  | 'warn'
   | 'helper'
   | 'getString'
 
@@ -95,7 +96,12 @@ export type SimpleTypeResolveContext = Pick<
     options: SimpleTypeResolveOptions
   }
 
-export type TypeResolveContext = ScriptCompileContext | SimpleTypeResolveContext
+export type TypeResolveContext = (
+  | ScriptCompileContext
+  | SimpleTypeResolveContext
+) & {
+  silentOnExtendsFailure?: boolean
+}
 
 type Import = Pick<ImportBinding, 'source' | 'imported'>
 
@@ -429,16 +435,21 @@ function resolveInterfaceMembers(
           ;(base.calls || (base.calls = [])).push(...calls)
         }
       } catch (e) {
-        ctx.error(
-          `Failed to resolve extends base type.\nIf this previously worked in 3.2, ` +
-            `you can instruct the compiler to ignore this extend by adding ` +
-            `/* @vue-ignore */ before it, for example:\n\n` +
-            `interface Props extends /* @vue-ignore */ Base {}\n\n` +
-            `Note: both in 3.2 or with the ignore, the properties in the base ` +
-            `type are treated as fallthrough attrs at runtime.`,
-          ext,
-          scope,
-        )
+        // when called from inferRuntimeType context, silently ignore extends
+        // resolution failure so that properties defined in the interface can
+        // still be correctly resolved
+        if (!ctx.silentOnExtendsFailure) {
+          ctx.error(
+            `Failed to resolve extends base type.\nIf this previously worked in 3.2, ` +
+              `you can instruct the compiler to ignore this extend by adding ` +
+              `/* @vue-ignore */ before it, for example:\n\n` +
+              `interface Props extends /* @vue-ignore */ Base {}\n\n` +
+              `Note: both in 3.2 or with the ignore, the properties in the base ` +
+              `type are treated as fallthrough attrs at runtime.`,
+            ext,
+            scope,
+          )
+        }
       }
     }
   }
@@ -975,16 +986,35 @@ function importSourceToScope(
 }
 
 function resolveExt(filename: string, fs: FS) {
+  // Keep the import's module kind so we can mirror TS NodeNext fallback order.
+  let moduleType: /*cjs*/ 'c' | /*mjs*/ 'm' | /*unknown*/ 'u' = 'u'
+  if (filename.endsWith('.mjs')) {
+    moduleType = 'm'
+  } else if (filename.endsWith('.cjs')) {
+    moduleType = 'c'
+  }
   // #8339 ts may import .js but we should resolve to corresponding ts or d.ts
-  filename = filename.replace(/\.js$/, '')
+  filename = filename.replace(/\.[cm]?jsx?$/, '')
   const tryResolve = (filename: string) => {
     if (fs.fileExists(filename)) return filename
   }
-  return (
-    tryResolve(filename) ||
+  const resolveTs = () =>
     tryResolve(filename + `.ts`) ||
     tryResolve(filename + `.tsx`) ||
-    tryResolve(filename + `.d.ts`) ||
+    tryResolve(filename + `.d.ts`)
+  const resolveMts = () =>
+    tryResolve(filename + `.mts`) || tryResolve(filename + `.d.mts`)
+  const resolveCts = () =>
+    tryResolve(filename + `.cts`) || tryResolve(filename + `.d.cts`)
+
+  return (
+    tryResolve(filename) ||
+    // For explicit .mjs/.cjs imports, prefer .mts/.cts declarations first.
+    (moduleType === 'm'
+      ? resolveMts() || resolveTs()
+      : moduleType === 'c'
+        ? resolveCts() || resolveTs()
+        : resolveTs() || resolveMts() || resolveCts()) ||
     tryResolve(joinPaths(filename, `index.ts`)) ||
     tryResolve(joinPaths(filename, `index.tsx`)) ||
     tryResolve(joinPaths(filename, `index.d.ts`))
@@ -1167,12 +1197,18 @@ function parseFile(
   parserPlugins?: SFCScriptCompileOptions['babelParserPlugins'],
 ): Statement[] {
   const ext = extname(filename)
-  if (ext === '.ts' || ext === '.mts' || ext === '.tsx' || ext === '.mtsx') {
+  if (
+    ext === '.ts' ||
+    ext === '.mts' ||
+    ext === '.tsx' ||
+    ext === '.cts' ||
+    ext === '.mtsx'
+  ) {
     return babelParse(content, {
       plugins: resolveParserPlugins(
         ext.slice(1),
         parserPlugins,
-        /\.d\.m?ts$/.test(filename),
+        /\.d\.[cm]?ts$/.test(filename),
       ),
       sourceType: 'module',
     }).program.body
@@ -1388,6 +1424,18 @@ function recordType(
     case 'TSInterfaceDeclaration':
     case 'TSEnumDeclaration':
     case 'TSModuleDeclaration': {
+      // Handle `declare global { ... }` blocks by recursively processing their contents
+      if (node.type === 'TSModuleDeclaration' && node.global) {
+        const body = node.body as TSModuleBlock
+        for (const s of body.body) {
+          if (s.type === 'ExportNamedDeclaration' && s.declaration) {
+            recordType(s.declaration, types, declares)
+          } else {
+            recordType(s, types, declares)
+          }
+        }
+        break
+      }
       const id = overwriteId || getId(node.id)
       let existing = types[id]
       if (existing) {
@@ -1518,6 +1566,10 @@ export function inferRuntimeType(
   ) {
     return [UNKNOWN_TYPE]
   }
+
+  // set flag to silence extends resolution errors in this context
+  const prevSilent = ctx.silentOnExtendsFailure
+  ctx.silentOnExtendsFailure = true
 
   try {
     switch (node.type) {
@@ -1886,6 +1938,8 @@ export function inferRuntimeType(
     }
   } catch (e) {
     // always soft fail on failed runtime type inference
+  } finally {
+    ctx.silentOnExtendsFailure = prevSilent
   }
   return [UNKNOWN_TYPE] // no runtime check
 }
@@ -1898,13 +1952,25 @@ function flattenTypes(
   typeParameters: Record<string, Node> | undefined = undefined,
 ): string[] {
   if (types.length === 1) {
-    return inferRuntimeType(ctx, types[0], scope, isKeyOf, typeParameters)
+    return inferRuntimeType(
+      ctx,
+      types[0],
+      (types[0] as MaybeWithScope)._ownerScope || scope,
+      isKeyOf,
+      typeParameters,
+    )
   }
   return [
     ...new Set(
       ([] as string[]).concat(
         ...types.map(t =>
-          inferRuntimeType(ctx, t, scope, isKeyOf, typeParameters),
+          inferRuntimeType(
+            ctx,
+            t,
+            (t as MaybeWithScope)._ownerScope || scope,
+            isKeyOf,
+            typeParameters,
+          ),
         ),
       ),
     ),

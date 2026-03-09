@@ -45,7 +45,7 @@ jobs:
           echo ${{ github.base_ref }} > ./temp/size/base.txt
 
       - name: Upload Size Data
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: size-data
           path: temp/size

@@ -711,6 +711,27 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
     })
 
+    // #12408
+    test('should set number tabindex as attribute', () => {
+      render(h('my-el-attrs', { tabindex: 1, 'data-test': true }), container)
+      const el = container.children[0] as HTMLElement
+      expect(el.getAttribute('tabindex')).toBe('1')
+      expect(el.getAttribute('data-test')).toBe('true')
+    })
+
+    test('should keep undeclared native attrs as attrs', () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      render(h('my-el-attrs', { translate: 'no' }), root)
+      const el = root.children[0] as HTMLElement
+      expect(el.getAttribute('translate')).toBe('no')
+      expect(el.translate).toBe(false)
+
+      render(null, root)
+      root.remove()
+    })
+
     // https://github.com/vuejs/core/issues/12964
     // Disabled because of missing support for `delegatesFocus` in jsdom
     // https://github.com/jsdom/jsdom/issues/3418
@@ -993,6 +1014,31 @@ describe('defineCustomElement', () => {
       expect(consumer.shadowRoot!.innerHTML).toBe(
         `<div>changedA! changedB!</div>`,
       )
+    })
+
+    test('should resolve correct parent when element is slotted in shadow DOM', async () => {
+      const GrandParent = defineCustomElement({
+        provide: {
+          foo: ref('GrandParent'),
+        },
+        render() {
+          return h('my-parent-in-shadow', h('slot'))
+        },
+      })
+      const Parent = defineCustomElement({
+        provide: {
+          foo: ref('Parent'),
+        },
+        render() {
+          return h('slot')
+        },
+      })
+      customElements.define('my-grand-parent', GrandParent)
+      customElements.define('my-parent-in-shadow', Parent)
+      container.innerHTML = `<my-grand-parent><my-consumer></my-consumer></my-grand-parent>`
+      const grandParent = container.childNodes[0] as VueElement,
+        consumer = grandParent.firstElementChild as VueElement
+      expect(consumer.shadowRoot!.textContent).toBe('Parent')
     })
 
     // #13212
@@ -1306,6 +1352,42 @@ describe('defineCustomElement', () => {
 
       e2.msg = 'hello'
       expect(e2.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+    })
+
+    test('render object prop before resolve', async () => {
+      const AsyncComp = defineComponent({
+        props: { value: Object },
+        render(this: any) {
+          return h('div', this.value.x)
+        },
+      })
+      let resolve!: (comp: typeof AsyncComp) => void
+      const p = new Promise<typeof AsyncComp>(res => {
+        resolve = res
+      })
+      const E = defineCustomElement(defineAsyncComponent(() => p))
+      customElements.define('my-el-async-object-prop', E)
+
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const value = { x: 1 }
+
+      render(h('my-el-async-object-prop', { value }), root)
+
+      const el = root.children[0] as VueElement & { value: typeof value }
+      expect(el.value).toBe(value)
+      expect(el.getAttribute('value')).toBe(null)
+
+      resolve(AsyncComp)
+
+      await new Promise(r => setTimeout(r))
+
+      expect(el.value).toBe(value)
+      expect(el.getAttribute('value')).toBe(null)
+      expect(el.shadowRoot!.innerHTML).toBe(`<div>1</div>`)
+
+      render(null, root)
+      root.remove()
     })
 
     test('Number prop casting before resolve', async () => {
