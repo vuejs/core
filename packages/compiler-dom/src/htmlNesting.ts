@@ -11,6 +11,11 @@
  * returns true if given parent-child nesting is valid HTML
  */
 export function isValidHTMLNesting(parent: string, child: string): boolean {
+  // if the parent is a template, it can have any child
+  if (parent === 'template') {
+    return true
+  }
+
   // if we know the list of children that are the only valid children for the given parent
   if (parent in onlyValidChildren) {
     return onlyValidChildren[parent].has(child)
