@@ -632,11 +632,11 @@ export class VueElement
       s.textContent = styles[i]
 
       root.insertBefore(s, last || insertionAnchor)
-      if (!parentComp) {
-        this._styleAnchors.set(this._def, s)
-      }
       last = s
-      if (owner && i === 0) this._styleAnchors.set(owner, s)
+      if (i === 0) {
+        if (!parentComp) this._styleAnchors.set(this._def, s)
+        if (owner) this._styleAnchors.set(owner, s)
+      }
 
       // record for HMR
       if (__DEV__) {
