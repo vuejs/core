@@ -24,10 +24,8 @@ import {
 } from './insertionState'
 import {
   advanceHydrationNode,
-  currentHydrationNode,
-  isComment,
+  consumeFragmentAnchor,
   isHydrating,
-  setCurrentHydrationNode,
 } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
 import type { KeepAliveInstance } from './components/KeepAlive'
@@ -74,14 +72,8 @@ export function createDynamicComponent(
           // starts at the actual first DOM node. For Fragment VNodes
           // (whose SSR also starts with <!--[-->), only skip when
           // nested anchors are detected (nextSibling is also <!--[-->).
-          if (
-            !isSingleRoot &&
-            isComment(currentHydrationNode!, '[') &&
-            !currentHydrationNode!.previousSibling &&
-            (value.type !== Fragment ||
-              isComment(currentHydrationNode!.nextSibling!, '['))
-          ) {
-            setCurrentHydrationNode(currentHydrationNode!.nextSibling!)
+          if (!isSingleRoot) {
+            consumeFragmentAnchor(value.type === Fragment)
           }
           frag.hydrate()
           if (_isLastInsertion) {

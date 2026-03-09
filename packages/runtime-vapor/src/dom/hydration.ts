@@ -289,3 +289,15 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
     }
   }
 }
+
+export function consumeFragmentAnchor(isFragment = false): void {
+  const node = currentHydrationNode
+  if (
+    node &&
+    isComment(node, '[') &&
+    (!node.previousSibling || node === currentHydrationStartNode) &&
+    (!isFragment || isComment(node.nextSibling!, '['))
+  ) {
+    currentHydrationNode = node.nextSibling
+  }
+}

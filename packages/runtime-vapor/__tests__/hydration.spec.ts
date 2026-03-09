@@ -6571,6 +6571,145 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate handwritten multi-root VDOM via createDynamicComponent as first child of nested multi-root Vapor', async () => {
+    const first = ref('Hello')
+    const second = ref('World')
+    const after = ref('After')
+
+    const MultiRootVDOM = {
+      setup() {
+        return () => [
+          runtimeDom.h('span', first.value),
+          runtimeDom.h('span', second.value),
+        ]
+      },
+    }
+
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <p>before</p>
+        <components.VaporChild />
+      </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+            import { h } from 'vue'
+            const MultiRootVDOM = _data.MultiRootVDOM
+            const after = _data.after
+            const vnode = h(MultiRootVDOM)
+          </script>
+          <template>
+            <component :is="vnode" />
+            <div>{{ after }}</div>
+          </template>`,
+          vapor: true,
+        },
+      },
+      { MultiRootVDOM, after },
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--[-->
+      <!--[--><span>Hello</span><span>World</span><!--]-->
+      <!--dynamic-component--><div>After</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+
+    first.value = 'Updated'
+    second.value = 'Again'
+    after.value = 'After updated'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--[-->
+      <!--[--><span>Updated</span><span>Again</span><!--]-->
+      <!--dynamic-component--><div>After updated</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate multi-root VDOM slot as first child of nested multi-root Vapor', async () => {
+    const msg = ref('Hello')
+    const after = ref('After')
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+        const msg = _data.msg
+      </script>
+      <template>
+        <p>before</p>
+        <components.VaporChild>
+          <components.VdomChild />
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+            const after = _data.after
+          </script>
+          <template>
+            <slot />
+            <div>{{ after }}</div>
+          </template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const msg = _data.msg</script>
+            <template><span>{{ msg }}</span><span>{{ msg }}</span></template>`,
+          vapor: false,
+        },
+      },
+      { msg, after },
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--[-->
+      <!--[-->
+      <!--[--><span>Hello</span><span>Hello</span><!--]-->
+      <!--]-->
+      <div>After</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    msg.value = 'Updated'
+    after.value = 'After updated'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--[-->
+      <!--[-->
+      <!--[--><span>Updated</span><span>Updated</span><!--]-->
+      <!--]-->
+      <div>After updated</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+  })
+
   test('hydrate multi-root VDOM via mountVNode as non-first child', async () => {
     const MultiRootVDOM = {
       setup() {

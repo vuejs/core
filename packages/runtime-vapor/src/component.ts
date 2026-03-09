@@ -92,9 +92,9 @@ import { hmrReload, hmrRerender } from './hmr'
 import {
   adoptTemplate,
   advanceHydrationNode,
+  consumeFragmentAnchor,
   currentHydrationNode,
   currentHydrationStartNode,
-  isComment,
   isHydrating,
   locateHydrationNode,
   locateNextNode,
@@ -310,13 +310,8 @@ export function createComponent(
     } else {
       // For multi-root VDOM components, consume the outer <!--[-->
       // anchor so VDOM hydration starts at the actual first DOM node.
-      if (
-        !isSingleRoot &&
-        isComment(currentHydrationNode!, '[') &&
-        (!currentHydrationNode!.previousSibling ||
-          currentHydrationNode === currentHydrationStartNode)
-      ) {
-        setCurrentHydrationNode(currentHydrationNode!.nextSibling!)
+      if (!isSingleRoot) {
+        consumeFragmentAnchor()
       }
       frag.hydrate()
       if (_isLastInsertion) {

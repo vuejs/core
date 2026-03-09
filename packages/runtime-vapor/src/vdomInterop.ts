@@ -79,6 +79,7 @@ import { _next, createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
+  consumeFragmentAnchor,
   currentHydrationNode,
   isComment,
   isHydrating,
@@ -858,6 +859,7 @@ function renderVDOMSlot(
 
       if (isHydrating) {
         if (isVNode(resolved)) {
+          consumeFragmentAnchor(resolved.type === Fragment)
           hydrateVNode(resolved, parentComponent as any)
           currentVNode = resolved
           currentBlock = null
