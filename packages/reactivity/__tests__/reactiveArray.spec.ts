@@ -653,6 +653,21 @@ describe('reactivity/reactive/Array', () => {
       expect(right.value).toMatchObject({ val: 24 })
     })
 
+    test('reduce left and right with single deep reactive element and no initial value', () => {
+      const deep = reactive([{ val: 1 }])
+      const left = computed(() => deep.reduce(prev => prev))
+      const right = computed(() => deep.reduceRight(prev => prev))
+
+      expect(isReactive(left.value)).toBe(true)
+      expect(isReactive(right.value)).toBe(true)
+      expect(left.value).toMatchObject({ val: 1 })
+      expect(right.value).toMatchObject({ val: 1 })
+
+      deep[0].val = 2
+      expect(left.value).toMatchObject({ val: 2 })
+      expect(right.value).toMatchObject({ val: 2 })
+    })
+
     test('some', () => {
       const shallow = shallowReactive([1, 2, 5])
       let result = computed(() => shallow.some(x => x > 4))

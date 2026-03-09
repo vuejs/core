@@ -277,13 +277,15 @@ function reduce(
   args: unknown[],
 ) {
   const arr = shallowReadArray(self)
+  const needsWrap = arr !== self && !isShallow(self)
   let wrappedFn = fn
+  let wrapInitialAccumulator = false
   if (arr !== self) {
-    if (!isShallow(self)) {
-      let needReactive = args.length === 0
+    if (needsWrap) {
+      wrapInitialAccumulator = args.length === 0
       wrappedFn = function (this: unknown, acc, item, index) {
-        if (needReactive) {
-          needReactive = false
+        if (wrapInitialAccumulator) {
+          wrapInitialAccumulator = false
           acc = toReactive(acc)
         }
         return fn.call(this, acc, toReactive(item), index, self)
@@ -294,7 +296,8 @@ function reduce(
       }
     }
   }
-  return (arr[method] as any)(wrappedFn, ...args)
+  const result = (arr[method] as any)(wrappedFn, ...args)
+  return wrapInitialAccumulator ? toReactive(result) : result
 }
 
 // instrument identity-sensitive methods to account for reactive proxies
