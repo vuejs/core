@@ -109,8 +109,8 @@ describe('CSS vars injection', () => {
       { isProd: true },
     )
     expect(content).toMatch(`_useCssVars(_ctx => ({
-  "4003f1a6": (_ctx.color),
-  "41b6490a": (_ctx.font.size)
+  "v4003f1a6": (_ctx.color),
+  "v41b6490a": (_ctx.font.size)
 }))}`)
 
     const { code } = compileStyle({
@@ -124,8 +124,8 @@ describe('CSS vars injection', () => {
     })
     expect(code).toMatchInlineSnapshot(`
       ".foo {
-              color: var(--4003f1a6);
-              font-size: var(--41b6490a);
+              color: var(--v4003f1a6);
+              font-size: var(--v41b6490a);
       }"
     `)
   })
