@@ -29,18 +29,14 @@ describe('renderList', () => {
   })
 
   it('should warn when given a non-integer N', () => {
-    try {
-      renderList(3.1, () => {})
-    } catch (e) {}
+    expect(renderList(3.1, () => {})).toEqual([])
     expect(
       `The v-for range expects a positive integer value but got 3.1.`,
     ).toHaveBeenWarned()
   })
 
   it('should warn when given a negative N', () => {
-    try {
-      renderList(-1, () => {})
-    } catch (e) {}
+    expect(renderList(-1, () => {})).toEqual([])
     expect(
       `The v-for range expects a positive integer value but got -1.`,
     ).toHaveBeenWarned()

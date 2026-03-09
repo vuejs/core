@@ -95,10 +95,12 @@ export function renderList(
       warn(
         `The v-for range expects a positive integer value but got ${source}.`,
       )
-    }
-    ret = new Array(source)
-    for (let i = 0; i < source; i++) {
-      ret[i] = renderItem(i + 1, i, undefined, cached && cached[i])
+      ret = []
+    } else {
+      ret = new Array(source)
+      for (let i = 0; i < source; i++) {
+        ret[i] = renderItem(i + 1, i, undefined, cached && cached[i])
+      }
     }
   } else if (isObject(source)) {
     if (source[Symbol.iterator as any]) {
