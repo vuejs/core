@@ -624,17 +624,15 @@ export class VueElement
     const root = this.shadowRoot!
     const insertionAnchor = parentComp
       ? this._getStyleAnchor(parentComp) || this._getStyleAnchor(this._def)
-      : null
+      : this._getRootStyleInsertionAnchor(root)
     let last: HTMLStyleElement | null = null
     for (let i = styles.length - 1; i >= 0; i--) {
       const s = document.createElement('style')
       if (nonce) s.setAttribute('nonce', nonce)
       s.textContent = styles[i]
 
-      if (parentComp) {
-        root.insertBefore(s, last || insertionAnchor)
-      } else {
-        root.prepend(s)
+      root.insertBefore(s, last || insertionAnchor)
+      if (!parentComp) {
         this._styleAnchors.set(this._def, s)
       }
       last = s
@@ -668,6 +666,16 @@ export class VueElement
     }
     if (anchor) {
       this._styleAnchors.delete(comp)
+    }
+    return null
+  }
+
+  private _getRootStyleInsertionAnchor(root: ShadowRoot): ChildNode | null {
+    for (let i = 0; i < root.childNodes.length; i++) {
+      const node = root.childNodes[i]
+      if (!(node instanceof HTMLStyleElement)) {
+        return node
+      }
     }
     return null
   }

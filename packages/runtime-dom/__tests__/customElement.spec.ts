@@ -1218,6 +1218,40 @@ describe('defineCustomElement', () => {
       assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
     })
 
+    test('root custom element HMR should preserve child-first style order', async () => {
+      const Child = defineComponent({
+        styles: [`div { color: green; }`],
+        render() {
+          return 'child'
+        },
+      })
+      const def = defineComponent({
+        __hmrId: 'root-child-style-order',
+        styles: [`div { color: red; }`],
+        render() {
+          return h(Child)
+        },
+      })
+      const Foo = defineCustomElement(def)
+      customElements.define('my-el-root-hmr-style-order', Foo)
+      container.innerHTML = `<my-el-root-hmr-style-order></my-el-root-hmr-style-order>`
+      const el = container.childNodes[0] as VueElement
+
+      assertStyles(el, [`div { color: green; }`, `div { color: red; }`])
+
+      __VUE_HMR_RUNTIME__.reload(def.__hmrId!, {
+        ...def,
+        styles: [`div { color: blue; }`, `div { color: yellow; }`],
+      } as any)
+
+      await nextTick()
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: yellow; }`,
+      ])
+    })
+
     test('inject child component styles before parent styles', async () => {
       const Baz = () => h(Bar)
       const Bar = defineComponent({
