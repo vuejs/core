@@ -4,6 +4,7 @@ import {
   type MaybeRefOrGetter,
   type Ref,
   type ShallowRef,
+  type TemplateRef,
   type ToRefs,
   type WritableComputedRef,
   computed,
@@ -535,7 +536,7 @@ expectType<string>(toValue(unref2))
 
 // useTemplateRef
 const tRef = useTemplateRef('foo')
-expectType<Readonly<ShallowRef<unknown>>>(tRef)
+expectType<TemplateRef>(tRef)
 
 const tRef2 = useTemplateRef<HTMLElement>('bar')
-expectType<Readonly<ShallowRef<HTMLElement | null>>>(tRef2)
+expectType<TemplateRef<HTMLElement>>(tRef2)

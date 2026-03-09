@@ -46,6 +46,7 @@ function resetVueVersion() {
 
 async function copyLink(e: MouseEvent) {
   if (e.metaKey) {
+    resetVueVersion()
     // hidden logic for going to local debug from play.vuejs.org
     window.location.href = 'http://localhost:5173/' + window.location.hash
     return
@@ -169,7 +170,6 @@ nav {
   background-color: var(--bg);
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.33);
   position: relative;
-  z-index: 999;
   display: flex;
   justify-content: space-between;
 }

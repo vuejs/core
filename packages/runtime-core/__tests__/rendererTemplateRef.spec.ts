@@ -1,4 +1,6 @@
 import {
+  KeepAlive,
+  defineAsyncComponent,
   defineComponent,
   h,
   nextTick,
@@ -8,6 +10,7 @@ import {
   render,
   serializeInner,
   shallowRef,
+  watch,
 } from '@vue/runtime-test'
 
 describe('api: template refs', () => {
@@ -175,6 +178,120 @@ describe('api: template refs', () => {
     toggle.value = false
     await nextTick()
     expect(el.value).toBe(null)
+  })
+
+  // #12639
+  it('update and unmount child in the same tick', async () => {
+    const root = nodeOps.createElement('div')
+    const el = ref(null)
+    const toggle = ref(true)
+    const show = ref(true)
+
+    const Comp = defineComponent({
+      emits: ['change'],
+      props: ['show'],
+      setup(props, { emit }) {
+        watch(
+          () => props.show,
+          () => {
+            emit('change')
+          },
+        )
+        return () => h('div', 'hi')
+      },
+    })
+
+    const App = {
+      setup() {
+        return {
+          refKey: el,
+        }
+      },
+      render() {
+        return toggle.value
+          ? h(Comp, {
+              ref: 'refKey',
+              show: show.value,
+              onChange: () => (toggle.value = false),
+            })
+          : null
+      },
+    }
+    render(h(App), root)
+    expect(el.value).not.toBe(null)
+
+    show.value = false
+    await nextTick()
+    expect(el.value).toBe(null)
+  })
+
+  it('set and change ref in the same tick', async () => {
+    const root = nodeOps.createElement('div')
+    const show = ref(false)
+    const refName = ref('a')
+
+    const Child = defineComponent({
+      setup() {
+        refName.value = 'b'
+        return () => {}
+      },
+    })
+
+    const Comp = {
+      render() {
+        return h(Child, {
+          ref: refName.value,
+        })
+      },
+      updated(this: any) {
+        expect(this.$refs.a).toBe(null)
+        expect(this.$refs.b).not.toBe(null)
+      },
+    }
+
+    const App = {
+      render() {
+        return show.value ? h(Comp) : null
+      },
+    }
+
+    render(h(App), root)
+    expect(refName.value).toBe('a')
+
+    show.value = true
+    await nextTick()
+    expect(refName.value).toBe('b')
+  })
+
+  it('unset old ref when new ref is absent', async () => {
+    const root1 = nodeOps.createElement('div')
+    const root2 = nodeOps.createElement('div')
+    const el1 = ref(null)
+    const el2 = ref(null)
+    const toggle = ref(true)
+
+    const Comp1 = {
+      setup() {
+        return () => (toggle.value ? h('div', { ref: el1 }) : h('div'))
+      },
+    }
+
+    const Comp2 = {
+      setup() {
+        return () => h('div', { ref: toggle.value ? el2 : undefined })
+      },
+    }
+
+    render(h(Comp1), root1)
+    render(h(Comp2), root2)
+
+    expect(el1.value).toBe(root1.children[0])
+    expect(el2.value).toBe(root2.children[0])
+
+    toggle.value = false
+    await nextTick()
+    expect(el1.value).toBe(null)
+    expect(el2.value).toBe(null)
   })
 
   test('string ref inside slots', async () => {
@@ -537,5 +654,69 @@ describe('api: template refs', () => {
     expect(serializeInner(root)).toBe(
       '<div><div>[object Object],[object Object]</div><ul><li>2</li><li>3</li></ul></div>',
     )
+  })
+
+  test('with async component which nested in KeepAlive', async () => {
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(resolve =>
+          setTimeout(() =>
+            resolve(
+              defineComponent({
+                setup(_, { expose }) {
+                  expose({
+                    name: 'AsyncComp',
+                  })
+                  return () => h('div')
+                },
+              }) as any,
+            ),
+          ),
+        ),
+    )
+
+    const Comp = defineComponent({
+      setup(_, { expose }) {
+        expose({
+          name: 'Comp',
+        })
+        return () => h('div')
+      },
+    })
+
+    const toggle = ref(false)
+    const instanceRef = ref<any>(null)
+
+    const App = {
+      render: () => {
+        return h(KeepAlive, () =>
+          toggle.value
+            ? h(AsyncComp, { ref: instanceRef })
+            : h(Comp, { ref: instanceRef }),
+        )
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(instanceRef.value.name).toBe('Comp')
+
+    // switch to async component
+    toggle.value = true
+    await nextTick()
+    expect(instanceRef.value).toBe(null)
+
+    await new Promise(r => setTimeout(r))
+    expect(instanceRef.value.name).toBe('AsyncComp')
+
+    // switch back to normal component
+    toggle.value = false
+    await nextTick()
+    expect(instanceRef.value.name).toBe('Comp')
+
+    // switch to async component again
+    toggle.value = true
+    await nextTick()
+    expect(instanceRef.value.name).toBe('AsyncComp')
   })
 })

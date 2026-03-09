@@ -10,9 +10,19 @@ const _hoisted_2 = _imports_0 + ' 1x, ' + "/foo/logo.png" + ' 2x'
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock(_Fragment, null, [
-    _cache[0] || (_cache[0] = _createElementVNode("img", { srcset: _hoisted_1 }, null, -1 /* HOISTED */)),
-    _cache[1] || (_cache[1] = _createElementVNode("img", { srcset: _hoisted_2 }, null, -1 /* HOISTED */))
+    _cache[0] || (_cache[0] = _createElementVNode("img", { srcset: _hoisted_1 }, null, -1 /* CACHED */)),
+    _cache[1] || (_cache[1] = _createElementVNode("img", { srcset: _hoisted_2 }, null, -1 /* CACHED */))
   ], 64 /* STABLE_FRAGMENT */))
+}"
+`;
+
+exports[`compiler sfc: transform srcset > transform empty srcset w/ includeAbsolute: true 1`] = `
+"import { openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+const _hoisted_1 = { srcset: " " }
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("img", _hoisted_1))
 }"
 `;
 
@@ -35,51 +45,51 @@ export function render(_ctx, _cache) {
     _cache[0] || (_cache[0] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: ""
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[1] || (_cache[1] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_1
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[2] || (_cache[2] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_2
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[3] || (_cache[3] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_3
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[4] || (_cache[4] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_4
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[5] || (_cache[5] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_5
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[6] || (_cache[6] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_6
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[7] || (_cache[7] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_7
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[8] || (_cache[8] = _createElementVNode("img", {
       src: "/logo.png",
       srcset: "/logo.png, /logo.png 2x"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[9] || (_cache[9] = _createElementVNode("img", {
       src: "https://example.com/logo.png",
       srcset: "https://example.com/logo.png, https://example.com/logo.png 2x"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[10] || (_cache[10] = _createElementVNode("img", {
       src: "/logo.png",
       srcset: _hoisted_8
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[11] || (_cache[11] = _createElementVNode("img", {
       src: "data:image/png;base64,i",
       srcset: "data:image/png;base64,i 1x, data:image/png;base64,i 2x"
-    }, null, -1 /* HOISTED */))
+    }, null, -1 /* CACHED */))
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
@@ -92,51 +102,51 @@ export function render(_ctx, _cache) {
     _cache[0] || (_cache[0] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: ""
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[1] || (_cache[1] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: "/foo/logo.png"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[2] || (_cache[2] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: "/foo/logo.png 2x"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[3] || (_cache[3] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: "/foo/logo.png 2x"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[4] || (_cache[4] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: "/foo/logo.png, /foo/logo.png 2x"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[5] || (_cache[5] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: "/foo/logo.png 2x, /foo/logo.png"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[6] || (_cache[6] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: "/foo/logo.png 2x, /foo/logo.png 3x"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[7] || (_cache[7] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: "/foo/logo.png, /foo/logo.png 2x, /foo/logo.png 3x"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[8] || (_cache[8] = _createElementVNode("img", {
       src: "/logo.png",
       srcset: "/logo.png, /logo.png 2x"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[9] || (_cache[9] = _createElementVNode("img", {
       src: "https://example.com/logo.png",
       srcset: "https://example.com/logo.png, https://example.com/logo.png 2x"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[10] || (_cache[10] = _createElementVNode("img", {
       src: "/logo.png",
       srcset: "/logo.png, /foo/logo.png 2x"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[11] || (_cache[11] = _createElementVNode("img", {
       src: "data:image/png;base64,i",
       srcset: "data:image/png;base64,i 1x, data:image/png;base64,i 2x"
-    }, null, -1 /* HOISTED */))
+    }, null, -1 /* CACHED */))
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
@@ -162,51 +172,51 @@ export function render(_ctx, _cache) {
     _cache[0] || (_cache[0] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: ""
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[1] || (_cache[1] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_1
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[2] || (_cache[2] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_2
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[3] || (_cache[3] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_3
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[4] || (_cache[4] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_4
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[5] || (_cache[5] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_5
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[6] || (_cache[6] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_6
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[7] || (_cache[7] = _createElementVNode("img", {
       src: "./logo.png",
       srcset: _hoisted_7
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[8] || (_cache[8] = _createElementVNode("img", {
       src: "/logo.png",
       srcset: _hoisted_8
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[9] || (_cache[9] = _createElementVNode("img", {
       src: "https://example.com/logo.png",
       srcset: "https://example.com/logo.png, https://example.com/logo.png 2x"
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[10] || (_cache[10] = _createElementVNode("img", {
       src: "/logo.png",
       srcset: _hoisted_9
-    }, null, -1 /* HOISTED */)),
+    }, null, -1 /* CACHED */)),
     _cache[11] || (_cache[11] = _createElementVNode("img", {
       src: "data:image/png;base64,i",
       srcset: "data:image/png;base64,i 1x, data:image/png;base64,i 2x"
-    }, null, -1 /* HOISTED */))
+    }, null, -1 /* CACHED */))
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
@@ -228,8 +238,8 @@ const _hoisted_8 = _imports_1 + ', ' + _imports_1 + ' 2x'
 const _hoisted_9 = _imports_1 + ', ' + _imports_0 + ' 2x'
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock("div", null, _cache[0] || (_cache[0] = [
+  return (_openBlock(), _createElementBlock("div", null, [...(_cache[0] || (_cache[0] = [
     _createStaticVNode("<img src=\\"./logo.png\\" srcset=\\"\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_1 + "\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_2 + "\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_3 + "\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_4 + "\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_5 + "\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_6 + "\\"><img src=\\"./logo.png\\" srcset=\\"" + _hoisted_7 + "\\"><img src=\\"/logo.png\\" srcset=\\"" + _hoisted_8 + "\\"><img src=\\"https://example.com/logo.png\\" srcset=\\"https://example.com/logo.png, https://example.com/logo.png 2x\\"><img src=\\"/logo.png\\" srcset=\\"" + _hoisted_9 + "\\"><img src=\\"data:image/png;base64,i\\" srcset=\\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\">", 12)
-  ])))
+  ]))]))
 }"
 `;
