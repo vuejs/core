@@ -290,12 +290,21 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
   }
 }
 
+/**
+ * When a multi-root Vapor boundary hydrates a VDOM child as its first node,
+ * the hydration cursor may still point at the boundary's outer `<!--[-->`.
+ * Skip that marker so VDOM hydration starts from the child's actual first node.
+ */
 export function consumeFragmentAnchor(isFragment = false): void {
   const node = currentHydrationNode
   if (
     node &&
     isComment(node, '[') &&
+    // Only consume the outer anchor for the first child of the current
+    // boundary, including nested boundaries with outer siblings.
     (!node.previousSibling || node === currentHydrationStartNode) &&
+    // Fragment VNodes also start with `<!--[-->`, so a second start marker
+    // means the current one belongs to the outer boundary.
     (!isFragment || isComment(node.nextSibling!, '['))
   ) {
     currentHydrationNode = node.nextSibling
