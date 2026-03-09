@@ -124,6 +124,26 @@ describe('compiler sfc: transform asset url', () => {
     expect(code).toContain(`_imports_1 from '#/src/assets/vue.svg'`)
   })
 
+  test('should not transform pure hash values for custom asset URL tags', () => {
+    const { code } = compileWithAssetUrls(
+      `<foo bar="#fragment" />` +
+        `<foo bar="#src/assets/vue.svg" />` +
+        `<foo bar="#/src/assets/vue.svg" />`,
+      {
+        tags: {
+          foo: ['bar'],
+        },
+      },
+    )
+
+    expect(code).toContain(`bar: "#fragment"`)
+    expect(code).toContain(`bar: "#src/assets/vue.svg"`)
+    expect(code).toContain(`bar: "#/src/assets/vue.svg"`)
+    expect(code).not.toContain(`from '#fragment'`)
+    expect(code).not.toContain(`from '#src/assets/vue.svg'`)
+    expect(code).not.toContain(`from '#/src/assets/vue.svg'`)
+  })
+
   test('should allow for full base URLs, with paths', () => {
     const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
       base: 'http://localhost:3000/src/',

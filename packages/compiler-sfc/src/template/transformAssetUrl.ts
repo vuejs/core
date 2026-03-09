@@ -34,14 +34,20 @@ export interface AssetURLOptions {
   tags?: AssetURLTagConfig
 }
 
+// Built-in attrs that always represent resource URLs. `use` is intentionally
+// omitted because its hash-only values may still be fragment references.
+const resourceUrlTagConfig: AssetURLTagConfig = {
+  video: ['src', 'poster'],
+  source: ['src'],
+  img: ['src'],
+  image: ['xlink:href', 'href'],
+}
+
 export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
   base: null,
   includeAbsolute: false,
   tags: {
-    video: ['src', 'poster'],
-    source: ['src'],
-    img: ['src'],
-    image: ['xlink:href', 'href'],
+    ...resourceUrlTagConfig,
     use: ['xlink:href', 'href'],
   },
 }
@@ -67,6 +73,10 @@ export const createAssetUrlTransformWithOptions = (
 ): NodeTransform => {
   return (node, context) =>
     (transformAssetUrl as Function)(node, context, options)
+}
+
+function canTransformHashImport(tag: string, attrName: string): boolean {
+  return !!resourceUrlTagConfig[tag]?.includes(attrName)
 }
 
 /**
@@ -101,26 +111,27 @@ export const transformAssetUrl: NodeTransform = (
 
     const assetAttrs = (attrs || []).concat(wildCardAttrs || [])
     node.props.forEach((attr, index) => {
-      const isHashFragment =
-        node.tag === 'use' &&
-        attr.type === NodeTypes.ATTRIBUTE &&
-        (attr.name === 'href' || attr.name === 'xlink:href') &&
-        attr.value?.content[0] === '#'
-
       if (
         attr.type !== NodeTypes.ATTRIBUTE ||
         !assetAttrs.includes(attr.name) ||
-        !attr.value ||
-        isExternalUrl(attr.value.content) ||
-        isDataUrl(attr.value.content) ||
-        isHashFragment ||
-        (!options.includeAbsolute && !isRelativeUrl(attr.value.content))
+        !attr.value
       ) {
         return
       }
 
-      const url = parseUrl(attr.value.content)
-      if (options.base && attr.value.content[0] === '.') {
+      const urlValue = attr.value.content
+      const isHashOnlyValue = urlValue[0] === '#'
+      if (
+        isExternalUrl(urlValue) ||
+        isDataUrl(urlValue) ||
+        (isHashOnlyValue && !canTransformHashImport(node.tag, attr.name)) ||
+        (!options.includeAbsolute && !isRelativeUrl(urlValue))
+      ) {
+        return
+      }
+
+      const url = parseUrl(urlValue)
+      if (options.base && urlValue[0] === '.') {
         // explicit base - directly rewrite relative urls into absolute url
         // to avoid generating extra imports
         // Allow for full hostnames provided in options.base
