@@ -1264,6 +1264,9 @@ export function isClassComponent(value: unknown): value is ClassComponent {
 }
 
 export interface ComponentCustomElementInterface {
+  /**
+   * @internal
+   */
   _isVueCE: boolean
   /**
    * @internal
