@@ -397,6 +397,27 @@ color: red
       ).toHaveBeenWarned()
     })
   })
+
+  test('should keep leading universal selector before non-space combinator', () => {
+    // * > .foo: * removed → invalid CSS ` > .foo`
+    expect(compileScoped(`* > .section { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "* > .section[data-v-test] { color: red;
+      }"
+    `)
+    // * + .foo: * removed → invalid CSS ` + .foo`
+    expect(compileScoped(`* + .section { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "* + .section[data-v-test] { color: red;
+      }"
+    `)
+    // * ~ .foo: * removed → invalid CSS ` ~ .foo`
+    expect(compileScoped(`* ~ .section { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "* ~ .section[data-v-test] { color: red;
+      }"
+    `)
+  })
 })
 
 describe('SFC CSS modules', () => {

@@ -199,9 +199,17 @@ function rewriteSelector(
       if (!prev) {
         // * .foo {} -> .foo[xxxxxxx] {}
         if (next) {
-          if (next.type === 'combinator' && next.value === ' ') {
-            selector.removeChild(next)
+          if (next.type === 'combinator') {
+            if (next.value === ' ') {
+              // * .foo {} -> .foo[xxxxxxx] {}
+              selector.removeChild(next)
+              selector.removeChild(n)
+              return
+            }
+            // * > .foo, * + .foo, * ~ .foo: keep *
+            return
           }
+          // *.foo {} -> .foo[xxxxxxx] {}
           selector.removeChild(n)
           return
         } else {
