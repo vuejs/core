@@ -6710,6 +6710,61 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate slot Fragment as first child of DynamicFragment with trailing sibling', async () => {
+    const msg = ref('2')
+    const tail = ref('1')
+
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+        const msg = _data.msg
+      </script>
+      <template>
+        <components.Comp>{{ msg }}</components.Comp>
+      </template>`,
+      {
+        Comp: {
+          code: `<script setup>
+            const tail = _data.tail
+          </script>
+          <template>
+            <template v-if="true">
+              <slot />
+              <span>{{ tail }}</span>
+            </template>
+          </template>`,
+          vapor: true,
+        },
+      },
+      { msg, tail },
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[-->2<!--]-->
+      <span>1</span><!--]-->
+      "
+    `,
+    )
+
+    msg.value = '3'
+    tail.value = '4'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[-->3<!--]-->
+      <span>4</span><!--]-->
+      "
+    `,
+    )
+  })
+
   test('hydrate multi-root VDOM via mountVNode as non-first child', async () => {
     const MultiRootVDOM = {
       setup() {
