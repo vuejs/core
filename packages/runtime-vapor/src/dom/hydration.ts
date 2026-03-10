@@ -70,10 +70,10 @@ function performHydration<T>(
   const prev = setIsHydrating(true)
   const prevHydrationNode = currentHydrationNode
   const prevHydrationBoundary = currentHydrationBoundary
-  const prevHydrationEntries = hydrationEntryStack.slice()
+  const prevHydrationEntry = currentHydrationEntry
   currentHydrationNode = null
   currentHydrationBoundary = null
-  hydrationEntryStack.length = 0
+  currentHydrationEntry = null
   try {
     try {
       setup()
@@ -84,8 +84,7 @@ function performHydration<T>(
   } finally {
     currentHydrationNode = prevHydrationNode
     currentHydrationBoundary = prevHydrationBoundary
-    hydrationEntryStack.length = 0
-    hydrationEntryStack.push(...prevHydrationEntries)
+    currentHydrationEntry = prevHydrationEntry
     setIsHydrating(prev)
     if (!isHydrating) disableHydrationNodeLookup()
   }
@@ -292,7 +291,10 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
   }
 }
 
-const hydrationEntryStack: (Node | null)[] = []
+interface HydrationEntryContext {
+  parent: HydrationEntryContext | null
+  node: Node | null
+}
 
 export interface HydrationBoundaryFrame {
   parent: HydrationBoundaryFrame | null
@@ -304,13 +306,17 @@ export interface HydrationBoundaryFrame {
 }
 
 let currentHydrationBoundary: HydrationBoundaryFrame | null = null
+let currentHydrationEntry: HydrationEntryContext | null = null
 
 function pushHydrationEntry(node: Node | null): void {
-  hydrationEntryStack.push(node)
+  currentHydrationEntry = {
+    parent: currentHydrationEntry,
+    node,
+  }
 }
 
 function popHydrationEntry(): void {
-  hydrationEntryStack.pop()
+  currentHydrationEntry = currentHydrationEntry && currentHydrationEntry.parent
 }
 
 export function withHydrationEntry<T>(node: Node | null, fn: () => T): T {
@@ -325,7 +331,7 @@ export function withHydrationEntry<T>(node: Node | null, fn: () => T): T {
 export function getCurrentHydrationEntry(): Node | null {
   return (
     (currentHydrationBoundary && currentHydrationBoundary.entry) ??
-    hydrationEntryStack[hydrationEntryStack.length - 1] ??
+    (currentHydrationEntry && currentHydrationEntry.node) ??
     null
   )
 }
@@ -442,7 +448,6 @@ function resolveHydrationBoundaryAsFragment(
 
 export function prepareHydrationChildEntry(isFragment = false): void {
   if (!currentHydrationBoundary) return
-
   const pending: HydrationBoundaryFrame[] = []
   for (
     let frame: HydrationBoundaryFrame | null = currentHydrationBoundary;
