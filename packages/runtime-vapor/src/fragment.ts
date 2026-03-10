@@ -28,7 +28,7 @@ import {
 } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
-  type HydrationBoundaryFrame,
+  type HydrationBoundary,
   currentHydrationNode,
   isComment,
   isHydrating,
@@ -100,7 +100,7 @@ export class DynamicFragment extends VaporFragment {
 
   slotOwner: VaporComponentInstance | null
 
-  hydrationBoundary: HydrationBoundaryFrame | null = null
+  hydrationBoundary: HydrationBoundary | null = null
 
   constructor(anchorLabel?: string, keyed: boolean = false) {
     super([])
@@ -118,7 +118,7 @@ export class DynamicFragment extends VaporFragment {
   }
 
   private runWithHydrationBoundary<T>(
-    hydrationBoundary: HydrationBoundaryFrame | null,
+    hydrationBoundary: HydrationBoundary | null,
     fn: () => T,
   ): T {
     this.hydrationBoundary = hydrationBoundary
@@ -200,9 +200,7 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    const renderWithBoundary = (
-      hydrationBoundary: HydrationBoundaryFrame | null,
-    ) =>
+    const renderWithBoundary = (hydrationBoundary: HydrationBoundary | null) =>
       this.runWithHydrationBoundary(hydrationBoundary, () => {
         try {
           this.renderBranch(render, transition, parent, instance)
@@ -315,55 +313,41 @@ export class DynamicFragment extends VaporFragment {
     // avoid repeated hydration
     if (this.anchor) return
 
-    if (this.anchorLabel === 'if') {
-      // reuse the empty comment node as the anchor for empty if
-      // e.g. `<div v-if="false"></div>` -> `<!---->`
-      if (isEmpty) {
-        resolveEmptyHydrationBoundary(this.hydrationBoundary)
+    // reuse `<!---->` as anchor
+    // `<div v-if="false"></div>` -> `<!---->`
+    if (isEmpty) {
+      resolveEmptyHydrationBoundary(this.hydrationBoundary)
+      if (isComment(currentHydrationNode!, '')) {
         this.anchor = currentHydrationNode!
-        if (__DEV__ && !isComment(this.anchor, '')) {
-          throw new Error(
-            'Failed to locate if anchor. this is likely a Vue internal bug.',
-          )
-        } else {
-          if (__DEV__) {
-            ;(this.anchor as Comment).data = this.anchorLabel
-          }
-          return
+        if (__DEV__) {
+          ;(this.anchor as Comment).data = this.anchorLabel!
         }
-      }
-    } else if (this.anchorLabel === 'slot') {
-      if (isEmpty) {
-        resolveEmptyHydrationBoundary(this.hydrationBoundary)
-        // reuse the empty comment node for empty slot
-        // e.g. `<slot v-if="false"></slot>`
-        if (isComment(currentHydrationNode!, '')) {
-          this.anchor = currentHydrationNode!
-          if (__DEV__) {
-            ;(this.anchor as Comment).data = this.anchorLabel!
-          }
-          return
-        }
-      }
-
-      // Reuse the slot boundary end when the owner frame resolved a fragment.
-      const anchor =
-        resolveHydrationBoundaryEnd(this.hydrationBoundary) ||
-        (isComment(currentHydrationNode!, ']') ? currentHydrationNode! : null)
-      if (__DEV__ && !anchor) {
-        throw new Error(
-          'Failed to locate slot anchor. this is likely a Vue internal bug.',
-        )
-      } else {
-        this.anchor = anchor!
         return
       }
     }
 
-    const { parentNode: pn, nextNode } = findBlockNode(this.nodes)!
-    // create an anchor
+    // reuse the `<!--]-->` as anchor for slot / multi-root if
+    if (
+      this.anchorLabel === 'slot' ||
+      (this.anchorLabel === 'if' && isArray(this.nodes))
+    ) {
+      const anchor =
+        resolveHydrationBoundaryEnd(this.hydrationBoundary) ||
+        (isComment(currentHydrationNode!, ']') ? currentHydrationNode! : null)
+      if (anchor) {
+        this.anchor = anchor
+        return
+      } else if (__DEV__) {
+        throw new Error(
+          `Failed to locate ${this.anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
+        )
+      }
+    }
+
+    // otherwise, create an anchor
+    const { parentNode, nextNode } = findBlockNode(this.nodes)!
     queuePostFlushCb(() => {
-      pn!.insertBefore(
+      parentNode!.insertBefore(
         (this.anchor = __DEV__
           ? createComment(this.anchorLabel!)
           : createTextNode()),

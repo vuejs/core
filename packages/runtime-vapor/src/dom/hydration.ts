@@ -291,13 +291,13 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
   }
 }
 
-interface HydrationEntryContext {
-  parent: HydrationEntryContext | null
+interface HydrationEntry {
+  parent: HydrationEntry | null
   node: Node | null
 }
 
-export interface HydrationBoundaryFrame {
-  parent: HydrationBoundaryFrame | null
+export interface HydrationBoundary {
+  parent: HydrationBoundary | null
   mode: 'known-single' | 'known-fragment' | 'deferred'
   state: 'pending' | 'resolved-single' | 'resolved-fragment'
   entry: Node | null
@@ -305,8 +305,8 @@ export interface HydrationBoundaryFrame {
   end: Anchor | null
 }
 
-let currentHydrationBoundary: HydrationBoundaryFrame | null = null
-let currentHydrationEntry: HydrationEntryContext | null = null
+let currentHydrationBoundary: HydrationBoundary | null = null
+let currentHydrationEntry: HydrationEntry | null = null
 
 function pushHydrationEntry(node: Node | null): void {
   currentHydrationEntry = {
@@ -337,10 +337,10 @@ export function getCurrentHydrationEntry(): Node | null {
 }
 
 function pushHydrationBoundary(
-  mode: HydrationBoundaryFrame['mode'],
+  mode: HydrationBoundary['mode'],
   entry: Node | null,
-): HydrationBoundaryFrame {
-  const frame: HydrationBoundaryFrame = {
+): HydrationBoundary {
+  const boundary: HydrationBoundary = {
     parent: currentHydrationBoundary,
     mode,
     state: 'pending',
@@ -348,89 +348,87 @@ function pushHydrationBoundary(
     start: null,
     end: null,
   }
-  return (currentHydrationBoundary = frame)
+  return (currentHydrationBoundary = boundary)
 }
 
-function popHydrationBoundary(frame: HydrationBoundaryFrame): void {
-  if (currentHydrationBoundary === frame) {
-    currentHydrationBoundary = frame.parent
+function popHydrationBoundary(boundary: HydrationBoundary): void {
+  if (currentHydrationBoundary === boundary) {
+    currentHydrationBoundary = boundary.parent
   }
 }
 
 export function withHydrationBoundary<T>(
-  mode: HydrationBoundaryFrame['mode'],
+  mode: HydrationBoundary['mode'],
   entry: Node | null,
-  fn: (frame: HydrationBoundaryFrame) => T,
+  fn: (boundary: HydrationBoundary) => T,
 ): T {
-  const frame = pushHydrationBoundary(mode, entry)
+  const boundary = pushHydrationBoundary(mode, entry)
   try {
-    return fn(frame)
+    return fn(boundary)
   } finally {
-    popHydrationBoundary(frame)
+    popHydrationBoundary(boundary)
   }
 }
 
 export function resolveHydrationBoundaryEnd(
-  frame: HydrationBoundaryFrame | null,
+  boundary: HydrationBoundary | null,
 ): Anchor | null {
-  if (!frame || frame.state !== 'resolved-fragment' || !frame.start) {
+  if (!boundary || boundary.state !== 'resolved-fragment' || !boundary.start) {
     return null
   }
 
-  return (frame.end ||= locateEndAnchor(frame.start) as Anchor | null)
+  return (boundary.end ||= locateEndAnchor(boundary.start) as Anchor | null)
 }
 
 export function resolveEmptyHydrationBoundary(
-  frame: HydrationBoundaryFrame | null,
-): HydrationBoundaryFrame | null {
-  if (!frame || frame.state !== 'pending') {
-    return frame
+  boundary: HydrationBoundary | null,
+): HydrationBoundary | null {
+  if (!boundary || boundary.state !== 'pending') {
+    return boundary
   }
 
-  const start = resolvePendingHydrationBoundaryStart(frame)
+  const start = resolvePendingHydrationBoundaryStart(boundary)
   if (start) {
-    resolveHydrationBoundaryAsFragment(frame, start)
+    resolveHydrationBoundaryAsFragment(boundary, start)
   }
-  return frame
+  return boundary
 }
 
-function resolveHydrationBoundary(
-  frame: HydrationBoundaryFrame,
+function resolvePendingHydrationBoundary(
+  boundary: HydrationBoundary,
   isFragment: boolean,
 ): void {
-  if (frame.state !== 'pending') return
-
-  const start = resolvePendingHydrationBoundaryStart(frame)
+  const start = resolvePendingHydrationBoundaryStart(boundary)
   if (!start) return
 
   if (
-    frame.mode === 'known-fragment' ||
+    boundary.mode === 'known-fragment' ||
     !isFragment ||
     isComment(start.nextSibling!, '[')
   ) {
-    resolveHydrationBoundaryAsFragment(frame, start)
+    resolveHydrationBoundaryAsFragment(boundary, start)
     return
   }
 
-  frame.state = 'resolved-single'
+  boundary.state = 'resolved-single'
 }
 
 function resolvePendingHydrationBoundaryStart(
-  frame: HydrationBoundaryFrame,
+  boundary: HydrationBoundary,
 ): Anchor | null {
-  if (frame.mode === 'known-single') {
-    frame.state = 'resolved-single'
+  if (boundary.mode === 'known-single') {
+    boundary.state = 'resolved-single'
     return null
   }
 
   const node = currentHydrationNode
   if (!(node && isComment(node, '['))) {
-    frame.state = 'resolved-single'
+    boundary.state = 'resolved-single'
     return null
   }
 
-  if (node.previousSibling && node !== frame.entry) {
-    frame.state = 'resolved-single'
+  if (node.previousSibling && node !== boundary.entry) {
+    boundary.state = 'resolved-single'
     return null
   }
 
@@ -438,28 +436,28 @@ function resolvePendingHydrationBoundaryStart(
 }
 
 function resolveHydrationBoundaryAsFragment(
-  frame: HydrationBoundaryFrame,
+  boundary: HydrationBoundary,
   start: Anchor,
 ): void {
-  frame.start = start
-  frame.state = 'resolved-fragment'
+  boundary.start = start
+  boundary.state = 'resolved-fragment'
   currentHydrationNode = start.nextSibling
 }
 
 export function prepareHydrationChildEntry(isFragment = false): void {
   if (!currentHydrationBoundary) return
-  const pending: HydrationBoundaryFrame[] = []
+  const pending: HydrationBoundary[] = []
   for (
-    let frame: HydrationBoundaryFrame | null = currentHydrationBoundary;
-    frame;
-    frame = frame.parent
+    let boundary: HydrationBoundary | null = currentHydrationBoundary;
+    boundary;
+    boundary = boundary.parent
   ) {
-    if (frame.state === 'pending') {
-      pending.push(frame)
+    if (boundary.state === 'pending') {
+      pending.push(boundary)
     }
   }
 
   for (let i = pending.length - 1; i >= 0; i--) {
-    resolveHydrationBoundary(pending[i], isFragment)
+    resolvePendingHydrationBoundary(pending[i], isFragment)
   }
 }

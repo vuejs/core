@@ -3094,6 +3094,69 @@ describe('Vapor Mode hydration', () => {
       `,
       )
     })
+
+    test('forwarded named slot can appear after hydrating as empty', async () => {
+      const data = reactive({
+        show: false,
+        foo: 'foo',
+        bar: 'bar',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Foo>
+            <template v-if="data.show" #foo>
+              <span>{{data.foo}}</span>
+            </template>
+          </components.Foo>
+        </template>`,
+        {
+          Foo: `<template>
+                  <components.Bar>
+                    <template #foo>
+                      <slot name="foo" />
+                    </template>
+                  </components.Bar>
+                </template>`,
+          Bar: `<template>
+                  <div>
+                    <slot name="foo" />
+                    <div>{{data.bar}}</div>
+                  </div>
+                </template>`,
+        },
+        data,
+      )
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><!--]-->
+        <div>bar</div></div>"
+      `,
+      )
+
+      data.show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><span>foo</span><!--]-->
+        <div>bar</div></div>"
+      `,
+      )
+
+      data.foo = 'foo1'
+      data.bar = 'bar1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><span>foo1</span><!--]-->
+        <div>bar1</div></div>"
+      `,
+      )
+    })
   })
 
   describe('transition', async () => {
@@ -5097,10 +5160,10 @@ describe('VDOM interop', () => {
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-        "
-        <!--[--><div>1</div><div>2</div><!--]-->
-        <!--if-->"
-      `,
+      "
+      <!--[--><div>1</div><div>2</div><!--]-->
+      "
+    `,
     )
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -6811,7 +6874,7 @@ describe('VDOM interop', () => {
       <!--[-->
       <!--[--><span>Hello</span><span>Hello</span><!--]-->
       <span>Tail</span><!--]-->
-      <!--if--><!--]-->
+      <!--]-->
       "
     `,
     )
@@ -6827,7 +6890,7 @@ describe('VDOM interop', () => {
       <!--[-->
       <!--[--><span>Updated</span><span>Updated</span><!--]-->
       <span>Tail updated</span><!--]-->
-      <!--if--><!--]-->
+      <!--]-->
       "
     `,
     )
@@ -6872,7 +6935,7 @@ describe('VDOM interop', () => {
       <!--[-->
       <!--[--><!--]-->
       <span>Tail</span><!--]-->
-      <!--if--><!--]-->
+      <!--]-->
       "
     `,
     )
@@ -6887,7 +6950,7 @@ describe('VDOM interop', () => {
       <!--[-->
       <!--[--><!--]-->
       <span>Tail updated</span><!--]-->
-      <!--if--><!--]-->
+      <!--]-->
       "
     `,
     )
