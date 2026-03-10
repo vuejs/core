@@ -160,6 +160,8 @@ function encodeIfBlockShape(
   positive: BlockIRNode,
   negative?: BlockIRNode | IfIRNode,
 ): number {
+  // Pack the true/false branch shapes into one integer so runtime `createIf()`
+  // can decode the selected branch with a single bit-mask operation.
   return getBlockShape(positive) | (getNegativeBlockShape(negative) << 2)
 }
 
