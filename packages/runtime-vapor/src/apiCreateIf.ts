@@ -17,7 +17,7 @@ export function createIf(
   b2?: BlockFn,
   once?: boolean,
   index?: number,
-  branchShape?: number,
+  blockShape?: number,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -41,8 +41,8 @@ export function createIf(
     renderEffect(() => {
       const ok = condition()
       const shape =
-        isHydrating && branchShape != null
-          ? decodeIfBranchShape(branchShape, ok)
+        isHydrating && blockShape != null
+          ? decodeIfShape(blockShape, ok)
           : undefined
       ;(frag as DynamicFragment).update(
         ok ? b1 : b2,
@@ -63,13 +63,10 @@ export function createIf(
   return frag
 }
 
-function decodeIfBranchShape(
-  branchShape: number,
-  ok: unknown,
-): VaporBlockShape {
+function decodeIfShape(shape: number, ok: unknown): VaporBlockShape {
   // The compiler packs the true/false branch shapes into one integer.
   // Each branch uses 2 bits.
   // The true branch reads the low 2 bits; the false branch shifts right by 2
   // and then reads the low 2 bits.
-  return ((branchShape >> (ok ? 0 : 2)) & 0b11) as VaporBlockShape
+  return ((shape >> (ok ? 0 : 2)) & 0b11) as VaporBlockShape
 }

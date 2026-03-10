@@ -129,6 +129,7 @@ export function advanceHydrationNode(node: Node): void {
  */
 function adoptTemplateImpl(node: Node, template: string): Node | null {
   if (!(template[0] === '<' && template[1] === '!')) {
+    // empty text node in slot
     if (
       template.trim() === '' &&
       isComment(node, ']') &&
@@ -178,6 +179,11 @@ function locateHydrationNodeImpl(consumeFragmentStart = false): Anchor | null {
     node = currentHydrationNode
   }
 
+  // consume fragment start anchor if needed
+  if (consumeFragmentStart && node && isComment(node, '[')) {
+    node = node.nextSibling
+  }
+
   if (__DEV__ && !node) {
     throw new Error(
       `No current hydration node was found.\n` +
@@ -187,10 +193,6 @@ function locateHydrationNodeImpl(consumeFragmentStart = false): Anchor | null {
 
   resetInsertionState()
   currentHydrationNode = node
-  if (consumeFragmentStart && node && isComment(node, '[')) {
-    currentHydrationNode = node.nextSibling
-    return node
-  }
   return null
 }
 

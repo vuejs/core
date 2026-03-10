@@ -1,6 +1,7 @@
 import {
   type ComponentInternalInstance,
   Fragment,
+  type VNode,
   currentInstance,
   isKeepAlive,
   isVNode,
@@ -69,7 +70,7 @@ export function createDynamicComponent(
 
         const frag = appContext.vapor.vdomMountVNode(value, currentInstance)
         if (isHydrating) {
-          locateHydrationNode(shouldConsumeVNodeHydrationStart(value))
+          locateHydrationNode(shouldConsumeFragmentStart(value))
           frag.hydrate()
           if (_isLastInsertion) {
             advanceHydrationNode(_insertionParent!)
@@ -113,7 +114,7 @@ function withScopeOwner(owner: VaporComponentInstance | null, fn: () => any) {
   }
 }
 
-function shouldConsumeVNodeHydrationStart(vnode: any): boolean {
+function shouldConsumeFragmentStart(vnode: VNode): boolean {
   if (vnode.type === Fragment) {
     return false
   }

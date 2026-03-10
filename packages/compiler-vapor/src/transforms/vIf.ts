@@ -50,7 +50,7 @@ export function processIf(
       context.dynamic.operation = {
         type: IRNodeTypes.IF,
         id,
-        branchShape: encodeIfBranchShape(branch),
+        blockShape: encodeIfBlockShape(branch),
         condition: dir.exp!,
         positive: branch,
         index: context.root.nextIfIndex(),
@@ -119,7 +119,7 @@ export function processIf(
         : {
             type: IRNodeTypes.IF,
             id: -1,
-            branchShape: VaporBlockShape.EMPTY,
+            blockShape: VaporBlockShape.EMPTY,
             condition: dir.exp!,
             positive: branch,
             index: context.root.nextIfIndex(),
@@ -131,10 +131,10 @@ export function processIf(
     return () => {
       onExit()
       if (negative.type === IRNodeTypes.IF) {
-        negative.branchShape = encodeIfBranchShape(negative.positive)
+        negative.blockShape = encodeIfBlockShape(negative.positive)
       }
       lastIfNode.negative = negative
-      lastIfNode.branchShape = encodeIfBranchShape(
+      lastIfNode.blockShape = encodeIfBlockShape(
         lastIfNode.positive,
         lastIfNode.negative,
       )
@@ -154,21 +154,21 @@ export function createIfBranch(
   return [branch, exitBlock]
 }
 
-function encodeIfBranchShape(
+function encodeIfBlockShape(
   positive: BlockIRNode,
   negative?: BlockIRNode | IfIRNode,
 ): number {
-  return getBlockBranchShape(positive) | (getNegativeBranchShape(negative) << 2)
+  return getBlockBlockShape(positive) | (getNegativeBlockShape(negative) << 2)
 }
 
-function getNegativeBranchShape(negative?: BlockIRNode | IfIRNode) {
+function getNegativeBlockShape(negative?: BlockIRNode | IfIRNode) {
   if (!negative) return VaporBlockShape.EMPTY
   return negative.type === IRNodeTypes.IF
     ? VaporBlockShape.SINGLE_ROOT
-    : getBlockBranchShape(negative)
+    : getBlockBlockShape(negative)
 }
 
-function getBlockBranchShape(block: BlockIRNode) {
+function getBlockBlockShape(block: BlockIRNode) {
   if (block.returns.length === 0) return VaporBlockShape.EMPTY
   return block.returns.length === 1
     ? VaporBlockShape.SINGLE_ROOT

@@ -176,11 +176,8 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    try {
-      this.renderBranch(render, transition, parent, instance)
-    } finally {
-      setActiveSub(prevSub)
-    }
+    this.renderBranch(render, transition, parent, instance)
+    setActiveSub(prevSub)
 
     if (isHydrating) {
       this.hydrate(render == null)
@@ -325,10 +322,10 @@ export class DynamicFragment extends VaporFragment {
 
 function getShape(
   fragment: DynamicFragment,
-  ifBranchShape?: VaporBlockShape,
+  shape?: VaporBlockShape,
 ): VaporBlockShape | undefined {
   if (fragment.anchorLabel === 'if') {
-    return ifBranchShape
+    return shape
   }
 
   if (fragment.anchorLabel === 'slot') {
