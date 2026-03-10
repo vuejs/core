@@ -472,6 +472,9 @@ describe('vnode', () => {
       expect(mergeProps(props1, props3)).toMatchObject({
         onClick: clickHandler1,
       })
+      expect(mergeProps({ onClick: null })).toMatchObject({
+        onClick: null,
+      })
     })
 
     test('default', () => {
