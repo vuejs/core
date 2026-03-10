@@ -37,11 +37,11 @@ export function genIf(
       conditionExpr,
       positiveArg,
       negativeArg,
+      String(blockShape),
       once && 'true',
       // index is only used when the branch can change
       // for transition keys and keep-alive caching
       index !== undefined && negative && String(index),
-      String(blockShape),
     ),
   )
 

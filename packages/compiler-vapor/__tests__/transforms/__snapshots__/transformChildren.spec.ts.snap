@@ -12,7 +12,7 @@ export function render(_ctx) {
   const n0 = _createIf(() => (1), () => {
     const n2 = t0()
     return n2
-  }, null, true, null, 1)
+  }, null, 1, true)
   return n4
 }"
 `;

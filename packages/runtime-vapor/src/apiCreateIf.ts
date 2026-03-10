@@ -15,9 +15,9 @@ export function createIf(
   condition: () => any,
   b1: BlockFn,
   b2?: BlockFn,
+  blockShape?: number,
   once?: boolean,
   index?: number,
-  blockShape?: number,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor

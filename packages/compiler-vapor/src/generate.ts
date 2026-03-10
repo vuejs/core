@@ -4,7 +4,7 @@ import type {
   SimpleExpressionNode,
 } from '@vue/compiler-dom'
 import type { BlockIRNode, CoreHelper, RootIRNode, VaporHelper } from './ir'
-import { VaporBlockShape, extend, remove } from '@vue/shared'
+import { type VaporBlockShape, extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
 import {
@@ -19,6 +19,7 @@ import {
 } from './generators/utils'
 import { setTemplateRefIdent } from './generators/templateRef'
 import { buildNextIdMap, getNextId } from './transform'
+import { getBlockShape } from './utils'
 
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
@@ -233,15 +234,8 @@ export function generate(
     preamble,
     map: map && map.toJSON(),
     helpers: new Set<string>(Array.from(context.helpers.keys())),
-    rootShape: getBlockRootShape(ir.block),
+    rootShape: getBlockShape(ir.block),
   }
-}
-
-function getBlockRootShape(block: BlockIRNode): VaporBlockShape {
-  if (block.returns.length === 0) return VaporBlockShape.EMPTY
-  return block.returns.length === 1
-    ? VaporBlockShape.SINGLE_ROOT
-    : VaporBlockShape.MULTI_ROOT
 }
 
 function genDelegates({ delegates, helper }: CodegenContext) {

@@ -181,7 +181,7 @@ export function render(_ctx) {
       const n0 = _createIf(() => (_ctx.ok), () => {
         const n2 = _createSlot("default", null)
         return n2
-      }, null, null, null, 1)
+      }, null, 1)
       return n0
     })
   }, true)
@@ -375,7 +375,7 @@ export function render(_ctx) {
   }, () => {
     const n5 = _createComponentWithFallback(_component_Bar)
     return n5
-  }, true, 0, 5)
+  }, 5, true, 0)
   return n6
 }"
 `;
@@ -617,7 +617,7 @@ export function render(_ctx) {
         _setInsertionState(n3, null, 0, true)
         const n2 = _createComponentWithFallback(_component_ChildComp)
         return n3
-      }, null, null, null, 1)
+      }, null, 1)
       return n0
     })
   }, true)
@@ -654,7 +654,7 @@ export function render(_ctx) {
         _setInsertionState(n3, null, 0, true)
         const n2 = _createPlainElement("my-element")
         return n3
-      }, null, null, null, 1)
+      }, null, 1)
       return n0
     })
   }, true)
@@ -695,9 +695,9 @@ export function render(_ctx) {
           _setInsertionState(n5, null, 0, true)
           const n4 = _createComponentWithFallback(_component_ChildComp)
           return n5
-        }, null, null, null, 1)
+        }, null, 1)
         return n6
-      }, null, null, null, 1)
+      }, null, 1)
       return n0
     })
   }, true)
@@ -791,7 +791,7 @@ export function render(_ctx) {
       }, () => {
         const n4 = t1()
         return n4
-      }, null, 0, 5)
+      }, 5, null, 0)
       return n0
     }
   }, true)

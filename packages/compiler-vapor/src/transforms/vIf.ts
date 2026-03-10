@@ -19,7 +19,7 @@ import {
 import { VaporBlockShape, extend } from '@vue/shared'
 import { newBlock, wrapTemplate } from './utils'
 import { getSiblingIf } from './transformComment'
-import { isStaticExpression } from '../utils'
+import { getBlockShape, isStaticExpression } from '../utils'
 
 export const transformVIf: NodeTransform = createStructuralDirectiveTransform(
   ['if', 'else', 'else-if'],
@@ -160,19 +160,12 @@ function encodeIfBlockShape(
   positive: BlockIRNode,
   negative?: BlockIRNode | IfIRNode,
 ): number {
-  return getBlockBlockShape(positive) | (getNegativeBlockShape(negative) << 2)
+  return getBlockShape(positive) | (getNegativeBlockShape(negative) << 2)
 }
 
 function getNegativeBlockShape(negative?: BlockIRNode | IfIRNode) {
   if (!negative) return VaporBlockShape.EMPTY
   return negative.type === IRNodeTypes.IF
     ? VaporBlockShape.SINGLE_ROOT
-    : getBlockBlockShape(negative)
-}
-
-function getBlockBlockShape(block: BlockIRNode) {
-  if (block.returns.length === 0) return VaporBlockShape.EMPTY
-  return block.returns.length === 1
-    ? VaporBlockShape.SINGLE_ROOT
-    : VaporBlockShape.MULTI_ROOT
+    : getBlockShape(negative)
 }

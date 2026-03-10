@@ -213,6 +213,7 @@ describe('VaporKeepAlive', () => {
                 return n1
               },
               undefined,
+              undefined,
               0,
             ),
         })
@@ -272,6 +273,7 @@ describe('VaporKeepAlive', () => {
                 setRefB(n1, instanceB)
                 return n1
               },
+              undefined,
               undefined,
               0,
             ),
