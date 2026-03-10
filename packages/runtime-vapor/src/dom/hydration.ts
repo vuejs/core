@@ -94,9 +94,7 @@ export function hydrateNode(node: Node, fn: () => void): void {
 }
 
 export let adoptTemplate: (node: Node, template: string) => Node | null
-export let locateHydrationNode: (
-  consumeFragmentStart?: boolean,
-) => Anchor | null
+export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
 
 type Anchor = Comment & {
   // cached matching fragment end to avoid repeated traversal
@@ -166,7 +164,7 @@ export function locateNextNode(node: Node): Node | null {
       : _next(node)
 }
 
-function locateHydrationNodeImpl(consumeFragmentStart = false): Anchor | null {
+function locateHydrationNodeImpl(consumeFragmentStart = false) {
   let node: Node | null
 
   if (insertionIndex !== undefined) {
@@ -193,7 +191,6 @@ function locateHydrationNodeImpl(consumeFragmentStart = false): Anchor | null {
 
   resetInsertionState()
   currentHydrationNode = node
-  return null
 }
 
 export function locateEndAnchor(

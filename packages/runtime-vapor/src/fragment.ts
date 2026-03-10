@@ -179,9 +179,7 @@ export class DynamicFragment extends VaporFragment {
     this.renderBranch(render, transition, parent, instance)
     setActiveSub(prevSub)
 
-    if (isHydrating) {
-      this.hydrate(render == null)
-    }
+    if (isHydrating) this.hydrate(render == null)
   }
 
   renderBranch(

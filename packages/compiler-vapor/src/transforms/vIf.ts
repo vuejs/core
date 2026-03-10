@@ -113,27 +113,29 @@ export function processIf(
 
     const [branch, onExit] = createIfBranch(node, context)
 
-    const negative =
-      dir.name === 'else'
-        ? branch
-        : {
-            type: IRNodeTypes.IF,
-            id: -1,
-            blockShape: VaporBlockShape.EMPTY,
-            condition: dir.exp!,
-            positive: branch,
-            index: context.root.nextIfIndex(),
-            once:
-              context.inVOnce ||
-              isStaticExpression(dir.exp!, context.options.bindingMetadata),
-          }
+    if (dir.name === 'else') {
+      lastIfNode.negative = branch
+    } else {
+      lastIfNode.negative = {
+        type: IRNodeTypes.IF,
+        id: -1,
+        condition: dir.exp!,
+        positive: branch,
+        index: context.root.nextIfIndex(),
+        blockShape: VaporBlockShape.EMPTY,
+        once:
+          context.inVOnce ||
+          isStaticExpression(dir.exp!, context.options.bindingMetadata),
+      }
+    }
 
     return () => {
       onExit()
-      if (negative.type === IRNodeTypes.IF) {
-        negative.blockShape = encodeIfBlockShape(negative.positive)
+      if (lastIfNode.negative.type === IRNodeTypes.IF) {
+        lastIfNode.negative.blockShape = encodeIfBlockShape(
+          lastIfNode.negative.positive,
+        )
       }
-      lastIfNode.negative = negative
       lastIfNode.blockShape = encodeIfBlockShape(
         lastIfNode.positive,
         lastIfNode.negative,
