@@ -75,13 +75,10 @@ function performHydration<T>(
   currentHydrationBoundary = null
   currentHydrationEntry = null
   try {
-    try {
-      setup()
-      return fn()
-    } finally {
-      cleanup()
-    }
+    setup()
+    return fn()
   } finally {
+    cleanup()
     currentHydrationNode = prevHydrationNode
     currentHydrationBoundary = prevHydrationBoundary
     currentHydrationEntry = prevHydrationEntry
