@@ -76,17 +76,22 @@ function processRule(id: string, rule: Rule) {
   }
   processedRules.add(rule)
   let deep = false
+  let isNested = false
   let parent: Document | Container | undefined = rule.parent
   while (parent && parent.type !== 'root') {
     if ((parent as any).__deep) {
       deep = true
       break
     }
+    if (parent.type === 'rule') {
+      isNested = true
+      break
+    }
     parent = parent.parent
   }
   rule.selector = selectorParser(selectorRoot => {
     selectorRoot.each(selector => {
-      rewriteSelector(id, rule, selector, selectorRoot, deep)
+      rewriteSelector(id, rule, selector, selectorRoot, deep, false, isNested)
     })
   }).processSync(rule.selector)
 }
@@ -98,6 +103,7 @@ function rewriteSelector(
   selectorRoot: selectorParser.Root,
   deep: boolean,
   slotted = false,
+  isNested = false,
 ) {
   let node: selectorParser.Node | null = null
   let shouldInject = !deep
@@ -200,7 +206,7 @@ function rewriteSelector(
         // * .foo {} -> .foo[xxxxxxx] {}
         if (next) {
           if (next.type === 'combinator') {
-            if (next.value === ' ' && rule.parent?.type !== 'rule') {
+            if (next.value === ' ' && !isNested) {
               // * .foo {} -> .foo[xxxxxxx] {}
               selector.removeChild(next)
               selector.removeChild(n)

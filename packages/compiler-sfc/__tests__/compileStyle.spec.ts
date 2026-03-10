@@ -457,6 +457,25 @@ color: red
       }
       }"
     `)
+    // @media at top-level (no rule ancestor): * should still be removed
+    expect(compileScoped(`@media screen { * .section { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      "@media screen {
+      .section[data-v-test] { color: red;
+      }
+      }"
+    `)
+    // * nested inside .outer via @media: * must be preserved
+    expect(
+      compileScoped(`.outer { @media screen { * .section { color: red; } } }`),
+    ).toMatchInlineSnapshot(`
+      ".outer[data-v-test] {
+      @media screen {
+      * .section[data-v-test] { color: red;
+      }
+      }
+      }"
+    `)
   })
 })
 
