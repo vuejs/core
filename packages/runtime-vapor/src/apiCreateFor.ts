@@ -28,7 +28,7 @@ import {
   setCurrentSlotOwner,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
-import { VaporVForFlags } from '../../shared/src/vaporFlags'
+import { VaporVForFlags } from '@vue/shared'
 import {
   advanceHydrationNode,
   currentHydrationNode,
@@ -36,7 +36,6 @@ import {
   isHydrating,
   locateHydrationNode,
   setCurrentHydrationNode,
-  withHydrationBoundary,
 } from './dom/hydration'
 import { ForFragment, VaporFragment } from './fragment'
 import {
@@ -103,7 +102,7 @@ export const createFor = (
   const _insertionIndex = insertionIndex
   const _isLastInsertion = isLastInsertion
   if (isHydrating) {
-    locateHydrationNode()
+    locateHydrationNode(true)
   } else {
     resetInsertionState()
   }
@@ -153,10 +152,7 @@ export const createFor = (
       }
 
       if (isHydrating) {
-        parentAnchor =
-          newLength === 0
-            ? currentHydrationNode!.nextSibling!
-            : currentHydrationNode!
+        parentAnchor = currentHydrationNode!
         if (
           __DEV__ &&
           (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']')))
@@ -492,42 +488,31 @@ export const createFor = (
     }
   }
 
-  const createForFragment = () => {
-    if (setup) {
-      setup({ createSelector })
-    }
-
-    if (flags & VaporVForFlags.ONCE) {
-      renderList()
-    } else {
-      renderEffect(() => {
-        if (!isMounted) return renderList()
-        const prevOwner = setCurrentSlotOwner(slotOwner)
-        try {
-          renderList()
-        } finally {
-          setCurrentSlotOwner(prevOwner)
-        }
-      })
-    }
-
-    if (!isHydrating) {
-      if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
-    } else {
-      advanceHydrationNode(_isLastInsertion ? _insertionParent! : parentAnchor!)
-    }
-
-    return frag
+  if (setup) {
+    setup({ createSelector })
   }
 
-  if (isHydrating) {
-    return withHydrationBoundary(
-      'known-fragment',
-      currentHydrationNode,
-      createForFragment,
-    )
+  if (flags & VaporVForFlags.ONCE) {
+    renderList()
+  } else {
+    renderEffect(() => {
+      if (!isMounted) return renderList()
+      const prevOwner = setCurrentSlotOwner(slotOwner)
+      try {
+        renderList()
+      } finally {
+        setCurrentSlotOwner(prevOwner)
+      }
+    })
   }
-  return createForFragment()
+
+  if (!isHydrating) {
+    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+  } else {
+    advanceHydrationNode(_isLastInsertion ? _insertionParent! : parentAnchor!)
+  }
+
+  return frag
 
   function createSelector(source: () => any): (cb: () => void) => void {
     let operMap = new Map<any, (() => void)[]>()

@@ -17,6 +17,7 @@ import {
 } from './insertionState'
 import {
   advanceHydrationNode,
+  currentHydrationNode,
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
@@ -197,7 +198,7 @@ export function createSlot(
 
   let fragment: SlotFragment
   if (isRef(rawSlots._) && isInteropEnabled) {
-    if (isHydrating) locateHydrationNode()
+    if (isHydrating && !currentHydrationNode) locateHydrationNode(true)
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,

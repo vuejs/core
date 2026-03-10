@@ -1830,3 +1830,27 @@ describe('vapor mode + ssr', () => {
     )
   })
 })
+
+describe('vapor mode', () => {
+  test.todo('inject root shape metadata into template-only vapor component')
+
+  test('inject root shape metadata into defineVaporComponent', () => {
+    const { content } = compile(
+      `
+        <script setup vapor>
+        const ok = true
+        </script>
+        <template>
+          <div />
+          <div />
+        </template>
+      `,
+      {
+        inlineTemplate: true,
+        vapor: true,
+      },
+    )
+
+    expect(content).toContain(`__shape: 2`)
+  })
+})

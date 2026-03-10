@@ -12,6 +12,7 @@ import {
   transformVText,
 } from '../../src'
 import { ErrorCodes, NodeTypes, type RootNode } from '@vue/compiler-dom'
+import { VaporBlockShape } from '@vue/shared'
 
 const compileWithVIf = makeCompile({
   nodeTransforms: [
@@ -60,6 +61,7 @@ describe('compiler: v-if', () => {
 
     expect(ir.block.effect).toEqual([])
     expect((op as IfIRNode).positive.effect).lengthOf(1)
+    expect((op as IfIRNode).branchShape).toBe(VaporBlockShape.SINGLE_ROOT)
 
     expect(code).matchSnapshot()
   })
@@ -160,6 +162,9 @@ describe('compiler: v-if', () => {
     expect(code).toContain('_template("<div>hi")')
     expect(code).toContain('_template("<div>ho")')
     expect([...ir.template.keys()]).toMatchObject(['<div>hi', '<div>ho'])
+    expect(
+      (ir.block.dynamic.children[0].operation as IfIRNode).branchShape,
+    ).toBe(VaporBlockShape.MULTI_ROOT)
   })
 
   test('template v-if (with v-for inside)', () => {
@@ -204,6 +209,9 @@ describe('compiler: v-if', () => {
       '<div>ho',
       '<div>',
     ])
+    expect(
+      (ir.block.dynamic.children[0].operation as IfIRNode).branchShape,
+    ).toBe(VaporBlockShape.MULTI_ROOT | (VaporBlockShape.SINGLE_ROOT << 2))
   })
 
   test('dedupe same template', () => {
@@ -357,6 +365,16 @@ describe('compiler: v-if', () => {
         },
       },
     })
+
+    const op = ir.block.dynamic.children[0].operation as IfIRNode
+    const nested = op.negative as IfIRNode
+    const innermost = nested.negative as IfIRNode
+    const singleOrSingle =
+      VaporBlockShape.SINGLE_ROOT | (VaporBlockShape.SINGLE_ROOT << 2)
+
+    expect(op.branchShape).toBe(singleOrSingle)
+    expect(nested.branchShape).toBe(singleOrSingle)
+    expect(innermost.branchShape).toBe(singleOrSingle)
   })
 
   test('v-if + v-if / v-else[-if]', () => {

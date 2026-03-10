@@ -9,6 +9,7 @@ import {
 import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
 import { createComment, createTextNode } from './dom/node'
+import type { VaporBlockShape } from '@vue/shared'
 
 export function createIf(
   condition: () => any,
@@ -16,6 +17,7 @@ export function createIf(
   b2?: BlockFn,
   once?: boolean,
   index?: number,
+  branchShape?: number,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -38,9 +40,14 @@ export function createIf(
         : new DynamicFragment(undefined, keyed)
     renderEffect(() => {
       const ok = condition()
+      const shape =
+        isHydrating && branchShape != null
+          ? decodeIfBranchShape(branchShape, ok)
+          : undefined
       ;(frag as DynamicFragment).update(
         ok ? b1 : b2,
         keyed ? `${index}${ok ? 0 : 1}` : undefined,
+        shape,
       )
     })
   }
@@ -54,4 +61,15 @@ export function createIf(
   }
 
   return frag
+}
+
+function decodeIfBranchShape(
+  branchShape: number,
+  ok: unknown,
+): VaporBlockShape {
+  // The compiler packs the true/false branch shapes into one integer.
+  // Each branch uses 2 bits.
+  // The true branch reads the low 2 bits; the false branch shifts right by 2
+  // and then reads the low 2 bits.
+  return ((branchShape >> (ok ? 0 : 2)) & 0b11) as VaporBlockShape
 }

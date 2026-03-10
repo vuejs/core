@@ -69,19 +69,13 @@ function performHydration<T>(
   enableHydrationNodeLookup()
   const prev = setIsHydrating(true)
   const prevHydrationNode = currentHydrationNode
-  const prevHydrationBoundary = currentHydrationBoundary
-  const prevHydrationEntry = currentHydrationEntry
   currentHydrationNode = null
-  currentHydrationBoundary = null
-  currentHydrationEntry = null
   try {
     setup()
     return fn()
   } finally {
     cleanup()
     currentHydrationNode = prevHydrationNode
-    currentHydrationBoundary = prevHydrationBoundary
-    currentHydrationEntry = prevHydrationEntry
     setIsHydrating(prev)
     if (!isHydrating) disableHydrationNodeLookup()
   }
@@ -100,7 +94,9 @@ export function hydrateNode(node: Node, fn: () => void): void {
 }
 
 export let adoptTemplate: (node: Node, template: string) => Node | null
-export let locateHydrationNode: () => void
+export let locateHydrationNode: (
+  consumeFragmentStart?: boolean,
+) => Anchor | null
 
 type Anchor = Comment & {
   // cached matching fragment end to avoid repeated traversal
@@ -132,21 +128,17 @@ export function advanceHydrationNode(node: Node): void {
  * while handling potential fragments.
  */
 function adoptTemplateImpl(node: Node, template: string): Node | null {
-  prepareHydrationChildEntry()
-
   if (!(template[0] === '<' && template[1] === '!')) {
+    if (
+      template.trim() === '' &&
+      isComment(node, ']') &&
+      isComment(node.previousSibling!, '[')
+    ) {
+      node.before((node = createTextNode()))
+    }
+
     while (node.nodeType === 8) {
       node = node.nextSibling!
-
-      // empty text node in slot
-      if (
-        template.trim() === '' &&
-        isComment(node, ']') &&
-        isComment(node.previousSibling!, '[')
-      ) {
-        node.before((node = createTextNode()))
-        break
-      }
     }
   }
 
@@ -173,7 +165,7 @@ export function locateNextNode(node: Node): Node | null {
       : _next(node)
 }
 
-function locateHydrationNodeImpl(): void {
+function locateHydrationNodeImpl(consumeFragmentStart = false): Anchor | null {
   let node: Node | null
 
   if (insertionIndex !== undefined) {
@@ -195,6 +187,11 @@ function locateHydrationNodeImpl(): void {
 
   resetInsertionState()
   currentHydrationNode = node
+  if (consumeFragmentStart && node && isComment(node, '[')) {
+    currentHydrationNode = node.nextSibling
+    return node
+  }
+  return null
 }
 
 export function locateEndAnchor(
@@ -285,176 +282,5 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
     } else {
       break
     }
-  }
-}
-
-interface HydrationEntry {
-  parent: HydrationEntry | null
-  node: Node | null
-}
-
-export interface HydrationBoundary {
-  parent: HydrationBoundary | null
-  mode: 'known-single' | 'known-fragment' | 'deferred'
-  state: 'pending' | 'resolved-single' | 'resolved-fragment'
-  entry: Node | null
-  start: Anchor | null
-  end: Anchor | null
-}
-
-let currentHydrationBoundary: HydrationBoundary | null = null
-let currentHydrationEntry: HydrationEntry | null = null
-
-function pushHydrationEntry(node: Node | null): void {
-  currentHydrationEntry = {
-    parent: currentHydrationEntry,
-    node,
-  }
-}
-
-function popHydrationEntry(): void {
-  currentHydrationEntry = currentHydrationEntry && currentHydrationEntry.parent
-}
-
-export function withHydrationEntry<T>(node: Node | null, fn: () => T): T {
-  pushHydrationEntry(node)
-  try {
-    return fn()
-  } finally {
-    popHydrationEntry()
-  }
-}
-
-export function getCurrentHydrationEntry(): Node | null {
-  return (
-    (currentHydrationBoundary && currentHydrationBoundary.entry) ??
-    (currentHydrationEntry && currentHydrationEntry.node) ??
-    null
-  )
-}
-
-function pushHydrationBoundary(
-  mode: HydrationBoundary['mode'],
-  entry: Node | null,
-): HydrationBoundary {
-  const boundary: HydrationBoundary = {
-    parent: currentHydrationBoundary,
-    mode,
-    state: 'pending',
-    entry,
-    start: null,
-    end: null,
-  }
-  return (currentHydrationBoundary = boundary)
-}
-
-function popHydrationBoundary(boundary: HydrationBoundary): void {
-  if (currentHydrationBoundary === boundary) {
-    currentHydrationBoundary = boundary.parent
-  }
-}
-
-export function withHydrationBoundary<T>(
-  mode: HydrationBoundary['mode'],
-  entry: Node | null,
-  fn: (boundary: HydrationBoundary) => T,
-): T {
-  const boundary = pushHydrationBoundary(mode, entry)
-  try {
-    return fn(boundary)
-  } finally {
-    popHydrationBoundary(boundary)
-  }
-}
-
-export function resolveHydrationBoundaryEnd(
-  boundary: HydrationBoundary | null,
-): Anchor | null {
-  if (!boundary || boundary.state !== 'resolved-fragment' || !boundary.start) {
-    return null
-  }
-
-  return (boundary.end ||= locateEndAnchor(boundary.start) as Anchor | null)
-}
-
-export function resolveEmptyHydrationBoundary(
-  boundary: HydrationBoundary | null,
-): HydrationBoundary | null {
-  if (!boundary || boundary.state !== 'pending') {
-    return boundary
-  }
-
-  const start = resolvePendingHydrationBoundaryStart(boundary)
-  if (start) {
-    resolveHydrationBoundaryAsFragment(boundary, start)
-  }
-  return boundary
-}
-
-function resolvePendingHydrationBoundary(
-  boundary: HydrationBoundary,
-  isFragment: boolean,
-): void {
-  const start = resolvePendingHydrationBoundaryStart(boundary)
-  if (!start) return
-
-  if (
-    boundary.mode === 'known-fragment' ||
-    !isFragment ||
-    isComment(start.nextSibling!, '[')
-  ) {
-    resolveHydrationBoundaryAsFragment(boundary, start)
-    return
-  }
-
-  boundary.state = 'resolved-single'
-}
-
-function resolvePendingHydrationBoundaryStart(
-  boundary: HydrationBoundary,
-): Anchor | null {
-  if (boundary.mode === 'known-single') {
-    boundary.state = 'resolved-single'
-    return null
-  }
-
-  const node = currentHydrationNode
-  if (!(node && isComment(node, '['))) {
-    boundary.state = 'resolved-single'
-    return null
-  }
-
-  if (node.previousSibling && node !== boundary.entry) {
-    boundary.state = 'resolved-single'
-    return null
-  }
-
-  return node
-}
-
-function resolveHydrationBoundaryAsFragment(
-  boundary: HydrationBoundary,
-  start: Anchor,
-): void {
-  boundary.start = start
-  boundary.state = 'resolved-fragment'
-  currentHydrationNode = start.nextSibling
-}
-
-export function prepareHydrationChildEntry(isFragment = false): void {
-  if (!currentHydrationBoundary) return
-  const pending: HydrationBoundary[] = []
-  for (
-    let boundary: HydrationBoundary | null = currentHydrationBoundary;
-    boundary;
-    boundary = boundary.parent
-  ) {
-    if (boundary.state === 'pending') {
-      pending.push(boundary)
-    }
-  }
-
-  for (let i = pending.length - 1; i >= 0; i--) {
-    resolvePendingHydrationBoundary(pending[i], isFragment)
   }
 }

@@ -22,7 +22,7 @@ import {
   createSrcsetTransformWithOptions,
   transformSrcset,
 } from './template/transformSrcset'
-import { generateCodeFrame, isObject } from '@vue/shared'
+import { type VaporBlockShape, generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerVapor from '@vue/compiler-vapor'
 import * as CompilerSSR from '@vue/compiler-ssr'
@@ -42,6 +42,7 @@ export interface SFCTemplateCompileResults {
   code: string
   ast?: unknown
   preamble?: string
+  vaporRootShape?: VaporBlockShape
   source: string
   tips: string[]
   errors: (string | CompilerError)[]
@@ -238,30 +239,26 @@ function doCompileTemplate({
     inAST = createRoot(template.children, inAST.source)
   }
 
-  let { code, ast, preamble, map, helpers } = compiler.compile(
-    inAST || source,
-    {
-      mode: 'module',
-      prefixIdentifiers: true,
-      hoistStatic: true,
-      cacheHandlers: true,
-      ssrCssVars:
-        ssr && ssrCssVars && ssrCssVars.length
-          ? genCssVarsFromList(ssrCssVars, shortId, isProd, true)
-          : '',
-      scopeId: scoped ? longId : undefined,
-      slotted,
-      sourceMap: true,
-      ...compilerOptions,
-      hmr: !isProd,
-      nodeTransforms: nodeTransforms.concat(
-        compilerOptions.nodeTransforms || [],
-      ),
-      filename,
-      onError: e => errors.push(e),
-      onWarn: w => warnings.push(w),
-    },
-  )
+  const result = compiler.compile(inAST || source, {
+    mode: 'module',
+    prefixIdentifiers: true,
+    hoistStatic: true,
+    cacheHandlers: true,
+    ssrCssVars:
+      ssr && ssrCssVars && ssrCssVars.length
+        ? genCssVarsFromList(ssrCssVars, shortId, isProd, true)
+        : '',
+    scopeId: scoped ? longId : undefined,
+    slotted,
+    sourceMap: true,
+    ...compilerOptions,
+    hmr: !isProd,
+    nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
+    filename,
+    onError: e => errors.push(e),
+    onWarn: w => warnings.push(w),
+  })
+  let { code, ast, preamble, map, helpers } = result
 
   // inMap should be the map produced by ./parse.ts which is a simple line-only
   // mapping. If it is present, we need to adjust the final map and errors to
@@ -291,6 +288,9 @@ function doCompileTemplate({
     code,
     ast,
     preamble,
+    vaporRootShape: vapor
+      ? (result as CompilerVapor.VaporCodegenResult).rootShape
+      : undefined,
     source,
     errors,
     tips,

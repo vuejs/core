@@ -949,6 +949,7 @@ export function compileScript(
   let templateMap
   // 9. generate return statement
   let returned
+  let inlinedVaporRootShape: number | undefined
   // ensure props bindings register before compile template in inline mode
   const propsDecl = genRuntimeProps(ctx)
   if (!inlineMode || (!sfc.template && ctx.hasDefaultExportRender)) {
@@ -995,25 +996,26 @@ export function compileScript(
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, preamble, tips, errors, helpers, map } = compileTemplate({
-        filename,
-        ast: sfc.template.ast,
-        source: sfc.template.content,
-        inMap: sfc.template.map,
-        ...options.templateOptions,
-        id: scopeId,
-        scoped: sfc.styles.some(s => s.scoped),
-        isProd: options.isProd,
-        ssrCssVars: sfc.cssVars,
-        vapor,
-        compilerOptions: {
-          ...(options.templateOptions &&
-            options.templateOptions.compilerOptions),
-          inline: true,
-          isTS: ctx.isTS,
-          bindingMetadata: ctx.bindingMetadata,
-        },
-      })
+      const { code, preamble, tips, errors, helpers, map, vaporRootShape } =
+        compileTemplate({
+          filename,
+          ast: sfc.template.ast,
+          source: sfc.template.content,
+          inMap: sfc.template.map,
+          ...options.templateOptions,
+          id: scopeId,
+          scoped: sfc.styles.some(s => s.scoped),
+          isProd: options.isProd,
+          ssrCssVars: sfc.cssVars,
+          vapor,
+          compilerOptions: {
+            ...(options.templateOptions &&
+              options.templateOptions.compilerOptions),
+            inline: true,
+            isTS: ctx.isTS,
+            bindingMetadata: ctx.bindingMetadata,
+          },
+        })
       templateMap = map
       if (tips.length) {
         tips.forEach(warnOnce)
@@ -1039,6 +1041,7 @@ export function compileScript(
       if (preamble) {
         ctx.s.prepend(preamble)
       }
+      inlinedVaporRootShape = vaporRootShape
       // avoid duplicated unref import
       // as this may get injected by the render function preamble OR the
       // css vars codegen
@@ -1094,6 +1097,9 @@ export function compileScript(
 
   const emitsDecl = genRuntimeEmits(ctx)
   if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
+  if (vapor && inlinedVaporRootShape != null) {
+    runtimeOptions += `\n  __shape: ${inlinedVaporRootShape},`
+  }
 
   let definedOptions = ''
   if (ctx.optionsRuntimeDecl) {

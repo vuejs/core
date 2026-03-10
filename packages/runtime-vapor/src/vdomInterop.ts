@@ -15,6 +15,7 @@ import {
   type Slots,
   Static,
   type SuspenseBoundary,
+  Text,
   type TransitionHooks,
   type VNode,
   type VNodeArrayChildren,
@@ -80,13 +81,11 @@ import { optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
   currentHydrationNode,
-  getCurrentHydrationEntry,
   isComment,
   isHydrating,
-  prepareHydrationChildEntry,
+  locateHydrationNode,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
-  withHydrationBoundary,
 } from './dom/hydration'
 import {
   VaporFragment,
@@ -861,9 +860,7 @@ function renderVDOMSlot(
 
       if (isHydrating) {
         if (isVNode(resolved)) {
-          withHydrationBoundary('deferred', getCurrentHydrationEntry(), () =>
-            hydrateVNode(resolved, parentComponent as any),
-          )
+          hydrateSlotVNode(resolved, parentComponent as any)
           currentVNode = resolved
           currentBlock = null
           frag.nodes = resolved.el as any
@@ -956,7 +953,6 @@ function hydrateVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
 ) {
-  prepareHydrationChildEntry(vnode.type === Fragment)
   const node = currentHydrationNode!
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
   const nextNode = vdomHydrateNode(
@@ -969,6 +965,63 @@ function hydrateVNode(
   )
   if (nextNode) setCurrentHydrationNode(nextNode)
   else advanceHydrationNode(node)
+}
+
+function hydrateSlotVNode(
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null,
+) {
+  if (vnode.type === Fragment) {
+    if (!isComment(currentHydrationNode!, '[')) {
+      hydrateVDOMSlotFragmentChildren(
+        vnode.children as VNode[],
+        parentComponent,
+      )
+      return
+    }
+
+    const start = currentHydrationNode!
+    if (
+      isComment(start.nextSibling as Node, '[') &&
+      isSingleTextFragment(vnode.children as VNode[])
+    ) {
+      setCurrentHydrationNode(start.nextSibling)
+      hydrateVNode(vnode, parentComponent)
+      return
+    }
+
+    if (
+      (vnode.children as VNode[]).length > 0 &&
+      !isComment(start.nextSibling as Node, '[')
+    ) {
+      setCurrentHydrationNode(start.nextSibling)
+      hydrateVDOMSlotFragmentChildren(
+        vnode.children as VNode[],
+        parentComponent,
+      )
+      return
+    }
+  }
+
+  locateHydrationNode(vnode.type !== Fragment)
+  hydrateVNode(vnode, parentComponent)
+}
+
+function isSingleTextFragment(children: any[]): boolean {
+  return (
+    children.length === 1 && isVNode(children[0]) && children[0].type === Text
+  )
+}
+
+function hydrateVDOMSlotFragmentChildren(
+  children: VNode[],
+  parentComponent: ComponentInternalInstance | null,
+) {
+  for (const child of children) {
+    if (isVNode(child)) {
+      hydrateVNode(child, parentComponent)
+    }
+  }
 }
 
 function createVaporFallback(

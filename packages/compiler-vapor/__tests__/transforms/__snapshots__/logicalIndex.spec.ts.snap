@@ -52,7 +52,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
-  }, null, true)
+  }, null, true, null, 1)
   return n5
 }"
 `;
@@ -73,7 +73,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
-  }, null, true)
+  }, null, true, null, 1)
   return n5
 }"
 `;
@@ -332,7 +332,7 @@ export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
-  })
+  }, null, null, null, 1)
   return n3
 }"
 `;
@@ -349,7 +349,7 @@ export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
-  })
+  }, null, null, null, 1)
   return n4
 }"
 `;
@@ -365,7 +365,7 @@ export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
-  })
+  }, null, null, null, 1)
   return n3
 }"
 `;
@@ -389,7 +389,7 @@ export function render(_ctx) {
   }, () => {
     const n5 = t1()
     return n5
-  }, null, 0)
+  }, null, 0, 5)
   _setInsertionState(n7, null, 2, true)
   const n6 = _createComponentWithFallback(_component_Comp2)
   return n7
@@ -414,7 +414,7 @@ export function render(_ctx) {
   }, () => {
     const n5 = t1()
     return n5
-  }, null, 0)
+  }, null, 0, 5)
   return n6
 }"
 `;
@@ -435,7 +435,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, null, 0)
+  }, null, 0, 5)
   return n6
 }"
 `;
@@ -460,7 +460,7 @@ export function render(_ctx) {
   }, () => {
     const n6 = t2()
     return n6
-  }, null, 1), null, 0)
+  }, null, 1, 5), null, 0, 5)
   return n8
 }"
 `;
@@ -480,7 +480,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, null, 0)
+  }, null, 0, 5)
   return n5
 }"
 `;
@@ -501,7 +501,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, null, 0)
+  }, null, 0, 5)
   _setInsertionState(n6, null, 2, true)
   const n5 = _createComponentWithFallback(_component_Comp)
   return n6
@@ -523,7 +523,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, null, 0)
+  }, null, 0, 5)
   return n5
 }"
 `;

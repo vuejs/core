@@ -58,6 +58,7 @@ import {
   EMPTY_OBJ,
   type Prettify,
   ShapeFlags,
+  VaporBlockShape,
   hasOwn,
   invokeArrayFns,
   isArray,
@@ -93,13 +94,10 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
-  getCurrentHydrationEntry,
   isHydrating,
   locateHydrationNode,
   locateNextNode,
   setCurrentHydrationNode,
-  withHydrationBoundary,
-  withHydrationEntry,
 } from './dom/hydration'
 import { createComment, createElement, createTextNode } from './dom/node'
 import {
@@ -251,10 +249,8 @@ export function createComponent(
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
-  let hydrationStartNode: Node | null = null
   if (isHydrating) {
-    locateHydrationNode()
-    hydrationStartNode = currentHydrationNode
+    locateHydrationNode(component.__shape === VaporBlockShape.MULTI_ROOT)
   } else {
     resetInsertionState()
   }
@@ -308,15 +304,7 @@ export function createComponent(
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
     } else {
-      if (!isSingleRoot) {
-        withHydrationBoundary(
-          'deferred',
-          getCurrentHydrationEntry(),
-          frag.hydrate,
-        )
-      } else {
-        frag.hydrate()
-      }
+      frag.hydrate()
       if (_isLastInsertion) {
         advanceHydrationNode(_insertionParent!)
       }
@@ -339,85 +327,78 @@ export function createComponent(
     return frag as any
   }
 
-  const create = (): VaporComponentInstance => {
-    const instance = new VaporComponentInstance(
-      component,
-      rawProps as RawProps,
-      rawSlots as RawSlots,
-      appContext,
-      once,
+  const instance = new VaporComponentInstance(
+    component,
+    rawProps as RawProps,
+    rawSlots as RawSlots,
+    appContext,
+    once,
+  )
+
+  // handle currentKeepAliveCtx for component boundary isolation
+  // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
+  // DynamicFragment can capture it
+  if (currentKeepAliveCtx && !isAsyncWrapper(instance)) {
+    currentKeepAliveCtx.processShapeFlag(instance)
+    // clear currentKeepAliveCtx so child components don't associate
+    // with parent's KeepAlive
+    setCurrentKeepAliveCtx(null)
+  }
+
+  // reset currentSlotOwner to null to avoid affecting the child components
+  const prevSlotOwner = setCurrentSlotOwner(null)
+
+  // HMR
+  if (__DEV__) {
+    registerHMR(instance)
+    instance.isSingleRoot = isSingleRoot
+    instance.hmrRerender = hmrRerender.bind(null, instance)
+    instance.hmrReload = hmrReload.bind(null, instance)
+
+    pushWarningContext(instance)
+    startMeasure(instance, `init`)
+
+    // cache normalized options for dev only emit check
+    instance.propsOptions = normalizePropsOptions(component)
+    instance.emitsOptions = normalizeEmitsOptions(component)
+  }
+
+  // hydrating async component
+  if (
+    isHydrating &&
+    isAsyncWrapper(instance) &&
+    component.__asyncHydrate &&
+    !component.__asyncResolved
+  ) {
+    component.__asyncHydrate(currentHydrationNode as Element, instance, () =>
+      setupComponent(instance, component),
     )
-
-    // handle currentKeepAliveCtx for component boundary isolation
-    // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
-    // DynamicFragment can capture it
-    if (currentKeepAliveCtx && !isAsyncWrapper(instance)) {
-      currentKeepAliveCtx.processShapeFlag(instance)
-      // clear currentKeepAliveCtx so child components don't associate
-      // with parent's KeepAlive
-      setCurrentKeepAliveCtx(null)
-    }
-
-    // reset currentSlotOwner to null to avoid affecting the child components
-    const prevSlotOwner = setCurrentSlotOwner(null)
-
-    // HMR
-    if (__DEV__) {
-      registerHMR(instance)
-      instance.isSingleRoot = isSingleRoot
-      instance.hmrRerender = hmrRerender.bind(null, instance)
-      instance.hmrReload = hmrReload.bind(null, instance)
-
-      pushWarningContext(instance)
-      startMeasure(instance, `init`)
-
-      // cache normalized options for dev only emit check
-      instance.propsOptions = normalizePropsOptions(component)
-      instance.emitsOptions = normalizeEmitsOptions(component)
-    }
-
-    // hydrating async component
-    if (
-      isHydrating &&
-      isAsyncWrapper(instance) &&
-      component.__asyncHydrate &&
-      !component.__asyncResolved
-    ) {
-      component.__asyncHydrate(currentHydrationNode as Element, instance, () =>
-        setupComponent(instance, component),
-      )
-    } else {
-      setupComponent(instance, component)
-    }
-
-    if (__DEV__) {
-      popWarningContext()
-      endMeasure(instance, 'init')
-    }
-
-    if (__FEATURE_SUSPENSE__ && currentInstance && currentInstance.suspense) {
-      setParentSuspense(prevSuspense)
-    }
-
-    // restore currentSlotOwner to previous value after setupFn is called
-    setCurrentSlotOwner(prevSlotOwner)
-    onScopeDispose(() => unmountComponent(instance), true)
-
-    if (_insertionParent || isHydrating) {
-      mountComponent(instance, _insertionParent!, _insertionAnchor)
-    }
-
-    if (isHydrating && _insertionAnchor !== undefined) {
-      advanceHydrationNode(_insertionParent!)
-    }
-
-    return instance
+  } else {
+    setupComponent(instance, component)
   }
 
-  if (isHydrating) {
-    return withHydrationEntry(hydrationStartNode, create)
+  if (__DEV__) {
+    popWarningContext()
+    endMeasure(instance, 'init')
   }
-  return create()
+
+  if (__FEATURE_SUSPENSE__ && currentInstance && currentInstance.suspense) {
+    setParentSuspense(prevSuspense)
+  }
+
+  // restore currentSlotOwner to previous value after setupFn is called
+  setCurrentSlotOwner(prevSlotOwner)
+  onScopeDispose(() => unmountComponent(instance), true)
+
+  if (_insertionParent || isHydrating) {
+    mountComponent(instance, _insertionParent!, _insertionAnchor)
+  }
+
+  if (isHydrating && _insertionAnchor !== undefined) {
+    advanceHydrationNode(_insertionParent!)
+  }
+
+  return instance
 }
 
 export function setupComponent(

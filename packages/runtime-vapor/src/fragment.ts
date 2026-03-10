@@ -28,16 +28,12 @@ import {
 } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
-  type HydrationBoundary,
   currentHydrationNode,
   isComment,
   isHydrating,
   locateHydrationNode,
-  resolveEmptyHydrationBoundary,
-  resolveHydrationBoundaryEnd,
-  withHydrationBoundary,
 } from './dom/hydration'
-import { isArray } from '@vue/shared'
+import { VaporBlockShape, isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import {
@@ -99,8 +95,7 @@ export class DynamicFragment extends VaporFragment {
   keepAliveCtx: VaporKeepAliveContext | null
 
   slotOwner: VaporComponentInstance | null
-
-  hydrationBoundary: HydrationBoundary | null = null
+  hydrationLocated = false
 
   constructor(anchorLabel?: string, keyed: boolean = false) {
     super([])
@@ -109,7 +104,6 @@ export class DynamicFragment extends VaporFragment {
     this.keepAliveCtx = currentKeepAliveCtx
     if (isHydrating) {
       this.anchorLabel = anchorLabel
-      locateHydrationNode()
     } else {
       this.anchor =
         __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
@@ -117,33 +111,15 @@ export class DynamicFragment extends VaporFragment {
     }
   }
 
-  private runWithHydrationBoundary<T>(
-    hydrationBoundary: HydrationBoundary | null,
-    fn: () => T,
-  ): T {
-    this.hydrationBoundary = hydrationBoundary
-    try {
-      return fn()
-    } finally {
-      this.hydrationBoundary = null
+  update(render?: BlockFn, key: any = render, shape?: VaporBlockShape): void {
+    if (isHydrating && !this.hydrationLocated) {
+      locateHydrationNode(getShape(this, shape) === VaporBlockShape.MULTI_ROOT)
+      this.hydrationLocated = true
     }
-  }
 
-  update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
       if (isHydrating) {
-        if (isDynamicBoundaryOwner(this)) {
-          withHydrationBoundary(
-            'deferred',
-            currentHydrationNode,
-            hydrationBoundary =>
-              this.runWithHydrationBoundary(hydrationBoundary, () =>
-                this.hydrate(true),
-              ),
-          )
-        } else {
-          this.runWithHydrationBoundary(null, () => this.hydrate(true))
-        }
+        this.hydrate(shape === VaporBlockShape.EMPTY)
       }
       return
     }
@@ -200,25 +176,14 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    const renderWithBoundary = (hydrationBoundary: HydrationBoundary | null) =>
-      this.runWithHydrationBoundary(hydrationBoundary, () => {
-        try {
-          this.renderBranch(render, transition, parent, instance)
-        } finally {
-          setActiveSub(prevSub)
-        }
+    try {
+      this.renderBranch(render, transition, parent, instance)
+    } finally {
+      setActiveSub(prevSub)
+    }
 
-        if (isHydrating) this.hydrate()
-      })
-
-    if (isHydrating && isDynamicBoundaryOwner(this)) {
-      withHydrationBoundary(
-        'deferred',
-        currentHydrationNode,
-        renderWithBoundary,
-      )
-    } else {
-      renderWithBoundary(null)
+    if (isHydrating) {
+      this.hydrate(render == null)
     }
   }
 
@@ -316,7 +281,6 @@ export class DynamicFragment extends VaporFragment {
     // reuse `<!---->` as anchor
     // `<div v-if="false"></div>` -> `<!---->`
     if (isEmpty) {
-      resolveEmptyHydrationBoundary(this.hydrationBoundary)
       if (isComment(currentHydrationNode!, '')) {
         this.anchor = currentHydrationNode!
         if (__DEV__) {
@@ -331,10 +295,12 @@ export class DynamicFragment extends VaporFragment {
       this.anchorLabel === 'slot' ||
       (this.anchorLabel === 'if' && isArray(this.nodes))
     ) {
-      const anchor =
-        resolveHydrationBoundaryEnd(this.hydrationBoundary) ||
-        (isComment(currentHydrationNode!, ']') ? currentHydrationNode! : null)
-      if (anchor) {
+      const anchor = isComment(currentHydrationNode!, ']')
+        ? currentHydrationNode!
+        : isComment(currentHydrationNode!.nextSibling!, ']')
+          ? currentHydrationNode!.nextSibling
+          : findBlockNode(this.nodes)!.nextNode
+      if (anchor && isComment(anchor, ']')) {
         this.anchor = anchor
         return
       } else if (__DEV__) {
@@ -357,12 +323,17 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
-function isDynamicBoundaryOwner(fragment: DynamicFragment): boolean {
-  return (
-    fragment.anchorLabel === 'if' ||
-    fragment.anchorLabel === 'slot' ||
-    fragment.anchorLabel === 'keyed'
-  )
+function getShape(
+  fragment: DynamicFragment,
+  ifBranchShape?: VaporBlockShape,
+): VaporBlockShape | undefined {
+  if (fragment.anchorLabel === 'if') {
+    return ifBranchShape
+  }
+
+  if (fragment.anchorLabel === 'slot') {
+    return VaporBlockShape.MULTI_ROOT
+  }
 }
 
 export class SlotFragment extends DynamicFragment {
@@ -372,7 +343,11 @@ export class SlotFragment extends DynamicFragment {
 
   updateSlot(render?: BlockFn, fallback?: BlockFn, key: any = render): void {
     if (!render || !fallback) {
-      this.update(render || fallback, key)
+      this.update(
+        render || fallback,
+        key,
+        !render && !fallback ? VaporBlockShape.EMPTY : undefined,
+      )
       return
     }
 

@@ -13,9 +13,10 @@ import {
   type BlockIRNode,
   DynamicFlag,
   IRNodeTypes,
+  type IfIRNode,
   type VaporDirectiveNode,
 } from '../ir'
-import { extend } from '@vue/shared'
+import { VaporBlockShape, extend } from '@vue/shared'
 import { newBlock, wrapTemplate } from './utils'
 import { getSiblingIf } from './transformComment'
 import { isStaticExpression } from '../utils'
@@ -49,6 +50,7 @@ export function processIf(
       context.dynamic.operation = {
         type: IRNodeTypes.IF,
         id,
+        branchShape: encodeIfBranchShape(branch),
         condition: dir.exp!,
         positive: branch,
         index: context.root.nextIfIndex(),
@@ -111,22 +113,32 @@ export function processIf(
 
     const [branch, onExit] = createIfBranch(node, context)
 
-    if (dir.name === 'else') {
-      lastIfNode.negative = branch
-    } else {
-      lastIfNode.negative = {
-        type: IRNodeTypes.IF,
-        id: -1,
-        condition: dir.exp!,
-        positive: branch,
-        index: context.root.nextIfIndex(),
-        once:
-          context.inVOnce ||
-          isStaticExpression(dir.exp!, context.options.bindingMetadata),
-      }
-    }
+    const negative =
+      dir.name === 'else'
+        ? branch
+        : {
+            type: IRNodeTypes.IF,
+            id: -1,
+            branchShape: VaporBlockShape.EMPTY,
+            condition: dir.exp!,
+            positive: branch,
+            index: context.root.nextIfIndex(),
+            once:
+              context.inVOnce ||
+              isStaticExpression(dir.exp!, context.options.bindingMetadata),
+          }
 
-    return () => onExit()
+    return () => {
+      onExit()
+      if (negative.type === IRNodeTypes.IF) {
+        negative.branchShape = encodeIfBranchShape(negative.positive)
+      }
+      lastIfNode.negative = negative
+      lastIfNode.branchShape = encodeIfBranchShape(
+        lastIfNode.positive,
+        lastIfNode.negative,
+      )
+    }
   }
 }
 
@@ -140,4 +152,25 @@ export function createIfBranch(
   const exitBlock = context.enterBlock(branch)
   context.reference()
   return [branch, exitBlock]
+}
+
+function encodeIfBranchShape(
+  positive: BlockIRNode,
+  negative?: BlockIRNode | IfIRNode,
+): number {
+  return getBlockBranchShape(positive) | (getNegativeBranchShape(negative) << 2)
+}
+
+function getNegativeBranchShape(negative?: BlockIRNode | IfIRNode) {
+  if (!negative) return VaporBlockShape.EMPTY
+  return negative.type === IRNodeTypes.IF
+    ? VaporBlockShape.SINGLE_ROOT
+    : getBlockBranchShape(negative)
+}
+
+function getBlockBranchShape(block: BlockIRNode) {
+  if (block.returns.length === 0) return VaporBlockShape.EMPTY
+  return block.returns.length === 1
+    ? VaporBlockShape.SINGLE_ROOT
+    : VaporBlockShape.MULTI_ROOT
 }
