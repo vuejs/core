@@ -200,18 +200,12 @@ function rewriteSelector(
         // * .foo {} -> .foo[xxxxxxx] {}
         if (next) {
           if (next.type === 'combinator') {
-            if (next.value === ' ') {
-              const isNested = rule.parent?.type === 'rule'
-              if (!isNested) {
-                // * .foo {} -> .foo[xxxxxxx] {}
-                selector.removeChild(next)
-                selector.removeChild(n)
-                return
-              }
-              // nested: .outer { * .foo {} } -> keep * to preserve semantics
-              return
+            if (next.value === ' ' && rule.parent?.type !== 'rule') {
+              // * .foo {} -> .foo[xxxxxxx] {}
+              selector.removeChild(next)
+              selector.removeChild(n)
             }
-            // * > .foo, * + .foo, * ~ .foo: keep *
+            // keep *: nested .outer { * .foo {} } or non-space combinator (* > .foo etc.)
             return
           }
           // *.foo {} -> .foo[xxxxxxx] {}
