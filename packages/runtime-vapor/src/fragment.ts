@@ -28,11 +28,14 @@ import {
 } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
+  type HydrationBoundaryFrame,
   currentHydrationNode,
   isComment,
   isHydrating,
-  locateFragmentEndAnchor,
   locateHydrationNode,
+  resolveEmptyHydrationBoundary,
+  resolveHydrationBoundaryEnd,
+  withHydrationBoundary,
 } from './dom/hydration'
 import { isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
@@ -97,6 +100,8 @@ export class DynamicFragment extends VaporFragment {
 
   slotOwner: VaporComponentInstance | null
 
+  hydrationBoundary: HydrationBoundaryFrame | null = null
+
   constructor(anchorLabel?: string, keyed: boolean = false) {
     super([])
     this.keyed = keyed
@@ -112,9 +117,34 @@ export class DynamicFragment extends VaporFragment {
     }
   }
 
+  private runWithHydrationBoundary<T>(
+    hydrationBoundary: HydrationBoundaryFrame | null,
+    fn: () => T,
+  ): T {
+    this.hydrationBoundary = hydrationBoundary
+    try {
+      return fn()
+    } finally {
+      this.hydrationBoundary = null
+    }
+  }
+
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
-      if (isHydrating) this.hydrate(true)
+      if (isHydrating) {
+        if (isDynamicBoundaryOwner(this)) {
+          withHydrationBoundary(
+            'deferred',
+            currentHydrationNode,
+            hydrationBoundary =>
+              this.runWithHydrationBoundary(hydrationBoundary, () =>
+                this.hydrate(true),
+              ),
+          )
+        } else {
+          this.runWithHydrationBoundary(null, () => this.hydrate(true))
+        }
+      }
       return
     }
 
@@ -170,11 +200,28 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    this.renderBranch(render, transition, parent, instance)
+    const renderWithBoundary = (
+      hydrationBoundary: HydrationBoundaryFrame | null,
+    ) =>
+      this.runWithHydrationBoundary(hydrationBoundary, () => {
+        try {
+          this.renderBranch(render, transition, parent, instance)
+        } finally {
+          setActiveSub(prevSub)
+        }
 
-    setActiveSub(prevSub)
+        if (isHydrating) this.hydrate()
+      })
 
-    if (isHydrating) this.hydrate()
+    if (isHydrating && isDynamicBoundaryOwner(this)) {
+      withHydrationBoundary(
+        'deferred',
+        currentHydrationNode,
+        renderWithBoundary,
+      )
+    } else {
+      renderWithBoundary(null)
+    }
   }
 
   renderBranch(
@@ -272,8 +319,9 @@ export class DynamicFragment extends VaporFragment {
       // reuse the empty comment node as the anchor for empty if
       // e.g. `<div v-if="false"></div>` -> `<!---->`
       if (isEmpty) {
-        this.anchor = locateFragmentEndAnchor('')!
-        if (__DEV__ && !this.anchor) {
+        resolveEmptyHydrationBoundary(this.hydrationBoundary)
+        this.anchor = currentHydrationNode!
+        if (__DEV__ && !isComment(this.anchor, '')) {
           throw new Error(
             'Failed to locate if anchor. this is likely a Vue internal bug.',
           )
@@ -285,23 +333,29 @@ export class DynamicFragment extends VaporFragment {
         }
       }
     } else if (this.anchorLabel === 'slot') {
-      // reuse the empty comment node for empty slot
-      // e.g. `<slot v-if="false"></slot>`
-      if (isEmpty && isComment(currentHydrationNode!, '')) {
-        this.anchor = currentHydrationNode!
-        if (__DEV__) {
-          ;(this.anchor as Comment).data = this.anchorLabel!
+      if (isEmpty) {
+        resolveEmptyHydrationBoundary(this.hydrationBoundary)
+        // reuse the empty comment node for empty slot
+        // e.g. `<slot v-if="false"></slot>`
+        if (isComment(currentHydrationNode!, '')) {
+          this.anchor = currentHydrationNode!
+          if (__DEV__) {
+            ;(this.anchor as Comment).data = this.anchorLabel!
+          }
+          return
         }
-        return
       }
 
-      // reuse the vdom fragment end anchor
-      this.anchor = locateFragmentEndAnchor()!
-      if (__DEV__ && !this.anchor) {
+      // Reuse the slot boundary end when the owner frame resolved a fragment.
+      const anchor =
+        resolveHydrationBoundaryEnd(this.hydrationBoundary) ||
+        (isComment(currentHydrationNode!, ']') ? currentHydrationNode! : null)
+      if (__DEV__ && !anchor) {
         throw new Error(
           'Failed to locate slot anchor. this is likely a Vue internal bug.',
         )
       } else {
+        this.anchor = anchor!
         return
       }
     }
@@ -317,6 +371,14 @@ export class DynamicFragment extends VaporFragment {
       )
     })
   }
+}
+
+function isDynamicBoundaryOwner(fragment: DynamicFragment): boolean {
+  return (
+    fragment.anchorLabel === 'if' ||
+    fragment.anchorLabel === 'slot' ||
+    fragment.anchorLabel === 'keyed'
+  )
 }
 
 export class SlotFragment extends DynamicFragment {

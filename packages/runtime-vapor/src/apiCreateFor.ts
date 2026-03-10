@@ -36,6 +36,7 @@ import {
   isHydrating,
   locateHydrationNode,
   setCurrentHydrationNode,
+  withHydrationBoundary,
 } from './dom/hydration'
 import { ForFragment, VaporFragment } from './fragment'
 import {
@@ -491,31 +492,42 @@ export const createFor = (
     }
   }
 
-  if (setup) {
-    setup({ createSelector })
+  const createForFragment = () => {
+    if (setup) {
+      setup({ createSelector })
+    }
+
+    if (flags & VaporVForFlags.ONCE) {
+      renderList()
+    } else {
+      renderEffect(() => {
+        if (!isMounted) return renderList()
+        const prevOwner = setCurrentSlotOwner(slotOwner)
+        try {
+          renderList()
+        } finally {
+          setCurrentSlotOwner(prevOwner)
+        }
+      })
+    }
+
+    if (!isHydrating) {
+      if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+    } else {
+      advanceHydrationNode(_isLastInsertion ? _insertionParent! : parentAnchor!)
+    }
+
+    return frag
   }
 
-  if (flags & VaporVForFlags.ONCE) {
-    renderList()
-  } else {
-    renderEffect(() => {
-      if (!isMounted) return renderList()
-      const prevOwner = setCurrentSlotOwner(slotOwner)
-      try {
-        renderList()
-      } finally {
-        setCurrentSlotOwner(prevOwner)
-      }
-    })
+  if (isHydrating) {
+    return withHydrationBoundary(
+      'known-fragment',
+      currentHydrationNode,
+      createForFragment,
+    )
   }
-
-  if (!isHydrating) {
-    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
-  } else {
-    advanceHydrationNode(_isLastInsertion ? _insertionParent! : parentAnchor!)
-  }
-
-  return frag
+  return createForFragment()
 
   function createSelector(source: () => any): (cb: () => void) => void {
     let operMap = new Map<any, (() => void)[]>()

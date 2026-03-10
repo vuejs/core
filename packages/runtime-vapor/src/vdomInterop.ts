@@ -79,12 +79,14 @@ import { _next, createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
-  consumeFragmentAnchor,
   currentHydrationNode,
+  getCurrentHydrationEntry,
   isComment,
   isHydrating,
+  prepareHydrationChildEntry,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
+  withHydrationBoundary,
 } from './dom/hydration'
 import {
   VaporFragment,
@@ -859,8 +861,9 @@ function renderVDOMSlot(
 
       if (isHydrating) {
         if (isVNode(resolved)) {
-          consumeFragmentAnchor(resolved.type === Fragment)
-          hydrateVNode(resolved, parentComponent as any)
+          withHydrationBoundary('deferred', getCurrentHydrationEntry(), () =>
+            hydrateVNode(resolved, parentComponent as any),
+          )
           currentVNode = resolved
           currentBlock = null
           frag.nodes = resolved.el as any
@@ -953,6 +956,7 @@ function hydrateVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
 ) {
+  prepareHydrationChildEntry(vnode.type === Fragment)
   const node = currentHydrationNode!
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
   const nextNode = vdomHydrateNode(
