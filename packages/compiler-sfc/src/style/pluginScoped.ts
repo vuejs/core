@@ -201,9 +201,14 @@ function rewriteSelector(
         if (next) {
           if (next.type === 'combinator') {
             if (next.value === ' ') {
-              // * .foo {} -> .foo[xxxxxxx] {}
-              selector.removeChild(next)
-              selector.removeChild(n)
+              const isNested = rule.parent?.type === 'rule'
+              if (!isNested) {
+                // * .foo {} -> .foo[xxxxxxx] {}
+                selector.removeChild(next)
+                selector.removeChild(n)
+                return
+              }
+              // nested: .outer { * .foo {} } -> keep * to preserve semantics
               return
             }
             // * > .foo, * + .foo, * ~ .foo: keep *

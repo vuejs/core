@@ -418,6 +418,46 @@ color: red
       }"
     `)
   })
+
+  test('should keep leading universal selector in nested rules', () => {
+    // non-nested: * should still be removed
+    expect(compileScoped(`* .section { color: red; }`)).toMatchInlineSnapshot(`
+      ".section[data-v-test] { color: red;
+      }"
+    `)
+    // .outer { * .section {} } → * must be preserved to avoid matching direct children
+    expect(compileScoped(`.outer { * .section { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      * .section[data-v-test] { color: red;
+      }
+      }"
+    `)
+    // nested non-space combinator should also keep *
+    expect(compileScoped(`.outer { * > .section { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      * > .section[data-v-test] { color: red;
+      }
+      }"
+    `)
+    // *.foo in nested: * should still be removed (*.foo is equivalent to .foo)
+    expect(compileScoped(`.outer { *.foo { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      .foo[data-v-test] { color: red;
+      }
+      }"
+    `)
+    // standalone * in nested: converted to [data-v-id]
+    expect(compileScoped(`.outer { * { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      [data-v-test] { color: red;
+      }
+      }"
+    `)
+  })
 })
 
 describe('SFC CSS modules', () => {
