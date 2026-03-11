@@ -58,7 +58,6 @@ import {
   EMPTY_OBJ,
   type Prettify,
   ShapeFlags,
-  VaporBlockShape,
   hasOwn,
   invokeArrayFns,
   isArray,
@@ -250,7 +249,7 @@ export function createComponent(
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
   if (isHydrating) {
-    locateHydrationNode(component.__shape === VaporBlockShape.MULTI_ROOT)
+    locateHydrationNode(component.__multiRoot)
   } else {
     resetInsertionState()
   }

@@ -8,7 +8,7 @@ import {
   resolveDynamicComponent,
   setCurrentRenderingInstance,
 } from '@vue/runtime-dom'
-import { ShapeFlags, VaporBlockShape } from '@vue/shared'
+import { ShapeFlags } from '@vue/shared'
 import { insert, isBlock } from './block'
 import {
   type VaporComponentInstance,
@@ -119,11 +119,11 @@ function shouldConsumeFragmentStart(vnode: VNode): boolean {
     return false
   }
 
-  // Only Vapor component VNodes carry `__shape`
+  // Only Vapor component VNodes carry `__multiRoot`
   // e.g. `h(VaporComp)`
   if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
-    const type = vnode.type as { __vapor?: boolean; __shape?: VaporBlockShape }
-    return !!type.__vapor && type.__shape === VaporBlockShape.SINGLE_ROOT
+    const type = vnode.type as { __vapor?: boolean; __multiRoot?: boolean }
+    return !!type.__vapor && !type.__multiRoot
   }
 
   return true

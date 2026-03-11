@@ -531,3 +531,36 @@ test('prefixing props edge case in inline mode', () => {
   expect(content).toMatchSnapshot()
   expect(content).toMatch(`__props["Foo"]).Bar`)
 })
+
+test('returns multiRoot metadata for a multi-root template when vapor is enabled', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<div /><div />`,
+    vapor: true,
+  })
+
+  expect(result.multiRoot).toBe(true)
+})
+
+test('returns single-root metadata for root control flow when vapor is enabled', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<template v-if="ok"><div /><div /></template>`,
+    vapor: true,
+  })
+
+  expect(result.multiRoot).toBe(false)
+})
+
+test('respects comments option when returning multiRoot metadata', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<!-- root comment --><div />`,
+    vapor: true,
+    compilerOptions: {
+      comments: false,
+    },
+  })
+
+  expect(result.multiRoot).toBe(false)
+})

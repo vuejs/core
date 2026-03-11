@@ -111,7 +111,6 @@ export interface BaseCodegenResult {
   ast: unknown
   map?: RawSourceMap
   helpers?: Set<string> | Set<symbol>
-  rootShape?: number
 }
 
 export interface CodegenResult extends BaseCodegenResult {

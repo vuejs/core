@@ -64,7 +64,6 @@ import {
   type IfAny,
   NOOP,
   ShapeFlags,
-  type VaporBlockShape,
   extend,
   isArray,
   isBuiltInTag,
@@ -199,9 +198,9 @@ export interface ComponentInternalOptions {
    */
   __vapor?: boolean
   /**
-   * vapor component root shape from compiler-vapor.
+   * whether this vapor component has multiple root nodes
    */
-  __shape?: VaporBlockShape
+  __multiRoot?: boolean
   /**
    * indicates keep-alive component
    */

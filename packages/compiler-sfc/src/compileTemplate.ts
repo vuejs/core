@@ -22,7 +22,8 @@ import {
   createSrcsetTransformWithOptions,
   transformSrcset,
 } from './template/transformSrcset'
-import { type VaporBlockShape, generateCodeFrame, isObject } from '@vue/shared'
+import { isMultiRoot } from './template/templateUtils'
+import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerVapor from '@vue/compiler-vapor'
 import * as CompilerSSR from '@vue/compiler-ssr'
@@ -42,7 +43,7 @@ export interface SFCTemplateCompileResults {
   code: string
   ast?: unknown
   preamble?: string
-  rootShape?: VaporBlockShape
+  multiRoot?: boolean
   source: string
   tips: string[]
   errors: (string | CompilerError)[]
@@ -239,7 +240,7 @@ function doCompileTemplate({
     inAST = createRoot(template.children, inAST.source)
   }
 
-  let { code, ast, preamble, map, helpers, rootShape } = compiler.compile(
+  let { code, ast, preamble, map, helpers } = compiler.compile(
     inAST || source,
     {
       mode: 'module',
@@ -292,7 +293,9 @@ function doCompileTemplate({
     code,
     ast,
     preamble,
-    rootShape: vapor ? rootShape : undefined,
+    multiRoot: vapor
+      ? isMultiRoot(inAST || source, compilerOptions)
+      : undefined,
     source,
     errors,
     tips,
