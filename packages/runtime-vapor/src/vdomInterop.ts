@@ -15,7 +15,6 @@ import {
   type Slots,
   Static,
   type SuspenseBoundary,
-  Text,
   type TransitionHooks,
   type VNode,
   type VNodeArrayChildren,
@@ -83,7 +82,6 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
-  locateHydrationNode,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
@@ -860,7 +858,7 @@ function renderVDOMSlot(
 
       if (isHydrating) {
         if (isVNode(resolved)) {
-          hydrateSlotVNode(resolved, parentComponent as any)
+          hydrateVNode(resolved, parentComponent as any)
           currentVNode = resolved
           currentBlock = null
           frag.nodes = resolved.el as any
@@ -965,63 +963,6 @@ function hydrateVNode(
   )
   if (nextNode) setCurrentHydrationNode(nextNode)
   else advanceHydrationNode(node)
-}
-
-function hydrateSlotVNode(
-  vnode: VNode,
-  parentComponent: ComponentInternalInstance | null,
-) {
-  if (vnode.type === Fragment) {
-    if (!isComment(currentHydrationNode!, '[')) {
-      hydrateVDOMSlotFragmentChildren(
-        vnode.children as VNode[],
-        parentComponent,
-      )
-      return
-    }
-
-    const start = currentHydrationNode!
-    if (
-      isComment(start.nextSibling as Node, '[') &&
-      isSingleTextFragment(vnode.children as VNode[])
-    ) {
-      setCurrentHydrationNode(start.nextSibling)
-      hydrateVNode(vnode, parentComponent)
-      return
-    }
-
-    if (
-      (vnode.children as VNode[]).length > 0 &&
-      !isComment(start.nextSibling as Node, '[')
-    ) {
-      setCurrentHydrationNode(start.nextSibling)
-      hydrateVDOMSlotFragmentChildren(
-        vnode.children as VNode[],
-        parentComponent,
-      )
-      return
-    }
-  }
-
-  locateHydrationNode(vnode.type !== Fragment)
-  hydrateVNode(vnode, parentComponent)
-}
-
-function isSingleTextFragment(children: any[]): boolean {
-  return (
-    children.length === 1 && isVNode(children[0]) && children[0].type === Text
-  )
-}
-
-function hydrateVDOMSlotFragmentChildren(
-  children: VNode[],
-  parentComponent: ComponentInternalInstance | null,
-) {
-  for (const child of children) {
-    if (isVNode(child)) {
-      hydrateVNode(child, parentComponent)
-    }
-  }
 }
 
 function createVaporFallback(

@@ -119,6 +119,8 @@ function shouldConsumeFragmentStart(vnode: VNode): boolean {
     return false
   }
 
+  // Only Vapor component VNodes carry `__shape`
+  // e.g. `h(VaporComp)`
   if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
     const type = vnode.type as { __vapor?: boolean; __shape?: VaporBlockShape }
     return !!type.__vapor && type.__shape === VaporBlockShape.SINGLE_ROOT

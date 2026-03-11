@@ -1,5 +1,9 @@
 import { type Block, type BlockFn, insert } from './block'
-import { advanceHydrationNode, isHydrating } from './dom/hydration'
+import {
+  advanceHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
@@ -9,7 +13,7 @@ import {
 import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
 import { createComment, createTextNode } from './dom/node'
-import type { VaporBlockShape } from '@vue/shared'
+import { VaporBlockShape } from '@vue/shared'
 
 export function createIf(
   condition: () => any,
@@ -26,7 +30,13 @@ export function createIf(
 
   let frag: Block
   if (once) {
-    frag = condition()
+    const ok = !!condition()
+    if (isHydrating && blockShape != null) {
+      locateHydrationNode(
+        decodeIfShape(blockShape, ok) === VaporBlockShape.MULTI_ROOT,
+      )
+    }
+    frag = ok
       ? b1()
       : b2
         ? b2()
