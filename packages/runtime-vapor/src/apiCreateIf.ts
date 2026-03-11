@@ -40,14 +40,10 @@ export function createIf(
         : new DynamicFragment(undefined, keyed)
     renderEffect(() => {
       const ok = condition()
-      const shape =
-        isHydrating && blockShape != null
-          ? decodeIfShape(blockShape, ok)
-          : undefined
       ;(frag as DynamicFragment).update(
         ok ? b1 : b2,
         keyed ? `${index}${ok ? 0 : 1}` : undefined,
-        shape,
+        isHydrating ? decodeIfShape(blockShape!, ok) : undefined,
       )
     })
   }
@@ -63,10 +59,25 @@ export function createIf(
   return frag
 }
 
-function decodeIfShape(shape: number, ok: unknown): VaporBlockShape {
-  // The compiler packs the true/false branch shapes into one integer.
-  // Each branch uses 2 bits.
-  // The true branch reads the low 2 bits; the false branch shifts right by 2
-  // and then reads the low 2 bits.
+// The compiler packs the true/false branch shapes into one integer:
+//   packed = trueShape | (falseShape << 2)
+//
+// Each branch shape fits in 2 bits:
+//   EMPTY       = 0b00
+//   SINGLE_ROOT = 0b01
+//   MULTI_ROOT  = 0b10
+//
+// Example:
+//   trueShape  = MULTI_ROOT  = 0b10
+//   falseShape = SINGLE_ROOT = 0b01
+//   packed     = 0b10 | (0b01 << 2) = 0b0110
+//
+// To read the active branch:
+// - true branch:  shift by 0, then keep the low 2 bits -> 0b10
+// - false branch: shift by 2, then keep the low 2 bits -> 0b01
+//
+// `0b11` is the binary mask for the low 2 bits (decimal `3`).
+// `value & 0b11` clears everything except the active branch shape.
+function decodeIfShape(shape: number, ok: boolean): VaporBlockShape {
   return ((shape >> (ok ? 0 : 2)) & 0b11) as VaporBlockShape
 }
