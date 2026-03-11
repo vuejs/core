@@ -30,10 +30,10 @@ export function createIf(
 
   let frag: Block
   if (once) {
-    const ok = !!condition()
-    if (isHydrating && blockShape != null) {
+    const ok = condition()
+    if (isHydrating) {
       locateHydrationNode(
-        decodeIfShape(blockShape, ok) === VaporBlockShape.MULTI_ROOT,
+        decodeIfShape(blockShape!, ok) === VaporBlockShape.MULTI_ROOT,
       )
     }
     frag = ok
@@ -46,14 +46,18 @@ export function createIf(
     const keyed = index != null
     frag =
       isHydrating || __DEV__
-        ? new DynamicFragment('if', keyed)
-        : new DynamicFragment(undefined, keyed)
+        ? new DynamicFragment('if', keyed, false)
+        : new DynamicFragment(undefined, keyed, false)
     renderEffect(() => {
       const ok = condition()
+      if (isHydrating) {
+        locateHydrationNode(
+          decodeIfShape(blockShape!, ok) === VaporBlockShape.MULTI_ROOT,
+        )
+      }
       ;(frag as DynamicFragment).update(
         ok ? b1 : b2,
         keyed ? `${index}${ok ? 0 : 1}` : undefined,
-        isHydrating ? decodeIfShape(blockShape!, ok) : undefined,
       )
     })
   }

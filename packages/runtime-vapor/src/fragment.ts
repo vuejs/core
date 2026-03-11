@@ -33,7 +33,7 @@ import {
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
-import { VaporBlockShape, isArray } from '@vue/shared'
+import { isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import {
@@ -95,15 +95,19 @@ export class DynamicFragment extends VaporFragment {
   keepAliveCtx: VaporKeepAliveContext | null
 
   slotOwner: VaporComponentInstance | null
-  hydrationLocated = false
 
-  constructor(anchorLabel?: string, keyed: boolean = false) {
+  constructor(
+    anchorLabel?: string,
+    keyed: boolean = false,
+    locate: boolean = true,
+  ) {
     super([])
     this.keyed = keyed
     this.slotOwner = currentSlotOwner
     this.keepAliveCtx = currentKeepAliveCtx
     if (isHydrating) {
       this.anchorLabel = anchorLabel
+      if (locate) locateHydrationNode()
     } else {
       this.anchor =
         __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
@@ -111,16 +115,11 @@ export class DynamicFragment extends VaporFragment {
     }
   }
 
-  update(render?: BlockFn, key: any = render, shape?: VaporBlockShape): void {
-    if (isHydrating && !this.hydrationLocated) {
-      locateHydrationNode(getShape(this, shape) === VaporBlockShape.MULTI_ROOT)
-      this.hydrationLocated = true
-    }
-
+  update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
-      if (isHydrating) {
-        this.hydrate(shape === VaporBlockShape.EMPTY)
-      }
+      // On initial hydration, `key === current` means `render` is empty,
+      // so this fragment hydrates as empty content.
+      if (isHydrating) this.hydrate(true)
       return
     }
 
@@ -318,31 +317,16 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
-function getShape(
-  fragment: DynamicFragment,
-  shape?: VaporBlockShape,
-): VaporBlockShape | undefined {
-  if (fragment.anchorLabel === 'if') {
-    return shape
-  }
-
-  if (fragment.anchorLabel === 'slot') {
-    return VaporBlockShape.MULTI_ROOT
-  }
-}
-
 export class SlotFragment extends DynamicFragment {
   constructor() {
-    super(isHydrating || __DEV__ ? 'slot' : undefined)
+    super(isHydrating || __DEV__ ? 'slot' : undefined, false, false)
   }
 
   updateSlot(render?: BlockFn, fallback?: BlockFn, key: any = render): void {
+    if (isHydrating) locateHydrationNode(true)
+
     if (!render || !fallback) {
-      this.update(
-        render || fallback,
-        key,
-        !render && !fallback ? VaporBlockShape.EMPTY : undefined,
-      )
+      this.update(render || fallback, key)
       return
     }
 
