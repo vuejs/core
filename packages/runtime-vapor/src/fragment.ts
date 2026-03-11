@@ -272,6 +272,8 @@ export class DynamicFragment extends VaporFragment {
     // avoid repeated hydration
     if (this.anchor) return
 
+    const forwardedSlot = (this as any as SlotFragment).forwarded
+
     // reuse `<!---->` as anchor
     // `<div v-if="false"></div>` -> `<!---->`
     if (isEmpty) {
@@ -282,20 +284,28 @@ export class DynamicFragment extends VaporFragment {
         }
         return
       }
+
+      // For forwarded slots that are empty and have no corresponding
+      // `<!---->` or fragment boundary in the SSR output (e.g. when
+      // ssrRenderSlotInner discarded the forwarded slot content because
+      // it was all-comments and used the slot fallback instead), skip
+      // anchor creation here. The anchor will be created on the next
+      // update() call (via renderSlotFallback) at the correct position,
+      // after the fallback content has been hydrated.
+      if (forwardedSlot && !isComment(currentHydrationNode!, ']')) {
+        return
+      }
     }
 
-    // reuse the `<!--]-->` as anchor for slot / multi-root if
+    // reuse the `<!--]-->` as anchor
+    // - non-forwarded slot (forwarded slots do not own a reusable SSR end anchor)
+    // - multi-root if
     if (
-      this.anchorLabel === 'slot' ||
+      (this.anchorLabel === 'slot' && !forwardedSlot) ||
       (this.anchorLabel === 'if' && isArray(this.nodes))
     ) {
-      const anchor = isComment(currentHydrationNode!, ']')
-        ? currentHydrationNode!
-        : isComment(currentHydrationNode!.nextSibling!, ']')
-          ? currentHydrationNode!.nextSibling
-          : findBlockNode(this.nodes)!.nextNode
-      if (anchor && isComment(anchor, ']')) {
-        this.anchor = anchor
+      if (isComment(currentHydrationNode!, ']')) {
+        this.anchor = currentHydrationNode
         return
       } else if (__DEV__) {
         throw new Error(
@@ -304,8 +314,17 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    // otherwise, create an anchor
-    const { parentNode, nextNode } = findBlockNode(this.nodes)!
+    // otherwise, create an anchor.
+    let parentNode: Node | null
+    let nextNode: Node | null
+    if (forwardedSlot) {
+      parentNode = currentHydrationNode!.parentNode
+      nextNode = currentHydrationNode!.nextSibling
+    } else {
+      const node = findBlockNode(this.nodes)
+      parentNode = node.parentNode
+      nextNode = node.nextNode
+    }
     queuePostFlushCb(() => {
       parentNode!.insertBefore(
         (this.anchor = __DEV__
@@ -318,11 +337,17 @@ export class DynamicFragment extends VaporFragment {
 }
 
 export class SlotFragment extends DynamicFragment {
+  forwarded = false
+
   constructor() {
     super(isHydrating || __DEV__ ? 'slot' : undefined, false, false)
   }
 
-  updateSlot(render?: BlockFn, fallback?: BlockFn, key: any = render): void {
+  updateSlot(
+    render?: BlockFn,
+    fallback?: BlockFn,
+    key: any = render || fallback,
+  ): void {
     if (isHydrating) locateHydrationNode(true)
 
     if (!render || !fallback) {

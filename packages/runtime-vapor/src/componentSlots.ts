@@ -207,6 +207,9 @@ export function createSlot(
     )
   } else {
     fragment = new SlotFragment()
+    // mark the slot as forwarded
+    fragment.forwarded =
+      currentSlotOwner != null && currentSlotOwner !== currentInstance
     const isDynamicName = isFunction(name)
 
     // Calculate slotScopeIds once (for vdom interop)

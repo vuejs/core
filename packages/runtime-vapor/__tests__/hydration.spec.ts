@@ -2984,7 +2984,7 @@ describe('Vapor Mode hydration', () => {
         "<div><div><div>
         <!--[-->
         <!--[--><span>foo</span><!--]-->
-        <!--]-->
+        <!--slot--><!--]-->
         </div></div><div>bar</div></div>"
       `,
       )
@@ -2997,7 +2997,7 @@ describe('Vapor Mode hydration', () => {
         "<div><div><div>
         <!--[-->
         <!--[--><span>foo1</span><!--]-->
-        <!--]-->
+        <!--slot--><!--]-->
         </div></div><div>bar1</div></div>"
       `,
       )
@@ -3021,7 +3021,7 @@ describe('Vapor Mode hydration', () => {
         `
         "<div>
         <!--[-->foo<!--]-->
-        </div>"
+        <!--slot--></div>"
       `,
       )
 
@@ -3031,7 +3031,7 @@ describe('Vapor Mode hydration', () => {
         `
         "<div>
         <!--[-->foo1<!--]-->
-        </div>"
+        <!--slot--></div>"
       `,
       )
     })
@@ -3080,7 +3080,7 @@ describe('Vapor Mode hydration', () => {
         `
         "<div>
         <!--[--><!--]-->
-        <div>foo</div></div>"
+        <!--slot--><!--slot--><!--slot--><div>foo</div></div>"
       `,
       )
 
@@ -3090,7 +3090,7 @@ describe('Vapor Mode hydration', () => {
         `
         "<div>
         <!--[--><!--]-->
-        <div>bar</div></div>"
+        <!--slot--><!--slot--><!--slot--><div>bar</div></div>"
       `,
       )
     })
@@ -3132,7 +3132,7 @@ describe('Vapor Mode hydration', () => {
         `
         "<div>
         <!--[--><!--]-->
-        <div>bar</div></div>"
+        <!--slot--><div>bar</div></div>"
       `,
       )
 
@@ -3141,8 +3141,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><span>foo</span><!--]-->
-        <div>bar</div></div>"
+        <!--[--><!--]-->
+        <span>foo</span><!--slot--><div>bar</div></div>"
       `,
       )
 
@@ -3152,8 +3152,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><span>foo1</span><!--]-->
-        <div>bar1</div></div>"
+        <!--[--><!--]-->
+        <span>foo1</span><!--slot--><div>bar1</div></div>"
       `,
       )
     })
