@@ -315,6 +315,7 @@ export class DynamicFragment extends VaporFragment {
     }
 
     // otherwise, create an anchor.
+    // forwarded slot, dynamic-component, async component, keyed fragment
     let parentNode: Node | null
     let nextNode: Node | null
     if (forwardedSlot) {
