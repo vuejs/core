@@ -30,6 +30,11 @@ jobs:
           cache: true
           run-install: false
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - name: Install deps
         run: vp install --frozen-lockfile
 

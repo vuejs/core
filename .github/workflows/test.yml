@@ -20,6 +20,11 @@ jobs:
           cache: true
           run-install: false
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - run: vp install --frozen-lockfile
 
       - name: Run unit tests
@@ -38,6 +43,11 @@ jobs:
           node-version: 'lts'
           cache: true
           run-install: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
       - run: vp install --frozen-lockfile
 
@@ -64,6 +74,11 @@ jobs:
           node-version: 'lts'
           cache: true
           run-install: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
       - run: vp install --frozen-lockfile
       - run: node node_modules/puppeteer/install.mjs
@@ -92,6 +107,11 @@ jobs:
           cache: true
           run-install: false
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - run: vp install --frozen-lockfile
       - run: node node_modules/puppeteer/install.mjs
 
@@ -111,6 +131,11 @@ jobs:
           node-version: 'lts'
           cache: true
           run-install: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
       - run: vp install --frozen-lockfile
 
