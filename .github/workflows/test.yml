@@ -13,19 +13,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-
-      - name: Install Node.js
-        uses: actions/setup-node@v6
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
+          node-version: 'lts'
+          cache: true
+          run-install: false
 
-      - run: pnpm install
+      - run: vp install --frozen-lockfile
 
       - name: Run unit tests
-        run: pnpm run test-unit
+        run: vp run test-unit
 
   unit-test-windows:
     runs-on: windows-latest
@@ -34,22 +32,20 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-
-      - name: Install Node.js
-        uses: actions/setup-node@v6
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
+          node-version: 'lts'
+          cache: true
+          run-install: false
 
-      - run: pnpm install
+      - run: vp install --frozen-lockfile
 
       - name: Run compiler unit tests
-        run: pnpm run test-unit compiler
+        run: vp run test-unit compiler
 
       - name: Run ssr unit tests
-        run: pnpm run test-unit server-renderer
+        run: vp run test-unit server-renderer
 
   e2e-test:
     runs-on: ubuntu-latest
@@ -62,20 +58,18 @@ jobs:
           path: ~/.cache/puppeteer
           key: chromium-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-
-      - name: Install Node.js
-        uses: actions/setup-node@v6
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
+          node-version: 'lts'
+          cache: true
+          run-install: false
 
-      - run: pnpm install
+      - run: vp install --frozen-lockfile
       - run: node node_modules/puppeteer/install.mjs
 
       - name: Run e2e tests
-        run: pnpm run test-e2e
+        run: vp run test-e2e
 
       - name: verify treeshaking
         run: node scripts/verify-treeshaking.js
@@ -83,28 +77,26 @@ jobs:
   e2e-vapor:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup cache for Chromium binary
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/puppeteer
           key: chromium-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.0.0
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
+          node-version: 'lts'
+          cache: true
+          run-install: false
 
-      - run: pnpm install
+      - run: vp install --frozen-lockfile
       - run: node node_modules/puppeteer/install.mjs
 
       - name: Run e2e tests
-        run: pnpm run test-e2e-vapor
+        run: vp run test-e2e-vapor
 
   lint-and-test-dts:
     runs-on: ubuntu-latest
@@ -113,25 +105,23 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-
-      - name: Install Node.js
-        uses: actions/setup-node@v6
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
+          node-version: 'lts'
+          cache: true
+          run-install: false
 
-      - run: pnpm install
+      - run: vp install --frozen-lockfile
 
-      - name: Run oxlint
-        run: pnpm run lint
+      - name: Run lint
+        run: vp lint
 
-      - name: Run oxfmt
-        run: pnpm run format-check
+      - name: Run format check
+        run: vp fmt --check
 
-      - name: Run tsc
-        run: pnpm run check
+      - name: Run type check
+        run: vp run check
 
       - name: Run type declaration tests
-        run: pnpm run test-dts
+        run: vp run test-dts

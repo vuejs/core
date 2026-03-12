@@ -13,22 +13,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-
-      - name: Install Node.js
-        uses: actions/setup-node@v6
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
-          node-version-file: '.node-version'
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'pnpm'
+          node-version: 'lts'
+          cache: true
+          run-install: false
 
-      - run: pnpm install
+      - run: vp install --frozen-lockfile
 
-      - name: Run oxlint
-        run: pnpm run lint --fix
+      - name: Run lint
+        run: vp lint --fix
 
-      - name: Run oxfmt
-        run: pnpm run format
+      - name: Run format
+        run: vp fmt
 
       - uses: autofix-ci/action@7a166d7532b277f34e16238930461bf77f9d7ed8

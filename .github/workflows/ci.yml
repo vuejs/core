@@ -23,21 +23,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v6
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
-          node-version-file: '.node-version'
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'pnpm'
+          node-version: 'lts'
+          cache: true
+          run-install: false
 
       - name: Install deps
-        run: pnpm install
+        run: vp install --frozen-lockfile
 
       - name: Build
-        run: pnpm build --withTypes
+        run: vp run build --withTypes
 
       - name: Release
-        run: pnpx pkg-pr-new publish --compact --pnpm './packages/*' --packageManager=pnpm,npm,yarn
+        run: vpx pkg-pr-new publish --compact --pnpm './packages/*' --packageManager=pnpm,npm,yarn
