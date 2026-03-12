@@ -29,10 +29,6 @@ jobs:
         with:
           node-version: 'lts'
           cache: true
-          run-install: false
-
-      - name: Install dependencies
-        run: vp install --frozen-lockfile
 
       - name: Download Size Data
         uses: dawidd6/action-download-artifact@v14

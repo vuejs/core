@@ -18,17 +18,9 @@ jobs:
         with:
           node-version: 'lts'
           cache: true
-          run-install: false
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-        with:
-          run_install: false
-
-      - run: vp install --frozen-lockfile
 
       - name: Run unit tests
-        run: pnpm run test-unit
+        run: vp run test-unit
 
   unit-test-windows:
     runs-on: windows-latest
@@ -42,20 +34,12 @@ jobs:
         with:
           node-version: 'lts'
           cache: true
-          run-install: false
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-        with:
-          run_install: false
-
-      - run: vp install --frozen-lockfile
 
       - name: Run compiler unit tests
-        run: pnpm run test-unit compiler
+        run: vp run test-unit compiler
 
       - name: Run ssr unit tests
-        run: pnpm run test-unit server-renderer
+        run: vp run test-unit server-renderer
 
   e2e-test:
     runs-on: ubuntu-latest
@@ -73,18 +57,10 @@ jobs:
         with:
           node-version: 'lts'
           cache: true
-          run-install: false
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-        with:
-          run_install: false
-
-      - run: vp install --frozen-lockfile
       - run: node node_modules/puppeteer/install.mjs
 
       - name: Run e2e tests
-        run: pnpm run test-e2e
+        run: vp run test-e2e
 
       - name: verify treeshaking
         run: node scripts/verify-treeshaking.js
@@ -105,18 +81,10 @@ jobs:
         with:
           node-version: 'lts'
           cache: true
-          run-install: false
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-        with:
-          run_install: false
-
-      - run: vp install --frozen-lockfile
       - run: node node_modules/puppeteer/install.mjs
 
       - name: Run e2e tests
-        run: pnpm run test-e2e-vapor
+        run: vp run test-e2e-vapor
 
   lint-and-test-dts:
     runs-on: ubuntu-latest
@@ -130,14 +98,6 @@ jobs:
         with:
           node-version: 'lts'
           cache: true
-          run-install: false
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-        with:
-          run_install: false
-
-      - run: vp install --frozen-lockfile
 
       - name: Run lint
         run: vp lint
@@ -146,7 +106,7 @@ jobs:
         run: vp fmt --check
 
       - name: Run type check
-        run: pnpm run check
+        run: vp run check
 
       - name: Run type declaration tests
-        run: pnpm run test-dts
+        run: vp run test-dts

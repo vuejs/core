@@ -28,15 +28,6 @@ jobs:
         with:
           node-version: 'lts'
           cache: true
-          run-install: false
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-        with:
-          run_install: false
-
-      - name: Install deps
-        run: vp install --frozen-lockfile
 
       - name: Update npm
         run: npm i -g npm@latest
@@ -44,7 +35,7 @@ jobs:
       - name: Build and publish
         id: publish
         run: |
-          pnpm release --publishOnly
+          vp run release --publishOnly
 
       - name: Create GitHub release
         id: release_tag

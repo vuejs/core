@@ -29,17 +29,8 @@ jobs:
         with:
           node-version: 'lts'
           cache: true
-          run-install: false
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-        with:
-          run_install: false
-
-      - name: Install dependencies
-        run: vp install --frozen-lockfile
-
-      - run: pnpm run size
+      - run: vp run size
 
       - name: Save PR number & base branch
         if: ${{github.event_name == 'pull_request'}}

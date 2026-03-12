@@ -1,1 +1,1 @@
-vp staged && pnpm check
+vp staged && vp run check
