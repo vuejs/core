@@ -12,6 +12,11 @@ const animationNameRE = /^(?:-\w+-)?animation-name$/
 const animationRE = /^(?:-\w+-)?animation$/
 const keyframesRE = /^(?:-\w+-)?keyframes$/
 
+// State pseudo-classes that need scoped attribute before them
+// e.g., .root:hover -> .root[data-v-xxx]:hover
+const statePseudoRE =
+  /^(?::(?:hover|active|focus|focus-within|visited|link|target|enabled|disabled|checked|unchecked|valid|invalid|required|optional|read-only|read-write|first-child|last-child|first-of-type|last-of-type|only-child|only-of-type|nth-child|nth-last-child|nth-of-type|nth-last-of-type|empty|blank|placeholder-shown|default|indeterminate))$/
+
 const scopedPlugin: PluginCreator<string> = (id = '') => {
   const keyframes = Object.create(null)
   const shortId = id.replace(/^data-v-/, '')
@@ -101,8 +106,29 @@ function rewriteSelector(
 ) {
   let node: selectorParser.Node | null = null
   let shouldInject = !deep
+  let prevNode: selectorParser.Node | null = null
   // find the last child node to insert attribute selector
   selector.each(n => {
+    // Handle combinator - inject scoped attribute before state pseudo classes
+    // e.g., .root:hover .a -> .root[data-v-xxx]:hover .a[data-v-xxx]
+    if (n.type === 'combinator' && prevNode && prevNode.type === 'pseudo') {
+      const pseudoValue = (prevNode as selectorParser.Pseudo).value
+      // Check if it's a state pseudo that needs attribute before it
+      if (statePseudoRE.test(pseudoValue)) {
+        const idToAdd = slotted ? id + '-s' : id
+        selector.insertBefore(
+          prevNode,
+          selectorParser.attribute({
+            attribute: idToAdd,
+            value: idToAdd,
+            raws: {},
+            quoteMark: `"`,
+          }),
+        )
+      }
+    }
+
+    prevNode = n
     // DEPRECATED ">>>" and "/deep/" combinator
     if (
       n.type === 'combinator' &&

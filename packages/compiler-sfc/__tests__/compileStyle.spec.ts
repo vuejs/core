@@ -109,6 +109,18 @@ color: red
     )
   })
 
+  // #13746 - state pseudo in compound selectors should have scoped attribute before it
+  test('state pseudo in compound selectors', () => {
+    // .root:hover .a -> .root[data-v-test]:hover .a[data-v-test]
+    expect(compileScoped(`.root:hover .a { color: red; }`)).toMatch(
+      `.root[data-v-test]:hover .a[data-v-test] { color: red;`,
+    )
+    // .root:focus .a -> .root[data-v-test]:focus .a[data-v-test]
+    expect(compileScoped(`.root:focus .a { color: red; }`)).toMatch(
+      `.root[data-v-test]:focus .a[data-v-test] { color: red;`,
+    )
+  })
+
   test('pseudo element', () => {
     expect(compileScoped(`::selection { display: none; }`)).toMatch(
       '[data-v-test]::selection {',
