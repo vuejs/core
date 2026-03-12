@@ -117,7 +117,9 @@ export type Attrs = Data & AllowedAttrs
  * declare const instance: ComponentInstance<typeof MyComp>
  * ```
  */
-export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
+export type ComponentInstance<T> = T extends {
+  new (): ComponentPublicInstance<any, any, any>
+}
   ? InstanceType<T>
   : T extends FunctionalComponent<infer Props, infer Emits>
     ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>
