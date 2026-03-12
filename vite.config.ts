@@ -102,6 +102,30 @@ export default defineConfig({
       },
     ],
   },
+  run: {
+    tasks: {
+      'size-workflow': {
+        cache: false,
+        dependsOn: ['size-global', 'size-esm-runtime', 'size-esm'],
+        command: 'node scripts/usage-size.js',
+      },
+      'test-dts-workflow': {
+        cache: false,
+        dependsOn: ['build-dts'],
+        command: 'vp run test-dts-only',
+      },
+      'dev-sfc-workflow': {
+        cache: false,
+        dependsOn: ['dev-prepare-cjs'],
+        command: 'vp run dev-sfc-run',
+      },
+      'build-sfc-playground-workflow': {
+        cache: false,
+        dependsOn: ['build-sfc-deps'],
+        command: 'vp run build-sfc-playground-self',
+      },
+    },
+  },
   staged: {
     '*.{js,json}': ['vp fmt --no-error-on-unmatched-pattern'],
     '*.ts?(x)': ['vp lint --fix', 'vp fmt --no-error-on-unmatched-pattern'],
