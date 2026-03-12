@@ -552,6 +552,41 @@ test('returns single-root metadata for root control flow when vapor is enabled',
   expect(result.multiRoot).toBe(false)
 })
 
+test('returns single-root metadata for a root if / else-if / else chain when vapor is enabled', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<template v-if="ok"><div /></template><template v-else-if="maybe"><div /></template><template v-else><div /></template>`,
+    vapor: true,
+  })
+
+  expect(result.multiRoot).toBe(false)
+})
+
+test('ignores preserved whitespace between root if branches when returning multiRoot metadata', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<template v-if="ok"><div /></template>
+
+<template v-else><div /></template>`,
+    vapor: true,
+    compilerOptions: {
+      whitespace: 'preserve',
+    },
+  })
+
+  expect(result.multiRoot).toBe(false)
+})
+
+test('returns multiRoot metadata for a root component with a sibling when vapor is enabled', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<KeepAlive><div /></KeepAlive><span />`,
+    vapor: true,
+  })
+
+  expect(result.multiRoot).toBe(true)
+})
+
 test('respects comments option when returning multiRoot metadata', () => {
   const result = compile({
     filename: 'example.vue',
