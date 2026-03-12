@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: vp install --frozen-lockfile
 
-      - run: vp exec pnpm run size
+      - run: pnpm run size
 
       - name: Save PR number & base branch
         if: ${{github.event_name == 'pull_request'}}

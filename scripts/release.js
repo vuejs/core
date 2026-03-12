@@ -182,7 +182,7 @@ async function main() {
 
   // generate changelog
   step('\nGenerating changelog...')
-  await run('vp', ['exec', 'pnpm', 'run', 'changelog'])
+  await run('pnpm', ['run', 'changelog'])
 
   if (!skipPrompts) {
     /** @type {{ yes: boolean }} */
@@ -369,7 +369,7 @@ function updatePackage(pkgRoot, version, getNewPackageName) {
 async function buildPackages() {
   step('\nBuilding all packages...')
   if (!skipBuild) {
-    await run('vp', ['exec', 'pnpm', 'run', 'build', '--withTypes'])
+    await run('pnpm', ['run', 'build', '--withTypes'])
   } else {
     console.log(`(skipped)`)
   }
