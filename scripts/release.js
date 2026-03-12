@@ -182,7 +182,7 @@ async function main() {
 
   // generate changelog
   step('\nGenerating changelog...')
-  await run('pnpm', ['run', 'changelog'])
+  await run(`pnpm`, ['run', 'changelog'])
 
   if (!skipPrompts) {
     /** @type {{ yes: boolean }} */
@@ -426,10 +426,8 @@ async function publishPackage(pkgName, version, additionalFlags) {
     // Don't change the package manager here as we rely on pnpm to handle
     // workspace:* deps
     await run(
-      'vp',
+      'pnpm',
       [
-        'exec',
-        'pnpm',
         'publish',
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',

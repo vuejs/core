@@ -30,8 +30,8 @@ jobs:
           cache: true
           run-install: false
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4.2.0
         with:
           run_install: false
 
@@ -44,7 +44,7 @@ jobs:
       - name: Build and publish
         id: publish
         run: |
-          pnpm run release --publishOnly
+          pnpm release --publishOnly
 
       - name: Create GitHub release
         id: release_tag

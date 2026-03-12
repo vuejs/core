@@ -30,8 +30,8 @@ jobs:
           cache: true
           run-install: false
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4.2.0
         with:
           run_install: false
 
@@ -39,7 +39,7 @@ jobs:
         run: vp install --frozen-lockfile
 
       - name: Build
-        run: pnpm run build --withTypes
+        run: pnpm build --withTypes
 
       - name: Release
         run: vpx pkg-pr-new publish --compact --pnpm './packages/*' --packageManager=pnpm,npm,yarn

@@ -31,8 +31,8 @@ jobs:
           cache: true
           run-install: false
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4.2.0
         with:
           run_install: false
 
