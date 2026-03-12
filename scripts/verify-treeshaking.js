@@ -2,7 +2,15 @@
 import fs from 'node:fs'
 import { exec } from './utils.js'
 
-exec('vp', ['run', 'build', 'vue', '-f', 'global-runtime']).then(() => {
+exec('vp', [
+  'exec',
+  'pnpm',
+  'run',
+  'build',
+  'vue',
+  '-f',
+  'global-runtime',
+]).then(() => {
   const errors = []
 
   const devBuild = fs.readFileSync(

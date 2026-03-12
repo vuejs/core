@@ -39,7 +39,7 @@ jobs:
       - name: Build and publish
         id: publish
         run: |
-          vp run release --publishOnly
+          vp exec pnpm run release --publishOnly
 
       - name: Create GitHub release
         id: release_tag

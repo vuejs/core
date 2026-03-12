@@ -34,7 +34,7 @@ jobs:
         run: vp install --frozen-lockfile
 
       - name: Build
-        run: vp run build --withTypes
+        run: vp exec pnpm run build --withTypes
 
       - name: Release
         run: vpx pkg-pr-new publish --compact --pnpm './packages/*' --packageManager=pnpm,npm,yarn
