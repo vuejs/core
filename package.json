@@ -8,7 +8,7 @@
     "build": "node scripts/build.js",
     "build-dts": "node scripts/build-types.js",
     "clean": "rimraf --glob packages/*/dist temp",
-    "size": "vp run size-workflow",
+    "size": "run-s \"size-*\" && node scripts/usage-size.js",
     "size-global": "node scripts/build.js vue runtime-dom compiler-dom -f global -p --size",
     "size-esm-runtime": "node scripts/build.js vue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime-shared runtime-dom runtime-core reactivity shared runtime-vapor -f esm-bundler",

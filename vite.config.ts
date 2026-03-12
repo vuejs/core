@@ -104,11 +104,6 @@ export default defineConfig({
   },
   run: {
     tasks: {
-      'size-workflow': {
-        cache: false,
-        dependsOn: ['size-global', 'size-esm-runtime', 'size-esm'],
-        command: 'node scripts/usage-size.js',
-      },
       'test-dts-workflow': {
         cache: false,
         dependsOn: ['build-dts'],
