@@ -207,13 +207,13 @@ The `dev-compiler` script builds, watches and serves the [Template Explorer](htt
 
 ### `nr test`
 
-The `test` script simply calls the `vitest` binary, so all [Vitest CLI Options](https://vitest.dev/guide/cli.html#options) can be used. Some examples:
+The `test` script runs `vp test`, which forwards options to Vitest, so all [Vitest CLI Options](https://vitest.dev/guide/cli.html#options) can still be used. Some examples:
 
 ```bash
 # run all tests in watch mode
 $ nr test
 
-# run once and exit (equivalent to `vitest run`)
+# run once and exit (equivalent to `vp test run`)
 $ nr test run
 
 # run all tests under the runtime-core package
