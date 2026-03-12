@@ -43,11 +43,7 @@
     "build-sfc-deps": "node scripts/build.js -f ~global+global-runtime",
     "build-sfc-playground-self": "vp build packages-private/sfc-playground",
     "preinstall": "npx only-allow pnpm",
-    "postinstall": "simple-git-hooks"
-  },
-  "simple-git-hooks": {
-    "pre-commit": "vp staged && pnpm check",
-    "commit-msg": "node scripts/verify-commit.js"
+    "prepare": "vp config --hooks-dir .vite-hooks"
   },
   "engines": {
     "node": ">=22.12.0"
@@ -86,7 +82,6 @@
     "semver": "^7.7.3",
     "serve": "^14.2.5",
     "serve-handler": "^6.1.6",
-    "simple-git-hooks": "^2.13.1",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.8.1",
     "typescript": "~5.6.2",

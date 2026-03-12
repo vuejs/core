@@ -131,9 +131,6 @@ importers:
       serve-handler:
         specifier: ^6.1.6
         version: 6.1.6
-      simple-git-hooks:
-        specifier: ^2.13.1
-        version: 2.13.1
       todomvc-app-css:
         specifier: ^2.4.3
         version: 2.4.3
@@ -3727,10 +3724,6 @@ packages:
   signal-exit@3.0.7:
     resolution: {integrity: sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==}
 
-  simple-git-hooks@2.13.1:
-    resolution: {integrity: sha512-WszCLXwT4h2k1ufIXAgsbiTOazqqevFCIncOuUBZJ91DdvWcC5+OFkluWRQPrcuSYd8fjq+o2y1QfWqYMoAToQ==}
-    hasBin: true
-
   sirv@2.0.4:
     resolution: {integrity: sha512-94Bdh3cC2PKrbgSOUqTiGPWVZeSiXfKOVZNJniWoqrWrRkB1CJzBU3NEbiTsPcYy1lDsANA/THzS+9WBiy5nfQ==}
     engines: {node: '>= 10'}
@@ -6913,8 +6906,6 @@ snapshots:
   shell-quote@1.8.3: {}
 
   signal-exit@3.0.7: {}
-
-  simple-git-hooks@2.13.1: {}
 
   sirv@2.0.4:
     dependencies:
