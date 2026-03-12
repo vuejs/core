@@ -106,7 +106,7 @@ The project uses [simple-git-hooks](https://github.com/toplenboren/simple-git-ho
 
 **The examples below will be using the `nr` command from the [@antfu/ni](https://github.com/antfu/ni) package.** You can also use plain `npm run`, but you will need to pass all additional arguments after the command after an extra `--`. For example, `nr build runtime --all` is equivalent to `npm run build -- runtime --all`.
 
-Some scripts still use `run-p` from [npm-run-all](https://github.com/mysticatea/npm-run-all) for parallel orchestration. The sequential `run-s` cases have been migrated to `vp run`.
+The `run-s` and `run-p` commands found in some scripts are from [npm-run-all](https://github.com/mysticatea/npm-run-all) for orchestrating multiple scripts. `run-s` means "run in sequence" while `run-p` means "run in parallel".
 
 - [`nr build`](#nr-build)
 - [`nr build-dts`](#nr-build-dts)
