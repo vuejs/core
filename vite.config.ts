@@ -1,0 +1,157 @@
+import { defineConfig } from 'vite-plus'
+
+export default defineConfig({
+  staged: {
+    '*.{js,json}': ['vp fmt --no-error-on-unmatched-pattern'],
+    '*.ts?(x)': ['vp lint --fix', 'vp fmt --no-error-on-unmatched-pattern'],
+  },
+  lint: {
+    categories: {
+      correctness: 'off',
+    },
+    env: {
+      builtin: true,
+    },
+    ignorePatterns: [
+      '**/dist/',
+      '**/temp/',
+      '**/coverage/',
+      'dts-build/packages',
+    ],
+    overrides: [
+      {
+        files: ['**/*.js', '**/*.ts', '**/*.tsx'],
+        rules: {
+          'no-debugger': 'error',
+          'no-console': [
+            'error',
+            {
+              allow: ['warn', 'error', 'info'],
+            },
+          ],
+          'no-restricted-globals': [
+            'error',
+            'window',
+            'document',
+            'module',
+            'require',
+          ],
+          'sort-imports': [
+            'error',
+            {
+              ignoreDeclarationSort: true,
+            },
+          ],
+          '@typescript-eslint/prefer-ts-expect-error': 'error',
+          '@typescript-eslint/consistent-type-imports': [
+            'error',
+            {
+              fixStyle: 'inline-type-imports',
+              disallowTypeAnnotations: false,
+            },
+          ],
+          '@typescript-eslint/no-import-type-side-effects': 'error',
+        },
+      },
+      {
+        files: ['packages/shared/**'],
+        rules: {
+          'no-restricted-globals': 'off',
+        },
+      },
+      {
+        files: ['packages/{vue,vue-compat,runtime-*}/**'],
+        rules: {
+          'no-restricted-globals': ['error', 'module', 'require'],
+          'oxc/no-optional-chaining': 'error',
+        },
+      },
+      {
+        files: ['packages/{compiler-*,server-renderer}/**'],
+        rules: {
+          'no-restricted-globals': ['error', 'window', 'document'],
+          'oxc/no-const-enum': 'error',
+        },
+      },
+      {
+        files: [
+          'packages-private/template-explorer/**',
+          'packages-private/sfc-playground/**',
+        ],
+        rules: {
+          'no-restricted-globals': ['error', 'module', 'require'],
+          'oxc/no-const-enum': 'error',
+          'no-console': 'off',
+        },
+      },
+      {
+        files: ['*.js'],
+        rules: {
+          'no-unused-vars': [
+            'error',
+            {
+              vars: 'all',
+              args: 'none',
+            },
+          ],
+        },
+      },
+      {
+        files: [
+          '**/__tests__/**',
+          'packages-private/dts-test/**',
+          'packages-private/dts-build-test/**',
+        ],
+        rules: {
+          'no-console': 'off',
+          'no-restricted-globals': 'off',
+          'no-unused-vars': 'off',
+          'oxc/no-optional-chaining': 'off',
+          'no-restricted-syntax': 'off',
+        },
+        globals: {
+          suite: 'writable',
+          test: 'writable',
+          describe: 'writable',
+          it: 'writable',
+          expectTypeOf: 'writable',
+          assertType: 'writable',
+          expect: 'writable',
+          assert: 'writable',
+          chai: 'writable',
+          vitest: 'writable',
+          vi: 'writable',
+          beforeAll: 'writable',
+          afterAll: 'writable',
+          beforeEach: 'writable',
+          afterEach: 'writable',
+          onTestFailed: 'writable',
+          onTestFinished: 'writable',
+        },
+      },
+      {
+        files: [
+          'scripts/**',
+          './*.{js,ts}',
+          'packages/*/*.js',
+          'packages/vue/*/*.js',
+          'packages-private/benchmark/*',
+          'packages-private/e2e-utils/*',
+        ],
+        rules: {
+          'no-restricted-globals': 'off',
+          'oxc/no-const-enum': 'error',
+          'no-console': 'off',
+        },
+      },
+    ],
+  },
+  fmt: {
+    semi: false,
+    singleQuote: true,
+    arrowParens: 'avoid',
+    printWidth: 80,
+    experimentalSortPackageJson: false,
+    ignorePatterns: ['dist', 'CHANGELOG*.md', '*.toml'],
+  },
+})

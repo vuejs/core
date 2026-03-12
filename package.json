@@ -13,9 +13,9 @@
     "size-esm-runtime": "node scripts/build.js vue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime-shared runtime-dom runtime-core reactivity shared runtime-vapor -f esm-bundler",
     "check": "tsc --incremental --noEmit",
-    "lint": "oxlint",
-    "format": "oxfmt",
-    "format-check": "oxfmt --check",
+    "lint": "vp lint",
+    "format": "vp fmt",
+    "format-check": "vp fmt --check",
     "test": "vitest",
     "test-unit": "vitest --project unit*",
     "test-e2e": "node scripts/build.js -e vue -f global+esm-browser-vapor -d && vitest --project e2e",
@@ -46,17 +46,8 @@
     "postinstall": "simple-git-hooks"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged && pnpm check",
+    "pre-commit": "vp staged && pnpm check",
     "commit-msg": "node scripts/verify-commit.js"
-  },
-  "lint-staged": {
-    "*.{js,json}": [
-      "oxfmt --no-error-on-unmatched-pattern"
-    ],
-    "*.ts?(x)": [
-      "oxlint --fix",
-      "oxfmt --no-error-on-unmatched-pattern"
-    ]
   },
   "engines": {
     "node": ">=22.12.0"
@@ -78,7 +69,6 @@
     "estree-walker": "catalog:",
     "fast-glob": "^3.3.2",
     "jsdom": "^27.3.0",
-    "lint-staged": "^16.2.7",
     "lodash": "^4.17.23",
     "magic-string": "^0.30.21",
     "markdown-table": "^3.0.4",
@@ -87,8 +77,6 @@
     "oxc-parser": "^0.116.0",
     "oxc-transform": "^0.116.0",
     "oxc-minify": "^0.116.0",
-    "oxfmt": "^0.36.0",
-    "oxlint": "^1.51.0",
     "picocolors": "^1.1.1",
     "pretty-bytes": "^7.1.0",
     "pug": "^3.0.3",
@@ -104,6 +92,7 @@
     "tslib": "^2.8.1",
     "typescript": "~5.6.2",
     "vite": "catalog:",
-    "vitest": "^4.0.18"
+    "vitest": "npm:@voidzero-dev/vite-plus-test@latest",
+    "vite-plus": "latest"
   }
 }
