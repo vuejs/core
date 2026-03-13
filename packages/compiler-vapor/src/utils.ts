@@ -1,4 +1,4 @@
-import { isGloballyAllowed } from '@vue/shared'
+import { VaporBlockShape, isGloballyAllowed } from '@vue/shared'
 import {
   type AttributeNode,
   type BindingMetadata,
@@ -12,7 +12,7 @@ import {
   isConstantNode,
   isLiteralWhitelisted,
 } from '@vue/compiler-dom'
-import type { VaporDirectiveNode } from './ir'
+import type { BlockIRNode, VaporDirectiveNode } from './ir'
 import { EMPTY_EXPRESSION } from './transforms/utils'
 import type { TransformContext } from './transform'
 
@@ -158,4 +158,11 @@ export function isBuiltInComponent(tag: string): string | undefined {
   } else if (isTransitionGroupTag(tag)) {
     return 'VaporTransitionGroup'
   }
+}
+
+export function getBlockShape(block: BlockIRNode): VaporBlockShape {
+  if (block.returns.length === 0) return VaporBlockShape.EMPTY
+  return block.returns.length === 1
+    ? VaporBlockShape.SINGLE_ROOT
+    : VaporBlockShape.MULTI_ROOT
 }

@@ -68,13 +68,17 @@ function performHydration<T>(
   }
   enableHydrationNodeLookup()
   const prev = setIsHydrating(true)
-  setup()
-  const res = fn()
-  cleanup()
+  const prevHydrationNode = currentHydrationNode
   currentHydrationNode = null
-  setIsHydrating(prev)
-  if (!isHydrating) disableHydrationNodeLookup()
-  return res
+  try {
+    setup()
+    return fn()
+  } finally {
+    cleanup()
+    currentHydrationNode = prevHydrationNode
+    setIsHydrating(prev)
+    if (!isHydrating) disableHydrationNodeLookup()
+  }
 }
 
 export function withHydration(container: ParentNode, fn: () => void): void {
@@ -90,7 +94,7 @@ export function hydrateNode(node: Node, fn: () => void): void {
 }
 
 export let adoptTemplate: (node: Node, template: string) => Node | null
-export let locateHydrationNode: () => void
+export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
 
 type Anchor = Comment & {
   // cached matching fragment end to avoid repeated traversal
@@ -123,18 +127,17 @@ export function advanceHydrationNode(node: Node): void {
  */
 function adoptTemplateImpl(node: Node, template: string): Node | null {
   if (!(template[0] === '<' && template[1] === '!')) {
+    // empty text node in slot
+    if (
+      template.trim() === '' &&
+      isComment(node, ']') &&
+      isComment(node.previousSibling!, '[')
+    ) {
+      node.before((node = createTextNode()))
+    }
+
     while (node.nodeType === 8) {
       node = node.nextSibling!
-
-      // empty text node in slot
-      if (
-        template.trim() === '' &&
-        isComment(node, ']') &&
-        isComment(node.previousSibling!, '[')
-      ) {
-        node.before((node = createTextNode()))
-        break
-      }
     }
   }
 
@@ -161,7 +164,7 @@ export function locateNextNode(node: Node): Node | null {
       : _next(node)
 }
 
-function locateHydrationNodeImpl(): void {
+function locateHydrationNodeImpl(consumeFragmentStart = false) {
   let node: Node | null
 
   if (insertionIndex !== undefined) {
@@ -172,6 +175,11 @@ function locateHydrationNodeImpl(): void {
     node = insertionParent.firstChild
   } else {
     node = currentHydrationNode
+  }
+
+  // consume fragment start anchor if needed
+  if (consumeFragmentStart && node && isComment(node, '[')) {
+    node = node.nextSibling
   }
 
   if (__DEV__ && !node) {
@@ -208,14 +216,6 @@ export function locateEndAnchor(
     }
   }
 
-  return null
-}
-export function locateFragmentEndAnchor(label: string = ']'): Comment | null {
-  let node = currentHydrationNode!
-  while (node) {
-    if (isComment(node, label)) return node
-    node = node.nextSibling!
-  }
   return null
 }
 

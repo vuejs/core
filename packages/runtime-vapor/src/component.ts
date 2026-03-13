@@ -249,7 +249,7 @@ export function createComponent(
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
   if (isHydrating) {
-    locateHydrationNode()
+    locateHydrationNode(component.__multiRoot)
   } else {
     resetInsertionState()
   }
@@ -299,7 +299,6 @@ export function createComponent(
       currentInstance as any,
       rawProps,
       rawSlots,
-      isSingleRoot,
     )
     if (!isHydrating) {
       if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)

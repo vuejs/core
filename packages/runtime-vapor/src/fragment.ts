@@ -28,10 +28,10 @@ import {
 } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
+  advanceHydrationNode,
   currentHydrationNode,
   isComment,
   isHydrating,
-  locateFragmentEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
 import { isArray } from '@vue/shared'
@@ -97,14 +97,18 @@ export class DynamicFragment extends VaporFragment {
 
   slotOwner: VaporComponentInstance | null
 
-  constructor(anchorLabel?: string, keyed: boolean = false) {
+  constructor(
+    anchorLabel?: string,
+    keyed: boolean = false,
+    locate: boolean = true,
+  ) {
     super([])
     this.keyed = keyed
     this.slotOwner = currentSlotOwner
     this.keepAliveCtx = currentKeepAliveCtx
     if (isHydrating) {
       this.anchorLabel = anchorLabel
-      locateHydrationNode()
+      if (locate) locateHydrationNode()
     } else {
       this.anchor =
         __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
@@ -114,6 +118,8 @@ export class DynamicFragment extends VaporFragment {
 
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
+      // On initial hydration, `key === current` means `render` is empty,
+      // so this fragment hydrates as empty content.
       if (isHydrating) this.hydrate(true)
       return
     }
@@ -180,10 +186,9 @@ export class DynamicFragment extends VaporFragment {
     }
 
     this.renderBranch(render, transition, parent, instance)
-
     setActiveSub(prevSub)
 
-    if (isHydrating) this.hydrate()
+    if (isHydrating) this.hydrate(render == null)
   }
 
   renderBranch(
@@ -277,48 +282,68 @@ export class DynamicFragment extends VaporFragment {
     // avoid repeated hydration
     if (this.anchor) return
 
-    if (this.anchorLabel === 'if') {
-      // reuse the empty comment node as the anchor for empty if
-      // e.g. `<div v-if="false"></div>` -> `<!---->`
-      if (isEmpty) {
-        this.anchor = locateFragmentEndAnchor('')!
-        if (__DEV__ && !this.anchor) {
-          throw new Error(
-            'Failed to locate if anchor. this is likely a Vue internal bug.',
-          )
-        } else {
-          if (__DEV__) {
-            ;(this.anchor as Comment).data = this.anchorLabel
-          }
-          return
-        }
-      }
-    } else if (this.anchorLabel === 'slot') {
-      // reuse the empty comment node for empty slot
-      // e.g. `<slot v-if="false"></slot>`
-      if (isEmpty && isComment(currentHydrationNode!, '')) {
-        this.anchor = currentHydrationNode!
+    // reuse `<!---->` as anchor
+    // `<div v-if="false"></div>` -> `<!---->`
+    if (isEmpty) {
+      if (isComment(currentHydrationNode!, '')) {
+        this.anchor = currentHydrationNode
+        advanceHydrationNode(currentHydrationNode)
         if (__DEV__) {
           ;(this.anchor as Comment).data = this.anchorLabel!
         }
         return
       }
+    }
 
-      // reuse the vdom fragment end anchor
-      this.anchor = locateFragmentEndAnchor()!
-      if (__DEV__ && !this.anchor) {
-        throw new Error(
-          'Failed to locate slot anchor. this is likely a Vue internal bug.',
-        )
-      } else {
+    const forwardedSlot = (this as any as SlotFragment).forwarded
+    let isValidSlot = false
+    // Empty forwarded slot with a fallback: skip anchor creation and
+    // let renderSlotFallback → frag.update(fallback) re-enter hydrate()
+    // to create the anchor after the fallback content is hydrated.
+    if (
+      forwardedSlot &&
+      (isEmpty || !(isValidSlot = isValidBlock(this.nodes))) &&
+      (this as any as SlotFragment).hasFallback
+    ) {
+      return
+    }
+
+    // reuse the `<!--]-->` as anchor
+    // - slot (forwarded slots can only reuse when they own SSR-rendered
+    //   content; when re-entering through renderSlotFallback, the
+    //   `<!--]-->` still belongs to the outer slot)
+    // - multi-root if
+    if (
+      (this.anchorLabel === 'slot' &&
+        (!forwardedSlot || (isValidSlot && !isInSlotFallback))) ||
+      (this.anchorLabel === 'if' && isArray(this.nodes))
+    ) {
+      if (isComment(currentHydrationNode!, ']')) {
+        this.anchor = currentHydrationNode
+        advanceHydrationNode(currentHydrationNode)
         return
+      } else if (__DEV__) {
+        throw new Error(
+          `Failed to locate ${this.anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
+        )
       }
     }
 
-    const { parentNode: pn, nextNode } = findBlockNode(this.nodes)!
-    // create an anchor
+    // otherwise, create an anchor.
+    // forwarded slot without a reusable SSR end anchor,
+    // dynamic-component, async component, keyed fragment
+    let parentNode: Node | null
+    let nextNode: Node | null
+    if (forwardedSlot) {
+      parentNode = currentHydrationNode!.parentNode
+      nextNode = currentHydrationNode!.nextSibling
+    } else {
+      const node = findBlockNode(this.nodes)
+      parentNode = node.parentNode
+      nextNode = node.nextNode
+    }
     queuePostFlushCb(() => {
-      pn!.insertBefore(
+      parentNode!.insertBefore(
         (this.anchor = __DEV__
           ? createComment(this.anchorLabel!)
           : createTextNode()),
@@ -328,19 +353,43 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
+let currentSlotHasFallback = false
+let isInSlotFallback = false
+
 export class SlotFragment extends DynamicFragment {
+  forwarded = false
+  hasFallback = false
+
   constructor() {
-    super(isHydrating || __DEV__ ? 'slot' : undefined)
+    super(isHydrating || __DEV__ ? 'slot' : undefined, false, false)
   }
 
-  updateSlot(render?: BlockFn, fallback?: BlockFn, key: any = render): void {
+  updateSlot(
+    render?: BlockFn,
+    fallback?: BlockFn,
+    key: any = render || fallback,
+  ): void {
+    if (isHydrating) {
+      locateHydrationNode(true)
+      if (this.forwarded) {
+        this.hasFallback = currentSlotHasFallback
+      }
+    }
+
     if (!render || !fallback) {
       this.update(render || fallback, key)
       return
     }
 
     const wrapped = () => {
-      const block = render()
+      const prev = currentSlotHasFallback
+      currentSlotHasFallback = true
+      let block: Block
+      try {
+        block = render()
+      } finally {
+        currentSlotHasFallback = prev
+      }
       const emptyFrag = attachSlotFallback(block, fallback)
       if (!isValidBlock(block)) {
         return renderSlotFallback(block, fallback, emptyFrag)
@@ -374,7 +423,13 @@ export function renderSlotFallback(
     if (frag instanceof ForFragment) {
       frag.nodes[0] = [fallback() || []] as Block[]
     } else if (frag instanceof DynamicFragment) {
-      frag.update(fallback)
+      const prev = isInSlotFallback
+      isInSlotFallback = true
+      try {
+        frag.update(fallback)
+      } finally {
+        isInSlotFallback = prev
+      }
     }
     return block
   }
