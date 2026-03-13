@@ -45,7 +45,7 @@ describe('compiler: expression', () => {
       </div>
     `)
     expect(code).toMatchSnapshot()
-    expect(code).contains(`_String(_foo.id++)`)
+    expect(code).contains(`String(_foo.id++)`)
   })
 
   test('empty interpolation', () => {

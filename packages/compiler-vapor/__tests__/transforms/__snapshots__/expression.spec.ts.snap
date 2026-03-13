@@ -89,13 +89,12 @@ export function render(_ctx) {
   const n0 = _child(n1)
   const x1 = _txt(n1)
   _renderEffect(() => {
-    const _String = String
     const _foo = _ctx.foo
-    _setProp(n1, "id", _String(_foo.id++))
+    _setProp(n1, "id", String(_foo.id++))
     _setProp(n1, "foo", _foo)
     _setProp(n1, "bar", _ctx.bar++)
-    _setText(n0, _toDisplayString(_String(_foo.id++)) + " " + _toDisplayString(_foo) + " " + _toDisplayString(_ctx.bar))
-    _setText(x1, _toDisplayString(_String(_foo.id++)) + " " + _toDisplayString(_foo) + " " + _toDisplayString(_ctx.bar))
+    _setText(n0, _toDisplayString(String(_foo.id++)) + " " + _toDisplayString(_foo) + " " + _toDisplayString(_ctx.bar))
+    _setText(x1, _toDisplayString(String(_foo.id++)) + " " + _toDisplayString(_foo) + " " + _toDisplayString(_ctx.bar))
   })
   return n1
 }"
