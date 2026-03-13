@@ -63,17 +63,29 @@ export type SSRContext = {
 }
 
 export function cleanupContext(context: SSRContext): void {
+  let firstError: unknown
   if (context.__watcherHandles) {
     for (const unwatch of context.__watcherHandles) {
-      unwatch()
+      try {
+        unwatch()
+      } catch (err) {
+        if (firstError === undefined) firstError = err
+      }
     }
     context.__watcherHandles.length = 0
   }
   if (context.__instanceScopes) {
     for (const scope of context.__instanceScopes) {
-      scope.stop()
+      try {
+        scope.stop()
+      } catch (err) {
+        if (firstError === undefined) firstError = err
+      }
     }
     context.__instanceScopes.length = 0
+  }
+  if (firstError !== undefined) {
+    throw firstError
   }
 }
 
