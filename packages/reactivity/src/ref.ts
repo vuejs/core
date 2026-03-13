@@ -202,6 +202,11 @@ class RefImpl<T = any> implements ReactiveNode {
     this.flags &= ~_ReactiveFlags.Dirty
     return hasChanged(this._oldValue, (this._oldValue = this._rawValue))
   }
+
+  // Release stale old-value references when nothing depends on this ref.
+  cleanup(): void {
+    this._oldValue = this._rawValue
+  }
 }
 
 /**

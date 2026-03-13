@@ -20,7 +20,7 @@ describe.skipIf(!global.gc)('reactivity/gc', () => {
   }
 
   // #9233
-  it.todo('should release computed cache', async () => {
+  it('should release computed cache', async () => {
     const src = ref<{} | undefined>({})
     // @ts-expect-error ES2021 API
     const srcRef = new WeakRef(src.value!)
@@ -35,7 +35,7 @@ describe.skipIf(!global.gc)('reactivity/gc', () => {
     expect(srcRef.deref()).toBeUndefined()
   })
 
-  it.todo('should release reactive property dep', async () => {
+  it('should release reactive property dep', async () => {
     const src = reactive({ foo: 1 })
 
     let c: ComputedRef | undefined = computed(() => src.foo)
