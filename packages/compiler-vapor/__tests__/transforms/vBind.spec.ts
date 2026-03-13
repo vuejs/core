@@ -992,4 +992,45 @@ describe('cache multiple access', () => {
     expect(code).matchSnapshot()
     expect(code).contains(`const _obj_foo_bar = _ctx.obj[_ctx.foo?.(_ctx.bar)]`)
   })
+
+  test('should not cache globally allowed identifier call expressions', () => {
+    const { code } = compileWithVBind(`
+      <div :id="Math.random()"></div>
+      <div :id="Math.random()"></div>
+    `)
+    expect(code).matchSnapshot()
+    // Math.random() should NOT be cached because it has side effects
+    expect(code).not.contains('const _Math')
+    expect(code).contains('Math.random()')
+  })
+
+  test('should not cache Date.now() call expressions', () => {
+    const { code } = compileWithVBind(`
+      <div :id="Date.now()"></div>
+      <div :id="Date.now()"></div>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).not.contains('const _Date')
+    expect(code).contains('Date.now()')
+  })
+
+  test('should not cache mixed expression with globally allowed call', () => {
+    const { code } = compileWithVBind(`
+      <div :id="Math.random() + foo"></div>
+      <div :id="Math.random() + foo"></div>
+    `)
+    expect(code).matchSnapshot()
+    // The whole expression should NOT be cached because Math.random() has side effects
+    expect(code).not.contains('const _Math_random')
+    expect(code).contains('Math.random()')
+  })
+
+  test('should not cache globally allowed identifier as variable', () => {
+    const { code } = compileWithVBind(`
+      <div :id="String(foo)"></div>
+      <div :id="String(bar)"></div>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).not.contains('const _String = String')
+  })
 })

@@ -393,6 +393,9 @@ function processRepeatedVariables(
 
   for (const [name, exps] of variableToExpMap) {
     if (updatedVariable.has(name)) continue
+    // skip globally allowed identifiers - they are not reactive and
+    // their method calls (e.g. Math.random()) may have side effects
+    if (isGloballyAllowed(name)) continue
     if (seenVariable[name] > 1 && exps.size > 0) {
       const isIdentifier = seenIdentifier.has(name)
       const varName = isIdentifier ? name : genVarName(name)
@@ -529,7 +532,11 @@ function processRepeatedExpressions(
       if (
         exp.ast &&
         exp.ast.type !== 'Identifier' &&
-        !(variables && variables.some(v => updatedVariable.has(v)))
+        !(variables && variables.some(v => updatedVariable.has(v))) &&
+        // skip expressions containing globally allowed identifiers
+        // (e.g. Math.random(), Date.now() + foo) - they are not reactive
+        // and may involve impure calls with side effects
+        !variables.some(v => isGloballyAllowed(v))
       ) {
         acc[exp.content] = (acc[exp.content] || 0) + 1
       }
