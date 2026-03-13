@@ -2981,11 +2981,11 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div><div><div>
-        <!--[-->
-        <!--[--><span>foo</span><!--]-->
-        <!--slot--><!--]-->
-        </div></div><div>bar</div></div>"
+      	"<div><div><div>
+      	<!--[-->
+      	<!--[--><span>foo</span><!--]-->
+      	<!--]-->
+      	</div></div><div>bar</div></div>"
       `,
       )
 
@@ -2994,13 +2994,45 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div><div><div>
-        <!--[-->
-        <!--[--><span>foo1</span><!--]-->
-        <!--slot--><!--]-->
-        </div></div><div>bar1</div></div>"
+      	"<div><div><div>
+      	<!--[-->
+      	<!--[--><span>foo1</span><!--]-->
+      	<!--]-->
+      	</div></div><div>bar1</div></div>"
       `,
       )
+    })
+
+    test('forwarded slot with fallback but rendered content', async () => {
+      const data = reactive({ foo: 'foo' })
+      const { container } = await testHydration(
+        `<template>
+          <components.Parent><span>{{data.foo}}</span></components.Parent>
+        </template>`,
+        {
+          Parent: `<template><components.Child><slot/></components.Child></template>`,
+          Child: `<template><div><slot>bar</slot></div></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[-->
+      	<!--[--><span>foo</span><!--]-->
+      	<!--]-->
+      	</div>"
+      `)
+
+      data.foo = 'foo1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[-->
+      	<!--[--><span>foo1</span><!--]-->
+      	<!--]-->
+      	</div>"
+      `)
     })
 
     test('forwarded slot with fallback', async () => {
@@ -3019,9 +3051,9 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
-        <!--[-->foo<!--]-->
-        <!--slot--></div>"
+      	"<div>
+      	<!--[-->foo<!--]-->
+      	<!--slot--></div>"
       `,
       )
 
@@ -3029,9 +3061,9 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
-        <!--[-->foo1<!--]-->
-        <!--slot--></div>"
+      	"<div>
+      	<!--[-->foo1<!--]-->
+      	<!--slot--></div>"
       `,
       )
     })
@@ -3078,9 +3110,9 @@ describe('Vapor Mode hydration', () => {
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
-        <!--[--><!--]-->
-        <!--slot--><!--slot--><!--slot--><div>foo</div></div>"
+      	"<div>
+      	<!--[--><!--]-->
+      	<!--slot--><!--slot--><!--slot--><div>foo</div></div>"
       `,
       )
 
@@ -3088,9 +3120,9 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
-        <!--[--><!--]-->
-        <!--slot--><!--slot--><!--slot--><div>bar</div></div>"
+      	"<div>
+      	<!--[--><!--]-->
+      	<!--slot--><!--slot--><!--slot--><div>bar</div></div>"
       `,
       )
     })
@@ -3130,9 +3162,9 @@ describe('Vapor Mode hydration', () => {
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
-        <!--[--><!--]-->
-        <!--slot--><div>bar</div></div>"
+      	"<div>
+      	<!--[--><!--]-->
+      	<!--slot--><div>bar</div></div>"
       `,
       )
 
@@ -3140,9 +3172,9 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
-        <!--[--><!--]-->
-        <span>foo</span><!--slot--><div>bar</div></div>"
+      	"<div>
+      	<!--[--><!--]-->
+      	<span>foo</span><!--slot--><div>bar</div></div>"
       `,
       )
 
@@ -3151,9 +3183,9 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
-        <!--[--><!--]-->
-        <span>foo1</span><!--slot--><div>bar1</div></div>"
+      	"<div>
+      	<!--[--><!--]-->
+      	<span>foo1</span><!--slot--><div>bar1</div></div>"
       `,
       )
     })
