@@ -44,7 +44,11 @@ type MapSources<T, Immediate> = {
       : never
 }
 
-export interface WatchEffectOptions extends DebuggerOptions {
+export interface BaseWatchEffectOptions extends DebuggerOptions {
+  signal?: AbortSignal
+}
+
+export interface WatchEffectOptions extends BaseWatchEffectOptions {
   flush?: 'pre' | 'post' | 'sync'
 }
 
@@ -64,7 +68,7 @@ export function watchEffect(
 
 export function watchPostEffect(
   effect: WatchEffect,
-  options?: DebuggerOptions,
+  options?: BaseWatchEffectOptions,
 ): WatchHandle {
   return doWatch(
     effect,
@@ -77,7 +81,7 @@ export function watchPostEffect(
 
 export function watchSyncEffect(
   effect: WatchEffect,
-  options?: DebuggerOptions,
+  options?: BaseWatchEffectOptions,
 ): WatchHandle {
   return doWatch(
     effect,
