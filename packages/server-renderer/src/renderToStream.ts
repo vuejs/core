@@ -96,7 +96,9 @@ export function renderToSimpleStream<T extends SimpleReadable>(
     .catch(error => {
       try {
         finalize()
-      } catch (_) {}
+      } catch {
+        // ignore cleanup errors to preserve the original render error
+      }
       stream.destroy(error)
     })
 
