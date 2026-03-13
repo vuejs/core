@@ -1,11 +1,11 @@
 {
   "name": "vapor-e2e-test",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build"
+    "dev": "vp dev",
+    "build": "vp build"
   },
   "devDependencies": {
     "@types/connect": "^3.4.38",
