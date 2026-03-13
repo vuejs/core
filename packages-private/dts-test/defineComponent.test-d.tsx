@@ -1397,6 +1397,20 @@ describe('function syntax w/ emits', () => {
       },
     },
   )
+
+  defineComponent<
+    {},
+    {
+      update: [value: string] // named tuple syntax
+    }
+  >((props, ctx) => {
+    ctx.emit('update', '123')
+    // @ts-expect-error
+    ctx.emit('update', 123)
+    // @ts-expect-error
+    ctx.emit('non-exist')
+    return () => {}
+  })
 })
 
 describe('function syntax w/ runtime props', () => {
