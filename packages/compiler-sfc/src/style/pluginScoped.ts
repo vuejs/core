@@ -174,6 +174,7 @@ function rewriteSelector(
           selectorRoot,
           deep,
           true /* slotted */,
+          isNested,
         )
         let last: selectorParser.Selector['nodes'][0] = n
         n.nodes[0].each(ss => {
@@ -255,7 +256,7 @@ function rewriteSelector(
     const { type, value } = node as selectorParser.Node
     if (type === 'pseudo' && (value === ':is' || value === ':where')) {
       ;(node as selectorParser.Pseudo).nodes.forEach(value =>
-        rewriteSelector(id, rule, value, selectorRoot, deep, slotted),
+        rewriteSelector(id, rule, value, selectorRoot, deep, slotted, isNested),
       )
       shouldInject = false
     }

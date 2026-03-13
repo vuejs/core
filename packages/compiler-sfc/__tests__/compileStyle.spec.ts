@@ -485,6 +485,46 @@ color: red
       }"
     `)
   })
+
+  test('should keep leading universal selector in :is() in nested rules', () => {
+    expect(compileScoped(`.outer { :is(* .foo) { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      :is(* .foo[data-v-test]) { color: red;
+      }
+      }"
+    `)
+  })
+
+  test('should keep leading universal selector in :where() in nested rules', () => {
+    expect(compileScoped(`.outer { :where(* .foo) { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      :where(* .foo[data-v-test]) { color: red;
+      }
+      }"
+    `)
+  })
+
+  test('should keep leading universal selector before non-space combinator in :is() in nested rules', () => {
+    expect(compileScoped(`.outer { :is(* > .foo) { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      :is(* > .foo[data-v-test]) { color: red;
+      }
+      }"
+    `)
+  })
+
+  test('should keep leading universal selector in ::v-slotted() in nested rules', () => {
+    expect(compileScoped(`.outer { ::v-slotted(* .foo) { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      * .foo[data-v-test-s] { color: red;
+      }
+      }"
+    `)
+  })
 })
 
 describe('SFC CSS modules', () => {
