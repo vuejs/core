@@ -16,7 +16,7 @@ jobs:
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: 'lts'
+          node-version-file: '.node-version'
           cache: true
 
       - name: Run unit tests
@@ -32,7 +32,7 @@ jobs:
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: 'lts'
+          node-version-file: '.node-version'
           cache: true
 
       - name: Run compiler unit tests
@@ -55,7 +55,7 @@ jobs:
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: 'lts'
+          node-version-file: '.node-version'
           cache: true
       - run: node node_modules/puppeteer/install.mjs
 
@@ -79,7 +79,7 @@ jobs:
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: 'lts'
+          node-version-file: '.node-version'
           cache: true
       - run: node node_modules/puppeteer/install.mjs
 
@@ -96,7 +96,7 @@ jobs:
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
-          node-version: 'lts'
+          node-version-file: '.node-version'
           cache: true
 
       - name: Run lint
