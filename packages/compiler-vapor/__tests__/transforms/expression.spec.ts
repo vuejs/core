@@ -124,6 +124,33 @@ describe('compiler: expression', () => {
       expect(code).contains('const _foo = _ctx.foo()')
     })
 
+    test('repeated simple function calls do not collide with repeated variables', () => {
+      const { code } = compileWithExpression(`
+        <div :id="foo"></div>
+        <div :id="foo"></div>
+        <div :id="foo()"></div>
+        <div :id="foo()"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('const _foo = _ctx.foo')
+      expect(code).toMatch(/const _foo_1 = .*foo\(\)/)
+      expect(code).contains('_setProp(n0, "id", _foo)')
+      expect(code).contains('_setProp(n2, "id", _foo_1)')
+    })
+
+    test('repeated expressions do not collide with existing identifiers', () => {
+      const { code } = compileWithExpression(`
+        <div :id="foo_bar"></div>
+        <div :id="foo + bar"></div>
+        <div :id="foo + bar"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('_setProp(n0, "id", _ctx.foo_bar)')
+      expect(code).contains('const _foo_bar_1 = _ctx.foo + _ctx.bar')
+      expect(code).contains('_setProp(n1, "id", _foo_bar_1)')
+      expect(code).contains('_setProp(n2, "id", _foo_bar_1)')
+    })
+
     test('repeated simple function calls with setup-const binding', () => {
       const { code } = compileWithExpression(
         `
