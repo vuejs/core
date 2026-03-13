@@ -217,6 +217,24 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: expression > cache expressions > repeated expressions do not collide with existing identifiers 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  _renderEffect(() => {
+    const _foo_bar_1 = _ctx.foo + _ctx.bar
+    _setProp(n0, "id", _ctx.foo_bar)
+    _setProp(n1, "id", _foo_bar_1)
+    _setProp(n2, "id", _foo_bar_1)
+  })
+  return [n0, n1, n2]
+}"
+`;
+
 exports[`compiler: expression > cache expressions > repeated simple function calls 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>")
@@ -230,6 +248,27 @@ export function render(_ctx) {
     _setProp(n1, "id", _foo)
   })
   return [n0, n1]
+}"
+`;
+
+exports[`compiler: expression > cache expressions > repeated simple function calls do not collide with repeated variables 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  const n3 = t0()
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    const _foo_1 = _foo()
+    _setProp(n0, "id", _foo)
+    _setProp(n1, "id", _foo)
+    _setProp(n2, "id", _foo_1)
+    _setProp(n3, "id", _foo_1)
+  })
+  return [n0, n1, n2, n3]
 }"
 `;
 
