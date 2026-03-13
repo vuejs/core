@@ -8,24 +8,14 @@
     "text": true,
     "yml": true
   },
-
   "prettier.enable": false,
   "eslint.enable": false,
   "oxc.enable": true,
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "file",
   "editor.codeActionsOnSave": {
     "source.fixAll.oxc": "explicit"
   },
-  // Use Oxc to format TypeScript, JavaScript and JSON files
-  "[typescript]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
-  },
-  "[javascript]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
-  },
-  // oxc-vscode does not yet support JSON formatting
-  // "[json]": {
-  //   "editor.defaultFormatter": "oxc.oxc-vscode"
-  // },
-  "editor.formatOnSave": true,
   "vitest.disableWorkspaceWarning": true
 }

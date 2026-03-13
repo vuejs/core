@@ -24,19 +24,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
-
-      - name: Install Node.js
-        uses: actions/setup-node@v6
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
           node-version-file: '.node-version'
-          cache: pnpm
+          cache: true
 
-      - name: Install dependencies
-        run: pnpm install
-
-      - run: pnpm run size
+      - run: vp run size
 
       - name: Save PR number & base branch
         if: ${{github.event_name == 'pull_request'}}
