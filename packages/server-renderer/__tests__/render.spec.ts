@@ -1059,7 +1059,7 @@ function testRender(type: string, render: typeof renderToString) {
 
     test('detached scopes created during SSR are not auto-stopped', async () => {
       let detachedStopped = false
-      let detached = effectScope(true)
+      let detached: any
 
       const app = createApp({
         setup() {
