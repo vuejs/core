@@ -160,13 +160,21 @@ export class DynamicFragment extends VaporFragment {
         (mode !== 'out-in' || isValidBlock(this.nodes))
       ) {
         applyTransitionLeaveHooks(this.nodes, transition, () => {
-          const pending = this.pending
-          if (pending) {
-            this.pending = undefined
-            this.current = pending.key
-            this.renderBranch(pending.render, transition, parent, instance)
-          } else {
-            this.renderBranch(render, transition, parent, instance)
+          // By the time this deferred out-in branch runs, the renderEffect
+          // has finished and currentInstance may have changed, so restore
+          // the captured instance.
+          const prevInstance = setCurrentInstance(instance)
+          try {
+            const pending = this.pending
+            if (pending) {
+              this.pending = undefined
+              this.current = pending.key
+              this.renderBranch(pending.render, transition, parent)
+            } else {
+              this.renderBranch(render, transition, parent)
+            }
+          } finally {
+            setCurrentInstance(...prevInstance)
           }
         })
         parent && remove(this.nodes, parent)
@@ -179,7 +187,7 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    this.renderBranch(render, transition, parent, instance)
+    this.renderBranch(render, transition, parent)
 
     setActiveSub(prevSub)
 
@@ -190,7 +198,6 @@ export class DynamicFragment extends VaporFragment {
     render: BlockFn | undefined,
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,
-    instance: GenericComponentInstance | null,
   ): void {
     if (render) {
       const keepAliveCtx = this.keepAliveCtx
@@ -209,11 +216,9 @@ export class DynamicFragment extends VaporFragment {
       const prevBranchKey = needBranchKey
         ? keepAliveCtx.setCurrentBranchKey(this.current)
         : undefined
-      const prevInstance = setCurrentInstance(instance)
       try {
         this.nodes = this.scope.run(render) || []
       } finally {
-        setCurrentInstance(...prevInstance)
         if (needBranchKey) keepAliveCtx.setCurrentBranchKey(prevBranchKey)
         setCurrentKeepAliveCtx(prevKeepAliveCtx)
         setCurrentSlotOwner(prevSlotOwner)
