@@ -100,10 +100,10 @@ jobs:
           cache: true
 
       - name: Run lint
-        run: vp lint
+        run: vp run lint
 
       - name: Run format check
-        run: vp fmt --check
+        run: vp run format-check
 
       - name: Run type check
         run: vp run check
