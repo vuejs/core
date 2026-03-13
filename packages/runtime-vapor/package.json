@@ -12,6 +12,11 @@
   "exports": {
     ".": {
       "types": "./dist/runtime-vapor.d.ts",
+      "node": {
+        "production": "./dist/runtime-vapor.cjs.prod.js",
+        "development": "./dist/runtime-vapor.cjs.js",
+        "default": "./index.js"
+      },
       "default": "./dist/runtime-vapor.esm-bundler.js"
     },
     "./*": "./*"
@@ -20,7 +25,8 @@
   "buildOptions": {
     "name": "VueRuntimeVapor",
     "formats": [
-      "esm-bundler"
+      "esm-bundler",
+      "cjs"
     ]
   },
   "repository": {
