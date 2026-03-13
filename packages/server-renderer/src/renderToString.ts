@@ -7,7 +7,12 @@ import {
   ssrUtils,
 } from 'vue'
 import { isPromise, isString } from '@vue/shared'
-import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
+import {
+  type SSRBuffer,
+  type SSRContext,
+  cleanupContext,
+  renderComponentVNode,
+} from './render'
 
 const { isVNode } = ssrUtils
 
@@ -90,17 +95,7 @@ export async function renderToString(
 
     return result
   } finally {
-    if (context.__watcherHandles) {
-      for (const unwatch of context.__watcherHandles) {
-        unwatch()
-      }
-    }
-    if (context.__instanceScopes) {
-      for (const scope of context.__instanceScopes) {
-        scope.stop()
-      }
-      context.__instanceScopes.length = 0
-    }
+    cleanupContext(context)
   }
 }
 

@@ -7,7 +7,12 @@ import {
   ssrUtils,
 } from 'vue'
 import { isPromise, isString } from '@vue/shared'
-import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
+import {
+  type SSRBuffer,
+  type SSRContext,
+  cleanupContext,
+  renderComponentVNode,
+} from './render'
 import type { Readable, Writable } from 'node:stream'
 import { resolveTeleports } from './renderToString'
 
@@ -73,27 +78,11 @@ export function renderToSimpleStream<T extends SimpleReadable>(
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
 
-  const cleanup = () => {
-    if (context.__watcherHandles) {
-      for (const unwatch of context.__watcherHandles) {
-        unwatch()
-      }
-      context.__watcherHandles.length = 0
-    }
-
-    if (context.__instanceScopes) {
-      for (const scope of context.__instanceScopes) {
-        scope.stop()
-      }
-      context.__instanceScopes.length = 0
-    }
-  }
-
   let cleaned = false
   const finalize = () => {
     if (cleaned) return
     cleaned = true
-    cleanup()
+    cleanupContext(context)
   }
 
   Promise.resolve()
@@ -107,9 +96,7 @@ export function renderToSimpleStream<T extends SimpleReadable>(
     .catch(error => {
       try {
         finalize()
-      } catch (cleanupError) {
-        error = cleanupError
-      }
+      } catch (_) {}
       stream.destroy(error)
     })
 

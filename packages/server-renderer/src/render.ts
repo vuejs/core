@@ -62,6 +62,21 @@ export type SSRContext = {
   __instanceScopes?: { stop: () => void }[]
 }
 
+export function cleanupContext(context: SSRContext): void {
+  if (context.__watcherHandles) {
+    for (const unwatch of context.__watcherHandles) {
+      unwatch()
+    }
+    context.__watcherHandles.length = 0
+  }
+  if (context.__instanceScopes) {
+    for (const scope of context.__instanceScopes) {
+      scope.stop()
+    }
+    context.__instanceScopes.length = 0
+  }
+}
+
 // Each component has a buffer array.
 // A buffer array can contain one of the following:
 // - plain string
