@@ -21,6 +21,14 @@ export function isDataUrl(url: string): boolean {
   return dataUrlRE.test(url)
 }
 
+export function normalizeDecodedImportPath(source: string): string {
+  try {
+    return decodeURIComponent(source)
+  } catch {
+    return source
+  }
+}
+
 /**
  * Parses string url into URL object.
  */

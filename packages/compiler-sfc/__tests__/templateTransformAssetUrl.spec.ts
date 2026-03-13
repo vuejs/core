@@ -144,6 +144,12 @@ describe('compiler sfc: transform asset url', () => {
     expect(code).not.toContain(`from '#/src/assets/vue.svg'`)
   })
 
+  test('should not throw for malformed percent-encoding in asset paths', () => {
+    const { code } = compileWithAssetUrls(`<img src="./foo%.png" />`)
+
+    expect(code).toContain(`import _imports_0 from './foo%.png'`)
+  })
+
   test('should allow for full base URLs, with paths', () => {
     const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
       base: 'http://localhost:3000/src/',

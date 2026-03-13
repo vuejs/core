@@ -13,6 +13,7 @@ import {
   isDataUrl,
   isExternalUrl,
   isRelativeUrl,
+  normalizeDecodedImportPath,
   parseUrl,
 } from './templateUtils'
 import { isArray } from '@vue/shared'
@@ -179,7 +180,7 @@ function resolveOrRegisterImport(
   name: string
   exp: SimpleExpressionNode
 } {
-  const normalizedSource = decodeURIComponent(source)
+  const normalizedSource = normalizeDecodedImportPath(source)
   const existingIndex = context.imports.findIndex(
     i => i.path === normalizedSource,
   )

@@ -12,6 +12,7 @@ import {
   isDataUrl,
   isExternalUrl,
   isRelativeUrl,
+  normalizeDecodedImportPath,
   parseUrl,
 } from './templateUtils'
 import {
@@ -112,7 +113,7 @@ export const transformSrcset: NodeTransform = (
               const { path, hash } = parseUrl(url)
               const source = path ? path : hash
               if (source) {
-                const normalizedSource = decodeURIComponent(source)
+                const normalizedSource = normalizeDecodedImportPath(source)
                 const existingImportsIndex = context.imports.findIndex(
                   i => i.path === normalizedSource,
                 )

@@ -131,4 +131,11 @@ describe('compiler sfc: transform srcset', () => {
       `const _hoisted_2 = _imports_0 + '#icon-star' + ' 2x'`,
     )
   })
+
+  test('should not throw for malformed percent-encoding in srcset paths', () => {
+    const code = compileWithSrcset(`<img srcset="./foo%.png 2x" />`).code
+
+    expect(code).toContain(`import _imports_0 from './foo%.png'`)
+    expect(code).toContain(`const _hoisted_1 = _imports_0 + ' 2x'`)
+  })
 })
