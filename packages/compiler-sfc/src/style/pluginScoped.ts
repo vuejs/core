@@ -76,17 +76,20 @@ function processRule(id: string, rule: Rule) {
   }
   processedRules.add(rule)
   let deep = false
+  let isNested = false
   let parent: Document | Container | undefined = rule.parent
   while (parent && parent.type !== 'root') {
     if ((parent as any).__deep) {
       deep = true
-      break
+    }
+    if (parent.type === 'rule') {
+      isNested = true
     }
     parent = parent.parent
   }
   rule.selector = selectorParser(selectorRoot => {
     selectorRoot.each(selector => {
-      rewriteSelector(id, rule, selector, selectorRoot, deep)
+      rewriteSelector(id, rule, selector, selectorRoot, deep, false, isNested)
     })
   }).processSync(rule.selector)
 }
@@ -98,6 +101,7 @@ function rewriteSelector(
   selectorRoot: selectorParser.Root,
   deep: boolean,
   slotted = false,
+  isNested = false,
 ) {
   let node: selectorParser.Node | null = null
   let shouldInject = !deep
@@ -170,6 +174,7 @@ function rewriteSelector(
           selectorRoot,
           deep,
           true /* slotted */,
+          isNested,
         )
         let last: selectorParser.Selector['nodes'][0] = n
         n.nodes[0].each(ss => {
@@ -199,9 +204,16 @@ function rewriteSelector(
       if (!prev) {
         // * .foo {} -> .foo[xxxxxxx] {}
         if (next) {
-          if (next.type === 'combinator' && next.value === ' ') {
-            selector.removeChild(next)
+          if (next.type === 'combinator') {
+            if (next.value === ' ' && !isNested) {
+              // * .foo {} -> .foo[xxxxxxx] {}
+              selector.removeChild(next)
+              selector.removeChild(n)
+            }
+            // keep *: nested .outer { * .foo {} } or non-space combinator (* > .foo etc.)
+            return
           }
+          // *.foo {} -> .foo[xxxxxxx] {}
           selector.removeChild(n)
           return
         } else {
@@ -244,7 +256,7 @@ function rewriteSelector(
     const { type, value } = node as selectorParser.Node
     if (type === 'pseudo' && (value === ':is' || value === ':where')) {
       ;(node as selectorParser.Pseudo).nodes.forEach(value =>
-        rewriteSelector(id, rule, value, selectorRoot, deep, slotted),
+        rewriteSelector(id, rule, value, selectorRoot, deep, slotted, isNested),
       )
       shouldInject = false
     }
