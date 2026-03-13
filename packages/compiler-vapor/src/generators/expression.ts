@@ -638,7 +638,7 @@ function genDeclarations(
   // process expressions
   declarations.forEach(({ name, isIdentifier, value }) => {
     if (!isIdentifier) {
-      const varName = (ids[name] = `_${name}`)
+      const varName = `_${name}`
       varNames.add(varName)
       if (shouldDeclare) {
         push(`const `)
@@ -648,6 +648,7 @@ function genDeclarations(
         ...context.withId(() => genExpression(value, context), ids),
         NEWLINE,
       )
+      ids[name] = varName
     }
   })
 

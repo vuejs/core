@@ -115,6 +115,27 @@ describe('compiler: expression', () => {
       expect(code).contains('_setProp(n2, "id", _foo + _foo_bar)')
     })
 
+    test('repeated simple function calls', () => {
+      const { code } = compileWithExpression(`
+        <div :id="foo()"></div>
+        <div :id="foo()"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('const _foo = _ctx.foo()')
+    })
+
+    test('repeated simple function calls with setup-const binding', () => {
+      const { code } = compileWithExpression(
+        `
+        <div :id="foo()"></div>
+        <div :id="foo()"></div>
+      `,
+        { bindingMetadata: { foo: BindingTypes.SETUP_CONST }, inline: true },
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains('const _foo = foo()')
+    })
+
     test('function calls with arguments', () => {
       const { code } = compileWithExpression(`
         <div :id="foo[bar(baz)]"></div>
