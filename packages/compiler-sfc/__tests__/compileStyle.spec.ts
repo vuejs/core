@@ -158,6 +158,24 @@ color: red
       }
       }"
     `)
+    expect(compileScoped(`:deep(.foo) { .bar { .baz { color: red; } } }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo {
+      .bar {
+      .baz { color: red;
+      }
+      }
+      }"
+    `)
+    expect(compileScoped(`.outer { :deep(.foo) { * .bar { color: red; } } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      [data-v-test] .foo {
+      * .bar { color: red;
+      }
+      }
+      }"
+    `)
   })
 
   test('::v-slotted', () => {

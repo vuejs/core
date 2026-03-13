@@ -81,11 +81,9 @@ function processRule(id: string, rule: Rule) {
   while (parent && parent.type !== 'root') {
     if ((parent as any).__deep) {
       deep = true
-      break
     }
     if (parent.type === 'rule') {
       isNested = true
-      break
     }
     parent = parent.parent
   }
