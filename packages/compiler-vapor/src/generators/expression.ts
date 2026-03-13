@@ -331,17 +331,23 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
     walkIdentifiers(exp.ast, (currentNode, parent, parentStack) => {
       if (parent && isMemberExpression(parent) && !seenParents.has(parent)) {
         seenParents.add(parent)
+        let hasGlobalIdentifier = false
         const memberExp = extractMemberExpression(parent, id => {
           registerVariable(id.name, exp, true, {
             start: id.start!,
             end: id.end!,
           })
+          if (isGloballyAllowed(id.name)) hasGlobalIdentifier = true
         })
 
         const parentOfMemberExp = parentStack[parentStack.length - 2]
         if (parentOfMemberExp && isCallExpression(parentOfMemberExp)) {
           return
         }
+
+        // skip member expressions containing globally allowed identifiers
+        // e.g. obj[Math.random()] - the call may have side effects
+        if (hasGlobalIdentifier) return
 
         registerVariable(
           memberExp,

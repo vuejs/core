@@ -347,6 +347,21 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`cache multiple access > should not cache member expression containing globally allowed call 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    _setProp(n0, "id", _ctx.obj[Math.random()])
+    _setProp(n1, "id", _ctx.obj[Math.random()])
+  })
+  return [n0, n1]
+}"
+`;
+
 exports[`cache multiple access > should not cache method call with different arguments 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>")

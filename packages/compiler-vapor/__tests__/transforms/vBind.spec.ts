@@ -1033,4 +1033,14 @@ describe('cache multiple access', () => {
     expect(code).matchSnapshot()
     expect(code).not.contains('const _String = String')
   })
+
+  test('should not cache member expression containing globally allowed call', () => {
+    const { code } = compileWithVBind(`
+      <div :id="obj[Math.random()]"></div>
+      <div :id="obj[Math.random()]"></div>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).not.contains('const _obj_Math_random')
+    expect(code).contains('Math.random()')
+  })
 })
