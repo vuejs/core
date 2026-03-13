@@ -399,19 +399,16 @@ color: red
   })
 
   test('should keep leading universal selector before non-space combinator', () => {
-    // * > .foo: * removed → invalid CSS ` > .foo`
     expect(compileScoped(`* > .section { color: red; }`))
       .toMatchInlineSnapshot(`
       "* > .section[data-v-test] { color: red;
       }"
     `)
-    // * + .foo: * removed → invalid CSS ` + .foo`
     expect(compileScoped(`* + .section { color: red; }`))
       .toMatchInlineSnapshot(`
       "* + .section[data-v-test] { color: red;
       }"
     `)
-    // * ~ .foo: * removed → invalid CSS ` ~ .foo`
     expect(compileScoped(`* ~ .section { color: red; }`))
       .toMatchInlineSnapshot(`
       "* ~ .section[data-v-test] { color: red;
@@ -420,12 +417,10 @@ color: red
   })
 
   test('should keep leading universal selector in nested rules', () => {
-    // non-nested: * should still be removed
     expect(compileScoped(`* .section { color: red; }`)).toMatchInlineSnapshot(`
       ".section[data-v-test] { color: red;
       }"
     `)
-    // .outer { * .section {} } → * must be preserved to avoid matching direct children
     expect(compileScoped(`.outer { * .section { color: red; } }`))
       .toMatchInlineSnapshot(`
       ".outer {
@@ -433,7 +428,6 @@ color: red
       }
       }"
     `)
-    // nested non-space combinator should also keep *
     expect(compileScoped(`.outer { * > .section { color: red; } }`))
       .toMatchInlineSnapshot(`
       ".outer {
@@ -441,7 +435,6 @@ color: red
       }
       }"
     `)
-    // *.foo in nested: * should still be removed (*.foo is equivalent to .foo)
     expect(compileScoped(`.outer { *.foo { color: red; } }`))
       .toMatchInlineSnapshot(`
       ".outer {
@@ -449,7 +442,6 @@ color: red
       }
       }"
     `)
-    // standalone * in nested: converted to [data-v-id]
     expect(compileScoped(`.outer { * { color: red; } }`))
       .toMatchInlineSnapshot(`
       ".outer {
@@ -457,7 +449,6 @@ color: red
       }
       }"
     `)
-    // @media at top-level (no rule ancestor): * should still be removed
     expect(compileScoped(`@media screen { * .section { color: red; } }`))
       .toMatchInlineSnapshot(`
       "@media screen {
@@ -465,7 +456,6 @@ color: red
       }
       }"
     `)
-    // * nested inside .outer via @media: * must be preserved
     expect(
       compileScoped(`.outer { @media screen { * .section { color: red; } } }`),
     ).toMatchInlineSnapshot(`
