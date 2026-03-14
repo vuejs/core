@@ -341,6 +341,7 @@ export type {
   AsyncComponentOptions,
   AsyncComponentLoader,
 } from './apiAsyncComponent'
+export { debug } from './debug'
 export type {
   HydrationStrategy,
   HydrationStrategyFactory,
