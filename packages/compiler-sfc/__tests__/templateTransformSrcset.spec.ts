@@ -106,4 +106,36 @@ describe('compiler sfc: transform srcset', () => {
     ).code
     expect(code).toMatchSnapshot()
   })
+
+  test('should transform subpath import paths starting with #', () => {
+    const code = compileWithSrcset(
+      `<img srcset="#src/assets/vue.svg" />` +
+        `<img srcset="#/src/assets/vue.svg 2x" />`,
+    ).code
+
+    expect(code).toContain(`_imports_0 from '#src/assets/vue.svg'`)
+    expect(code).toContain(`_imports_1 from '#/src/assets/vue.svg'`)
+    expect(code).toContain(`const _hoisted_1 = _imports_0`)
+    expect(code).toContain(`const _hoisted_2 = _imports_1 + ' 2x'`)
+  })
+
+  test('should preserve svg fragments in srcset URLs', () => {
+    const code = compileWithSrcset(
+      `<img srcset="./icons.svg#icon-heart" />` +
+        `<img srcset="./icons.svg#icon-star 2x" />`,
+    ).code
+
+    expect(code).toContain(`_imports_0 from './icons.svg'`)
+    expect(code).toContain(`const _hoisted_1 = _imports_0 + '#icon-heart'`)
+    expect(code).toContain(
+      `const _hoisted_2 = _imports_0 + '#icon-star' + ' 2x'`,
+    )
+  })
+
+  test('should not throw for malformed percent-encoding in srcset paths', () => {
+    const code = compileWithSrcset(`<img srcset="./foo%.png 2x" />`).code
+
+    expect(code).toContain(`import _imports_0 from './foo%.png'`)
+    expect(code).toContain(`const _hoisted_1 = _imports_0 + ' 2x'`)
+  })
 })
