@@ -29,6 +29,8 @@ export interface VaporTransitionHooks extends TransitionHooks {
   instance: VaporComponentInstance
   // mark transition hooks as disabled
   disabled?: boolean
+  // TransitionGroup sets this to handle applying hooks to list children
+  applyGroup?: (block: Block, hooks: VaporTransitionHooks) => void
 }
 
 export interface TransitionOptions {

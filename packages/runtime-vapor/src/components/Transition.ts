@@ -34,6 +34,7 @@ import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import {
   type DynamicFragment,
+  ForFragment,
   type VaporFragment,
   isFragment,
 } from '../fragment'
@@ -204,6 +205,12 @@ function applyTransitionHooksImpl(
     } else if (block.length === 0) {
       return hooks
     }
+  }
+
+  // delegate to TransitionGroup's apply logic for list children
+  if (hooks.applyGroup && block instanceof ForFragment) {
+    hooks.applyGroup(block, hooks)
+    return hooks
   }
 
   const fragments: VaporFragment[] = []
