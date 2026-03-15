@@ -34,6 +34,7 @@ import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import {
   type DynamicFragment,
+  ForFragment,
   type VaporFragment,
   isFragment,
 } from '../fragment'
@@ -192,6 +193,29 @@ export function resolveTransitionHooks(
   return hooks
 }
 
+function getTransitionElements(block: Block): TransitionBlock[] {
+  let children: TransitionBlock[] = []
+  if (block instanceof Element) {
+    children.push(block)
+  } else if (isVaporComponent(block)) {
+    children.push(...getTransitionElements(block.block))
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      const b = block[i]
+      const blocks = getTransitionElements(b)
+      children.push(...blocks)
+    }
+  } else if (isFragment(block)) {
+    if (block.insert) {
+      children.push(block)
+    } else {
+      children.push(...getTransitionElements(block.nodes))
+    }
+  }
+
+  return children
+}
+
 function applyTransitionHooksImpl(
   block: Block,
   hooks: VaporTransitionHooks,
@@ -226,10 +250,23 @@ function applyTransitionHooksImpl(
     instance,
     hooks => (resolvedHooks = hooks as VaporTransitionHooks),
   )
-  resolvedHooks.delayedLeave = delayedLeave
-  child.$transition = resolvedHooks
-  fragments.forEach(f => (f.$transition = resolvedHooks))
 
+  if (block instanceof ForFragment) {
+    setTransitionHooksOnFragment(block, {
+      props,
+      state,
+      instance,
+    } as VaporTransitionHooks)
+
+    const children = getTransitionElements(block.nodes)
+    for (let c of children) {
+      setTransitionHooks(c, resolvedHooks)
+    }
+  } else {
+    resolvedHooks.delayedLeave = delayedLeave
+    child.$transition = resolvedHooks
+    fragments.forEach(f => (f.$transition = resolvedHooks))
+  }
   return resolvedHooks
 }
 
@@ -303,6 +340,8 @@ export function findTransitionBlock(
   if (block instanceof Node) {
     // transition can only be applied on Element child
     if (block instanceof Element) child = block
+  } else if (block instanceof ForFragment) {
+    child = block
   } else if (isVaporComponent(block)) {
     if (isAsyncWrapper(block)) {
       // for unresolved async wrapper, set transition hooks on inner fragment
@@ -357,7 +396,7 @@ export function setTransitionHooksOnFragment(
 ): void {
   if (isFragment(block)) {
     block.$transition = hooks
-    if (block.nodes && isFragment(block.nodes)) {
+    if (block.nodes && (isFragment(block.nodes) || isArray(block.nodes))) {
       setTransitionHooksOnFragment(block.nodes, hooks)
     }
   } else if (isArray(block)) {

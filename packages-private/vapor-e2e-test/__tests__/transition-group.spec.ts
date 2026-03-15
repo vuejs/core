@@ -429,6 +429,29 @@ describe('vapor transition-group', () => {
     E2E_TIMEOUT,
   )
 
+  test(
+    'with v-if',
+    async () => {
+      const btnSelector = '.with-v-if > button'
+      const containerSelector = '.with-v-if > div'
+
+      expect(await html(containerSelector)).toBe(`<ul>` + `</ul>`)
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<ul>` +
+          `<li class="v-enter-from v-enter-active">0</li>` +
+          `<li class="v-enter-from v-enter-active">1</li>` +
+          `</ul>`,
+      )
+      await waitForInnerHTML(
+        containerSelector,
+        `<ul>` + `<li class="">0</li>` + `<li class="">1</li>` + `</ul>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
   describe('interop', () => {
     test('render vdom component', async () => {
       const btnSelector = '.interop > button'
