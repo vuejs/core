@@ -1446,6 +1446,33 @@ describe('api: watch', () => {
     expect(spy).toHaveBeenCalledTimes(2)
   })
 
+  test('watching keypath should not stop on falsy intermediate values', async () => {
+    const spy = vi.fn()
+    const Comp = defineComponent({
+      render() {},
+      data() {
+        return {
+          a: {
+            b: 0 as any,
+          },
+        }
+      },
+      created(this: any) {
+        this.$watch('a.b', spy)
+      },
+      mounted(this: any) {
+        this.a.b = 1
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy).toHaveBeenCalledWith(1, 0, expect.anything())
+  })
+
   it('watching sources: ref<any[]>', async () => {
     const foo = ref([1])
     const spy = vi.fn()

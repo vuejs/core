@@ -167,4 +167,15 @@ describe(`runtime-dom: style patching`, () => {
     patchProp(el, 'style', 'color:red', { fontSize: '12px' })
     expect(el.style.cssText.replace(/\s/g, '')).toBe('font-size:12px;')
   })
+
+  it('should handle string style with trailing semicolon when patching to object', () => {
+    const el = document.createElement('div')
+    // set initial string style with trailing semicolon
+    patchProp(el, 'style', {}, 'color:red;')
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
+
+    // patch from string to object, entries without colon (from trailing ;) should be skipped
+    patchProp(el, 'style', 'color:red;', { fontSize: '12px' })
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('font-size:12px;')
+  })
 })
