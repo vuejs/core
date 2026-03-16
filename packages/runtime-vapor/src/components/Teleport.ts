@@ -199,6 +199,13 @@ export class TeleportFragment extends VaporFragment {
         // target changed
         this.targetAnchor.parentNode !== target
       ) {
+        // clean up old anchors from previous target when target changes
+        if (this.targetStart) {
+          remove(this.targetStart, this.targetStart.parentNode!)
+        }
+        if (this.targetAnchor) {
+          remove(this.targetAnchor, this.targetAnchor.parentNode!)
+        }
         insert((this.targetStart = createTextNode('')), target)
         insert((this.targetAnchor = createTextNode('')), target)
       }
