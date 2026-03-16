@@ -19,12 +19,8 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
-import {
-  type Block,
-  type TransitionBlock,
-  type VaporTransitionHooks,
-  registerTransitionHooks,
-} from '../block'
+import type { Block, TransitionBlock, VaporTransitionHooks } from '../block'
+import { registerTransitionHooks } from '../transition'
 import {
   type FunctionalVaporComponent,
   type VaporComponentInstance,
@@ -34,6 +30,7 @@ import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import {
   type DynamicFragment,
+  ForFragment,
   type VaporFragment,
   isFragment,
 } from '../fragment'
@@ -204,6 +201,12 @@ function applyTransitionHooksImpl(
     } else if (block.length === 0) {
       return hooks
     }
+  }
+
+  // delegate to TransitionGroup's apply logic for list children
+  if (hooks.applyGroup && block instanceof ForFragment) {
+    hooks.applyGroup(block, hooks)
+    return hooks
   }
 
   const fragments: VaporFragment[] = []

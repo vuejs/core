@@ -93,6 +93,60 @@ describe('vapor transition-group', () => {
   )
 
   test(
+    'if + for enter',
+    async () => {
+      const btnSelector = '.if-for-enter > button.toggle'
+      const addBtnSelector = '.if-for-enter > button.add'
+      const containerSelector = '.if-for-enter > div'
+
+      expect(await html(containerSelector)).toBe(`<ul></ul>`)
+
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<ul>` +
+          `<li class="test v-enter-from v-enter-active">0</li>` +
+          `<li class="test v-enter-from v-enter-active">1</li>` +
+          `</ul>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<ul>` +
+          `<li class="test v-enter-active v-enter-to">0</li>` +
+          `<li class="test v-enter-active v-enter-to">1</li>` +
+          `</ul>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<ul><li class="test">0</li><li class="test">1</li></ul>`,
+      )
+
+      // add a new item
+      expect(
+        (await transitionStart(addBtnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<ul>` +
+          `<li class="test">0</li>` +
+          `<li class="test">1</li>` +
+          `<li class="test v-enter-from v-enter-active">2</li>` +
+          `</ul>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<ul>` +
+          `<li class="test">0</li>` +
+          `<li class="test">1</li>` +
+          `<li class="test">2</li>` +
+          `</ul>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
     'leave',
     async () => {
       const btnSelector = '.leave > button'

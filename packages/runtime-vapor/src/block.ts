@@ -12,7 +12,6 @@ import {
   type TransitionHooks,
   type TransitionProps,
   type TransitionState,
-  getInheritedScopeIds,
   performTransitionEnter,
   performTransitionLeave,
 } from '@vue/runtime-dom'
@@ -29,6 +28,8 @@ export interface VaporTransitionHooks extends TransitionHooks {
   instance: VaporComponentInstance
   // mark transition hooks as disabled
   disabled?: boolean
+  // TransitionGroup sets this to handle applying hooks to list children
+  applyGroup?: (block: Block, hooks: VaporTransitionHooks) => void
 }
 
 export interface TransitionOptions {
@@ -329,91 +330,10 @@ export function isFragmentBlock(block: Block): boolean {
   return false
 }
 
-export function setScopeId(block: Block, scopeIds: string[]): void {
-  if (block instanceof Element) {
-    for (const id of scopeIds) {
-      block.setAttribute(id, '')
-    }
-  } else if (isVaporComponent(block)) {
-    setScopeId(block.block, scopeIds)
-  } else if (isArray(block)) {
-    for (const b of block) {
-      setScopeId(b, scopeIds)
-    }
-  } else if (isFragment(block)) {
-    setScopeId(block.nodes, scopeIds)
-  }
-}
+export { setScopeId, setComponentScopeId } from './scopeId'
 
-export function setComponentScopeId(instance: VaporComponentInstance): void {
-  const { parent, scopeId } = instance
-  if (!parent || !scopeId) return
-
-  // prevent setting scopeId on multi-root fragments
-  if (isArray(instance.block) && instance.block.length > 1) return
-
-  const scopeIds: string[] = []
-  const parentScopeId = parent && parent.type.__scopeId
-  // if parent scopeId is different from scopeId, this means scopeId
-  // is inherited from slot owner, so we need to set it to the component
-  // scopeIds. the `parentScopeId-s` is handled in createSlot
-  if (parentScopeId !== scopeId) {
-    scopeIds.push(scopeId)
-  } else {
-    if (parentScopeId) scopeIds.push(parentScopeId)
-  }
-
-  // inherit scopeId from vdom parent
-  if (
-    parent.subTree &&
-    (parent.subTree.component as any) === instance &&
-    parent.vnode!.scopeId
-  ) {
-    scopeIds.push(parent.vnode!.scopeId)
-    const inheritedScopeIds = getInheritedScopeIds(parent.vnode!, parent.parent)
-    scopeIds.push(...inheritedScopeIds)
-  }
-
-  if (scopeIds.length > 0) {
-    setScopeId(instance.block, scopeIds)
-  }
-}
-
-// Transition hooks registry for tree-shaking
-// These are registered by Transition component when it's used
-type ApplyTransitionHooksFn = (
-  block: Block,
-  hooks: VaporTransitionHooks,
-) => VaporTransitionHooks
-type ApplyTransitionLeaveHooksFn = (
-  block: Block,
-  enterHooks: VaporTransitionHooks,
-  afterLeaveCb: () => void,
-) => void
-
-let _applyTransitionHooks: ApplyTransitionHooksFn | undefined
-let _applyTransitionLeaveHooks: ApplyTransitionLeaveHooksFn | undefined
-
-export function registerTransitionHooks(
-  applyHooks: ApplyTransitionHooksFn,
-  applyLeaveHooks: ApplyTransitionLeaveHooksFn,
-): void {
-  _applyTransitionHooks = applyHooks
-  _applyTransitionLeaveHooks = applyLeaveHooks
-}
-
-export function applyTransitionHooks(
-  block: Block,
-  hooks: VaporTransitionHooks,
-): VaporTransitionHooks {
-  return _applyTransitionHooks ? _applyTransitionHooks(block, hooks) : hooks
-}
-
-export function applyTransitionLeaveHooks(
-  block: Block,
-  enterHooks: VaporTransitionHooks,
-  afterLeaveCb: () => void,
-): void {
-  _applyTransitionLeaveHooks &&
-    _applyTransitionLeaveHooks(block, enterHooks, afterLeaveCb)
-}
+export {
+  registerTransitionHooks,
+  applyTransitionHooks,
+  applyTransitionLeaveHooks,
+} from './transition'
