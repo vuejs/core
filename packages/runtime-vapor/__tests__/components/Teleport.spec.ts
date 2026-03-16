@@ -1380,3 +1380,34 @@ function runSharedTests(deferMode: boolean): void {
     expect(beforeEnter).toHaveBeenCalledTimes(0)
   })
 }
+
+test('should clean up old anchors when target changes', async () => {
+  const targetA = document.createElement('div')
+  const targetB = document.createElement('div')
+  const target = ref(targetA)
+
+  const { mount } = define({
+    setup() {
+      const n0 = createComponent(
+        VaporTeleport,
+        { to: () => target.value },
+        { default: () => template('<div>teleported</div>')() },
+      )
+      return n0
+    },
+  }).create()
+  const root = document.createElement('div')
+  mount(root)
+  await nextTick()
+
+  const oldChildCount = targetA.childNodes.length
+  expect(oldChildCount).toBeGreaterThan(0) // has targetStart + content + targetAnchor
+
+  target.value = targetB
+  await nextTick()
+
+  // Old target should have no residual anchor nodes
+  expect(targetA.childNodes.length).toBe(0)
+  // New target should have the content
+  expect(targetB.childNodes.length).toBe(oldChildCount)
+})
