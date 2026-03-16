@@ -13,13 +13,7 @@ import {
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
-import {
-  type Block,
-  applyTransitionHooks,
-  findBlockNode,
-  insert,
-  remove,
-} from './block'
+import { type Block, applyTransitionHooks, insert, remove } from './block'
 import { queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import {
@@ -35,6 +29,7 @@ import {
   isComment,
   isHydrating,
   locateHydrationNode,
+  locateNextNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { ForFragment, VaporFragment } from './fragment'
@@ -144,11 +139,11 @@ export const createFor = (
 
     if (!isMounted) {
       isMounted = true
+      let nextNode
       for (let i = 0; i < newLength; i++) {
-        const nodes = mount(source, i).nodes
-        if (isHydrating) {
-          setCurrentHydrationNode(findBlockNode(nodes!).nextNode)
-        }
+        if (isHydrating) nextNode = locateNextNode(currentHydrationNode!)
+        mount(source, i)
+        if (isHydrating && nextNode) setCurrentHydrationNode(nextNode)
       }
 
       if (isHydrating) {
