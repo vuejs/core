@@ -300,14 +300,40 @@ export class TeleportFragment extends VaporFragment {
     this.mountAnchor = undefined
   }
 
-  private hydrateDisabledTeleport(targetNode: Node | null): void {
+  private hydrateTargetAnchors(
+    target: TeleportTargetElement,
+    targetNode: Node | null,
+  ): void {
+    let targetAnchor = targetNode
+    while (targetAnchor) {
+      if (targetAnchor.nodeType === 8) {
+        if ((targetAnchor as Comment).data === 'teleport start anchor') {
+          this.targetStart = targetAnchor
+        } else if ((targetAnchor as Comment).data === 'teleport anchor') {
+          this.targetAnchor = targetAnchor
+          target._lpa = this.targetAnchor.nextSibling
+          break
+        }
+      }
+      targetAnchor = targetAnchor.nextSibling
+    }
+  }
+
+  private hydrateDisabledTeleport(
+    target: TeleportTargetElement | null,
+    targetNode: Node | null,
+  ): void {
     if (!isHydrating) return
     let nextNode = this.placeholder!.nextSibling!
     setCurrentHydrationNode(nextNode)
     this.mountAnchor = this.anchor = locateTeleportEndAnchor(nextNode)!
     this.mountContainer = this.anchor.parentNode
-    this.targetStart = targetNode
-    this.targetAnchor = targetNode && targetNode.nextSibling
+    if (target) {
+      this.hydrateTargetAnchors(target, targetNode)
+    } else {
+      this.targetStart = targetNode
+      this.targetAnchor = targetNode && targetNode.nextSibling
+    }
     this.initChildren()
   }
 
@@ -344,26 +370,17 @@ export class TeleportFragment extends VaporFragment {
       const targetNode =
         (target as TeleportTargetElement)._lpa || target.firstChild
       if (disabled) {
-        this.hydrateDisabledTeleport(targetNode)
+        this.hydrateDisabledTeleport(
+          target as TeleportTargetElement,
+          targetNode,
+        )
       } else {
         this.anchor = locateTeleportEndAnchor(
           currentHydrationNode!.nextSibling!,
         )!
         this.mountContainer = target
-        let targetAnchor = targetNode
-        while (targetAnchor) {
-          if (targetAnchor && targetAnchor.nodeType === 8) {
-            if ((targetAnchor as Comment).data === 'teleport start anchor') {
-              this.targetStart = targetAnchor
-            } else if ((targetAnchor as Comment).data === 'teleport anchor') {
-              this.mountAnchor = this.targetAnchor = targetAnchor
-              ;(target as TeleportTargetElement)._lpa =
-                this.targetAnchor && this.targetAnchor.nextSibling
-              break
-            }
-          }
-          targetAnchor = targetAnchor.nextSibling
-        }
+        this.hydrateTargetAnchors(target as TeleportTargetElement, targetNode)
+        this.mountAnchor = this.targetAnchor
 
         if (targetNode) {
           setCurrentHydrationNode(targetNode.nextSibling)
@@ -381,7 +398,7 @@ export class TeleportFragment extends VaporFragment {
       }
     } else if (disabled) {
       // pass null as targetNode since there is no target
-      this.hydrateDisabledTeleport(null)
+      this.hydrateDisabledTeleport(null, null)
     } else {
       // enabled teleport with null target: init children without
       // hydration since there's no target to hydrate into.
