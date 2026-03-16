@@ -911,6 +911,30 @@ describe('defineVaporCustomElement', () => {
       )
     })
 
+    test('should resolve correct parent when element is slotted in shadow DOM', async () => {
+      const GrandParent = defineVaporCustomElement({
+        setup() {
+          provide('foo', ref('GrandParent'))
+          const n0 = createPlainElement('my-parent-in-shadow', null, {
+            default: () => template('<slot></slot>')(),
+          })
+          return n0
+        },
+      })
+      const Parent = defineVaporCustomElement({
+        setup() {
+          provide('foo', ref('Parent'))
+          return template('<slot></slot>')()
+        },
+      })
+      customElements.define('my-grand-parent', GrandParent)
+      customElements.define('my-parent-in-shadow', Parent)
+      container.innerHTML = `<my-grand-parent><my-consumer></my-consumer></my-grand-parent>`
+      const grandParent = container.childNodes[0] as VaporElement,
+        consumer = grandParent.firstElementChild as VaporElement
+      expect(consumer.shadowRoot!.textContent).toBe('Parent')
+    })
+
     test('inherited from app context within nested elements', async () => {
       const outerValues: (string | undefined)[] = []
       const innerValues: (string | undefined)[] = []
