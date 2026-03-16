@@ -28,7 +28,7 @@ import {
   setCurrentSlotOwner,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
-import { VaporVForFlags } from '../../shared/src/vaporFlags'
+import { VaporVForFlags } from '@vue/shared'
 import {
   advanceHydrationNode,
   currentHydrationNode,
@@ -102,7 +102,7 @@ export const createFor = (
   const _insertionIndex = insertionIndex
   const _isLastInsertion = isLastInsertion
   if (isHydrating) {
-    locateHydrationNode()
+    locateHydrationNode(true)
   } else {
     resetInsertionState()
   }
@@ -152,10 +152,7 @@ export const createFor = (
       }
 
       if (isHydrating) {
-        parentAnchor =
-          newLength === 0
-            ? currentHydrationNode!.nextSibling!
-            : currentHydrationNode!
+        parentAnchor = currentHydrationNode!
         if (
           __DEV__ &&
           (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']')))

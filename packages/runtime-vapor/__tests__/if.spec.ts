@@ -142,6 +142,7 @@ describe('createIf', () => {
           () => toggle.value,
           () => template('<p>foo</p>')(),
           () => template('<p>bar</p>')(),
+          undefined,
           true,
         )
       },

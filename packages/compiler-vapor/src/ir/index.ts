@@ -72,6 +72,7 @@ export interface RootIRNode {
 export interface IfIRNode extends BaseIRNode {
   type: IRNodeTypes.IF
   id: number
+  blockShape: number
   condition: SimpleExpressionNode
   positive: BlockIRNode
   negative?: BlockIRNode | IfIRNode

@@ -1,11 +1,14 @@
 import {
   type ComponentInternalInstance,
+  Fragment,
+  type VNode,
   currentInstance,
   isKeepAlive,
   isVNode,
   resolveDynamicComponent,
   setCurrentRenderingInstance,
 } from '@vue/runtime-dom'
+import { ShapeFlags } from '@vue/shared'
 import { insert, isBlock } from './block'
 import {
   type VaporComponentInstance,
@@ -21,7 +24,11 @@ import {
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-import { advanceHydrationNode, isHydrating } from './dom/hydration'
+import {
+  advanceHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import { isInteropEnabled } from './vdomInteropState'
@@ -63,6 +70,7 @@ export function createDynamicComponent(
 
         const frag = appContext.vapor.vdomMountVNode(value, currentInstance)
         if (isHydrating) {
+          locateHydrationNode(shouldConsumeFragmentStart(value))
           frag.hydrate()
           if (_isLastInsertion) {
             advanceHydrationNode(_insertionParent!)
@@ -104,4 +112,19 @@ function withScopeOwner(owner: VaporComponentInstance | null, fn: () => any) {
   } finally {
     setCurrentRenderingInstance(prev)
   }
+}
+
+function shouldConsumeFragmentStart(vnode: VNode): boolean {
+  if (vnode.type === Fragment) {
+    return false
+  }
+
+  // Only Vapor component VNodes carry `__multiRoot`
+  // e.g. `h(VaporComp)`
+  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    const type = vnode.type as { __vapor?: boolean; __multiRoot?: boolean }
+    return !!type.__vapor && !type.__multiRoot
+  }
+
+  return true
 }

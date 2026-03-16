@@ -285,11 +285,18 @@ export function findBlockNode(block: Block): {
   parentNode: Node | null
   nextNode: Node | null
 } {
-  let { parentNode, nextSibling: nextNode } = findLastChild(block)!
+  const lastChild = findLastChild(block)!
+  let { parentNode, nextSibling: nextNode } = lastChild
 
   // if nodes render as a fragment and the current nextNode is fragment
-  // end anchor, need to move to the next node
-  if (nextNode && isComment(nextNode, ']') && isFragmentBlock(block)) {
+  // end anchor, need to move to the next node. Skip this when the block
+  // already includes its own end anchor (for example VDOM Fragment ranges).
+  if (
+    nextNode &&
+    isComment(nextNode, ']') &&
+    isFragmentBlock(block) &&
+    !isComment(lastChild, ']')
+  ) {
     nextNode = nextNode.nextSibling
   }
 

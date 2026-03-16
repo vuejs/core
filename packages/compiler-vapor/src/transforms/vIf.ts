@@ -13,12 +13,13 @@ import {
   type BlockIRNode,
   DynamicFlag,
   IRNodeTypes,
+  type IfIRNode,
   type VaporDirectiveNode,
 } from '../ir'
-import { extend } from '@vue/shared'
+import { VaporBlockShape, extend } from '@vue/shared'
 import { newBlock, wrapTemplate } from './utils'
 import { getSiblingIf } from './transformComment'
-import { isStaticExpression } from '../utils'
+import { getBlockShape, isStaticExpression } from '../utils'
 
 export const transformVIf: NodeTransform = createStructuralDirectiveTransform(
   ['if', 'else', 'else-if'],
@@ -49,6 +50,7 @@ export function processIf(
       context.dynamic.operation = {
         type: IRNodeTypes.IF,
         id,
+        blockShape: encodeIfBlockShape(branch),
         condition: dir.exp!,
         positive: branch,
         index: context.root.nextIfIndex(),
@@ -120,13 +122,25 @@ export function processIf(
         condition: dir.exp!,
         positive: branch,
         index: context.root.nextIfIndex(),
+        blockShape: VaporBlockShape.EMPTY,
         once:
           context.inVOnce ||
           isStaticExpression(dir.exp!, context.options.bindingMetadata),
       }
     }
 
-    return () => onExit()
+    return () => {
+      onExit()
+      if (lastIfNode.negative.type === IRNodeTypes.IF) {
+        lastIfNode.negative.blockShape = encodeIfBlockShape(
+          lastIfNode.negative.positive,
+        )
+      }
+      lastIfNode.blockShape = encodeIfBlockShape(
+        lastIfNode.positive,
+        lastIfNode.negative,
+      )
+    }
   }
 }
 
@@ -140,4 +154,20 @@ export function createIfBranch(
   const exitBlock = context.enterBlock(branch)
   context.reference()
   return [branch, exitBlock]
+}
+
+function encodeIfBlockShape(
+  positive: BlockIRNode,
+  negative?: BlockIRNode | IfIRNode,
+): number {
+  // Pack the true/false branch shapes into one integer so runtime `createIf()`
+  // can decode the selected branch with a single bit-mask operation.
+  return getBlockShape(positive) | (getNegativeBlockShape(negative) << 2)
+}
+
+function getNegativeBlockShape(negative?: BlockIRNode | IfIRNode) {
+  if (!negative) return VaporBlockShape.EMPTY
+  return negative.type === IRNodeTypes.IF
+    ? VaporBlockShape.SINGLE_ROOT
+    : getBlockShape(negative)
 }

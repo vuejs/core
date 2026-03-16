@@ -547,6 +547,7 @@ describe('useVaporCssVars', () => {
             return n2
           },
           null as any,
+          undefined,
           true,
         )
       },
