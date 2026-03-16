@@ -9,6 +9,7 @@ import {
   isTeleportDisabled,
   queuePostFlushCb,
   resolveTeleportTarget,
+  setCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
 import {
@@ -23,12 +24,15 @@ import { createComment, createTextNode, querySelector } from '../dom/node'
 import {
   type LooseRawProps,
   type LooseRawSlots,
+  type VaporComponentInstance,
+  currentInstance,
   isVaporComponent,
 } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend, isArray } from '@vue/shared'
 import { VaporFragment, isFragment } from '../fragment'
+import { currentKeepAliveCtx, setCurrentKeepAliveCtx } from './KeepAlive'
 import {
   advanceHydrationNode,
   currentHydrationNode,
@@ -39,7 +43,11 @@ import {
   setCurrentHydrationNode,
 } from '../dom/hydration'
 import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
-import { getScopeOwner } from '../componentSlots'
+import {
+  currentSlotOwner,
+  getScopeOwner,
+  setCurrentSlotOwner,
+} from '../componentSlots'
 
 const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -63,6 +71,11 @@ export class TeleportFragment extends VaporFragment {
   private rawSlots?: LooseRawSlots
   isDisabled?: boolean
   private isMounted = false
+  private childrenInitialized = false
+  private readonly ownerInstance =
+    currentInstance as VaporComponentInstance | null
+  private readonly slotOwner = currentSlotOwner
+  private readonly keepAliveCtx = currentKeepAliveCtx
 
   target?: ParentNode | null
   targetAnchor?: Node | null
@@ -103,10 +116,6 @@ export class TeleportFragment extends VaporFragment {
         this.handlePropsUpdate()
       }
     })
-
-    if (!isHydrating) {
-      this.initChildren()
-    }
   }
 
   get parent(): ParentNode | null {
@@ -114,27 +123,46 @@ export class TeleportFragment extends VaporFragment {
   }
 
   private initChildren(): void {
-    renderEffect(() => {
-      this.handleChildrenUpdate(
-        this.rawSlots!.default && (this.rawSlots!.default as BlockFn)(),
-      )
-    })
-    const nodes = this.nodes
+    const prevInstance = setCurrentInstance(this.ownerInstance)
+    try {
+      this.childrenInitialized = true
+      renderEffect(() => {
+        const prevOwner = setCurrentSlotOwner(this.slotOwner)
+        const prevKeepAliveCtx = setCurrentKeepAliveCtx(this.keepAliveCtx)
+        try {
+          this.handleChildrenUpdate(
+            this.rawSlots!.default && (this.rawSlots!.default as BlockFn)(),
+          )
+        } finally {
+          setCurrentKeepAliveCtx(prevKeepAliveCtx)
+          setCurrentSlotOwner(prevOwner)
+        }
+      })
+      const nodes = this.nodes
 
-    // register updateCssVars to nested fragments's update hooks so that
-    // it will be called when root fragment changed
-    if (this.parentComponent && this.parentComponent.ut) {
-      this.registerUpdateCssVars(nodes)
-    }
-
-    if (__DEV__) {
-      if (isVaporComponent(nodes)) {
-        nodes.parentTeleport = this
-      } else if (isArray(nodes)) {
-        nodes.forEach(
-          node => isVaporComponent(node) && (node.parentTeleport = this),
-        )
+      // register updateCssVars to nested fragments's update hooks so that
+      // it will be called when root fragment changed
+      if (this.parentComponent && this.parentComponent.ut) {
+        this.registerUpdateCssVars(nodes)
       }
+
+      if (__DEV__) {
+        if (isVaporComponent(nodes)) {
+          nodes.parentTeleport = this
+        } else if (isArray(nodes)) {
+          nodes.forEach(
+            node => isVaporComponent(node) && (node.parentTeleport = this),
+          )
+        }
+      }
+    } finally {
+      setCurrentInstance(...prevInstance)
+    }
+  }
+
+  private ensureChildrenInitialized(): void {
+    if (!this.childrenInitialized) {
+      this.initChildren()
     }
   }
 
@@ -152,8 +180,7 @@ export class TeleportFragment extends VaporFragment {
   }
 
   private handleChildrenUpdate(children: Block): void {
-    // not mounted yet
-    if (!this.parent || isHydrating || !this.mountContainer) {
+    if (isHydrating || !this.parent || !this.mountContainer) {
       this.nodes = children
       return
     }
@@ -210,6 +237,8 @@ export class TeleportFragment extends VaporFragment {
         insert((this.targetAnchor = createTextNode('')), target)
       }
 
+      this.ensureChildrenInitialized()
+
       // track CE teleport targets
       if (this.parentComponent && this.parentComponent.isCE) {
         ;(
@@ -235,6 +264,7 @@ export class TeleportFragment extends VaporFragment {
 
     // mount into main container
     if (this.isDisabled) {
+      this.ensureChildrenInitialized()
       this.mount(this.parent, this.anchor!)
       updateCssVars(this)
     }
@@ -271,8 +301,8 @@ export class TeleportFragment extends VaporFragment {
 
   remove = (parent: ParentNode | undefined = this.parent!): void => {
     // remove nodes
-    if (this.nodes) {
-      remove(this.nodes, this.mountContainer!)
+    if (this.nodes && this.mountContainer) {
+      remove(this.nodes, this.mountContainer)
       this.nodes = []
     }
 
@@ -401,9 +431,9 @@ export class TeleportFragment extends VaporFragment {
       this.hydrateDisabledTeleport(null, null)
     } else {
       // Align with VDOM Teleport hydration: keep main-view markers only and
-      // avoid mounting children inline when the target is missing.
+      // avoid mounting children inline or eagerly initializing them when the
+      // target is missing.
       this.anchor = locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!
-      runWithoutHydration(this.initChildren.bind(this))
     }
 
     if (target || disabled) {

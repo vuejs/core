@@ -6,6 +6,7 @@ import {
 } from '../../src/component'
 import {
   type VaporDirective,
+  VaporKeepAlive,
   VaporTeleport,
   VaporTransition,
   child,
@@ -25,7 +26,9 @@ import { makeRender } from '../_utils'
 import {
   h,
   nextTick,
+  onActivated,
   onBeforeUnmount,
+  onDeactivated,
   onMounted,
   onUnmounted,
   ref,
@@ -1445,4 +1448,129 @@ test('should not duplicate main-view anchors when keyed list reorders teleport r
 
   expect(countAnchors('start')).toBe(2)
   expect(countAnchors('end')).toBe(2)
+})
+
+test('should delay child setup until teleport target becomes available', async () => {
+  const version = ref('one')
+  const target = ref<any>('#missing-teleport-target')
+  const setups: string[] = []
+
+  const Child = defineVaporComponent({
+    props: { msg: String },
+    setup(props) {
+      setups.push(String(props.msg))
+      const n0 = template('<div> </div>')() as any
+      const x0 = child(n0) as any
+      renderEffect(() => setText(x0, String(props.msg)))
+      return n0
+    },
+  })
+
+  const { mount } = define({
+    setup() {
+      return createComponent(
+        VaporTeleport,
+        { to: () => target.value },
+        {
+          default: () => {
+            const current = version.value
+            return createComponent(Child, { msg: () => current })
+          },
+        },
+      )
+    },
+  }).create()
+
+  const root = document.createElement('div')
+  mount(root)
+  expect('Failed to locate Teleport target').toHaveBeenWarned()
+  expect('Invalid Teleport target on mount').toHaveBeenWarned()
+  expect(setups).toEqual([])
+  expect(root.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
+
+  version.value = 'two'
+  await nextTick()
+  version.value = 'three'
+  await nextTick()
+  expect(setups).toEqual([])
+
+  const targetEl = document.createElement('div')
+  target.value = targetEl
+  await nextTick()
+
+  expect(setups).toEqual(['three'])
+  expect(targetEl.innerHTML).toBe('<div>three</div>')
+})
+
+test('should cache delayed teleported child under KeepAlive once target becomes available', async () => {
+  const show = ref(true)
+  const target = ref<any>('#missing-teleport-target-keepalive')
+  const hooks = {
+    mounted: vi.fn(),
+    activated: vi.fn(),
+    deactivated: vi.fn(),
+    unmounted: vi.fn(),
+  }
+
+  const Child = defineVaporComponent({
+    name: 'DelayedTeleportKeepAliveChild',
+    setup() {
+      onMounted(hooks.mounted)
+      onActivated(hooks.activated)
+      onDeactivated(hooks.deactivated)
+      onUnmounted(hooks.unmounted)
+      return template('<div>child</div>')()
+    },
+  })
+
+  const { mount } = define({
+    setup() {
+      return createComponent(VaporKeepAlive, null, {
+        default: () =>
+          createIf(
+            () => show.value,
+            () =>
+              createComponent(
+                VaporTeleport,
+                { to: () => target.value },
+                {
+                  default: () => createComponent(Child),
+                },
+              ),
+          ),
+      })
+    },
+  }).create()
+
+  const root = document.createElement('div')
+  mount(root)
+
+  expect('Failed to locate Teleport target').toHaveBeenWarned()
+  expect('Invalid Teleport target on mount').toHaveBeenWarned()
+  expect(hooks.mounted).toHaveBeenCalledTimes(0)
+  expect(root.innerHTML).toBe(
+    '<!--teleport start--><!--teleport end--><!--if-->',
+  )
+
+  const targetEl = document.createElement('div')
+  target.value = targetEl
+  await nextTick()
+
+  expect(targetEl.innerHTML).toBe('<div>child</div>')
+  expect(hooks.mounted).toHaveBeenCalledTimes(1)
+  expect(hooks.activated).toHaveBeenCalledTimes(1)
+
+  show.value = false
+  await nextTick()
+
+  expect(targetEl.innerHTML).toBe('')
+  expect(hooks.deactivated).toHaveBeenCalledTimes(1)
+  expect(hooks.unmounted).toHaveBeenCalledTimes(0)
+
+  show.value = true
+  await nextTick()
+
+  expect(targetEl.innerHTML).toBe('<div>child</div>')
+  expect(hooks.mounted).toHaveBeenCalledTimes(1)
+  expect(hooks.activated).toHaveBeenCalledTimes(2)
 })
