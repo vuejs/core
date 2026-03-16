@@ -199,6 +199,13 @@ export class TeleportFragment extends VaporFragment {
         // target changed
         this.targetAnchor.parentNode !== target
       ) {
+        // clean up old anchors from previous target when target changes
+        if (this.targetStart) {
+          remove(this.targetStart, this.targetStart.parentNode!)
+        }
+        if (this.targetAnchor) {
+          remove(this.targetAnchor, this.targetAnchor.parentNode!)
+        }
         insert((this.targetStart = createTextNode('')), target)
         insert((this.targetAnchor = createTextNode('')), target)
       }
@@ -335,7 +342,9 @@ export class TeleportFragment extends VaporFragment {
       if (disabled) {
         this.hydrateDisabledTeleport(targetNode)
       } else {
-        this.anchor = locateTeleportEndAnchor()!
+        this.anchor = locateTeleportEndAnchor(
+          currentHydrationNode!.nextSibling!,
+        )!
         this.mountContainer = target
         let targetAnchor = targetNode
         while (targetAnchor) {
@@ -369,6 +378,12 @@ export class TeleportFragment extends VaporFragment {
     } else if (disabled) {
       // pass null as targetNode since there is no target
       this.hydrateDisabledTeleport(null)
+    } else {
+      // enabled teleport with null target: init children without
+      // hydration since there's no target to hydrate into.
+      this.mountAnchor = this.anchor = locateTeleportEndAnchor()!
+      this.mountContainer = this.anchor && this.anchor.parentNode
+      runWithoutHydration(this.initChildren.bind(this))
     }
 
     updateCssVars(this)
@@ -400,9 +415,16 @@ export function isTeleportFragment(value: unknown): value is TeleportFragment {
 function locateTeleportEndAnchor(
   node: Node = currentHydrationNode!,
 ): Node | null {
+  let depth = 0
   while (node) {
-    if (isComment(node, 'teleport end')) {
-      return node
+    if (isComment(node, 'teleport start')) {
+      depth++
+    } else if (isComment(node, 'teleport end')) {
+      if (depth === 0) {
+        return node
+      } else {
+        depth--
+      }
     }
     node = node.nextSibling as Node
   }
