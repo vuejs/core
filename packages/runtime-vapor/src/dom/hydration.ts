@@ -15,8 +15,6 @@ import {
   _next,
   createElement,
   createTextNode,
-  disableHydrationNodeLookup,
-  enableHydrationNodeLookup,
   locateChildByLogicalIndex,
   parentNode,
 } from './node'
@@ -66,14 +64,12 @@ function performHydration<T>(
 
     isOptimized = true
   }
-  enableHydrationNodeLookup()
   const prev = setIsHydrating(true)
   setup()
   const res = fn()
   cleanup()
   currentHydrationNode = null
   setIsHydrating(prev)
-  if (!isHydrating) disableHydrationNodeLookup()
   return res
 }
 
