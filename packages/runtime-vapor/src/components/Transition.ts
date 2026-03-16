@@ -19,12 +19,8 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
-import {
-  type Block,
-  type TransitionBlock,
-  type VaporTransitionHooks,
-  registerTransitionHooks,
-} from '../block'
+import type { Block, TransitionBlock, VaporTransitionHooks } from '../block'
+import { registerTransitionHooks } from '../transition'
 import {
   type FunctionalVaporComponent,
   type VaporComponentInstance,
