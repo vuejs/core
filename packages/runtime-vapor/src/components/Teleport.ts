@@ -376,7 +376,8 @@ export class TeleportFragment extends VaporFragment {
         }
       }
     } else if (disabled) {
-      this.hydrateDisabledTeleport(currentHydrationNode!)
+      // pass null as targetNode since there is no target
+      this.hydrateDisabledTeleport(null)
     } else {
       // enabled teleport with null target: init children without
       // hydration since there's no target to hydrate into.

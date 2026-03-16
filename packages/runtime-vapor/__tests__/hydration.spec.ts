@@ -3933,6 +3933,24 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('disabled teleport with null target hydration', async () => {
+      const { block, container } = await mountWithHydration(
+        '<!--teleport start--><div>content</div><!--teleport end-->',
+        `<teleport :to="undefined" :disabled="true">
+          <div>content</div>
+        </teleport>`,
+      )
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><div>content</div><!--teleport end-->`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+
+      // targetStart must NOT be set when there's no target
+      const teleport = block as TeleportFragment
+      expect(teleport.targetStart).toBeNull()
+      expect(teleport.targetAnchor).toBeNull()
+    })
+
     test('enabled teleport with null target', async () => {
       const { container } = await mountWithHydration(
         '<!--teleport start--><!--teleport end-->',
