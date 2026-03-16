@@ -360,7 +360,7 @@ export function setTransitionHooksOnFragment(
 ): void {
   if (isFragment(block)) {
     block.$transition = hooks
-    if (block.nodes && isFragment(block.nodes)) {
+    if (block.nodes && (isFragment(block.nodes) || isArray(block.nodes))) {
       setTransitionHooksOnFragment(block.nodes, hooks)
     }
   } else if (isArray(block)) {
