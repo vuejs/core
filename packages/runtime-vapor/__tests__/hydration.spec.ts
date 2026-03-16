@@ -3988,8 +3988,10 @@ describe('Vapor Mode hydration', () => {
           <div>content</div>
         </teleport>`,
       )
+
+      // Align with VDOM Teleport behavior
       expect(container.innerHTML).toBe(
-        `<!--teleport start--><div>content</div><!--teleport end-->`,
+        `<!--teleport start--><!--teleport end-->`,
       )
       expect('Failed to locate Teleport target').toHaveBeenWarned()
     })

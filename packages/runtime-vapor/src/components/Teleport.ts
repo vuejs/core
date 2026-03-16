@@ -153,7 +153,7 @@ export class TeleportFragment extends VaporFragment {
 
   private handleChildrenUpdate(children: Block): void {
     // not mounted yet
-    if (!this.parent || isHydrating) {
+    if (!this.parent || isHydrating || !this.mountContainer) {
       this.nodes = children
       return
     }
@@ -400,16 +400,15 @@ export class TeleportFragment extends VaporFragment {
       // pass null as targetNode since there is no target
       this.hydrateDisabledTeleport(null, null)
     } else {
-      // enabled teleport with null target: init children without
-      // hydration since there's no target to hydrate into.
-      this.mountAnchor = this.anchor = locateTeleportEndAnchor(
-        currentHydrationNode!.nextSibling!,
-      )!
-      this.mountContainer = this.anchor && this.anchor.parentNode
+      // Align with VDOM Teleport hydration: keep main-view markers only and
+      // avoid mounting children inline when the target is missing.
+      this.anchor = locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!
       runWithoutHydration(this.initChildren.bind(this))
     }
 
-    updateCssVars(this)
+    if (target || disabled) {
+      updateCssVars(this)
+    }
     advanceHydrationNode(this.anchor!)
   }
 }
