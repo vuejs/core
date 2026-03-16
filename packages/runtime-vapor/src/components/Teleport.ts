@@ -256,10 +256,14 @@ export class TeleportFragment extends VaporFragment {
   insert = (container: ParentNode, anchor: Node | null): void => {
     if (isHydrating) return
 
-    // insert anchors in the main view
-    this.placeholder = __DEV__
-      ? createComment('teleport start')
-      : createTextNode()
+    // Re-inserting an already-mounted teleport should move existing anchors
+    // instead of creating a second placeholder in the main view.
+    if (!this.placeholder) {
+      this.placeholder = __DEV__
+        ? createComment('teleport start')
+        : createTextNode()
+    }
+
     insert(this.placeholder, container, anchor)
     insert(this.anchor!, container, anchor)
     this.handlePropsUpdate()
@@ -276,7 +280,7 @@ export class TeleportFragment extends VaporFragment {
 
     // remove anchors
     if (this.targetStart) {
-      remove(this.targetStart!, this.target!)
+      remove(this.targetStart, this.target!)
       this.targetStart = undefined
       remove(this.targetAnchor!, this.target!)
       this.targetAnchor = undefined

@@ -9,6 +9,7 @@ import {
   VaporTeleport,
   VaporTransition,
   child,
+  createFor,
   createIf,
   createTemplateRefSetter,
   createVaporApp,
@@ -1410,4 +1411,38 @@ test('should clean up old anchors when target changes', async () => {
   expect(targetA.childNodes.length).toBe(0)
   // New target should have the content
   expect(targetB.childNodes.length).toBe(oldChildCount)
+})
+
+test('should not duplicate main-view anchors when keyed list reorders teleport roots', async () => {
+  const target = document.createElement('div')
+  const items = ref([
+    { id: 'one', text: 'one' },
+    { id: 'two', text: 'two' },
+  ])
+
+  const { host } = define(() =>
+    createFor(
+      () => items.value,
+      item =>
+        createComponent(
+          VaporTeleport,
+          { to: () => target },
+          { default: () => template(item.value.text)() },
+        ),
+      item => item.id,
+    ),
+  ).render()
+
+  const countAnchors = (label: 'start' | 'end') =>
+    (host.innerHTML.match(new RegExp(`<!--teleport ${label}-->`, 'g')) || [])
+      .length
+
+  expect(countAnchors('start')).toBe(2)
+  expect(countAnchors('end')).toBe(2)
+
+  items.value = [items.value[1], items.value[0]]
+  await nextTick()
+
+  expect(countAnchors('start')).toBe(2)
+  expect(countAnchors('end')).toBe(2)
 })
