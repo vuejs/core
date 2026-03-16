@@ -3633,6 +3633,36 @@ describe('Vapor Mode hydration', () => {
       expect(`mismatch`).not.toHaveBeenWarned()
     })
 
+    test('multiple disabled teleports hydrating to the same target should consume distinct target anchors', async () => {
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport-disabled-shared'
+      teleportContainer.innerHTML =
+        `<!--teleport start anchor-->` +
+        `<!--teleport anchor-->` +
+        `<!--teleport start anchor-->` +
+        `<!--teleport anchor-->`
+      document.body.appendChild(teleportContainer)
+
+      const { block } = await mountWithHydration(
+        `<!--[-->` +
+          `<!--teleport start--><div>one</div><!--teleport end-->` +
+          `<!--teleport start--><div>two</div><!--teleport end-->` +
+          `<!--]-->`,
+        `<teleport to="#teleport-disabled-shared" disabled>
+            <div>one</div>
+          </teleport>
+          <teleport to="#teleport-disabled-shared" disabled>
+            <div>two</div>
+          </teleport>`,
+      )
+
+      const teleports = block as TeleportFragment[]
+      expect(teleports[0].targetStart).toBe(teleportContainer.childNodes[0])
+      expect(teleports[0].targetAnchor).toBe(teleportContainer.childNodes[1])
+      expect(teleports[1].targetStart).toBe(teleportContainer.childNodes[2])
+      expect(teleports[1].targetAnchor).toBe(teleportContainer.childNodes[3])
+    })
+
     test('disabled + as component root', async () => {
       const { container } = await mountWithHydration(
         `<!--[-->` +
