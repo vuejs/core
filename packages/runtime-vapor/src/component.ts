@@ -888,7 +888,10 @@ export function mountComponent(
   // custom element style injection
   const { root, type } = instance as GenericComponentInstance
   if (root && root.ce && (root.ce as VaporElement)._hasShadowRoot()) {
-    root.ce!._injectChildStyle(type)
+    root.ce!._injectChildStyle(
+      type,
+      instance.parent ? instance.parent.type : undefined,
+    )
   }
 
   if (__DEV__) {
