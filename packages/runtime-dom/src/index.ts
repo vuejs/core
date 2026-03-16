@@ -336,7 +336,7 @@ export { patchStyle } from './modules/style'
 /**
  * @internal
  */
-export { shouldSetAsProp } from './patchProp'
+export { shouldSetAsProp, shouldSetAsPropForVueCE } from './patchProp'
 /**
  * @internal
  */

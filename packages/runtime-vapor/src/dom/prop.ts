@@ -28,6 +28,7 @@ import {
   patchStyle,
   queuePostFlushCb,
   shouldSetAsProp,
+  shouldSetAsPropForVueCE,
   toClassSet,
   toStyleMap,
   unsafeToTrustedHTML,
@@ -519,9 +520,13 @@ export function setDynamicProp(
       setDOMProp(el, key, value, forceHydrate)
     }
   } else if (
-    // custom elements
+    // #11081 force set props for possible async custom element
     (el as VaporElement)._isVueCE &&
-    (/[A-Z]/.test(key) || !isString(value))
+    // #12408 check if it's declared prop or it's async custom element
+    (shouldSetAsPropForVueCE(el as VaporElement, key) ||
+      // @ts-expect-error _def is private
+      ((el as VaporElement)._def.__asyncLoader &&
+        (/[A-Z]/.test(key) || !isString(value))))
   ) {
     setDOMProp(el, camelize(key), value, forceHydrate, key)
   } else {

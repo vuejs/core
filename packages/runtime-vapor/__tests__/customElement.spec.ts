@@ -604,6 +604,26 @@ describe('defineVaporCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
     })
 
+    // #12408
+    test('should set number tabindex as attribute', () => {
+      const { container: root } = render('my-el-attrs', {
+        tabindex: () => 1,
+        'data-test': () => true,
+      })
+      const el = root.children[0] as HTMLElement
+      expect(el.getAttribute('tabindex')).toBe('1')
+      expect(el.getAttribute('data-test')).toBe('true')
+    })
+
+    test('should keep undeclared native attrs as attrs', () => {
+      const { container: root } = render('my-el-attrs', {
+        translate: () => 'no',
+      })
+      const el = root.children[0] as HTMLElement
+      expect(el.getAttribute('translate')).toBe('no')
+      expect(el.translate).toBe(false)
+    })
+
     // https://github.com/vuejs/core/issues/12964
     // Disabled because of missing support for `delegatesFocus` in jsdom
     // https://github.com/jsdom/jsdom/issues/3418
@@ -1417,6 +1437,55 @@ describe('defineVaporCustomElement', () => {
 
       e2.msg = 'hello'
       expect(e2.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+    })
+
+    test('render object prop before resolve', async () => {
+      const AsyncComp = defineVaporComponent({
+        props: { value: Object },
+        setup(props: any) {
+          const n0 = template('<div> </div>', true)() as any
+          const x0 = txt(n0) as any
+          renderEffect(() => setText(x0, props.value.x))
+          return n0
+        },
+      })
+      let resolve!: (comp: typeof AsyncComp) => void
+      const p = new Promise<typeof AsyncComp>(res => {
+        resolve = res
+      })
+      const E = defineVaporCustomElement(defineVaporAsyncComponent(() => p))
+      customElements.define('my-el-async-object-prop', E)
+
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const value = { x: 1 }
+
+      const app = createVaporApp({
+        setup() {
+          return createPlainElement(
+            'my-el-async-object-prop',
+            { value: () => value },
+            null,
+            true,
+          )
+        },
+      })
+      app.mount(root)
+
+      const el = root.children[0] as VaporElement & { value: typeof value }
+      expect(el.value).toBe(value)
+      expect(el.getAttribute('value')).toBe(null)
+
+      resolve(AsyncComp)
+
+      await new Promise(r => setTimeout(r))
+
+      expect(el.value).toBe(value)
+      expect(el.getAttribute('value')).toBe(null)
+      expect(el.shadowRoot!.innerHTML).toBe(`<div>1</div>`)
+
+      app.unmount()
+      root.remove()
     })
 
     test('Number prop casting before resolve', async () => {
