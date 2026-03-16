@@ -368,6 +368,12 @@ export class TeleportFragment extends VaporFragment {
       }
     } else if (disabled) {
       this.hydrateDisabledTeleport(currentHydrationNode!)
+    } else {
+      // enabled teleport with null target: init children without
+      // hydration since there's no target to hydrate into.
+      this.mountAnchor = this.anchor = locateTeleportEndAnchor()!
+      this.mountContainer = this.anchor && this.anchor.parentNode
+      runWithoutHydration(this.initChildren.bind(this))
     }
 
     updateCssVars(this)
