@@ -302,9 +302,9 @@ export class DynamicFragment extends VaporFragment {
 
     const forwardedSlot = (this as any as SlotFragment).forwarded
     let isValidSlot = false
-    // Empty forwarded slot with a fallback: skip anchor creation and
-    // let renderSlotFallback → frag.update(fallback) re-enter hydrate()
-    // to create the anchor after the fallback content is hydrated.
+    // Empty forwarded slot with a fallback: defer anchor creation —
+    // renderSlotFallback → frag.update(fallback) will re-enter hydrate()
+    // after the fallback content is hydrated.
     if (
       forwardedSlot &&
       (isEmpty || !(isValidSlot = isValidBlock(this.nodes))) &&
@@ -313,11 +313,18 @@ export class DynamicFragment extends VaporFragment {
       return
     }
 
-    // reuse the `<!--]-->` as anchor
-    // - slot (forwarded slots can only reuse when they own SSR-rendered
-    //   content; when re-entering through renderSlotFallback, the
-    //   `<!--]-->` still belongs to the outer slot)
-    // - multi-root if
+    // Reuse SSR `<!--]-->` as anchor.
+    // SSR always wraps slot content with `<!--[-->...<!--]-->`, so any slot
+    // with content has a matching end anchor we can reuse.
+    //
+    // For forwarded slots, two additional conditions must hold:
+    //   1. isValidSlot — the forwarded slot rendered actual content
+    //   2. !isInSlotFallback — the content came from the slot's own render,
+    //      not from a fallback re-entry. During fallback re-entry, the
+    //      `<!--]-->` at the cursor belongs to the outer (non-forwarded)
+    //      slot, not this forwarded one.
+    //
+    // Multi-root `v-if` also gets `<!--[-->...<!--]-->` from SSR.
     if (
       (this.anchorLabel === 'slot' &&
         (!forwardedSlot || (isValidSlot && !isInSlotFallback))) ||
@@ -334,9 +341,9 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    // otherwise, create an anchor.
-    // forwarded slot without a reusable SSR end anchor,
-    // dynamic-component, async component, keyed fragment
+    // Otherwise, create a new anchor.
+    // This covers: empty forwarded slots, dynamic-component,
+    // async component, keyed fragment.
     let parentNode: Node | null
     let nextNode: Node | null
     if (forwardedSlot) {
