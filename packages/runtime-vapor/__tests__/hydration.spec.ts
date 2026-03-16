@@ -3583,6 +3583,56 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('nested disabled teleport hydration should locate correct end anchor', async () => {
+      const data = ref({ msg: ref('after') })
+      const { block, container } = await mountWithHydration(
+        `<!--[-->` +
+          `<!--teleport start-->` +
+          `<div>outer</div>` +
+          `<!--teleport start-->` +
+          `<div>inner</div>` +
+          `<!--teleport end-->` +
+          `<!--teleport end-->` +
+          `<div>after</div>` +
+          `<!--]-->`,
+        `<teleport to="body" disabled>
+          <div>outer</div>
+          <teleport to="body" disabled>
+            <div>inner</div>
+          </teleport>
+        </teleport>
+        <div>{{data.msg}}</div>`,
+        data,
+      )
+
+      const blocks = block as any[]
+      const outerTeleport = blocks[0] as TeleportFragment
+      // The outer teleport's anchor must be the LAST <!--teleport end-->,
+      // NOT the inner one. If locateTeleportEndAnchor doesn't handle nesting,
+      // it would incorrectly pick the inner <!--teleport end-->.
+      const allEndComments = Array.from(container.childNodes).filter(
+        n => n.nodeType === 8 && (n as Comment).data === 'teleport end',
+      )
+      expect(allEndComments.length).toBe(2)
+      expect(outerTeleport.anchor).toBe(allEndComments[1]) // must be the LAST one
+
+      // The sibling <div>after</div> should hydrate correctly
+      // If the outer anchor is wrong, the hydration cursor is misaligned
+      // and the sibling element won't match.
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<!--teleport start-->` +
+          `<div>outer</div>` +
+          `<!--teleport start-->` +
+          `<div>inner</div>` +
+          `<!--teleport end-->` +
+          `<!--teleport end-->` +
+          `<div>after</div>` +
+          `<!--]-->`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
     test('disabled + as component root', async () => {
       const { container } = await mountWithHydration(
         `<!--[-->` +

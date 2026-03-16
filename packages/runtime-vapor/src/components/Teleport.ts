@@ -335,7 +335,9 @@ export class TeleportFragment extends VaporFragment {
       if (disabled) {
         this.hydrateDisabledTeleport(targetNode)
       } else {
-        this.anchor = locateTeleportEndAnchor()!
+        this.anchor = locateTeleportEndAnchor(
+          currentHydrationNode!.nextSibling!,
+        )!
         this.mountContainer = target
         let targetAnchor = targetNode
         while (targetAnchor) {
@@ -405,9 +407,16 @@ export function isTeleportFragment(value: unknown): value is TeleportFragment {
 function locateTeleportEndAnchor(
   node: Node = currentHydrationNode!,
 ): Node | null {
+  let depth = 0
   while (node) {
-    if (isComment(node, 'teleport end')) {
-      return node
+    if (isComment(node, 'teleport start')) {
+      depth++
+    } else if (isComment(node, 'teleport end')) {
+      if (depth === 0) {
+        return node
+      } else {
+        depth--
+      }
     }
     node = node.nextSibling as Node
   }
