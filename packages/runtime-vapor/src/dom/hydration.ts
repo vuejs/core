@@ -108,12 +108,12 @@ export function setCurrentHydrationNode(node: Node | null): void {
 /* @__NO_SIDE_EFFECTS__ */
 function locateNextSiblingOfParent(n: Node): Node | null {
   if (!n.parentNode) return null
-  return n.parentNode.nextSibling || locateNextSiblingOfParent(n.parentNode)
+  return _next(n.parentNode) || locateNextSiblingOfParent(n.parentNode)
 }
 
 export function advanceHydrationNode(node: Node): void {
   // if no next sibling, find the next node in the parent chain
-  const ret = node.nextSibling || locateNextSiblingOfParent(node)
+  const ret = _next(node) || locateNextSiblingOfParent(node)
   if (ret) setCurrentHydrationNode(ret)
 }
 
@@ -148,7 +148,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
     node = handleMismatch(node, template)
   }
 
-  currentHydrationNode = node.nextSibling
+  advanceHydrationNode(node)
   return node
 }
 
@@ -200,7 +200,7 @@ export function locateEndAnchor(
   }
 
   const stack: Anchor[] = [node]
-  while ((node = node.nextSibling as Anchor) && stack.length > 0) {
+  while ((node = _next(node) as Anchor) && stack.length > 0) {
     if (node.nodeType === 8) {
       if (node.data === open) {
         stack.push(node)
