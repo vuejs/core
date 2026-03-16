@@ -1527,7 +1527,10 @@ function baseCreateRenderer(
             (root as ComponentInternalInstance).ce &&
             (root as ComponentInternalInstance).ce!._hasShadowRoot()
           ) {
-            ;(root as ComponentInternalInstance).ce!._injectChildStyle(type)
+            ;(root as ComponentInternalInstance).ce!._injectChildStyle(
+              type,
+              instance.parent ? instance.parent.type : undefined,
+            )
           }
 
           if (__DEV__) {

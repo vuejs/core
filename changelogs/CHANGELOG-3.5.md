@@ -1,3 +1,22 @@
+## [3.5.30](https://github.com/vuejs/core/compare/v3.5.29...v3.5.30) (2026-03-09)
+
+
+### Bug Fixes
+
+* **compat:** add `entities` to @vue/compat deps to fix CJS edge cases ([#12514](https://github.com/vuejs/core/issues/12514)) ([e725a67](https://github.com/vuejs/core/commit/e725a679e434a688c3493fc9af496501a8d1eeec)), closes [#10609](https://github.com/vuejs/core/issues/10609)
+* **custom-element:** ensure child component styles are injected in correct order before parent styles ([#13374](https://github.com/vuejs/core/issues/13374)) ([1398bf8](https://github.com/vuejs/core/commit/1398bf8dfbfef6b1bca154fc98d37044011a51be)), closes [#13029](https://github.com/vuejs/core/issues/13029)
+* **custom-element:** properly locate parent when slotted in shadow dom ([#12480](https://github.com/vuejs/core/issues/12480)) ([f06c81a](https://github.com/vuejs/core/commit/f06c81aa3dddbeff8bc2e2e63c0b6b6debcbdc13)), closes [#12479](https://github.com/vuejs/core/issues/12479)
+* **custom-element:** should properly patch as props for vue custom elements ([#12409](https://github.com/vuejs/core/issues/12409)) ([740983e](https://github.com/vuejs/core/commit/740983e6736255b183ee27a3f8b40e89ad7e3ba3)), closes [#12408](https://github.com/vuejs/core/issues/12408)
+* **reactivity:** avoid duplicate raw/proxy entries in Set.add ([#14545](https://github.com/vuejs/core/issues/14545)) ([d943612](https://github.com/vuejs/core/commit/d943612e59feb656e16568dea77b97856923c58c))
+* **reactivity:** fix reduce on reactive arrays to preserve reactivity ([#12737](https://github.com/vuejs/core/issues/12737)) ([16ef165](https://github.com/vuejs/core/commit/16ef165415224def18ec8247dabb84d5a1338c17)), closes [#12735](https://github.com/vuejs/core/issues/12735)
+* **reactivity:** handle `Set` with initial reactive values edge case ([#12393](https://github.com/vuejs/core/issues/12393)) ([5dc27ca](https://github.com/vuejs/core/commit/5dc27ca68fdbab95b37af15870d91515fc2412b2)), closes [#8647](https://github.com/vuejs/core/issues/8647)
+* **runtime-core:** warn about negative number in v-for ([#12308](https://github.com/vuejs/core/issues/12308)) ([9438cc5](https://github.com/vuejs/core/commit/9438cc54506a38038a1bf4b6698025f9a4cafb48))
+* **ssr:** prevent watch from firing after async setup await ([#14547](https://github.com/vuejs/core/issues/14547)) ([6cda71d](https://github.com/vuejs/core/commit/6cda71d48bd45c5e0ed2822866b83c4fafff1be9)), closes [#14546](https://github.com/vuejs/core/issues/14546)
+* **types:** make generics with runtime props in defineComponent work (fix [#11374](https://github.com/vuejs/core/issues/11374)) ([#13119](https://github.com/vuejs/core/issues/13119)) ([cea3cf7](https://github.com/vuejs/core/commit/cea3cf758645c9683db51822590b073ce3069dda)), closes [#13763](https://github.com/vuejs/core/issues/13763)
+* **types:** narrow useAttrs class/style typing for TSX ([#14492](https://github.com/vuejs/core/issues/14492)) ([bbb8977](https://github.com/vuejs/core/commit/bbb89775b137eac12b92ae4eb49999a7fd6b52b0)), closes [#14489](https://github.com/vuejs/core/issues/14489)
+
+
+
 ## [3.5.29](https://github.com/vuejs/core/compare/v3.5.28...v3.5.29) (2026-02-24)
 
 
