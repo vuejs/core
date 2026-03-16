@@ -1091,6 +1091,190 @@ describe('defineVaporCustomElement', () => {
       assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
     })
 
+    test('root custom element HMR should preserve child-first style order', async () => {
+      const Child = defineVaporComponent({
+        styles: [`div { color: green; }`],
+        setup() {
+          return template('child')()
+        },
+      } as any)
+      const def = defineVaporComponent({
+        __hmrId: 'root-child-style-order',
+        styles: [`div { color: red; }`],
+        setup() {
+          return createComponent(Child)
+        },
+      } as any)
+      const Foo = defineVaporCustomElement(def)
+      customElements.define('my-el-root-hmr-style-order', Foo)
+      container.innerHTML = `<my-el-root-hmr-style-order></my-el-root-hmr-style-order>`
+      const el = container.childNodes[0] as VaporElement
+
+      assertStyles(el, [`div { color: green; }`, `div { color: red; }`])
+
+      __VUE_HMR_RUNTIME__.reload((def as any).__hmrId!, {
+        ...def,
+        styles: [`div { color: blue; }`, `div { color: yellow; }`],
+      } as any)
+
+      await nextTick()
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: yellow; }`,
+      ])
+    })
+
+    test('inject child component styles before parent styles', async () => {
+      const Bar = defineVaporComponent({
+        styles: [`div { color: green; }`],
+        setup() {
+          return template('bar')()
+        },
+      } as any)
+      const Baz = () => createComponent(Bar)
+      const WrapperBar = defineVaporComponent({
+        styles: [`div { color: blue; }`],
+        setup() {
+          return createComponent(Baz)
+        },
+      } as any)
+      const WBaz = () => createComponent(WrapperBar)
+      const Foo = defineVaporCustomElement({
+        styles: [`div { color: red; }`],
+        setup() {
+          return [createComponent(Baz), createComponent(WBaz)]
+        },
+      })
+      customElements.define('my-el-with-wrapper-child-styles', Foo)
+      container.innerHTML = `<my-el-with-wrapper-child-styles></my-el-with-wrapper-child-styles>`
+      const el = container.childNodes[0] as VaporElement
+
+      // inject order should be child -> parent
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: red; }`,
+      ])
+    })
+
+    test('inject nested child component styles after HMR removes parent styles', async () => {
+      const Bar = defineVaporComponent({
+        __hmrId: 'nested-child-style-hmr-bar',
+        styles: [`div { color: green; }`],
+        setup() {
+          return template('bar')()
+        },
+      } as any)
+      const WrapperBar = defineVaporComponent({
+        __hmrId: 'nested-child-style-hmr-wrapper',
+        styles: [`div { color: blue; }`],
+        setup() {
+          return createComponent(Bar)
+        },
+      } as any)
+      const Foo = defineVaporCustomElement({
+        styles: [`div { color: red; }`],
+        setup() {
+          return createComponent(WrapperBar)
+        },
+      })
+      customElements.define('my-el-with-hmr-nested-child-styles', Foo)
+      container.innerHTML = `<my-el-with-hmr-nested-child-styles></my-el-with-hmr-nested-child-styles>`
+      const el = container.childNodes[0] as VaporElement
+
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: red; }`,
+      ])
+
+      __VUE_HMR_RUNTIME__.reload((WrapperBar as any).__hmrId!, {
+        ...WrapperBar,
+        styles: undefined,
+      } as any)
+      await nextTick()
+      assertStyles(el, [`div { color: green; }`, `div { color: red; }`])
+
+      __VUE_HMR_RUNTIME__.reload((Bar as any).__hmrId!, {
+        ...Bar,
+        styles: [`div { color: yellow; }`],
+      } as any)
+      await nextTick()
+      assertStyles(el, [`div { color: yellow; }`, `div { color: red; }`])
+    })
+
+    test('inject child component styles when parent has no styles', async () => {
+      const Bar = defineVaporComponent({
+        styles: [`div { color: green; }`],
+        setup() {
+          return template('bar')()
+        },
+      } as any)
+      const Baz = () => createComponent(Bar)
+      const WrapperBar = defineVaporComponent({
+        styles: [`div { color: blue; }`],
+        setup() {
+          return createComponent(Baz)
+        },
+      } as any)
+      const WBaz = () => createComponent(WrapperBar)
+      // without styles
+      const Foo = defineVaporCustomElement({
+        setup() {
+          return [createComponent(Baz), createComponent(WBaz)]
+        },
+      })
+      customElements.define('my-el-with-inject-child-styles', Foo)
+      container.innerHTML = `<my-el-with-inject-child-styles></my-el-with-inject-child-styles>`
+      const el = container.childNodes[0] as VaporElement
+
+      assertStyles(el, [`div { color: green; }`, `div { color: blue; }`])
+    })
+
+    test('inject nested child component styles', async () => {
+      const Bar = defineVaporComponent({
+        styles: [`div { color: green; }`],
+        setup() {
+          return template('bar')()
+        },
+      } as any)
+      const Baz = defineVaporComponent({
+        styles: [`div { color: yellow; }`],
+        setup() {
+          return createComponent(Bar)
+        },
+      } as any)
+      const WrapperBar = defineVaporComponent({
+        styles: [`div { color: blue; }`],
+        setup() {
+          return createComponent(Baz)
+        },
+      } as any)
+      const WBaz = defineVaporComponent({
+        styles: [`div { color: black; }`],
+        setup() {
+          return createComponent(WrapperBar)
+        },
+      } as any)
+      const Foo = defineVaporCustomElement({
+        styles: [`div { color: red; }`],
+        setup() {
+          return [createComponent(Baz), createComponent(WBaz)]
+        },
+      })
+      customElements.define('my-el-with-inject-nested-child-styles', Foo)
+      container.innerHTML = `<my-el-with-inject-nested-child-styles></my-el-with-inject-nested-child-styles>`
+      const el = container.childNodes[0] as VaporElement
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: yellow; }`,
+        `div { color: blue; }`,
+        `div { color: black; }`,
+        `div { color: red; }`,
+      ])
+    })
+
     test("child components should not inject styles to root element's shadow root w/ shadowRoot false", async () => {
       const Bar = defineVaporComponent({
         styles: [`div { color: green; }`],
