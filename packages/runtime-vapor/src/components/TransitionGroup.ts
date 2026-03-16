@@ -80,12 +80,11 @@ const VaporTransitionGroupImpl = defineVaporComponent({
     })
 
     let prevChildren: TransitionBlock[]
-    let children: TransitionBlock[]
     const slottedBlock = slots.default && slots.default()
 
     onBeforeUpdate(() => {
       prevChildren = []
-      children = getTransitionBlocks(slottedBlock)
+      const children = getTransitionBlocks(slottedBlock)
       if (children) {
         for (let i = 0; i < children.length; i++) {
           const child = children[i]
@@ -141,30 +140,12 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       prevChildren = []
     })
 
-    // store props and state on fragment for reusing during insert new items
-    setTransitionHooksOnFragment(slottedBlock, {
+    applyGroupTransitionHooks(slottedBlock, {
       props: propsProxy,
       state,
       instance,
+      applyGroup: applyGroupTransitionHooks,
     } as VaporTransitionHooks)
-
-    children = getTransitionBlocks(slottedBlock)
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i]
-      if (isValidTransitionBlock(child)) {
-        if (child.$key != null) {
-          const hooks = resolveTransitionHooks(
-            child,
-            propsProxy,
-            state,
-            instance!,
-          )
-          setTransitionHooks(child, hooks)
-        } else if (__DEV__) {
-          warn(`<transition-group> children must be keyed`)
-        }
-      }
-    }
 
     const tag = props.tag
     if (tag) {
@@ -182,6 +163,29 @@ export const VaporTransitionGroup: DefineVaporComponent<
   string,
   TransitionGroupProps
 > = /*@__PURE__*/ decorate(VaporTransitionGroupImpl)
+
+function applyGroupTransitionHooks(
+  block: Block,
+  hooks: VaporTransitionHooks,
+): void {
+  // propagate hooks to inner fragments for reusing during insert new items
+  setTransitionHooksOnFragment(block, hooks)
+  const { props, state, instance } = hooks
+  const children = getTransitionBlocks(block)
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (isValidTransitionBlock(child)) {
+      if (child.$key != null) {
+        setTransitionHooks(
+          child,
+          resolveTransitionHooks(child, props, state, instance),
+        )
+      } else if (__DEV__) {
+        warn(`<transition-group> children must be keyed`)
+      }
+    }
+  }
+}
 
 function getTransitionBlocks(block: Block) {
   let children: TransitionBlock[] = []
