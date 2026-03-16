@@ -107,9 +107,8 @@ export function shouldSetAsProp(
   return key in el
 }
 
-function shouldSetAsPropForVueCE(el: VueElement, key: string) {
-  const props = // @ts-expect-error _def is private
-    el._def.props as Record<string, unknown> | string[] | undefined
+export function shouldSetAsPropForVueCE(el: any, key: string): boolean {
+  const props = el._def.props as Record<string, unknown> | string[] | undefined
   if (!props) {
     return false
   }
