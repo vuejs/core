@@ -1,3 +1,36 @@
+# [3.6.0-beta.8](https://github.com/vuejs/core/compare/v3.5.30...v3.6.0-beta.8) (2026-03-16)
+
+
+### Bug Fixes
+
+* **compiler-vapor:** avoid cache name collisions in expression dedupe ([#14568](https://github.com/vuejs/core/issues/14568)) ([9101686](https://github.com/vuejs/core/commit/9101686980f95707bf6cbe4cfee1535d604b922c))
+* **compiler-vapor:** do not cache expressions with globally allowed identifiers ([#14562](https://github.com/vuejs/core/issues/14562)) ([cc2f3f5](https://github.com/vuejs/core/commit/cc2f3f5365eb895563abd53834795328c6c4a717)), closes [#14560](https://github.com/vuejs/core/issues/14560)
+* **compiler-vapor:** fix circular reference in repeated call expression cache ([#14567](https://github.com/vuejs/core/issues/14567)) ([62f2ab4](https://github.com/vuejs/core/commit/62f2ab4ab3f07fa3876dc494d4f49d59cd210597))
+* **compiler-vapor:** preserve :is prop on normal components ([#14491](https://github.com/vuejs/core/issues/14491)) ([c763388](https://github.com/vuejs/core/commit/c763388867606657cca0de0157968a1359a89ae3))
+* **custom-element:** should properly patch as props for vapor custom elements ([#14583](https://github.com/vuejs/core/issues/14583)) ([c4b51d8](https://github.com/vuejs/core/commit/c4b51d81882b500ae67b7c4125d62f0c863fe9e5)), closes [#12409](https://github.com/vuejs/core/issues/12409)
+* **hmr:** child reload in dynamic branch should not break subsequent parent reload ([#14527](https://github.com/vuejs/core/issues/14527)) ([abefa0c](https://github.com/vuejs/core/commit/abefa0c4604d8076acabb48833a7b3742d5f484a))
+* **hmr:** preserve appContext on root HMR reload ([#14528](https://github.com/vuejs/core/issues/14528)) ([714151e](https://github.com/vuejs/core/commit/714151ebe01fc7d52ee2f2b0ae590fcff4408df1))
+* **runtime-vapor:** cleanup stale refs when dynamic vdom component ref target changes ([#14501](https://github.com/vuejs/core/issues/14501)) ([178b77f](https://github.com/vuejs/core/commit/178b77f41b98be6750a5566aa02b75272b4fb71d))
+* **runtime-vapor:** correct vapor slot props proxy has/ownKeys semantics ([#14522](https://github.com/vuejs/core/issues/14522)) ([8a64a19](https://github.com/vuejs/core/commit/8a64a192b781e1a8ae9010d4f3fb260ec6681498))
+* **runtime-vapor:** enable hydration capability for createSSRApp + vdomInterop ([#14505](https://github.com/vuejs/core/issues/14505)) ([5c320b7](https://github.com/vuejs/core/commit/5c320b7da43ffe2b9d603c506b055ae01556a27c))
+* **runtime-vapor:** ensure vapor slot unmounting removes vnode slot content ([#14520](https://github.com/vuejs/core/issues/14520)) ([eff4cab](https://github.com/vuejs/core/commit/eff4cabc8255ebccc0d808de691ae4078dc40174))
+* **runtime-vapor:** fix interop hydration anchor handling for Teleport/Suspense dynamic VNodes ([#14517](https://github.com/vuejs/core/issues/14517)) ([7d079d5](https://github.com/vuejs/core/commit/7d079d50ff01eb2554226d1e99d60c9ef1344571))
+* **runtime-vapor:** fix VDOM interop hydration for multi-node vnode ranges ([#14513](https://github.com/vuejs/core/issues/14513)) ([6a53e41](https://github.com/vuejs/core/commit/6a53e413c03a6bafda07fc211cb9872abf2a50e6))
+* **runtime-vapor:** handle null/undefined dynamic template refs without warning ([#14502](https://github.com/vuejs/core/issues/14502)) ([b7a3356](https://github.com/vuejs/core/commit/b7a3356dbf0fd947be5a787a9a60c215a9ca1822))
+* **runtime-vapor:** handle out-in transition with empty leaving branch ([#14538](https://github.com/vuejs/core/issues/14538)) ([70647b6](https://github.com/vuejs/core/commit/70647b61b45a49580179fb4fd930ab75748f440d))
+* **runtime-vapor:** handle Static/Fragment vnode ranges in interop block nodes ([#14510](https://github.com/vuejs/core/issues/14510)) ([8ec6b64](https://github.com/vuejs/core/commit/8ec6b64318d7d95e4a8f10d671dfc96151f317f9))
+* **runtime-vapor:** handle transition in-out leave without incoming branch ([#14535](https://github.com/vuejs/core/issues/14535)) ([191a1e1](https://github.com/vuejs/core/commit/191a1e1d8ecf6dc25720dd116aa2783543db6808)), closes [#14533](https://github.com/vuejs/core/issues/14533)
+* **runtime-vapor:** hydrate vapor slot in vdom component with sibling nodes ([#14512](https://github.com/vuejs/core/issues/14512)) ([fe613c7](https://github.com/vuejs/core/commit/fe613c787534ff4d076ea4be09146bc0ba846341))
+* **runtime-vapor:** keep vdom child attrs in sync with vapor parent updates ([#14521](https://github.com/vuejs/core/issues/14521)) ([11cb112](https://github.com/vuejs/core/commit/11cb1126eb7be79f454f4604e92c9dc00fe9e91f))
+* **runtime-vapor:** pass parentComp to _injectChildStyle for correct style ordering ([79190e8](https://github.com/vuejs/core/commit/79190e845bbe4f56d2cc44c3204d76a29dc51533))
+* **runtime-vapor:** properly resolve event handler in dynamic props ([#14514](https://github.com/vuejs/core/issues/14514)) ([6764170](https://github.com/vuejs/core/commit/67641706ba4571859b92ce28e2f45f0bc5f5af6e))
+* **runtime-vapor:** properly set ref on dynamic component + vdom component ([#14496](https://github.com/vuejs/core/issues/14496)) ([e05c850](https://github.com/vuejs/core/commit/e05c8503363247c59983209ca51034bf7fb04e2f))
+* **runtime-vapor:** should not pass reserved props into vapor attrs on update ([#14524](https://github.com/vuejs/core/issues/14524)) ([91f1483](https://github.com/vuejs/core/commit/91f14836692f67177e4fc84866b372220160d6df))
+* **runtime-vapor:** TransitionGroup with v-if + v-for not applying transition hooks ([#14571](https://github.com/vuejs/core/issues/14571)) ([508edbe](https://github.com/vuejs/core/commit/508edbe3c22d6050d269d09a1219ad671c98f7ee)), closes [#14564](https://github.com/vuejs/core/issues/14564) [#14569](https://github.com/vuejs/core/issues/14569)
+* **transition:** handle rapid in-out transition toggles ([#14540](https://github.com/vuejs/core/issues/14540)) ([452290d](https://github.com/vuejs/core/commit/452290ddaab2b490ad8116c1592ccc356664e548)), closes [#14539](https://github.com/vuejs/core/issues/14539)
+* **vapor:** infer component multi-root metadata from SFC templates for hydration ([#14530](https://github.com/vuejs/core/issues/14530)) ([c531937](https://github.com/vuejs/core/commit/c531937c5caacb67751b9b2c380d41684b9a6ea8))
+
+
 # [3.6.0-beta.7](https://github.com/vuejs/core/compare/v3.5.29...v3.6.0-beta.7) (2026-02-27)
 
 
