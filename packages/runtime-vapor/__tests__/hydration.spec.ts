@@ -3883,6 +3883,19 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('enabled teleport with null target', async () => {
+      const { container } = await mountWithHydration(
+        '<!--teleport start--><!--teleport end-->',
+        `<teleport to="#non-existent-target-hydrate">
+          <div>content</div>
+        </teleport>`,
+      )
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><div>content</div><!--teleport end-->`,
+      )
+      expect('Failed to locate Teleport target').toHaveBeenWarned()
+    })
+
     test('should apply css vars after hydration', async () => {
       const state = reactive({ color: 'red' })
 
