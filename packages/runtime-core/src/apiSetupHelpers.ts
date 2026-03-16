@@ -233,6 +233,22 @@ export function defineOptions<
   }
 }
 
+/**
+ * Vue `<script setup>` compiler macro for providing type hints to IDEs for
+ * slot name and slot props type checking.
+ *
+ * Example usage:
+ * ```ts
+ * const slots = defineSlots<{
+ *   default(props: { msg: string }): any
+ * }>()
+ * ```
+ *
+ * This is only usable inside `<script setup>`, is compiled away in the
+ * output and should **not** be actually called at runtime.
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineslots}
+ */
 export function defineSlots<
   S extends Record<string, any> = Record<string, any>,
 >(): StrictUnwrapSlotsType<SlotsType<S>> {
