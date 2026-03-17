@@ -190,6 +190,7 @@ export class TeleportFragment extends VaporFragment {
       )
       this.isMounted = true
     }
+    updateCssVars(this)
   }
 
   private mountToTarget(): void {
@@ -224,7 +225,6 @@ export class TeleportFragment extends VaporFragment {
       }
 
       this.mount(target, this.targetAnchor!)
-      updateCssVars(this)
     } else if (__DEV__) {
       warn(
         `Invalid Teleport target on ${this.targetAnchor ? 'update' : 'mount'}:`,
@@ -241,7 +241,6 @@ export class TeleportFragment extends VaporFragment {
     // mount into main container
     if (this.isDisabled) {
       this.mount(this.parent, this.anchor!)
-      updateCssVars(this)
     }
     // mount into target container
     else {
