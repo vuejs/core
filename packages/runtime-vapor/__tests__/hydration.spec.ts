@@ -9,6 +9,7 @@ import {
   delegateEvents,
   renderEffect,
   setStyle,
+  setText,
   template,
   useVaporCssVars,
 } from '../src'
@@ -3994,6 +3995,64 @@ describe('Vapor Mode hydration', () => {
         `<!--teleport start--><!--teleport end-->`,
       )
       expect('Failed to locate Teleport target').toHaveBeenWarned()
+    })
+
+    test('enabled teleport with null target should delay child setup until target becomes available', async () => {
+      const version = ref('one')
+      const target = ref<any>('#non-existent-target-hydrate-late')
+      const setups: string[] = []
+
+      const Child = defineVaporComponent({
+        props: { msg: String },
+        setup(props) {
+          setups.push(String(props.msg))
+          const n0 = template('<div> </div>')() as any
+          const x0 = child(n0) as any
+          renderEffect(() => setText(x0, String(props.msg)))
+          return n0
+        },
+      })
+
+      const App = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VaporTeleport,
+            { to: () => target.value },
+            {
+              default: () => {
+                const current = version.value
+                return createComponent(Child, { msg: () => current })
+              },
+            },
+          )
+        },
+      })
+
+      const container = document.createElement('div')
+      container.innerHTML = '<!--teleport start--><!--teleport end-->'
+      document.body.appendChild(container)
+
+      const app = createVaporSSRApp(App)
+      app.mount(container)
+
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><!--teleport end-->`,
+      )
+      expect(setups).toEqual([])
+      expect('Failed to locate Teleport target').toHaveBeenWarned()
+
+      version.value = 'two'
+      await nextTick()
+      version.value = 'three'
+      await nextTick()
+      expect(setups).toEqual([])
+
+      const targetEl = document.createElement('div')
+      target.value = targetEl
+      await nextTick()
+
+      expect(setups).toEqual(['three'])
+      expect(targetEl.innerHTML).toBe('<div>three</div>')
     })
 
     test('should apply css vars after hydration', async () => {
