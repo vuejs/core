@@ -123,6 +123,39 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(html()).toBe('bar|false')
     })
+
+    test('should invoke onVnodeMounted and onVnodeUnmounted', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor</div>')()
+        },
+      })
+
+      const show = ref(true)
+      const vnodeMounted = vi.fn()
+      const vnodeUnmounted = vi.fn()
+
+      const { html } = define({
+        setup() {
+          return () =>
+            show.value
+              ? h(VaporChild as any, {
+                  onVnodeMounted: vnodeMounted,
+                  onVnodeUnmounted: vnodeUnmounted,
+                })
+              : null
+        },
+      }).render()
+      await nextTick()
+
+      expect(html()).toBe('<div>vapor</div>')
+      expect(vnodeMounted).toHaveBeenCalledTimes(1)
+      expect(vnodeUnmounted).toHaveBeenCalledTimes(0)
+
+      show.value = false
+      await nextTick()
+      expect(vnodeUnmounted).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('v-model', () => {
@@ -1988,6 +2021,61 @@ describe('vdomInterop', () => {
       current.value = VaporChild
       await nextTick()
       expect(root.innerHTML).toBe('<div>updated</div>')
+    })
+
+    test('should invoke vnode hooks on activate/deactivate', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor</div>')()
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('span', 'vdom')
+        },
+      })
+
+      const current = shallowRef<any>(VaporChild)
+      const vnodeMounted = vi.fn()
+      const vnodeUnmounted = vi.fn()
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(KeepAlive, null, {
+              default: () =>
+                h(
+                  resolveDynamicComponent(current.value) as any,
+                  current.value === VaporChild
+                    ? {
+                        onVnodeMounted: vnodeMounted,
+                        onVnodeUnmounted: vnodeUnmounted,
+                      }
+                    : null,
+                ),
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      await nextTick()
+
+      expect(vnodeMounted).toHaveBeenCalledTimes(1)
+      expect(vnodeUnmounted).toHaveBeenCalledTimes(0)
+
+      // Deactivate vapor child
+      current.value = VdomChild
+      await nextTick()
+      expect(vnodeUnmounted).toHaveBeenCalledTimes(1)
+
+      // Reactivate vapor child
+      current.value = VaporChild
+      await nextTick()
+      expect(vnodeMounted).toHaveBeenCalledTimes(2)
     })
   })
 })

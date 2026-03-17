@@ -2,6 +2,7 @@ import {
   type App,
   type ComponentInternalInstance,
   type ConcreteComponent,
+  ErrorCodes,
   Fragment,
   type FunctionalComponent,
   type HydrationRenderer,
@@ -20,6 +21,7 @@ import {
   type VNodeArrayChildren,
   type VNodeNormalizedRef,
   type VaporInteropInterface,
+  callWithAsyncErrorHandling,
   createInternalObject,
   createVNode,
   currentInstance,
@@ -210,6 +212,19 @@ const vaporInteropImpl: Omit<
 
     mountComponent(instance, container, selfAnchor)
 
+    // invoke onVnodeMounted hook
+    queuePostFlushCb(() => {
+      const vnodeHook = vnode.props && vnode.props.onVnodeMounted
+      if (vnodeHook) {
+        callWithAsyncErrorHandling(
+          vnodeHook,
+          parentComponent,
+          ErrorCodes.VNODE_HOOK,
+          [vnode],
+        )
+      }
+    })
+
     simpleSetCurrentInstance(prev)
     return instance
   },
@@ -251,6 +266,18 @@ const vaporInteropImpl: Omit<
       remove(vnode.vb, container)
     }
     remove(vnode.anchor as Node, container)
+    // invoke onVnodeUnmounted hook
+    const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
+    if (vnodeHook) {
+      queuePostFlushCb(() => {
+        callWithAsyncErrorHandling(
+          vnodeHook,
+          instance && instance.parent,
+          ErrorCodes.VNODE_HOOK,
+          [vnode],
+        )
+      })
+    }
   },
 
   /**
@@ -358,11 +385,34 @@ const vaporInteropImpl: Omit<
     // in case props have changed while deactivated
     instance.rawPropsRef!.value = filterReservedProps(vnode.props)
     instance.rawSlotsRef!.value = vnode.children
+    queuePostFlushCb(() => {
+      const vnodeHook = vnode.props && vnode.props.onVnodeMounted
+      if (vnodeHook) {
+        callWithAsyncErrorHandling(
+          vnodeHook,
+          parentComponent,
+          ErrorCodes.VNODE_HOOK,
+          [vnode],
+        )
+      }
+    })
   },
 
   deactivate(vnode, container) {
-    deactivate(vnode.component as any, container)
+    const instance = vnode.component as any as VaporComponentInstance
+    deactivate(instance, container)
     insert(vnode.anchor as any, container)
+    queuePostFlushCb(() => {
+      const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
+      if (vnodeHook) {
+        callWithAsyncErrorHandling(
+          vnodeHook,
+          instance.parent,
+          ErrorCodes.VNODE_HOOK,
+          [vnode],
+        )
+      }
+    })
   },
 }
 
