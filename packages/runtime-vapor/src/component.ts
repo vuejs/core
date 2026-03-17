@@ -23,6 +23,7 @@ import {
   expose,
   getComponentName,
   getFunctionalFallthrough,
+  invalidateMount,
   isAsyncWrapper,
   isKeepAlive,
   markAsyncBoundary,
@@ -935,6 +936,8 @@ export function unmountComponent(
     if (__DEV__) {
       unregisterHMR(instance)
     }
+    invalidateMount(instance.m)
+    invalidateMount(instance.a)
     if (instance.bum) {
       invokeArrayFns(instance.bum)
     }

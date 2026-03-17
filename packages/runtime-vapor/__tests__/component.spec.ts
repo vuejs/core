@@ -4,6 +4,7 @@ import {
   type Ref,
   inject,
   nextTick,
+  onBeforeMount,
   onMounted,
   onUpdated,
   provide,
@@ -558,6 +559,37 @@ describe('component', () => {
     expect(
       'Unhandled error during execution of setup function',
     ).not.toHaveBeenWarned()
+  })
+
+  it('should invalidate pending mounted hooks when unmounted before flush', async () => {
+    const mountedSpy = vi.fn()
+    const show = ref(false)
+
+    const Child = defineVaporComponent({
+      setup() {
+        onBeforeMount(() => {
+          show.value = false
+        })
+        onMounted(mountedSpy)
+        return template('<div>child</div>')()
+      },
+    })
+
+    define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => createComponent(Child),
+        )
+      },
+    }).render()
+
+    expect(mountedSpy).toHaveBeenCalledTimes(0)
+
+    show.value = true
+    await nextTick()
+
+    expect(mountedSpy).toHaveBeenCalledTimes(0)
   })
 })
 
