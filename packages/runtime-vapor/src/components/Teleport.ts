@@ -3,6 +3,8 @@ import {
   type GenericComponentInstance,
   MismatchTypes,
   MoveType,
+  type SchedulerJob,
+  SchedulerJobFlags,
   type TeleportProps,
   type TeleportTargetElement,
   isMismatchAllowed,
@@ -81,6 +83,8 @@ export class TeleportFragment extends VaporFragment {
   placeholder?: Node
   mountContainer?: ParentNode | null
   mountAnchor?: Node | null
+
+  private mountToTargetJob?: SchedulerJob
 
   constructor(props: LooseRawProps, slots?: LooseRawSlots | null) {
     super([])
@@ -273,7 +277,21 @@ export class TeleportFragment extends VaporFragment {
         // typically due to an early insertion caused by setInsertionState.
         !this.parent!.isConnected
       ) {
-        queuePostFlushCb(this.mountToTarget.bind(this))
+        // Reuse one queued mount job per Teleport instance so repeated
+        // updates in the same flush don't enqueue duplicate target mounts.
+        // If the previous job was disposed during unmount, recreate it.
+        if (
+          !this.mountToTargetJob ||
+          this.mountToTargetJob.flags! & SchedulerJobFlags.DISPOSED
+        ) {
+          this.mountToTargetJob = () => {
+            this.mountToTargetJob = undefined
+            // State may have changed before the post-flush job runs.
+            if (this.isDisabled || !this.anchor) return
+            this.mountToTarget()
+          }
+        }
+        queuePostFlushCb(this.mountToTargetJob)
       } else {
         this.mountToTarget()
       }
@@ -297,6 +315,11 @@ export class TeleportFragment extends VaporFragment {
   }
 
   remove = (parent: ParentNode | undefined = this.parent!): void => {
+    if (this.mountToTargetJob) {
+      this.mountToTargetJob.flags! |= SchedulerJobFlags.DISPOSED
+      this.mountToTargetJob = undefined
+    }
+
     // remove nodes
     if (this.nodes && this.mountContainer) {
       remove(this.nodes, this.mountContainer)

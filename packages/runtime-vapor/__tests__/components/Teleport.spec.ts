@@ -130,6 +130,35 @@ describe('renderer: VaporTeleport', () => {
         `<!--teleport start--><!--teleport end--><div>Footer</div><div id="targetId"><div>bar</div></div><!--if-->`,
       )
     })
+
+    test('should not mount deferred teleport content after unmount', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      const show = ref(true)
+      const { mount } = define({
+        setup() {
+          return createIf(
+            () => show.value,
+            () =>
+              createComp(
+                VaporTeleport,
+                {
+                  to: () => target,
+                  defer: () => true,
+                },
+                { default: () => template('<div>teleported</div>')() },
+              ),
+            () => template('<div>root</div>')(),
+          )
+        },
+      }).create()
+      mount(root)
+
+      show.value = false
+      await nextTick()
+
+      expect(target.innerHTML).toBe('')
+    })
   })
 
   describe('HMR', () => {
