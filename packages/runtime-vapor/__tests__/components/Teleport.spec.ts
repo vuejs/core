@@ -814,6 +814,7 @@ function runSharedTests(deferMode: boolean): void {
       '<!--teleport start--><!--teleport end--><div>root</div>',
     )
     expect(targetA.innerHTML).toBe('<div>teleported</div>')
+    expect(targetA.childNodes.length).toBe(3)
 
     target.value = '#missing-teleport-target'
     await nextTick()
@@ -824,9 +825,11 @@ function runSharedTests(deferMode: boolean): void {
       '<!--teleport start--><!--teleport end--><div>root</div>',
     )
     expect(targetA.innerHTML).toBe('<div>teleported</div>')
+    expect(targetA.childNodes.length).toBe(3)
 
     app.unmount()
     expect(targetA.innerHTML).toBe('')
+    expect(targetA.childNodes.length).toBe(0)
   })
 
   test('should update children', async () => {

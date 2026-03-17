@@ -306,6 +306,7 @@ describe('renderer: teleport', () => {
         `<!--teleport start--><!--teleport end-->`,
       )
       expect(serializeInner(targetA)).toBe(`<div>teleported</div>`)
+      expect(targetA.children.length).toBe(3)
 
       to.value = null
       await nextTick()
@@ -315,9 +316,11 @@ describe('renderer: teleport', () => {
         `<!--teleport start--><!--teleport end-->`,
       )
       expect(serializeInner(targetA)).toBe(`<div>teleported</div>`)
+      expect(targetA.children.length).toBe(3)
 
       render(null, root)
       expect(serializeInner(targetA)).toBe(``)
+      expect(targetA.children.length).toBe(0)
     })
 
     test('move cached text nodes', async () => {

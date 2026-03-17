@@ -287,6 +287,7 @@ export const TeleportImpl = {
               TeleportMoveTypes.TARGET_CHANGE,
             )
           } else if (__DEV__) {
+            n2.target = target
             warn(
               'Invalid Teleport target on update:',
               target,
