@@ -563,6 +563,13 @@ describe('compiler: transform slot', () => {
       })
     })
 
+    test('comments cannot be treated as default child nodes', () => {
+      const onError = vi.fn()
+      const source = `<Comp><template #default>foo</template><!--  --></Comp>`
+      compileWithSlots(source, { onError })
+      expect(onError).not.toHaveBeenCalled()
+    })
+
     test('error on duplicated slot names', () => {
       const onError = vi.fn()
       const source = `<Comp><template #foo></template><template #foo></template></Comp>`
