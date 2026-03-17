@@ -272,6 +272,108 @@ describe('renderer: VaporTeleport', () => {
       expect(target.innerHTML).toBe('<div>teleported</div>')
     })
 
+    test('child reload in nested teleport branch keeps content after parent reload', async () => {
+      const target = document.createElement('div')
+      const root = document.createElement('div')
+      const childId = 'test4-child-reload-nested-teleport'
+      const parentId = 'test4-parent-in-teleport-branch'
+
+      const { component: Child } = define({
+        __hmrId: childId,
+        setup() {
+          const msg = ref('teleported')
+          return { msg }
+        },
+        render(ctx) {
+          const n0 = template(`<div> </div>`)()
+          const x0 = child(n0 as any)
+          renderEffect(() => setText(x0 as any, ctx.msg))
+          return [n0]
+        },
+      })
+      createRecord(childId, Child as any)
+
+      const { mount, component: Parent } = define({
+        __hmrId: parentId,
+        components: { Child },
+        setup() {
+          const show = ref(true)
+          return { show, target }
+        },
+        render(ctx) {
+          return createComp(
+            VaporTeleport,
+            { to: () => target },
+            {
+              default: () =>
+                createIf(
+                  () => ctx.show,
+                  () =>
+                    createIf(
+                      () => true,
+                      () => createComp(Child),
+                      () => template('<span>fallback</span>')(),
+                    ),
+                ),
+            },
+          )
+        },
+      }).create()
+      createRecord(parentId, Parent as any)
+
+      mount(root)
+      expect(target.innerHTML).toContain('teleported')
+
+      reload(childId, {
+        __hmrId: childId,
+        __vapor: true,
+        setup() {
+          const msg = ref('teleported 2')
+          return { msg }
+        },
+        render(ctx: any) {
+          const n0 = template(`<div> </div>`)()
+          const x0 = child(n0 as any)
+          renderEffect(() => setText(x0 as any, ctx.msg))
+          return [n0]
+        },
+      })
+      await nextTick()
+      expect(target.textContent).toBe('teleported 2')
+
+      reload(
+        parentId,
+        define({
+          __hmrId: parentId,
+          components: { Child },
+          setup() {
+            const show = ref(true)
+            return { show, target }
+          },
+          render(ctx) {
+            return createComp(
+              VaporTeleport,
+              { to: () => target },
+              {
+                default: () =>
+                  createIf(
+                    () => ctx.show,
+                    () =>
+                      createIf(
+                        () => true,
+                        () => createComp(Child),
+                        () => template('<span>fallback</span>')(),
+                      ),
+                  ),
+              },
+            )
+          },
+        }),
+      )
+      await nextTick()
+      expect(target.innerHTML).toContain('teleported 2')
+    })
+
     test('reload child + reload parent', async () => {
       const target = document.createElement('div')
       const root = document.createElement('div')

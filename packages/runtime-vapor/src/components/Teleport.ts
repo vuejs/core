@@ -160,13 +160,25 @@ export class TeleportFragment extends VaporFragment {
     }
 
     if (__DEV__) {
-      if (isVaporComponent(block)) {
-        block.parentTeleport = this
-      } else if (isArray(block)) {
-        block.forEach(
-          node => isVaporComponent(node) && (node.parentTeleport = this),
-        )
+      this.bindParentTeleport(block)
+    }
+  }
+
+  private bindParentTeleport(block: Block): void {
+    if (isVaporComponent(block)) {
+      block.parentTeleport = this
+      return
+    }
+
+    if (isArray(block)) {
+      for (const node of block) {
+        this.bindParentTeleport(node)
       }
+      return
+    }
+
+    if (isFragment(block)) {
+      this.bindParentTeleport(block.nodes)
     }
   }
 
