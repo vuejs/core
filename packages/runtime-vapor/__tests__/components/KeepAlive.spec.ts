@@ -1820,4 +1820,44 @@ describe('VaporKeepAlive', () => {
       expect(inputEl.value).toBe('vdom')
     })
   })
+
+  test('should invalidate pending mount/activated hooks when deactivated before post flush', async () => {
+    const mountedSpy = vi.fn()
+    const activatedSpy = vi.fn()
+
+    const show = ref(false)
+
+    const Child = defineVaporComponent({
+      name: 'Child',
+      setup() {
+        onBeforeMount(() => {
+          show.value = false
+        })
+        onMounted(mountedSpy)
+        onActivated(activatedSpy)
+        return template('<div>child</div>')()
+      },
+    })
+
+    define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => show.value,
+              () => createComponent(Child),
+            ),
+        })
+      },
+    }).render()
+
+    expect(mountedSpy).toHaveBeenCalledTimes(0)
+    expect(activatedSpy).toHaveBeenCalledTimes(0)
+
+    show.value = true
+    await nextTick()
+
+    expect(mountedSpy).toHaveBeenCalledTimes(0)
+    expect(activatedSpy).toHaveBeenCalledTimes(0)
+  })
 })

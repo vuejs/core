@@ -8,6 +8,7 @@ import {
   currentInstance,
   devtoolsComponentAdded,
   getComponentName,
+  invalidateMount,
   isAsyncWrapper,
   isVNode,
   matches,
@@ -478,6 +479,9 @@ export function deactivate(
   instance: VaporComponentInstance,
   container: ParentNode,
 ): void {
+  invalidateMount(instance.m)
+  invalidateMount(instance.a)
+
   move(instance.block, container, null, MoveType.LEAVE, instance)
 
   queuePostFlushCb(() => {

@@ -635,7 +635,11 @@ export { devtoolsComponentAdded } from './devtools'
 /**
  * @internal
  */
-export { performTransitionEnter, performTransitionLeave } from './renderer'
+export {
+  performTransitionEnter,
+  performTransitionLeave,
+  invalidateMount,
+} from './renderer'
 /**
  * @internal
  */
