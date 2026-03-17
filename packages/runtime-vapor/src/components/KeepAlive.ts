@@ -86,11 +86,15 @@ type CompositeKey = {
   branchKey: any
 }
 
-const compositeKeyCache = new WeakMap<object, Map<any, CompositeKey>>()
-const compositeKeyCachePrimitive = new Map<any, Map<any, CompositeKey>>()
+// Returns a stable composite key object for a given (type, branchKey) pair.
+// Caches are passed as parameters (per KeepAlive instance) to avoid
+// module-level Map leaks for primitive type keys (e.g. string tag names
+// from VDOM interop).
 function getCompositeKey(
   type: VaporComponent | VNode['type'],
   branchKey: any,
+  compositeKeyCache: WeakMap<object, Map<any, CompositeKey>>,
+  compositeKeyCachePrimitive: Map<any, Map<any, CompositeKey>>,
 ): CacheKey {
   const isObjectType = isObject(type) || isFunction(type)
   const perType = isObjectType
@@ -137,6 +141,53 @@ const VaporKeepAliveImpl = defineVaporComponent({
     const keys: Keys = new Set()
     const storageContainer = createElement('div')
     const keptAliveScopes = new Map<any, EffectScope>()
+    // Per-instance composite key caches for generating stable cache keys.
+    // Using WeakMap for object types (auto GC) and Map for primitive types
+    // (e.g. string tag names from VDOM interop). Both are per-instance so
+    // they are cleaned up when the KeepAlive instance is destroyed.
+    const compositeKeyCache = new WeakMap<object, Map<any, CompositeKey>>()
+    const compositeKeyCachePrimitive = new Map<any, Map<any, CompositeKey>>()
+
+    const resolveKey = (
+      type: VaporComponent | VNode['type'],
+      key?: any,
+      branchKey?: any,
+    ): CacheKey => {
+      if (key != null) {
+        return getCompositeKey(
+          type,
+          key,
+          compositeKeyCache,
+          compositeKeyCachePrimitive,
+        )
+      }
+      if (branchKey !== undefined) {
+        return getCompositeKey(
+          type,
+          branchKey,
+          compositeKeyCache,
+          compositeKeyCachePrimitive,
+        )
+      }
+      return type as CacheKey
+    }
+
+    const getCacheKey = (
+      block: VaporComponentInstance | VaporFragment,
+      interop: boolean,
+      branchKey?: any,
+    ): CacheKey => {
+      if (interop && isInteropEnabled) {
+        const frag = block as VaporFragment
+        return resolveKey(
+          frag.vnode!.type,
+          frag.$key !== undefined ? frag.$key : frag.vnode!.key,
+          branchKey,
+        )
+      }
+      const instance = block as VaporComponentInstance
+      return resolveKey(instance.type, instance.key, branchKey)
+    }
     // Track active keyed DynamicFragment branch key so KeepAlive can combine
     // branch key + component type into a stable isolated cache key.
     let currentBranchKey: any | undefined
@@ -399,37 +450,6 @@ type InnerBlockResult =
   | [VaporFragment, true]
   | [VaporComponentInstance, false]
   | [undefined, false]
-
-function resolveKey(
-  type: VaporComponent | VNode['type'],
-  key?: any,
-  branchKey?: any,
-): CacheKey {
-  if (key != null) {
-    return getCompositeKey(type, key)
-  }
-  if (branchKey !== undefined) {
-    return getCompositeKey(type, branchKey)
-  }
-  return type as CacheKey
-}
-
-function getCacheKey(
-  block: VaporComponentInstance | VaporFragment,
-  interop: boolean,
-  branchKey?: any,
-): CacheKey {
-  if (interop && isInteropEnabled) {
-    const frag = block as VaporFragment
-    return resolveKey(
-      frag.vnode!.type,
-      frag.$key !== undefined ? frag.$key : frag.vnode!.key,
-      branchKey,
-    )
-  }
-  const instance = block as VaporComponentInstance
-  return resolveKey(instance.type, instance.key, branchKey)
-}
 
 function getInnerBlock(block: Block): InnerBlockResult {
   if (isVaporComponent(block)) {
