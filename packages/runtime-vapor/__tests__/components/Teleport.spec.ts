@@ -711,6 +711,27 @@ function runSharedTests(deferMode: boolean): void {
     expect(target.innerHTML).toBe('<div>teleported</div>')
   })
 
+  test('should handle missing slots without crashing', () => {
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+
+    const { mount } = define({
+      setup() {
+        const n0 = createComponent(VaporTeleport, {
+          to: () => target,
+        })
+        const n1 = template('<div>root</div>')()
+        return [n0, n1]
+      },
+    }).create()
+    mount(root)
+
+    expect(root.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><div>root</div>',
+    )
+    expect(target.innerHTML).toBe('')
+  })
+
   test('should work with SVG', async () => {
     const svg = ref()
     const circle = ref()
