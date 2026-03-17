@@ -1932,4 +1932,62 @@ describe('vdomInterop', () => {
       expect(html()).toContain('<span>resolved</span>')
     })
   })
+
+  describe('KeepAlive', () => {
+    test('should update props on reactivation of vapor child in vdom KeepAlive', async () => {
+      const VaporChild = defineVaporComponent({
+        props: { msg: String },
+        setup(props: any) {
+          const n0 = template('<div> </div>')() as any
+          const x0 = child(n0) as any
+          renderEffect(() => setText(x0, props.msg))
+          return n0
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('span', 'vdom')
+        },
+      })
+
+      const current = shallowRef<any>(VaporChild)
+      const msg = ref('hello')
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(KeepAlive, null, {
+              default: () =>
+                h(
+                  resolveDynamicComponent(current.value) as any,
+                  current.value === VaporChild ? { msg: msg.value } : null,
+                ),
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('<div>hello</div>')
+
+      // Switch to vdom child (deactivates vapor child)
+      current.value = VdomChild
+      await nextTick()
+      expect(root.innerHTML).toBe('<span>vdom</span>')
+
+      // Change props while vapor child is deactivated
+      msg.value = 'updated'
+      await nextTick()
+      expect(root.innerHTML).toBe('<span>vdom</span>')
+
+      // Reactivate vapor child — should reflect new props
+      current.value = VaporChild
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>updated</div>')
+    })
+  })
 })
