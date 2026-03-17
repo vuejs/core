@@ -292,6 +292,34 @@ describe('renderer: teleport', () => {
       expect(serializeInner(targetB)).toBe(`<div>teleported</div>`)
     })
 
+    test('should clean up anchors when target becomes invalid', async () => {
+      const targetA = nodeOps.createElement('div')
+      const to = ref<any>(targetA)
+      const root = nodeOps.createElement('div')
+
+      render(
+        h(() => h(Teleport, { to: to.value }, h('div', 'teleported'))),
+        root,
+      )
+
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end-->`,
+      )
+      expect(serializeInner(targetA)).toBe(`<div>teleported</div>`)
+
+      to.value = null
+      await nextTick()
+      expect('Invalid Teleport target').toHaveBeenWarned()
+
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end-->`,
+      )
+      expect(serializeInner(targetA)).toBe(`<div>teleported</div>`)
+
+      render(null, root)
+      expect(serializeInner(targetA)).toBe(``)
+    })
+
     test('move cached text nodes', async () => {
       document.body.innerHTML = ''
       const root = document.createElement('div')

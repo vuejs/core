@@ -787,6 +787,48 @@ function runSharedTests(deferMode: boolean): void {
     expect(targetB.innerHTML).toBe('<div>teleported</div>')
   })
 
+  test('should clean up anchors when target becomes invalid', async () => {
+    const targetA = document.createElement('div')
+    const target = ref<any>(targetA)
+    const root = document.createElement('div')
+
+    const { app } = define({
+      setup() {
+        const n0 = createComponent(
+          VaporTeleport,
+          {
+            to: () => target.value,
+          },
+          {
+            default: () => template('<div>teleported</div>')(),
+          },
+        )
+        const n1 = template('<div>root</div>')()
+        return [n0, n1]
+      },
+    }).create()
+
+    app.mount(root)
+
+    expect(root.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><div>root</div>',
+    )
+    expect(targetA.innerHTML).toBe('<div>teleported</div>')
+
+    target.value = '#missing-teleport-target'
+    await nextTick()
+    expect('Failed to locate Teleport target').toHaveBeenWarned()
+    expect('Invalid Teleport target on update').toHaveBeenWarned()
+
+    expect(root.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><div>root</div>',
+    )
+    expect(targetA.innerHTML).toBe('<div>teleported</div>')
+
+    app.unmount()
+    expect(targetA.innerHTML).toBe('')
+  })
+
   test('should update children', async () => {
     const target = document.createElement('div')
     const root = document.createElement('div')
