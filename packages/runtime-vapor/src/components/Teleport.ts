@@ -50,7 +50,10 @@ const VaporTeleportImpl = {
   __isTeleport: true,
   __vapor: true,
 
-  process(props: LooseRawProps, slots: LooseRawSlots): TeleportFragment {
+  process(
+    props: LooseRawProps,
+    slots?: LooseRawSlots | null,
+  ): TeleportFragment {
     return new TeleportFragment(props, slots)
   },
 }
@@ -64,7 +67,7 @@ export class TeleportFragment extends VaporFragment {
   anchor?: Node
   private rawProps?: LooseRawProps
   private resolvedProps?: TeleportProps
-  private rawSlots?: LooseRawSlots
+  private rawSlots?: LooseRawSlots | null
   isDisabled?: boolean
   private isMounted = false
   private childrenInitialized = false
@@ -79,7 +82,7 @@ export class TeleportFragment extends VaporFragment {
   mountContainer?: ParentNode | null
   mountAnchor?: Node | null
 
-  constructor(props: LooseRawProps, slots: LooseRawSlots) {
+  constructor(props: LooseRawProps, slots?: LooseRawSlots | null) {
     super([])
     this.rawProps = props
     this.rawSlots = slots
@@ -123,7 +126,9 @@ export class TeleportFragment extends VaporFragment {
       renderEffect(() =>
         this.runWithRenderCtx(() =>
           this.handleChildrenUpdate(
-            this.rawSlots!.default && (this.rawSlots!.default as BlockFn)(),
+            this.rawSlots && this.rawSlots.default
+              ? (this.rawSlots.default as BlockFn)()
+              : [],
           ),
         ),
       )
