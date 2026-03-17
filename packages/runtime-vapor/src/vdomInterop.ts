@@ -73,7 +73,11 @@ import {
 } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
-import { currentSlotScopeIds } from './componentSlots'
+import {
+  currentSlotOwner,
+  currentSlotScopeIds,
+  setCurrentSlotOwner,
+} from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { _next, createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -768,6 +772,8 @@ function renderVDOMSlot(
 ): VaporFragment {
   const suspense = currentParentSuspense || parentComponent.suspense
   const frag = new VaporFragment([])
+  const instance = currentInstance
+  const slotOwner = currentSlotOwner
 
   if (fallback && !frag.fallback) frag.fallback = fallback
 
@@ -809,117 +815,128 @@ function renderVDOMSlot(
   }
 
   const render = (parentNode?: ParentNode, anchor?: Node | null) => {
-    renderEffect(() => {
-      const effectiveFallback = frag.fallback || fallback
-      let slotContent: VNode | Block | undefined
-      let isEmpty = true
-      let emptyFrag: VaporFragment | null = null
+    const prev = currentInstance
+    simpleSetCurrentInstance(instance)
+    try {
+      renderEffect(() => {
+        const prevSlotOwner = setCurrentSlotOwner(slotOwner)
+        try {
+          const effectiveFallback = frag.fallback || fallback
+          let slotContent: VNode | Block | undefined
+          let isEmpty = true
+          let emptyFrag: VaporFragment | null = null
 
-      if (slotsRef.value) {
-        slotContent = renderSlot(
-          slotsRef.value,
-          isFunction(name) ? name() : name,
-          props,
-        )
-
-        if (isVNode(slotContent)) {
-          const children = slotContent.children as VNode[]
-          // handle forwarded vapor slot without its own fallback
-          // use the fallback provided by the slot outlet
-          ensureVaporSlotFallback(
-            children,
-            effectiveFallback as () => VNodeArrayChildren,
-          )
-          isEmpty = children.length === 0
-        } else {
-          if (effectiveFallback && slotContent) {
-            emptyFrag = attachSlotFallback(slotContent, () =>
-              effectiveFallback(internals, parentComponent),
+          if (slotsRef.value) {
+            slotContent = renderSlot(
+              slotsRef.value,
+              isFunction(name) ? name() : name,
+              props,
             )
+
+            if (isVNode(slotContent)) {
+              const children = slotContent.children as VNode[]
+              // handle forwarded vapor slot without its own fallback
+              // use the fallback provided by the slot outlet
+              ensureVaporSlotFallback(
+                children,
+                effectiveFallback as () => VNodeArrayChildren,
+              )
+              isEmpty = children.length === 0
+            } else {
+              if (effectiveFallback && slotContent) {
+                emptyFrag = attachSlotFallback(slotContent, () =>
+                  effectiveFallback(internals, parentComponent),
+                )
+              }
+              isEmpty = !isValidBlock(slotContent)
+            }
           }
-          isEmpty = !isValidBlock(slotContent)
-        }
-      }
 
-      let resolved = slotContent
-      if (isEmpty && effectiveFallback) {
-        if (isVNode(slotContent)) {
-          resolved = effectiveFallback(internals, parentComponent)
-        } else if (slotContent) {
-          resolved = renderSlotFallback(
-            slotContent,
-            () => effectiveFallback(internals, parentComponent),
-            emptyFrag,
-          )
-        } else {
-          resolved = effectiveFallback(internals, parentComponent)
-        }
-      }
+          let resolved = slotContent
+          if (isEmpty && effectiveFallback) {
+            if (isVNode(slotContent)) {
+              resolved = effectiveFallback(internals, parentComponent)
+            } else if (slotContent) {
+              resolved = renderSlotFallback(
+                slotContent,
+                () => effectiveFallback(internals, parentComponent),
+                emptyFrag,
+              )
+            } else {
+              resolved = effectiveFallback(internals, parentComponent)
+            }
+          }
 
-      if (isHydrating) {
-        if (isVNode(resolved)) {
-          hydrateVNode(resolved, parentComponent as any)
-          currentVNode = resolved
-          currentBlock = null
-          frag.nodes = resolved.el as any
-        } else if (resolved) {
-          currentBlock = resolved as Block
-          currentVNode = null
-          frag.nodes = resolved as any
-        } else {
-          currentBlock = null
-          currentVNode = null
+          if (isHydrating) {
+            if (isVNode(resolved)) {
+              hydrateVNode(resolved, parentComponent as any)
+              currentVNode = resolved
+              currentBlock = null
+              frag.nodes = resolved.el as any
+            } else if (resolved) {
+              currentBlock = resolved as Block
+              currentVNode = null
+              frag.nodes = resolved as any
+            } else {
+              currentBlock = null
+              currentVNode = null
+              frag.nodes = []
+            }
+            return
+          }
+
+          if (isVNode(resolved)) {
+            if (currentBlock) {
+              remove(currentBlock, parentNode)
+              currentBlock = null
+            }
+            internals.p(
+              currentVNode,
+              resolved,
+              parentNode!,
+              anchor,
+              parentComponent as any,
+              suspense,
+              undefined, // namespace
+              resolved.slotScopeIds, // pass slotScopeIds for :slotted styles
+            )
+            currentVNode = resolved
+            frag.nodes = resolved.el as any
+            return
+          }
+
+          if (resolved) {
+            if (currentVNode) {
+              internals.um(currentVNode, parentComponent as any, null, true)
+              currentVNode = null
+            }
+            if (currentBlock) {
+              remove(currentBlock, parentNode)
+            }
+            insert(resolved, parentNode!, anchor)
+            currentBlock = resolved
+            frag.nodes = resolved as any
+            return
+          }
+
+          if (currentBlock) {
+            remove(currentBlock, parentNode)
+            currentBlock = null
+          }
+          if (currentVNode) {
+            internals.um(currentVNode, parentComponent as any, null, true)
+            currentVNode = null
+          }
+
+          // mark as empty
           frag.nodes = []
+        } finally {
+          setCurrentSlotOwner(prevSlotOwner)
         }
-        return
-      }
-
-      if (isVNode(resolved)) {
-        if (currentBlock) {
-          remove(currentBlock, parentNode)
-          currentBlock = null
-        }
-        internals.p(
-          currentVNode,
-          resolved,
-          parentNode!,
-          anchor,
-          parentComponent as any,
-          suspense,
-          undefined, // namespace
-          resolved.slotScopeIds, // pass slotScopeIds for :slotted styles
-        )
-        currentVNode = resolved
-        frag.nodes = resolved.el as any
-        return
-      }
-
-      if (resolved) {
-        if (currentVNode) {
-          internals.um(currentVNode, parentComponent as any, null, true)
-          currentVNode = null
-        }
-        if (currentBlock) {
-          remove(currentBlock, parentNode)
-        }
-        insert(resolved, parentNode!, anchor)
-        currentBlock = resolved
-        frag.nodes = resolved as any
-        return
-      }
-
-      if (currentBlock) {
-        remove(currentBlock, parentNode)
-        currentBlock = null
-      }
-      if (currentVNode) {
-        internals.um(currentVNode, parentComponent as any, null, true)
-        currentVNode = null
-      }
-
-      // mark as empty
-      frag.nodes = []
-    })
+      })
+    } finally {
+      simpleSetCurrentInstance(prev)
+    }
   }
 
   frag.hydrate = () => {
