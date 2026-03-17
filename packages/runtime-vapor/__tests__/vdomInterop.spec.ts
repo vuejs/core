@@ -42,6 +42,7 @@ import {
   setText,
   template,
   vaporInteropPlugin,
+  withVaporCtx,
 } from '../src'
 
 const define = makeInteropRender()
@@ -1615,6 +1616,71 @@ describe('vdomInterop', () => {
       show.value = true
       await nextTick()
       expect(html()).toBe('slot text<!--if-->')
+    })
+
+    test('vdom slot fallback inside VaporKeepAlive should preserve render context', async () => {
+      const show = ref(true)
+
+      const VDomComp = defineComponent({
+        setup(_, { slots }) {
+          return () => renderSlot(slots, 'default')
+        },
+      })
+
+      const VaporFallback = defineVaporComponent({
+        setup() {
+          onBeforeMount(() => hooks.beforeMount())
+          onMounted(() => hooks.mounted())
+          onActivated(() => hooks.activated())
+          onDeactivated(() => hooks.deactivated())
+          onUnmounted(() => hooks.unmounted())
+          return template('<div>fallback</div>')() as any
+        },
+      })
+
+      const App = defineVaporComponent({
+        setup() {
+          return createComponent(VaporKeepAlive, null, {
+            default: withVaporCtx(() =>
+              createIf(
+                () => show.value,
+                () =>
+                  createComponent(
+                    VDomComp as any,
+                    null,
+                    {
+                      default: withVaporCtx(() =>
+                        createSlot('default', null, () =>
+                          createComponent(VaporFallback as any),
+                        ),
+                      ),
+                    },
+                    true,
+                  ),
+              ),
+            ),
+          })
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(App)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>fallback</div><!--if-->')
+      assertHookCalls(hooks, [1, 1, 1, 0, 0])
+
+      show.value = false
+      await nextTick()
+      expect(html()).toBe('<!--if-->')
+      assertHookCalls(hooks, [1, 1, 1, 1, 0])
+
+      show.value = true
+      await nextTick()
+      expect(html()).toBe('<div>fallback</div><!--if-->')
+      assertHookCalls(hooks, [1, 1, 2, 1, 0])
     })
 
     test('unmounting vapor slot should remove vnode slot content', async () => {
