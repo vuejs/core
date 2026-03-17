@@ -350,10 +350,6 @@ const VaporKeepAliveImpl = defineVaporComponent({
     onBeforeUnmount(() => {
       cache.forEach((cached, key) => {
         const instance = getInstanceFromCache(cached)
-        if (!instance) return
-
-        resetCachedShapeFlag(cached)
-        cache.delete(key)
 
         // current instance will be unmounted as part of keep-alive's unmount
         if (current) {
@@ -363,13 +359,17 @@ const VaporKeepAliveImpl = defineVaporComponent({
             currentBranchKey,
           )
           if (currentKey === key) {
+            resetCachedShapeFlag(cached)
             // call deactivated hook
-            const da = instance.da
-            da && queuePostFlushCb(da)
+            if (instance) {
+              const da = instance.da
+              da && queuePostFlushCb(da)
+            }
             return
           }
         }
 
+        resetCachedShapeFlag(cached)
         remove(cached, storageContainer)
       })
       keptAliveScopes.forEach(scope => scope.stop())
