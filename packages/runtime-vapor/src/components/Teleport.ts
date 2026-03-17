@@ -1,3 +1,4 @@
+import { pauseTracking, resetTracking } from '@vue/reactivity'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -138,23 +139,7 @@ export class TeleportFragment extends VaporFragment {
           setCurrentSlotOwner(prevOwner)
         }
       })
-      const nodes = this.nodes
-
-      // register updateCssVars to nested fragments's update hooks so that
-      // it will be called when root fragment changed
-      if (this.parentComponent && this.parentComponent.ut) {
-        this.registerUpdateCssVars(nodes)
-      }
-
-      if (__DEV__) {
-        if (isVaporComponent(nodes)) {
-          nodes.parentTeleport = this
-        } else if (isArray(nodes)) {
-          nodes.forEach(
-            node => isVaporComponent(node) && (node.parentTeleport = this),
-          )
-        }
-      }
+      this.bindChildren(this.nodes)
     } finally {
       setCurrentInstance(...prevInstance)
     }
@@ -179,6 +164,24 @@ export class TeleportFragment extends VaporFragment {
     }
   }
 
+  private bindChildren(block: Block): void {
+    // register updateCssVars to nested fragments's update hooks so that
+    // it will be called when root fragment changed
+    if (this.parentComponent && this.parentComponent.ut) {
+      this.registerUpdateCssVars(block)
+    }
+
+    if (__DEV__) {
+      if (isVaporComponent(block)) {
+        block.parentTeleport = this
+      } else if (isArray(block)) {
+        block.forEach(
+          node => isVaporComponent(node) && (node.parentTeleport = this),
+        )
+      }
+    }
+  }
+
   private handleChildrenUpdate(children: Block): void {
     if (isHydrating || !this.parent || !this.mountContainer) {
       this.nodes = children
@@ -189,6 +192,8 @@ export class TeleportFragment extends VaporFragment {
     remove(this.nodes, this.mountContainer!)
     // mount new nodes
     insert((this.nodes = children), this.mountContainer!, this.mountAnchor!)
+    this.bindChildren(this.nodes)
+    updateCssVars(this)
   }
 
   private mount(parent: ParentNode, anchor: Node | null) {
@@ -212,6 +217,7 @@ export class TeleportFragment extends VaporFragment {
       )
       this.isMounted = true
     }
+    updateCssVars(this)
   }
 
   private mountToTarget(): void {
@@ -248,7 +254,6 @@ export class TeleportFragment extends VaporFragment {
       }
 
       this.mount(target, this.targetAnchor!)
-      updateCssVars(this)
     } else if (__DEV__) {
       warn(
         `Invalid Teleport target on ${this.targetAnchor ? 'update' : 'mount'}:`,
@@ -266,7 +271,6 @@ export class TeleportFragment extends VaporFragment {
     if (this.isDisabled) {
       this.ensureChildrenInitialized()
       this.mount(this.parent, this.anchor!)
-      updateCssVars(this)
     }
     // mount into target container
     else {
@@ -499,6 +503,13 @@ function updateCssVars(frag: TeleportFragment) {
         (node as Element).setAttribute('data-v-owner', String(ctx.uid))
       node = node.nextSibling
     }
-    ctx.ut()
+    // Avoid collecting the owner's css vars dependencies into the active
+    // Teleport effect, or later css vars updates would re-run Teleport itself.
+    pauseTracking()
+    try {
+      ctx.ut()
+    } finally {
+      resetTracking()
+    }
   }
 }

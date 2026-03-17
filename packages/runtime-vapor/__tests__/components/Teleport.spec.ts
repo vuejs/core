@@ -19,6 +19,7 @@ import {
   setInsertionState,
   setText,
   template,
+  useVaporCssVars,
   vaporInteropPlugin,
   withVaporDirectives,
 } from '@vue/runtime-vapor'
@@ -31,6 +32,7 @@ import {
   onDeactivated,
   onMounted,
   onUnmounted,
+  reactive,
   ref,
   shallowRef,
 } from 'vue'
@@ -1573,4 +1575,42 @@ test('should cache delayed teleported child under KeepAlive once target becomes 
   expect(targetEl.innerHTML).toBe('<div>child</div>')
   expect(hooks.mounted).toHaveBeenCalledTimes(1)
   expect(hooks.activated).toHaveBeenCalledTimes(2)
+})
+
+test('should reapply css vars when teleport root children are replaced', async () => {
+  const target = document.createElement('div')
+  document.body.appendChild(target)
+
+  const state = reactive({ color: 'red' })
+  const showAlt = ref(false)
+
+  define({
+    setup() {
+      useVaporCssVars(() => state)
+      return createComponent(
+        VaporTeleport,
+        { to: () => target },
+        {
+          default: () =>
+            showAlt.value
+              ? template('<p>alt</p>', true)()
+              : template('<span>base</span>', true)(),
+        },
+      )
+    },
+  }).render()
+  await nextTick()
+
+  showAlt.value = true
+  await nextTick()
+
+  const teleported = target.firstElementChild as HTMLElement
+  expect(teleported.tagName).toBe('P')
+  expect(teleported.getAttribute('data-v-owner')).toBeTruthy()
+  expect(teleported.style.getPropertyValue('--color')).toBe('red')
+
+  state.color = 'blue'
+  await nextTick()
+
+  expect(teleported.style.getPropertyValue('--color')).toBe('blue')
 })
