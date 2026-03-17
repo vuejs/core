@@ -337,7 +337,9 @@ export class TeleportFragment extends VaporFragment {
     if (this.targetStart) {
       remove(this.targetStart, parentNode(this.targetStart)!)
       this.targetStart = undefined
-      remove(this.targetAnchor!, parentNode(this.targetAnchor!)!)
+    }
+    if (this.targetAnchor) {
+      remove(this.targetAnchor, parentNode(this.targetAnchor)!)
       this.targetAnchor = undefined
     }
 
