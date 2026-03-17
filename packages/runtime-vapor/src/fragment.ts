@@ -70,8 +70,23 @@ export class VaporFragment<
   // hooks
   onUpdated?: ((nodes?: Block) => void)[]
 
+  // render context
+  readonly slotOwner: VaporComponentInstance | null = currentSlotOwner
+  readonly keepAliveCtx: VaporKeepAliveContext | null = currentKeepAliveCtx
+
   constructor(nodes: T) {
     this.nodes = nodes
+  }
+
+  protected runWithRenderCtx<R>(fn: () => R): R {
+    const prevSlotOwner = setCurrentSlotOwner(this.slotOwner)
+    const prevKeepAliveCtx = setCurrentKeepAliveCtx(this.keepAliveCtx)
+    try {
+      return fn()
+    } finally {
+      setCurrentKeepAliveCtx(prevKeepAliveCtx)
+      setCurrentSlotOwner(prevSlotOwner)
+    }
   }
 }
 
@@ -92,11 +107,6 @@ export class DynamicFragment extends VaporFragment {
 
   // fallthrough attrs
   attrs?: Record<string, any>
-
-  keepAliveCtx: VaporKeepAliveContext | null
-
-  slotOwner: VaporComponentInstance | null
-
   constructor(
     anchorLabel?: string,
     keyed: boolean = false,
@@ -104,8 +114,6 @@ export class DynamicFragment extends VaporFragment {
   ) {
     super([])
     this.keyed = keyed
-    this.slotOwner = currentSlotOwner
-    this.keepAliveCtx = currentKeepAliveCtx
     if (isHydrating) {
       this.anchorLabel = anchorLabel
       if (locate) locateHydrationNode()
@@ -214,19 +222,14 @@ export class DynamicFragment extends VaporFragment {
         this.scope = new EffectScope()
       }
 
-      const prevSlotOwner = setCurrentSlotOwner(this.slotOwner)
-      // set currentKeepAliveCtx so nested DynamicFragments and components can capture it
-      const prevKeepAliveCtx = setCurrentKeepAliveCtx(keepAliveCtx)
       const needBranchKey = keepAliveCtx && this.keyed
       const prevBranchKey = needBranchKey
         ? keepAliveCtx.setCurrentBranchKey(this.current)
         : undefined
       try {
-        this.nodes = this.scope.run(render) || []
+        this.nodes = this.runWithRenderCtx(() => this.scope!.run(render) || [])
       } finally {
         if (needBranchKey) keepAliveCtx.setCurrentBranchKey(prevBranchKey)
-        setCurrentKeepAliveCtx(prevKeepAliveCtx)
-        setCurrentSlotOwner(prevSlotOwner)
       }
 
       // set key on blocks

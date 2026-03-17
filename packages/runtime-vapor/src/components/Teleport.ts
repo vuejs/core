@@ -33,7 +33,6 @@ import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend, isArray } from '@vue/shared'
 import { VaporFragment, isFragment } from '../fragment'
-import { currentKeepAliveCtx, setCurrentKeepAliveCtx } from './KeepAlive'
 import {
   advanceHydrationNode,
   currentHydrationNode,
@@ -44,11 +43,7 @@ import {
   setCurrentHydrationNode,
 } from '../dom/hydration'
 import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
-import {
-  currentSlotOwner,
-  getScopeOwner,
-  setCurrentSlotOwner,
-} from '../componentSlots'
+import { getScopeOwner } from '../componentSlots'
 
 const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -75,8 +70,6 @@ export class TeleportFragment extends VaporFragment {
   private childrenInitialized = false
   private readonly ownerInstance =
     currentInstance as VaporComponentInstance | null
-  private readonly slotOwner = currentSlotOwner
-  private readonly keepAliveCtx = currentKeepAliveCtx
 
   target?: ParentNode | null
   targetAnchor?: Node | null
@@ -127,18 +120,13 @@ export class TeleportFragment extends VaporFragment {
     const prevInstance = setCurrentInstance(this.ownerInstance)
     try {
       this.childrenInitialized = true
-      renderEffect(() => {
-        const prevOwner = setCurrentSlotOwner(this.slotOwner)
-        const prevKeepAliveCtx = setCurrentKeepAliveCtx(this.keepAliveCtx)
-        try {
+      renderEffect(() =>
+        this.runWithRenderCtx(() =>
           this.handleChildrenUpdate(
             this.rawSlots!.default && (this.rawSlots!.default as BlockFn)(),
-          )
-        } finally {
-          setCurrentKeepAliveCtx(prevKeepAliveCtx)
-          setCurrentSlotOwner(prevOwner)
-        }
-      })
+          ),
+        ),
+      )
       this.bindChildren(this.nodes)
     } finally {
       setCurrentInstance(...prevInstance)
