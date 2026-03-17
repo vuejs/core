@@ -1541,6 +1541,111 @@ describe('VaporKeepAlive', () => {
     expect(activated).toHaveBeenCalledTimes(0)
   })
 
+  test('should not prune cached async component when its resolved name still matches include', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const include = ref('Foo')
+    const toggle = ref(true)
+    const { html, instance } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => include.value },
+          {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => createComponent(AsyncComp),
+              )
+            },
+          },
+        )
+      },
+    }).render()
+
+    resolve!(
+      defineVaporComponent({
+        name: 'Foo',
+        setup() {
+          return template(`<div>Foo</div>`)()
+        },
+      }),
+    )
+    await timeout()
+    expect(html()).toBe(`<div>Foo</div><!--async component--><!--if-->`)
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+    expect(cache.size).toBe(1)
+
+    include.value = 'Foo,Bar'
+    await nextTick()
+    expect(cache.size).toBe(1)
+  })
+
+  test('should prune cached async component when its resolved name no longer matches include', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const include = ref('Foo')
+    const toggle = ref(true)
+    const { html, instance } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => include.value },
+          {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => createComponent(AsyncComp),
+              )
+            },
+          },
+        )
+      },
+    }).render()
+
+    resolve!(
+      defineVaporComponent({
+        name: 'Foo',
+        setup() {
+          return template(`<div>Foo</div>`)()
+        },
+      }),
+    )
+    await timeout()
+    expect(html()).toBe(`<div>Foo</div><!--async component--><!--if-->`)
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+    expect(cache.size).toBe(1)
+
+    // 'Foo' no longer matches include 'Bar', should be pruned
+    include.value = 'Bar'
+    await nextTick()
+    expect(cache.size).toBe(0)
+  })
+
   test('handle error in async onActivated', async () => {
     const err = new Error('foo')
     const handler = vi.fn()

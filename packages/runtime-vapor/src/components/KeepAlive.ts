@@ -304,7 +304,11 @@ const VaporKeepAliveImpl = defineVaporComponent({
       cache.forEach((cached, key) => {
         const instance = getInstanceFromCache(cached)
         if (!instance) return
-        const name = getComponentName(instance.type)
+        const name = getComponentName(
+          isAsyncWrapper(instance)
+            ? (instance.type as any).__asyncResolved || {}
+            : instance.type,
+        )
         if (name && !filter(name)) {
           pruneCacheEntry(key)
         }
@@ -441,6 +445,14 @@ const resetCachedShapeFlag = (
 ) => {
   if (isVaporComponent(cached)) {
     resetShapeFlag(cached)
+    // for async components, also reset the inner resolved component's
+    // shapeFlag.
+    if (isAsyncWrapper(cached)) {
+      const [inner] = getInnerBlock(cached.block)
+      if (inner && isVaporComponent(inner)) {
+        resetShapeFlag(inner)
+      }
+    }
   } else if (isInteropEnabled) {
     resetShapeFlag(cached.vnode)
   }
