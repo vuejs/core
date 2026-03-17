@@ -352,8 +352,12 @@ const vaporInteropImpl: Omit<
     vnode.el = cached.el
     vnode.component = cached.component
     vnode.anchor = cached.anchor
-    activate(vnode.component as any, container, anchor)
+    const instance = vnode.component as any as VaporComponentInstance
+    activate(instance, container, anchor)
     insert(vnode.anchor as any, container, anchor)
+    // in case props have changed while deactivated
+    instance.rawPropsRef!.value = filterReservedProps(vnode.props)
+    instance.rawSlotsRef!.value = vnode.children
   },
 
   deactivate(vnode, container) {
