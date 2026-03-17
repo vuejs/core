@@ -6,6 +6,14 @@ import { expect } from 'vitest'
 import { startE2ETestServer } from './server'
 const { page, html, transitionStart, waitForInnerHTML } = setupPuppeteer()
 
+const appearTransitionStart = (containerSelector: string) =>
+  page().evaluate(selector => {
+    ;(window as any).setAppear()
+    return Promise.resolve().then(
+      () => (document.querySelector(selector) as HTMLElement)!.innerHTML,
+    )
+  }, containerSelector)
+
 function toSlug(value: string) {
   return value
     .trim()
@@ -278,12 +286,8 @@ describe('vapor transition-group', () => {
 
       expect(await html('.appear')).toBe(`<button>appear button</button>`)
 
-      await page().evaluate(() => {
-        return (window as any).setAppear()
-      })
-
       // appear
-      expect(await html(containerSelector)).toBe(
+      expect(await appearTransitionStart(containerSelector)).toBe(
         `<div class="test test-appear-from test-appear-active">a</div>` +
           `<div class="test test-appear-from test-appear-active">b</div>` +
           `<div class="test test-appear-from test-appear-active">c</div>`,
@@ -411,12 +415,8 @@ describe('vapor transition-group', () => {
 
     expect(await html('.events')).toBe(`<button>events button</button>`)
 
-    await page().evaluate(() => {
-      return (window as any).setAppear()
-    })
-
     // appear
-    expect(await html(containerSelector)).toBe(
+    expect(await appearTransitionStart(containerSelector)).toBe(
       `<div class="test test-appear-from test-appear-active">a</div>` +
         `<div class="test test-appear-from test-appear-active">b</div>` +
         `<div class="test test-appear-from test-appear-active">c</div>`,

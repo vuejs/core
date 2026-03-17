@@ -1843,9 +1843,9 @@ describe('vapor transition', () => {
           `<div class="v-enter-active v-enter-to">1</div><div class="v-enter-from v-enter-active">2</div>`,
         )
 
-        await click(btnSelector)
-        await waitForInnerHTML(
-          containerSelector,
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).innerHTML,
+        ).toBe(
           `<div class="v-enter-from v-enter-active">2</div><div class="v-enter-from v-enter-active">1</div>`,
         )
 
@@ -1855,9 +1855,9 @@ describe('vapor transition', () => {
         )
         await waitForInnerHTML(containerSelector, `<div class="">1</div>`)
 
-        await click(btnSelector)
-        await waitForInnerHTML(
-          containerSelector,
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).innerHTML,
+        ).toBe(
           `<div class="">1</div><div class="v-enter-from v-enter-active">2</div>`,
         )
         await waitForInnerHTML(
