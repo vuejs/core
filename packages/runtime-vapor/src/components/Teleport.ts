@@ -23,7 +23,12 @@ import {
   move,
   remove,
 } from '../block'
-import { createComment, createTextNode, querySelector } from '../dom/node'
+import {
+  createComment,
+  createTextNode,
+  parentNode,
+  querySelector,
+} from '../dom/node'
 import {
   type LooseRawProps,
   type LooseRawSlots,
@@ -120,7 +125,7 @@ export class TeleportFragment extends VaporFragment {
   }
 
   get parent(): ParentNode | null {
-    return this.anchor ? this.anchor.parentNode : null
+    return this.anchor ? parentNode(this.anchor) : null
   }
 
   private initChildren(): void {
@@ -227,14 +232,14 @@ export class TeleportFragment extends VaporFragment {
         // initial mount into target
         !this.targetAnchor ||
         // target changed
-        this.targetAnchor.parentNode !== target
+        parentNode(this.targetAnchor) !== target
       ) {
         // clean up old anchors from previous target when target changes
         if (this.targetStart) {
-          remove(this.targetStart, this.targetStart.parentNode!)
+          remove(this.targetStart, parentNode(this.targetStart)!)
         }
         if (this.targetAnchor) {
-          remove(this.targetAnchor, this.targetAnchor.parentNode!)
+          remove(this.targetAnchor, parentNode(this.targetAnchor)!)
         }
         insert((this.targetStart = createTextNode('')), target)
         insert((this.targetAnchor = createTextNode('')), target)
@@ -330,14 +335,14 @@ export class TeleportFragment extends VaporFragment {
 
     // remove anchors
     if (this.targetStart) {
-      remove(this.targetStart, this.target!)
+      remove(this.targetStart, parentNode(this.targetStart)!)
       this.targetStart = undefined
-      remove(this.targetAnchor!, this.target!)
+      remove(this.targetAnchor!, parentNode(this.targetAnchor!)!)
       this.targetAnchor = undefined
     }
 
     if (this.anchor) {
-      remove(this.anchor, this.anchor.parentNode!)
+      remove(this.anchor, parentNode(this.anchor)!)
       this.anchor = undefined
     }
 
@@ -377,7 +382,7 @@ export class TeleportFragment extends VaporFragment {
     let nextNode = this.placeholder!.nextSibling!
     setCurrentHydrationNode(nextNode)
     this.mountAnchor = this.anchor = locateTeleportEndAnchor(nextNode)!
-    this.mountContainer = this.anchor.parentNode
+    this.mountContainer = parentNode(this.anchor)
     if (target) {
       this.hydrateTargetAnchors(target, targetNode)
     } else {
