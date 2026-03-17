@@ -327,6 +327,11 @@ const VaporKeepAliveImpl = defineVaporComponent({
       }
       cache.delete(key)
       keys.delete(key)
+      const scope = keptAliveScopes.get(key)
+      if (scope) {
+        scope.stop()
+        keptAliveScopes.delete(key)
+      }
     }
 
     // prune cache on include/exclude prop change
