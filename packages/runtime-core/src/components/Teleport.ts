@@ -287,7 +287,6 @@ export const TeleportImpl = {
               TeleportMoveTypes.TARGET_CHANGE,
             )
           } else if (__DEV__) {
-            n2.target = target
             warn(
               'Invalid Teleport target on update:',
               target,
@@ -318,12 +317,14 @@ export const TeleportImpl = {
     { um: unmount, o: { remove: hostRemove } }: RendererInternals,
     doRemove: boolean,
   ): void {
-    const { shapeFlag, children, anchor, targetStart, targetAnchor, target, props } =
+    const { shapeFlag, children, anchor, targetStart, targetAnchor, props } =
       vnode
 
-    if (target) {
-      hostRemove(targetStart!)
-      hostRemove(targetAnchor!)
+    if (targetStart) {
+      hostRemove(targetStart)
+    }
+    if (targetAnchor) {
+      hostRemove(targetAnchor)
     }
 
     // an unmounted teleport should always unmount its children whether it's disabled or not
