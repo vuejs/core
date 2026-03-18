@@ -270,6 +270,11 @@ const VaporKeepAliveImpl = defineVaporComponent({
         ) {
           return
         }
+        // For keyed DynamicFragment, read branch key from the fragment
+        // since currentBranchKey is already restored at lifecycle hook time
+        if (block.keyed) {
+          currentBranchKey = block.current
+        }
       }
       const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
@@ -319,7 +324,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
 
     // delete scope from keptAliveScopes by one key,
     // also removes the paired entry (cache key ↔ branch key)
-    const deleteScope = (key: CacheKey): EffectScope | undefined => {
+    const deleteScope = (key: any): EffectScope | undefined => {
       const scope = keptAliveScopes.get(key)
       if (scope) {
         keptAliveScopes.delete(key)

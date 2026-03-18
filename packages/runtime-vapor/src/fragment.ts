@@ -153,12 +153,19 @@ export class DynamicFragment extends VaporFragment {
       const keepAliveCtx = this.keepAliveCtx
 
       // if keepAliveCtx exists and processShapeFlag returns a cache key,
-      // cache the scope and retain it
+      // cache the scope and retain it.
+      // For keyed fragments, temporarily set branchKey to prevKey so
+      // getCacheKey generates the correct composite key for the OLD block.
+      const needBranchKey = keepAliveCtx && this.keyed
+      const prevBranchKey = needBranchKey
+        ? keepAliveCtx.setCurrentBranchKey(prevKey)
+        : undefined
       const cacheKey = keepAliveCtx && keepAliveCtx.processShapeFlag(this.nodes)
       if (cacheKey) {
         keepAliveCtx!.cacheScope(cacheKey, prevKey, this.scope)
         retainScope = true
       }
+      if (needBranchKey) keepAliveCtx.setCurrentBranchKey(prevBranchKey)
 
       if (!retainScope) {
         this.scope.stop()
@@ -230,19 +237,21 @@ export class DynamicFragment extends VaporFragment {
       try {
         this.nodes = this.runWithRenderCtx(() => this.scope!.run(render) || [])
       } finally {
+        // set key on blocks
+        if (this.keyed) setKey(this.nodes, this.current)
+
+        if (transition) {
+          this.$transition = applyTransitionHooks(this.nodes, transition)
+        }
+
+        // call processShapeFlag to mark shapeFlag before mounting.
+        // Must be called before restoring branchKey so getCacheKey
+        // generates the correct composite key.
+        if (keepAliveCtx) {
+          keepAliveCtx.processShapeFlag(this.nodes)
+        }
+
         if (needBranchKey) keepAliveCtx.setCurrentBranchKey(prevBranchKey)
-      }
-
-      // set key on blocks
-      if (this.keyed) setKey(this.nodes, this.current)
-
-      if (transition) {
-        this.$transition = applyTransitionHooks(this.nodes, transition)
-      }
-
-      // call processShapeFlag to mark shapeFlag before mounting
-      if (keepAliveCtx) {
-        keepAliveCtx.processShapeFlag(this.nodes)
       }
 
       if (parent) {
