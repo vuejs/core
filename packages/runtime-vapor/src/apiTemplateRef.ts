@@ -108,11 +108,12 @@ function setRef(
 
   // async component
   if (isVaporComponent(el) && isAsyncWrapper(el)) {
-    // unresolved: handled in DynamicFragment's updated hook
-    if (!el.type.__asyncResolved) return
-
     // resolved: set ref to the inner component
-    el = (el.block as DynamicFragment).nodes as VaporComponentInstance
+    if (el.type.__asyncResolved) {
+      el = (el.block as DynamicFragment).nodes as VaporComponentInstance
+    }
+    // unresolved: el stays as async wrapper, getRefValue returns null
+    // → ref will be cleared through normal setRef logic below
   }
 
   const setupState: any = __DEV__ ? instance.setupState || {} : null
@@ -198,6 +199,11 @@ function setRef(
     if (_isString || _isRef) {
       const doSet: SchedulerJob = () => {
         if (refFor) {
+          // for unresolved async components, refValue is null.
+          // skip adding null to the array — the ref will be re-set
+          // when the async component resolves via DynamicFragment's updated hook.
+          if (refValue == null) return
+
           existing = _isString
             ? __DEV__ && canSetSetupRef(ref)
               ? setupState[ref]
@@ -262,6 +268,8 @@ function setRef(
 
 const getRefValue = (el: RefEl) => {
   if (isVaporComponent(el)) {
+    // unresolved async wrapper: return null so ref gets cleared
+    if (isAsyncWrapper(el) && !el.type.__asyncResolved) return null
     return getExposed(el) || el
   } else if (isTeleportFragment(el)) {
     return null

@@ -2278,4 +2278,77 @@ describe('VaporKeepAlive', () => {
     expect(mountedSpy).toHaveBeenCalledTimes(0)
     expect(activatedSpy).toHaveBeenCalledTimes(0)
   })
+
+  test('should clear template ref when switching to unresolved async component', async () => {
+    const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
+    let resolveAsync: (comp: any) => void
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolveAsync = r
+        }),
+    )
+
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      setup() {
+        return template('<div>comp</div>')()
+      },
+    })
+
+    const instanceRef = ref<any>(null)
+    const toggle = ref(false)
+
+    define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => {
+                const comp = createComponent(AsyncComp)
+                setRef(comp, instanceRef)
+                return comp
+              },
+              () => {
+                const comp = createComponent(Comp)
+                setRef(comp, instanceRef)
+                return comp
+              },
+            ),
+        })
+      },
+    }).render()
+
+    await nextTick()
+    // Comp is mounted — ref should point to it
+    expect(instanceRef.value).not.toBe(null)
+
+    // switch to async component (unresolved)
+    toggle.value = true
+    await nextTick()
+    // ref should be null while async is pending
+    expect(instanceRef.value).toBe(null)
+
+    // resolve async
+    resolveAsync!(
+      defineVaporComponent({
+        name: 'AsyncResolved',
+        setup() {
+          return template('<div>async</div>')()
+        },
+      }),
+    )
+    await timeout()
+    await nextTick()
+    // ref should now point to the resolved component
+    expect(instanceRef.value).not.toBe(null)
+
+    // switch back to Comp
+    toggle.value = false
+    await nextTick()
+    expect(instanceRef.value).not.toBe(null)
+  })
 })
