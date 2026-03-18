@@ -1765,6 +1765,148 @@ describe('VaporKeepAlive', () => {
     expect(keptAliveScopes.size).toBe(0)
   })
 
+  test('should use live keyed branch when tearing down KeepAlive after same-tick switch', async () => {
+    const show = ref(true)
+    const toggle = ref(true)
+    let keepAlive: any
+    const deactivatedA = vi.fn()
+    const deactivatedB = vi.fn()
+    const unmountedA = vi.fn()
+
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      props: ['id'],
+      setup(props: any) {
+        const n0 = template('<div> </div>')() as any
+        const n1 = child(n0) as any
+        onBeforeMount(() => {
+          if (props.id === 'b') {
+            show.value = false
+          }
+        })
+        onDeactivated(() => {
+          if (props.id === 'a') {
+            deactivatedA()
+          } else {
+            deactivatedB()
+          }
+        })
+        onUnmounted(() => {
+          if (props.id === 'a') {
+            unmountedA()
+          }
+        })
+        renderEffect(() => setText(n1, props.id))
+        return n0
+      },
+    })
+
+    define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => {
+            keepAlive = createComponent(VaporKeepAlive, null, {
+              default: () =>
+                createIf(
+                  () => toggle.value,
+                  () => createComponent(Comp, { id: () => 'a' }),
+                  () => createComponent(Comp, { id: () => 'b' }),
+                  undefined,
+                  undefined,
+                  0,
+                ),
+            })
+            return keepAlive
+          },
+        )
+      },
+    }).render()
+
+    await nextTick()
+
+    toggle.value = false
+    await nextTick()
+
+    expect(show.value).toBe(false)
+    expect(deactivatedA).toHaveBeenCalledTimes(1)
+    expect(unmountedA).toHaveBeenCalledTimes(1)
+    expect(deactivatedB).toHaveBeenCalledTimes(1)
+    expect(keepAlive.ctx.getStorageContainer().innerHTML).toBe('')
+  })
+
+  test('should not retain cached keyed branch when current branch is unresolved async during KeepAlive teardown', async () => {
+    const show = ref(true)
+    const toggle = ref(true)
+    let keepAlive: any
+    const deactivatedA = vi.fn()
+    const unmountedA = vi.fn()
+
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(() => {
+          // keep unresolved
+        }),
+    )
+
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      props: ['id'],
+      setup(props: any) {
+        const n0 = template('<div> </div>')() as any
+        const n1 = child(n0) as any
+        onDeactivated(() => {
+          if (props.id === 'a') {
+            deactivatedA()
+          }
+        })
+        onUnmounted(() => {
+          if (props.id === 'a') {
+            unmountedA()
+          }
+        })
+        renderEffect(() => setText(n1, props.id))
+        return n0
+      },
+    })
+
+    define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => {
+            keepAlive = createComponent(VaporKeepAlive, null, {
+              default: () =>
+                createIf(
+                  () => toggle.value,
+                  () => createComponent(Comp, { id: () => 'a' }),
+                  () => createComponent(AsyncComp),
+                  undefined,
+                  undefined,
+                  0,
+                ),
+            })
+            return keepAlive
+          },
+        )
+      },
+    }).render()
+
+    await nextTick()
+
+    toggle.value = false
+    await nextTick()
+
+    expect(deactivatedA).toHaveBeenCalledTimes(1)
+    expect(unmountedA).toHaveBeenCalledTimes(0)
+
+    show.value = false
+    await nextTick()
+
+    expect(unmountedA).toHaveBeenCalledTimes(1)
+    expect(keepAlive.ctx.getStorageContainer().innerHTML).toBe('')
+  })
+
   test('should recreate composite cache key after max prunes keyed branch entry', async () => {
     const Comp = defineVaporComponent({
       name: 'Comp',

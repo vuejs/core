@@ -401,31 +401,53 @@ const VaporKeepAliveImpl = defineVaporComponent({
 
     onMounted(cacheBlock)
     onUpdated(cacheBlock)
-    onBeforeUnmount(() => {
-      cache.forEach((cached, key) => {
-        const instance = getInstanceFromCache(cached)
 
+    const getCurrentBlockState = () => {
+      const block = keepAliveInstance.block!
+      const [currentBlock, interop] = getInnerBlock(block)
+      const branchKey =
+        isDynamicFragment(block) && block.keyed
+          ? block.current
+          : currentBranchKey
+
+      return {
+        currentBlock,
+        interop,
+        currentKey:
+          currentBlock && getCacheKey(currentBlock, interop, branchKey),
+      }
+    }
+
+    onBeforeUnmount(() => {
+      const { currentBlock, interop, currentKey } = getCurrentBlockState()
+      const deactivateCached = (
+        cached: VaporComponentInstance | VaporFragment,
+      ): void => {
+        resetCachedShapeFlag(cached)
+        const instance = getInstanceFromCache(cached)
+        if (instance) {
+          const da = instance.da
+          da && queuePostFlushCb(da)
+        }
+      }
+
+      let matched = false
+      cache.forEach((cached, key) => {
         // current instance will be unmounted as part of keep-alive's unmount
-        if (current) {
-          const currentKey = getCacheKey(
-            current,
-            !isVaporComponent(current),
-            currentBranchKey,
-          )
-          if (currentKey === key) {
-            resetCachedShapeFlag(cached)
-            // call deactivated hook
-            if (instance) {
-              const da = instance.da
-              da && queuePostFlushCb(da)
-            }
-            return
-          }
+        if (currentKey === key) {
+          matched = true
+          deactivateCached(cached)
+          return
         }
 
         resetCachedShapeFlag(cached)
         remove(cached, storageContainer)
       })
+
+      if (!matched && currentBlock && isKeptAlive(currentBlock, interop)) {
+        deactivateCached(currentBlock)
+      }
+
       keptAliveScopes.forEach(scope => scope.stop())
       keptAliveScopes.clear()
     })
@@ -518,6 +540,19 @@ const resetCachedShapeFlag = (
   } else if (isInteropEnabled) {
     resetShapeFlag(cached.vnode)
   }
+}
+
+function isKeptAlive(
+  cached: VaporComponentInstance | VaporFragment,
+  interop: boolean,
+): boolean {
+  if (interop && isInteropEnabled && isInteropFragment(cached)) {
+    return !!(cached.vnode!.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE)
+  }
+  return !!(
+    (cached as VaporComponentInstance).shapeFlag! &
+    ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+  )
 }
 
 type InnerBlockResult =
