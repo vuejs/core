@@ -424,7 +424,9 @@ const shouldCache = (
   props: KeepAliveProps,
   interop: boolean = false,
 ) => {
-  const isAsync = !interop && isAsyncWrapper(block as GenericComponentInstance)
+  const isAsync = isAsyncWrapper(
+    interop ? block.vnode! : (block as GenericComponentInstance),
+  )
   const type = (
     interop && isInteropEnabled
       ? (block as VaporFragment).vnode!.type
@@ -432,7 +434,8 @@ const shouldCache = (
   ) as GenericComponent & AsyncComponentInternalOptions
 
   // for unresolved async components, don't cache yet
-  // caching will be handled by AsyncWrapper calling keepAliveCtx.cacheBlock()
+  // - vapor async: caching deferred via keepAliveCtx.cacheBlock() in apiDefineAsyncComponent
+  // - vdom async: caching deferred via __asyncLoader().then() in createVDOMComponent
   if (isAsync && !type.__asyncResolved) {
     return false
   }

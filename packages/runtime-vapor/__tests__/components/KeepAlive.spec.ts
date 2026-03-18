@@ -1,4 +1,5 @@
 import {
+  defineAsyncComponent,
   h,
   nextTick,
   onActivated,
@@ -1923,6 +1924,137 @@ describe('VaporKeepAlive', () => {
       assertHookCalls(oneHooks, [2, 2, 3, 2, 1])
       inputEl = container.firstChild as HTMLInputElement
       expect(inputEl.value).toBe('vdom')
+    })
+
+    test('should cache interop async component and match by resolved name', async () => {
+      const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
+      const InnerComp = {
+        name: 'InnerComp',
+        setup() {
+          onActivated(() => oneHooks.activated())
+          onDeactivated(() => oneHooks.deactivated())
+          return () => h('div', 'async inner')
+        },
+      }
+
+      const AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(resolve =>
+            setTimeout(() => resolve(InnerComp as any), 0),
+          ),
+      )
+
+      const include = ref('InnerComp')
+      const toggle = ref(true)
+      let cache: Map<any, any>
+
+      const App = defineVaporComponent({
+        setup() {
+          const ka = createComponent(
+            VaporKeepAlive,
+            { include: () => include.value },
+            {
+              default: () =>
+                createIf(
+                  () => toggle.value,
+                  () => createComponent(AsyncComp as any),
+                ),
+            },
+          )
+          cache = (ka as any).__v_cache
+          return ka
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      // wait for async component to resolve
+      await timeout()
+      await nextTick()
+      await nextTick()
+
+      expect(container.innerHTML).toContain('async inner')
+
+      // deactivate — should be cached since resolved name matches include
+      toggle.value = false
+      await nextTick()
+      expect(cache!.size).toBe(1)
+
+      // change include — resolved name still matches
+      include.value = 'InnerComp'
+      await nextTick()
+      expect(cache!.size).toBe(1)
+
+      // change include to exclude — should prune by resolved name
+      include.value = 'OtherComp'
+      await nextTick()
+      expect(cache!.size).toBe(0)
+    })
+
+    test('should not crash when toggling off interop async before resolve', async () => {
+      const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
+      let resolve: (comp: any) => void
+      const AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolve = r
+          }),
+      )
+
+      const InnerComp = {
+        name: 'InnerComp',
+        setup() {
+          return () => h('div', 'async inner')
+        },
+      }
+
+      const include = ref('InnerComp')
+      const toggle = ref(true)
+
+      const App = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VaporKeepAlive,
+            { include: () => include.value },
+            {
+              default: () =>
+                createIf(
+                  () => toggle.value,
+                  () => createComponent(AsyncComp as any),
+                ),
+            },
+          )
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      // toggle off BEFORE async resolves
+      toggle.value = false
+      await nextTick()
+
+      // resolve async component while toggled off
+      resolve!(InnerComp)
+      await timeout()
+      await nextTick()
+
+      // toggle back on — should remount fresh (not cached since was unresolved)
+      toggle.value = true
+      await nextTick()
+      await timeout()
+      await nextTick()
+
+      expect(container.innerHTML).toContain('async inner')
     })
   })
 
