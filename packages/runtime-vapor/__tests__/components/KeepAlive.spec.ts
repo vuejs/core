@@ -1701,6 +1701,68 @@ describe('VaporKeepAlive', () => {
     expect(keptAliveScopes.size).toBe(0)
   })
 
+  test('should stop branch scope when cache entry is pruned (keyed branches)', async () => {
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      props: ['id'],
+      setup(props: any) {
+        return template('<div></div>')()
+      },
+    })
+
+    const exclude = ref('')
+    const toggle = ref(true)
+    const { html, instance } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { exclude: () => exclude.value },
+          {
+            default: () =>
+              // index=0 makes this a keyed DynamicFragment
+              createIf(
+                () => toggle.value,
+                () => createComponent(Comp, { id: () => 'a' }),
+                () => createComponent(Comp, { id: () => 'b' }),
+                undefined,
+                undefined,
+                0,
+              ),
+          },
+        )
+      },
+    }).render()
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+    const keptAliveScopes = keepAliveInstance.__v_keptAliveScopes as Map<
+      any,
+      any
+    >
+
+    expect(html()).toBe('<div></div><!--if-->')
+
+    // switch from branch A to branch B
+    toggle.value = false
+    await nextTick()
+
+    // both branches should be independently cached
+    // keyed branches use branchKey to distinguish same-type components
+    expect(cache.size).toBe(2)
+    expect(keptAliveScopes.size).toBe(2)
+
+    // switch back to branch A
+    toggle.value = true
+    await nextTick()
+    expect(cache.size).toBe(2)
+
+    // prune by excluding Comp — all entries should be cleaned
+    exclude.value = 'Comp'
+    await nextTick()
+    expect(cache.size).toBe(0)
+    expect(keptAliveScopes.size).toBe(0)
+  })
+
   test('handle error in async onActivated', async () => {
     const err = new Error('foo')
     const handler = vi.fn()
