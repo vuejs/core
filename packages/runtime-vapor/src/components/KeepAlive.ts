@@ -95,7 +95,7 @@ type CompositeKey = {
 // Caches are passed as parameters (per KeepAlive instance) to avoid
 // module-level Map leaks for primitive type keys (e.g. string tag names
 // from VDOM interop).
-function getCompositeKey(
+function getOrCreateCompositeKey(
   type: BaseCacheKey,
   branchKey: any,
   compositeKeyCache: WeakMap<object, Map<any, CompositeKey>>,
@@ -117,6 +117,20 @@ function getCompositeKey(
     perType.set(branchKey, composite)
   }
   return composite
+}
+
+function getCompositeKey(
+  type: BaseCacheKey,
+  branchKey: any,
+  compositeKeyCache: WeakMap<object, Map<any, CompositeKey>>,
+  compositeKeyCachePrimitive: Map<any, Map<any, CompositeKey>>,
+): CacheKey | undefined {
+  const isObjectType = isObject(type) || isFunction(type)
+  const perType = isObjectType
+    ? compositeKeyCache.get(type)
+    : compositeKeyCachePrimitive.get(type)
+
+  return perType && perType.get(branchKey)
 }
 
 function deleteCompositeKey(
@@ -183,6 +197,30 @@ const VaporKeepAliveImpl = defineVaporComponent({
       key?: any,
       branchKey?: any,
     ): CacheKey => {
+      if (key != null) {
+        return getOrCreateCompositeKey(
+          type,
+          key,
+          compositeKeyCache,
+          compositeKeyCachePrimitive,
+        )
+      }
+      if (branchKey !== undefined) {
+        return getOrCreateCompositeKey(
+          type,
+          branchKey,
+          compositeKeyCache,
+          compositeKeyCachePrimitive,
+        )
+      }
+      return type as CacheKey
+    }
+
+    const resolveKeyForLookup = (
+      type: BaseCacheKey,
+      key?: any,
+      branchKey?: any,
+    ): CacheKey | undefined => {
       if (key != null) {
         return getCompositeKey(
           type,
@@ -252,9 +290,15 @@ const VaporKeepAliveImpl = defineVaporComponent({
       getStorageContainer: () => storageContainer,
       getCachedComponent: (comp, key) => {
         if (isInteropEnabled && isVNode(comp)) {
-          return cache.get(resolveKey(comp.type, comp.key, currentBranchKey))
+          const cacheKey = resolveKeyForLookup(
+            comp.type,
+            comp.key,
+            currentBranchKey,
+          )
+          return cacheKey === undefined ? undefined : cache.get(cacheKey)
         }
-        return cache.get(resolveKey(comp, key, currentBranchKey))
+        const cacheKey = resolveKeyForLookup(comp, key, currentBranchKey)
+        return cacheKey === undefined ? undefined : cache.get(cacheKey)
       },
       activate: (instance, parentNode, anchor) => {
         current = instance
