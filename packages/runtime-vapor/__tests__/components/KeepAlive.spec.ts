@@ -2351,4 +2351,62 @@ describe('VaporKeepAlive', () => {
     await nextTick()
     expect(instanceRef.value).not.toBe(null)
   })
+
+  test('should clear old ref when switching KeepAlive branches', async () => {
+    const CompA = defineVaporComponent({
+      name: 'CompA',
+      setup() {
+        return template('<div>A</div>')()
+      },
+    })
+
+    const CompB = defineVaporComponent({
+      name: 'CompB',
+      setup() {
+        return template('<div>B</div>')()
+      },
+    })
+
+    const refA = ref<any>(null)
+    const refB = ref<any>(null)
+    const toggle = ref(true)
+
+    define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => {
+                const comp = createComponent(CompA)
+                setRef(comp, refA)
+                return comp
+              },
+              () => {
+                const comp = createComponent(CompB)
+                setRef(comp, refB)
+                return comp
+              },
+            ),
+        })
+      },
+    }).render()
+
+    await nextTick()
+    expect(refA.value).not.toBe(null)
+    expect(refB.value).toBe(null)
+
+    // switch to CompB — refA should be cleared
+    toggle.value = false
+    await nextTick()
+    expect(refB.value).not.toBe(null)
+    expect(refA.value).toBe(null)
+
+    // switch back to CompA — refB should be cleared
+    toggle.value = true
+    await nextTick()
+    expect(refA.value).not.toBe(null)
+    expect(refB.value).toBe(null)
+  })
 })

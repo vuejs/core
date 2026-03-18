@@ -38,6 +38,7 @@ import {
   isObject,
 } from '@vue/shared'
 import { createElement } from '../dom/node'
+import { unsetRef } from '../refCleanup'
 import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
 import type { EffectScope } from '@vue/reactivity'
 import { isInteropEnabled } from '../vdomInteropState'
@@ -539,6 +540,10 @@ export function deactivate(
   instance: VaporComponentInstance,
   container: ParentNode,
 ): void {
+  // Clear refs before deactivation, matching VDOM core's unmount path
+  // which calls setRef(null) before the deactivation check.
+  unsetRef(instance)
+
   invalidateMount(instance.m)
   invalidateMount(instance.a)
 
