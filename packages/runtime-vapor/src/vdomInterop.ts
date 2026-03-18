@@ -212,6 +212,17 @@ const vaporInteropImpl: Omit<
       }
     }
 
+    // invoke onVnodeBeforeMount hook
+    const vnodeBeforeMountHook = vnode.props && vnode.props.onVnodeBeforeMount
+    if (vnodeBeforeMountHook) {
+      callWithAsyncErrorHandling(
+        vnodeBeforeMountHook,
+        parentComponent,
+        ErrorCodes.VNODE_HOOK,
+        [vnode],
+      )
+    }
+
     mountComponent(instance, container, selfAnchor)
 
     // invoke onVnodeMounted hook

@@ -1965,6 +1965,42 @@ describe('vdomInterop', () => {
       expect(html()).toContain('<span>resolved</span>')
     })
   })
+  test('should invoke onVnodeBeforeMount/onVnodeBeforeUnmount on vapor child', async () => {
+    const beforeMountSpy = vi.fn()
+    const beforeUnmountSpy = vi.fn()
+
+    const VaporChild = defineVaporComponent({
+      setup() {
+        return template('<div>vapor</div>')()
+      },
+    })
+
+    const show = ref(true)
+    const App = defineComponent({
+      setup() {
+        return () =>
+          show.value
+            ? h(VaporChild as any, {
+                onVnodeBeforeMount: beforeMountSpy,
+                onVnodeBeforeUnmount: beforeUnmountSpy,
+              })
+            : null
+      },
+    })
+
+    const root = document.createElement('div')
+    const app = createApp(App)
+    app.use(vaporInteropPlugin)
+    app.mount(root)
+    await nextTick()
+
+    expect(beforeMountSpy).toHaveBeenCalledTimes(1)
+
+    // unmount
+    show.value = false
+    await nextTick()
+    expect(beforeUnmountSpy).toHaveBeenCalledTimes(1)
+  })
 
   describe('KeepAlive', () => {
     test('should update props on reactivation of vapor child in vdom KeepAlive', async () => {
