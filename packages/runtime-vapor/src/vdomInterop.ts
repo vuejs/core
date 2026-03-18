@@ -39,6 +39,7 @@ import {
   setTransitionHooks as setVNodeTransitionHooks,
   shallowReactive,
   shallowRef,
+  shouldUpdateComponent,
   simpleSetCurrentInstance,
   activate as vdomActivate,
   deactivate as vdomDeactivate,
@@ -381,16 +382,41 @@ const vaporInteropImpl: Omit<
     vnode.component = cached.component
     vnode.anchor = cached.anchor
     const instance = vnode.component as any as VaporComponentInstance
+    const shouldUpdate = shouldUpdateComponent(cached, vnode)
     activate(instance, container, anchor)
     insert(vnode.anchor as any, container, anchor)
     // in case props have changed while deactivated
     instance.rawPropsRef!.value = filterReservedProps(vnode.props)
     instance.rawSlotsRef!.value = vnode.children
-    queuePostFlushCb(() => {
-      const vnodeHook = vnode.props && vnode.props.onVnodeMounted
-      if (vnodeHook) {
+    if (shouldUpdate) {
+      const vnodeBeforeUpdateHook =
+        vnode.props && vnode.props.onVnodeBeforeUpdate
+      if (vnodeBeforeUpdateHook) {
         callWithAsyncErrorHandling(
-          vnodeHook,
+          vnodeBeforeUpdateHook,
+          parentComponent,
+          ErrorCodes.VNODE_HOOK,
+          [vnode, cached],
+        )
+      }
+    }
+    queuePostFlushCb(() => {
+      if (shouldUpdate) {
+        const vnodeUpdatedHook = vnode.props && vnode.props.onVnodeUpdated
+        if (vnodeUpdatedHook) {
+          callWithAsyncErrorHandling(
+            vnodeUpdatedHook,
+            parentComponent,
+            ErrorCodes.VNODE_HOOK,
+            [vnode, cached],
+          )
+        }
+      }
+
+      const vnodeMountedHook = vnode.props && vnode.props.onVnodeMounted
+      if (vnodeMountedHook) {
+        callWithAsyncErrorHandling(
+          vnodeMountedHook,
           parentComponent,
           ErrorCodes.VNODE_HOOK,
           [vnode],
