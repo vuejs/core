@@ -623,6 +623,13 @@ function createVDOMComponent(
 
   if (currentKeepAliveCtx) {
     currentKeepAliveCtx.processShapeFlag(frag)
+    // for VDOM async components, trigger cacheBlock after resolution
+    if ((component as any).__asyncLoader) {
+      const keepAliveCtx = currentKeepAliveCtx
+      ;(component as any).__asyncLoader().then(() => {
+        keepAliveCtx.cacheBlock()
+      })
+    }
     setCurrentKeepAliveCtx(null)
   }
 
