@@ -33,7 +33,12 @@ import {
   isFragment,
 } from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
-import { refCleanups } from './refCleanup'
+import {
+  type RefCleanupState,
+  invalidatePendingRef,
+  refCleanups,
+  unsetRef,
+} from './refCleanup'
 
 export type NodeRef =
   | string
@@ -52,11 +57,12 @@ export type setRefFn = (
   refKey?: string,
 ) => NodeRef | undefined
 
-function ensureCleanup(el: RefEl): { fn: () => void } {
+function ensureCleanup(el: RefEl): RefCleanupState {
   let cleanupRef = refCleanups.get(el)
   if (!cleanupRef) {
     refCleanups.set(el, (cleanupRef = { fn: NOOP }))
     onScopeDispose(() => {
+      invalidatePendingRef(el)
       cleanupRef!.fn()
       refCleanups.delete(el)
     })
@@ -105,16 +111,6 @@ function setRef(
 ): NodeRef | undefined {
   if (!instance || instance.isUnmounted) return
 
-  // async component
-  if (isVaporComponent(el) && isAsyncWrapper(el)) {
-    // resolved: set ref to the inner component
-    if (el.type.__asyncResolved) {
-      el = (el.block as DynamicFragment).nodes as VaporComponentInstance
-    }
-    // unresolved: el stays as async wrapper, getRefValue returns null
-    // → ref will be cleared through normal setRef logic below
-  }
-
   const setupState: any = __DEV__ ? instance.setupState || {} : null
   const refValue = getRefValue(el)
 
@@ -151,6 +147,7 @@ function setRef(
 
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
+    invalidatePendingRef(el)
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (__DEV__ && canSetSetupRef(oldRef)) {
@@ -172,8 +169,7 @@ function setRef(
       ])
     } else if (refFor) {
       // For dynamic ref-for branches, remove only this branch's previous value.
-      const cleanup = refCleanups.get(el)
-      if (cleanup) cleanup.fn()
+      unsetRef(el)
     }
   }
 
@@ -241,11 +237,12 @@ function setRef(
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
         }
       }
-      queuePostFlushCb(doSet, -1)
-
-      ensureCleanup(el).fn = () => {
-        if (isArray(existing)) {
-          remove(existing, refValue)
+      const cleanup = ensureCleanup(el)
+      cleanup.fn = () => {
+        if (refFor) {
+          if (isArray(existing)) {
+            remove(existing, refValue)
+          }
         } else if (_isString) {
           refs[ref] = null
           if (__DEV__ && canSetSetupRef(ref)) {
@@ -256,6 +253,18 @@ function setRef(
           if (refKey) refs[refKey] = null
         }
       }
+
+      invalidatePendingRef(el)
+      if (refValue != null) {
+        const job: SchedulerJob = () => {
+          doSet()
+          if (cleanup.job === job) cleanup.job = undefined
+        }
+        cleanup.job = job
+        queuePostFlushCb(job, -1)
+      } else {
+        doSet()
+      }
     } else if (__DEV__) {
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
     }
@@ -265,8 +274,11 @@ function setRef(
 
 const getRefValue = (el: RefEl) => {
   if (isVaporComponent(el)) {
-    // unresolved async wrapper: return null so ref gets cleared
-    if (isAsyncWrapper(el) && !el.type.__asyncResolved) return null
+    if (isAsyncWrapper(el)) {
+      // unresolved async wrapper: return null so ref gets cleared
+      if (!el.type.__asyncResolved) return null
+      return getRefValue((el.block as DynamicFragment).nodes as RefEl)
+    }
     return getExposed(el) || el
   } else if (isTeleportFragment(el)) {
     return null
