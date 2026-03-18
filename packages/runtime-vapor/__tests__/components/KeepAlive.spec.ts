@@ -2094,7 +2094,7 @@ describe('VaporKeepAlive', () => {
           throw err
         })
 
-        return template(`<span></span`)()
+        return template(`<span></span>`)()
       },
     })
 
