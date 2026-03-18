@@ -28,6 +28,7 @@ import {
   ensureHydrationRenderer,
   ensureRenderer,
   ensureVaporSlotFallback,
+  invokeDirectiveHook,
   isEmitListener,
   isKeepAlive,
   isVNode,
@@ -396,10 +397,12 @@ const vaporInteropImpl: Omit<
     const shouldUpdate = shouldUpdateComponent(cached, vnode)
     activate(instance, container, anchor)
     insert(vnode.anchor as any, container, anchor)
-    // in case props have changed while deactivated
-    instance.rawPropsRef!.value = filterReservedProps(vnode.props)
-    instance.rawSlotsRef!.value = vnode.children
     if (shouldUpdate) {
+      instance.rawPropsRef!.value = filterReservedProps(vnode.props)
+      instance.rawSlotsRef!.value = vnode.children
+      if (vnode.dirs) {
+        invokeDirectiveHook(vnode, cached, parentComponent, 'beforeUpdate')
+      }
       const vnodeBeforeUpdateHook =
         vnode.props && vnode.props.onVnodeBeforeUpdate
       if (vnodeBeforeUpdateHook) {
@@ -413,6 +416,9 @@ const vaporInteropImpl: Omit<
     }
     queuePostFlushCb(() => {
       if (shouldUpdate) {
+        if (vnode.dirs) {
+          invokeDirectiveHook(vnode, cached, parentComponent, 'updated')
+        }
         const vnodeUpdatedHook = vnode.props && vnode.props.onVnodeUpdated
         if (vnodeUpdatedHook) {
           callWithAsyncErrorHandling(

@@ -699,3 +699,7 @@ export { knownTemplateRefs, isTemplateRefKey } from './helpers/useTemplateRef'
  * @internal
  */
 export { setCurrentRenderingInstance } from './componentRenderContext'
+/**
+ * @internal
+ */
+export { invokeDirectiveHook } from './directives'

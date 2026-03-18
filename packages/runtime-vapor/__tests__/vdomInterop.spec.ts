@@ -2171,5 +2171,64 @@ describe('vdomInterop', () => {
       expect(beforeUpdateSpy).toHaveBeenCalledTimes(1)
       expect(updatedSpy).toHaveBeenCalledTimes(1)
     })
+
+    test('should invoke directive beforeUpdate/updated on reactivation', async () => {
+      const beforeUpdateSpy = vi.fn()
+      const updatedSpy = vi.fn()
+
+      const vDir = {
+        beforeUpdate: beforeUpdateSpy,
+        updated: updatedSpy,
+      }
+
+      const VaporChild = defineVaporComponent({
+        props: ['msg'],
+        setup(props: any) {
+          return template('<div></div>')()
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('span', 'vdom')
+        },
+      })
+
+      const current = shallowRef<any>(VaporChild)
+      const msg = ref('hello')
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(KeepAlive, null, {
+              default: () =>
+                current.value === VaporChild
+                  ? withDirectives(h(VaporChild as any, { msg: msg.value }), [
+                      [vDir],
+                    ])
+                  : h(VdomChild),
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      await nextTick()
+
+      // Deactivate vapor child
+      current.value = VdomChild
+      await nextTick()
+
+      // Change props while deactivated
+      msg.value = 'world'
+
+      // Reactivate — should trigger directive update hooks
+      current.value = VaporChild
+      await nextTick()
+      expect(beforeUpdateSpy).toHaveBeenCalledTimes(1)
+      expect(updatedSpy).toHaveBeenCalledTimes(1)
+    })
   })
 })
