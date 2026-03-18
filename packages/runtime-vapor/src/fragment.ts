@@ -152,10 +152,11 @@ export class DynamicFragment extends VaporFragment {
       let retainScope = false
       const keepAliveCtx = this.keepAliveCtx
 
-      // if keepAliveCtx exists and processShapeFlag returns true,
+      // if keepAliveCtx exists and processShapeFlag returns a cache key,
       // cache the scope and retain it
-      if (keepAliveCtx && keepAliveCtx.processShapeFlag(this.nodes)) {
-        keepAliveCtx.cacheScope(prevKey, this.scope)
+      const cacheKey = keepAliveCtx && keepAliveCtx.processShapeFlag(this.nodes)
+      if (cacheKey) {
+        keepAliveCtx!.cacheScope(cacheKey, prevKey, this.scope)
         retainScope = true
       }
 

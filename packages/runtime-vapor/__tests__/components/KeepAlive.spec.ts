@@ -1647,6 +1647,60 @@ describe('VaporKeepAlive', () => {
     expect(cache.size).toBe(0)
   })
 
+  test('should stop branch scope when cache entry is pruned', async () => {
+    const One = defineVaporComponent({
+      name: 'One',
+      setup() {
+        return template('<div>one</div>')()
+      },
+    })
+
+    const Two = defineVaporComponent({
+      name: 'Two',
+      setup() {
+        return template('<div>two</div>')()
+      },
+    })
+
+    const include = ref('One,Two')
+    const toggle = ref(true)
+    const { html, instance } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => include.value },
+          {
+            default: () =>
+              createIf(
+                () => toggle.value,
+                () => createComponent(One),
+                () => createComponent(Two),
+              ),
+          },
+        )
+      },
+    }).render()
+
+    const keepAliveInstance = instance!.block as any
+    const keptAliveScopes = keepAliveInstance.__v_keptAliveScopes as Map<
+      any,
+      any
+    >
+
+    expect(html()).toBe('<div>one</div><!--if-->')
+
+    // deactivate One → branch scope retained in keptAliveScopes
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<div>two</div><!--if-->')
+    expect(keptAliveScopes.size).toBe(2)
+
+    // prune One from cache → keptAliveScopes should also be cleaned up
+    include.value = 'Two'
+    await nextTick()
+    expect(keptAliveScopes.size).toBe(0)
+  })
+
   test('handle error in async onActivated', async () => {
     const err = new Error('foo')
     const handler = vi.fn()
