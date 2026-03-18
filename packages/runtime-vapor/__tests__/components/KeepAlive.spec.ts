@@ -1765,6 +1765,101 @@ describe('VaporKeepAlive', () => {
     expect(keptAliveScopes.size).toBe(0)
   })
 
+  test('should recreate composite cache key after max prunes keyed branch entry', async () => {
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      props: ['id'],
+      setup() {
+        return template('<div></div>')()
+      },
+    })
+
+    const toggle = ref(true)
+    const { instance } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { max: () => 1 },
+          {
+            default: () =>
+              // index=0 makes this a keyed DynamicFragment
+              createIf(
+                () => toggle.value,
+                () => createComponent(Comp, { id: () => 'a' }),
+                () => createComponent(Comp, { id: () => 'b' }),
+                undefined,
+                undefined,
+                0,
+              ),
+          },
+        )
+      },
+    }).render()
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+
+    await nextTick()
+    expect(cache.size).toBe(1)
+    const keyA1 = Array.from(cache.keys())[0]
+
+    toggle.value = false
+    await nextTick()
+    expect(cache.size).toBe(1)
+    const keyB = Array.from(cache.keys())[0]
+    expect(keyB).not.toBe(keyA1)
+
+    toggle.value = true
+    await nextTick()
+    expect(cache.size).toBe(1)
+    const keyA2 = Array.from(cache.keys())[0]
+
+    expect((keyA1 as any).branchKey).toBe((keyA2 as any).branchKey)
+    expect(keyA2).not.toBe(keyA1)
+  })
+
+  test('should recreate composite cache key after KeepAlive hmr rerender', async () => {
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      props: ['id'],
+      setup() {
+        return template('<div></div>')()
+      },
+    })
+
+    const toggle = ref(true)
+    const { instance } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => createComponent(Comp, { id: () => 'a' }),
+              () => createComponent(Comp, { id: () => 'b' }),
+              undefined,
+              undefined,
+              0,
+            ),
+        })
+      },
+    }).render()
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+
+    await nextTick()
+    expect(cache.size).toBe(1)
+    const keyA1 = Array.from(cache.keys())[0]
+
+    keepAliveInstance.hmrRerender!()
+    await nextTick()
+
+    expect(cache.size).toBe(1)
+    const keyA2 = Array.from(cache.keys())[0]
+    expect((keyA1 as any).branchKey).toBe((keyA2 as any).branchKey)
+    expect(keyA2).not.toBe(keyA1)
+  })
+
   test('handle error in async onActivated', async () => {
     const err = new Error('foo')
     const handler = vi.fn()

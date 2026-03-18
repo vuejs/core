@@ -79,12 +79,16 @@ export interface KeepAliveInstance extends VaporComponentInstance {
   }
 }
 
-type CacheKey = VaporComponent | VNode['type']
+const COMPOSITE_KEY: unique symbol = Symbol('keepAliveCompositeKey')
+
+type BaseCacheKey = VaporComponent | VNode['type']
+type CacheKey = BaseCacheKey | CompositeKey
 type Cache = Map<CacheKey, VaporComponentInstance | VaporFragment>
 type Keys = Set<CacheKey>
 type CompositeKey = {
-  type: CacheKey
+  type: BaseCacheKey
   branchKey: any
+  [COMPOSITE_KEY]: true
 }
 
 // Returns a stable composite key object for a given (type, branchKey) pair.
@@ -92,7 +96,7 @@ type CompositeKey = {
 // module-level Map leaks for primitive type keys (e.g. string tag names
 // from VDOM interop).
 function getCompositeKey(
-  type: CacheKey,
+  type: BaseCacheKey,
   branchKey: any,
   compositeKeyCache: WeakMap<object, Map<any, CompositeKey>>,
   compositeKeyCachePrimitive: Map<any, Map<any, CompositeKey>>,
@@ -109,10 +113,35 @@ function getCompositeKey(
 
   let composite = perType.get(branchKey)
   if (!composite) {
-    composite = { type, branchKey }
+    composite = { type, branchKey, [COMPOSITE_KEY]: true }
     perType.set(branchKey, composite)
   }
   return composite
+}
+
+function deleteCompositeKey(
+  key: CacheKey,
+  compositeKeyCache: WeakMap<object, Map<any, CompositeKey>>,
+  compositeKeyCachePrimitive: Map<any, Map<any, CompositeKey>>,
+): void {
+  if (!isObject(key) || !(COMPOSITE_KEY in key)) return
+
+  const { type, branchKey } = key as CompositeKey
+  const isObjectType = isObject(type) || isFunction(type)
+  const perType = isObjectType
+    ? compositeKeyCache.get(type)
+    : compositeKeyCachePrimitive.get(type)
+
+  if (!perType || perType.get(branchKey) !== key) return
+
+  perType.delete(branchKey)
+  if (perType.size) return
+
+  if (isObjectType) {
+    compositeKeyCache.delete(type)
+  } else {
+    compositeKeyCachePrimitive.delete(type)
+  }
 }
 
 const VaporKeepAliveImpl = defineVaporComponent({
@@ -150,7 +179,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     const compositeKeyCachePrimitive = new Map<any, Map<any, CompositeKey>>()
 
     const resolveKey = (
-      type: VaporComponent | VNode['type'],
+      type: BaseCacheKey,
       key?: any,
       branchKey?: any,
     ): CacheKey => {
@@ -205,7 +234,10 @@ const VaporKeepAliveImpl = defineVaporComponent({
       const rerender = keepAliveInstance.hmrRerender
       keepAliveInstance.hmrRerender = () => {
         keepAliveInstance.exposed = null
-        cache.forEach(cached => resetCachedShapeFlag(cached))
+        cache.forEach((cached, key) => {
+          resetCachedShapeFlag(cached)
+          deleteCompositeKey(key, compositeKeyCache, compositeKeyCachePrimitive)
+        })
         cache.clear()
         keys.clear()
         keptAliveScopes.forEach(scope => scope.stop())
@@ -351,6 +383,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       }
       cache.delete(key)
       keys.delete(key)
+      deleteCompositeKey(key, compositeKeyCache, compositeKeyCachePrimitive)
       const scope = deleteScope(key)
       if (scope) scope.stop()
     }
