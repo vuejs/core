@@ -2056,6 +2056,71 @@ describe('VaporKeepAlive', () => {
 
       expect(container.innerHTML).toContain('async inner')
     })
+
+    test('should not mis-cache when interop async resolves after switching away', async () => {
+      const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
+      let resolveA: (comp: any) => void
+      const AsyncCompA = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolveA = r
+          }),
+      )
+
+      const InnerCompA = {
+        name: 'CompA',
+        setup() {
+          return () => h('div', 'comp A')
+        },
+      }
+
+      const CompB = {
+        name: 'CompB',
+        setup() {
+          return () => h('div', 'comp B')
+        },
+      }
+
+      const showA = ref(true)
+      let cache: Map<any, any>
+
+      const App = defineVaporComponent({
+        setup() {
+          const ka = createComponent(VaporKeepAlive, null, {
+            default: () =>
+              createIf(
+                () => showA.value,
+                () => createComponent(AsyncCompA as any),
+                () => createComponent(CompB),
+              ),
+          })
+          cache = (ka as any).__v_cache
+          return ka
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      // switch to CompB before AsyncCompA resolves
+      showA.value = false
+      await nextTick()
+      expect(container.innerHTML).toContain('comp B')
+
+      const cacheBeforeResolve = cache!.size
+
+      // resolve A after switching away — should NOT trigger mis-cache
+      resolveA!(InnerCompA)
+      await timeout()
+      await nextTick()
+
+      // cache should not have grown from the stale resolution
+      expect(cache!.size).toBe(cacheBeforeResolve)
+    })
   })
 
   test('should invalidate pending mount/activated hooks when deactivated before post flush', async () => {

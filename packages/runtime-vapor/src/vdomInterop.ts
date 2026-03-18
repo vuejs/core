@@ -67,6 +67,7 @@ import {
 } from './block'
 import {
   EMPTY_OBJ,
+  NOOP,
   ShapeFlags,
   extend,
   isArray,
@@ -626,9 +627,15 @@ function createVDOMComponent(
     // for VDOM async components, trigger cacheBlock after resolution
     if ((component as any).__asyncLoader) {
       const keepAliveCtx = currentKeepAliveCtx
-      ;(component as any).__asyncLoader().then(() => {
-        keepAliveCtx.cacheBlock()
-      })
+      // guard against stale resolution after unmount or branch switch
+      let disposed = false
+      onScopeDispose(() => (disposed = true))
+      ;(component as any)
+        .__asyncLoader()
+        .then(() => {
+          if (!disposed) keepAliveCtx.cacheBlock()
+        })
+        .catch(NOOP)
     }
     setCurrentKeepAliveCtx(null)
   }
