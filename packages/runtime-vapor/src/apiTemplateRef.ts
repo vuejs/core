@@ -33,6 +33,7 @@ import {
   isFragment,
 } from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
+import { refCleanups } from './refCleanup'
 
 export type NodeRef =
   | string
@@ -50,8 +51,6 @@ export type setRefFn = (
   refFor?: boolean,
   refKey?: string,
 ) => NodeRef | undefined
-
-const refCleanups = new WeakMap<RefEl, { fn: () => void }>()
 
 function ensureCleanup(el: RefEl): { fn: () => void } {
   let cleanupRef = refCleanups.get(el)
@@ -245,19 +244,17 @@ function setRef(
       queuePostFlushCb(doSet, -1)
 
       ensureCleanup(el).fn = () => {
-        queuePostFlushCb(() => {
-          if (isArray(existing)) {
-            remove(existing, refValue)
-          } else if (_isString) {
-            refs[ref] = null
-            if (__DEV__ && canSetSetupRef(ref)) {
-              setupState[ref] = null
-            }
-          } else if (_isRef) {
-            if (canSetRef(ref, refKey)) ref.value = null
-            if (refKey) refs[refKey] = null
+        if (isArray(existing)) {
+          remove(existing, refValue)
+        } else if (_isString) {
+          refs[ref] = null
+          if (__DEV__ && canSetSetupRef(ref)) {
+            setupState[ref] = null
           }
-        })
+        } else if (_isRef) {
+          if (canSetRef(ref, refKey)) ref.value = null
+          if (refKey) refs[refKey] = null
+        }
       }
     } else if (__DEV__) {
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
