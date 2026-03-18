@@ -394,6 +394,19 @@ const vaporInteropImpl: Omit<
     vnode.component = cached.component
     vnode.anchor = cached.anchor
     const instance = vnode.component as any as VaporComponentInstance
+    const rootEl = getRootElement(instance)
+    if (rootEl) {
+      vnode.el = rootEl
+    }
+    if (vnode.dirs && !rootEl) {
+      if (__DEV__) {
+        warn(
+          `Runtime directive used on component with non-element root node. ` +
+            `The directives will not function as intended.`,
+        )
+      }
+      vnode.dirs = null
+    }
     const shouldUpdate = shouldUpdateComponent(cached, vnode)
     activate(instance, container, anchor)
     insert(vnode.anchor as any, container, anchor)

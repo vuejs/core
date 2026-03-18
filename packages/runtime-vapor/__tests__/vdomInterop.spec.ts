@@ -2230,5 +2230,72 @@ describe('vdomInterop', () => {
       expect(beforeUpdateSpy).toHaveBeenCalledTimes(1)
       expect(updatedSpy).toHaveBeenCalledTimes(1)
     })
+
+    test('should bail out directive beforeUpdate/updated on reactivation for non-element root vapor child', async () => {
+      const beforeUpdateSpy = vi.fn()
+      const updatedSpy = vi.fn()
+
+      const vDir = {
+        beforeUpdate: beforeUpdateSpy,
+        updated: updatedSpy,
+      }
+
+      const VaporChild = defineVaporComponent({
+        props: ['msg'],
+        setup() {
+          return [template('<div></div>')(), template('<div></div>')()]
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('span', 'vdom')
+        },
+      })
+
+      const current = shallowRef<any>(VaporChild)
+      const msg = ref('hello')
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(KeepAlive, null, {
+              default: () =>
+                current.value === VaporChild
+                  ? withDirectives(h(VaporChild as any, { msg: msg.value }), [
+                      [vDir],
+                    ])
+                  : h(VdomChild),
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      await nextTick()
+
+      if (__DEV__) {
+        expect(
+          `Runtime directive used on component with non-element root node.`,
+        ).toHaveBeenWarnedTimes(1)
+      }
+      expect(beforeUpdateSpy).toHaveBeenCalledTimes(0)
+      expect(updatedSpy).toHaveBeenCalledTimes(0)
+
+      current.value = VdomChild
+      await nextTick()
+
+      msg.value = 'world'
+      current.value = VaporChild
+      await nextTick()
+
+      expect(
+        `Runtime directive used on component with non-element root node.`,
+      ).toHaveBeenWarnedTimes(2)
+      expect(beforeUpdateSpy).toHaveBeenCalledTimes(0)
+      expect(updatedSpy).toHaveBeenCalledTimes(0)
+    })
   })
 })
