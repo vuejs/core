@@ -2530,6 +2530,11 @@ describe('VaporKeepAlive', () => {
         },
       }),
     )
+
+    await timeout()
+    await nextTick()
+    expect(listRef.value).toHaveLength(2)
+    expect(listRef.value.map(item => item.name).sort()).toEqual(['B', 'C'])
   })
 
   test('should clear old ref when switching KeepAlive branches', async () => {
