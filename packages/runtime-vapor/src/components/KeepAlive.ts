@@ -43,10 +43,10 @@ import type { EffectScope } from '@vue/reactivity'
 import { isInteropEnabled } from '../vdomInteropState'
 
 export interface VaporKeepAliveContext {
-  processShapeFlag(block: Block): boolean
+  processShapeFlag(block: Block): CacheKey | false
   cacheBlock(): void
-  cacheScope(key: any, scope: EffectScope): void
-  getScope(key: any): EffectScope | undefined
+  cacheScope(cacheKey: CacheKey, branchKey: any, scope: EffectScope): void
+  getScope(branchKey: any): EffectScope | undefined
   setCurrentBranchKey(key: any): any
 }
 
@@ -78,11 +78,11 @@ export interface KeepAliveInstance extends VaporComponentInstance {
   }
 }
 
-type CacheKey = VaporComponent | VNode['type'] | any
+type CacheKey = VaporComponent | VNode['type']
 type Cache = Map<CacheKey, VaporComponentInstance | VaporFragment>
 type Keys = Set<CacheKey>
 type CompositeKey = {
-  type: VaporComponent | VNode['type']
+  type: CacheKey
   branchKey: any
 }
 
@@ -91,7 +91,7 @@ type CompositeKey = {
 // module-level Map leaks for primitive type keys (e.g. string tag names
 // from VDOM interop).
 function getCompositeKey(
-  type: VaporComponent | VNode['type'],
+  type: CacheKey,
   branchKey: any,
   compositeKeyCache: WeakMap<object, Map<any, CompositeKey>>,
   compositeKeyCachePrimitive: Map<any, Map<any, CompositeKey>>,
@@ -195,6 +195,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       ;(keepAliveInstance as any).__v_cache = cache
+      ;(keepAliveInstance as any).__v_keptAliveScopes = keptAliveScopes
     }
 
     // Clear cache and shapeFlags before HMR rerender so cached components
@@ -278,7 +279,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       )
     }
 
-    const processShapeFlag = (block: Block): boolean => {
+    const processShapeFlag = (block: Block): CacheKey | false => {
       const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
 
@@ -288,6 +289,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
           innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
         }
         innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+        return cacheKey
       } else {
         const cacheKey = getCacheKey(innerBlock, false, currentBranchKey)
         if (cache.has(cacheKey)) {
@@ -296,8 +298,8 @@ const VaporKeepAliveImpl = defineVaporComponent({
         }
         ;(innerBlock as VaporComponentInstance)!.shapeFlag! |=
           ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+        return cacheKey
       }
-      return true
     }
 
     const pruneCache = (filter: (name: string) => boolean) => {
@@ -315,6 +317,22 @@ const VaporKeepAliveImpl = defineVaporComponent({
       })
     }
 
+    // delete scope from keptAliveScopes by one key,
+    // also removes the paired entry (cache key ↔ branch key)
+    const deleteScope = (key: CacheKey): EffectScope | undefined => {
+      const scope = keptAliveScopes.get(key)
+      if (scope) {
+        keptAliveScopes.delete(key)
+        for (const [k, s] of keptAliveScopes) {
+          if (s === scope) {
+            keptAliveScopes.delete(k)
+            break
+          }
+        }
+      }
+      return scope
+    }
+
     const pruneCacheEntry = (key: CacheKey) => {
       const cached = cache.get(key)!
 
@@ -327,11 +345,8 @@ const VaporKeepAliveImpl = defineVaporComponent({
       }
       cache.delete(key)
       keys.delete(key)
-      const scope = keptAliveScopes.get(key)
-      if (scope) {
-        scope.stop()
-        keptAliveScopes.delete(key)
-      }
+      const scope = deleteScope(key)
+      if (scope) scope.stop()
     }
 
     // prune cache on include/exclude prop change
@@ -379,15 +394,15 @@ const VaporKeepAliveImpl = defineVaporComponent({
     const keepAliveCtx: VaporKeepAliveContext = {
       processShapeFlag,
       cacheBlock,
-      cacheScope(key, scope) {
-        keptAliveScopes.set(key, scope)
+      cacheScope(cacheKey, branchKey, scope) {
+        // store under both keys so the scope can be looked up by:
+        // - cache key: for cleanup in pruneCacheEntry
+        // - branch key: for reuse in getScope (before the cache key is known)
+        keptAliveScopes.set(cacheKey, scope)
+        keptAliveScopes.set(branchKey, scope)
       },
-      getScope(key) {
-        const scope = keptAliveScopes.get(key)
-        if (scope) {
-          keptAliveScopes.delete(key)
-          return scope
-        }
+      getScope(branchKey) {
+        return deleteScope(branchKey)
       },
       setCurrentBranchKey(key) {
         try {
