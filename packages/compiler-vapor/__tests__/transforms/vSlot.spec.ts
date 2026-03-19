@@ -563,7 +563,7 @@ describe('compiler: transform slot', () => {
       })
     })
 
-    test('comments cannot be treated as default child nodes', () => {
+    test('ignore comments when checking extraneous default slot children', () => {
       const onError = vi.fn()
       const source = `<Comp><template #default>foo</template><!--  --></Comp>`
       compileWithSlots(source, { onError })
