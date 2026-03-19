@@ -23,22 +23,6 @@ const compileWithSlots = makeCompile({
     transformSlotOutlet,
     transformElement,
     transformVSlot,
-    transformChildren,
-  ],
-  directiveTransforms: {
-    bind: transformVBind,
-    on: transformVOn,
-  },
-})
-
-const compileWithSlotsAndComments = makeCompile({
-  nodeTransforms: [
-    transformText,
-    transformVIf,
-    transformVFor,
-    transformSlotOutlet,
-    transformElement,
-    transformVSlot,
     transformComment,
     transformChildren,
   ],
@@ -589,9 +573,7 @@ describe('compiler: transform slot', () => {
     })
 
     test('comment-only children should still generate implicit default slot', () => {
-      const { ir, code } = compileWithSlotsAndComments(
-        `<Comp><!--foo--></Comp>`,
-      )
+      const { ir, code } = compileWithSlots(`<Comp><!--foo--></Comp>`)
 
       expect(code).toContain(`<!--foo-->`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -610,7 +592,7 @@ describe('compiler: transform slot', () => {
     })
 
     test('comments should be excluded from mixed implicit default slot content', () => {
-      const { code } = compileWithSlotsAndComments(
+      const { code } = compileWithSlots(
         `<Comp><template #one>foo</template><!--bar--><span/></Comp>`,
       )
 
