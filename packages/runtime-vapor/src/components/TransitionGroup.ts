@@ -35,7 +35,7 @@ import {
 } from '../component'
 import { isForBlock } from '../apiCreateFor'
 import { createElement } from '../dom/node'
-import { isFragment } from '../fragment'
+import { DynamicFragment, isFragment } from '../fragment'
 import {
   type DefineVaporComponent,
   defineVaporComponent,
@@ -80,25 +80,23 @@ const VaporTransitionGroupImpl = defineVaporComponent({
     })
 
     let prevChildren: TransitionBlock[]
-    const slottedBlock = slots.default && slots.default()
+    let slottedBlock: Block = []
 
     onBeforeUpdate(() => {
       prevChildren = []
       const children = getTransitionBlocks(slottedBlock)
-      if (children) {
-        for (let i = 0; i < children.length; i++) {
-          const child = children[i]
-          if (isValidTransitionBlock(child)) {
-            prevChildren.push(child)
-            // disabled transition during enter, so the children will be
-            // inserted into the correct position immediately. this prevents
-            // `recordPosition` from getting incorrect positions in `onUpdated`
-            child.$transition!.disabled = true
-            positionMap.set(
-              child,
-              getTransitionElement(child).getBoundingClientRect(),
-            )
-          }
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i]
+        if (isValidTransitionBlock(child)) {
+          prevChildren.push(child)
+          // disabled transition during enter, so the children will be
+          // inserted into the correct position immediately. this prevents
+          // `recordPosition` from getting incorrect positions in `onUpdated`
+          child.$transition!.disabled = true
+          positionMap.set(
+            child,
+            getTransitionElement(child).getBoundingClientRect(),
+          )
         }
       }
     })
@@ -140,21 +138,41 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       prevChildren = []
     })
 
-    applyGroupTransitionHooks(slottedBlock, {
+    const transitionHooks = {
       props: propsProxy,
       state,
       instance,
       applyGroup: applyGroupTransitionHooks,
-    } as VaporTransitionHooks)
+    } as VaporTransitionHooks
 
-    const tag = props.tag
-    if (tag) {
-      const container = createElement(tag)
-      insert(slottedBlock, container)
-      return container
-    } else {
-      return slottedBlock
-    }
+    const frag = new DynamicFragment('transition-group')
+    let currentTag: string | undefined
+    let isMounted = false
+    renderEffect(() => {
+      const tag = props.tag
+      // tag is not changed, do nothing
+      if (isMounted && tag === currentTag) return
+
+      let block: Block = slottedBlock
+      frag.update(
+        () => {
+          block = (slots.default && slots.default()) || []
+          applyGroupTransitionHooks(block, transitionHooks)
+          if (tag) {
+            const container = createElement(tag)
+            insert(block, container)
+            return container
+          }
+          return block
+        },
+        // Avoid `undefined` falling back to the render function as the key.
+        tag ?? null,
+      )
+      slottedBlock = block
+      currentTag = tag
+      isMounted = true
+    })
+    return frag
   },
 })
 
