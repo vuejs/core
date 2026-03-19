@@ -115,7 +115,7 @@ describe('compiler: transition', () => {
         <template v-if="ok"></template>
       </transition>
       `,
-      true,
+      false,
     )
   })
 
