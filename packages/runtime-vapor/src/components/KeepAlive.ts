@@ -353,6 +353,10 @@ const VaporKeepAliveImpl = defineVaporComponent({
         remove(cached, storageContainer)
       })
 
+      // Same-tick branch switches can tear down KeepAlive after the next branch
+      // has already been marked with COMPONENT_SHOULD_KEEP_ALIVE in
+      // processShapeFlag(), but before cacheBlock() stores it in cache.
+      // That current live block still needs the current-entry deactivation path.
       if (!matched && currentBlock && isKeptAlive(currentBlock, interop)) {
         deactivateCached(currentBlock)
       }
