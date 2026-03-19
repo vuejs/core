@@ -1705,10 +1705,20 @@ describe('VaporKeepAlive', () => {
   })
 
   test('should stop branch scope when cache entry is pruned (keyed branches)', async () => {
+    const mountedA = vi.fn()
+    const mountedB = vi.fn()
+
     const Comp = defineVaporComponent({
       name: 'Comp',
       props: ['id'],
       setup(props: any) {
+        onMounted(() => {
+          if (props.id === 'a') {
+            mountedA()
+          } else {
+            mountedB()
+          }
+        })
         return template('<div></div>')()
       },
     })
@@ -1750,14 +1760,16 @@ describe('VaporKeepAlive', () => {
     await nextTick()
 
     // both branches should be independently cached
-    // keyed branches use branchKey to distinguish same-type components
     expect(cache.size).toBe(2)
-    expect(keptAliveScopes.size).toBe(2)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(1)
 
     // switch back to branch A
     toggle.value = true
     await nextTick()
     expect(cache.size).toBe(2)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(1)
 
     // prune by excluding Comp — all entries should be cleaned
     exclude.value = 'Comp'
@@ -1908,7 +1920,7 @@ describe('VaporKeepAlive', () => {
     expect(keepAlive.ctx.getStorageContainer().innerHTML).toBe('')
   })
 
-  test('should recreate composite cache key after max prunes keyed branch entry', async () => {
+  test('should recreate cached entry while preserving branch cache key after max prunes keyed branch entry', async () => {
     const Comp = defineVaporComponent({
       name: 'Comp',
       props: ['id'],
@@ -1945,6 +1957,7 @@ describe('VaporKeepAlive', () => {
     await nextTick()
     expect(cache.size).toBe(1)
     const keyA1 = Array.from(cache.keys())[0]
+    const cachedA1 = cache.get(keyA1)
 
     toggle.value = false
     await nextTick()
@@ -1956,12 +1969,13 @@ describe('VaporKeepAlive', () => {
     await nextTick()
     expect(cache.size).toBe(1)
     const keyA2 = Array.from(cache.keys())[0]
+    const cachedA2 = cache.get(keyA2)
 
-    expect((keyA1 as any).branchKey).toBe((keyA2 as any).branchKey)
-    expect(keyA2).not.toBe(keyA1)
+    expect(keyA2).toBe(keyA1)
+    expect(cachedA2).not.toBe(cachedA1)
   })
 
-  test('should recreate composite cache key after KeepAlive hmr rerender', async () => {
+  test('should recreate cached entry while preserving branch cache key after KeepAlive hmr rerender', async () => {
     const Comp = defineVaporComponent({
       name: 'Comp',
       props: ['id'],
@@ -1993,17 +2007,19 @@ describe('VaporKeepAlive', () => {
     await nextTick()
     expect(cache.size).toBe(1)
     const keyA1 = Array.from(cache.keys())[0]
+    const cachedA1 = cache.get(keyA1)
 
     keepAliveInstance.hmrRerender!()
     await nextTick()
 
     expect(cache.size).toBe(1)
     const keyA2 = Array.from(cache.keys())[0]
-    expect((keyA1 as any).branchKey).toBe((keyA2 as any).branchKey)
-    expect(keyA2).not.toBe(keyA1)
+    const cachedA2 = cache.get(keyA2)
+    expect(keyA2).toBe(keyA1)
+    expect(cachedA2).not.toBe(cachedA1)
   })
 
-  test('should not retain composite key entries for uncached keyed branches', async () => {
+  test('should not create cache entries for uncached keyed branches', async () => {
     const Comp = defineVaporComponent({
       name: 'Comp',
       setup() {
@@ -2013,76 +2029,42 @@ describe('VaporKeepAlive', () => {
 
     const include = ref('OtherComp')
     const routeKey = ref('a')
+    const { instance } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => include.value },
+          {
+            default: () =>
+              createKeyedFragment(
+                () => routeKey.value,
+                () => createComponent(Comp),
+              ),
+          },
+        )
+      },
+    }).render()
 
-    const rawSet = Map.prototype.set
-    const rawDelete = Map.prototype.delete
-    const compositeMaps = new WeakSet<Map<any, any>>()
-    let compositeSetCount = 0
-    let compositeDeleteCount = 0
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+    const keptAliveScopes = keepAliveInstance.__v_keptAliveScopes as Map<
+      any,
+      any
+    >
 
-    const setSpy = vi.spyOn(Map.prototype, 'set').mockImplementation(function (
-      this: Map<any, any>,
-      key: any,
-      value: any,
-    ) {
-      if (
-        value &&
-        typeof value === 'object' &&
-        'branchKey' in value &&
-        'type' in value &&
-        value.type === Comp
-      ) {
-        compositeMaps.add(this)
-        compositeSetCount++
-      }
-      return rawSet.call(this, key, value)
-    })
+    await nextTick()
+    expect(cache.size).toBe(0)
+    expect(keptAliveScopes.size).toBe(0)
 
-    const deleteSpy = vi
-      .spyOn(Map.prototype, 'delete')
-      .mockImplementation(function (this: Map<any, any>, key: any) {
-        if (compositeMaps.has(this)) {
-          compositeDeleteCount++
-        }
-        return rawDelete.call(this, key)
-      })
+    routeKey.value = 'b'
+    await nextTick()
+    expect(cache.size).toBe(0)
+    expect(keptAliveScopes.size).toBe(0)
 
-    try {
-      const { instance } = define({
-        setup() {
-          return createComponent(
-            VaporKeepAlive,
-            { include: () => include.value },
-            {
-              default: () =>
-                createKeyedFragment(
-                  () => routeKey.value,
-                  () => createComponent(Comp),
-                ),
-            },
-          )
-        },
-      }).render()
-
-      const keepAliveInstance = instance!.block as any
-      const cache = keepAliveInstance.__v_cache as Map<any, any>
-
-      await nextTick()
-      expect(cache.size).toBe(0)
-
-      routeKey.value = 'b'
-      await nextTick()
-      expect(cache.size).toBe(0)
-
-      routeKey.value = 'c'
-      await nextTick()
-      expect(cache.size).toBe(0)
-
-      expect(compositeSetCount - compositeDeleteCount).toBeLessThanOrEqual(1)
-    } finally {
-      setSpy.mockRestore()
-      deleteSpy.mockRestore()
-    }
+    routeKey.value = 'c'
+    await nextTick()
+    expect(cache.size).toBe(0)
+    expect(keptAliveScopes.size).toBe(0)
   })
 
   test('handle error in async onActivated', async () => {
