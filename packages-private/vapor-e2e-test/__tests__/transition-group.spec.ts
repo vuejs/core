@@ -409,6 +409,157 @@ describe('vapor transition-group', () => {
     )
   })
 
+  // Dynamic tag changes have no leave transition, only enter transition.
+  // This matches vdom transition-group behavior.
+  test('dynamic tag', async () => {
+    const btnSelector = '.dynamic-tag > button'
+    const containerSelector = '.dynamic-tag > div'
+
+    expect(await html(containerSelector)).toBe(
+      `<div>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>` +
+        `</div>`,
+    )
+
+    // div -> section
+    expect(
+      (await transitionStart(btnSelector, containerSelector)).innerHTML,
+    ).toBe(
+      `<section>` +
+        `<div class="test v-enter-from v-enter-active">a</div>` +
+        `<div class="test v-enter-from v-enter-active">b</div>` +
+        `<div class="test v-enter-from v-enter-active">c</div>` +
+        `</section>`,
+    )
+    await waitForInnerHTML(
+      containerSelector,
+      `<section>` +
+        `<div class="test v-enter-active v-enter-to">a</div>` +
+        `<div class="test v-enter-active v-enter-to">b</div>` +
+        `<div class="test v-enter-active v-enter-to">c</div>` +
+        `</section>`,
+    )
+    await waitForInnerHTML(
+      containerSelector,
+      `<section>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>` +
+        `</section>`,
+    )
+
+    // section -> fragment
+    expect(
+      (await transitionStart(btnSelector, containerSelector)).innerHTML,
+    ).toBe(
+      `<div class="test v-enter-from v-enter-active">a</div>` +
+        `<div class="test v-enter-from v-enter-active">b</div>` +
+        `<div class="test v-enter-from v-enter-active">c</div>`,
+    )
+    await waitForInnerHTML(
+      containerSelector,
+      `<div class="test v-enter-active v-enter-to">a</div>` +
+        `<div class="test v-enter-active v-enter-to">b</div>` +
+        `<div class="test v-enter-active v-enter-to">c</div>`,
+    )
+    await waitForInnerHTML(
+      containerSelector,
+      `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>`,
+    )
+
+    // fragment -> div
+    expect(
+      (await transitionStart(btnSelector, containerSelector)).innerHTML,
+    ).toBe(
+      `<div>` +
+        `<div class="test v-enter-from v-enter-active">a</div>` +
+        `<div class="test v-enter-from v-enter-active">b</div>` +
+        `<div class="test v-enter-from v-enter-active">c</div>` +
+        `</div>`,
+    )
+    await waitForInnerHTML(
+      containerSelector,
+      `<div>` +
+        `<div class="test v-enter-active v-enter-to">a</div>` +
+        `<div class="test v-enter-active v-enter-to">b</div>` +
+        `<div class="test v-enter-active v-enter-to">c</div>` +
+        `</div>`,
+    )
+    await waitForInnerHTML(
+      containerSelector,
+      `<div>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>` +
+        `</div>`,
+    )
+  })
+
+  test('dynamic tag render effect leak', async () => {
+    const cycleBtnSelector = '.dynamic-tag-render-effect-leak > button.cycle'
+    const addBtnSelector = '.dynamic-tag-render-effect-leak > button.add'
+    const containerSelector = '.dynamic-tag-render-effect-leak > div'
+
+    expect(await html(containerSelector)).toBe(
+      `<div>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `</div>`,
+    )
+
+    await page().evaluate(() => {
+      ;(window as any).clearRenderCalls()
+    })
+
+    await transitionStart(cycleBtnSelector, containerSelector)
+    await waitForInnerHTML(
+      containerSelector,
+      `<section>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `</section>`,
+    )
+
+    await transitionStart(cycleBtnSelector, containerSelector)
+    await waitForInnerHTML(
+      containerSelector,
+      `<div class="test">a</div>` + `<div class="test">b</div>`,
+    )
+
+    await transitionStart(cycleBtnSelector, containerSelector)
+    await waitForInnerHTML(
+      containerSelector,
+      `<div>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `</div>`,
+    )
+
+    await page().evaluate(() => {
+      ;(window as any).clearRenderCalls()
+    })
+
+    await transitionStart(addBtnSelector, containerSelector)
+    await waitForInnerHTML(
+      containerSelector,
+      `<div>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>` +
+        `</div>`,
+    )
+
+    expect(
+      await page().evaluate(() => {
+        return (window as any).getRenderCalls()
+      }),
+    ).toEqual(['c'])
+  })
+
   test('events', async () => {
     const btnSelector = '.events > button'
     const containerSelector = '.events > div'
