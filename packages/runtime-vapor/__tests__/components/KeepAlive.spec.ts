@@ -2067,6 +2067,84 @@ describe('VaporKeepAlive', () => {
     expect(keptAliveScopes.size).toBe(0)
   })
 
+  test('should cache keyed branches with falsy key (0)', async () => {
+    const mountedZero = vi.fn()
+    const mountedOne = vi.fn()
+    const unmountedZero = vi.fn()
+    const unmountedOne = vi.fn()
+
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      props: ['id'],
+      setup(props: any) {
+        onMounted(() => {
+          if (props.id === 0) {
+            mountedZero()
+          } else {
+            mountedOne()
+          }
+        })
+        onUnmounted(() => {
+          if (props.id === 0) {
+            unmountedZero()
+          } else {
+            unmountedOne()
+          }
+        })
+        const n0 = template('<div> </div>')() as any
+        const n1 = child(n0) as any
+        renderEffect(() => setText(n1, String(props.id)))
+        return n0
+      },
+    })
+
+    const routeKey = ref(0)
+    const { instance } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createKeyedFragment(
+              () => routeKey.value,
+              () => createComponent(Comp, { id: () => routeKey.value }),
+            ),
+        })
+      },
+    }).render()
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+    const keptAliveScopes = keepAliveInstance.__v_keptAliveScopes as Map<
+      any,
+      any
+    >
+
+    await nextTick()
+    expect(cache.size).toBe(1)
+    expect(cache.has(0)).toBe(true)
+    expect(mountedZero).toHaveBeenCalledTimes(1)
+
+    routeKey.value = 1
+    await nextTick()
+    expect(cache.size).toBe(2)
+    expect(cache.has(0)).toBe(true)
+    expect(cache.has(1)).toBe(true)
+    // key=0 should still retain branch scope in KeepAlive bookkeeping
+    // (regression guard for falsy cache key handling)
+    expect(keptAliveScopes.has(0)).toBe(true)
+    expect(mountedOne).toHaveBeenCalledTimes(1)
+    expect(unmountedZero).toHaveBeenCalledTimes(0)
+
+    routeKey.value = 0
+    await nextTick()
+    expect(mountedZero).toHaveBeenCalledTimes(1)
+    expect(unmountedZero).toHaveBeenCalledTimes(0)
+
+    routeKey.value = 1
+    await nextTick()
+    expect(mountedOne).toHaveBeenCalledTimes(1)
+    expect(unmountedOne).toHaveBeenCalledTimes(0)
+  })
+
   test('handle error in async onActivated', async () => {
     const err = new Error('foo')
     const handler = vi.fn()

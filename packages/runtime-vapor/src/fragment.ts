@@ -162,7 +162,7 @@ export class DynamicFragment extends VaporFragment {
             )
           : keepAliveCtx.processShapeFlag(this.nodes)
         : false
-      if (cacheKey) {
+      if (cacheKey !== false) {
         keepAliveCtx!.cacheScope(cacheKey, this.current, this.scope)
         retainScope = true
       }
