@@ -127,7 +127,7 @@ describe('compiler: transition', () => {
         <template v-else></template>
       </transition>
       `,
-      true,
+      false,
     )
   })
 
