@@ -23,6 +23,7 @@ import {
   expose,
   getComponentName,
   getFunctionalFallthrough,
+  invalidateMount,
   isAsyncWrapper,
   isKeepAlive,
   markAsyncBoundary,
@@ -923,7 +924,8 @@ export function unmountComponent(
   if (
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.parent &&
-    instance.parent.vapor
+    instance.parent.vapor &&
+    (instance.parent as KeepAliveInstance).ctx
   ) {
     if (parentNode) {
       ;(instance.parent as KeepAliveInstance)!.ctx.deactivate(instance)
@@ -935,6 +937,8 @@ export function unmountComponent(
     if (__DEV__) {
       unregisterHMR(instance)
     }
+    invalidateMount(instance.m)
+    invalidateMount(instance.a)
     if (instance.bum) {
       invokeArrayFns(instance.bum)
     }

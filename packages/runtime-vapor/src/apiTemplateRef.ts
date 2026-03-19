@@ -33,6 +33,12 @@ import {
   isFragment,
 } from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
+import {
+  type RefCleanupState,
+  invalidatePendingRef,
+  refCleanups,
+  unsetRef,
+} from './refCleanup'
 
 export type NodeRef =
   | string
@@ -51,13 +57,12 @@ export type setRefFn = (
   refKey?: string,
 ) => NodeRef | undefined
 
-const refCleanups = new WeakMap<RefEl, { fn: () => void }>()
-
-function ensureCleanup(el: RefEl): { fn: () => void } {
+function ensureCleanup(el: RefEl): RefCleanupState {
   let cleanupRef = refCleanups.get(el)
   if (!cleanupRef) {
     refCleanups.set(el, (cleanupRef = { fn: NOOP }))
     onScopeDispose(() => {
+      invalidatePendingRef(el)
       cleanupRef!.fn()
       refCleanups.delete(el)
     })
@@ -106,15 +111,6 @@ function setRef(
 ): NodeRef | undefined {
   if (!instance || instance.isUnmounted) return
 
-  // async component
-  if (isVaporComponent(el) && isAsyncWrapper(el)) {
-    // unresolved: handled in DynamicFragment's updated hook
-    if (!el.type.__asyncResolved) return
-
-    // resolved: set ref to the inner component
-    el = (el.block as DynamicFragment).nodes as VaporComponentInstance
-  }
-
   const setupState: any = __DEV__ ? instance.setupState || {} : null
   const refValue = getRefValue(el)
 
@@ -151,6 +147,7 @@ function setRef(
 
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
+    invalidatePendingRef(el)
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (__DEV__ && canSetSetupRef(oldRef)) {
@@ -172,8 +169,7 @@ function setRef(
       ])
     } else if (refFor) {
       // For dynamic ref-for branches, remove only this branch's previous value.
-      const cleanup = refCleanups.get(el)
-      if (cleanup) cleanup.fn()
+      unsetRef(el)
     }
   }
 
@@ -198,6 +194,11 @@ function setRef(
     if (_isString || _isRef) {
       const doSet: SchedulerJob = () => {
         if (refFor) {
+          // for unresolved async components, refValue is null.
+          // skip adding null to the array — the ref will be re-set
+          // when the async component resolves via DynamicFragment's updated hook.
+          if (refValue == null) return
+
           existing = _isString
             ? __DEV__ && canSetSetupRef(ref)
               ? setupState[ref]
@@ -236,22 +237,33 @@ function setRef(
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
         }
       }
-      queuePostFlushCb(doSet, -1)
-
-      ensureCleanup(el).fn = () => {
-        queuePostFlushCb(() => {
+      const cleanup = ensureCleanup(el)
+      cleanup.fn = () => {
+        if (refFor) {
           if (isArray(existing)) {
             remove(existing, refValue)
-          } else if (_isString) {
-            refs[ref] = null
-            if (__DEV__ && canSetSetupRef(ref)) {
-              setupState[ref] = null
-            }
-          } else if (_isRef) {
-            if (canSetRef(ref, refKey)) ref.value = null
-            if (refKey) refs[refKey] = null
           }
-        })
+        } else if (_isString) {
+          refs[ref] = null
+          if (__DEV__ && canSetSetupRef(ref)) {
+            setupState[ref] = null
+          }
+        } else if (_isRef) {
+          if (canSetRef(ref, refKey)) ref.value = null
+          if (refKey) refs[refKey] = null
+        }
+      }
+
+      invalidatePendingRef(el)
+      if (refValue != null) {
+        const job: SchedulerJob = () => {
+          doSet()
+          if (cleanup.job === job) cleanup.job = undefined
+        }
+        cleanup.job = job
+        queuePostFlushCb(job, -1)
+      } else {
+        doSet()
       }
     } else if (__DEV__) {
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
@@ -262,6 +274,11 @@ function setRef(
 
 const getRefValue = (el: RefEl) => {
   if (isVaporComponent(el)) {
+    if (isAsyncWrapper(el)) {
+      // unresolved async wrapper: return null so ref gets cleared
+      if (!el.type.__asyncResolved) return null
+      return getRefValue((el.block as DynamicFragment).nodes as RefEl)
+    }
     return getExposed(el) || el
   } else if (isTeleportFragment(el)) {
     return null

@@ -1,8 +1,10 @@
 import {
+  defineAsyncComponent,
   h,
   nextTick,
   onActivated,
   onBeforeMount,
+  onBeforeUpdate,
   onDeactivated,
   onMounted,
   onUnmounted,
@@ -19,7 +21,9 @@ import {
   child,
   createComponent,
   createDynamicComponent,
+  createFor,
   createIf,
+  createKeyedFragment,
   createSlot,
   createTemplateRefSetter,
   createVaporApp,
@@ -1541,6 +1545,606 @@ describe('VaporKeepAlive', () => {
     expect(activated).toHaveBeenCalledTimes(0)
   })
 
+  test('should not prune cached async component when its resolved name still matches include', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const include = ref('Foo')
+    const toggle = ref(true)
+    const { html, instance } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => include.value },
+          {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => createComponent(AsyncComp),
+              )
+            },
+          },
+        )
+      },
+    }).render()
+
+    resolve!(
+      defineVaporComponent({
+        name: 'Foo',
+        setup() {
+          return template(`<div>Foo</div>`)()
+        },
+      }),
+    )
+    await timeout()
+    expect(html()).toBe(`<div>Foo</div><!--async component--><!--if-->`)
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+    expect(cache.size).toBe(1)
+
+    include.value = 'Foo,Bar'
+    await nextTick()
+    expect(cache.size).toBe(1)
+  })
+
+  test('should prune cached async component when its resolved name no longer matches include', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const include = ref('Foo')
+    const toggle = ref(true)
+    const { html, instance } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => include.value },
+          {
+            default: () => {
+              return createIf(
+                () => toggle.value,
+                () => createComponent(AsyncComp),
+              )
+            },
+          },
+        )
+      },
+    }).render()
+
+    resolve!(
+      defineVaporComponent({
+        name: 'Foo',
+        setup() {
+          return template(`<div>Foo</div>`)()
+        },
+      }),
+    )
+    await timeout()
+    expect(html()).toBe(`<div>Foo</div><!--async component--><!--if-->`)
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+    expect(cache.size).toBe(1)
+
+    // 'Foo' no longer matches include 'Bar', should be pruned
+    include.value = 'Bar'
+    await nextTick()
+    expect(cache.size).toBe(0)
+  })
+
+  test('should stop branch scope when cache entry is pruned', async () => {
+    const One = defineVaporComponent({
+      name: 'One',
+      setup() {
+        return template('<div>one</div>')()
+      },
+    })
+
+    const Two = defineVaporComponent({
+      name: 'Two',
+      setup() {
+        return template('<div>two</div>')()
+      },
+    })
+
+    const include = ref('One,Two')
+    const toggle = ref(true)
+    const { html, instance } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => include.value },
+          {
+            default: () =>
+              createIf(
+                () => toggle.value,
+                () => createComponent(One),
+                () => createComponent(Two),
+              ),
+          },
+        )
+      },
+    }).render()
+
+    const keepAliveInstance = instance!.block as any
+    const keptAliveScopes = keepAliveInstance.__v_keptAliveScopes as Map<
+      any,
+      any
+    >
+
+    expect(html()).toBe('<div>one</div><!--if-->')
+
+    // deactivate One → branch scope retained in keptAliveScopes
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<div>two</div><!--if-->')
+    expect(keptAliveScopes.size).toBe(2)
+
+    // prune One from cache → keptAliveScopes should also be cleaned up
+    include.value = 'Two'
+    await nextTick()
+    expect(keptAliveScopes.size).toBe(0)
+  })
+
+  test('should stop branch scope when cache entry is pruned (keyed branches)', async () => {
+    const mountedA = vi.fn()
+    const mountedB = vi.fn()
+
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      props: ['id'],
+      setup(props: any) {
+        onMounted(() => {
+          if (props.id === 'a') {
+            mountedA()
+          } else {
+            mountedB()
+          }
+        })
+        return template('<div></div>')()
+      },
+    })
+
+    const exclude = ref('')
+    const toggle = ref(true)
+    const { html, instance } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { exclude: () => exclude.value },
+          {
+            default: () =>
+              // index=0 makes this a keyed DynamicFragment
+              createIf(
+                () => toggle.value,
+                () => createComponent(Comp, { id: () => 'a' }),
+                () => createComponent(Comp, { id: () => 'b' }),
+                undefined,
+                undefined,
+                0,
+              ),
+          },
+        )
+      },
+    }).render()
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+    const keptAliveScopes = keepAliveInstance.__v_keptAliveScopes as Map<
+      any,
+      any
+    >
+
+    expect(html()).toBe('<div></div><!--if-->')
+
+    // switch from branch A to branch B
+    toggle.value = false
+    await nextTick()
+
+    // both branches should be independently cached
+    expect(cache.size).toBe(2)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(1)
+
+    // switch back to branch A
+    toggle.value = true
+    await nextTick()
+    expect(cache.size).toBe(2)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(1)
+
+    // prune by excluding Comp — all entries should be cleaned
+    exclude.value = 'Comp'
+    await nextTick()
+    expect(cache.size).toBe(0)
+    expect(keptAliveScopes.size).toBe(0)
+  })
+
+  test('should use live keyed branch when tearing down KeepAlive after same-tick switch', async () => {
+    const show = ref(true)
+    const toggle = ref(true)
+    let keepAlive: any
+    const deactivatedA = vi.fn()
+    const deactivatedB = vi.fn()
+    const unmountedA = vi.fn()
+
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      props: ['id'],
+      setup(props: any) {
+        const n0 = template('<div> </div>')() as any
+        const n1 = child(n0) as any
+        onBeforeMount(() => {
+          if (props.id === 'b') {
+            show.value = false
+          }
+        })
+        onDeactivated(() => {
+          if (props.id === 'a') {
+            deactivatedA()
+          } else {
+            deactivatedB()
+          }
+        })
+        onUnmounted(() => {
+          if (props.id === 'a') {
+            unmountedA()
+          }
+        })
+        renderEffect(() => setText(n1, props.id))
+        return n0
+      },
+    })
+
+    define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => {
+            keepAlive = createComponent(VaporKeepAlive, null, {
+              default: () =>
+                createIf(
+                  () => toggle.value,
+                  () => createComponent(Comp, { id: () => 'a' }),
+                  () => createComponent(Comp, { id: () => 'b' }),
+                  undefined,
+                  undefined,
+                  0,
+                ),
+            })
+            return keepAlive
+          },
+        )
+      },
+    }).render()
+
+    await nextTick()
+
+    toggle.value = false
+    await nextTick()
+
+    expect(show.value).toBe(false)
+    expect(deactivatedA).toHaveBeenCalledTimes(1)
+    expect(unmountedA).toHaveBeenCalledTimes(1)
+    expect(deactivatedB).toHaveBeenCalledTimes(1)
+    expect(keepAlive.ctx.getStorageContainer().innerHTML).toBe('')
+  })
+
+  test('should not retain cached keyed branch when current branch is unresolved async during KeepAlive teardown', async () => {
+    const show = ref(true)
+    const toggle = ref(true)
+    let keepAlive: any
+    const deactivatedA = vi.fn()
+    const unmountedA = vi.fn()
+
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(() => {
+          // keep unresolved
+        }),
+    )
+
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      props: ['id'],
+      setup(props: any) {
+        const n0 = template('<div> </div>')() as any
+        const n1 = child(n0) as any
+        onDeactivated(() => {
+          if (props.id === 'a') {
+            deactivatedA()
+          }
+        })
+        onUnmounted(() => {
+          if (props.id === 'a') {
+            unmountedA()
+          }
+        })
+        renderEffect(() => setText(n1, props.id))
+        return n0
+      },
+    })
+
+    define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => {
+            keepAlive = createComponent(VaporKeepAlive, null, {
+              default: () =>
+                createIf(
+                  () => toggle.value,
+                  () => createComponent(Comp, { id: () => 'a' }),
+                  () => createComponent(AsyncComp),
+                  undefined,
+                  undefined,
+                  0,
+                ),
+            })
+            return keepAlive
+          },
+        )
+      },
+    }).render()
+
+    await nextTick()
+
+    toggle.value = false
+    await nextTick()
+
+    expect(deactivatedA).toHaveBeenCalledTimes(1)
+    expect(unmountedA).toHaveBeenCalledTimes(0)
+
+    show.value = false
+    await nextTick()
+
+    expect(unmountedA).toHaveBeenCalledTimes(1)
+    expect(keepAlive.ctx.getStorageContainer().innerHTML).toBe('')
+  })
+
+  test('should recreate cached entry while preserving branch cache key after max prunes keyed branch entry', async () => {
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      props: ['id'],
+      setup() {
+        return template('<div></div>')()
+      },
+    })
+
+    const toggle = ref(true)
+    const { instance } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { max: () => 1 },
+          {
+            default: () =>
+              // index=0 makes this a keyed DynamicFragment
+              createIf(
+                () => toggle.value,
+                () => createComponent(Comp, { id: () => 'a' }),
+                () => createComponent(Comp, { id: () => 'b' }),
+                undefined,
+                undefined,
+                0,
+              ),
+          },
+        )
+      },
+    }).render()
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+
+    await nextTick()
+    expect(cache.size).toBe(1)
+    const keyA1 = Array.from(cache.keys())[0]
+    const cachedA1 = cache.get(keyA1)
+
+    toggle.value = false
+    await nextTick()
+    expect(cache.size).toBe(1)
+    const keyB = Array.from(cache.keys())[0]
+    expect(keyB).not.toBe(keyA1)
+
+    toggle.value = true
+    await nextTick()
+    expect(cache.size).toBe(1)
+    const keyA2 = Array.from(cache.keys())[0]
+    const cachedA2 = cache.get(keyA2)
+
+    expect(keyA2).toBe(keyA1)
+    expect(cachedA2).not.toBe(cachedA1)
+  })
+
+  test('should recreate cached entry while preserving branch cache key after KeepAlive hmr rerender', async () => {
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      props: ['id'],
+      setup() {
+        return template('<div></div>')()
+      },
+    })
+
+    const toggle = ref(true)
+    const { instance } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => createComponent(Comp, { id: () => 'a' }),
+              () => createComponent(Comp, { id: () => 'b' }),
+              undefined,
+              undefined,
+              0,
+            ),
+        })
+      },
+    }).render()
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+
+    await nextTick()
+    expect(cache.size).toBe(1)
+    const keyA1 = Array.from(cache.keys())[0]
+    const cachedA1 = cache.get(keyA1)
+
+    keepAliveInstance.hmrRerender!()
+    await nextTick()
+
+    expect(cache.size).toBe(1)
+    const keyA2 = Array.from(cache.keys())[0]
+    const cachedA2 = cache.get(keyA2)
+    expect(keyA2).toBe(keyA1)
+    expect(cachedA2).not.toBe(cachedA1)
+  })
+
+  test('should not create cache entries for uncached keyed branches', async () => {
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      setup() {
+        return template('<div></div>')()
+      },
+    })
+
+    const include = ref('OtherComp')
+    const routeKey = ref('a')
+    const { instance } = define({
+      setup() {
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => include.value },
+          {
+            default: () =>
+              createKeyedFragment(
+                () => routeKey.value,
+                () => createComponent(Comp),
+              ),
+          },
+        )
+      },
+    }).render()
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+    const keptAliveScopes = keepAliveInstance.__v_keptAliveScopes as Map<
+      any,
+      any
+    >
+
+    await nextTick()
+    expect(cache.size).toBe(0)
+    expect(keptAliveScopes.size).toBe(0)
+
+    routeKey.value = 'b'
+    await nextTick()
+    expect(cache.size).toBe(0)
+    expect(keptAliveScopes.size).toBe(0)
+
+    routeKey.value = 'c'
+    await nextTick()
+    expect(cache.size).toBe(0)
+    expect(keptAliveScopes.size).toBe(0)
+  })
+
+  test('should cache keyed branches with falsy key (0)', async () => {
+    const mountedZero = vi.fn()
+    const mountedOne = vi.fn()
+    const unmountedZero = vi.fn()
+    const unmountedOne = vi.fn()
+
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      props: ['id'],
+      setup(props: any) {
+        onMounted(() => {
+          if (props.id === 0) {
+            mountedZero()
+          } else {
+            mountedOne()
+          }
+        })
+        onUnmounted(() => {
+          if (props.id === 0) {
+            unmountedZero()
+          } else {
+            unmountedOne()
+          }
+        })
+        const n0 = template('<div> </div>')() as any
+        const n1 = child(n0) as any
+        renderEffect(() => setText(n1, String(props.id)))
+        return n0
+      },
+    })
+
+    const routeKey = ref(0)
+    const { instance } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createKeyedFragment(
+              () => routeKey.value,
+              () => createComponent(Comp, { id: () => routeKey.value }),
+            ),
+        })
+      },
+    }).render()
+
+    const keepAliveInstance = instance!.block as any
+    const cache = keepAliveInstance.__v_cache as Map<any, any>
+    const keptAliveScopes = keepAliveInstance.__v_keptAliveScopes as Map<
+      any,
+      any
+    >
+
+    await nextTick()
+    expect(cache.size).toBe(1)
+    expect(cache.has(0)).toBe(true)
+    expect(mountedZero).toHaveBeenCalledTimes(1)
+
+    routeKey.value = 1
+    await nextTick()
+    expect(cache.size).toBe(2)
+    expect(cache.has(0)).toBe(true)
+    expect(cache.has(1)).toBe(true)
+    // key=0 should still retain branch scope in KeepAlive bookkeeping
+    // (regression guard for falsy cache key handling)
+    expect(keptAliveScopes.has(0)).toBe(true)
+    expect(mountedOne).toHaveBeenCalledTimes(1)
+    expect(unmountedZero).toHaveBeenCalledTimes(0)
+
+    routeKey.value = 0
+    await nextTick()
+    expect(mountedZero).toHaveBeenCalledTimes(1)
+    expect(unmountedZero).toHaveBeenCalledTimes(0)
+
+    routeKey.value = 1
+    await nextTick()
+    expect(mountedOne).toHaveBeenCalledTimes(1)
+    expect(unmountedOne).toHaveBeenCalledTimes(0)
+  })
+
   test('handle error in async onActivated', async () => {
     const err = new Error('foo')
     const handler = vi.fn()
@@ -1550,7 +2154,7 @@ describe('VaporKeepAlive', () => {
           throw err
         })
 
-        return template(`<span></span`)()
+        return template(`<span></span>`)()
       },
     })
 
@@ -1818,6 +2422,678 @@ describe('VaporKeepAlive', () => {
       assertHookCalls(oneHooks, [2, 2, 3, 2, 1])
       inputEl = container.firstChild as HTMLInputElement
       expect(inputEl.value).toBe('vdom')
+    })
+
+    test('should cache interop async component and match by resolved name', async () => {
+      const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
+      const InnerComp = {
+        name: 'InnerComp',
+        setup() {
+          onActivated(() => oneHooks.activated())
+          onDeactivated(() => oneHooks.deactivated())
+          return () => h('div', 'async inner')
+        },
+      }
+
+      const AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(resolve =>
+            setTimeout(() => resolve(InnerComp as any), 0),
+          ),
+      )
+
+      const include = ref('InnerComp')
+      const toggle = ref(true)
+      let cache: Map<any, any>
+
+      const App = defineVaporComponent({
+        setup() {
+          const ka = createComponent(
+            VaporKeepAlive,
+            { include: () => include.value },
+            {
+              default: () =>
+                createIf(
+                  () => toggle.value,
+                  () => createComponent(AsyncComp as any),
+                ),
+            },
+          )
+          cache = (ka as any).__v_cache
+          return ka
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      // wait for async component to resolve
+      await timeout()
+      await nextTick()
+      await nextTick()
+
+      expect(container.innerHTML).toContain('async inner')
+
+      // deactivate — should be cached since resolved name matches include
+      toggle.value = false
+      await nextTick()
+      expect(cache!.size).toBe(1)
+
+      // change include — resolved name still matches
+      include.value = 'InnerComp'
+      await nextTick()
+      expect(cache!.size).toBe(1)
+
+      // change include to exclude — should prune by resolved name
+      include.value = 'OtherComp'
+      await nextTick()
+      expect(cache!.size).toBe(0)
+    })
+
+    test('should not crash when toggling off interop async before resolve', async () => {
+      const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
+      let resolve: (comp: any) => void
+      const AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolve = r
+          }),
+      )
+
+      const InnerComp = {
+        name: 'InnerComp',
+        setup() {
+          return () => h('div', 'async inner')
+        },
+      }
+
+      const include = ref('InnerComp')
+      const toggle = ref(true)
+
+      const App = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VaporKeepAlive,
+            { include: () => include.value },
+            {
+              default: () =>
+                createIf(
+                  () => toggle.value,
+                  () => createComponent(AsyncComp as any),
+                ),
+            },
+          )
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      // toggle off BEFORE async resolves
+      toggle.value = false
+      await nextTick()
+
+      // resolve async component while toggled off
+      resolve!(InnerComp)
+      await timeout()
+      await nextTick()
+
+      // toggle back on — should remount fresh (not cached since was unresolved)
+      toggle.value = true
+      await nextTick()
+      await timeout()
+      await nextTick()
+
+      expect(container.innerHTML).toContain('async inner')
+    })
+
+    test('should not mis-cache when interop async resolves after switching away', async () => {
+      const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
+      let resolveA: (comp: any) => void
+      const AsyncCompA = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolveA = r
+          }),
+      )
+
+      const InnerCompA = {
+        name: 'CompA',
+        setup() {
+          return () => h('div', 'comp A')
+        },
+      }
+
+      const CompB = {
+        name: 'CompB',
+        setup() {
+          return () => h('div', 'comp B')
+        },
+      }
+
+      const showA = ref(true)
+      let cache: Map<any, any>
+
+      const App = defineVaporComponent({
+        setup() {
+          const ka = createComponent(VaporKeepAlive, null, {
+            default: () =>
+              createIf(
+                () => showA.value,
+                () => createComponent(AsyncCompA as any),
+                () => createComponent(CompB),
+              ),
+          })
+          cache = (ka as any).__v_cache
+          return ka
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      // switch to CompB before AsyncCompA resolves
+      showA.value = false
+      await nextTick()
+      expect(container.innerHTML).toContain('comp B')
+
+      const cacheBeforeResolve = cache!.size
+
+      // resolve A after switching away — should NOT trigger mis-cache
+      resolveA!(InnerCompA)
+      await timeout()
+      await nextTick()
+
+      // cache should not have grown from the stale resolution
+      expect(cache!.size).toBe(cacheBeforeResolve)
+    })
+  })
+
+  test('should invalidate pending mount/activated hooks when deactivated before post flush', async () => {
+    const mountedSpy = vi.fn()
+    const activatedSpy = vi.fn()
+
+    const show = ref(false)
+
+    const Child = defineVaporComponent({
+      name: 'Child',
+      setup() {
+        onBeforeMount(() => {
+          show.value = false
+        })
+        onMounted(mountedSpy)
+        onActivated(activatedSpy)
+        return template('<div>child</div>')()
+      },
+    })
+
+    define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => show.value,
+              () => createComponent(Child),
+            ),
+        })
+      },
+    }).render()
+
+    expect(mountedSpy).toHaveBeenCalledTimes(0)
+    expect(activatedSpy).toHaveBeenCalledTimes(0)
+
+    show.value = true
+    await nextTick()
+
+    expect(mountedSpy).toHaveBeenCalledTimes(0)
+    expect(activatedSpy).toHaveBeenCalledTimes(0)
+  })
+
+  test('should clear template ref when switching to unresolved async component', async () => {
+    const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
+    let resolveAsync: (comp: any) => void
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolveAsync = r
+        }),
+    )
+
+    const Comp = defineVaporComponent({
+      name: 'Comp',
+      setup() {
+        return template('<div>comp</div>')()
+      },
+    })
+
+    const instanceRef = ref<any>(null)
+    const toggle = ref(false)
+
+    define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => {
+                const comp = createComponent(AsyncComp)
+                setRef(comp, instanceRef)
+                return comp
+              },
+              () => {
+                const comp = createComponent(Comp)
+                setRef(comp, instanceRef)
+                return comp
+              },
+            ),
+        })
+      },
+    }).render()
+
+    await nextTick()
+    // Comp is mounted — ref should point to it
+    expect(instanceRef.value).not.toBe(null)
+
+    // switch to async component (unresolved)
+    toggle.value = true
+    await nextTick()
+    // ref should be null while async is pending
+    expect(instanceRef.value).toBe(null)
+
+    // resolve async
+    resolveAsync!(
+      defineVaporComponent({
+        name: 'AsyncResolved',
+        setup() {
+          return template('<div>async</div>')()
+        },
+      }),
+    )
+    await timeout()
+    await nextTick()
+    // ref should now point to the resolved component
+    expect(instanceRef.value).not.toBe(null)
+
+    // switch back to Comp
+    toggle.value = false
+    await nextTick()
+    expect(instanceRef.value).not.toBe(null)
+  })
+
+  test('should keep sibling ref_for entries when switching away from unresolved async KeepAlive branch in v-for', async () => {
+    let resolveAsync: (comp: VaporComponent) => void
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolveAsync = r as any
+        }),
+    )
+
+    const CompB = defineVaporComponent({
+      name: 'CompB',
+      setup(_, { expose }) {
+        expose({ name: 'B' })
+        return template('<div>B</div>')()
+      },
+    })
+
+    const CompC = defineVaporComponent({
+      name: 'CompC',
+      setup(_, { expose }) {
+        expose({ name: 'C' })
+        return template('<div>C</div>')()
+      },
+    })
+
+    const listRef = ref<any[]>([])
+    const toggle = ref(true)
+
+    define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        const items = ['async', 'stable']
+        return createFor(
+          () => items,
+          item => {
+            if (item.value === 'async') {
+              return createComponent(VaporKeepAlive, null, {
+                default: () =>
+                  createIf(
+                    () => toggle.value,
+                    () => {
+                      const comp = createComponent(AsyncComp)
+                      setRef(comp, listRef as any, true)
+                      return comp
+                    },
+                    () => {
+                      const comp = createComponent(CompB)
+                      setRef(comp, listRef as any, true)
+                      return comp
+                    },
+                  ),
+              })
+            }
+
+            const comp = createComponent(CompC)
+            setRef(comp, listRef as any, true)
+            return comp
+          },
+          item => item,
+        )
+      },
+    }).render()
+
+    await nextTick()
+    expect(listRef.value).toHaveLength(1)
+    expect(listRef.value[0]).toMatchObject({ name: 'C' })
+
+    toggle.value = false
+    await nextTick()
+
+    expect(listRef.value).toHaveLength(2)
+    expect(listRef.value.map(item => item.name).sort()).toEqual(['B', 'C'])
+
+    resolveAsync!(
+      defineVaporComponent({
+        name: 'ResolvedA',
+        setup() {
+          return template('<div>A</div>')()
+        },
+      }),
+    )
+
+    await timeout()
+    await nextTick()
+    expect(listRef.value).toHaveLength(2)
+    expect(listRef.value.map(item => item.name).sort()).toEqual(['B', 'C'])
+  })
+
+  test('should clear old ref when switching KeepAlive branches', async () => {
+    const CompA = defineVaporComponent({
+      name: 'CompA',
+      setup() {
+        return template('<div>A</div>')()
+      },
+    })
+
+    const CompB = defineVaporComponent({
+      name: 'CompB',
+      setup() {
+        return template('<div>B</div>')()
+      },
+    })
+
+    const refA = ref<any>(null)
+    const refB = ref<any>(null)
+    const toggle = ref(true)
+
+    define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => {
+                const comp = createComponent(CompA)
+                setRef(comp, refA)
+                return comp
+              },
+              () => {
+                const comp = createComponent(CompB)
+                setRef(comp, refB)
+                return comp
+              },
+            ),
+        })
+      },
+    }).render()
+
+    await nextTick()
+    expect(refA.value).not.toBe(null)
+    expect(refB.value).toBe(null)
+
+    // switch to CompB — refA should be cleared
+    toggle.value = false
+    await nextTick()
+    expect(refB.value).not.toBe(null)
+    expect(refA.value).toBe(null)
+
+    // switch back to CompA — refB should be cleared
+    toggle.value = true
+    await nextTick()
+    expect(refA.value).not.toBe(null)
+    expect(refB.value).toBe(null)
+  })
+
+  test('should not restore stale ref when current KeepAlive branch rerenders and then switches', async () => {
+    const refresh = ref(0)
+    const refA = ref<any>(null)
+    const refB = ref<any>(null)
+    const current = shallowRef<VaporComponent>()
+    let switched = false
+
+    const CompB = defineVaporComponent({
+      name: 'CompB',
+      setup(_, { expose }) {
+        expose({ name: 'B' })
+        return template('<div>B</div>')()
+      },
+    })
+
+    const CompA = defineVaporComponent({
+      name: 'CompA',
+      props: ['n'],
+      setup(props, { expose }) {
+        expose({ name: 'A' })
+
+        onBeforeUpdate(() => {
+          if (!switched && props.n === 1) {
+            switched = true
+            current.value = CompB
+          }
+        })
+
+        const n0 = template('<div> </div>')() as any
+        const x0 = child(n0) as any
+        renderEffect(() => setText(x0, `A${props.n}`))
+        return n0
+      },
+    })
+
+    current.value = CompA
+
+    define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => current.value === CompA,
+              () => {
+                const comp = createComponent(CompA, { n: () => refresh.value })
+                setRef(comp, refA)
+                return comp
+              },
+              () => {
+                const comp = createComponent(CompB)
+                setRef(comp, refB)
+                return comp
+              },
+            ),
+        })
+      },
+    }).render()
+
+    await nextTick()
+    expect(refA.value).toMatchObject({ name: 'A' })
+    expect(refB.value).toBe(null)
+
+    refresh.value = 1
+    await nextTick()
+
+    expect(refA.value).toBe(null)
+    expect(refB.value).toMatchObject({ name: 'B' })
+  })
+
+  test('should not restore stale ref when resolved async KeepAlive branch switches away in the same tick', async () => {
+    const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
+    let resolveAsync: (comp: VaporComponent) => void
+    const refA = ref<any>(null)
+    const refB = ref<any>(null)
+    const current = shallowRef<VaporComponent>()
+
+    const CompB = defineVaporComponent({
+      name: 'CompB',
+      setup(_, { expose }) {
+        expose({ name: 'B' })
+        return template('<div>B</div>')()
+      },
+    })
+
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolveAsync = r as any
+        }),
+    )
+
+    current.value = AsyncComp
+
+    define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => current.value === AsyncComp,
+              () => {
+                const comp = createComponent(AsyncComp)
+                setRef(comp, refA)
+                return comp
+              },
+              () => {
+                const comp = createComponent(CompB)
+                setRef(comp, refB)
+                return comp
+              },
+            ),
+        })
+      },
+    }).render()
+
+    await nextTick()
+    expect(refA.value).toBe(null)
+    expect(refB.value).toBe(null)
+
+    resolveAsync!(
+      defineVaporComponent({
+        name: 'ResolvedA',
+        setup(_, { expose }) {
+          expose({ name: 'A' })
+          onBeforeMount(() => {
+            current.value = CompB
+          })
+          return template('<div>A</div>')()
+        },
+      }),
+    )
+
+    await timeout()
+    await nextTick()
+
+    expect(refA.value).toBe(null)
+    expect(refB.value).toMatchObject({ name: 'B' })
+  })
+
+  test('should clear function ref when resolved async KeepAlive branch switches away in the same tick', async () => {
+    const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
+    let resolveAsync: (comp: VaporComponent) => void
+    const fnA = vi.fn()
+    const fnB = vi.fn()
+    const current = shallowRef<VaporComponent>()
+
+    const CompB = defineVaporComponent({
+      name: 'CompB',
+      setup(_, { expose }) {
+        expose({ name: 'B' })
+        return template('<div>B</div>')()
+      },
+    })
+
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolveAsync = r as any
+        }),
+    )
+
+    current.value = AsyncComp
+
+    define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => current.value === AsyncComp,
+              () => {
+                const comp = createComponent(AsyncComp)
+                setRef(comp, fnA as any)
+                return comp
+              },
+              () => {
+                const comp = createComponent(CompB)
+                setRef(comp, fnB as any)
+                return comp
+              },
+            ),
+        })
+      },
+    }).render()
+
+    await nextTick()
+    expect(fnA).toHaveBeenCalled()
+    expect(fnA.mock.calls[0][0]).toBe(null)
+    expect(fnB).not.toHaveBeenCalled()
+
+    resolveAsync!(
+      defineVaporComponent({
+        name: 'ResolvedA',
+        setup(_, { expose }) {
+          expose({ name: 'A' })
+          onBeforeMount(() => {
+            current.value = CompB
+          })
+          return template('<div>A</div>')()
+        },
+      }),
+    )
+
+    await timeout()
+    await nextTick()
+
+    const fnAArgs = fnA.mock.calls.map(args => args[0])
+    expect(fnAArgs.some(arg => arg && arg.name === 'A')).toBe(true)
+    expect(fnAArgs[fnAArgs.length - 1]).toBe(null)
+    expect(fnB.mock.calls[fnB.mock.calls.length - 1][0]).toMatchObject({
+      name: 'B',
     })
   })
 })

@@ -2,6 +2,7 @@ import {
   type App,
   type ComponentInternalInstance,
   type ConcreteComponent,
+  ErrorCodes,
   Fragment,
   type FunctionalComponent,
   type HydrationRenderer,
@@ -20,12 +21,14 @@ import {
   type VNodeArrayChildren,
   type VNodeNormalizedRef,
   type VaporInteropInterface,
+  callWithAsyncErrorHandling,
   createInternalObject,
   createVNode,
   currentInstance,
   ensureHydrationRenderer,
   ensureRenderer,
   ensureVaporSlotFallback,
+  invokeDirectiveHook,
   isEmitListener,
   isKeepAlive,
   isVNode,
@@ -37,6 +40,7 @@ import {
   setTransitionHooks as setVNodeTransitionHooks,
   shallowReactive,
   shallowRef,
+  shouldUpdateComponent,
   simpleSetCurrentInstance,
   activate as vdomActivate,
   deactivate as vdomDeactivate,
@@ -65,6 +69,7 @@ import {
 } from './block'
 import {
   EMPTY_OBJ,
+  NOOP,
   ShapeFlags,
   extend,
   isArray,
@@ -208,7 +213,31 @@ const vaporInteropImpl: Omit<
       }
     }
 
+    // invoke onVnodeBeforeMount hook
+    const vnodeBeforeMountHook = vnode.props && vnode.props.onVnodeBeforeMount
+    if (vnodeBeforeMountHook) {
+      callWithAsyncErrorHandling(
+        vnodeBeforeMountHook,
+        parentComponent,
+        ErrorCodes.VNODE_HOOK,
+        [vnode],
+      )
+    }
+
     mountComponent(instance, container, selfAnchor)
+
+    // invoke onVnodeMounted hook
+    queuePostFlushCb(() => {
+      const vnodeHook = vnode.props && vnode.props.onVnodeMounted
+      if (vnodeHook) {
+        callWithAsyncErrorHandling(
+          vnodeHook,
+          parentComponent,
+          ErrorCodes.VNODE_HOOK,
+          [vnode],
+        )
+      }
+    })
 
     simpleSetCurrentInstance(prev)
     return instance
@@ -251,6 +280,18 @@ const vaporInteropImpl: Omit<
       remove(vnode.vb, container)
     }
     remove(vnode.anchor as Node, container)
+    // invoke onVnodeUnmounted hook
+    const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
+    if (vnodeHook) {
+      queuePostFlushCb(() => {
+        callWithAsyncErrorHandling(
+          vnodeHook,
+          instance && instance.parent,
+          ErrorCodes.VNODE_HOOK,
+          [vnode],
+        )
+      })
+    }
   },
 
   /**
@@ -352,13 +393,83 @@ const vaporInteropImpl: Omit<
     vnode.el = cached.el
     vnode.component = cached.component
     vnode.anchor = cached.anchor
-    activate(vnode.component as any, container, anchor)
+    const instance = vnode.component as any as VaporComponentInstance
+    const rootEl = getRootElement(instance)
+    if (rootEl) {
+      vnode.el = rootEl
+    }
+    if (vnode.dirs && !rootEl) {
+      if (__DEV__) {
+        warn(
+          `Runtime directive used on component with non-element root node. ` +
+            `The directives will not function as intended.`,
+        )
+      }
+      vnode.dirs = null
+    }
+    const shouldUpdate = shouldUpdateComponent(cached, vnode)
+    activate(instance, container, anchor)
     insert(vnode.anchor as any, container, anchor)
+    if (shouldUpdate) {
+      instance.rawPropsRef!.value = filterReservedProps(vnode.props)
+      instance.rawSlotsRef!.value = vnode.children
+      if (vnode.dirs) {
+        invokeDirectiveHook(vnode, cached, parentComponent, 'beforeUpdate')
+      }
+      const vnodeBeforeUpdateHook =
+        vnode.props && vnode.props.onVnodeBeforeUpdate
+      if (vnodeBeforeUpdateHook) {
+        callWithAsyncErrorHandling(
+          vnodeBeforeUpdateHook,
+          parentComponent,
+          ErrorCodes.VNODE_HOOK,
+          [vnode, cached],
+        )
+      }
+    }
+    queuePostFlushCb(() => {
+      if (shouldUpdate) {
+        if (vnode.dirs) {
+          invokeDirectiveHook(vnode, cached, parentComponent, 'updated')
+        }
+        const vnodeUpdatedHook = vnode.props && vnode.props.onVnodeUpdated
+        if (vnodeUpdatedHook) {
+          callWithAsyncErrorHandling(
+            vnodeUpdatedHook,
+            parentComponent,
+            ErrorCodes.VNODE_HOOK,
+            [vnode, cached],
+          )
+        }
+      }
+
+      const vnodeMountedHook = vnode.props && vnode.props.onVnodeMounted
+      if (vnodeMountedHook) {
+        callWithAsyncErrorHandling(
+          vnodeMountedHook,
+          parentComponent,
+          ErrorCodes.VNODE_HOOK,
+          [vnode],
+        )
+      }
+    })
   },
 
   deactivate(vnode, container) {
-    deactivate(vnode.component as any, container)
+    const instance = vnode.component as any as VaporComponentInstance
+    deactivate(instance, container)
     insert(vnode.anchor as any, container)
+    queuePostFlushCb(() => {
+      const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
+      if (vnodeHook) {
+        callWithAsyncErrorHandling(
+          vnodeHook,
+          instance.parent,
+          ErrorCodes.VNODE_HOOK,
+          [vnode],
+        )
+      }
+    })
   },
 }
 
@@ -569,6 +680,19 @@ function createVDOMComponent(
 
   if (currentKeepAliveCtx) {
     currentKeepAliveCtx.processShapeFlag(frag)
+    // for VDOM async components, trigger cacheBlock after resolution
+    if ((component as any).__asyncLoader) {
+      const keepAliveCtx = currentKeepAliveCtx
+      // guard against stale resolution after unmount or branch switch
+      let disposed = false
+      onScopeDispose(() => (disposed = true))
+      ;(component as any)
+        .__asyncLoader()
+        .then(() => {
+          if (!disposed) keepAliveCtx.cacheBlock()
+        })
+        .catch(NOOP)
+    }
     setCurrentKeepAliveCtx(null)
   }
 

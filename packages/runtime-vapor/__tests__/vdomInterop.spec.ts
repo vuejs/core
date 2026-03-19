@@ -123,6 +123,39 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(html()).toBe('bar|false')
     })
+
+    test('should invoke onVnodeMounted and onVnodeUnmounted', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor</div>')()
+        },
+      })
+
+      const show = ref(true)
+      const vnodeMounted = vi.fn()
+      const vnodeUnmounted = vi.fn()
+
+      const { html } = define({
+        setup() {
+          return () =>
+            show.value
+              ? h(VaporChild as any, {
+                  onVnodeMounted: vnodeMounted,
+                  onVnodeUnmounted: vnodeUnmounted,
+                })
+              : null
+        },
+      }).render()
+      await nextTick()
+
+      expect(html()).toBe('<div>vapor</div>')
+      expect(vnodeMounted).toHaveBeenCalledTimes(1)
+      expect(vnodeUnmounted).toHaveBeenCalledTimes(0)
+
+      show.value = false
+      await nextTick()
+      expect(vnodeUnmounted).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('v-model', () => {
@@ -1930,6 +1963,339 @@ describe('vdomInterop', () => {
 
       await nextTick()
       expect(html()).toContain('<span>resolved</span>')
+    })
+  })
+  test('should invoke onVnodeBeforeMount/onVnodeBeforeUnmount on vapor child', async () => {
+    const beforeMountSpy = vi.fn()
+    const beforeUnmountSpy = vi.fn()
+
+    const VaporChild = defineVaporComponent({
+      setup() {
+        return template('<div>vapor</div>')()
+      },
+    })
+
+    const show = ref(true)
+    const App = defineComponent({
+      setup() {
+        return () =>
+          show.value
+            ? h(VaporChild as any, {
+                onVnodeBeforeMount: beforeMountSpy,
+                onVnodeBeforeUnmount: beforeUnmountSpy,
+              })
+            : null
+      },
+    })
+
+    const root = document.createElement('div')
+    const app = createApp(App)
+    app.use(vaporInteropPlugin)
+    app.mount(root)
+    await nextTick()
+
+    expect(beforeMountSpy).toHaveBeenCalledTimes(1)
+
+    // unmount
+    show.value = false
+    await nextTick()
+    expect(beforeUnmountSpy).toHaveBeenCalledTimes(1)
+  })
+
+  describe('KeepAlive', () => {
+    test('should update props on reactivation of vapor child in vdom KeepAlive', async () => {
+      const VaporChild = defineVaporComponent({
+        props: { msg: String },
+        setup(props: any) {
+          const n0 = template('<div> </div>')() as any
+          const x0 = child(n0) as any
+          renderEffect(() => setText(x0, props.msg))
+          return n0
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('span', 'vdom')
+        },
+      })
+
+      const current = shallowRef<any>(VaporChild)
+      const msg = ref('hello')
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(KeepAlive, null, {
+              default: () =>
+                h(
+                  resolveDynamicComponent(current.value) as any,
+                  current.value === VaporChild ? { msg: msg.value } : null,
+                ),
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('<div>hello</div>')
+
+      // Switch to vdom child (deactivates vapor child)
+      current.value = VdomChild
+      await nextTick()
+      expect(root.innerHTML).toBe('<span>vdom</span>')
+
+      // Change props while vapor child is deactivated
+      msg.value = 'updated'
+      await nextTick()
+      expect(root.innerHTML).toBe('<span>vdom</span>')
+
+      // Reactivate vapor child — should reflect new props
+      current.value = VaporChild
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>updated</div>')
+    })
+
+    test('should invoke vnode hooks on activate/deactivate', async () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor</div>')()
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('span', 'vdom')
+        },
+      })
+
+      const current = shallowRef<any>(VaporChild)
+      const vnodeMounted = vi.fn()
+      const vnodeUnmounted = vi.fn()
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(KeepAlive, null, {
+              default: () =>
+                h(
+                  resolveDynamicComponent(current.value) as any,
+                  current.value === VaporChild
+                    ? {
+                        onVnodeMounted: vnodeMounted,
+                        onVnodeUnmounted: vnodeUnmounted,
+                      }
+                    : null,
+                ),
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      await nextTick()
+
+      expect(vnodeMounted).toHaveBeenCalledTimes(1)
+      expect(vnodeUnmounted).toHaveBeenCalledTimes(0)
+
+      // Deactivate vapor child
+      current.value = VdomChild
+      await nextTick()
+      expect(vnodeUnmounted).toHaveBeenCalledTimes(1)
+
+      // Reactivate vapor child
+      current.value = VaporChild
+      await nextTick()
+      expect(vnodeMounted).toHaveBeenCalledTimes(2)
+    })
+
+    test('should invoke onVnodeBeforeUpdate/onVnodeUpdated on reactivation', async () => {
+      const VaporChild = defineVaporComponent({
+        props: ['msg'],
+        setup(props: any) {
+          return template('<div></div>')()
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('span', 'vdom')
+        },
+      })
+
+      const current = shallowRef<any>(VaporChild)
+      const msg = ref('hello')
+      const beforeUpdateSpy = vi.fn()
+      const updatedSpy = vi.fn()
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(KeepAlive, null, {
+              default: () =>
+                h(
+                  resolveDynamicComponent(current.value) as any,
+                  current.value === VaporChild
+                    ? {
+                        msg: msg.value,
+                        onVnodeBeforeUpdate: beforeUpdateSpy,
+                        onVnodeUpdated: updatedSpy,
+                      }
+                    : null,
+                ),
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      await nextTick()
+
+      // Deactivate vapor child
+      current.value = VdomChild
+      await nextTick()
+
+      // Change props while deactivated
+      msg.value = 'world'
+
+      // Reactivate — should trigger update hooks
+      current.value = VaporChild
+      await nextTick()
+      expect(beforeUpdateSpy).toHaveBeenCalledTimes(1)
+      expect(updatedSpy).toHaveBeenCalledTimes(1)
+    })
+
+    test('should invoke directive beforeUpdate/updated on reactivation', async () => {
+      const beforeUpdateSpy = vi.fn()
+      const updatedSpy = vi.fn()
+
+      const vDir = {
+        beforeUpdate: beforeUpdateSpy,
+        updated: updatedSpy,
+      }
+
+      const VaporChild = defineVaporComponent({
+        props: ['msg'],
+        setup(props: any) {
+          return template('<div></div>')()
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('span', 'vdom')
+        },
+      })
+
+      const current = shallowRef<any>(VaporChild)
+      const msg = ref('hello')
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(KeepAlive, null, {
+              default: () =>
+                current.value === VaporChild
+                  ? withDirectives(h(VaporChild as any, { msg: msg.value }), [
+                      [vDir],
+                    ])
+                  : h(VdomChild),
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      await nextTick()
+
+      // Deactivate vapor child
+      current.value = VdomChild
+      await nextTick()
+
+      // Change props while deactivated
+      msg.value = 'world'
+
+      // Reactivate — should trigger directive update hooks
+      current.value = VaporChild
+      await nextTick()
+      expect(beforeUpdateSpy).toHaveBeenCalledTimes(1)
+      expect(updatedSpy).toHaveBeenCalledTimes(1)
+    })
+
+    test('should bail out directive beforeUpdate/updated on reactivation for non-element root vapor child', async () => {
+      const beforeUpdateSpy = vi.fn()
+      const updatedSpy = vi.fn()
+
+      const vDir = {
+        beforeUpdate: beforeUpdateSpy,
+        updated: updatedSpy,
+      }
+
+      const VaporChild = defineVaporComponent({
+        props: ['msg'],
+        setup() {
+          return [template('<div></div>')(), template('<div></div>')()]
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('span', 'vdom')
+        },
+      })
+
+      const current = shallowRef<any>(VaporChild)
+      const msg = ref('hello')
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(KeepAlive, null, {
+              default: () =>
+                current.value === VaporChild
+                  ? withDirectives(h(VaporChild as any, { msg: msg.value }), [
+                      [vDir],
+                    ])
+                  : h(VdomChild),
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      await nextTick()
+
+      if (__DEV__) {
+        expect(
+          `Runtime directive used on component with non-element root node.`,
+        ).toHaveBeenWarnedTimes(1)
+      }
+      expect(beforeUpdateSpy).toHaveBeenCalledTimes(0)
+      expect(updatedSpy).toHaveBeenCalledTimes(0)
+
+      current.value = VdomChild
+      await nextTick()
+
+      msg.value = 'world'
+      current.value = VaporChild
+      await nextTick()
+
+      expect(
+        `Runtime directive used on component with non-element root node.`,
+      ).toHaveBeenWarnedTimes(2)
+      expect(beforeUpdateSpy).toHaveBeenCalledTimes(0)
+      expect(updatedSpy).toHaveBeenCalledTimes(0)
     })
   })
 })
