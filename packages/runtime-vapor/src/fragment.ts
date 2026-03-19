@@ -41,6 +41,7 @@ import {
   type VaporKeepAliveContext,
   currentKeepAliveCtx,
   setCurrentKeepAliveCtx,
+  withCurrentCacheKey,
 } from './components/KeepAlive'
 
 export class VaporFragment<
@@ -136,13 +137,13 @@ export class DynamicFragment extends VaporFragment {
     // currently leaving: defer mounting the next branch until
     // the leave finishes.
     if (transition && transition.state.isLeaving) {
+      // Track the latest target key immediately so repeated updates during
+      // leave keep overwriting the pending branch instead of reviving stale
+      // keys when the deferred render finally runs.
       this.current = key
       this.pending = { render, key }
       return
     }
-
-    const prevKey = this.current
-    this.current = key
 
     const instance = currentInstance
     const prevSub = setActiveSub()
@@ -154,18 +155,17 @@ export class DynamicFragment extends VaporFragment {
 
       // if keepAliveCtx exists and processShapeFlag returns a cache key,
       // cache the scope and retain it.
-      // For keyed fragments, temporarily set branchKey to prevKey so
-      // getCacheKey generates the correct composite key for the OLD block.
-      const needBranchKey = keepAliveCtx && this.keyed
-      const prevBranchKey = needBranchKey
-        ? keepAliveCtx.setCurrentBranchKey(prevKey)
-        : undefined
-      const cacheKey = keepAliveCtx && keepAliveCtx.processShapeFlag(this.nodes)
+      const cacheKey = keepAliveCtx
+        ? this.keyed
+          ? withCurrentCacheKey(this.current, () =>
+              keepAliveCtx.processShapeFlag(this.nodes),
+            )
+          : keepAliveCtx.processShapeFlag(this.nodes)
+        : false
       if (cacheKey) {
-        keepAliveCtx!.cacheScope(cacheKey, prevKey, this.scope)
+        keepAliveCtx!.cacheScope(cacheKey, this.current, this.scope)
         retainScope = true
       }
-      if (needBranchKey) keepAliveCtx.setCurrentBranchKey(prevBranchKey)
 
       if (!retainScope) {
         this.scope.stop()
@@ -190,10 +190,9 @@ export class DynamicFragment extends VaporFragment {
             const pending = this.pending
             if (pending) {
               this.pending = undefined
-              this.current = pending.key
-              this.renderBranch(pending.render, transition, parent)
+              this.renderBranch(pending.render, transition, parent, pending.key)
             } else {
-              this.renderBranch(render, transition, parent)
+              this.renderBranch(render, transition, parent, key)
             }
           } finally {
             setCurrentInstance(...prevInstance)
@@ -209,7 +208,7 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    this.renderBranch(render, transition, parent)
+    this.renderBranch(render, transition, parent, key)
     setActiveSub(prevSub)
 
     if (isHydrating) this.hydrate(render == null)
@@ -219,7 +218,9 @@ export class DynamicFragment extends VaporFragment {
     render: BlockFn | undefined,
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,
+    key: any,
   ): void {
+    this.current = key
     if (render) {
       const keepAliveCtx = this.keepAliveCtx
       // try to reuse the kept-alive scope
@@ -230,28 +231,33 @@ export class DynamicFragment extends VaporFragment {
         this.scope = new EffectScope()
       }
 
-      const needBranchKey = keepAliveCtx && this.keyed
-      const prevBranchKey = needBranchKey
-        ? keepAliveCtx.setCurrentBranchKey(this.current)
-        : undefined
-      try {
-        this.nodes = this.runWithRenderCtx(() => this.scope!.run(render) || [])
-      } finally {
-        // set key on blocks
-        if (this.keyed) setKey(this.nodes, this.current)
+      const renderBranch = () => {
+        try {
+          this.nodes = this.runWithRenderCtx(
+            () => this.scope!.run(render) || [],
+          )
+        } finally {
+          // set key on blocks
+          if (this.keyed) setKey(this.nodes, this.current)
 
-        if (transition) {
-          this.$transition = applyTransitionHooks(this.nodes, transition)
+          if (transition) {
+            this.$transition = applyTransitionHooks(this.nodes, transition)
+          }
+
+          // call processShapeFlag to mark shapeFlag before mounting.
+          // This must run before leaving the keyed cache-key context so
+          // creating components inside the branch can still resolve the
+          // same cache key during initial mount.
+          if (keepAliveCtx) {
+            keepAliveCtx.processShapeFlag(this.nodes)
+          }
         }
+      }
 
-        // call processShapeFlag to mark shapeFlag before mounting.
-        // Must be called before restoring branchKey so getCacheKey
-        // generates the correct composite key.
-        if (keepAliveCtx) {
-          keepAliveCtx.processShapeFlag(this.nodes)
-        }
-
-        if (needBranchKey) keepAliveCtx.setCurrentBranchKey(prevBranchKey)
+      if (keepAliveCtx && this.keyed) {
+        withCurrentCacheKey(key, renderBranch)
+      } else {
+        renderBranch()
       }
 
       if (parent) {

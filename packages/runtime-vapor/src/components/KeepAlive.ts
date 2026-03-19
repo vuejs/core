@@ -30,13 +30,7 @@ import {
   type DefineVaporComponent,
   defineVaporComponent,
 } from '../apiDefineComponent'
-import {
-  ShapeFlags,
-  invokeArrayFns,
-  isArray,
-  isFunction,
-  isObject,
-} from '@vue/shared'
+import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
 import { createElement } from '../dom/node'
 import { unsetRef } from '../refCleanup'
 import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
@@ -46,9 +40,8 @@ import { isInteropEnabled } from '../vdomInteropState'
 export interface VaporKeepAliveContext {
   processShapeFlag(block: Block): CacheKey | false
   cacheBlock(): void
-  cacheScope(cacheKey: CacheKey, branchKey: any, scope: EffectScope): void
-  getScope(branchKey: any): EffectScope | undefined
-  setCurrentBranchKey(key: any): any
+  cacheScope(cacheKey: CacheKey, scopeLookupKey: any, scope: EffectScope): void
+  getScope(key: any): EffectScope | undefined
 }
 
 export let currentKeepAliveCtx: VaporKeepAliveContext | null = null
@@ -60,6 +53,17 @@ export function setCurrentKeepAliveCtx(
     return currentKeepAliveCtx
   } finally {
     currentKeepAliveCtx = ctx
+  }
+}
+
+let currentCacheKey: any | undefined
+export function withCurrentCacheKey<T>(key: any, fn: () => T): T {
+  const prev = currentCacheKey
+  currentCacheKey = key
+  try {
+    return fn()
+  } finally {
+    currentCacheKey = prev
   }
 }
 
@@ -79,84 +83,9 @@ export interface KeepAliveInstance extends VaporComponentInstance {
   }
 }
 
-const COMPOSITE_KEY: unique symbol = Symbol('keepAliveCompositeKey')
-
-type BaseCacheKey = VaporComponent | VNode['type']
-type CacheKey = BaseCacheKey | CompositeKey
+type CacheKey = any
 type Cache = Map<CacheKey, VaporComponentInstance | VaporFragment>
 type Keys = Set<CacheKey>
-type CompositeKey = {
-  type: BaseCacheKey
-  branchKey: any
-  [COMPOSITE_KEY]: true
-}
-
-// Returns a stable composite key object for a given (type, branchKey) pair.
-// Caches are passed as parameters (per KeepAlive instance) to avoid
-// module-level Map leaks for primitive type keys (e.g. string tag names
-// from VDOM interop).
-function getOrCreateCompositeKey(
-  type: BaseCacheKey,
-  branchKey: any,
-  compositeKeyCache: WeakMap<object, Map<any, CompositeKey>>,
-  compositeKeyCachePrimitive: Map<any, Map<any, CompositeKey>>,
-): CacheKey {
-  const isObjectType = isObject(type) || isFunction(type)
-  const perType = isObjectType
-    ? compositeKeyCache.get(type) || new Map<any, CompositeKey>()
-    : compositeKeyCachePrimitive.get(type) || new Map<any, CompositeKey>()
-  if (isObjectType) {
-    if (!compositeKeyCache.has(type)) compositeKeyCache.set(type, perType)
-  } else if (!compositeKeyCachePrimitive.has(type)) {
-    compositeKeyCachePrimitive.set(type, perType)
-  }
-
-  let composite = perType.get(branchKey)
-  if (!composite) {
-    composite = { type, branchKey, [COMPOSITE_KEY]: true }
-    perType.set(branchKey, composite)
-  }
-  return composite
-}
-
-function getCompositeKey(
-  type: BaseCacheKey,
-  branchKey: any,
-  compositeKeyCache: WeakMap<object, Map<any, CompositeKey>>,
-  compositeKeyCachePrimitive: Map<any, Map<any, CompositeKey>>,
-): CacheKey | undefined {
-  const isObjectType = isObject(type) || isFunction(type)
-  const perType = isObjectType
-    ? compositeKeyCache.get(type)
-    : compositeKeyCachePrimitive.get(type)
-
-  return perType && perType.get(branchKey)
-}
-
-function deleteCompositeKey(
-  key: CacheKey,
-  compositeKeyCache: WeakMap<object, Map<any, CompositeKey>>,
-  compositeKeyCachePrimitive: Map<any, Map<any, CompositeKey>>,
-): void {
-  if (!isObject(key) || !(COMPOSITE_KEY in key)) return
-
-  const { type, branchKey } = key as CompositeKey
-  const isObjectType = isObject(type) || isFunction(type)
-  const perType = isObjectType
-    ? compositeKeyCache.get(type)
-    : compositeKeyCachePrimitive.get(type)
-
-  if (!perType || perType.get(branchKey) !== key) return
-
-  perType.delete(branchKey)
-  if (perType.size) return
-
-  if (isObjectType) {
-    compositeKeyCache.delete(type)
-  } else {
-    compositeKeyCachePrimitive.delete(type)
-  }
-}
 
 const VaporKeepAliveImpl = defineVaporComponent({
   name: 'VaporKeepAlive',
@@ -185,80 +114,28 @@ const VaporKeepAliveImpl = defineVaporComponent({
     const keys: Keys = new Set()
     const storageContainer = createElement('div')
     const keptAliveScopes = new Map<any, EffectScope>()
-    // Per-instance composite key caches for generating stable cache keys.
-    // Using WeakMap for object types (auto GC) and Map for primitive types
-    // (e.g. string tag names from VDOM interop). Both are per-instance so
-    // they are cleaned up when the KeepAlive instance is destroyed.
-    const compositeKeyCache = new WeakMap<object, Map<any, CompositeKey>>()
-    const compositeKeyCachePrimitive = new Map<any, Map<any, CompositeKey>>()
 
-    const resolveKey = (
-      type: BaseCacheKey,
-      key?: any,
-      branchKey?: any,
-    ): CacheKey => {
-      if (key != null) {
-        return getOrCreateCompositeKey(
-          type,
-          key,
-          compositeKeyCache,
-          compositeKeyCachePrimitive,
-        )
-      }
-      if (branchKey !== undefined) {
-        return getOrCreateCompositeKey(
-          type,
-          branchKey,
-          compositeKeyCache,
-          compositeKeyCachePrimitive,
-        )
-      }
-      return type as CacheKey
-    }
-
-    const resolveKeyForLookup = (
-      type: BaseCacheKey,
-      key?: any,
-      branchKey?: any,
-    ): CacheKey | undefined => {
-      if (key != null) {
-        return getCompositeKey(
-          type,
-          key,
-          compositeKeyCache,
-          compositeKeyCachePrimitive,
-        )
-      }
-      if (branchKey !== undefined) {
-        return getCompositeKey(
-          type,
-          branchKey,
-          compositeKeyCache,
-          compositeKeyCachePrimitive,
-        )
-      }
-      return type as CacheKey
-    }
-
-    const getCacheKey = (
+    const resolveCacheKeyFromBlock = (
       block: VaporComponentInstance | VaporFragment,
       interop: boolean,
-      branchKey?: any,
+      branchKey = currentCacheKey,
     ): CacheKey => {
       if (interop && isInteropEnabled) {
         const frag = block as VaporFragment
-        return resolveKey(
-          frag.vnode!.type,
-          frag.$key !== undefined ? frag.$key : frag.vnode!.key,
-          branchKey,
+        return (
+          (frag.$key !== undefined
+            ? frag.$key
+            : (frag.vnode!.key ?? branchKey)) ?? frag.vnode!.type
         )
       }
-      const instance = block as VaporComponentInstance
-      return resolveKey(instance.type, instance.key, branchKey)
+
+      return (
+        (block as VaporComponentInstance).key ??
+        branchKey ??
+        (block as VaporComponentInstance).type
+      )
     }
-    // Track active keyed DynamicFragment branch key so KeepAlive can combine
-    // branch key + component type into a stable isolated cache key.
-    let currentBranchKey: any | undefined
+
     let current: VaporComponentInstance | VaporFragment | undefined
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -272,10 +149,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       const rerender = keepAliveInstance.hmrRerender
       keepAliveInstance.hmrRerender = () => {
         keepAliveInstance.exposed = null
-        cache.forEach((cached, key) => {
-          resetCachedShapeFlag(cached)
-          deleteCompositeKey(key, compositeKeyCache, compositeKeyCachePrimitive)
-        })
+        cache.forEach(cached => resetCachedShapeFlag(cached))
         cache.clear()
         keys.clear()
         keptAliveScopes.forEach(scope => scope.stop())
@@ -290,15 +164,9 @@ const VaporKeepAliveImpl = defineVaporComponent({
       getStorageContainer: () => storageContainer,
       getCachedComponent: (comp, key) => {
         if (isInteropEnabled && isVNode(comp)) {
-          const cacheKey = resolveKeyForLookup(
-            comp.type,
-            comp.key,
-            currentBranchKey,
-          )
-          return cacheKey === undefined ? undefined : cache.get(cacheKey)
+          return cache.get(comp.key ?? currentCacheKey ?? comp.type)
         }
-        const cacheKey = resolveKeyForLookup(comp, key, currentBranchKey)
-        return cacheKey === undefined ? undefined : cache.get(cacheKey)
+        return cache.get(key ?? currentCacheKey ?? comp)
       },
       activate: (instance, parentNode, anchor) => {
         current = instance
@@ -347,16 +215,13 @@ const VaporKeepAliveImpl = defineVaporComponent({
         ) {
           return
         }
-        // For keyed DynamicFragment, read branch key from the fragment
-        // since currentBranchKey is already restored at lifecycle hook time
-        if (block.keyed) {
-          currentBranchKey = block.current
-        }
       }
       const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
+      const branchKey =
+        isDynamicFragment(block) && block.keyed ? block.current : undefined
       innerCacheBlock(
-        getCacheKey(innerBlock, interop, currentBranchKey),
+        resolveCacheKeyFromBlock(innerBlock, interop, branchKey),
         innerBlock,
       )
     }
@@ -366,14 +231,14 @@ const VaporKeepAliveImpl = defineVaporComponent({
       if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
 
       if (interop && isInteropEnabled) {
-        const cacheKey = getCacheKey(innerBlock, true, currentBranchKey)
+        const cacheKey = resolveCacheKeyFromBlock(innerBlock, true)
         if (cache.has(cacheKey)) {
           innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
         }
         innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
         return cacheKey
       } else {
-        const cacheKey = getCacheKey(innerBlock, false, currentBranchKey)
+        const cacheKey = resolveCacheKeyFromBlock(innerBlock, false)
         if (cache.has(cacheKey)) {
           ;(innerBlock as VaporComponentInstance)!.shapeFlag! |=
             ShapeFlags.COMPONENT_KEPT_ALIVE
@@ -400,7 +265,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     }
 
     // delete scope from keptAliveScopes by one key,
-    // also removes the paired entry (cache key ↔ branch key)
+    // also removes the paired entry (cache key ↔ scope lookup key)
     const deleteScope = (key: any): EffectScope | undefined => {
       const scope = keptAliveScopes.get(key)
       if (scope) {
@@ -427,7 +292,6 @@ const VaporKeepAliveImpl = defineVaporComponent({
       }
       cache.delete(key)
       keys.delete(key)
-      deleteCompositeKey(key, compositeKeyCache, compositeKeyCachePrimitive)
       const scope = deleteScope(key)
       if (scope) scope.stop()
     }
@@ -452,13 +316,14 @@ const VaporKeepAliveImpl = defineVaporComponent({
       const branchKey =
         isDynamicFragment(block) && block.keyed
           ? block.current
-          : currentBranchKey
+          : currentCacheKey
 
       return {
         currentBlock,
         interop,
         currentKey:
-          currentBlock && getCacheKey(currentBlock, interop, branchKey),
+          currentBlock &&
+          resolveCacheKeyFromBlock(currentBlock, interop, branchKey),
       }
     }
 
@@ -499,22 +364,26 @@ const VaporKeepAliveImpl = defineVaporComponent({
     const keepAliveCtx: VaporKeepAliveContext = {
       processShapeFlag,
       cacheBlock,
-      cacheScope(cacheKey, branchKey, scope) {
-        // store under both keys so the scope can be looked up by:
-        // - cache key: for cleanup in pruneCacheEntry
-        // - branch key: for reuse in getScope (before the cache key is known)
-        keptAliveScopes.set(cacheKey, scope)
-        keptAliveScopes.set(branchKey, scope)
-      },
-      getScope(branchKey) {
-        return deleteScope(branchKey)
-      },
-      setCurrentBranchKey(key) {
-        try {
-          return currentBranchKey
-        } finally {
-          currentBranchKey = key
+      cacheScope(cacheKey, scopeLookupKey, scope) {
+        // remove stale scope
+        const prevScope = keptAliveScopes.get(cacheKey)
+        if (prevScope && prevScope !== scope) {
+          const staleScope = deleteScope(cacheKey)
+          if (staleScope) {
+            staleScope.stop()
+          }
         }
+
+        // cacheKey is used for cleanup in pruneCacheEntry.
+        // scopeLookupKey is still needed for getScope() before a new block
+        // exists, but keyed branches may resolve to the same effective cacheKey.
+        keptAliveScopes.set(cacheKey, scope)
+        if (scopeLookupKey !== cacheKey) {
+          keptAliveScopes.set(scopeLookupKey, scope)
+        }
+      },
+      getScope(key) {
+        return deleteScope(key)
       },
     }
 
