@@ -7,7 +7,6 @@ import {
   type TemplateChildNode,
   createCompilerError,
   isTemplateNode,
-  isVSlot,
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import { newBlock } from './utils'
@@ -25,6 +24,7 @@ import {
 } from '../ir'
 import { findDir, resolveExpression } from '../utils'
 import { markNonTemplate } from './transformText'
+import { ignoreComment } from './transformComment'
 
 export const transformVSlot: NodeTransform = (node, context) => {
   if (node.type !== NodeTypes.ELEMENT) return
@@ -67,17 +67,23 @@ function transformComponentSlot(
 ) {
   const { children } = node
   const arg = dir && dir.arg
+  const hasTemplateSlots = children.some(isSlotTemplateChild)
 
   // whitespace: 'preserve'
   const emptyTextNodes: TemplateChildNode[] = []
   const nonSlotTemplateChildren = children.filter(n => {
+    if (isSlotTemplateChild(n)) {
+      return false
+    }
+    if (n.type === NodeTypes.COMMENT && hasTemplateSlots) {
+      ignoreComment(n, context)
+      return false
+    }
     if (isNonWhitespaceContent(n)) {
-      return !(
-        n.type === NodeTypes.COMMENT ||
-        (n.type === NodeTypes.ELEMENT && n.props.some(isVSlot))
-      )
+      return true
     } else {
       emptyTextNodes.push(n)
+      return false
     }
   })
   if (!nonSlotTemplateChildren.length) {
@@ -257,4 +263,12 @@ function createSlotBlock(
 function isNonWhitespaceContent(node: TemplateChildNode): boolean {
   if (node.type !== NodeTypes.TEXT) return true
   return !!node.content.trim()
+}
+
+function isSlotTemplateChild(node: TemplateChildNode): node is ElementNode {
+  return (
+    node.type === NodeTypes.ELEMENT &&
+    isTemplateNode(node) &&
+    !!findDir(node, 'slot', true)
+  )
 }
