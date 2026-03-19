@@ -72,7 +72,10 @@ function transformComponentSlot(
   const emptyTextNodes: TemplateChildNode[] = []
   const nonSlotTemplateChildren = children.filter(n => {
     if (isNonWhitespaceContent(n)) {
-      return !(n.type === NodeTypes.ELEMENT && n.props.some(isVSlot))
+      return !(
+        n.type === NodeTypes.COMMENT ||
+        (n.type === NodeTypes.ELEMENT && n.props.some(isVSlot))
+      )
     } else {
       emptyTextNodes.push(n)
     }
