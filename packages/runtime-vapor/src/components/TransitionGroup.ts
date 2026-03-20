@@ -206,10 +206,10 @@ function applyGroupTransitionHooks(
 }
 
 function inheritKey(children: TransitionBlock[], key: any): void {
-  if (key === undefined || children.length !== 1) return
-  const child = children[0]
-  if (child.$key === undefined) {
-    child.$key = key
+  if (key === undefined || children.length === 0) return
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    child.$key = String(key) + String(child.$key != null ? child.$key : i)
   }
 }
 
