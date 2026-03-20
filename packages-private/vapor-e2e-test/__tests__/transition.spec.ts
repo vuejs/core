@@ -1316,6 +1316,56 @@ describe('vapor transition', () => {
         '<div class="">vapor compA</div>',
       )
     })
+
+    test(
+      'different pre-resolved async types during leave',
+      async () => {
+        const rootSelector = '.different-pre-resolved-async-types-during-leave'
+        const btnSelector = `${rootSelector} > button`
+        const hiddenASelector = `${rootSelector} #hidden-a`
+        const hiddenBSelector = `${rootSelector} #hidden-b`
+        const containerSelector = `${rootSelector} #container`
+
+        await waitForInnerHTML(
+          hiddenASelector,
+          '<div style="display: none;">vapor compA</div>',
+        )
+        await waitForInnerHTML(
+          hiddenBSelector,
+          '<div style="display: none;">vapor compB</div>',
+        )
+        await waitForInnerHTML(containerSelector, '<div>vapor compA</div>')
+
+        await page().evaluate(() => {
+          ;(window as any).resetCalls()
+        })
+        await domClick(btnSelector)
+        await nextTick()
+
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls()
+        })
+        expect(calls).toContain('beforeEnter:vapor compB')
+        expect(calls).toContain('enter:vapor compB')
+        expect(calls).toContain('beforeLeave:vapor compA')
+        expect(calls).toContain('leave:vapor compA')
+        expect(calls).not.toContain('afterLeave:vapor compA')
+
+        await timeout(50 + buffer)
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls()
+        })
+        expect(calls).toStrictEqual([
+          'beforeLeave:vapor compA',
+          'leave:vapor compA',
+          'beforeEnter:vapor compB',
+          'enter:vapor compB',
+          'afterLeave:vapor compA',
+          'afterEnter:vapor compB',
+        ])
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with v-show', () => {
@@ -1783,6 +1833,44 @@ describe('vapor transition', () => {
         ])
 
         await waitForInnerHTML(containerSelector, '2')
+      },
+      E2E_TIMEOUT,
+    )
+  })
+
+  describe('dynamic component', () => {
+    test(
+      'different type during leave',
+      async () => {
+        const btnSelector = '.different-type-during-leave > button'
+
+        await page().evaluate(() => {
+          ;(window as any).resetCalls()
+        })
+        await domClick(btnSelector)
+        await nextTick()
+
+        let calls = await page().evaluate(() => {
+          return (window as any).getCalls()
+        })
+        expect(calls).toContain('beforeEnter:span')
+        expect(calls).toContain('enter:span')
+        expect(calls).toContain('beforeLeave:div')
+        expect(calls).toContain('leave:div')
+        expect(calls).not.toContain('afterLeave:div')
+
+        await timeout(50 + buffer)
+        calls = await page().evaluate(() => {
+          return (window as any).getCalls()
+        })
+        expect(calls).toStrictEqual([
+          'beforeLeave:div',
+          'leave:div',
+          'beforeEnter:span',
+          'enter:span',
+          'afterLeave:div',
+          'afterEnter:span',
+        ])
       },
       E2E_TIMEOUT,
     )

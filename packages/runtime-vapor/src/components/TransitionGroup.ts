@@ -23,6 +23,7 @@ import {
 } from '../block'
 import { renderEffect } from '../renderEffect'
 import {
+  type ResolvedTransitionBlock,
   ensureTransitionHooksRegistered,
   resolveTransitionHooks,
   setTransitionHooks,
@@ -79,7 +80,7 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       cssTransitionProps = resolveTransitionProps(props)
     })
 
-    let prevChildren: TransitionBlock[]
+    let prevChildren: ResolvedTransitionBlock[]
     let slottedBlock: Block = []
 
     onBeforeUpdate(() => {
@@ -230,19 +231,23 @@ function getTransitionBlocks(block: Block) {
   return children
 }
 
-function isValidTransitionBlock(block: Block): boolean {
+function isValidTransitionBlock(
+  block: Block,
+): block is ResolvedTransitionBlock {
   return !!(block instanceof Element || (isFragment(block) && block.insert))
 }
 
-function getTransitionElement(c: TransitionBlock): Element {
+function getTransitionElement(c: ResolvedTransitionBlock): Element {
   return (isFragment(c) ? (c.nodes as Element) : c) as Element
 }
 
-function recordPosition(c: TransitionBlock) {
+function recordPosition(c: ResolvedTransitionBlock) {
   newPositionMap.set(c, getTransitionElement(c).getBoundingClientRect())
 }
 
-function applyTranslation(c: TransitionBlock): TransitionBlock | undefined {
+function applyTranslation(
+  c: ResolvedTransitionBlock,
+): ResolvedTransitionBlock | undefined {
   if (
     baseApplyTranslation(
       positionMap.get(c)!,
@@ -255,7 +260,7 @@ function applyTranslation(c: TransitionBlock): TransitionBlock | undefined {
 }
 
 function getFirstConnectedChild(
-  children: TransitionBlock[],
+  children: ResolvedTransitionBlock[],
 ): Element | undefined {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
