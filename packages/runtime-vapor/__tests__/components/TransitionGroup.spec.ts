@@ -82,10 +82,7 @@ describe('TransitionGroup', () => {
     expect(child.block[1].$key).toBeUndefined()
     expect(child.block[0].$transition).toBeUndefined()
     expect(child.block[1].$transition).toBeUndefined()
-    if (__DEV__) {
-      expect(`<transition-group> children must be keyed`).toHaveBeenWarnedTimes(
-        2,
-      )
-    }
+
+    expect(`<transition-group> children must be keyed`).toHaveBeenWarnedTimes(2)
   })
 })

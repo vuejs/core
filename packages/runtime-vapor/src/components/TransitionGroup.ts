@@ -1,7 +1,9 @@
 import {
   type ElementWithTransition,
   type TransitionGroupProps,
+  type TransitionProps,
   TransitionPropsValidators,
+  type TransitionState,
   baseApplyTranslation,
   callPendingCbs,
   currentInstance,
@@ -15,19 +17,13 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import { extend, isArray } from '@vue/shared'
-import {
-  type Block,
-  type TransitionBlock,
-  type VaporTransitionHooks,
-  insert,
-} from '../block'
+import { type Block, type TransitionBlock, insert } from '../block'
 import { renderEffect } from '../renderEffect'
 import {
   type ResolvedTransitionBlock,
   ensureTransitionHooksRegistered,
   resolveTransitionHooks,
   setTransitionHooks,
-  setTransitionHooksOnFragment,
 } from './Transition'
 import {
   type VaporComponentInstance,
@@ -36,12 +32,11 @@ import {
 } from '../component'
 import { isForBlock } from '../apiCreateFor'
 import { createElement } from '../dom/node'
-import { DynamicFragment, isFragment } from '../fragment'
+import { DynamicFragment, type VaporFragment, isFragment } from '../fragment'
 import {
   type DefineVaporComponent,
   defineVaporComponent,
 } from '../apiDefineComponent'
-import { isInteropEnabled } from '../vdomInteropState'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -140,13 +135,6 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       prevChildren = []
     })
 
-    const transitionHooks = {
-      props: propsProxy,
-      state,
-      instance,
-      applyGroup: applyGroupTransitionHooks,
-    } as VaporTransitionHooks
-
     const frag = new DynamicFragment('transition-group')
     let currentTag: string | undefined
     let isMounted = false
@@ -159,7 +147,7 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       frag.update(
         () => {
           block = (slots.default && slots.default()) || []
-          applyGroupTransitionHooks(block, transitionHooks)
+          applyGroupTransitionHooks(block, propsProxy, state, instance)
           if (tag) {
             const container = createElement(tag)
             insert(block, container)
@@ -186,12 +174,12 @@ export const VaporTransitionGroup: DefineVaporComponent<
 
 function applyGroupTransitionHooks(
   block: Block,
-  hooks: VaporTransitionHooks,
+  props: TransitionProps,
+  state: TransitionState,
+  instance: VaporComponentInstance,
 ): void {
-  // propagate hooks to inner fragments for reusing during insert new items
-  setTransitionHooksOnFragment(block, hooks)
-  const { props, state, instance } = hooks
-  const children = getTransitionBlocks(block)
+  const fragments: VaporFragment[] = []
+  const children = getTransitionBlocks(block, frag => fragments.push(frag))
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     if (isValidTransitionBlock(child)) {
@@ -200,16 +188,18 @@ function applyGroupTransitionHooks(
           child,
           resolveTransitionHooks(child, props, state, instance),
         )
-      } else {
-        if (isInteropEnabled && isFragment(child) && child.vnode) {
-          child.$transition = undefined
-        }
-        if (__DEV__) {
-          warn(`<transition-group> children must be keyed`)
-        }
+      } else if (__DEV__) {
+        warn(`<transition-group> children must be keyed`)
       }
     }
   }
+
+  // propagate hooks to inner fragments for reusing during insert new items
+  fragments.forEach(frag => {
+    const hooks = resolveTransitionHooks(frag, props, state, instance)
+    hooks.applyGroup = applyGroupTransitionHooks
+    frag.$transition = hooks
+  })
 }
 
 function inheritKey(children: TransitionBlock[], key: any): void {
@@ -220,27 +210,31 @@ function inheritKey(children: TransitionBlock[], key: any): void {
   }
 }
 
-function getTransitionBlocks(block: Block) {
-  let children: TransitionBlock[] = []
-  if (block instanceof Node) {
+function getTransitionBlocks(
+  block: Block,
+  onFragment?: (frag: VaporFragment) => void,
+): ResolvedTransitionBlock[] {
+  let children: ResolvedTransitionBlock[] = []
+  if (block instanceof Element) {
     children.push(block)
   } else if (isVaporComponent(block)) {
-    const blocks = getTransitionBlocks(block.block)
+    const blocks = getTransitionBlocks(block.block, onFragment)
     inheritKey(blocks, block.$key)
     children.push(...blocks)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       const b = block[i]
-      const blocks = getTransitionBlocks(b)
+      const blocks = getTransitionBlocks(b, onFragment)
       if (isForBlock(b)) blocks.forEach(block => (block.$key = b.key))
       children.push(...blocks)
     }
   } else if (isFragment(block)) {
-    if (block.insert) {
+    if (block.vnode) {
       // vdom component
       children.push(block)
     } else {
-      const blocks = getTransitionBlocks(block.nodes)
+      if (onFragment) onFragment(block)
+      const blocks = getTransitionBlocks(block.nodes, onFragment)
       inheritKey(blocks, block.$key)
       children.push(...blocks)
     }
