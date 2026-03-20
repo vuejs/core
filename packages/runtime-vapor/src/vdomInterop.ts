@@ -101,7 +101,10 @@ import {
   renderSlotFallback,
 } from './fragment'
 import type { NodeRef } from './apiTemplateRef'
-import { setTransitionHooks as setVaporTransitionHooks } from './components/Transition'
+import {
+  getVNodeKey,
+  setTransitionHooks as setVaporTransitionHooks,
+} from './components/Transition'
 import { setInteropEnabled } from './vdomInteropState'
 import {
   type KeepAliveInstance,
@@ -559,19 +562,22 @@ function resolveVNodeNodes(vnode: VNode): Block {
   return vnode.el as Block
 }
 
+function appendVnodeUpdatedHook(vnode: VNode, hook: () => void): void {
+  const props = (vnode.props ||= {})
+  const existing = props.onVnodeUpdated
+  props.onVnodeUpdated = existing
+    ? isArray(existing)
+      ? [...existing, hook]
+      : [existing, hook]
+    : hook
+}
+
 function trackFragmentVNodeUpdates(frag: VaporFragment, vnode: VNode): void {
   const refresh = () => {
     frag.nodes = resolveVNodeNodes(vnode)
     if (frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
-
-  const props = (vnode.props ||= {})
-  const existing = props.onVnodeUpdated
-  props.onVnodeUpdated = existing
-    ? isArray(existing)
-      ? [...existing, refresh]
-      : [existing, refresh]
-    : refresh
+  appendVnodeUpdatedHook(vnode, refresh)
 }
 
 /**
@@ -903,12 +909,21 @@ function ensureRendererBridge(
 }
 
 function trackSlotVNodeUpdates(frag: VaporFragment, vnode: VNode): void {
-  trackFragmentVNodeUpdates(frag, vnode)
-  if (vnode.type === Fragment && isArray(vnode.children)) {
-    vnode.children.forEach(child => {
-      if (isVNode(child)) trackSlotVNodeUpdates(frag, child)
-    })
+  const refresh = () => {
+    frag.nodes = resolveVNodeNodes(vnode)
+    if (frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
+
+  const track = (node: VNode) => {
+    appendVnodeUpdatedHook(node, refresh)
+    if (node.type === Fragment && isArray(node.children)) {
+      node.children.forEach(child => {
+        if (isVNode(child)) track(child)
+      })
+    }
+  }
+
+  track(vnode)
 }
 
 /**
@@ -1021,6 +1036,8 @@ function renderVDOMSlot(
 
           if (isHydrating) {
             if (isVNode(resolved)) {
+              frag.vnode = resolved
+              frag.$key = getVNodeKey(resolved)
               trackSlotVNodeUpdates(frag, resolved)
               hydrateVNode(resolved, parentComponent as any)
               currentVNode = resolved
@@ -1039,6 +1056,8 @@ function renderVDOMSlot(
           }
 
           if (isVNode(resolved)) {
+            frag.vnode = resolved
+            frag.$key = getVNodeKey(resolved)
             trackSlotVNodeUpdates(frag, resolved)
             if (currentBlock) {
               remove(currentBlock, parentNode)
@@ -1060,6 +1079,8 @@ function renderVDOMSlot(
           }
 
           if (resolved) {
+            frag.vnode = null
+            frag.$key = undefined
             if (currentVNode) {
               internals.um(currentVNode, parentComponent as any, null, true)
               currentVNode = null
@@ -1083,6 +1104,8 @@ function renderVDOMSlot(
           }
 
           // mark as empty
+          frag.vnode = null
+          frag.$key = undefined
           frag.nodes = []
         } finally {
           setCurrentSlotOwner(prevSlotOwner)

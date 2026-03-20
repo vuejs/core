@@ -22,6 +22,7 @@ import { renderEffect } from '../renderEffect'
 import {
   type ResolvedTransitionBlock,
   ensureTransitionHooksRegistered,
+  getTransitionElementFromVNode,
   resolveTransitionHooks,
   setTransitionHooks,
 } from './Transition'
@@ -257,14 +258,8 @@ function getTransitionElement(
   if (block instanceof Element) return block
 
   // vdom interop
-  if (
-    isInteropEnabled &&
-    isFragment(block) &&
-    block.vnode &&
-    !isArray(block.nodes) &&
-    (block.nodes instanceof Element || isFragment(block.nodes))
-  ) {
-    return getTransitionElement(block.nodes)
+  if (isInteropEnabled && isFragment(block) && block.vnode) {
+    return getTransitionElementFromVNode(block.vnode)
   }
 }
 
