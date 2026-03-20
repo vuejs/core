@@ -746,6 +746,20 @@ describe('vapor transition-group', () => {
   )
 
   describe('interop', () => {
+    test('unkeyed vdom component update', async () => {
+      const btnSelector = '.unkeyed-vdom-component-update > button'
+      const containerSelector = '.unkeyed-vdom-component-update > div'
+
+      expect(await html(containerSelector)).toBe(`<div><div>a</div></div>`)
+
+      await page().click(btnSelector)
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div><div>a</div></div><div class="test">b</div>`,
+      )
+    })
+
     test('static keyed vdom component enter', async () => {
       const btnSelector = '.static-keyed-vdom-component-enter > button'
       const containerSelector = '.static-keyed-vdom-component-enter > div'

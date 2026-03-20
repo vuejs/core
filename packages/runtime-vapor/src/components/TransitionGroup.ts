@@ -41,6 +41,7 @@ import {
   type DefineVaporComponent,
   defineVaporComponent,
 } from '../apiDefineComponent'
+import { isInteropEnabled } from '../vdomInteropState'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -88,7 +89,7 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       const children = getTransitionBlocks(slottedBlock)
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
-        if (isValidTransitionBlock(child)) {
+        if (isValidTransitionBlock(child) && child.$transition) {
           prevChildren.push(child)
           // disabled transition during enter, so the children will be
           // inserted into the correct position immediately. this prevents
@@ -199,8 +200,13 @@ function applyGroupTransitionHooks(
           child,
           resolveTransitionHooks(child, props, state, instance),
         )
-      } else if (__DEV__) {
-        warn(`<transition-group> children must be keyed`)
+      } else {
+        if (isInteropEnabled && isFragment(child) && child.vnode) {
+          child.$transition = undefined
+        }
+        if (__DEV__) {
+          warn(`<transition-group> children must be keyed`)
+        }
       }
     }
   }
