@@ -53,8 +53,7 @@ function hasMultipleChildren(node: ElementNode): boolean {
     children.every(
       (c, index) =>
         c.type === NodeTypes.ELEMENT &&
-        (!isTemplateNode(c) ||
-          (isTemplateNode(c) && !hasMultipleChildren(c))) &&
+        (!isTemplateNode(c) || !hasMultipleChildren(c)) &&
         // not has v-for
         !findDir(c, 'for') &&
         // if the first child has v-if, the rest should also have v-else-if/v-else
