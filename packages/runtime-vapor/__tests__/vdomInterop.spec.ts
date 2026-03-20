@@ -102,6 +102,61 @@ describe('vdomInterop', () => {
       expect(host.innerHTML).toBe('<div>child</div>')
       expect(frag.nodes).toBeInstanceOf(HTMLDivElement)
     })
+
+    test('refreshes vdom slot fragment nodes after child root updates', async () => {
+      const show = ref(false)
+      const VDomChild = defineComponent({
+        setup() {
+          return () =>
+            show.value ? h('div', 'child') : createCommentVNode('v-if', true)
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createSlot('default') as any
+        },
+      })
+
+      const Parent = defineComponent({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: () => [h(VDomChild)],
+            })
+        },
+      })
+
+      const app = createApp(Parent)
+      app.use(vaporInteropPlugin)
+      const vapor = (app._context as any).vapor
+      const originalVdomSlot = vapor.vdomSlot
+      let frag: any
+      vapor.vdomSlot = (...args: any[]) => (frag = originalVdomSlot(...args))
+
+      const host = document.createElement('div')
+      app.mount(host)
+
+      const onUpdated = vi.fn()
+      frag.onUpdated = [onUpdated]
+
+      const getNodes = () =>
+        (Array.isArray(frag.nodes) ? frag.nodes : [frag.nodes]).filter(Boolean)
+
+      expect(host.innerHTML).toBe('<!--v-if-->')
+      expect(getNodes().some((n: Node) => n instanceof HTMLDivElement)).toBe(
+        false,
+      )
+
+      show.value = true
+      await nextTick()
+
+      expect(host.innerHTML).toContain('<div>child</div>')
+      expect(getNodes().some((n: Node) => n instanceof HTMLDivElement)).toBe(
+        true,
+      )
+      expect(onUpdated).toHaveBeenCalled()
+    })
   })
 
   describe('props', () => {
