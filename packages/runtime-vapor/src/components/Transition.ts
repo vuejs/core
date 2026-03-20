@@ -7,10 +7,12 @@ import {
   type TransitionProps,
   TransitionPropsValidators,
   type TransitionState,
+  type VNode,
   baseResolveTransitionHooks,
   checkTransitionMode,
   currentInstance,
   getComponentName,
+  getTransitionRawChildren,
   isAsyncWrapper,
   isTemplateNode,
   leaveCbKey,
@@ -44,6 +46,7 @@ import {
   isHydrating,
   setCurrentHydrationNode,
 } from '../dom/hydration'
+import { isInteropEnabled } from '../vdomInteropState'
 
 const displayName = 'VaporTransition'
 export type ResolvedTransitionBlock = (
@@ -139,7 +142,10 @@ function getTransitionType(block: ResolvedTransitionBlock): any {
   const type = transitionTypeMap.get(block)
   if (type !== undefined) return type
   if (block instanceof Element) return block.localName
-  if (isFragment(block) && block.vnode) return block.vnode.type
+  if (isFragment(block) && block.vnode) {
+    const children = getTransitionRawChildren([block.vnode])
+    if (children.length === 1) return children[0].type
+  }
   return block
 }
 
@@ -162,6 +168,10 @@ function getLeaveElement(
 ): TransitionElement | undefined {
   if (block instanceof Element) {
     return block as TransitionElement
+  }
+  if (isInteropEnabled && isFragment(block) && block.vnode) {
+    const el = getTransitionElementFromVNode(block.vnode)
+    if (el) return el as TransitionElement
   }
   if (
     isFragment(block) &&
@@ -407,9 +417,12 @@ export function resolveTransitionBlock(
       if (!__DEV__) break
     }
   } else if (isFragment(block)) {
-    if (block.insert) {
+    if (isInteropEnabled && block.vnode) {
       child = block
-      if (block.vnode) transitionTypeMap.set(child, block.vnode.type)
+      const children = getTransitionRawChildren([block.vnode])
+      if (children.length === 1) {
+        transitionTypeMap.set(child, children[0].type)
+      }
     } else {
       // collect fragments for setting transition hooks
       if (onFragment) onFragment(block)
@@ -429,4 +442,28 @@ export function setTransitionHooks(
     if (!block) return
   }
   block.$transition = hooks
+}
+
+export function getVNodeKey(
+  vnode: VNode | undefined,
+): VNode['key'] | undefined {
+  if (!vnode) return
+  const children = getTransitionRawChildren([vnode])
+  return children.length === 1 ? children[0].key : undefined
+}
+
+export function getTransitionElementFromVNode(
+  vnode: VNode | undefined,
+): Element | undefined {
+  if (!vnode) return
+  if (vnode.component) {
+    return getTransitionElementFromVNode(vnode.component.subTree)
+  }
+  if (vnode.el instanceof Element) {
+    return vnode.el
+  }
+  const children = getTransitionRawChildren([vnode])
+  if (children.length === 1 && children[0] !== vnode) {
+    return getTransitionElementFromVNode(children[0])
+  }
 }

@@ -73,6 +73,55 @@ describe('vdomInterop', () => {
       expect(componentBlock.$key).toBe('bar')
       expect(componentBlock.vnode.key).toBe('bar')
     })
+
+    test('preserves single slot vnode key on interop fragments', async () => {
+      const key = ref('foo')
+
+      const CompA = defineComponent({
+        setup() {
+          return () => h('div', 'A')
+        },
+      })
+      const CompB = defineComponent({
+        setup() {
+          return () => h('div', 'B')
+        },
+      })
+      const current = shallowRef<any>(CompA)
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createSlot('default') as any
+        },
+      })
+
+      const Parent = defineComponent({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: () => [h(current.value, { key: key.value })],
+            })
+        },
+      })
+
+      const app = createApp(Parent)
+      app.use(vaporInteropPlugin)
+      const vapor = (app._context as any).vapor
+      const originalVdomSlot = vapor.vdomSlot
+      let frag: any
+      vapor.vdomSlot = (...args: any[]) => (frag = originalVdomSlot(...args))
+
+      const host = document.createElement('div')
+      app.mount(host)
+
+      expect(frag.$key).toBe('_defaultfoo')
+
+      key.value = 'bar'
+      current.value = CompB
+      await nextTick()
+
+      expect(frag.$key).toBe('_defaultbar')
+    })
   })
 
   describe('fragment nodes', () => {
