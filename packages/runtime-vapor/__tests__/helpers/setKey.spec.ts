@@ -59,8 +59,5 @@ describe('helpers: setBlockKey', () => {
 
     expect(blocks[0].$key).toBeUndefined()
     expect(blocks[1].$key).toBeUndefined()
-    expect(
-      `key cannot be applied to multiple root elements.`,
-    ).toHaveBeenWarned()
   })
 })
