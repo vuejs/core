@@ -19,7 +19,12 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
-import type { Block, TransitionBlock, VaporTransitionHooks } from '../block'
+import type {
+  Block,
+  TransitionBlock,
+  TransitionOptions,
+  VaporTransitionHooks,
+} from '../block'
 import { registerTransitionHooks } from '../transition'
 import {
   type FunctionalVaporComponent,
@@ -41,6 +46,12 @@ import {
 } from '../dom/hydration'
 
 const displayName = 'VaporTransition'
+export type ResolvedTransitionBlock = (
+  | Element
+  | VaporFragment
+  | DynamicFragment
+) &
+  TransitionOptions
 
 let registered = false
 export const ensureTransitionHooksRegistered = (): void => {
@@ -122,30 +133,70 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     return children
   })
 
+const transitionTypeMap = new WeakMap<ResolvedTransitionBlock, any>()
+
+function getTransitionType(block: ResolvedTransitionBlock): any {
+  const type = transitionTypeMap.get(block)
+  if (type !== undefined) return type
+  if (block instanceof Element) return block.localName
+  if (isFragment(block) && block.vnode) return block.vnode.type
+  return block
+}
+
+function getLeavingNodesForType(
+  state: TransitionState,
+  block: ResolvedTransitionBlock,
+): Record<string, ResolvedTransitionBlock> {
+  const { leavingNodes } = state
+  const type = getTransitionType(block)
+  let nodes = leavingNodes.get(type) as Record<string, ResolvedTransitionBlock>
+  if (!nodes) {
+    nodes = Object.create(null)
+    leavingNodes.set(type, nodes)
+  }
+  return nodes
+}
+
+function getLeaveElement(
+  block: ResolvedTransitionBlock,
+): TransitionElement | undefined {
+  if (block instanceof Element) {
+    return block as TransitionElement
+  }
+  if (
+    isFragment(block) &&
+    !isArray(block.nodes) &&
+    (block.nodes instanceof Element || isFragment(block.nodes))
+  ) {
+    return getLeaveElement(block.nodes)
+  }
+}
+
 const getTransitionHooksContext = (
-  key: string,
+  block: ResolvedTransitionBlock,
   props: TransitionProps,
   state: TransitionState,
   instance: GenericComponentInstance,
   postClone: ((hooks: TransitionHooks) => void) | undefined,
 ) => {
-  const { leavingNodes } = state
+  const key = String(block.$key)
+  const leavingNodes = getLeavingNodesForType(state, block)
   const context: TransitionHooksContext = {
-    isLeaving: () => leavingNodes.has(key),
-    setLeavingNodeCache: el => {
-      leavingNodes.set(key, el)
+    isLeaving: () => leavingNodes[key] === block,
+    setLeavingNodeCache: () => {
+      leavingNodes[key] = block
     },
-    unsetLeavingNodeCache: el => {
-      const leavingNode = leavingNodes.get(key)
-      if (leavingNode === el) {
-        leavingNodes.delete(key)
+    unsetLeavingNodeCache: () => {
+      if (leavingNodes[key] === block) {
+        delete leavingNodes[key]
       }
     },
     earlyRemove: () => {
-      const leavingNode = leavingNodes.get(key)
-      if (leavingNode && (leavingNode as TransitionElement)[leaveCbKey]) {
+      const leavingNode = leavingNodes[key]
+      const el = leavingNode && getLeaveElement(leavingNode)
+      if (el && el[leaveCbKey]) {
         // force early removal (not cancelled)
-        ;(leavingNode as TransitionElement)[leaveCbKey]!()
+        el[leaveCbKey]!()
       }
     },
     cloneHooks: block => {
@@ -164,14 +215,14 @@ const getTransitionHooksContext = (
 }
 
 export function resolveTransitionHooks(
-  block: TransitionBlock,
+  block: ResolvedTransitionBlock,
   props: TransitionProps,
   state: TransitionState,
   instance: GenericComponentInstance,
   postClone?: (hooks: TransitionHooks) => void,
 ): VaporTransitionHooks {
   const context = getTransitionHooksContext(
-    String(block.$key),
+    block,
     props,
     state,
     instance,
@@ -210,7 +261,7 @@ function applyTransitionHooksImpl(
   }
 
   const fragments: VaporFragment[] = []
-  const child = findTransitionBlock(block, frag => fragments.push(frag))
+  const child = resolveTransitionBlock(block, frag => fragments.push(frag))
   if (!child) {
     // set transition hooks on fragments for later use
     fragments.forEach(f => (f.$transition = hooks))
@@ -241,7 +292,7 @@ function applyTransitionLeaveHooksImpl(
   enterHooks: VaporTransitionHooks,
   afterLeaveCb: () => void,
 ): void {
-  const leavingBlock = findTransitionBlock(block)
+  const leavingBlock = resolveTransitionBlock(block)
   if (!leavingBlock) return undefined
 
   const { props, state, instance } = enterHooks
@@ -268,8 +319,9 @@ function applyTransitionLeaveHooksImpl(
       earlyRemove,
       delayedLeave,
     ) => {
+      const leavingNodes = getLeavingNodesForType(state, leavingBlock)
       const leavingKey = String(leavingBlock.$key)
-      state.leavingNodes.set(leavingKey, leavingBlock)
+      leavingNodes[leavingKey] = leavingBlock
       // Bind cleanup to this specific handoff so an older leave callback
       // cannot clear a newer delayedLeave during rapid toggles.
       const delayedLeaveCb = () => {
@@ -286,8 +338,8 @@ function applyTransitionLeaveHooksImpl(
         leavingBlock.$transition = undefined
         // Same-key in-out switches early-remove the previous leaving block.
         // Clear the cache entry so the next enter isn't skipped as "still leaving".
-        if (state.leavingNodes.get(leavingKey) === leavingBlock) {
-          state.leavingNodes.delete(leavingKey)
+        if (leavingNodes[leavingKey] === leavingBlock) {
+          delete leavingNodes[leavingKey]
         }
         if (enterHooks.delayedLeave === delayedLeaveCb) {
           delete enterHooks.delayedLeave
@@ -298,11 +350,11 @@ function applyTransitionLeaveHooksImpl(
   }
 }
 
-export function findTransitionBlock(
+export function resolveTransitionBlock(
   block: Block,
   onFragment?: (frag: VaporFragment) => void,
-): TransitionBlock | undefined {
-  let child: TransitionBlock | undefined
+): ResolvedTransitionBlock | undefined {
+  let child: ResolvedTransitionBlock | undefined
   if (block instanceof Node) {
     // transition can only be applied on Element child
     if (block instanceof Element) child = block
@@ -312,23 +364,28 @@ export function findTransitionBlock(
       if (!block.type.__asyncResolved) {
         onFragment && onFragment(block.block! as DynamicFragment)
       } else {
-        child = findTransitionBlock(
+        child = resolveTransitionBlock(
           (block.block! as DynamicFragment).nodes,
           onFragment,
         )
+        // align with normal component branches so leaving cache can
+        // distinguish different resolved async wrapper types.
+        if (child && child.$key === undefined) child.$key = block.uid
+        if (child) transitionTypeMap.set(child, block.type)
       }
     } else {
       // stop searching if encountering nested Transition component
       if (getComponentName(block.type) === displayName) return undefined
-      child = findTransitionBlock(block.block, onFragment)
+      child = resolveTransitionBlock(block.block, onFragment)
       // use component id as key
       if (child && child.$key === undefined) child.$key = block.uid
+      if (child) transitionTypeMap.set(child, block.type)
     }
   } else if (isArray(block)) {
     let hasFound = false
     for (const c of block) {
       if (c instanceof Comment) continue
-      const item = findTransitionBlock(c, onFragment)
+      const item = resolveTransitionBlock(c, onFragment)
       if (__DEV__ && hasFound) {
         // warn more than one non-comment child
         warn(
@@ -344,10 +401,11 @@ export function findTransitionBlock(
   } else if (isFragment(block)) {
     if (block.insert) {
       child = block
+      if (block.vnode) transitionTypeMap.set(child, block.vnode.type)
     } else {
       // collect fragments for setting transition hooks
       if (onFragment) onFragment(block)
-      child = findTransitionBlock(block.nodes, onFragment)
+      child = resolveTransitionBlock(block.nodes, onFragment)
     }
   }
 
@@ -375,7 +433,7 @@ export function setTransitionHooks(
   hooks: VaporTransitionHooks,
 ): void {
   if (isVaporComponent(block)) {
-    block = findTransitionBlock(block.block) as TransitionBlock
+    block = resolveTransitionBlock(block.block) as TransitionBlock
     if (!block) return
   }
   block.$transition = hooks
