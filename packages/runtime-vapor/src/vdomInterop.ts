@@ -902,6 +902,15 @@ function ensureRendererBridge(
   return bridge
 }
 
+function trackSlotVNodeUpdates(frag: VaporFragment, vnode: VNode): void {
+  trackFragmentVNodeUpdates(frag, vnode)
+  if (vnode.type === Fragment && isArray(vnode.children)) {
+    vnode.children.forEach(child => {
+      if (isVNode(child)) trackSlotVNodeUpdates(frag, child)
+    })
+  }
+}
+
 /**
  * Mount vdom slot in vapor
  */
@@ -914,7 +923,7 @@ function renderVDOMSlot(
   fallback?: VaporSlot,
 ): VaporFragment {
   const suspense = currentParentSuspense || parentComponent.suspense
-  const frag = new VaporFragment([])
+  const frag = new VaporFragment<Block>([])
   const instance = currentInstance
   const slotOwner = currentSlotOwner
 
@@ -1012,10 +1021,11 @@ function renderVDOMSlot(
 
           if (isHydrating) {
             if (isVNode(resolved)) {
+              trackSlotVNodeUpdates(frag, resolved)
               hydrateVNode(resolved, parentComponent as any)
               currentVNode = resolved
               currentBlock = null
-              frag.nodes = resolved.el as any
+              frag.nodes = resolveVNodeNodes(resolved)
             } else if (resolved) {
               currentBlock = resolved as Block
               currentVNode = null
@@ -1029,6 +1039,7 @@ function renderVDOMSlot(
           }
 
           if (isVNode(resolved)) {
+            trackSlotVNodeUpdates(frag, resolved)
             if (currentBlock) {
               remove(currentBlock, parentNode)
               currentBlock = null
@@ -1044,7 +1055,7 @@ function renderVDOMSlot(
               resolved.slotScopeIds, // pass slotScopeIds for :slotted styles
             )
             currentVNode = resolved
-            frag.nodes = resolved.el as any
+            frag.nodes = resolveVNodeNodes(resolved)
             return
           }
 
