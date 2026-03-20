@@ -237,8 +237,9 @@ export class DynamicFragment extends VaporFragment {
             () => this.scope!.run(render) || [],
           )
         } finally {
-          // set key on blocks
-          if (this.keyed) setBlockKey(this.nodes, this.current)
+          // propagate the fragment key onto freshly rendered nodes.
+          const key = this.keyed ? this.current : this.$key
+          if (key !== undefined) setBlockKey(this.nodes, key)
 
           if (transition) {
             this.$transition = applyTransitionHooks(this.nodes, transition)

@@ -2,14 +2,17 @@ import {
   VaporTransitionGroup,
   createComponent,
   createIf,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   setBlockKey,
   template,
   withVaporCtx,
 } from '../../src'
+import { nextTick } from '@vue/runtime-dom'
 import { makeRender } from '../_utils'
 
 const define = makeRender()
+const timeout = (n = 0) => new Promise(r => setTimeout(r, n))
 
 describe('TransitionGroup', () => {
   test('inherits outer component key for a single transition child', () => {
@@ -84,5 +87,43 @@ describe('TransitionGroup', () => {
     expect(child.block[1].$transition).toBeUndefined()
 
     expect(`<transition-group> children must be keyed`).toHaveBeenWarnedTimes(2)
+  })
+
+  test('preserves outer key when unresolved async child resolves', async () => {
+    let resolve!: (comp: any) => void
+    const ResolvedChild = defineVaporComponent({
+      setup() {
+        return template(`<div>child</div>`)() as any
+      },
+    })
+    const AsyncChild = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(AsyncChild)
+        setBlockKey(child, 'foo')
+        return createComponent(VaporTransitionGroup, null, {
+          default: withVaporCtx(() => child),
+        })
+      },
+    }).render()
+
+    expect(child.$key).toBe('foo')
+    expect(child.block.$key).toBe('foo')
+
+    resolve(ResolvedChild)
+    await timeout()
+    await nextTick()
+    await nextTick()
+
+    expect(child.block.nodes.$key).toBe('foo')
+    expect(child.block.nodes.block.$key).toBe('foo')
+    expect(child.block.nodes.block.$transition).toBeDefined()
   })
 })
