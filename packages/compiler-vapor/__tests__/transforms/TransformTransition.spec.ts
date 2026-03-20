@@ -115,7 +115,47 @@ describe('compiler: transition', () => {
         <template v-if="ok"></template>
       </transition>
       `,
+      true,
+    )
+  })
+
+  test('does not warn with template v-if containing one child', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="ok">
+          <div>hey</div>
+        </template>
+      </transition>
+      `,
       false,
+    )
+  })
+
+  test('warns with template v-if containing multiple children', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="ok">
+          <div>hey</div>
+          <div>there</div>
+        </template>
+      </transition>
+      `,
+      true,
+    )
+  })
+
+  test('warns with template v-if containing v-for', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="ok">
+          <div v-for="i in items">hey</div>
+        </template>
+      </transition>
+      `,
+      true,
     )
   })
 
@@ -125,6 +165,18 @@ describe('compiler: transition', () => {
       <transition>
         <template v-if="a"></template>
         <template v-else></template>
+      </transition>
+      `,
+      true,
+    )
+  })
+
+  test('does not warn with multiple templates containing one child each', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="a"><div>hey</div></template>
+        <template v-else><div>there</div></template>
       </transition>
       `,
       false,
