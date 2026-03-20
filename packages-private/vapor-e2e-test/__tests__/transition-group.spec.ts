@@ -746,6 +746,52 @@ describe('vapor transition-group', () => {
   )
 
   describe('interop', () => {
+    test(
+      'avoid set transition hooks for comment node',
+      async () => {
+        const btnSelector =
+          '.avoid-set-transition-hooks-for-comment-node > button'
+        const containerSelector =
+          '.avoid-set-transition-hooks-for-comment-node > div'
+
+        expect(await html(containerSelector)).toBe(`<!--v-if-->`)
+
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).innerHTML,
+        ).toBe(
+          `<div class="test test-enter-from test-enter-active">a</div>` +
+            `<div class="test test-enter-from test-enter-active">b</div>` +
+            `<div class="test test-enter-from test-enter-active">c</div>` +
+            `<!--v-if-->`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test">a</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test">c</div>` +
+            `<!--v-if-->`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test">a</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test">c</div>` +
+            `<div class="test test-enter-active test-enter-to">child</div>`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test">a</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test">c</div>` +
+            `<div class="test">child</div>`,
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
     test('unkeyed vdom component update', async () => {
       const btnSelector = '.unkeyed-vdom-component-update > button'
       const containerSelector = '.unkeyed-vdom-component-update > div'
