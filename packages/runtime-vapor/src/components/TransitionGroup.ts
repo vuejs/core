@@ -206,12 +206,22 @@ function applyGroupTransitionHooks(
   }
 }
 
+function inheritKey(children: TransitionBlock[], key: any): void {
+  if (key === undefined || children.length !== 1) return
+  const child = children[0]
+  if (child.$key === undefined) {
+    child.$key = key
+  }
+}
+
 function getTransitionBlocks(block: Block) {
   let children: TransitionBlock[] = []
   if (block instanceof Node) {
     children.push(block)
   } else if (isVaporComponent(block)) {
-    children.push(...getTransitionBlocks(block.block))
+    const blocks = getTransitionBlocks(block.block)
+    inheritKey(blocks, block.$key)
+    children.push(...blocks)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       const b = block[i]
@@ -224,7 +234,9 @@ function getTransitionBlocks(block: Block) {
       // vdom component
       children.push(block)
     } else {
-      children.push(...getTransitionBlocks(block.nodes))
+      const blocks = getTransitionBlocks(block.nodes)
+      inheritKey(blocks, block.$key)
+      children.push(...blocks)
     }
   }
 

@@ -7,6 +7,7 @@ import {
   transformText,
   transformVFor,
   transformVIf,
+  transformVOnce,
   transformVSlot,
 } from '../../src'
 import { NodeTypes } from '@vue/compiler-dom'
@@ -14,6 +15,7 @@ import { NodeTypes } from '@vue/compiler-dom'
 const compileWithKey = makeCompile({
   nodeTransforms: [
     transformVIf,
+    transformVOnce,
     transformKey,
     transformVFor,
     transformText,
@@ -123,29 +125,78 @@ describe('compiler: key', () => {
     })
   })
 
-  // static keys will be ignored
   describe('with static key', () => {
     test('component + key', () => {
       const { code } = compileWithKey(`<Foo key="1" />`)
       expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
       expect(code).not.contains('_createKeyedFragment(')
     })
 
     test('element + key', () => {
-      const { code } = compileWithKey(`<div key="1"></div>`)
+      const { code, ir } = compileWithKey(`<div key="1"></div>`)
       expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
       expect(code).not.contains('_createKeyedFragment(')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.SET_BLOCK_KEY,
+          element: 0,
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: '1',
+            isStatic: true,
+          },
+        },
+      ])
     })
 
     test('<component is/> + key', () => {
       const { code } = compileWithKey(`<component :is="view" key="1" />`)
       expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('<component is literal/> + key', () => {
+      const { code } = compileWithKey(`<component :is="'div'" key="1" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
       expect(code).not.contains('_createKeyedFragment(')
     })
 
     test('static expression key', () => {
       const { code } = compileWithKey(`<div :key="1" />`)
       expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('boolean static expression key', () => {
+      const { code } = compileWithKey(`<div :key="true" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('null static expression key', () => {
+      const { code } = compileWithKey(`<div :key="null" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('v-once + element key', () => {
+      const { code } = compileWithKey(`<div v-once key="foo" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
+    test('v-once + component key', () => {
+      const { code } = compileWithKey(`<Foo v-once key="bar" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
       expect(code).not.contains('_createKeyedFragment(')
     })
   })

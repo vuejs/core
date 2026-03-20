@@ -368,18 +368,26 @@ export function resolveTransitionBlock(
           (block.block! as DynamicFragment).nodes,
           onFragment,
         )
-        // align with normal component branches so leaving cache can
-        // distinguish different resolved async wrapper types.
-        if (child && child.$key === undefined) child.$key = block.uid
-        if (child) transitionTypeMap.set(child, block.type)
+        if (child) {
+          if (child.$key === undefined) {
+            child.$key = block.$key ?? block.uid
+          }
+          // align with normal component branches so leaving cache can
+          // distinguish different resolved async wrapper types.
+          transitionTypeMap.set(child, block.type)
+        }
       }
     } else {
       // stop searching if encountering nested Transition component
       if (getComponentName(block.type) === displayName) return undefined
       child = resolveTransitionBlock(block.block, onFragment)
-      // use component id as key
-      if (child && child.$key === undefined) child.$key = block.uid
-      if (child) transitionTypeMap.set(child, block.type)
+      if (child) {
+        if (child.$key === undefined) {
+          // prefer explicit component key, otherwise fall back to uid.
+          child.$key = block.$key ?? block.uid
+        }
+        transitionTypeMap.set(child, block.type)
+      }
     }
   } else if (isArray(block)) {
     let hasFound = false

@@ -155,6 +155,64 @@ describe('vapor transition-group', () => {
   )
 
   test(
+    'static keyed component enter',
+    async () => {
+      const btnSelector = '.static-keyed-component-enter > button'
+      const containerSelector = '.static-keyed-component-enter > div'
+
+      expect(await html(containerSelector)).toBe(``)
+
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<div class="test test-enter-from test-enter-active">a</div>` +
+          `<div class="test test-enter-from test-enter-active">b</div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test test-enter-active test-enter-to">a</div>` +
+          `<div class="test test-enter-active test-enter-to">b</div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test">a</div><div class="test">b</div>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
+    'static keyed enter',
+    async () => {
+      const btnSelector = '.static-keyed-enter > button'
+      const containerSelector = '.static-keyed-enter > div'
+
+      expect(await html(containerSelector)).toBe(``)
+
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<div class="test test-enter-from test-enter-active">a</div>` +
+          `<div class="test test-enter-from test-enter-active">b</div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test test-enter-active test-enter-to">a</div>` +
+          `<div class="test test-enter-active test-enter-to">b</div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test">a</div><div class="test">b</div>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
     'for + if enter',
     async () => {
       const btnSelector = '.for-if-enter > button.toggle'
@@ -688,6 +746,31 @@ describe('vapor transition-group', () => {
   )
 
   describe('interop', () => {
+    test('static keyed vdom component enter', async () => {
+      const btnSelector = '.static-keyed-vdom-component-enter > button'
+      const containerSelector = '.static-keyed-vdom-component-enter > div'
+
+      expect(await html(containerSelector)).toBe(``)
+
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<div class="test test-enter-from test-enter-active">a</div>` +
+          `<div class="test test-enter-from test-enter-active">b</div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test test-enter-active test-enter-to">a</div>` +
+          `<div class="test test-enter-active test-enter-to">b</div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test">a</div><div class="test">b</div>`,
+      )
+    })
+
     test('render vdom component', async () => {
       const btnSelector = '.interop > button'
       const containerSelector = '.interop > div'

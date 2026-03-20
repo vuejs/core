@@ -48,6 +48,31 @@ import {
 const define = makeInteropRender()
 
 describe('vdomInterop', () => {
+  describe('key', () => {
+    test('preserves vnode key on blocks passed from vdom to vapor', () => {
+      const VDomChild = defineComponent({
+        setup() {
+          return () => h('div', 'vdom child')
+        },
+      })
+
+      const app = createApp({ render: () => null })
+      app.use(vaporInteropPlugin)
+      const vapor = (app._context as any).vapor
+
+      const vnodeBlock = vapor.vdomMountVNode(
+        h(VDomChild, { key: 'foo' }),
+        null,
+      )
+      expect(vnodeBlock.$key).toBe('foo')
+      expect(vnodeBlock.vnode.key).toBe('foo')
+
+      const componentBlock = vapor.vdomMount(VDomChild, null, { key: 'bar' })
+      expect(componentBlock.$key).toBe('bar')
+      expect(componentBlock.vnode.key).toBe('bar')
+    })
+  })
+
   describe('props', () => {
     test('should work if props are not provided', () => {
       const VaporChild = defineVaporComponent({

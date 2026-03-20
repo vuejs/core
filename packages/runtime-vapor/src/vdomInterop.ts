@@ -571,6 +571,7 @@ function mountVNode(
     currentParentSuspense || (parentComponent && parentComponent.suspense)
   const frag = new VaporFragment<Block>([])
   frag.vnode = vnode
+  frag.$key = vnode.key
 
   let isMounted = false
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
@@ -677,6 +678,7 @@ function createVDOMComponent(
     comp,
     rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
   ))
+  frag.$key = vnode.key
 
   if (currentKeepAliveCtx) {
     currentKeepAliveCtx.processShapeFlag(frag)

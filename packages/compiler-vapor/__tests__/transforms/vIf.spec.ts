@@ -251,7 +251,13 @@ describe('compiler: v-if', () => {
         type: IRNodeTypes.BLOCK,
         dynamic: {
           children: [
-            { operation: { asset: true, tag: 'Component', type: 11 } },
+            {
+              operation: {
+                asset: true,
+                tag: 'Component',
+                type: IRNodeTypes.CREATE_COMPONENT_NODE,
+              },
+            },
           ],
         },
       },
