@@ -256,7 +256,7 @@ function applyTransitionHooksImpl(
 
   // delegate to TransitionGroup's apply logic for list children
   if (hooks.applyGroup && block instanceof ForFragment) {
-    hooks.applyGroup(block, hooks)
+    hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
     return hooks
   }
 
@@ -418,22 +418,6 @@ export function resolveTransitionBlock(
   }
 
   return child
-}
-
-export function setTransitionHooksOnFragment(
-  block: Block,
-  hooks: VaporTransitionHooks,
-): void {
-  if (isFragment(block)) {
-    block.$transition = hooks
-    if (block.nodes && (isFragment(block.nodes) || isArray(block.nodes))) {
-      setTransitionHooksOnFragment(block.nodes, hooks)
-    }
-  } else if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      setTransitionHooksOnFragment(block[i], hooks)
-    }
-  }
 }
 
 export function setTransitionHooks(
