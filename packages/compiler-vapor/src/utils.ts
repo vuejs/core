@@ -57,7 +57,9 @@ export function isStaticExpression(
   } else if (node.ast === null) {
     if (
       !node.isStatic &&
-      (node.content === 'true' || node.content === 'false')
+      (node.content === 'true' ||
+        node.content === 'false' ||
+        node.content === 'null')
     ) {
       return true
     }

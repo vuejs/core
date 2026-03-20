@@ -35,6 +35,7 @@ import {
 import { isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
+import { setBlockKey } from './helpers/setKey'
 import {
   type VaporKeepAliveContext,
   currentKeepAliveCtx,
@@ -237,7 +238,7 @@ export class DynamicFragment extends VaporFragment {
           )
         } finally {
           // set key on blocks
-          if (this.keyed) setKey(this.nodes, this.current)
+          if (this.keyed) setBlockKey(this.nodes, this.current)
 
           if (transition) {
             this.$transition = applyTransitionHooks(this.nodes, transition)
@@ -575,21 +576,5 @@ function chainFallback(existing: BlockFn | undefined, next: BlockFn): BlockFn {
   return (...args: any[]) => {
     const res = existing(...args)
     return !isValidBlock(res) ? next(...args) : res
-  }
-}
-
-function setKey(block: Block & { $key?: any }, key: any) {
-  if (block instanceof Node) {
-    block.$key = key
-  } else if (isVaporComponent(block)) {
-    block.key = key
-    setKey(block.block, key)
-  } else if (isArray(block)) {
-    for (const b of block) {
-      setKey(b, key)
-    }
-  } else {
-    block.$key = key
-    setKey(block.nodes, key)
   }
 }

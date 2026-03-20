@@ -64,6 +64,7 @@ export {
 } from './apiCreateFor'
 export { createTemplateRefSetter } from './apiTemplateRef'
 export { useVaporCssVars } from './helpers/useCssVars'
+export { setBlockKey } from './helpers/setKey'
 export { createDynamicComponent } from './apiCreateDynamicComponent'
 export { applyVShow } from './directives/vShow'
 export {

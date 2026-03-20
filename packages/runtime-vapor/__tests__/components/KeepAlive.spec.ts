@@ -30,6 +30,7 @@ import {
   defineVaporAsyncComponent,
   defineVaporComponent,
   renderEffect,
+  setBlockKey,
   setText,
   template,
   vaporInteropPlugin,
@@ -2291,6 +2292,57 @@ describe('VaporKeepAlive', () => {
   })
 
   describe('vdom interop', () => {
+    test('should cache interop branches by explicit key', async () => {
+      let cache: Map<any, any>
+      let keepAlive: any
+
+      const VdomComp = {
+        props: ['id'],
+        setup(props: any) {
+          onBeforeMount(() => oneHooks.beforeMount())
+          onMounted(() => oneHooks.mounted())
+          onActivated(() => oneHooks.activated())
+          onDeactivated(() => oneHooks.deactivated())
+          onUnmounted(() => oneHooks.unmounted())
+          return () => h('button', props.id)
+        },
+      }
+
+      const App = defineVaporComponent({
+        setup() {
+          keepAlive = createComponent(VaporKeepAlive, null, {
+            default: () => {
+              const block = createComponent(VdomComp as any, {
+                id: () => 'a',
+              })
+              setBlockKey(block, 'a')
+              return block
+            },
+          })
+          cache = (keepAlive as any).__v_cache
+          return keepAlive
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      expect(container.querySelector('button')!.textContent).toBe('a')
+      expect(cache!.size).toBe(1)
+      expect(cache!.has('a')).toBe(true)
+      expect(keepAlive.ctx.getCachedComponent(VdomComp as any, 'a')).toBe(
+        cache!.get('a'),
+      )
+      expect(keepAlive.ctx.getCachedComponent(VdomComp as any, 'b')).toBe(
+        undefined,
+      )
+
+      assertHookCalls(oneHooks, [1, 1, 1, 0, 0])
+    })
+
     test('should work', () => {
       const VdomComp = {
         setup() {

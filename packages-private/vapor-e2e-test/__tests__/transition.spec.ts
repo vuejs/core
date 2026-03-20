@@ -1766,6 +1766,72 @@ describe('vapor transition', () => {
 
   describe('keyed', () => {
     test(
+      'should work with static keyed element',
+      async () => {
+        const btnSelector = '.static-keyed > button'
+        const containerSelector = '.static-keyed > h1'
+
+        await waitForInnerHTML(containerSelector, '0')
+
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).classNames,
+        ).toStrictEqual(['v-leave-from', 'v-leave-active'])
+
+        await nextFrame()
+        expect(await classList(containerSelector)).toStrictEqual([
+          'v-leave-active',
+          'v-leave-to',
+        ])
+        await waitForInnerHTML(containerSelector, '1')
+
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).classNames,
+        ).toStrictEqual(['v-leave-from', 'v-leave-active'])
+
+        await nextFrame()
+        expect(await classList(containerSelector)).toStrictEqual([
+          'v-leave-active',
+          'v-leave-to',
+        ])
+        await waitForInnerHTML(containerSelector, '0')
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'should work with static keyed component',
+      async () => {
+        const btnSelector = '.static-keyed-component > button'
+        const containerSelector = '.static-keyed-component > h1'
+
+        await waitForInnerHTML(containerSelector, '0')
+
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).classNames,
+        ).toStrictEqual(['v-leave-from', 'v-leave-active'])
+
+        await nextFrame()
+        expect(await classList(containerSelector)).toStrictEqual([
+          'v-leave-active',
+          'v-leave-to',
+        ])
+        await waitForInnerHTML(containerSelector, '1')
+
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).classNames,
+        ).toStrictEqual(['v-leave-from', 'v-leave-active'])
+
+        await nextFrame()
+        expect(await classList(containerSelector)).toStrictEqual([
+          'v-leave-active',
+          'v-leave-to',
+        ])
+        await waitForInnerHTML(containerSelector, '0')
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
       'should work with keyed element',
       async () => {
         const btnSelector = '.keyed > button'
@@ -2181,6 +2247,39 @@ describe('vapor transition', () => {
 
   // tests for using vdom component in createVaporApp + vaporInteropPlugin
   describe('interop', () => {
+    test(
+      'should work with static keyed vdom component',
+      async () => {
+        const btnSelector = '.static-keyed-vdom > button'
+        const containerSelector = '.static-keyed-vdom > div > h1'
+
+        await waitForInnerHTML(containerSelector, '0')
+
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).classNames,
+        ).toStrictEqual(['v-leave-from', 'v-leave-active'])
+
+        await nextFrame()
+        expect(await classList(containerSelector)).toStrictEqual([
+          'v-leave-active',
+          'v-leave-to',
+        ])
+        await waitForInnerHTML(containerSelector, '1')
+
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).classNames,
+        ).toStrictEqual(['v-leave-from', 'v-leave-active'])
+
+        await nextFrame()
+        expect(await classList(containerSelector)).toStrictEqual([
+          'v-leave-active',
+          'v-leave-to',
+        ])
+        await waitForInnerHTML(containerSelector, '0')
+      },
+      E2E_TIMEOUT,
+    )
+
     test(
       'render vdom component',
       async () => {

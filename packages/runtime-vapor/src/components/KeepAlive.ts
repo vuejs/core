@@ -130,7 +130,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       }
 
       return (
-        (block as VaporComponentInstance).key ??
+        (block as VaporComponentInstance).$key ??
         branchKey ??
         (block as VaporComponentInstance).type
       )

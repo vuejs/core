@@ -15,6 +15,7 @@ export enum IRNodeTypes {
   ROOT,
   BLOCK,
 
+  SET_BLOCK_KEY,
   SET_PROP,
   SET_DYNAMIC_PROPS,
   SET_TEXT,
@@ -117,6 +118,12 @@ export interface KeyIRNode extends BaseIRNode {
   logicalIndex?: number
   append?: boolean
   last?: boolean
+}
+
+export interface SetBlockKeyIRNode extends BaseIRNode {
+  type: IRNodeTypes.SET_BLOCK_KEY
+  element: number
+  value: SimpleExpressionNode
 }
 
 export interface SetPropIRNode extends BaseIRNode {
@@ -246,6 +253,7 @@ export interface GetTextChildIRNode extends BaseIRNode {
 
 export type IRNode = OperationNode | RootIRNode
 export type OperationNode =
+  | SetBlockKeyIRNode
   | SetPropIRNode
   | SetDynamicPropsIRNode
   | SetTextIRNode
