@@ -15,7 +15,7 @@ const define = makeRender()
 const timeout = (n = 0) => new Promise(r => setTimeout(r, n))
 
 describe('TransitionGroup', () => {
-  test('inherits outer component key for a single transition child', () => {
+  test('prefixes outer component key for a single transition child', () => {
     const Child = defineVaporComponent({
       setup() {
         return template(`<div>child</div>`)() as any
@@ -34,11 +34,11 @@ describe('TransitionGroup', () => {
       },
     }).render()
 
-    expect(child.block.$key).toBe('foo')
+    expect(child.block.$key).toBe('foo0')
     expect(child.block.$transition).toBeDefined()
   })
 
-  test('inherits outer fragment key for a single transition child', () => {
+  test('prefixes outer fragment key for a single transition child', () => {
     let frag: any
     define({
       setup() {
@@ -54,11 +54,11 @@ describe('TransitionGroup', () => {
       },
     }).render()
 
-    expect(frag.nodes.$key).toBe('foo')
+    expect(frag.nodes.$key).toBe('foo0')
     expect(frag.nodes.$transition).toBeDefined()
   })
 
-  test('does not duplicate outer key across multiple transition children', () => {
+  test('derives unique keys from outer key across multiple transition children', () => {
     const Child = defineVaporComponent({
       setup() {
         return [
@@ -81,12 +81,38 @@ describe('TransitionGroup', () => {
       },
     }).render()
 
-    expect(child.block[0].$key).toBeUndefined()
-    expect(child.block[1].$key).toBeUndefined()
-    expect(child.block[0].$transition).toBeUndefined()
-    expect(child.block[1].$transition).toBeUndefined()
+    expect(child.block[0].$key).toBe('foo0')
+    expect(child.block[1].$key).toBe('foo1')
+    expect(child.block[0].$transition).toBeDefined()
+    expect(child.block[1].$transition).toBeDefined()
+  })
 
-    expect(`<transition-group> children must be keyed`).toHaveBeenWarnedTimes(2)
+  test('prefixes child keys with outer key across multiple transition children', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        const a = template(`<div>a</div>`)() as any
+        const b = template(`<div>b</div>`)() as any
+        a.$key = 'a'
+        b.$key = 'b'
+        return [a, b]
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, 'foo')
+        return createComponent(VaporTransitionGroup, null, {
+          default: withVaporCtx(() => child),
+        })
+      },
+    }).render()
+
+    expect(child.block[0].$key).toBe('fooa')
+    expect(child.block[1].$key).toBe('foob')
+    expect(child.block[0].$transition).toBeDefined()
+    expect(child.block[1].$transition).toBeDefined()
   })
 
   test('preserves outer key when unresolved async child resolves', async () => {
