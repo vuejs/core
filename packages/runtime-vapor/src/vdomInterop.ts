@@ -559,6 +559,21 @@ function resolveVNodeNodes(vnode: VNode): Block {
   return vnode.el as Block
 }
 
+function trackFragmentVNodeUpdates(frag: VaporFragment, vnode: VNode): void {
+  const refresh = () => {
+    frag.nodes = resolveVNodeNodes(vnode)
+    if (frag.onUpdated) frag.onUpdated.forEach(m => m())
+  }
+
+  const props = (vnode.props ||= {})
+  const existing = props.onVnodeUpdated
+  props.onVnodeUpdated = existing
+    ? isArray(existing)
+      ? [...existing, refresh]
+      : [existing, refresh]
+    : refresh
+}
+
 /**
  * Mount VNode in vapor
  */
@@ -572,6 +587,7 @@ function mountVNode(
   const frag = new VaporFragment<Block>([])
   frag.vnode = vnode
   frag.$key = vnode.key
+  trackFragmentVNodeUpdates(frag, vnode)
 
   let isMounted = false
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
@@ -679,6 +695,7 @@ function createVDOMComponent(
     rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
   ))
   frag.$key = vnode.key
+  trackFragmentVNodeUpdates(frag, vnode)
 
   if (currentKeepAliveCtx) {
     currentKeepAliveCtx.processShapeFlag(frag)
