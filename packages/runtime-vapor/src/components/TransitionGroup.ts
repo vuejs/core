@@ -37,6 +37,7 @@ import {
   type DefineVaporComponent,
   defineVaporComponent,
 } from '../apiDefineComponent'
+import { isInteropEnabled } from '../vdomInteropState'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -84,16 +85,17 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       const children = getTransitionBlocks(slottedBlock)
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
-        if (isValidTransitionBlock(child) && child.$transition) {
+        const el =
+          isValidTransitionBlock(child) && child.$transition
+            ? getTransitionElement(child)
+            : undefined
+        if (el) {
           prevChildren.push(child)
           // disabled transition during enter, so the children will be
           // inserted into the correct position immediately. this prevents
           // `recordPosition` from getting incorrect positions in `onUpdated`
           child.$transition!.disabled = true
-          positionMap.set(
-            child,
-            getTransitionElement(child).getBoundingClientRect(),
-          )
+          positionMap.set(child, el.getBoundingClientRect())
         }
       }
     })
@@ -229,7 +231,7 @@ function getTransitionBlocks(
       children.push(...blocks)
     }
   } else if (isFragment(block)) {
-    if (block.vnode) {
+    if (isInteropEnabled && block.vnode) {
       // vdom component
       children.push(block)
     } else {
@@ -246,25 +248,41 @@ function getTransitionBlocks(
 function isValidTransitionBlock(
   block: Block,
 ): block is ResolvedTransitionBlock {
-  return !!(block instanceof Element || (isFragment(block) && block.insert))
+  return !!(block instanceof Element || (isFragment(block) && block.vnode))
 }
 
-function getTransitionElement(c: ResolvedTransitionBlock): Element {
-  return (isFragment(c) ? (c.nodes as Element) : c) as Element
+function getTransitionElement(
+  block: ResolvedTransitionBlock,
+): Element | undefined {
+  if (block instanceof Element) return block
+
+  // vdom interop
+  if (
+    isInteropEnabled &&
+    isFragment(block) &&
+    block.vnode &&
+    !isArray(block.nodes) &&
+    (block.nodes instanceof Element || isFragment(block.nodes))
+  ) {
+    return getTransitionElement(block.nodes)
+  }
 }
 
 function recordPosition(c: ResolvedTransitionBlock) {
-  newPositionMap.set(c, getTransitionElement(c).getBoundingClientRect())
+  const el = getTransitionElement(c)
+  if (el) newPositionMap.set(c, el.getBoundingClientRect())
 }
 
 function applyTranslation(
   c: ResolvedTransitionBlock,
 ): ResolvedTransitionBlock | undefined {
+  const el = getTransitionElement(c)
   if (
+    el &&
     baseApplyTranslation(
       positionMap.get(c)!,
       newPositionMap.get(c)!,
-      getTransitionElement(c) as ElementWithTransition,
+      el as ElementWithTransition,
     )
   ) {
     return c
@@ -277,6 +295,6 @@ function getFirstConnectedChild(
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     const el = getTransitionElement(child)
-    if (el.isConnected) return el
+    if (el && el.isConnected) return el
   }
 }
