@@ -379,7 +379,7 @@ export function resolveTransitionBlock(
           onFragment,
         )
         if (child) {
-          if (child.$key === undefined) {
+          if (child.$key == null) {
             child.$key = block.$key ?? block.uid
           }
           // align with normal component branches so leaving cache can
@@ -392,7 +392,7 @@ export function resolveTransitionBlock(
       if (getComponentName(block.type) === displayName) return undefined
       child = resolveTransitionBlock(block.block, onFragment)
       if (child) {
-        if (child.$key === undefined) {
+        if (child.$key == null) {
           // prefer explicit component key, otherwise fall back to uid.
           child.$key = block.$key ?? block.uid
         }

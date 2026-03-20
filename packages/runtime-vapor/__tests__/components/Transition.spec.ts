@@ -74,4 +74,26 @@ describe('Transition', () => {
     const resolved = resolveTransitionBlock(child)!
     expect(resolved.$key).toBe(0)
   })
+
+  test('treats null component key as absent when resolving child', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return template(`<div>child</div>`)() as any
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, null)
+        return child
+      },
+    }).render()
+
+    child.block.$key = null
+
+    const resolved = resolveTransitionBlock(child)!
+    expect(resolved.$key).toBe(child.uid)
+  })
 })
