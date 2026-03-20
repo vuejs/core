@@ -4,6 +4,7 @@ import {
   Suspense,
   Teleport,
   createApp,
+  createCommentVNode,
   createVNode,
   defineComponent,
   h,
@@ -38,6 +39,7 @@ import {
   createTemplateRefSetter,
   defineVaporAsyncComponent,
   defineVaporComponent,
+  insert,
   renderEffect,
   setText,
   template,
@@ -70,6 +72,35 @@ describe('vdomInterop', () => {
       const componentBlock = vapor.vdomMount(VDomChild, null, { key: 'bar' })
       expect(componentBlock.$key).toBe('bar')
       expect(componentBlock.vnode.key).toBe('bar')
+    })
+  })
+
+  describe('fragment nodes', () => {
+    test('refreshes interop fragment nodes after component root updates', async () => {
+      const show = ref(false)
+      const VDomChild = defineComponent({
+        setup() {
+          return () =>
+            show.value ? h('div', 'child') : createCommentVNode('v-if', true)
+        },
+      })
+
+      const app = createApp({ render: () => null })
+      app.use(vaporInteropPlugin)
+      const vapor = (app._context as any).vapor
+      const host = document.createElement('div')
+
+      const frag = vapor.vdomMount(VDomChild, null)
+      insert(frag, host)
+
+      expect(host.innerHTML).toBe('<!--v-if-->')
+      expect(frag.nodes).toBeInstanceOf(Comment)
+
+      show.value = true
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<div>child</div>')
+      expect(frag.nodes).toBeInstanceOf(HTMLDivElement)
     })
   })
 
