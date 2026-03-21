@@ -88,9 +88,13 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   // Only delegate if:
   // - no dynamic event name
   // - no event option modifiers (passive, capture, once)
+  // - no propagation modifiers that depend on running before ancestor listeners
   // - is a delegatable event
   const delegate =
-    arg.isStatic && !eventOptionModifiers.length && delegatedEvents(arg.content)
+    arg.isStatic &&
+    !eventOptionModifiers.length &&
+    !nonKeyModifiers.includes('stop') &&
+    delegatedEvents(arg.content)
 
   const operation: SetEventIRNode = {
     type: IRNodeTypes.SET_EVENT,

@@ -116,9 +116,9 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n19 = t3()
   const n20 = t3()
   const n21 = t3()
-  n0.$evtclick = _createInvoker(_withModifiers(_ctx.handleEvent, ["stop"]))
+  _on(n0, "click", _createInvoker(_withModifiers(_ctx.handleEvent, ["stop"])))
   _on(n1, "submit", _createInvoker(_withModifiers(_ctx.handleEvent, ["prevent"])))
-  n2.$evtclick = _createInvoker(_withModifiers(_ctx.handleEvent, ["stop","prevent"]))
+  _on(n2, "click", _createInvoker(_withModifiers(_ctx.handleEvent, ["stop","prevent"])))
   n3.$evtclick = _createInvoker(_withModifiers(_ctx.handleEvent, ["self"]))
   _on(n4, "click", _createInvoker(_ctx.handleEvent), {
     capture: true
@@ -299,6 +299,19 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`v-on > should not delegate .stop when have multiple events of same name 1`] = `
+"import { createInvoker as _createInvoker, withModifiers as _withModifiers, on as _on, delegateEvents as _delegateEvents, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+_delegateEvents("click")
+
+export function render(_ctx) {
+  const n0 = t0()
+  n0.$evtclick = _createInvoker(e => _ctx.test(e))
+  _on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))
+  return n0
+}"
+`;
+
 exports[`v-on > should not prefix member expression 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div>", true)
@@ -324,13 +337,13 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should support multiple events and modifiers options w/ prefixIdentifiers: true 1`] = `
-"import { createInvoker as _createInvoker, withModifiers as _withModifiers, withKeys as _withKeys, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { createInvoker as _createInvoker, withModifiers as _withModifiers, on as _on, withKeys as _withKeys, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div>", true)
-_delegateEvents("click", "keyup")
+_delegateEvents("keyup")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtclick = _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"]))
+  _on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))
   n0.$evtkeyup = _createInvoker(_withKeys(e => _ctx.test(e), ["enter"]))
   return n0
 }"
@@ -402,19 +415,6 @@ export function render(_ctx) {
       effect: true
     })
   })
-  return n0
-}"
-`;
-
-exports[`v-on > should use delegate helper when have multiple events of same name 1`] = `
-"import { createInvoker as _createInvoker, delegate as _delegate, withModifiers as _withModifiers, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div>", true)
-_delegateEvents("click")
-
-export function render(_ctx) {
-  const n0 = t0()
-  _delegate(n0, "click", _createInvoker(e => _ctx.test(e)))
-  _delegate(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))
   return n0
 }"
 `;
