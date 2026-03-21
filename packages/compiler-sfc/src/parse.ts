@@ -40,6 +40,7 @@ export interface SFCBlock {
   map?: RawSourceMap
   lang?: string
   src?: string
+  spatial?: boolean
 }
 
 export interface SFCTemplateBlock extends SFCBlock {
@@ -83,6 +84,16 @@ export interface SFCDescriptor {
    * this is used as a compiler optimization hint.
    */
   slotted: boolean
+  /**
+   * Whether the SFC is a spatial component targeting visionOS/SwiftUI.
+   * True if any block carries the `spatial` attribute.
+   */
+  spatial: boolean
+  /**
+   * Spatial styles collected from `<style spatial>` blocks.
+   * These compile to SwiftUI view modifiers instead of CSS.
+   */
+  stylesSpatial: SFCStyleBlock[]
 
   /**
    * compare with an existing descriptor to determine whether HMR should perform
@@ -137,6 +148,8 @@ export function parse(
     customBlocks: [],
     cssVars: [],
     slotted: false,
+    spatial: false,
+    stylesSpatial: [],
     shouldForceReload: prevImports => hmrShouldReload(prevImports, descriptor),
   }
 
@@ -176,6 +189,10 @@ export function parse(
             templateBlock.ast = createRoot(node.children, source)
           }
 
+          if (templateBlock.spatial) {
+            descriptor.spatial = true
+          }
+
           // warn against 2.x <template functional>
           if (templateBlock.attrs.functional) {
             const err = new SyntaxError(
@@ -196,6 +213,25 @@ export function parse(
       case 'script':
         const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
         const isSetup = !!scriptBlock.attrs.setup
+        const isSpatial = !!scriptBlock.attrs.spatial
+        if (isSpatial && !isSetup) {
+          errors.push(
+            new SyntaxError(
+              `<script spatial> must also use the "setup" attribute. ` +
+                `Spatial components require Composition API.`,
+            ) as CompilerError,
+          )
+          break
+        }
+        if (isSetup && isSpatial) {
+          if (descriptor.scriptSetup) {
+            errors.push(createDuplicateBlockError(node, true))
+            break
+          }
+          descriptor.scriptSetup = scriptBlock
+          descriptor.spatial = true
+          break
+        }
         if (isSetup && !descriptor.scriptSetup) {
           descriptor.scriptSetup = scriptBlock
           break
@@ -216,7 +252,12 @@ export function parse(
             ),
           )
         }
-        descriptor.styles.push(styleBlock)
+        if (styleBlock.spatial) {
+          descriptor.spatial = true
+          descriptor.stylesSpatial.push(styleBlock)
+        } else {
+          descriptor.styles.push(styleBlock)
+        }
         break
       default:
         descriptor.customBlocks.push(createBlock(node, source, pad))
@@ -251,6 +292,30 @@ export function parse(
     }
   }
 
+  // Spatial validation
+  if (descriptor.spatial) {
+    if (descriptor.scriptSetup && descriptor.script) {
+      errors.push(
+        new SyntaxError(
+          `<script setup spatial> cannot coexist with a normal <script> block. ` +
+            `Spatial components must use Composition API exclusively.`,
+        ),
+      )
+    }
+    if (
+      descriptor.template &&
+      !descriptor.template.spatial &&
+      descriptor.scriptSetup?.spatial
+    ) {
+      errors.push(
+        new SyntaxError(
+          `<script setup spatial> requires <template spatial>. ` +
+            `Add the "spatial" attribute to the <template> block.`,
+        ),
+      )
+    }
+  }
+
   // dedent pug/jade templates
   let templateColumnOffset = 0
   if (
@@ -278,6 +343,7 @@ export function parse(
     genMap(descriptor.template, templateColumnOffset)
     genMap(descriptor.script)
     descriptor.styles.forEach(s => genMap(s))
+    descriptor.stylesSpatial.forEach(s => genMap(s))
     descriptor.customBlocks.forEach(s => genMap(s))
   }
 
@@ -336,6 +402,8 @@ function createBlock(
         block.lang = p.value && p.value.content
       } else if (name === 'src') {
         block.src = p.value && p.value.content
+      } else if (name === 'spatial') {
+        block.spatial = true
       } else if (type === 'style') {
         if (name === 'scoped') {
           ;(block as SFCStyleBlock).scoped = true

@@ -8,6 +8,9 @@ export { compileScript } from './compileScript'
 export { rewriteDefault, rewriteDefaultAST } from './rewriteDefault'
 export { resolveTypeElements, inferRuntimeType } from './script/resolveType'
 
+// Spatial utilities
+export { isSpatialComponent } from './spatial'
+
 import { type SFCParseResult, parseCache as _parseCache } from './parse'
 // #9521 export parseCache as a simple map to avoid exposing LRU types
 export const parseCache = _parseCache as Map<string, SFCParseResult>

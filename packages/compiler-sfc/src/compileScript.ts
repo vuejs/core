@@ -177,6 +177,12 @@ export function compileScript(
     )
   }
 
+  // Spatial components: return the script block as-is for now.
+  // Actual compilation will be handled by @vue/compiler-spatial.
+  if (sfc.spatial && sfc.scriptSetup?.spatial) {
+    return sfc.scriptSetup
+  }
+
   const { script, scriptSetup, source, filename } = sfc
   const hoistStatic = options.hoistStatic !== false && !script
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''

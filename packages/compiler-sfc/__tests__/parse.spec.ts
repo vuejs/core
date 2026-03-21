@@ -436,4 +436,104 @@ h1 { color: red }
       )
     })
   })
+
+  describe('spatial', () => {
+    test('should parse <script setup spatial>', () => {
+      const { descriptor, errors } = parse(
+        `<template spatial><div/></template>\n<script setup spatial>console.log(1)</script>`,
+      )
+      expect(errors.length).toBe(0)
+      expect(descriptor.spatial).toBe(true)
+      expect(descriptor.scriptSetup).toBeTruthy()
+      expect(descriptor.scriptSetup!.spatial).toBe(true)
+      expect(descriptor.scriptSetup!.setup).toBeTruthy()
+      expect(descriptor.template!.spatial).toBe(true)
+    })
+
+    test('should parse <script setup spatial lang="ts">', () => {
+      const { descriptor, errors } = parse(
+        `<template spatial><div/></template>\n<script setup spatial lang="ts">const x: number = 1</script>`,
+      )
+      expect(errors.length).toBe(0)
+      expect(descriptor.spatial).toBe(true)
+      expect(descriptor.scriptSetup!.lang).toBe('ts')
+      expect(descriptor.scriptSetup!.spatial).toBe(true)
+    })
+
+    test('should parse <style spatial>', () => {
+      const { descriptor, errors } = parse(
+        `<template spatial><div/></template>\n<script setup spatial>const x = 1</script>\n<style spatial>.card { depth: 20 }</style>`,
+      )
+      expect(errors.length).toBe(0)
+      expect(descriptor.stylesSpatial.length).toBe(1)
+      expect(descriptor.stylesSpatial[0].spatial).toBe(true)
+      expect(descriptor.stylesSpatial[0].content).toContain('depth: 20')
+      expect(descriptor.styles.length).toBe(0)
+    })
+
+    test('should separate spatial and non-spatial styles', () => {
+      const { descriptor } = parse(
+        `<template spatial><div/></template>\n<script setup spatial>const x = 1</script>\n<style spatial>.card { depth: 20 }</style>\n<style>.normal { color: red }</style>`,
+      )
+      expect(descriptor.stylesSpatial.length).toBe(1)
+      expect(descriptor.styles.length).toBe(1)
+    })
+
+    test('should error on <script spatial> without setup', () => {
+      const { errors } = parse(
+        `<template><div/></template>\n<script spatial>export default {}</script>`,
+      )
+      expect(errors.length).toBeGreaterThan(0)
+      expect(errors[0].message).toMatch(
+        `<script spatial> must also use the "setup" attribute`,
+      )
+    })
+
+    test('should error on <script setup spatial> with normal <script>', () => {
+      const { errors } = parse(
+        `<template spatial><div/></template>\n<script setup spatial>const x = 1</script>\n<script>export default {}</script>`,
+      )
+      expect(errors.length).toBeGreaterThan(0)
+      expect(errors[0].message).toMatch(
+        `<script setup spatial> cannot coexist with a normal <script> block`,
+      )
+    })
+
+    test('should error on <script setup spatial> without <template spatial>', () => {
+      const { errors } = parse(
+        `<template><div/></template>\n<script setup spatial>const x = 1</script>`,
+      )
+      expect(errors.length).toBeGreaterThan(0)
+      expect(errors[0].message).toMatch(
+        `<script setup spatial> requires <template spatial>`,
+      )
+    })
+
+    test('should not mark non-spatial SFC as spatial', () => {
+      const { descriptor } = parse(
+        `<template><div/></template>\n<script setup>const x = 1</script>`,
+      )
+      expect(descriptor.spatial).toBe(false)
+      expect(descriptor.stylesSpatial.length).toBe(0)
+    })
+
+    test('should set spatial flag from template alone', () => {
+      const { descriptor } = parse(
+        `<template spatial><div/></template>\n<script setup>const x = 1</script>`,
+      )
+      expect(descriptor.spatial).toBe(true)
+      expect(descriptor.template!.spatial).toBe(true)
+      expect(descriptor.scriptSetup!.spatial).toBeUndefined()
+    })
+
+    test('should only allow single <script setup spatial>', () => {
+      const { errors } = parse(
+        `<template spatial><div/></template>\n<script setup spatial>1</script>\n<script setup spatial>2</script>`,
+      )
+      expect(errors.length).toBeGreaterThan(0)
+      expect(errors[0].message).toMatch(
+        `Single file component can contain only one <script setup> element`,
+      )
+    })
+  })
 })
