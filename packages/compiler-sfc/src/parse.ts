@@ -210,7 +210,7 @@ export function parse(
           errors.push(createDuplicateBlockError(node))
         }
         break
-      case 'script':
+      case 'script': {
         const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
         const isSetup = !!scriptBlock.attrs.setup
         const isSpatial = !!scriptBlock.attrs.spatial
@@ -242,7 +242,8 @@ export function parse(
         }
         errors.push(createDuplicateBlockError(node, isSetup))
         break
-      case 'style':
+      }
+      case 'style': {
         const styleBlock = createBlock(node, source, pad) as SFCStyleBlock
         if (styleBlock.attrs.vars) {
           errors.push(
@@ -259,6 +260,7 @@ export function parse(
           descriptor.styles.push(styleBlock)
         }
         break
+      }
       default:
         descriptor.customBlocks.push(createBlock(node, source, pad))
         break
