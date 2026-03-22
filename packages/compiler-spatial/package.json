@@ -1,0 +1,37 @@
+{
+  "name": "@vue/compiler-spatial",
+  "version": "3.5.30",
+  "description": "@vue/compiler-spatial",
+  "main": "dist/compiler-spatial.cjs.js",
+  "types": "dist/compiler-spatial.d.ts",
+  "files": [
+    "dist"
+  ],
+  "buildOptions": {
+    "prod": false,
+    "formats": [
+      "cjs"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/core.git",
+    "directory": "packages/compiler-spatial"
+  },
+  "keywords": [
+    "vue",
+    "spatial",
+    "visionos",
+    "swiftui"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/core/issues"
+  },
+  "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-spatial#readme",
+  "dependencies": {
+    "@vue/shared": "workspace:*",
+    "@vue/compiler-dom": "workspace:*"
+  }
+}

@@ -10,6 +10,11 @@ export { resolveTypeElements, inferRuntimeType } from './script/resolveType'
 
 // Spatial utilities
 export { isSpatialComponent } from './spatial'
+export { compile as compileSpatial } from '@vue/compiler-spatial'
+export type {
+  SpatialCompilerOptions,
+  SpatialCodegenResult,
+} from '@vue/compiler-spatial'
 
 import { type SFCParseResult, parseCache as _parseCache } from './parse'
 // #9521 export parseCache as a simple map to avoid exposing LRU types

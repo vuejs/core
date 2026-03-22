@@ -289,6 +289,9 @@ importers:
       '@vue/compiler-dom':
         specifier: workspace:*
         version: link:../compiler-dom
+      '@vue/compiler-spatial':
+        specifier: workspace:*
+        version: link:../compiler-spatial
       '@vue/compiler-ssr':
         specifier: workspace:*
         version: link:../compiler-ssr
@@ -338,6 +341,15 @@ importers:
       sass:
         specifier: ^1.97.3
         version: 1.97.3
+
+  packages/compiler-spatial:
+    dependencies:
+      '@vue/compiler-dom':
+        specifier: workspace:*
+        version: link:../compiler-dom
+      '@vue/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/compiler-ssr:
     dependencies:
