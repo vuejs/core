@@ -5,8 +5,6 @@ import {
   type BlockFn,
   type TransitionOptions,
   type VaporTransitionHooks,
-  applyTransitionHooks,
-  applyTransitionLeaveHooks,
   findBlockNode,
   insert,
   isValidBlock,
@@ -44,6 +42,7 @@ import {
   setCurrentKeepAliveCtx,
   withCurrentCacheKey,
 } from './components/KeepAlive'
+import { applyTransitionHooks, applyTransitionLeaveHooks } from './transition'
 
 export class VaporFragment<
   T extends Block = Block,

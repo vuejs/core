@@ -334,11 +334,3 @@ export function isFragmentBlock(block: Block): boolean {
   }
   return false
 }
-
-export { setScopeId, setComponentScopeId } from './scopeId'
-
-export {
-  registerTransitionHooks,
-  applyTransitionHooks,
-  applyTransitionLeaveHooks,
-} from './transition'

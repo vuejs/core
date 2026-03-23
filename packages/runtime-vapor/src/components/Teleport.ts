@@ -15,14 +15,7 @@ import {
   setCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
-import {
-  type Block,
-  type BlockFn,
-  applyTransitionHooks,
-  insert,
-  move,
-  remove,
-} from '../block'
+import { type Block, type BlockFn, insert, move, remove } from '../block'
 import {
   createComment,
   createTextNode,
@@ -51,6 +44,7 @@ import {
 } from '../dom/hydration'
 import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
 import { getScopeOwner } from '../componentSlots'
+import { applyTransitionHooks } from '../transition'
 
 const VaporTeleportImpl = {
   name: 'VaporTeleport',
