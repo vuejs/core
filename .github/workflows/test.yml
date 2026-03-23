@@ -70,18 +70,20 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup cache for Chromium binary
+      - name: Setup cache for Playwright browsers
         uses: actions/cache@v5
         with:
-          path: ~/.cache/puppeteer
-          key: chromium-${{ hashFiles('pnpm-lock.yaml') }}
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
         with:
           node-version-file: '.node-version'
           cache: true
-      - run: node node_modules/puppeteer/install.mjs
+
+      - name: Install Playwright Chromium
+        run: vp exec playwright install chromium
 
       - name: Run e2e tests
         run: vp run test-e2e-vapor
