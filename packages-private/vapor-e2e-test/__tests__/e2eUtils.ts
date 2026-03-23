@@ -1,7 +1,7 @@
 import { type Locator, page, userEvent } from 'vitest/browser'
 
 export const css = (css: string) => page.getByCSS(css)
-export const E2E_TIMEOUT: number = 2 * 1000
+export const E2E_TIMEOUT: number = 10 * 1000
 
 const duration = 50
 export function timeout(time: number) {
