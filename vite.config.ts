@@ -93,30 +93,34 @@ export default defineConfig({
           include: ['packages/vue/__tests__/e2e/*.spec.ts'],
         },
       },
-      {
-        extends: './packages-private/vapor-e2e-test/vite.config.ts',
-        root: './packages-private/vapor-e2e-test',
-        test: {
-          globals: true,
-          isolate: true,
-          name: 'e2e-vapor',
-          setupFiles: ['./__tests__/setupBrowser.ts'],
-          browser: {
-            enabled: true,
-            provider: playwright({
-              launchOptions: {
-                args: process.env.CI
-                  ? ['--no-sandbox', '--disable-setuid-sandbox']
-                  : [],
+      ...(process.env.VAPOR_E2E === '1'
+        ? [
+            {
+              extends: './packages-private/vapor-e2e-test/vite.config.ts',
+              root: './packages-private/vapor-e2e-test',
+              test: {
+                globals: true,
+                isolate: true,
+                name: 'e2e-vapor',
+                setupFiles: ['./__tests__/setupBrowser.ts'],
+                browser: {
+                  enabled: true,
+                  provider: playwright({
+                    launchOptions: {
+                      args: process.env.CI
+                        ? ['--no-sandbox', '--disable-setuid-sandbox']
+                        : [],
+                    },
+                  }),
+                  headless: true,
+                  screenshotFailures: false,
+                  instances: [{ browser: 'chromium' }],
+                },
+                include: ['./__tests__/*.spec.ts'],
               },
-            }),
-            headless: true,
-            screenshotFailures: false,
-            instances: [{ browser: 'chromium' }],
-          },
-          include: ['./__tests__/*.spec.ts'],
-        },
-      },
+            },
+          ]
+        : []),
     ],
     onConsoleLog(log) {
       if (log.startsWith('You are running a development build of Vue.')) {
