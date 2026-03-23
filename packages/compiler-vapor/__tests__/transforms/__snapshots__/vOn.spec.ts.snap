@@ -300,14 +300,25 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should not delegate .stop when have multiple events of same name 1`] = `
-"import { createInvoker as _createInvoker, withModifiers as _withModifiers, on as _on, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { createInvoker as _createInvoker, on as _on, withModifiers as _withModifiers, template as _template } from 'vue';
 const t0 = _template("<div>", true)
-_delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtclick = _createInvoker(e => _ctx.test(e))
+  _on(n0, "click", _createInvoker(e => _ctx.test(e)))
   _on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))
+  return n0
+}"
+`;
+
+exports[`v-on > should not delegate normalized static event when sibling uses .stop 1`] = `
+"import { createInvoker as _createInvoker, withModifiers as _withModifiers, on as _on, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _on(n0, "contextmenu", _createInvoker(_withModifiers(e => _ctx.test(e), ["right"])))
+  _on(n0, "contextmenu", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))
   return n0
 }"
 `;

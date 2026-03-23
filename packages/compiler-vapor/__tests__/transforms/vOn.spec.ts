@@ -694,10 +694,27 @@ describe('v-on', () => {
       `<div @click="test" @click.stop="test" />`,
     )
     expect(helpers).not.contains('delegate')
+    expect(helpers).not.contains('delegateEvents')
     expect(code).toMatchSnapshot()
-    expect(code).contains('n0.$evtclick = _createInvoker(e => _ctx.test(e))')
+    expect(code).contains('_on(n0, "click", _createInvoker(e => _ctx.test(e)))')
     expect(code).contains(
       '_on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))',
+    )
+  })
+
+  test('should not delegate normalized static event when sibling uses .stop', () => {
+    const { code, helpers } = compileWithVOn(
+      `<div @click.right="test" @contextmenu.stop="test" />`,
+    )
+
+    expect(helpers).not.contains('delegate')
+    expect(helpers).not.contains('delegateEvents')
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '_on(n0, "contextmenu", _createInvoker(_withModifiers(e => _ctx.test(e), ["right"])))',
+    )
+    expect(code).contains(
+      '_on(n0, "contextmenu", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))',
     )
   })
 
