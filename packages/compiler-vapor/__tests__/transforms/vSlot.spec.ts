@@ -63,6 +63,30 @@ describe('compiler: transform slot', () => {
     })
   })
 
+  test('named default slot with v-if directive', () => {
+    const { ir, code } = compileWithSlots(
+      `<Comp><template # v-if="show"></template></Comp>`,
+    )
+    expect(code).toMatchSnapshot()
+
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      id: 1,
+      tag: 'Comp',
+      props: [[]],
+      slots: [
+        {
+          slotType: IRSlotType.CONDITIONAL,
+        },
+      ],
+    })
+    expect(ir.block.returns).toEqual([1])
+    expect(ir.block.dynamic).toMatchObject({
+      children: [{ id: 1 }],
+    })
+    expect(code).contain(`name: "default",`)
+  })
+
   test('on-component default slot', () => {
     const { ir, code } = compileWithSlots(
       `<Comp v-slot="{ foo }">{{ foo + bar }}</Comp>`,
