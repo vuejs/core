@@ -12,33 +12,36 @@ import {
   watch,
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
-import {
-  createComment,
-  createTextNode,
-  updateLastLogicalChild,
-} from './dom/node'
-import { type Block, findBlockNode, insert, remove } from './block'
-import { warn } from '@vue/runtime-dom'
+import { createComment, createTextNode } from './dom/node'
+import { type Block, insert, remove } from './block'
+import { queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
-import type { DynamicSlot } from './componentSlots'
+import {
+  type DynamicSlot,
+  currentSlotOwner,
+  setCurrentSlotOwner,
+} from './componentSlots'
 import { renderEffect } from './renderEffect'
-import { VaporVForFlags } from '../../shared/src/vaporFlags'
+import { VaporVForFlags } from '@vue/shared'
 import {
   advanceHydrationNode,
   currentHydrationNode,
   isComment,
   isHydrating,
   locateHydrationNode,
+  locateNextNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { applyTransitionHooks } from './components/Transition'
 import { ForFragment, VaporFragment } from './fragment'
 import {
+  type ChildItem,
   insertionAnchor,
+  insertionIndex,
   insertionParent,
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
+import { applyTransitionHooks } from './transition'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
@@ -92,9 +95,10 @@ export const createFor = (
 ): ForFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _insertionIndex = insertionIndex
   const _isLastInsertion = isLastInsertion
   if (isHydrating) {
-    locateHydrationNode()
+    locateHydrationNode(true)
   } else {
     resetInsertionState()
   }
@@ -119,6 +123,8 @@ export const createFor = (
     cleanup: () => void
   }[] = []
 
+  const slotOwner = currentSlotOwner
+
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
   }
@@ -134,18 +140,15 @@ export const createFor = (
 
     if (!isMounted) {
       isMounted = true
+      let nextNode
       for (let i = 0; i < newLength; i++) {
-        const nodes = mount(source, i).nodes
-        if (isHydrating) {
-          setCurrentHydrationNode(findBlockNode(nodes!).nextNode)
-        }
+        if (isHydrating) nextNode = locateNextNode(currentHydrationNode!)
+        mount(source, i)
+        if (isHydrating && nextNode) setCurrentHydrationNode(nextNode)
       }
 
       if (isHydrating) {
-        parentAnchor =
-          newLength === 0
-            ? currentHydrationNode!.nextSibling!
-            : currentHydrationNode!
+        parentAnchor = currentHydrationNode!
         if (
           __DEV__ &&
           (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']')))
@@ -155,8 +158,11 @@ export const createFor = (
           )
         }
 
-        if (_insertionParent) {
-          updateLastLogicalChild(_insertionParent!, parentAnchor)
+        // optimization: cache the fragment end anchor as $llc (last logical child)
+        // so that locateChildByLogicalIndex can skip the entire fragment
+        if (_insertionParent && isComment(parentAnchor, ']')) {
+          ;(parentAnchor as any as ChildItem).$idx = _insertionIndex || 0
+          _insertionParent.$llc = parentAnchor
         }
       }
     } else {
@@ -396,7 +402,7 @@ export const createFor = (
       oldBlocks = []
     }
 
-    if (isMounted && frag.updated) frag.updated.forEach(m => m())
+    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
     setActiveSub(prevSub)
   }
 
@@ -485,7 +491,15 @@ export const createFor = (
   if (flags & VaporVForFlags.ONCE) {
     renderList()
   } else {
-    renderEffect(renderList)
+    renderEffect(() => {
+      if (!isMounted) return renderList()
+      const prevOwner = setCurrentSlotOwner(slotOwner)
+      try {
+        renderList()
+      } finally {
+        setCurrentSlotOwner(prevOwner)
+      }
+    })
   }
 
   if (!isHydrating) {
@@ -507,12 +521,18 @@ export const createFor = (
           oper()
         }
       }
-      activeOpers = operMap.get(newValue)
-      if (activeOpers !== undefined) {
-        for (const oper of activeOpers) {
-          oper()
+
+      // watch may trigger before list patched
+      // defer to post-flush so operMap is up to date
+      queuePostFlushCb(() => {
+        activeKey = newValue
+        activeOpers = operMap.get(newValue)
+        if (activeOpers !== undefined) {
+          for (const oper of activeOpers) {
+            oper()
+          }
         }
-      }
+      })
     })
 
     selectors.push({ deregister, cleanup })
@@ -604,6 +624,8 @@ function normalizeSource(source: any): ResolvedSource {
         values[i] = source[keys[i]]
       }
     }
+  } else {
+    values = []
   }
   return {
     values,

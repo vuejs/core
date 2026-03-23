@@ -32,13 +32,16 @@ function hasMultipleChildren(node: ElementNode): boolean {
 
   const first = children[0]
 
-  // has v-for
-  if (
-    children.length === 1 &&
-    first.type === NodeTypes.ELEMENT &&
-    (findDir(first, 'for') || isTemplateNode(first))
-  ) {
-    return true
+  if (children.length === 1 && first.type === NodeTypes.ELEMENT) {
+    // has v-for
+    if (findDir(first, 'for')) {
+      return true
+    }
+
+    // Template branches should be validated based on their rendered children.
+    if (isTemplateNode(first)) {
+      return hasMultipleChildren(first)
+    }
   }
 
   const hasElse = (node: ElementNode) =>
@@ -46,20 +49,19 @@ function hasMultipleChildren(node: ElementNode): boolean {
 
   // has v-if/v-else-if/v-else
   if (
+    children.length > 0 &&
     children.every(
       (c, index) =>
         c.type === NodeTypes.ELEMENT &&
-        // not template
-        !isTemplateNode(c) &&
+        (!isTemplateNode(c) || !hasMultipleChildren(c)) &&
         // not has v-for
         !findDir(c, 'for') &&
         // if the first child has v-if, the rest should also have v-else-if/v-else
-        (index === 0 ? findDir(c, 'if') : hasElse(c)) &&
-        !hasMultipleChildren(c),
+        (index === 0 ? findDir(c, 'if') : hasElse(c)),
     )
   ) {
     return false
   }
 
-  return children.length > 1
+  return children.length !== 1
 }

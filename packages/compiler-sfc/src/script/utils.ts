@@ -109,7 +109,7 @@ function toFileNameLowerCase(x: string) {
 
 /**
  * We need `getCanonicalFileName` when creating ts module resolution cache,
- * but TS does not expose it directly. This implementation is repllicated from
+ * but TS does not expose it directly. This implementation is replicated from
  * the TS source code.
  */
 export function createGetCanonicalFileName(

@@ -23,17 +23,17 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 - New feature that addresses a clearly explained and widely applicable use case. **"Widely applicable"** means the new feature should provide non-trivial improvements to the majority of the user base. Vue already has a large API surface so we are quite cautious about adding new features - if the use case is niche and can be addressed via userland implementations, it likely isn't suitable to go into core.
 
-  The feature implementation should also consider the trade-off between the added complexity vs. the benefits gained. For example, if a small feature requires significant changes that spreads across the codebase, it is likely not worth it, or the approach should be reconsidered.
+  The feature implementation should also consider the trade-off between the added complexity vs. the benefits gained. For example, if a small feature requires significant changes that spread across the codebase, it is likely not worth it, or the approach should be reconsidered.
 
   If the feature has a non-trivial API surface addition, or significantly affects the way a common use case is approached by the users, it should go through a discussion first in the [RFC repo](https://github.com/vuejs/rfcs/discussions). PRs of such features without prior discussion make it really difficult to steer / adjust the API design due to coupling with concrete implementations, and can lead to wasted work.
 
 - Chore: typos, comment improvements, build config, CI config, etc. For typos and comment changes, try to combine multiple of them into a single PR.
 
-- **It should be noted that we discourage contributors from submitting code refactors that are largely stylistic.** Code refactors are only accepted if it improves performance, or comes with sufficient explanations on why it objectively improves the code quality (e.g. makes a related feature implementation easier).
+- **It should be noted that we discourage contributors from submitting code refactors that are largely stylistic.** Code refactors are only accepted if they improve performance, or come with sufficient explanations on why they objectively improve the code quality (e.g. makes a related feature implementation easier).
 
   The reason is that code readability is subjective. The maintainers of this project have chosen to write the code in its current style based on our preferences, and we do not want to spend time explaining our stylistic preferences. Contributors should just respect the established conventions when contributing code.
 
-  Another aspect of it is that large scale stylistic changes result in massive diffs that touch multiple files, adding noise to the git history and makes tracing behavior changes across commits more cumbersome.
+  Another aspect of it is that large scale stylistic changes result in massive diffs that touch multiple files, adding noise to the git history and make tracing behavior changes across commits more cumbersome.
 
 ### Pull Request Checklist
 
@@ -59,13 +59,13 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 - Commit messages must follow the [commit message convention](./commit-convention.md) so that changelogs can be automatically generated. Commit messages are automatically validated before commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
 
-- No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with Prettier on commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
+- No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with oxfmt on commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
 
 ### Advanced Pull Request Tips
 
 - The PR should fix the intended bug **only** and not introduce unrelated changes. This includes unnecessary refactors - a PR should focus on the fix and not code style, this makes it easier to trace changes in the future.
 
-- Consider the performance / size impact of the changes, and whether the bug being fixes justifies the cost. If the bug being fixed is a very niche edge case, we should try to minimize the size / perf cost to make it worthwhile.
+- Consider the performance / size impact of the changes, and whether the bug being fixed justifies the cost. If the bug being fixed is a very niche edge case, we should try to minimize the size / perf cost to make it worthwhile.
   - Is the code perf-sensitive (e.g. in "hot paths" like component updates or the vdom patch function?)
     - If the branch is dev-only, performance is less of a concern.
 
@@ -78,7 +78,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 You will need [Node.js](https://nodejs.org) with minimum version as specified in the [`.node-version`](https://github.com/vuejs/core/blob/main/.node-version) file, and [PNPM](https://pnpm.io) with minimum version as specified in the [`"packageManager"` field in `package.json`](https://github.com/vuejs/core/blob/main/package.json#L4).
 
-We also recommend installing [@antfu/ni](https://github.com/antfu/ni) to help switching between repos using different package managers. `ni` also provides the handy `nr` command which running npm scripts easier.
+We also recommend installing [@antfu/ni](https://github.com/antfu/ni) to help switching between repos using different package managers. `ni` also provides the handy `nr` command which makes running npm scripts easier.
 
 After cloning the repo, run:
 
@@ -89,18 +89,17 @@ $ pnpm i # install the dependencies of the project
 A high level overview of tools used:
 
 - [TypeScript](https://www.typescriptlang.org/) as the development language
-- [Vite](https://vitejs.dev/) and [ESBuild](https://esbuild.github.io/) for development bundling
-- [Rollup](https://rollupjs.org) for production bundling
+- [Rolldown](https://rolldown.rs/) for bundling
 - [Vitest](https://vitest.dev/) for unit testing
-- [Prettier](https://prettier.io/) for code formatting
-- [ESLint](https://eslint.org/) for static error prevention (outside of types)
+- [oxlint](https://oxc.rs/docs/guide/usage/linter.html) for static error prevention (outside of types)
+- [oxfmt](https://oxc.rs/docs/guide/usage/formatter.html) for code formatting
 
 ## Git Hooks
 
 The project uses [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks) to enforce the following on each commit:
 
 - Type check the entire project
-- Automatically format changed files using Prettier
+- Automatically format changed files using oxfmt
 - Verify commit message format (logic in `scripts/verify-commit.js`)
 
 ## Scripts
@@ -133,7 +132,7 @@ nr build runtime-core
 nr build runtime --all
 ```
 
-Note that `nr build` uses `rollup-plugin-esbuild` for transpiling typescript and **does not perform type checking**. To run type check on the entire codebase, run `nr check`. Type checks are also automatically run on each commit.
+Note that `nr build` uses [`oxc-transform`](https://oxc.rs/docs/guide/usage/transformer.html) for transpiling typescript and **does not perform type checking**. To run type check on the entire codebase, run `nr check`. Type checks are also automatically run on each commit.
 
 #### Build Formats
 
@@ -150,7 +149,7 @@ Additional formats that only apply to the main `vue` package:
 - **`esm-bundler-runtime`**
 - **`esm-browser-runtime`**
 
-More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/core/blob/main/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/core/blob/main/rollup.config.js).
+More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/core/blob/main/packages/vue/README.md#which-dist-file-to-use) and the [Rolldown config file](https://github.com/vuejs/core/blob/main/scripts/create-rolldown-config.js).
 
 For example, to build `runtime-core` with the global build only:
 
@@ -170,7 +169,7 @@ Use the `--sourcemap` or `-s` flag to build with source maps. Note this will mak
 
 ### `nr build-dts`
 
-This command builds the type declarations for all packages. It first generates the raw `.d.ts` files in the `temp` directory, then uses [rollup-plugin-dts](https://github.com/Swatinem/rollup-plugin-dts) to roll the types into a single `.d.ts` file for each package.
+This command builds the type declarations for all packages. It first generates the raw `.d.ts` files in the `temp` directory, then uses [rolldown-plugin-dts](https://github.com/sxzz/rolldown-plugin-dts) to roll the types into a single `.d.ts` file for each package.
 
 ### `nr check`
 
@@ -192,7 +191,7 @@ $ nr dev
 
 - The `dev` script also supports the `-s` flag for generating source maps, but it will make rebuilds slower.
 
-- The `dev` script supports the `-i` flag for inlining all deps. This is useful when debugging `esm-bundler` builds which externalizes deps by default.
+- The `dev` script supports the `-i` flag for inlining all deps. This is useful when debugging `esm-bundler` builds which externalize deps by default.
 
 ### `nr dev-sfc`
 
@@ -200,7 +199,7 @@ Shortcut for starting the SFC Playground in local dev mode. This provides the fa
 
 ### `nr dev-esm`
 
-Builds and watches `vue/dist/vue-runtime.esm-bundler.js` with all deps inlined using esbuild. This is useful when debugging the ESM build in a reproduction that requires real build setups: link `packages/vue` globally, then link it into the project being debugged.
+Builds and watches `vue/dist/vue-runtime.esm-bundler.js` with all deps inlined using rolldown. This is useful when debugging the ESM build in a reproduction that requires real build setups: link `packages/vue` globally, then link it into the project being debugged.
 
 ### `nr dev-compiler`
 
@@ -208,13 +207,13 @@ The `dev-compiler` script builds, watches and serves the [Template Explorer](htt
 
 ### `nr test`
 
-The `test` script simply calls the `vitest` binary, so all [Vitest CLI Options](https://vitest.dev/guide/cli.html#options) can be used. Some examples:
+The `test` script runs `vp test`, which forwards options to Vitest, so all [Vitest CLI Options](https://vitest.dev/guide/cli.html#options) can still be used. Some examples:
 
 ```bash
 # run all tests in watch mode
 $ nr test
 
-# run once and exit (equivalent to `vitest run`)
+# run once and exit (equivalent to `vp test run`)
 $ nr test run
 
 # run all tests under the runtime-core package
@@ -277,7 +276,7 @@ import { h } from '@vue/runtime-core'
 This is made possible via several configurations:
 
 - For TypeScript, `compilerOptions.paths` in `tsconfig.json`
-- Vitest and Rollup share the same set of aliases from `scripts/aliases.js`
+- Vitest and Rolldown share the same set of aliases from `scripts/aliases.js`
 - For plain Node.js, they are linked using [PNPM Workspaces](https://pnpm.io/workspaces).
 
 ### Package Dependencies
@@ -337,7 +336,7 @@ Unit tests are collocated with the code being tested in each package, inside dir
 
 - Only use platform-specific runtimes if the test is asserting platform-specific behavior.
 
-Test coverage is continuously deployed at https://coverage.vuejs.org. PRs that improve test coverage are welcome, but in general the test coverage should be used as a guidance for finding API use cases that are not covered by tests. We don't recommend adding tests that only improve coverage but not actually test a meaning use case.
+Test coverage is continuously deployed at https://coverage.vuejs.org. PRs that improve test coverage are welcome, but in general the test coverage should be used as a guidance for finding API use cases that are not covered by tests. We don't recommend adding tests that only improve coverage but not actually test a meaningful use case.
 
 ### Testing Type Definition Correctness
 

@@ -21,7 +21,11 @@ import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
-import { type RendererElement, getVaporInterface } from '../renderer'
+import {
+  type RendererElement,
+  getVaporInterface,
+  isVaporComponent,
+} from '../renderer'
 import { SchedulerJobFlags } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
@@ -140,7 +144,7 @@ export const BaseTransitionPropsValidators: Record<string, any> = {
 }
 
 const recursiveGetSubtree = (instance: ComponentInternalInstance): VNode => {
-  const subTree = instance.type.__vapor
+  const subTree = isVaporComponent(instance.type)
     ? (instance as any).block
     : instance.subTree
   return subTree.component ? recursiveGetSubtree(subTree.component) : subTree
@@ -315,6 +319,7 @@ function getLeavingNodesForType(
 }
 
 export interface TransitionHooksContext {
+  isLeaving: () => boolean
   setLeavingNodeCache: (node: any) => void
   unsetLeavingNodeCache: (node: any) => void
   earlyRemove: () => void
@@ -333,6 +338,7 @@ export function resolveTransitionHooks(
   const key = String(vnode.key)
   const leavingVNodesCache = getLeavingNodesForType(state, vnode)
   const context: TransitionHooksContext = {
+    isLeaving: () => leavingVNodesCache[key] === vnode,
     setLeavingNodeCache: () => {
       leavingVNodesCache[key] = vnode
     },
@@ -376,6 +382,7 @@ export function baseResolveTransitionHooks(
   instance: GenericComponentInstance,
 ): TransitionHooks {
   const {
+    isLeaving,
     setLeavingNodeCache,
     unsetLeavingNodeCache,
     earlyRemove,
@@ -445,6 +452,8 @@ export function baseResolveTransitionHooks(
     },
 
     enter(el) {
+      // prevent enter if leave is in progress
+      if (isLeaving()) return
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled
@@ -458,7 +467,7 @@ export function baseResolveTransitionHooks(
         }
       }
       let called = false
-      const done = (el[enterCbKey] = (cancelled?) => {
+      el[enterCbKey] = (cancelled?) => {
         if (called) return
         called = true
         if (cancelled) {
@@ -470,7 +479,8 @@ export function baseResolveTransitionHooks(
           hooks.delayedLeave()
         }
         el[enterCbKey] = undefined
-      })
+      }
+      const done = el[enterCbKey]!.bind(null, false)
       if (hook) {
         callAsyncHook(hook, [el, done])
       } else {
@@ -488,7 +498,7 @@ export function baseResolveTransitionHooks(
       }
       callHook(onBeforeLeave, [el])
       let called = false
-      const done = (el[leaveCbKey] = (cancelled?) => {
+      el[leaveCbKey] = (cancelled?) => {
         if (called) return
         called = true
         remove()
@@ -499,8 +509,9 @@ export function baseResolveTransitionHooks(
         }
         el[leaveCbKey] = undefined
         unsetLeavingNodeCache(el)
-      })
+      }
       setLeavingNodeCache(el)
+      const done = el[leaveCbKey]!.bind(null, false)
       if (onLeave) {
         callAsyncHook(onLeave, [el, done])
       } else {
@@ -559,7 +570,7 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
-    if ((vnode.type as ConcreteComponent).__vapor) {
+    if (isVaporComponent(vnode.type as ConcreteComponent)) {
       getVaporInterface(vnode.component, vnode).setTransitionHooks(
         vnode.component,
         hooks,

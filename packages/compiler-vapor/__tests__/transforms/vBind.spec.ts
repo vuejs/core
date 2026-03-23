@@ -23,7 +23,7 @@ describe('compiler v-bind', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect([...ir.template.keys()]).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div>'])
     expect(ir.block.effect).lengthOf(1)
     expect(ir.block.effect[0].expressions).lengthOf(1)
     expect(ir.block.effect[0].operations).lengthOf(1)
@@ -241,10 +241,10 @@ describe('compiler v-bind', () => {
         end: { line: 1, column: 19 },
       },
     })
-    expect([...ir.template.keys()]).toEqual(['<div arg></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div arg>'])
 
     expect(code).matchSnapshot()
-    expect(code).contains(JSON.stringify('<div arg></div>'))
+    expect(code).contains(JSON.stringify('<div arg>'))
   })
 
   test('error on invalid argument for same-name shorthand', () => {
@@ -717,7 +717,16 @@ describe('compiler v-bind', () => {
       <svg :class="cls"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setAttr(n0, "class", _ctx.cls, true))')
+    // should pass isSVG: true to the helper
+    expect(code).contains('_setClass(n0, _ctx.cls, true))')
+  })
+
+  test(':style w/ svg elements', () => {
+    const { code } = compileWithVBind(`
+      <svg :style="style"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setStyle(n0, _ctx.style))')
   })
 
   test('v-bind w/ svg elements', () => {
@@ -764,194 +773,5 @@ describe('compiler v-bind', () => {
       },
     )
     expect(code).matchSnapshot()
-  })
-})
-
-describe('cache multiple access', () => {
-  test('repeated variables', () => {
-    const { code } = compileWithVBind(`
-        <div :class="foo"></div>
-        <div :class="foo"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo = _ctx.foo')
-    expect(code).contains('setClass(n0, _foo)')
-    expect(code).contains('setClass(n1, _foo)')
-  })
-
-  test('repeated expressions', () => {
-    const { code } = compileWithVBind(`
-        <div :id="foo + bar"></div>
-        <div :id="foo + bar"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo_bar = _ctx.foo + _ctx.bar')
-    expect(code).contains('_setProp(n0, "id", _foo_bar)')
-    expect(code).contains('_setProp(n1, "id", _foo_bar)')
-  })
-
-  test('repeated variable in expressions', () => {
-    const { code } = compileWithVBind(`
-        <div :id="foo + foo + bar"></div>
-        <div :id="foo"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo = _ctx.foo')
-    expect(code).contains('_setProp(n0, "id", _foo + _foo + _ctx.bar)')
-    expect(code).contains('_setProp(n1, "id", _foo)')
-  })
-
-  test('repeated expression in expressions', () => {
-    const { code } = compileWithVBind(`
-        <div :id="foo + bar"></div>
-        <div :id="foo + bar"></div>
-        <div :id="foo + foo + bar"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo_bar = _foo + _ctx.bar')
-    expect(code).contains('_setProp(n0, "id", _foo_bar)')
-    expect(code).contains('_setProp(n2, "id", _foo + _foo_bar)')
-  })
-
-  test('function calls with arguments', () => {
-    const { code } = compileWithVBind(`
-        <div :id="foo[bar(baz)]"></div>
-        <div :id="foo[bar(baz)]"></div>
-        <div :id="bar() + foo"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo_bar_baz = _foo[_bar(_ctx.baz)]')
-    expect(code).contains('_setProp(n0, "id", _foo_bar_baz)')
-    expect(code).contains('_setProp(n1, "id", _foo_bar_baz)')
-    expect(code).contains('_setProp(n2, "id", _bar() + _foo)')
-  })
-
-  test('dynamic key bindings with expressions', () => {
-    const { code } = compileWithVBind(`
-        <div :[key+1]="foo[key+1]()" />
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _key = _ctx.key')
-    expect(code).contains('[{ [_key+1]: _ctx.foo[_key+1]() }]')
-  })
-
-  test('object property chain access', () => {
-    const { code } = compileWithVBind(`
-        <div :id="obj['foo']['baz'] + obj.bar"></div>
-        <div :id="obj['foo']['baz'] + obj.bar"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains(
-      "const _obj_foo_baz_obj_bar = _obj['foo']['baz'] + _obj.bar",
-    )
-    expect(code).contains('_setProp(n0, "id", _obj_foo_baz_obj_bar)')
-    expect(code).contains('_setProp(n1, "id", _obj_foo_baz_obj_bar)')
-  })
-
-  test('dynamic property access', () => {
-    const { code } = compileWithVBind(`
-        <div :id="obj[1][baz] + obj.bar"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _obj = _ctx.obj')
-    expect(code).contains('_setProp(n0, "id", _obj[1][_ctx.baz] + _obj.bar)')
-  })
-
-  test('dynamic property access with parentheses', () => {
-    const { code } = compileWithVBind(`
-        <div :x="(foo[bar]).x" :bar="(foo[bar])"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo_bar = _ctx.foo[_ctx.bar]')
-    expect(code).contains('_setProp(n0, "x", (_foo_bar).x)')
-    expect(code).contains('_setProp(n0, "bar", (_foo_bar))')
-  })
-
-  test('variable name substring edge cases', () => {
-    const { code } = compileWithVBind(
-      `<div :id="title + titles + title"></div>`,
-    )
-    expect(code).matchSnapshot()
-    expect(code).contains('const _title = _ctx.title')
-    expect(code).contains('_setProp(n0, "id", _title + _ctx.titles + _title)')
-  })
-
-  test('object property name substring cases', () => {
-    const { code } = compileWithVBind(
-      `<div :id="p.title + p.titles + p.title"></div>`,
-    )
-    expect(code).matchSnapshot()
-    expect(code).contains('const _p = _ctx.p')
-    expect(code).contains('const _p_title = _p.title')
-    expect(code).contains('_setProp(n0, "id", _p_title + _p.titles + _p_title)')
-  })
-
-  test('cache variable used in both property shorthand and normal binding', () => {
-    const { code } = compileWithVBind(`
-        <div :style="{color}" :id="color"/>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _color = _ctx.color')
-    expect(code).contains('_setStyle(n0, {color: _color})')
-  })
-
-  test('optional chaining', () => {
-    const { code } = compileWithVBind(`<div :id="obj?.foo + obj?.bar"></div>`)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _obj = _ctx.obj')
-    expect(code).contains('_setProp(n0, "id", _obj?.foo + _obj?.bar)')
-  })
-
-  test('TSNonNullExpression', () => {
-    const { code } = compileWithVBind(`<div :id="obj!.foo + obj!.bar"></div>`)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _obj = _ctx.obj')
-    expect(code).contains('_setProp(n0, "id", _obj!.foo + _obj!.bar)')
-  })
-
-  test('shared member root', () => {
-    const { code } = compileWithVBind(`
-        <div :id="foo.bar"></div>
-        <div :id="foo.baz"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo = _ctx.foo')
-    expect(code).contains('_setProp(n0, "id", _foo.bar)')
-    expect(code).contains('_setProp(n1, "id", _foo.baz)')
-  })
-
-  test('shared member root with TSNonNullExpression', () => {
-    const { code } = compileWithVBind(`
-        <div :id="foo!.bar"></div>
-        <div :id="foo!.baz"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo = _ctx.foo')
-    expect(code).contains('_setProp(n0, "id", _foo!.bar)')
-    expect(code).contains('_setProp(n1, "id", _foo!.baz)')
-  })
-
-  test('not cache variable only used in property shorthand', () => {
-    const { code } = compileWithVBind(`
-        <div :style="{color}" />
-      `)
-    expect(code).matchSnapshot()
-    expect(code).not.contains('const _color = _ctx.color')
-  })
-
-  test('not cache variable and member expression with the same name', () => {
-    const { code } = compileWithVBind(`
-        <div :id="bar + obj.bar"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).not.contains('const _bar = _ctx.bar')
-  })
-
-  test('not cache variable in function expression', () => {
-    const { code } = compileWithVBind(`
-        <div v-bind="{ foo: bar => foo = bar }"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).not.contains('const _bar = _ctx.bar')
   })
 })

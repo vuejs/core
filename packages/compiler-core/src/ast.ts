@@ -479,7 +479,7 @@ export interface DirectiveArguments extends ArrayExpression {
 
 export interface DirectiveArgumentNode extends ArrayExpression {
   elements: // dir, exp, arg, modifiers
-  | [string]
+    | [string]
     | [string, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode, ObjectExpression]
@@ -489,7 +489,7 @@ export interface DirectiveArgumentNode extends ArrayExpression {
 export interface RenderSlotCall extends CallExpression {
   callee: typeof RENDER_SLOT
   arguments: // $slots, name, props, fallback
-  | [string, string | ExpressionNode]
+    | [string, string | ExpressionNode]
     | [string, string | ExpressionNode, PropsExpression]
     | [
         string,

@@ -573,7 +573,7 @@ export function getMemoedVNodeCall(
 export function filterNonCommentChildren(
   node: ParentNode,
 ): TemplateChildNode[] {
-  return node.children.filter(n => n.type !== NodeTypes.COMMENT)
+  return node.children.filter(n => !isCommentOrWhitespace(n))
 }
 
 export function hasSingleChild(node: ParentNode): boolean {

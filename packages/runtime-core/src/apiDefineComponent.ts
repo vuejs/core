@@ -157,7 +157,7 @@ export function defineComponent<
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
-    props?: (keyof Props)[]
+    props?: (keyof NoInfer<Props>)[]
     emits?: E | EE[]
     slots?: S
   },
@@ -183,8 +183,8 @@ export function defineComponent<
 export function defineComponent<
   // props
   TypeProps,
-  RuntimePropsOptions extends
-    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
+  RuntimePropsOptions extends ComponentObjectPropsOptions =
+    ComponentObjectPropsOptions,
   RuntimePropsKeys extends string = string,
   // emits
   TypeEmits extends ComponentTypeEmits = {},
@@ -307,9 +307,7 @@ export function defineComponent(
   extraOptions?: ComponentOptions,
 ) {
   return isFunction(options)
-    ? // #8236: extend call and options.name access are considered side-effects
-      // by Rollup, so we have to wrap it in a pure-annotated IIFE.
-      /*@__PURE__*/ (() =>
+    ? /*@__PURE__*/ (() =>
         extend({ name: options.name }, extraOptions, { setup: options }))()
     : options
 }

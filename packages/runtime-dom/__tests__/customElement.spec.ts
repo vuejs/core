@@ -711,10 +711,31 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
     })
 
+    // #12408
+    test('should set number tabindex as attribute', () => {
+      render(h('my-el-attrs', { tabindex: 1, 'data-test': true }), container)
+      const el = container.children[0] as HTMLElement
+      expect(el.getAttribute('tabindex')).toBe('1')
+      expect(el.getAttribute('data-test')).toBe('true')
+    })
+
+    test('should keep undeclared native attrs as attrs', () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      render(h('my-el-attrs', { translate: 'no' }), root)
+      const el = root.children[0] as HTMLElement
+      expect(el.getAttribute('translate')).toBe('no')
+      expect(el.translate).toBe(false)
+
+      render(null, root)
+      root.remove()
+    })
+
     // https://github.com/vuejs/core/issues/12964
     // Disabled because of missing support for `delegatesFocus` in jsdom
     // https://github.com/jsdom/jsdom/issues/3418
-    // eslint-disable-next-line vitest/no-disabled-tests
+    // oxlint-disable-next-line vitest/no-disabled-tests
     test.skip('shadowRoot should be initialized with delegatesFocus', () => {
       const E = defineCustomElement(
         {
@@ -995,6 +1016,31 @@ describe('defineCustomElement', () => {
       )
     })
 
+    test('should resolve correct parent when element is slotted in shadow DOM', async () => {
+      const GrandParent = defineCustomElement({
+        provide: {
+          foo: ref('GrandParent'),
+        },
+        render() {
+          return h('my-parent-in-shadow', h('slot'))
+        },
+      })
+      const Parent = defineCustomElement({
+        provide: {
+          foo: ref('Parent'),
+        },
+        render() {
+          return h('slot')
+        },
+      })
+      customElements.define('my-grand-parent', GrandParent)
+      customElements.define('my-parent-in-shadow', Parent)
+      container.innerHTML = `<my-grand-parent><my-consumer></my-consumer></my-grand-parent>`
+      const grandParent = container.childNodes[0] as VueElement,
+        consumer = grandParent.firstElementChild as VueElement
+      expect(consumer.shadowRoot!.textContent).toBe('Parent')
+    })
+
     // #13212
     test('inherited from app context within nested elements', async () => {
       const outerValues: (string | undefined)[] = []
@@ -1172,6 +1218,190 @@ describe('defineCustomElement', () => {
       assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
     })
 
+    test('root custom element HMR should preserve child-first style order', async () => {
+      const Child = defineComponent({
+        styles: [`div { color: green; }`],
+        render() {
+          return 'child'
+        },
+      })
+      const def = defineComponent({
+        __hmrId: 'root-child-style-order',
+        styles: [`div { color: red; }`],
+        render() {
+          return h(Child)
+        },
+      })
+      const Foo = defineCustomElement(def)
+      customElements.define('my-el-root-hmr-style-order', Foo)
+      container.innerHTML = `<my-el-root-hmr-style-order></my-el-root-hmr-style-order>`
+      const el = container.childNodes[0] as VueElement
+
+      assertStyles(el, [`div { color: green; }`, `div { color: red; }`])
+
+      __VUE_HMR_RUNTIME__.reload(def.__hmrId!, {
+        ...def,
+        styles: [`div { color: blue; }`, `div { color: yellow; }`],
+      } as any)
+
+      await nextTick()
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: yellow; }`,
+      ])
+    })
+
+    test('inject child component styles before parent styles', async () => {
+      const Baz = () => h(Bar)
+      const Bar = defineComponent({
+        styles: [`div { color: green; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const WrapperBar = defineComponent({
+        styles: [`div { color: blue; }`],
+        render() {
+          return h(Baz)
+        },
+      })
+      const WBaz = () => h(WrapperBar)
+      const Foo = defineCustomElement({
+        styles: [`div { color: red; }`],
+        render() {
+          return [h(Baz), h(WBaz)]
+        },
+      })
+      customElements.define('my-el-with-wrapper-child-styles', Foo)
+      container.innerHTML = `<my-el-with-wrapper-child-styles></my-el-with-wrapper-child-styles>`
+      const el = container.childNodes[0] as VueElement
+
+      // inject order should be child -> parent
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: red; }`,
+      ])
+    })
+
+    test('inject nested child component styles after HMR removes parent styles', async () => {
+      const Bar = defineComponent({
+        __hmrId: 'nested-child-style-hmr-bar',
+        styles: [`div { color: green; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const WrapperBar = defineComponent({
+        __hmrId: 'nested-child-style-hmr-wrapper',
+        styles: [`div { color: blue; }`],
+        render() {
+          return h(Bar)
+        },
+      })
+      const Foo = defineCustomElement({
+        styles: [`div { color: red; }`],
+        render() {
+          return h(WrapperBar)
+        },
+      })
+      customElements.define('my-el-with-hmr-nested-child-styles', Foo)
+      container.innerHTML = `<my-el-with-hmr-nested-child-styles></my-el-with-hmr-nested-child-styles>`
+      const el = container.childNodes[0] as VueElement
+
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: red; }`,
+      ])
+
+      __VUE_HMR_RUNTIME__.reload(WrapperBar.__hmrId!, {
+        ...WrapperBar,
+        styles: undefined,
+      } as any)
+      await nextTick()
+      assertStyles(el, [`div { color: green; }`, `div { color: red; }`])
+
+      __VUE_HMR_RUNTIME__.reload(Bar.__hmrId!, {
+        ...Bar,
+        styles: [`div { color: yellow; }`],
+      } as any)
+      await nextTick()
+      assertStyles(el, [`div { color: yellow; }`, `div { color: red; }`])
+    })
+
+    test('inject child component styles when parent has no styles', async () => {
+      const Baz = () => h(Bar)
+      const Bar = defineComponent({
+        styles: [`div { color: green; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const WrapperBar = defineComponent({
+        styles: [`div { color: blue; }`],
+        render() {
+          return h(Baz)
+        },
+      })
+      const WBaz = () => h(WrapperBar)
+      // without styles
+      const Foo = defineCustomElement({
+        render() {
+          return [h(Baz), h(WBaz)]
+        },
+      })
+      customElements.define('my-el-with-inject-child-styles', Foo)
+      container.innerHTML = `<my-el-with-inject-child-styles></my-el-with-inject-child-styles>`
+      const el = container.childNodes[0] as VueElement
+
+      assertStyles(el, [`div { color: green; }`, `div { color: blue; }`])
+    })
+
+    test('inject nested child component styles', async () => {
+      const Baz = defineComponent({
+        styles: [`div { color: yellow; }`],
+        render() {
+          return h(Bar)
+        },
+      })
+      const Bar = defineComponent({
+        styles: [`div { color: green; }`],
+        render() {
+          return 'bar'
+        },
+      })
+      const WrapperBar = defineComponent({
+        styles: [`div { color: blue; }`],
+        render() {
+          return h(Baz)
+        },
+      })
+      const WBaz = defineComponent({
+        styles: [`div { color: black; }`],
+        render() {
+          return h(WrapperBar)
+        },
+      })
+      const Foo = defineCustomElement({
+        styles: [`div { color: red; }`],
+        render() {
+          return [h(Baz), h(WBaz)]
+        },
+      })
+      customElements.define('my-el-with-inject-nested-child-styles', Foo)
+      container.innerHTML = `<my-el-with-inject-nested-child-styles></my-el-with-inject-nested-child-styles>`
+      const el = container.childNodes[0] as VueElement
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: yellow; }`,
+        `div { color: blue; }`,
+        `div { color: black; }`,
+        `div { color: red; }`,
+      ])
+    })
+
     test("child components should not inject styles to root element's shadow root w/ shadowRoot false", async () => {
       const Bar = defineComponent({
         styles: [`div { color: green; }`],
@@ -1306,6 +1536,42 @@ describe('defineCustomElement', () => {
 
       e2.msg = 'hello'
       expect(e2.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
+    })
+
+    test('render object prop before resolve', async () => {
+      const AsyncComp = defineComponent({
+        props: { value: Object },
+        render(this: any) {
+          return h('div', this.value.x)
+        },
+      })
+      let resolve!: (comp: typeof AsyncComp) => void
+      const p = new Promise<typeof AsyncComp>(res => {
+        resolve = res
+      })
+      const E = defineCustomElement(defineAsyncComponent(() => p))
+      customElements.define('my-el-async-object-prop', E)
+
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const value = { x: 1 }
+
+      render(h('my-el-async-object-prop', { value }), root)
+
+      const el = root.children[0] as VueElement & { value: typeof value }
+      expect(el.value).toBe(value)
+      expect(el.getAttribute('value')).toBe(null)
+
+      resolve(AsyncComp)
+
+      await new Promise(r => setTimeout(r))
+
+      expect(el.value).toBe(value)
+      expect(el.getAttribute('value')).toBe(null)
+      expect(el.shadowRoot!.innerHTML).toBe(`<div>1</div>`)
+
+      render(null, root)
+      root.remove()
     })
 
     test('Number prop casting before resolve', async () => {

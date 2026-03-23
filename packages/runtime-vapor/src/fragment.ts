@@ -19,25 +19,34 @@ import {
   setCurrentInstance,
   warnExtraneousAttributes,
 } from '@vue/runtime-dom'
-import { type VaporComponentInstance, applyFallthroughProps } from './component'
+import {
+  type VaporComponentInstance,
+  applyFallthroughProps,
+  isVaporComponent,
+} from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
-  applyTransitionHooks,
-  applyTransitionLeaveHooks,
-} from './components/Transition'
-import {
+  advanceHydrationNode,
   currentHydrationNode,
   isComment,
   isHydrating,
-  locateFragmentEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
 import { isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
+import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
+import { setBlockKey } from './helpers/setKey'
+import {
+  type VaporKeepAliveContext,
+  currentKeepAliveCtx,
+  setCurrentKeepAliveCtx,
+  withCurrentCacheKey,
+} from './components/KeepAlive'
+import { applyTransitionHooks, applyTransitionLeaveHooks } from './transition'
 
-export class VaporFragment<T extends Block = Block>
-  implements TransitionOptions
-{
+export class VaporFragment<
+  T extends Block = Block,
+> implements TransitionOptions {
   $key?: any
   $transition?: VaporTransitionHooks | undefined
   nodes: T
@@ -60,10 +69,25 @@ export class VaporFragment<T extends Block = Block>
   ) => void
 
   // hooks
-  updated?: ((nodes?: Block) => void)[]
+  onUpdated?: ((nodes?: Block) => void)[]
+
+  // render context
+  readonly slotOwner: VaporComponentInstance | null = currentSlotOwner
+  readonly keepAliveCtx: VaporKeepAliveContext | null = currentKeepAliveCtx
 
   constructor(nodes: T) {
     this.nodes = nodes
+  }
+
+  protected runWithRenderCtx<R>(fn: () => R): R {
+    const prevSlotOwner = setCurrentSlotOwner(this.slotOwner)
+    const prevKeepAliveCtx = setCurrentKeepAliveCtx(this.keepAliveCtx)
+    try {
+      return fn()
+    } finally {
+      setCurrentKeepAliveCtx(prevKeepAliveCtx)
+      setCurrentSlotOwner(prevSlotOwner)
+    }
   }
 }
 
@@ -74,34 +98,26 @@ export class ForFragment extends VaporFragment<Block[]> {
 }
 
 export class DynamicFragment extends VaporFragment {
-  anchor!: Node
+  // @ts-expect-error - assigned in hydrate()
+  anchor: Node
   scope: EffectScope | undefined
   current?: BlockFn
-  fallback?: BlockFn
+  pending?: { render?: BlockFn; key: any }
   anchorLabel?: string
+  keyed?: boolean
 
   // fallthrough attrs
   attrs?: Record<string, any>
-
-  // set ref for async wrapper
-  setAsyncRef?: (instance: VaporComponentInstance) => void
-
-  // get the kept-alive scope when used in keep-alive
-  getScope?: (key: any) => EffectScope | undefined
-
-  // hooks
-  beforeTeardown?: ((
-    oldKey: any,
-    nodes: Block,
-    scope: EffectScope,
-  ) => boolean)[]
-  beforeMount?: ((newKey: any, nodes: Block, scope: EffectScope) => void)[]
-
-  constructor(anchorLabel?: string) {
+  constructor(
+    anchorLabel?: string,
+    keyed: boolean = false,
+    locate: boolean = true,
+  ) {
     super([])
+    this.keyed = keyed
     if (isHydrating) {
       this.anchorLabel = anchorLabel
-      locateHydrationNode()
+      if (locate) locateHydrationNode()
     } else {
       this.anchor =
         __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
@@ -111,33 +127,77 @@ export class DynamicFragment extends VaporFragment {
 
   update(render?: BlockFn, key: any = render): void {
     if (key === this.current) {
+      // On initial hydration, `key === current` means `render` is empty,
+      // so this fragment hydrates as empty content.
       if (isHydrating) this.hydrate(true)
       return
     }
-    this.current = key
+
+    const transition = this.$transition
+    // currently leaving: defer mounting the next branch until
+    // the leave finishes.
+    if (transition && transition.state.isLeaving) {
+      // Track the latest target key immediately so repeated updates during
+      // leave keep overwriting the pending branch instead of reviving stale
+      // keys when the deferred render finally runs.
+      this.current = key
+      this.pending = { render, key }
+      return
+    }
 
     const instance = currentInstance
     const prevSub = setActiveSub()
     const parent = isHydrating ? null : this.anchor.parentNode
-    const transition = this.$transition
     // teardown previous branch
     if (this.scope) {
-      let preserveScope = false
-      // if any of the hooks returns true the scope will be preserved
-      // for kept-alive component
-      if (this.beforeTeardown) {
-        preserveScope = this.beforeTeardown.some(hook =>
-          hook(this.current, this.nodes, this.scope!),
-        )
+      let retainScope = false
+      const keepAliveCtx = this.keepAliveCtx
+
+      // if keepAliveCtx exists and processShapeFlag returns a cache key,
+      // cache the scope and retain it.
+      const cacheKey = keepAliveCtx
+        ? this.keyed
+          ? withCurrentCacheKey(this.current, () =>
+              keepAliveCtx.processShapeFlag(this.nodes),
+            )
+          : keepAliveCtx.processShapeFlag(this.nodes)
+        : false
+      if (cacheKey !== false) {
+        keepAliveCtx!.cacheScope(cacheKey, this.current, this.scope)
+        retainScope = true
       }
-      if (!preserveScope) {
+
+      if (!retainScope) {
         this.scope.stop()
       }
       const mode = transition && transition.mode
-      if (mode) {
-        applyTransitionLeaveHooks(this.nodes, transition, () =>
-          this.render(render, transition, parent, instance),
-        )
+
+      if (
+        mode &&
+        // in-out only works when there is an incoming branch to trigger
+        // delayedLeave; otherwise the current branch should leave immediately.
+        (mode !== 'in-out' || (mode === 'in-out' && render)) &&
+        // out-in only needs to defer when the current branch actually has
+        // a rendered child to leave before mounting the next one.
+        (mode !== 'out-in' || isValidBlock(this.nodes))
+      ) {
+        applyTransitionLeaveHooks(this.nodes, transition, () => {
+          // By the time this deferred out-in branch runs, the renderEffect
+          // has finished and currentInstance may have changed, so restore
+          // the captured instance.
+          const prevInstance = setCurrentInstance(instance)
+          try {
+            const pending = this.pending
+            if (pending) {
+              this.pending = undefined
+              this.renderBranch(pending.render, transition, parent, pending.key)
+            } else {
+              this.renderBranch(render, transition, parent, key)
+            }
+          } finally {
+            setCurrentInstance(...prevInstance)
+          }
+        })
         parent && remove(this.nodes, parent)
         if (mode === 'out-in') {
           setActiveSub(prevSub)
@@ -148,86 +208,69 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    this.render(render, transition, parent, instance)
-
-    if (this.fallback) {
-      // Find the deepest invalid fragment
-      let invalidFragment: VaporFragment | null = null
-      if (isFragment(this.nodes)) {
-        setFragmentFallback(
-          this.nodes,
-          this.fallback,
-          (frag: VaporFragment) => {
-            if (!isValidBlock(frag.nodes)) {
-              invalidFragment = frag
-            }
-          },
-        )
-      }
-
-      // Check self validity (when no nested fragment or nested is valid)
-      if (!invalidFragment && !isValidBlock(this.nodes)) {
-        invalidFragment = this
-      }
-
-      if (invalidFragment) {
-        parent && remove(this.nodes, parent)
-        const scope = this.scope || (this.scope = new EffectScope())
-        scope.run(() => {
-          if (invalidFragment !== this) {
-            renderFragmentFallback(invalidFragment!)
-          } else {
-            this.nodes = this.fallback!() || []
-          }
-        })
-        parent && insert(this.nodes, parent, this.anchor)
-      }
-    }
-
+    this.renderBranch(render, transition, parent, key)
     setActiveSub(prevSub)
 
-    if (isHydrating) this.hydrate()
+    if (isHydrating) this.hydrate(render == null)
   }
 
-  private render(
+  renderBranch(
     render: BlockFn | undefined,
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,
-    instance: GenericComponentInstance | null,
-  ) {
+    key: any,
+  ): void {
+    this.current = key
     if (render) {
+      const keepAliveCtx = this.keepAliveCtx
       // try to reuse the kept-alive scope
-      const scope = this.getScope && this.getScope(this.current)
+      const scope = keepAliveCtx && keepAliveCtx.getScope(this.current)
       if (scope) {
         this.scope = scope
       } else {
         this.scope = new EffectScope()
       }
 
-      // switch current instance to parent instance during update
-      // ensure that the parent instance is correct for nested components
-      let prev
-      if (parent && instance) prev = setCurrentInstance(instance)
-      this.nodes = this.scope.run(render) || []
-      if (parent && instance) setCurrentInstance(...prev!)
+      const renderBranch = () => {
+        try {
+          this.nodes = this.runWithRenderCtx(
+            () => this.scope!.run(render) || [],
+          )
+        } finally {
+          // propagate the fragment key onto freshly rendered nodes.
+          const key = this.keyed ? this.current : this.$key
+          if (key !== undefined) setBlockKey(this.nodes, key)
 
-      if (transition) {
-        this.$transition = applyTransitionHooks(this.nodes, transition)
+          if (transition) {
+            this.$transition = applyTransitionHooks(this.nodes, transition)
+          }
+
+          // call processShapeFlag to mark shapeFlag before mounting.
+          // This must run before leaving the keyed cache-key context so
+          // creating components inside the branch can still resolve the
+          // same cache key during initial mount.
+          if (keepAliveCtx) {
+            keepAliveCtx.processShapeFlag(this.nodes)
+          }
+        }
       }
 
-      if (this.beforeMount) {
-        this.beforeMount.forEach(hook =>
-          hook(this.current, this.nodes, this.scope!),
-        )
+      if (keepAliveCtx && this.keyed) {
+        withCurrentCacheKey(key, renderBranch)
+      } else {
+        renderBranch()
       }
 
       if (parent) {
         // apply fallthrough props during update
         if (this.attrs) {
           if (this.nodes instanceof Element) {
-            renderEffect(() =>
-              applyFallthroughProps(this.nodes as Element, this.attrs!),
-            )
+            // ensure render effect is cleaned up when scope is stopped
+            this.scope.run(() => {
+              renderEffect(() =>
+                applyFallthroughProps(this.nodes as Element, this.attrs!),
+              )
+            })
           } else if (
             __DEV__ &&
             // preventing attrs fallthrough on slots
@@ -240,8 +283,15 @@ export class DynamicFragment extends VaporFragment {
         }
 
         insert(this.nodes, parent, this.anchor)
-        if (this.updated) {
-          this.updated.forEach(hook => hook(this.nodes))
+
+        // For out-in transition, call cacheBlock after renderBranch completes
+        // because KeepAlive's onUpdated fires before the deferred rendering finishes
+        if (keepAliveCtx && transition && transition.mode === 'out-in') {
+          keepAliveCtx.cacheBlock()
+        }
+
+        if (this.onUpdated) {
+          this.onUpdated.forEach(hook => hook(this.nodes))
         }
       }
     } else {
@@ -251,49 +301,79 @@ export class DynamicFragment extends VaporFragment {
   }
 
   hydrate = (isEmpty = false): void => {
-    // avoid repeated hydration during fallback rendering
+    // early return allows tree-shaking of hydration logic when not used
+    if (!isHydrating) return
+
+    // avoid repeated hydration
     if (this.anchor) return
 
-    if (this.anchorLabel === 'if') {
-      // reuse the empty comment node as the anchor for empty if
-      // e.g. `<div v-if="false"></div>` -> `<!---->`
-      if (isEmpty) {
-        this.anchor = locateFragmentEndAnchor('')!
-        if (__DEV__ && !this.anchor) {
-          throw new Error(
-            'Failed to locate if anchor. this is likely a Vue internal bug.',
-          )
-        } else {
-          if (__DEV__) {
-            ;(this.anchor as Comment).data = this.anchorLabel
-          }
-          return
-        }
-      }
-    } else if (this.anchorLabel === 'slot') {
-      // reuse the empty comment node for empty slot
-      // e.g. `<slot v-if="false"></slot>`
-      if (isEmpty && isComment(currentHydrationNode!, '')) {
-        this.anchor = currentHydrationNode!
+    // reuse `<!---->` as anchor
+    // `<div v-if="false"></div>` -> `<!---->`
+    if (isEmpty) {
+      if (isComment(currentHydrationNode!, '')) {
+        this.anchor = currentHydrationNode
+        advanceHydrationNode(currentHydrationNode)
         if (__DEV__) {
           ;(this.anchor as Comment).data = this.anchorLabel!
         }
         return
       }
+    }
 
-      // reuse the vdom fragment end anchor
-      this.anchor = locateFragmentEndAnchor()!
-      if (__DEV__ && !this.anchor) {
-        throw new Error(
-          'Failed to locate slot anchor. this is likely a Vue internal bug.',
-        )
-      } else {
+    const forwardedSlot = (this as any as SlotFragment).forwarded
+    let isValidSlot = false
+    // Empty forwarded slot with a fallback: defer anchor creation —
+    // renderSlotFallback → frag.update(fallback) will re-enter hydrate()
+    // after the fallback content is hydrated.
+    if (
+      forwardedSlot &&
+      (isEmpty || !(isValidSlot = isValidBlock(this.nodes))) &&
+      (this as any as SlotFragment).hasFallback
+    ) {
+      return
+    }
+
+    // Reuse SSR `<!--]-->` as anchor.
+    // SSR always wraps slot content with `<!--[-->...<!--]-->`, so any slot
+    // with content has a matching end anchor we can reuse.
+    //
+    // For forwarded slots, two additional conditions must hold:
+    //   1. isValidSlot — the forwarded slot rendered actual content
+    //   2. !isInSlotFallback — the content came from the slot's own render,
+    //      not from a fallback re-entry. During fallback re-entry, the
+    //      `<!--]-->` at the cursor belongs to the outer (non-forwarded)
+    //      slot, not this forwarded one.
+    //
+    // Multi-root `v-if` also gets `<!--[-->...<!--]-->` from SSR.
+    if (
+      (this.anchorLabel === 'slot' &&
+        (!forwardedSlot || (isValidSlot && !isInSlotFallback))) ||
+      (this.anchorLabel === 'if' && isArray(this.nodes))
+    ) {
+      if (isComment(currentHydrationNode!, ']')) {
+        this.anchor = currentHydrationNode
+        advanceHydrationNode(currentHydrationNode)
         return
+      } else if (__DEV__) {
+        throw new Error(
+          `Failed to locate ${this.anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
+        )
       }
     }
 
-    const { parentNode, nextNode } = findBlockNode(this.nodes)!
-    // create an anchor
+    // Otherwise, create a new anchor.
+    // This covers: empty forwarded slots, dynamic-component,
+    // async component, keyed fragment.
+    let parentNode: Node | null
+    let nextNode: Node | null
+    if (forwardedSlot) {
+      parentNode = currentHydrationNode!.parentNode
+      nextNode = currentHydrationNode!.nextSibling
+    } else {
+      const node = findBlockNode(this.nodes)
+      parentNode = node.parentNode
+      nextNode = node.nextNode
+    }
     queuePostFlushCb(() => {
       parentNode!.insertBefore(
         (this.anchor = __DEV__
@@ -305,40 +385,51 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
-export function setFragmentFallback(
-  fragment: VaporFragment,
-  fallback: BlockFn,
-  onFragment?: (frag: VaporFragment) => void,
-): void {
-  if (fragment.fallback) {
-    const originalFallback = fragment.fallback
-    // if the original fallback also renders invalid blocks,
-    // this ensures proper fallback chaining
-    fragment.fallback = () => {
-      const fallbackNodes = originalFallback()
-      if (isValidBlock(fallbackNodes)) {
-        return fallbackNodes
+let currentSlotHasFallback = false
+let isInSlotFallback = false
+
+export class SlotFragment extends DynamicFragment {
+  forwarded = false
+  hasFallback = false
+
+  constructor() {
+    super(isHydrating || __DEV__ ? 'slot' : undefined, false, false)
+  }
+
+  updateSlot(
+    render?: BlockFn,
+    fallback?: BlockFn,
+    key: any = render || fallback,
+  ): void {
+    if (isHydrating) {
+      locateHydrationNode(true)
+      if (this.forwarded) {
+        this.hasFallback = currentSlotHasFallback
       }
-      return fallback()
     }
-  } else {
-    fragment.fallback = fallback
-  }
 
-  if (onFragment) onFragment(fragment)
+    if (!render || !fallback) {
+      this.update(render || fallback, key)
+      return
+    }
 
-  if (isFragment(fragment.nodes)) {
-    setFragmentFallback(fragment.nodes, fragment.fallback, onFragment)
-  }
-}
+    const wrapped = () => {
+      const prev = currentSlotHasFallback
+      currentSlotHasFallback = true
+      let block: Block
+      try {
+        block = render()
+      } finally {
+        currentSlotHasFallback = prev
+      }
+      const emptyFrag = attachSlotFallback(block, fallback)
+      if (!isValidBlock(block)) {
+        return renderSlotFallback(block, fallback, emptyFrag)
+      }
+      return block
+    }
 
-function renderFragmentFallback(fragment: VaporFragment): void {
-  if (fragment instanceof ForFragment) {
-    fragment.nodes[0] = [fragment.fallback!() || []] as Block[]
-  } else if (fragment instanceof DynamicFragment) {
-    fragment.update(fragment.fallback)
-  } else {
-    // vdom slots
+    this.update(wrapped, key)
   }
 }
 
@@ -350,4 +441,141 @@ export function isDynamicFragment(
   val: NonNullable<unknown>,
 ): val is DynamicFragment {
   return val instanceof DynamicFragment
+}
+
+export function renderSlotFallback(
+  block: Block,
+  fallback: BlockFn,
+  emptyFragment?: VaporFragment | null,
+): Block {
+  // emptyFragment comes from attachSlotFallback, but v-if/v-for updates can
+  // change which fragment is empty after update(); fall back to a fresh search.
+  const frag = emptyFragment || findDeepestEmptyFragment(block)
+  if (frag) {
+    if (frag instanceof ForFragment) {
+      frag.nodes[0] = [fallback() || []] as Block[]
+    } else if (frag instanceof DynamicFragment) {
+      const prev = isInSlotFallback
+      isInSlotFallback = true
+      try {
+        frag.update(fallback)
+      } finally {
+        isInSlotFallback = prev
+      }
+    }
+    return block
+  }
+  return fallback()
+}
+
+export function attachSlotFallback(
+  block: Block,
+  fallback: BlockFn,
+): VaporFragment | null {
+  const state = { emptyFrag: null as VaporFragment | null }
+  traverseForFallback(block, fallback, state)
+  return state.emptyFrag
+}
+
+// Tracks per-DynamicFragment fallback and whether update() has been wrapped.
+// We need this state to:
+// 1) avoid wrapping update() multiple times when attachSlotFallback is called repeatedly,
+// 2) allow fallback to be chained/updated as slot fallback propagates through nested fragments.
+const slotFallbackState = new WeakMap<
+  DynamicFragment,
+  { fallback: BlockFn; wrapped: boolean }
+>()
+
+// Slot fallback needs to propagate into nested fragments created by v-if/v-for.
+// We wrap DynamicFragment.update() once and store fallback state so that when a
+// nested branch turns empty later, it can render the slot fallback without
+// requiring the parent slot outlet to re-render.
+function traverseForFallback(
+  block: Block,
+  fallback: BlockFn,
+  state: { emptyFrag: VaporFragment | null },
+): void {
+  if (isVaporComponent(block)) {
+    if (block.block) traverseForFallback(block.block, fallback, state)
+    return
+  }
+
+  if (isArray(block)) {
+    for (const item of block) traverseForFallback(item, fallback, state)
+    return
+  }
+
+  // v-for fallback is handled by apiCreateFor; keep fallback on fragment
+  if (block instanceof ForFragment) {
+    block.fallback = chainFallback(block.fallback, fallback)
+    if (!isValidBlock(block.nodes)) state.emptyFrag = block
+    traverseForFallback(block.nodes, fallback, state)
+    return
+  }
+
+  // vdom slot fragment: store fallback on the fragment itself
+  if (block instanceof VaporFragment && block.insert) {
+    block.fallback = chainFallback(block.fallback, fallback)
+    if (!isValidBlock(block.nodes)) state.emptyFrag = block
+    traverseForFallback(block.nodes, fallback, state)
+    return
+  }
+
+  // DynamicFragment: chain/record fallback and wrap update() once for empty checks.
+  if (block instanceof DynamicFragment) {
+    let slotState = slotFallbackState.get(block)
+    if (slotState) {
+      slotState.fallback = chainFallback(slotState.fallback, fallback)
+    } else {
+      slotFallbackState.set(block, (slotState = { fallback, wrapped: false }))
+    }
+    if (!slotState.wrapped) {
+      slotState.wrapped = true
+      const original = block.update.bind(block)
+      block.update = (render?: BlockFn, key?: any) => {
+        original(render, key)
+        // attach to newly created nested fragments
+        const emptyFrag = attachSlotFallback(block.nodes, slotState!.fallback)
+        if (render !== slotState!.fallback && !isValidBlock(block.nodes)) {
+          renderSlotFallback(block, slotState!.fallback, emptyFrag)
+        }
+      }
+    }
+    if (!isValidBlock(block.nodes)) state.emptyFrag = block
+    traverseForFallback(block.nodes, fallback, state)
+  }
+}
+
+function findDeepestEmptyFragment(block: Block): VaporFragment | null {
+  let emptyFrag: VaporFragment | null = null
+  traverseForEmptyFragment(block, frag => (emptyFrag = frag))
+  return emptyFrag
+}
+
+function traverseForEmptyFragment(
+  block: Block,
+  onFound: (frag: VaporFragment) => void,
+): void {
+  if (isVaporComponent(block)) {
+    if (block.block) traverseForEmptyFragment(block.block, onFound)
+    return
+  }
+
+  if (isArray(block)) {
+    for (const item of block) traverseForEmptyFragment(item, onFound)
+    return
+  }
+
+  if (isFragment(block)) {
+    if (!isValidBlock(block.nodes)) onFound(block)
+    traverseForEmptyFragment(block.nodes, onFound)
+  }
+}
+
+function chainFallback(existing: BlockFn | undefined, next: BlockFn): BlockFn {
+  if (!existing) return next
+  return (...args: any[]) => {
+    const res = existing(...args)
+    return !isValidBlock(res) ? next(...args) : res
+  }
 }

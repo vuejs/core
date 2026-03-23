@@ -173,7 +173,13 @@ const KeepAliveImpl: ComponentOptions = {
 
     function pruneCache(filter: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
-        const name = getComponentName(vnode.type as ConcreteComponent)
+        // for async components, name check should be based in its loaded
+        // inner component if available
+        const name = getComponentName(
+          isAsyncWrapper(vnode)
+            ? (vnode.type as ComponentOptions).__asyncResolved || {}
+            : (vnode.type as ConcreteComponent),
+        )
         if (name && !filter(name)) {
           pruneCacheEntry(key)
         }
@@ -545,7 +551,7 @@ export function deactivate(
   }
 
   // for e2e test
-  if (__DEV__ && __BROWSER__) {
+  if (__E2E_TEST__) {
     ;(instance as any).__keepAliveStorageContainer = container
   }
 }

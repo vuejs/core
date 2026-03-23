@@ -34,6 +34,7 @@ export async function expectByPolling(
 interface PuppeteerUtils {
   page: () => Page
   click(selector: string, options?: ClickOptions): Promise<void>
+  domClick(selector: string): Promise<void>
   count(selector: string): Promise<number>
   text(selector: string): Promise<string | null>
   value(selector: string): Promise<string>
@@ -53,11 +54,16 @@ interface PuppeteerUtils {
   transitionStart(
     btnSelector: string,
     containerSelector: string,
-  ): Promise<{ classNames: string[]; innerHTML: string }>
+  ): Promise<{ classNames: string[]; innerHTML: string; outerHTML: string }>
   waitForElement(
     selector: string,
     text: string,
     classNames: string[],
+    timeout?: number,
+  ): Promise<any>
+  waitForInnerHTML(
+    selector: string,
+    expected: string,
     timeout?: number,
   ): Promise<any>
 }
@@ -104,6 +110,10 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
     options?: ClickOptions,
   ): Promise<void> {
     await page.click(selector, options)
+  }
+
+  async function domClick(selector: string): Promise<void> {
+    await page.$eval(selector, (el: any) => el.click())
   }
 
   async function count(selector: string): Promise<number> {
@@ -219,6 +229,7 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
           return {
             classNames: container.className.split(/\s+/g),
             innerHTML: container.innerHTML,
+            outerHTML: container.outerHTML,
           }
         })
       },
@@ -247,9 +258,25 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
       classNames,
     )
 
+  const waitForInnerHTML = (
+    selector: string,
+    expected: string,
+    timeout = 2000,
+  ) =>
+    page.waitForFunction(
+      (sel, exp) => {
+        const el = document.querySelector(sel)
+        return !!el && el.innerHTML === exp
+      },
+      { timeout },
+      selector,
+      expected,
+    )
+
   return {
     page: () => page,
     click,
+    domClick,
     count,
     text,
     value,
@@ -268,5 +295,6 @@ export function setupPuppeteer(args?: string[]): PuppeteerUtils {
     nextFrame,
     transitionStart,
     waitForElement,
+    waitForInnerHTML,
   }
 }

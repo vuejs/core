@@ -21,20 +21,13 @@ jobs:
     environment: Release
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v6
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
           node-version-file: '.node-version'
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'pnpm'
-
-      - name: Install deps
-        run: pnpm install
+          cache: true
 
       - name: Update npm
         run: npm i -g npm@latest
@@ -42,7 +35,7 @@ jobs:
       - name: Build and publish
         id: publish
         run: |
-          pnpm release --publishOnly
+          vp run release --publishOnly
 
       - name: Create GitHub release
         id: release_tag

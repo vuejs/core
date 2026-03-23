@@ -3,6 +3,7 @@ import {
   IRNodeTypes,
   IRSlotType,
   transformChildren,
+  transformComment,
   transformElement,
   transformSlotOutlet,
   transformText,
@@ -22,6 +23,7 @@ const compileWithSlots = makeCompile({
     transformSlotOutlet,
     transformElement,
     transformVSlot,
+    transformComment,
     transformChildren,
   ],
   directiveTransforms: {
@@ -35,7 +37,7 @@ describe('compiler: transform slot', () => {
     const { ir, code } = compileWithSlots(`<Comp><div/></Comp>`)
     expect(code).toMatchSnapshot()
 
-    expect([...ir.template.keys()]).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div>'])
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
       id: 1,
@@ -254,7 +256,7 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect([...ir.template.keys()]).toEqual(['foo', 'bar', '<span></span>'])
+    expect([...ir.template.keys()]).toEqual(['foo', 'bar', '<span>'])
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
       id: 4,
@@ -561,6 +563,40 @@ describe('compiler: transform slot', () => {
           },
         },
       })
+    })
+
+    test('ignore comments when checking extraneous default slot children', () => {
+      const onError = vi.fn()
+      const source = `<Comp><template #default>foo</template><!--  --></Comp>`
+      compileWithSlots(source, { onError })
+      expect(onError).not.toHaveBeenCalled()
+    })
+
+    test('comment-only children should still generate implicit default slot', () => {
+      const { ir, code } = compileWithSlots(`<Comp><!--foo--></Comp>`)
+
+      expect(code).toContain(`<!--foo-->`)
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        slots: [
+          {
+            slotType: IRSlotType.STATIC,
+            slots: {
+              default: {
+                type: IRNodeTypes.BLOCK,
+              },
+            },
+          },
+        ],
+      })
+    })
+
+    test('comments should be excluded from mixed implicit default slot content', () => {
+      const { code } = compileWithSlots(
+        `<Comp><template #one>foo</template><!--bar--><span/></Comp>`,
+      )
+
+      expect(code).not.toContain(`<!--bar-->`)
     })
 
     test('error on duplicated slot names', () => {

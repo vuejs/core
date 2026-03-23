@@ -35,9 +35,13 @@ export function renderSlot(
   let slot = slots[name]
 
   // vapor slots rendered in vdom
-  if (slot && (slot as any).__vapor) {
+  // __vs: original vapor slot stored on a wrapper from vaporSlotsProxyHandler
+  // __vapor: marker indicating the slot itself is an original vapor slot
+  const vaporSlot =
+    slot && ((slot as any).__vs || ((slot as any).__vapor ? slot : null))
+  if (vaporSlot) {
     const ret = (openBlock(), createBlock(VaporSlot, props))
-    ret.vs = { slot, fallback }
+    ret.vs = { slot: vaporSlot, fallback }
     return ret
   }
 

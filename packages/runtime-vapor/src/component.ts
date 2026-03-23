@@ -1,16 +1,21 @@
 import {
   type AsyncComponentInternalOptions,
   type ComponentInternalOptions,
+  type ComponentObjectPropsOptions,
   type ComponentPropsOptions,
   EffectScope,
   type EmitFn,
   type EmitsOptions,
+  type EmitsToProps,
   ErrorCodes,
+  type ExtractPropTypes,
   type GenericAppContext,
   type GenericComponentInstance,
   type LifecycleHook,
+  NULL_DYNAMIC_COMPONENT,
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
+  type ShallowUnwrapRef,
   type SuspenseBoundary,
   callWithErrorHandling,
   currentInstance,
@@ -18,6 +23,7 @@ import {
   expose,
   getComponentName,
   getFunctionalFallthrough,
+  invalidateMount,
   isAsyncWrapper,
   isKeepAlive,
   markAsyncBoundary,
@@ -32,14 +38,7 @@ import {
   warn,
   warnExtraneousAttributes,
 } from '@vue/runtime-dom'
-import {
-  type Block,
-  insert,
-  isBlock,
-  remove,
-  setComponentScopeId,
-  setScopeId,
-} from './block'
+import { type Block, insert, isBlock, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -51,6 +50,7 @@ import {
 } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
+  type Prettify,
   ShapeFlags,
   hasOwn,
   invokeArrayFns,
@@ -87,18 +87,21 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
-  isComment,
   isHydrating,
-  locateEndAnchor,
   locateHydrationNode,
   locateNextNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { _next, createElement } from './dom/node'
-import { TeleportFragment, isVaporTeleport } from './components/Teleport'
+import { createComment, createElement, createTextNode } from './dom/node'
 import {
-  type KeepAliveInstance,
-  findParentKeepAlive,
+  type TeleportFragment,
+  isTeleportFragment,
+  isVaporTeleport,
+} from './components/Teleport'
+import type { KeepAliveInstance } from './components/KeepAlive'
+import {
+  currentKeepAliveCtx,
+  setCurrentKeepAliveCtx,
 } from './components/KeepAlive'
 import {
   insertionAnchor,
@@ -106,42 +109,86 @@ import {
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
+import type {
+  DefineVaporComponent,
+  VaporRenderResult,
+} from './apiDefineComponent'
 import { DynamicFragment, isFragment } from './fragment'
-import type { VaporElement } from './apiDefineVaporCustomElement'
+import type { VaporElement } from './apiDefineCustomElement'
 import { parentSuspense, setParentSuspense } from './components/Suspense'
+import { isInteropEnabled } from './vdomInteropState'
+import { setComponentScopeId, setScopeId } from './scopeId'
 
 export { currentInstance } from '@vue/runtime-dom'
 
-export type VaporComponent = FunctionalVaporComponent | ObjectVaporComponent
+export type VaporComponent =
+  | FunctionalVaporComponent<any>
+  | VaporComponentOptions
+  | DefineVaporComponent
 
-export type VaporSetupFn = (
-  props: any,
-  ctx: Pick<VaporComponentInstance, 'slots' | 'attrs' | 'emit' | 'expose'>,
-) => Block | Record<string, any> | undefined
-
-export type FunctionalVaporComponent = VaporSetupFn &
-  Omit<ObjectVaporComponent, 'setup'> & {
+export type FunctionalVaporComponent<
+  Props = {},
+  Emits extends EmitsOptions = {},
+  Slots extends StaticSlots = StaticSlots,
+  Exposed extends Record<string, any> = Record<string, any>,
+> = ((
+  props: Props & EmitsToProps<Emits>,
+  ctx: {
+    emit: EmitFn<Emits>
+    slots: Slots
+    attrs: Record<string, any>
+    expose: <T extends Record<string, any> = Exposed>(exposed: T) => void
+  },
+) => VaporRenderResult) &
+  Omit<
+    VaporComponentOptions<ComponentPropsOptions<Props>, Emits, string, Slots>,
+    'setup'
+  > & {
     displayName?: string
   } & SharedInternalOptions
 
-export interface ObjectVaporComponent
-  extends ComponentInternalOptions,
-    AsyncComponentInternalOptions<ObjectVaporComponent, VaporComponentInstance>,
+export interface VaporComponentOptions<
+  Props = {},
+  Emits extends EmitsOptions = {},
+  RuntimeEmitsKeys extends string = string,
+  Slots extends StaticSlots = StaticSlots,
+  Exposed extends Record<string, any> = Record<string, any>,
+  TypeBlock extends Block = Block,
+  InferredProps = ComponentObjectPropsOptions extends Props
+    ? {}
+    : ExtractPropTypes<Props>,
+>
+  extends
+    ComponentInternalOptions,
+    AsyncComponentInternalOptions<
+      VaporComponentOptions,
+      VaporComponentInstance
+    >,
     SharedInternalOptions {
-  setup?: VaporSetupFn
   inheritAttrs?: boolean
-  props?: ComponentPropsOptions
-  emits?: EmitsOptions
+  props?: Props
+  emits?: Emits | RuntimeEmitsKeys[]
+  slots?: Slots
+  setup?: (
+    props: Readonly<InferredProps>,
+    ctx: {
+      emit: EmitFn<Emits>
+      slots: Slots
+      attrs: Record<string, any>
+      expose: <T extends Record<string, any> = Exposed>(exposed: T) => void
+    },
+  ) => TypeBlock | Exposed | Promise<Exposed> | void
   render?(
-    ctx: any,
-    props?: any,
-    emit?: EmitFn,
-    attrs?: any,
-    slots?: Record<string, VaporSlot>,
-  ): Block
+    ctx: Exposed extends Block ? undefined : ShallowUnwrapRef<Exposed>,
+    props: Readonly<InferredProps>,
+    emit: EmitFn<Emits>,
+    attrs: any,
+    slots: Slots,
+  ): VaporRenderResult<TypeBlock> | void
 
   name?: string
   vapor?: boolean
+  components?: Record<string, VaporComponent>
   /**
    * @internal custom element interception hook
    */
@@ -197,7 +244,7 @@ export function createComponent(
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
   if (isHydrating) {
-    locateHydrationNode()
+    locateHydrationNode(component.__multiRoot)
   } else {
     resetInsertionState()
   }
@@ -233,15 +280,15 @@ export function createComponent(
     currentInstance.vapor &&
     isKeepAlive(currentInstance)
   ) {
-    const cached = (currentInstance as KeepAliveInstance).getCachedComponent(
-      component,
-    )
+    const cached = (
+      currentInstance as KeepAliveInstance
+    ).ctx.getCachedComponent(component)
     // @ts-expect-error
     if (cached) return cached
   }
 
   // vdom interop enabled and component is not an explicit vapor component
-  if (appContext.vapor && !component.__vapor) {
+  if (isInteropEnabled && appContext.vapor && !component.__vapor) {
     const frag = appContext.vapor.vdomMount(
       component as any,
       currentInstance as any,
@@ -282,6 +329,16 @@ export function createComponent(
     once,
   )
 
+  // handle currentKeepAliveCtx for component boundary isolation
+  // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
+  // DynamicFragment can capture it
+  if (currentKeepAliveCtx && !isAsyncWrapper(instance)) {
+    currentKeepAliveCtx.processShapeFlag(instance)
+    // clear currentKeepAliveCtx so child components don't associate
+    // with parent's KeepAlive
+    setCurrentKeepAliveCtx(null)
+  }
+
   // reset currentSlotOwner to null to avoid affecting the child components
   const prevSlotOwner = setCurrentSlotOwner(null)
 
@@ -307,34 +364,7 @@ export function createComponent(
     component.__asyncHydrate &&
     !component.__asyncResolved
   ) {
-    // it may get unmounted before its inner component is loaded,
-    // so we need to give it a placeholder block that matches its
-    // adopted DOM
-    const el = currentHydrationNode!
-    if (isComment(el, '[')) {
-      const end = _next(locateEndAnchor(el)!)
-      const block = (instance.block = [el as Node])
-      let cur = el as Node
-      while (true) {
-        let n = _next(cur)
-        if (n && n !== end) {
-          block.push((cur = n))
-        } else {
-          break
-        }
-      }
-    } else {
-      instance.block = el
-    }
-    // also mark it as mounted to ensure it can be unmounted before
-    // its inner component is resolved
-    instance.isMounted = true
-
-    // advance current hydration node to the nextSibling
-    setCurrentHydrationNode(
-      isComment(el, '[') ? locateEndAnchor(el)! : el.nextSibling,
-    )
-    component.__asyncHydrate(el as Element, instance, () =>
+    component.__asyncHydrate(currentHydrationNode as Element, instance, () =>
       setupComponent(instance, component),
     )
   } else {
@@ -412,7 +442,7 @@ export function setupComponent(
       )
     }
   } else {
-    handleSetupResult(setupResult, component, instance, setupFn)
+    handleSetupResult(setupResult, component, instance)
   }
 
   setActiveSub(prevSub)
@@ -495,7 +525,14 @@ export const emptyContext: GenericAppContext = {
   provides: /*@__PURE__*/ Object.create(null),
 }
 
-export class VaporComponentInstance implements GenericComponentInstance {
+export class VaporComponentInstance<
+  Props extends Record<string, any> = {},
+  Emits extends EmitsOptions = {},
+  Slots extends StaticSlots = StaticSlots,
+  Exposed extends Record<string, any> = Record<string, any>,
+  TypeBlock extends Block = Block,
+  TypeRefs extends Record<string, any> = Record<string, any>,
+> implements GenericComponentInstance {
   vapor: true
   uid: number
   type: VaporComponent
@@ -503,17 +540,17 @@ export class VaporComponentInstance implements GenericComponentInstance {
   parent: GenericComponentInstance | null
   appContext: GenericAppContext
 
-  block: Block
+  block: TypeBlock
   scope: EffectScope
 
   rawProps: RawProps
   rawSlots: RawSlots
 
-  props: Record<string, any>
+  props: Readonly<Props>
   attrs: Record<string, any>
   propsDefaults: Record<string, any> | null
 
-  slots: StaticSlots
+  slots: Slots
 
   scopeId?: string | null
 
@@ -521,15 +558,17 @@ export class VaporComponentInstance implements GenericComponentInstance {
   rawPropsRef?: ShallowRef<any>
   rawSlotsRef?: ShallowRef<any>
 
-  emit: EmitFn
+  emit: EmitFn<Emits>
   emitted: Record<string, boolean> | null
 
-  expose: (exposed: Record<string, any>) => void
-  exposed: Record<string, any> | null
-  exposeProxy: Record<string, any> | null
+  expose: (<T extends Record<string, any> = Exposed>(exposed: T) => void) &
+    // compatible with vdom components
+    string[]
+  exposed: Exposed | null
+  exposeProxy: Prettify<ShallowUnwrapRef<Exposed>> | null
 
   // for useTemplateRef()
-  refs: Record<string, any>
+  refs: TypeRefs
   // for provide / inject
   provides: Record<string, any>
   // for useId
@@ -540,14 +579,18 @@ export class VaporComponentInstance implements GenericComponentInstance {
   asyncDep: Promise<any> | null
   asyncResolved: boolean
 
-  // for HMR and vapor custom element
-  // all render effects associated with this instance
+  // for vapor custom element
   renderEffects?: RenderEffect[]
 
   hasFallthrough: boolean
 
   // for keep-alive
   shapeFlag?: number
+  $key?: any
+
+  // for v-once: caches props/attrs values to ensure they remain frozen
+  // even when the component re-renders due to local state changes
+  oncePropsCache?: Record<string | symbol, any>
 
   // lifecycle hooks
   isMounted: boolean
@@ -571,7 +614,7 @@ export class VaporComponentInstance implements GenericComponentInstance {
   sp?: LifecycleHook<() => Promise<unknown>> // LifecycleHooks.SERVER_PREFETCH
 
   // dev only
-  setupState?: Record<string, any>
+  setupState?: Exposed extends Block ? undefined : ShallowUnwrapRef<Exposed>
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void
@@ -586,6 +629,13 @@ export class VaporComponentInstance implements GenericComponentInstance {
    * fallthrough can be suppressed.
    */
   accessedAttrs: boolean = false
+
+  // type only
+  /**
+   * @deprecated only used for JSX to detect props types.
+   */
+  // @ts-expect-error
+  $props: Props
 
   constructor(
     comp: VaporComponent,
@@ -614,9 +664,9 @@ export class VaporComponentInstance implements GenericComponentInstance {
     this.block = null! // to be set
     this.scope = new EffectScope(true)
 
-    this.emit = emit.bind(null, this)
-    this.expose = expose.bind(null, this)
-    this.refs = EMPTY_OBJ
+    this.emit = emit.bind(null, this) as EmitFn<Emits>
+    this.expose = expose.bind(null, this) as any
+    this.refs = EMPTY_OBJ as TypeRefs
     this.emitted = this.exposed = this.exposeProxy = this.propsDefaults = null
 
     // suspense related
@@ -637,22 +687,26 @@ export class VaporComponentInstance implements GenericComponentInstance {
     if (rawProps || comp.props) {
       const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp, once)
       this.attrs = new Proxy(this, attrsHandlers)
-      this.props = comp.props
-        ? new Proxy(this, propsHandlers!)
-        : isFunction(comp)
-          ? this.attrs
-          : EMPTY_OBJ
+      this.props = (
+        comp.props
+          ? new Proxy(this, propsHandlers!)
+          : isFunction(comp)
+            ? this.attrs
+            : EMPTY_OBJ
+      ) as Props
     } else {
-      this.props = this.attrs = EMPTY_OBJ
+      this.props = this.attrs = EMPTY_OBJ as Props
     }
 
     // init slots
     this.rawSlots = rawSlots || EMPTY_OBJ
-    this.slots = rawSlots
-      ? rawSlots.$
-        ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
-        : rawSlots
-      : EMPTY_OBJ
+    this.slots = (
+      rawSlots
+        ? rawSlots.$
+          ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
+          : rawSlots
+        : EMPTY_OBJ
+    ) as Slots
 
     this.scopeId = getCurrentScopeId()
 
@@ -699,13 +753,19 @@ export function isVaporComponent(
  * element if the resolution fails.
  */
 export function createComponentWithFallback(
-  comp: VaporComponent | string,
+  comp: VaporComponent | typeof NULL_DYNAMIC_COMPONENT | string,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
   once?: boolean,
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
+  if (comp === NULL_DYNAMIC_COMPONENT) {
+    return (__DEV__
+      ? createComment('ndc')
+      : createTextNode('')) as any as HTMLElement
+  }
+
   if (!isString(comp)) {
     return createComponent(
       comp,
@@ -770,8 +830,11 @@ export function createPlainElement(
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
       if (!isHydrating) insert(frag, el)
     } else {
-      const block = getSlot(rawSlots as RawSlots, 'default')!()
-      if (!isHydrating) insert(block, el)
+      let slot = getSlot(rawSlots as RawSlots, 'default')
+      if (slot) {
+        const block = slot()
+        if (!isHydrating) insert(block, el)
+      }
     }
     if (isHydrating) {
       setCurrentHydrationNode(nextNode)
@@ -802,31 +865,28 @@ export function mountComponent(
   ) {
     const component = instance.type
     instance.suspense.registerDep(instance, setupResult => {
-      handleSetupResult(
-        setupResult,
-        component,
-        instance,
-        isFunction(component) ? component : component.setup,
-      )
+      handleSetupResult(setupResult, component, instance)
       mountComponent(instance, parent, anchor)
     })
     return
   }
 
   if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-    findParentKeepAlive(instance)!.activate(instance, parent, anchor)
+    ;(instance.parent as KeepAliveInstance)!.ctx.activate(
+      instance,
+      parent,
+      anchor,
+    )
     return
   }
 
   // custom element style injection
   const { root, type } = instance as GenericComponentInstance
-  if (
-    root &&
-    root.ce &&
-    // @ts-expect-error _def is private
-    (root.ce as VaporElement)._def.shadowRoot !== false
-  ) {
-    root.ce!._injectChildStyle(type)
+  if (root && root.ce && (root.ce as VaporElement)._hasShadowRoot()) {
+    root.ce!._injectChildStyle(
+      type,
+      instance.parent ? instance.parent.type : undefined,
+    )
   }
 
   if (__DEV__) {
@@ -854,20 +914,25 @@ export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
 ): void {
+  // Skip unmount for kept-alive components - deactivate if called from remove()
   if (
-    parentNode &&
+    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.parent &&
     instance.parent.vapor &&
-    instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    (instance.parent as KeepAliveInstance).ctx
   ) {
-    findParentKeepAlive(instance)!.deactivate(instance)
+    if (parentNode) {
+      ;(instance.parent as KeepAliveInstance)!.ctx.deactivate(instance)
+    }
     return
   }
 
   if (instance.isMounted && !instance.isUnmounted) {
-    if (__DEV__ && instance.type.__hmrId) {
+    if (__DEV__) {
       unregisterHMR(instance)
     }
+    invalidateMount(instance.m)
+    invalidateMount(instance.a)
     if (instance.bum) {
       invokeArrayFns(instance.bum)
     }
@@ -911,7 +976,7 @@ export function getRootElement(
     return getRootElement(block.block, onDynamicFragment, recurse)
   }
 
-  if (isFragment(block) && !(block instanceof TeleportFragment)) {
+  if (isFragment(block) && !isTeleportFragment(block)) {
     if (block instanceof DynamicFragment && onDynamicFragment) {
       onDynamicFragment(block)
     }
@@ -952,7 +1017,6 @@ function handleSetupResult(
   setupResult: any,
   component: VaporComponent,
   instance: VaporComponentInstance,
-  setupFn: VaporSetupFn | undefined,
 ) {
   if (__DEV__) {
     pushWarningContext(instance)
@@ -980,7 +1044,7 @@ function handleSetupResult(
   } else {
     // component has a render function but no setup function
     // (typically components with only a template and no state)
-    if (!setupFn && component.render) {
+    if (setupResult === EMPTY_OBJ && component.render) {
       instance.block = callWithErrorHandling(
         component.render,
         instance,
@@ -1019,7 +1083,7 @@ function handleSetupResult(
         instance.block.length) ||
         // preventing attrs fallthrough on Teleport
         // consistent with VDOM Teleport behavior
-        instance.block instanceof TeleportFragment)
+        isTeleportFragment(instance.block))
     ) {
       warnExtraneousAttributes(instance.attrs)
     }

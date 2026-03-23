@@ -395,8 +395,8 @@ test('should generate the correct imports expression', () => {
     `,
     ssr: true,
   })
-  expect(code).toMatch(`_ssrRenderAttr(\"src\", _imports_1)`)
-  expect(code).toMatch(`_createVNode(\"img\", { src: _imports_1 })`)
+  expect(code).toMatch(`_ssrRenderAttr("src", _imports_1)`)
+  expect(code).toMatch(`_createVNode("img", { src: _imports_1 })`)
 })
 
 // #3874
@@ -530,4 +530,72 @@ test('prefixing props edge case in inline mode', () => {
 
   expect(content).toMatchSnapshot()
   expect(content).toMatch(`__props["Foo"]).Bar`)
+})
+
+test('returns multiRoot metadata for a multi-root template when vapor is enabled', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<div /><div />`,
+    vapor: true,
+  })
+
+  expect(result.multiRoot).toBe(true)
+})
+
+test('returns single-root metadata for root control flow when vapor is enabled', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<template v-if="ok"><div /><div /></template>`,
+    vapor: true,
+  })
+
+  expect(result.multiRoot).toBe(false)
+})
+
+test('returns single-root metadata for a root if / else-if / else chain when vapor is enabled', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<template v-if="ok"><div /></template><template v-else-if="maybe"><div /></template><template v-else><div /></template>`,
+    vapor: true,
+  })
+
+  expect(result.multiRoot).toBe(false)
+})
+
+test('ignores preserved whitespace between root if branches when returning multiRoot metadata', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<template v-if="ok"><div /></template>
+
+<template v-else><div /></template>`,
+    vapor: true,
+    compilerOptions: {
+      whitespace: 'preserve',
+    },
+  })
+
+  expect(result.multiRoot).toBe(false)
+})
+
+test('returns multiRoot metadata for a root component with a sibling when vapor is enabled', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<KeepAlive><div /></KeepAlive><span />`,
+    vapor: true,
+  })
+
+  expect(result.multiRoot).toBe(true)
+})
+
+test('respects comments option when returning multiRoot metadata', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<!-- root comment --><div />`,
+    vapor: true,
+    compilerOptions: {
+      comments: false,
+    },
+  })
+
+  expect(result.multiRoot).toBe(false)
 })

@@ -1,25 +1,48 @@
-import path from 'node:path'
 import {
   E2E_TIMEOUT,
   setupPuppeteer,
 } from '../../../packages/vue/__tests__/e2e/e2eUtils'
-import connect from 'connect'
-import sirv from 'sirv'
 import { expect } from 'vitest'
-const { page, nextFrame, timeout, html, transitionStart } = setupPuppeteer()
+import { startE2ETestServer } from './server'
+const { page, html, transitionStart, waitForInnerHTML } = setupPuppeteer()
 
-const duration = process.env.CI ? 200 : 50
-const buffer = process.env.CI ? 50 : 20
-const transitionFinish = (time = duration) => timeout(time + buffer)
+const appearTransitionStart = (containerSelector: string) =>
+  page().evaluate(selector => {
+    ;(window as any).setAppear()
+    return Promise.resolve().then(
+      () => (document.querySelector(selector) as HTMLElement)!.innerHTML,
+    )
+  }, containerSelector)
+
+function toSlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function resolveCaseId(testName: string) {
+  const parts = testName
+    .split(' > ')
+    .map(item => item.trim())
+    .filter(Boolean)
+  const testTitle = parts[parts.length - 1]
+  if (!testTitle) {
+    throw new Error(`[transition-group] Invalid test name: "${testName}"`)
+  }
+  const suiteParts = parts.slice(1, -1)
+  const folderParts = suiteParts.length ? suiteParts : [parts[0]]
+  const folderPath = folderParts.map(toSlug).join('/')
+  return `${folderPath}/${toSlug(testTitle)}`
+}
 
 describe('vapor transition-group', () => {
-  let server: any
-  const port = '8196'
-  beforeAll(() => {
-    server = connect()
-      .use(sirv(path.resolve(import.meta.dirname, '../dist')))
-      .listen(port)
-    process.on('SIGTERM', () => server && server.close())
+  let server: Awaited<ReturnType<typeof startE2ETestServer>>
+  let port = 0
+  beforeAll(async () => {
+    server = await startE2ETestServer('transition-group', import.meta.dirname)
+    port = server.port
   })
 
   afterAll(() => {
@@ -27,7 +50,9 @@ describe('vapor transition-group', () => {
   })
 
   beforeEach(async () => {
-    const baseUrl = `http://localhost:${port}/transition-group/`
+    const testName = expect.getState().currentTestName || ''
+    const caseId = resolveCaseId(testName)
+    const baseUrl = `http://localhost:${port}/transition-group/?case=${caseId}`
     await page().goto(baseUrl)
     await page().waitForSelector('#app')
   })
@@ -54,8 +79,8 @@ describe('vapor transition-group', () => {
           `<div class="test test-enter-from test-enter-active">e</div>`,
       )
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
@@ -63,13 +88,178 @@ describe('vapor transition-group', () => {
           `<div class="test test-enter-active test-enter-to">e</div>`,
       )
 
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
           `<div class="test">d</div>` +
           `<div class="test">e</div>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
+    'if + for enter',
+    async () => {
+      const btnSelector = '.if-for-enter > button.toggle'
+      const addBtnSelector = '.if-for-enter > button.add'
+      const containerSelector = '.if-for-enter > div'
+
+      expect(await html(containerSelector)).toBe(`<ul></ul>`)
+
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<ul>` +
+          `<li class="test v-enter-from v-enter-active">0</li>` +
+          `<li class="test v-enter-from v-enter-active">1</li>` +
+          `</ul>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<ul>` +
+          `<li class="test v-enter-active v-enter-to">0</li>` +
+          `<li class="test v-enter-active v-enter-to">1</li>` +
+          `</ul>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<ul><li class="test">0</li><li class="test">1</li></ul>`,
+      )
+
+      // add a new item
+      expect(
+        (await transitionStart(addBtnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<ul>` +
+          `<li class="test">0</li>` +
+          `<li class="test">1</li>` +
+          `<li class="test v-enter-from v-enter-active">2</li>` +
+          `</ul>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<ul>` +
+          `<li class="test">0</li>` +
+          `<li class="test">1</li>` +
+          `<li class="test">2</li>` +
+          `</ul>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
+    'static keyed component enter',
+    async () => {
+      const btnSelector = '.static-keyed-component-enter > button'
+      const containerSelector = '.static-keyed-component-enter > div'
+
+      expect(await html(containerSelector)).toBe(``)
+
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<div class="test test-enter-from test-enter-active">a</div>` +
+          `<div class="test test-enter-from test-enter-active">b</div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test test-enter-active test-enter-to">a</div>` +
+          `<div class="test test-enter-active test-enter-to">b</div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test">a</div><div class="test">b</div>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
+    'static keyed enter',
+    async () => {
+      const btnSelector = '.static-keyed-enter > button'
+      const containerSelector = '.static-keyed-enter > div'
+
+      expect(await html(containerSelector)).toBe(``)
+
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<div class="test test-enter-from test-enter-active">a</div>` +
+          `<div class="test test-enter-from test-enter-active">b</div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test test-enter-active test-enter-to">a</div>` +
+          `<div class="test test-enter-active test-enter-to">b</div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test">a</div><div class="test">b</div>`,
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
+    'for + if enter',
+    async () => {
+      const btnSelector = '.for-if-enter > button.toggle'
+      const addBtnSelector = '.for-if-enter > button.add'
+      const containerSelector = '.for-if-enter > div'
+      expect(await html(containerSelector)).toBe(`<ul></ul>`)
+
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<ul>` +
+          `<li class="test v-enter-from v-enter-active">0</li>` +
+          `<li class="test v-enter-from v-enter-active">1</li>` +
+          `</ul>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<ul>` +
+          `<li class="test v-enter-active v-enter-to">0</li>` +
+          `<li class="test v-enter-active v-enter-to">1</li>` +
+          `</ul>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<ul><li class="test">0</li><li class="test">1</li></ul>`,
+      )
+
+      // add a new item
+      expect(
+        (await transitionStart(addBtnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<ul>` +
+          `<li class="test">0</li>` +
+          `<li class="test">1</li>` +
+          `<li class="test v-enter-from v-enter-active">2</li>` +
+          `</ul>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<ul>` +
+          `<li class="test">0</li>` +
+          `<li class="test">1</li>` +
+          `<li class="test">2</li>` +
+          `</ul>`,
       )
     },
     E2E_TIMEOUT,
@@ -95,14 +285,14 @@ describe('vapor transition-group', () => {
           `<div class="test test-leave-from test-leave-active">c</div>`,
       )
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test test-leave-active test-leave-to">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test test-leave-active test-leave-to">c</div>`,
       )
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe(`<div class="test">b</div>`)
+
+      await waitForInnerHTML(containerSelector, `<div class="test">b</div>`)
     },
     E2E_TIMEOUT,
   )
@@ -128,15 +318,16 @@ describe('vapor transition-group', () => {
           `<div class="test test-enter-from test-enter-active">d</div>`,
       )
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test test-leave-active test-leave-to">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
           `<div class="test test-enter-active test-enter-to">d</div>`,
       )
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe(
+
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test">b</div>` +
           `<div class="test">c</div>` +
           `<div class="test">d</div>`,
@@ -153,26 +344,22 @@ describe('vapor transition-group', () => {
 
       expect(await html('.appear')).toBe(`<button>appear button</button>`)
 
-      await page().evaluate(() => {
-        return (window as any).setAppear()
-      })
-
       // appear
-      expect(await html(containerSelector)).toBe(
+      expect(await appearTransitionStart(containerSelector)).toBe(
         `<div class="test test-appear-from test-appear-active">a</div>` +
           `<div class="test test-appear-from test-appear-active">b</div>` +
           `<div class="test test-appear-from test-appear-active">c</div>`,
       )
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test test-appear-active test-appear-to">a</div>` +
           `<div class="test test-appear-active test-appear-to">b</div>` +
           `<div class="test test-appear-active test-appear-to">c</div>`,
       )
 
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>`,
@@ -189,8 +376,8 @@ describe('vapor transition-group', () => {
           `<div class="test test-enter-from test-enter-active">e</div>`,
       )
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
@@ -198,8 +385,8 @@ describe('vapor transition-group', () => {
           `<div class="test test-enter-active test-enter-to">e</div>`,
       )
 
-      await transitionFinish()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
@@ -231,15 +418,16 @@ describe('vapor transition-group', () => {
           `<div class="test group-leave-from group-leave-active group-move" style="">c</div>`,
       )
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test group-enter-active group-enter-to">d</div>` +
           `<div class="test">b</div>` +
           `<div class="test group-move" style="">a</div>` +
           `<div class="test group-leave-active group-move group-leave-to" style="">c</div>`,
       )
-      await transitionFinish(duration * 2)
-      expect(await html(containerSelector)).toBe(
+
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test">d</div>` +
           `<div class="test">b</div>` +
           `<div class="test" style="">a</div>`,
@@ -271,12 +459,163 @@ describe('vapor transition-group', () => {
         `<div class="group-move" style="">c</div>`,
     )
 
-    await transitionFinish()
-    expect(await html(containerSelector)).toBe(
+    await waitForInnerHTML(
+      containerSelector,
       `<div class="" style="">a</div>` +
         `<div class="" style="">b</div>` +
         `<div class="" style="">c</div>`,
     )
+  })
+
+  // Dynamic tag changes have no leave transition, only enter transition.
+  // This matches vdom transition-group behavior.
+  test('dynamic tag', async () => {
+    const btnSelector = '.dynamic-tag > button'
+    const containerSelector = '.dynamic-tag > div'
+
+    expect(await html(containerSelector)).toBe(
+      `<div>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>` +
+        `</div>`,
+    )
+
+    // div -> section
+    expect(
+      (await transitionStart(btnSelector, containerSelector)).innerHTML,
+    ).toBe(
+      `<section>` +
+        `<div class="test v-enter-from v-enter-active">a</div>` +
+        `<div class="test v-enter-from v-enter-active">b</div>` +
+        `<div class="test v-enter-from v-enter-active">c</div>` +
+        `</section>`,
+    )
+    await waitForInnerHTML(
+      containerSelector,
+      `<section>` +
+        `<div class="test v-enter-active v-enter-to">a</div>` +
+        `<div class="test v-enter-active v-enter-to">b</div>` +
+        `<div class="test v-enter-active v-enter-to">c</div>` +
+        `</section>`,
+    )
+    await waitForInnerHTML(
+      containerSelector,
+      `<section>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>` +
+        `</section>`,
+    )
+
+    // section -> fragment
+    expect(
+      (await transitionStart(btnSelector, containerSelector)).innerHTML,
+    ).toBe(
+      `<div class="test v-enter-from v-enter-active">a</div>` +
+        `<div class="test v-enter-from v-enter-active">b</div>` +
+        `<div class="test v-enter-from v-enter-active">c</div>`,
+    )
+    await waitForInnerHTML(
+      containerSelector,
+      `<div class="test v-enter-active v-enter-to">a</div>` +
+        `<div class="test v-enter-active v-enter-to">b</div>` +
+        `<div class="test v-enter-active v-enter-to">c</div>`,
+    )
+    await waitForInnerHTML(
+      containerSelector,
+      `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>`,
+    )
+
+    // fragment -> div
+    expect(
+      (await transitionStart(btnSelector, containerSelector)).innerHTML,
+    ).toBe(
+      `<div>` +
+        `<div class="test v-enter-from v-enter-active">a</div>` +
+        `<div class="test v-enter-from v-enter-active">b</div>` +
+        `<div class="test v-enter-from v-enter-active">c</div>` +
+        `</div>`,
+    )
+    await waitForInnerHTML(
+      containerSelector,
+      `<div>` +
+        `<div class="test v-enter-active v-enter-to">a</div>` +
+        `<div class="test v-enter-active v-enter-to">b</div>` +
+        `<div class="test v-enter-active v-enter-to">c</div>` +
+        `</div>`,
+    )
+    await waitForInnerHTML(
+      containerSelector,
+      `<div>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>` +
+        `</div>`,
+    )
+  })
+
+  test('dynamic tag render effect leak', async () => {
+    const cycleBtnSelector = '.dynamic-tag-render-effect-leak > button.cycle'
+    const addBtnSelector = '.dynamic-tag-render-effect-leak > button.add'
+    const containerSelector = '.dynamic-tag-render-effect-leak > div'
+
+    expect(await html(containerSelector)).toBe(
+      `<div>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `</div>`,
+    )
+
+    await page().evaluate(() => {
+      ;(window as any).clearRenderCalls()
+    })
+
+    await transitionStart(cycleBtnSelector, containerSelector)
+    await waitForInnerHTML(
+      containerSelector,
+      `<section>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `</section>`,
+    )
+
+    await transitionStart(cycleBtnSelector, containerSelector)
+    await waitForInnerHTML(
+      containerSelector,
+      `<div class="test">a</div>` + `<div class="test">b</div>`,
+    )
+
+    await transitionStart(cycleBtnSelector, containerSelector)
+    await waitForInnerHTML(
+      containerSelector,
+      `<div>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `</div>`,
+    )
+
+    await page().evaluate(() => {
+      ;(window as any).clearRenderCalls()
+    })
+
+    await transitionStart(addBtnSelector, containerSelector)
+    await waitForInnerHTML(
+      containerSelector,
+      `<div>` +
+        `<div class="test">a</div>` +
+        `<div class="test">b</div>` +
+        `<div class="test">c</div>` +
+        `</div>`,
+    )
+
+    expect(
+      await page().evaluate(() => {
+        return (window as any).getRenderCalls()
+      }),
+    ).toEqual(['c'])
   })
 
   test('events', async () => {
@@ -285,18 +624,15 @@ describe('vapor transition-group', () => {
 
     expect(await html('.events')).toBe(`<button>events button</button>`)
 
-    await page().evaluate(() => {
-      return (window as any).setAppear()
-    })
-
     // appear
-    expect(await html(containerSelector)).toBe(
+    expect(await appearTransitionStart(containerSelector)).toBe(
       `<div class="test test-appear-from test-appear-active">a</div>` +
         `<div class="test test-appear-from test-appear-active">b</div>` +
         `<div class="test test-appear-from test-appear-active">c</div>`,
     )
-    await nextFrame()
-    expect(await html(containerSelector)).toBe(
+
+    await waitForInnerHTML(
+      containerSelector,
       `<div class="test test-appear-active test-appear-to">a</div>` +
         `<div class="test test-appear-active test-appear-to">b</div>` +
         `<div class="test test-appear-active test-appear-to">c</div>`,
@@ -309,8 +645,8 @@ describe('vapor transition-group', () => {
     expect(calls).toContain('onAppear')
     expect(calls).not.toContain('afterAppear')
 
-    await transitionFinish()
-    expect(await html(containerSelector)).toBe(
+    await waitForInnerHTML(
+      containerSelector,
       `<div class="test">a</div>` +
         `<div class="test">b</div>` +
         `<div class="test">c</div>`,
@@ -342,21 +678,22 @@ describe('vapor transition-group', () => {
     expect(calls).toContain('onEnter')
     expect(calls).not.toContain('afterEnter')
 
-    await nextFrame()
-    expect(await html(containerSelector)).toBe(
+    await waitForInnerHTML(
+      containerSelector,
       `<div class="test test-leave-active test-leave-to">a</div>` +
         `<div class="test">b</div>` +
         `<div class="test">c</div>` +
         `<div class="test test-enter-active test-enter-to">d</div>`,
     )
+
     calls = await page().evaluate(() => {
       return (window as any).getCalls()
     })
     expect(calls).not.toContain('afterLeave')
     expect(calls).not.toContain('afterEnter')
 
-    await transitionFinish()
-    expect(await html(containerSelector)).toBe(
+    await waitForInnerHTML(
+      containerSelector,
       `<div class="test">b</div>` +
         `<div class="test">c</div>` +
         `<div class="test">d</div>`,
@@ -390,15 +727,16 @@ describe('vapor transition-group', () => {
           `<div class="test group-leave-from group-leave-active group-move" style="">c</div>`,
       )
 
-      await nextFrame()
-      expect(await html(containerSelector)).toBe(
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test group-enter-active group-enter-to">d</div>` +
           `<div class="test">b</div>` +
           `<div class="test group-move" style="">a</div>` +
           `<div class="test group-leave-active group-move group-leave-to" style="">c</div>`,
       )
-      await transitionFinish(duration * 2)
-      expect(await html(containerSelector)).toBe(
+
+      await waitForInnerHTML(
+        containerSelector,
         `<div class="test">d</div>` +
           `<div class="test">b</div>` +
           `<div class="test" style="">a</div>`,
@@ -407,38 +745,125 @@ describe('vapor transition-group', () => {
     E2E_TIMEOUT,
   )
 
-  test('interop: render vdom component', async () => {
-    const btnSelector = '.interop > button'
-    const containerSelector = '.interop > div'
+  describe('interop', () => {
+    test(
+      'avoid set transition hooks for comment node',
+      async () => {
+        const btnSelector =
+          '.avoid-set-transition-hooks-for-comment-node > button'
+        const containerSelector =
+          '.avoid-set-transition-hooks-for-comment-node > div'
 
-    expect(await html(containerSelector)).toBe(
-      `<div><div>a</div></div>` +
-        `<div><div>b</div></div>` +
-        `<div><div>c</div></div>`,
+        expect(await html(containerSelector)).toBe(`<!--v-if-->`)
+
+        expect(
+          (await transitionStart(btnSelector, containerSelector)).innerHTML,
+        ).toBe(
+          `<div class="test test-enter-from test-enter-active">a</div>` +
+            `<div class="test test-enter-from test-enter-active">b</div>` +
+            `<div class="test test-enter-from test-enter-active">c</div>` +
+            `<!--v-if-->`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test">a</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test">c</div>` +
+            `<!--v-if-->`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test">a</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test">c</div>` +
+            `<div class="test test-enter-active test-enter-to">child</div>`,
+        )
+
+        await waitForInnerHTML(
+          containerSelector,
+          `<div class="test">a</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test">c</div>` +
+            `<div class="test">child</div>`,
+        )
+      },
+      E2E_TIMEOUT,
     )
 
-    expect(
-      (await transitionStart(btnSelector, containerSelector)).innerHTML,
-    ).toBe(
-      `<div class="test-leave-from test-leave-active"><div>a</div></div>` +
-        `<div class="test-move" style=""><div>b</div></div>` +
-        `<div class="test-move" style=""><div>c</div></div>` +
-        `<div class="test-enter-from test-enter-active"><div>d</div></div>`,
-    )
+    test('unkeyed vdom component update', async () => {
+      const btnSelector = '.unkeyed-vdom-component-update > button'
+      const containerSelector = '.unkeyed-vdom-component-update > div'
 
-    await nextFrame()
-    expect(await html(containerSelector)).toBe(
-      `<div class="test-leave-active test-leave-to"><div>a</div></div>` +
-        `<div class="test-move" style=""><div>b</div></div>` +
-        `<div class="test-move" style=""><div>c</div></div>` +
-        `<div class="test-enter-active test-enter-to"><div>d</div></div>`,
-    )
+      expect(await html(containerSelector)).toBe(`<div><div>a</div></div>`)
 
-    await transitionFinish()
-    expect(await html(containerSelector)).toBe(
-      `<div class="" style=""><div>b</div></div>` +
-        `<div class="" style=""><div>c</div></div>` +
-        `<div class=""><div>d</div></div>`,
-    )
+      await page().click(btnSelector)
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div><div>a</div></div><div class="test">b</div>`,
+      )
+    })
+
+    test('static keyed vdom component enter', async () => {
+      const btnSelector = '.static-keyed-vdom-component-enter > button'
+      const containerSelector = '.static-keyed-vdom-component-enter > div'
+
+      expect(await html(containerSelector)).toBe(``)
+
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<div class="test test-enter-from test-enter-active">a</div>` +
+          `<div class="test test-enter-from test-enter-active">b</div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test test-enter-active test-enter-to">a</div>` +
+          `<div class="test test-enter-active test-enter-to">b</div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test">a</div><div class="test">b</div>`,
+      )
+    })
+
+    test('render vdom component', async () => {
+      const btnSelector = '.interop > button'
+      const containerSelector = '.interop > div'
+
+      expect(await html(containerSelector)).toBe(
+        `<div><div>a</div></div>` +
+          `<div><div>b</div></div>` +
+          `<div><div>c</div></div>`,
+      )
+
+      expect(
+        (await transitionStart(btnSelector, containerSelector)).innerHTML,
+      ).toBe(
+        `<div class="test-leave-from test-leave-active"><div>a</div></div>` +
+          `<div class="test-move" style=""><div>b</div></div>` +
+          `<div class="test-move" style=""><div>c</div></div>` +
+          `<div class="test-enter-from test-enter-active"><div>d</div></div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test-leave-active test-leave-to"><div>a</div></div>` +
+          `<div class="test-move" style=""><div>b</div></div>` +
+          `<div class="test-move" style=""><div>c</div></div>` +
+          `<div class="test-enter-active test-enter-to"><div>d</div></div>`,
+      )
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="" style=""><div>b</div></div>` +
+          `<div class="" style=""><div>c</div></div>` +
+          `<div class=""><div>d</div></div>`,
+      )
+    })
   })
 })

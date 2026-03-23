@@ -1,6 +1,10 @@
 import { onEffectCleanup } from '@vue/reactivity'
 import { isArray } from '@vue/shared'
-import { ErrorCodes, callWithAsyncErrorHandling, currentInstance } from 'vue'
+import {
+  ErrorCodes,
+  callWithAsyncErrorHandling,
+  currentInstance,
+} from '@vue/runtime-dom'
 
 export function addEventListener(
   el: Element,
@@ -56,7 +60,7 @@ type DelegatedHandler = {
 /**
  * Event delegation borrowed from solid
  */
-const delegatedEvents = Object.create(null)
+const delegatedEvents = /*@__PURE__*/ Object.create(null)
 
 export const delegateEvents = (...names: string[]): void => {
   for (const name of names) {

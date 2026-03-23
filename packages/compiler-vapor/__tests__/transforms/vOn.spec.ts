@@ -463,6 +463,7 @@ describe('v-on', () => {
           nonKeys: ['stop'],
           options: [],
         },
+        delegate: false,
       },
       {
         type: IRNodeTypes.SET_EVENT,
@@ -481,12 +482,13 @@ describe('v-on', () => {
           nonKeys: [],
           options: [],
         },
+        delegate: true,
       },
     ])
 
     expect(code).matchSnapshot()
     expect(code).contains(
-      `n0.$evtclick = _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"]))
+      `_on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))
   n0.$evtkeyup = _createInvoker(_withKeys(e => _ctx.test(e), ["enter"]))`,
     )
   })
@@ -687,17 +689,32 @@ describe('v-on', () => {
     ])
   })
 
-  test('should use delegate helper when have multiple events of same name', () => {
+  test('should not delegate .stop when have multiple events of same name', () => {
     const { code, helpers } = compileWithVOn(
       `<div @click="test" @click.stop="test" />`,
     )
-    expect(helpers).contains('delegate')
+    expect(helpers).not.contains('delegate')
+    expect(helpers).not.contains('delegateEvents')
+    expect(code).toMatchSnapshot()
+    expect(code).contains('_on(n0, "click", _createInvoker(e => _ctx.test(e)))')
+    expect(code).contains(
+      '_on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))',
+    )
+  })
+
+  test('should not delegate normalized static event when sibling uses .stop', () => {
+    const { code, helpers } = compileWithVOn(
+      `<div @click.right="test" @contextmenu.stop="test" />`,
+    )
+
+    expect(helpers).not.contains('delegate')
+    expect(helpers).not.contains('delegateEvents')
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      '_delegate(n0, "click", _createInvoker(e => _ctx.test(e)))',
+      '_on(n0, "contextmenu", _createInvoker(_withModifiers(e => _ctx.test(e), ["right"])))',
     )
     expect(code).contains(
-      '_delegate(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))',
+      '_on(n0, "contextmenu", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))',
     )
   })
 
@@ -725,6 +742,12 @@ describe('v-on', () => {
     expect(code).contains('const _on_update_model = () => {}')
     expect(code).contains('const _on_update_model1 = () => {}')
     expect(code).contains('"onUpdate:model": () => _on_update_model')
-    expect(code).contains('"onUpdate-model": () => _on_update_model1')
+    expect(code).contains('onUpdateModel: () => _on_update_model1')
+  })
+
+  test('component event should camelize kebab-case', () => {
+    const { code } = compileWithVOn(`<Comp @name-click="handleClick" />`)
+    expect(code).matchSnapshot()
+    expect(code).contains('onNameClick: () => _ctx.handleClick')
   })
 })

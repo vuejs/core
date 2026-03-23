@@ -1,7 +1,6 @@
 import {
   EMPTY_ARR,
   NO,
-  YES,
   camelize,
   hasOwn,
   isArray,
@@ -12,6 +11,7 @@ import type { VaporComponent, VaporComponentInstance } from './component'
 import {
   type NormalizedPropsOptions,
   baseNormalizePropsOptions,
+  currentInstance,
   isEmitListener,
   popWarningContext,
   pushWarningContext,
@@ -20,7 +20,12 @@ import {
   validateProps,
   warn,
 } from '@vue/runtime-dom'
-import { type ComputedRef, ReactiveFlags, computed } from '@vue/reactivity'
+import {
+  type ComputedRef,
+  ReactiveFlags,
+  computed,
+  onScopeDispose,
+} from '@vue/reactivity'
 import { normalizeEmitsOptions } from './componentEmits'
 import { renderEffect } from './renderEffect'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
@@ -43,16 +48,34 @@ export function resolveSource(
     : source
 }
 
-/**
- * Resolve a function source with computed caching.
- */
 export function resolveFunctionSource<T>(
   source: (() => T) & { _cache?: ComputedRef<T> },
 ): T {
-  if (!source._cache) {
-    source._cache = computed(source)
+  // use existing cache if available
+  if (source._cache) {
+    return source._cache.value
   }
-  return source._cache.value
+
+  // source function is defined in the parent component, so it should be
+  // executed in the parent's context. currentInstance is the child component
+  // (the one accessing props/slots), so we use parent to get the component
+  // where source was defined.
+  const parent = currentInstance && currentInstance.parent
+  if (parent) {
+    source._cache = computed(() => {
+      const prev = setCurrentInstance(parent)
+      try {
+        return source()
+      } finally {
+        setCurrentInstance(...prev)
+      }
+    })
+    onScopeDispose(() => (source._cache = undefined))
+    return source._cache.value
+  }
+
+  // no parent, no cache - just call directly
+  return source()
 }
 
 export function getPropsProxyHandlers(
@@ -74,9 +97,12 @@ export function getPropsProxyHandlers(
       : NO
   ) as (key: string | symbol) => key is string
   const isAttr = propsOptions
-    ? (key: string) =>
-        key !== '$' && !isProp(key) && !isEmitListener(emitsOptions, key)
-    : YES
+    ? (key: string | symbol) =>
+        isString(key) &&
+        key !== '$' &&
+        !isProp(key) &&
+        !isEmitListener(emitsOptions, key)
+    : (key: string | symbol) => isString(key)
 
   const getProp = (instance: VaporComponentInstance, key: string | symbol) => {
     // this enables direct watching of props and prevents `Invalid watch source` DEV warnings.
@@ -101,7 +127,9 @@ export function getPropsProxyHandlers(
             return resolvePropValue(
               propsOptions!,
               key,
-              isDynamic ? source[rawKey] : source[rawKey](),
+              isDynamic
+                ? source[rawKey]
+                : resolveFunctionSource(source[rawKey]),
               instance,
               resolveDefault,
             )
@@ -130,18 +158,29 @@ export function getPropsProxyHandlers(
     )
   }
 
-  const getPropValue = once
-    ? (...args: Parameters<typeof getProp>) => {
+  const withOnceCache = <
+    T extends (instance: VaporComponentInstance, key: string | symbol) => any,
+  >(
+    getter: T,
+  ): T => {
+    return ((instance: VaporComponentInstance, key: string | symbol) => {
+      const cache = instance.oncePropsCache || (instance.oncePropsCache = {})
+      if (!(key in cache)) {
         pauseTracking()
-        const value = getProp(...args)
-        resetTracking()
-        return value
+        try {
+          cache[key] = getter(instance, key)
+        } finally {
+          resetTracking()
+        }
       }
-    : getProp
+      return cache[key]
+    }) as T
+  }
 
+  const getOnceProp = withOnceCache(getProp)
   const propsHandlers = propsOptions
     ? ({
-        get: (target, key) => getPropValue(target, key),
+        get: (target, key) => (once ? getOnceProp : getProp)(target, key),
         has: (_, key) => isProp(key),
         ownKeys: () => Object.keys(propsOptions),
         getOwnPropertyDescriptor(target, key) {
@@ -149,7 +188,7 @@ export function getPropsProxyHandlers(
             return {
               configurable: true,
               enumerable: true,
-              get: () => getPropValue(target, key),
+              get: () => (once ? getOnceProp : getProp)(target, key),
             }
           }
         },
@@ -163,13 +202,13 @@ export function getPropsProxyHandlers(
     })
   }
 
-  const getAttr = (target: RawProps, key: string) => {
-    if (!isProp(key) && !isEmitListener(emitsOptions, key)) {
+  const getAttr = (target: RawProps, key: string | symbol) => {
+    if (isString(key) && !isProp(key) && !isEmitListener(emitsOptions, key)) {
       return getAttrFromRawProps(target, key)
     }
   }
 
-  const hasAttr = (target: RawProps, key: string) => {
+  const hasAttr = (target: RawProps, key: string | symbol) => {
     if (isAttr(key)) {
       return hasAttrFromRawProps(target, key)
     } else {
@@ -177,25 +216,21 @@ export function getPropsProxyHandlers(
     }
   }
 
-  const getAttrValue = once
-    ? (...args: Parameters<typeof getAttr>) => {
-        pauseTracking()
-        const value = getAttr(...args)
-        resetTracking()
-        return value
-      }
-    : getAttr
-
+  const getOnceAttr = withOnceCache((instance, key) =>
+    getAttr(instance.rawProps, key),
+  )
   const attrsHandlers = {
-    get: (target, key: string) => getAttrValue(target.rawProps, key),
-    has: (target, key: string) => hasAttr(target.rawProps, key),
+    get: (target, key: string | symbol) =>
+      once ? getOnceAttr(target, key) : getAttr(target.rawProps, key),
+    has: (target, key: string | symbol) => hasAttr(target.rawProps, key),
     ownKeys: target => getKeysFromRawProps(target.rawProps).filter(isAttr),
-    getOwnPropertyDescriptor(target, key: string) {
-      if (hasAttr(target.rawProps, key)) {
+    getOwnPropertyDescriptor(target, key: string | symbol) {
+      if (isString(key) && hasAttr(target.rawProps, key)) {
         return {
           configurable: true,
           enumerable: true,
-          get: () => getAttrValue(target.rawProps, key),
+          get: () =>
+            once ? getOnceAttr(target, key) : getAttr(target.rawProps, key),
         }
       }
     },
@@ -223,12 +258,12 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
       source = dynamicSources[i]
       isDynamic = isFunction(source)
       source = isDynamic
-        ? (resolveFunctionSource(
-            source as () => Record<string, unknown>,
-          ) as any)
+        ? resolveFunctionSource(source as () => Record<string, unknown>)
         : source
       if (source && hasOwn(source, key)) {
-        const value = isDynamic ? source[key] : source[key]()
+        const value = isDynamic
+          ? source[key]
+          : resolveFunctionSource(source[key])
         if (merged) {
           merged.push(value)
         } else {
@@ -275,7 +310,11 @@ export function getKeysFromRawProps(rawProps: RawProps): string[] {
     let i = dynamicSources.length
     let source
     while (i--) {
-      source = resolveSource(dynamicSources[i])
+      source = isFunction(dynamicSources[i])
+        ? resolveFunctionSource(
+            dynamicSources[i] as () => Record<string, unknown>,
+          )
+        : dynamicSources[i]
       for (const key in source) {
         keys.push(key)
       }
@@ -360,7 +399,9 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
       const isDynamic = isFunction(source)
       const resolved = isDynamic ? resolveFunctionSource(source) : source
       for (const key in resolved) {
-        const value = isDynamic ? resolved[key] : (resolved[key] as Function)()
+        const value = isDynamic
+          ? resolved[key]
+          : resolveFunctionSource(source[key])
         if (key === 'class' || key === 'style') {
           const existing = mergedRawProps[key]
           if (isArray(existing)) {

@@ -22,6 +22,7 @@ import {
   createSrcsetTransformWithOptions,
   transformSrcset,
 } from './template/transformSrcset'
+import { isMultiRoot } from './template/templateUtils'
 import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerVapor from '@vue/compiler-vapor'
@@ -42,6 +43,7 @@ export interface SFCTemplateCompileResults {
   code: string
   ast?: unknown
   preamble?: string
+  multiRoot?: boolean
   source: string
   tips: string[]
   errors: (string | CompilerError)[]
@@ -291,6 +293,9 @@ function doCompileTemplate({
     code,
     ast,
     preamble,
+    multiRoot: vapor
+      ? isMultiRoot(inAST || source, compilerOptions)
+      : undefined,
     source,
     errors,
     tips,

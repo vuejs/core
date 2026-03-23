@@ -2,6 +2,7 @@ import { isFunction } from '@vue/shared'
 import { currentInstance, getCurrentGenericInstance } from './component'
 import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
+import { isHmrUpdating } from './hmr'
 
 interface InjectionConstraint<T> {}
 
@@ -12,7 +13,7 @@ export function provide<T, K = InjectionKey<T> | string | number>(
   value: K extends InjectionKey<infer V> ? V : T,
 ): void {
   if (__DEV__) {
-    if (!currentInstance || currentInstance.isMounted) {
+    if (!currentInstance || (currentInstance.isMounted && !isHmrUpdating)) {
       warn(`provide() can only be used inside setup().`)
     }
   }

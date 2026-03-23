@@ -1,17 +1,37 @@
-import { currentInstance, resolveDynamicComponent } from '@vue/runtime-dom'
-import { insert } from './block'
-import { createComponentWithFallback, emptyContext } from './component'
+import {
+  type ComponentInternalInstance,
+  Fragment,
+  type VNode,
+  currentInstance,
+  isKeepAlive,
+  isVNode,
+  resolveDynamicComponent,
+  setCurrentRenderingInstance,
+} from '@vue/runtime-dom'
+import { ShapeFlags } from '@vue/shared'
+import { insert, isBlock } from './block'
+import {
+  type VaporComponentInstance,
+  createComponentWithFallback,
+  emptyContext,
+} from './component'
 import { renderEffect } from './renderEffect'
 import type { RawProps } from './componentProps'
-import type { RawSlots } from './componentSlots'
+import { type RawSlots, getScopeOwner } from './componentSlots'
 import {
   insertionAnchor,
   insertionParent,
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-import { advanceHydrationNode, isHydrating } from './dom/hydration'
+import {
+  advanceHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
+import type { KeepAliveInstance } from './components/KeepAlive'
+import { isInteropEnabled } from './vdomInteropState'
 
 export function createDynamicComponent(
   getter: () => any,
@@ -30,22 +50,44 @@ export function createDynamicComponent(
       ? new DynamicFragment('dynamic-component')
       : new DynamicFragment()
 
+  const scopeOwner = getScopeOwner()
   const renderFn = () => {
     const value = getter()
     const appContext =
       (currentInstance && currentInstance.appContext) || emptyContext
-    frag.update(
-      () =>
-        createComponentWithFallback(
-          resolveDynamicComponent(value) as any,
-          rawProps,
-          rawSlots,
-          isSingleRoot,
-          once,
-          appContext,
-        ),
-      value,
-    )
+    frag.update(() => {
+      // Support integration with VaporRouterView/VaporRouterLink by accepting blocks
+      if (isBlock(value)) return value
+
+      // Handles VNodes passed from VDOM components (e.g., `h(VaporComp)` from slots)
+      if (isInteropEnabled && appContext.vapor && isVNode(value)) {
+        if (isKeepAlive(currentInstance)) {
+          const frag = (
+            currentInstance as KeepAliveInstance
+          ).ctx.getCachedComponent(value.type, value.key) as VaporFragment
+          if (frag) return frag
+        }
+
+        const frag = appContext.vapor.vdomMountVNode(value, currentInstance)
+        if (isHydrating) {
+          locateHydrationNode(shouldConsumeFragmentStart(value))
+          frag.hydrate()
+          if (_isLastInsertion) {
+            advanceHydrationNode(_insertionParent!)
+          }
+        }
+        return frag
+      }
+
+      return createComponentWithFallback(
+        withScopeOwner(scopeOwner, () => resolveDynamicComponent(value)),
+        rawProps,
+        rawSlots,
+        isSingleRoot,
+        once,
+        appContext,
+      )
+    }, value)
   }
 
   if (once) renderFn()
@@ -59,4 +101,30 @@ export function createDynamicComponent(
     }
   }
   return frag
+}
+
+function withScopeOwner(owner: VaporComponentInstance | null, fn: () => any) {
+  const prev = setCurrentRenderingInstance(
+    owner as ComponentInternalInstance | null,
+  )
+  try {
+    return fn()
+  } finally {
+    setCurrentRenderingInstance(prev)
+  }
+}
+
+function shouldConsumeFragmentStart(vnode: VNode): boolean {
+  if (vnode.type === Fragment) {
+    return false
+  }
+
+  // Only Vapor component VNodes carry `__multiRoot`
+  // e.g. `h(VaporComp)`
+  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    const type = vnode.type as { __vapor?: boolean; __multiRoot?: boolean }
+    return !!type.__vapor && !type.__multiRoot
+  }
+
+  return true
 }

@@ -1,5 +1,5 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, insert, setScopeId } from './block'
+import { type Block, type BlockFn, insert } from './block'
 import { rawPropsProxyHandlers, resolveFunctionSource } from './componentProps'
 import {
   type GenericComponentInstance,
@@ -20,9 +20,15 @@ import {
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
-import { DynamicFragment, type VaporFragment } from './fragment'
+import {
+  type DynamicFragment,
+  SlotFragment,
+  type VaporFragment,
+} from './fragment'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
+import { isInteropEnabled } from './vdomInteropState'
+import { setScopeId } from './scopeId'
 
 /**
  * Flag to indicate if we are executing a once slot.
@@ -75,10 +81,12 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
       for (const source of dynamicSources) {
         if (isFunction(source)) {
           const slot = resolveFunctionSource(source)
-          if (isArray(slot)) {
-            for (const s of slot) keys.push(String(s.name))
-          } else {
-            keys.push(String(slot.name))
+          if (slot) {
+            if (isArray(slot)) {
+              for (const s of slot) keys.push(String(s.name))
+            } else {
+              keys.push(String(slot.name))
+            }
           }
         } else {
           keys.push(...Object.keys(source))
@@ -94,7 +102,9 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
 export function getSlot(
   target: RawSlots,
   key: string,
-): (VaporSlot & { _bound?: VaporSlot }) | undefined {
+):
+  | (VaporSlot & { _boundMap?: WeakMap<DynamicFragment, VaporSlot> })
+  | undefined {
   if (key === '$') return
   const dynamicSources = target.$
   if (dynamicSources) {
@@ -153,11 +163,11 @@ export function getScopeOwner(): VaporComponentInstance | null {
  * Wrap a slot function to track the slot owner.
  *
  * This ensures:
- * 1. createSlot gets rawSlots from the correct component (slot owner)
- * 2. Elements inherit the slot owner's scopeId
+ * 1. createSlot gets rawSlots from the correct instance (slot owner)
+ * 2. elements inherit the slot owner's scopeId
  */
 export function withVaporCtx(fn: Function): BlockFn {
-  const owner = currentInstance as VaporComponentInstance
+  const owner = getScopeOwner()
   return (...args: any[]) => {
     const prevOwner = setCurrentSlotOwner(owner)
     try {
@@ -186,8 +196,8 @@ export function createSlot(
     ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
 
-  let fragment: DynamicFragment
-  if (isRef(rawSlots._)) {
+  let fragment: SlotFragment
+  if (isRef(rawSlots._) && isInteropEnabled) {
     if (isHydrating) locateHydrationNode()
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
@@ -197,10 +207,10 @@ export function createSlot(
       fallback,
     )
   } else {
-    fragment =
-      isHydrating || __DEV__
-        ? new DynamicFragment('slot')
-        : new DynamicFragment()
+    fragment = new SlotFragment()
+    // mark the slot as forwarded
+    fragment.forwarded =
+      currentSlotOwner != null && currentSlotOwner !== currentInstance
     const isDynamicName = isFunction(name)
 
     // Calculate slotScopeIds once (for vdom interop)
@@ -238,27 +248,31 @@ export function createSlot(
 
       const slot = getSlot(rawSlots, slotName)
       if (slot) {
-        fragment.fallback = fallback
-        // Create and cache bound version of the slot to make it stable
-        // so that we avoid unnecessary updates if it resolves to the same slot
-        fragment.update(
-          slot._bound ||
-            (slot._bound = () => {
-              const prevSlotScopeIds = setCurrentSlotScopeIds(
-                slotScopeIds.length > 0 ? slotScopeIds : null,
-              )
-              const prev = inOnceSlot
-              try {
-                if (once) inOnceSlot = true
-                return slot(slotProps)
-              } finally {
-                inOnceSlot = prev
-                setCurrentSlotScopeIds(prevSlotScopeIds)
-              }
-            }),
-        )
+        // Create and cache bound slot to keep it stable and avoid unnecessary
+        // updates when it resolves to the same slot. Cache per-fragment
+        // (v-for creates multiple fragments) so each fragment keeps its own
+        // slotProps without cross-talk.
+        const boundMap = slot._boundMap || (slot._boundMap = new WeakMap())
+        let bound = boundMap.get(fragment)
+        if (!bound) {
+          bound = () => {
+            const prevSlotScopeIds = setCurrentSlotScopeIds(
+              slotScopeIds.length > 0 ? slotScopeIds : null,
+            )
+            const prev = inOnceSlot
+            try {
+              if (once) inOnceSlot = true
+              return slot(slotProps)
+            } finally {
+              inOnceSlot = prev
+              setCurrentSlotScopeIds(prevSlotScopeIds)
+            }
+          }
+          boundMap.set(fragment, bound)
+        }
+        fragment.updateSlot(bound, fallback)
       } else {
-        fragment.update(fallback)
+        fragment.updateSlot(undefined, fallback)
       }
     }
 

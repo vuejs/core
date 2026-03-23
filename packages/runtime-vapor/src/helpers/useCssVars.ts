@@ -7,6 +7,7 @@ import {
 import { type VaporComponentInstance, isVaporComponent } from '../component'
 import { isArray } from '@vue/shared'
 import type { Block } from '../block'
+import { isTeleportFragment } from '../components/Teleport'
 
 export function useVaporCssVars(getter: () => Record<string, string>): void {
   if (!__BROWSER__ && !__TEST__) return
@@ -23,11 +24,12 @@ function resolveParentNode(block: Block): Node {
   if (block instanceof Node) {
     return block.parentNode!
   } else if (isArray(block)) {
-    return resolveParentNode(block[0])
+    // Use the last element, so ForFragment will use the anchor
+    return resolveParentNode(block[block.length - 1])
   } else if (isVaporComponent(block)) {
     return resolveParentNode(block.block!)
   } else {
-    return resolveParentNode(block.nodes)
+    return resolveParentNode(block.anchor || block.nodes)
   }
 }
 
@@ -49,6 +51,10 @@ function setVarsOnBlock(block: Block, vars: Record<string, string>): void {
     block.forEach(child => setVarsOnBlock(child, vars))
   } else if (isVaporComponent(block)) {
     setVarsOnBlock(block.block!, vars)
+  } else if (isTeleportFragment(block)) {
+    // Teleport children are handled via data-v-owner + ut() to preserve
+    // lexical owner semantics for slot content.
+    return
   } else {
     setVarsOnBlock(block.nodes, vars)
   }

@@ -1,292 +1,8 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`cache multiple access > TSNonNullExpression 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = t0()
-  _renderEffect(() => {
-    const _obj = _ctx.obj
-    _setProp(n0, "id", _obj!.foo + _obj!.bar)
-  })
-  return n0
-}"
-`;
-
-exports[`cache multiple access > cache variable used in both property shorthand and normal binding 1`] = `
-"import { setStyle as _setStyle, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = t0()
-  _renderEffect(() => {
-    const _color = _ctx.color
-    _setStyle(n0, {color: _color})
-    _setProp(n0, "id", _color)
-  })
-  return n0
-}"
-`;
-
-exports[`cache multiple access > dynamic key bindings with expressions 1`] = `
-"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = t0()
-  _renderEffect(() => {
-    const _key = _ctx.key
-    _setDynamicProps(n0, [{ [_key+1]: _ctx.foo[_key+1]() }])
-  })
-  return n0
-}"
-`;
-
-exports[`cache multiple access > dynamic property access 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = t0()
-  _renderEffect(() => {
-    const _obj = _ctx.obj
-    _setProp(n0, "id", _obj[1][_ctx.baz] + _obj.bar)
-  })
-  return n0
-}"
-`;
-
-exports[`cache multiple access > dynamic property access with parentheses 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = t0()
-  _renderEffect(() => {
-    const _foo_bar = _ctx.foo[_ctx.bar]
-    _setProp(n0, "x", (_foo_bar).x)
-    _setProp(n0, "bar", (_foo_bar))
-  })
-  return n0
-}"
-`;
-
-exports[`cache multiple access > function calls with arguments 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-
-export function render(_ctx) {
-  const n0 = t0()
-  const n1 = t0()
-  const n2 = t0()
-  _renderEffect(() => {
-    const _foo = _ctx.foo
-    const _bar = _ctx.bar
-    const _foo_bar_baz = _foo[_bar(_ctx.baz)]
-    _setProp(n0, "id", _foo_bar_baz)
-    _setProp(n1, "id", _foo_bar_baz)
-    _setProp(n2, "id", _bar() + _foo)
-  })
-  return [n0, n1, n2]
-}"
-`;
-
-exports[`cache multiple access > not cache variable and member expression with the same name 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = t0()
-  _renderEffect(() => _setProp(n0, "id", _ctx.bar + _ctx.obj.bar))
-  return n0
-}"
-`;
-
-exports[`cache multiple access > not cache variable in function expression 1`] = `
-"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ foo: bar => _ctx.foo = bar }]))
-  return n0
-}"
-`;
-
-exports[`cache multiple access > not cache variable only used in property shorthand 1`] = `
-"import { setStyle as _setStyle, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = t0()
-  _renderEffect(() => _setStyle(n0, {color: _ctx.color}))
-  return n0
-}"
-`;
-
-exports[`cache multiple access > object property chain access 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-
-export function render(_ctx) {
-  const n0 = t0()
-  const n1 = t0()
-  _renderEffect(() => {
-    const _obj = _ctx.obj
-    const _obj_foo_baz_obj_bar = _obj['foo']['baz'] + _obj.bar
-    _setProp(n0, "id", _obj_foo_baz_obj_bar)
-    _setProp(n1, "id", _obj_foo_baz_obj_bar)
-  })
-  return [n0, n1]
-}"
-`;
-
-exports[`cache multiple access > object property name substring cases 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = t0()
-  _renderEffect(() => {
-    const _p = _ctx.p
-    const _p_title = _p.title
-    _setProp(n0, "id", _p_title + _p.titles + _p_title)
-  })
-  return n0
-}"
-`;
-
-exports[`cache multiple access > optional chaining 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = t0()
-  _renderEffect(() => {
-    const _obj = _ctx.obj
-    _setProp(n0, "id", _obj?.foo + _obj?.bar)
-  })
-  return n0
-}"
-`;
-
-exports[`cache multiple access > repeated expression in expressions 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-
-export function render(_ctx) {
-  const n0 = t0()
-  const n1 = t0()
-  const n2 = t0()
-  _renderEffect(() => {
-    const _foo = _ctx.foo
-    const _foo_bar = _foo + _ctx.bar
-    _setProp(n0, "id", _foo_bar)
-    _setProp(n1, "id", _foo_bar)
-    _setProp(n2, "id", _foo + _foo_bar)
-  })
-  return [n0, n1, n2]
-}"
-`;
-
-exports[`cache multiple access > repeated expressions 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-
-export function render(_ctx) {
-  const n0 = t0()
-  const n1 = t0()
-  _renderEffect(() => {
-    const _foo_bar = _ctx.foo + _ctx.bar
-    _setProp(n0, "id", _foo_bar)
-    _setProp(n1, "id", _foo_bar)
-  })
-  return [n0, n1]
-}"
-`;
-
-exports[`cache multiple access > repeated variable in expressions 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-
-export function render(_ctx) {
-  const n0 = t0()
-  const n1 = t0()
-  _renderEffect(() => {
-    const _foo = _ctx.foo
-    _setProp(n0, "id", _foo + _foo + _ctx.bar)
-    _setProp(n1, "id", _foo)
-  })
-  return [n0, n1]
-}"
-`;
-
-exports[`cache multiple access > repeated variables 1`] = `
-"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-
-export function render(_ctx) {
-  const n0 = t0()
-  const n1 = t0()
-  _renderEffect(() => {
-    const _foo = _ctx.foo
-    _setClass(n0, _foo)
-    _setClass(n1, _foo)
-  })
-  return [n0, n1]
-}"
-`;
-
-exports[`cache multiple access > shared member root 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-
-export function render(_ctx) {
-  const n0 = t0()
-  const n1 = t0()
-  _renderEffect(() => {
-    const _foo = _ctx.foo
-    _setProp(n0, "id", _foo.bar)
-    _setProp(n1, "id", _foo.baz)
-  })
-  return [n0, n1]
-}"
-`;
-
-exports[`cache multiple access > shared member root with TSNonNullExpression 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
-
-export function render(_ctx) {
-  const n0 = t0()
-  const n1 = t0()
-  _renderEffect(() => {
-    const _foo = _ctx.foo
-    _setProp(n0, "id", _foo!.bar)
-    _setProp(n1, "id", _foo!.baz)
-  })
-  return [n0, n1]
-}"
-`;
-
-exports[`cache multiple access > variable name substring edge cases 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
-
-export function render(_ctx) {
-  const n0 = t0()
-  _renderEffect(() => {
-    const _title = _ctx.title
-    _setProp(n0, "id", _title + _ctx.titles + _title)
-  })
-  return n0
-}"
-`;
-
 exports[`compiler v-bind > .attr modifier 1`] = `
 "import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -297,7 +13,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .attr modifier w/ innerHTML 1`] = `
 "import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -308,7 +24,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .attr modifier w/ no expression 1`] = `
 "import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -319,7 +35,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .attr modifier w/ progress value 1`] = `
 "import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<progress></progress>", true)
+const t0 = _template("<progress>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -330,7 +46,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .attr modifier w/ textContent 1`] = `
 "import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -341,7 +57,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .attr modifier w/ value 1`] = `
 "import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -352,7 +68,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .camel modifier 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -363,7 +79,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .camel modifier w/ dynamic arg + prefixIdentifiers 1`] = `
 "import { camelize as _camelize, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -374,7 +90,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .camel modifier w/ dynamic arg 1`] = `
 "import { camelize as _camelize, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -385,7 +101,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .camel modifier w/ no expression 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -396,7 +112,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier (shorthand) 1`] = `
 "import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -407,7 +123,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ innerHTML 1`] = `
 "import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -418,7 +134,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ no expression 1`] = `
 "import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -429,7 +145,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ progress value 1`] = `
 "import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<progress></progress>", true)
+const t0 = _template("<progress>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -440,7 +156,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ textContent 1`] = `
 "import { setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -451,7 +167,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ value 1`] = `
 "import { setValue as _setValue, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -462,7 +178,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier 1`] = `
 "import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -473,7 +189,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier w/ dynamic arg + prefixIdentifiers 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -484,7 +200,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier w/ dynamic arg 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -495,7 +211,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier w/ innerHTML 1`] = `
 "import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -506,7 +222,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier w/ no expression 1`] = `
 "import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -517,7 +233,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier w/ progress value 1`] = `
 "import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<progress></progress>", true)
+const t0 = _template("<progress>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -528,7 +244,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier w/ textContent 1`] = `
 "import { setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -539,7 +255,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .prop modifier w/ value 1`] = `
 "import { setValue as _setValue, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -549,19 +265,19 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > :class w/ svg elements 1`] = `
-"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<svg></svg>", true, 1)
+"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<svg>", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setAttr(n0, "class", _ctx.cls, true))
+  _renderEffect(() => _setClass(n0, _ctx.cls, true))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :innerHTML 1`] = `
 "import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -570,9 +286,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > :style w/ svg elements 1`] = `
+"import { setStyle as _setStyle, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<svg>", true, 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setStyle(n0, _ctx.style))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > :textContext 1`] = `
 "import { setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -594,7 +321,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > :value w/ progress 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<progress></progress>", true)
+const t0 = _template("<progress>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -605,12 +332,12 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > attributes must be set as attribute 1`] = `
 "import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>")
+const t0 = _template("<div>")
 const t1 = _template("<input>")
-const t2 = _template("<textarea></textarea>")
+const t2 = _template("<textarea>")
 const t3 = _template("<img>")
-const t4 = _template("<video></video>")
-const t5 = _template("<canvas></canvas>")
+const t4 = _template("<video>")
+const t5 = _template("<canvas>")
 const t6 = _template("<source>")
 
 export function render(_ctx) {
@@ -645,7 +372,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > basic 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -656,7 +383,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > dynamic arg 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -671,7 +398,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > dynamic arg w/ static attribute 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -685,7 +412,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > no expression (shorthand) 1`] = `
 "import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -696,7 +423,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > no expression 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -717,7 +444,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > should error if empty expression 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div arg></div>", true)
+const t0 = _template("<div arg>", true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -727,7 +454,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > v-bind w/ svg elements 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<svg></svg>", true, 1)
+const t0 = _template("<svg>", true, 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -738,7 +465,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > with constant value 1`] = `
 "import { setProp as _setProp, template as _template } from 'vue';
-const t0 = _template("<div e=\\"2\\" f=\\"foo1\\" g=\\"1\\" h=\\"1\\"></div>", true)
+const t0 = _template("<div e=2 f=foo1 g=1 h=1>", true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()

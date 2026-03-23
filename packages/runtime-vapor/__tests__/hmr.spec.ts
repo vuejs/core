@@ -1,11 +1,15 @@
 import {
   type HMRRuntime,
   computed,
+  createApp,
+  h,
+  inject,
   nextTick,
   onActivated,
   onDeactivated,
   onMounted,
   onUnmounted,
+  provide,
   ref,
   toDisplayString,
 } from '@vue/runtime-dom'
@@ -14,12 +18,14 @@ import {
   createComponent,
   createSlot,
   createTemplateRefSetter,
+  createVaporApp,
   defineVaporAsyncComponent,
   defineVaporComponent,
   delegateEvents,
   renderEffect,
   setText,
   template,
+  vaporInteropPlugin,
   withVaporCtx,
 } from '@vue/runtime-vapor'
 import { BindingTypes } from '@vue/compiler-core'
@@ -68,7 +74,6 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: parentId,
-      // @ts-expect-error ObjectVaporComponent doesn't have components
       components: { Child },
       setup() {
         const count = ref(0)
@@ -175,6 +180,39 @@ describe('hot module replacement', () => {
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 
+  test('reload root vapor component should preserve appContext provide/inject', async () => {
+    const root = document.createElement('div')
+    const appId = 'test-root-reload-app-context'
+
+    const Child = defineVaporComponent({
+      setup() {
+        const msg = inject('msg')
+        return { msg }
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
+    })
+
+    const App = defineVaporComponent({
+      __hmrId: appId,
+      render: () => createComponent(Child),
+    })
+    createRecord(appId, App as any)
+
+    const app = createVaporApp(App)
+    app.provide('msg', 'app-injected')
+    app.mount(root)
+    expect(root.innerHTML).toBe(`<div>app-injected</div>`)
+
+    reload(appId, {
+      __vapor: true,
+      __hmrId: appId,
+      render: () => createComponent(Child),
+    })
+
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>app-injected</div>`)
+  })
+
   test('reload KeepAlive slot', async () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
@@ -197,7 +235,6 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: 'parentId',
-      // @ts-expect-error
       components: { Child },
       setup() {
         const toggle = ref(true)
@@ -249,6 +286,101 @@ describe('hot module replacement', () => {
     expect(deactivatedSpy).toHaveBeenCalledTimes(1)
   })
 
+  test('reload deactivated KeepAlive child', async () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const childId = 'test-child-keep-alive-deactivated'
+    const oldUnmountSpy = vi.fn()
+    const oldActiveSpy = vi.fn()
+    const oldDeactivatedSpy = vi.fn()
+    const newUnmountSpy = vi.fn()
+    const newMountSpy = vi.fn()
+    const newActiveSpy = vi.fn()
+    const newDeactivatedSpy = vi.fn()
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      setup() {
+        onUnmounted(oldUnmountSpy)
+        onActivated(oldActiveSpy)
+        onDeactivated(oldDeactivatedSpy)
+        const count = ref(0)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      __hmrId: 'parentId-keep-alive-deactivated',
+      components: { Child },
+      setup() {
+        const toggle = ref(true)
+        return { toggle }
+      },
+      render: compileToFunction(
+        `<button @click="toggle = !toggle" />
+        <KeepAlive><Child v-if="toggle" /></KeepAlive>`,
+      ),
+    })
+
+    define(Parent).create().mount(root)
+    expect(root.innerHTML).toBe(`<button></button><div>0</div><!--if-->`)
+    expect(oldActiveSpy).toHaveBeenCalledTimes(1)
+    expect(oldDeactivatedSpy).toHaveBeenCalledTimes(0)
+    expect(oldUnmountSpy).toHaveBeenCalledTimes(0)
+
+    // deactivate and move child into KeepAlive cache
+    triggerEvent('click', root.children[0] as Element)
+    await nextTick()
+    expect(root.innerHTML).toBe(`<button></button><!--if-->`)
+    expect(oldDeactivatedSpy).toHaveBeenCalledTimes(1)
+    expect(oldUnmountSpy).toHaveBeenCalledTimes(0)
+
+    // reload while child is cached but inactive
+    reload(childId, {
+      __hmrId: childId,
+      __vapor: true,
+      setup() {
+        onMounted(newMountSpy)
+        onUnmounted(newUnmountSpy)
+        onActivated(newActiveSpy)
+        onDeactivated(newDeactivatedSpy)
+        const count = ref(1)
+        return { count }
+      },
+      render: compileToFunction(`<div>{{ count }}</div>`),
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe(`<button></button><!--if-->`)
+    // old cached instance should be unmounted during KeepAlive HMR rerender
+    expect(oldUnmountSpy).toHaveBeenCalledTimes(1)
+
+    // re-activate should render the new component instance
+    triggerEvent('click', root.children[0] as Element)
+    await nextTick()
+    expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
+    expect(newMountSpy).toHaveBeenCalledTimes(1)
+    expect(newActiveSpy).toHaveBeenCalledTimes(1)
+    expect(newDeactivatedSpy).toHaveBeenCalledTimes(0)
+
+    // subsequent toggles should use KeepAlive cache for the new instance
+    triggerEvent('click', root.children[0] as Element)
+    await nextTick()
+    expect(root.innerHTML).toBe(`<button></button><!--if-->`)
+    expect(newMountSpy).toHaveBeenCalledTimes(1)
+    expect(newActiveSpy).toHaveBeenCalledTimes(1)
+    expect(newDeactivatedSpy).toHaveBeenCalledTimes(1)
+
+    triggerEvent('click', root.children[0] as Element)
+    await nextTick()
+    expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
+    expect(newMountSpy).toHaveBeenCalledTimes(1)
+    expect(newActiveSpy).toHaveBeenCalledTimes(2)
+    expect(newDeactivatedSpy).toHaveBeenCalledTimes(1)
+    expect(newUnmountSpy).toHaveBeenCalledTimes(0)
+  })
+
   test('reload KeepAlive slot in Transition', async () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
@@ -271,15 +403,17 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: 'parentId',
-      // @ts-expect-error
       components: { Child },
       setup() {
         const toggle = ref(true)
-        return { toggle }
+        function onLeave(_: any, done: Function) {
+          setTimeout(done, 0)
+        }
+        return { toggle, onLeave }
       },
       render: compileToFunction(
         `<button @click="toggle = !toggle" />
-        <Transition>
+        <Transition @leave="onLeave">
           <KeepAlive><Child v-if="toggle" /></KeepAlive>
         </Transition>`,
       ),
@@ -302,6 +436,7 @@ describe('hot module replacement', () => {
       render: compileToFunction(`<div>{{ count }}</div>`),
     })
     await nextTick()
+    await new Promise(r => setTimeout(r, 0))
     expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
@@ -349,7 +484,6 @@ describe('hot module replacement', () => {
     createRecord(childId, Child as any)
 
     const Parent = defineVaporComponent({
-      // @ts-expect-error
       components: { Child },
       setup() {
         function onLeave(_: any, done: Function) {
@@ -531,7 +665,6 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: parentId,
-      // @ts-expect-error
       components: { Child },
       render: compileToFunction(`<Child msg="foo" />`),
     })
@@ -557,7 +690,6 @@ describe('hot module replacement', () => {
 
     const Parent = defineVaporComponent({
       __hmrId: parentId,
-      // @ts-expect-error
       components: { Child },
       render: compileToFunction(`<Child class="test" />`),
     })
@@ -594,13 +726,11 @@ describe('hot module replacement', () => {
       components.push(parentComp)
       if (i === 0) {
         parentComp.render = compileToFunction(`<Child />`)
-        // @ts-expect-error
         parentComp.components = {
           Child,
         }
       } else {
         parentComp.render = compileToFunction(`<Parent />`)
-        // @ts-expect-error
         parentComp.components = {
           Parent: components[i - 1],
         }
@@ -1010,7 +1140,6 @@ describe('hot module replacement', () => {
 
     const { mount, component: Parent } = define({
       __hmrId: parentId,
-      // @ts-expect-error
       components: { Child },
       setup() {
         const msg = ref('root')
@@ -1068,5 +1197,289 @@ describe('hot module replacement', () => {
     expect(root.innerHTML).toMatchInlineSnapshot(
       `"<div>child changed2</div><div>root changed</div>"`,
     )
+  })
+
+  test('child reload in dynamic branch should not break subsequent parent reload', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-dynamic-child-reload'
+    const parentId = 'test-dynamic-parent-reload'
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      setup() {
+        const msg = ref('child')
+        return { msg }
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const { mount, component: Parent } = define({
+      __hmrId: parentId,
+      components: { Child },
+      setup() {
+        const ok = ref(true)
+        return { ok }
+      },
+      render: compileToFunction(`<Child v-if="ok" />`),
+    }).create()
+    createRecord(parentId, Parent as any)
+
+    mount(root)
+    expect(root.innerHTML).toBe(`<div>child</div><!--if-->`)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      setup() {
+        const msg = ref('child changed')
+        return { msg }
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
+    })
+    expect(root.innerHTML).toBe(`<div>child changed</div><!--if-->`)
+
+    reload(parentId, {
+      __vapor: true,
+      __hmrId: parentId,
+      components: { Child },
+      setup() {
+        const ok = ref(true)
+        return { ok }
+      },
+      render: compileToFunction(`<Child v-if="ok" />`),
+    })
+
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>child changed</div><!--if-->`)
+  })
+
+  test('child reload with multiple instances in dynamic branch should keep parent reload stable', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-dynamic-multi-child-reload'
+    const parentId = 'test-dynamic-multi-parent-reload'
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      setup() {
+        const msg = ref('child')
+        return { msg }
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const { mount, component: Parent } = define({
+      __hmrId: parentId,
+      components: { Child },
+      setup() {
+        const ok = ref(true)
+        return { ok }
+      },
+      render: compileToFunction(
+        `<template v-if="ok"><Child/><Child/></template>`,
+      ),
+    }).create()
+    createRecord(parentId, Parent as any)
+
+    mount(root)
+    expect(root.textContent).toBe(`childchild`)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      setup() {
+        const msg = ref('child changed')
+        return { msg }
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
+    })
+    expect(root.textContent).toBe(`child changedchild changed`)
+
+    reload(parentId, {
+      __vapor: true,
+      __hmrId: parentId,
+      components: { Child },
+      setup() {
+        const ok = ref(true)
+        return { ok }
+      },
+      render: compileToFunction(
+        `<template v-if="ok"><Child/><Child/></template>`,
+      ),
+    })
+
+    await nextTick()
+    expect(root.textContent).toBe(`child changedchild changed`)
+  })
+
+  test('child reload in teleport dynamic branch should not break subsequent parent reload', async () => {
+    const root = document.createElement('div')
+    const target = document.createElement('div')
+    document.body.appendChild(root)
+    document.body.appendChild(target)
+    const childId = 'test-teleport-dynamic-child-reload'
+    const parentId = 'test-teleport-dynamic-parent-reload'
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      setup() {
+        const msg = ref('child')
+        return { msg }
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const { mount, component: Parent } = define({
+      __hmrId: parentId,
+      components: { Child },
+      setup() {
+        const ok = ref(true)
+        return { ok, target }
+      },
+      render: compileToFunction(
+        `<teleport :to="target"><template v-if="ok"><Child/><span>sibling</span></template></teleport>`,
+      ),
+    }).create()
+    createRecord(parentId, Parent as any)
+
+    mount(root)
+    expect(target.textContent).toBe(`childsibling`)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      setup() {
+        const msg = ref('child changed')
+        return { msg }
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`),
+    })
+    expect(target.textContent).toBe(`child changedsibling`)
+
+    reload(parentId, {
+      __vapor: true,
+      __hmrId: parentId,
+      components: { Child },
+      setup() {
+        const ok = ref(true)
+        return { ok, target }
+      },
+      render: compileToFunction(
+        `<teleport :to="target"><template v-if="ok"><Child/><span>sibling</span></template></teleport>`,
+      ),
+    })
+
+    await nextTick()
+    expect(target.textContent).toBe(`child changedsibling`)
+  })
+
+  // Vapor router-view has no render function (setup-only).
+  // When HMR rerender is triggered, the setup function is re-executed.
+  // Ensure provide() warning is suppressed.
+  test('rerender setup-only component', async () => {
+    const childId = 'test-child-reload-01'
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<div>foo</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    // without a render function
+    const Parent = defineVaporComponent({
+      setup() {
+        provide('foo', 'bar')
+        return createComponent(Child)
+      },
+    })
+
+    const { html } = define({
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    expect(html()).toBe('<div>foo</div>')
+
+    // will trigger parent rerender
+    reload(childId, {
+      __hmrId: childId,
+      render: compileToFunction(`<div>bar</div>`),
+    })
+
+    await nextTick()
+    expect(html()).toBe('<div>bar</div>')
+    expect('provide() can only be used inside setup()').not.toHaveBeenWarned()
+  })
+
+  describe('switch vapor/vdom modes', () => {
+    test('vapor -> vdom', async () => {
+      const id = 'vapor-to-vdom'
+      const Comp = {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>foo</div>')()
+        },
+      }
+      createRecord(id, Comp)
+
+      const App = {
+        render() {
+          return h(Comp as any)
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      expect(root.innerHTML).toBe('<div>foo</div>')
+
+      // switch to vdom
+      reload(id, {
+        __hmrId: id,
+        render() {
+          return h('div', 'bar')
+        },
+      })
+
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>bar</div>')
+    })
+
+    test('vdom -> vapor', async () => {
+      const id = 'vdom-to-vapor'
+      const Comp = {
+        __hmrId: id,
+        render() {
+          return h('div', 'foo')
+        },
+      }
+      createRecord(id, Comp)
+
+      const App = {
+        render() {
+          return h(Comp)
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      expect(root.innerHTML).toBe('<div>foo</div>')
+
+      // switch to vapor
+      reload(id, {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>bar</div>')()
+        },
+      })
+
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>bar</div>')
+    })
   })
 })

@@ -133,6 +133,7 @@ export {
 export { withDirectives } from './directives'
 // SSR context
 export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
+export { MoveType } from './renderer'
 
 // Custom Renderer API ---------------------------------------------------------
 
@@ -153,6 +154,7 @@ export {
   resolveComponent,
   resolveDirective,
   resolveDynamicComponent,
+  NULL_DYNAMIC_COMPONENT,
 } from './helpers/resolveAssets'
 // For integration with runtime compiler
 export { registerRuntimeCompiler, isRuntimeOnly } from './component'
@@ -269,7 +271,9 @@ export type {
   ConcreteComponent,
   FunctionalComponent,
   ComponentInternalInstance,
+  Attrs,
   SetupContext,
+  AllowedAttrs,
   ComponentCustomProps,
   AllowedComponentProps,
   GlobalComponents,
@@ -305,6 +309,7 @@ export type {
   EmitsToProps,
   ShortEmitsToObject,
   EmitFn,
+  TypeEmitsToOptions,
 } from './componentEmits'
 export type {
   ComponentPublicInstance,
@@ -397,6 +402,7 @@ export {
   normalizeClass,
   normalizeStyle,
 } from '@vue/shared'
+export { setIsHydratingEnabled } from './hydration'
 
 // For test-utils
 export { transformVNodeArgs } from './vnode'
@@ -518,11 +524,7 @@ export { type VaporInteropInterface } from './apiCreateApp'
 /**
  * @internal
  */
-export {
-  type RendererInternals,
-  MoveType,
-  getInheritedScopeIds,
-} from './renderer'
+export { type RendererInternals, getInheritedScopeIds } from './renderer'
 /**
  * @internal
  */
@@ -538,7 +540,7 @@ export { baseEmit, isEmitListener } from './componentEmits'
 /**
  * @internal
  */
-export { queueJob, flushOnAppMount } from './scheduler'
+export { queueJob, flushOnAppMount, SchedulerJobFlags } from './scheduler'
 /**
  * @internal
  */
@@ -633,7 +635,11 @@ export { devtoolsComponentAdded } from './devtools'
 /**
  * @internal
  */
-export { performTransitionEnter, performTransitionLeave } from './renderer'
+export {
+  performTransitionEnter,
+  performTransitionLeave,
+  invalidateMount,
+} from './renderer'
 /**
  * @internal
  */
@@ -651,6 +657,7 @@ export {
   isMapEqual,
   isValidHtmlOrSvgAttribute,
   getAttributeMismatch,
+  isHydrating,
 } from './hydration'
 /**
  * @internal
@@ -681,4 +688,18 @@ export type { GenericComponent } from './component'
 export {
   warnExtraneousAttributes,
   getFunctionalFallthrough,
+  shouldUpdateComponent,
 } from './componentRenderUtils'
+
+/**
+ * @internal
+ */
+export { knownTemplateRefs, isTemplateRefKey } from './helpers/useTemplateRef'
+/**
+ * @internal
+ */
+export { setCurrentRenderingInstance } from './componentRenderContext'
+/**
+ * @internal
+ */
+export { invokeDirectiveHook } from './directives'

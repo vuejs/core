@@ -4,10 +4,12 @@ import {
   type Ref,
   inject,
   nextTick,
+  onBeforeMount,
   onMounted,
   onUpdated,
   provide,
   ref,
+  toDisplayString,
   useAttrs,
   watch,
   watchEffect,
@@ -20,6 +22,7 @@ import {
   renderEffect,
   setInsertionState,
   template,
+  txt,
 } from '../src'
 import { makeRender } from './_utils'
 import type { VaporComponentInstance } from '../src/component'
@@ -158,6 +161,35 @@ describe('component', () => {
     outer.value++
     await nextTick()
     expect(host.innerHTML).toBe('<div>1</div><div>1</div>')
+  })
+
+  it('events in dynamic props', async () => {
+    const { component: Child } = define({
+      props: ['count'],
+      setup(props: any, { emit }) {
+        emit('update', props.count + 1)
+        const n0 = template('<div></div>')()
+        renderEffect(() => setElementText(n0, props.count))
+        return n0
+      },
+    })
+
+    const count = ref(0)
+    const { host } = define({
+      setup() {
+        const n0 = createComponent(Child, {
+          $: [
+            () => ({
+              count: count.value,
+            }),
+            { onUpdate: () => (val: number) => (count.value = val) },
+          ],
+        })
+        return n0
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>1</div>')
   })
 
   it('child only updates once when triggered in multiple ways', async () => {
@@ -324,7 +356,7 @@ describe('component', () => {
       },
       setup(props) {
         const n0 = template(' ')() as any
-        renderEffect(() => setText(n0, props.count))
+        renderEffect(() => setText(n0, String(props.count)))
         return n0
       },
     })
@@ -377,6 +409,83 @@ describe('component', () => {
     expect(html()).toBe('0')
   })
 
+  it('v-once props should be frozen and not update when parent changes', async () => {
+    const localCount = ref(0)
+    const Child = defineVaporComponent({
+      props: {
+        count: Number,
+      },
+      setup(props) {
+        const n0 = template('<div></div>')() as any
+        renderEffect(() =>
+          setElementText(n0, `${localCount.value} - ${props.count}`),
+        )
+        return n0
+      },
+    })
+
+    const parentCount = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => parentCount.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    parentCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    localCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>1 - 0</div>')
+  })
+
+  it('v-once attrs should be frozen and not update when parent changes', async () => {
+    const localCount = ref(0)
+    const Child = defineVaporComponent({
+      inheritAttrs: false,
+      setup() {
+        const attrs = useAttrs()
+        const n0 = template('<div></div>')() as any
+        renderEffect(() =>
+          setElementText(n0, `${localCount.value} - ${attrs.count}`),
+        )
+        return n0
+      },
+    })
+
+    const parentCount = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => parentCount.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    parentCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    localCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>1 - 0</div>')
+  })
+
   test('should mount component only with template in production mode', () => {
     __DEV__ = false
     const { component: Child } = define({
@@ -396,6 +505,7 @@ describe('component', () => {
   })
 
   it('warn if functional vapor component not return a block', () => {
+    // @ts-expect-error
     define(() => {
       return () => {}
     }).render()
@@ -431,6 +541,55 @@ describe('component', () => {
     expect(
       'Property "foo" was accessed during render but is not defined on instance.',
     ).toHaveBeenWarned()
+  })
+
+  test('display attrs', () => {
+    const App = defineVaporComponent({
+      props: {},
+      emits: [],
+      setup(props, { attrs }) {
+        const n0 = template('<div> ')() as any
+        const x0 = txt(n0) as any
+        renderEffect(() => setText(x0, toDisplayString(attrs)))
+        return n0
+      },
+    })
+    const { render } = define(App)
+    expect(render).not.toThrow(TypeError)
+    expect(
+      'Unhandled error during execution of setup function',
+    ).not.toHaveBeenWarned()
+  })
+
+  it('should invalidate pending mounted hooks when unmounted before flush', async () => {
+    const mountedSpy = vi.fn()
+    const show = ref(false)
+
+    const Child = defineVaporComponent({
+      setup() {
+        onBeforeMount(() => {
+          show.value = false
+        })
+        onMounted(mountedSpy)
+        return template('<div>child</div>')()
+      },
+    })
+
+    define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => createComponent(Child),
+        )
+      },
+    }).render()
+
+    expect(mountedSpy).toHaveBeenCalledTimes(0)
+
+    show.value = true
+    await nextTick()
+
+    expect(mountedSpy).toHaveBeenCalledTimes(0)
   })
 })
 

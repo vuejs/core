@@ -292,6 +292,80 @@ describe('renderer: teleport', () => {
       expect(serializeInner(targetB)).toBe(`<div>teleported</div>`)
     })
 
+    test('should clean up anchors when target becomes invalid', async () => {
+      const targetA = nodeOps.createElement('div')
+      const to = ref<any>(targetA)
+      const root = nodeOps.createElement('div')
+
+      render(
+        h(() => h(Teleport, { to: to.value }, h('div', 'teleported'))),
+        root,
+      )
+
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end-->`,
+      )
+      expect(serializeInner(targetA)).toBe(`<div>teleported</div>`)
+      expect(targetA.children.length).toBe(3)
+
+      to.value = null
+      await nextTick()
+      expect('Invalid Teleport target').toHaveBeenWarned()
+
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end-->`,
+      )
+      expect(serializeInner(targetA)).toBe(`<div>teleported</div>`)
+      expect(targetA.children.length).toBe(3)
+
+      render(null, root)
+      expect(serializeInner(targetA)).toBe(``)
+      expect(targetA.children.length).toBe(0)
+    })
+
+    test('move cached text nodes', async () => {
+      document.body.innerHTML = ''
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const to = ref('#teleport01')
+      const disabled = ref(true)
+
+      const App = defineComponent({
+        setup() {
+          return { to, disabled, deferMode }
+        },
+        template: `  
+          <div id="teleport01">
+            <Teleport :to="to" :defer="deferMode" :disabled="disabled">
+              static text
+            </Teleport>
+          </div>
+          <div id="teleport02"></div>
+        `,
+      })
+
+      domRender(h(App), root)
+      await nextTick()
+
+      const target1 = root.querySelector('#teleport01') as HTMLElement
+      const target2 = root.querySelector('#teleport02') as HTMLElement
+      expect(target1.innerHTML).toBe(
+        '<!--teleport start--> static text <!--teleport end-->',
+      )
+      expect(target2.innerHTML).toBe('')
+
+      to.value = '#teleport02'
+      disabled.value = false
+
+      await nextTick()
+      expect(target1.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
+      expect(target2.innerHTML).toContain('static text')
+
+      domRender(null, root)
+      root.remove()
+    })
+
     test('should update children', async () => {
       const target = nodeOps.createElement('div')
       const root = nodeOps.createElement('div')

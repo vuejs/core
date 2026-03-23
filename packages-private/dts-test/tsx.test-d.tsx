@@ -1,5 +1,12 @@
 // TSX w/ defineComponent is tested in defineComponent.test-d.tsx
-import { Fragment, KeepAlive, Suspense, Teleport, type VNode } from 'vue'
+import {
+  Fragment,
+  KeepAlive,
+  Suspense,
+  Teleport,
+  type VNode,
+  useAttrs,
+} from 'vue'
 import { expectType } from './utils'
 
 expectType<VNode>(<div />)
@@ -53,6 +60,14 @@ expectType<JSX.Element>(
     ]}
   />,
 )
+
+// allow class/style passthrough from attrs
+const attrs = useAttrs()
+expectType<JSX.Element>(<div class={attrs.class} />)
+expectType<JSX.Element>(<div style={attrs.style} />)
+
+// @ts-expect-error invalid class value
+;<div class={0} />
 
 // #7955
 expectType<JSX.Element>(<div style={[undefined, '', null, false]} />)

@@ -138,10 +138,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
                 instance,
               ),
             )
-            positionMap.set(child, {
-              left: (child.el as HTMLElement).offsetLeft,
-              top: (child.el as HTMLElement).offsetTop,
-            })
+            positionMap.set(child, getPosition(child.el as HTMLElement))
           }
         }
       }
@@ -181,10 +178,7 @@ export function callPendingCbs(el: any): void {
 }
 
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, {
-    left: (c.el as HTMLElement).offsetLeft,
-    top: (c.el as HTMLElement).offsetTop,
-  })
+  newPositionMap.set(c, getPosition(c.el as HTMLElement))
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
@@ -208,12 +202,32 @@ export function baseApplyTranslation(
   const dx = oldPos.left - newPos.left
   const dy = oldPos.top - newPos.top
   if (dx || dy) {
-    const s = (el as HTMLElement).style
-    s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
+    const s = el.style
+    const rect = el.getBoundingClientRect()
+    let scaleX = 1
+    let scaleY = 1
+    if (el.offsetWidth) scaleX = rect.width / el.offsetWidth
+    if (el.offsetHeight) scaleY = rect.height / el.offsetHeight
+    if (!Number.isFinite(scaleX) || scaleX === 0) scaleX = 1
+    if (!Number.isFinite(scaleY) || scaleY === 0) scaleY = 1
+    // Avoid division noise when scale is effectively 1.
+    if (Math.abs(scaleX - 1) < 0.01) scaleX = 1
+    if (Math.abs(scaleY - 1) < 0.01) scaleY = 1
+    s.transform = s.webkitTransform = `translate(${dx / scaleX}px,${
+      dy / scaleY
+    }px)`
     s.transitionDuration = '0s'
     return true
   }
   return false
+}
+
+function getPosition(el: HTMLElement): Position {
+  const rect = el.getBoundingClientRect()
+  return {
+    left: rect.left,
+    top: rect.top,
+  }
 }
 
 // shared between vdom and vapor

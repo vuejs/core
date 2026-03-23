@@ -7,10 +7,12 @@ import {
   type TransitionProps,
   TransitionPropsValidators,
   type TransitionState,
+  type VNode,
   baseResolveTransitionHooks,
   checkTransitionMode,
   currentInstance,
   getComponentName,
+  getTransitionRawChildren,
   isAsyncWrapper,
   isTemplateNode,
   leaveCbKey,
@@ -19,7 +21,13 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
-import type { Block, TransitionBlock, VaporTransitionHooks } from '../block'
+import type {
+  Block,
+  TransitionBlock,
+  TransitionOptions,
+  VaporTransitionHooks,
+} from '../block'
+import { registerTransitionHooks } from '../transition'
 import {
   type FunctionalVaporComponent,
   type VaporComponentInstance,
@@ -27,14 +35,61 @@ import {
 } from '../component'
 import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
-import { isFragment } from '../fragment'
+import {
+  type DynamicFragment,
+  ForFragment,
+  type VaporFragment,
+  isFragment,
+} from '../fragment'
 import {
   currentHydrationNode,
   isHydrating,
   setCurrentHydrationNode,
 } from '../dom/hydration'
+import { isInteropEnabled } from '../vdomInteropState'
 
 const displayName = 'VaporTransition'
+export type ResolvedTransitionBlock = (
+  | Element
+  | VaporFragment
+  | DynamicFragment
+) &
+  TransitionOptions
+
+let registered = false
+export const ensureTransitionHooksRegistered = (): void => {
+  if (!registered) {
+    registered = true
+    registerTransitionHooks(
+      applyTransitionHooksImpl,
+      applyTransitionLeaveHooksImpl,
+    )
+  }
+}
+
+const hydrateTransitionImpl = () => {
+  if (!currentHydrationNode || !isTemplateNode(currentHydrationNode)) return
+  // replace <template> node with inner child
+  const {
+    content: { firstChild },
+    parentNode,
+  } = currentHydrationNode
+  if (firstChild) {
+    parentNode!.replaceChild(firstChild, currentHydrationNode)
+    setCurrentHydrationNode(firstChild)
+
+    if (firstChild instanceof HTMLElement || firstChild instanceof SVGElement) {
+      const originalDisplay = firstChild.style.display
+      firstChild.style.display = 'none'
+
+      return (hooks: TransitionHooks) => {
+        hooks.beforeEnter(firstChild)
+        firstChild.style.display = originalDisplay
+        queuePostFlushCb(() => hooks.enter(firstChild))
+      }
+    }
+  }
+}
 
 const decorate = (t: typeof VaporTransition) => {
   t.displayName = displayName
@@ -43,103 +98,115 @@ const decorate = (t: typeof VaporTransition) => {
   return t
 }
 
-export const VaporTransition: FunctionalVaporComponent = /*@__PURE__*/ decorate(
-  (props, { slots }) => {
-    // wrapped <transition appear>
-    let resetDisplay: Function | undefined
-    if (
-      isHydrating &&
-      currentHydrationNode &&
-      isTemplateNode(currentHydrationNode)
-    ) {
-      // replace <template> node with inner child
-      const {
-        content: { firstChild },
-        parentNode,
-      } = currentHydrationNode
-      if (firstChild) {
-        if (
-          firstChild instanceof HTMLElement ||
-          firstChild instanceof SVGElement
-        ) {
-          const originalDisplay = firstChild.style.display
-          firstChild.style.display = 'none'
-          resetDisplay = () => (firstChild.style.display = originalDisplay)
-        }
+export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
+  /*@__PURE__*/ decorate((props, { slots, expose }) => {
+    // @ts-expect-error
+    expose()
 
-        parentNode!.replaceChild(firstChild, currentHydrationNode)
-        setCurrentHydrationNode(firstChild)
-      }
-    }
+    // Register transition hooks on first use
+    ensureTransitionHooksRegistered()
+
+    const performAppear = isHydrating ? hydrateTransitionImpl() : undefined
 
     const children = (slots.default && slots.default()) as any as Block
-    if (!children) return
+    if (!children) return []
 
     const instance = currentInstance! as VaporComponentInstance
     const { mode } = props
     checkTransitionMode(mode)
 
     let resolvedProps: BaseTransitionProps<Element>
-    let isMounted = false
-    renderEffect(() => {
-      resolvedProps = resolveTransitionProps(props)
-      if (isMounted) {
-        // only update props for Fragment transition, for later reusing
-        if (isFragment(children)) {
-          children.$transition!.props = resolvedProps
-        } else {
-          const child = findTransitionBlock(children)
-          if (child) {
-            // replace existing transition hooks
-            child.$transition!.props = resolvedProps
-            applyTransitionHooks(child, child.$transition!, true)
-          }
-        }
-      } else {
-        isMounted = true
-      }
-    })
+    renderEffect(() => (resolvedProps = resolveTransitionProps(props)))
 
-    const hooks = applyTransitionHooks(children, {
+    const hooks = applyTransitionHooksImpl(children, {
       state: useTransitionState(),
-      props: resolvedProps!,
+      // use proxy to keep props reference stable
+      props: new Proxy({} as BaseTransitionProps<Element>, {
+        get(_, key) {
+          return resolvedProps[key as keyof BaseTransitionProps<Element>]
+        },
+      }),
       instance: instance,
     } as VaporTransitionHooks)
 
-    if (resetDisplay && resolvedProps!.appear) {
-      const child = findTransitionBlock(children)!
-      hooks.beforeEnter(child)
-      resetDisplay()
-      queuePostFlushCb(() => hooks.enter(child))
+    if (resolvedProps!.appear && performAppear) {
+      performAppear(hooks)
     }
 
     return children
-  },
-)
+  })
+
+const transitionTypeMap = new WeakMap<ResolvedTransitionBlock, any>()
+
+function getTransitionType(block: ResolvedTransitionBlock): any {
+  const type = transitionTypeMap.get(block)
+  if (type !== undefined) return type
+  if (block instanceof Element) return block.localName
+  if (isFragment(block) && block.vnode) {
+    const children = getTransitionRawChildren([block.vnode])
+    if (children.length === 1) return children[0].type
+  }
+  return block
+}
+
+function getLeavingNodesForType(
+  state: TransitionState,
+  block: ResolvedTransitionBlock,
+): Record<string, ResolvedTransitionBlock> {
+  const { leavingNodes } = state
+  const type = getTransitionType(block)
+  let nodes = leavingNodes.get(type) as Record<string, ResolvedTransitionBlock>
+  if (!nodes) {
+    nodes = Object.create(null)
+    leavingNodes.set(type, nodes)
+  }
+  return nodes
+}
+
+function getLeaveElement(
+  block: ResolvedTransitionBlock,
+): TransitionElement | undefined {
+  if (block instanceof Element) {
+    return block as TransitionElement
+  }
+  if (isInteropEnabled && isFragment(block) && block.vnode) {
+    const el = getTransitionElementFromVNode(block.vnode)
+    if (el) return el as TransitionElement
+  }
+  if (
+    isFragment(block) &&
+    !isArray(block.nodes) &&
+    (block.nodes instanceof Element || isFragment(block.nodes))
+  ) {
+    return getLeaveElement(block.nodes)
+  }
+}
 
 const getTransitionHooksContext = (
-  key: string,
+  block: ResolvedTransitionBlock,
   props: TransitionProps,
   state: TransitionState,
   instance: GenericComponentInstance,
   postClone: ((hooks: TransitionHooks) => void) | undefined,
 ) => {
-  const { leavingNodes } = state
+  const key = String(block.$key)
+  const leavingNodes = getLeavingNodesForType(state, block)
   const context: TransitionHooksContext = {
-    setLeavingNodeCache: el => {
-      leavingNodes.set(key, el)
+    isLeaving: () => leavingNodes[key] === block,
+    setLeavingNodeCache: () => {
+      leavingNodes[key] = block
     },
-    unsetLeavingNodeCache: el => {
-      const leavingNode = leavingNodes.get(key)
-      if (leavingNode === el) {
-        leavingNodes.delete(key)
+    unsetLeavingNodeCache: () => {
+      if (leavingNodes[key] === block) {
+        delete leavingNodes[key]
       }
     },
     earlyRemove: () => {
-      const leavingNode = leavingNodes.get(key)
-      if (leavingNode && (leavingNode as TransitionElement)[leaveCbKey]) {
+      const leavingNode = leavingNodes[key]
+      const el = leavingNode && getLeaveElement(leavingNode)
+      if (el && el[leaveCbKey]) {
         // force early removal (not cancelled)
-        ;(leavingNode as TransitionElement)[leaveCbKey]!()
+        el[leaveCbKey]!()
       }
     },
     cloneHooks: block => {
@@ -158,14 +225,14 @@ const getTransitionHooksContext = (
 }
 
 export function resolveTransitionHooks(
-  block: TransitionBlock,
+  block: ResolvedTransitionBlock,
   props: TransitionProps,
   state: TransitionState,
   instance: GenericComponentInstance,
   postClone?: (hooks: TransitionHooks) => void,
 ): VaporTransitionHooks {
   const context = getTransitionHooksContext(
-    String(block.$key),
+    block,
     props,
     state,
     instance,
@@ -183,10 +250,9 @@ export function resolveTransitionHooks(
   return hooks
 }
 
-export function applyTransitionHooks(
+function applyTransitionHooksImpl(
   block: Block,
   hooks: VaporTransitionHooks,
-  isResolved: boolean = false,
 ): VaporTransitionHooks {
   // filter out comment nodes
   if (isArray(block)) {
@@ -198,13 +264,21 @@ export function applyTransitionHooks(
     }
   }
 
-  const isFrag = isFragment(block)
-  const child = isResolved
-    ? (block as TransitionBlock)
-    : findTransitionBlock(block, isFrag)
+  // delegate to TransitionGroup's apply logic for list children
+  if (hooks.applyGroup && block instanceof ForFragment) {
+    hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
+    return hooks
+  }
+
+  const fragments: VaporFragment[] = []
+  const child = resolveTransitionBlock(block, frag => fragments.push(frag))
   if (!child) {
-    // set transition hooks on fragment for reusing during it's updating
-    if (isFrag) setTransitionHooksOnFragment(block, hooks)
+    // set transition hooks on fragments for later use
+    fragments.forEach(f => (f.$transition = hooks))
+    // warn if no child and no fragments
+    if (__DEV__ && fragments.length === 0) {
+      warn('Transition component has no valid child element')
+    }
     return hooks
   }
 
@@ -218,17 +292,17 @@ export function applyTransitionHooks(
   )
   resolvedHooks.delayedLeave = delayedLeave
   child.$transition = resolvedHooks
-  if (isFrag) setTransitionHooksOnFragment(block, resolvedHooks)
+  fragments.forEach(f => (f.$transition = resolvedHooks))
 
   return resolvedHooks
 }
 
-export function applyTransitionLeaveHooks(
+function applyTransitionLeaveHooksImpl(
   block: Block,
   enterHooks: VaporTransitionHooks,
   afterLeaveCb: () => void,
 ): void {
-  const leavingBlock = findTransitionBlock(block)
+  const leavingBlock = resolveTransitionBlock(block)
   if (!leavingBlock) return undefined
 
   const { props, state, instance } = enterHooks
@@ -255,49 +329,81 @@ export function applyTransitionLeaveHooks(
       earlyRemove,
       delayedLeave,
     ) => {
-      state.leavingNodes.set(String(leavingBlock.$key), leavingBlock)
+      const leavingNodes = getLeavingNodesForType(state, leavingBlock)
+      const leavingKey = String(leavingBlock.$key)
+      leavingNodes[leavingKey] = leavingBlock
+      // Bind cleanup to this specific handoff so an older leave callback
+      // cannot clear a newer delayedLeave during rapid toggles.
+      const delayedLeaveCb = () => {
+        delayedLeave()
+        leavingBlock.$transition = undefined
+        if (enterHooks.delayedLeave === delayedLeaveCb) {
+          delete enterHooks.delayedLeave
+        }
+      }
       // early removal callback
       block[leaveCbKey] = () => {
         earlyRemove()
         block[leaveCbKey] = undefined
         leavingBlock.$transition = undefined
-        delete enterHooks.delayedLeave
+        // Same-key in-out switches early-remove the previous leaving block.
+        // Clear the cache entry so the next enter isn't skipped as "still leaving".
+        if (leavingNodes[leavingKey] === leavingBlock) {
+          delete leavingNodes[leavingKey]
+        }
+        if (enterHooks.delayedLeave === delayedLeaveCb) {
+          delete enterHooks.delayedLeave
+        }
       }
-      enterHooks.delayedLeave = () => {
-        delayedLeave()
-        leavingBlock.$transition = undefined
-        delete enterHooks.delayedLeave
-      }
+      enterHooks.delayedLeave = delayedLeaveCb
     }
   }
 }
 
-export function findTransitionBlock(
+export function resolveTransitionBlock(
   block: Block,
-  inFragment: boolean = false,
-): TransitionBlock | undefined {
-  let child: TransitionBlock | undefined
+  onFragment?: (frag: VaporFragment) => void,
+): ResolvedTransitionBlock | undefined {
+  let child: ResolvedTransitionBlock | undefined
   if (block instanceof Node) {
     // transition can only be applied on Element child
     if (block instanceof Element) child = block
   } else if (isVaporComponent(block)) {
-    // should save hooks on unresolved async wrapper, so that it can be applied after resolved
-    if (isAsyncWrapper(block) && !block.type.__asyncResolved) {
-      child = block
+    if (isAsyncWrapper(block)) {
+      // for unresolved async wrapper, set transition hooks on inner fragment
+      if (!block.type.__asyncResolved) {
+        onFragment && onFragment(block.block! as DynamicFragment)
+      } else {
+        child = resolveTransitionBlock(
+          (block.block! as DynamicFragment).nodes,
+          onFragment,
+        )
+        if (child) {
+          if (child.$key == null) {
+            child.$key = block.$key ?? block.uid
+          }
+          // align with normal component branches so leaving cache can
+          // distinguish different resolved async wrapper types.
+          transitionTypeMap.set(child, block.type)
+        }
+      }
     } else {
       // stop searching if encountering nested Transition component
       if (getComponentName(block.type) === displayName) return undefined
-      child = findTransitionBlock(block.block, inFragment)
-      // use component id as key
-      if (child && child.$key === undefined) child.$key = block.uid
+      child = resolveTransitionBlock(block.block, onFragment)
+      if (child) {
+        if (child.$key == null) {
+          // prefer explicit component key, otherwise fall back to uid.
+          child.$key = block.$key ?? block.uid
+        }
+        transitionTypeMap.set(child, block.type)
+      }
     }
   } else if (isArray(block)) {
     let hasFound = false
     for (const c of block) {
       if (c instanceof Comment) continue
-      // check if the child is a fragment to suppress warnings
-      if (isFragment(c)) inFragment = true
-      const item = findTransitionBlock(c, inFragment)
+      const item = resolveTransitionBlock(c, onFragment)
       if (__DEV__ && hasFound) {
         // warn more than one non-comment child
         warn(
@@ -311,36 +417,20 @@ export function findTransitionBlock(
       if (!__DEV__) break
     }
   } else if (isFragment(block)) {
-    // mark as in fragment to suppress warnings
-    inFragment = true
-    if (block.insert) {
+    if (isInteropEnabled && block.vnode) {
       child = block
+      const children = getTransitionRawChildren([block.vnode])
+      if (children.length === 1) {
+        transitionTypeMap.set(child, children[0].type)
+      }
     } else {
-      child = findTransitionBlock(block.nodes, true)
+      // collect fragments for setting transition hooks
+      if (onFragment) onFragment(block)
+      child = resolveTransitionBlock(block.nodes, onFragment)
     }
-  }
-
-  if (__DEV__ && !child && !inFragment) {
-    warn('Transition component has no valid child element')
   }
 
   return child
-}
-
-export function setTransitionHooksOnFragment(
-  block: Block,
-  hooks: VaporTransitionHooks,
-): void {
-  if (isFragment(block)) {
-    block.$transition = hooks
-    if (block.nodes && isFragment(block.nodes)) {
-      setTransitionHooksOnFragment(block.nodes, hooks)
-    }
-  } else if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      setTransitionHooksOnFragment(block[i], hooks)
-    }
-  }
 }
 
 export function setTransitionHooks(
@@ -348,8 +438,32 @@ export function setTransitionHooks(
   hooks: VaporTransitionHooks,
 ): void {
   if (isVaporComponent(block)) {
-    block = findTransitionBlock(block.block) as TransitionBlock
+    block = resolveTransitionBlock(block.block) as TransitionBlock
     if (!block) return
   }
   block.$transition = hooks
+}
+
+export function getVNodeKey(
+  vnode: VNode | undefined,
+): VNode['key'] | undefined {
+  if (!vnode) return
+  const children = getTransitionRawChildren([vnode])
+  return children.length === 1 ? children[0].key : undefined
+}
+
+export function getTransitionElementFromVNode(
+  vnode: VNode | undefined,
+): Element | undefined {
+  if (!vnode) return
+  if (vnode.component) {
+    return getTransitionElementFromVNode(vnode.component.subTree)
+  }
+  if (vnode.el instanceof Element) {
+    return vnode.el
+  }
+  const children = getTransitionRawChildren([vnode])
+  if (children.length === 1 && children[0] !== vnode) {
+    return getTransitionElementFromVNode(children[0])
+  }
 }

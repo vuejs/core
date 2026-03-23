@@ -1,13 +1,18 @@
 import { ref, shallowRef } from '@vue/reactivity'
 import { nextTick, resolveDynamicComponent } from '@vue/runtime-dom'
 import {
+  createComponent,
   createComponentWithFallback,
   createDynamicComponent,
+  createSlot,
   defineVaporComponent,
+  insert,
   renderEffect,
+  setBlockKey,
   setHtml,
   setInsertionState,
   template,
+  withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
 
@@ -178,5 +183,76 @@ describe('api: createDynamicComponent', () => {
     expect(html()).toBe(
       '<div><span>hi</span><!--slot--></div><!--dynamic-component-->',
     )
+  })
+
+  test('compiled static key on dynamic component fallback', () => {
+    const Comp = defineVaporComponent({
+      setup() {
+        const n0 = createDynamicComponent(() => 'div', null, null, true)
+        setBlockKey(n0, 'foo')
+        return n0
+      },
+    })
+
+    const { html, instance } = define(Comp).render()
+    expect(html()).toBe('<div></div><!--dynamic-component-->')
+
+    const block = instance!.block as any
+    expect(block.$key).toBe('foo')
+    expect(block.nodes.$key).toBe('foo')
+  })
+
+  test('resolves slot owner local components after dynamic updates', async () => {
+    const current = shallowRef('Foo')
+    const Foo = defineVaporComponent({
+      setup() {
+        return template('<span>foo</span>')()
+      },
+    })
+    const Child = defineVaporComponent({
+      setup() {
+        const n0 = template('<section></section>')()
+        insert(createSlot('default'), n0 as ParentNode)
+        return n0
+      },
+    })
+
+    const { html } = define({
+      components: { Foo },
+      setup() {
+        return createComponent(Child, null, {
+          default: withVaporCtx(() =>
+            createDynamicComponent(() => current.value),
+          ),
+        })
+      },
+    }).render()
+
+    expect(html()).toBe(
+      '<section><span>foo</span><!--dynamic-component--><!--slot--></section>',
+    )
+
+    current.value = 'div'
+    await nextTick()
+    expect(html()).toBe(
+      '<section><div></div><!--dynamic-component--><!--slot--></section>',
+    )
+
+    current.value = 'Foo'
+    await nextTick()
+    expect(html()).toBe(
+      '<section><span>foo</span><!--dynamic-component--><!--slot--></section>',
+    )
+  })
+
+  test('accept blocks', async () => {
+    const { html } = define({
+      setup() {
+        const n0 = template('<a>router link</a>')()
+        return createDynamicComponent(() => n0)
+      },
+    }).render()
+
+    expect(html()).toBe('<a>router link</a><!--dynamic-component-->')
   })
 })

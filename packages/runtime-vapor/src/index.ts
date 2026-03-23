@@ -1,24 +1,33 @@
 // public APIs
 export { createVaporApp, createVaporSSRApp } from './apiCreateApp'
-export { defineVaporComponent } from './apiDefineComponent'
+export {
+  defineVaporComponent,
+  type DefineVaporComponent,
+  type VaporPublicProps,
+  type VaporRenderResult,
+} from './apiDefineComponent'
 export { defineVaporAsyncComponent } from './apiDefineAsyncComponent'
 export { vaporInteropPlugin } from './vdomInterop'
 export type { VaporDirective } from './directives/custom'
-export { VaporTeleportImpl as VaporTeleport } from './components/Teleport'
-export { VaporKeepAliveImpl as VaporKeepAlive } from './components/KeepAlive'
+export { VaporTeleport } from './components/Teleport'
+export { VaporKeepAlive } from './components/KeepAlive'
 export {
   defineVaporCustomElement,
   defineVaporSSRCustomElement,
-} from './apiDefineVaporCustomElement'
+  VaporElement,
+  type VaporElementConstructor,
+} from './apiDefineCustomElement'
 
 // compiler-use only
-export { insert, prepend, remove } from './block'
+export { insert, prepend, remove, type Block } from './block'
 export { setInsertionState } from './insertionState'
 export {
   createComponent,
   createComponentWithFallback,
   createPlainElement,
   isVaporComponent,
+  type FunctionalVaporComponent,
+  type VaporComponentInstance,
 } from './component'
 export { renderEffect } from './renderEffect'
 export { createSlot, withVaporCtx } from './componentSlots'
@@ -55,6 +64,7 @@ export {
 } from './apiCreateFor'
 export { createTemplateRefSetter } from './apiTemplateRef'
 export { useVaporCssVars } from './helpers/useCssVars'
+export { setBlockKey } from './helpers/setKey'
 export { createDynamicComponent } from './apiCreateDynamicComponent'
 export { applyVShow } from './directives/vShow'
 export {
@@ -65,6 +75,12 @@ export {
   applyDynamicModel,
 } from './directives/vModel'
 export { withVaporDirectives } from './directives/custom'
-export { isFragment, VaporFragment } from './fragment'
+export { isFragment, VaporFragment, DynamicFragment } from './fragment'
 export { VaporTransition } from './components/Transition'
 export { VaporTransitionGroup } from './components/TransitionGroup'
+
+// types
+export type { VaporComponent, VaporComponentOptions } from './component'
+export type { VaporSlot } from './componentSlots'
+export type { VaporTransitionHooks } from './block'
+export type { VaporKeepAliveContext } from './components/KeepAlive'

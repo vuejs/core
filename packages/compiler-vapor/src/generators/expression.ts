@@ -252,6 +252,7 @@ export function processExpressions(
     seenIdentifier,
     updatedVariable,
   } = analyzeExpressions(expressions)
+  const reservedNames = new Set<string>(seenIdentifier)
 
   // process repeated identifiers and member expressions
   // e.g., `foo[baz]` will be transformed into `foo_baz`
@@ -262,6 +263,7 @@ export function processExpressions(
     expToVariableMap,
     seenIdentifier,
     updatedVariable,
+    reservedNames,
   )
 
   // process duplicate expressions after identifier and member expression handling.
@@ -272,6 +274,7 @@ export function processExpressions(
     varDeclarations,
     updatedVariable,
     expToVariableMap,
+    reservedNames,
   )
 
   return genDeclarations(
@@ -331,12 +334,24 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
     walkIdentifiers(exp.ast, (currentNode, parent, parentStack) => {
       if (parent && isMemberExpression(parent) && !seenParents.has(parent)) {
         seenParents.add(parent)
+        let hasGlobalIdentifier = false
         const memberExp = extractMemberExpression(parent, id => {
           registerVariable(id.name, exp, true, {
             start: id.start!,
             end: id.end!,
           })
+          if (isGloballyAllowed(id.name)) hasGlobalIdentifier = true
         })
+
+        const parentOfMemberExp = parentStack[parentStack.length - 2]
+        if (parentOfMemberExp && isCallExpression(parentOfMemberExp)) {
+          return
+        }
+
+        // skip member expressions containing globally allowed identifiers
+        // e.g. obj[Math.random()] - the call may have side effects
+        if (hasGlobalIdentifier) return
+
         registerVariable(
           memberExp,
           exp,
@@ -375,6 +390,7 @@ function processRepeatedVariables(
   >,
   seenIdentifier: Set<string>,
   updatedVariable: Set<string>,
+  reservedNames: Set<string>,
 ): DeclarationValue[] {
   const declarations: DeclarationValue[] = []
   const expToReplacementMap = new Map<
@@ -387,9 +403,14 @@ function processRepeatedVariables(
 
   for (const [name, exps] of variableToExpMap) {
     if (updatedVariable.has(name)) continue
+    // skip globally allowed identifiers - they are not reactive and
+    // their method calls (e.g. Math.random()) may have side effects
+    if (isGloballyAllowed(name)) continue
     if (seenVariable[name] > 1 && exps.size > 0) {
       const isIdentifier = seenIdentifier.has(name)
-      const varName = isIdentifier ? name : genVarName(name)
+      const varName = isIdentifier
+        ? name
+        : getUniqueDeclarationName(genVarName(name), reservedNames)
 
       // replaces all non-identifiers with the new name. if node content
       // includes only one member expression, it will become an identifier,
@@ -511,6 +532,7 @@ function processRepeatedExpressions(
     SimpleExpressionNode,
     Array<{ name: string; loc?: { start: number; end: number } }>
   >,
+  reservedNames: Set<string>,
 ): DeclarationValue[] {
   const declarations: DeclarationValue[] = []
   const seenExp = expressions.reduce(
@@ -523,7 +545,11 @@ function processRepeatedExpressions(
       if (
         exp.ast &&
         exp.ast.type !== 'Identifier' &&
-        !(variables && variables.some(v => updatedVariable.has(v)))
+        !(variables && variables.some(v => updatedVariable.has(v))) &&
+        // skip expressions containing globally allowed identifiers
+        // (e.g. Math.random(), Date.now() + foo) - they are not reactive
+        // and may involve impure calls with side effects
+        !variables.some(v => isGloballyAllowed(v))
       ) {
         acc[exp.content] = (acc[exp.content] || 0) + 1
       }
@@ -535,41 +561,43 @@ function processRepeatedExpressions(
   Object.entries(seenExp).forEach(([content, count]) => {
     if (count > 1) {
       // foo + baz -> foo_baz
-      const varName = genVarName(content)
-      if (!declarations.some(d => d.name === varName)) {
-        // if foo and baz have no other references, we don't need to declare separate variables
-        // instead of:
-        // const foo = _ctx.foo
-        // const baz = _ctx.baz
-        // const foo_baz = foo + baz
-        // we can generate:
-        // const foo_baz = _ctx.foo + _ctx.baz
-        const delVars: Record<string, string> = {}
-        for (let i = varDeclarations.length - 1; i >= 0; i--) {
-          const item = varDeclarations[i]
-          if (!item.exps || !item.seenCount) continue
+      // if foo and baz have no other references, we don't need to declare separate variables
+      // instead of:
+      // const foo = _ctx.foo
+      // const baz = _ctx.baz
+      // const foo_baz = foo + baz
+      // we can generate:
+      // const foo_baz = _ctx.foo + _ctx.baz
+      const delVars: Record<string, string> = {}
+      for (let i = varDeclarations.length - 1; i >= 0; i--) {
+        const item = varDeclarations[i]
+        if (!item.exps || !item.seenCount) continue
 
-          const shouldRemove = [...item.exps].every(
-            node => node.content === content && item.seenCount === count,
-          )
-          if (shouldRemove) {
-            delVars[item.name] = item.rawName!
-            varDeclarations.splice(i, 1)
-          }
-        }
-        const value = extend(
-          {},
-          expressions.find(exp => exp.content === content)!,
+        const shouldRemove = [...item.exps].every(
+          node => node.content === content && item.seenCount === count,
         )
-        Object.keys(delVars).forEach(name => {
-          value.content = value.content.replace(name, delVars[name])
-          if (value.ast) value.ast = parseExp(context, value.content)
-        })
-        declarations.push({
-          name: varName,
-          value: value,
-        })
+        if (shouldRemove) {
+          delVars[item.name] = item.rawName!
+          reservedNames.delete(item.name)
+          varDeclarations.splice(i, 1)
+        }
       }
+      const value = extend(
+        {},
+        expressions.find(exp => exp.content === content)!,
+      )
+      Object.keys(delVars).forEach(name => {
+        value.content = value.content.replace(name, delVars[name])
+        if (value.ast) value.ast = parseExp(context, value.content)
+      })
+      const varName = getUniqueDeclarationName(
+        genVarName(content),
+        reservedNames,
+      )
+      declarations.push({
+        name: varName,
+        value,
+      })
 
       // assume content equals to `foo + baz`
       expressions.forEach(exp => {
@@ -619,7 +647,7 @@ function genDeclarations(
   // process expressions
   declarations.forEach(({ name, isIdentifier, value }) => {
     if (!isIdentifier) {
-      const varName = (ids[name] = `_${name}`)
+      const varName = `_${name}`
       varNames.add(varName)
       if (shouldDeclare) {
         push(`const `)
@@ -629,6 +657,7 @@ function genDeclarations(
         ...context.withId(() => genExpression(value, context), ids),
         NEWLINE,
       )
+      ids[name] = varName
     }
   })
 
@@ -654,6 +683,20 @@ export function genVarName(exp: string): string {
     .replace(/_+$/, '')}`
 }
 
+function getUniqueDeclarationName(
+  baseName: string,
+  reservedNames: Set<string>,
+): string {
+  const normalizedBase = baseName || 'exp'
+  let name = normalizedBase
+  let i = 1
+  while (reservedNames.has(name)) {
+    name = `${normalizedBase}_${i++}`
+  }
+  reservedNames.add(name)
+  return name
+}
+
 function extractMemberExpression(
   exp: Node,
   onIdentifier: (id: Identifier) => void,
@@ -671,6 +714,8 @@ function extractMemberExpression(
       return `${extractMemberExpression(exp.left, onIdentifier)} ${exp.operator} ${extractMemberExpression(exp.right, onIdentifier)}`
     case 'CallExpression': // foo[bar(baz)]
       return `${extractMemberExpression(exp.callee, onIdentifier)}(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
+    case 'OptionalCallExpression': // foo[bar?.(baz)]
+      return `${extractMemberExpression(exp.callee, onIdentifier)}?.(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
     case 'MemberExpression': // foo[bar.baz]
     case 'OptionalMemberExpression': // foo?.bar
       const object = extractMemberExpression(exp.object, onIdentifier)
@@ -683,6 +728,12 @@ function extractMemberExpression(
     default:
       return ''
   }
+}
+
+const isCallExpression = (node: Node) => {
+  return (
+    node.type === 'CallExpression' || node.type === 'OptionalCallExpression'
+  )
 }
 
 const isMemberExpression = (node: Node) => {

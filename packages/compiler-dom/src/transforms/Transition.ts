@@ -44,7 +44,7 @@ export function postTransformTransition(
       )
     }
 
-    // check if it's s single child w/ v-show
+    // check if it's a single child w/ v-show
     // if yes, inject "persisted: true" to the transition props
     const child = node.children[0]
     if (child.type === NodeTypes.ELEMENT) {

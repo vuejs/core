@@ -1264,6 +1264,7 @@ describe('api: watch', () => {
       sideEffect = obj.a
     })
 
+    // oxlint-disable-next-line no-self-assign
     v.value = v.value
     await nextTick()
     // should not trigger

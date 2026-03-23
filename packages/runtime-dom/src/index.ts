@@ -15,6 +15,7 @@ import {
   createHydrationRenderer,
   createRenderer,
   isRuntimeOnly,
+  setIsHydratingEnabled,
   warn,
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
@@ -35,6 +36,7 @@ import type { TransitionGroupProps } from './components/TransitionGroup'
 import type { vShow } from './directives/vShow'
 import type { VOnDirective } from './directives/vOn'
 import type { VModelDirective } from './directives/vModel'
+import type { ClassValue, StyleValue } from './jsx'
 
 /**
  * This is a stub implementation to prevent the need to use dom types.
@@ -50,6 +52,11 @@ declare module '@vue/reactivity' {
 }
 
 declare module '@vue/runtime-core' {
+  interface AllowedAttrs {
+    class?: ClassValue
+    style?: StyleValue
+  }
+
   interface GlobalComponents {
     Transition: DefineComponent<TransitionProps>
     TransitionGroup: DefineComponent<TransitionGroupProps>
@@ -148,6 +155,7 @@ export const createApp = ((...args) => {
 }) as CreateAppFunction<Element, Component>
 
 export const createSSRApp = ((...args) => {
+  setIsHydratingEnabled(true)
   const app = ensureHydrationRenderer().createApp(...args)
 
   if (__DEV__) {
@@ -328,7 +336,7 @@ export { patchStyle } from './modules/style'
 /**
  * @internal
  */
-export { shouldSetAsProp } from './patchProp'
+export { shouldSetAsProp, shouldSetAsPropForVueCE } from './patchProp'
 /**
  * @internal
  */

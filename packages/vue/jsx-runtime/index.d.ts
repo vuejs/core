@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
 
 /**
@@ -18,6 +17,7 @@ export namespace JSX {
   }
   export interface IntrinsicElements extends NativeElements {
     // allow arbitrary elements
+    // oxlint-disable-next-line typescript/prefer-ts-expect-error
     // @ts-ignore suppress ts:2374 = Duplicate string index signature.
     [name: string]: any
   }

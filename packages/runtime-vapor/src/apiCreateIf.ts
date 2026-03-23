@@ -1,5 +1,9 @@
 import { type Block, type BlockFn, insert } from './block'
-import { advanceHydrationNode, isHydrating } from './dom/hydration'
+import {
+  advanceHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
@@ -8,12 +12,16 @@ import {
 } from './insertionState'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
+import { createComment, createTextNode } from './dom/node'
+import { VaporBlockShape } from '@vue/shared'
 
 export function createIf(
   condition: () => any,
   b1: BlockFn,
   b2?: BlockFn,
+  blockShape?: number,
   once?: boolean,
+  index?: number,
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -22,11 +30,36 @@ export function createIf(
 
   let frag: Block
   if (once) {
-    frag = condition() ? b1() : b2 ? b2() : []
+    const ok = condition()
+    if (isHydrating) {
+      locateHydrationNode(
+        decodeIfShape(blockShape!, ok) === VaporBlockShape.MULTI_ROOT,
+      )
+    }
+    frag = ok
+      ? b1()
+      : b2
+        ? b2()
+        : [__DEV__ ? createComment('if') : createTextNode()]
   } else {
+    // DynamicFragment should be keyed for correct transition behavior
+    const keyed = index != null
     frag =
-      isHydrating || __DEV__ ? new DynamicFragment('if') : new DynamicFragment()
-    renderEffect(() => (frag as DynamicFragment).update(condition() ? b1 : b2))
+      isHydrating || __DEV__
+        ? new DynamicFragment('if', keyed, false)
+        : new DynamicFragment(undefined, keyed, false)
+    renderEffect(() => {
+      const ok = condition()
+      if (isHydrating) {
+        locateHydrationNode(
+          decodeIfShape(blockShape!, ok) === VaporBlockShape.MULTI_ROOT,
+        )
+      }
+      ;(frag as DynamicFragment).update(
+        ok ? b1 : b2,
+        keyed ? `${index}${ok ? 0 : 1}` : undefined,
+      )
+    })
   }
 
   if (!isHydrating) {
@@ -38,4 +71,27 @@ export function createIf(
   }
 
   return frag
+}
+
+// The compiler packs the true/false branch shapes into one integer:
+//   packed = trueShape | (falseShape << 2)
+//
+// Each branch shape fits in 2 bits:
+//   EMPTY       = 0b00
+//   SINGLE_ROOT = 0b01
+//   MULTI_ROOT  = 0b10
+//
+// Example:
+//   trueShape  = MULTI_ROOT  = 0b10
+//   falseShape = SINGLE_ROOT = 0b01
+//   packed     = 0b10 | (0b01 << 2) = 0b0110
+//
+// To read the active branch:
+// - true branch:  shift by 0, then keep the low 2 bits -> 0b10
+// - false branch: shift by 2, then keep the low 2 bits -> 0b01
+//
+// `0b11` is the binary mask for the low 2 bits (decimal `3`).
+// `value & 0b11` clears everything except the active branch shape.
+function decodeIfShape(shape: number, ok: boolean): VaporBlockShape {
+  return ((shape >> (ok ? 0 : 2)) & 0b11) as VaporBlockShape
 }
