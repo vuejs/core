@@ -4,13 +4,22 @@ export const css = (css: string) => page.getByCSS(css)
 export const E2E_TIMEOUT: number = 2 * 1000
 
 const duration = 50
-function timeout(time: number) {
+export function timeout(time: number) {
   return new Promise(r => {
     setTimeout(r, time)
   })
 }
 
 export const transitionFinish = (time = duration) => timeout(time)
+
+export const nextFrame = () =>
+  new Promise(resolve => {
+    requestAnimationFrame(resolve)
+  })
+
+export const click = (selector: string) => {
+  ;(css(selector).element() as HTMLButtonElement).click()
+}
 
 export async function enterValue(locator: Locator, text: string) {
   await locator.fill(text)
@@ -29,6 +38,13 @@ export function expectTransitionSnapshotSequence(
   return new Promise<string[]>((resolve, reject) => {
     const snapshots: string[] = []
 
+    const finish = (
+      fn: typeof resolve | typeof reject,
+      value: string[] | Error,
+    ) => {
+      fn(value as never)
+    }
+
     const capture = () => {
       const html = container.innerHTML
       if (snapshots[snapshots.length - 1] !== html) {
@@ -43,15 +59,17 @@ export function expectTransitionSnapshotSequence(
         })
 
         if (isInOrder) {
-          resolve(snapshots)
+          finish(resolve, snapshots)
           return
         }
 
-        reject(
+        finish(
+          reject,
           new Error(
             `Snapshots were captured out of order.\n${snapshots.join('\n---\n')}`,
           ),
         )
+        return
       }
     }
 
@@ -67,7 +85,8 @@ export function expectTransitionSnapshotSequence(
           return
         }
         if (remainingFrames-- === 0) {
-          reject(
+          finish(
+            reject,
             new Error(
               `Timed out waiting for snapshots.\n${snapshots.join('\n---\n')}`,
             ),
