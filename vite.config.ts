@@ -1,6 +1,9 @@
 import { configDefaults } from 'vitest/config'
 import { defineConfig } from 'vite-plus'
 import { entries } from './scripts/aliases.js'
+import { playwright } from '@vitest/browser-playwright'
+
+const includeVaporBrowserE2E = process.env.VUE_INCLUDE_VAPOR_BROWSER_E2E === '1'
 
 export default defineConfig({
   define: {
@@ -92,15 +95,58 @@ export default defineConfig({
           include: ['packages/vue/__tests__/e2e/*.spec.ts'],
         },
       },
+      // TODO: merge all vapor e2e tests into browser tests and remove this project
       {
         extends: true,
         test: {
           name: 'e2e-vapor',
           isolate: true,
           include: ['packages-private/vapor-e2e-test/__tests__/*.spec.ts'],
+          exclude: [
+            'packages-private/vapor-e2e-test/__tests__/todomvc.spec.ts',
+            'packages-private/vapor-e2e-test/__tests__/vdomInterop.spec.ts',
+          ],
         },
       },
+      // This project pulls in built compiler-sfc output, so keep it out of
+      // unrelated test runs and only enable it for the dedicated e2e script.
+      // @ts-expect-error
+      ...(includeVaporBrowserE2E
+        ? [
+            {
+              extends: './packages-private/vapor-e2e-test/vite.config.ts',
+              root: './packages-private/vapor-e2e-test',
+              test: {
+                globals: true,
+                isolate: true,
+                name: 'e2e-vapor-browser',
+                setupFiles: ['./__tests__/setupBrowser.ts'],
+                browser: {
+                  enabled: true,
+                  provider: playwright({
+                    launchOptions: {
+                      args: process.env.CI
+                        ? ['--no-sandbox', '--disable-setuid-sandbox']
+                        : [],
+                    },
+                  }),
+                  headless: true,
+                  instances: [{ browser: 'chromium' }],
+                },
+                include: [
+                  './__tests__/todomvc.spec.ts',
+                  './__tests__/vdomInterop.spec.ts',
+                ],
+              },
+            },
+          ]
+        : []),
     ],
+    onConsoleLog(log) {
+      if (log.startsWith('You are running a development build of Vue.')) {
+        return false
+      }
+    },
   },
   staged: {
     '*.{js,json}': ['vp fmt --no-error-on-unmatched-pattern'],
