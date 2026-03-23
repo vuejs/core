@@ -742,10 +742,13 @@ function baseCreateRenderer(
       queuePostRenderEffect(() => {
         let prev
         if (__DEV__) prev = setHmrUpdating(isHmr)
-        vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-        needCallTransitionHooks && transition!.enter(el)
-        dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
-        if (__DEV__) setHmrUpdating(prev!)
+        try {
+          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+          needCallTransitionHooks && transition!.enter(el)
+          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+        } finally {
+          if (__DEV__) setHmrUpdating(prev!)
+        }
       }, parentSuspense)
     }
   }
