@@ -16,8 +16,8 @@ catalogs:
       specifier: ^6.0.4
       version: 6.0.4
     entities:
-      specifier: ^7.0.1
-      version: 7.0.1
+      specifier: ^8.0.0
+      version: 8.0.0
     estree-walker:
       specifier: ^2.0.2
       version: 2.0.2
@@ -257,7 +257,7 @@ importers:
         version: link:../shared
       entities:
         specifier: 'catalog:'
-        version: 7.0.1
+        version: 8.0.0
       estree-walker:
         specifier: 'catalog:'
         version: 2.0.2
@@ -433,7 +433,7 @@ importers:
         version: 7.29.0
       entities:
         specifier: 'catalog:'
-        version: 7.0.1
+        version: 8.0.0
       estree-walker:
         specifier: 'catalog:'
         version: 2.0.2
@@ -1890,9 +1890,9 @@ packages:
     resolution: {integrity: sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g==}
     engines: {node: '>=0.12'}
 
-  entities@7.0.1:
-    resolution: {integrity: sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==}
-    engines: {node: '>=0.12'}
+  entities@8.0.0:
+    resolution: {integrity: sha512-zwfzJecQ/Uej6tusMqwAqU/6KL2XaB2VZ2Jg54Je6ahNBGNH6Ek6g3jjNCF0fG9EWQKGZNddNjU5F1ZQn/sBnA==}
+    engines: {node: '>=20.19.0'}
 
   env-paths@2.2.1:
     resolution: {integrity: sha512-+h1lkLKhZMTYjog1VEpJNG7NZJWcuc2DDk/qsqSTRRCOXiLjeQ1d1/udrUGhqMxUgAlwKNZ0cf2uqan5GLuS2A==}
@@ -4631,7 +4631,7 @@ snapshots:
 
   entities@6.0.1: {}
 
-  entities@7.0.1: {}
+  entities@8.0.0: {}
 
   env-paths@2.2.1: {}
 

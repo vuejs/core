@@ -5,7 +5,7 @@ packages:
 catalog:
   '@babel/parser': ^7.29.0
   '@babel/types': ^7.29.0
-  'entities': '^7.0.1'
+  'entities': '^8.0.0'
   'estree-walker': ^2.0.2
   'magic-string': ^0.30.21
   'source-map-js': ^1.2.1
