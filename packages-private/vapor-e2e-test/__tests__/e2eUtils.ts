@@ -9,13 +9,9 @@ export async function enterValue(locator: Locator, text: string) {
 }
 
 export function nextFrame() {
-  // this page is not same as Playwright's page
-  // how to wait for the next frame?
-  return page.evaluate(() => {
-    return new Promise(resolve => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(resolve)
-      })
+  return new Promise(resolve => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(resolve)
     })
   })
 }

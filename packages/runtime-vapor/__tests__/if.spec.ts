@@ -23,8 +23,8 @@ describe('createIf', () => {
     //    <p v-else>zero</p>
     //  </div>
 
-    let spyIfFn: Mock<any>
-    let spyElseFn: Mock<any>
+    let spyIfFn: Mock<() => Node>
+    let spyElseFn: Mock<() => Node>
     const count = ref(0)
 
     const spyConditionFn = vi.fn(() => count.value)
@@ -47,12 +47,12 @@ describe('createIf', () => {
               setElementText(n2, count.value)
             })
             return n2
-          })) as any,
+          })),
           // v-else
           (spyElseFn ||= vi.fn(() => {
             const n4 = t2()
             return n4
-          })) as any,
+          })),
         ),
         n0 as any as ParentNode,
       )

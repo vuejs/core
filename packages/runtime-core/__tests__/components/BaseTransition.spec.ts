@@ -14,7 +14,7 @@ import {
 } from '@vue/runtime-test'
 
 function mount(
-  props: BaseTransitionProps,
+  props: BaseTransitionProps<TestElement>,
   slot: () => any,
   withKeepAlive = false,
 ) {
@@ -35,7 +35,10 @@ function mount(
   return { root, unmount }
 }
 
-function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
+function mockProps(
+  extra: BaseTransitionProps<TestElement> = {},
+  withKeepAlive = false,
+) {
   const cbs: {
     doneEnter: Record<string, () => void>
     doneLeave: Record<string, () => void>
@@ -43,7 +46,7 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
     doneEnter: {},
     doneLeave: {},
   }
-  const props: BaseTransitionProps = {
+  const props: BaseTransitionProps<TestElement> = {
     onBeforeEnter: vi.fn(el => {
       if (!extra.persisted && !withKeepAlive) {
         expect(el.parentNode).toBeNull()
@@ -52,20 +55,20 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
     onEnter: vi.fn((el, done) => {
       cbs.doneEnter[serialize(el as TestElement)] = done
     }),
-    onAfterEnter: vi.fn() as any,
-    onEnterCancelled: vi.fn() as any,
-    onBeforeLeave: vi.fn() as any,
+    onAfterEnter: vi.fn<(el: TestElement) => void>(),
+    onEnterCancelled: vi.fn<(el: TestElement) => void>(),
+    onBeforeLeave: vi.fn<(el: TestElement) => void>(),
     onLeave: vi.fn((el, done) => {
       cbs.doneLeave[serialize(el as TestElement)] = done
     }),
-    onAfterLeave: vi.fn() as any,
-    onLeaveCancelled: vi.fn() as any,
-    onBeforeAppear: vi.fn() as any,
+    onAfterLeave: vi.fn<(el: TestElement) => void>(),
+    onLeaveCancelled: vi.fn<(el: TestElement) => void>(),
+    onBeforeAppear: vi.fn<(el: TestElement) => void>(),
     onAppear: vi.fn((el, done) => {
       cbs.doneEnter[serialize(el as TestElement)] = done
     }),
-    onAfterAppear: vi.fn() as any,
-    onAppearCancelled: vi.fn() as any,
+    onAfterAppear: vi.fn<(el: TestElement) => void>(),
+    onAppearCancelled: vi.fn<(el: TestElement) => void>(),
     ...extra,
   }
   return {
@@ -75,7 +78,7 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
 }
 
 function assertCalls(
-  props: BaseTransitionProps,
+  props: BaseTransitionProps<TestElement>,
   calls: Record<string, number>,
 ) {
   Object.keys(calls).forEach(key => {
