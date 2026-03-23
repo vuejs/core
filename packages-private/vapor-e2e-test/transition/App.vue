@@ -30,7 +30,7 @@ const currentCase = selectedCase.default
 </template>
 
 <style>
-.transition-container>div {
+.transition-container > div {
   padding: 15px;
   border: 1px solid #f7f7f7;
   margin-top: 15px;
