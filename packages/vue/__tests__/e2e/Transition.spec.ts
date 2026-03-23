@@ -1655,6 +1655,75 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT,
     )
 
+    // #14608
+    test(
+      'hmr reload child wrapped in KeepAlive (out-in mode)',
+      async () => {
+        await page().evaluate(
+          async ({ duration, childId }) => {
+            const { createApp } = (window as any).Vue
+            const { createRecord } = (window as any).__VUE_HMR_RUNTIME__
+
+            const Child = {
+              __hmrId: childId,
+              name: 'OriginalChild',
+              data() {
+                return { count: 0 }
+              },
+              template: `<div class="test">{{ count }}</div>`,
+            }
+
+            createRecord(childId, Child)
+
+            createApp({
+              components: { Child },
+              data() {
+                return { toggle: true }
+              },
+              template: `
+                <div id="container">
+                  <transition name="test" mode="out-in" :duration="${duration}">
+                    <KeepAlive>
+                      <Child v-if="toggle" />
+                    </KeepAlive>
+                  </transition>
+                </div>
+              `,
+            }).mount('#app')
+
+            await (window as any).Vue.nextTick()
+          },
+          { duration, childId: 'transition-keepalive-out-in-hmr' },
+        )
+
+        expect(await html('#container')).toBe('<div class="test">0</div>')
+
+        await page().evaluate(async childId => {
+          const { reload } = (window as any).__VUE_HMR_RUNTIME__
+          reload(childId, {
+            __hmrId: childId,
+            name: 'UpdatedChild',
+            data() {
+              return { count: 1 }
+            },
+            template: `<div class="test">{{ count }}</div>`,
+          })
+
+          await (window as any).Vue.nextTick()
+        }, 'transition-keepalive-out-in-hmr')
+
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div class="test test-leave-active test-leave-to">0</div>' +
+            '<div class="test test-enter-active test-enter-to">1</div>',
+        )
+
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="test">1</div>')
+      },
+      E2E_TIMEOUT,
+    )
+
     // #12860
     test(
       'unmount children',
