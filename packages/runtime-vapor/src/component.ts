@@ -38,14 +38,7 @@ import {
   warn,
   warnExtraneousAttributes,
 } from '@vue/runtime-dom'
-import {
-  type Block,
-  insert,
-  isBlock,
-  remove,
-  setComponentScopeId,
-  setScopeId,
-} from './block'
+import { type Block, insert, isBlock, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -124,6 +117,7 @@ import { DynamicFragment, isFragment } from './fragment'
 import type { VaporElement } from './apiDefineCustomElement'
 import { parentSuspense, setParentSuspense } from './components/Suspense'
 import { isInteropEnabled } from './vdomInteropState'
+import { setComponentScopeId, setScopeId } from './scopeId'
 
 export { currentInstance } from '@vue/runtime-dom'
 

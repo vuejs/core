@@ -13,7 +13,7 @@ import {
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
-import { type Block, applyTransitionHooks, insert, remove } from './block'
+import { type Block, insert, remove } from './block'
 import { queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import {
@@ -41,6 +41,7 @@ import {
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
+import { applyTransitionHooks } from './transition'
 
 class ForBlock extends VaporFragment {
   scope: EffectScope | undefined

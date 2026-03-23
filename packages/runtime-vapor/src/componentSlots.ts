@@ -1,5 +1,5 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, insert, setScopeId } from './block'
+import { type Block, type BlockFn, insert } from './block'
 import { rawPropsProxyHandlers, resolveFunctionSource } from './componentProps'
 import {
   type GenericComponentInstance,
@@ -28,6 +28,7 @@ import {
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
 import { isInteropEnabled } from './vdomInteropState'
+import { setScopeId } from './scopeId'
 
 /**
  * Flag to indicate if we are executing a once slot.
