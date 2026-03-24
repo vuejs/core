@@ -1367,7 +1367,10 @@ function baseCreateRenderer(
         } else {
           // custom element style injection
           if (root.ce && root.ce._hasShadowRoot()) {
-            root.ce._injectChildStyle(type)
+            root.ce._injectChildStyle(
+              type,
+              instance.parent ? instance.parent.type : undefined,
+            )
           }
 
           if (__DEV__) {
