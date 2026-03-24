@@ -58,7 +58,6 @@
     "@types/serve-handler": "^6.1.4",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
-    "@vitest/browser-playwright": "^4.0.14",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "enquirer": "^2.4.1",
