@@ -6,6 +6,7 @@ import {
   type SimpleExpressionNode,
   type TemplateChildNode,
   createCompilerError,
+  createSimpleExpression,
   isTemplateNode,
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
@@ -134,7 +135,9 @@ function transformTemplateSlot(
 ) {
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE
 
-  const arg = dir.arg && resolveExpression(dir.arg)
+  const resolvedArg = dir.arg && resolveExpression(dir.arg)
+  let arg = resolvedArg
+  if (!arg) arg = createSimpleExpression('default', true)
   const vFor = findDir(node, 'for')
   const vIf = findDir(node, 'if')
   const vElse = findDir(node, /^else(-if)?$/, true /* allowEmpty */)
@@ -142,7 +145,9 @@ function transformTemplateSlot(
   const [block, onExit] = createSlotBlock(node, dir, context)
 
   if (!vFor && !vIf && !vElse) {
-    const slotName = arg ? arg.isStatic && arg.content : 'default'
+    const slotName = resolvedArg
+      ? resolvedArg.isStatic && resolvedArg.content
+      : 'default'
     if (slotName && hasStaticSlot(slots, slotName)) {
       context.options.onError(
         createCompilerError(ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES, dir.loc),

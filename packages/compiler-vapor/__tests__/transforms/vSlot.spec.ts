@@ -63,6 +63,65 @@ describe('compiler: transform slot', () => {
     })
   })
 
+  test('default slot with v-if directive', () => {
+    const { ir, code } = compileWithSlots(
+      `<Comp><template # v-if="show"></template></Comp>`,
+    )
+    expect(code).toMatchSnapshot()
+
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      id: 1,
+      tag: 'Comp',
+      props: [[]],
+      slots: [
+        {
+          slotType: IRSlotType.CONDITIONAL,
+        },
+      ],
+    })
+    expect(ir.block.returns).toEqual([1])
+    expect(ir.block.dynamic).toMatchObject({
+      children: [{ id: 1 }],
+    })
+    expect(code).contains(`name: "default",`)
+  })
+
+  test('default slot with v-for directive', () => {
+    const { ir, code } = compileWithSlots(
+      `<Comp><template # v-for="item in list">{{ item }}</template></Comp>`,
+    )
+    expect(code).toMatchSnapshot()
+
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      id: 2,
+      tag: 'Comp',
+      props: [[]],
+      slots: [
+        {
+          slotType: IRSlotType.LOOP,
+          name: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'default',
+            isStatic: true,
+          },
+          fn: { type: IRNodeTypes.BLOCK },
+          loop: {
+            source: { content: 'list' },
+            value: { content: 'item' },
+            index: undefined,
+          },
+        },
+      ],
+    })
+    expect(ir.block.returns).toEqual([2])
+    expect(ir.block.dynamic).toMatchObject({
+      children: [{ id: 2 }],
+    })
+    expect(code).contains(`name: "default",`)
+  })
+
   test('on-component default slot', () => {
     const { ir, code } = compileWithSlots(
       `<Comp v-slot="{ foo }">{{ foo + bar }}</Comp>`,
