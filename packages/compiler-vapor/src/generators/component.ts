@@ -498,7 +498,7 @@ function genBasicDynamicSlot(
   const { name, fn } = slot
   return genMulti(
     DELIMITERS_OBJECT_NEWLINE,
-    ['name: ', ...(name ? genExpression(name, context) : ['"default"'])],
+    ['name: ', ...genExpression(name, context)],
     ['fn: ', ...genSlotBlockWithProps(fn, context)],
   )
 }
