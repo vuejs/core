@@ -93,7 +93,10 @@ export default defineConfig({
           include: ['packages/vue/__tests__/e2e/*.spec.ts'],
         },
       },
-      // @ts-expect-error - conditional projects
+      // @ts-expect-error - https://github.com/vuejs/core/actions/runs/23430103557/job/68154030981
+      // When running `vp test --project unit*`, Vitest still initializes all projects
+      // and loads `packages-private/vapor-e2e-test/vite.config.ts`.
+      // That config immediately imports `vue/compiler-sfc`, but the package has not been built yet.
       ...(process.env.VAPOR_E2E === '1'
         ? [
             {
