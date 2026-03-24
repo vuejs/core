@@ -93,6 +93,7 @@ export default defineConfig({
           include: ['packages/vue/__tests__/e2e/*.spec.ts'],
         },
       },
+      // @ts-expect-error - conditional projects
       ...(process.env.VAPOR_E2E === '1'
         ? [
             {
