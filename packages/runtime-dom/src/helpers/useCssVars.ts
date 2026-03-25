@@ -3,20 +3,23 @@ import {
   Static,
   type VNode,
   getCurrentInstance,
-  onBeforeMount,
+  onBeforeUpdate,
   onMounted,
   onUnmounted,
+  queuePostFlushCb,
   warn,
-  watchPostEffect,
+  watch,
 } from '@vue/runtime-core'
-import { ShapeFlags } from '@vue/shared'
+import { NOOP, ShapeFlags, normalizeCssVarValue } from '@vue/shared'
 
 export const CSS_VAR_TEXT: unique symbol = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
 /**
  * Runtime helper for SFC's CSS variable injection feature.
  * @private
  */
-export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
+export function useCssVars(
+  getter: (ctx: any) => Record<string, unknown>,
+): void {
   if (!__BROWSER__ && !__TEST__) return
 
   const instance = getCurrentInstance()
@@ -48,18 +51,22 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>): void {
     updateTeleports(vars)
   }
 
-  onBeforeMount(() => {
-    watchPostEffect(setVars)
+  // handle cases where child component root is affected
+  // and triggers reflow in onMounted
+  onBeforeUpdate(() => {
+    queuePostFlushCb(setVars)
   })
 
   onMounted(() => {
+    // run setVars synchronously here, but run as post-effect on changes
+    watch(setVars, NOOP, { flush: 'post' })
     const ob = new MutationObserver(setVars)
     ob.observe(instance.subTree.el!.parentNode, { childList: true })
     onUnmounted(() => ob.disconnect())
   })
 }
 
-function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
+function setVarsOnVNode(vnode: VNode, vars: Record<string, unknown>) {
   if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     const suspense = vnode.suspense!
     vnode = suspense.activeBranch!
@@ -89,13 +96,14 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
   }
 }
 
-function setVarsOnNode(el: Node, vars: Record<string, string>) {
+function setVarsOnNode(el: Node, vars: Record<string, unknown>) {
   if (el.nodeType === 1) {
     const style = (el as HTMLElement).style
     let cssText = ''
     for (const key in vars) {
-      style.setProperty(`--${key}`, vars[key])
-      cssText += `--${key}: ${vars[key]};`
+      const value = normalizeCssVarValue(vars[key])
+      style.setProperty(`--${key}`, value)
+      cssText += `--${key}: ${value};`
     }
     ;(style as any)[CSS_VAR_TEXT] = cssText
   }

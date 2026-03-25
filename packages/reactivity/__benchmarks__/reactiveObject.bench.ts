@@ -1,5 +1,5 @@
 import { bench } from 'vitest'
-import { reactive } from '../src'
+import { reactive } from '../dist/reactivity.esm-browser.prod'
 
 bench('create reactive obj', () => {
   reactive({ a: 1 })

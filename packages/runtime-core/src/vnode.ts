@@ -196,6 +196,7 @@ export interface VNode<
 
   // DOM
   el: HostNode | null
+  placeholder: HostNode | null // async component el placeholder
   anchor: HostNode | null // fragment anchor
   target: HostElement | null // teleport target
   targetStart: HostNode | null // teleport target start anchor
@@ -301,7 +302,7 @@ export let isBlockTreeEnabled = 1
  *
  * ``` js
  * _cache[1] || (
- *   setBlockTracking(-1),
+ *   setBlockTracking(-1, true),
  *   _cache[1] = createVNode(...),
  *   setBlockTracking(1),
  *   _cache[1]
@@ -310,11 +311,11 @@ export let isBlockTreeEnabled = 1
  *
  * @private
  */
-export function setBlockTracking(value: number): void {
+export function setBlockTracking(value: number, inVOnce = false): void {
   isBlockTreeEnabled += value
-  if (value < 0 && currentBlock) {
+  if (value < 0 && currentBlock && inVOnce) {
     // mark current block so it doesn't take fast path and skip possible
-    // nested components duriung unmount
+    // nested components during unmount
     currentBlock.hasOnce = true
   }
 }
@@ -711,6 +712,8 @@ export function cloneVNode<T, U>(
     suspense: vnode.suspense,
     ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
     ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
+    placeholder: vnode.placeholder,
+
     el: vnode.el,
     anchor: vnode.anchor,
     ctx: vnode.ctx,
@@ -793,7 +796,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
       // #3666, avoid reference pollution when reusing vnode
       child.slice(),
     )
-  } else if (typeof child === 'object') {
+  } else if (isVNode(child)) {
     // already vnode, this should be the most common since compiled templates
     // always produce all-vnode children arrays
     return cloneIfMounted(child)

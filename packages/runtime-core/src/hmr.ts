@@ -7,7 +7,7 @@ import {
   type InternalRenderFunction,
   isClassComponent,
 } from './component'
-import { queueJob, queuePostFlushCb } from './scheduler'
+import { SchedulerJobFlags, queueJob, queuePostFlushCb } from './scheduler'
 import { extend, getGlobalThis } from '@vue/shared'
 
 type HMRComponent = ComponentOptions | ClassComponent
@@ -96,7 +96,10 @@ function rerender(id: string, newRender?: Function): void {
     instance.renderCache = []
     // this flag forces child components with slot content to update
     isHmrUpdating = true
-    instance.update()
+    // #13771 don't update if the job is already disposed
+    if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
+      instance.update()
+    }
     isHmrUpdating = false
   })
 }
@@ -144,9 +147,15 @@ function reload(id: string, newComp: HMRComponent): void {
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.
       queueJob(() => {
-        instance.parent!.update()
-        // #6930, #11248 avoid infinite recursion
-        dirtyInstances.delete(instance)
+        // vite-plugin-vue/issues/599
+        // don't update if the job is already disposed
+        if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
+          isHmrUpdating = true
+          instance.parent!.update()
+          isHmrUpdating = false
+          // #6930, #11248 avoid infinite recursion
+          dirtyInstances.delete(instance)
+        }
       })
     } else if (instance.appContext.reload) {
       // root instance mounted via createApp() has a reload method

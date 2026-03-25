@@ -4,6 +4,7 @@ import {
   type MaybeRefOrGetter,
   type Ref,
   type ShallowRef,
+  type TemplateRef,
   type ToRefs,
   type WritableComputedRef,
   computed,
@@ -187,6 +188,24 @@ describe('allow getter and setter types to be unrelated', <T>() => {
   expectType<number>(f.value)
   // @ts-expect-error
   f.value = ref(1)
+})
+
+describe('correctly unwraps nested refs', () => {
+  const obj = {
+    n: 24,
+    ref: ref(24),
+    nestedRef: ref({ n: ref(0) }),
+  }
+
+  const a = ref(obj)
+  expectType<number>(a.value.n)
+  expectType<number>(a.value.ref)
+  expectType<number>(a.value.nestedRef.n)
+
+  const b = reactive({ a })
+  expectType<number>(b.a.n)
+  expectType<number>(b.a.ref)
+  expectType<number>(b.a.nestedRef.n)
 })
 
 // computed
@@ -517,7 +536,7 @@ expectType<string>(toValue(unref2))
 
 // useTemplateRef
 const tRef = useTemplateRef('foo')
-expectType<Readonly<ShallowRef<unknown>>>(tRef)
+expectType<TemplateRef>(tRef)
 
 const tRef2 = useTemplateRef<HTMLElement>('bar')
-expectType<Readonly<ShallowRef<HTMLElement | null>>>(tRef2)
+expectType<TemplateRef<HTMLElement>>(tRef2)

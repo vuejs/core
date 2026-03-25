@@ -78,6 +78,49 @@ test('ssr custom element hydration', async () => {
   await assertInteraction('my-element-async')
 })
 
+test('work with Teleport (shadowRoot: false)', async () => {
+  await setContent(
+    `<div id='test'></div><my-p><my-y><span>default</span></my-y></my-p>`,
+  )
+
+  await page().evaluate(() => {
+    const { h, defineSSRCustomElement, Teleport, renderSlot } = (window as any)
+      .Vue
+    const Y = defineSSRCustomElement(
+      {
+        render() {
+          return h(
+            Teleport,
+            { to: '#test' },
+            {
+              default: () => [renderSlot(this.$slots, 'default')],
+            },
+          )
+        },
+      },
+      { shadowRoot: false },
+    )
+    customElements.define('my-y', Y)
+    const P = defineSSRCustomElement(
+      {
+        render() {
+          return renderSlot(this.$slots, 'default')
+        },
+      },
+      { shadowRoot: false },
+    )
+    customElements.define('my-p', P)
+  })
+
+  function getInnerHTML() {
+    return page().evaluate(() => {
+      return (document.querySelector('#test') as any).innerHTML
+    })
+  }
+
+  expect(await getInnerHTML()).toBe('<span>default</span>')
+})
+
 // #11641
 test('pass key to custom element', async () => {
   const messages: string[] = []

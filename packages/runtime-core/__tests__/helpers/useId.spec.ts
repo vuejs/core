@@ -8,6 +8,7 @@ import {
   defineAsyncComponent,
   defineComponent,
   h,
+  onServerPrefetch,
   useId,
 } from 'vue'
 import { renderToString } from '@vue/server-renderer'
@@ -59,7 +60,7 @@ describe('useId', () => {
         const app = createApp(BasicComponentWithUseId)
         return [app, []]
       }),
-    ).toBe('v:0 v:1')
+    ).toBe('v-0 v-1')
   })
 
   test('with config.idPrefix', async () => {
@@ -69,7 +70,7 @@ describe('useId', () => {
         app.config.idPrefix = 'foo'
         return [app, []]
       }),
-    ).toBe('foo:0 foo:1')
+    ).toBe('foo-0 foo-1')
   })
 
   test('async component', async () => {
@@ -92,9 +93,9 @@ describe('useId', () => {
     }
 
     const expected =
-      'v:0 v:1 ' + // root
-      'v:0-0 v:0-1 ' + // inside first async subtree
-      'v:1-0 v:1-1' // inside second async subtree
+      'v-0 v-1 ' + // root
+      'v-0-0 v-0-1 ' + // inside first async subtree
+      'v-1-0 v-1-1' // inside second async subtree
     // assert different async resolution order does not affect id stable-ness
     expect(await getOutput(() => factory(0, 16))).toBe(expected)
     expect(await getOutput(() => factory(16, 0))).toBe(expected)
@@ -137,12 +138,46 @@ describe('useId', () => {
     }
 
     const expected =
-      'v:0 v:1 ' + // root
-      'v:0-0 v:0-1 ' + // inside first async subtree
-      'v:1-0 v:1-1' // inside second async subtree
+      'v-0 v-1 ' + // root
+      'v-0-0 v-0-1 ' + // inside first async subtree
+      'v-1-0 v-1-1' // inside second async subtree
     // assert different async resolution order does not affect id stable-ness
     expect(await getOutput(() => factory(0, 16))).toBe(expected)
     expect(await getOutput(() => factory(16, 0))).toBe(expected)
+  })
+
+  test('components with serverPrefetch', async () => {
+    const factory = (): ReturnType<TestCaseFactory> => {
+      const SPOne = defineComponent({
+        setup() {
+          onServerPrefetch(() => {})
+          return () => h(BasicComponentWithUseId)
+        },
+      })
+
+      const SPTwo = defineComponent({
+        render() {
+          return h(BasicComponentWithUseId)
+        },
+      })
+
+      const app = createApp({
+        setup() {
+          const id1 = useId()
+          const id2 = useId()
+          return () => [id1, ' ', id2, ' ', h(SPOne), ' ', h(SPTwo)]
+        },
+      })
+      return [app, []]
+    }
+
+    const expected =
+      'v-0 v-1 ' + // root
+      'v-0-0 v-0-1 ' + // inside first async subtree
+      'v-2 v-3' // inside second async subtree
+    // assert different async resolution order does not affect id stable-ness
+    expect(await getOutput(() => factory())).toBe(expected)
+    expect(await getOutput(() => factory())).toBe(expected)
   })
 
   test('async setup()', async () => {
@@ -188,9 +223,9 @@ describe('useId', () => {
 
     const expected =
       '<div>' +
-      'v:0 v:1 ' + // root
-      'v:0-0 v:0-1 ' + // inside first async subtree
-      'v:1-0 v:1-1' + // inside second async subtree
+      'v-0 v-1 ' + // root
+      'v-0-0 v-0-1 ' + // inside first async subtree
+      'v-1-0 v-1-1' + // inside second async subtree
       '</div>'
     // assert different async resolution order does not affect id stable-ness
     expect(await getOutput(() => factory(0, 16))).toBe(expected)
@@ -232,10 +267,10 @@ describe('useId', () => {
     }
 
     const expected =
-      'v:0 ' + // One
-      'v:0-0 ' + // Two
-      'v:0-0-0 v:0-0-1 ' + // Three + Three nested in Two
-      'v:0-1' // Three after Two
+      'v-0 ' + // One
+      'v-0-0 ' + // Two
+      'v-0-0-0 v-0-0-1 ' + // Three + Three nested in Two
+      'v-0-1' // Three after Two
     // assert different async resolution order does not affect id stable-ness
     expect(await getOutput(() => factory())).toBe(expected)
     expect(await getOutput(() => factory())).toBe(expected)
@@ -278,8 +313,8 @@ describe('useId', () => {
 
     const expected =
       '<div>' +
-      'v:0 v:1 ' + // root
-      'v:0-0-0 v:0-0-1' + // async component inside async setup
+      'v-0 v-1 ' + // root
+      'v-0-0-0 v-0-0-1' + // async component inside async setup
       '</div>'
     // assert different async resolution order does not affect id stable-ness
     expect(await getOutput(async () => factory(0, 16))).toBe(expected)

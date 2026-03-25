@@ -7,11 +7,12 @@ import {
   type TemplateChildNode,
   createSimpleExpression,
   findDir,
+  isCommentOrWhitespace,
   locStub,
 } from '@vue/compiler-dom'
 
 const filterChild = (node: ParentNode) =>
-  node.children.filter(n => n.type !== NodeTypes.COMMENT)
+  node.children.filter(n => !isCommentOrWhitespace(n))
 
 const hasSingleChild = (node: ParentNode): boolean =>
   filterChild(node).length === 1

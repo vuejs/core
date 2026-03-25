@@ -64,7 +64,7 @@ export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
-export { useTemplateRef } from './helpers/useTemplateRef'
+export { useTemplateRef, type TemplateRef } from './helpers/useTemplateRef'
 export { useId } from './helpers/useId'
 export {
   hydrateOnIdle,
@@ -259,7 +259,9 @@ export type {
   ConcreteComponent,
   FunctionalComponent,
   ComponentInternalInstance,
+  Attrs,
   SetupContext,
+  AllowedAttrs,
   ComponentCustomProps,
   AllowedComponentProps,
   GlobalComponents,
@@ -327,6 +329,7 @@ export type {
   DirectiveHook,
   ObjectDirective,
   FunctionDirective,
+  DirectiveModifiers,
   DirectiveArguments,
 } from './directives'
 export type { SuspenseBoundary } from './components/Suspense'
@@ -400,6 +403,7 @@ import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import { isVNode, normalizeVNode } from './vnode'
 import { ensureValidVNode } from './helpers/renderSlot'
+import { popWarningContext, pushWarningContext } from './warning'
 
 const _ssrUtils: {
   createComponentInstance: typeof createComponentInstance
@@ -410,6 +414,8 @@ const _ssrUtils: {
   normalizeVNode: typeof normalizeVNode
   getComponentPublicInstance: typeof getComponentPublicInstance
   ensureValidVNode: typeof ensureValidVNode
+  pushWarningContext: typeof pushWarningContext
+  popWarningContext: typeof popWarningContext
 } = {
   createComponentInstance,
   setupComponent,
@@ -419,6 +425,8 @@ const _ssrUtils: {
   normalizeVNode,
   getComponentPublicInstance,
   ensureValidVNode,
+  pushWarningContext,
+  popWarningContext,
 }
 
 /**
