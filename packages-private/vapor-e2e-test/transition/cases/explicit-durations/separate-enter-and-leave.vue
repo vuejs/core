@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 
 const toggle = ref(true)
-const duration = window.__TRANSITION_DURATION__ || 50
+const duration = 50
 </script>
 
 <template>

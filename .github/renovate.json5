@@ -11,7 +11,13 @@
     },
     {
       groupName: 'test',
-      matchPackageNames: ['vitest', 'jsdom', 'puppeteer', '@vitest{/,}**'],
+      matchPackageNames: [
+        'vitest',
+        'jsdom',
+        'playwright',
+        'puppeteer',
+        '@vitest{/,}**',
+      ],
     },
     {
       groupName: 'playground',

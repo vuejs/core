@@ -1,9 +1,7 @@
 import { configDefaults } from 'vitest/config'
+import { playwright } from 'vitest/browser-playwright'
 import { defineConfig } from 'vite-plus'
 import { entries } from './scripts/aliases.js'
-import { playwright } from '@vitest/browser-playwright'
-
-const includeVaporBrowserE2E = process.env.VUE_INCLUDE_VAPOR_BROWSER_E2E === '1'
 
 export default defineConfig({
   define: {
@@ -95,23 +93,19 @@ export default defineConfig({
           include: ['packages/vue/__tests__/e2e/*.spec.ts'],
         },
       },
-      // TODO: merge all vapor e2e tests into browser tests and remove this project
-      {
-        extends: true,
-        test: {
-          name: 'e2e-vapor',
-          isolate: true,
-          include: ['packages-private/vapor-e2e-test/__tests__/*.spec.ts'],
-          exclude: [
-            'packages-private/vapor-e2e-test/__tests__/todomvc.spec.ts',
-            'packages-private/vapor-e2e-test/__tests__/vdomInterop.spec.ts',
-          ],
-        },
-      },
-      // This project pulls in built compiler-sfc output, so keep it out of
-      // unrelated test runs and only enable it for the dedicated e2e script.
-      // @ts-expect-error
-      ...(includeVaporBrowserE2E
+      // @ts-expect-error - https://github.com/vuejs/core/actions/runs/23430103557/job/68154030981
+      // When running `vp test --project unit*`, Vitest still initializes all projects (this is
+      // expected  behavior see https://github.com/vitest-dev/vitest/issues/9849) and loads
+      // `packages-private/vapor-e2e-test/vite.config.ts`. That config immediately imports
+      // `vue/compiler-sfc`, but the package has not been built yet.
+      // To work around this, we conditionally include the vapor e2e test project only when the
+      // `VAPOR_E2E` env variable is set.
+      // for Vitest VSCode extension, we can set this env variable in the `vitest.nodeEnv` config
+      // to ensure the vapor e2e tests are included when running tests in VSCode.
+      // "vitest.nodeEnv": {
+      //   "VAPOR_E2E": "1"
+      // },
+      ...(process.env.VAPOR_E2E === '1'
         ? [
             {
               extends: './packages-private/vapor-e2e-test/vite.config.ts',
@@ -119,7 +113,7 @@ export default defineConfig({
               test: {
                 globals: true,
                 isolate: true,
-                name: 'e2e-vapor-browser',
+                name: 'e2e-vapor',
                 setupFiles: ['./__tests__/setupBrowser.ts'],
                 browser: {
                   enabled: true,
@@ -131,12 +125,10 @@ export default defineConfig({
                     },
                   }),
                   headless: true,
+                  screenshotFailures: false,
                   instances: [{ browser: 'chromium' }],
                 },
-                include: [
-                  './__tests__/todomvc.spec.ts',
-                  './__tests__/vdomInterop.spec.ts',
-                ],
+                include: ['./__tests__/*.spec.ts'],
               },
             },
           ]
