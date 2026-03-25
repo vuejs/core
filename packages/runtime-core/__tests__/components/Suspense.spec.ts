@@ -8,6 +8,7 @@ import {
   KeepAlive,
   Suspense,
   type SuspenseProps,
+  Teleport,
   createCommentVNode,
   h,
   nextTick,
@@ -2163,6 +2164,127 @@ describe('Suspense', () => {
     // should not throw error due to Suspense vnode.el being null
     data.value = 'data2'
     await Promise.all(deps)
+  })
+
+  test('should mount after suspense is resolved', async () => {
+    const target = nodeOps.createElement('div')
+
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      },
+    })
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h('div', null, [
+              h(Async),
+              h(Teleport, { to: target }, h('div', 'teleported')),
+            ]),
+            fallback: h('div', 'fallback'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>async</div><!--teleport start--><!--teleport end--></div>`,
+    )
+    expect(serializeInner(target)).toBe(`<div>teleported</div>`)
+  })
+
+  test('should patch teleport before suspense is resolved', async () => {
+    const target = nodeOps.createElement('div')
+    const text = ref('one')
+
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      },
+    })
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h('div', null, [
+              h(Async),
+              h(Teleport, { to: target }, h('div', text.value)),
+            ]),
+            fallback: h('div', 'fallback'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    text.value = 'two'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>async</div><!--teleport start--><!--teleport end--></div>`,
+    )
+    expect(serializeInner(target)).toBe(`<div>two</div>`)
+  })
+
+  test('should handle disabled teleport updates before suspense is resolved', async () => {
+    const target = nodeOps.createElement('div')
+    const disabled = ref(false)
+
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      },
+    })
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h('div', null, [
+              h(Async),
+              h(
+                Teleport,
+                { to: target, disabled: disabled.value },
+                h('div', 'teleported'),
+              ),
+            ]),
+            fallback: h('div', 'fallback'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    disabled.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>async</div><!--teleport start--><div>teleported</div><!--teleport end--></div>`,
+    )
+    expect(serializeInner(target)).toBe(``)
   })
 
   //#11617
