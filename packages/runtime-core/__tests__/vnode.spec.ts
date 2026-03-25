@@ -477,6 +477,12 @@ describe('vnode', () => {
       expect(mergeProps({ onClick: null })).toMatchObject({
         onClick: null,
       })
+      expect(
+        mergeProps({ 'onUpdate:modelValue': undefined }),
+      ).not.toHaveProperty('onUpdate:modelValue')
+      expect(mergeProps({ 'onUpdate:modelValue': null })).not.toHaveProperty(
+        'onUpdate:modelValue',
+      )
     })
 
     test('default', () => {
