@@ -2134,6 +2134,7 @@ function baseCreateRenderer(
       patchFlag,
       dirs,
       cacheIndex,
+      memo,
     } = vnode
 
     if (patchFlag === PatchFlags.BAIL) {
@@ -2222,15 +2223,24 @@ function baseCreateRenderer(
       }
     }
 
+    // v-for + v-memo stores cached vnodes inside renderList's array cache rather
+    // than component renderCache. Invalidate detached cached vnodes after
+    // unmount so a later v-if remount won't reuse a vnode whose DOM is gone.
+    const shouldInvalidateMemo = memo != null && cacheIndex == null
+
     if (
       (shouldInvokeVnodeHook &&
         (vnodeHook = props && props.onVnodeUnmounted)) ||
-      shouldInvokeDirs
+      shouldInvokeDirs ||
+      shouldInvalidateMemo
     ) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
         shouldInvokeDirs &&
           invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
+        if (shouldInvalidateMemo) {
+          vnode.el = null
+        }
       }, parentSuspense)
     }
   }
