@@ -169,9 +169,13 @@ export const TeleportImpl = {
         updateCssVars(n2, true)
       }
 
-      if (isTeleportDeferred(n2.props)) {
+      if (
+        isTeleportDeferred(n2.props) ||
+        (parentSuspense && parentSuspense.pendingBranch)
+      ) {
         n2.el!.__isMounted = false
         queuePostRenderEffect(() => {
+          if (n2.el!.__isMounted !== false) return
           mountToTarget()
           delete n2.el!.__isMounted
         }, parentSuspense)
@@ -179,7 +183,17 @@ export const TeleportImpl = {
         mountToTarget()
       }
     } else {
-      if (isTeleportDeferred(n2.props) && n1.el!.__isMounted === false) {
+      // update content
+      n2.el = n1.el
+      n2.targetStart = n1.targetStart
+      const mainAnchor = (n2.anchor = n1.anchor)!
+      const target = (n2.target = n1.target)!
+      const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
+
+      // Target mounting may still be pending because of deferred teleport or a
+      // parent suspense buffering post-render effects. In that case, defer the
+      // teleport patch itself until the pending mount effect has run.
+      if (n1.el!.__isMounted === false) {
         queuePostRenderEffect(() => {
           TeleportImpl.process(
             n1,
@@ -196,12 +210,6 @@ export const TeleportImpl = {
         }, parentSuspense)
         return
       }
-      // update content
-      n2.el = n1.el
-      n2.targetStart = n1.targetStart
-      const mainAnchor = (n2.anchor = n1.anchor)!
-      const target = (n2.target = n1.target)!
-      const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
       const wasDisabled = isTeleportDisabled(n1.props)
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
