@@ -21,6 +21,7 @@ import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
 import { SchedulerJobFlags } from '../scheduler'
+import { isHmrUpdating } from '../hmr'
 
 type Hook<T = () => void> = T | T[]
 
@@ -401,7 +402,7 @@ export function resolveTransitionHooks(
 
     enter(el) {
       // prevent enter if leave is in progress
-      if (leavingVNodesCache[key] === vnode) return
+      if (!isHmrUpdating && leavingVNodesCache[key] === vnode) return
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled

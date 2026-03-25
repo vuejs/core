@@ -71,7 +71,12 @@ import {
   type TeleportVNode,
 } from './components/Teleport'
 import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
-import { isHmrUpdating, registerHMR, unregisterHMR } from './hmr'
+import {
+  isHmrUpdating,
+  registerHMR,
+  setHmrUpdating,
+  unregisterHMR,
+} from './hmr'
 import { type RootHydrateFunction, createHydrationFunctions } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { endMeasure, startMeasure } from './profiling'
@@ -733,10 +738,17 @@ function baseCreateRenderer(
       needCallTransitionHooks ||
       dirs
     ) {
+      const isHmr = __DEV__ && isHmrUpdating
       queuePostRenderEffect(() => {
-        vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-        needCallTransitionHooks && transition!.enter(el)
-        dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+        let prev
+        if (__DEV__) prev = setHmrUpdating(isHmr)
+        try {
+          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+          needCallTransitionHooks && transition!.enter(el)
+          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+        } finally {
+          if (__DEV__) setHmrUpdating(prev!)
+        }
       }, parentSuspense)
     }
   }
