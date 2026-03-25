@@ -67,9 +67,5 @@
     // pinned
     // only used in example for e2e tests
     'marked',
-
-    // pinned, 5.0+ has exports issues
-    // https://github.com/vuejs/core/issues/11603
-    'entities',
   ],
 }
