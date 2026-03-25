@@ -176,6 +176,29 @@ export const TeleportImpl = {
       const target = (n2.target = n1.target)!
       const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
       const wasDisabled = isTeleportDisabled(n1.props)
+
+      // When teleport target mounting is deferred into a pending parent suspense's
+      // effect queue, patching before the suspense resolves would run against an
+      // uninitialized target. Defer the teleport patch itself so it runs after
+      // the suspense flushes its effects.
+      if (parentSuspense && parentSuspense.pendingBranch && !targetAnchor) {
+        queuePostRenderEffect(() => {
+          TeleportImpl.process(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            namespace,
+            slotScopeIds,
+            optimized,
+            internals,
+          )
+        }, parentSuspense)
+        return
+      }
+
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
 
