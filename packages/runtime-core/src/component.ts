@@ -723,7 +723,7 @@ export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
 let internalSetCurrentInstance: (
   instance: ComponentInternalInstance | null,
 ) => void
-let setInSSRSetupState: (state: boolean) => void
+export let setInSSRSetupState: (state: boolean) => void
 
 /**
  * The following makes getCurrentInstance() usage across multiple copies of Vue
@@ -1271,7 +1271,7 @@ export interface ComponentCustomElementInterface {
   /**
    * @internal
    */
-  _injectChildStyle(type: ConcreteComponent): void
+  _injectChildStyle(type: ConcreteComponent, parent?: ConcreteComponent): void
   /**
    * @internal
    */

@@ -235,6 +235,8 @@ export class VueElement
   private _styleChildren = new WeakSet()
   private _pendingResolve: Promise<void> | undefined
   private _parent: VueElement | undefined
+  private _styleAnchors: WeakMap<ConcreteComponent, HTMLStyleElement> =
+    new WeakMap()
   /**
    * dev only
    */
@@ -571,6 +573,7 @@ export class VueElement
               this._styles.forEach(s => this._root.removeChild(s))
               this._styles.length = 0
             }
+            this._styleAnchors.delete(this._def)
             this._applyStyles(newStyles)
             this._instance = null
             this._update()
@@ -607,6 +610,7 @@ export class VueElement
   private _applyStyles(
     styles: string[] | undefined,
     owner?: ConcreteComponent,
+    parentComp?: ConcreteComponent,
   ) {
     if (!styles) return
     if (owner) {
@@ -615,12 +619,25 @@ export class VueElement
       }
       this._styleChildren.add(owner)
     }
+
     const nonce = this._nonce
+    const root = this.shadowRoot!
+    const insertionAnchor = parentComp
+      ? this._getStyleAnchor(parentComp) || this._getStyleAnchor(this._def)
+      : this._getRootStyleInsertionAnchor(root)
+    let last: HTMLStyleElement | null = null
     for (let i = styles.length - 1; i >= 0; i--) {
       const s = document.createElement('style')
       if (nonce) s.setAttribute('nonce', nonce)
       s.textContent = styles[i]
-      this.shadowRoot!.prepend(s)
+
+      root.insertBefore(s, last || insertionAnchor)
+      last = s
+      if (i === 0) {
+        if (!parentComp) this._styleAnchors.set(this._def, s)
+        if (owner) this._styleAnchors.set(owner, s)
+      }
+
       // record for HMR
       if (__DEV__) {
         if (owner) {
@@ -637,6 +654,30 @@ export class VueElement
         }
       }
     }
+  }
+
+  private _getStyleAnchor(comp?: ConcreteComponent): HTMLStyleElement | null {
+    if (!comp) {
+      return null
+    }
+    const anchor = this._styleAnchors.get(comp)
+    if (anchor && anchor.parentNode === this.shadowRoot) {
+      return anchor
+    }
+    if (anchor) {
+      this._styleAnchors.delete(comp)
+    }
+    return null
+  }
+
+  private _getRootStyleInsertionAnchor(root: ShadowRoot): ChildNode | null {
+    for (let i = 0; i < root.childNodes.length; i++) {
+      const node = root.childNodes[i]
+      if (!(node instanceof HTMLStyleElement)) {
+        return node
+      }
+    }
+    return null
   }
 
   /**
@@ -708,8 +749,11 @@ export class VueElement
   /**
    * @internal
    */
-  _injectChildStyle(comp: ConcreteComponent & CustomElementOptions): void {
-    this._applyStyles(comp.styles, comp)
+  _injectChildStyle(
+    comp: ConcreteComponent & CustomElementOptions,
+    parentComp?: ConcreteComponent,
+  ): void {
+    this._applyStyles(comp.styles, comp, parentComp)
   }
 
   /**
@@ -743,6 +787,7 @@ export class VueElement
   _removeChildStyle(comp: ConcreteComponent): void {
     if (__DEV__) {
       this._styleChildren.delete(comp)
+      this._styleAnchors.delete(comp)
       if (this._childStyles && comp.__hmrId) {
         // clear old styles
         const oldStyles = this._childStyles.get(comp.__hmrId)

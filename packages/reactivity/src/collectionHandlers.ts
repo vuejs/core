@@ -169,13 +169,17 @@ function createInstrumentations(
           add(this: SetTypes, value: unknown) {
             const target = toRaw(this)
             const proto = getProto(target)
+            const rawValue = toRaw(value)
             const valueToAdd =
               !shallow && !isShallow(value) && !isReadonly(value)
-                ? toRaw(value)
+                ? rawValue
                 : value
             const hadKey =
               proto.has.call(target, valueToAdd) ||
-              (value !== valueToAdd && proto.has.call(target, value))
+              (hasChanged(value, valueToAdd) &&
+                proto.has.call(target, value)) ||
+              (hasChanged(rawValue, valueToAdd) &&
+                proto.has.call(target, rawValue))
             if (!hadKey) {
               target.add(valueToAdd)
               trigger(target, TriggerOpTypes.ADD, valueToAdd, valueToAdd)
