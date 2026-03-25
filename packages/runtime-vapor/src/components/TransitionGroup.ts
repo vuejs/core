@@ -141,27 +141,35 @@ const VaporTransitionGroupImpl = defineVaporComponent({
     const frag = new DynamicFragment('transition-group')
     let currentTag: string | undefined
     let isMounted = false
+    let container: HTMLElement | null
+
     renderEffect(() => {
       const tag = props.tag
       // tag is not changed, do nothing
       if (isMounted && tag === currentTag) return
 
-      let block: Block = slottedBlock
-      frag.update(
-        () => {
-          block = (slots.default && slots.default()) || []
-          applyGroupTransitionHooks(block, propsProxy, state, instance)
-          if (tag) {
-            const container = createElement(tag)
-            insert(block, container)
-            return container
-          }
-          return block
-        },
-        // Avoid `undefined` falling back to the render function as the key.
-        tag ?? null,
-      )
-      slottedBlock = block
+      renderEffect(() => {
+        let block: Block = slottedBlock
+        const defaultSlot = slots.default
+        frag.update(
+          () => {
+            block = (defaultSlot && defaultSlot()) || []
+            applyGroupTransitionHooks(block, propsProxy, state, instance)
+            if (tag !== currentTag) {
+              container = tag ? createElement(tag) : null
+            }
+            if (container) {
+              insert(block, container)
+              return container
+            }
+            return block
+          },
+          // Avoid `undefined` falling back to the render function as the key.
+          '' + tag + defaultSlot,
+        )
+        slottedBlock = block
+      })
+
       currentTag = tag
       isMounted = true
     })
