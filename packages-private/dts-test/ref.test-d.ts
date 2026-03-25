@@ -338,6 +338,14 @@ expectType<{ name: string } | null>(p2.union)
   // Should not distribute Refs over union
   expectType<Ref<number | string>>(toRef(obj, 'c'))
 
+  const array = reactive(['a', 'b'])
+  expectType<Ref<string>>(toRef(array, '1'))
+  expectType<Ref<string>>(toRef(array, '1', 'fallback'))
+
+  const tuple: [string, number] = ['a', 1]
+  expectType<Ref<string>>(toRef(tuple, '0'))
+  expectType<Ref<number>>(toRef(tuple, '1'))
+
   expectType<Ref<number>>(toRef(() => 123))
   expectType<Ref<number | string>>(toRef(() => obj.c))
 
