@@ -1,4 +1,4 @@
-import { createVaporApp, nextTick, vaporInteropPlugin } from 'vue'
+import { createVaporApp, next, nextTick, vaporInteropPlugin } from 'vue'
 import { expect } from 'vitest'
 import App from '../transition-group/App.vue'
 import '../../../packages/vue/__tests__/e2e/style.css'
@@ -339,48 +339,59 @@ describe('vapor transition-group', () => {
       const btnSelector = '.dynamic-slot-with-v-if > button.toggle'
       const addBtnSelector = '.dynamic-slot-with-v-if > button.add'
       const containerSelector = '.dynamic-slot-with-v-if > div'
-      expect(await html(containerSelector)).toBe(`<ul></ul>`)
+      expect(html(containerSelector)).toBe(`<ul></ul><!--transition-group-->`)
 
-      expect(
-        (await transitionStart(btnSelector, containerSelector)).innerHTML,
-      ).toBe(
+      click(btnSelector)
+      await nextTick()
+      await nextFrame()
+      expect(html(containerSelector)).toBe(
         `<ul>` +
           `<li class="test v-enter-from v-enter-active">0</li>` +
           `<li class="test v-enter-from v-enter-active">1</li>` +
-          `</ul>`,
+          `<!--for--></ul><!--transition-group-->`,
       )
 
-      await waitForInnerHTML(
-        containerSelector,
+      await nextFrame()
+      expect(html(containerSelector)).toBe(
         `<ul>` +
           `<li class="test v-enter-active v-enter-to">0</li>` +
           `<li class="test v-enter-active v-enter-to">1</li>` +
-          `</ul>`,
+          `<!--for--></ul><!--transition-group-->`,
       )
 
-      await waitForInnerHTML(
-        containerSelector,
-        `<ul><li class="test">0</li><li class="test">1</li></ul>`,
+      await transitionFinish(100)
+      expect(html(containerSelector)).toBe(
+        `<ul><li class="test">0</li><li class="test">1</li><!--for--></ul><!--transition-group-->`,
       )
 
       // add a new item
-      expect(
-        (await transitionStart(addBtnSelector, containerSelector)).innerHTML,
-      ).toBe(
+      click(addBtnSelector)
+      await nextTick()
+      await nextFrame()
+      expect(html(containerSelector)).toBe(
         `<ul>` +
           `<li class="test">0</li>` +
           `<li class="test">1</li>` +
           `<li class="test v-enter-from v-enter-active">2</li>` +
-          `</ul>`,
+          `<!--for--></ul><!--transition-group-->`,
       )
 
-      await waitForInnerHTML(
-        containerSelector,
+      await nextFrame()
+      expect(html(containerSelector)).toBe(
+        `<ul>` +
+          `<li class="test">0</li>` +
+          `<li class="test">1</li>` +
+          `<li class="test v-enter-active v-enter-to">2</li>` +
+          `<!--for--></ul><!--transition-group-->`,
+      )
+
+      await transitionFinish(100)
+      expect(html(containerSelector)).toBe(
         `<ul>` +
           `<li class="test">0</li>` +
           `<li class="test">1</li>` +
           `<li class="test">2</li>` +
-          `</ul>`,
+          `<!--for--></ul><!--transition-group-->`,
       )
     },
     E2E_TIMEOUT,
