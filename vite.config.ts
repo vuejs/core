@@ -94,9 +94,17 @@ export default defineConfig({
         },
       },
       // @ts-expect-error - https://github.com/vuejs/core/actions/runs/23430103557/job/68154030981
-      // When running `vp test --project unit*`, Vitest still initializes all projects
-      // and loads `packages-private/vapor-e2e-test/vite.config.ts`.
-      // That config immediately imports `vue/compiler-sfc`, but the package has not been built yet.
+      // When running `vp test --project unit*`, Vitest still initializes all projects (this is
+      // expected  behavior see https://github.com/vitest-dev/vitest/issues/9849) and loads
+      // `packages-private/vapor-e2e-test/vite.config.ts`. That config immediately imports
+      // `vue/compiler-sfc`, but the package has not been built yet.
+      // To work around this, we conditionally include the vapor e2e test project only when the
+      // `VAPOR_E2E` env variable is set.
+      // for Vitest VSCode extension, we can set this env variable in the `vitest.nodeEnv` config
+      // to ensure the vapor e2e tests are included when running tests in VSCode.
+      // "vitest.nodeEnv": {
+      //   "VAPOR_E2E": "1"
+      // },
       ...(process.env.VAPOR_E2E === '1'
         ? [
             {
