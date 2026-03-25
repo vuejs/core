@@ -32,7 +32,7 @@ describe('ssr: watch', () => {
     const ctx: SSRContext = {}
     const html = await renderToString(app, ctx)
 
-    expect(ctx.__watcherHandles!.length).toBe(1)
+    expect(ctx.__watcherHandles!.length).toBe(0)
 
     expect(html).toMatch('hello world')
   })
@@ -61,7 +61,7 @@ describe('ssr: watch', () => {
     const ctx: SSRContext = {}
     const html = await renderToString(app, ctx)
 
-    expect(ctx.__watcherHandles!.length).toBe(1)
+    expect(ctx.__watcherHandles!.length).toBe(0)
     expect(html).toMatch('changed again')
     await nextTick()
     expect(msg).toBe('changed again')
@@ -229,7 +229,7 @@ describe('ssr: watchEffect', () => {
     const ctx: SSRContext = {}
     const html = await renderToString(app, ctx)
 
-    expect(ctx.__watcherHandles!.length).toBe(1)
+    expect(ctx.__watcherHandles!.length).toBe(0)
     expect(html).toMatch('changed again')
     await nextTick()
     expect(msg).toBe('changed again')

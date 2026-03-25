@@ -6,6 +6,7 @@ import {
   extend,
   isArray,
   isFunction,
+  isModelListener,
   isObject,
   isOn,
   isString,
@@ -891,6 +892,14 @@ export function mergeProps(...args: (Data & VNodeProps)[]): Data {
           ret[key] = existing
             ? [].concat(existing as any, incoming as any)
             : incoming
+        } else if (
+          incoming == null &&
+          existing == null &&
+          // mergeProps({ 'onUpdate:modelValue': undefined }) should not retain
+          // the model listener.
+          !isModelListener(key)
+        ) {
+          ret[key] = incoming
         }
       } else if (key !== '') {
         ret[key] = toMerge[key]
