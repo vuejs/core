@@ -5,6 +5,7 @@ import {
   isFunction,
   isIntegerKey,
   isObject,
+  isSymbol,
 } from '@vue/shared'
 import { Dep, getDepFromReactive } from './dep'
 import {
@@ -358,20 +359,22 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   public _value: T[K] = undefined!
 
   private readonly _raw: T
+  private readonly _key: K
   private readonly _shallow: boolean
 
   constructor(
     private readonly _object: T,
-    private readonly _key: K,
+    key: K,
     private readonly _defaultValue?: T[K],
   ) {
+    this._key = (isSymbol(key) ? key : String(key)) as K
     this._raw = toRaw(_object)
 
     let shallow = true
     let obj = _object
 
     // For an array with integer key, refs are not unwrapped
-    if (!isArray(_object) || !isIntegerKey(String(_key))) {
+    if (!isArray(_object) || !isIntegerKey(String(this._key))) {
       // Otherwise, check each proxy layer for unwrapping
       do {
         shallow = !isProxy(obj) || isShallow(obj)
@@ -480,8 +483,8 @@ export function toRef<T extends object, K extends keyof T>(
 ): ToRef<Exclude<T[K], undefined>>
 /*@__NO_SIDE_EFFECTS__*/
 export function toRef(
-  source: Record<string, any> | MaybeRef,
-  key?: string,
+  source: Record<PropertyKey, any> | MaybeRef,
+  key?: string | number | symbol,
   defaultValue?: unknown,
 ): Ref {
   if (isRef(source)) {
@@ -496,8 +499,8 @@ export function toRef(
 }
 
 function propertyToRef(
-  source: Record<string, any>,
-  key: string,
+  source: Record<PropertyKey, any>,
+  key: string | number | symbol,
   defaultValue?: unknown,
 ) {
   return new ObjectRefImpl(source, key, defaultValue) as any
