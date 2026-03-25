@@ -334,6 +334,22 @@ export type ToRefs<T = any> = {
   [K in keyof T]: ToRef<T[K]>
 }
 
+type ArrayStringKey<T> = T extends readonly any[]
+  ? number extends T['length']
+    ? `${number}`
+    : never
+  : never
+
+type ToRefKey<T> = keyof T | ArrayStringKey<T>
+
+type ToRefValue<T extends object, K extends ToRefKey<T>> = K extends keyof T
+  ? T[K]
+  : T extends readonly (infer V)[]
+    ? K extends ArrayStringKey<T>
+      ? V
+      : never
+    : never
+
 /**
  * Converts a reactive object to a plain object where each property of the
  * resulting object is a ref pointing to the corresponding property of the
@@ -472,15 +488,15 @@ export function toRef<T>(
   : T extends Ref
     ? T
     : Ref<UnwrapRef<T>>
-export function toRef<T extends object, K extends keyof T>(
+export function toRef<T extends object, K extends ToRefKey<T>>(
   object: T,
   key: K,
-): ToRef<T[K]>
-export function toRef<T extends object, K extends keyof T>(
+): ToRef<ToRefValue<T, K>>
+export function toRef<T extends object, K extends ToRefKey<T>>(
   object: T,
   key: K,
-  defaultValue: T[K],
-): ToRef<Exclude<T[K], undefined>>
+  defaultValue: ToRefValue<T, K>,
+): ToRef<Exclude<ToRefValue<T, K>, undefined>>
 /*@__NO_SIDE_EFFECTS__*/
 export function toRef(
   source: Record<PropertyKey, any> | MaybeRef,
