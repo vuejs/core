@@ -57,9 +57,9 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 - Make sure tests pass!
 
-- Commit messages must follow the [commit message convention](./commit-convention.md) so that changelogs can be automatically generated. Commit messages are automatically validated before commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
+- Commit messages must follow the [commit message convention](./commit-convention.md) so that changelogs can be automatically generated. Commit messages are automatically validated by the Vite+ `commit-msg` hook (logic in `scripts/verify-commit.js`).
 
-- No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with oxfmt on commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks)).
+- No need to worry too much about code style as long as you have installed the dev dependencies. On commit, the Vite+ `pre-commit` hook runs `vp staged`, which currently formats staged JS / JSON files and runs `vp lint --fix` plus formatting for staged TS / TSX files.
 
 ### Advanced Pull Request Tips
 
@@ -96,10 +96,12 @@ A high level overview of tools used:
 
 ## Git Hooks
 
-The project uses [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks) to enforce the following on each commit:
+The project uses Vite+ Git Hooks. Hooks are installed via `vp config --hooks-dir .vite-hooks` during `pnpm i`. To reinstall them manually, run `vp run prepare`.
 
-- Type check the entire project
-- Automatically format changed files using oxfmt
+On commit, the hooks enforce the following:
+
+- Run staged-file fixes via `vp staged` as defined in `vite.config.ts`
+- Type check the entire project via `vp run check`
 - Verify commit message format (logic in `scripts/verify-commit.js`)
 
 ## Scripts
