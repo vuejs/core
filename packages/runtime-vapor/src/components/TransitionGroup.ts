@@ -141,7 +141,7 @@ const VaporTransitionGroupImpl = defineVaporComponent({
     const frag = new DynamicFragment('transition-group')
     let currentTag: string | undefined
     let isMounted = false
-    let container: HTMLElement | null
+    let container: HTMLElement | undefined
 
     renderEffect(() => {
       const tag = props.tag
@@ -156,7 +156,7 @@ const VaporTransitionGroupImpl = defineVaporComponent({
             block = (defaultSlot && defaultSlot()) || []
             applyGroupTransitionHooks(block, propsProxy, state, instance)
             if (tag !== currentTag) {
-              container = tag ? createElement(tag) : null
+              container = tag ? createElement(tag) : undefined
             }
             if (container) {
               insert(block, container)
