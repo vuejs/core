@@ -405,6 +405,19 @@ describe('reactivity/ref', () => {
     assertTriggerRef([0])
   })
 
+  test('triggerRef on toRef created from symbol key preserves the symbol', () => {
+    const key = Symbol()
+    const object = reactive({ [key]: 'a' })
+    const value = toRef(object, key)
+    const fn = vi.fn()
+
+    effect(() => fn(value.value))
+    expect(fn).toHaveBeenCalledTimes(1)
+
+    triggerRef(value)
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
   test('toRef default value', () => {
     const a: { x: number | undefined } = { x: undefined }
     const x = toRef(a, 'x', 1)
