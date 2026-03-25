@@ -402,6 +402,7 @@ describe('reactivity/ref', () => {
     }
 
     assertTriggerRef(0)
+    // JS coerces non-symbol property keys like [0] to the string "0".
     assertTriggerRef([0])
   })
 
