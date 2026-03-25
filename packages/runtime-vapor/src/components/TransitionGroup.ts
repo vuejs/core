@@ -17,7 +17,12 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import { extend, isArray } from '@vue/shared'
-import { type Block, type TransitionBlock, insert } from '../block'
+import {
+  type Block,
+  type BlockFn,
+  type TransitionBlock,
+  insert,
+} from '../block'
 import { renderEffect } from '../renderEffect'
 import {
   type ResolvedTransitionBlock,
@@ -140,37 +145,29 @@ const VaporTransitionGroupImpl = defineVaporComponent({
 
     const frag = new DynamicFragment('transition-group')
     let currentTag: string | undefined
+    let currentSlot: BlockFn | undefined
     let isMounted = false
-    let container: HTMLElement | undefined
 
     renderEffect(() => {
       const tag = props.tag
-      // tag is not changed, do nothing
-      if (isMounted && tag === currentTag) return
+      const slot = slots.default
+      if (isMounted && tag === currentTag && slot === currentSlot) return
 
-      renderEffect(() => {
-        let block: Block = slottedBlock
-        const defaultSlot = slots.default
-        frag.update(
-          () => {
-            block = (defaultSlot && defaultSlot()) || []
-            applyGroupTransitionHooks(block, propsProxy, state, instance)
-            if (tag !== currentTag) {
-              container = tag ? createElement(tag) : undefined
-            }
-            if (container) {
-              insert(block, container)
-              return container
-            }
-            return block
-          },
-          // Avoid `undefined` falling back to the render function as the key.
-          '' + tag + defaultSlot,
-        )
-        slottedBlock = block
+      const container = tag ? createElement(tag) : undefined
+      let block: Block = slottedBlock
+      frag.update(() => {
+        block = (slot && slot()) || []
+        applyGroupTransitionHooks(block, propsProxy, state, instance)
+        if (container) {
+          insert(block, container)
+          return container
+        }
+        return block
       })
+      slottedBlock = block
 
       currentTag = tag
+      currentSlot = slot
       isMounted = true
     })
     return frag
