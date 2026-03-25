@@ -374,7 +374,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
     let obj = _object
 
     // For an array with integer key, refs are not unwrapped
-    if (!isArray(_object) || !isIntegerKey(String(this._key))) {
+    if (!isArray(_object) || isSymbol(this._key) || !isIntegerKey(this._key)) {
       // Otherwise, check each proxy layer for unwrapping
       do {
         shallow = !isProxy(obj) || isShallow(obj)
