@@ -151,6 +151,7 @@ const VaporTransitionGroupImpl = defineVaporComponent({
     renderEffect(() => {
       const tag = props.tag
       const slot = slots.default
+      // if the tag and slot are the same as previous render, no need to update.
       if (isMounted && tag === currentTag && slot === currentSlot) return
 
       const container = tag ? createElement(tag) : undefined
