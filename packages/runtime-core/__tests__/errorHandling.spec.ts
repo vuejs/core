@@ -670,5 +670,42 @@ describe('error handling', () => {
     )
   })
 
+  // #11624
+  test('in computed that is used as key for watch', async () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+    const trigger = ref(false)
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return () => h(Child)
+      },
+    }
+
+    const Child = {
+      setup() {
+        const foo = computed(() => {
+          if (trigger.value) throw err
+          return 1
+        })
+        watch(foo, () => {})
+        return () => null
+      },
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    trigger.value = true
+    await nextTick()
+    expect(fn).toHaveBeenCalledWith(
+      err,
+      ErrorTypeStrings[ErrorCodes.COMPONENT_UPDATE],
+    )
+  })
+
   // native event handler handling should be tested in respective renderers
 })

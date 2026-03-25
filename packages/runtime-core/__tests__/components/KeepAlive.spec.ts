@@ -32,6 +32,7 @@ const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 describe('KeepAlive', () => {
   let one: ComponentOptions
   let two: ComponentOptions
+  let oneTest: ComponentOptions
   let views: Record<string, ComponentOptions>
   let root: TestElement
 
@@ -40,6 +41,18 @@ describe('KeepAlive', () => {
     one = {
       name: 'one',
       data: () => ({ msg: 'one' }),
+      render(this: any) {
+        return h('div', this.msg)
+      },
+      created: vi.fn(),
+      mounted: vi.fn(),
+      activated: vi.fn(),
+      deactivated: vi.fn(),
+      unmounted: vi.fn(),
+    }
+    oneTest = {
+      name: 'oneTest',
+      data: () => ({ msg: 'oneTest' }),
       render(this: any) {
         return h('div', this.msg)
       },
@@ -63,6 +76,7 @@ describe('KeepAlive', () => {
     }
     views = {
       one,
+      oneTest,
       two,
     }
   })
@@ -369,6 +383,128 @@ describe('KeepAlive', () => {
     assertHookCalls(two, [2, 2, 0, 0, 2])
   }
 
+  async function assertNameMatchWithFlag(props: KeepAliveProps) {
+    const outerRef = ref(true)
+    const viewRef = ref('one')
+    const App = {
+      render() {
+        return outerRef.value
+          ? h(KeepAlive, props, () => h(views[viewRef.value]))
+          : null
+      },
+    }
+    render(h(App), root)
+
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    assertHookCalls(one, [1, 1, 1, 0, 0])
+    assertHookCalls(oneTest, [0, 0, 0, 0, 0])
+    assertHookCalls(two, [0, 0, 0, 0, 0])
+
+    viewRef.value = 'oneTest'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>oneTest</div>`)
+    assertHookCalls(one, [1, 1, 1, 1, 0])
+    assertHookCalls(oneTest, [1, 1, 1, 0, 0])
+    assertHookCalls(two, [0, 0, 0, 0, 0])
+
+    viewRef.value = 'two'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>two</div>`)
+    assertHookCalls(one, [1, 1, 1, 1, 0])
+    assertHookCalls(oneTest, [1, 1, 1, 1, 0])
+    assertHookCalls(two, [1, 1, 0, 0, 0])
+
+    viewRef.value = 'one'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    assertHookCalls(one, [1, 1, 2, 1, 0])
+    assertHookCalls(oneTest, [1, 1, 1, 1, 0])
+    assertHookCalls(two, [1, 1, 0, 0, 1])
+
+    viewRef.value = 'oneTest'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>oneTest</div>`)
+    assertHookCalls(one, [1, 1, 2, 2, 0])
+    assertHookCalls(oneTest, [1, 1, 2, 1, 0])
+    assertHookCalls(two, [1, 1, 0, 0, 1])
+
+    viewRef.value = 'two'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>two</div>`)
+    assertHookCalls(one, [1, 1, 2, 2, 0])
+    assertHookCalls(oneTest, [1, 1, 2, 2, 0])
+    assertHookCalls(two, [2, 2, 0, 0, 1])
+
+    // teardown
+    outerRef.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    assertHookCalls(one, [1, 1, 2, 2, 1])
+    assertHookCalls(oneTest, [1, 1, 2, 2, 1])
+    assertHookCalls(two, [2, 2, 0, 0, 2])
+  }
+
+  async function assertNameMatchWithFlagExclude(props: KeepAliveProps) {
+    const outerRef = ref(true)
+    const viewRef = ref('one')
+    const App = {
+      render() {
+        return outerRef.value
+          ? h(KeepAlive, props, () => h(views[viewRef.value]))
+          : null
+      },
+    }
+    render(h(App), root)
+
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    assertHookCalls(one, [1, 1, 0, 0, 0])
+    assertHookCalls(oneTest, [0, 0, 0, 0, 0])
+    assertHookCalls(two, [0, 0, 0, 0, 0])
+
+    viewRef.value = 'oneTest'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>oneTest</div>`)
+    assertHookCalls(one, [1, 1, 0, 0, 1])
+    assertHookCalls(oneTest, [1, 1, 0, 0, 0])
+    assertHookCalls(two, [0, 0, 0, 0, 0])
+
+    viewRef.value = 'two'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>two</div>`)
+    assertHookCalls(one, [1, 1, 0, 0, 1])
+    assertHookCalls(oneTest, [1, 1, 0, 0, 1])
+    assertHookCalls(two, [1, 1, 1, 0, 0])
+
+    viewRef.value = 'one'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>one</div>`)
+    assertHookCalls(one, [2, 2, 0, 0, 1])
+    assertHookCalls(oneTest, [1, 1, 0, 0, 1])
+    assertHookCalls(two, [1, 1, 1, 1, 0])
+
+    viewRef.value = 'oneTest'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>oneTest</div>`)
+    assertHookCalls(one, [2, 2, 0, 0, 2])
+    assertHookCalls(oneTest, [2, 2, 0, 0, 1])
+    assertHookCalls(two, [1, 1, 1, 1, 0])
+
+    viewRef.value = 'two'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>two</div>`)
+    assertHookCalls(one, [2, 2, 0, 0, 2])
+    assertHookCalls(oneTest, [2, 2, 0, 0, 2])
+    assertHookCalls(two, [1, 1, 2, 1, 0])
+
+    // teardown
+    outerRef.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    assertHookCalls(one, [2, 2, 0, 0, 2])
+    assertHookCalls(oneTest, [2, 2, 0, 0, 2])
+    assertHookCalls(two, [1, 1, 2, 2, 1])
+  }
+
   describe('props', () => {
     test('include (string)', async () => {
       await assertNameMatch({ include: 'one' })
@@ -376,6 +512,10 @@ describe('KeepAlive', () => {
 
     test('include (regex)', async () => {
       await assertNameMatch({ include: /^one$/ })
+    })
+
+    test('include (regex with g flag)', async () => {
+      await assertNameMatchWithFlag({ include: /one/g })
     })
 
     test('include (array)', async () => {
@@ -388,6 +528,10 @@ describe('KeepAlive', () => {
 
     test('exclude (regex)', async () => {
       await assertNameMatch({ exclude: /^two$/ })
+    })
+
+    test('exclude (regex with a flag)', async () => {
+      await assertNameMatchWithFlagExclude({ exclude: /one/g })
     })
 
     test('exclude (array)', async () => {
@@ -810,7 +954,7 @@ describe('KeepAlive', () => {
     expect(spyUnmounted).toHaveBeenCalledTimes(4)
   })
 
-  // #1513
+  // #1511
   test('should work with cloned root due to scopeId / fallthrough attrs', async () => {
     const viewRef = ref('one')
     const instanceRef = ref<any>(null)
@@ -976,5 +1120,106 @@ describe('KeepAlive', () => {
     expect(deactivatedA).toHaveBeenCalledTimes(1)
     expect(mountedB).toHaveBeenCalledTimes(1)
     expect(unmountedB).toHaveBeenCalledTimes(0)
+  })
+
+  // #11717
+  test('remove component from include then switching child', async () => {
+    const About = {
+      name: 'About',
+      render() {
+        return h('h1', 'About')
+      },
+    }
+    const mountedHome = vi.fn()
+    const unmountedHome = vi.fn()
+    const activatedHome = vi.fn()
+    const deactivatedHome = vi.fn()
+    const Home = {
+      name: 'Home',
+      setup() {
+        onMounted(mountedHome)
+        onUnmounted(unmountedHome)
+        onDeactivated(deactivatedHome)
+        onActivated(activatedHome)
+        return () => {
+          h('h1', 'Home')
+        }
+      },
+    }
+    const activeViewName = ref('Home')
+    const cacheList = reactive(['Home'])
+    const App = createApp({
+      setup() {
+        return () => {
+          return [
+            h(
+              KeepAlive,
+              {
+                include: cacheList,
+              },
+              [activeViewName.value === 'Home' ? h(Home) : h(About)],
+            ),
+          ]
+        }
+      },
+    })
+    App.mount(nodeOps.createElement('div'))
+    expect(mountedHome).toHaveBeenCalledTimes(1)
+    expect(activatedHome).toHaveBeenCalledTimes(1)
+    cacheList.splice(0, 1)
+    await nextTick()
+    activeViewName.value = 'About'
+    await nextTick()
+    expect(deactivatedHome).toHaveBeenCalledTimes(0)
+    expect(unmountedHome).toHaveBeenCalledTimes(1)
+  })
+
+  test('should work with async component when update `include` props', async () => {
+    let resolve: (comp: Component) => void
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const toggle = ref(true)
+    const instanceRef = ref<any>(null)
+    const keepaliveInclude = ref(['Foo'])
+    const App = {
+      render: () => {
+        return h(KeepAlive, { include: keepaliveInclude.value }, () =>
+          toggle.value ? h(AsyncComp, { ref: instanceRef }) : null,
+        )
+      },
+    }
+
+    render(h(App), root)
+    // async component has not been resolved
+    expect(serializeInner(root)).toBe('<!---->')
+
+    resolve!({
+      name: 'Foo',
+      data: () => ({ count: 0 }),
+      render() {
+        return h('p', this.count)
+      },
+    })
+
+    await timeout()
+    // resolved
+    expect(serializeInner(root)).toBe('<p>0</p>')
+
+    // change state + toggle out + update `include` props
+    instanceRef.value.count++
+    toggle.value = false
+    keepaliveInclude.value = ['Foo']
+    await nextTick()
+    expect(serializeInner(root)).toBe('<!---->')
+
+    // toggle in, state should be maintained
+    toggle.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<p>1</p>')
   })
 })

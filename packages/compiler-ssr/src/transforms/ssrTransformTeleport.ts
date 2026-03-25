@@ -18,7 +18,7 @@ import { SSR_RENDER_TELEPORT } from '../runtimeHelpers'
 export function ssrProcessTeleport(
   node: ComponentNode,
   context: SSRTransformContext,
-) {
+): void {
   const targetProp = findProp(node, 'to')
   if (!targetProp) {
     context.onError(

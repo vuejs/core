@@ -47,7 +47,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     directives: [],
     imports: [],
     hoists: [],
-    cached: 0,
+    cached: [],
     temps: 0,
     codegenNode: createSimpleExpression(`null`, false),
     loc: locStub,
@@ -422,7 +422,7 @@ describe('compiler: codegen', () => {
   test('CacheExpression', () => {
     const { code } = generate(
       createRoot({
-        cached: 1,
+        cached: [],
         codegenNode: createCacheExpression(
           1,
           createSimpleExpression(`foo`, false),
@@ -440,7 +440,7 @@ describe('compiler: codegen', () => {
   test('CacheExpression w/ isVOnce: true', () => {
     const { code } = generate(
       createRoot({
-        cached: 1,
+        cached: [],
         codegenNode: createCacheExpression(
           1,
           createSimpleExpression(`foo`, false),

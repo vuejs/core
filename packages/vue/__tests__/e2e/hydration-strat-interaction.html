@@ -1,0 +1,63 @@
+<script src="../../dist/vue.global.js"></script>
+
+<div>click to hydrate</div>
+<div id="app"><button>0</button></div>
+<style>
+  body {
+    margin: 0;
+  }
+</style>
+
+<script>
+  const isFragment = location.search.includes('?fragment')
+  if (isFragment) {
+    document.getElementById('app').innerHTML =
+      `<!--[--><!--[--><span>one</span><!--]--><button>0</button><span>two</span><!--]-->`
+  }
+
+  window.isHydrated = false
+  const {
+    createSSRApp,
+    defineAsyncComponent,
+    h,
+    ref,
+    onMounted,
+    hydrateOnInteraction,
+  } = Vue
+
+  const Comp = {
+    setup() {
+      const count = ref(0)
+      onMounted(() => {
+        console.log('hydrated')
+        window.isHydrated = true
+      })
+      return () => {
+        const button = h(
+          'button',
+          { onClick: () => count.value++ },
+          count.value,
+        )
+        if (isFragment) {
+          return [[h('span', 'one')], button, h('span', 'two')]
+        } else {
+          return button
+        }
+      }
+    },
+  }
+
+  const AsyncComp = defineAsyncComponent({
+    loader: () => Promise.resolve(Comp),
+    hydrate: hydrateOnInteraction(['click', 'wheel']),
+  })
+
+  createSSRApp({
+    setup() {
+      onMounted(() => {
+        window.isRootMounted = true
+      })
+      return () => h(AsyncComp)
+    },
+  }).mount('#app')
+</script>

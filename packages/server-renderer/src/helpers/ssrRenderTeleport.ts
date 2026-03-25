@@ -12,7 +12,7 @@ export function ssrRenderTeleport(
   target: string,
   disabled: boolean,
   parentComponent: ComponentInternalInstance,
-) {
+): void {
   parentPush('<!--teleport start-->')
 
   const context = parentComponent.appContext.provides[

@@ -33,7 +33,7 @@ import {
   legacyPrependModifier,
   legacyRenderSlot,
   legacyRenderStatic,
-  legacyresolveScopedSlots,
+  legacyResolveScopedSlots,
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
 import type { Slots } from '../componentSlots'
@@ -62,7 +62,9 @@ export interface LegacyPublicProperties {
   $listeners: Record<string, Function | Function[]>
 }
 
-export function installCompatInstanceProperties(map: PublicPropertiesMap) {
+export function installCompatInstanceProperties(
+  map: PublicPropertiesMap,
+): void {
   const set = (target: any, key: any, val: any) => {
     target[key] = val
     return target[key]
@@ -181,7 +183,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     _b: () => legacyBindObjectProps,
     _v: () => createTextVNode,
     _e: () => createCommentVNode,
-    _u: () => legacyresolveScopedSlots,
+    _u: () => legacyResolveScopedSlots,
     _g: () => legacyBindObjectListeners,
     _d: () => legacyBindDynamicKeys,
     _p: () => legacyPrependModifier,

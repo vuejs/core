@@ -288,12 +288,27 @@ describe('ssr: element', () => {
           }></div>\`"
       `)
     })
+  })
 
-    test('custom dir', () => {
+  describe('custom directives', () => {
+    // #8112 should respect textContent / innerHTML from directive getSSRProps
+    // if the element has no children
+    test('custom dir without children', () => {
       expect(getCompiledString(`<div v-xxx:x.y="z" />`)).toMatchInlineSnapshot(`
         "\`<div\${
+            _ssrRenderAttrs(_temp0 = _ssrGetDirectiveProps(_ctx, _directive_xxx, _ctx.z, "x", { y: true }))
+          }>\${
+            ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+          }</div>\`"
+      `)
+    })
+
+    test('custom dir with children', () => {
+      expect(getCompiledString(`<div v-xxx:x.y="z">hello</div>`))
+        .toMatchInlineSnapshot(`
+        "\`<div\${
             _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx, _ctx.z, "x", { y: true }))
-          }></div>\`"
+          }>hello</div>\`"
       `)
     })
 
@@ -301,30 +316,69 @@ describe('ssr: element', () => {
       expect(getCompiledString(`<div class="foo" v-xxx />`))
         .toMatchInlineSnapshot(`
           "\`<div\${
-              _ssrRenderAttrs(_mergeProps({ class: "foo" }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
-            }></div>\`"
+              _ssrRenderAttrs(_temp0 = _mergeProps({ class: "foo" }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+            }>\${
+              ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+            }</div>\`"
         `)
     })
 
     test('custom dir with v-bind', () => {
       expect(getCompiledString(`<div :title="foo" :class="bar" v-xxx />`))
         .toMatchInlineSnapshot(`
-        "\`<div\${
-            _ssrRenderAttrs(_mergeProps({
-              title: _ctx.foo,
-              class: _ctx.bar
-            }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
-          }></div>\`"
-      `)
+          "\`<div\${
+              _ssrRenderAttrs(_temp0 = _mergeProps({
+                title: _ctx.foo,
+                class: _ctx.bar
+              }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+            }>\${
+              ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+            }</div>\`"
+        `)
+    })
+
+    test('custom dir with v-text', () => {
+      expect(getCompiledString(`<div v-xxx v-text="foo" />`))
+        .toMatchInlineSnapshot(`
+          "\`<div\${
+              _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx))
+            }>\${
+              _ssrInterpolate(_ctx.foo)
+            }</div>\`"
+        `)
+    })
+
+    test('custom dir with v-text and normal attrs', () => {
+      expect(getCompiledString(`<div class="test" v-xxx v-text="foo" />`))
+        .toMatchInlineSnapshot(`
+          "\`<div\${
+              _ssrRenderAttrs(_mergeProps({ class: "test" }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+            }>\${
+              _ssrInterpolate(_ctx.foo)
+            }</div>\`"
+        `)
+    })
+
+    test('mulptiple custom dirs with v-text', () => {
+      expect(getCompiledString(`<div v-xxx v-yyy v-text="foo" />`))
+        .toMatchInlineSnapshot(`
+          "\`<div\${
+              _ssrRenderAttrs(_mergeProps(_ssrGetDirectiveProps(_ctx, _directive_xxx), _ssrGetDirectiveProps(_ctx, _directive_yyy)))
+            }>\${
+              _ssrInterpolate(_ctx.foo)
+            }</div>\`"
+        `)
     })
 
     test('custom dir with object v-bind', () => {
       expect(getCompiledString(`<div v-bind="x" v-xxx />`))
         .toMatchInlineSnapshot(`
-        "\`<div\${
-            _ssrRenderAttrs(_mergeProps(_ctx.x, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
-          }></div>\`"
-      `)
+          "\`<div\${
+              _ssrRenderAttrs(_temp0 = _mergeProps(_ctx.x, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+            }>\${
+              ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+            }</div>\`"
+        `)
     })
 
     test('custom dir with object v-bind + normal bindings', () => {
@@ -332,11 +386,13 @@ describe('ssr: element', () => {
         getCompiledString(`<div v-bind="x" class="foo" v-xxx title="bar" />`),
       ).toMatchInlineSnapshot(`
         "\`<div\${
-            _ssrRenderAttrs(_mergeProps(_ctx.x, {
+            _ssrRenderAttrs(_temp0 = _mergeProps(_ctx.x, {
               class: "foo",
               title: "bar"
             }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
-          }></div>\`"
+          }>\${
+            ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+          }</div>\`"
       `)
     })
   })

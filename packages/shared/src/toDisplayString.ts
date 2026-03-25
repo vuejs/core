@@ -1,3 +1,5 @@
+// enums are compiled away via custom transform so no real dependency here
+import { ReactiveFlags } from '@vue/reactivity'
 import {
   isArray,
   isFunction,
@@ -12,7 +14,7 @@ import {
 
 // can't use isRef here since @vue/shared has no deps
 const isRef = (val: any): val is { value: unknown } => {
-  return !!(val && val.__v_isRef === true)
+  return !!(val && val[ReactiveFlags.IS_REF] === true)
 }
 
 /**

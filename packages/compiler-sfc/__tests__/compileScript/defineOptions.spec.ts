@@ -12,7 +12,7 @@ describe('defineOptions()', () => {
     expect(content).not.toMatch('defineOptions')
     // should include context options in default export
     expect(content).toMatch(
-      `export default /*#__PURE__*/Object.assign({ name: 'FooApp' }, `,
+      `export default /*@__PURE__*/Object.assign({ name: 'FooApp' }, `,
     )
   })
 

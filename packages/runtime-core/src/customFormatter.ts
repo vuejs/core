@@ -4,13 +4,15 @@ import {
   isReadonly,
   isRef,
   isShallow,
+  pauseTracking,
+  resetTracking,
   toRaw,
 } from '@vue/reactivity'
 import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
 import type { ComponentInternalInstance, ComponentOptions } from './component'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 
-export function initCustomFormatter() {
+export function initCustomFormatter(): void {
   /* eslint-disable no-restricted-globals */
   if (!__DEV__ || typeof window === 'undefined') {
     return
@@ -34,12 +36,16 @@ export function initCustomFormatter() {
       if (obj.__isVue) {
         return ['div', vueStyle, `VueInstance`]
       } else if (isRef(obj)) {
+        // avoid tracking during debugger accessing
+        pauseTracking()
+        const value = obj.value
+        resetTracking()
         return [
           'div',
           {},
           ['span', vueStyle, genRefFlag(obj)],
           '<',
-          formatValue(obj.value),
+          formatValue(value),
           `>`,
         ]
       } else if (isReactive(obj)) {
