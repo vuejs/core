@@ -2300,6 +2300,56 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<h1>true</h1><!--v-if-->`)
   })
 
+  test('propagates host el through wrapper components above Suspense after async child self-triggered update', async () => {
+    const AsyncComp = defineComponent({
+      async setup() {
+        const show = ref(true)
+        onMounted(() => {
+          show.value = false
+        })
+        const p = new Promise(r => setTimeout(r, 1))
+        deps.push(p.then(() => Promise.resolve()))
+        return () =>
+          h(
+            'div',
+            { key: show.value ? 'show' : 'hidden' },
+            show.value ? 'show' : 'hidden',
+          )
+      },
+    })
+
+    const Inner = defineComponent({
+      render() {
+        return h(Suspense, null, {
+          default: () => h(AsyncComp),
+        })
+      },
+    })
+
+    const Outer = defineComponent({
+      render() {
+        return h(Inner)
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    const vnode = h(Outer)
+    render(vnode, root)
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>hidden</div>`)
+
+    const renderedEl = root.children[0]
+    const innerVNode = vnode.component!.subTree
+    const suspenseVNode = innerVNode.component!.subTree
+
+    expect(suspenseVNode.el).toBe(renderedEl)
+    expect(innerVNode.el).toBe(renderedEl)
+    expect(vnode.el).toBe(renderedEl)
+  })
+
   describe('warnings', () => {
     // base function to check if a combination of slots warns or not
     function baseCheckWarn(

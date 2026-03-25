@@ -457,7 +457,10 @@ export function updateHOCHostEl(
   while (parent) {
     const root = parent.subTree
     if (root.suspense && root.suspense.activeBranch === vnode) {
-      root.suspense.vnode.el = root.el = vnode.el
+      // Suspense proxies its active branch host node, so keep propagating from
+      // the boundary vnode to any wrapper components above it.
+      root.suspense.vnode.el = root.el = el
+      vnode = root
     }
     if (root === vnode) {
       ;(vnode = parent.vnode).el = el
