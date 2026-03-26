@@ -138,24 +138,22 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       },
     })
 
-    let block: Block
     const shouldCaptureVShow = !isHydrating && !!props.appear
     const shouldPerformAppear = !!props.appear && !!performAppear
     // Dynamic slot sources can add/remove the default slot after setup, so
     // Transition needs a DynamicFragment to drive enter/leave on updates.
     if (instance.rawSlots.$) {
-      const frag = (block = new DynamicFragment('transition'))
+      const frag = new DynamicFragment('transition')
       let isMounted = false
       renderEffect(() => {
         if (!frag.$transition) {
           frag.$transition = resolveTransitionHooks(
-            frag as ResolvedTransitionBlock,
+            frag,
             propsProxy,
             state,
             instance,
           )
         }
-
         const [, pendingVShows] = capturePendingVShows(
           shouldCaptureVShow && !isMounted,
           () => frag.update(slots.default),
@@ -165,35 +163,26 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
           resolveTransitionBlock(frag.nodes),
           pendingVShows,
         )
-
-        if (!isMounted && shouldPerformAppear) {
-          performAppear(frag.$transition!)
-        }
+        if (!isMounted && shouldPerformAppear) performAppear(frag.$transition!)
         isMounted = true
       })
-    } else {
-      const [children, pendingVShows] = capturePendingVShows(
-        shouldCaptureVShow,
-        () => (slots.default && slots.default()) as any as Block,
-      )
-      if (!children) return []
-
-      block = children
-      const { hooks, root } = applyResolvedTransitionHooks(block, {
-        state,
-        // use proxy to keep props reference stable
-        props: propsProxy,
-        instance: instance,
-      } as VaporTransitionHooks)
-
-      applyPendingVShows(hooks, root, pendingVShows)
-
-      if (shouldPerformAppear) {
-        performAppear(hooks)
-      }
+      return frag
     }
 
-    return block
+    const [children, pendingVShows] = capturePendingVShows(
+      shouldCaptureVShow,
+      () => ((slots.default && slots.default()) || []) as any as Block,
+    )
+
+    const { hooks, root } = applyResolvedTransitionHooks(children, {
+      state,
+      // use proxy to keep props reference stable
+      props: propsProxy,
+      instance: instance,
+    } as VaporTransitionHooks)
+    applyPendingVShows(hooks, root, pendingVShows)
+    if (shouldPerformAppear) performAppear(hooks)
+    return children
   })
 
 const transitionTypeMap = new WeakMap<ResolvedTransitionBlock, any>()
