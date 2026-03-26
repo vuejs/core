@@ -2235,7 +2235,156 @@ describe('vdomInterop', () => {
   })
 
   describe('Suspense', () => {
-    test('renders async vapor child inside VDOM Suspense', async () => {
+    test('renders vapor async wrapper inside VDOM Suspense', async () => {
+      const duration = 5
+
+      const VaporAsyncChild = defineVaporAsyncComponent({
+        loader: () =>
+          new Promise(resolve => {
+            setTimeout(() => {
+              resolve(
+                defineVaporComponent({
+                  setup() {
+                    return template('<div><button>click</button></div>')()
+                  },
+                }) as any,
+              )
+            }, duration)
+          }),
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            Suspense as any,
+            null,
+            {
+              default: () => createComponent(VaporAsyncChild, null, null, true),
+              fallback: () => template('loading')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+
+      expect(html()).toContain('loading')
+
+      await new Promise(resolve => setTimeout(resolve, duration + 1))
+      await nextTick()
+
+      expect(html()).toContain('<div><button>click</button></div>')
+    })
+
+    test('does not suspend vapor async wrapper with suspensible false inside VDOM Suspense', async () => {
+      const duration = 5
+
+      const VaporAsyncChild = defineVaporAsyncComponent({
+        loader: () =>
+          new Promise(resolve => {
+            setTimeout(() => {
+              resolve(
+                defineVaporComponent({
+                  setup() {
+                    return template('<div><button>click</button></div>')()
+                  },
+                }) as any,
+              )
+            }, duration)
+          }),
+        suspensible: false,
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            Suspense as any,
+            null,
+            {
+              default: () => createComponent(VaporAsyncChild, null, null, true),
+              fallback: () => template('loading')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+
+      expect(html()).not.toContain('loading')
+      expect(html()).toContain('<!--async component-->')
+
+      await new Promise(resolve => setTimeout(resolve, duration + 1))
+      await nextTick()
+
+      expect(html()).toContain('<div><button>click</button></div>')
+    })
+
+    test('renders error component for vapor async wrapper inside VDOM Suspense', async () => {
+      const tick = () => new Promise(resolve => setTimeout(resolve))
+
+      let reject!: (error: Error) => void
+      const VaporAsyncChild = defineVaporAsyncComponent({
+        loader: () =>
+          new Promise((_resolve, _reject) => {
+            reject = _reject as (error: Error) => void
+          }),
+        errorComponent: defineVaporComponent({
+          props: ['error'],
+          setup(props: { error: Error }) {
+            return template(props.error.message)()
+          },
+        }),
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            Suspense as any,
+            null,
+            {
+              default: () => createComponent(VaporAsyncChild, null, null, true),
+              fallback: () => template('loading')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () => h(VaporParent as any),
+      })
+      const errorHandler = vi.fn()
+      app.use(vaporInteropPlugin)
+      app.config.errorHandler = errorHandler
+      try {
+        app.mount(host)
+
+        expect(host.innerHTML).toContain('loading')
+
+        reject(new Error('errored out'))
+        await tick()
+        await nextTick()
+
+        expect(errorHandler).toHaveBeenCalled()
+        expect(host.innerHTML).toContain('errored out')
+      } finally {
+        app.unmount()
+        host.remove()
+      }
+    })
+
+    test('renders async setup vapor component inside VDOM Suspense', async () => {
       const duration = 5
 
       const VaporAsyncChild = defineVaporComponent({
