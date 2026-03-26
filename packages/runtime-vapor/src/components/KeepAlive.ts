@@ -39,7 +39,7 @@ import { isInteropEnabled } from '../vdomInteropState'
 
 export interface VaporKeepAliveContext {
   processShapeFlag(block: Block): CacheKey | false
-  cacheBlock(): void
+  cacheBlock(block?: Block): void
   cacheScope(cacheKey: CacheKey, scopeLookupKey: any, scope: EffectScope): void
   getScope(key: any): EffectScope | undefined
 }
@@ -200,9 +200,8 @@ const VaporKeepAliveImpl = defineVaporComponent({
       current = block
     }
 
-    const cacheBlock = () => {
+    const cacheBlock = (block: Block = keepAliveInstance.block!) => {
       // TODO suspense
-      const block = keepAliveInstance.block!
       // Skip caching during out-in transition leaving phase.
       // The correct component will be cached after renderBranch completes
       // via the Fragment's onUpdated hook.
@@ -217,13 +216,21 @@ const VaporKeepAliveImpl = defineVaporComponent({
         }
       }
       const [innerBlock, interop] = getInnerBlock(block)
-      if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
+      if (!innerBlock) return
+
       const branchKey =
         isDynamicFragment(block) && block.keyed ? block.current : undefined
-      innerCacheBlock(
-        resolveCacheKeyFromBlock(innerBlock, interop, branchKey),
-        innerBlock,
-      )
+      const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop, branchKey)
+      // Align with VDOM KeepAlive behavior: async wrappers can enter the cache
+      // before they resolve, and a later async update may resolve the same
+      // branch to a component name that no longer matches include/exclude.
+      // Prune that stale entry instead of keeping it.
+      if (!shouldCache(innerBlock, props, interop)) {
+        if (cache.has(cacheKey)) pruneCacheEntry(cacheKey)
+        return
+      }
+
+      innerCacheBlock(cacheKey, innerBlock)
     }
 
     const processShapeFlag = (block: Block): CacheKey | false => {
@@ -426,11 +433,10 @@ const shouldCache = (
       : (block as GenericComponentInstance).type
   ) as GenericComponent & AsyncComponentInternalOptions
 
-  // for unresolved async components, don't cache yet
-  // - vapor async: caching deferred via keepAliveCtx.cacheBlock() in apiDefineAsyncComponent
-  // - vdom async: caching deferred via __asyncLoader().then() in createVDOMComponent
+  // Match VDOM KeepAlive behavior for unresolved async wrappers:
+  // cache them unless include needs a resolved name match.
   if (isAsync && !type.__asyncResolved) {
-    return false
+    return !props.include
   }
 
   const { include, exclude } = props

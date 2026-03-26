@@ -714,7 +714,7 @@ function createVDOMComponent(
       ;(component as any)
         .__asyncLoader()
         .then(() => {
-          if (!disposed) keepAliveCtx.cacheBlock()
+          if (!disposed) keepAliveCtx.cacheBlock(frag)
         })
         .catch(NOOP)
     }
