@@ -153,6 +153,10 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
             state,
             instance,
           )
+        } else {
+          // DynamicFragment.update() reads the fragment hook's mode directly,
+          // so keep it in sync when Transition mode changes reactively.
+          frag.$transition.mode = resolvedProps.value.mode
         }
         const [, pendingVShows] = capturePendingVShows(
           shouldCaptureVShow && !isMounted,

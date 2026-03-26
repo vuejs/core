@@ -391,4 +391,42 @@ describe('Transition', () => {
     expect(onBeforeLeave).toHaveBeenCalledTimes(1)
     expect(onLeave).toHaveBeenCalledTimes(1)
   })
+
+  test('dynamic default slot source should respect reactive mode changes', async () => {
+    const onLeave = vi.fn((_: Element, done: () => void) => setTimeout(done, 0))
+    const data = ref({
+      mode: 'default',
+      show: true,
+      onLeave,
+    })
+    const App = compile(
+      `<template>
+        <Transition :mode="data.mode" @leave="data.onLeave">
+          <template #default v-if="data.show">
+            <div>A</div>
+          </template>
+          <template #default v-else>
+            <div>B</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    data.value.mode = 'out-in'
+    await nextTick()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(host.textContent).toContain('A')
+    expect(host.textContent).not.toContain('B')
+
+    await new Promise(r => setTimeout(r, 0))
+    await nextTick()
+
+    expect(host.textContent).toContain('B')
+    expect(onLeave).toHaveBeenCalledTimes(1)
+  })
 })
