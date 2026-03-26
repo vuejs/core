@@ -118,6 +118,15 @@ describe('Transition', () => {
     expect(resolved.$key).toBe(child.uid)
   })
 
+  test('allows empty transition content', async () => {
+    const App = compile(`<template><Transition /></template>`, ref({}))
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.innerHTML).toBe('')
+  })
+
   test('direct child with initial hidden v-show should not trigger appear hooks', async () => {
     const { data, onBeforeAppear, onAppear } = createAppearTestState(false)
     const App = compile(
@@ -313,5 +322,73 @@ describe('Transition', () => {
     expect(host.querySelector('div')?.style.display).toBe('none')
     expect(onBeforeAppear).not.toHaveBeenCalled()
     expect(onAppear).not.toHaveBeenCalled()
+  })
+
+  test('dynamic default slot source should trigger enter hooks when toggled on', async () => {
+    const onBeforeEnter = vi.fn()
+    const onEnter = vi.fn()
+    const data = ref({
+      show: false,
+      onBeforeEnter,
+      onEnter,
+    })
+    const App = compile(
+      `<template>
+        <button @click="data.show = !data.show">toggle</button>
+        <Transition
+          @before-enter="data.onBeforeEnter"
+          @enter="data.onEnter"
+        >
+          <template #default v-if="data.show">
+            <div>foo</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    host.querySelector('button')!.click()
+    await nextTick()
+
+    expect(host.innerHTML).toContain(
+      '<div class="v-enter-from v-enter-active">foo</div>',
+    )
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+    expect(onEnter).toHaveBeenCalledTimes(1)
+  })
+
+  test('dynamic default slot source should trigger leave hooks when toggled off', async () => {
+    const onBeforeLeave = vi.fn()
+    const onLeave = vi.fn()
+    const data = ref({
+      show: true,
+      onBeforeLeave,
+      onLeave,
+    })
+    const App = compile(
+      `<template>
+        <button @click="data.show = !data.show">toggle</button>
+        <Transition
+          @before-leave="data.onBeforeLeave"
+          @leave="data.onLeave"
+        >
+          <template #default v-if="data.show">
+            <div>foo</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    host.querySelector('button')!.click()
+    await nextTick()
+
+    expect(host.innerHTML).toContain(
+      '<div class="v-leave-from v-leave-active">foo</div>',
+    )
+    expect(onBeforeLeave).toHaveBeenCalledTimes(1)
+    expect(onLeave).toHaveBeenCalledTimes(1)
   })
 })
