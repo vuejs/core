@@ -67,7 +67,6 @@ export interface RootIRNode {
   directive: Set<string>
   block: BlockIRNode
   hasTemplateRef: boolean
-  hasDeferredVShow: boolean
 }
 
 export interface IfIRNode extends BaseIRNode {
@@ -210,7 +209,6 @@ export interface DirectiveIRNode extends BaseIRNode {
   builtin?: boolean
   asset?: boolean
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
-  deferred?: boolean
 }
 
 export interface CreateComponentIRNode extends BaseIRNode {

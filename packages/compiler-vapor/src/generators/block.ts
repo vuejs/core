@@ -73,10 +73,6 @@ export function genBlockContent(
   push(...genOperations(operation, context))
   push(...genEffects(effect, context, genEffectsExtraFrag))
 
-  if (root && context.ir.hasDeferredVShow) {
-    push(NEWLINE, `deferredApplyVShows.forEach(fn => fn())`)
-  }
-
   push(NEWLINE, `return `)
 
   const returnNodes = returns.map(n => `n${n}`)

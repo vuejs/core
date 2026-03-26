@@ -5,9 +5,30 @@ import {
   template,
 } from '../../src'
 import { resolveTransitionBlock } from '../../src/components/Transition'
-import { makeRender } from '../_utils'
+import { nextTick, ref } from 'vue'
+import { compile, makeRender } from '../_utils'
 
 const define = makeRender()
+
+function createAppearTestState(
+  show: boolean,
+  extraState: Record<string, any> = {},
+) {
+  const onBeforeAppear = vi.fn()
+  const onAppear = vi.fn()
+  const data = ref({
+    show,
+    ...extraState,
+    onBeforeAppear,
+    onAppear,
+  })
+
+  return {
+    data,
+    onBeforeAppear,
+    onAppear,
+  }
+}
 
 describe('Transition', () => {
   test('prefers explicit component key over uid when resolving child', () => {
@@ -95,5 +116,202 @@ describe('Transition', () => {
 
     const resolved = resolveTransitionBlock(child)!
     expect(resolved.$key).toBe(child.uid)
+  })
+
+  test('direct child with initial hidden v-show should not trigger appear hooks', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(false)
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <div v-show="data.show">foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('none')
+    expect(onBeforeAppear).not.toHaveBeenCalled()
+    expect(onAppear).not.toHaveBeenCalled()
+  })
+
+  test('direct child with initial shown v-show should trigger appear hooks once', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(true)
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <div v-show="data.show">foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('')
+    expect(onBeforeAppear).toHaveBeenCalledTimes(1)
+    expect(onAppear).toHaveBeenCalledTimes(1)
+  })
+
+  test('direct slot child with initial hidden v-show should not trigger appear hooks', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(false)
+    const Child = compile(`<template><slot /></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <components.Child>
+            <div v-show="data.show">foo</div>
+          </components.Child>
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('none')
+    expect(onBeforeAppear).not.toHaveBeenCalled()
+    expect(onAppear).not.toHaveBeenCalled()
+  })
+
+  test('direct slot child with initial shown v-show should trigger appear hooks once', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(true)
+    const Child = compile(`<template><slot /></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <components.Child>
+            <div v-show="data.show">foo</div>
+          </components.Child>
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('')
+    expect(onBeforeAppear).toHaveBeenCalledTimes(1)
+    expect(onAppear).toHaveBeenCalledTimes(1)
+  })
+
+  test('forwarded slot child with initial hidden v-show should not trigger appear hooks', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(false)
+    const Inner = compile(`<template><slot /></template>`, data)
+    const Child = compile(
+      `<template><components.Inner><slot /></components.Inner></template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <components.Child>
+            <div v-show="data.show">foo</div>
+          </components.Child>
+        </Transition>
+      </template>`,
+      data,
+      { Child, Inner },
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('none')
+    expect(onBeforeAppear).not.toHaveBeenCalled()
+    expect(onAppear).not.toHaveBeenCalled()
+  })
+
+  test('forwarded slot child with initial shown v-show should trigger appear hooks once', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(true)
+    const Inner = compile(`<template><slot /></template>`, data)
+    const Child = compile(
+      `<template><components.Inner><slot /></components.Inner></template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <components.Child>
+            <div v-show="data.show">foo</div>
+          </components.Child>
+        </Transition>
+      </template>`,
+      data,
+      { Child, Inner },
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('')
+    expect(onBeforeAppear).toHaveBeenCalledTimes(1)
+    expect(onAppear).toHaveBeenCalledTimes(1)
+  })
+
+  test('slotted component with dynamic fragment root and initial hidden v-show should not trigger appear hooks', async () => {
+    const { data, onBeforeAppear, onAppear } = createAppearTestState(false, {
+      ok: true,
+    })
+    const Child = compile(`<template><slot /></template>`, data)
+    const Inner = compile(
+      `<template><div v-if="data.ok">foo</div><span v-else>foo</span></template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <components.Child>
+            <components.Inner v-show="data.show" />
+          </components.Child>
+        </Transition>
+      </template>`,
+      data,
+      { Child, Inner },
+    )
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.querySelector('div')?.style.display).toBe('none')
+    expect(onBeforeAppear).not.toHaveBeenCalled()
+    expect(onAppear).not.toHaveBeenCalled()
   })
 })

@@ -16,6 +16,7 @@ import {
   isAsyncWrapper,
   isTemplateNode,
   leaveCbKey,
+  onBeforeMount,
   queuePostFlushCb,
   resolveTransitionProps,
   useTransitionState,
@@ -46,6 +47,7 @@ import {
   isHydrating,
   setCurrentHydrationNode,
 } from '../dom/hydration'
+import { type PendingVShow, setCurrentPendingVShows } from '../directives/vShow'
 import { isInteropEnabled } from '../vdomInteropState'
 
 const displayName = 'VaporTransition'
@@ -70,22 +72,38 @@ export const ensureTransitionHooksRegistered = (): void => {
 const hydrateTransitionImpl = () => {
   if (!currentHydrationNode || !isTemplateNode(currentHydrationNode)) return
   // replace <template> node with inner child
-  const {
-    content: { firstChild },
-    parentNode,
-  } = currentHydrationNode
+  const { content, parentNode } = currentHydrationNode
+  const { firstChild } = content
   if (firstChild) {
-    parentNode!.replaceChild(firstChild, currentHydrationNode)
+    let transitionEl: Element | undefined
+    // firstChild may be a fragment anchor comment (e.g. <!--[--> from slotted
+    // content), but appear hooks still need to target the actual element.
+    for (
+      let node: ChildNode | null = firstChild;
+      node;
+      node = node.nextSibling
+    ) {
+      if (node instanceof Element) {
+        transitionEl = node
+        break
+      }
+    }
+
+    parentNode!.insertBefore(content, currentHydrationNode)
+    parentNode!.removeChild(currentHydrationNode)
     setCurrentHydrationNode(firstChild)
 
-    if (firstChild instanceof HTMLElement || firstChild instanceof SVGElement) {
-      const originalDisplay = firstChild.style.display
-      firstChild.style.display = 'none'
+    if (
+      transitionEl instanceof HTMLElement ||
+      transitionEl instanceof SVGElement
+    ) {
+      const originalDisplay = transitionEl.style.display
+      transitionEl.style.display = 'none'
 
       return (hooks: TransitionHooks) => {
-        hooks.beforeEnter(firstChild)
-        firstChild.style.display = originalDisplay
-        queuePostFlushCb(() => hooks.enter(firstChild))
+        hooks.beforeEnter(transitionEl)
+        transitionEl.style.display = originalDisplay
+        queuePostFlushCb(() => hooks.enter(transitionEl))
       }
     }
   }
@@ -107,19 +125,31 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     ensureTransitionHooksRegistered()
 
     const performAppear = isHydrating ? hydrateTransitionImpl() : undefined
+    const state = useTransitionState()
 
-    const children = (slots.default && slots.default()) as any as Block
+    let resolvedProps: BaseTransitionProps<Element>
+    renderEffect(() => (resolvedProps = resolveTransitionProps(props)))
+
+    let pendingVShows: PendingVShow[] | undefined
+    let children: Block
+    if (!isHydrating && resolvedProps!.appear) {
+      const prev = setCurrentPendingVShows((pendingVShows = []))
+      try {
+        children = (slots.default && slots.default()) as any as Block
+      } finally {
+        setCurrentPendingVShows(prev)
+      }
+    } else {
+      children = (slots.default && slots.default()) as any as Block
+    }
     if (!children) return []
 
     const instance = currentInstance! as VaporComponentInstance
     const { mode } = props
     checkTransitionMode(mode)
 
-    let resolvedProps: BaseTransitionProps<Element>
-    renderEffect(() => (resolvedProps = resolveTransitionProps(props)))
-
-    const hooks = applyTransitionHooksImpl(children, {
-      state: useTransitionState(),
+    const { hooks, root } = applyResolvedTransitionHooks(children, {
+      state,
       // use proxy to keep props reference stable
       props: new Proxy({} as BaseTransitionProps<Element>, {
         get(_, key) {
@@ -128,6 +158,30 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       }),
       instance: instance,
     } as VaporTransitionHooks)
+
+    if (pendingVShows) {
+      if (root) {
+        // Keep compiler-injected persisted for direct v-show children, and
+        // additionally treat slot/component roots as persisted when their
+        // deferred v-show target resolves to the same transition root.
+        hooks.persisted =
+          hooks.persisted ||
+          pendingVShows.some(
+            pending =>
+              pending.target === root ||
+              resolveTransitionBlock(pending.target) === root,
+          )
+      }
+
+      onBeforeMount(() => {
+        // Flush the deferred initial v-show writes right before mount so the
+        // DOM is still not inserted, but transition hooks are already ready.
+        for (const pending of pendingVShows) {
+          pending.setDisplay()
+        }
+        pendingVShows.length = 0
+      })
+    }
 
     if (resolvedProps!.appear && performAppear) {
       performAppear(hooks)
@@ -254,20 +308,30 @@ function applyTransitionHooksImpl(
   block: Block,
   hooks: VaporTransitionHooks,
 ): VaporTransitionHooks {
+  return applyResolvedTransitionHooks(block, hooks).hooks
+}
+
+function applyResolvedTransitionHooks(
+  block: Block,
+  hooks: VaporTransitionHooks,
+): {
+  hooks: VaporTransitionHooks
+  root?: ResolvedTransitionBlock
+} {
   // filter out comment nodes
   if (isArray(block)) {
     block = block.filter(b => !(b instanceof Comment))
     if (block.length === 1) {
       block = block[0]
     } else if (block.length === 0) {
-      return hooks
+      return { hooks }
     }
   }
 
   // delegate to TransitionGroup's apply logic for list children
   if (hooks.applyGroup && block instanceof ForFragment) {
     hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
-    return hooks
+    return { hooks }
   }
 
   const fragments: VaporFragment[] = []
@@ -279,7 +343,7 @@ function applyTransitionHooksImpl(
     if (__DEV__ && fragments.length === 0) {
       warn('Transition component has no valid child element')
     }
-    return hooks
+    return { hooks }
   }
 
   const { props, instance, state, delayedLeave } = hooks
@@ -294,7 +358,10 @@ function applyTransitionHooksImpl(
   child.$transition = resolvedHooks
   fragments.forEach(f => (f.$transition = resolvedHooks))
 
-  return resolvedHooks
+  return {
+    hooks: resolvedHooks,
+    root: child,
+  }
 }
 
 function applyTransitionLeaveHooksImpl(
