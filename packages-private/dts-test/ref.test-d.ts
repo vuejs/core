@@ -8,6 +8,7 @@ import {
   type ToRefs,
   type WritableComputedRef,
   computed,
+  customRef,
   isRef,
   proxyRefs,
   reactive,
@@ -548,3 +549,22 @@ expectType<TemplateRef>(tRef)
 
 const tRef2 = useTemplateRef<HTMLElement>('bar')
 expectType<TemplateRef<HTMLElement>>(tRef2)
+
+// #14637 customRef with different getter/setter types
+describe('customRef with different getter/setter types', () => {
+  // customRef should support different getter/setter types like Ref<T, S>
+  const cr = customRef<string, number>((track, trigger) => ({
+    get: () => 'hello',
+    set: (val: number) => {
+      // setter accepts number, getter returns string
+      trigger()
+    },
+  }))
+
+  // getter returns string
+  expectType<string>(cr.value)
+  // setter accepts number
+  cr.value = 123
+  // @ts-expect-error setter doesn't accept string
+  cr.value = 'world'
+})
