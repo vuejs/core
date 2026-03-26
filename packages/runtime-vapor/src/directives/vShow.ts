@@ -18,15 +18,15 @@ export interface PendingVShow {
   setDisplay: () => void
 }
 
-export let currentAppearVShows: PendingVShow[] | null = null
+export let currentPendingVShows: PendingVShow[] | null = null
 
-export function setCurrentAppearVShows(
+export function setCurrentPendingVShows(
   pending: PendingVShow[] | null,
 ): PendingVShow[] | null {
   try {
-    return currentAppearVShows
+    return currentPendingVShows
   } finally {
-    currentAppearVShows = pending
+    currentPendingVShows = pending
   }
 }
 
@@ -55,11 +55,11 @@ export function applyVShow(target: Block, source: () => any): void {
 
   renderEffect(() => {
     const value = source()
-    if (currentAppearVShows) {
+    if (currentPendingVShows) {
       // Inside Transition appear, target.$transition is not assigned yet.
       // Defer the initial setDisplay until Transition beforeMount so it can
       // enter through the transition-aware branch.
-      currentAppearVShows.push({
+      currentPendingVShows.push({
         target,
         setDisplay: () => setDisplay(target, value),
       })

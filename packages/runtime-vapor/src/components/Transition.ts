@@ -47,7 +47,7 @@ import {
   isHydrating,
   setCurrentHydrationNode,
 } from '../dom/hydration'
-import { type PendingVShow, setCurrentAppearVShows } from '../directives/vShow'
+import { type PendingVShow, setCurrentPendingVShows } from '../directives/vShow'
 import { isInteropEnabled } from '../vdomInteropState'
 
 const displayName = 'VaporTransition'
@@ -130,14 +130,14 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     let resolvedProps: BaseTransitionProps<Element>
     renderEffect(() => (resolvedProps = resolveTransitionProps(props)))
 
-    let pendingAppearVShows: PendingVShow[] | undefined
+    let pendingVShows: PendingVShow[] | undefined
     let children: Block
     if (!isHydrating && resolvedProps!.appear) {
-      const prev = setCurrentAppearVShows((pendingAppearVShows = []))
+      const prev = setCurrentPendingVShows((pendingVShows = []))
       try {
         children = (slots.default && slots.default()) as any as Block
       } finally {
-        setCurrentAppearVShows(prev)
+        setCurrentPendingVShows(prev)
       }
     } else {
       children = (slots.default && slots.default()) as any as Block
@@ -159,14 +159,14 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       instance: instance,
     } as VaporTransitionHooks)
 
-    if (pendingAppearVShows) {
+    if (pendingVShows) {
       if (root) {
         // Keep compiler-injected persisted for direct v-show children, and
         // additionally treat slot/component roots as persisted when their
         // deferred v-show target resolves to the same transition root.
         hooks.persisted =
           hooks.persisted ||
-          pendingAppearVShows.some(
+          pendingVShows.some(
             pending =>
               pending.target === root ||
               resolveTransitionBlock(pending.target) === root,
@@ -176,10 +176,10 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       onBeforeMount(() => {
         // Flush the deferred initial v-show writes right before mount so the
         // DOM is still not inserted, but transition hooks are already ready.
-        for (const pending of pendingAppearVShows) {
+        for (const pending of pendingVShows) {
           pending.setDisplay()
         }
-        pendingAppearVShows.length = 0
+        pendingVShows.length = 0
       })
     }
 
