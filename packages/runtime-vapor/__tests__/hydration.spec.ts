@@ -3274,8 +3274,51 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div style="display:none;" class="v-enter-from v-enter-active v-leave-from v-leave-active">foo</div>"`,
+        `"<div style="display:none;" class="v-enter-from v-enter-active">foo</div>"`,
       )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('transition appear with slotted v-show', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <components.Child>
+              <div v-show="data">foo</div>
+            </components.Child>
+          </transition>
+        </template>`,
+        {
+          Child: `<template><slot /></template>`,
+        },
+        data,
+      )
+      const el = container.querySelector('div')!
+      expect(el.style.display).toBe('none')
+      expect(el.className).toBe('v-enter-from v-enter-active')
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('transition appear with forwarded slotted v-show', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <components.Parent>
+              <div v-show="data">foo</div>
+            </components.Parent>
+          </transition>
+        </template>`,
+        {
+          Parent: `<template><components.Child><slot /></components.Child></template>`,
+          Child: `<template><slot /></template>`,
+        },
+        data,
+      )
+      const el = container.querySelector('div')!
+      expect(el.style.display).toBe('none')
+      expect(el.className).toBe('v-enter-from v-enter-active')
       expect(`mismatch`).not.toHaveBeenWarned()
     })
 

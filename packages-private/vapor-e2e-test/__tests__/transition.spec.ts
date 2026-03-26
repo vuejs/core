@@ -1649,6 +1649,88 @@ describe('vapor transition', () => {
     )
 
     test(
+      'reusable transition slot v-show on appear',
+      async () => {
+        const btnSelector = '.show-appear-reusable-slot > button'
+        const containerSelector = '.show-appear-reusable-slot > div'
+        const childSelector = `${containerSelector} > div`
+        const hiddenBtnSelector =
+          '.show-appear-not-enter-reusable-slot > button'
+        const hiddenContainerSelector =
+          '.show-appear-not-enter-reusable-slot > div'
+        const hiddenChildSelector = `${hiddenContainerSelector} > div`
+
+        let calls = (window as any).getCalls()
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter'])
+        await expect.element(css(hiddenChildSelector)).not.toBeVisible()
+
+        await expect
+          .element(css(childSelector))
+          .toHaveClass('test-appear-active')
+        await transitionFinish()
+        await expect
+          .element(css(containerSelector))
+          .toContainHTML('<div class="test">content</div>')
+        calls = (window as any).getCalls()
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter', 'afterEnter'])
+
+        click(btnSelector)
+        await nextTick()
+        await nextFrame()
+        expect(html(containerSelector)).toContain(
+          '<div class="test test-leave-from test-leave-active">content</div>',
+        )
+        await nextFrame()
+        expect(html(containerSelector)).toContain(
+          '<div class="test test-leave-active test-leave-to">content</div>',
+        )
+        await transitionFinish()
+        await expect
+          .element(css(containerSelector))
+          .toContainHTML(
+            '<div class="test" style="display: none;">content</div>',
+          )
+
+        click(btnSelector)
+        await nextTick()
+        await nextFrame()
+        expect(html(containerSelector)).toContain(
+          '<div class="test test-enter-from test-enter-active" style="">content</div>',
+        )
+        await nextFrame()
+        expect(html(containerSelector)).toContain(
+          '<div class="test test-enter-active test-enter-to" style="">content</div>',
+        )
+        await transitionFinish()
+        await expect
+          .element(css(containerSelector))
+          .toContainHTML('<div class="test" style="">content</div>')
+
+        ;(window as any).resetCalls()
+        click(hiddenBtnSelector)
+        await nextTick()
+        await nextFrame()
+        expect(html(hiddenContainerSelector)).toContain(
+          '<div class="test test-enter-from test-enter-active" style="">content</div>',
+        )
+        await nextFrame()
+        expect(html(hiddenContainerSelector)).toContain(
+          '<div class="test test-enter-active test-enter-to" style="">content</div>',
+        )
+        calls = (window as any).getCalls()
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter'])
+        expect(calls).not.contain('afterEnter')
+        await transitionFinish()
+        await expect
+          .element(css(hiddenContainerSelector))
+          .toContainHTML('<div class="test" style="">content</div>')
+        calls = (window as any).getCalls()
+        expect(calls).toStrictEqual(['beforeEnter', 'onEnter', 'afterEnter'])
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
       'transition events should not call onEnter with v-show false',
       async () => {
         const btnSelector = '.show-appear-not-enter > button'

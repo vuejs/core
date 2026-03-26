@@ -13,6 +13,23 @@ import { isArray } from '@vue/shared'
 import { isHydrating, logMismatchError } from '../dom/hydration'
 import { DynamicFragment, VaporFragment, isFragment } from '../fragment'
 
+export interface PendingVShow {
+  target: Block
+  setDisplay: () => void
+}
+
+export let currentAppearVShows: PendingVShow[] | null = null
+
+export function setCurrentAppearVShows(
+  pending: PendingVShow[] | null,
+): PendingVShow[] | null {
+  try {
+    return currentAppearVShows
+  } finally {
+    currentAppearVShows = pending
+  }
+}
+
 export function applyVShow(target: Block, source: () => any): void {
   if (isVaporComponent(target)) {
     return applyVShow(target.block, source)
@@ -36,7 +53,19 @@ export function applyVShow(target: Block, source: () => any): void {
     }
   }
 
-  renderEffect(() => setDisplay(target, source()))
+  renderEffect(() => {
+    const value = source()
+    if (currentAppearVShows) {
+      // Inside Transition appear, defer the initial applyVShow until
+      // Transition beforeMount so transition hooks/persisted state are ready.
+      currentAppearVShows.push({
+        target,
+        setDisplay: () => setDisplay(target, value),
+      })
+      return
+    }
+    setDisplay(target, value)
+  })
 }
 
 function setDisplay(target: Block, value: unknown): void {
