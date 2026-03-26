@@ -3294,9 +3294,13 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      const el = container.querySelector('div')!
-      expect(el.style.display).toBe('none')
-      expect(el.className).toBe('v-enter-from v-enter-active')
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+      	"
+      	<!--[--><div style="display:none;" class="v-enter-from v-enter-active">foo</div><!--]-->
+      	"
+      `,
+      )
       expect(`mismatch`).not.toHaveBeenWarned()
     })
 
@@ -3316,9 +3320,15 @@ describe('Vapor Mode hydration', () => {
         },
         data,
       )
-      const el = container.querySelector('div')!
-      expect(el.style.display).toBe('none')
-      expect(el.className).toBe('v-enter-from v-enter-active')
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+      	"
+      	<!--[-->
+      	<!--[--><div style="display:none;" class="v-enter-from v-enter-active">foo</div><!--]-->
+      	<!--]-->
+      	"
+      `,
+      )
       expect(`mismatch`).not.toHaveBeenWarned()
     })
 
