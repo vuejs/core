@@ -81,11 +81,16 @@ export function createTemplateRefSetter(): setRefFn {
       const frag = isDynamicFragment(el)
         ? (el as DynamicFragment)
         : ((el as VaporComponentInstance).block as DynamicFragment)
-      const doSet = () =>
+      const doSet = () => {
+        // KeepAlive clears refs on deactivation but keeps this fragment update
+        // callback alive. Skip re-applying refs for async/offscreen updates
+        // until the component is activated again.
+        if (isVaporComponent(el) && el.isDeactivated) return
         oldRefMap.set(
           el,
           setRef(instance, el, ref, oldRefMap.get(el), refFor, refKey),
         )
+      }
       const prevSet = setRefMap.get(frag)
       if (prevSet && frag.onUpdated) remove(frag.onUpdated, prevSet)
       ;(frag.onUpdated || (frag.onUpdated = [])).push(doSet)
