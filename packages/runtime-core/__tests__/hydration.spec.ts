@@ -2109,6 +2109,41 @@ describe('SSR hydration', () => {
     expect(root.innerHTML).toBe('<div>bar</div>')
   })
 
+  // #14635
+  test('duplicate component VNode rendered after hydration in SSR mode', async () => {
+    const MyLink = defineComponent({
+      setup() {
+        return () => h('a', { href: '#' }, 'link')
+      },
+    })
+
+    const DuplicateTest = defineComponent({
+      setup() {
+        return () => {
+          const link = h(MyLink)
+          return h('p', ['Click this ', link, ' and that ', link, '.'])
+        }
+      },
+    })
+
+    const show = ref(false)
+    const App = defineComponent({
+      setup() {
+        return () => [show.value ? h(DuplicateTest) : null]
+      },
+    })
+
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    createSSRApp(App).mount(container)
+    // toggle to show DuplicateTest (mounted fresh, not hydrated)
+    show.value = true
+    await nextTick()
+    expect(container.innerHTML).toContain(
+      '<p>Click this <a href="#">link</a> and that <a href="#">link</a>.</p>',
+    )
+  })
+
   describe('mismatch handling', () => {
     test('text node', () => {
       const { container } = mountWithHydration(`foo`, () => 'bar')

@@ -203,12 +203,18 @@ describe('vnode', () => {
     const vnode = createVNode('div')
     expect(normalizeVNode(vnode)).toBe(vnode)
 
-    // mounted VNode -> cloned VNode
+    // mounted VNode -> cloned VNode with el/anchor reset
     const mounted = createVNode('div')
     mounted.el = {}
     const normalized = normalizeVNode(mounted)
     expect(normalized).not.toBe(mounted)
-    expect(normalized).toEqual(mounted)
+    // el and anchor are reset so the clone is treated as fresh during mount
+    expect(normalized.el).toBe(null)
+    expect(normalized.anchor).toBe(null)
+    // everything else should match the original
+    expect({ ...normalized, el: mounted.el, anchor: mounted.anchor }).toEqual(
+      mounted,
+    )
 
     // primitive types
     expect(normalizeVNode('foo')).toMatchObject({ type: Text, children: `foo` })
