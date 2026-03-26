@@ -56,8 +56,9 @@ export function applyVShow(target: Block, source: () => any): void {
   renderEffect(() => {
     const value = source()
     if (currentAppearVShows) {
-      // Inside Transition appear, defer the initial applyVShow until
-      // Transition beforeMount so transition hooks/persisted state are ready.
+      // Inside Transition appear, target.$transition is not assigned yet.
+      // Defer the initial setDisplay until Transition beforeMount so it can
+      // enter through the transition-aware branch.
       currentAppearVShows.push({
         target,
         setDisplay: () => setDisplay(target, value),
