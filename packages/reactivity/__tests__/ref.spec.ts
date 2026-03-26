@@ -388,6 +388,37 @@ describe('reactivity/ref', () => {
     expect(bar.value).toBe(6)
   })
 
+  test('triggerRef on toRef created from array coerces property keys', () => {
+    const assertTriggerRef = (key: unknown) => {
+      const array = reactive(['a'])
+      const first = toRef(array as any, key as any)
+      const fn = vi.fn()
+
+      effect(() => fn(first.value))
+      expect(fn).toHaveBeenCalledTimes(1)
+
+      triggerRef(first)
+      expect(fn).toHaveBeenCalledTimes(2)
+    }
+
+    assertTriggerRef(0)
+    // JS coerces non-symbol property keys like [0] to the string "0".
+    assertTriggerRef([0])
+  })
+
+  test('triggerRef on toRef created from symbol key preserves the symbol', () => {
+    const key = Symbol()
+    const object = reactive({ [key]: 'a' })
+    const value = toRef(object, key)
+    const fn = vi.fn()
+
+    effect(() => fn(value.value))
+    expect(fn).toHaveBeenCalledTimes(1)
+
+    triggerRef(value)
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
   test('toRef default value', () => {
     const a: { x: number | undefined } = { x: undefined }
     const x = toRef(a, 'x', 1)

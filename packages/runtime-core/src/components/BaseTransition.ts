@@ -27,6 +27,7 @@ import {
   isVaporComponent,
 } from '../renderer'
 import { SchedulerJobFlags } from '../scheduler'
+import { isHmrUpdating } from '../hmr'
 
 type Hook<T = () => void> = T | T[]
 
@@ -453,7 +454,7 @@ export function baseResolveTransitionHooks(
 
     enter(el) {
       // prevent enter if leave is in progress
-      if (isLeaving()) return
+      if (!isHmrUpdating && isLeaving()) return
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled

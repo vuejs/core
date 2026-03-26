@@ -9,6 +9,7 @@ import {
   isDataUrl,
   isExternalUrl,
   isRelativeUrl,
+  normalizeDecodedImportPath,
   parseUrl,
 } from './templateUtils'
 import {
@@ -106,11 +107,13 @@ export const transformSrcset: NodeTransform = (
           let content = ''
           imageCandidates.forEach(({ url, descriptor }, index) => {
             if (shouldProcessUrl(url)) {
-              const { path } = parseUrl(url)
-              if (path) {
+              const { path, hash } = parseUrl(url)
+              const source = path ? path : hash
+              if (source) {
                 let exp = ''
+                const normalizedSource = normalizeDecodedImportPath(source)
                 const existingImportsIndex = context.imports.findIndex(
-                  i => i.path === path,
+                  i => i.path === normalizedSource,
                 )
                 if (existingImportsIndex > -1) {
                   exp = `_imports_${existingImportsIndex}`
@@ -123,8 +126,11 @@ export const transformSrcset: NodeTransform = (
                       attr.loc,
                       ConstantTypes.CAN_STRINGIFY,
                     ),
-                    path,
+                    path: normalizedSource,
                   })
+                }
+                if (path && hash) {
+                  exp = `${exp} + '${hash}'`
                 }
                 content += exp
               }

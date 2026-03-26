@@ -62,7 +62,7 @@
     "minimatch": "~10.2.4",
     "postcss-modules": "^6.0.1",
     "postcss-selector-parser": "^7.1.1",
-    "pug": "^3.0.3",
-    "sass": "^1.97.3"
+    "pug": "^3.0.4",
+    "sass": "^1.98.0"
   }
 }

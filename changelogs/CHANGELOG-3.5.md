@@ -1,3 +1,24 @@
+## [3.5.31](https://github.com/vuejs/core/compare/v3.5.30...v3.5.31) (2026-03-25)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** allow Node.js subpath imports patterns in asset urls ([#13045](https://github.com/vuejs/core/issues/13045)) ([95c3356](https://github.com/vuejs/core/commit/95c33560c9af369d44a7670d0c3b93fb62323be2)), closes [#9919](https://github.com/vuejs/core/issues/9919)
+* **compiler-sfc:** support template literal as defineModel name ([#14622](https://github.com/vuejs/core/issues/14622)) ([bd7eef0](https://github.com/vuejs/core/commit/bd7eef0161d69bccd48ac303bc6a56ba8d718e2d)), closes [#14621](https://github.com/vuejs/core/issues/14621)
+* **reactivity:** normalize toRef property keys before dep lookup + improve types ([#14625](https://github.com/vuejs/core/issues/14625)) ([1bb28d0](https://github.com/vuejs/core/commit/1bb28d011b31bc75c80d2860bc6484cceec1ff20)), closes [#12427](https://github.com/vuejs/core/issues/12427) [#12431](https://github.com/vuejs/core/issues/12431)
+* **runtime-core:** invalidate detached v-for memo vnodes after unmount ([#14624](https://github.com/vuejs/core/issues/14624)) ([560def4](https://github.com/vuejs/core/commit/560def426fc38c1710fda7ddd1ac634d67897960)), closes [#12708](https://github.com/vuejs/core/issues/12708) [#12710](https://github.com/vuejs/core/issues/12710)
+* **runtime-core:** preserve nullish event handlers in mergeProps ([#14550](https://github.com/vuejs/core/issues/14550)) ([5725222](https://github.com/vuejs/core/commit/5725222a6bc5d1dd032318349ce0c540b1d63a49))
+* **runtime-core:** prevent merging model listener when value is null or undefined ([#14629](https://github.com/vuejs/core/issues/14629)) ([b39e032](https://github.com/vuejs/core/commit/b39e0329f67354702f4e417e55c15c61d2439657))
+* **runtime-dom:** defer teleport mount/update until suspense resolves ([#8619](https://github.com/vuejs/core/issues/8619)) ([88ed045](https://github.com/vuejs/core/commit/88ed04501555b9257df8d7ad86d844c2c2136e50)), closes [#8603](https://github.com/vuejs/core/issues/8603)
+* **runtime-dom:** handle activeElement check in Shadow DOM for v-model ([#14196](https://github.com/vuejs/core/issues/14196)) ([959ded2](https://github.com/vuejs/core/commit/959ded22ab7ea1453f607e0964e1fb6748ece6c7))
+* **server-renderer:** cleanup component effect scopes after SSR render ([#14548](https://github.com/vuejs/core/issues/14548)) ([862f11e](https://github.com/vuejs/core/commit/862f11ee017d51cb9573a8c0642055b3b17cace8))
+* **suspense:** avoid unmount activeBranch twice if wrapped in transition ([#9392](https://github.com/vuejs/core/issues/9392)) ([908c6ad](https://github.com/vuejs/core/commit/908c6ad05e1c76ae690d2e50f3bd28278af07e22)), closes [#7966](https://github.com/vuejs/core/issues/7966)
+* **suspense:** update suspense vnode's el during branch self-update ([#12922](https://github.com/vuejs/core/issues/12922)) ([a2c1700](https://github.com/vuejs/core/commit/a2c17004c84e5ce3c4e82e35b806ba381144eed3)), closes [#12920](https://github.com/vuejs/core/issues/12920)
+* **transition:** skip enter guard while hmr updating ([#14611](https://github.com/vuejs/core/issues/14611)) ([be0a2f1](https://github.com/vuejs/core/commit/be0a2f1a7fc3d81d05638798cc628848cfa62cef)), closes [#14608](https://github.com/vuejs/core/issues/14608)
+* **types:** prevent shallowReactive marker from leaking into value unions ([#14493](https://github.com/vuejs/core/issues/14493)) ([3b561db](https://github.com/vuejs/core/commit/3b561db4ab42d06166b002f13c0e97cb2bd4a061)), closes [#14490](https://github.com/vuejs/core/issues/14490)
+
+
+
 ## [3.5.30](https://github.com/vuejs/core/compare/v3.5.29...v3.5.30) (2026-03-09)
 
 
