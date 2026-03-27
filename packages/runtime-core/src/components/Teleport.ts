@@ -328,6 +328,15 @@ export const TeleportImpl = {
       props,
     } = vnode
 
+    let isPendingMount = false
+    // A deferred teleport inside a pending suspense may be unmounted before its
+    // target content is ever mounted. Clear the flag so the queued mount effect
+    // becomes a no-op when the parent suspense resolves.
+    if (vnode.el!.__isMounted === false) {
+      delete vnode.el!.__isMounted
+      isPendingMount = !isTeleportDisabled(props)
+    }
+
     if (target) {
       hostRemove(targetStart!)
       hostRemove(targetAnchor!)
@@ -336,7 +345,8 @@ export const TeleportImpl = {
     // an unmounted teleport should always unmount its children whether it's disabled or not
     doRemove && hostRemove(anchor!)
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      const shouldRemove = doRemove || !isTeleportDisabled(props)
+      const shouldRemove =
+        (doRemove || !isTeleportDisabled(props)) && !isPendingMount
       for (let i = 0; i < (children as VNode[]).length; i++) {
         const child = (children as VNode[])[i]
         unmount(
