@@ -193,7 +193,11 @@ export const TeleportImpl = {
       // Target mounting may still be pending because of deferred teleport or a
       // parent suspense buffering post-render effects. In that case, defer the
       // teleport patch itself until the pending mount effect has run.
-      if (n1.el!.__isMounted === false) {
+      if (
+        (isTeleportDeferred(n2.props) ||
+          (parentSuspense && parentSuspense.pendingBranch)) &&
+        n1.el!.__isMounted === false
+      ) {
         queuePostRenderEffect(() => {
           TeleportImpl.process(
             n1,
