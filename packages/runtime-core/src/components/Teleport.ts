@@ -14,6 +14,7 @@ import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { ShapeFlags, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
+import { type SchedulerJob, SchedulerJobFlags } from '../scheduler'
 
 export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
 
@@ -22,6 +23,15 @@ export interface TeleportProps {
   disabled?: boolean
   defer?: boolean
 }
+
+interface PendingTeleportState {
+  mounted: boolean
+  mountJob?: SchedulerJob
+  updateJob?: SchedulerJob
+  baseVNode?: TeleportVNode
+}
+
+const pendingTeleportStates = new WeakMap<RendererNode, PendingTeleportState>()
 
 export const TeleportEndKey: unique symbol = Symbol('_vte')
 
@@ -95,13 +105,117 @@ export const TeleportImpl = {
     } = internals
 
     const disabled = isTeleportDisabled(n2.props)
-    let { shapeFlag, children, dynamicChildren } = n2
+    let { dynamicChildren } = n2
 
     // #3302
     // HMR updated, force full diff
     if (__DEV__ && isHmrUpdating) {
       optimized = false
       dynamicChildren = null
+    }
+
+    const mount = (
+      vnode: TeleportVNode,
+      container: RendererElement,
+      anchor: RendererNode,
+    ) => {
+      // Teleport *always* has Array children. This is enforced in both the
+      // compiler and vnode children normalization.
+      if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        mountChildren(
+          vnode.children as VNodeArrayChildren,
+          container,
+          anchor,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+        )
+      }
+    }
+
+    const mountToTarget = (vnode: TeleportVNode = n2) => {
+      const disabled = isTeleportDisabled(vnode.props)
+      const target = (vnode.target = resolveTarget(vnode.props, querySelector))
+      const targetAnchor = prepareAnchor(target, vnode, createText, insert)
+      if (target) {
+        // #2652 we could be teleporting from a non-SVG tree into an SVG tree
+        if (namespace !== 'svg' && isTargetSVG(target)) {
+          namespace = 'svg'
+        } else if (namespace !== 'mathml' && isTargetMathML(target)) {
+          namespace = 'mathml'
+        }
+
+        // track CE teleport targets
+        if (parentComponent && parentComponent.isCE) {
+          ;(
+            parentComponent.ce!._teleportTargets ||
+            (parentComponent.ce!._teleportTargets = new Set())
+          ).add(target)
+        }
+
+        if (!disabled) {
+          mount(vnode, target, targetAnchor)
+          updateCssVars(vnode, false)
+        }
+      } else if (__DEV__ && !disabled) {
+        warn('Invalid Teleport target on mount:', target, `(${typeof target})`)
+      }
+    }
+
+    const queuePendingMount = (
+      vnode: TeleportVNode,
+      state: PendingTeleportState,
+    ) => {
+      const mountJob: SchedulerJob = () => {
+        const pendingState = pendingTeleportStates.get(vnode.el!)
+        if (!pendingState || pendingState.mountJob !== mountJob) return
+        pendingState.mountJob = undefined
+        mountToTarget(vnode)
+        if (!pendingState.updateJob) {
+          pendingTeleportStates.delete(vnode.el!)
+        }
+      }
+      state.baseVNode = undefined
+      state.mountJob = mountJob
+      queuePostRenderEffect(mountJob, parentSuspense)
+    }
+
+    const queuePendingUpdate = (
+      n1: TeleportVNode,
+      n2: TeleportVNode,
+      state: PendingTeleportState,
+    ) => {
+      const updateBase = state.baseVNode || n1
+      const processJob: SchedulerJob = () => {
+        const pendingState = pendingTeleportStates.get(n2.el!)
+        if (!pendingState || pendingState.updateJob !== processJob) return
+        const updateBase = pendingState.baseVNode || n1
+        pendingState.updateJob = undefined
+        pendingState.baseVNode = undefined
+        if (!pendingState.mountJob) {
+          pendingTeleportStates.delete(n2.el!)
+        }
+        TeleportImpl.process(
+          updateBase,
+          n2,
+          container,
+          anchor,
+          parentComponent,
+          parentSuspense,
+          namespace,
+          slotScopeIds,
+          optimized,
+          internals,
+        )
+      }
+      if (state.updateJob) {
+        state.updateJob.flags! |= SchedulerJobFlags.DISPOSED
+      }
+      state.baseVNode = updateBase
+      state.updateJob = processJob
+      queuePostRenderEffect(processJob, parentSuspense)
     }
 
     if (n1 == null) {
@@ -115,70 +229,20 @@ export const TeleportImpl = {
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
 
-      const mount = (container: RendererElement, anchor: RendererNode) => {
-        // Teleport *always* has Array children. This is enforced in both the
-        // compiler and vnode children normalization.
-        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-          mountChildren(
-            children as VNodeArrayChildren,
-            container,
-            anchor,
-            parentComponent,
-            parentSuspense,
-            namespace,
-            slotScopeIds,
-            optimized,
-          )
-        }
-      }
-
-      const mountToTarget = () => {
-        const target = (n2.target = resolveTarget(n2.props, querySelector))
-        const targetAnchor = prepareAnchor(target, n2, createText, insert)
-        if (target) {
-          // #2652 we could be teleporting from a non-SVG tree into an SVG tree
-          if (namespace !== 'svg' && isTargetSVG(target)) {
-            namespace = 'svg'
-          } else if (namespace !== 'mathml' && isTargetMathML(target)) {
-            namespace = 'mathml'
-          }
-
-          // track CE teleport targets
-          if (parentComponent && parentComponent.isCE) {
-            ;(
-              parentComponent.ce!._teleportTargets ||
-              (parentComponent.ce!._teleportTargets = new Set())
-            ).add(target)
-          }
-
-          if (!disabled) {
-            mount(target, targetAnchor)
-            updateCssVars(n2, false)
-          }
-        } else if (__DEV__ && !disabled) {
-          warn(
-            'Invalid Teleport target on mount:',
-            target,
-            `(${typeof target})`,
-          )
-        }
-      }
-
       if (disabled) {
-        mount(container, mainAnchor)
+        mount(n2, container, mainAnchor)
         updateCssVars(n2, true)
       }
 
       if (
         isTeleportDeferred(n2.props) ||
-        (parentSuspense && parentSuspense.pendingBranch)
+        (__FEATURE_SUSPENSE__ && parentSuspense && parentSuspense.pendingBranch)
       ) {
-        n2.el!.__isMounted = false
-        queuePostRenderEffect(() => {
-          if (n2.el!.__isMounted !== false) return
-          mountToTarget()
-          delete n2.el!.__isMounted
-        }, parentSuspense)
+        const pendingState: PendingTeleportState = {
+          mounted: !!disabled,
+        }
+        pendingTeleportStates.set(n2.el!, pendingState)
+        queuePendingMount(n2, pendingState)
       } else {
         mountToTarget()
       }
@@ -189,32 +253,28 @@ export const TeleportImpl = {
       const mainAnchor = (n2.anchor = n1.anchor)!
       const target = (n2.target = n1.target)!
       const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
-
+      const wasDisabled = isTeleportDisabled(n1.props)
       // Target mounting may still be pending because of deferred teleport or a
       // parent suspense buffering post-render effects. In that case, defer the
       // teleport patch itself until the pending mount effect has run.
-      if (
-        (isTeleportDeferred(n2.props) ||
-          (parentSuspense && parentSuspense.pendingBranch)) &&
-        n1.el!.__isMounted === false
-      ) {
-        queuePostRenderEffect(() => {
-          TeleportImpl.process(
-            n1,
-            n2,
-            container,
-            anchor,
-            parentComponent,
-            parentSuspense,
-            namespace,
-            slotScopeIds,
-            optimized,
-            internals,
-          )
-        }, parentSuspense)
+      const pendingState = pendingTeleportStates.get(n1.el!)
+      if (pendingState && pendingState.mountJob) {
+        // Replace the pending mount job so target content mounts from the
+        // latest vnode instead of first mounting the stale pending vnode.
+        if (!wasDisabled && !disabled && pendingState.mounted === false) {
+          pendingState.mountJob.flags! |= SchedulerJobFlags.DISPOSED
+          if (pendingState.updateJob) {
+            pendingState.updateJob.flags! |= SchedulerJobFlags.DISPOSED
+            pendingState.updateJob = undefined
+            pendingState.baseVNode = undefined
+          }
+          queuePendingMount(n2, pendingState)
+          return
+        }
+
+        queuePendingUpdate(n1, n2, pendingState)
         return
       }
-      const wasDisabled = isTeleportDisabled(n1.props)
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
 
@@ -328,13 +388,20 @@ export const TeleportImpl = {
       props,
     } = vnode
 
-    let isPendingMount = false
+    let isMounted = true
     // A deferred teleport inside a pending suspense may be unmounted before its
     // target content is ever mounted. Clear the flag so the queued mount effect
     // becomes a no-op when the parent suspense resolves.
-    if (vnode.el!.__isMounted === false) {
-      delete vnode.el!.__isMounted
-      isPendingMount = !isTeleportDisabled(props)
+    const pendingState = pendingTeleportStates.get(vnode.el!)
+    if (pendingState) {
+      isMounted = !pendingState.mountJob || pendingState.mounted
+      if (pendingState.mountJob) {
+        pendingState.mountJob.flags! |= SchedulerJobFlags.DISPOSED
+      }
+      if (pendingState.updateJob) {
+        pendingState.updateJob.flags! |= SchedulerJobFlags.DISPOSED
+      }
+      pendingTeleportStates.delete(vnode.el!)
     }
 
     if (target) {
@@ -345,8 +412,7 @@ export const TeleportImpl = {
     // an unmounted teleport should always unmount its children whether it's disabled or not
     doRemove && hostRemove(anchor!)
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      const shouldRemove =
-        (doRemove || !isTeleportDisabled(props)) && !isPendingMount
+      const shouldRemove = (doRemove || !isTeleportDisabled(props)) && isMounted
       for (let i = 0; i < (children as VNode[]).length; i++) {
         const child = (children as VNode[])[i]
         unmount(

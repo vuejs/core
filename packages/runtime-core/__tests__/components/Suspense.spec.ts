@@ -2517,6 +2517,59 @@ describe('Suspense', () => {
     expect(serializeInner(target)).toBe(``)
   })
 
+  test('should not process discarded disabled teleport update after suspense is resolved', async () => {
+    const target = nodeOps.createElement('div')
+    const showTeleport = ref(true)
+    const disabled = ref(false)
+
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      },
+    })
+
+    const Comp = {
+      setup() {
+        return () => {
+          const children = [h(Async)]
+          if (showTeleport.value) {
+            children.push(
+              h(
+                Teleport,
+                { to: target, disabled: disabled.value },
+                h('div', 'teleported'),
+              ),
+            )
+          }
+          return h(Suspense, null, {
+            default: h('div', null, children),
+            fallback: h('div', 'fallback'),
+          })
+        }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    disabled.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    showTeleport.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div><div>async</div></div>`)
+    expect(serializeInner(target)).toBe(``)
+  })
+
   //#11617
   test('update async component before resolve then update again', async () => {
     const arr: boolean[] = []

@@ -146,6 +146,56 @@ describe('renderer: teleport', () => {
       )
     })
 
+    test('should keep the mounted vnode as the patch base across deferred updates', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const show = ref(false)
+      const disabled = ref(false)
+      const text = ref('A')
+      const phase = ref(0)
+
+      const Step1 = {
+        setup() {
+          disabled.value = true
+          text.value = 'B'
+          phase.value = 1
+          return () => h('div', 'step1')
+        },
+      }
+
+      const Step2 = {
+        setup() {
+          disabled.value = false
+          text.value = 'C'
+          return () => h('div', 'step2')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return show.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId2', defer: true, disabled: disabled.value },
+                  h('div', text.value),
+                ),
+                phase.value === 0 ? h(Step1) : h(Step2),
+                h('div', { id: 'targetId2' }),
+              ]
+            : [h('div')]
+        },
+      }).mount(root)
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><!--teleport end--><div>step2</div><div id="targetId2"><div>C</div></div>"`,
+      )
+    })
+
     // #13349
     test('handle deferred teleport updates before and after mount', async () => {
       const root = document.createElement('div')
