@@ -320,6 +320,12 @@ expectType<undefined>(p2.u)
 expectType<Ref<string>>(p2.obj.k)
 expectType<{ name: string } | null>(p2.union)
 
+const r3 = shallowReactive({
+  n: ref(1),
+})
+const p3 = proxyRefs(r3)
+expectType<Ref<number>>(p3.n)
+
 // toRef and toRefs
 {
   const obj: {
@@ -434,6 +440,15 @@ describe('shallow reactive in reactive', () => {
 
   expectType<Ref<number>>(foo.value.a.b)
   expectType<number>(foo.value.a.b.value)
+})
+
+describe('shallow reactive collection in reactive', () => {
+  const baz = reactive({
+    foo: shallowReactive(new Map([['a', ref(42)]])),
+  })
+
+  const foo = toRef(baz, 'foo')
+  expectType<Ref<number> | undefined>(foo.value.get('a'))
 })
 
 describe('shallow ref in reactive', () => {

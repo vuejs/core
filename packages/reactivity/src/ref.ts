@@ -10,7 +10,7 @@ import {
 import { Dep, getDepFromReactive } from './dep'
 import {
   type Builtin,
-  type ShallowReactiveMarker,
+  type ShallowReactiveBrand,
   type Target,
   isProxy,
   isReactive,
@@ -537,9 +537,11 @@ function propertyToRef(
  */
 export interface RefUnwrapBailTypes {}
 
-export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: DistributeRef<T[K]>
-}
+export type ShallowUnwrapRef<T> = T extends ShallowReactiveBrand
+  ? T
+  : {
+      [K in keyof T]: DistributeRef<T[K]>
+    }
 
 type DistributeRef<T> = T extends Ref<infer V, unknown> ? V : T
 
@@ -556,19 +558,20 @@ export type UnwrapRefSimple<T> = T extends
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }
   ? T
-  : T extends Map<infer K, infer V>
-    ? Map<K, UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof Map<any, any>>>
-    : T extends WeakMap<infer K, infer V>
-      ? WeakMap<K, UnwrapRefSimple<V>> &
-          UnwrapRef<Omit<T, keyof WeakMap<any, any>>>
-      : T extends Set<infer V>
-        ? Set<UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof Set<any>>>
-        : T extends WeakSet<infer V>
-          ? WeakSet<UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof WeakSet<any>>>
-          : T extends ReadonlyArray<any>
-            ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-            : T extends object & { [ShallowReactiveMarker]: never }
-              ? T
+  : T extends ShallowReactiveBrand
+    ? T
+    : T extends Map<infer K, infer V>
+      ? Map<K, UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof Map<any, any>>>
+      : T extends WeakMap<infer K, infer V>
+        ? WeakMap<K, UnwrapRefSimple<V>> &
+            UnwrapRef<Omit<T, keyof WeakMap<any, any>>>
+        : T extends Set<infer V>
+          ? Set<UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof Set<any>>>
+          : T extends WeakSet<infer V>
+            ? WeakSet<UnwrapRefSimple<V>> &
+                UnwrapRef<Omit<T, keyof WeakSet<any>>>
+            : T extends ReadonlyArray<any>
+              ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
               : T extends object
                 ? {
                     [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
