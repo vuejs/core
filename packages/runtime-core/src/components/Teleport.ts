@@ -24,14 +24,7 @@ export interface TeleportProps {
   defer?: boolean
 }
 
-interface PendingTeleportState {
-  mounted: boolean
-  mountJob?: SchedulerJob
-  updateJob?: SchedulerJob
-  baseVNode?: TeleportVNode
-}
-
-const pendingTeleportStates = new WeakMap<RendererNode, PendingTeleportState>()
+const pendingMounts = new WeakMap<VNode, SchedulerJob>()
 
 export const TeleportEndKey: unique symbol = Symbol('_vte')
 
@@ -164,58 +157,18 @@ export const TeleportImpl = {
       }
     }
 
-    const queuePendingMount = (
-      vnode: TeleportVNode,
-      state: PendingTeleportState,
-    ) => {
+    const queuePendingMount = (vnode: TeleportVNode) => {
       const mountJob: SchedulerJob = () => {
-        const pendingState = pendingTeleportStates.get(vnode.el!)
-        if (!pendingState || pendingState.mountJob !== mountJob) return
-        pendingState.mountJob = undefined
+        if (pendingMounts.get(vnode) !== mountJob) return
+        pendingMounts.delete(vnode)
+        if (isTeleportDisabled(vnode.props)) {
+          mount(vnode, container, vnode.anchor!)
+          updateCssVars(vnode, true)
+        }
         mountToTarget(vnode)
-        if (!pendingState.updateJob) {
-          pendingTeleportStates.delete(vnode.el!)
-        }
       }
-      state.baseVNode = undefined
-      state.mountJob = mountJob
+      pendingMounts.set(vnode, mountJob)
       queuePostRenderEffect(mountJob, parentSuspense)
-    }
-
-    const queuePendingUpdate = (
-      n1: TeleportVNode,
-      n2: TeleportVNode,
-      state: PendingTeleportState,
-    ) => {
-      const updateBase = state.baseVNode || n1
-      const processJob: SchedulerJob = () => {
-        const pendingState = pendingTeleportStates.get(n2.el!)
-        if (!pendingState || pendingState.updateJob !== processJob) return
-        const updateBase = pendingState.baseVNode || n1
-        pendingState.updateJob = undefined
-        pendingState.baseVNode = undefined
-        if (!pendingState.mountJob) {
-          pendingTeleportStates.delete(n2.el!)
-        }
-        TeleportImpl.process(
-          updateBase,
-          n2,
-          container,
-          anchor,
-          parentComponent,
-          parentSuspense,
-          namespace,
-          slotScopeIds,
-          optimized,
-          internals,
-        )
-      }
-      if (state.updateJob) {
-        state.updateJob.flags! |= SchedulerJobFlags.DISPOSED
-      }
-      state.baseVNode = updateBase
-      state.updateJob = processJob
-      queuePostRenderEffect(processJob, parentSuspense)
     }
 
     if (n1 == null) {
@@ -229,23 +182,20 @@ export const TeleportImpl = {
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
 
+      if (
+        isTeleportDeferred(n2.props) ||
+        (__FEATURE_SUSPENSE__ && parentSuspense && parentSuspense.pendingBranch)
+      ) {
+        queuePendingMount(n2)
+        return
+      }
+
       if (disabled) {
         mount(n2, container, mainAnchor)
         updateCssVars(n2, true)
       }
 
-      if (
-        isTeleportDeferred(n2.props) ||
-        (__FEATURE_SUSPENSE__ && parentSuspense && parentSuspense.pendingBranch)
-      ) {
-        const pendingState: PendingTeleportState = {
-          mounted: !!disabled,
-        }
-        pendingTeleportStates.set(n2.el!, pendingState)
-        queuePendingMount(n2, pendingState)
-      } else {
-        mountToTarget()
-      }
+      mountToTarget()
     } else {
       // update content
       n2.el = n1.el
@@ -255,24 +205,13 @@ export const TeleportImpl = {
       const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
       const wasDisabled = isTeleportDisabled(n1.props)
       // Target mounting may still be pending because of deferred teleport or a
-      // parent suspense buffering post-render effects. In that case, defer the
-      // teleport patch itself until the pending mount effect has run.
-      const pendingState = pendingTeleportStates.get(n1.el!)
-      if (pendingState && pendingState.mountJob) {
-        // Replace the pending mount job so target content mounts from the
-        // latest vnode instead of first mounting the stale pending vnode.
-        if (!wasDisabled && !disabled && pendingState.mounted === false) {
-          pendingState.mountJob.flags! |= SchedulerJobFlags.DISPOSED
-          if (pendingState.updateJob) {
-            pendingState.updateJob.flags! |= SchedulerJobFlags.DISPOSED
-            pendingState.updateJob = undefined
-            pendingState.baseVNode = undefined
-          }
-          queuePendingMount(n2, pendingState)
-          return
-        }
-
-        queuePendingUpdate(n1, n2, pendingState)
+      // parent suspense buffering post-render effects. In that case, replace
+      // the pending mount so the latest vnode goes through the mount flow.
+      const pendingMount = pendingMounts.get(n1)
+      if (pendingMount) {
+        pendingMount.flags! |= SchedulerJobFlags.DISPOSED
+        pendingMounts.delete(n1)
+        queuePendingMount(n2)
         return
       }
       const currentContainer = wasDisabled ? container : target
@@ -388,20 +327,15 @@ export const TeleportImpl = {
       props,
     } = vnode
 
-    let isMounted = true
+    let shouldRemove = doRemove || !isTeleportDisabled(props)
     // A deferred teleport inside a pending suspense may be unmounted before its
-    // target content is ever mounted. Clear the flag so the queued mount effect
-    // becomes a no-op when the parent suspense resolves.
-    const pendingState = pendingTeleportStates.get(vnode.el!)
-    if (pendingState) {
-      isMounted = !pendingState.mountJob || pendingState.mounted
-      if (pendingState.mountJob) {
-        pendingState.mountJob.flags! |= SchedulerJobFlags.DISPOSED
-      }
-      if (pendingState.updateJob) {
-        pendingState.updateJob.flags! |= SchedulerJobFlags.DISPOSED
-      }
-      pendingTeleportStates.delete(vnode.el!)
+    // content is ever mounted. Clear the queued mount effect and skip removing
+    // children because nothing has been mounted yet.
+    const pendingMount = pendingMounts.get(vnode)
+    if (pendingMount) {
+      pendingMount.flags! |= SchedulerJobFlags.DISPOSED
+      pendingMounts.delete(vnode)
+      shouldRemove = false
     }
 
     if (target) {
@@ -412,7 +346,6 @@ export const TeleportImpl = {
     // an unmounted teleport should always unmount its children whether it's disabled or not
     doRemove && hostRemove(anchor!)
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      const shouldRemove = (doRemove || !isTeleportDisabled(props)) && isMounted
       for (let i = 0; i < (children as VNode[]).length; i++) {
         const child = (children as VNode[])[i]
         unmount(
