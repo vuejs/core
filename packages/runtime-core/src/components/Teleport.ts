@@ -199,11 +199,7 @@ export const TeleportImpl = {
     } else {
       // update content
       n2.el = n1.el
-      n2.targetStart = n1.targetStart
       const mainAnchor = (n2.anchor = n1.anchor)!
-      const target = (n2.target = n1.target)!
-      const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
-      const wasDisabled = isTeleportDisabled(n1.props)
       // Target mounting may still be pending because of deferred teleport or a
       // parent suspense buffering post-render effects. In that case, replace
       // the pending mount so the latest vnode goes through the mount flow.
@@ -214,6 +210,10 @@ export const TeleportImpl = {
         queuePendingMount(n2)
         return
       }
+      n2.targetStart = n1.targetStart
+      const target = (n2.target = n1.target)!
+      const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
+      const wasDisabled = isTeleportDisabled(n1.props)
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
 
