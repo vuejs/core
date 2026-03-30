@@ -34,6 +34,7 @@ import {
   child,
   createComponent,
   createDynamicComponent,
+  createForSlots,
   createIf,
   createSlot,
   createTemplateRefSetter,
@@ -43,6 +44,7 @@ import {
   renderEffect,
   setText,
   template,
+  txt,
   vaporInteropPlugin,
   withVaporCtx,
 } from '../src'
@@ -914,6 +916,103 @@ describe('vdomInterop', () => {
       }).render()
 
       expect(html()).toBe('<div>forwarded slot</div>')
+    })
+
+    test('dynamic slots via createForSlots should update in vdom child', async () => {
+      const list = ref([0, 1, 2])
+
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => h('div', null, [renderSlot(slots, 'default')])
+        },
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(VDomChild as any, null, {
+            $: [
+              () =>
+                createForSlots(list.value, value => ({
+                  name: 'default',
+                  fn: () => {
+                    const n = template('<span> </span>')() as Element
+                    const t = txt(n) as Text
+                    renderEffect(() => setText(t, toDisplayString(value)))
+                    return n
+                  },
+                })),
+            ],
+          })
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+
+      // last-wins: shows last item
+      expect(html()).toBe('<div><span>2</span></div>')
+
+      list.value.push(3)
+      await nextTick()
+      expect(html()).toBe('<div><span>3</span></div>')
+
+      list.value.pop()
+      list.value.pop()
+      await nextTick()
+      expect(html()).toBe('<div><span>1</span></div>')
+    })
+
+    test('dynamic slots via createForSlots should re-mount fragment slot in vdom child', async () => {
+      const list = ref([0, 1, 2])
+
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => h('div', null, [renderSlot(slots, 'default')])
+        },
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(VDomChild as any, null, {
+            $: [
+              () =>
+                createForSlots(list.value, value => ({
+                  name: 'default',
+                  fn: () =>
+                    createIf(
+                      () => true,
+                      () => {
+                        const n = template('<span> </span>')() as Element
+                        const t = txt(n) as Text
+                        renderEffect(() => setText(t, toDisplayString(value)))
+                        return n
+                      },
+                    ),
+                })),
+            ],
+          })
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div><span>2</span><!--if--></div>')
+
+      list.value.push(3)
+      await nextTick()
+      expect(html()).toBe('<div><span>3</span><!--if--></div>')
+
+      list.value.pop()
+      list.value.pop()
+      await nextTick()
+      expect(html()).toBe('<div><span>1</span><!--if--></div>')
     })
   })
 
