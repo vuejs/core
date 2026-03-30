@@ -3409,6 +3409,89 @@ describe('VaporKeepAlive', () => {
       // cache should not have grown from the stale resolution
       expect(cache!.size).toBe(cacheBeforeResolve)
     })
+
+    test('should not update keep-alive recency for a deactivated interop async branch that resolves later', async () => {
+      let resolveA!: (comp: any) => void
+      const AsyncCompA = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolveA = r
+          }),
+      )
+      const unmountedA = vi.fn()
+
+      const InnerCompA = {
+        name: 'CompA',
+        setup() {
+          onUnmounted(unmountedA)
+          return () => h('div', 'comp A')
+        },
+      }
+
+      const CompB = {
+        name: 'CompB',
+        setup() {
+          return () => h('div', 'comp B')
+        },
+      }
+
+      const CompC = {
+        name: 'CompC',
+        setup() {
+          return () => h('div', 'comp C')
+        },
+      }
+
+      const current = shallowRef<any>(AsyncCompA)
+      let keepAlive: any
+
+      const App = defineVaporComponent({
+        setup() {
+          keepAlive = createComponent(
+            VaporKeepAlive,
+            { max: () => 2 },
+            {
+              default: () => createDynamicComponent(() => current.value),
+            },
+          )
+          return keepAlive
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      try {
+        app.mount(container)
+
+        current.value = CompB
+        await nextTick()
+        expect(container.innerHTML).toContain('comp B')
+
+        resolveA(InnerCompA)
+        await timeout()
+        await nextTick()
+        await nextTick()
+
+        expect(keepAlive.ctx.getStorageContainer().innerHTML).toContain(
+          'comp A',
+        )
+
+        current.value = CompC
+        await nextTick()
+        await nextTick()
+
+        expect(container.innerHTML).toContain('comp C')
+        expect(keepAlive.ctx.getStorageContainer().innerHTML).not.toContain(
+          'comp A',
+        )
+        expect(unmountedA).toHaveBeenCalledTimes(1)
+      } finally {
+        app.unmount()
+        container.remove()
+      }
+    })
   })
 
   test('should invalidate pending mount/activated hooks when deactivated before post flush', async () => {
