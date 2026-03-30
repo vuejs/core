@@ -2231,6 +2231,49 @@ describe('component: slots', () => {
       )
     })
 
+    // #14648
+    test('should use last slot when v-for generates duplicate slot names', async () => {
+      const list = ref([0, 1, 2])
+
+      const Child = defineVaporComponent(() => {
+        const n = template('<div></div>')()
+        insert(createSlot('default'), n as any as ParentNode)
+        return n
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, null, {
+            $: [
+              () =>
+                createForSlots(list.value, item => ({
+                  name: 'default',
+                  fn: () => template(String(item))(),
+                })),
+            ],
+          })
+        },
+      }).render()
+
+      // should display the last item (last wins, matching vDOM behavior)
+      expect(host.innerHTML).toBe('<div>2<!--slot--></div>')
+
+      // push: new last item should be displayed
+      list.value.push(3)
+      await nextTick()
+      expect(host.innerHTML).toBe('<div>3<!--slot--></div>')
+
+      // pop: should fall back to previous last item
+      list.value.pop()
+      await nextTick()
+      expect(host.innerHTML).toBe('<div>2<!--slot--></div>')
+
+      // splice middle: last item unchanged
+      list.value.splice(1, 1)
+      await nextTick()
+      expect(host.innerHTML).toBe('<div>2<!--slot--></div>')
+    })
+
     test('should work with null and undefined', async () => {
       const loop = ref<number[] | null | undefined>(undefined)
 

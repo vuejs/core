@@ -116,8 +116,8 @@ export function getSlot(
         const slot = resolveFunctionSource(source)
         if (slot) {
           if (isArray(slot)) {
-            for (const s of slot) {
-              if (String(s.name) === key) return s.fn
+            for (let j = slot.length - 1; j >= 0; j--) {
+              if (String(slot[j].name) === key) return slot[j].fn
             }
           } else if (String(slot.name) === key) {
             return slot.fn
