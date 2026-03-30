@@ -196,6 +196,150 @@ describe('renderer: teleport', () => {
       )
     })
 
+    test('should handle disabled teleport updates before deferred mount', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'targetId3'
+      document.body.appendChild(root)
+      document.body.appendChild(target)
+
+      const showTeleport = ref(false)
+      const disabled = ref(false)
+
+      const Step = {
+        setup() {
+          disabled.value = true
+          return () => h('div', 'step')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return showTeleport.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId3', defer: true, disabled: disabled.value },
+                  h('div', 'teleported'),
+                ),
+                h(Step),
+              ]
+            : [h('div')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div></div>"`)
+      expect(target.innerHTML).toBe(``)
+
+      showTeleport.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><div>teleported</div><!--teleport end--><div>step</div>"`,
+      )
+      expect(target.innerHTML).toBe(``)
+    })
+
+    test('should not mount discarded teleport after deferred updates', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'targetId4'
+      document.body.appendChild(root)
+      document.body.appendChild(target)
+
+      const showTeleport = ref(false)
+      const phase = ref(0)
+
+      const Step1 = {
+        setup() {
+          phase.value = 1
+          return () => h('div', 'step1')
+        },
+      }
+
+      const Step2 = {
+        setup() {
+          showTeleport.value = false
+          return () => h('div', 'step2')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return showTeleport.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId4', defer: true },
+                  h('div', 'teleported'),
+                ),
+                phase.value === 0 ? h(Step1) : h(Step2),
+              ]
+            : [h('div', 'done')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+
+      showTeleport.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+    })
+
+    test('should not mount discarded disabled teleport after deferred updates', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'targetId5'
+      document.body.appendChild(root)
+      document.body.appendChild(target)
+
+      const showTeleport = ref(false)
+      const disabled = ref(false)
+      const phase = ref(0)
+
+      const Step1 = {
+        setup() {
+          disabled.value = true
+          phase.value = 1
+          return () => h('div', 'step1')
+        },
+      }
+
+      const Step2 = {
+        setup() {
+          showTeleport.value = false
+          return () => h('div', 'step2')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return showTeleport.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId5', defer: true, disabled: disabled.value },
+                  h('div', 'teleported'),
+                ),
+                phase.value === 0 ? h(Step1) : h(Step2),
+              ]
+            : [h('div', 'done')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+
+      showTeleport.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+    })
+
     // #13349
     test('handle deferred teleport updates before and after mount', async () => {
       const root = document.createElement('div')
