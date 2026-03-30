@@ -7,6 +7,7 @@ import {
   handleError,
   markAsyncBoundary,
   performAsyncHydrate,
+  setCurrentInstance,
   useAsyncComponentState,
   watch,
 } from '@vue/runtime-dom'
@@ -153,7 +154,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // already resolved
       let resolvedComp = getResolvedComp()
       if (resolvedComp) {
-        frag!.update(() => createInnerComp(resolvedComp!, instance, frag))
+        frag!.update(() => createInnerComp(resolvedComp!, instance))
         return frag
       }
 
@@ -167,8 +168,30 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         )
       }
 
-      // TODO suspense-controlled
       if (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) {
+        return load()
+          .then(() => {
+            resolvedComp = getResolvedComp()
+            if (resolvedComp) {
+              frag.update(() => createInnerComp(resolvedComp!, instance))
+            }
+            return frag
+          })
+          .catch(err => {
+            onError(err)
+            if (errorComponent) {
+              frag.update(() =>
+                createInnerComp(
+                  errorComponent,
+                  instance,
+                  { error: () => err },
+                  // Avoid wrapper slot fallthrough
+                  {},
+                ),
+              )
+            }
+            return frag
+          })
       }
 
       const { loaded, error, delayed } = useAsyncComponentState(
@@ -190,7 +213,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         resolvedComp = getResolvedComp()
         let render
         if (loaded.value && resolvedComp) {
-          render = () => createInnerComp(resolvedComp!, instance, frag)
+          render = () => createInnerComp(resolvedComp!, instance)
         } else if (error.value && errorComponent) {
           render = () =>
             createComponent(errorComponent, { error: () => error.value })
@@ -211,19 +234,22 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
 function createInnerComp(
   comp: VaporComponent,
   parent: VaporComponentInstance & TransitionOptions,
-  frag?: DynamicFragment,
+  rawProps = parent.rawProps,
+  rawSlots = parent.rawSlots,
 ): VaporComponentInstance {
-  const { rawProps, rawSlots, appContext } = parent
-  const instance = createComponent(
-    comp,
-    rawProps,
-    rawSlots,
-    // rawProps is shared and already contains fallthrough attrs.
-    // so isSingleRoot should be undefined
-    undefined,
-    undefined,
-    appContext,
-  )
-
-  return instance
+  const prevInstance = setCurrentInstance(parent)
+  try {
+    return createComponent(
+      comp,
+      rawProps,
+      rawSlots,
+      // rawProps is shared and already contains fallthrough attrs.
+      // so isSingleRoot should be undefined
+      undefined,
+      undefined,
+      parent.appContext,
+    )
+  } finally {
+    setCurrentInstance(...prevInstance)
+  }
 }

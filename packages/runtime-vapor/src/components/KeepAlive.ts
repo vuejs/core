@@ -20,7 +20,7 @@ import {
   warn,
   watch,
 } from '@vue/runtime-dom'
-import { type Block, move, remove } from '../block'
+import { type Block, findBlockNode, move, remove } from '../block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
@@ -39,7 +39,7 @@ import { isInteropEnabled } from '../vdomInteropState'
 
 export interface VaporKeepAliveContext {
   processShapeFlag(block: Block): CacheKey | false
-  cacheBlock(): void
+  cacheBlock(block?: Block): void
   cacheScope(cacheKey: CacheKey, scopeLookupKey: any, scope: EffectScope): void
   getScope(key: any): EffectScope | undefined
 }
@@ -149,7 +149,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       const rerender = keepAliveInstance.hmrRerender
       keepAliveInstance.hmrRerender = () => {
         keepAliveInstance.exposed = null
-        cache.forEach(cached => resetCachedShapeFlag(cached))
+        cache.forEach(cached => unsetShapeFlag(cached))
         cache.clear()
         keys.clear()
         keptAliveScopes.forEach(scope => scope.stop())
@@ -181,13 +181,18 @@ const VaporKeepAliveImpl = defineVaporComponent({
     const innerCacheBlock = (
       key: CacheKey,
       block: VaporComponentInstance | VaporFragment,
+      isCurrent: boolean,
     ) => {
       const { max } = props
 
       if (cache.has(key)) {
-        // make this key the freshest
-        keys.delete(key)
-        keys.add(key)
+        if (isCurrent) {
+          // Only active branches should refresh their recency. Background
+          // async resolves may update a cached offscreen branch, but that
+          // should not make it the freshest entry.
+          keys.delete(key)
+          keys.add(key)
+        }
       } else {
         keys.add(key)
         // prune oldest entry
@@ -197,12 +202,11 @@ const VaporKeepAliveImpl = defineVaporComponent({
       }
 
       cache.set(key, block)
-      current = block
+      if (isCurrent) current = block
     }
 
-    const cacheBlock = () => {
+    const cacheBlock = (block: Block = keepAliveInstance.block!) => {
       // TODO suspense
-      const block = keepAliveInstance.block!
       // Skip caching during out-in transition leaving phase.
       // The correct component will be cached after renderBranch completes
       // via the Fragment's onUpdated hook.
@@ -217,12 +221,26 @@ const VaporKeepAliveImpl = defineVaporComponent({
         }
       }
       const [innerBlock, interop] = getInnerBlock(block)
-      if (!innerBlock || !shouldCache(innerBlock, props, interop)) return
+      if (!innerBlock) return
+
       const branchKey =
         isDynamicFragment(block) && block.keyed ? block.current : undefined
+      const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop, branchKey)
+      // Align with VDOM KeepAlive behavior: async wrappers can enter the cache
+      // before they resolve, and a later async update may resolve the same
+      // branch to a component name that no longer matches include/exclude.
+      // Prune that stale entry instead of keeping it.
+      if (!shouldCache(innerBlock, props, interop)) {
+        if (cache.has(cacheKey)) pruneCacheEntry(cacheKey)
+        return
+      }
+
+      setShapeFlag(innerBlock, interop, cache.has(cacheKey))
+      const { currentBlock, currentKey } = getCurrentBlockState()
       innerCacheBlock(
-        resolveCacheKeyFromBlock(innerBlock, interop, branchKey),
+        cacheKey,
         innerBlock,
+        currentBlock === innerBlock || currentKey === cacheKey,
       )
     }
 
@@ -230,23 +248,9 @@ const VaporKeepAliveImpl = defineVaporComponent({
       const [innerBlock, interop] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
 
-      if (interop && isInteropEnabled) {
-        const cacheKey = resolveCacheKeyFromBlock(innerBlock, true)
-        if (cache.has(cacheKey)) {
-          innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_KEPT_ALIVE
-        }
-        innerBlock.vnode!.shapeFlag! |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        return cacheKey
-      } else {
-        const cacheKey = resolveCacheKeyFromBlock(innerBlock, false)
-        if (cache.has(cacheKey)) {
-          ;(innerBlock as VaporComponentInstance)!.shapeFlag! |=
-            ShapeFlags.COMPONENT_KEPT_ALIVE
-        }
-        ;(innerBlock as VaporComponentInstance)!.shapeFlag! |=
-          ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-        return cacheKey
-      }
+      const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop)
+      setShapeFlag(innerBlock, interop, cache.has(cacheKey))
+      return cacheKey
     }
 
     const pruneCache = (filter: (name: string) => boolean) => {
@@ -285,10 +289,12 @@ const VaporKeepAliveImpl = defineVaporComponent({
 
       // don't unmount if the instance is the current one
       if (cached && (!current || cached !== current)) {
-        resetCachedShapeFlag(cached)
-        remove(cached)
+        unsetShapeFlag(cached)
+        // A pruned branch may still be leaving and not yet be in storageContainer.
+        const parentNode = findBlockNode(cached).parentNode
+        if (parentNode) remove(cached, parentNode as ParentNode)
       } else if (current) {
-        resetCachedShapeFlag(current)
+        unsetShapeFlag(current)
       }
       cache.delete(key)
       keys.delete(key)
@@ -332,7 +338,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       const deactivateCached = (
         cached: VaporComponentInstance | VaporFragment,
       ): void => {
-        resetCachedShapeFlag(cached)
+        unsetShapeFlag(cached)
         const instance = getInstanceFromCache(cached)
         if (instance) {
           const da = instance.da
@@ -349,7 +355,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
           return
         }
 
-        resetCachedShapeFlag(cached)
+        unsetShapeFlag(cached)
         remove(cached, storageContainer)
       })
 
@@ -426,11 +432,10 @@ const shouldCache = (
       : (block as GenericComponentInstance).type
   ) as GenericComponent & AsyncComponentInternalOptions
 
-  // for unresolved async components, don't cache yet
-  // - vapor async: caching deferred via keepAliveCtx.cacheBlock() in apiDefineAsyncComponent
-  // - vdom async: caching deferred via __asyncLoader().then() in createVDOMComponent
+  // Match VDOM KeepAlive behavior for unresolved async wrappers:
+  // cache them unless include needs a resolved name match.
   if (isAsync && !type.__asyncResolved) {
-    return false
+    return !props.include
   }
 
   const { include, exclude } = props
@@ -441,9 +446,29 @@ const shouldCache = (
   )
 }
 
-const resetCachedShapeFlag = (
-  cached: VaporComponentInstance | VaporFragment,
-) => {
+function setShapeFlag(
+  block: VaporComponentInstance | VaporFragment,
+  interop: boolean,
+  cached: boolean,
+): void {
+  if (interop && isInteropEnabled) {
+    if (cached) {
+      ;(block as VaporFragment).vnode!.shapeFlag! |=
+        ShapeFlags.COMPONENT_KEPT_ALIVE
+    }
+    ;(block as VaporFragment).vnode!.shapeFlag! |=
+      ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+  } else {
+    if (cached) {
+      ;(block as VaporComponentInstance).shapeFlag! |=
+        ShapeFlags.COMPONENT_KEPT_ALIVE
+    }
+    ;(block as VaporComponentInstance).shapeFlag! |=
+      ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+  }
+}
+
+const unsetShapeFlag = (cached: VaporComponentInstance | VaporFragment) => {
   if (isVaporComponent(cached)) {
     resetShapeFlag(cached)
     // for async components, also reset the inner resolved component's

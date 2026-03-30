@@ -1476,6 +1476,605 @@ describe('VaporKeepAlive', () => {
     expect(html()).toBe('<!--if-->')
   })
 
+  test('should preserve errored async component state across KeepAlive reactivation', async () => {
+    let reject: (e: Error) => void
+    const loader = vi.fn(
+      () =>
+        new Promise<VaporComponent>((_resolve, _reject) => {
+          reject = _reject
+        }),
+    )
+    const AsyncComp = defineVaporAsyncComponent({
+      loader,
+      errorComponent: (props: { error: Error }) =>
+        template(props.error.message)(),
+    })
+
+    const toggle = ref(true)
+    const { app, mount, html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => createComponent(AsyncComp),
+            ),
+        })
+      },
+    }).create()
+
+    const handler = vi.fn()
+    app.config.errorHandler = handler
+    mount()
+
+    expect(html()).toBe('<!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+
+    const err = new Error('errored out')
+    reject!(err)
+    await timeout()
+    expect(handler).toHaveBeenCalled()
+    expect(html()).toBe('errored out<!--async component--><!--if-->')
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('errored out<!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+  })
+
+  test('should preserve timed out async component state across KeepAlive reactivation', async () => {
+    const loader = vi.fn(
+      () =>
+        new Promise<VaporComponent>(() => {
+          // keep pending
+        }),
+    )
+    const AsyncComp = defineVaporAsyncComponent({
+      loader,
+      timeout: 1,
+      errorComponent: () => template('timed out')(),
+    })
+
+    const toggle = ref(true)
+    const { app, mount, html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => createComponent(AsyncComp),
+            ),
+        })
+      },
+    }).create()
+
+    const handler = vi.fn()
+    app.config.errorHandler = handler
+    mount()
+
+    expect(html()).toBe('<!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+
+    await timeout(1)
+    expect(handler).toHaveBeenCalled()
+    expect(html()).toBe('timed out<!--async component--><!--if-->')
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('timed out<!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+  })
+
+  test('should preserve timeout state when async component times out while deactivated in KeepAlive', async () => {
+    const loader = vi.fn(
+      () =>
+        new Promise<VaporComponent>(() => {
+          // keep pending
+        }),
+    )
+    const AsyncComp = defineVaporAsyncComponent({
+      loader,
+      timeout: 1,
+      errorComponent: () => template('timed out')(),
+    })
+
+    const toggle = ref(true)
+    const { app, mount, html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => createComponent(AsyncComp),
+            ),
+        })
+      },
+    }).create()
+
+    const handler = vi.fn()
+    app.config.errorHandler = handler
+    mount()
+
+    expect(html()).toBe('<!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    await timeout(1)
+    await nextTick()
+    expect(handler).toHaveBeenCalled()
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('timed out<!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+  })
+
+  test('should update to resolved state when timed out async component resolves while deactivated in KeepAlive', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const loader = vi.fn(
+      () =>
+        new Promise<VaporComponent>(_resolve => {
+          resolve = _resolve
+        }),
+    )
+    const AsyncComp = defineVaporAsyncComponent({
+      loader,
+      timeout: 1,
+      errorComponent: () => template('timed out')(),
+    })
+
+    const toggle = ref(true)
+    const { app, mount, html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => createComponent(AsyncComp),
+            ),
+        })
+      },
+    }).create()
+
+    const handler = vi.fn()
+    app.config.errorHandler = handler
+    mount()
+
+    expect(html()).toBe('<!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    await timeout(1)
+    await nextTick()
+    expect(handler).toHaveBeenCalled()
+
+    resolve!(
+      defineVaporComponent({
+        name: 'ResolvedAfterTimeout',
+        setup() {
+          return template('resolved')()
+        },
+      }),
+    )
+    await timeout()
+    await nextTick()
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('resolved<!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+  })
+
+  test('should preserve async retry progress when component resolves while deactivated in KeepAlive', async () => {
+    let loaderCallCount = 0
+    let resolve: (comp: VaporComponent) => void
+    let reject: (e: Error) => void
+
+    const AsyncComp = defineVaporAsyncComponent({
+      loader: () => {
+        loaderCallCount++
+        return new Promise<VaporComponent>((_resolve, _reject) => {
+          resolve = _resolve
+          reject = _reject
+        })
+      },
+      onError(error, retry, fail) {
+        if (error.message === 'retry me') {
+          retry()
+        } else {
+          fail()
+        }
+      },
+    })
+
+    const toggle = ref(true)
+    const { app, mount, html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => createComponent(AsyncComp),
+            ),
+        })
+      },
+    }).create()
+
+    const handler = vi.fn()
+    app.config.errorHandler = handler
+    mount()
+
+    expect(html()).toBe('<!--async component--><!--if-->')
+    expect(loaderCallCount).toBe(1)
+
+    reject!(new Error('retry me'))
+    await timeout()
+    expect(handler).not.toHaveBeenCalled()
+    expect(loaderCallCount).toBe(2)
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    resolve!(
+      defineVaporComponent({
+        name: 'ResolvedAfterRetry',
+        setup() {
+          return template('resolved')()
+        },
+      }),
+    )
+    await timeout()
+    await nextTick()
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('resolved<!--async component--><!--if-->')
+    expect(loaderCallCount).toBe(2)
+  })
+
+  test('should cache resolved async component by include name after retry resolves while deactivated', async () => {
+    let loaderCallCount = 0
+    let resolve: (comp: VaporComponent) => void
+    let reject: (e: Error) => void
+
+    const AsyncComp = defineVaporAsyncComponent({
+      loader: () => {
+        loaderCallCount++
+        return new Promise<VaporComponent>((_resolve, _reject) => {
+          resolve = _resolve
+          reject = _reject
+        })
+      },
+      onError(error, retry, fail) {
+        if (error.message === 'retry me') {
+          retry()
+        } else {
+          fail()
+        }
+      },
+    })
+
+    const toggle = ref(true)
+    const instanceRef = ref<any>(null)
+    const { app, mount, html } = define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(
+          VaporKeepAlive,
+          { include: () => 'Foo' },
+          {
+            default: () =>
+              createIf(
+                () => toggle.value,
+                () => {
+                  const comp = createComponent(AsyncComp)
+                  setRef(comp, instanceRef)
+                  return comp
+                },
+              ),
+          },
+        )
+      },
+    }).create()
+
+    const handler = vi.fn()
+    app.config.errorHandler = handler
+    mount()
+
+    expect(html()).toBe('<!--async component--><!--if-->')
+    expect(loaderCallCount).toBe(1)
+
+    reject!(new Error('retry me'))
+    await timeout()
+    expect(handler).not.toHaveBeenCalled()
+    expect(loaderCallCount).toBe(2)
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    resolve!(
+      defineVaporComponent({
+        name: 'Foo',
+        setup(_, { expose }) {
+          const count = ref(0)
+          expose({
+            inc: () => {
+              count.value++
+            },
+          })
+          const n0 = template('<p> </p>')() as any
+          const x0 = child(n0) as any
+          renderEffect(() => {
+            setText(x0, String(count.value))
+          })
+          return n0
+        },
+      }),
+    )
+    await timeout()
+    await nextTick()
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('<p>0</p><!--async component--><!--if-->')
+    expect(loaderCallCount).toBe(2)
+
+    instanceRef.value.inc()
+    await nextTick()
+    expect(html()).toBe('<p>1</p><!--async component--><!--if-->')
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('<p>1</p><!--async component--><!--if-->')
+    expect(loaderCallCount).toBe(2)
+  })
+
+  test('should preserve loading state across KeepAlive reactivation', async () => {
+    const loader = vi.fn(
+      () =>
+        new Promise<VaporComponent>(() => {
+          // keep pending
+        }),
+    )
+    const AsyncComp = defineVaporAsyncComponent({
+      loader,
+      loadingComponent: () => template('loading')(),
+      delay: 0,
+    })
+
+    const toggle = ref(true)
+    const { mount, html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => createComponent(AsyncComp),
+            ),
+        })
+      },
+    }).create()
+
+    mount()
+
+    expect(html()).toBe('loading<!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('loading<!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+  })
+
+  test('should not cache resolved async component by exclude name after resolving while deactivated', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const loader = vi.fn(
+      () =>
+        new Promise<VaporComponent>(_resolve => {
+          resolve = _resolve
+        }),
+    )
+    const AsyncComp = defineVaporAsyncComponent(loader)
+
+    const toggle = ref(true)
+    const instanceRef = ref<any>(null)
+    const { mount, html } = define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(
+          VaporKeepAlive,
+          { exclude: () => 'Foo' },
+          {
+            default: () =>
+              createIf(
+                () => toggle.value,
+                () => {
+                  const comp = createComponent(AsyncComp)
+                  setRef(comp, instanceRef)
+                  return comp
+                },
+              ),
+          },
+        )
+      },
+    }).create()
+
+    mount()
+
+    expect(html()).toBe('<!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    resolve!(
+      defineVaporComponent({
+        name: 'Foo',
+        setup(_, { expose }) {
+          const count = ref(0)
+          expose({
+            inc: () => {
+              count.value++
+            },
+          })
+          const n0 = template('<p> </p>')() as any
+          const x0 = child(n0) as any
+          renderEffect(() => {
+            setText(x0, String(count.value))
+          })
+          return n0
+        },
+      }),
+    )
+    await timeout()
+    await nextTick()
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('<p>0</p><!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+
+    instanceRef.value.inc()
+    await nextTick()
+    expect(html()).toBe('<p>1</p><!--async component--><!--if-->')
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('<p>0</p><!--async component--><!--if-->')
+    expect(loader).toHaveBeenCalledTimes(1)
+  })
+
+  test('should not cache resolved async component by exclude name after retry resolves while deactivated', async () => {
+    let loaderCallCount = 0
+    let resolve: (comp: VaporComponent) => void
+    let reject: (e: Error) => void
+
+    const AsyncComp = defineVaporAsyncComponent({
+      loader: () => {
+        loaderCallCount++
+        return new Promise<VaporComponent>((_resolve, _reject) => {
+          resolve = _resolve
+          reject = _reject
+        })
+      },
+      onError(error, retry, fail) {
+        if (error.message === 'retry me') {
+          retry()
+        } else {
+          fail()
+        }
+      },
+    })
+
+    const toggle = ref(true)
+    const instanceRef = ref<any>(null)
+    const { app, mount, html } = define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(
+          VaporKeepAlive,
+          { exclude: () => 'Foo' },
+          {
+            default: () =>
+              createIf(
+                () => toggle.value,
+                () => {
+                  const comp = createComponent(AsyncComp)
+                  setRef(comp, instanceRef)
+                  return comp
+                },
+              ),
+          },
+        )
+      },
+    }).create()
+
+    const handler = vi.fn()
+    app.config.errorHandler = handler
+    mount()
+
+    expect(html()).toBe('<!--async component--><!--if-->')
+    expect(loaderCallCount).toBe(1)
+
+    reject!(new Error('retry me'))
+    await timeout()
+    expect(handler).not.toHaveBeenCalled()
+    expect(loaderCallCount).toBe(2)
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    resolve!(
+      defineVaporComponent({
+        name: 'Foo',
+        setup(_, { expose }) {
+          const count = ref(0)
+          expose({
+            inc: () => {
+              count.value++
+            },
+          })
+          const n0 = template('<p> </p>')() as any
+          const x0 = child(n0) as any
+          renderEffect(() => {
+            setText(x0, String(count.value))
+          })
+          return n0
+        },
+      }),
+    )
+    await timeout()
+    await nextTick()
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('<p>0</p><!--async component--><!--if-->')
+    expect(loaderCallCount).toBe(2)
+
+    instanceRef.value.inc()
+    await nextTick()
+    expect(html()).toBe('<p>1</p><!--async component--><!--if-->')
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('<p>0</p><!--async component--><!--if-->')
+    expect(loaderCallCount).toBe(2)
+  })
+
   test('should not cache async component when resolved name does not match include', async () => {
     let resolve: (comp: VaporComponent) => void
     const AsyncComp = defineVaporAsyncComponent(
@@ -2546,6 +3145,145 @@ describe('VaporKeepAlive', () => {
       expect(cache!.size).toBe(0)
     })
 
+    test('should preserve interop async timeout state while deactivated', async () => {
+      const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
+      const loader = vi.fn(
+        () =>
+          new Promise(() => {
+            // keep pending
+          }),
+      ) as any
+      const AsyncComp = defineAsyncComponent({
+        loader,
+        timeout: 1,
+        errorComponent: () => 'timed out',
+      })
+
+      const toggle = ref(true)
+
+      const App = defineVaporComponent({
+        setup() {
+          return createComponent(VaporKeepAlive, null, {
+            default: () =>
+              createIf(
+                () => toggle.value,
+                () => createComponent(AsyncComp as any),
+              ),
+          })
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      const handler = (app.config.errorHandler = vi.fn())
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      expect(loader).toHaveBeenCalledTimes(1)
+      expect(container.innerHTML).not.toContain('timed out')
+
+      toggle.value = false
+      await nextTick()
+
+      await timeout(1)
+      await nextTick()
+      await nextTick()
+      expect(handler).toHaveBeenCalled()
+
+      toggle.value = true
+      await nextTick()
+      await nextTick()
+      expect(container.innerHTML).toContain('timed out')
+      expect(loader).toHaveBeenCalledTimes(1)
+    })
+
+    test('should not keep interop async component when it resolves to an excluded name while deactivated', async () => {
+      const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
+
+      let resolve: (comp: any) => void
+      const loader = vi.fn(
+        () =>
+          new Promise(r => {
+            resolve = r
+          }),
+      ) as any
+      const AsyncComp = defineAsyncComponent(loader)
+
+      const activated = vi.fn()
+      const deactivated = vi.fn()
+      let instance: any
+
+      const InnerComp = {
+        name: 'Foo',
+        data: () => ({ count: 0 }),
+        mounted(this: any) {
+          instance = this
+        },
+        activated,
+        deactivated,
+        render(this: any) {
+          return h('div', this.count)
+        },
+      }
+
+      const toggle = ref(true)
+
+      const App = defineVaporComponent({
+        setup() {
+          const ka = createComponent(
+            VaporKeepAlive,
+            { exclude: () => 'Foo' },
+            {
+              default: () =>
+                createIf(
+                  () => toggle.value,
+                  () => createComponent(AsyncComp as any),
+                ),
+            },
+          )
+          return ka
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      expect(loader).toHaveBeenCalledTimes(1)
+
+      toggle.value = false
+      await nextTick()
+
+      resolve!(InnerComp)
+      await timeout()
+      await nextTick()
+      await nextTick()
+
+      toggle.value = true
+      await nextTick()
+      await nextTick()
+      expect(container.innerHTML).toContain('<div>0</div>')
+      expect(activated).toHaveBeenCalledTimes(0)
+
+      instance.count++
+      await nextTick()
+      expect(container.innerHTML).toContain('<div>1</div>')
+
+      toggle.value = false
+      await nextTick()
+      expect(deactivated).toHaveBeenCalledTimes(0)
+
+      toggle.value = true
+      await nextTick()
+      await nextTick()
+      expect(container.innerHTML).toContain('<div>0</div>')
+      expect(loader).toHaveBeenCalledTimes(1)
+    })
+
     test('should not crash when toggling off interop async before resolve', async () => {
       const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
@@ -2670,6 +3408,89 @@ describe('VaporKeepAlive', () => {
 
       // cache should not have grown from the stale resolution
       expect(cache!.size).toBe(cacheBeforeResolve)
+    })
+
+    test('should not update keep-alive recency for a deactivated interop async branch that resolves later', async () => {
+      let resolveA!: (comp: any) => void
+      const AsyncCompA = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolveA = r
+          }),
+      )
+      const unmountedA = vi.fn()
+
+      const InnerCompA = {
+        name: 'CompA',
+        setup() {
+          onUnmounted(unmountedA)
+          return () => h('div', 'comp A')
+        },
+      }
+
+      const CompB = {
+        name: 'CompB',
+        setup() {
+          return () => h('div', 'comp B')
+        },
+      }
+
+      const CompC = {
+        name: 'CompC',
+        setup() {
+          return () => h('div', 'comp C')
+        },
+      }
+
+      const current = shallowRef<any>(AsyncCompA)
+      let keepAlive: any
+
+      const App = defineVaporComponent({
+        setup() {
+          keepAlive = createComponent(
+            VaporKeepAlive,
+            { max: () => 2 },
+            {
+              default: () => createDynamicComponent(() => current.value),
+            },
+          )
+          return keepAlive
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      try {
+        app.mount(container)
+
+        current.value = CompB
+        await nextTick()
+        expect(container.innerHTML).toContain('comp B')
+
+        resolveA(InnerCompA)
+        await timeout()
+        await nextTick()
+        await nextTick()
+
+        expect(keepAlive.ctx.getStorageContainer().innerHTML).toContain(
+          'comp A',
+        )
+
+        current.value = CompC
+        await nextTick()
+        await nextTick()
+
+        expect(container.innerHTML).toContain('comp C')
+        expect(keepAlive.ctx.getStorageContainer().innerHTML).not.toContain(
+          'comp A',
+        )
+        expect(unmountedA).toHaveBeenCalledTimes(1)
+      } finally {
+        app.unmount()
+        container.remove()
+      }
     })
   })
 
