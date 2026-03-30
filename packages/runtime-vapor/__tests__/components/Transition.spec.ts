@@ -324,6 +324,48 @@ describe('Transition', () => {
     expect(onAppear).not.toHaveBeenCalled()
   })
 
+  test('dynamic slot branch swaps preserve persisted hooks for slot-root v-show', async () => {
+    const data = ref({
+      branch: true,
+      show: true,
+    })
+    const Child = compile(`<template><slot /></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition appear>
+          <template #default v-if="data.branch">
+            <components.Child>
+              <div v-show="data.show">foo</div>
+            </components.Child>
+          </template>
+          <template #default v-else>
+            <components.Child>
+              <div v-show="data.show">bar</div>
+            </components.Child>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host, instance } = define(App as any).render()
+    const transitionFragment = (instance!.block as any).block
+    const getTransitionOwner = () =>
+      transitionFragment.nodes?.$transition
+        ? transitionFragment.nodes
+        : transitionFragment.nodes?.block
+
+    await nextTick()
+
+    expect(getTransitionOwner()?.$transition?.persisted).toBe(true)
+
+    data.value.branch = false
+    await nextTick()
+
+    expect(host.textContent).toContain('bar')
+    expect(getTransitionOwner()?.$transition?.persisted).toBe(true)
+  })
+
   test('dynamic default slot source should trigger enter hooks when toggled on', async () => {
     const onBeforeEnter = vi.fn()
     const onEnter = vi.fn()

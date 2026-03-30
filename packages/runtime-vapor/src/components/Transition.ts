@@ -353,6 +353,9 @@ function applyResolvedTransitionHooks(
     instance,
     hooks => (resolvedHooks = hooks as VaporTransitionHooks),
   )
+  // Dynamic slot updates replace the active hook object. Preserve any
+  // runtime-derived persisted state for slot/component-root v-show.
+  resolvedHooks.persisted = resolvedHooks.persisted || hooks.persisted
   resolvedHooks.delayedLeave = delayedLeave
   child.$transition = resolvedHooks
   fragments.forEach(f => (f.$transition = resolvedHooks))
