@@ -1692,6 +1692,101 @@ describe('resolveType', () => {
         bar: ['String'],
       })
     })
+
+    // https://github.com/vuejs/router/issues/2611
+    test('modular js extension', () => {
+      const files = {
+        '/mts.mjs': 'export {}',
+        '/mts.d.mts': 'export type LinkProps = { activeClass: string }',
+        '/tsx.jsx': 'export {}',
+        '/tsx.d.ts': 'export type Foo = number',
+        '/mtsTyped.mjs': 'export {}',
+        '/mtsTyped.d.ts': 'export type Bar = string',
+        '/cts.cjs': 'module.exports = {}',
+        '/cts.d.cts': `export type Baz = boolean`,
+      }
+
+      let props!: Record<string, string[]>
+      expect(() => {
+        props = resolve(
+          `
+        import type { LinkProps } from './mts.mjs'
+        import { Foo } from './tsx.jsx'
+        import { Bar } from './mtsTyped.mjs'
+        import type { Baz } from './cts.cjs'
+        defineProps<LinkProps & { foo: Foo; bar: Bar; baz: Baz }>()
+        `,
+          files,
+        ).props
+      }).not.toThrow()
+      expect(props).not.toBe(undefined)
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String'],
+        baz: ['Boolean'],
+        activeClass: ['String'],
+      })
+    })
+
+    test('prefer .mts over .ts for .mjs import', () => {
+      const files = {
+        '/foo.mjs': 'export {}',
+        '/foo.ts': 'export type Foo = number',
+        '/foo.mts': 'export type Foo = string',
+      }
+
+      const { props } = resolve(
+        `
+        import type { Foo } from './foo.mjs'
+        defineProps<{ value: Foo }>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        value: ['String'],
+      })
+    })
+
+    test('prefer .d.mts over .d.ts for .mjs import', () => {
+      const files = {
+        '/foo.mjs': 'export {}',
+        '/foo.d.ts': 'export type Foo = number',
+        '/foo.d.mts': 'export type Foo = string',
+      }
+
+      const { props } = resolve(
+        `
+        import type { Foo } from './foo.mjs'
+        defineProps<{ value: Foo }>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        value: ['String'],
+      })
+    })
+
+    test('prefer .d.cts over .d.ts for .cjs import', () => {
+      const files = {
+        '/foo.cjs': 'module.exports = {}',
+        '/foo.d.ts': 'export type Foo = number',
+        '/foo.d.cts': 'export type Foo = boolean',
+      }
+
+      const { props } = resolve(
+        `
+        import type { Foo } from './foo.cjs'
+        defineProps<{ value: Foo }>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        value: ['Boolean'],
+      })
+    })
   })
 })
 

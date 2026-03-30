@@ -472,6 +472,17 @@ describe('vnode', () => {
       expect(mergeProps(props1, props3)).toMatchObject({
         onClick: clickHandler1,
       })
+      const props4: Data = { onClick: undefined }
+      expect(mergeProps(props4)).toHaveProperty('onClick', undefined)
+      expect(mergeProps({ onClick: null })).toMatchObject({
+        onClick: null,
+      })
+      expect(
+        mergeProps({ 'onUpdate:modelValue': undefined }),
+      ).not.toHaveProperty('onUpdate:modelValue')
+      expect(mergeProps({ 'onUpdate:modelValue': null })).not.toHaveProperty(
+        'onUpdate:modelValue',
+      )
     })
 
     test('default', () => {

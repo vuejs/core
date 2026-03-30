@@ -4,6 +4,7 @@ import {
   reactive,
   readonly,
   ref,
+  shallowReactive,
   shallowReadonly,
 } from 'vue'
 import { describe, expectType } from './utils'
@@ -129,4 +130,13 @@ describe('should not error when assignment', () => {
   let record2: { [key: number]: string }
   record2 = arr
   expectType<string>(record2[0])
+})
+
+describe('shallowReactive marker should not leak into value unions', () => {
+  const state = shallowReactive({
+    a: { title: 'A' },
+    b: { title: 'B' },
+  })
+  const value = {} as (typeof state)[keyof typeof state]
+  expectType<string>(value.title)
 })
