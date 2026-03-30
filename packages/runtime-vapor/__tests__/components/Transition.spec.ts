@@ -118,6 +118,15 @@ describe('Transition', () => {
     expect(resolved.$key).toBe(child.uid)
   })
 
+  test('allows empty transition content', async () => {
+    const App = compile(`<template><Transition /></template>`, ref({}))
+    const { host } = define(App as any).render()
+
+    await nextTick()
+
+    expect(host.innerHTML).toBe('')
+  })
+
   test('direct child with initial hidden v-show should not trigger appear hooks', async () => {
     const { data, onBeforeAppear, onAppear } = createAppearTestState(false)
     const App = compile(
@@ -313,5 +322,153 @@ describe('Transition', () => {
     expect(host.querySelector('div')?.style.display).toBe('none')
     expect(onBeforeAppear).not.toHaveBeenCalled()
     expect(onAppear).not.toHaveBeenCalled()
+  })
+
+  test('dynamic slot branch swaps preserve persisted hooks for slot-root v-show', async () => {
+    const data = ref({
+      branch: true,
+      show: true,
+    })
+    const Child = compile(`<template><slot /></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition appear>
+          <template #default v-if="data.branch">
+            <components.Child>
+              <div v-show="data.show">foo</div>
+            </components.Child>
+          </template>
+          <template #default v-else>
+            <components.Child>
+              <div v-show="data.show">bar</div>
+            </components.Child>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host, instance } = define(App as any).render()
+    const transitionFragment = (instance!.block as any).block
+    const getTransitionOwner = () =>
+      transitionFragment.nodes?.$transition
+        ? transitionFragment.nodes
+        : transitionFragment.nodes?.block
+
+    await nextTick()
+
+    expect(getTransitionOwner()?.$transition?.persisted).toBe(true)
+
+    data.value.branch = false
+    await nextTick()
+
+    expect(host.textContent).toContain('bar')
+    expect(getTransitionOwner()?.$transition?.persisted).toBe(true)
+  })
+
+  test('dynamic default slot source should trigger enter hooks when toggled on', async () => {
+    const onBeforeEnter = vi.fn()
+    const onEnter = vi.fn()
+    const data = ref({
+      show: false,
+      onBeforeEnter,
+      onEnter,
+    })
+    const App = compile(
+      `<template>
+        <button @click="data.show = !data.show">toggle</button>
+        <Transition
+          @before-enter="data.onBeforeEnter"
+          @enter="data.onEnter"
+        >
+          <template #default v-if="data.show">
+            <div>foo</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    host.querySelector('button')!.click()
+    await nextTick()
+
+    expect(host.innerHTML).toContain(
+      '<div class="v-enter-from v-enter-active">foo</div>',
+    )
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+    expect(onEnter).toHaveBeenCalledTimes(1)
+  })
+
+  test('dynamic default slot source should trigger leave hooks when toggled off', async () => {
+    const onBeforeLeave = vi.fn()
+    const onLeave = vi.fn()
+    const data = ref({
+      show: true,
+      onBeforeLeave,
+      onLeave,
+    })
+    const App = compile(
+      `<template>
+        <button @click="data.show = !data.show">toggle</button>
+        <Transition
+          @before-leave="data.onBeforeLeave"
+          @leave="data.onLeave"
+        >
+          <template #default v-if="data.show">
+            <div>foo</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    host.querySelector('button')!.click()
+    await nextTick()
+
+    expect(host.innerHTML).toContain(
+      '<div class="v-leave-from v-leave-active">foo</div>',
+    )
+    expect(onBeforeLeave).toHaveBeenCalledTimes(1)
+    expect(onLeave).toHaveBeenCalledTimes(1)
+  })
+
+  test('dynamic default slot source should respect reactive mode changes', async () => {
+    const onLeave = vi.fn((_: Element, done: () => void) => setTimeout(done, 0))
+    const data = ref({
+      mode: 'default',
+      show: true,
+      onLeave,
+    })
+    const App = compile(
+      `<template>
+        <Transition :mode="data.mode" @leave="data.onLeave">
+          <template #default v-if="data.show">
+            <div>A</div>
+          </template>
+          <template #default v-else>
+            <div>B</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    data.value.mode = 'out-in'
+    await nextTick()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(host.textContent).toContain('A')
+    expect(host.textContent).not.toContain('B')
+
+    await new Promise(r => setTimeout(r, 0))
+    await nextTick()
+
+    expect(host.textContent).toContain('B')
+    expect(onLeave).toHaveBeenCalledTimes(1)
   })
 })
