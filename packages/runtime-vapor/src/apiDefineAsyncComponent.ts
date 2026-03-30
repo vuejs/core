@@ -181,9 +181,13 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
             onError(err)
             if (errorComponent) {
               frag.update(() =>
-                createInnerComp(errorComponent, instance, {
-                  error: () => err,
-                }),
+                createInnerComp(
+                  errorComponent,
+                  instance,
+                  { error: () => err },
+                  // Avoid wrapper slot fallthrough
+                  {},
+                ),
               )
             }
             return frag
