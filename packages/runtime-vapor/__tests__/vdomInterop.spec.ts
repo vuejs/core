@@ -2384,6 +2384,73 @@ describe('vdomInterop', () => {
       }
     })
 
+    test('does not fall through slots to error component for vapor async wrapper inside VDOM Suspense', async () => {
+      const tick = () => new Promise(resolve => setTimeout(resolve))
+
+      let reject!: (error: Error) => void
+      const VaporAsyncChild = defineVaporAsyncComponent({
+        loader: () =>
+          new Promise((_resolve, _reject) => {
+            reject = _reject as (error: Error) => void
+          }),
+        errorComponent: defineVaporComponent({
+          setup() {
+            const n0 = template('<div>error</div>')()
+            insert(createSlot('default'), n0 as any as ParentNode)
+            return n0
+          },
+        }),
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            Suspense as any,
+            null,
+            {
+              default: () =>
+                createComponent(
+                  VaporAsyncChild,
+                  null,
+                  {
+                    default: withVaporCtx(() =>
+                      template('<span>slot content</span>')(),
+                    ),
+                  },
+                  true,
+                ),
+              fallback: () => template('loading')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () => h(VaporParent as any),
+      })
+      app.use(vaporInteropPlugin)
+      const errorHandler = vi.fn()
+      app.config.errorHandler = errorHandler
+      try {
+        app.mount(host)
+
+        expect(host.innerHTML).toContain('loading')
+
+        reject(new Error('errored out'))
+        await tick()
+        await nextTick()
+
+        expect(errorHandler).toHaveBeenCalled()
+        expect(host.innerHTML).toContain('error')
+        expect(host.innerHTML).not.toContain('slot content')
+      } finally {
+        app.unmount()
+        host.remove()
+      }
+    })
+
     test('renders async setup vapor component inside VDOM Suspense', async () => {
       const duration = 5
 
