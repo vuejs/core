@@ -69,6 +69,7 @@ After making changes, run at least the minimal validation matching the scope of 
 - Use package names for cross-package imports; do not use relative paths across package boundaries.
 - Compiler packages must not import runtime; runtime must not import compiler. If something needs to be shared, move it to `@vue/shared`.
 - If package A has a non-type import from package B, or re-exports a type from package B, then A's `package.json` must declare B as a dependency.
+- In runtime source code, do not use optional chaining (`?.`); test files are exempt, and runtime code should prefer explicit guards or local variables instead.
 - Follow the existing code style. Prefer straightforward, easy-to-understand implementations over clever ones.
 - Keep PR scope focused; do not include unrelated formatting, renames, or style changes.
 
@@ -99,6 +100,7 @@ About size, tree-shaking, and performance:
 - First determine whether the change is a fix, feature, or refactor, then decide the target branch and validation scope.
 - For bug fixes, first add or extend a test to prove the issue exists; confirm the new test fails before the fix, then change the implementation; after the fix, ensure the newly added test passes.
 - During review, if you suspect some scenarios may contain bugs, regression risk, or missing coverage, add tests directly to the existing test files to validate them, and keep those tests as regression protection.
+- When adding new tests or new helper functions, prefer placing them near the end of the file unless there is a strong locality reason to keep them elsewhere.
 - If the change touches public API, compiler output, runtime hot paths, type declarations, or bundle size, explain the trade-offs clearly.
 - Prefer the smallest sufficient fix; do not bundle large unrelated cleanup.
 - `runtime-vapor` tests should stay close to template-compiled output and real usage paths; do not use hand-written `setup` edge cases as the primary test model.
