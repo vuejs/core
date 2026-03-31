@@ -331,14 +331,31 @@ const vaporInteropImpl: Omit<
     move(vnode.anchor as any, container, anchor, moveType)
   },
 
-  hydrate(vnode, node, container, anchor, parentComponent, parentSuspense) {
+  hydrate(
+    vnode,
+    node,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    onBeforeMount,
+    onVnodeBeforeMount,
+  ) {
     // Check both vapor's isHydrating (for createVaporSSRApp) and
     // VDOM's isVdomHydrating (for createSSRApp).
     // In CSR (createApp/createVaporApp + vaporInteropPlugin), both are false,
     // so this logic is tree-shaken.
     if (!isHydrating && !isVdomHydrating) return node
     vaporHydrateNode(node, () =>
-      this.mount(vnode, container, anchor, parentComponent, parentSuspense),
+      this.mount(
+        vnode,
+        container,
+        anchor,
+        parentComponent,
+        parentSuspense,
+        onBeforeMount,
+        onVnodeBeforeMount,
+      ),
     )
     return _next(node)
   },

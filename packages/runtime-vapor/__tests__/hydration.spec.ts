@@ -13,7 +13,16 @@ import {
   template,
   useVaporCssVars,
 } from '../src'
-import { defineAsyncComponent, nextTick, reactive, ref } from '@vue/runtime-dom'
+import {
+  createSSRApp,
+  defineAsyncComponent,
+  defineComponent,
+  h,
+  nextTick,
+  reactive,
+  ref,
+  withDirectives,
+} from '@vue/runtime-dom'
 import { isString } from '@vue/shared'
 import type { VaporComponentInstance } from '../src/component'
 import type { TeleportFragment } from '../src/components/Teleport'
@@ -5252,6 +5261,77 @@ describe('VDOM interop', () => {
   beforeEach(() => {
     setIsHydratingEnabled(false)
   })
+
+  test('hydrate VDOM -> Vapor component should invoke vnode and directive mount hooks in VDOM order', async () => {
+    const calls: string[] = []
+    const dir = {
+      created: vi.fn(() => calls.push('directive created')),
+      beforeMount: vi.fn(() => calls.push('directive beforeMount')),
+      mounted: vi.fn(() => calls.push('directive mounted')),
+    }
+    const serverVaporChild = compile(
+      `<template><div>child</div></template>`,
+      ref({}),
+      {},
+      {
+        vapor: true,
+        ssr: true,
+      },
+    )
+    const clientVaporChild = compile(
+      `<template><div>child</div></template>`,
+      ref({}),
+      {},
+      {
+        vapor: true,
+        ssr: false,
+      },
+    )
+    const ServerApp = defineComponent({
+      setup() {
+        return () =>
+          withDirectives(
+            h(serverVaporChild as any, {
+              onVnodeBeforeMount: () => calls.push('vnode beforeMount'),
+              onVnodeMounted: () => calls.push('vnode mounted'),
+            }),
+            [[dir]],
+          )
+      },
+    })
+    const ClientApp = defineComponent({
+      setup() {
+        return () =>
+          withDirectives(
+            h(clientVaporChild as any, {
+              onVnodeBeforeMount: () => calls.push('vnode beforeMount'),
+              onVnodeMounted: () => calls.push('vnode mounted'),
+            }),
+            [[dir]],
+          )
+      },
+    })
+
+    const html = await VueServerRenderer.renderToString(createSSRApp(ServerApp))
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+
+    const app = createSSRApp(ClientApp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    await nextTick()
+
+    expect(calls).toEqual([
+      'vnode beforeMount',
+      'directive created',
+      'directive beforeMount',
+      'directive mounted',
+      'vnode mounted',
+    ])
+  })
+
   test('basic render vapor component', async () => {
     const data = ref(true)
     const { container } = await testWithVDOMApp(
