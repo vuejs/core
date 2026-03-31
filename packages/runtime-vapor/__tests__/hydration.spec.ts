@@ -6707,6 +6707,100 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate VDOM slot content should unmount hydrated slot child before first insert', async () => {
+    const data = ref({
+      unmounted: vi.fn(),
+    })
+
+    const appCode = `<script setup>
+      const components = _components
+    </script>
+    <template>
+      <components.VaporChild>
+        <components.SlotChild />
+      </components.VaporChild>
+    </template>`
+
+    const ssrComponents = {
+      VaporChild: compile(
+        `<template><slot /></template>`,
+        data,
+        {},
+        {
+          vapor: true,
+          ssr: true,
+        },
+      ),
+      SlotChild: compile(
+        `<script setup>
+          import { onUnmounted } from 'vue'
+          const data = _data
+          onUnmounted(() => data.value.unmounted())
+        </script>
+        <template><div>slot child</div></template>`,
+        data,
+        {},
+        {
+          vapor: false,
+          ssr: true,
+        },
+      ),
+    }
+
+    const clientComponents = {
+      VaporChild: compile(
+        `<template><slot /></template>`,
+        data,
+        {},
+        {
+          vapor: true,
+          ssr: false,
+        },
+      ),
+      SlotChild: compile(
+        `<script setup>
+          import { onUnmounted } from 'vue'
+          const data = _data
+          onUnmounted(() => data.value.unmounted())
+        </script>
+        <template><div>slot child</div></template>`,
+        data,
+        {},
+        {
+          vapor: false,
+          ssr: false,
+        },
+      ),
+    }
+
+    const serverComp = compile(appCode, data, ssrComponents, {
+      vapor: false,
+      ssr: true,
+    })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+
+    const clientComp = compile(appCode, data, clientComponents, {
+      vapor: false,
+      ssr: false,
+    })
+    const app = runtimeDom.createSSRApp(clientComp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    app.unmount()
+    await nextTick()
+
+    expect(data.value.unmounted).toHaveBeenCalledTimes(1)
+  })
+
   test('hydrate VDOM slot fallback', async () => {
     const data = ref('foo')
     const { container } = await testWithVaporApp(
