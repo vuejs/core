@@ -538,6 +538,12 @@ declare const unref2:
   | WritableComputedRef<string>
 expectType<string>(unref(unref2))
 
+// #12986
+function toRefFromMaybeRef(v: MaybeRef<number>) {
+  const r = toRef(v)
+  r.value = 1
+}
+
 // toValue
 expectType<number>(toValue(unref1))
 expectType<string>(toValue(unref2))
