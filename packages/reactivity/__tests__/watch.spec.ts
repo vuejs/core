@@ -60,6 +60,19 @@ describe('watch', () => {
     expect(dummy).toBe(1)
   })
 
+  // #13807
+  test('with explicit generic type argument', () => {
+    const source = ref(0)
+    let seen: number | undefined
+
+    watch<number>(source, value => {
+      seen = value
+    })
+
+    source.value++
+    expect(seen).toBe(1)
+  })
+
   test('call option with error handling', () => {
     const onError = vi.fn()
     const call: WatchOptions['call'] = function call(fn, type, args) {

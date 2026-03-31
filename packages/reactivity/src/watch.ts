@@ -74,6 +74,18 @@ export interface WatchHandle extends WatchStopHandle {
   stop: () => void
 }
 
+type MaybeUndefined<T, I> = I extends true ? T | undefined : T
+
+type MultiWatchSources = (WatchSource<unknown> | object)[]
+
+type MapSources<T, Immediate> = {
+  [K in keyof T]: T[K] extends WatchSource<infer V>
+    ? MaybeUndefined<V, Immediate>
+    : T[K] extends object
+      ? MaybeUndefined<T[K], Immediate>
+      : never
+}
+
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
@@ -117,10 +129,45 @@ export function onWatcherCleanup(
   }
 }
 
-export function watch(
-  source: WatchSource | WatchSource[] | WatchEffect | object,
+export function watch(effect: WatchEffect, options?: WatchOptions): WatchHandle
+
+export function watch<T, Immediate extends Readonly<boolean> = false>(
+  source: WatchSource<T>,
+  cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
+  options?: WatchOptions<Immediate>,
+): WatchHandle
+
+export function watch<
+  T extends Readonly<MultiWatchSources>,
+  Immediate extends Readonly<boolean> = false,
+>(
+  sources: readonly [...T] | T,
+  cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
+  options?: WatchOptions<Immediate>,
+): WatchHandle
+
+export function watch<
+  T extends MultiWatchSources,
+  Immediate extends Readonly<boolean> = false,
+>(
+  sources: [...T],
+  cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
+  options?: WatchOptions<Immediate>,
+): WatchHandle
+
+export function watch<
+  T extends object,
+  Immediate extends Readonly<boolean> = false,
+>(
+  source: T,
+  cb: WatchCallback<T, MaybeUndefined<T, Immediate>>,
+  options?: WatchOptions<Immediate>,
+): WatchHandle
+
+export function watch<T = any, Immediate extends Readonly<boolean> = false>(
+  source: WatchSource<T> | WatchSource<T>[] | WatchEffect | T,
   cb?: WatchCallback | null,
-  options: WatchOptions = EMPTY_OBJ,
+  options: WatchOptions<Immediate> = EMPTY_OBJ,
 ): WatchHandle {
   const { immediate, deep, once, scheduler, augmentJob, call } = options
 
