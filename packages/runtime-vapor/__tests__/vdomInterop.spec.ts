@@ -2452,6 +2452,59 @@ describe('vdomInterop', () => {
       ])
     })
 
+    test('should invoke updated before activated on reactivation', async () => {
+      const calls: string[] = []
+
+      const VaporChild = defineVaporComponent({
+        props: ['msg'],
+        setup(props: any) {
+          onActivated(() => calls.push('activated'))
+          return template('<div></div>')()
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('span', 'vdom')
+        },
+      })
+
+      const current = shallowRef<any>(VaporChild)
+      const msg = ref('one')
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(KeepAlive, null, {
+              default: () =>
+                current.value === VaporChild
+                  ? h(VaporChild as any, {
+                      msg: msg.value,
+                      onVnodeUpdated: () => calls.push('vnode updated'),
+                      onVnodeMounted: () => calls.push('vnode mounted'),
+                    })
+                  : h(VdomChild),
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      await nextTick()
+      calls.length = 0
+
+      current.value = VdomChild
+      await nextTick()
+
+      msg.value = 'two'
+      current.value = VaporChild
+      await nextTick()
+
+      expect(calls).toEqual(['vnode updated', 'activated', 'vnode mounted'])
+    })
+
     test('should expose the latest vapor root element in updated hooks on reactivation', async () => {
       const VaporChild = defineVaporComponent({
         props: {
