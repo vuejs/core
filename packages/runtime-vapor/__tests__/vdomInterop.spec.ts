@@ -320,6 +320,48 @@ describe('vdomInterop', () => {
       expect(vnodeUnmounted).toHaveBeenCalledTimes(1)
     })
 
+    test('should invoke vnode and directive mount hooks in VDOM order', async () => {
+      const calls: string[] = []
+      const vCustom = {
+        created: vi.fn(() => calls.push('directive created')),
+        beforeMount: vi.fn(() => calls.push('directive beforeMount')),
+        mounted: vi.fn(() => calls.push('directive mounted')),
+      }
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor</div>')()
+        },
+      })
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            withDirectives(
+              h(VaporChild as any, {
+                onVnodeBeforeMount: () => calls.push('vnode beforeMount'),
+                onVnodeMounted: () => calls.push('vnode mounted'),
+              }),
+              [[vCustom]],
+            )
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      await nextTick()
+
+      expect(calls).toEqual([
+        'vnode beforeMount',
+        'directive created',
+        'directive beforeMount',
+        'directive mounted',
+        'vnode mounted',
+      ])
+    })
+
     test('should invoke update hooks in VDOM order on normal updates', async () => {
       const msg = ref('foo')
       const calls: string[] = []
