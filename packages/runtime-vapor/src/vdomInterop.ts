@@ -249,7 +249,8 @@ const vaporInteropImpl: Omit<
 
   update(n1, n2, shouldUpdate, onBeforeUpdate, onVnodeBeforeUpdate) {
     n2.component = n1.component
-    n2.el = n2.anchor = n1.anchor
+    n2.el = n1.el
+    n2.anchor = n1.anchor
 
     const instance = n2.component as any as VaporComponentInstance
 
@@ -270,6 +271,7 @@ const vaporInteropImpl: Omit<
       }
       instance.rawPropsRef!.value = filterReservedProps(n2.props)
       instance.rawSlotsRef!.value = n2.children
+      queuePostFlushCb(() => syncVNodeRootEl(n2, instance))
     }
   },
 
@@ -441,6 +443,7 @@ const vaporInteropImpl: Omit<
     }
     queuePostFlushCb(() => {
       if (shouldUpdate) {
+        syncVNodeRootEl(vnode, instance)
         if (vnode.dirs) {
           invokeDirectiveHook(vnode, cached, parentComponent, 'updated')
         }
@@ -1279,5 +1282,15 @@ function invokeVaporSlot(vnode: VNode): Block {
     vnode.vs!.scope = undefined
     scope.stop()
     throw e
+  }
+}
+
+function syncVNodeRootEl(vnode: VNode, instance: VaporComponentInstance): void {
+  const rootEl = getRootElement(instance)
+  if (rootEl) {
+    vnode.el = rootEl
+  } else {
+    vnode.el = vnode.anchor as any
+    vnode.dirs = null
   }
 }
