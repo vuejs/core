@@ -406,8 +406,6 @@ const vaporInteropImpl: Omit<
       vnode.dirs = null
     }
     const shouldUpdate = shouldUpdateComponent(cached, vnode)
-    activate(instance, container, anchor)
-    insert(vnode.anchor as any, container, anchor)
     if (shouldUpdate) {
       instance.rawPropsRef!.value = filterReservedProps(vnode.props)
       instance.rawSlotsRef!.value = vnode.children
@@ -424,9 +422,7 @@ const vaporInteropImpl: Omit<
       if (vnode.dirs) {
         invokeDirectiveHook(vnode, cached, parentComponent, 'beforeUpdate')
       }
-    }
-    queuePostFlushCb(() => {
-      if (shouldUpdate) {
+      queuePostFlushCb(() => {
         syncVNodeRootEl(vnode, instance)
         if (vnode.dirs) {
           invokeDirectiveHook(vnode, cached, parentComponent, 'updated')
@@ -440,18 +436,21 @@ const vaporInteropImpl: Omit<
             [vnode, cached],
           )
         }
-      }
-
-      const vnodeMountedHook = vnode.props && vnode.props.onVnodeMounted
-      if (vnodeMountedHook) {
+      })
+    }
+    activate(instance, container, anchor)
+    insert(vnode.anchor as any, container, anchor)
+    const vnodeMountedHook = vnode.props && vnode.props.onVnodeMounted
+    if (vnodeMountedHook) {
+      queuePostFlushCb(() => {
         callWithAsyncErrorHandling(
           vnodeMountedHook,
           parentComponent,
           ErrorCodes.VNODE_HOOK,
           [vnode],
         )
-      }
-    })
+      })
+    }
   },
 
   deactivate(vnode, container) {
