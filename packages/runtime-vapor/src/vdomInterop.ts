@@ -47,6 +47,7 @@ import {
   setRef as vdomSetRef,
   warn,
 } from '@vue/runtime-dom'
+import { effectScope } from '@vue/reactivity'
 import {
   type LooseRawProps,
   type LooseRawSlots,
@@ -281,6 +282,7 @@ const vaporInteropImpl: Omit<
       }
     } else if (vnode.vb) {
       remove(vnode.vb, container)
+      stopVaporSlotScope(vnode)
     }
     remove(vnode.anchor as Node, container)
     // invoke onVnodeUnmounted hook
@@ -329,6 +331,7 @@ const vaporInteropImpl: Omit<
           isFragment(n1.vb!) && n1.vb!.anchor === selfAnchor
         // remove old vapor block
         remove(n1.vb!, parent)
+        stopVaporSlotScope(n1)
         const slotBlock = renderVaporSlot(n2, parentComponent, parentSuspense)
         let newAnchor = isFragment(slotBlock) ? slotBlock.anchor : undefined
         let insertAnchor = nextSibling as Node
@@ -348,6 +351,7 @@ const vaporInteropImpl: Omit<
         n2.el = n2.anchor = n1.anchor
         n2.vb = n1.vb
         ;(n2.vs!.ref = n1.vs!.ref)!.value = n2.props
+        n2.vs!.scope = n1.vs!.scope
       }
     }
   },
@@ -371,10 +375,8 @@ const vaporInteropImpl: Omit<
 
   hydrateSlot(vnode, node) {
     if (!isHydrating && !isVdomHydrating) return node
-    const { slot } = vnode.vs!
-    const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
     vaporHydrateNode(node, () => {
-      vnode.vb = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
+      vnode.vb = invokeVaporSlot(vnode)
       vnode.anchor = vnode.el = currentHydrationNode!
 
       if (__DEV__ && !vnode.anchor) {
@@ -1213,9 +1215,8 @@ function renderVaporSlot(
     prevSuspense = setParentSuspense(parentSuspense)
   }
   try {
-    const { slot, fallback } = vnode.vs!
-    const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
-    let slotBlock = slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
+    const { fallback } = vnode.vs!
+    let slotBlock = invokeVaporSlot(vnode)
     if (!fallback) {
       return slotBlock
     }
@@ -1231,5 +1232,32 @@ function renderVaporSlot(
       setParentSuspense(prevSuspense)
     }
     simpleSetCurrentInstance(prev)
+  }
+}
+
+function stopVaporSlotScope(vnode: VNode): void {
+  if (vnode.vs && vnode.vs.scope) {
+    vnode.vs.scope.stop()
+    vnode.vs.scope = undefined
+  }
+}
+
+/**
+ * Slot functions can create renderEffects while evaluating their block.
+ * Those effects live in this dedicated scope so slot re-mount/unmount can
+ * dispose them immediately instead of waiting for the parent component.
+ */
+function invokeVaporSlot(vnode: VNode): Block {
+  const propsRef = (vnode.vs!.ref = shallowRef(vnode.props))
+  const scope = effectScope()
+  vnode.vs!.scope = scope
+  try {
+    return scope.run(() =>
+      vnode.vs!.slot(new Proxy(propsRef, vaporSlotPropsProxyHandler)),
+    )!
+  } catch (e) {
+    vnode.vs!.scope = undefined
+    scope.stop()
+    throw e
   }
 }

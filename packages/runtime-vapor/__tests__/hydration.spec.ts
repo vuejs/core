@@ -5883,6 +5883,69 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate dynamic vapor slot re-mount should stop stale effects from previous slot function', async () => {
+    const staleState = reactive({ id: 0, text: 'zero' })
+    const activeState = reactive({ id: 1, text: 'one' })
+    const nextState = reactive({ id: 2, text: 'two' })
+    const data = reactive({
+      items: [staleState, activeState],
+      track: vi.fn((_: number, text: string) => text),
+    })
+
+    const { container } = await testWithVaporApp(
+      `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Comp>
+          <template v-for="item in data.items" #default>
+            <span>{{ data.track(item.id, item.text) }}</span>
+          </template>
+        </components.Comp>
+      </template>`,
+      {
+        Comp: {
+          code: `
+          <template>
+            <div>
+              <slot />
+            </div>
+          </template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[--><span>one</span><!--]-->
+      </div>"
+    `)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.items.push(nextState)
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[--><span>two</span><!--]-->
+      </div>"
+    `)
+
+    data.track.mockClear()
+    activeState.text = 'stale-one'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[--><span>two</span><!--]-->
+      </div>"
+    `)
+    expect(data.track).not.toHaveBeenCalled()
+  })
+
   test('hydrate multi-root VNode component via createDynamicComponent and switch branch', async () => {
     const data = ref({
       showMulti: true,

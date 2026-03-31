@@ -24,6 +24,7 @@ import {
 } from './component'
 import type { RawSlots } from './componentSlots'
 import {
+  type EffectScope,
   type ReactiveFlags,
   type Ref,
   type ShallowRef,
@@ -270,6 +271,7 @@ export interface VNode<
     slot: (props: any) => any
     fallback: (() => VNodeArrayChildren) | undefined
     ref?: ShallowRef<any>
+    scope?: EffectScope
   }
   /**
    * @internal Vapor slot Block

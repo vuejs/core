@@ -1014,6 +1014,67 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(html()).toBe('<div><span>1</span><!--if--></div>')
     })
+
+    test('dynamic slot re-mount should stop stale effects from previous slot function', async () => {
+      const list = ref([0, 1])
+      const slotStates = new Map([
+        [0, { text: ref('zero'), runs: vi.fn() }],
+        [1, { text: ref('one'), runs: vi.fn() }],
+        [2, { text: ref('two'), runs: vi.fn() }],
+      ])
+
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => h('div', null, [renderSlot(slots, 'default')])
+        },
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(VDomChild as any, null, {
+            $: [
+              () =>
+                createForSlots(list.value, value => ({
+                  name: 'default',
+                  fn: () => {
+                    const state = slotStates.get(value)!
+                    const n = template('<span> </span>')() as Element
+                    const t = txt(n) as Text
+                    renderEffect(() => {
+                      state.runs()
+                      setText(t, state.text.value)
+                    })
+                    return n
+                  },
+                })),
+            ],
+          })
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+
+      const firstState = slotStates.get(1)!
+
+      expect(html()).toBe('<div><span>one</span></div>')
+      expect(firstState.runs).toHaveBeenCalledTimes(1)
+
+      list.value.push(2)
+      await nextTick()
+
+      expect(html()).toBe('<div><span>two</span></div>')
+      expect(firstState.runs).toHaveBeenCalledTimes(1)
+
+      firstState.text.value = 'stale-one'
+      await nextTick()
+
+      expect(html()).toBe('<div><span>two</span></div>')
+      expect(firstState.runs).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('provide / inject', () => {
