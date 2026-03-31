@@ -1226,19 +1226,32 @@ function baseCreateRenderer(
           }
         }
       } else {
+        const shouldUpdate = shouldUpdateComponent(n1, n2, optimized)
         getVaporInterface(parentComponent, n2).update(
           n1,
           n2,
-          shouldUpdateComponent(n1, n2, optimized),
+          shouldUpdate,
           () => {
             if (n2.dirs) {
               invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
             }
           },
+          () => {
+            const vnodeBeforeUpdateHook =
+              n2.props && n2.props.onVnodeBeforeUpdate
+            if (vnodeBeforeUpdateHook) {
+              invokeVNodeHook(vnodeBeforeUpdateHook, parentComponent, n2, n1)
+            }
+          },
         )
-        if (n2.dirs) {
+        const vnodeUpdatedHook = n2.props && n2.props.onVnodeUpdated
+        if (shouldUpdate && (vnodeUpdatedHook || n2.dirs)) {
           queuePostRenderEffect(
-            () => invokeDirectiveHook(n2, n1, parentComponent, 'updated'),
+            () => {
+              n2.dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
+              vnodeUpdatedHook &&
+                invokeVNodeHook(vnodeUpdatedHook, parentComponent, n2, n1)
+            },
             undefined,
             parentSuspense,
           )

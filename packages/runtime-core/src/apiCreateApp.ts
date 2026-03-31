@@ -196,6 +196,7 @@ export interface VaporInteropInterface {
     n2: VNode,
     shouldUpdate: boolean,
     onBeforeUpdate?: () => void,
+    onVnodeBeforeUpdate?: () => void,
   ): void
   unmount(vnode: VNode, doRemove?: boolean): void
   move(vnode: VNode, container: any, anchor: any, moveType: MoveType): void

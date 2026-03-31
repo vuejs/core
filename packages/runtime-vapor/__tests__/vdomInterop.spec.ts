@@ -319,6 +319,59 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(vnodeUnmounted).toHaveBeenCalledTimes(1)
     })
+
+    test('should invoke update hooks in VDOM order on normal updates', async () => {
+      const msg = ref('foo')
+      const calls: string[] = []
+
+      const vCustom = {
+        beforeUpdate: vi.fn(() => calls.push('directive beforeUpdate')),
+        updated: vi.fn(() => calls.push('directive updated')),
+      }
+
+      const VaporChild = defineVaporComponent({
+        props: {
+          msg: String,
+        },
+        setup(props: any) {
+          const n0 = template('<div> </div>', true)() as any
+          const x0 = child(n0) as any
+          renderEffect(() => {
+            setText(x0, props.msg)
+          })
+          return n0
+        },
+      })
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            withDirectives(
+              h(VaporChild as any, {
+                msg: msg.value,
+                onVnodeBeforeUpdate: () => calls.push('vnode beforeUpdate'),
+                onVnodeUpdated: () => calls.push('vnode updated'),
+              }),
+              [[vCustom]],
+            )
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      msg.value = 'bar'
+      await nextTick()
+
+      expect(calls).toEqual([
+        'vnode beforeUpdate',
+        'directive beforeUpdate',
+        'directive updated',
+        'vnode updated',
+      ])
+    })
   })
 
   describe('v-model', () => {
@@ -2207,7 +2260,7 @@ describe('vdomInterop', () => {
       expect(vnodeMounted).toHaveBeenCalledTimes(2)
     })
 
-    test('should invoke onVnodeBeforeUpdate/onVnodeUpdated on reactivation', async () => {
+    test('should invoke update hooks in VDOM order on reactivation', async () => {
       const VaporChild = defineVaporComponent({
         props: ['msg'],
         setup(props: any) {
@@ -2223,24 +2276,28 @@ describe('vdomInterop', () => {
 
       const current = shallowRef<any>(VaporChild)
       const msg = ref('hello')
-      const beforeUpdateSpy = vi.fn()
-      const updatedSpy = vi.fn()
+      const calls: string[] = []
+      const vDir = {
+        beforeUpdate: vi.fn(() => calls.push('directive beforeUpdate')),
+        updated: vi.fn(() => calls.push('directive updated')),
+      }
 
       const App = defineComponent({
         setup() {
           return () =>
             h(KeepAlive, null, {
               default: () =>
-                h(
-                  resolveDynamicComponent(current.value) as any,
-                  current.value === VaporChild
-                    ? {
+                current.value === VaporChild
+                  ? withDirectives(
+                      h(VaporChild as any, {
                         msg: msg.value,
-                        onVnodeBeforeUpdate: beforeUpdateSpy,
-                        onVnodeUpdated: updatedSpy,
-                      }
-                    : null,
-                ),
+                        onVnodeBeforeUpdate: () =>
+                          calls.push('vnode beforeUpdate'),
+                        onVnodeUpdated: () => calls.push('vnode updated'),
+                      }),
+                      [[vDir]],
+                    )
+                  : h(VdomChild),
             })
         },
       })
@@ -2261,67 +2318,12 @@ describe('vdomInterop', () => {
       // Reactivate — should trigger update hooks
       current.value = VaporChild
       await nextTick()
-      expect(beforeUpdateSpy).toHaveBeenCalledTimes(1)
-      expect(updatedSpy).toHaveBeenCalledTimes(1)
-    })
-
-    test('should invoke directive beforeUpdate/updated on reactivation', async () => {
-      const beforeUpdateSpy = vi.fn()
-      const updatedSpy = vi.fn()
-
-      const vDir = {
-        beforeUpdate: beforeUpdateSpy,
-        updated: updatedSpy,
-      }
-
-      const VaporChild = defineVaporComponent({
-        props: ['msg'],
-        setup(props: any) {
-          return template('<div></div>')()
-        },
-      })
-
-      const VdomChild = defineComponent({
-        setup() {
-          return () => h('span', 'vdom')
-        },
-      })
-
-      const current = shallowRef<any>(VaporChild)
-      const msg = ref('hello')
-
-      const App = defineComponent({
-        setup() {
-          return () =>
-            h(KeepAlive, null, {
-              default: () =>
-                current.value === VaporChild
-                  ? withDirectives(h(VaporChild as any, { msg: msg.value }), [
-                      [vDir],
-                    ])
-                  : h(VdomChild),
-            })
-        },
-      })
-
-      const root = document.createElement('div')
-      const app = createApp(App)
-      app.use(vaporInteropPlugin)
-      app.mount(root)
-      await nextTick()
-
-      // Deactivate vapor child
-      current.value = VdomChild
-      await nextTick()
-
-      // Change props while deactivated
-      msg.value = 'world'
-
-      // Reactivate — should trigger directive update hooks
-      current.value = VaporChild
-      await nextTick()
-      expect(beforeUpdateSpy).toHaveBeenCalledTimes(1)
-      expect(updatedSpy).toHaveBeenCalledTimes(1)
+      expect(calls).toEqual([
+        'vnode beforeUpdate',
+        'directive beforeUpdate',
+        'directive updated',
+        'vnode updated',
+      ])
     })
 
     test('should bail out directive beforeUpdate/updated on reactivation for non-element root vapor child', async () => {
