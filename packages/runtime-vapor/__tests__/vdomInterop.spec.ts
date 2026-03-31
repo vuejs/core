@@ -29,6 +29,7 @@ import {
 import { makeInteropRender } from './_utils'
 import {
   VaporKeepAlive,
+  VaporTeleport,
   applyTextModel,
   applyVShow,
   child,
@@ -2390,6 +2391,68 @@ describe('vdomInterop', () => {
         expect(target.innerHTML).toContain('<span>teleported</span>')
       } finally {
         target.remove()
+      }
+    })
+
+    test('should patch vdom slot content in the new teleport target after move', async () => {
+      const targetA = document.createElement('div')
+      targetA.id = 'interop-slot-target-a'
+      const targetB = document.createElement('div')
+      targetB.id = 'interop-slot-target-b'
+      document.body.append(targetA, targetB)
+
+      const to = ref('#interop-slot-target-a')
+      const useAltRoot = ref(false)
+
+      try {
+        const VaporChild = defineVaporComponent({
+          setup() {
+            return createComponent(
+              VaporTeleport,
+              {
+                to: () => to.value,
+              },
+              {
+                default: () => createSlot('default'),
+              },
+            )
+          },
+        })
+
+        const App = defineComponent({
+          setup() {
+            return () =>
+              h(VaporChild as any, null, {
+                default: () => [
+                  useAltRoot.value ? h('p', 'moved') : h('div', 'initial'),
+                ],
+              })
+          },
+        })
+
+        const host = document.createElement('div')
+        const app = createApp(App)
+        app.use(vaporInteropPlugin)
+        app.mount(host)
+        await nextTick()
+
+        expect(targetA.innerHTML).toBe('<div>initial</div>')
+        expect(targetB.innerHTML).toBe('')
+
+        to.value = '#interop-slot-target-b'
+        await nextTick()
+
+        expect(targetA.innerHTML).toBe('')
+        expect(targetB.innerHTML).toBe('<div>initial</div>')
+
+        useAltRoot.value = true
+        await nextTick()
+
+        expect(targetA.innerHTML).toBe('')
+        expect(targetB.innerHTML).toBe('<p>moved</p>')
+      } finally {
+        targetA.remove()
+        targetB.remove()
       }
     })
   })
