@@ -548,3 +548,4 @@ expectType<TemplateRef>(tRef)
 
 const tRef2 = useTemplateRef<HTMLElement>('bar')
 expectType<TemplateRef<HTMLElement>>(tRef2)
+expectType<Readonly<Ref<HTMLElement | null>>>(tRef2)
