@@ -2424,10 +2424,17 @@ function baseCreateRenderer(
           invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
         }
         getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
-        if (dirs) {
+        if (
+          (shouldInvokeVnodeHook &&
+            (vnodeHook = props && props.onVnodeUnmounted)) ||
+          dirs
+        ) {
           queuePostRenderEffect(
-            () =>
-              invokeDirectiveHook(vnode, null, parentComponent, 'unmounted'),
+            () => {
+              dirs &&
+                invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
+              vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+            },
             undefined,
             parentSuspense,
           )
