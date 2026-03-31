@@ -955,12 +955,16 @@ function renderVDOMSlot(
   let isMounted = false
   let currentBlock: Block | null = null
   let currentVNode: VNode | null = null
+  let currentParentNode: ParentNode | undefined
+  let currentAnchor: Node | null | undefined
 
   frag.insert = (parentNode, anchor) => {
     if (isHydrating) return
+    currentParentNode = parentNode
+    currentAnchor = anchor
 
     if (!isMounted) {
-      render(parentNode, anchor)
+      render()
       isMounted = true
     } else {
       if (currentVNode) {
@@ -989,7 +993,7 @@ function renderVDOMSlot(
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
 
-  const render = (parentNode?: ParentNode, anchor?: Node | null) => {
+  const render = () => {
     const prev = currentInstance
     simpleSetCurrentInstance(instance)
     try {
@@ -1068,14 +1072,14 @@ function renderVDOMSlot(
             frag.$key = getVNodeKey(resolved)
             trackSlotVNodeUpdates(frag, resolved)
             if (currentBlock) {
-              remove(currentBlock, parentNode)
+              remove(currentBlock, currentParentNode)
               currentBlock = null
             }
             internals.p(
               currentVNode,
               resolved,
-              parentNode!,
-              anchor,
+              currentParentNode!,
+              currentAnchor,
               parentComponent as any,
               suspense,
               undefined, // namespace
@@ -1094,16 +1098,16 @@ function renderVDOMSlot(
               currentVNode = null
             }
             if (currentBlock) {
-              remove(currentBlock, parentNode)
+              remove(currentBlock, currentParentNode)
             }
-            insert(resolved, parentNode!, anchor)
+            insert(resolved, currentParentNode!, currentAnchor)
             currentBlock = resolved
             frag.nodes = resolved as any
             return
           }
 
           if (currentBlock) {
-            remove(currentBlock, parentNode)
+            remove(currentBlock, currentParentNode)
             currentBlock = null
           }
           if (currentVNode) {
