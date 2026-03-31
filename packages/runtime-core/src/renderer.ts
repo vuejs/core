@@ -1204,6 +1204,8 @@ function baseCreateRenderer(
             parentComponent!,
           )
         } else {
+          const vnodeBeforeMountHook =
+            !isAsyncWrapper(n2) && n2.props && n2.props.onVnodeBeforeMount
           getVaporInterface(parentComponent, n2).mount(
             n2,
             container,
@@ -1216,10 +1218,26 @@ function baseCreateRenderer(
                 invokeDirectiveHook(n2, null, parentComponent, 'beforeMount')
               }
             },
+            () => {
+              if (vnodeBeforeMountHook) {
+                invokeVNodeHook(vnodeBeforeMountHook, parentComponent, n2)
+              }
+            },
           )
           if (n2.dirs) {
             queuePostRenderEffect(
               () => invokeDirectiveHook(n2, null, parentComponent, 'mounted'),
+              undefined,
+              parentSuspense,
+            )
+          }
+          const vnodeMountedHook =
+            !isAsyncWrapper(n2) && n2.props && n2.props.onVnodeMounted
+          if (vnodeMountedHook) {
+            const scopedVNode = n2
+            queuePostRenderEffect(
+              () =>
+                invokeVNodeHook(vnodeMountedHook, parentComponent, scopedVNode),
               undefined,
               parentSuspense,
             )

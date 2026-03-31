@@ -190,6 +190,7 @@ export interface VaporInteropInterface {
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     onBeforeMount?: () => void,
+    onVnodeBeforeMount?: () => void,
   ): GenericComponentInstance // VaporComponentInstance
   update(
     n1: VNode,

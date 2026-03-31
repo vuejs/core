@@ -143,6 +143,7 @@ const vaporInteropImpl: Omit<
     parentComponent,
     parentSuspense,
     onBeforeMount,
+    onVnodeBeforeMount,
   ) {
     let selfAnchor = (vnode.anchor = createTextNode())
     if (isHydrating) {
@@ -202,6 +203,8 @@ const vaporInteropImpl: Omit<
     if (rootEl) {
       vnode.el = rootEl
     }
+    // align with VDOM: vnode beforeMount runs before directive created/beforeMount.
+    onVnodeBeforeMount && onVnodeBeforeMount()
     // invoke directive hooks only when we have a valid root element
     if (vnode.dirs) {
       if (rootEl) {
@@ -217,31 +220,7 @@ const vaporInteropImpl: Omit<
       }
     }
 
-    // invoke onVnodeBeforeMount hook
-    const vnodeBeforeMountHook = vnode.props && vnode.props.onVnodeBeforeMount
-    if (vnodeBeforeMountHook) {
-      callWithAsyncErrorHandling(
-        vnodeBeforeMountHook,
-        parentComponent,
-        ErrorCodes.VNODE_HOOK,
-        [vnode],
-      )
-    }
-
     mountComponent(instance, container, selfAnchor)
-
-    // invoke onVnodeMounted hook
-    queuePostFlushCb(() => {
-      const vnodeHook = vnode.props && vnode.props.onVnodeMounted
-      if (vnodeHook) {
-        callWithAsyncErrorHandling(
-          vnodeHook,
-          parentComponent,
-          ErrorCodes.VNODE_HOOK,
-          [vnode],
-        )
-      }
-    })
 
     simpleSetCurrentInstance(prev)
     return instance
