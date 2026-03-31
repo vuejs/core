@@ -716,6 +716,47 @@ describe('vdomInterop', () => {
       expect(calls.length).toBe(0)
       app.unmount()
     })
+
+    test('should expose the latest vapor root element in updated hooks', async () => {
+      const useAltRoot = ref(false)
+      const updatedSpy = vi.fn((vnode: any) => {
+        expect((vnode.el as Element).tagName).toBe('P')
+      })
+
+      const VaporChild = defineVaporComponent({
+        props: {
+          alt: Boolean,
+        },
+        setup(props: any) {
+          return createIf(
+            () => props.alt,
+            () => template('<p>alt</p>')(),
+            () => template('<div>base</div>')(),
+          )
+        },
+      })
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(VaporChild as any, {
+              alt: useAltRoot.value,
+              onVnodeUpdated: updatedSpy,
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      useAltRoot.value = true
+      await nextTick()
+
+      expect(root.querySelector('p')).not.toBeNull()
+      expect(updatedSpy).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('slots', () => {
@@ -2324,6 +2365,64 @@ describe('vdomInterop', () => {
         'directive updated',
         'vnode updated',
       ])
+    })
+
+    test('should expose the latest vapor root element in updated hooks on reactivation', async () => {
+      const VaporChild = defineVaporComponent({
+        props: {
+          alt: Boolean,
+        },
+        setup(props: any) {
+          return createIf(
+            () => props.alt,
+            () => template('<p>alt</p>')(),
+            () => template('<div>base</div>')(),
+          )
+        },
+      })
+
+      const VdomChild = defineComponent({
+        setup() {
+          return () => h('span', 'vdom')
+        },
+      })
+
+      const current = shallowRef<any>(VaporChild)
+      const useAltRoot = ref(false)
+      const updatedSpy = vi.fn((vnode: any) => {
+        expect((vnode.el as Element).tagName).toBe('P')
+      })
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(KeepAlive, null, {
+              default: () =>
+                current.value === VaporChild
+                  ? h(VaporChild as any, {
+                      alt: useAltRoot.value,
+                      onVnodeUpdated: updatedSpy,
+                    })
+                  : h(VdomChild),
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      await nextTick()
+
+      current.value = VdomChild
+      await nextTick()
+
+      useAltRoot.value = true
+      current.value = VaporChild
+      await nextTick()
+
+      expect(root.querySelector('p')).not.toBeNull()
+      expect(updatedSpy).toHaveBeenCalledTimes(1)
     })
 
     test('should bail out directive beforeUpdate/updated on reactivation for non-element root vapor child', async () => {
