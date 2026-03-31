@@ -9,6 +9,7 @@ import {
   ref,
   shallowRef,
   watch,
+  watchEffect,
 } from 'vue'
 import { expectType } from './utils'
 
@@ -211,3 +212,9 @@ defineComponent({
     expectType<string>(value)
   })
 }
+
+// #14249
+watchEffect(async onCleanup => {
+  onCleanup(() => {})
+})
+
