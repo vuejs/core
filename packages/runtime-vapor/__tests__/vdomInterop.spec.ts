@@ -362,6 +362,49 @@ describe('vdomInterop', () => {
       ])
     })
 
+    test('should invoke vnode and directive unmount hooks in VDOM order', async () => {
+      const calls: string[] = []
+      const vCustom = {
+        beforeUnmount: vi.fn(() => calls.push('directive beforeUnmount')),
+        unmounted: vi.fn(() => calls.push('directive unmounted')),
+      }
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor</div>')()
+        },
+      })
+
+      const show = ref(true)
+      const { html } = define({
+        setup() {
+          return () =>
+            show.value
+              ? withDirectives(
+                  h(VaporChild as any, {
+                    onVnodeBeforeUnmount: () =>
+                      calls.push('vnode beforeUnmount'),
+                    onVnodeUnmounted: () => calls.push('vnode unmounted'),
+                  }),
+                  [[vCustom]],
+                )
+              : null
+        },
+      }).render()
+
+      expect(html()).toBe('<div>vapor</div>')
+
+      show.value = false
+      await nextTick()
+
+      expect(calls).toEqual([
+        'vnode beforeUnmount',
+        'directive beforeUnmount',
+        'directive unmounted',
+        'vnode unmounted',
+      ])
+    })
+
     test('should invoke update hooks in VDOM order on normal updates', async () => {
       const msg = ref('foo')
       const calls: string[] = []

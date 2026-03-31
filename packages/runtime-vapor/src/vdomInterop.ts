@@ -267,18 +267,6 @@ const vaporInteropImpl: Omit<
       stopVaporSlotScope(vnode)
     }
     remove(vnode.anchor as Node, container)
-    // invoke onVnodeUnmounted hook
-    const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
-    if (vnodeHook) {
-      queuePostFlushCb(() => {
-        callWithAsyncErrorHandling(
-          vnodeHook,
-          instance && instance.parent,
-          ErrorCodes.VNODE_HOOK,
-          [vnode],
-        )
-      })
-    }
   },
 
   /**
