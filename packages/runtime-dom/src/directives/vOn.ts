@@ -11,8 +11,13 @@ import { hyphenate, isArray } from '@vue/shared'
 const systemModifiers = ['ctrl', 'shift', 'alt', 'meta'] as const
 type SystemModifiers = (typeof systemModifiers)[number]
 type CompatModifiers = keyof typeof keyNames
+type KeyModifiers = string & {}
 
-export type VOnModifiers = SystemModifiers | ModifierGuards | CompatModifiers
+export type VOnModifiers =
+  | SystemModifiers
+  | ModifierGuards
+  | CompatModifiers
+  | KeyModifiers
 type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent
 
 type ModifierGuards =

@@ -10,6 +10,7 @@ import {
   h,
   ref,
   resolveComponent,
+  withModifiers,
 } from 'vue'
 import { describe, expectAssignable, expectType } from './utils'
 
@@ -45,6 +46,10 @@ describe('h inference w/ element', () => {
       expectType<FocusEvent>(e)
     },
   })
+})
+
+describe('withModifiers typing', () => {
+  withModifiers((e: Event) => e.type, ['enter', 'tab'])
 })
 
 describe('h inference w/ Fragment', () => {
