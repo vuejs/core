@@ -7,6 +7,15 @@ export const knownTemplateRefs: WeakSet<ShallowRef> = new WeakSet()
 
 export type TemplateRef<T = unknown> = Readonly<ShallowRef<T | null>>
 
+/**
+ * Create a read-only template ref by key.
+ *
+ * When the same ref key is used multiple times in the owner template
+ * (for example under `v-for`), the collected value is an array.
+ *
+ * For slotted content rendered in another component's scope, ref collection
+ * follows the slot render owner semantics.
+ */
 export function useTemplateRef<T = unknown, Keys extends string = string>(
   key: Keys,
 ): TemplateRef<T> {
