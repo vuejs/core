@@ -12,9 +12,11 @@ import {
   nextTick,
   onActivated,
   onBeforeMount,
+  onBeforeUpdate,
   onDeactivated,
   onMounted,
   onUnmounted,
+  onUpdated,
   provide,
   ref,
   renderSlot,
@@ -3206,6 +3208,62 @@ describe('vdomInterop', () => {
       show.value = false
       await nextTick()
       expect(beforeUnmountSpy).toHaveBeenCalledTimes(1)
+    })
+
+    test('should invoke update hooks in VDOM order on vapor child self-update', async () => {
+      const calls: string[] = []
+      let flip!: () => void
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          const alt = ref(false)
+          onBeforeUpdate(() => calls.push('component beforeUpdate'))
+          onUpdated(() => calls.push('component updated'))
+          flip = () => {
+            alt.value = true
+          }
+          return createIf(
+            () => alt.value,
+            () => template('<p>alt</p>')(),
+            () => template('<div>base</div>')(),
+          )
+        },
+      })
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(VaporChild as any, {
+              onVnodeBeforeUpdate: (vnode: any, prevVNode: any) => {
+                expect((vnode.el as Element).tagName).toBe('DIV')
+                expect((prevVNode.el as Element).tagName).toBe('DIV')
+                calls.push('vnode beforeUpdate')
+              },
+              onVnodeUpdated: (vnode: any) => {
+                expect((vnode.el as Element).tagName).toBe('P')
+                calls.push('vnode updated')
+              },
+            })
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.querySelector('div')!.textContent).toBe('base')
+
+      flip()
+      await nextTick()
+
+      expect(root.querySelector('p')!.textContent).toBe('alt')
+      expect(calls).toEqual([
+        'component beforeUpdate',
+        'vnode beforeUpdate',
+        'component updated',
+        'vnode updated',
+      ])
     })
   })
 })
