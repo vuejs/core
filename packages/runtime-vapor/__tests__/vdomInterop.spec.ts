@@ -1286,6 +1286,46 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<div><span>two</span></div>')
       expect(firstState.runs).toHaveBeenCalledTimes(1)
     })
+
+    test('should stop vdom slot outlet effects after outlet unmount', async () => {
+      const showOutlet = ref(true)
+      const msg = ref('one')
+      const track = vi.fn()
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createIf(
+            () => showOutlet.value,
+            () => createSlot('default'),
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: () => {
+                track()
+                return [h('span', msg.value)]
+              },
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>one</span><!--if-->')
+      expect(track).toHaveBeenCalledTimes(1)
+
+      showOutlet.value = false
+      await nextTick()
+      expect(html()).toBe('<!--if-->')
+
+      msg.value = 'two'
+      await nextTick()
+
+      expect(track).toHaveBeenCalledTimes(1)
+      expect(html()).toBe('<!--if-->')
+    })
   })
 
   describe('provide / inject', () => {

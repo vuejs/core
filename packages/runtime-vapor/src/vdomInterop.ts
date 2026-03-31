@@ -959,6 +959,7 @@ function renderVDOMSlot(
   let currentVNode: VNode | null = null
   let currentParentNode: ParentNode | undefined
   let currentAnchor: Node | null | undefined
+  let scope = effectScope()
 
   frag.insert = (parentNode, anchor) => {
     if (isHydrating) return
@@ -966,7 +967,7 @@ function renderVDOMSlot(
     currentAnchor = anchor
 
     if (!isMounted) {
-      render()
+      scope.run(render)
       isMounted = true
     } else {
       if (currentVNode) {
@@ -988,6 +989,7 @@ function renderVDOMSlot(
   }
 
   frag.remove = parentNode => {
+    scope.stop()
     if (currentBlock) {
       remove(currentBlock, parentNode)
     } else if (currentVNode) {
@@ -1132,7 +1134,7 @@ function renderVDOMSlot(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    render()
+    scope.run(render)
     isMounted = true
   }
 
