@@ -982,15 +982,15 @@ function renderVDOMSlot(
       }
     }
 
-    frag.remove = parentNode => {
-      if (currentBlock) {
-        remove(currentBlock, parentNode)
-      } else if (currentVNode) {
-        internals.um(currentVNode, parentComponent as any, null, true)
-      }
-    }
-
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+  }
+
+  frag.remove = parentNode => {
+    if (currentBlock) {
+      remove(currentBlock, parentNode)
+    } else if (currentVNode) {
+      internals.um(currentVNode, parentComponent as any, null, true)
+    }
   }
 
   const render = () => {
