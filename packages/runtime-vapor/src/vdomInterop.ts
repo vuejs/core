@@ -184,6 +184,7 @@ const vaporInteropImpl: Omit<
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
+    ensureVNodeHookState(instance, vnode)
 
     // copy the shape flag from the vdom component if inside a keep-alive
     if (isKeepAlive(parentComponent)) instance.shapeFlag = vnode.shapeFlag
@@ -232,6 +233,7 @@ const vaporInteropImpl: Omit<
     n2.anchor = n1.anchor
 
     const instance = n2.component as any as VaporComponentInstance
+    const vnodeHookState = ensureVNodeHookState(instance, n2)
 
     if (shouldUpdate) {
       const rootEl = getRootElement(instance)
@@ -248,9 +250,15 @@ const vaporInteropImpl: Omit<
           n2.dirs = null
         }
       }
+      vnodeHookState.skipVnodeHooks = true
       instance.rawPropsRef!.value = filterReservedProps(n2.props)
       instance.rawSlotsRef!.value = n2.children
-      queuePostFlushCb(() => syncVNodeRootEl(n2, instance))
+      queuePostFlushCb(() => {
+        syncVNodeEl(n2, instance)
+        if (!instance.isUpdating) {
+          vnodeHookState.skipVnodeHooks = false
+        }
+      })
     }
   },
 
@@ -392,6 +400,7 @@ const vaporInteropImpl: Omit<
     vnode.component = cached.component
     vnode.anchor = cached.anchor
     const instance = vnode.component as any as VaporComponentInstance
+    const vnodeHookState = ensureVNodeHookState(instance, vnode)
     const rootEl = getRootElement(instance)
     if (rootEl) {
       vnode.el = rootEl
@@ -407,6 +416,7 @@ const vaporInteropImpl: Omit<
     }
     const shouldUpdate = shouldUpdateComponent(cached, vnode)
     if (shouldUpdate) {
+      vnodeHookState.skipVnodeHooks = true
       instance.rawPropsRef!.value = filterReservedProps(vnode.props)
       instance.rawSlotsRef!.value = vnode.children
       const vnodeBeforeUpdateHook =
@@ -423,7 +433,7 @@ const vaporInteropImpl: Omit<
         invokeDirectiveHook(vnode, cached, parentComponent, 'beforeUpdate')
       }
       queuePostFlushCb(() => {
-        syncVNodeRootEl(vnode, instance)
+        syncVNodeEl(vnode, instance)
         if (vnode.dirs) {
           invokeDirectiveHook(vnode, cached, parentComponent, 'updated')
         }
@@ -435,6 +445,9 @@ const vaporInteropImpl: Omit<
             ErrorCodes.VNODE_HOOK,
             [vnode, cached],
           )
+        }
+        if (!instance.isUpdating) {
+          vnodeHookState.skipVnodeHooks = false
         }
       })
     }
@@ -1270,12 +1283,70 @@ function invokeVaporSlot(vnode: VNode): Block {
   }
 }
 
-function syncVNodeRootEl(vnode: VNode, instance: VaporComponentInstance): void {
+function syncVNodeEl(vnode: VNode, instance: VaporComponentInstance): void {
   const rootEl = getRootElement(instance)
   if (rootEl) {
     vnode.el = rootEl
   } else {
-    vnode.el = vnode.anchor as any
+    vnode.el = vnode.anchor
     vnode.dirs = null
   }
+}
+
+interface VNodeHookState {
+  vnode: VNode
+  skipVnodeHooks: boolean
+}
+
+const vnodeHookStateMap = new WeakMap<VaporComponentInstance, VNodeHookState>()
+
+function ensureVNodeHookState(
+  instance: VaporComponentInstance,
+  vnode: VNode,
+): VNodeHookState {
+  let state = vnodeHookStateMap.get(instance)
+  if (!state) {
+    state = {
+      vnode,
+      skipVnodeHooks: false,
+    }
+    vnodeHookStateMap.set(instance, state)
+    ;(instance.bu || (instance.bu = [])).push(() => {
+      if (state!.skipVnodeHooks) return
+      const vnodeHook =
+        state!.vnode.props && state!.vnode.props.onVnodeBeforeUpdate
+      if (vnodeHook) {
+        callWithAsyncErrorHandling(
+          vnodeHook,
+          instance.parent,
+          ErrorCodes.VNODE_HOOK,
+          [state!.vnode, state!.vnode],
+        )
+      }
+    })
+
+    // Sync the outer component vnode before running any updated hooks so
+    // both component updated hooks and onVnodeUpdated see the latest root el.
+    ;(instance.u || (instance.u = [])).unshift(() =>
+      syncVNodeEl(state!.vnode, instance),
+    )
+    instance.u.push(() => {
+      if (state!.skipVnodeHooks) {
+        state!.skipVnodeHooks = false
+        return
+      }
+      const vnodeHook = state!.vnode.props && state!.vnode.props.onVnodeUpdated
+      if (vnodeHook) {
+        callWithAsyncErrorHandling(
+          vnodeHook,
+          instance.parent,
+          ErrorCodes.VNODE_HOOK,
+          [state!.vnode, state!.vnode],
+        )
+      }
+    })
+  } else {
+    state.vnode = vnode
+  }
+  return state
 }
