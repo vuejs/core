@@ -753,6 +753,37 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<div>direct call slot</div>')
     })
 
+    test('slots.default() access should return a stable wrapper', () => {
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          const first = slots.default
+          const second = slots.default
+          return () => h('div', String(first === second))
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: () => template('stable slot wrapper')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>true</div>')
+    })
+
     test('slots.default() with slot props', () => {
       const VDomChild = defineComponent({
         setup(_, { slots }) {

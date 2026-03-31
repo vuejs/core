@@ -506,17 +506,32 @@ const vaporSlotPropsProxyHandler: ProxyHandler<
   },
 }
 
+// Cache wrappers per raw slots object so repeated `slots.default` access keeps
+// a stable function identity
+const vaporSlotWrappersCache = new WeakMap<
+  object,
+  Map<PropertyKey, { slot: Function; wrapped: Function }>
+>()
+
 const vaporSlotsProxyHandler: ProxyHandler<any> = {
   get(target, key) {
     const slot = target[key]
     if (isFunction(slot)) {
       slot.__vapor = true
+      let wrappers = vaporSlotWrappersCache.get(target)
+      if (!wrappers) vaporSlotWrappersCache.set(target, (wrappers = new Map()))
+      const cached = wrappers.get(key)
+      if (cached && cached.slot === slot) {
+        return cached.wrapped
+      }
+
       // Create a wrapper that internally uses renderSlot for proper vapor slot handling
       // This ensures that calling slots.default() works the same as renderSlot(slots, 'default')
       const wrapped = (props?: Record<string, any>) => [
         renderSlot({ [key]: slot }, key as string, props),
       ]
       ;(wrapped as any).__vs = slot
+      wrappers.set(key, { slot, wrapped })
       return wrapped
     }
     return slot
