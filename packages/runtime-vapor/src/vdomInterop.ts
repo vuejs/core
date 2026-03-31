@@ -247,26 +247,27 @@ const vaporInteropImpl: Omit<
     return instance
   },
 
-  update(n1, n2, shouldUpdate, onBeforeUpdate) {
+  update(n1, n2, shouldUpdate, onBeforeUpdate, onVnodeBeforeUpdate) {
     n2.component = n1.component
     n2.el = n2.anchor = n1.anchor
 
     const instance = n2.component as any as VaporComponentInstance
 
-    const rootEl = getRootElement(instance)
-    if (rootEl) {
-      n2.el = rootEl
-    }
-    // invoke directive hooks only when we have a valid root element
-    if (n2.dirs) {
-      if (rootEl) {
-        onBeforeUpdate && onBeforeUpdate()
-      } else {
-        n2.dirs = null
-      }
-    }
-
     if (shouldUpdate) {
+      const rootEl = getRootElement(instance)
+      if (rootEl) {
+        n2.el = rootEl
+      }
+      // align with VDOM: vnode beforeUpdate runs before directive beforeUpdate.
+      onVnodeBeforeUpdate && onVnodeBeforeUpdate()
+      // invoke directive hooks only when we have a valid root element
+      if (n2.dirs) {
+        if (rootEl) {
+          onBeforeUpdate && onBeforeUpdate()
+        } else {
+          n2.dirs = null
+        }
+      }
       instance.rawPropsRef!.value = filterReservedProps(n2.props)
       instance.rawSlotsRef!.value = n2.children
     }
@@ -424,9 +425,6 @@ const vaporInteropImpl: Omit<
     if (shouldUpdate) {
       instance.rawPropsRef!.value = filterReservedProps(vnode.props)
       instance.rawSlotsRef!.value = vnode.children
-      if (vnode.dirs) {
-        invokeDirectiveHook(vnode, cached, parentComponent, 'beforeUpdate')
-      }
       const vnodeBeforeUpdateHook =
         vnode.props && vnode.props.onVnodeBeforeUpdate
       if (vnodeBeforeUpdateHook) {
@@ -436,6 +434,9 @@ const vaporInteropImpl: Omit<
           ErrorCodes.VNODE_HOOK,
           [vnode, cached],
         )
+      }
+      if (vnode.dirs) {
+        invokeDirectiveHook(vnode, cached, parentComponent, 'beforeUpdate')
       }
     }
     queuePostFlushCb(() => {
