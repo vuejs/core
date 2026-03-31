@@ -53,6 +53,9 @@ export interface WatchOptions<Immediate = boolean> extends WatchEffectOptions {
 }
 
 // Simple effect.
+// watchEffect tracks dependencies during each synchronous run, so conditional
+// branches can update the active dependency list between re-runs. For async
+// effects, only accesses before the first await are tracked.
 export function watchEffect(
   effect: WatchEffect,
   options?: WatchEffectOptions,
