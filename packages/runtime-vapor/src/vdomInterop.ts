@@ -188,7 +188,8 @@ const vaporInteropImpl: Omit<
     ensureVNodeHookState(instance, vnode)
 
     // copy the shape flag from the vdom component if inside a keep-alive
-    if (isKeepAlive(parentComponent)) instance.shapeFlag = vnode.shapeFlag
+    if (parentComponent && isKeepAlive(parentComponent))
+      instance.shapeFlag = vnode.shapeFlag
 
     if (vnode.transition) {
       setVaporTransitionHooks(
