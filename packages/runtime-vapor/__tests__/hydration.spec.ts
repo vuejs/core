@@ -8120,4 +8120,89 @@ describe('VDOM interop', () => {
     `,
     )
   })
+
+  test('hydrate interop vapor slot fallback from empty slot branch under Suspense', async () => {
+    const data = reactive({
+      show: false,
+      fallback: 'foo',
+      slot: 'bar',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <Suspense>
+          <components.VaporChild />
+          <template #fallback>
+            <i>pending</i>
+          </template>
+        </Suspense>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+            const data = _data
+            const components = _components
+          </script>
+          <template>
+            <components.VdomChild>
+              <template #default>
+                <template v-if="data.show">
+                  <span>{{ data.slot }}</span>
+                </template>
+              </template>
+            </components.VdomChild>
+          </template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data</script>
+          <template><slot><div>{{ data.fallback }}</div></slot></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>foo</div><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.fallback = 'baz'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>baz</div><!--]-->
+      "
+    `,
+    )
+
+    data.show = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>bar</span><!--]-->
+      "
+    `,
+    )
+
+    data.slot = 'qux'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>qux</span><!--]-->
+      "
+    `,
+    )
+  })
 })
