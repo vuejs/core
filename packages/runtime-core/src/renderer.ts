@@ -71,7 +71,12 @@ import {
   type TeleportVNode,
 } from './components/Teleport'
 import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
-import { isHmrUpdating, registerHMR, unregisterHMR } from './hmr'
+import {
+  isHmrUpdating,
+  registerHMR,
+  setHmrUpdating,
+  unregisterHMR,
+} from './hmr'
 import { type RootHydrateFunction, createHydrationFunctions } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { endMeasure, startMeasure } from './profiling'
@@ -733,10 +738,17 @@ function baseCreateRenderer(
       needCallTransitionHooks ||
       dirs
     ) {
+      const isHmr = __DEV__ && isHmrUpdating
       queuePostRenderEffect(() => {
-        vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-        needCallTransitionHooks && transition!.enter(el)
-        dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+        let prev
+        if (__DEV__) prev = setHmrUpdating(isHmr)
+        try {
+          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+          needCallTransitionHooks && transition!.enter(el)
+          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+        } finally {
+          if (__DEV__) setHmrUpdating(prev!)
+        }
       }, parentSuspense)
     }
   }
@@ -2122,6 +2134,7 @@ function baseCreateRenderer(
       patchFlag,
       dirs,
       cacheIndex,
+      memo,
     } = vnode
 
     if (patchFlag === PatchFlags.BAIL) {
@@ -2210,15 +2223,24 @@ function baseCreateRenderer(
       }
     }
 
+    // v-for + v-memo stores cached vnodes inside renderList's array cache rather
+    // than component renderCache. Invalidate detached cached vnodes after
+    // unmount so a later v-if remount won't reuse a vnode whose DOM is gone.
+    const shouldInvalidateMemo = memo != null && cacheIndex == null
+
     if (
       (shouldInvokeVnodeHook &&
         (vnodeHook = props && props.onVnodeUnmounted)) ||
-      shouldInvokeDirs
+      shouldInvokeDirs ||
+      shouldInvalidateMemo
     ) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
         shouldInvokeDirs &&
           invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
+        if (shouldInvalidateMemo) {
+          vnode.el = null
+        }
       }, parentSuspense)
     }
   }

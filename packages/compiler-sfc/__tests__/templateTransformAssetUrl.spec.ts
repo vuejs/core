@@ -114,6 +114,42 @@ describe('compiler sfc: transform asset url', () => {
     expect(code).toMatch(`"xlink:href": "#myCircle"`)
   })
 
+  // #9919
+  test('should transform subpath import paths', () => {
+    const { code } = compileWithAssetUrls(
+      `<img src="#src/assets/vue.svg" />` +
+        `<img src="#/src/assets/vue.svg" />`,
+    )
+    expect(code).toContain(`_imports_0 from '#src/assets/vue.svg'`)
+    expect(code).toContain(`_imports_1 from '#/src/assets/vue.svg'`)
+  })
+
+  test('should not transform pure hash values for custom asset URL tags', () => {
+    const { code } = compileWithAssetUrls(
+      `<foo bar="#fragment" />` +
+        `<foo bar="#src/assets/vue.svg" />` +
+        `<foo bar="#/src/assets/vue.svg" />`,
+      {
+        tags: {
+          foo: ['bar'],
+        },
+      },
+    )
+
+    expect(code).toContain(`bar: "#fragment"`)
+    expect(code).toContain(`bar: "#src/assets/vue.svg"`)
+    expect(code).toContain(`bar: "#/src/assets/vue.svg"`)
+    expect(code).not.toContain(`from '#fragment'`)
+    expect(code).not.toContain(`from '#src/assets/vue.svg'`)
+    expect(code).not.toContain(`from '#/src/assets/vue.svg'`)
+  })
+
+  test('should not throw for malformed percent-encoding in asset paths', () => {
+    const { code } = compileWithAssetUrls(`<img src="./foo%.png" />`)
+
+    expect(code).toContain(`import _imports_0 from './foo%.png'`)
+  })
+
   test('should allow for full base URLs, with paths', () => {
     const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
       base: 'http://localhost:3000/src/',
