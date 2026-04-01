@@ -36,12 +36,14 @@ import {
   createApp,
   defineAsyncComponent as defineAsyncComp,
   defineComponent,
+  getCurrentInstance,
   inject,
   provide,
 } from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
 import { resetSuspenseId } from '../../src/components/Suspense'
 import { PatchFlags } from '@vue/shared'
+import { withAsyncContext } from '../../src/apiSetupHelpers'
 
 describe('Suspense', () => {
   const deps: Promise<any>[] = []
@@ -2623,6 +2625,50 @@ describe('Suspense', () => {
     // wait for new B to resolve
     await Promise.all(deps)
     expect(serializeInner(root)).toBe(`<div>B</div>`)
+  })
+
+  // #14667
+  test('no currentInstance leak when async setups resolve concurrently', async () => {
+    let selfInstance: any = null
+    let renderInstance: any = null
+
+    const AsyncA = defineComponent({
+      async setup() {
+        let __temp: any, __restore: any
+        ;[__temp, __restore] = withAsyncContext(() =>
+          Promise.resolve()
+            .then(() => {})
+            .then(() => {}),
+        )
+        __temp = await __temp
+        __restore()
+        return () => h('div', 'A')
+      },
+    })
+
+    const AsyncB = defineComponent({
+      async setup() {
+        let __temp: any, __restore: any
+        ;[__temp, __restore] = withAsyncContext(() => Promise.resolve())
+        __temp = await __temp
+        __restore()
+        selfInstance = getCurrentInstance()
+        return () => {
+          renderInstance = getCurrentInstance()
+          return h('div', 'B')
+        }
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(() => h(Suspense, () => h('div', [h(AsyncA), h(AsyncB)]))),
+      root,
+    )
+
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe(`<div><div>A</div><div>B</div></div>`)
+    expect(renderInstance).toBe(selfInstance)
   })
 
   describe('warnings', () => {
