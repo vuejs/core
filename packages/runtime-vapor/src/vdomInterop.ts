@@ -96,6 +96,7 @@ import {
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
 import {
+  SlotFragment,
   VaporFragment,
   attachSlotFallback,
   isFragment,
@@ -368,11 +369,14 @@ const vaporInteropImpl: Omit<
     return _next(node)
   },
 
-  hydrateSlot(vnode, node) {
+  hydrateSlot(vnode, node, parentComponent, parentSuspense) {
     if (!isHydrating && !isVdomHydrating) return node
     vaporHydrateNode(node, () => {
-      vnode.vb = invokeVaporSlot(vnode)
-      vnode.anchor = vnode.el = currentHydrationNode!
+      vnode.vb = renderVaporSlot(vnode, parentComponent, parentSuspense)
+      vnode.anchor = vnode.el =
+        isFragment(vnode.vb) && vnode.vb.anchor
+          ? vnode.vb.anchor
+          : currentHydrationNode!
 
       if (__DEV__ && !vnode.anchor) {
         throw new Error(
@@ -1193,7 +1197,13 @@ function createVaporFallback(
   parentComponent: ComponentInternalInstance | null,
 ): BlockFn {
   const internals = ensureRenderer().internals
-  return () => createFallback(fallback)(internals, parentComponent)
+  return () => {
+    const block = createFallback(fallback)(internals, parentComponent)
+    if (isHydrating && isFragment(block) && block.hydrate) {
+      block.hydrate()
+    }
+    return block
+  }
 }
 
 const createFallback =
@@ -1206,18 +1216,11 @@ const createFallback =
 
     // vnode content, wrap it as a VaporFragment
     if (isArray(fallbackNodes) && fallbackNodes.every(isVNode)) {
-      const frag = new VaporFragment([])
-      frag.insert = (parentNode, anchor) => {
-        fallbackNodes.forEach(vnode => {
-          internals.p(null, vnode, parentNode, anchor, parentComponent)
-        })
-      }
-      frag.remove = parentNode => {
-        fallbackNodes.forEach(vnode => {
-          internals.um(vnode, parentComponent, null, true)
-        })
-      }
-      return frag
+      return createVNodeChildrenFragment(
+        internals,
+        () => fallback() as VNode[],
+        parentComponent,
+      )
     }
 
     // vapor block
@@ -1237,12 +1240,25 @@ function renderVaporSlot(
   }
   try {
     const { fallback } = vnode.vs!
-    let slotBlock = invokeVaporSlot(vnode)
-    if (!fallback) {
-      return slotBlock
+    if (isHydrating && fallback) {
+      const frag = new SlotFragment()
+      frag.hydrateWithFallback = true
+      frag.updateSlot(
+        () => invokeVaporSlot(vnode),
+        createVaporFallback(fallback, parentComponent),
+      )
+      return frag
     }
 
+    if (!fallback) {
+      return invokeVaporSlot(vnode)
+    }
+
+    let slotBlock = invokeVaporSlot(vnode)
     const vaporFallback = createVaporFallback(fallback, parentComponent)
+    if (!slotBlock) {
+      return vaporFallback()
+    }
     const emptyFrag = attachSlotFallback(slotBlock, vaporFallback)
     if (!isValidBlock(slotBlock)) {
       slotBlock = renderSlotFallback(slotBlock, vaporFallback, emptyFrag)
@@ -1349,4 +1365,116 @@ function ensureVNodeHookState(
     state.vnode = vnode
   }
   return state
+}
+
+function createVNodeChildrenFragment(
+  internals: RendererInternals,
+  render: () => VNode[],
+  parentComponent: ComponentInternalInstance | null,
+): VaporFragment {
+  const suspense =
+    currentParentSuspense || (parentComponent && parentComponent.suspense)
+  const frag = new VaporFragment<Block>([])
+  let currentVNode: VNode | null = null
+  let currentChildren: VNode[] = []
+  let currentParentNode: ParentNode | null = null
+  let currentAnchor: Node | null = null
+  let isMounted = false
+  const scope = effectScope()
+
+  const renderContent = () => {
+    const prev = currentInstance
+    simpleSetCurrentInstance(parentComponent)
+    try {
+      renderEffect(() => {
+        const nextChildren = render()
+        if (isHydrating) {
+          nextChildren.forEach(vnode => hydrateVNode(vnode, parentComponent))
+          currentChildren = nextChildren
+          currentVNode = createVNode(Fragment, null, nextChildren)
+          currentParentNode = currentHydrationNode!.parentNode as ParentNode
+          currentAnchor = currentHydrationNode
+        } else if (!currentVNode) {
+          currentChildren = nextChildren
+          currentVNode = createVNode(Fragment, null, nextChildren)
+          if (nextChildren.length) {
+            internals.mc(
+              nextChildren,
+              currentParentNode!,
+              currentAnchor,
+              parentComponent,
+              suspense,
+              undefined,
+              null,
+              false,
+            )
+          }
+        } else {
+          const nextVNode = createVNode(Fragment, null, nextChildren)
+          internals.pc(
+            currentVNode,
+            nextVNode,
+            currentParentNode!,
+            currentAnchor,
+            parentComponent,
+            suspense,
+            undefined,
+            null,
+            false,
+          )
+          currentChildren = nextChildren
+          currentVNode = nextVNode
+        }
+
+        if (currentChildren.length === 0) {
+          frag.nodes = []
+        } else if (currentChildren.length === 1) {
+          frag.nodes = resolveVNodeNodes(currentChildren[0])
+        } else {
+          frag.nodes = currentChildren.map(resolveVNodeNodes) as Block[]
+        }
+
+        if (isMounted && frag.onUpdated) {
+          frag.onUpdated.forEach(hook => hook())
+        }
+      })
+    } finally {
+      simpleSetCurrentInstance(prev)
+    }
+  }
+
+  frag.insert = (parentNode, anchor) => {
+    if (isHydrating) return
+    currentParentNode = parentNode
+    currentAnchor = anchor
+    if (!isMounted) {
+      scope.run(renderContent)
+      isMounted = true
+    } else {
+      currentChildren.forEach(vnode => {
+        internals.m(
+          vnode,
+          parentNode,
+          anchor,
+          MoveType.REORDER,
+          parentComponent as any,
+        )
+      })
+    }
+  }
+
+  frag.remove = parentNode => {
+    scope.stop()
+    currentChildren.forEach(vnode => {
+      internals.um(vnode, parentComponent, null, !!parentNode)
+    })
+  }
+
+  frag.hydrate = () => {
+    if (!isHydrating) return
+    scope.run(renderContent)
+    isMounted = true
+  }
+
+  return frag
 }

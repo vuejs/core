@@ -219,7 +219,12 @@ export interface VaporInteropInterface {
     onBeforeMount?: () => void,
     onVnodeBeforeMount?: () => void,
   ): Node
-  hydrateSlot(vnode: VNode, node: any): Node
+  hydrateSlot(
+    vnode: VNode,
+    node: any,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+  ): Node
   activate(
     vnode: VNode,
     container: any,
