@@ -6921,6 +6921,85 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate VDOM slot content can mount after hydrating as empty', async () => {
+    const data = reactive({
+      show: false,
+      text: 'foo',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild>
+          <template v-if="data.show">
+            <span>{{ data.text }}</span>
+          </template>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><slot /></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.show = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>foo</span><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate VDOM slot multi-root content can mount after hydrating as empty', async () => {
+    const data = reactive({
+      show: false,
+      text: 'foo',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+          const data = _data
+          const components = _components
+        </script>
+        <template>
+          <components.VaporChild>
+            <template v-if="data.show">
+              <span>{{ data.text }}</span>
+              <span>{{ data.text }}</span>
+            </template>
+          </components.VaporChild>
+        </template>`,
+      {
+        VaporChild: {
+          code: `<template><slot /></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.show = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+        "
+        <!--[--><span>foo</span><span>foo</span><!--]-->
+        "
+      `,
+    )
+  })
+
   test('hydrate interop vapor slot fallback', async () => {
     const data = reactive({
       text: 'foo',
