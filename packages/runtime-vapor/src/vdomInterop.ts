@@ -1152,6 +1152,8 @@ function renderVDOMSlot(
   frag.hydrate = () => {
     if (!isHydrating) return
     scope.run(render)
+    currentParentNode = currentHydrationNode!.parentNode as ParentNode
+    currentAnchor = currentHydrationNode
     isMounted = true
   }
 
