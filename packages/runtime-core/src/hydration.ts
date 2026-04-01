@@ -285,6 +285,8 @@ export function createHydrationFunctions(
         nextNode = getVaporInterface(parentComponent, vnode).hydrateSlot(
           vnode,
           node,
+          parentComponent,
+          parentSuspense,
         )
         break
       default:
