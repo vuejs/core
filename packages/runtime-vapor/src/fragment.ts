@@ -159,7 +159,7 @@ export class DynamicFragment extends VaporFragment {
     if (key === this.current) {
       // On initial hydration, `key === current` means `render` is empty,
       // so this fragment hydrates as empty content.
-      if (isHydrating && !(this instanceof SlotFragment)) this.hydrate(true)
+      if (isHydrating && this.anchorLabel !== 'slot') this.hydrate(true)
       return
     }
 
@@ -241,7 +241,7 @@ export class DynamicFragment extends VaporFragment {
     this.renderBranch(render, transition, parent, key)
     setActiveSub(prevSub)
 
-    if (isHydrating && !(this instanceof SlotFragment)) {
+    if (isHydrating && this.anchorLabel !== 'slot') {
       this.hydrate(render == null)
     }
   }
