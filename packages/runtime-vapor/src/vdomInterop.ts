@@ -1245,7 +1245,6 @@ function renderVaporSlot(
     const { fallback } = vnode.vs!
     if (isHydrating && fallback) {
       const frag = new SlotFragment()
-      frag.hydrateWithFallback = true
       frag.updateSlot(
         () => invokeVaporSlot(vnode),
         createVaporFallback(fallback, parentComponent),

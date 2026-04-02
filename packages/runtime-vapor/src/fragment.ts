@@ -1,4 +1,4 @@
-import { EffectScope, setActiveSub } from '@vue/reactivity'
+import { EffectScope, type ShallowRef, setActiveSub } from '@vue/reactivity'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
@@ -30,7 +30,9 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
+  locateEndAnchor,
   locateHydrationNode,
+  setCurrentHydrationNode,
 } from './dom/hydration'
 import { isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
@@ -97,6 +99,34 @@ export class ForFragment extends VaporFragment<Block[]> {
   }
 }
 
+export class ForBlock extends VaporFragment {
+  scope: EffectScope | undefined
+  key: any
+  prev?: ForBlock
+  next?: ForBlock
+  prevAnchor?: ForBlock
+
+  itemRef: ShallowRef<any>
+  keyRef: ShallowRef<any> | undefined
+  indexRef: ShallowRef<number | undefined> | undefined
+
+  constructor(
+    nodes: Block,
+    scope: EffectScope | undefined,
+    item: ShallowRef<any>,
+    key: ShallowRef<any> | undefined,
+    index: ShallowRef<number | undefined> | undefined,
+    renderKey: any,
+  ) {
+    super(nodes)
+    this.scope = scope
+    this.itemRef = item
+    this.keyRef = key
+    this.indexRef = index
+    this.key = renderKey
+  }
+}
+
 export class DynamicFragment extends VaporFragment {
   // @ts-expect-error - assigned in hydrate()
   anchor: Node
@@ -105,9 +135,6 @@ export class DynamicFragment extends VaporFragment {
   pending?: { render?: BlockFn; key: any }
   anchorLabel?: string
   keyed?: boolean
-  // When slot content hydrates as empty while the surrounding slot is already
-  // using fallback DOM, reuse the parent's closing fragment anchor.
-  deferredToFallback?: boolean
 
   // fallthrough attrs
   attrs?: Record<string, any>
@@ -132,7 +159,7 @@ export class DynamicFragment extends VaporFragment {
     if (key === this.current) {
       // On initial hydration, `key === current` means `render` is empty,
       // so this fragment hydrates as empty content.
-      if (isHydrating) this.hydrate(true)
+      if (isHydrating && !(this instanceof SlotFragment)) this.hydrate(true)
       return
     }
 
@@ -214,7 +241,9 @@ export class DynamicFragment extends VaporFragment {
     this.renderBranch(render, transition, parent, key)
     setActiveSub(prevSub)
 
-    if (isHydrating) this.hydrate(render == null)
+    if (isHydrating && !(this instanceof SlotFragment)) {
+      this.hydrate(render == null)
+    }
   }
 
   renderBranch(
@@ -303,7 +332,7 @@ export class DynamicFragment extends VaporFragment {
     }
   }
 
-  hydrate = (isEmpty = false): void => {
+  hydrate = (isEmpty = false, isSlot = false): void => {
     // early return allows tree-shaking of hydration logic when not used
     if (!isHydrating) return
 
@@ -316,63 +345,45 @@ export class DynamicFragment extends VaporFragment {
       if (isComment(currentHydrationNode!, '')) {
         this.anchor = currentHydrationNode
         advanceHydrationNode(currentHydrationNode)
-        if (__DEV__) {
-          ;(this.anchor as Comment).data = this.anchorLabel!
-        }
+        return
+      }
+    }
+
+    // Slot fallback can fall through an inner `v-if`. When the `if` resolves
+    // to an invalid block and the fallback is selected, the `if` still needs
+    // its own runtime anchor instead of reusing the parent slot's end anchor.
+    if (this.anchorLabel === 'if' && currentSlotEndAnchor) {
+      if (
+        currentEmptyFragment !== undefined &&
+        (!isValidBlock(this.nodes) || currentEmptyFragment === this)
+      ) {
+        const endAnchor = currentSlotEndAnchor
+        this.anchor = __DEV__
+          ? createComment(this.anchorLabel!)
+          : createTextNode()
+        queuePostFlushCb(() =>
+          endAnchor.parentNode!.insertBefore(this.anchor, endAnchor),
+        )
         return
       }
     }
 
     const forwardedSlot = (this as any as SlotFragment).forwarded
-    const slotHasFallback = (this as any as SlotFragment).hasFallback
-    const slotContext = currentSlotContext
-    const hydratingSlotFallback =
-      slotContext !== null && slotContext.hydratingFallback && !forwardedSlot
-    const inSlotFallback =
-      slotContext !== null && slotContext.phase === 'fallback-render'
-    let isValidSlot = false
-    if ((forwardedSlot || hydratingSlotFallback) && !isEmpty) {
-      isValidSlot = isValidBlock(this.nodes)
-    }
-    // When the current slot hydrates against fallback DOM, defer anchor
-    // creation so renderSlotFallback → frag.update(fallback) can re-enter
-    // hydrate() after the fallback content is hydrated.
-    if (
-      ((forwardedSlot && slotHasFallback) || hydratingSlotFallback) &&
-      (isEmpty || !isValidSlot)
-    ) {
-      if (hydratingSlotFallback) {
-        this.deferredToFallback = true
-      }
-      return
-    }
-
-    if (this.deferredToFallback && isComment(currentHydrationNode!, ']')) {
-      this.anchor = currentHydrationNode
-      this.deferredToFallback = false
-      return
-    }
-
+    const slotAnchor = isSlot ? currentSlotEndAnchor : null
     // Reuse SSR `<!--]-->` as anchor.
-    // SSR always wraps slot content with `<!--[-->...<!--]-->`, so any slot
-    // with content has a matching end anchor we can reuse.
-    //
-    // For forwarded slots, two additional conditions must hold:
-    //   1. isValidSlot — the forwarded slot rendered actual content
-    //   2. !inSlotFallback — the content came from the slot's own render,
-    //      not from a fallback re-entry. During fallback re-entry, the
-    //      `<!--]-->` at the cursor belongs to the outer (non-forwarded)
-    //      slot, not this forwarded one.
-    //
-    // Multi-root `v-if` also gets `<!--[-->...<!--]-->` from SSR.
+    // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
+    // Non-forwarded slots always own the closing `<!--]-->`, even when empty.
+    // Forwarded slots only own it when they rendered valid content.
     if (
-      (this.anchorLabel === 'slot' &&
-        (!forwardedSlot || (isValidSlot && !inSlotFallback))) ||
-      (this.anchorLabel === 'if' && isArray(this.nodes))
+      (isSlot && (!forwardedSlot || isValidBlock(this.nodes))) ||
+      (this.anchorLabel === 'if' &&
+        isArray(this.nodes) &&
+        this.nodes.length > 1)
     ) {
-      if (isComment(currentHydrationNode!, ']')) {
-        this.anchor = currentHydrationNode
-        advanceHydrationNode(currentHydrationNode)
+      const anchor = slotAnchor || currentHydrationNode
+      if (isComment(anchor!, ']')) {
+        this.anchor = anchor
+        advanceHydrationNode(anchor)
         return
       } else if (__DEV__) {
         throw new Error(
@@ -387,8 +398,8 @@ export class DynamicFragment extends VaporFragment {
     let parentNode: Node | null
     let nextNode: Node | null
     if (forwardedSlot) {
-      parentNode = currentHydrationNode!.parentNode
-      nextNode = currentHydrationNode!.nextSibling
+      parentNode = slotAnchor!.parentNode
+      nextNode = slotAnchor!.nextSibling
     } else {
       const node = findBlockNode(this.nodes)
       parentNode = node.parentNode
@@ -405,39 +416,32 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
-type SlotContextPhase = 'render' | 'fallback-render'
-
-type SlotContext = {
-  phase: SlotContextPhase
-  hydratingFallback: boolean
-}
-
-let currentSlotContext: SlotContext | null = null
-
-function runWithSlotContext<R>(
-  phase: SlotContextPhase,
-  hydratingFallback: boolean,
-  fn: () => R,
-): R {
-  const prev = currentSlotContext
-  currentSlotContext = {
-    phase,
-    hydratingFallback,
-  }
+export let currentSlotEndAnchor: Node | null = null
+function setCurrentSlotEndAnchor(end: Node | null): Node | null {
   try {
-    return fn()
+    return currentSlotEndAnchor
   } finally {
-    currentSlotContext = prev
+    currentSlotEndAnchor = end
   }
 }
+
+// Tracks slot fallback hydration that falls through an inner empty fragment,
+// e.g.
+// - `<slot><template v-if="false" /></slot>`
+// - `<slot><span v-for="item in items" /></slot>`.
+// We need this because the inner empty fragment can hydrate before slot render
+// finishes and before we know whether fallback will ultimately land on it.
+// - `undefined` means the current hydration is not resolving slot fallback.
+// - `null` means slot render is in progress and fallback may land on an empty
+//   fragment, but the target fragment is not known yet. Empty `v-for` only
+//   needs this phase marker so it can create its own runtime anchor instead of
+//   expecting one from SSR.
+// - A DynamicFragment value means fallback resolves through that fragment, so it
+//   must create its own anchor instead of reusing the slot end anchor.
+export let currentEmptyFragment: DynamicFragment | null | undefined
 
 export class SlotFragment extends DynamicFragment {
   forwarded = false
-  // Hydrating forwarded slots need to remember whether an outer slot can
-  // fall back so empty forwarded content defers anchor creation.
-  hasFallback = false
-  // Interop slots can hydrate directly against fallback DOM.
-  hydrateWithFallback = false
 
   constructor() {
     super(isHydrating || __DEV__ ? 'slot' : undefined, false, false)
@@ -448,31 +452,58 @@ export class SlotFragment extends DynamicFragment {
     fallback?: BlockFn,
     key: any = render || fallback,
   ): void {
+    let prevEndAnchor: Node | null = null
+    let pushedEndAnchor = false
     if (isHydrating) {
-      locateHydrationNode(true)
-      if (this.forwarded) {
-        this.hasFallback = currentSlotContext !== null
+      locateHydrationNode()
+      if (isComment(currentHydrationNode!, '[')) {
+        const endAnchor = locateEndAnchor(currentHydrationNode)
+        setCurrentHydrationNode(currentHydrationNode.nextSibling)
+        prevEndAnchor = setCurrentSlotEndAnchor(endAnchor)
+        pushedEndAnchor = true
       }
     }
 
-    if (!render || !fallback) {
-      this.update(render || fallback, key)
-      return
-    }
+    try {
+      if (!render || !fallback) {
+        this.update(render || fallback, key)
+      } else {
+        const wrapped = () => {
+          const prev = currentEmptyFragment
+          if (isHydrating) currentEmptyFragment = null
+          try {
+            let block = render()
+            const emptyFrag = attachSlotFallback(block, fallback)
+            if (!isValidBlock(block)) {
+              if (isHydrating && emptyFrag instanceof DynamicFragment) {
+                currentEmptyFragment = emptyFrag
+              }
+              block = renderSlotFallback(block, fallback, emptyFrag)
+            }
+            return block
+          } finally {
+            if (isHydrating) currentEmptyFragment = prev
+          }
+        }
 
-    const wrapped = () => {
-      const hydratingFallback =
-        this.hydrateWithFallback ||
-        (currentSlotContext !== null && currentSlotContext.hydratingFallback)
-      const block = runWithSlotContext('render', hydratingFallback, render)
-      const emptyFrag = attachSlotFallback(block, fallback)
-      if (!isValidBlock(block)) {
-        return renderSlotFallback(block, fallback, emptyFrag)
+        this.update(wrapped, key)
       }
-      return block
-    }
 
-    this.update(wrapped, key)
+      // Slot render and slot fallback can both trigger DynamicFragment
+      // hydrate that tries to reuse the current SSR end anchor. Hydrating
+      // the slot before render/fallback resolution finishes can make the
+      // slot and inner fallback carrier compete for the same `<!--]-->`, or
+      // place synthetic anchors like `<!--if-->` at the wrong position.
+      // Wait until render/fallback has fully resolved, then hydrate the slot
+      // once against the final block.
+      if (isHydrating) {
+        this.hydrate(render == null, true)
+      }
+    } finally {
+      if (isHydrating && pushedEndAnchor) {
+        setCurrentSlotEndAnchor(prevEndAnchor)
+      }
+    }
   }
 }
 
@@ -498,12 +529,7 @@ export function renderSlotFallback(
     if (frag instanceof ForFragment) {
       frag.nodes[0] = [fallback() || []] as Block[]
     } else if (frag instanceof DynamicFragment) {
-      const hydratingFallback =
-        currentSlotContext !== null && currentSlotContext.hydratingFallback
-      return runWithSlotContext('fallback-render', hydratingFallback, () => {
-        frag.update(fallback)
-        return block
-      })
+      frag.update(fallback)
     }
     return block
   }
@@ -553,6 +579,12 @@ function traverseForFallback(
     if (!isValidBlock(block.nodes)) state.emptyFrag = block
     traverseForFallback(block.nodes, fallback, state)
     return
+  }
+
+  // Recurse into per-item ForBlock so slot fallback can keep propagating to
+  // nested DynamicFragments inside each list item.
+  if (block instanceof ForBlock) {
+    traverseForFallback(block.nodes, fallback, state)
   }
 
   // vdom slot fragment: store fallback on the fragment itself

@@ -1146,14 +1146,12 @@ describe('Vapor Mode hydration', () => {
         undefined,
         data,
       )
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<!--if-->"`,
-      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
 
       data.value = true
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div>foo</div><!--if-->"`,
+        `"<div>foo</div><!---->"`,
       )
     })
 
@@ -2969,6 +2967,183 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('slot fallback from empty v-if branch', async () => {
+      const data = reactive({
+        show: false,
+        fallback: 'foo',
+        slot: 'bar',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <template v-if="data.show">
+                <span>{{ data.slot }}</span>
+              </template>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot><div>{{ data.fallback }}</div></slot></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>foo</div><!--if--><!--]-->
+        "
+      `,
+      )
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.fallback = 'baz'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>baz</div><!--if--><!--]-->
+        "
+      `,
+      )
+
+      data.show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>bar</span><!--if--><!--]-->
+        "
+      `,
+      )
+
+      data.slot = 'qux'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>qux</span><!--if--><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('slot fallback from empty v-for branch', async () => {
+      const data = reactive({
+        items: [] as string[],
+        fallback: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <span v-for="item in data.items" :key="item">{{ item }}</span>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot><div>{{ data.fallback }}</div></slot></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>foo</div><!--for--><!--]-->
+        "
+      `,
+      )
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.fallback = 'baz'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>baz</div><!--for--><!--]-->
+        "
+      `,
+      )
+
+      data.items = ['bar', 'qux']
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>bar</span><span>qux</span><!--for--><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('slot fallback from invalid v-for branch', async () => {
+      const data = reactive({
+        items: [{ text: 'bar', show: false }],
+        fallback: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <template v-for="item in data.items" :key="item.text">
+                <template v-if="item.show">
+                  <span>{{ item.text }}</span>
+                </template>
+              </template>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot><div>{{ data.fallback }}</div></slot></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>foo</div><!--if--><!--for--><!--]-->
+        "
+      `,
+      )
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.fallback = 'baz'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>baz</div><!--if--><!--for--><!--]-->
+        "
+      `,
+      )
+
+      data.items[0].show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>bar</span><!--if--><!--for--><!--]-->
+        "
+      `,
+      )
+
+      data.items[0].show = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>baz</div><!--if--><!--for--><!--]-->
+        "
+      `,
+      )
+    })
+
     test('forwarded slot', async () => {
       const data = reactive({
         foo: 'foo',
@@ -3243,7 +3418,7 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<!--slot--><!--if-->"`,
+        `"<!----><!--if-->"`,
       )
       expect(`mismatch`).not.toHaveBeenWarned()
 
@@ -3265,9 +3440,7 @@ describe('Vapor Mode hydration', () => {
         undefined,
         data,
       )
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<!--if-->"`,
-      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
       expect(`mismatch`).not.toHaveBeenWarned()
     })
 
@@ -7088,7 +7261,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>foo</div><!--]-->
+      <!--[--><div>foo</div><!--if--><!--]-->
       "
     `,
     )
@@ -7100,7 +7273,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>baz</div><!--]-->
+      <!--[--><div>baz</div><!--if--><!--]-->
       "
     `,
     )
@@ -7110,7 +7283,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>bar</span><!--]-->
+      <!--[--><span>bar</span><!--if--><!--]-->
       "
     `,
     )
@@ -7120,7 +7293,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>qux</span><!--]-->
+      <!--[--><span>qux</span><!--if--><!--]-->
       "
     `,
     )
@@ -7234,7 +7407,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
         "
-        <!--[--><div>foo</div><p>bar</p><!--]-->
+        <!--[--><div>foo</div><p>bar</p><!--if--><!--]-->
         "
       `,
     )
@@ -7247,7 +7420,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
         "
-        <!--[--><div>qux</div><p>quux</p><!--]-->
+        <!--[--><div>qux</div><p>quux</p><!--if--><!--]-->
         "
       `,
     )
@@ -7257,7 +7430,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
         "
-        <!--[--><span>baz</span><!--]-->
+        <!--[--><span>baz</span><!--if--><!--]-->
         "
       `,
     )
@@ -7314,7 +7487,7 @@ describe('VDOM interop', () => {
       `
         "
         <!--[-->
-        <!--[--><div>foo</div><!----><!--]-->
+        <!--[--><div>foo</div><!----><!--if--><!--]-->
         <i>tail</i><!--]-->
         "
       `,
@@ -7326,7 +7499,7 @@ describe('VDOM interop', () => {
       `
         "
         <!--[-->
-        <!--[--><div>foo</div><p>bar</p><!--]-->
+        <!--[--><div>foo</div><!--if--><p>bar</p><!--]-->
         <i>tail</i><!--]-->
         "
       `,
@@ -7946,9 +8119,9 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-      "
-      <!--[--><div>Before</div><!--if--><span>Tail</span><!--]-->
-      "
+    	"
+    	<!--[--><div>Before</div><!----><span>Tail</span><!--]-->
+    	"
     `,
     )
 
@@ -7959,9 +8132,9 @@ describe('VDOM interop', () => {
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-      "
-      <!--[--><div>Before</div><span>Updated</span><span>Updated</span><!--if--><span>Tail updated</span><!--]-->
-      "
+    	"
+    	<!--[--><div>Before</div><span>Updated</span><span>Updated</span><!----><span>Tail updated</span><!--]-->
+    	"
     `,
     )
 
@@ -7970,9 +8143,9 @@ describe('VDOM interop', () => {
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-      "
-      <!--[--><div>Before</div><!--if--><span>Tail updated</span><!--]-->
-      "
+    	"
+    	<!--[--><div>Before</div><!----><span>Tail updated</span><!--]-->
+    	"
     `,
     )
   })
@@ -8168,7 +8341,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>foo</div><!--]-->
+      <!--[--><div>foo</div><!--if--><!--]-->
       "
     `,
     )
@@ -8180,7 +8353,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>baz</div><!--]-->
+      <!--[--><div>baz</div><!--if--><!--]-->
       "
     `,
     )
@@ -8190,7 +8363,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>bar</span><!--]-->
+      <!--[--><span>bar</span><!--if--><!--]-->
       "
     `,
     )
@@ -8200,7 +8373,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>qux</span><!--]-->
+      <!--[--><span>qux</span><!--if--><!--]-->
       "
     `,
     )
