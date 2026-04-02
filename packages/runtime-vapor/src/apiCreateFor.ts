@@ -139,9 +139,13 @@ export const createFor = (
           currentSlotEndAnchor
         ) {
           const anchor =
-            hydrationStart !== currentSlotEndAnchor
-              ? hydrationStart!.nextSibling!
-              : currentSlotEndAnchor
+            // The invalid list still consumed local SSR item ranges.
+            currentHydrationNode !== hydrationStart
+              ? currentHydrationNode!
+              : // Empty source with trailing slot siblings.
+                hydrationStart !== currentSlotEndAnchor
+                ? hydrationStart!.nextSibling!
+                : currentSlotEndAnchor
           parentAnchor = __DEV__ ? createComment('for') : createTextNode()
           pendingHydrationAnchor = true
           setCurrentHydrationNode(hydrationStart)

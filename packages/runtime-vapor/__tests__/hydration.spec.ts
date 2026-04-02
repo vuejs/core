@@ -3204,6 +3204,81 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('slot content from multi-item invalid v-for branch keeps list order', async () => {
+      const data = reactive({
+        items: [
+          { text: 'a', show: false },
+          { text: 'b', show: false },
+        ],
+        tail: 'tail',
+        fallback: 'fallback',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <template v-for="item in data.items" :key="item.text">
+                <template v-if="item.show">
+                  <span>{{ item.text }}</span>
+                </template>
+              </template>
+              <i>{{ data.tail }}</i>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <slot><div>{{ data.fallback }}</div></slot>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"
+      	<!--[-->
+      	<!--[-->
+      	<!--[--><!----><!--]-->
+      	<!--[--><!----><!--]-->
+      	<!--for--><!--]-->
+      	<i>tail</i><!--]-->
+      	"
+      `)
+
+      data.items.push({ text: 'c', show: true })
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+      	"
+      	<!--[-->
+      	<!--[-->
+      	<!--[--><!----><!--]-->
+      	<!--[--><!----><!--]-->
+      	<span>c</span><!--if--><!--for--><!--]-->
+      	<i>tail</i><!--]-->
+      	"
+      `,
+      )
+
+      data.items[1].show = true
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[-->
+        <!--[-->
+        <!--[--><!----><!--]-->
+        <!--[--><span>b</span><!----><!--]-->
+        <span>c</span><!--if--><!--for--><!--]-->
+        <i>tail</i><!--]-->
+        "
+      `,
+      )
+    })
+
     test('forwarded slot', async () => {
       const data = reactive({
         foo: 'foo',

@@ -195,6 +195,29 @@ describe('compiler: v-if', () => {
     })
   })
 
+  test('v-if in template v-for forces MULTI_ROOT shape', () => {
+    const { ir, helpers } = compileWithVIf(
+      `<template v-for="item in list">
+        <span v-if="item.ok">
+          <span>{{ item.text }}</span>
+        </span>
+      </template>`,
+    )
+
+    expect(helpers).toContain('createIf')
+    expect(helpers).toContain('createFor')
+
+    const forOp = ir.block.dynamic.children[0].operation
+    expect(forOp).toMatchObject({
+      type: IRNodeTypes.FOR,
+    })
+
+    const ifOp = (forOp as any).render.dynamic.children[0].operation as IfIRNode
+    expect(ifOp.blockShape).toBe(
+      VaporBlockShape.MULTI_ROOT | (VaporBlockShape.MULTI_ROOT << 2),
+    )
+  })
+
   test('template v-if + normal v-else', () => {
     const { code, ir } = compileWithVIf(
       `<template v-if="foo"><div>hi</div><div>ho</div></template><div v-else/>`,

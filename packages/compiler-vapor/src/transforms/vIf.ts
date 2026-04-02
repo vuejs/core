@@ -1,6 +1,8 @@
 import {
   type ElementNode,
+  ElementTypes,
   ErrorCodes,
+  NodeTypes,
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
@@ -40,6 +42,7 @@ export function processIf(
   }
 
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE
+  const forceMultiRoot = shouldForceMultiRoot(context)
   if (dir.name === 'if') {
     const id = context.reference()
     context.dynamic.flags |= DynamicFlag.INSERT
@@ -50,7 +53,7 @@ export function processIf(
       context.dynamic.operation = {
         type: IRNodeTypes.IF,
         id,
-        blockShape: encodeIfBlockShape(branch),
+        blockShape: encodeIfBlockShape(branch, forceMultiRoot),
         condition: dir.exp!,
         positive: branch,
         index: context.root.nextIfIndex(),
@@ -134,10 +137,12 @@ export function processIf(
       if (lastIfNode.negative.type === IRNodeTypes.IF) {
         lastIfNode.negative.blockShape = encodeIfBlockShape(
           lastIfNode.negative.positive,
+          forceMultiRoot,
         )
       }
       lastIfNode.blockShape = encodeIfBlockShape(
         lastIfNode.positive,
+        forceMultiRoot,
         lastIfNode.negative,
       )
     }
@@ -158,10 +163,14 @@ export function createIfBranch(
 
 function encodeIfBlockShape(
   positive: BlockIRNode,
+  forceMultiRoot: boolean = false,
   negative?: BlockIRNode | IfIRNode,
 ): number {
   // Pack the true/false branch shapes into one integer so runtime `createIf()`
   // can decode the selected branch with a single bit-mask operation.
+  if (forceMultiRoot) {
+    return VaporBlockShape.MULTI_ROOT | (VaporBlockShape.MULTI_ROOT << 2)
+  }
   return getBlockShape(positive) | (getNegativeBlockShape(negative) << 2)
 }
 
@@ -170,4 +179,18 @@ function getNegativeBlockShape(negative?: BlockIRNode | IfIRNode) {
   return negative.type === IRNodeTypes.IF
     ? VaporBlockShape.SINGLE_ROOT
     : getBlockShape(negative)
+}
+
+// SSR renders `v-if` inside `<template v-for>` always output <!--[-->...<!--]-->.
+// should mark the block as multi-root
+function shouldForceMultiRoot(context: TransformContext<ElementNode>): boolean {
+  const parent = context.parent && context.parent.node
+  return (
+    !!parent &&
+    parent.type === NodeTypes.ELEMENT &&
+    parent.tagType === ElementTypes.TEMPLATE &&
+    parent.props.some(
+      prop => prop.type === NodeTypes.DIRECTIVE && prop.name === 'for',
+    )
+  )
 }
