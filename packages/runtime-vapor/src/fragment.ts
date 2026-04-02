@@ -130,6 +130,7 @@ export class ForBlock extends VaporFragment {
 export class DynamicFragment extends VaporFragment {
   // @ts-expect-error - assigned in hydrate()
   anchor: Node
+  isAnchorPending?: boolean
   scope: EffectScope | undefined
   current?: BlockFn
   pending?: { render?: BlockFn; key: any }
@@ -336,8 +337,10 @@ export class DynamicFragment extends VaporFragment {
     // early return allows tree-shaking of hydration logic when not used
     if (!isHydrating) return
 
-    // avoid repeated hydration
-    if (this.anchor) return
+    // Slot fallback can fall through to an inner empty `v-if` / `v-for`.
+    // When fallback runs during hydration, the same fragment can still
+    // re-enter `hydrate()` after its empty branch has already hydrated once.
+    if (this.isAnchorPending) return
 
     // reuse `<!---->` as anchor
     // `<div v-if="false"></div>` -> `<!---->`
@@ -358,11 +361,14 @@ export class DynamicFragment extends VaporFragment {
         (!isValidBlock(this.nodes) || currentEmptyFragment === this)
       ) {
         const endAnchor = currentSlotEndAnchor
-        this.anchor = __DEV__
-          ? createComment(this.anchorLabel!)
-          : createTextNode()
+        this.isAnchorPending = true
         queuePostFlushCb(() =>
-          endAnchor.parentNode!.insertBefore(this.anchor, endAnchor),
+          endAnchor.parentNode!.insertBefore(
+            (this.anchor = __DEV__
+              ? createComment(this.anchorLabel!)
+              : createTextNode()),
+            endAnchor,
+          ),
         )
         return
       }
@@ -405,6 +411,10 @@ export class DynamicFragment extends VaporFragment {
       parentNode = node.parentNode
       nextNode = node.nextNode
     }
+
+    // Assign `this.anchor` only after the anchor is inserted.
+    // Otherwise detached anchors could be observed too early by traversal
+    // logic such as `findLastChild()`.
     queuePostFlushCb(() => {
       parentNode!.insertBefore(
         (this.anchor = __DEV__
