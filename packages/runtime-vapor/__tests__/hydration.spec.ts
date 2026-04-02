@@ -3080,6 +3080,66 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('slot content from empty v-for branch with trailing sibling', async () => {
+      const data = reactive({
+        items: [] as string[],
+        tail: 'tail',
+        fallback: 'fallback',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <span v-for="item in data.items" :key="item">{{ item }}</span>
+              <i>{{ data.tail }}</i>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <slot><div>{{ data.fallback }}</div></slot>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[-->
+        <!--[--><!--]-->
+        <!--for--><i>tail</i><!--]-->
+        "
+      `,
+      )
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.items = ['foo', 'bar']
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[-->
+        <!--[--><!--]-->
+        <span>foo</span><span>bar</span><!--for--><i>tail</i><!--]-->
+        "
+      `,
+      )
+
+      data.tail = 'tail2'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[-->
+        <!--[--><!--]-->
+        <span>foo</span><span>bar</span><!--for--><i>tail2</i><!--]-->
+        "
+      `,
+      )
+    })
+
     test('slot fallback from invalid v-for branch', async () => {
       const data = reactive({
         items: [{ text: 'bar', show: false }],

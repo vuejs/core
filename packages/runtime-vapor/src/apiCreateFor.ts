@@ -129,20 +129,24 @@ export const createFor = (
       if (isHydrating) {
         // Slot fallback can fall through an empty/invalid `v-for`. In that
         // case SSR only rendered the parent slot range, so this `v-for` has no
-        // own `<!--]-->` to reuse. Restore the hydration cursor to the slot
-        // content start so fallback can hydrate the existing DOM, then create a
-        // runtime `<!--for-->` anchor before the parent slot end anchor.
+        // own `<!--]-->` to reuse. If `hydrationStart` is not the parent slot
+        // end anchor, use `hydrationStart.nextSibling` as the insertion anchor
+        // so the runtime `<!--for-->` lands immediately after that local SSR
+        // range. Otherwise insert it before the parent slot end anchor.
         if (
           currentEmptyFragment !== undefined &&
           !isValidBlock(newBlocks) &&
           currentSlotEndAnchor
         ) {
-          const endAnchor = currentSlotEndAnchor
+          const anchor =
+            hydrationStart !== currentSlotEndAnchor
+              ? hydrationStart!.nextSibling!
+              : currentSlotEndAnchor
           parentAnchor = __DEV__ ? createComment('for') : createTextNode()
           pendingHydrationAnchor = true
           setCurrentHydrationNode(hydrationStart)
           queuePostFlushCb(() =>
-            endAnchor.parentNode!.insertBefore(parentAnchor, endAnchor),
+            anchor.parentNode!.insertBefore(parentAnchor, anchor),
           )
         } else {
           parentAnchor = currentHydrationNode!
