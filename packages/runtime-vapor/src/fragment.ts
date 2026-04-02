@@ -561,7 +561,7 @@ export function attachSlotFallback(
 // 2) allow fallback to be chained/updated as slot fallback propagates through nested fragments.
 const slotFallbackState = new WeakMap<
   DynamicFragment,
-  { fallback: BlockFn; wrapped: boolean }
+  { fallback: BlockFn; wrapped: boolean; forOwner?: ForFragment }
 >()
 
 // Slot fallback needs to propagate into nested fragments created by v-if/v-for.
@@ -572,14 +572,16 @@ function traverseForFallback(
   block: Block,
   fallback: BlockFn,
   state: { emptyFrag: VaporFragment | null },
+  forOwner?: ForFragment,
 ): void {
   if (isVaporComponent(block)) {
-    if (block.block) traverseForFallback(block.block, fallback, state)
+    if (block.block) traverseForFallback(block.block, fallback, state, forOwner)
     return
   }
 
   if (isArray(block)) {
-    for (const item of block) traverseForFallback(item, fallback, state)
+    for (const item of block)
+      traverseForFallback(item, fallback, state, forOwner)
     return
   }
 
@@ -587,21 +589,24 @@ function traverseForFallback(
   if (block instanceof ForFragment) {
     block.fallback = chainFallback(block.fallback, fallback)
     if (!isValidBlock(block.nodes)) state.emptyFrag = block
-    traverseForFallback(block.nodes, fallback, state)
+    traverseForFallback(block.nodes, fallback, state, block)
     return
   }
 
   // Recurse into per-item ForBlock so slot fallback can keep propagating to
-  // nested DynamicFragments inside each list item.
+  // nested DynamicFragments inside each list item. Gate those updates on the
+  // owning `v-for` so a single empty item does not render slot fallback while
+  // the list still has valid content.
   if (block instanceof ForBlock) {
-    traverseForFallback(block.nodes, fallback, state)
+    traverseForFallback(block.nodes, fallback, state, forOwner)
+    return
   }
 
   // vdom slot fragment: store fallback on the fragment itself
   if (block instanceof VaporFragment && block.insert) {
     block.fallback = chainFallback(block.fallback, fallback)
     if (!isValidBlock(block.nodes)) state.emptyFrag = block
-    traverseForFallback(block.nodes, fallback, state)
+    traverseForFallback(block.nodes, fallback, state, forOwner)
     return
   }
 
@@ -611,8 +616,12 @@ function traverseForFallback(
     if (slotState) {
       slotState.fallback = chainFallback(slotState.fallback, fallback)
     } else {
-      slotFallbackState.set(block, (slotState = { fallback, wrapped: false }))
+      slotFallbackState.set(
+        block,
+        (slotState = { fallback, wrapped: false, forOwner }),
+      )
     }
+    slotState.forOwner = forOwner || slotState.forOwner
     if (!slotState.wrapped) {
       slotState.wrapped = true
       const original = block.update.bind(block)
@@ -620,13 +629,17 @@ function traverseForFallback(
         original(render, key)
         // attach to newly created nested fragments
         const emptyFrag = attachSlotFallback(block.nodes, slotState!.fallback)
-        if (render !== slotState!.fallback && !isValidBlock(block.nodes)) {
+        if (
+          render !== slotState!.fallback &&
+          !isValidBlock(block.nodes) &&
+          (!slotState!.forOwner || !isValidBlock(slotState!.forOwner.nodes))
+        ) {
           renderSlotFallback(block, slotState!.fallback, emptyFrag)
         }
       }
     }
     if (!isValidBlock(block.nodes)) state.emptyFrag = block
-    traverseForFallback(block.nodes, fallback, state)
+    traverseForFallback(block.nodes, fallback, state, forOwner)
   }
 }
 
