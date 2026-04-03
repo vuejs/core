@@ -285,36 +285,36 @@ export function proxyRefs<T extends object>(
     : new Proxy(objectWithRefs, shallowUnwrapHandlers)
 }
 
-export type CustomRefFactory<T> = (
+export type CustomRefFactory<T, S = T> = (
   track: () => void,
   trigger: () => void,
 ) => {
   get: () => T
-  set: (value: T) => void
+  set: (value: S) => void
 }
 
-class CustomRefImpl<T> {
+class CustomRefImpl<T, S = T> {
   public dep: Dep
 
-  private readonly _get: ReturnType<CustomRefFactory<T>>['get']
-  private readonly _set: ReturnType<CustomRefFactory<T>>['set']
+  private readonly _get: ReturnType<CustomRefFactory<T, S>>['get']
+  private readonly _set: ReturnType<CustomRefFactory<T, S>>['set']
 
   public readonly [ReactiveFlags.IS_REF] = true
 
   public _value: T = undefined!
 
-  constructor(factory: CustomRefFactory<T>) {
+  constructor(factory: CustomRefFactory<T, S>) {
     const dep = (this.dep = new Dep())
     const { get, set } = factory(dep.track.bind(dep), dep.trigger.bind(dep))
     this._get = get
     this._set = set
   }
 
-  get value() {
+  get value(): T {
     return (this._value = this._get())
   }
 
-  set value(newVal) {
+  set value(newVal: S) {
     this._set(newVal)
   }
 }
@@ -326,7 +326,9 @@ class CustomRefImpl<T> {
  * @param factory - The function that receives the `track` and `trigger` callbacks.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#customref}
  */
-export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
+export function customRef<T, S = T>(
+  factory: CustomRefFactory<T, S>,
+): Ref<T, S> {
   return new CustomRefImpl(factory) as any
 }
 
