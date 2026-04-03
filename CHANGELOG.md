@@ -1,3 +1,20 @@
+## [3.5.32](https://github.com/vuejs/core/compare/v3.5.31...v3.5.32) (2026-04-03)
+
+
+### Bug Fixes
+
+* **runtime-core:** prevent currentInstance leak into sibling render during async setup re-entry ([#14668](https://github.com/vuejs/core/issues/14668)) ([f166353](https://github.com/vuejs/core/commit/f1663535a163057788d3285dec54a245c3efb3ad)), closes [#14667](https://github.com/vuejs/core/issues/14667)
+* **teleport:** handle updates before deferred mount ([#14642](https://github.com/vuejs/core/issues/14642)) ([32b44f1](https://github.com/vuejs/core/commit/32b44f19f67aa30899817a7e79a4510f3b52970a)), closes [#14640](https://github.com/vuejs/core/issues/14640)
+* **types:** allow customRef to have different getter/setter types ([#14639](https://github.com/vuejs/core/issues/14639)) ([e20ddb0](https://github.com/vuejs/core/commit/e20ddb00188e9935884930046fa572eab7c9dcba))
+* **types:** use private branding for shallowReactive ([#14641](https://github.com/vuejs/core/issues/14641)) ([302c47a](https://github.com/vuejs/core/commit/302c47a4994bc8b47b8a2af6693d8cb6bbd4b06b)), closes [#14638](https://github.com/vuejs/core/issues/14638) [#14493](https://github.com/vuejs/core/issues/14493)
+
+
+### Reverts
+
+* Revert "fix(server-renderer): cleanup component effect scopes after SSR render" (#14674) ([219d83b](https://github.com/vuejs/core/commit/219d83bd305ce6fc052941acaaf02e7bc70616a4)), closes [#14674](https://github.com/vuejs/core/issues/14674) [#14669](https://github.com/vuejs/core/issues/14669)
+
+
+
 ## [3.5.31](https://github.com/vuejs/core/compare/v3.5.30...v3.5.31) (2026-03-25)
 
 
