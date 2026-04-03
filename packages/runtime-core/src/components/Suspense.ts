@@ -13,7 +13,6 @@ import {
 import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
 import {
   type ComponentInternalInstance,
-  getCurrentInstance,
   handleSetupResult,
   unsetCurrentInstance,
 } from '../component'
@@ -727,10 +726,10 @@ function createSuspenseBoundary(
           ) {
             return
           }
-          // clear any currentInstance that may have leaked from a concurrent
-          // async setup continuation (withAsyncContext defers its cleanup to
-          // the next microtask, which may run after this handler).
-          if (getCurrentInstance()) unsetCurrentInstance()
+          // withAsyncContext defers cleanup to a later microtask, so currentInstance may
+          // still be set when Suspense re-enters another component's render path.
+          // Clear it first.
+          unsetCurrentInstance()
           // retry from this component
           instance.asyncResolved = true
           const { vnode } = instance
