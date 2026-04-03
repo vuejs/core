@@ -11,7 +11,11 @@ import {
   openBlock,
 } from '../vnode'
 import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
-import { type ComponentInternalInstance, handleSetupResult } from '../component'
+import {
+  type ComponentInternalInstance,
+  handleSetupResult,
+  unsetCurrentInstance,
+} from '../component'
 import type { Slots } from '../componentSlots'
 import {
   type ElementNamespace,
@@ -722,6 +726,10 @@ function createSuspenseBoundary(
           ) {
             return
           }
+          // withAsyncContext defers cleanup to a later microtask, so currentInstance may
+          // still be set when Suspense re-enters another component's render path.
+          // Clear it first.
+          unsetCurrentInstance()
           // retry from this component
           instance.asyncResolved = true
           const { vnode } = instance
