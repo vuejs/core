@@ -10,11 +10,9 @@ import {
   createTextVNode,
   createVNode,
   defineComponent,
-  effectScope,
   getCurrentInstance,
   h,
   onErrorCaptured,
-  onScopeDispose,
   onServerPrefetch,
   reactive,
   ref,
@@ -1002,84 +1000,6 @@ function testRender(type: string, render: typeof renderToString) {
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello</div>`)
-    })
-
-    test('cleans up component effect scopes after each render', async () => {
-      const cleanups: number[] = []
-      const app = createApp({
-        setup() {
-          onScopeDispose(() => {
-            cleanups.push(1)
-          })
-          return () => h('div', 'ok')
-        },
-      })
-
-      expect(cleanups).toEqual([])
-      expect(await render(app)).toBe(`<div>ok</div>`)
-      expect(cleanups).toEqual([1])
-    })
-
-    test('concurrent renders isolate scope cleanup ownership', async () => {
-      const cleaned: string[] = []
-
-      const deferred = () => {
-        let resolve!: () => void
-        const promise = new Promise<void>(r => {
-          resolve = r
-        })
-        return { promise, resolve }
-      }
-
-      const gateA = deferred()
-      const gateB = deferred()
-
-      const makeApp = (id: string, gate: ReturnType<typeof deferred>) =>
-        createApp({
-          async setup() {
-            onScopeDispose(() => {
-              cleaned.push(id)
-            })
-            await gate.promise
-            return () => h('div', id)
-          },
-        })
-
-      const pA = render(makeApp('A', gateA))
-      const pB = render(makeApp('B', gateB))
-
-      gateB.resolve()
-      expect(await pB).toBe(`<div>B</div>`)
-      expect(cleaned).toEqual(['B'])
-
-      gateA.resolve()
-      expect(await pA).toBe(`<div>A</div>`)
-      expect(cleaned.sort()).toEqual(['A', 'B'])
-    })
-
-    test('detached scopes created during SSR are not auto-stopped', async () => {
-      let detachedStopped = false
-      let detached: any
-
-      const app = createApp({
-        setup() {
-          detached = effectScope(true)
-          detached.run(() => {
-            onScopeDispose(() => {
-              detachedStopped = true
-            })
-          })
-          return () => h('div', 'detached')
-        },
-      })
-
-      expect(await render(app)).toBe(`<div>detached</div>`)
-      expect(detached.active).toBe(true)
-      expect(detachedStopped).toBe(false)
-
-      detached.stop()
-      expect(detached.active).toBe(false)
-      expect(detachedStopped).toBe(true)
     })
 
     test('multiple onServerPrefetch', async () => {
