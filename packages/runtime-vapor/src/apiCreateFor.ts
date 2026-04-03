@@ -13,7 +13,7 @@ import {
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
-import { type Block, insert, remove } from './block'
+import { type Block, insert, isValidBlock, remove } from './block'
 import { queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import {
@@ -32,7 +32,12 @@ import {
   locateNextNode,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { ForFragment, VaporFragment } from './fragment'
+import {
+  ForBlock,
+  ForFragment,
+  currentEmptyFragment,
+  currentSlotEndAnchor,
+} from './fragment'
 import {
   type ChildItem,
   insertionAnchor,
@@ -42,34 +47,6 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { applyTransitionHooks } from './transition'
-
-class ForBlock extends VaporFragment {
-  scope: EffectScope | undefined
-  key: any
-  prev?: ForBlock
-  next?: ForBlock
-  prevAnchor?: ForBlock
-
-  itemRef: ShallowRef<any>
-  keyRef: ShallowRef<any> | undefined
-  indexRef: ShallowRef<number | undefined> | undefined
-
-  constructor(
-    nodes: Block,
-    scope: EffectScope | undefined,
-    item: ShallowRef<any>,
-    key: ShallowRef<any> | undefined,
-    index: ShallowRef<number | undefined> | undefined,
-    renderKey: any,
-  ) {
-    super(nodes)
-    this.scope = scope
-    this.itemRef = item
-    this.keyRef = key
-    this.indexRef = index
-    this.key = renderKey
-  }
-}
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 
@@ -110,6 +87,7 @@ export const createFor = (
   // createSelector only
   let currentKey: any
   let parentAnchor: Node
+  let pendingHydrationAnchor = false
   if (!isHydrating) {
     parentAnchor = __DEV__ ? createComment('for') : createTextNode()
   }
@@ -141,6 +119,7 @@ export const createFor = (
     if (!isMounted) {
       isMounted = true
       let nextNode
+      const hydrationStart = isHydrating ? currentHydrationNode : null
       for (let i = 0; i < newLength; i++) {
         if (isHydrating) nextNode = locateNextNode(currentHydrationNode!)
         mount(source, i)
@@ -148,21 +127,48 @@ export const createFor = (
       }
 
       if (isHydrating) {
-        parentAnchor = currentHydrationNode!
+        // Slot fallback can fall through an empty/invalid `v-for`. In that
+        // case SSR only rendered the parent slot range, so this `v-for` has no
+        // own `<!--]-->` to reuse. If `hydrationStart` is not the parent slot
+        // end anchor, use `hydrationStart.nextSibling` as the insertion anchor
+        // so the runtime `<!--for-->` lands immediately after that local SSR
+        // range. Otherwise insert it before the parent slot end anchor.
         if (
-          __DEV__ &&
-          (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']')))
+          currentEmptyFragment !== undefined &&
+          !isValidBlock(newBlocks) &&
+          currentSlotEndAnchor
         ) {
-          throw new Error(
-            `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
+          const anchor =
+            // The invalid list still consumed local SSR item ranges.
+            currentHydrationNode !== hydrationStart
+              ? currentHydrationNode!
+              : // Empty source with trailing slot siblings.
+                hydrationStart !== currentSlotEndAnchor
+                ? hydrationStart!.nextSibling!
+                : currentSlotEndAnchor
+          parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+          pendingHydrationAnchor = true
+          setCurrentHydrationNode(hydrationStart)
+          queuePostFlushCb(() =>
+            anchor.parentNode!.insertBefore(parentAnchor, anchor),
           )
-        }
+        } else {
+          parentAnchor = currentHydrationNode!
+          if (
+            __DEV__ &&
+            (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']')))
+          ) {
+            throw new Error(
+              `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
+            )
+          }
 
-        // optimization: cache the fragment end anchor as $llc (last logical child)
-        // so that locateChildByLogicalIndex can skip the entire fragment
-        if (_insertionParent && isComment(parentAnchor, ']')) {
-          ;(parentAnchor as any as ChildItem).$idx = _insertionIndex || 0
-          _insertionParent.$llc = parentAnchor
+          // optimization: cache the fragment end anchor as $llc (last logical child)
+          // so that locateChildByLogicalIndex can skip the entire fragment
+          if (_insertionParent && isComment(parentAnchor, ']')) {
+            ;(parentAnchor as any as ChildItem).$idx = _insertionIndex || 0
+            _insertionParent.$llc = parentAnchor
+          }
         }
       }
     } else {
@@ -504,7 +510,7 @@ export const createFor = (
 
   if (!isHydrating) {
     if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
-  } else {
+  } else if (!pendingHydrationAnchor) {
     advanceHydrationNode(_isLastInsertion ? _insertionParent! : parentAnchor!)
   }
 

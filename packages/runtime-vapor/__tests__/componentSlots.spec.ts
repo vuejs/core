@@ -825,6 +825,103 @@ describe('component: slots', () => {
       expect(html()).toBe('<span>2</span><!--for--><!--slot-->')
     })
 
+    test('render fallback with invalid v-for branch', async () => {
+      const Child = {
+        setup() {
+          return createSlot('default', null, () =>
+            document.createTextNode('fallback'),
+          )
+        },
+      }
+
+      const items = ref([{ text: 'bar', show: false }])
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              return createFor(
+                () => items.value,
+                for_item0 => {
+                  return createIf(
+                    () => for_item0.value.show,
+                    () => {
+                      const n5 = template('<span> </span>')() as any
+                      const x5 = child(n5) as any
+                      renderEffect(() =>
+                        setText(x5, toDisplayString(for_item0.value.text)),
+                      )
+                      return n5
+                    },
+                  )
+                },
+                item => item.text,
+              )
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('fallback<!--if--><!--for--><!--slot-->')
+
+      items.value[0].show = true
+      await nextTick()
+      expect(html()).toBe('<span>bar</span><!--if--><!--for--><!--slot-->')
+
+      items.value[0].show = false
+      await nextTick()
+      expect(html()).toBe('fallback<!--if--><!--for--><!--slot-->')
+    })
+
+    test('should not render fallback for a single empty item in v-for', async () => {
+      const Child = {
+        setup() {
+          return createSlot('default', null, () =>
+            document.createTextNode('fallback'),
+          )
+        },
+      }
+
+      const items = ref([
+        { text: 'bar', show: true },
+        { text: 'baz', show: true },
+      ])
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              return createFor(
+                () => items.value,
+                for_item0 => {
+                  return createIf(
+                    () => for_item0.value.show,
+                    () => {
+                      const n5 = template('<span> </span>')() as any
+                      const x5 = child(n5) as any
+                      renderEffect(() =>
+                        setText(x5, toDisplayString(for_item0.value.text)),
+                      )
+                      return n5
+                    },
+                  )
+                },
+                item => item.text,
+              )
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe(
+        '<span>bar</span><!--if--><span>baz</span><!--if--><!--for--><!--slot-->',
+      )
+
+      items.value[1].show = false
+      await nextTick()
+      expect(html()).toBe(
+        '<span>bar</span><!--if--><!--if--><!--for--><!--slot-->',
+      )
+    })
+
     test('work with v-once', async () => {
       const Child = defineVaporComponent({
         setup() {
