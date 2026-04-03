@@ -59,7 +59,9 @@ export type SSRContext = {
   /**
    * @internal
    */
-  __instanceScopes?: { stop: () => void }[]
+  __instanceScopes?: {
+    stop: (fromParent?: boolean, allowScopeCleanups?: boolean) => void
+  }[]
 }
 
 export function cleanupContext(context: SSRContext): void {
@@ -77,7 +79,9 @@ export function cleanupContext(context: SSRContext): void {
   if (context.__instanceScopes) {
     for (const scope of context.__instanceScopes) {
       try {
-        scope.stop()
+        // SSR should dispose component-owned effects/scopes without invoking
+        // user cleanup callbacks registered via onScopeDispose().
+        scope.stop(false, false)
       } catch (err) {
         if (firstError === undefined) firstError = err
       }

@@ -129,7 +129,7 @@ export class EffectScope {
     }
   }
 
-  stop(fromParent?: boolean): void {
+  stop(fromParent?: boolean, allowScopeCleanups = true): void {
     if (this._active) {
       this._active = false
       let i, l
@@ -138,14 +138,16 @@ export class EffectScope {
       }
       this.effects.length = 0
 
-      for (i = 0, l = this.cleanups.length; i < l; i++) {
-        this.cleanups[i]()
+      if (allowScopeCleanups) {
+        for (i = 0, l = this.cleanups.length; i < l; i++) {
+          this.cleanups[i]()
+        }
       }
       this.cleanups.length = 0
 
       if (this.scopes) {
         for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].stop(true)
+          this.scopes[i].stop(true, allowScopeCleanups)
         }
         this.scopes.length = 0
       }

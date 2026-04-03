@@ -1004,10 +1004,12 @@ function testRender(type: string, render: typeof renderToString) {
       expect(html).toBe(`<div>hello</div>`)
     })
 
-    test('cleans up component effect scopes after each render', async () => {
+    test('stops component effect scopes after each render without triggering onScopeDispose', async () => {
+      let instanceScope: any
       const cleanups: number[] = []
       const app = createApp({
         setup() {
+          instanceScope = getCurrentInstance()!.scope
           onScopeDispose(() => {
             cleanups.push(1)
           })
@@ -1015,13 +1017,14 @@ function testRender(type: string, render: typeof renderToString) {
         },
       })
 
-      expect(cleanups).toEqual([])
       expect(await render(app)).toBe(`<div>ok</div>`)
-      expect(cleanups).toEqual([1])
+      expect(instanceScope.active).toBe(false)
+      expect(cleanups).toEqual([])
     })
 
-    test('concurrent renders isolate scope cleanup ownership', async () => {
+    test('concurrent renders isolate effect scope disposal ownership', async () => {
       const cleaned: string[] = []
+      const scopes: Record<string, any> = {}
 
       const deferred = () => {
         let resolve!: () => void
@@ -1037,6 +1040,7 @@ function testRender(type: string, render: typeof renderToString) {
       const makeApp = (id: string, gate: ReturnType<typeof deferred>) =>
         createApp({
           async setup() {
+            scopes[id] = getCurrentInstance()!.scope
             onScopeDispose(() => {
               cleaned.push(id)
             })
@@ -1050,11 +1054,14 @@ function testRender(type: string, render: typeof renderToString) {
 
       gateB.resolve()
       expect(await pB).toBe(`<div>B</div>`)
-      expect(cleaned).toEqual(['B'])
+      expect(scopes.B.active).toBe(false)
+      expect(scopes.A.active).toBe(true)
+      expect(cleaned).toEqual([])
 
       gateA.resolve()
       expect(await pA).toBe(`<div>A</div>`)
-      expect(cleaned.sort()).toEqual(['A', 'B'])
+      expect(scopes.A.active).toBe(false)
+      expect(cleaned).toEqual([])
     })
 
     test('detached scopes created during SSR are not auto-stopped', async () => {
