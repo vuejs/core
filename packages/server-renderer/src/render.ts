@@ -11,7 +11,6 @@ import {
   type VNodeArrayChildren,
   type VNodeProps,
   mergeProps,
-  ssrContextKey,
   ssrUtils,
   warn,
 } from 'vue'
@@ -56,37 +55,6 @@ export type SSRContext = {
    * @internal
    */
   __watcherHandles?: (() => void)[]
-  /**
-   * @internal
-   */
-  __instanceScopes?: { stop: () => void }[]
-}
-
-export function cleanupContext(context: SSRContext): void {
-  let firstError: unknown
-  if (context.__watcherHandles) {
-    for (const unwatch of context.__watcherHandles) {
-      try {
-        unwatch()
-      } catch (err) {
-        if (firstError === undefined) firstError = err
-      }
-    }
-    context.__watcherHandles.length = 0
-  }
-  if (context.__instanceScopes) {
-    for (const scope of context.__instanceScopes) {
-      try {
-        scope.stop()
-      } catch (err) {
-        if (firstError === undefined) firstError = err
-      }
-    }
-    context.__instanceScopes.length = 0
-  }
-  if (firstError !== undefined) {
-    throw firstError
-  }
 }
 
 // Each component has a buffer array.
@@ -130,14 +98,6 @@ export function renderComponentVNode(
     parentComponent,
     null,
   ))
-  const context = instance.appContext.provides[ssrContextKey as any] as
-    | SSRContext
-    | undefined
-  if (context) {
-    ;(context.__instanceScopes || (context.__instanceScopes = [])).push(
-      instance.scope,
-    )
-  }
   if (__DEV__) pushWarningContext(vnode)
   const res = setupComponent(instance, true /* isSSR */)
   if (__DEV__) popWarningContext()
