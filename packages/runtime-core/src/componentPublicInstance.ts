@@ -50,7 +50,7 @@ import {
   shouldCacheAccess,
 } from './componentOptions'
 import type { EmitFn, EmitsOptions } from './componentEmits'
-import type { SlotsType, UnwrapSlotsType } from './componentSlots'
+import type { Slots, SlotsType, UnwrapSlotsType } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
@@ -224,7 +224,7 @@ export type CreateComponentPublicInstanceWithMixins<
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
-  S extends SlotsType = {},
+  S extends SlotsType | Slots = {},
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
@@ -272,7 +272,7 @@ export type CreateComponentPublicInstanceWithMixins<
     Provide
   >,
   I,
-  S,
+  S extends SlotsType ? S : SlotsType<S>,
   Exposed,
   TypeRefs,
   TypeEl

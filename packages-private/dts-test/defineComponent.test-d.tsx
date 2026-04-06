@@ -1175,6 +1175,77 @@ describe('componentOptions setup should be `SetupContext`', () => {
   )
 })
 
+describe('infer slots from `SetupContext`', () => {
+  // options
+  const Foo = defineComponent({
+    setup(
+      _props,
+      _ctx: SetupContext<
+        EmitsOptions,
+        {
+          default: (props: { foo: number }) => any
+        }
+      >,
+    ) {},
+    render() {
+      this.$slots.default({ foo: 1 })
+    },
+  })
+  const foo = {} as InstanceType<typeof Foo>
+  expectType<IsAny<typeof foo.$slots.default>>(false)
+  foo.$slots.default({ foo: 1 })
+
+  const Bar = defineComponent({
+    setup(
+      _props,
+      _ctx: SetupContext<
+        EmitsOptions,
+        {
+          default: (props: { foo: number }) => any
+        }
+      >,
+    ) {},
+    render() {
+      this.$slots.default({ foo: 1 })
+    },
+  })
+  const bar = {} as InstanceType<typeof Bar>
+  expectType<IsAny<typeof bar.$slots.default>>(false)
+  bar.$slots.default({ foo: 1 })
+
+  // functional
+  const Baz = defineComponent(
+    <T,>(
+      _props: { foo: T },
+      _ctx: {
+        slots: {
+          default: (props: { foo: T }) => any
+        }
+      },
+    ) =>
+      () => [],
+  )
+  const baz = new Baz({ foo: 1 })
+  expectType<IsAny<typeof baz.$slots.default>>(false)
+  baz.$slots.default?.({ foo: 1 })
+
+  const Qux = defineComponent(
+    <T,>(
+      _props: { foo: T },
+      _ctx: SetupContext<
+        EmitsOptions,
+        {
+          default: (props: { foo: T }) => any
+        }
+      >,
+    ) =>
+      () => [],
+  )
+  const qux = new Qux({ foo: 1 })
+  expectType<IsAny<typeof qux.$slots.default>>(false)
+  qux.$slots.default?.({ foo: 1 })
+})
+
 describe('extract instance type', () => {
   const Base = defineComponent({
     props: {

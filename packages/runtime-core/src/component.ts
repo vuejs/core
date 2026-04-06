@@ -287,11 +287,11 @@ export type LifecycleHook<TFn = Function> = (TFn & SchedulerJob)[] | null
 // use `E extends any` to force evaluating type to fix #2362
 export type SetupContext<
   E = EmitsOptions,
-  S extends SlotsType = {},
+  S extends SlotsType | Slots = {},
 > = E extends any
   ? {
       attrs: Attrs
-      slots: UnwrapSlotsType<S>
+      slots: S extends SlotsType ? UnwrapSlotsType<S> : Readonly<S>
       emit: EmitFn<E>
       expose: <Exposed extends Record<string, any> = Record<string, any>>(
         exposed?: Exposed,

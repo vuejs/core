@@ -33,7 +33,7 @@ import type {
   ComponentPublicInstanceConstructor,
   CreateComponentPublicInstanceWithMixins,
 } from './componentPublicInstance'
-import type { SlotsType } from './componentSlots'
+import type { Slots, SlotsType } from './componentSlots'
 import type { Directive } from './directives'
 import type { ComponentTypeEmits } from './apiSetupHelpers'
 
@@ -150,7 +150,7 @@ export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {},
+  S extends SlotsType | Slots = {},
 >(
   setup: (
     props: Props,
@@ -166,7 +166,7 @@ export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {},
+  S extends SlotsType | Slots = {},
 >(
   setup: (
     props: Props,
@@ -199,7 +199,7 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   InjectOptions extends ComponentInjectOptions = {},
   InjectKeys extends string = string,
-  Slots extends SlotsType = {},
+  TypeSlots extends SlotsType | Slots = {},
   LocalComponents extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
@@ -249,7 +249,7 @@ export function defineComponent<
     {}, // Defaults
     InjectOptions,
     InjectKeys,
-    Slots,
+    TypeSlots,
     LocalComponents,
     Directives,
     Exposed,
@@ -269,7 +269,7 @@ export function defineComponent<
         {},
         false,
         InjectOptions,
-        Slots,
+        TypeSlots,
         LocalComponents,
         Directives,
         string
@@ -288,7 +288,7 @@ export function defineComponent<
   PublicProps,
   ToResolvedProps<InferredProps, ResolvedEmits>,
   ExtractDefaultPropTypes<RuntimePropsOptions>,
-  Slots,
+  TypeSlots,
   LocalComponents,
   Directives,
   Exposed,
