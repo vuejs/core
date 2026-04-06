@@ -1033,17 +1033,43 @@ describe('expose typing', () => {
       { expose }: { expose: (exposed: { a: number; b: string }) => void },
     ) => {
       expose({ a: 1, b: '' })
+      return <div></div>
     },
   )
-  const foo = new Foo()
+  const foo = {} as InstanceType<typeof Foo>
   // internal should still be exposed
   foo.props
 
-  expectType<number>(foo.exposeProxy!.a)
-  expectType<string>(foo.exposeProxy!.b)
+  if (foo.exposeProxy) {
+    expectType<IsAny<typeof foo.exposeProxy.a>>(false)
+    expectType<IsAny<typeof foo.exposeProxy.b>>(false)
+    expectType<number>(foo.exposeProxy.a)
+    expectType<string>(foo.exposeProxy.b)
+  }
+
+  // options
+  const Bar = defineVaporComponent({
+    setup: (
+      props: { some?: string },
+      { expose }: { expose: (exposed: { a: number; b: string }) => void },
+    ) => {
+      expose({ a: 1, b: '' })
+      return <div></div>
+    },
+  })
+  const bar = {} as InstanceType<typeof Bar>
+  // internal should still be exposed
+  bar.props
+
+  if (bar.exposeProxy) {
+    expectType<IsAny<typeof bar.exposeProxy.a>>(false)
+    expectType<IsAny<typeof bar.exposeProxy.b>>(false)
+    expectType<number>(bar.exposeProxy.a)
+    expectType<string>(bar.exposeProxy.b)
+  }
 
   // runtime
-  const Bar = defineVaporComponent({
+  const Baz = defineVaporComponent({
     props: {
       some: String,
     },
@@ -1052,12 +1078,16 @@ describe('expose typing', () => {
     },
   })
 
-  const bar = new Bar()
+  const baz = new Baz()
   // internal should still be exposed
-  bar.props
+  baz.props
 
-  expectType<number>(bar.exposeProxy!.a)
-  expectType<string>(bar.exposeProxy!.b)
+  if (baz.exposeProxy) {
+    expectType<IsAny<typeof baz.exposeProxy.a>>(false)
+    expectType<IsAny<typeof baz.exposeProxy.b>>(false)
+    expectType<number>(baz.exposeProxy.a)
+    expectType<string>(baz.exposeProxy.b)
+  }
 })
 
 describe('Custom options', () => {

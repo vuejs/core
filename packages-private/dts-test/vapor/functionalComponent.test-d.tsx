@@ -1,6 +1,6 @@
-import type { FunctionalVaporComponent } from 'vue'
+import { type FunctionalVaporComponent, type Ref, ref } from 'vue'
 import { expectType } from '../utils'
-import type { Block } from 'vue'
+import type { Block, UnwrapRef } from 'vue'
 
 // simple function signature
 const VaporComp = (props: { foo: number }) => [<div>123</div>]
@@ -61,8 +61,9 @@ const Quux: FunctionalVaporComponent<
   {
     default: (props: { foo: number }) => Block
     optional?: (props: { foo: number }) => Block
-  }
-> = (props, { emit, slots }) => {
+  },
+  { foo: Ref<string> }
+> = (props, { emit, slots, expose }) => {
   expectType<{
     default: (scope: { foo: number }) => Block
     optional?: (scope: { foo: number }) => Block
@@ -77,6 +78,14 @@ const Quux: FunctionalVaporComponent<
   slots.optional?.({ foo: 'fesf' })
   // @ts-expect-error
   slots.optional({ foo: 123 })
+
+  expose({ foo: ref('foo') })
   return []
 }
 ;<Quux />
+
+// Exposed
+const quux = {} as UnwrapRef<
+  Parameters<Parameters<typeof Quux>[1]['expose']>[0]
+>
+expectType<string>(quux.foo)

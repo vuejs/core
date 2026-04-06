@@ -137,7 +137,7 @@ export type FunctionalVaporComponent<
     emit: EmitFn<Emits>
     slots: Slots
     attrs: Record<string, any>
-    expose: <T extends Record<string, any> = Exposed>(exposed: T) => void
+    expose: (exposed: Exposed) => void
   },
 ) => VaporRenderResult) &
   Omit<
@@ -175,9 +175,9 @@ export interface VaporComponentOptions<
       emit: EmitFn<Emits>
       slots: Slots
       attrs: Record<string, any>
-      expose: <T extends Record<string, any> = Exposed>(exposed: T) => void
+      expose: (exposed: Exposed) => void
     },
-  ) => TypeBlock | Exposed | Promise<Exposed> | void
+  ) => VaporRenderResult<TypeBlock> | Exposed | Promise<Exposed> | void
   render?(
     ctx: Exposed extends Block ? undefined : ShallowUnwrapRef<Exposed>,
     props: Readonly<InferredProps>,
