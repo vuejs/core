@@ -1227,7 +1227,7 @@ describe('infer slots from `SetupContext`', () => {
   )
   const baz = new Baz({ foo: 1 })
   expectType<IsAny<typeof baz.$slots.default>>(false)
-  baz.$slots.default?.({ foo: 1 })
+  baz.$slots.default({ foo: 1 })
 
   const Qux = defineComponent(
     <T,>(
@@ -1242,7 +1242,7 @@ describe('infer slots from `SetupContext`', () => {
   )
   const qux = new Qux({ foo: 1 })
   expectType<IsAny<typeof qux.$slots.default>>(false)
-  qux.$slots.default?.({ foo: 1 })
+  qux.$slots.default({ foo: 1 })
 })
 
 describe('extract instance type', () => {
