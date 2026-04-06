@@ -1198,12 +1198,11 @@ describe('infer slots from `SetupContext`', () => {
   const Bar = defineComponent({
     setup(
       _props,
-      _ctx: SetupContext<
-        EmitsOptions,
-        {
+      _ctx: {
+        slots: {
           default: (props: { foo: number }) => any
         }
-      >,
+      },
     ) {},
     render() {
       this.$slots.default({ foo: 1 })
@@ -1217,11 +1216,12 @@ describe('infer slots from `SetupContext`', () => {
   const Baz = defineComponent(
     <T,>(
       _props: { foo: T },
-      _ctx: {
-        slots: {
+      _ctx: SetupContext<
+        EmitsOptions,
+        {
           default: (props: { foo: T }) => any
         }
-      },
+      >,
     ) =>
       () => [],
   )
@@ -1232,12 +1232,11 @@ describe('infer slots from `SetupContext`', () => {
   const Qux = defineComponent(
     <T,>(
       _props: { foo: T },
-      _ctx: SetupContext<
-        EmitsOptions,
-        {
+      _ctx: {
+        slots: {
           default: (props: { foo: T }) => any
         }
-      >,
+      },
     ) =>
       () => [],
   )
