@@ -1175,6 +1175,13 @@ describe('componentOptions setup should be `SetupContext`', () => {
   )
 })
 
+describe('infer emits from SetupContext', () => {
+  const Foo = defineComponent({
+    setup(_, _ctx: SetupContext<['foo']>) {},
+  })
+  ;<Foo onFoo={() => {}}></Foo>
+})
+
 describe('extract instance type', () => {
   const Base = defineComponent({
     props: {
