@@ -87,6 +87,7 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
+  enterHydration,
   isHydrating,
   locateHydrationNode,
   locateNextNode,
@@ -329,6 +330,14 @@ export function createComponent(
     appContext,
     once,
   )
+
+  if (isHydrating) {
+    const hydrationNode = currentHydrationNode!
+    // For compiler output, template hydration runs after the last
+    // `withAsyncContext()` restore. Re-enter vapor hydration so compiled setup
+    // code adopts SSR DOM instead of creating fresh nodes.
+    instance.restoreAsyncContext = () => enterHydration(hydrationNode)
+  }
 
   // handle currentKeepAliveCtx for component boundary isolation
   // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
@@ -579,6 +588,7 @@ export class VaporComponentInstance<
   suspenseId: number
   asyncDep: Promise<any> | null
   asyncResolved: boolean
+  restoreAsyncContext?: () => void | (() => void)
 
   // for vapor custom element
   renderEffects?: RenderEffect[]
@@ -675,6 +685,7 @@ export class VaporComponentInstance<
     this.suspenseId = parentSuspense ? parentSuspense.pendingId : 0
     this.asyncDep = null
     this.asyncResolved = false
+    this.restoreAsyncContext = undefined
 
     this.isMounted =
       this.isUnmounted =
@@ -867,8 +878,17 @@ export function mountComponent(
   ) {
     const component = instance.type
     instance.suspense.registerDep(instance, setupResult => {
-      handleSetupResult(setupResult, component, instance)
-      mountComponent(instance, parent, anchor)
+      // Final suspense retry after async setup resolves. Restore hydrating
+      // mode so the last mount does not fall back to fresh DOM insertion.
+      const reset =
+        instance.restoreAsyncContext && instance.restoreAsyncContext()
+      try {
+        handleSetupResult(setupResult, component, instance)
+        mountComponent(instance, parent, anchor)
+      } finally {
+        instance.restoreAsyncContext = undefined
+        if (reset) reset()
+      }
     })
     return
   }

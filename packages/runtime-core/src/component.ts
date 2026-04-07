@@ -486,6 +486,11 @@ export interface GenericComponentInstance {
    */
   asyncResolved: boolean
   /**
+   * restore renderer-specific async context after `withAsyncContext()`
+   * @internal
+   */
+  restoreAsyncContext?: () => void | (() => void)
+  /**
    * `updateTeleportCssVars`
    * For updating css vars on contained teleports
    * @internal
