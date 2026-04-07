@@ -531,6 +531,10 @@ export function createPropsRestProxy(
 export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   const ctx = getCurrentGenericInstance()!
   const inSSRSetup = isInSSRComponentSetup
+  const restoreAsyncContext =
+    ctx && ctx.restoreAsyncContext
+      ? ctx.restoreAsyncContext.bind(ctx)
+      : undefined
   if (__DEV__ && !ctx) {
     warn(
       `withAsyncContext called without active current instance. ` +
@@ -548,6 +552,7 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
     if (inSSRSetup) {
       setInSSRSetupState(true)
     }
+    return restoreAsyncContext && restoreAsyncContext()
   }
 
   // Never restore a captured "prev" instance here: in concurrent async setup
@@ -562,19 +567,27 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
 
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
-      restore()
+      const reset = restore()
       // Defer cleanup so the async function's catch continuation
       // still runs with the restored instance.
-      Promise.resolve().then(() => Promise.resolve().then(cleanup))
+      Promise.resolve().then(() =>
+        Promise.resolve().then(() => {
+          if (reset) reset()
+          cleanup()
+        }),
+      )
       throw e
     })
   }
   return [
     awaitable,
     () => {
-      restore()
+      const reset = restore()
       // Keep instance for the current continuation, then cleanup.
-      Promise.resolve().then(cleanup)
+      Promise.resolve().then(() => {
+        if (reset) reset()
+        cleanup()
+      })
     },
   ]
 }

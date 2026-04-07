@@ -4767,8 +4767,302 @@ describe('Vapor Mode hydration', () => {
           expect(beforeMount).toHaveBeenCalledTimes(1)
         })
 
-        test.todo('hydrate safely when property used by async setup changed before render', async () => {})
-        test.todo('hydrate safely when property used by deep nested async setup changed before render', async () => {})
+        test('hydrate safely when property used by async setup changed before render', async () => {
+          const data = ref({ toggle: true })
+          const vaporChildCode = `
+            <script vapor>
+              defineProps(['prop'])
+              await new Promise(r => setTimeout(r, 10))
+            </script>
+            <template><h1>{{ prop }}</h1></template>
+          `
+          const wrapperCode = `
+            <script setup>
+              const props = defineProps(['prop'])
+              const components = _components
+            </script>
+            <template>
+              <components.VaporChild :prop="props.prop" />
+            </template>
+          `
+          const siblingCode = `
+            <script setup>
+              const data = _data
+              data.value.toggle = false
+            </script>
+            <template><span/></template>
+          `
+          const appCode = `
+            <script setup>
+              import { Suspense } from 'vue'
+              const data = _data
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <main>
+                  <components.AsyncWrapper :prop="data.toggle ? 'hello' : 'world'" />
+                  <components.SiblingComp />
+                </main>
+              </Suspense>
+            </template>
+          `
+
+          const serverComponents: any = {}
+          const clientComponents: any = {}
+          serverComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            serverComponents,
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+          clientComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            clientComponents,
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+          serverComponents.AsyncWrapper = compile(
+            wrapperCode,
+            data,
+            serverComponents,
+            {
+              vapor: false,
+              ssr: true,
+            },
+          )
+          clientComponents.AsyncWrapper = compile(
+            wrapperCode,
+            data,
+            clientComponents,
+            {
+              vapor: false,
+              ssr: false,
+            },
+          )
+          serverComponents.SiblingComp = compile(
+            siblingCode,
+            data,
+            serverComponents,
+            {
+              vapor: false,
+              ssr: true,
+            },
+          )
+          clientComponents.SiblingComp = compile(
+            siblingCode,
+            data,
+            clientComponents,
+            {
+              vapor: false,
+              ssr: false,
+            },
+          )
+
+          const serverApp = compile(appCode, data, serverComponents, {
+            vapor: false,
+            ssr: true,
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(serverApp),
+          )
+
+          expect(html).toBe('<main><h1>hello</h1><span></span></main>')
+          expect(data.value.toggle).toBe(false)
+
+          data.value.toggle = true
+
+          const clientApp = compile(appCode, data, clientComponents, {
+            vapor: false,
+            ssr: false,
+          })
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+
+          const app = runtimeDom.createSSRApp(clientApp)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+          expect(container.innerHTML).toBe(html)
+
+          await new Promise(r => setTimeout(r, 10))
+          await nextTick()
+
+          expect(data.value.toggle).toBe(false)
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+          expect(container.innerHTML).toBe(
+            '<main><h1>world</h1><span></span></main>',
+          )
+        })
+
+        test('hydrate safely when property used by deep nested async setup changed before render', async () => {
+          const data = ref({ toggle: true })
+          const vaporChildCode = `
+            <script vapor>
+              defineProps(['prop'])
+              await new Promise(r => setTimeout(r, 10))
+            </script>
+            <template><h1>{{ prop }}</h1></template>
+          `
+          const wrapperCode = `
+            <script setup>
+              const components = _components
+            </script>
+            <template>
+              <components.VaporChild v-bind="$attrs" />
+            </template>
+          `
+          const wrapperWrapperCode = `
+            <script setup>
+              const components = _components
+            </script>
+            <template>
+              <components.AsyncWrapper v-bind="$attrs" />
+            </template>
+          `
+          const siblingCode = `
+            <script setup>
+              const data = _data
+              data.value.toggle = false
+            </script>
+            <template><span/></template>
+          `
+          const appCode = `
+            <script setup>
+              import { Suspense } from 'vue'
+              const data = _data
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <main>
+                  <components.AsyncWrapperWrapper :prop="data.toggle ? 'hello' : 'world'" />
+                  <components.SiblingComp />
+                </main>
+              </Suspense>
+            </template>
+          `
+
+          const serverComponents: any = {}
+          const clientComponents: any = {}
+          serverComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            serverComponents,
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+          clientComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            clientComponents,
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+          serverComponents.AsyncWrapper = compile(
+            wrapperCode,
+            data,
+            serverComponents,
+            {
+              vapor: false,
+              ssr: true,
+            },
+          )
+          clientComponents.AsyncWrapper = compile(
+            wrapperCode,
+            data,
+            clientComponents,
+            {
+              vapor: false,
+              ssr: false,
+            },
+          )
+          serverComponents.AsyncWrapperWrapper = compile(
+            wrapperWrapperCode,
+            data,
+            serverComponents,
+            {
+              vapor: false,
+              ssr: true,
+            },
+          )
+          clientComponents.AsyncWrapperWrapper = compile(
+            wrapperWrapperCode,
+            data,
+            clientComponents,
+            {
+              vapor: false,
+              ssr: false,
+            },
+          )
+          serverComponents.SiblingComp = compile(
+            siblingCode,
+            data,
+            serverComponents,
+            {
+              vapor: false,
+              ssr: true,
+            },
+          )
+          clientComponents.SiblingComp = compile(
+            siblingCode,
+            data,
+            clientComponents,
+            {
+              vapor: false,
+              ssr: false,
+            },
+          )
+
+          const serverApp = compile(appCode, data, serverComponents, {
+            vapor: false,
+            ssr: true,
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(serverApp),
+          )
+
+          expect(html).toBe('<main><h1>hello</h1><span></span></main>')
+          expect(data.value.toggle).toBe(false)
+
+          data.value.toggle = true
+
+          const clientApp = compile(appCode, data, clientComponents, {
+            vapor: false,
+            ssr: false,
+          })
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+
+          const app = runtimeDom.createSSRApp(clientApp)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+          expect(container.innerHTML).toBe(html)
+
+          await new Promise(r => setTimeout(r, 10))
+          await nextTick()
+
+          expect(data.value.toggle).toBe(false)
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+          expect(container.innerHTML).toBe(
+            '<main><h1>world</h1><span></span></main>',
+          )
+        })
       })
 
       // required vapor Suspense

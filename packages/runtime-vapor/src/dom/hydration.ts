@@ -89,6 +89,25 @@ export function hydrateNode(node: Node, fn: () => void): void {
   return performHydration(fn, setup, cleanup)
 }
 
+export function enterHydration(node: Node): () => void {
+  const prevHydrationEnabled = isHydratingEnabled
+  if (!prevHydrationEnabled) {
+    setIsHydratingEnabled(true)
+  }
+
+  const prev = setIsHydrating(true)
+  const prevHydrationNode = currentHydrationNode
+  currentHydrationNode = node
+
+  return () => {
+    currentHydrationNode = prevHydrationNode
+    setIsHydrating(prev)
+    if (!prevHydrationEnabled) {
+      setIsHydratingEnabled(false)
+    }
+  }
+}
+
 export let adoptTemplate: (node: Node, template: string) => Node | null
 export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
 

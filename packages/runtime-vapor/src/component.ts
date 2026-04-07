@@ -579,6 +579,7 @@ export class VaporComponentInstance<
   suspenseId: number
   asyncDep: Promise<any> | null
   asyncResolved: boolean
+  restoreAsyncContext?: () => void | (() => void)
 
   // for vapor custom element
   renderEffects?: RenderEffect[]
@@ -867,8 +868,17 @@ export function mountComponent(
   ) {
     const component = instance.type
     instance.suspense.registerDep(instance, setupResult => {
-      handleSetupResult(setupResult, component, instance)
-      mountComponent(instance, parent, anchor)
+      // Final suspense retry after async setup resolves. Restore hydrating
+      // mode so the last mount does not fall back to fresh DOM insertion.
+      const reset =
+        instance.restoreAsyncContext && instance.restoreAsyncContext()
+      try {
+        handleSetupResult(setupResult, component, instance)
+        mountComponent(instance, parent, anchor)
+      } finally {
+        instance.restoreAsyncContext = undefined
+        if (reset) reset()
+      }
     })
     return
   }
