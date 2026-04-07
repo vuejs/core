@@ -822,8 +822,9 @@ export function createPlainElement(
       setCurrentHydrationNode(el.firstChild)
     }
     if (rawSlots.$) {
-      // ssr output does not contain the slot anchor, use an empty string
-      // as the anchor label to avoid slot anchor search errors
+      // Dynamic element children don't own an SSR slot-range anchor.
+      // Use an empty label so hydration treats this as a generic dynamic
+      // fragment instead of trying to reuse SlotFragment-style anchors.
       const frag = new DynamicFragment(
         isHydrating ? '' : __DEV__ ? 'slot' : undefined,
       )
