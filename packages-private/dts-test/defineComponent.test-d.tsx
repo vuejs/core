@@ -1193,7 +1193,7 @@ describe('infer expose from `SetupContext`', () => {
 
   const Bar = defineComponent({
     setup(
-      _props: { foo: 1 },
+      _props: { foo: number },
       _ctx: {
         expose: (exposed: { bar: Ref<number> }) => void
       },
@@ -1210,7 +1210,7 @@ describe('infer expose from `SetupContext`', () => {
   const Baz = defineComponent(
     <T,>(
       _props: { foo: T },
-      _ctx: SetupContext<EmitsOptions, {}, { bar: Ref<number> }>,
+      _ctx: SetupContext<EmitsOptions, {}, { bar: Ref<T> }>,
     ) =>
       () => [],
   )
@@ -1222,7 +1222,7 @@ describe('infer expose from `SetupContext`', () => {
     <T,>(
       _props: { foo: T },
       _ctx: {
-        expose: (exposed: { bar: Ref<number> }) => void
+        expose: (exposed: { bar: Ref<T> }) => void
       },
     ) =>
       () => [],
