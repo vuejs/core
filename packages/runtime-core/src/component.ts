@@ -288,7 +288,7 @@ export type LifecycleHook<TFn = Function> = (TFn & SchedulerJob)[] | null
 export type SetupContext<
   E = EmitsOptions,
   S extends SlotsType = {},
-  Exposed extends Record<string, any> = {},
+  Exposed = {},
 > = E extends any
   ? {
       attrs: Attrs

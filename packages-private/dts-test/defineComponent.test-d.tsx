@@ -1182,7 +1182,9 @@ describe('infer expose from `SetupContext`', () => {
     setup(
       _props: { foo: number },
       _ctx: SetupContext<EmitsOptions, {}, { bar: Ref<number> }>,
-    ) {},
+    ) {
+      return () => <></>
+    },
     render() {
       expectType<number>(this.bar)
     },
@@ -1197,7 +1199,9 @@ describe('infer expose from `SetupContext`', () => {
       _ctx: {
         expose: (exposed: { bar: Ref<number> }) => void
       },
-    ) {},
+    ) {
+      return () => <></>
+    },
     render() {
       expectType<number>(this.bar)
     },
@@ -1212,7 +1216,7 @@ describe('infer expose from `SetupContext`', () => {
       _props: { foo: T },
       _ctx: SetupContext<EmitsOptions, {}, { bar: Ref<T> }>,
     ) =>
-      () => [],
+      () => <></>,
   )
   const baz = new Baz({ foo: 1 })
   expectType<IsAny<typeof baz.bar>>(false)
@@ -1225,7 +1229,7 @@ describe('infer expose from `SetupContext`', () => {
         expose: (exposed: { bar: Ref<T> }) => void
       },
     ) =>
-      () => [],
+      () => <></>,
   )
   const qux = new Qux({ foo: 1 })
   expectType<IsAny<typeof qux.bar>>(false)
