@@ -4890,11 +4890,14 @@ describe('Vapor Mode hydration', () => {
           const app = runtimeDom.createSSRApp(clientApp)
           app.use(runtimeVapor.vaporInteropPlugin)
           app.mount(container)
+          expect(container.innerHTML).toBe(html)
 
           await new Promise(r => setTimeout(r, 10))
           await nextTick()
 
           expect(data.value.toggle).toBe(false)
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
           expect(container.innerHTML).toBe(
             '<main><h1>world</h1><span></span></main>',
           )
@@ -5048,11 +5051,14 @@ describe('Vapor Mode hydration', () => {
           const app = runtimeDom.createSSRApp(clientApp)
           app.use(runtimeVapor.vaporInteropPlugin)
           app.mount(container)
+          expect(container.innerHTML).toBe(html)
 
           await new Promise(r => setTimeout(r, 10))
           await nextTick()
 
           expect(data.value.toggle).toBe(false)
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
           expect(container.innerHTML).toBe(
             '<main><h1>world</h1><span></span></main>',
           )

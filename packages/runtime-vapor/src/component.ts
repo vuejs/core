@@ -870,18 +870,14 @@ export function mountComponent(
     instance.suspense.registerDep(instance, setupResult => {
       // Final suspense retry after async setup resolves. Restore hydrating
       // mode so the last mount does not fall back to fresh DOM insertion.
-      let reset
-      if (isHydrating && instance.restoreAsyncContext) {
-        reset = instance.restoreAsyncContext()
-      }
+      const reset =
+        instance.restoreAsyncContext && instance.restoreAsyncContext()
       try {
         handleSetupResult(setupResult, component, instance)
         mountComponent(instance, parent, anchor)
       } finally {
-        if (isHydrating) {
-          instance.restoreAsyncContext = undefined
-          if (reset) reset()
-        }
+        instance.restoreAsyncContext = undefined
+        if (reset) reset()
       }
     })
     return
