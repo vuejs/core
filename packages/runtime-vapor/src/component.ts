@@ -239,6 +239,7 @@ export function createComponent(
   appContext: GenericAppContext = (currentInstance &&
     currentInstance.appContext) ||
     emptyContext,
+  managedMount = false,
 ): VaporComponentInstance {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -384,7 +385,7 @@ export function createComponent(
   setCurrentSlotOwner(prevSlotOwner)
   onScopeDispose(() => unmountComponent(instance), true)
 
-  if (_insertionParent || isHydrating) {
+  if (!managedMount && (_insertionParent || isHydrating)) {
     mountComponent(instance, _insertionParent!, _insertionAnchor)
   }
 

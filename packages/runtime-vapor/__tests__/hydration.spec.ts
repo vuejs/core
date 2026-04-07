@@ -383,6 +383,23 @@ describe('Vapor Mode hydration', () => {
   })
 
   describe('component', () => {
+    test('root component should not enter beforeMount twice during hydration', async () => {
+      const beforeMount = vi.fn()
+      await testHydration(
+        `
+          <script vapor>
+            import { onBeforeMount } from 'vue'
+            const data = _data
+            onBeforeMount(() => data.value.beforeMount())
+          </script>
+          <template><div>root</div></template>
+        `,
+        {},
+        ref({ beforeMount }),
+      )
+      expect(beforeMount).toHaveBeenCalledTimes(1)
+    })
+
     test('basic component', async () => {
       const { container, data } = await testHydration(
         `
@@ -4675,11 +4692,91 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
-    // required vapor Suspense
-    test.todo('hydrate safely when property used by async setup changed before render', async () => {})
+    describe('suspense', () => {
+      describe('VDOM suspense', () => {
+        test('hydrate VDOM Suspense vapor async setup should not enter mount hooks twice', async () => {
+          const beforeMount = vi.fn()
+          const data = ref({ beforeMount })
+          const vaporChildCode = `
+            <script vapor>
+              import { onBeforeMount } from 'vue'
+              const data = _data
+              onBeforeMount(() => data.value.beforeMount())
+              await new Promise(r => setTimeout(r, 10))
+            </script>
+            <template><h1>Async component</h1></template>
+          `
+          const appCode = `
+            <script setup>
+              import { Suspense } from 'vue'
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <components.VaporChild />
+              </Suspense>
+            </template>
+          `
 
-    // required vapor Suspense
-    test.todo('hydrate safely when property used by deep nested async setup changed before render', async () => {})
+          const serverComponents: any = {}
+          const clientComponents: any = {}
+          serverComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            serverComponents,
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+          clientComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            clientComponents,
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+
+          const serverApp = compile(appCode, data, serverComponents, {
+            vapor: false,
+            ssr: true,
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(serverApp),
+          )
+
+          const clientApp = compile(appCode, data, clientComponents, {
+            vapor: false,
+            ssr: false,
+          })
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+
+          const app = runtimeDom.createSSRApp(clientApp)
+          app.use(runtimeVapor.vaporInteropPlugin)
+
+          app.mount(container)
+          await new Promise(r => setTimeout(r, 10))
+          await nextTick()
+
+          // beforeMount should only be called once during hydration
+          expect(beforeMount).toHaveBeenCalledTimes(1)
+        })
+
+        test.todo('hydrate safely when property used by async setup changed before render', async () => {})
+        test.todo('hydrate safely when property used by deep nested async setup changed before render', async () => {})
+      })
+
+      // required vapor Suspense
+      describe.todo('vapor suspense', () => {
+        test.todo('hydrate safely when property used by async setup changed before render', async () => {})
+        test.todo('hydrate safely when property used by deep nested async setup changed before render', async () => {})
+      })
+    })
 
     test('unmount async wrapper before load', async () => {
       const data = ref({
