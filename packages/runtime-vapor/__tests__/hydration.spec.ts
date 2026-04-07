@@ -383,6 +383,23 @@ describe('Vapor Mode hydration', () => {
   })
 
   describe('component', () => {
+    test('root component should not enter beforeMount twice during hydration', async () => {
+      const beforeMount = vi.fn()
+      await testHydration(
+        `
+          <script vapor>
+            import { onBeforeMount } from 'vue'
+            const data = _data
+            onBeforeMount(() => data.value.beforeMount())
+          </script>
+          <template><div>root</div></template>
+        `,
+        {},
+        ref({ beforeMount }),
+      )
+      expect(beforeMount).toHaveBeenCalledTimes(1)
+    })
+
     test('basic component', async () => {
       const { container, data } = await testHydration(
         `
