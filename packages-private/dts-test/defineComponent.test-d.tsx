@@ -3,6 +3,7 @@ import {
   type ComponentOptions,
   type ComponentPublicInstance,
   type PropType,
+  type Ref,
   type SetupContext,
   type Slots,
   type SlotsType,
@@ -1173,6 +1174,62 @@ describe('componentOptions setup should be `SetupContext`', () => {
   expectType<ComponentOptions['setup']>(
     {} as (props: Record<string, any>, ctx: SetupContext) => any,
   )
+})
+
+describe('infer expose from `SetupContext`', () => {
+  // options
+  const Foo = defineComponent({
+    setup(
+      _props: { foo: number },
+      _ctx: SetupContext<EmitsOptions, {}, { bar: Ref<number> }>,
+    ) {},
+    render() {
+      expectType<number>(this.bar)
+    },
+  })
+  const foo = {} as InstanceType<typeof Foo>
+  expectType<IsAny<typeof foo.bar>>(false)
+  expectType<number>(foo.bar)
+
+  const Bar = defineComponent({
+    setup(
+      _props: { foo: 1 },
+      _ctx: {
+        expose: (exposed: { bar: Ref<number> }) => void
+      },
+    ) {},
+    render() {
+      expectType<number>(this.bar)
+    },
+  })
+  const bar = {} as InstanceType<typeof Bar>
+  expectType<IsAny<typeof bar.bar>>(false)
+  expectType<number>(bar.bar)
+
+  // functional
+  const Baz = defineComponent(
+    <T,>(
+      _props: { foo: T },
+      _ctx: SetupContext<EmitsOptions, {}, { bar: Ref<number> }>,
+    ) =>
+      () => [],
+  )
+  const baz = new Baz({ foo: 1 })
+  expectType<IsAny<typeof baz.bar>>(false)
+  expectType<number>(baz.bar)
+
+  const Qux = defineComponent(
+    <T,>(
+      _props: { foo: T },
+      _ctx: {
+        expose: (exposed: { bar: Ref<number> }) => void
+      },
+    ) =>
+      () => [],
+  )
+  const qux = new Qux({ foo: 1 })
+  expectType<IsAny<typeof qux.bar>>(false)
+  expectType<number>(qux.bar)
 })
 
 describe('extract instance type', () => {

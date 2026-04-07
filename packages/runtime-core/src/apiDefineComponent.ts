@@ -116,13 +116,14 @@ export type DefineSetupFnComponent<
   P extends Record<string, any>,
   E extends EmitsOptions = {},
   S extends SlotsType = SlotsType,
+  B extends Record<string, any> = {},
   Props = P & EmitsToProps<E>,
   PP = PublicProps,
 > = new (
   props: Props & PP,
 ) => CreateComponentPublicInstanceWithMixins<
   Props,
-  {},
+  B,
   {},
   {},
   {},
@@ -151,22 +152,24 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
+  B extends Record<string, any> = {},
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>,
+    ctx: SetupContext<E, S, B>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: (keyof NoInfer<Props>)[]
     emits?: E | EE[]
     slots?: S
   },
-): DefineSetupFnComponent<Props, E, S>
+): DefineSetupFnComponent<Props, E, S, B>
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
+  B extends Record<string, any> = {},
 >(
   setup: (
     props: Props,
@@ -177,7 +180,7 @@ export function defineComponent<
     emits?: E | EE[]
     slots?: S
   },
-): DefineSetupFnComponent<Props, E, S>
+): DefineSetupFnComponent<Props, E, S, B>
 
 // overload 2: defineComponent with options object, infer props from options
 export function defineComponent<
