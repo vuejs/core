@@ -28,6 +28,50 @@ export function setIsHydratingEnabled(value: boolean): void {
 
 export let currentHydrationNode: Node | null = null
 
+export type HydrationBoundaryOwner =
+  | 'root'
+  | 'fragment'
+  | 'element'
+  | 'if'
+  | 'for'
+  | 'slot'
+  | 'async'
+  | 'teleport'
+  | 'dynamic-component'
+
+export interface HydrationBoundaryState {
+  start: Node | null
+  end: Node | null
+  insertionAnchor: Node | null
+  owner: HydrationBoundaryOwner
+  cursorSource:
+    | 'current-hydration-node'
+    | 'logical-index'
+    | 'delegated-next-node'
+  delegatedTo?: 'vapor' | 'vdom'
+  plane?: 'main' | 'teleport-target'
+}
+
+export let currentHydrationBoundary: HydrationBoundaryState | null = null
+
+export function pushHydrationBoundary(
+  boundary: HydrationBoundaryState,
+): () => void {
+  const prev = currentHydrationBoundary
+  currentHydrationBoundary = boundary
+  return () => {
+    currentHydrationBoundary = prev
+  }
+}
+
+export function patchCurrentHydrationBoundary(
+  patch: Partial<HydrationBoundaryState>,
+): void {
+  if (currentHydrationBoundary) {
+    Object.assign(currentHydrationBoundary, patch)
+  }
+}
+
 export let isHydrating = false
 function setIsHydrating(value: boolean) {
   if (!isHydratingEnabled && !isVdomHydrating) return false
@@ -67,6 +111,7 @@ function performHydration<T>(
   }
   const prev = setIsHydrating(true)
   const prevHydrationNode = currentHydrationNode
+  const prevHydrationBoundary = currentHydrationBoundary
   currentHydrationNode = null
   try {
     setup()
@@ -74,18 +119,37 @@ function performHydration<T>(
   } finally {
     cleanup()
     currentHydrationNode = prevHydrationNode
+    currentHydrationBoundary = prevHydrationBoundary
     setIsHydrating(prev)
   }
 }
 
 export function withHydration(container: ParentNode, fn: () => void): void {
-  const setup = () => setInsertionState(container)
+  const setup = () => {
+    setInsertionState(container)
+    currentHydrationBoundary = {
+      start: container.firstChild,
+      end: null,
+      insertionAnchor: null,
+      owner: 'root',
+      cursorSource: 'logical-index',
+    }
+  }
   const cleanup = () => resetInsertionState()
   return performHydration(fn, setup, cleanup)
 }
 
 export function hydrateNode(node: Node, fn: () => void): void {
-  const setup = () => (currentHydrationNode = node)
+  const setup = () => {
+    currentHydrationNode = node
+    currentHydrationBoundary = {
+      start: node,
+      end: null,
+      insertionAnchor: null,
+      owner: 'root',
+      cursorSource: 'current-hydration-node',
+    }
+  }
   const cleanup = () => {}
   return performHydration(fn, setup, cleanup)
 }
@@ -98,10 +162,19 @@ export function enterHydration(node: Node): () => void {
 
   const prev = setIsHydrating(true)
   const prevHydrationNode = currentHydrationNode
+  const prevHydrationBoundary = currentHydrationBoundary
   currentHydrationNode = node
+  currentHydrationBoundary = {
+    start: node,
+    end: null,
+    insertionAnchor: null,
+    owner: 'root',
+    cursorSource: 'current-hydration-node',
+  }
 
   return () => {
     currentHydrationNode = prevHydrationNode
+    currentHydrationBoundary = prevHydrationBoundary
     setIsHydrating(prev)
     if (!prevHydrationEnabled) {
       setIsHydratingEnabled(false)
@@ -110,7 +183,7 @@ export function enterHydration(node: Node): () => void {
 }
 
 export let adoptTemplate: (node: Node, template: string) => Node | null
-export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
+export let locateHydrationNode: () => void
 
 type Anchor = Node & {
   // runtime-created or reused insertion anchor that must be preserved during
@@ -157,7 +230,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
     ) {
       node.before((node = createTextNode()))
     }
-    node = resolveHydrationTarget(node, template)
+    node = resolveHydrationTarget(node)
   }
 
   const type = node.nodeType
@@ -183,7 +256,7 @@ export function locateNextNode(node: Node): Node | null {
       : _next(node)
 }
 
-function locateHydrationNodeImpl(consumeFragmentStart = false) {
+function locateHydrationNodeImpl() {
   let node: Node | null
 
   if (insertionIndex !== undefined) {
@@ -194,11 +267,6 @@ function locateHydrationNodeImpl(consumeFragmentStart = false) {
     node = insertionParent.firstChild
   } else {
     node = currentHydrationNode
-  }
-
-  // consume fragment start anchor if needed
-  if (consumeFragmentStart && node && isComment(node, '[')) {
-    node = node.nextSibling
   }
 
   if (__DEV__ && !node) {
@@ -321,14 +389,9 @@ export function isHydrationAnchor(node: Node | null | undefined): boolean {
   return !!node && (node as Anchor).$vha === 1
 }
 
-function resolveHydrationTarget(node: Node, template: string): Node {
+function resolveHydrationTarget(node: Node): Node {
   while (true) {
     if (isHydrationAnchor(node)) {
-      const next = node.nextSibling
-      if (next && canUseAsHydrationTarget(next, template)) {
-        node = next
-        continue
-      }
       return node
     }
 
@@ -347,19 +410,4 @@ function resolveHydrationTarget(node: Node, template: string): Node {
 
     return node
   }
-}
-
-function canUseAsHydrationTarget(node: Node, template: string): boolean {
-  if (template[0] !== '<') {
-    return node.nodeType === 3
-  }
-
-  if (template.startsWith('<!')) {
-    return node.nodeType === 8
-  }
-
-  return (
-    node.nodeType === 1 &&
-    template.startsWith(`<${(node as Element).tagName.toLowerCase()}`)
-  )
 }

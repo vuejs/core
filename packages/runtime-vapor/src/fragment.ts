@@ -33,6 +33,8 @@ import {
   locateEndAnchor,
   locateHydrationNode,
   markHydrationAnchor,
+  patchCurrentHydrationBoundary,
+  pushHydrationBoundary,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { isArray } from '@vue/shared'
@@ -364,87 +366,114 @@ export class DynamicFragment extends VaporFragment {
     // re-enter `hydrate()` after its empty branch has already hydrated once.
     if (this.isAnchorPending) return
 
-    // reuse `<!---->` as anchor
-    // `<div v-if="false"></div>` -> `<!---->`
-    if (isEmpty) {
-      if (isComment(currentHydrationNode!, '')) {
-        this.anchor = markHydrationAnchor(currentHydrationNode!)
-        advanceHydrationNode(currentHydrationNode)
-        return
-      }
-    }
-
-    // Slot fallback can fall through an inner `v-if`. When the `if` resolves
-    // to an invalid block and the fallback is selected, the `if` still needs
-    // its own runtime anchor instead of reusing the parent slot's end anchor.
-    if (this.anchorLabel === 'if' && currentSlotEndAnchor) {
-      if (
-        currentEmptyFragment !== undefined &&
-        (!isValidBlock(this.nodes) || currentEmptyFragment === this)
-      ) {
-        const endAnchor = currentSlotEndAnchor
-        this.isAnchorPending = true
-        queuePostFlushCb(() =>
-          endAnchor.parentNode!.insertBefore(
-            (this.anchor = markHydrationAnchor(
-              __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
-            )),
-            endAnchor,
-          ),
-        )
-        return
-      }
-    }
-
-    const forwardedSlot = (this as any as SlotFragment).forwarded
-    const slotAnchor = isSlot ? currentSlotEndAnchor : null
-    // Reuse SSR `<!--]-->` as anchor.
-    // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
-    // Non-forwarded slots always own the closing `<!--]-->`, even when empty.
-    // Forwarded slots only own it when they rendered valid content.
-    if (
-      (isSlot && (!forwardedSlot || isValidBlock(this.nodes))) ||
-      (this.anchorLabel === 'if' &&
-        isArray(this.nodes) &&
-        this.nodes.length > 1)
-    ) {
-      const anchor = slotAnchor || currentHydrationNode
-      if (isComment(anchor!, ']')) {
-        this.anchor = markHydrationAnchor(anchor)
-        advanceHydrationNode(anchor)
-        return
-      } else if (__DEV__) {
-        throw new Error(
-          `Failed to locate ${this.anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
-        )
-      }
-    }
-
-    // Otherwise, create a new anchor.
-    // This covers: empty forwarded slots, dynamic-component,
-    // async component, keyed fragment.
-    let parentNode: Node | null
-    let nextNode: Node | null
-    if (forwardedSlot) {
-      parentNode = slotAnchor!.parentNode
-      nextNode = slotAnchor!.nextSibling
-    } else {
-      const node = findBlockNode(this.nodes)
-      parentNode = node.parentNode
-      nextNode = node.nextNode
-    }
-
-    // Assign `this.anchor` only after the anchor is inserted.
-    // Otherwise detached anchors could be observed too early by traversal
-    // logic such as `findLastChild()`.
-    queuePostFlushCb(() => {
-      parentNode!.insertBefore(
-        (this.anchor = markHydrationAnchor(
-          __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
-        )),
-        nextNode,
-      )
+    const restoreBoundary = pushHydrationBoundary({
+      start: currentHydrationNode,
+      end: null,
+      insertionAnchor: null,
+      owner: isSlot
+        ? 'slot'
+        : this.anchorLabel === 'if'
+          ? 'if'
+          : this.anchorLabel === 'dynamic-component'
+            ? 'dynamic-component'
+            : 'fragment',
+      cursorSource: 'current-hydration-node',
     })
+
+    try {
+      // reuse `<!---->` as anchor
+      // `<div v-if="false"></div>` -> `<!---->`
+      if (isEmpty) {
+        if (isComment(currentHydrationNode!, '')) {
+          this.anchor = markHydrationAnchor(currentHydrationNode!)
+          patchCurrentHydrationBoundary({
+            end: currentHydrationNode,
+            insertionAnchor: this.anchor,
+          })
+          advanceHydrationNode(currentHydrationNode)
+          return
+        }
+      }
+
+      // Slot fallback can fall through an inner `v-if`. When the `if` resolves
+      // to an invalid block and the fallback is selected, the `if` still needs
+      // its own runtime anchor instead of reusing the parent slot's end anchor.
+      if (this.anchorLabel === 'if' && currentSlotEndAnchor) {
+        if (
+          currentEmptyFragment !== undefined &&
+          (!isValidBlock(this.nodes) || currentEmptyFragment === this)
+        ) {
+          const endAnchor = currentSlotEndAnchor
+          patchCurrentHydrationBoundary({ end: endAnchor })
+          this.isAnchorPending = true
+          queuePostFlushCb(() =>
+            endAnchor.parentNode!.insertBefore(
+              (this.anchor = markHydrationAnchor(
+                __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
+              )),
+              endAnchor,
+            ),
+          )
+          return
+        }
+      }
+
+      const forwardedSlot = (this as any as SlotFragment).forwarded
+      const slotAnchor = isSlot ? currentSlotEndAnchor : null
+      // Reuse SSR `<!--]-->` as anchor.
+      // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
+      // Non-forwarded slots always own the closing `<!--]-->`, even when empty.
+      // Forwarded slots only own it when they rendered valid content.
+      if (
+        (isSlot && (!forwardedSlot || isValidBlock(this.nodes))) ||
+        (this.anchorLabel === 'if' &&
+          isArray(this.nodes) &&
+          this.nodes.length > 1)
+      ) {
+        const anchor = slotAnchor || currentHydrationNode
+        if (isComment(anchor!, ']')) {
+          this.anchor = markHydrationAnchor(anchor)
+          patchCurrentHydrationBoundary({
+            end: anchor,
+            insertionAnchor: this.anchor,
+          })
+          advanceHydrationNode(anchor)
+          return
+        } else if (__DEV__) {
+          throw new Error(
+            `Failed to locate ${this.anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
+          )
+        }
+      }
+
+      // Otherwise, create a new anchor.
+      // This covers: empty forwarded slots, dynamic-component,
+      // async component, keyed fragment.
+      let parentNode: Node | null
+      let nextNode: Node | null
+      if (forwardedSlot) {
+        parentNode = slotAnchor!.parentNode
+        nextNode = slotAnchor!.nextSibling
+      } else {
+        const node = findBlockNode(this.nodes)
+        parentNode = node.parentNode
+        nextNode = node.nextNode
+      }
+
+      // Assign `this.anchor` only after the anchor is inserted.
+      // Otherwise detached anchors could be observed too early by traversal
+      // logic such as `findLastChild()`.
+      queuePostFlushCb(() => {
+        parentNode!.insertBefore(
+          (this.anchor = markHydrationAnchor(
+            __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
+          )),
+          nextNode,
+        )
+      })
+    } finally {
+      restoreBoundary()
+    }
   }
 }
 
@@ -486,13 +515,30 @@ export class SlotFragment extends DynamicFragment {
   ): void {
     let prevEndAnchor: Node | null = null
     let pushedEndAnchor = false
+    let restoreBoundary: (() => void) | undefined
     if (isHydrating) {
       locateHydrationNode()
+      const start = currentHydrationNode
       if (isComment(currentHydrationNode!, '[')) {
         const endAnchor = locateEndAnchor(currentHydrationNode)
         setCurrentHydrationNode(currentHydrationNode.nextSibling)
         prevEndAnchor = setCurrentSlotEndAnchor(endAnchor)
         pushedEndAnchor = true
+        restoreBoundary = pushHydrationBoundary({
+          start: currentHydrationNode,
+          end: endAnchor,
+          insertionAnchor: null,
+          owner: 'slot',
+          cursorSource: 'current-hydration-node',
+        })
+      } else {
+        restoreBoundary = pushHydrationBoundary({
+          start,
+          end: null,
+          insertionAnchor: null,
+          owner: 'slot',
+          cursorSource: 'current-hydration-node',
+        })
       }
     }
 
@@ -535,6 +581,7 @@ export class SlotFragment extends DynamicFragment {
       if (isHydrating && pushedEndAnchor) {
         setCurrentSlotEndAnchor(prevEndAnchor)
       }
+      restoreBoundary && restoreBoundary()
     }
   }
 }

@@ -87,6 +87,7 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
+  isComment,
   isHydrating,
   locateHydrationNode,
   locateNextNode,
@@ -245,7 +246,10 @@ export function createComponent(
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
   if (isHydrating) {
-    locateHydrationNode(component.__multiRoot)
+    locateHydrationNode()
+    if (component.__multiRoot && isComment(currentHydrationNode!, '[')) {
+      setCurrentHydrationNode(currentHydrationNode!.nextSibling)
+    }
   } else {
     resetInsertionState()
   }

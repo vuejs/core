@@ -26,8 +26,11 @@ import {
 } from './insertionState'
 import {
   advanceHydrationNode,
+  currentHydrationNode,
+  isComment,
   isHydrating,
   locateHydrationNode,
+  setCurrentHydrationNode,
 } from './dom/hydration'
 import { DynamicFragment, type VaporFragment } from './fragment'
 import type { KeepAliveInstance } from './components/KeepAlive'
@@ -70,7 +73,11 @@ export function createDynamicComponent(
 
         const frag = appContext.vapor.vdomMountVNode(value, currentInstance)
         if (isHydrating) {
-          locateHydrationNode(shouldConsumeFragmentStart(value))
+          const consumeFragmentStart = shouldConsumeFragmentStart(value)
+          locateHydrationNode()
+          if (consumeFragmentStart && isComment(currentHydrationNode!, '[')) {
+            setCurrentHydrationNode(currentHydrationNode!.nextSibling)
+          }
           frag.hydrate()
           if (_isLastInsertion) {
             advanceHydrationNode(_insertionParent!)

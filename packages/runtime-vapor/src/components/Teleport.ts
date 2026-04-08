@@ -40,6 +40,8 @@ import {
   isHydrating,
   logMismatchError,
   markHydrationAnchor,
+  patchCurrentHydrationBoundary,
+  pushHydrationBoundary,
   runWithoutHydration,
   setCurrentHydrationNode,
 } from '../dom/hydration'
@@ -415,58 +417,86 @@ export class TeleportFragment extends VaporFragment {
 
   hydrate = (): void => {
     if (!isHydrating) return
-    const target = (this.target = resolveTeleportTarget(
-      this.resolvedProps!,
-      querySelector,
-    ))
-    const disabled = isTeleportDisabled(this.resolvedProps!)
-    this.placeholder = currentHydrationNode!
-    if (target) {
-      const targetNode =
-        (target as TeleportTargetElement)._lpa || target.firstChild
-      if (disabled) {
-        this.hydrateDisabledTeleport(
-          target as TeleportTargetElement,
-          targetNode,
-        )
+    const restoreBoundary = pushHydrationBoundary({
+      start: currentHydrationNode,
+      end: null,
+      insertionAnchor: null,
+      owner: 'teleport',
+      cursorSource: 'current-hydration-node',
+      plane: 'main',
+    })
+    try {
+      const target = (this.target = resolveTeleportTarget(
+        this.resolvedProps!,
+        querySelector,
+      ))
+      const disabled = isTeleportDisabled(this.resolvedProps!)
+      this.placeholder = currentHydrationNode!
+      if (target) {
+        const targetNode =
+          (target as TeleportTargetElement)._lpa || target.firstChild
+        if (disabled) {
+          this.hydrateDisabledTeleport(
+            target as TeleportTargetElement,
+            targetNode,
+          )
+          patchCurrentHydrationBoundary({
+            end: this.anchor,
+            insertionAnchor: this.anchor,
+          })
+        } else {
+          this.anchor = markHydrationAnchor(
+            locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!,
+          )
+          patchCurrentHydrationBoundary({
+            end: this.anchor,
+            insertionAnchor: this.anchor,
+          })
+          this.mountContainer = target
+          this.hydrateTargetAnchors(target as TeleportTargetElement, targetNode)
+          this.mountAnchor = this.targetAnchor
+
+          if (targetNode) {
+            setCurrentHydrationNode(targetNode.nextSibling)
+          }
+
+          // if the HTML corresponding to Teleport is not embedded in the
+          // correct position on the final page during SSR. the targetAnchor will
+          // always be null, we need to manually add targetAnchor to ensure
+          // Teleport it can properly unmount or move
+          if (!this.targetAnchor) {
+            this.mountChildren(target)
+          } else {
+            this.initChildren()
+          }
+        }
+      } else if (disabled) {
+        // pass null as targetNode since there is no target
+        this.hydrateDisabledTeleport(null, null)
+        patchCurrentHydrationBoundary({
+          end: this.anchor,
+          insertionAnchor: this.anchor,
+        })
       } else {
+        // Align with VDOM Teleport hydration: keep main-view markers only and
+        // avoid mounting children inline or eagerly initializing them when the
+        // target is missing.
         this.anchor = markHydrationAnchor(
           locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!,
         )
-        this.mountContainer = target
-        this.hydrateTargetAnchors(target as TeleportTargetElement, targetNode)
-        this.mountAnchor = this.targetAnchor
-
-        if (targetNode) {
-          setCurrentHydrationNode(targetNode.nextSibling)
-        }
-
-        // if the HTML corresponding to Teleport is not embedded in the
-        // correct position on the final page during SSR. the targetAnchor will
-        // always be null, we need to manually add targetAnchor to ensure
-        // Teleport it can properly unmount or move
-        if (!this.targetAnchor) {
-          this.mountChildren(target)
-        } else {
-          this.initChildren()
-        }
+        patchCurrentHydrationBoundary({
+          end: this.anchor,
+          insertionAnchor: this.anchor,
+        })
       }
-    } else if (disabled) {
-      // pass null as targetNode since there is no target
-      this.hydrateDisabledTeleport(null, null)
-    } else {
-      // Align with VDOM Teleport hydration: keep main-view markers only and
-      // avoid mounting children inline or eagerly initializing them when the
-      // target is missing.
-      this.anchor = markHydrationAnchor(
-        locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!,
-      )
-    }
 
-    if (target || disabled) {
-      updateCssVars(this)
+      if (target || disabled) {
+        updateCssVars(this)
+      }
+      advanceHydrationNode(this.anchor!)
+    } finally {
+      restoreBoundary()
     }
-    advanceHydrationNode(this.anchor!)
   }
 }
 

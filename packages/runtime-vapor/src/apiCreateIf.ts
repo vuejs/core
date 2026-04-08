@@ -1,8 +1,11 @@
 import { type Block, type BlockFn, insert } from './block'
 import {
   advanceHydrationNode,
+  currentHydrationNode,
+  isComment,
   isHydrating,
   locateHydrationNode,
+  setCurrentHydrationNode,
 } from './dom/hydration'
 import {
   insertionAnchor,
@@ -32,9 +35,12 @@ export function createIf(
   if (once) {
     const ok = condition()
     if (isHydrating) {
-      locateHydrationNode(
-        decodeIfShape(blockShape!, ok) === VaporBlockShape.MULTI_ROOT,
-      )
+      const consumeFragmentStart =
+        decodeIfShape(blockShape!, ok) === VaporBlockShape.MULTI_ROOT
+      locateHydrationNode()
+      if (consumeFragmentStart && isComment(currentHydrationNode!, '[')) {
+        setCurrentHydrationNode(currentHydrationNode!.nextSibling)
+      }
     }
     frag = ok
       ? b1()
@@ -51,9 +57,12 @@ export function createIf(
     renderEffect(() => {
       const ok = condition()
       if (isHydrating) {
-        locateHydrationNode(
-          decodeIfShape(blockShape!, ok) === VaporBlockShape.MULTI_ROOT,
-        )
+        const consumeFragmentStart =
+          decodeIfShape(blockShape!, ok) === VaporBlockShape.MULTI_ROOT
+        locateHydrationNode()
+        if (consumeFragmentStart && isComment(currentHydrationNode!, '[')) {
+          setCurrentHydrationNode(currentHydrationNode!.nextSibling)
+        }
       }
       ;(frag as DynamicFragment).update(
         ok ? b1 : b2,
