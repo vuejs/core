@@ -2,6 +2,7 @@ lockfileVersion: '9.0'
 
 settings:
   autoInstallPeers: true
+  dedupePeers: true
   excludeLinksFromLockfile: false
 
 catalogs:
@@ -73,10 +74,10 @@ importers:
         version: 6.1.4
       '@vitest/coverage-v8':
         specifier: ^4.1.1
-        version: 4.1.1(vitest@4.1.1(@types/node@24.12.0)(jsdom@29.0.1)(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2)))
+        version: 4.1.1(vitest@4.1.1)
       '@vitest/eslint-plugin':
         specifier: ^1.6.13
-        version: 1.6.13(@typescript-eslint/eslint-plugin@8.57.2(@typescript-eslint/parser@8.57.2(eslint@10.1.0)(typescript@5.6.3))(eslint@10.1.0)(typescript@5.6.3))(eslint@10.1.0)(typescript@5.6.3)(vitest@4.1.1(@types/node@24.12.0)(jsdom@29.0.1)(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2)))
+        version: 1.6.13(@typescript-eslint/eslint-plugin@8.57.2)(eslint@10.1.0)(typescript@5.6.3)(vitest@4.1.1)
       '@vue/consolidate':
         specifier: 1.0.0
         version: 1.0.0
@@ -97,7 +98,7 @@ importers:
         version: 10.1.0
       eslint-plugin-import-x:
         specifier: ^4.16.2
-        version: 4.16.2(@typescript-eslint/utils@8.57.2(eslint@10.1.0)(typescript@5.6.3))(eslint-import-resolver-node@0.3.9)(eslint@10.1.0)
+        version: 4.16.2(@typescript-eslint/utils@8.57.2)(eslint-import-resolver-node@0.3.9)(eslint@10.1.0)
       estree-walker:
         specifier: 'catalog:'
         version: 2.0.2
@@ -181,7 +182,7 @@ importers:
         version: 7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2)
       vitest:
         specifier: ^4.1.1
-        version: 4.1.1(@types/node@24.12.0)(jsdom@29.0.1)(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2))
+        version: 4.1.1(@types/node@24.12.0)(jsdom@29.0.1)(vite@7.3.1)
 
   packages-private/dts-built-test:
     dependencies:
@@ -221,7 +222,7 @@ importers:
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
-        version: 6.0.5(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2))(vue@packages+vue)
+        version: 6.0.5(vite@7.3.1)(vue@packages+vue)
       vite:
         specifier: 'catalog:'
         version: 7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2)
@@ -239,7 +240,7 @@ importers:
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
-        version: 6.0.5(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2))(vue@packages+vue)
+        version: 6.0.5(vite@7.3.1)(vue@packages+vue)
       vite:
         specifier: 'catalog:'
         version: 7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2)
@@ -3451,8 +3452,8 @@ snapshots:
 
   '@asamuzakjp/css-color@5.0.1':
     dependencies:
-      '@csstools/css-calc': 3.1.1(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
-      '@csstools/css-color-parser': 4.0.2(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
+      '@csstools/css-calc': 3.1.1(@csstools/css-parser-algorithms@4.0.0)(@csstools/css-tokenizer@4.0.0)
+      '@csstools/css-color-parser': 4.0.2(@csstools/css-parser-algorithms@4.0.0)(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-parser-algorithms': 4.0.0(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-tokenizer': 4.0.0
       lru-cache: 11.2.7
@@ -3509,15 +3510,15 @@ snapshots:
 
   '@csstools/color-helpers@6.0.2': {}
 
-  '@csstools/css-calc@3.1.1(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)':
+  '@csstools/css-calc@3.1.1(@csstools/css-parser-algorithms@4.0.0)(@csstools/css-tokenizer@4.0.0)':
     dependencies:
       '@csstools/css-parser-algorithms': 4.0.0(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-tokenizer': 4.0.0
 
-  '@csstools/css-color-parser@4.0.2(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)':
+  '@csstools/css-color-parser@4.0.2(@csstools/css-parser-algorithms@4.0.0)(@csstools/css-tokenizer@4.0.0)':
     dependencies:
       '@csstools/color-helpers': 6.0.2
-      '@csstools/css-calc': 3.1.1(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
+      '@csstools/css-calc': 3.1.1(@csstools/css-parser-algorithms@4.0.0)(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-parser-algorithms': 4.0.0(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-tokenizer': 4.0.0
 
@@ -4007,7 +4008,7 @@ snapshots:
       '@types/node': 24.12.0
     optional: true
 
-  '@typescript-eslint/eslint-plugin@8.57.2(@typescript-eslint/parser@8.57.2(eslint@10.1.0)(typescript@5.6.3))(eslint@10.1.0)(typescript@5.6.3)':
+  '@typescript-eslint/eslint-plugin@8.57.2(@typescript-eslint/parser@8.57.2)(eslint@10.1.0)(typescript@5.6.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
       '@typescript-eslint/parser': 8.57.2(eslint@10.1.0)(typescript@5.6.3)
@@ -4159,13 +4160,13 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
-  '@vitejs/plugin-vue@6.0.5(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2))(vue@packages+vue)':
+  '@vitejs/plugin-vue@6.0.5(vite@7.3.1)(vue@packages+vue)':
     dependencies:
       '@rolldown/pluginutils': 1.0.0-rc.2
       vite: 7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2)
       vue: link:packages/vue
 
-  '@vitest/coverage-v8@4.1.1(vitest@4.1.1(@types/node@24.12.0)(jsdom@29.0.1)(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2)))':
+  '@vitest/coverage-v8@4.1.1(vitest@4.1.1)':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
       '@vitest/utils': 4.1.1
@@ -4177,17 +4178,17 @@ snapshots:
       obug: 2.1.1
       std-env: 4.0.0
       tinyrainbow: 3.0.3
-      vitest: 4.1.1(@types/node@24.12.0)(jsdom@29.0.1)(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2))
+      vitest: 4.1.1(@types/node@24.12.0)(jsdom@29.0.1)(vite@7.3.1)
 
-  '@vitest/eslint-plugin@1.6.13(@typescript-eslint/eslint-plugin@8.57.2(@typescript-eslint/parser@8.57.2(eslint@10.1.0)(typescript@5.6.3))(eslint@10.1.0)(typescript@5.6.3))(eslint@10.1.0)(typescript@5.6.3)(vitest@4.1.1(@types/node@24.12.0)(jsdom@29.0.1)(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2)))':
+  '@vitest/eslint-plugin@1.6.13(@typescript-eslint/eslint-plugin@8.57.2)(eslint@10.1.0)(typescript@5.6.3)(vitest@4.1.1)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.57.2
       '@typescript-eslint/utils': 8.57.2(eslint@10.1.0)(typescript@5.6.3)
       eslint: 10.1.0
     optionalDependencies:
-      '@typescript-eslint/eslint-plugin': 8.57.2(@typescript-eslint/parser@8.57.2(eslint@10.1.0)(typescript@5.6.3))(eslint@10.1.0)(typescript@5.6.3)
+      '@typescript-eslint/eslint-plugin': 8.57.2(@typescript-eslint/parser@8.57.2)(eslint@10.1.0)(typescript@5.6.3)
       typescript: 5.6.3
-      vitest: 4.1.1(@types/node@24.12.0)(jsdom@29.0.1)(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2))
+      vitest: 4.1.1(@types/node@24.12.0)(jsdom@29.0.1)(vite@7.3.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -4200,7 +4201,7 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.1.1(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2))':
+  '@vitest/mocker@4.1.1(vite@7.3.1)':
     dependencies:
       '@vitest/spy': 4.1.1
       estree-walker: 3.0.3
@@ -4755,7 +4756,7 @@ snapshots:
       - supports-color
     optional: true
 
-  eslint-plugin-import-x@4.16.2(@typescript-eslint/utils@8.57.2(eslint@10.1.0)(typescript@5.6.3))(eslint-import-resolver-node@0.3.9)(eslint@10.1.0):
+  eslint-plugin-import-x@4.16.2(@typescript-eslint/utils@8.57.2)(eslint-import-resolver-node@0.3.9)(eslint@10.1.0):
     dependencies:
       '@package-json/types': 0.0.12
       '@typescript-eslint/types': 8.56.1
@@ -6088,7 +6089,7 @@ snapshots:
 
   typescript-eslint@8.57.2(eslint@10.1.0)(typescript@5.6.3):
     dependencies:
-      '@typescript-eslint/eslint-plugin': 8.57.2(@typescript-eslint/parser@8.57.2(eslint@10.1.0)(typescript@5.6.3))(eslint@10.1.0)(typescript@5.6.3)
+      '@typescript-eslint/eslint-plugin': 8.57.2(@typescript-eslint/parser@8.57.2)(eslint@10.1.0)(typescript@5.6.3)
       '@typescript-eslint/parser': 8.57.2(eslint@10.1.0)(typescript@5.6.3)
       '@typescript-eslint/typescript-estree': 8.57.2(typescript@5.6.3)
       '@typescript-eslint/utils': 8.57.2(eslint@10.1.0)(typescript@5.6.3)
@@ -6171,10 +6172,10 @@ snapshots:
       sass: 1.98.0
       yaml: 2.8.2
 
-  vitest@4.1.1(@types/node@24.12.0)(jsdom@29.0.1)(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2)):
+  vitest@4.1.1(@types/node@24.12.0)(jsdom@29.0.1)(vite@7.3.1):
     dependencies:
       '@vitest/expect': 4.1.1
-      '@vitest/mocker': 4.1.1(vite@7.3.1(@types/node@24.12.0)(sass@1.98.0)(yaml@2.8.2))
+      '@vitest/mocker': 4.1.1(vite@7.3.1)
       '@vitest/pretty-format': 4.1.1
       '@vitest/runner': 4.1.1
       '@vitest/snapshot': 4.1.1
