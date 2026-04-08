@@ -39,6 +39,7 @@ import {
   isComment,
   isHydrating,
   logMismatchError,
+  markHydrationAnchor,
   runWithoutHydration,
   setCurrentHydrationNode,
 } from '../dom/hydration'
@@ -361,7 +362,7 @@ export class TeleportFragment extends VaporFragment {
         if ((targetAnchor as Comment).data === 'teleport start anchor') {
           this.targetStart = targetAnchor
         } else if ((targetAnchor as Comment).data === 'teleport anchor') {
-          this.targetAnchor = targetAnchor
+          this.targetAnchor = markHydrationAnchor(targetAnchor)
           target._lpa = this.targetAnchor.nextSibling
           break
         }
@@ -377,7 +378,9 @@ export class TeleportFragment extends VaporFragment {
     if (!isHydrating) return
     let nextNode = this.placeholder!.nextSibling!
     setCurrentHydrationNode(nextNode)
-    this.mountAnchor = this.anchor = locateTeleportEndAnchor(nextNode)!
+    this.mountAnchor = this.anchor = markHydrationAnchor(
+      locateTeleportEndAnchor(nextNode)!,
+    )
     this.mountContainer = parentNode(this.anchor)
     if (target) {
       this.hydrateTargetAnchors(target, targetNode)
@@ -392,7 +395,8 @@ export class TeleportFragment extends VaporFragment {
     if (!isHydrating) return
     target.appendChild((this.targetStart = createTextNode('')))
     target.appendChild(
-      (this.mountAnchor = this.targetAnchor = createTextNode('')),
+      (this.mountAnchor = this.targetAnchor =
+        markHydrationAnchor(createTextNode(''))),
     )
 
     if (!isMismatchAllowed(target as Element, MismatchTypes.CHILDREN)) {
@@ -426,9 +430,9 @@ export class TeleportFragment extends VaporFragment {
           targetNode,
         )
       } else {
-        this.anchor = locateTeleportEndAnchor(
-          currentHydrationNode!.nextSibling!,
-        )!
+        this.anchor = markHydrationAnchor(
+          locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!,
+        )
         this.mountContainer = target
         this.hydrateTargetAnchors(target as TeleportTargetElement, targetNode)
         this.mountAnchor = this.targetAnchor
@@ -454,7 +458,9 @@ export class TeleportFragment extends VaporFragment {
       // Align with VDOM Teleport hydration: keep main-view markers only and
       // avoid mounting children inline or eagerly initializing them when the
       // target is missing.
-      this.anchor = locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!
+      this.anchor = markHydrationAnchor(
+        locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!,
+      )
     }
 
     if (target || disabled) {

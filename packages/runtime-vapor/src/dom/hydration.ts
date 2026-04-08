@@ -61,6 +61,7 @@ function performHydration<T>(
     ;(Comment.prototype as any).$fe = undefined
     ;(Node.prototype as any).$idx = undefined
     ;(Node.prototype as any).$llc = undefined
+    ;(Node.prototype as any).$vha = undefined
 
     isOptimized = true
   }
@@ -111,13 +112,19 @@ export function enterHydration(node: Node): () => void {
 export let adoptTemplate: (node: Node, template: string) => Node | null
 export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
 
-type Anchor = Comment & {
-  // cached matching fragment end to avoid repeated traversal
-  // on nested fragments
+type Anchor = Node & {
+  // runtime-created or reused insertion anchor that must be preserved during
+  // hydration mismatch recovery.
+  $vha?: 1
+
+  // cached matching fragment end to avoid repeated traversal on nested
+  // comment fragments.
   $fe?: Anchor
 }
 
-export const isComment = (node: Node, data: string): node is Anchor =>
+type CommentAnchor = Comment & Anchor
+
+export const isComment = (node: Node, data: string): node is CommentAnchor =>
   node.nodeType === 8 && (node as Comment).data === data
 
 export function setCurrentHydrationNode(node: Node | null): void {
@@ -150,10 +157,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
     ) {
       node.before((node = createTextNode()))
     }
-
-    while (node.nodeType === 8) {
-      node = node.nextSibling!
-    }
+    node = resolveHydrationTarget(node, template)
   }
 
   const type = node.nodeType
@@ -209,7 +213,7 @@ function locateHydrationNodeImpl(consumeFragmentStart = false) {
 }
 
 export function locateEndAnchor(
-  node: Anchor,
+  node: CommentAnchor,
   open = '[',
   close = ']',
 ): Node | null {
@@ -218,8 +222,8 @@ export function locateEndAnchor(
     return node.$fe
   }
 
-  const stack: Anchor[] = [node]
-  while ((node = _next(node) as Anchor) && stack.length > 0) {
+  const stack: CommentAnchor[] = [node]
+  while ((node = _next(node) as CommentAnchor) && stack.length > 0) {
     if (node.nodeType === 8) {
       if (node.data === open) {
         stack.push(node)
@@ -256,9 +260,14 @@ function handleMismatch(node: Node, template: string): Node {
     removeFragmentNodes(node)
   }
 
-  const next = _next(node)
+  // Range-end markers and runtime insertion anchors are structural boundaries,
+  // not replaceable content. New nodes must be inserted before them.
+  const shouldInsertBefore = isHydrationAnchor(node)
   const container = parentNode(node)!
-  remove(node, container)
+  const next = shouldInsertBefore ? node : _next(node)
+  if (!shouldInsertBefore) {
+    remove(node, container)
+  }
 
   // fast path for text nodes
   if (template[0] !== '<') {
@@ -269,10 +278,14 @@ function handleMismatch(node: Node, template: string): Node {
   const t = createElement('template') as HTMLTemplateElement
   t.innerHTML = template
   const newNode = _child(t.content).cloneNode(true) as Element
-  newNode.innerHTML = (node as Element).innerHTML
-  Array.from((node as Element).attributes).forEach(attr => {
-    newNode.setAttribute(attr.name, attr.value)
-  })
+  // only carry over existing children/attrs when the original node is itself
+  // an element (the legacy element-vs-element mismatch case).
+  if (node.nodeType === 1) {
+    newNode.innerHTML = (node as Element).innerHTML
+    Array.from((node as Element).attributes).forEach(attr => {
+      newNode.setAttribute(attr.name, attr.value)
+    })
+  }
   container.insertBefore(newNode, next)
   return newNode
 }
@@ -288,7 +301,7 @@ export const logMismatchError = (): void => {
 }
 
 export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
-  const end = endAnchor || locateEndAnchor(node as Anchor)
+  const end = endAnchor || locateEndAnchor(node as CommentAnchor)
   while (true) {
     const next = _next(node)
     if (next && next !== end) {
@@ -297,4 +310,56 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
       break
     }
   }
+}
+
+export function markHydrationAnchor<T extends Node>(node: T): T {
+  ;(node as Anchor).$vha = 1
+  return node
+}
+
+export function isHydrationAnchor(node: Node | null | undefined): boolean {
+  return !!node && (node as Anchor).$vha === 1
+}
+
+function resolveHydrationTarget(node: Node, template: string): Node {
+  while (true) {
+    if (isHydrationAnchor(node)) {
+      const next = node.nextSibling
+      if (next && canUseAsHydrationTarget(next, template)) {
+        node = next
+        continue
+      }
+      return node
+    }
+
+    if (
+      node.nodeType === 8 &&
+      ((node as Comment).data === '[' ||
+        (node as Comment).data === ']' ||
+        (node as Comment).data === 'teleport start' ||
+        (node as Comment).data === 'teleport end')
+    ) {
+      const next = node.nextSibling
+      if (!next) return node
+      node = next
+      continue
+    }
+
+    return node
+  }
+}
+
+function canUseAsHydrationTarget(node: Node, template: string): boolean {
+  if (template[0] !== '<') {
+    return node.nodeType === 3
+  }
+
+  if (template.startsWith('<!')) {
+    return node.nodeType === 8
+  }
+
+  return (
+    node.nodeType === 1 &&
+    template.startsWith(`<${(node as Element).tagName.toLowerCase()}`)
+  )
 }

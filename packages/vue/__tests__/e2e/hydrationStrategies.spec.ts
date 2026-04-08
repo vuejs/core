@@ -123,9 +123,13 @@ describe('async component hydration strategies', () => {
 
       expect(spy).toBeCalledTimes(0)
       currentPage.off('pageerror', spy)
-      expect(
-        warn.some(w => w.includes('Skipping lazy hydration for component')),
-      ).toBe(true)
+      if (!vapor) {
+        expect(
+          warn.some(w => w.includes('Skipping lazy hydration for component')),
+        ).toBe(true)
+      } else {
+        expect(warn.some(w => w.includes('mismatch'))).toBe(true)
+      }
     })
 
     test('interaction', async () => {
