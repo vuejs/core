@@ -1184,7 +1184,7 @@ describe('infer slots from `SetupContext`', () => {
       _ctx: SetupContext<
         EmitsOptions,
         {
-          default: (props: { foo: number }) => any
+          default: (props: { foo: number }) => VNode
         }
       >,
     ) {},
@@ -1201,7 +1201,7 @@ describe('infer slots from `SetupContext`', () => {
       _props,
       _ctx: {
         slots: {
-          default: (props: { foo: number }) => any
+          default: (props: { foo: number }) => VNode
         }
       },
     ) {},
@@ -1220,7 +1220,7 @@ describe('infer slots from `SetupContext`', () => {
       _ctx: SetupContext<
         EmitsOptions,
         {
-          default: (props: { foo: T }) => any
+          default: (props: { foo: T }) => VNode
         }
       >,
     ) =>
@@ -1235,7 +1235,7 @@ describe('infer slots from `SetupContext`', () => {
       _props: { foo: T },
       _ctx: {
         slots: {
-          default: (props: { foo: T }) => any
+          default: (props: { foo: T }) => VNode
         }
       },
     ) =>

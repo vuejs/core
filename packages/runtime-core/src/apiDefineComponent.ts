@@ -33,7 +33,7 @@ import type {
   ComponentPublicInstanceConstructor,
   CreateComponentPublicInstanceWithMixins,
 } from './componentPublicInstance'
-import type { Slots, SlotsType } from './componentSlots'
+import type { SlotsType } from './componentSlots'
 import type { Directive } from './directives'
 import type { ComponentTypeEmits } from './apiSetupHelpers'
 
@@ -150,7 +150,7 @@ export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType | Slots = {},
+  S extends SlotsType | Record<string, any> = {},
 >(
   setup: (
     props: Props,
@@ -166,7 +166,7 @@ export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType | Slots = {},
+  S extends SlotsType | Record<string, any> = {},
 >(
   setup: (
     props: Props,
@@ -199,7 +199,7 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   InjectOptions extends ComponentInjectOptions = {},
   InjectKeys extends string = string,
-  TypeSlots extends SlotsType | Slots = {},
+  TypeSlots extends SlotsType | Record<string, any> = {},
   LocalComponents extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
