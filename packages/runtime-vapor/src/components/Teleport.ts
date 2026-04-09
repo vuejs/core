@@ -442,11 +442,7 @@ export class TeleportFragment extends VaporFragment {
 
   hydrate = (): void => {
     if (!isHydrating) return
-    const restoreBoundary = pushHydrationBoundary({
-      close: null,
-      preserve: null,
-      cleanupOnPop: false,
-    })
+    const restoreBoundary = pushHydrationBoundary({})
     try {
       const target = (this.target = resolveTeleportTarget(
         this.resolvedProps!,

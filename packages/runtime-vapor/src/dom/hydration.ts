@@ -30,23 +30,14 @@ export let currentHydrationNode: Node | null = null
 
 export interface HydrationBoundary {
   // Structural close marker the current owner must not cross during cleanup.
-  close: Node | null
+  close?: Node | null
   // Marker mismatch recovery must insert before instead of replacing.
-  preserve: Node | null
+  preserve?: Node | null
   // Whether restore should trim unclaimed SSR nodes up to `close`.
   cleanupOnPop?: boolean
 }
 
 export let currentHydrationBoundary: HydrationBoundary | null = null
-
-function canReachBoundaryClose(node: Node, close: Node): boolean {
-  let cur: Node | null = node
-  while (cur) {
-    if (cur === close) return true
-    cur = locateNextNode(cur)
-  }
-  return false
-}
 
 function finalizeHydrationBoundary(boundary: HydrationBoundary): void {
   const close = boundary.close
@@ -56,9 +47,14 @@ function finalizeHydrationBoundary(boundary: HydrationBoundary): void {
     return
   }
 
-  if (!canReachBoundaryClose(node, close)) {
-    return
+  // This boundary only owns cleanup while the current cursor is still inside
+  // its SSR range. If nested hydration has already advanced past `close`, stop
+  // here so we don't delete sibling or parent-owned SSR nodes by mistake.
+  let cur: Node | null = node
+  while (cur && cur !== close) {
+    cur = locateNextNode(cur)
   }
+  if (!cur) return
 
   warnHydrationChildrenMismatch((close as Node).parentElement)
 
@@ -157,11 +153,7 @@ function performHydration<T>(
 export function withHydration(container: ParentNode, fn: () => void): void {
   const setup = () => {
     setInsertionState(container)
-    currentHydrationBoundary = {
-      close: null,
-      preserve: null,
-      cleanupOnPop: false,
-    }
+    currentHydrationBoundary = {}
   }
   const cleanup = () => resetInsertionState()
   return performHydration(fn, setup, cleanup)
@@ -170,11 +162,7 @@ export function withHydration(container: ParentNode, fn: () => void): void {
 export function hydrateNode(node: Node, fn: () => void): void {
   const setup = () => {
     currentHydrationNode = node
-    currentHydrationBoundary = {
-      close: null,
-      preserve: null,
-      cleanupOnPop: false,
-    }
+    currentHydrationBoundary = {}
   }
   const cleanup = () => {}
   return performHydration(fn, setup, cleanup)
@@ -190,11 +178,7 @@ export function enterHydration(node: Node): () => void {
   const prevHydrationNode = currentHydrationNode
   const prevHydrationBoundary = currentHydrationBoundary
   currentHydrationNode = node
-  currentHydrationBoundary = {
-    close: null,
-    preserve: null,
-    cleanupOnPop: false,
-  }
+  currentHydrationBoundary = {}
 
   return () => {
     currentHydrationNode = prevHydrationNode

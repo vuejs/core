@@ -374,11 +374,7 @@ export class DynamicFragment extends VaporFragment {
     if (this.isAnchorPending) return
 
     let advanceAfterRestore: Node | null = null
-    const restoreBoundary = pushHydrationBoundary({
-      close: null,
-      preserve: null,
-      cleanupOnPop: false,
-    })
+    const restoreBoundary = pushHydrationBoundary({})
 
     try {
       // reuse `<!---->` as anchor
@@ -389,7 +385,6 @@ export class DynamicFragment extends VaporFragment {
           patchCurrentHydrationBoundary({
             close: currentHydrationNode,
             preserve: this.anchor,
-            cleanupOnPop: false,
           })
           advanceHydrationNode(currentHydrationNode)
           return
@@ -442,7 +437,6 @@ export class DynamicFragment extends VaporFragment {
           if (nextNode) {
             patchCurrentHydrationBoundary({
               close: nextNode,
-              preserve: null,
               cleanupOnPop: true,
             })
           } else {
@@ -611,15 +605,10 @@ export class SlotFragment extends DynamicFragment {
         pushedEndAnchor = true
         restoreBoundary = pushHydrationBoundary({
           close: endAnchor,
-          preserve: null,
           cleanupOnPop: true,
         })
       } else {
-        restoreBoundary = pushHydrationBoundary({
-          close: null,
-          preserve: null,
-          cleanupOnPop: true,
-        })
+        restoreBoundary = pushHydrationBoundary({ cleanupOnPop: true })
       }
     }
 

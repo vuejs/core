@@ -124,10 +124,7 @@ export const createFor = (
       isMounted = true
       if (isHydrating) {
         const hydrationStart = currentHydrationNode!
-        const restoreBoundary = pushHydrationBoundary({
-          close: null,
-          preserve: null,
-        })
+        const restoreBoundary = pushHydrationBoundary({})
         let nextNode
         const emptyLocalRange =
           isComment(hydrationStart, ']') &&
