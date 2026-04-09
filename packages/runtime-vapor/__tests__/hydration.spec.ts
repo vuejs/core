@@ -5806,38 +5806,51 @@ describe('mismatch handling', () => {
     expect(container.innerHTML).toBe('<span>foo</span><!--dynamic-component-->')
     expect(`Hydration node mismatch`).toHaveBeenWarned()
   })
-  // test('fragment mismatch removal', () => {
-  //   const { container } = mountWithHydration(
-  //     `<div><!--[--><div>foo</div><div>bar</div><!--]--></div>`,
-  //     () => h('div', [h('span', 'replaced')]),
-  //   )
-  //   expect(container.innerHTML).toBe('<div><span>replaced</span></div>')
-  //   expect(`Hydration node mismatch`).toHaveBeenWarned()
-  // })
-  // test('fragment not enough children', () => {
-  //   const { container } = mountWithHydration(
-  //     `<div><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
-  //     () => h('div', [[h('div', 'foo'), h('div', 'bar')], h('div', 'baz')]),
-  //   )
-  //   expect(container.innerHTML).toBe(
-  //     '<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
-  //   )
-  //   expect(`Hydration node mismatch`).toHaveBeenWarned()
-  // })
-  // test('fragment too many children', () => {
-  //   const { container } = mountWithHydration(
-  //     `<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
-  //     () => h('div', [[h('div', 'foo')], h('div', 'baz')]),
-  //   )
-  //   expect(container.innerHTML).toBe(
-  //     '<div><!--[--><div>foo</div><!--]--><div>baz</div></div>',
-  //   )
-  //   // fragment ends early and attempts to hydrate the extra <div>bar</div>
-  //   // as 2nd fragment child.
-  //   expect(`Hydration text content mismatch`).toHaveBeenWarned()
-  //   // excessive children removal
-  //   expect(`Hydration children mismatch`).toHaveBeenWarned()
-  // })
+  test('fragment mismatch removal', async () => {
+    const data = ref({ items: [] as string[] })
+    const { container } = await mountWithHydration(
+      `<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
+      `<div>
+        <div v-for="item in data.items" :key="item">foo</div>
+        <div>baz</div>
+      </div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div><!--[--><!--]--><div>baz</div></div>',
+    )
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+  })
+  test('fragment not enough children', async () => {
+    const data = ref({ items: ['a', 'b'] })
+    const { container } = await mountWithHydration(
+      `<div><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
+      `<div>
+        <div v-for="item in data.items" :key="item">foo</div>
+        <div>baz</div>
+      </div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div><!--[--><div>foo</div><div>foo</div><!--]--><div>baz</div></div>',
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+  })
+  test('fragment too many children', async () => {
+    const data = ref({ items: ['a'] })
+    const { container } = await mountWithHydration(
+      `<div><!--[--><div>foo</div><div>foo</div><!--]--><div>baz</div></div>`,
+      `<div>
+        <div v-for="item in data.items" :key="item">foo</div>
+        <div>baz</div>
+      </div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div><!--[--><div>foo</div><!--]--><div>baz</div></div>',
+    )
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+  })
   // test('Teleport target has empty children', () => {
   //   const teleportContainer = document.createElement('div')
   //   teleportContainer.id = 'teleport'
@@ -6296,40 +6309,51 @@ describe('data-allow-mismatch', () => {
     )
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
   })
-  // test('fragment mismatch removal', () => {
-  //   const { container } = mountWithHydration(
-  //     `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--></div>`,
-  //     () => h('div', [h('span', 'replaced')]),
-  //   )
-  //   expect(container.innerHTML).toBe(
-  //     '<div data-allow-mismatch="children"><span>replaced</span></div>',
-  //   )
-  //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  // })
-  // test('fragment not enough children', () => {
-  //   const { container } = mountWithHydration(
-  //     `<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
-  //     () => h('div', [[h('div', 'foo'), h('div', 'bar')], h('div', 'baz')]),
-  //   )
-  //   expect(container.innerHTML).toBe(
-  //     '<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
-  //   )
-  //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  // })
-  // test('fragment too many children', () => {
-  //   const { container } = mountWithHydration(
-  //     `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
-  //     () => h('div', [[h('div', 'foo')], h('div', 'baz')]),
-  //   )
-  //   expect(container.innerHTML).toBe(
-  //     '<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>',
-  //   )
-  //   // fragment ends early and attempts to hydrate the extra <div>bar</div>
-  //   // as 2nd fragment child.
-  //   expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
-  //   // excessive children removal
-  //   expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-  // })
+  test('fragment mismatch removal', async () => {
+    const data = ref({ items: [] as string[] })
+    const { container } = await mountWithHydration(
+      `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
+      `<div data-allow-mismatch="children">
+        <div v-for="item in data.items" :key="item">foo</div>
+        <div>baz</div>
+      </div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="children"><!--[--><!--]--><div>baz</div></div>',
+    )
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
+  test('fragment not enough children', async () => {
+    const data = ref({ items: ['a', 'b'] })
+    const { container } = await mountWithHydration(
+      `<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
+      `<div data-allow-mismatch="children">
+        <div v-for="item in data.items" :key="item">foo</div>
+        <div>baz</div>
+      </div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="children"><!--[--><div>foo</div><div>foo</div><!--]--><div>baz</div></div>',
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+  test('fragment too many children', async () => {
+    const data = ref({ items: ['a'] })
+    const { container } = await mountWithHydration(
+      `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>foo</div><!--]--><div>baz</div></div>`,
+      `<div data-allow-mismatch="children">
+        <div v-for="item in data.items" :key="item">foo</div>
+        <div>baz</div>
+      </div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>',
+    )
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
   // test('comment mismatch (element)', () => {
   //   const { container } = mountWithHydration(
   //     `<div data-allow-mismatch="children"><span></span></div>`,
@@ -7340,6 +7364,174 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(container.innerHTML).toBe(
       '<!--[--><!--dynamic-component--><span>tail-updated</span><!--]-->',
+    )
+  })
+
+  test('hydrate createDynamicComponent to null branch at end of container', async () => {
+    const data = ref({
+      show: true,
+      msg: 'late',
+    })
+    const code = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <component :is="data.show ? 'div' : null">{{ data.msg }}</component>
+      </template>`
+
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    data.value.show = false
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    createVaporSSRApp(clientComp).mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe('<!--dynamic-component-->')
+
+    data.value.show = true
+    await nextTick()
+    expect(container.innerHTML).toBe('<div>late</div><!--dynamic-component-->')
+
+    data.value.msg = 'late-updated'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div>late-updated</div><!--dynamic-component-->',
+    )
+  })
+
+  test('hydrate createDynamicComponent to null branch at end of allowed-mismatch container', async () => {
+    const data = ref({
+      show: true,
+      msg: 'late',
+    })
+    const code = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <div data-allow-mismatch="children">
+          <component :is="data.show ? 'div' : null">{{ data.msg }}</component>
+        </div>
+      </template>`
+
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    data.value.show = false
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    createVaporSSRApp(clientComp).mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="children"><!--dynamic-component--></div>',
+    )
+  })
+
+  test('hydrate Fragment dynamic component to null branch at end of container', async () => {
+    const data = ref({
+      showMulti: true,
+    })
+    const code = `<script setup>
+        import { Fragment, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showMulti
+            ? h(Fragment, null, [
+                h('div', null, 'first fragment'),
+                h('div', null, 'second fragment'),
+              ])
+            : null
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+      </template>`
+
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    data.value.showMulti = false
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    const app = createVaporSSRApp(clientComp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe('<!--dynamic-component-->')
+
+    data.value.showMulti = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>first fragment</div><div>second fragment</div><!--dynamic-component-->"
+    `)
+  })
+
+  test('hydrate Fragment dynamic component to null branch at end of allowed-mismatch container', async () => {
+    const data = ref({
+      showMulti: true,
+    })
+    const code = `<script setup>
+        import { Fragment, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showMulti
+            ? h(Fragment, null, [
+                h('div', null, 'first fragment'),
+                h('div', null, 'second fragment'),
+              ])
+            : null
+        )
+      </script>
+      <template>
+        <div data-allow-mismatch="children">
+          <component :is="vnode" />
+        </div>
+      </template>`
+
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    data.value.showMulti = false
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    const app = createVaporSSRApp(clientComp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="children"><!--dynamic-component--></div>',
     )
   })
 
