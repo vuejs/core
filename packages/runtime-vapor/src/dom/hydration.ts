@@ -155,7 +155,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
       node.before((node = createTextNode()))
     }
 
-    node = resolveHydrationTarget(node, template)
+    node = resolveHydrationTarget(node)
   }
 
   const type = node.nodeType
@@ -236,6 +236,31 @@ export function locateEndAnchor(
   return null
 }
 
+// Find the SSR close marker for the current owner.
+export function locateHydrationBoundaryClose(
+  node: Node,
+  closeHint: Node | null = null,
+): Node {
+  let close = closeHint
+  if (!close || !isComment(close, ']')) {
+    if (isComment(node, ']')) {
+      close = node
+    } else {
+      let candidate = locateNextNode(node)
+      while (candidate && !isComment(candidate, ']')) {
+        candidate = locateNextNode(candidate)
+      }
+      close = candidate
+    }
+  }
+
+  if (!close) {
+    return node
+  }
+
+  return close
+}
+
 function handleMismatch(node: Node, template: string): Node {
   if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
@@ -295,15 +320,52 @@ export const logMismatchError = (): void => {
 }
 
 export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
+  const parent = parentNode(node)
+  if (!parent) {
+    return
+  }
   const end = endAnchor || locateEndAnchor(node as Anchor)
   while (true) {
     const next = _next(node)
     if (next && next !== end) {
-      remove(next, parentNode(node)!)
+      remove(next, parent)
     } else {
       break
     }
   }
+}
+
+function removeHydrationNode(node: Node, close: Node | null = null): void {
+  const parent = parentNode(node)
+  if (!parent) {
+    return
+  }
+
+  if (isComment(node, '[')) {
+    const end = locateEndAnchor(node)
+    removeFragmentNodes(node, end || undefined)
+    const endParent = end && parentNode(end)
+    if (end && end !== close && endParent) {
+      remove(end, endParent)
+    }
+  } else if (isComment(node, 'teleport start')) {
+    const end = locateEndAnchor(node, 'teleport start', 'teleport end')
+    removeFragmentNodes(node, end || undefined)
+    const endParent = end && parentNode(end)
+    if (end && end !== close && endParent) {
+      remove(end, endParent)
+    }
+  }
+
+  remove(node, parent)
+}
+
+export function cleanupHydrationTail(node: Node): void {
+  const container = node.parentElement
+  if (container) {
+    warnHydrationChildrenMismatch(container)
+  }
+  removeHydrationNode(node)
 }
 
 export function markHydrationAnchor<T extends Node>(node: T): T {
@@ -315,14 +377,9 @@ export function isHydrationAnchor(node: Node | null | undefined): boolean {
   return !!node && (node as Anchor).$vha === 1
 }
 
-function resolveHydrationTarget(node: Node, template: string): Node {
+function resolveHydrationTarget(node: Node): Node {
   while (true) {
     if (isHydrationAnchor(node)) {
-      const next = node.nextSibling
-      if (next && canUseAsHydrationTarget(next, template)) {
-        node = next
-        continue
-      }
       return node
     }
 
@@ -343,17 +400,60 @@ function resolveHydrationTarget(node: Node, template: string): Node {
   }
 }
 
-function canUseAsHydrationTarget(node: Node, template: string): boolean {
-  if (template[0] !== '<') {
-    return node.nodeType === 3
+function finalizeHydrationBoundary(close: Node | null): void {
+  let node = currentHydrationNode
+
+  // Once the hydration cursor has already reached `close`, this scope has no
+  // unclaimed SSR nodes left to trim. Single-root paths commonly end up here,
+  // so there is no children-count mismatch to report for this boundary.
+  if (!close || !node || node === close) {
+    return
   }
 
-  if (template.startsWith('<!')) {
-    return node.nodeType === 8
+  // This boundary only owns cleanup while the current cursor is still inside
+  // its SSR range. If nested hydration has already advanced past `close`, stop
+  // here so we don't delete sibling or parent-owned SSR nodes by mistake.
+  let cur: Node | null = node
+  let hasRemovableNode = false
+  while (cur && cur !== close) {
+    if (!isHydrationAnchor(cur)) {
+      hasRemovableNode = true
+    }
+    cur = locateNextNode(cur)
+  }
+  if (!cur) return
+  if (!hasRemovableNode) {
+    setCurrentHydrationNode(close)
+    return
   }
 
-  return (
-    node.nodeType === 1 &&
-    template.startsWith(`<${(node as Element).tagName.toLowerCase()}`)
-  )
+  warnHydrationChildrenMismatch((close as Node).parentElement)
+
+  while (node && node !== close) {
+    const next = locateNextNode(node)
+    if (!isHydrationAnchor(node)) {
+      removeHydrationNode(node, close)
+    }
+    node = next!
+  }
+
+  setCurrentHydrationNode(close)
+}
+
+function warnHydrationChildrenMismatch(container: Element | null): void {
+  if (container && !isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Hydration children mismatch on`,
+        container,
+        `\nServer rendered element contains more child nodes than client nodes.`,
+      )
+    logMismatchError()
+  }
+}
+
+export function enterHydrationBoundary(close: Node | null): () => void {
+  return () => {
+    finalizeHydrationBoundary(close)
+  }
 }
