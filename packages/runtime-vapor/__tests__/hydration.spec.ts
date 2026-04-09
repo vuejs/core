@@ -4413,6 +4413,85 @@ describe('Vapor Mode hydration', () => {
       expect('Failed to locate Teleport target').toHaveBeenWarned()
     })
 
+    test('disabled teleport with null target should preserve trailing sibling when re-enabled without target', async () => {
+      const data = ref({
+        disabled: true,
+        target: undefined as string | undefined,
+        tail: 'tail',
+      })
+
+      const { container } = await mountWithHydration(
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail</span><!--]-->',
+        `<teleport :to="data.target" :disabled="data.disabled">
+          <div>content</div>
+        </teleport>
+        <span>{{data.tail}}</span>`,
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail</span><!--]-->',
+      )
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+      data.value.tail = 'tail-updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+      expect('Invalid Teleport target').not.toHaveBeenWarned()
+
+      data.value.disabled = false
+      await nextTick()
+      expect('Invalid Teleport target').toHaveBeenWarned()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+    })
+
+    test('enabled teleport with null target should preserve trailing sibling when toggling disabled', async () => {
+      const data = ref({
+        disabled: false,
+        target: '#non-existent-target-hydrate-sibling' as string | undefined,
+        tail: 'tail',
+      })
+
+      const { container } = await mountWithHydration(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail</span><!--]-->',
+        `<teleport :to="data.target" :disabled="data.disabled">
+          <div>content</div>
+        </teleport>
+        <span>{{data.tail}}</span>`,
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail</span><!--]-->',
+      )
+      expect('Failed to locate Teleport target').toHaveBeenWarned()
+
+      data.value.tail = 'tail-updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+
+      data.value.disabled = true
+      data.value.target = undefined
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+
+      data.value.disabled = false
+      data.value.target = '#non-existent-target-hydrate-sibling'
+      await nextTick()
+      expect('Invalid Teleport target on mount').toHaveBeenWarned()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+    })
+
     test('enabled teleport with null target should delay child setup until target becomes available', async () => {
       const version = ref('one')
       const target = ref<any>('#non-existent-target-hydrate-late')

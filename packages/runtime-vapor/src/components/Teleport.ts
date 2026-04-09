@@ -259,6 +259,20 @@ export class TeleportFragment extends VaporFragment {
     }
   }
 
+  private clearMainViewChildren(): void {
+    if (!this.placeholder || !this.anchor) return
+
+    let node = this.placeholder.nextSibling
+    while (node && node !== this.anchor) {
+      const next = node.nextSibling
+      remove(node, parentNode(node)!)
+      node = next
+    }
+
+    this.isMounted = false
+    this.mountContainer = null
+  }
+
   private handlePropsUpdate(): void {
     // not mounted yet
     if (!this.parent || isHydrating) return
@@ -270,6 +284,17 @@ export class TeleportFragment extends VaporFragment {
     }
     // mount into target container
     else {
+      // Align with initial enabled-null-target hydration: once Teleport leaves
+      // disabled mode, its children should no longer stay mounted inline in the
+      // main view if there is no valid target to move them into.
+      if (
+        this.placeholder &&
+        this.anchor &&
+        this.placeholder.nextSibling !== this.anchor
+      ) {
+        this.clearMainViewChildren()
+      }
+
       if (
         isTeleportDeferred(this.resolvedProps!) ||
         // force defer when the parent is not connected to the DOM,
