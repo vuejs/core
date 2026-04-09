@@ -60,7 +60,7 @@ function finalizeHydrationBoundary(boundary: HydrationBoundary): void {
     return
   }
 
-  warnHydrationChildrenMismatch((close as Node).parentElement!)
+  warnHydrationChildrenMismatch((close as Node).parentElement)
 
   while (node && node !== close) {
     const next = locateNextNode(node)
@@ -71,8 +71,8 @@ function finalizeHydrationBoundary(boundary: HydrationBoundary): void {
   setCurrentHydrationNode(close)
 }
 
-function warnHydrationChildrenMismatch(container: Element): void {
-  if (!isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
+function warnHydrationChildrenMismatch(container: Element | null): void {
+  if (container && !isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       warn(
         `Hydration children mismatch on`,
@@ -420,11 +420,15 @@ export const logMismatchError = (): void => {
 }
 
 export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
+  const parent = parentNode(node)
+  if (!parent) {
+    return
+  }
   const end = endAnchor || locateEndAnchor(node as CommentAnchor)
   while (true) {
     const next = _next(node)
     if (next && next !== end) {
-      remove(next, parentNode(node)!)
+      remove(next, parent)
     } else {
       break
     }
@@ -432,21 +436,28 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
 }
 
 function removeHydrationNode(node: Node, close: Node | null = null): void {
+  const parent = parentNode(node)
+  if (!parent) {
+    return
+  }
+
   if (isComment(node, '[')) {
     const end = locateEndAnchor(node)
     removeFragmentNodes(node, end || undefined)
-    if (end && end !== close) {
-      remove(end, parentNode(end)!)
+    const endParent = end && parentNode(end)
+    if (end && end !== close && endParent) {
+      remove(end, endParent)
     }
   } else if (isComment(node, 'teleport start')) {
     const end = locateEndAnchor(node, 'teleport start', 'teleport end')
     removeFragmentNodes(node, end || undefined)
-    if (end && end !== close) {
-      remove(end, parentNode(end)!)
+    const endParent = end && parentNode(end)
+    if (end && end !== close && endParent) {
+      remove(end, endParent)
     }
   }
 
-  remove(node, parentNode(node)!)
+  remove(node, parent)
 }
 
 export function cleanupHydrationTail(node: Node): void {
