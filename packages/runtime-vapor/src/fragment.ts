@@ -527,15 +527,6 @@ export class DynamicFragment extends VaporFragment {
   }
 }
 
-export let currentSlotEndAnchor: Node | null = null
-function setCurrentSlotEndAnchor(end: Node | null): Node | null {
-  try {
-    return currentSlotEndAnchor
-  } finally {
-    currentSlotEndAnchor = end
-  }
-}
-
 function isReusableDynamicFragmentAnchor(
   node: Comment,
   anchorLabel: string,
@@ -547,6 +538,15 @@ function isReusableDynamicFragmentAnchor(
         anchorLabel === 'async component' ||
         anchorLabel === 'keyed'))
   )
+}
+
+export let currentSlotEndAnchor: Node | null = null
+function setCurrentSlotEndAnchor(end: Node | null): Node | null {
+  try {
+    return currentSlotEndAnchor
+  } finally {
+    currentSlotEndAnchor = end
+  }
 }
 
 // Tracks slot fallback hydration that falls through an inner empty fragment,
@@ -578,6 +578,7 @@ export class SlotFragment extends DynamicFragment {
   ): void {
     let prevEndAnchor: Node | null = null
     let pushedEndAnchor = false
+    let exitHydrationBoundary: (() => void) | undefined
     if (isHydrating) {
       locateHydrationNode()
       if (isComment(currentHydrationNode!, '[')) {
@@ -585,6 +586,7 @@ export class SlotFragment extends DynamicFragment {
         setCurrentHydrationNode(currentHydrationNode.nextSibling)
         prevEndAnchor = setCurrentSlotEndAnchor(endAnchor)
         pushedEndAnchor = true
+        exitHydrationBoundary = enterHydrationBoundary(endAnchor)
       }
     }
 
@@ -627,6 +629,7 @@ export class SlotFragment extends DynamicFragment {
       if (isHydrating && pushedEndAnchor) {
         setCurrentSlotEndAnchor(prevEndAnchor)
       }
+      exitHydrationBoundary && exitHydrationBoundary()
     }
   }
 }
