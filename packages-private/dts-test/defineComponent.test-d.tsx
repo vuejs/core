@@ -1181,12 +1181,7 @@ describe('infer slots from `SetupContext`', () => {
   const Foo = defineComponent({
     setup(
       _props,
-      _ctx: SetupContext<
-        EmitsOptions,
-        {
-          default: (props: { foo: number }) => VNode
-        }
-      >,
+      _ctx: SetupContext<EmitsOptions, { default: { foo: number } }>,
     ) {},
     render() {
       this.$slots.default({ foo: 1 })
@@ -1216,15 +1211,16 @@ describe('infer slots from `SetupContext`', () => {
   // functional
   const Baz = defineComponent(
     <T,>(
-      _props: { foo: T },
-      _ctx: SetupContext<
+      props: { foo: T },
+      ctx: SetupContext<
         EmitsOptions,
-        {
+        SlotsType<{
           default: (props: { foo: T }) => VNode
-        }
+        }>
       >,
     ) =>
-      () => [],
+      () =>
+        ctx.slots.default(props),
   )
   const baz = new Baz({ foo: 1 })
   expectType<IsAny<typeof baz.$slots.default>>(false)
@@ -1232,14 +1228,15 @@ describe('infer slots from `SetupContext`', () => {
 
   const Qux = defineComponent(
     <T,>(
-      _props: { foo: T },
-      _ctx: {
+      props: { foo: T },
+      ctx: {
         slots: {
           default: (props: { foo: T }) => VNode
         }
       },
     ) =>
-      () => [],
+      () =>
+        ctx.slots.default(props),
   )
   const qux = new Qux({ foo: 1 })
   expectType<IsAny<typeof qux.$slots.default>>(false)
