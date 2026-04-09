@@ -346,7 +346,8 @@ export function setText(el: Text & { $txt?: string }, value: string): void {
       return
     }
 
-    if (!isMismatchAllowed(el.parentElement!, MismatchTypes.TEXT)) {
+    const parent = el.parentElement
+    if (parent && !isMismatchAllowed(parent, MismatchTypes.TEXT)) {
       ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
         warn(
           `Hydration text mismatch in`,

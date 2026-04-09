@@ -4439,6 +4439,7 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toBe(
         '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
       )
+      expect('Invalid Teleport target').not.toHaveBeenWarned()
 
       data.value.disabled = false
       await nextTick()
@@ -7228,6 +7229,37 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(container.innerHTML).toBe(
       '<!--[--><div>late-updated</div><!--dynamic-component--><!--keyed--><span>tail-updated</span><!--]-->',
+    )
+  })
+
+  test('hydrate createDynamicComponent to null branch should remove stale branch before trailing sibling', async () => {
+    const data = ref({
+      show: false,
+      msg: 'late',
+      tail: 'tail',
+    })
+    const { container } = await mountWithHydration(
+      '<!--[--><div>late</div><!--dynamic-component--><span>tail</span><!--]-->',
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <component :is="data.show ? 'div' : null">{{ data.msg }}</component>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<!--[--><!--dynamic-component--><span>tail</span><!--]-->',
+    )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[--><!--dynamic-component--><span>tail-updated</span><!--]-->',
     )
   })
 
