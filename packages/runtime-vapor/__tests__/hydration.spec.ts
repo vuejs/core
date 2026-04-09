@@ -4970,8 +4970,160 @@ describe('Vapor Mode hydration', () => {
       `)
     })
 
+    test('update async component slot content from empty v-for branch with trailing sibling after parent mount before async component resolve', async () => {
+      const data = ref({
+        items: [] as string[],
+        tail: 'tail',
+      })
+      const compCode = `<div><slot/></div>`
+      const SSRComp = compileVaporComponent(
+        compCode,
+        undefined,
+        undefined,
+        true,
+      )
+      let serverResolve: any
+      let AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            serverResolve = r
+          }),
+      )
+      const appCode = `<components.AsyncComp><span v-for="item in data.items" :key="item">{{item}}</span><i>{{data.tail}}</i></components.AsyncComp>`
+      const SSRApp = compileVaporComponent(appCode, data, { AsyncComp }, true)
+
+      const htmlPromise = VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      serverResolve(SSRComp)
+      const html = await htmlPromise
+
+      let clientResolve: any
+      AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      ) as any
+
+      const Comp = compileVaporComponent(compCode)
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+
+      data.value.items = ['foo', 'bar']
+      await nextTick()
+
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[-->
+      	<!--[--><span>foo</span><span>bar</span><!--]-->
+      	<i>tail</i><!--]-->
+      	</div><!--async component-->"
+      `)
+    })
+
     describe('suspense', () => {
       describe('VDOM suspense', () => {
+        test('hydrate VDOM Suspense vapor async setup updates empty v-for before trailing sibling', async () => {
+          const data = ref({
+            items: [] as string[],
+            tail: 'tail',
+          })
+          const vaporChildCode = `
+            <script vapor>
+              import { onMounted } from 'vue'
+              const data = _data
+              onMounted(() => {
+                data.value.items = ['foo', 'bar']
+              })
+              await new Promise(r => setTimeout(r, 10))
+            </script>
+            <template>
+              <div>
+                <span v-for="item in data.items" :key="item">{{ item }}</span>
+                <i>{{ data.tail }}</i>
+              </div>
+            </template>
+          `
+          const appCode = `
+            <script setup>
+              import { Suspense } from 'vue'
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <components.VaporChild />
+              </Suspense>
+            </template>
+          `
+
+          const serverComponents: any = {}
+          const clientComponents: any = {}
+          serverComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            serverComponents,
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+          clientComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            clientComponents,
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+          const serverComp = compile(appCode, data, serverComponents, {
+            vapor: false,
+            ssr: true,
+          })
+
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(serverComp),
+          )
+          expect(formatHtml(html)).toMatchInlineSnapshot(`
+          	"<div>
+          	<!--[--><!--]-->
+          	<i>tail</i></div>"
+          `)
+
+          const container = document.createElement('div')
+          document.body.appendChild(container)
+          container.innerHTML = html
+
+          const clientComp = compile(appCode, data, clientComponents, {
+            vapor: false,
+            ssr: false,
+          })
+          const app = runtimeDom.createSSRApp(clientComp)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+
+          await new Promise(r => setTimeout(r, 20))
+          await nextTick()
+
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+          	"<div>
+          	<!--[--><span>foo</span><span>bar</span><!--]-->
+          	<i>tail</i></div>"
+          `)
+        })
+
         test('hydrate VDOM Suspense vapor async setup should not enter mount hooks twice', async () => {
           const beforeMount = vi.fn()
           const data = ref({ beforeMount })
