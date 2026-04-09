@@ -4384,6 +4384,86 @@ describe('Vapor Mode hydration', () => {
       expect('Failed to locate Teleport target').toHaveBeenWarned()
     })
 
+    test('disabled teleport with null target should preserve trailing sibling when re-enabled without target', async () => {
+      const data = ref({
+        disabled: true,
+        target: undefined as string | undefined,
+        tail: 'tail',
+      })
+
+      const { container } = await mountWithHydration(
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail</span><!--]-->',
+        `<teleport :to="data.target" :disabled="data.disabled">
+          <div>content</div>
+        </teleport>
+        <span>{{data.tail}}</span>`,
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail</span><!--]-->',
+      )
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+      data.value.tail = 'tail-updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+
+      data.value.disabled = false
+      await nextTick()
+      expect('Invalid Teleport target').toHaveBeenWarned()
+      expect(
+        container.innerHTML.indexOf('<span>tail-updated</span>'),
+      ).toBeGreaterThan(container.innerHTML.indexOf('<!--teleport end-->'))
+      expect(container.innerHTML).toContain('<span>tail-updated</span><!--]-->')
+    })
+
+    test('enabled teleport with null target should preserve trailing sibling when toggling disabled', async () => {
+      const data = ref({
+        disabled: false,
+        target: '#non-existent-target-hydrate-sibling' as string | undefined,
+        tail: 'tail',
+      })
+
+      const { container } = await mountWithHydration(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail</span><!--]-->',
+        `<teleport :to="data.target" :disabled="data.disabled">
+          <div>content</div>
+        </teleport>
+        <span>{{data.tail}}</span>`,
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail</span><!--]-->',
+      )
+      expect('Failed to locate Teleport target').toHaveBeenWarned()
+
+      data.value.tail = 'tail-updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+
+      data.value.disabled = true
+      data.value.target = undefined
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+
+      data.value.disabled = false
+      data.value.target = '#non-existent-target-hydrate-sibling'
+      await nextTick()
+      expect('Invalid Teleport target on mount').toHaveBeenWarned()
+      expect(
+        container.innerHTML.indexOf('<span>tail-updated</span>'),
+      ).toBeGreaterThan(container.innerHTML.indexOf('<!--teleport end-->'))
+      expect(container.innerHTML).toContain('<span>tail-updated</span><!--]-->')
+    })
+
     test('enabled teleport with null target should delay child setup until target becomes available', async () => {
       const version = ref('one')
       const target = ref<any>('#non-existent-target-hydrate-late')
@@ -7043,6 +7123,92 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate empty createDynamicComponent should fill before trailing sibling', async () => {
+    const data = ref({
+      show: false,
+      msg: 'late',
+      tail: 'tail',
+    })
+    const { container } = await mountWithHydration(
+      '<!--[--><!--dynamic-component--><span>tail</span><!--]-->',
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <component :is="data.show ? 'div' : null">{{ data.msg }}</component>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<!--[--><!--dynamic-component--><span>tail</span><!--]-->',
+    )
+
+    data.value.show = true
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[--><div>late</div><!--dynamic-component--><span>tail</span><!--]-->',
+    )
+
+    data.value.msg = 'late-updated'
+    data.value.tail = 'tail-updated'
+    await nextTick()
+
+    expect(container.innerHTML).toBe(
+      '<!--[--><div>late-updated</div><!--dynamic-component--><span>tail-updated</span><!--]-->',
+    )
+  })
+
+  test('hydrate empty Transition keyed fragment should fill before trailing sibling', async () => {
+    const data = ref({
+      show: false,
+      key: 'empty',
+      msg: 'late',
+      tail: 'tail',
+    })
+    const { container } = await mountWithHydration(
+      '<!--[--><!----><span>tail</span><!--]-->',
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <Transition :css="false">
+          <component :is="data.show ? 'div' : null" :key="data.key">
+            {{ data.msg }}
+          </component>
+        </Transition>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<!--[--><!----><!--keyed--><span>tail</span><!--]-->',
+    )
+
+    data.value.show = true
+    data.value.key = 'filled'
+    await nextTick()
+    expect(container.innerHTML.indexOf('<div>late</div>')).toBeGreaterThan(-1)
+    expect(container.innerHTML.indexOf('<div>late</div>')).toBeLessThan(
+      container.innerHTML.indexOf('<span>tail</span>'),
+    )
+
+    data.value.msg = 'late-updated'
+    data.value.tail = 'tail-updated'
+    await nextTick()
+
+    expect(
+      container.innerHTML.indexOf('<div>late-updated</div>'),
+    ).toBeGreaterThan(-1)
+    expect(container.innerHTML.indexOf('<div>late-updated</div>')).toBeLessThan(
+      container.innerHTML.indexOf('<span>tail-updated</span>'),
+    )
+  })
+
   test('hydrate vapor slot in vdom component with sibling nodes', async () => {
     const msg = ref('Hello World!')
     const { container } = await testWithVaporApp(
@@ -9177,6 +9343,130 @@ describe('VDOM interop', () => {
       <div>After</div><!--]-->
       "
     `,
+    )
+  })
+
+  test('hydrate multi-root Vapor component should cleanup extra SSR text without crossing trailing sibling', async () => {
+    const data = ref({
+      msg: 'Hello',
+      extra: 'Tail',
+      after: 'After',
+    })
+
+    const childCode = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <span>{{ data.msg }}</span>{{ data.extra }}
+      </template>`
+
+    const appCode = `<script setup>
+        const components = _components
+        const data = _data
+      </script>
+      <template>
+        <div data-test="wrapper">
+          <components.Child />
+          <span>{{ data.after }}</span>
+        </div>
+      </template>`
+
+    const SSRChild = compileVaporComponent(childCode, data, undefined, true)
+    const SSRApp = compileVaporComponent(
+      appCode,
+      data,
+      { Child: SSRChild },
+      true,
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRApp),
+    )
+
+    data.value.extra = ''
+
+    const ClientChild = compileVaporComponent(childCode, data)
+    const ClientApp = compileVaporComponent(appCode, data, {
+      Child: ClientChild,
+    })
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    createVaporSSRApp(ClientApp).mount(container)
+
+    expect(`Hydration text mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<div data-test="wrapper"><!--[--><span>Hello</span><!--]--><span>After</span></div>',
+    )
+
+    data.value.extra = 'Updated'
+    data.value.after = 'After updated'
+    await nextTick()
+
+    expect(container.innerHTML).toBe(
+      '<div data-test="wrapper"><!--[--><span>Hello</span>Updated<!--]--><span>After updated</span></div>',
+    )
+  })
+
+  test('hydrate multi-root Vapor component should cleanup extra SSR text within allow-mismatch wrapper', async () => {
+    const data = ref({
+      msg: 'Hello',
+      extra: 'Tail',
+      after: 'After',
+    })
+
+    const childCode = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <span>{{ data.msg }}</span>{{ data.extra }}
+      </template>`
+
+    const appCode = `<script setup>
+        const components = _components
+        const data = _data
+      </script>
+      <template>
+        <div data-allow-mismatch="text">
+          <components.Child />
+          <span>{{ data.after }}</span>
+        </div>
+      </template>`
+
+    const SSRChild = compileVaporComponent(childCode, data, undefined, true)
+    const SSRApp = compileVaporComponent(
+      appCode,
+      data,
+      { Child: SSRChild },
+      true,
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRApp),
+    )
+
+    data.value.extra = ''
+
+    const ClientChild = compileVaporComponent(childCode, data)
+    const ClientApp = compileVaporComponent(appCode, data, {
+      Child: ClientChild,
+    })
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    createVaporSSRApp(ClientApp).mount(container)
+
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="text"><!--[--><span>Hello</span><!--]--><span>After</span></div>',
+    )
+
+    data.value.extra = 'Updated'
+    data.value.after = 'After updated'
+    await nextTick()
+
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="text"><!--[--><span>Hello</span>Updated<!--]--><span>After updated</span></div>',
     )
   })
 

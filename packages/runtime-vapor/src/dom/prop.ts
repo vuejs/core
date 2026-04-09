@@ -346,14 +346,16 @@ export function setText(el: Text & { $txt?: string }, value: string): void {
       return
     }
 
-    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      warn(
-        `Hydration text mismatch in`,
-        el.parentNode,
-        `\n  - rendered on server: ${JSON.stringify((el as Text).data)}` +
-          `\n  - expected on client: ${JSON.stringify(value)}`,
-      )
-    logMismatchError()
+    if (!isMismatchAllowed(el.parentElement!, MismatchTypes.TEXT)) {
+      ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+        warn(
+          `Hydration text mismatch in`,
+          el.parentNode,
+          `\n  - rendered on server: ${JSON.stringify((el as Text).data)}` +
+            `\n  - expected on client: ${JSON.stringify(value)}`,
+        )
+      logMismatchError()
+    }
   }
 
   if (el.$txt !== value) {

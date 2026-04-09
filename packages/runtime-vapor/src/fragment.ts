@@ -1,5 +1,9 @@
 import { EffectScope, type ShallowRef, setActiveSub } from '@vue/reactivity'
-import { createComment, createTextNode } from './dom/node'
+import {
+  createComment,
+  createTextNode,
+  parentNode as getParentNode,
+} from './dom/node'
 import {
   type Block,
   type BlockFn,
@@ -387,6 +391,26 @@ export class DynamicFragment extends VaporFragment {
           advanceHydrationNode(currentHydrationNode)
           return
         }
+      }
+
+      // Reuse an existing SSR comment anchor for empty dynamic-component /
+      // async-component / keyed-fragment branches. Without this, hydration can
+      // end up creating a detached runtime anchor and lose the parent/sibling
+      // position needed for same-hydration branch flips.
+      if (
+        !isValidBlock(this.nodes) &&
+        this.nodes instanceof Comment &&
+        getParentNode(this.nodes)
+      ) {
+        this.anchor = markHydrationAnchor(this.nodes)
+        this.nodes = []
+        patchCurrentHydrationBoundary({
+          close: this.anchor,
+          preserve: this.anchor,
+          cleanupOnPop: false,
+        })
+        advanceHydrationNode(this.anchor)
+        return
       }
 
       // Slot fallback can fall through an inner `v-if`. When the `if` resolves

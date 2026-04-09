@@ -787,6 +787,17 @@ export function createComponentWithFallback(
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   if (comp === NULL_DYNAMIC_COMPONENT) {
+    if (
+      isHydrating &&
+      currentHydrationNode &&
+      currentHydrationNode.nodeType === 8 &&
+      !isComment(currentHydrationNode, '[') &&
+      !isComment(currentHydrationNode, ']')
+    ) {
+      const node = currentHydrationNode
+      advanceHydrationNode(node)
+      return node as any as HTMLElement
+    }
     return (__DEV__
       ? createComment('ndc')
       : createTextNode('')) as any as HTMLElement
