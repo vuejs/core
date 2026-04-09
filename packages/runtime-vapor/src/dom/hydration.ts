@@ -79,17 +79,13 @@ function performHydration<T>(
 }
 
 export function withHydration(container: ParentNode, fn: () => void): void {
-  const setup = () => {
-    setInsertionState(container)
-  }
+  const setup = () => setInsertionState(container)
   const cleanup = () => resetInsertionState()
   return performHydration(fn, setup, cleanup)
 }
 
 export function hydrateNode(node: Node, fn: () => void): void {
-  const setup = () => {
-    currentHydrationNode = node
-  }
+  const setup = () => (currentHydrationNode = node)
   const cleanup = () => {}
   return performHydration(fn, setup, cleanup)
 }
