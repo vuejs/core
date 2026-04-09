@@ -79,10 +79,7 @@ export const createFor = (
   const _insertionIndex = insertionIndex
   const _isLastInsertion = isLastInsertion
   if (isHydrating) {
-    locateHydrationNode()
-    if (isComment(currentHydrationNode!, '[')) {
-      setCurrentHydrationNode(currentHydrationNode!.nextSibling)
-    }
+    locateHydrationNode(true)
   } else {
     resetInsertionState()
   }

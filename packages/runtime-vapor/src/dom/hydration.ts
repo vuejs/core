@@ -207,7 +207,7 @@ export function enterHydration(node: Node): () => void {
 }
 
 export let adoptTemplate: (node: Node, template: string) => Node | null
-export let locateHydrationNode: () => void
+export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
 
 type Anchor = Node & {
   // Runtime-created or reused preserve anchor that must stay in place during
@@ -280,7 +280,7 @@ export function locateNextNode(node: Node): Node | null {
       : _next(node)
 }
 
-function locateHydrationNodeImpl() {
+function locateHydrationNodeImpl(consumeFragmentStart = false) {
   let node: Node | null
 
   if (insertionIndex !== undefined) {
@@ -291,6 +291,11 @@ function locateHydrationNodeImpl() {
     node = insertionParent.firstChild
   } else {
     node = currentHydrationNode
+  }
+
+  // consume fragment start anchor if needed
+  if (consumeFragmentStart && node && isComment(node, '[')) {
+    node = node.nextSibling
   }
 
   if (__DEV__ && !node) {
@@ -379,12 +384,13 @@ function handleMismatch(node: Node, template: string): Node {
     removeFragmentNodes(node)
   }
 
-  // Range-end markers and preserve anchors are structural boundaries, not
-  // replaceable content. New nodes must be inserted before them.
-  const shouldInsertBefore = isHydrationAnchor(node)
+  // Reused hydration anchors are structural boundaries, not replaceable
+  // content. Mismatch recovery inserts the new node before the anchor and
+  // keeps the anchor in place.
+  const shouldPreserveAnchor = isHydrationAnchor(node)
   const container = parentNode(node)!
-  const next = shouldInsertBefore ? node : _next(node)
-  if (!shouldInsertBefore) {
+  const next = shouldPreserveAnchor ? node : _next(node)
+  if (!shouldPreserveAnchor) {
     remove(node, container)
   }
 
