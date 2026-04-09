@@ -7312,6 +7312,37 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate createDynamicComponent to null branch should remove stale branch before trailing sibling', async () => {
+    const data = ref({
+      show: false,
+      msg: 'late',
+      tail: 'tail',
+    })
+    const { container } = await mountWithHydration(
+      '<!--[--><div>late</div><!--dynamic-component--><span>tail</span><!--]-->',
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <component :is="data.show ? 'div' : null">{{ data.msg }}</component>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<!--[--><!--dynamic-component--><span>tail</span><!--]-->',
+    )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[--><!--dynamic-component--><span>tail-updated</span><!--]-->',
+    )
+  })
+
   test('hydrate vapor slot in vdom component with empty slot and sibling nodes', async () => {
     const msg = ref('Hello World!')
     const { container } = await testWithVaporApp(
