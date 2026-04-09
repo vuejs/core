@@ -374,6 +374,22 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
+    // Reuse an attached SSR comment anchor for empty dynamic-component /
+    // async-component / keyed-fragment branches. Otherwise hydration would
+    // fall back to creating a detached runtime anchor and lose the sibling
+    // position needed for later same-tick inserts.
+    if (
+      this.anchorLabel &&
+      !isValidBlock(this.nodes) &&
+      currentHydrationNode &&
+      isReusableDynamicFragmentAnchor(currentHydrationNode, this.anchorLabel)
+    ) {
+      this.anchor = markHydrationAnchor(currentHydrationNode)
+      this.nodes = []
+      advanceHydrationNode(this.anchor)
+      return
+    }
+
     // Slot fallback can fall through an inner `v-if`. When the `if` resolves
     // to an invalid block and the fallback is selected, the `if` still needs
     // its own runtime anchor instead of reusing the parent slot's end anchor.
@@ -455,6 +471,19 @@ function setCurrentSlotEndAnchor(end: Node | null): Node | null {
   } finally {
     currentSlotEndAnchor = end
   }
+}
+
+function isReusableDynamicFragmentAnchor(
+  node: Node,
+  anchorLabel: string,
+): boolean {
+  return (
+    isComment(node, anchorLabel) ||
+    (isComment(node, '') &&
+      (anchorLabel === 'dynamic-component' ||
+        anchorLabel === 'async component' ||
+        anchorLabel === 'keyed'))
+  )
 }
 
 // Tracks slot fallback hydration that falls through an inner empty fragment,
