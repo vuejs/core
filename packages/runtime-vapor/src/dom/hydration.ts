@@ -155,7 +155,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
       node.before((node = createTextNode()))
     }
 
-    node = resolveHydrationTarget(node)
+    node = resolveHydrationTarget(node, template)
   }
 
   const type = node.nodeType
@@ -307,29 +307,53 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
 }
 
 export function markHydrationAnchor<T extends Node>(node: T): T {
-  ;(node as T & { $vha?: 1 }).$vha = 1
+  ;(node as any).$vha = 1
   return node
 }
 
-function isHydrationAnchor(node: Node | null | undefined): boolean {
-  return !!node && (node as Node & { $vha?: 1 }).$vha === 1
+export function isHydrationAnchor(node: Node | null | undefined): boolean {
+  return !!node && (node as Anchor).$vha === 1
 }
 
-function resolveHydrationTarget(node: Node): Node {
+function resolveHydrationTarget(node: Node, template: string): Node {
   while (true) {
     if (isHydrationAnchor(node)) {
+      const next = node.nextSibling
+      if (next && canUseAsHydrationTarget(next, template)) {
+        node = next
+        continue
+      }
       return node
     }
 
-    if (node.nodeType === 8) {
+    if (
+      node.nodeType === 8 &&
+      ((node as Comment).data === '[' ||
+        (node as Comment).data === ']' ||
+        (node as Comment).data === 'teleport start' ||
+        (node as Comment).data === 'teleport end')
+    ) {
       const next = node.nextSibling
-      if (!next) {
-        return node
-      }
+      if (!next) return node
       node = next
       continue
     }
 
     return node
   }
+}
+
+function canUseAsHydrationTarget(node: Node, template: string): boolean {
+  if (template[0] !== '<') {
+    return node.nodeType === 3
+  }
+
+  if (template.startsWith('<!')) {
+    return node.nodeType === 8
+  }
+
+  return (
+    node.nodeType === 1 &&
+    template.startsWith(`<${(node as Element).tagName.toLowerCase()}`)
+  )
 }

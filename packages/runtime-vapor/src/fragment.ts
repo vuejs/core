@@ -32,6 +32,7 @@ import {
   isHydrating,
   locateEndAnchor,
   locateHydrationNode,
+  markHydrationAnchor,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { isArray } from '@vue/shared'
@@ -239,6 +240,27 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
+    // A non-slot fragment can render empty first during hydration, then flip
+    // to a real branch before hydration exits (for example inside an async
+    // component slot). Re-point the cursor at the fragment-owned insertion
+    // anchor so the late branch inserts before that anchor instead of
+    // consuming trailing hydrated siblings or the enclosing slot boundary.
+    if (
+      isHydrating &&
+      render &&
+      this.anchorLabel !== 'slot' &&
+      !isValidBlock(this.nodes)
+    ) {
+      const anchor =
+        this.anchor ||
+        (currentHydrationNode === currentSlotEndAnchor
+          ? currentSlotEndAnchor
+          : null)
+      if (anchor) {
+        setCurrentHydrationNode(markHydrationAnchor(anchor))
+      }
+    }
+
     this.renderBranch(render, transition, parent, key)
     setActiveSub(prevSub)
 
@@ -346,7 +368,7 @@ export class DynamicFragment extends VaporFragment {
     // `<div v-if="false"></div>` -> `<!---->`
     if (isEmpty) {
       if (isComment(currentHydrationNode!, '')) {
-        this.anchor = currentHydrationNode
+        this.anchor = markHydrationAnchor(currentHydrationNode!)
         advanceHydrationNode(currentHydrationNode)
         return
       }
@@ -364,9 +386,9 @@ export class DynamicFragment extends VaporFragment {
         this.isAnchorPending = true
         queuePostFlushCb(() =>
           endAnchor.parentNode!.insertBefore(
-            (this.anchor = __DEV__
-              ? createComment(this.anchorLabel!)
-              : createTextNode()),
+            (this.anchor = markHydrationAnchor(
+              __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
+            )),
             endAnchor,
           ),
         )
@@ -388,7 +410,7 @@ export class DynamicFragment extends VaporFragment {
     ) {
       const anchor = slotAnchor || currentHydrationNode
       if (isComment(anchor!, ']')) {
-        this.anchor = anchor
+        this.anchor = markHydrationAnchor(anchor)
         advanceHydrationNode(anchor)
         return
       } else if (__DEV__) {
@@ -417,9 +439,9 @@ export class DynamicFragment extends VaporFragment {
     // logic such as `findLastChild()`.
     queuePostFlushCb(() => {
       parentNode!.insertBefore(
-        (this.anchor = __DEV__
-          ? createComment(this.anchorLabel!)
-          : createTextNode()),
+        (this.anchor = markHydrationAnchor(
+          __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
+        )),
         nextNode,
       )
     })
