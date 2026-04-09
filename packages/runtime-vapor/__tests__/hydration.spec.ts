@@ -7231,6 +7231,87 @@ describe('VDOM interop', () => {
     `)
   })
 
+  test('hydrate empty createDynamicComponent should fill before trailing sibling', async () => {
+    const data = ref({
+      show: false,
+      msg: 'late',
+      tail: 'tail',
+    })
+    const { container } = await mountWithHydration(
+      '<!--[--><!--dynamic-component--><span>tail</span><!--]-->',
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <component :is="data.show ? 'div' : null">{{ data.msg }}</component>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<!--[--><!--dynamic-component--><span>tail</span><!--]-->',
+    )
+
+    data.value.show = true
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[--><div>late</div><!--dynamic-component--><span>tail</span><!--]-->',
+    )
+
+    data.value.msg = 'late-updated'
+    data.value.tail = 'tail-updated'
+    await nextTick()
+
+    expect(container.innerHTML).toBe(
+      '<!--[--><div>late-updated</div><!--dynamic-component--><span>tail-updated</span><!--]-->',
+    )
+  })
+
+  test('hydrate empty createDynamicComponent under keyed Transition should fill before trailing sibling', async () => {
+    const data = ref({
+      show: false,
+      key: 'empty',
+      msg: 'late',
+      tail: 'tail',
+    })
+    const { container } = await mountWithHydration(
+      '<!--[--><!----><span>tail</span><!--]-->',
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <Transition :css="false">
+          <component :is="data.show ? 'div' : null" :key="data.key">
+            {{ data.msg }}
+          </component>
+        </Transition>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<!--[--><!----><!--keyed--><span>tail</span><!--]-->',
+    )
+
+    data.value.show = true
+    data.value.key = 'filled'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[--><div>late</div><!--dynamic-component--><!--keyed--><span>tail</span><!--]-->',
+    )
+
+    data.value.msg = 'late-updated'
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[--><div>late-updated</div><!--dynamic-component--><!--keyed--><span>tail-updated</span><!--]-->',
+    )
+  })
+
   test('hydrate vapor slot in vdom component with empty slot and sibling nodes', async () => {
     const msg = ref('Hello World!')
     const { container } = await testWithVaporApp(
