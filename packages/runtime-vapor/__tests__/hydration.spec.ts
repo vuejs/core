@@ -9693,6 +9693,139 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate multi-root Vapor component should preserve close marker when client renders extra child', async () => {
+    const data = ref({
+      msg: 'Hello',
+      extra: '',
+    })
+
+    const childCode = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <span>{{ data.msg }}</span>{{ data.extra }}
+      </template>`
+
+    const appCode = `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <div>Before</div>
+        <components.Child />
+        <div>After</div>
+      </template>`
+
+    const SSRChild = compileVaporComponent(childCode, data, undefined, true)
+    const SSRApp = compileVaporComponent(
+      appCode,
+      data,
+      { Child: SSRChild },
+      true,
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRApp),
+    )
+
+    data.value.extra = 'Tail'
+
+    const ClientChild = compileVaporComponent(childCode, data)
+    const ClientApp = compileVaporComponent(appCode, data, {
+      Child: ClientChild,
+    })
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    createVaporSSRApp(ClientApp).mount(container)
+
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(`Hydration text mismatch`).toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><span>Hello</span>Tail<!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+
+    data.value.extra = 'Tail updated'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><span>Hello</span>Tail updated<!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate multi-root Vapor component should cleanup extra SSR text without crossing trailing sibling', async () => {
+    const data = ref({
+      msg: 'Hello',
+      extra: 'Tail',
+      after: 'After',
+    })
+
+    const childCode = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <span>{{ data.msg }}</span>{{ data.extra }}
+      </template>`
+
+    const appCode = `<script setup>
+        const components = _components
+        const data = _data
+      </script>
+      <template>
+        <div data-test="wrapper">
+          <components.Child />
+          <span>{{ data.after }}</span>
+        </div>
+      </template>`
+
+    const SSRChild = compileVaporComponent(childCode, data, undefined, true)
+    const SSRApp = compileVaporComponent(
+      appCode,
+      data,
+      { Child: SSRChild },
+      true,
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRApp),
+    )
+
+    data.value.extra = ''
+
+    const ClientChild = compileVaporComponent(childCode, data)
+    const ClientApp = compileVaporComponent(appCode, data, {
+      Child: ClientChild,
+    })
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    createVaporSSRApp(ClientApp).mount(container)
+
+    expect(`Hydration text mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<div data-test="wrapper"><!--[--><span>Hello</span><!--]--><span>After</span></div>',
+    )
+
+    data.value.extra = 'Updated'
+    data.value.after = 'After updated'
+    await nextTick()
+
+    expect(container.innerHTML).toBe(
+      '<div data-test="wrapper"><!--[--><span>Hello</span>Updated<!--]--><span>After updated</span></div>',
+    )
+  })
+
   test('hydrate multi-root VDOM via mountVNode as non-first child', async () => {
     const MultiRootVDOM = {
       setup() {
