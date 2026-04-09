@@ -61,6 +61,7 @@ function performHydration<T>(
     ;(Comment.prototype as any).$fe = undefined
     ;(Node.prototype as any).$idx = undefined
     ;(Node.prototype as any).$llc = undefined
+    ;(Node.prototype as any).$vha = undefined
 
     isOptimized = true
   }
@@ -112,6 +113,9 @@ export let adoptTemplate: (node: Node, template: string) => Node | null
 export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
 
 type Anchor = Comment & {
+  // reused hydration anchors must stay in place during mismatch recovery
+  $vha?: 1
+
   // cached matching fragment end to avoid repeated traversal
   // on nested fragments
   $fe?: Anchor
@@ -151,9 +155,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
       node.before((node = createTextNode()))
     }
 
-    while (node.nodeType === 8) {
-      node = node.nextSibling!
-    }
+    node = resolveHydrationTarget(node)
   }
 
   const type = node.nodeType
@@ -256,9 +258,12 @@ function handleMismatch(node: Node, template: string): Node {
     removeFragmentNodes(node)
   }
 
-  const next = _next(node)
   const container = parentNode(node)!
-  remove(node, container)
+  const shouldPreserveAnchor = isHydrationAnchor(node)
+  const next = shouldPreserveAnchor ? node : _next(node)
+  if (!shouldPreserveAnchor) {
+    remove(node, container)
+  }
 
   // fast path for text nodes
   if (template[0] !== '<') {
@@ -269,10 +274,12 @@ function handleMismatch(node: Node, template: string): Node {
   const t = createElement('template') as HTMLTemplateElement
   t.innerHTML = template
   const newNode = _child(t.content).cloneNode(true) as Element
-  newNode.innerHTML = (node as Element).innerHTML
-  Array.from((node as Element).attributes).forEach(attr => {
-    newNode.setAttribute(attr.name, attr.value)
-  })
+  if (node.nodeType === 1) {
+    newNode.innerHTML = (node as Element).innerHTML
+    Array.from((node as Element).attributes).forEach(attr => {
+      newNode.setAttribute(attr.name, attr.value)
+    })
+  }
   container.insertBefore(newNode, next)
   return newNode
 }
@@ -296,5 +303,33 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
     } else {
       break
     }
+  }
+}
+
+export function markHydrationAnchor<T extends Node>(node: T): T {
+  ;(node as T & { $vha?: 1 }).$vha = 1
+  return node
+}
+
+function isHydrationAnchor(node: Node | null | undefined): boolean {
+  return !!node && (node as Node & { $vha?: 1 }).$vha === 1
+}
+
+function resolveHydrationTarget(node: Node): Node {
+  while (true) {
+    if (isHydrationAnchor(node)) {
+      return node
+    }
+
+    if (node.nodeType === 8) {
+      const next = node.nextSibling
+      if (!next) {
+        return node
+      }
+      node = next
+      continue
+    }
+
+    return node
   }
 }
