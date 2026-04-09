@@ -86,7 +86,7 @@
     "estree-walker": "catalog:",
     "jsdom": "^29.0.1",
     "lint-staged": "^16.4.0",
-    "lodash": "^4.17.23",
+    "lodash": "^4.18.1",
     "magic-string": "^0.30.21",
     "markdown-table": "^3.0.4",
     "marked": "13.0.3",
