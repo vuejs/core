@@ -3182,7 +3182,7 @@ describe('Vapor Mode hydration', () => {
       expect(`Hydration node mismatch`).toHaveBeenWarned()
       expect(`Hydration text mismatch`).toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div>\n<!--[--><!--]-->\n<span>foo</span><span>bar</span><!--for--><i>tail</i></div>"`,
+        `"<div>\n<!--[--><span>foo</span><span>bar</span><!--]-->\n<i>tail</i></div>"`,
       )
     })
 
@@ -5104,8 +5104,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       	"<div>
       	<!--[-->
-      	<!--[--><!--]-->
-      	<span>foo</span><span>bar</span><!--for--><i>tail</i><!--]-->
+      	<!--[--><span>foo</span><span>bar</span><!--]-->
+      	<i>tail</i><!--]-->
       	</div><!--async component-->"
       `)
     })

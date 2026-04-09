@@ -26,14 +26,13 @@ import { VaporVForFlags } from '@vue/shared'
 import {
   advanceHydrationNode,
   currentHydrationNode,
+  enterHydrationBoundary,
   isComment,
   isHydrating,
   locateHydrationBoundaryClose,
   locateHydrationNode,
   locateNextNode,
   markHydrationAnchor,
-  patchCurrentHydrationBoundary,
-  pushHydrationBoundary,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import {
@@ -124,7 +123,7 @@ export const createFor = (
       isMounted = true
       if (isHydrating) {
         const hydrationStart = currentHydrationNode!
-        const restoreBoundary = pushHydrationBoundary({})
+        let exitHydrationBoundary: (() => void) | undefined
         let nextNode
         const emptyLocalRange =
           isComment(hydrationStart, ']') &&
@@ -134,31 +133,17 @@ export const createFor = (
 
         try {
           if (emptyLocalRange && newLength) {
-            patchCurrentHydrationBoundary({ close: hydrationStart })
-            const anchor = (hydrationStart.nextSibling || hydrationStart)!
-            parentAnchor = markHydrationAnchor(
-              __DEV__ ? createComment('for') : createTextNode(),
-            )
-            patchCurrentHydrationBoundary({
-              preserve: parentAnchor,
-              cleanupOnPop: true,
-            })
-            anchor.parentNode!.insertBefore(parentAnchor, anchor)
-            setCurrentHydrationNode(parentAnchor)
+            parentAnchor = markHydrationAnchor(hydrationStart)
+            exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
             for (let i = 0; i < newLength; i++) {
               mount(source, i)
             }
-            setCurrentHydrationNode(anchor)
+            setCurrentHydrationNode(parentAnchor)
           } else {
             for (let i = 0; i < newLength; i++) {
               if (isComment(currentHydrationNode!, ']')) {
-                const anchor = markHydrationAnchor(currentHydrationNode!)
-                patchCurrentHydrationBoundary({
-                  preserve: anchor,
-                  cleanupOnPop: true,
-                })
-                nextNode = anchor
-                setCurrentHydrationNode(anchor)
+                nextNode = markHydrationAnchor(currentHydrationNode!)
+                setCurrentHydrationNode(nextNode)
               } else {
                 nextNode = locateNextNode(currentHydrationNode!)
               }
@@ -169,11 +154,10 @@ export const createFor = (
             // Slot fallback can fall through an empty/invalid `v-for`. In that
             // case SSR only rendered the parent slot range, so this `v-for` has no
             // own `<!--]-->` to reuse. If `hydrationStart` is not the parent slot
-            // end anchor, use `hydrationStart.nextSibling` as the preserve anchor
+            // end anchor, use `hydrationStart.nextSibling` as the insertion point
             // so the runtime `<!--for-->` lands immediately after that local SSR
             // range. Otherwise insert it before the parent slot end anchor.
             if (slotFallbackRange && !isValidBlock(newBlocks)) {
-              patchCurrentHydrationBoundary({ close: currentSlotEndAnchor })
               const anchor =
                 // The invalid list still consumed local SSR item ranges.
                 currentHydrationNode !== hydrationStart
@@ -185,10 +169,6 @@ export const createFor = (
               parentAnchor = markHydrationAnchor(
                 __DEV__ ? createComment('for') : createTextNode(),
               )
-              patchCurrentHydrationBoundary({
-                preserve: parentAnchor,
-                cleanupOnPop: false,
-              })
               pendingHydrationAnchor = true
               if (
                 currentHydrationNode === hydrationStart ||
@@ -201,13 +181,8 @@ export const createFor = (
               )
             } else {
               const close = locateHydrationBoundaryClose(currentHydrationNode!)
-
               parentAnchor = markHydrationAnchor(close)
-              patchCurrentHydrationBoundary({
-                close: parentAnchor,
-                preserve: parentAnchor,
-                cleanupOnPop: true,
-              })
+              exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
               if (__DEV__ && !isComment(parentAnchor, ']')) {
                 throw new Error(
                   `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
@@ -223,7 +198,7 @@ export const createFor = (
             }
           }
         } finally {
-          restoreBoundary()
+          exitHydrationBoundary && exitHydrationBoundary()
         }
       } else {
         for (let i = 0; i < newLength; i++) {

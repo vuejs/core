@@ -87,13 +87,13 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
+  enterHydrationBoundary,
   isComment,
   isHydrating,
   locateEndAnchor,
   locateHydrationNode,
   locateNextNode,
   markHydrationAnchor,
-  pushHydrationBoundary,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { createComment, createElement, createTextNode } from './dom/node'
@@ -249,16 +249,14 @@ export function createComponent(
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
   let hydrationClose: Node | null = null
-  let restoreBoundary: (() => void) | undefined
+  let exitHydrationBoundary: (() => void) | undefined
   if (isHydrating) {
     locateHydrationNode()
     if (component.__multiRoot && isComment(currentHydrationNode!, '[')) {
       hydrationClose = locateEndAnchor(currentHydrationNode!)
-      restoreBoundary = pushHydrationBoundary({
-        close: hydrationClose,
-        preserve: hydrationClose && markHydrationAnchor(hydrationClose),
-        cleanupOnPop: true,
-      })
+      exitHydrationBoundary = enterHydrationBoundary(
+        hydrationClose && markHydrationAnchor(hydrationClose),
+      )
       setCurrentHydrationNode(currentHydrationNode!.nextSibling)
     }
   } else {
@@ -412,7 +410,7 @@ export function createComponent(
     return instance
   } finally {
     if (isHydrating) {
-      restoreBoundary && restoreBoundary()
+      exitHydrationBoundary && exitHydrationBoundary()
       if (hydrationClose && currentHydrationNode === hydrationClose) {
         advanceHydrationNode(hydrationClose)
       }
