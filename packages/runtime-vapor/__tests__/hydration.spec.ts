@@ -3157,6 +3157,35 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('hydrate non-empty v-for over empty SSR range with trailing sibling', async () => {
+      const ssrData = ref({
+        items: [] as string[],
+        tail: 'tail',
+      })
+      const clientData = ref({
+        items: ['foo', 'bar'],
+        tail: 'tail',
+      })
+      const code = `
+        <div>
+          <span v-for="item in data.items" :key="item">{{ item }}</span>
+          <i>{{ data.tail }}</i>
+        </div>
+      `
+      const SSRComp = compileVaporComponent(code, ssrData, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+
+      const { container } = await mountWithHydration(html, code, clientData)
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>\n<!--[--><!--]-->\n<span>foo</span><span>bar</span><!--for--><i>tail</i></div>"`,
+      )
+    })
+
     test('slot fallback from invalid v-for branch', async () => {
       const data = reactive({
         items: [{ text: 'bar', show: false }],

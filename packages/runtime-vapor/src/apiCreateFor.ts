@@ -135,9 +135,7 @@ export const createFor = (
         try {
           if (emptyLocalRange && newLength) {
             patchCurrentHydrationBoundary({ close: hydrationStart })
-            const anchor = (hydrationStart.nextSibling ||
-              currentSlotEndAnchor ||
-              hydrationStart)!
+            const anchor = (hydrationStart.nextSibling || hydrationStart)!
             parentAnchor = markHydrationAnchor(
               __DEV__ ? createComment('for') : createTextNode(),
             )

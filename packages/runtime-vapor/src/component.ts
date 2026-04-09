@@ -411,8 +411,8 @@ export function createComponent(
 
     return instance
   } finally {
-    if (restoreBoundary) {
-      restoreBoundary()
+    if (isHydrating) {
+      restoreBoundary && restoreBoundary()
       if (hydrationClose && currentHydrationNode === hydrationClose) {
         advanceHydrationNode(hydrationClose)
       }
