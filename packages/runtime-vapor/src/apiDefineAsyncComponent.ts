@@ -9,7 +9,6 @@ import {
   performAsyncHydrate,
   setCurrentInstance,
   useAsyncComponentState,
-  watch,
 } from '@vue/runtime-dom'
 import { defineVaporComponent } from './apiDefineComponent'
 import {
@@ -24,12 +23,10 @@ import {
   isComment,
   isHydrating,
   locateEndAnchor,
-  removeFragmentNodes,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { type TransitionOptions, insert, remove } from './block'
-import { _next, parentNode } from './dom/node'
-import { invokeArrayFns } from '@vue/shared'
+import type { TransitionOptions } from './block'
+import { _next } from './dom/node'
 
 /*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
@@ -92,45 +89,10 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         isComment(el, '[') ? locateEndAnchor(el)! : el.nextSibling,
       )
 
-      // If async component needs to be updated before hydration, hydration is no longer needed.
-      let isHydrated = false
-      watch(
-        () => instance.attrs,
-        () => {
-          // early return if already hydrated
-          if (isHydrated) return
-
-          // call the beforeUpdate hook to avoid calling hydrate in performAsyncHydrate
-          instance.bu && invokeArrayFns(instance.bu)
-
-          // mount the inner component and remove the placeholder
-          const parent = parentNode(el)!
-          load().then(() => {
-            if (instance.isUnmounted) return
-            hydrate()
-            if (isComment(el, '[')) {
-              const endAnchor = locateEndAnchor(el)!
-              removeFragmentNodes(el, endAnchor)
-              insert(instance.block, parent, endAnchor)
-            } else {
-              insert(instance.block, parent, el)
-              remove(el, parent)
-            }
-          })
-        },
-        { deep: true, once: true },
-      )
-
       performAsyncHydrate(
         el,
         instance,
-        () => {
-          hydrateNode(el, () => {
-            hydrate()
-            insert(instance.block, parentNode(el)!, el)
-            isHydrated = true
-          })
-        },
+        () => hydrateNode(el, hydrate),
         getResolvedComp,
         load,
         hydrateStrategy,
