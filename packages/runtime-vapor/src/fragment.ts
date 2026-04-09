@@ -31,12 +31,14 @@ import {
 import type { NodeRef } from './apiTemplateRef'
 import {
   advanceHydrationNode,
+  cleanupHydrationTail,
   currentHydrationNode,
   isComment,
   isHydrating,
   locateEndAnchor,
   locateHydrationBoundaryClose,
   locateHydrationNode,
+  locateNextNode,
   markHydrationAnchor,
   patchCurrentHydrationBoundary,
   pushHydrationBoundary,
@@ -371,6 +373,7 @@ export class DynamicFragment extends VaporFragment {
     // re-enter `hydrate()` after its empty branch has already hydrated once.
     if (this.isAnchorPending) return
 
+    let advanceAfterRestore: Node | null = null
     const restoreBoundary = pushHydrationBoundary({
       close: null,
       preserve: null,
@@ -398,19 +401,64 @@ export class DynamicFragment extends VaporFragment {
       // end up creating a detached runtime anchor and lose the parent/sibling
       // position needed for same-hydration branch flips.
       if (
+        this.anchorLabel &&
         !isValidBlock(this.nodes) &&
         this.nodes instanceof Comment &&
+        isReusableDynamicFragmentAnchor(this.nodes, this.anchorLabel) &&
         getParentNode(this.nodes)
       ) {
         this.anchor = markHydrationAnchor(this.nodes)
         this.nodes = []
+        const needsCleanup = currentHydrationNode !== this.anchor
         patchCurrentHydrationBoundary({
           close: this.anchor,
           preserve: this.anchor,
-          cleanupOnPop: false,
+          cleanupOnPop: needsCleanup,
         })
-        advanceHydrationNode(this.anchor)
+        if (needsCleanup) {
+          advanceAfterRestore = this.anchor
+        } else {
+          advanceHydrationNode(this.anchor)
+        }
         return
+      }
+
+      // Empty dynamic fragments can also start from a detached runtime comment
+      // (for example client null against non-empty SSR content). In that case
+      // derive the insertion point from the current hydration cursor rather
+      // than from the detached block node, and let boundary cleanup trim the
+      // SSR range before the next logical sibling.
+      if (
+        this.anchorLabel &&
+        !isValidBlock(this.nodes) &&
+        this.nodes instanceof Comment &&
+        !getParentNode(this.nodes) &&
+        currentHydrationNode
+      ) {
+        const parentNode = getParentNode(currentHydrationNode)
+        const nextNode = locateNextNode(currentHydrationNode)
+        if (parentNode) {
+          this.nodes = []
+          if (nextNode) {
+            patchCurrentHydrationBoundary({
+              close: nextNode,
+              preserve: null,
+              cleanupOnPop: true,
+            })
+          } else {
+            cleanupHydrationTail(currentHydrationNode)
+            setCurrentHydrationNode(null)
+          }
+          queuePostFlushCb(() => {
+            parentNode.insertBefore(
+              (this.anchor = markHydrationAnchor(
+                __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
+              )),
+              nextNode,
+            )
+          })
+          return
+        }
       }
 
       // Slot fallback can fall through an inner `v-if`. When the `if` resolves
@@ -495,8 +543,24 @@ export class DynamicFragment extends VaporFragment {
       })
     } finally {
       restoreBoundary()
+      if (advanceAfterRestore && currentHydrationNode === advanceAfterRestore) {
+        advanceHydrationNode(advanceAfterRestore)
+      }
     }
   }
+}
+
+function isReusableDynamicFragmentAnchor(
+  node: Comment,
+  anchorLabel: string,
+): boolean {
+  return (
+    isComment(node, anchorLabel) ||
+    (isComment(node, '') &&
+      (anchorLabel === 'dynamic-component' ||
+        anchorLabel === 'async component' ||
+        anchorLabel === 'keyed'))
+  )
 }
 
 export let currentSlotEndAnchor: Node | null = null

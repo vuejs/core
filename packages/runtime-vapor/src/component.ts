@@ -787,16 +787,19 @@ export function createComponentWithFallback(
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   if (comp === NULL_DYNAMIC_COMPONENT) {
-    if (
-      isHydrating &&
-      currentHydrationNode &&
-      currentHydrationNode.nodeType === 8 &&
-      !isComment(currentHydrationNode, '[') &&
-      !isComment(currentHydrationNode, ']')
-    ) {
-      const node = currentHydrationNode
-      advanceHydrationNode(node)
-      return node as any as HTMLElement
+    if (isHydrating && currentHydrationNode) {
+      if (isReusableNullComponentAnchor(currentHydrationNode)) {
+        const node = currentHydrationNode
+        if (isComment(node, '')) {
+          advanceHydrationNode(node)
+        }
+        return node as any as HTMLElement
+      }
+
+      const nextAnchor = locateNextNode(currentHydrationNode)
+      if (nextAnchor && isReusableNullComponentAnchor(nextAnchor)) {
+        return nextAnchor as any as HTMLElement
+      }
     }
     return (__DEV__
       ? createComment('ndc')
@@ -815,6 +818,15 @@ export function createComponentWithFallback(
   }
 
   return createPlainElement(comp, rawProps, rawSlots, isSingleRoot, once)
+}
+
+function isReusableNullComponentAnchor(node: Node): boolean {
+  return (
+    isComment(node, '') ||
+    isComment(node, 'dynamic-component') ||
+    isComment(node, 'async component') ||
+    isComment(node, 'keyed')
+  )
 }
 
 export function createPlainElement(

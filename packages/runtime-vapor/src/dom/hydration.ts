@@ -60,28 +60,27 @@ function finalizeHydrationBoundary(boundary: HydrationBoundary): void {
     return
   }
 
-  if (
-    !isMismatchAllowed((close as Node).parentElement!, MismatchTypes.CHILDREN)
-  ) {
-    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      warn(
-        `Hydration children mismatch on`,
-        (close as Node).parentElement,
-        `\nServer rendered element contains more child nodes than client nodes.`,
-      )
-    logMismatchError()
-  }
+  warnHydrationChildrenMismatch((close as Node).parentElement!)
 
   while (node && node !== close) {
     const next = locateNextNode(node)
-    if (isComment(node, '[')) {
-      removeFragmentNodes(node)
-    }
-    remove(node, parentNode(node)!)
+    removeHydrationNode(node, close)
     node = next!
   }
 
   setCurrentHydrationNode(close)
+}
+
+function warnHydrationChildrenMismatch(container: Element): void {
+  if (!isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Hydration children mismatch on`,
+        container,
+        `\nServer rendered element contains more child nodes than client nodes.`,
+      )
+    logMismatchError()
+  }
 }
 
 export function pushHydrationBoundary(boundary: HydrationBoundary): () => void {
@@ -430,6 +429,32 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
       break
     }
   }
+}
+
+function removeHydrationNode(node: Node, close: Node | null = null): void {
+  if (isComment(node, '[')) {
+    const end = locateEndAnchor(node)
+    removeFragmentNodes(node, end || undefined)
+    if (end && end !== close) {
+      remove(end, parentNode(end)!)
+    }
+  } else if (isComment(node, 'teleport start')) {
+    const end = locateEndAnchor(node, 'teleport start', 'teleport end')
+    removeFragmentNodes(node, end || undefined)
+    if (end && end !== close) {
+      remove(end, parentNode(end)!)
+    }
+  }
+
+  remove(node, parentNode(node)!)
+}
+
+export function cleanupHydrationTail(node: Node): void {
+  const container = node.parentElement
+  if (container) {
+    warnHydrationChildrenMismatch(container)
+  }
+  removeHydrationNode(node)
 }
 
 export function markHydrationAnchor<T extends Node>(node: T): T {
