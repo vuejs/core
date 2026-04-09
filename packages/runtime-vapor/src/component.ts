@@ -87,6 +87,7 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
+  isComment,
   isHydrating,
   locateHydrationNode,
   locateNextNode,
@@ -763,6 +764,23 @@ export function createComponentWithFallback(
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   if (comp === NULL_DYNAMIC_COMPONENT) {
+    if (isHydrating && currentHydrationNode) {
+      if (isReusableNullComponentAnchor(currentHydrationNode)) {
+        const node = currentHydrationNode
+        if (isComment(node, '')) {
+          advanceHydrationNode(node)
+        }
+        return node as any as HTMLElement
+      }
+
+      const nextAnchor = locateNextNode(currentHydrationNode)
+      if (nextAnchor && isReusableNullComponentAnchor(nextAnchor)) {
+        // Keep the cursor on the stale SSR node before `nextAnchor` so the
+        // owning DynamicFragment can trim that range on hydrate exit and then
+        // advance past the reused null-branch anchor in one place.
+        return nextAnchor as any as HTMLElement
+      }
+    }
     return (__DEV__
       ? createComment('ndc')
       : createTextNode('')) as any as HTMLElement
@@ -780,6 +798,15 @@ export function createComponentWithFallback(
   }
 
   return createPlainElement(comp, rawProps, rawSlots, isSingleRoot, once)
+}
+
+function isReusableNullComponentAnchor(node: Node): boolean {
+  return (
+    isComment(node, '') ||
+    isComment(node, 'dynamic-component') ||
+    isComment(node, 'async component') ||
+    isComment(node, 'keyed')
+  )
 }
 
 export function createPlainElement(

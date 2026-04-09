@@ -12,11 +12,14 @@ import {
 } from './block'
 import {
   type GenericComponentInstance,
+  MismatchTypes,
   type TransitionHooks,
   type VNode,
   currentInstance,
+  isMismatchAllowed,
   queuePostFlushCb,
   setCurrentInstance,
+  warn,
   warnExtraneousAttributes,
 } from '@vue/runtime-dom'
 import {
@@ -32,6 +35,8 @@ import {
   isHydrating,
   locateEndAnchor,
   locateHydrationNode,
+  locateNextNode,
+  logMismatchError,
   markHydrationAnchor,
   setCurrentHydrationNode,
 } from './dom/hydration'
@@ -374,6 +379,29 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
+    if (
+      this.anchorLabel &&
+      !isValidBlock(this.nodes) &&
+      this.nodes instanceof Comment &&
+      this.nodes.parentNode &&
+      isReusableDynamicFragmentAnchor(this.nodes, this.anchorLabel)
+    ) {
+      this.anchor = markHydrationAnchor(this.nodes)
+      this.nodes = []
+      if (
+        currentHydrationNode &&
+        shouldCleanupHydrationNodesBeforeAnchor(
+          currentHydrationNode,
+          this.anchor,
+        )
+      ) {
+        cleanupHydrationNodesBeforeAnchor(this.anchor)
+      } else {
+        advanceHydrationNode(this.anchor)
+      }
+      return
+    }
+
     // Reuse an attached SSR comment anchor for empty dynamic-component /
     // async-component / keyed-fragment branches. Otherwise hydration would
     // fall back to creating a detached runtime anchor and lose the sibling
@@ -483,6 +511,43 @@ function isReusableDynamicFragmentAnchor(
       (anchorLabel === 'dynamic-component' ||
         anchorLabel === 'async component' ||
         anchorLabel === 'keyed'))
+  )
+}
+
+function cleanupHydrationNodesBeforeAnchor(anchor: Node): void {
+  let node = currentHydrationNode
+  const container = anchor.parentElement
+  if (container && !isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
+    if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
+      warn(
+        `Hydration children mismatch on`,
+        container,
+        `\nServer rendered element contains more child nodes than client nodes.`,
+      )
+    }
+    logMismatchError()
+  }
+
+  while (node && node !== anchor) {
+    const next = locateNextNode(node)
+    const parent = node.parentNode
+    if (parent) {
+      remove(node, parent)
+    }
+    node = next
+  }
+
+  setCurrentHydrationNode(anchor)
+  advanceHydrationNode(anchor)
+}
+
+function shouldCleanupHydrationNodesBeforeAnchor(
+  node: Node,
+  anchor: Node,
+): boolean {
+  return !!(
+    node !== anchor &&
+    node.compareDocumentPosition(anchor) & Node.DOCUMENT_POSITION_FOLLOWING
   )
 }
 
