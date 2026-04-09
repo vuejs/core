@@ -796,6 +796,9 @@ export function createComponentWithFallback(
 
       const nextAnchor = locateNextNode(currentHydrationNode)
       if (nextAnchor && isReusableNullComponentAnchor(nextAnchor)) {
+        // Keep the cursor on the stale SSR node before `nextAnchor` so the
+        // owning DynamicFragment can trim that range on hydrate exit and then
+        // advance past the reused null-branch anchor in one place.
         return nextAnchor as any as HTMLElement
       }
     }
