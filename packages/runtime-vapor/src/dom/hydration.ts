@@ -28,44 +28,75 @@ export function setIsHydratingEnabled(value: boolean): void {
 
 export let currentHydrationNode: Node | null = null
 
-export type HydrationBoundaryOwner =
-  | 'root'
-  | 'fragment'
-  | 'element'
-  | 'if'
-  | 'for'
-  | 'slot'
-  | 'async'
-  | 'teleport'
-  | 'dynamic-component'
-
-export interface HydrationBoundaryState {
-  start: Node | null
-  end: Node | null
-  insertionAnchor: Node | null
-  owner: HydrationBoundaryOwner
-  cursorSource:
-    | 'current-hydration-node'
-    | 'logical-index'
-    | 'delegated-next-node'
-  delegatedTo?: 'vapor' | 'vdom'
-  plane?: 'main' | 'teleport-target'
+export interface HydrationBoundary {
+  // Structural close marker the current owner must not cross during cleanup.
+  close: Node | null
+  // Marker mismatch recovery must insert before instead of replacing.
+  preserve: Node | null
+  // Whether restore should trim unclaimed SSR nodes up to `close`.
+  cleanupOnPop?: boolean
 }
 
-export let currentHydrationBoundary: HydrationBoundaryState | null = null
+export let currentHydrationBoundary: HydrationBoundary | null = null
 
-export function pushHydrationBoundary(
-  boundary: HydrationBoundaryState,
-): () => void {
+function canReachBoundaryClose(node: Node, close: Node): boolean {
+  let cur: Node | null = node
+  while (cur) {
+    if (cur === close) return true
+    cur = locateNextNode(cur)
+  }
+  return false
+}
+
+function finalizeHydrationBoundary(boundary: HydrationBoundary): void {
+  const close = boundary.close
+  let node = currentHydrationNode
+
+  if (!close || !node || node === close || node === boundary.preserve) {
+    return
+  }
+
+  if (!canReachBoundaryClose(node, close)) {
+    return
+  }
+
+  if (
+    !isMismatchAllowed((close as Node).parentElement!, MismatchTypes.CHILDREN)
+  ) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Hydration children mismatch on`,
+        (close as Node).parentElement,
+        `\nServer rendered element contains more child nodes than client nodes.`,
+      )
+    logMismatchError()
+  }
+
+  while (node && node !== close) {
+    const next = locateNextNode(node)
+    if (isComment(node, '[')) {
+      removeFragmentNodes(node)
+    }
+    remove(node, parentNode(node)!)
+    node = next!
+  }
+
+  setCurrentHydrationNode(close)
+}
+
+export function pushHydrationBoundary(boundary: HydrationBoundary): () => void {
   const prev = currentHydrationBoundary
   currentHydrationBoundary = boundary
   return () => {
+    if (boundary.cleanupOnPop) {
+      finalizeHydrationBoundary(boundary)
+    }
     currentHydrationBoundary = prev
   }
 }
 
 export function patchCurrentHydrationBoundary(
-  patch: Partial<HydrationBoundaryState>,
+  patch: Partial<HydrationBoundary>,
 ): void {
   if (currentHydrationBoundary) {
     Object.assign(currentHydrationBoundary, patch)
@@ -128,11 +159,9 @@ export function withHydration(container: ParentNode, fn: () => void): void {
   const setup = () => {
     setInsertionState(container)
     currentHydrationBoundary = {
-      start: container.firstChild,
-      end: null,
-      insertionAnchor: null,
-      owner: 'root',
-      cursorSource: 'logical-index',
+      close: null,
+      preserve: null,
+      cleanupOnPop: false,
     }
   }
   const cleanup = () => resetInsertionState()
@@ -143,11 +172,9 @@ export function hydrateNode(node: Node, fn: () => void): void {
   const setup = () => {
     currentHydrationNode = node
     currentHydrationBoundary = {
-      start: node,
-      end: null,
-      insertionAnchor: null,
-      owner: 'root',
-      cursorSource: 'current-hydration-node',
+      close: null,
+      preserve: null,
+      cleanupOnPop: false,
     }
   }
   const cleanup = () => {}
@@ -165,11 +192,9 @@ export function enterHydration(node: Node): () => void {
   const prevHydrationBoundary = currentHydrationBoundary
   currentHydrationNode = node
   currentHydrationBoundary = {
-    start: node,
-    end: null,
-    insertionAnchor: null,
-    owner: 'root',
-    cursorSource: 'current-hydration-node',
+    close: null,
+    preserve: null,
+    cleanupOnPop: false,
   }
 
   return () => {
@@ -186,7 +211,7 @@ export let adoptTemplate: (node: Node, template: string) => Node | null
 export let locateHydrationNode: () => void
 
 type Anchor = Node & {
-  // runtime-created or reused insertion anchor that must be preserved during
+  // Runtime-created or reused preserve anchor that must stay in place during
   // hydration mismatch recovery.
   $vha?: 1
 
@@ -306,6 +331,33 @@ export function locateEndAnchor(
   return null
 }
 
+// Find the SSR close marker for the current owner and cache it on the active
+// boundary so restore-time cleanup can reuse the same structural limit.
+export function locateHydrationBoundaryClose(
+  node: Node,
+  closeHint: Node | null = null,
+): Node {
+  let close = closeHint
+  if (!close || !isComment(close, ']')) {
+    if (isComment(node, ']')) {
+      close = node
+    } else {
+      let candidate = locateNextNode(node)
+      while (candidate && !isComment(candidate, ']')) {
+        candidate = locateNextNode(candidate)
+      }
+      close = candidate
+    }
+  }
+
+  if (!close) {
+    return node
+  }
+
+  patchCurrentHydrationBoundary({ close })
+  return close
+}
+
 function handleMismatch(node: Node, template: string): Node {
   if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
@@ -328,8 +380,8 @@ function handleMismatch(node: Node, template: string): Node {
     removeFragmentNodes(node)
   }
 
-  // Range-end markers and runtime insertion anchors are structural boundaries,
-  // not replaceable content. New nodes must be inserted before them.
+  // Range-end markers and preserve anchors are structural boundaries, not
+  // replaceable content. New nodes must be inserted before them.
   const shouldInsertBefore = isHydrationAnchor(node)
   const container = parentNode(node)!
   const next = shouldInsertBefore ? node : _next(node)

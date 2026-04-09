@@ -5829,16 +5829,17 @@ describe('mismatch handling', () => {
     // expect(`Hydration text content mismatch`).toHaveBeenWarned()
     expect(`Hydration children mismatch`).toHaveBeenWarned()
   })
-  // test('Teleport target has empty children', () => {
-  //   const teleportContainer = document.createElement('div')
-  //   teleportContainer.id = 'teleport'
-  //   document.body.appendChild(teleportContainer)
-  //   mountWithHydration('<!--teleport start--><!--teleport end-->', () =>
-  //     h(Teleport, { to: '#teleport' }, [h('span', 'value')]),
-  //   )
-  //   expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
-  //   expect(`Hydration children mismatch`).toHaveBeenWarned()
-  // })
+  test('Teleport target has empty children', async () => {
+    const teleportContainer = document.createElement('div')
+    teleportContainer.id = 'teleport'
+    document.body.appendChild(teleportContainer)
+    await mountWithHydration(
+      '<!--teleport start--><!--teleport end-->',
+      `<teleport to="#teleport"><span>value</span></teleport>`,
+    )
+    expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+  })
   // test('comment mismatch (element)', () => {
   //   const { container } = mountWithHydration(`<div><span></span></div>`, () =>
   //     h('div', [createCommentVNode('hi')]),
@@ -9104,6 +9105,77 @@ describe('VDOM interop', () => {
     	"
     	<!--[--><div>Before</div><!----><span>Tail updated</span><!--]-->
     	"
+    `,
+    )
+  })
+
+  test('hydrate multi-root Vapor component should preserve close marker when client renders extra child', async () => {
+    const data = ref({
+      msg: 'Hello',
+      extra: '',
+    })
+
+    const childCode = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <span>{{ data.msg }}</span>{{ data.extra }}
+      </template>`
+
+    const appCode = `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <div>Before</div>
+        <components.Child />
+        <div>After</div>
+      </template>`
+
+    const SSRChild = compileVaporComponent(childCode, data, undefined, true)
+    const SSRApp = compileVaporComponent(
+      appCode,
+      data,
+      { Child: SSRChild },
+      true,
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRApp),
+    )
+
+    data.value.extra = 'Tail'
+
+    const ClientChild = compileVaporComponent(childCode, data)
+    const ClientApp = compileVaporComponent(appCode, data, {
+      Child: ClientChild,
+    })
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    createVaporSSRApp(ClientApp).mount(container)
+
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(`Hydration text mismatch`).toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><span>Hello</span>Tail<!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+
+    data.value.extra = 'Tail updated'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><span>Hello</span>Tail updated<!--]-->
+      <div>After</div><!--]-->
+      "
     `,
     )
   })

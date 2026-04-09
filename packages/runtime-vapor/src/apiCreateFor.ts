@@ -14,12 +14,7 @@ import {
 import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import { type Block, insert, isValidBlock, remove } from './block'
-import {
-  MismatchTypes,
-  isMismatchAllowed,
-  queuePostFlushCb,
-  warn,
-} from '@vue/runtime-dom'
+import { queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import {
   type DynamicSlot,
@@ -33,13 +28,12 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
+  locateHydrationBoundaryClose,
   locateHydrationNode,
   locateNextNode,
-  logMismatchError,
   markHydrationAnchor,
   patchCurrentHydrationBoundary,
   pushHydrationBoundary,
-  removeFragmentNodes,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import {
@@ -134,14 +128,8 @@ export const createFor = (
       if (isHydrating) {
         const hydrationStart = currentHydrationNode!
         const restoreBoundary = pushHydrationBoundary({
-          start: hydrationStart,
-          end: null,
-          insertionAnchor: null,
-          owner: 'for',
-          cursorSource:
-            _insertionIndex !== undefined
-              ? 'logical-index'
-              : 'current-hydration-node',
+          close: null,
+          preserve: null,
         })
         let nextNode
         const emptyLocalRange =
@@ -152,14 +140,17 @@ export const createFor = (
 
         try {
           if (emptyLocalRange && newLength) {
-            patchCurrentHydrationBoundary({ end: hydrationStart })
+            patchCurrentHydrationBoundary({ close: hydrationStart })
             const anchor = (hydrationStart.nextSibling ||
               currentSlotEndAnchor ||
               hydrationStart)!
             parentAnchor = markHydrationAnchor(
               __DEV__ ? createComment('for') : createTextNode(),
             )
-            patchCurrentHydrationBoundary({ insertionAnchor: parentAnchor })
+            patchCurrentHydrationBoundary({
+              preserve: parentAnchor,
+              cleanupOnPop: true,
+            })
             anchor.parentNode!.insertBefore(parentAnchor, anchor)
             setCurrentHydrationNode(parentAnchor)
             for (let i = 0; i < newLength; i++) {
@@ -170,7 +161,10 @@ export const createFor = (
             for (let i = 0; i < newLength; i++) {
               if (isComment(currentHydrationNode!, ']')) {
                 const anchor = markHydrationAnchor(currentHydrationNode!)
-                patchCurrentHydrationBoundary({ insertionAnchor: anchor })
+                patchCurrentHydrationBoundary({
+                  preserve: anchor,
+                  cleanupOnPop: true,
+                })
                 nextNode = anchor
                 setCurrentHydrationNode(anchor)
               } else {
@@ -183,11 +177,11 @@ export const createFor = (
             // Slot fallback can fall through an empty/invalid `v-for`. In that
             // case SSR only rendered the parent slot range, so this `v-for` has no
             // own `<!--]-->` to reuse. If `hydrationStart` is not the parent slot
-            // end anchor, use `hydrationStart.nextSibling` as the insertion anchor
+            // end anchor, use `hydrationStart.nextSibling` as the preserve anchor
             // so the runtime `<!--for-->` lands immediately after that local SSR
             // range. Otherwise insert it before the parent slot end anchor.
             if (slotFallbackRange && !isValidBlock(newBlocks)) {
-              patchCurrentHydrationBoundary({ end: currentSlotEndAnchor })
+              patchCurrentHydrationBoundary({ close: currentSlotEndAnchor })
               const anchor =
                 // The invalid list still consumed local SSR item ranges.
                 currentHydrationNode !== hydrationStart
@@ -199,7 +193,10 @@ export const createFor = (
               parentAnchor = markHydrationAnchor(
                 __DEV__ ? createComment('for') : createTextNode(),
               )
-              patchCurrentHydrationBoundary({ insertionAnchor: parentAnchor })
+              patchCurrentHydrationBoundary({
+                preserve: parentAnchor,
+                cleanupOnPop: false,
+              })
               pendingHydrationAnchor = true
               if (
                 currentHydrationNode === hydrationStart ||
@@ -211,43 +208,13 @@ export const createFor = (
                 anchor.parentNode!.insertBefore(parentAnchor, anchor),
               )
             } else {
-              let endAnchor = currentHydrationNode!
-              if (!isComment(endAnchor, ']')) {
-                let candidate = locateNextNode(endAnchor)
-                while (candidate && !isComment(candidate, ']')) {
-                  candidate = locateNextNode(candidate)
-                }
-                if (candidate && isComment(candidate, ']')) {
-                  if (
-                    !isMismatchAllowed(
-                      candidate.parentElement!,
-                      MismatchTypes.CHILDREN,
-                    )
-                  ) {
-                    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-                      warn(
-                        `Hydration children mismatch on`,
-                        candidate.parentElement,
-                        `\nServer rendered element contains more child nodes than client nodes.`,
-                      )
-                    logMismatchError()
-                  }
-                  while (endAnchor && endAnchor !== candidate) {
-                    const next = locateNextNode(endAnchor)
-                    if (isComment(endAnchor, '[')) {
-                      removeFragmentNodes(endAnchor)
-                    }
-                    remove(endAnchor, endAnchor.parentNode!)
-                    endAnchor = next!
-                  }
-                }
-                endAnchor = candidate || endAnchor
-              }
+              const close = locateHydrationBoundaryClose(currentHydrationNode!)
 
-              parentAnchor = markHydrationAnchor(endAnchor)
+              parentAnchor = markHydrationAnchor(close)
               patchCurrentHydrationBoundary({
-                end: parentAnchor,
-                insertionAnchor: parentAnchor,
+                close: parentAnchor,
+                preserve: parentAnchor,
+                cleanupOnPop: true,
               })
               if (__DEV__ && !isComment(parentAnchor, ']')) {
                 throw new Error(

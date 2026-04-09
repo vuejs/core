@@ -31,6 +31,7 @@ import {
   isComment,
   isHydrating,
   locateEndAnchor,
+  locateHydrationBoundaryClose,
   locateHydrationNode,
   markHydrationAnchor,
   patchCurrentHydrationBoundary,
@@ -367,17 +368,9 @@ export class DynamicFragment extends VaporFragment {
     if (this.isAnchorPending) return
 
     const restoreBoundary = pushHydrationBoundary({
-      start: currentHydrationNode,
-      end: null,
-      insertionAnchor: null,
-      owner: isSlot
-        ? 'slot'
-        : this.anchorLabel === 'if'
-          ? 'if'
-          : this.anchorLabel === 'dynamic-component'
-            ? 'dynamic-component'
-            : 'fragment',
-      cursorSource: 'current-hydration-node',
+      close: null,
+      preserve: null,
+      cleanupOnPop: false,
     })
 
     try {
@@ -387,8 +380,9 @@ export class DynamicFragment extends VaporFragment {
         if (isComment(currentHydrationNode!, '')) {
           this.anchor = markHydrationAnchor(currentHydrationNode!)
           patchCurrentHydrationBoundary({
-            end: currentHydrationNode,
-            insertionAnchor: this.anchor,
+            close: currentHydrationNode,
+            preserve: this.anchor,
+            cleanupOnPop: false,
           })
           advanceHydrationNode(currentHydrationNode)
           return
@@ -404,7 +398,7 @@ export class DynamicFragment extends VaporFragment {
           (!isValidBlock(this.nodes) || currentEmptyFragment === this)
         ) {
           const endAnchor = currentSlotEndAnchor
-          patchCurrentHydrationBoundary({ end: endAnchor })
+          patchCurrentHydrationBoundary({ close: endAnchor })
           this.isAnchorPending = true
           queuePostFlushCb(() =>
             endAnchor.parentNode!.insertBefore(
@@ -430,12 +424,16 @@ export class DynamicFragment extends VaporFragment {
           isArray(this.nodes) &&
           this.nodes.length > 1)
       ) {
-        const anchor = slotAnchor || currentHydrationNode
+        const anchor = locateHydrationBoundaryClose(
+          slotAnchor || currentHydrationNode!,
+          slotAnchor || null,
+        )
         if (isComment(anchor!, ']')) {
           this.anchor = markHydrationAnchor(anchor)
           patchCurrentHydrationBoundary({
-            end: anchor,
-            insertionAnchor: this.anchor,
+            close: anchor,
+            preserve: this.anchor,
+            cleanupOnPop: true,
           })
           advanceHydrationNode(anchor)
           return
@@ -518,26 +516,21 @@ export class SlotFragment extends DynamicFragment {
     let restoreBoundary: (() => void) | undefined
     if (isHydrating) {
       locateHydrationNode()
-      const start = currentHydrationNode
       if (isComment(currentHydrationNode!, '[')) {
         const endAnchor = locateEndAnchor(currentHydrationNode)
         setCurrentHydrationNode(currentHydrationNode.nextSibling)
         prevEndAnchor = setCurrentSlotEndAnchor(endAnchor)
         pushedEndAnchor = true
         restoreBoundary = pushHydrationBoundary({
-          start: currentHydrationNode,
-          end: endAnchor,
-          insertionAnchor: null,
-          owner: 'slot',
-          cursorSource: 'current-hydration-node',
+          close: endAnchor,
+          preserve: null,
+          cleanupOnPop: true,
         })
       } else {
         restoreBoundary = pushHydrationBoundary({
-          start,
-          end: null,
-          insertionAnchor: null,
-          owner: 'slot',
-          cursorSource: 'current-hydration-node',
+          close: null,
+          preserve: null,
+          cleanupOnPop: true,
         })
       }
     }

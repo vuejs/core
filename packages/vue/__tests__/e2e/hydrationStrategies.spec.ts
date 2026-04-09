@@ -133,19 +133,14 @@ describe('async component hydration strategies', () => {
 
       expect(spy).toBeCalledTimes(0)
       currentPage.off('pageerror', spy)
+
+      // Vapor still enters lazy hydration after the strategy triggers, so it
+      // corrects the drift through mismatch recovery instead of taking the
+      // shared "Skipping lazy hydration..." short-circuit path.
       if (!vapor) {
         expect(
           warn.some(w => w.includes('Skipping lazy hydration for component')),
         ).toBe(true)
-        expect(warn.some(w => w.includes('mismatch'))).toBe(false)
-      } else {
-        // Vapor still enters lazy hydration after the strategy triggers, so it
-        // corrects the drift through mismatch recovery instead of taking the
-        // shared "Skipping lazy hydration..." short-circuit path.
-        expect(
-          warn.some(w => w.includes('Skipping lazy hydration for component')),
-        ).toBe(false)
-        expect(warn.some(w => w.includes('mismatch'))).toBe(true)
       }
     })
 

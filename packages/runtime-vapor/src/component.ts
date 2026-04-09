@@ -89,8 +89,11 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
+  locateEndAnchor,
   locateHydrationNode,
   locateNextNode,
+  markHydrationAnchor,
+  pushHydrationBoundary,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { createComment, createElement, createTextNode } from './dom/node'
@@ -245,159 +248,176 @@ export function createComponent(
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   const _isLastInsertion = isLastInsertion
+  let hydrationClose: Node | null = null
+  let restoreBoundary: (() => void) | undefined
   if (isHydrating) {
     locateHydrationNode()
     if (component.__multiRoot && isComment(currentHydrationNode!, '[')) {
+      hydrationClose = locateEndAnchor(currentHydrationNode!)
+      restoreBoundary = pushHydrationBoundary({
+        close: hydrationClose,
+        preserve: hydrationClose && markHydrationAnchor(hydrationClose),
+        cleanupOnPop: true,
+      })
       setCurrentHydrationNode(currentHydrationNode!.nextSibling)
     }
   } else {
     resetInsertionState()
   }
 
-  let prevSuspense: SuspenseBoundary | null = null
-  if (__FEATURE_SUSPENSE__ && currentInstance && currentInstance.suspense) {
-    prevSuspense = setParentSuspense(currentInstance.suspense)
-  }
+  try {
+    let prevSuspense: SuspenseBoundary | null = null
+    if (__FEATURE_SUSPENSE__ && currentInstance && currentInstance.suspense) {
+      prevSuspense = setParentSuspense(currentInstance.suspense)
+    }
 
-  if (
-    (isSingleRoot ||
-      // transition has attrs fallthrough
-      (currentInstance && isVaporTransition(currentInstance!.type))) &&
-    component.inheritAttrs !== false &&
-    isVaporComponent(currentInstance) &&
-    currentInstance.hasFallthrough
-  ) {
-    // check if we are the single root of the parent
-    // if yes, inject parent attrs as dynamic props source
-    const attrs = currentInstance.attrs
-    if (rawProps && rawProps !== EMPTY_OBJ) {
-      ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
-        () => attrs,
+    if (
+      (isSingleRoot ||
+        // transition has attrs fallthrough
+        (currentInstance && isVaporTransition(currentInstance!.type))) &&
+      component.inheritAttrs !== false &&
+      isVaporComponent(currentInstance) &&
+      currentInstance.hasFallthrough
+    ) {
+      // check if we are the single root of the parent
+      // if yes, inject parent attrs as dynamic props source
+      const attrs = currentInstance.attrs
+      if (rawProps && rawProps !== EMPTY_OBJ) {
+        ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
+          () => attrs,
+        )
+      } else {
+        rawProps = { $: [() => attrs] } as RawProps
+      }
+    }
+
+    // keep-alive
+    if (
+      currentInstance &&
+      currentInstance.vapor &&
+      isKeepAlive(currentInstance)
+    ) {
+      const cached = (
+        currentInstance as KeepAliveInstance
+      ).ctx.getCachedComponent(component)
+      // @ts-expect-error
+      if (cached) return cached
+    }
+
+    // vdom interop enabled and component is not an explicit vapor component
+    if (isInteropEnabled && appContext.vapor && !component.__vapor) {
+      const frag = appContext.vapor.vdomMount(
+        component as any,
+        currentInstance as any,
+        rawProps,
+        rawSlots,
+      )
+      if (!isHydrating) {
+        if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+      } else {
+        frag.hydrate()
+        if (_isLastInsertion) {
+          advanceHydrationNode(_insertionParent!)
+        }
+      }
+      return frag
+    }
+
+    // teleport
+    if (isVaporTeleport(component)) {
+      const frag = component.process(rawProps!, rawSlots!)
+      if (!isHydrating) {
+        if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+      } else {
+        frag.hydrate()
+        if (_isLastInsertion) {
+          advanceHydrationNode(_insertionParent!)
+        }
+      }
+
+      return frag as any
+    }
+
+    const instance = new VaporComponentInstance(
+      component,
+      rawProps as RawProps,
+      rawSlots as RawSlots,
+      appContext,
+      once,
+    )
+
+    // handle currentKeepAliveCtx for component boundary isolation
+    // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
+    // DynamicFragment can capture it
+    if (currentKeepAliveCtx && !isAsyncWrapper(instance)) {
+      currentKeepAliveCtx.processShapeFlag(instance)
+      // clear currentKeepAliveCtx so child components don't associate
+      // with parent's KeepAlive
+      setCurrentKeepAliveCtx(null)
+    }
+
+    // reset currentSlotOwner to null to avoid affecting the child components
+    const prevSlotOwner = setCurrentSlotOwner(null)
+
+    // HMR
+    if (__DEV__) {
+      registerHMR(instance)
+      instance.isSingleRoot = isSingleRoot
+      instance.hmrRerender = hmrRerender.bind(null, instance)
+      instance.hmrReload = hmrReload.bind(null, instance)
+
+      pushWarningContext(instance)
+      startMeasure(instance, `init`)
+
+      // cache normalized options for dev only emit check
+      instance.propsOptions = normalizePropsOptions(component)
+      instance.emitsOptions = normalizeEmitsOptions(component)
+    }
+
+    // hydrating async component
+    if (
+      isHydrating &&
+      isAsyncWrapper(instance) &&
+      component.__asyncHydrate &&
+      !component.__asyncResolved
+    ) {
+      component.__asyncHydrate(currentHydrationNode as Element, instance, () =>
+        setupComponent(instance, component),
       )
     } else {
-      rawProps = { $: [() => attrs] } as RawProps
+      setupComponent(instance, component)
     }
-  }
 
-  // keep-alive
-  if (
-    currentInstance &&
-    currentInstance.vapor &&
-    isKeepAlive(currentInstance)
-  ) {
-    const cached = (
-      currentInstance as KeepAliveInstance
-    ).ctx.getCachedComponent(component)
-    // @ts-expect-error
-    if (cached) return cached
-  }
+    if (__DEV__) {
+      popWarningContext()
+      endMeasure(instance, 'init')
+    }
 
-  // vdom interop enabled and component is not an explicit vapor component
-  if (isInteropEnabled && appContext.vapor && !component.__vapor) {
-    const frag = appContext.vapor.vdomMount(
-      component as any,
-      currentInstance as any,
-      rawProps,
-      rawSlots,
-    )
-    if (!isHydrating) {
-      if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
-    } else {
-      frag.hydrate()
-      if (_isLastInsertion) {
-        advanceHydrationNode(_insertionParent!)
+    if (__FEATURE_SUSPENSE__ && currentInstance && currentInstance.suspense) {
+      setParentSuspense(prevSuspense)
+    }
+
+    // restore currentSlotOwner to previous value after setupFn is called
+    setCurrentSlotOwner(prevSlotOwner)
+    onScopeDispose(() => unmountComponent(instance), true)
+
+    if (!managedMount && (_insertionParent || isHydrating)) {
+      mountComponent(instance, _insertionParent!, _insertionAnchor)
+    }
+
+    if (isHydrating && _insertionAnchor !== undefined) {
+      advanceHydrationNode(_insertionParent!)
+    }
+
+    return instance
+  } finally {
+    if (restoreBoundary) {
+      restoreBoundary()
+      if (hydrationClose && currentHydrationNode === hydrationClose) {
+        advanceHydrationNode(hydrationClose)
       }
     }
-    return frag
   }
-
-  // teleport
-  if (isVaporTeleport(component)) {
-    const frag = component.process(rawProps!, rawSlots!)
-    if (!isHydrating) {
-      if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
-    } else {
-      frag.hydrate()
-      if (_isLastInsertion) {
-        advanceHydrationNode(_insertionParent!)
-      }
-    }
-
-    return frag as any
-  }
-
-  const instance = new VaporComponentInstance(
-    component,
-    rawProps as RawProps,
-    rawSlots as RawSlots,
-    appContext,
-    once,
-  )
-
-  // handle currentKeepAliveCtx for component boundary isolation
-  // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
-  // DynamicFragment can capture it
-  if (currentKeepAliveCtx && !isAsyncWrapper(instance)) {
-    currentKeepAliveCtx.processShapeFlag(instance)
-    // clear currentKeepAliveCtx so child components don't associate
-    // with parent's KeepAlive
-    setCurrentKeepAliveCtx(null)
-  }
-
-  // reset currentSlotOwner to null to avoid affecting the child components
-  const prevSlotOwner = setCurrentSlotOwner(null)
-
-  // HMR
-  if (__DEV__) {
-    registerHMR(instance)
-    instance.isSingleRoot = isSingleRoot
-    instance.hmrRerender = hmrRerender.bind(null, instance)
-    instance.hmrReload = hmrReload.bind(null, instance)
-
-    pushWarningContext(instance)
-    startMeasure(instance, `init`)
-
-    // cache normalized options for dev only emit check
-    instance.propsOptions = normalizePropsOptions(component)
-    instance.emitsOptions = normalizeEmitsOptions(component)
-  }
-
-  // hydrating async component
-  if (
-    isHydrating &&
-    isAsyncWrapper(instance) &&
-    component.__asyncHydrate &&
-    !component.__asyncResolved
-  ) {
-    component.__asyncHydrate(currentHydrationNode as Element, instance, () =>
-      setupComponent(instance, component),
-    )
-  } else {
-    setupComponent(instance, component)
-  }
-
-  if (__DEV__) {
-    popWarningContext()
-    endMeasure(instance, 'init')
-  }
-
-  if (__FEATURE_SUSPENSE__ && currentInstance && currentInstance.suspense) {
-    setParentSuspense(prevSuspense)
-  }
-
-  // restore currentSlotOwner to previous value after setupFn is called
-  setCurrentSlotOwner(prevSlotOwner)
-  onScopeDispose(() => unmountComponent(instance), true)
-
-  if (!managedMount && (_insertionParent || isHydrating)) {
-    mountComponent(instance, _insertionParent!, _insertionAnchor)
-  }
-
-  if (isHydrating && _insertionAnchor !== undefined) {
-    advanceHydrationNode(_insertionParent!)
-  }
-
-  return instance
 }
 
 export function setupComponent(

@@ -418,12 +418,9 @@ export class TeleportFragment extends VaporFragment {
   hydrate = (): void => {
     if (!isHydrating) return
     const restoreBoundary = pushHydrationBoundary({
-      start: currentHydrationNode,
-      end: null,
-      insertionAnchor: null,
-      owner: 'teleport',
-      cursorSource: 'current-hydration-node',
-      plane: 'main',
+      close: null,
+      preserve: null,
+      cleanupOnPop: false,
     })
     try {
       const target = (this.target = resolveTeleportTarget(
@@ -441,16 +438,16 @@ export class TeleportFragment extends VaporFragment {
             targetNode,
           )
           patchCurrentHydrationBoundary({
-            end: this.anchor,
-            insertionAnchor: this.anchor,
+            close: this.anchor,
+            preserve: this.anchor,
           })
         } else {
           this.anchor = markHydrationAnchor(
             locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!,
           )
           patchCurrentHydrationBoundary({
-            end: this.anchor,
-            insertionAnchor: this.anchor,
+            close: this.anchor,
+            preserve: this.anchor,
           })
           this.mountContainer = target
           this.hydrateTargetAnchors(target as TeleportTargetElement, targetNode)
@@ -474,8 +471,8 @@ export class TeleportFragment extends VaporFragment {
         // pass null as targetNode since there is no target
         this.hydrateDisabledTeleport(null, null)
         patchCurrentHydrationBoundary({
-          end: this.anchor,
-          insertionAnchor: this.anchor,
+          close: this.anchor,
+          preserve: this.anchor,
         })
       } else {
         // Align with VDOM Teleport hydration: keep main-view markers only and
@@ -485,8 +482,8 @@ export class TeleportFragment extends VaporFragment {
           locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!,
         )
         patchCurrentHydrationBoundary({
-          end: this.anchor,
-          insertionAnchor: this.anchor,
+          close: this.anchor,
+          preserve: this.anchor,
         })
       }
 
