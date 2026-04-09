@@ -4611,9 +4611,9 @@ describe('Vapor Mode hydration', () => {
       clientResolve(Comp)
       await new Promise(r => setTimeout(r))
 
-      // prevent lazy hydration since the component has been patched
-      expect('Skipping lazy hydration for component').toHaveBeenWarned()
-      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      // vapor lazy hydration always proceeds; drift is corrected by the
+      // mismatch handling path.
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
       expect(container.innerHTML).toMatchInlineSnapshot(
         `"<h1>Updated async component</h1><!--async component-->"`,
       )
@@ -4684,12 +4684,196 @@ describe('Vapor Mode hydration', () => {
       clientResolve(Comp)
       await new Promise(r => setTimeout(r))
 
-      // prevent lazy hydration since the component has been patched
-      expect('Skipping lazy hydration for component').toHaveBeenWarned()
-      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      // vapor lazy hydration always proceeds; drift is corrected by the
+      // mismatch handling path.
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
       expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--[--><h1>Updated async component</h1><h2>fragment root</h2><!--async component--><!--]-->"`,
+        `"<!--[--><h1>Updated async component</h1><h2>fragment root</h2><!--]--><!--async component-->"`,
       )
+    })
+
+    test('update async component fallthrough attrs after parent mount before async component resolve', async () => {
+      const data = ref({
+        cls: 'foo',
+      })
+      const compCode = `<div>Async component</div>`
+      const SSRComp = compileVaporComponent(
+        compCode,
+        undefined,
+        undefined,
+        true,
+      )
+      let serverResolve: any
+      let AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            serverResolve = r
+          }),
+      )
+      const appCode = `<components.AsyncComp :class="data.cls"/>`
+      const SSRApp = compileVaporComponent(appCode, data, { AsyncComp }, true)
+
+      const htmlPromise = VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      serverResolve(SSRComp)
+      const html = await htmlPromise
+      expect(html).toMatchInlineSnapshot(
+        `"<div class=\"foo\">Async component</div>"`,
+      )
+
+      let clientResolve: any
+      AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      ) as any
+
+      const Comp = compileVaporComponent(compCode)
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+
+      data.value.cls = 'bar'
+      await nextTick()
+
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      expect(`Hydration class mismatch`).toHaveBeenWarned()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div class="foo bar">Async component</div><!--async component-->"`,
+      )
+    })
+
+    test('update async component slot content after parent mount before async component resolve', async () => {
+      const data = ref({
+        msg: 'foo',
+      })
+      const compCode = `<div><slot/></div>`
+      const SSRComp = compileVaporComponent(
+        compCode,
+        undefined,
+        undefined,
+        true,
+      )
+      let serverResolve: any
+      let AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            serverResolve = r
+          }),
+      )
+      const appCode = `<components.AsyncComp><span>{{data.msg}}</span></components.AsyncComp>`
+      const SSRApp = compileVaporComponent(appCode, data, { AsyncComp }, true)
+
+      const htmlPromise = VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      serverResolve(SSRComp)
+      const html = await htmlPromise
+      expect(formatHtml(html)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[--><span>foo</span><!--]-->
+      	</div>"
+      `)
+
+      let clientResolve: any
+      AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      ) as any
+
+      const Comp = compileVaporComponent(compCode)
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+
+      data.value.msg = 'bar'
+      await nextTick()
+
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[--><span>bar</span><!--]-->
+      	</div><!--async component-->"
+      `)
+    })
+
+    test.todo('update async component slot structure after parent mount before async component resolve', async () => {
+      const data = ref({
+        show: false,
+        msg: 'bar',
+      })
+      const compCode = `<div><slot/></div>`
+      const SSRComp = compileVaporComponent(
+        compCode,
+        undefined,
+        undefined,
+        true,
+      )
+      let serverResolve: any
+      let AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            serverResolve = r
+          }),
+      )
+      const appCode = `<components.AsyncComp><span v-if="data.show">{{data.msg}}</span></components.AsyncComp>`
+      const SSRApp = compileVaporComponent(appCode, data, { AsyncComp }, true)
+
+      const htmlPromise = VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      serverResolve(SSRComp)
+      const html = await htmlPromise
+      expect(formatHtml(html)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[--><!--]-->
+      	</div>"
+      `)
+
+      let clientResolve: any
+      AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      ) as any
+
+      const Comp = compileVaporComponent(compCode)
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+
+      data.value.show = true
+      await nextTick()
+
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[--><span>bar</span><!--if--><!--]-->
+      	</div><!--async component-->"
+      `)
     })
 
     describe('suspense', () => {
