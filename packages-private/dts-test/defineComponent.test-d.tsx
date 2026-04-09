@@ -13,6 +13,7 @@ import {
   h,
   reactive,
   ref,
+  shallowRef,
   withKeys,
   withModifiers,
 } from 'vue'
@@ -1180,9 +1181,10 @@ describe('infer expose from `SetupContext`', () => {
   // options
   const Foo = defineComponent({
     setup(
-      _props: { foo: number },
-      _ctx: SetupContext<EmitsOptions, {}, { bar: Ref<number> }>,
+      props: { foo: number },
+      ctx: SetupContext<EmitsOptions, {}, { bar: Ref<number> }>,
     ) {
+      ctx.expose({ bar: ref(props.foo) })
       return () => <></>
     },
     render() {
@@ -1195,11 +1197,12 @@ describe('infer expose from `SetupContext`', () => {
 
   const Bar = defineComponent({
     setup(
-      _props: { foo: number },
-      _ctx: {
+      props: { foo: number },
+      ctx: {
         expose: (exposed: { bar: Ref<number> }) => void
       },
     ) {
+      ctx.expose({ bar: ref(props.foo) })
       return () => <></>
     },
     render() {
@@ -1213,10 +1216,12 @@ describe('infer expose from `SetupContext`', () => {
   // functional
   const Baz = defineComponent(
     <T,>(
-      _props: { foo: T },
-      _ctx: SetupContext<EmitsOptions, {}, { bar: Ref<T> }>,
-    ) =>
-      () => <></>,
+      props: { foo: T },
+      ctx: SetupContext<EmitsOptions, {}, { bar: Ref<T> }>,
+    ) => {
+      ctx.expose({ bar: shallowRef(props.foo) })
+      return () => <></>
+    },
   )
   const baz = new Baz({ foo: 1 })
   expectType<IsAny<typeof baz.bar>>(false)
@@ -1224,12 +1229,14 @@ describe('infer expose from `SetupContext`', () => {
 
   const Qux = defineComponent(
     <T,>(
-      _props: { foo: T },
-      _ctx: {
+      props: { foo: T },
+      ctx: {
         expose: (exposed: { bar: Ref<T> }) => void
       },
-    ) =>
-      () => <></>,
+    ) => {
+      ctx.expose({ bar: shallowRef(props.foo) })
+      return () => <></>
+    },
   )
   const qux = new Qux({ foo: 1 })
   expectType<IsAny<typeof qux.bar>>(false)
