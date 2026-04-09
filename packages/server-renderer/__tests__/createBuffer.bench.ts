@@ -1,6 +1,10 @@
 import { bench, describe } from 'vitest'
 
-import { createBuffer } from '../src/render'
+import { createBuffer as _createBuffer } from '../src/render'
+
+// move to local const to avoid import access overhead
+// https://github.com/vitest-dev/vitest/issues/6903
+const createBuffer = _createBuffer
 
 describe('createBuffer', () => {
   let stringBuffer = createBuffer()

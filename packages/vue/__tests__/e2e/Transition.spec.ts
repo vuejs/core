@@ -1,9 +1,10 @@
+import type { ElementHandle } from 'puppeteer'
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'node:path'
 import { Transition, createApp, h, nextTick, ref } from 'vue'
 
 describe('e2e: Transition', () => {
-  const { page, html, classList, isVisible, timeout, nextFrame, click } =
+  const { page, html, classList, style, isVisible, timeout, nextFrame, click } =
     setupPuppeteer()
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
@@ -1653,6 +1654,244 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #14608
+    test(
+      'hmr reload child wrapped in KeepAlive (out-in mode)',
+      async () => {
+        await page().evaluate(
+          async ({ duration, childId }) => {
+            const { createApp } = (window as any).Vue
+            const { createRecord } = (window as any).__VUE_HMR_RUNTIME__
+
+            const Child = {
+              __hmrId: childId,
+              name: 'OriginalChild',
+              data() {
+                return { count: 0 }
+              },
+              template: `<div class="test">{{ count }}</div>`,
+            }
+
+            createRecord(childId, Child)
+
+            createApp({
+              components: { Child },
+              data() {
+                return { toggle: true }
+              },
+              template: `
+                <div id="container">
+                  <transition name="test" mode="out-in" :duration="${duration}">
+                    <KeepAlive>
+                      <Child v-if="toggle" />
+                    </KeepAlive>
+                  </transition>
+                </div>
+              `,
+            }).mount('#app')
+
+            await (window as any).Vue.nextTick()
+          },
+          { duration, childId: 'transition-keepalive-out-in-hmr' },
+        )
+
+        expect(await html('#container')).toBe('<div class="test">0</div>')
+
+        await page().evaluate(async childId => {
+          const { reload } = (window as any).__VUE_HMR_RUNTIME__
+          reload(childId, {
+            __hmrId: childId,
+            name: 'UpdatedChild',
+            data() {
+              return { count: 1 }
+            },
+            template: `<div class="test">{{ count }}</div>`,
+          })
+
+          await (window as any).Vue.nextTick()
+        }, 'transition-keepalive-out-in-hmr')
+
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div class="test test-leave-active test-leave-to">0</div>' +
+            '<div class="test test-enter-active test-enter-to">1</div>',
+        )
+
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="test">1</div>')
+      },
+      E2E_TIMEOUT,
+    )
+
+    // #12860
+    test(
+      'unmount children',
+      async () => {
+        const unmountSpy = vi.fn()
+        let storageContainer: ElementHandle<HTMLDivElement>
+        const setStorageContainer = (container: any) =>
+          (storageContainer = container)
+        await page().exposeFunction('unmountSpy', unmountSpy)
+        await page().exposeFunction('setStorageContainer', setStorageContainer)
+        await page().evaluate(() => {
+          const { unmountSpy, setStorageContainer } = window as any
+          const { createApp, ref, h, onUnmounted, getCurrentInstance } = (
+            window as any
+          ).Vue
+          createApp({
+            template: `
+            <div id="container">
+              <transition>
+                <KeepAlive :include="includeRef">
+                  <TrueBranch v-if="toggle"></TrueBranch>
+                </KeepAlive>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            components: {
+              TrueBranch: {
+                name: 'TrueBranch',
+                setup() {
+                  const instance = getCurrentInstance()
+                  onUnmounted(() => {
+                    unmountSpy()
+                    setStorageContainer(instance.__keepAliveStorageContainer)
+                  })
+                  const count = ref(0)
+                  return () => h('div', count.value)
+                },
+              },
+            },
+            setup: () => {
+              const includeRef = ref(['TrueBranch'])
+              const toggle = ref(true)
+              const click = () => {
+                toggle.value = !toggle.value
+                if (toggle.value) {
+                  includeRef.value = ['TrueBranch']
+                } else {
+                  includeRef.value = []
+                }
+              }
+              return { toggle, click, unmountSpy, includeRef }
+            },
+          }).mount('#app')
+        })
+
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div>0</div>')
+
+        await click('#toggleBtn')
+        await transitionFinish()
+        expect(await html('#container')).toBe('<!--v-if-->')
+        expect(unmountSpy).toBeCalledTimes(1)
+        expect(await storageContainer!.evaluate(x => x.innerHTML)).toBe(``)
+      },
+      E2E_TIMEOUT,
+    )
+
+    // #13153
+    test(
+      'move kept-alive node before v-show transition leave finishes',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, ref } = (window as any).Vue
+          const show = ref(true)
+          createApp({
+            template: `
+            <div id="container">
+              <KeepAlive :include="['Comp1', 'Comp2']">
+                <component :is="state === 1 ? 'Comp1' : 'Comp2'"/>
+              </KeepAlive>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const state = ref(1)
+              const click = () => (state.value = state.value === 1 ? 2 : 1)
+              return { state, click }
+            },
+            components: {
+              Comp1: {
+                components: {
+                  Item: {
+                    name: 'Item',
+                    setup() {
+                      return { show }
+                    },
+                    template: `
+                      <Transition name="test">
+                        <div v-show="show" >
+                          <h2>{{ show ? "I should show" : "I shouldn't show " }}</h2>
+                        </div>
+                      </Transition>
+                    `,
+                  },
+                },
+                name: 'Comp1',
+                setup() {
+                  const toggle = () => (show.value = !show.value)
+                  return { show, toggle }
+                },
+                template: `
+                  <Item />
+                  <h2>This is page1</h2>
+                  <button id="changeShowBtn" @click="toggle">{{ show }}</button>
+                `,
+              },
+              Comp2: {
+                name: 'Comp2',
+                template: `<h2>This is page2</h2>`,
+              },
+            },
+          }).mount('#app')
+        })
+
+        expect(await html('#container')).toBe(
+          `<div><h2>I should show</h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">true</button>`,
+        )
+
+        // trigger v-show transition leave
+        await click('#changeShowBtn')
+        await nextTick()
+        expect(await html('#container')).toBe(
+          `<div class="test-leave-from test-leave-active"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+
+        // switch to page2, before leave finishes
+        // expect v-show element's display to be none
+        await click('#toggleBtn')
+        await nextTick()
+        expect(await html('#container')).toBe(
+          `<div class="test-leave-from test-leave-active" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page2</h2>`,
+        )
+
+        // switch back to page1
+        // expect v-show element's display to be none
+        await click('#toggleBtn')
+        await nextTick()
+        expect(await html('#container')).toBe(
+          `<div class="test-enter-from test-enter-active" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          `<div class="" style="display: none;"><h2>I shouldn't show </h2></div>` +
+            `<h2>This is page1</h2>` +
+            `<button id="changeShowBtn">false</button>`,
+        )
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with Suspense', () => {
@@ -1875,6 +2114,112 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT,
     )
 
+    // #14640
+    test(
+      'switch suspense branches after teleport updates before pending mount finishes',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, defineComponent, nextTick, ref } = (window as any)
+            .Vue
+
+          const Comp = defineComponent({
+            props: {
+              mode: {
+                type: String,
+                required: true,
+              },
+              count: Number,
+            },
+            emits: ['go', 'back'],
+            async setup() {
+              await new Promise(resolve => setTimeout(resolve, 0))
+            },
+            template: `
+              <div v-if="mode === 'a'">
+                <button @click="$emit('go')">Go</button>
+                <div>{{ count }}</div>
+                <teleport to="body">
+                  <Transition name="fade">
+                    <div>
+                      A Teleport
+                    </div>
+                  </Transition>
+                </teleport>
+              </div>
+
+              <div v-else>
+                <button @click="$emit('back')">Back</button>
+                <teleport to="body">
+                  <div>
+                    B Teleport
+                  </div>
+                </teleport>
+              </div>
+            `,
+          })
+
+          createApp({
+            components: {
+              Comp,
+            },
+            setup() {
+              const count = ref(0)
+              const page = ref('a')
+
+              const switchTo = (key: string) => {
+                page.value = key
+              }
+
+              const handleResolve = async () => {
+                await nextTick()
+                count.value++
+              }
+
+              return {
+                count,
+                page,
+                switchTo,
+                handleResolve,
+              }
+            },
+            template: `
+              <div id="container">
+                <Transition mode="out-in">
+                  <Suspense @resolve="handleResolve">
+                    <Comp
+                      :key="page"
+                      :mode="page"
+                      :count="count"
+                      @go="switchTo('b')"
+                      @back="switchTo('a')"
+                    />
+                  </Suspense>
+                </Transition>
+              </div>
+            `,
+          }).mount('#app')
+        })
+
+        await transitionFinish(60)
+        expect(await html('#container')).toBe(
+          '<div class=""><button>Go</button><div>1</div><!--teleport start--><!--teleport end--></div>',
+        )
+
+        await click('button')
+        await transitionFinish(60)
+        expect(await html('#container')).toBe(
+          '<div class=""><button>Back</button><!--teleport start--><!--teleport end--></div>',
+        )
+
+        await click('button')
+        await transitionFinish(60)
+        expect(await html('#container')).toBe(
+          '<div class=""><button>Go</button><div>3</div><!--teleport start--><!--teleport end--></div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
     // #3963
     test(
       'Suspense fallback should work with transition',
@@ -1934,6 +2279,74 @@ describe('e2e: Transition', () => {
 
         await transitionFinish(duration * 2)
         expect(await html('#container')).toBe('<div class="">success</div>')
+      },
+      E2E_TIMEOUT,
+    )
+
+    test(
+      'avoid unmount activeBranch twice with Suspense (out-in mode + timeout="0")',
+      async () => {
+        const unmountSpy = vi.fn()
+        await page().exposeFunction('unmountSpy', unmountSpy)
+        await page().evaluate(() => {
+          const { createApp, shallowRef, h } = (window as any).Vue
+          const One = {
+            setup() {
+              return () =>
+                h(
+                  'div',
+                  {
+                    onVnodeBeforeUnmount: () => unmountSpy(),
+                  },
+                  'one',
+                )
+            },
+          }
+          const Two = {
+            async setup() {
+              return () => h('div', null, 'two')
+            },
+          }
+          createApp({
+            template: `
+            <div id="container">
+              <transition mode="out-in">
+                <suspense timeout="0">
+                  <template #default>
+                    <component :is="view"></component>
+                  </template>
+                  <template #fallback>
+                    <div>Loading...</div>
+                  </template>
+                </suspense>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+            `,
+            setup: () => {
+              const view = shallowRef(One)
+              const click = () => {
+                view.value = view.value === One ? Two : One
+              }
+              return { view, click }
+            },
+          }).mount('#app')
+        })
+
+        expect(await html('#container')).toBe('<div>one</div>')
+
+        // leave
+        await classWhenTransitionStart()
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div class="v-enter-from v-enter-active">two</div>',
+        )
+
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="">two</div>')
+
+        // should only call unmount once
+        expect(unmountSpy).toBeCalledTimes(1)
       },
       E2E_TIMEOUT,
     )
@@ -2986,6 +3399,55 @@ describe('e2e: Transition', () => {
     )
   })
 
+  test('reflow after *-leave-from before *-leave-active', async () => {
+    await page().evaluate(() => {
+      const { createApp, ref } = (window as any).Vue
+      createApp({
+        template: `
+          <div id="container">
+            <transition name="test-reflow">
+              <div v-if="toggle" class="test-reflow">content</div>
+            </transition>
+          </div>
+          <button id="toggleBtn" @click="click">button</button>
+        `,
+        setup: () => {
+          const toggle = ref(false)
+          const click = () => (toggle.value = !toggle.value)
+          return {
+            toggle,
+            click,
+          }
+        },
+      }).mount('#app')
+    })
+
+    // if transition starts while there's v-leave-active added along with v-leave-from, its bad, it has to start when it doesnt have the v-leave-from
+
+    // enter
+    await classWhenTransitionStart()
+    await transitionFinish()
+
+    // leave
+    expect(await classWhenTransitionStart()).toStrictEqual([
+      'test-reflow',
+      'test-reflow-leave-from',
+      'test-reflow-leave-active',
+    ])
+
+    expect(await style('.test-reflow', 'opacity')).toStrictEqual('0.9')
+
+    await nextFrame()
+    expect(await classList('.test-reflow')).toStrictEqual([
+      'test-reflow',
+      'test-reflow-leave-active',
+      'test-reflow-leave-to',
+    ])
+
+    await transitionFinish()
+    expect(await html('#container')).toBe('<!--v-if-->')
+  })
+
   test('warn when used on multiple elements', async () => {
     createApp({
       render() {
@@ -3121,4 +3583,194 @@ describe('e2e: Transition', () => {
     },
     E2E_TIMEOUT,
   )
+
+  // #12091
+  test(
+    'prevent enter when leaving',
+    async () => {
+      const hooks: string[] = []
+      const pushHook = (hook: string) => hooks.push(hook)
+      await page().exposeFunction('pushHook', pushHook)
+      await page().evaluate(() => {
+        const { pushHook } = window as any
+        const { createApp, ref } = (window as any).Vue
+        const visible = ref(true)
+        createApp({
+          components: {
+            Comp: {
+              setup() {
+                visible.value = false
+                return () => null
+              },
+            },
+          },
+          template: `
+            <div id="content" v-if="toggle">
+              <div id="container">
+                <transition
+                  appear
+                  @before-enter="pushHook('beforeEnter')"
+                  @enter="pushHook('enter')"
+                  @enter-cancelled="pushHook('enterCancelled')"
+                  @after-enter="pushHook('afterEnter')"
+                  @before-leave="pushHook('beforeLeave')"
+                  @leave="pushHook('leave')"
+                  @after-leave="pushHook('afterLeave')"
+                >
+                  <div v-if="visible">content</div>
+                </transition>
+              </div>
+              <Comp />
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const toggle = ref(false)
+            const click = () => (toggle.value = !toggle.value)
+            return {
+              toggle,
+              click,
+              pushHook,
+              visible,
+            }
+          },
+        }).mount('#app')
+      })
+
+      await click('#toggleBtn')
+      await nextTick()
+      await transitionFinish()
+
+      expect(hooks).toStrictEqual([
+        'beforeEnter',
+        'beforeLeave',
+        'leave',
+        'afterLeave',
+      ])
+      expect(await html('#content')).toBe(
+        '<div id="container"><!--v-if--></div><!---->',
+      )
+    },
+    E2E_TIMEOUT,
+  )
+
+  // https://github.com/vuejs/core/issues/12181#issuecomment-2414380955
+  describe('not leaking', async () => {
+    test('switching VNodes', async () => {
+      const client = await page().createCDPSession()
+      await page().evaluate(async () => {
+        const { createApp, ref, nextTick } = (window as any).Vue
+        const empty = ref(true)
+
+        createApp({
+          components: {
+            Child: {
+              setup: () => {
+                // Big arrays kick GC earlier
+                const test = ref([...Array(30_000_000)].map((_, i) => ({ i })))
+                // TODO: Use a different TypeScript env for testing
+                // @ts-expect-error - Custom property and same lib as runtime is used
+                window.__REF__ = new WeakRef(test)
+
+                return { test }
+              },
+              template: `
+                <p>{{ test.length }}</p>
+              `,
+            },
+            Empty: {
+              template: '<div></div>',
+            },
+          },
+          template: `
+            <transition>
+              <component :is="empty ? 'Empty' : 'Child'" />
+            </transition>
+          `,
+          setup() {
+            return { empty }
+          },
+        }).mount('#app')
+
+        await nextTick()
+        empty.value = false
+        await nextTick()
+        empty.value = true
+        await nextTick()
+      })
+
+      const isCollected = async () =>
+        // @ts-expect-error - Custom property
+        await page().evaluate(() => window.__REF__.deref() === undefined)
+
+      while ((await isCollected()) === false) {
+        await client.send('HeapProfiler.collectGarbage')
+      }
+
+      expect(await isCollected()).toBe(true)
+    })
+
+    // https://github.com/vuejs/core/issues/12181#issue-2588232334
+    test('switching deep vnodes edge case', async () => {
+      const client = await page().createCDPSession()
+      await page().evaluate(async () => {
+        const { createApp, ref, nextTick } = (window as any).Vue
+        const shown = ref(false)
+
+        createApp({
+          components: {
+            Child: {
+              setup: () => {
+                // Big arrays kick GC earlier
+                const test = ref([...Array(30_000_000)].map((_, i) => ({ i })))
+                // TODO: Use a different TypeScript env for testing
+                // @ts-expect-error - Custom property and same lib as runtime is used
+                window.__REF__ = new WeakRef(test)
+
+                return { test }
+              },
+              template: `
+                <p>{{ test.length }}</p>
+              `,
+            },
+            Wrapper: {
+              template: `
+                <transition>
+                  <div v-if="true">
+                    <slot />
+                  </div>
+                </transition>
+              `,
+            },
+          },
+          template: `
+            <button id="toggleBtn" @click="shown = !shown">{{ shown ? 'Hide' : 'Show' }}</button>
+            <Wrapper>
+              <Child v-if="shown" />
+              <div v-else></div>
+            </Wrapper>
+          `,
+          setup() {
+            return { shown }
+          },
+        }).mount('#app')
+
+        await nextTick()
+        shown.value = true
+        await nextTick()
+        shown.value = false
+        await nextTick()
+      })
+
+      const isCollected = async () =>
+        // @ts-expect-error - Custom property
+        await page().evaluate(() => window.__REF__.deref() === undefined)
+
+      while ((await isCollected()) === false) {
+        await client.send('HeapProfiler.collectGarbage')
+      }
+
+      expect(await isCollected()).toBe(true)
+    })
+  })
 })

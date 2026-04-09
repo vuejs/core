@@ -49,6 +49,7 @@ export enum EffectFlags {
   DIRTY = 1 << 4,
   ALLOW_RECURSE = 1 << 5,
   PAUSED = 1 << 6,
+  EVALUATED = 1 << 7,
 }
 
 /**
@@ -310,7 +311,7 @@ function prepareDeps(sub: Subscriber) {
 }
 
 function cleanupDeps(sub: Subscriber) {
-  // Cleanup unsued deps
+  // Cleanup unused deps
   let head
   let tail = sub.depsTail
   let link = tail
@@ -377,22 +378,22 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   }
   computed.globalVersion = globalVersion
 
-  const dep = computed.dep
-  computed.flags |= EffectFlags.RUNNING
   // In SSR there will be no render effect, so the computed has no subscriber
   // and therefore tracks no deps, thus we cannot rely on the dirty check.
   // Instead, computed always re-evaluate and relies on the globalVersion
   // fast path above for caching.
+  // #12337 if computed has no deps (does not rely on any reactive data) and evaluated,
+  // there is no need to re-evaluate.
   if (
-    dep.version > 0 &&
     !computed.isSSR &&
-    computed.deps &&
-    !isDirty(computed)
+    computed.flags & EffectFlags.EVALUATED &&
+    ((!computed.deps && !(computed as any)._dirty) || !isDirty(computed))
   ) {
-    computed.flags &= ~EffectFlags.RUNNING
     return
   }
+  computed.flags |= EffectFlags.RUNNING
 
+  const dep = computed.dep
   const prevSub = activeSub
   const prevShouldTrack = shouldTrack
   activeSub = computed
@@ -402,6 +403,7 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
     prepareDeps(computed)
     const value = computed.fn(computed._value)
     if (dep.version === 0 || hasChanged(value, computed._value)) {
+      computed.flags |= EffectFlags.EVALUATED
       computed._value = value
       dep.version++
     }
@@ -426,23 +428,24 @@ function removeSub(link: Link, soft = false) {
     nextSub.prevSub = prevSub
     link.nextSub = undefined
   }
-  if (dep.subs === link) {
-    // was previous tail, point new tail to prev
-    dep.subs = prevSub
-  }
   if (__DEV__ && dep.subsHead === link) {
     // was previous head, point new head to next
     dep.subsHead = nextSub
   }
 
-  if (!dep.subs && dep.computed) {
-    // if computed, unsubscribe it from all its deps so this computed and its
-    // value can be GCed
-    dep.computed.flags &= ~EffectFlags.TRACKING
-    for (let l = dep.computed.deps; l; l = l.nextDep) {
-      // here we are only "soft" unsubscribing because the computed still keeps
-      // referencing the deps and the dep should not decrease its sub count
-      removeSub(l, true)
+  if (dep.subs === link) {
+    // was previous tail, point new tail to prev
+    dep.subs = prevSub
+
+    if (!prevSub && dep.computed) {
+      // if computed, unsubscribe it from all its deps so this computed and its
+      // value can be GCed
+      dep.computed.flags &= ~EffectFlags.TRACKING
+      for (let l = dep.computed.deps; l; l = l.nextDep) {
+        // here we are only "soft" unsubscribing because the computed still keeps
+        // referencing the deps and the dep should not decrease its sub count
+        removeSub(l, true)
+      }
     }
   }
 
@@ -465,11 +468,6 @@ function removeDep(link: Link) {
     nextDep.prevDep = prevDep
     link.nextDep = undefined
   }
-}
-
-export interface ReactiveEffectRunner<T = any> {
-  (): T
-  effect: ReactiveEffect
 }
 
 export function effect<T = any>(

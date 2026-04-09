@@ -1,5 +1,22 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`comments and preserved whitespace are ignored 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createCommentVNode: _createCommentVNode, createElementVNode: _createElementVNode, Transition: _Transition, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return (_openBlock(), _createBlock(_Transition, null, {
+      default: _withCtx(() => [
+        _createElementVNode("div", null, "foo bar")
+      ]),
+      _: 1 /* STABLE */
+    }))
+  }
+}"
+`;
+
 exports[`inject persisted when child has v-show 1`] = `
 "const _Vue = Vue
 

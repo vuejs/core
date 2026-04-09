@@ -11,7 +11,11 @@ import {
   openBlock,
 } from '../vnode'
 import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
-import { type ComponentInternalInstance, handleSetupResult } from '../component'
+import {
+  type ComponentInternalInstance,
+  handleSetupResult,
+  unsetCurrentInstance,
+} from '../component'
 import type { Slots } from '../componentSlots'
 import {
   type ElementNamespace,
@@ -20,6 +24,7 @@ import {
   type RendererInternals,
   type RendererNode,
   type SetupRenderEffectFn,
+  queuePostRenderEffect,
 } from '../renderer'
 import { queuePostFlushCb } from '../scheduler'
 import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
@@ -36,6 +41,10 @@ export interface SuspenseProps {
   onResolve?: () => void
   onPending?: () => void
   onFallback?: () => void
+  /**
+   * Switch to fallback content if it takes longer than `timeout` milliseconds to render the new default content.
+   * A `timeout` value of `0` will cause the fallback content to be displayed immediately when default content is replaced.
+   */
   timeout?: string | number
   /**
    * Allow suspense to be captured by parent suspense
@@ -235,7 +244,7 @@ function patchSuspense(
   const { activeBranch, pendingBranch, isInFallback, isHydrating } = suspense
   if (pendingBranch) {
     suspense.pendingBranch = newBranch
-    if (isSameVNodeType(newBranch, pendingBranch)) {
+    if (isSameVNodeType(pendingBranch, newBranch)) {
       // same root type but content may have changed.
       patch(
         pendingBranch,
@@ -321,7 +330,7 @@ function patchSuspense(
           )
           setActiveBranch(suspense, newFallback)
         }
-      } else if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
+      } else if (activeBranch && isSameVNodeType(activeBranch, newBranch)) {
         // toggled "back" to current active branch
         patch(
           activeBranch,
@@ -355,7 +364,7 @@ function patchSuspense(
       }
     }
   } else {
-    if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
+    if (activeBranch && isSameVNodeType(activeBranch, newBranch)) {
       // root did not change, just normal patch
       patch(
         activeBranch,
@@ -418,6 +427,7 @@ export interface SuspenseBoundary {
   container: RendererElement
   hiddenContainer: RendererElement
   activeBranch: VNode | null
+  isFallbackMountPending: boolean
   pendingBranch: VNode | null
   deps: number
   pendingId: number
@@ -503,6 +513,7 @@ function createSuspenseBoundary(
     pendingId: suspenseId++,
     timeout: typeof timeout === 'number' ? timeout : -1,
     activeBranch: null,
+    isFallbackMountPending: false,
     pendingBranch: null,
     isInFallback: !isHydrating,
     isHydrating,
@@ -530,6 +541,7 @@ function createSuspenseBoundary(
         effects,
         parentComponent,
         container,
+        isInFallback,
       } = suspense
 
       // if there's a transition happening we need to wait it to finish.
@@ -551,11 +563,18 @@ function createSuspenseBoundary(
                 MoveType.ENTER,
               )
               queuePostFlushCb(effects)
+              // clear el reference from fallback vnode to allow GC after transition
+              if (isInFallback && vnode.ssFallback) {
+                vnode.ssFallback.el = null
+              }
             }
           }
         }
         // unmount current active tree
-        if (activeBranch) {
+        // #7966 when Suspense is wrapped in Transition, fallback may wait for
+        // afterLeave before mounting. In that window, activeBranch is still the
+        // leaving content, so avoid unmounting it again during resolve.
+        if (activeBranch && !suspense.isFallbackMountPending) {
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
           // #8105 if `delayEnter` is true, it means that the mounting of
@@ -570,6 +589,10 @@ function createSuspenseBoundary(
             anchor = next(activeBranch)
           }
           unmount(activeBranch, parentComponent, suspense, true)
+          // clear el reference from fallback vnode to allow GC
+          if (!delayEnter && isInFallback && vnode.ssFallback) {
+            queuePostRenderEffect(() => (vnode.ssFallback!.el = null), suspense)
+          }
         }
         if (!delayEnter) {
           // move content from off-dom container to actual container
@@ -577,6 +600,7 @@ function createSuspenseBoundary(
         }
       }
 
+      suspense.isFallbackMountPending = false
       setActiveBranch(suspense, pendingBranch!)
       suspense.pendingBranch = null
       suspense.isInFallback = false
@@ -632,6 +656,7 @@ function createSuspenseBoundary(
 
       const anchor = next(activeBranch!)
       const mountFallback = () => {
+        suspense.isFallbackMountPending = false
         if (!suspense.isInFallback) {
           return
         }
@@ -653,6 +678,7 @@ function createSuspenseBoundary(
       const delayEnter =
         fallbackVNode.transition && fallbackVNode.transition.mode === 'out-in'
       if (delayEnter) {
+        suspense.isFallbackMountPending = true
         activeBranch!.transition!.afterLeave = mountFallback
       }
       suspense.isInFallback = true
@@ -700,6 +726,10 @@ function createSuspenseBoundary(
           ) {
             return
           }
+          // withAsyncContext defers cleanup to a later microtask, so currentInstance may
+          // still be set when Suspense re-enters another component's render path.
+          // Clear it first.
+          unsetCurrentInstance()
           // retry from this component
           instance.asyncResolved = true
           const { vnode } = instance
@@ -728,6 +758,8 @@ function createSuspenseBoundary(
             optimized,
           )
           if (placeholder) {
+            // clean up placeholder reference
+            vnode.placeholder = null
             remove(placeholder)
           }
           updateHOCHostEl(instance, vnode.el)

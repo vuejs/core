@@ -10,6 +10,7 @@ import type {
 import { walk } from 'estree-walker'
 import {
   BindingTypes,
+  TS_NODE_TYPES,
   extractIdentifiers,
   isFunctionType,
   isInDestructureAssignment,
@@ -147,11 +148,6 @@ export function transformDestructuredProps(
         if (stmt.declare || !stmt.id) continue
         registerLocalBinding(stmt.id)
       } else if (
-        (stmt.type === 'ForOfStatement' || stmt.type === 'ForInStatement') &&
-        stmt.left.type === 'VariableDeclaration'
-      ) {
-        walkVariableDeclaration(stmt.left)
-      } else if (
         stmt.type === 'ExportNamedDeclaration' &&
         stmt.declaration &&
         stmt.declaration.type === 'VariableDeclaration'
@@ -240,10 +236,7 @@ export function transformDestructuredProps(
       if (
         parent &&
         parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSSatisfiesExpression' &&
-        parent.type !== 'TSTypeAssertion'
+        !TS_NODE_TYPES.includes(parent.type)
       ) {
         return this.skip()
       }
@@ -271,6 +264,23 @@ export function transformDestructuredProps(
         return
       }
 
+      // for loops: loop variable should be scoped to the loop
+      if (
+        node.type === 'ForOfStatement' ||
+        node.type === 'ForInStatement' ||
+        node.type === 'ForStatement'
+      ) {
+        pushScope()
+        const varDecl = node.type === 'ForStatement' ? node.init : node.left
+        if (varDecl && varDecl.type === 'VariableDeclaration') {
+          walkVariableDeclaration(varDecl)
+        }
+        if (node.body.type === 'BlockStatement') {
+          walkScope(node.body)
+        }
+        return
+      }
+
       // non-function block scopes
       if (node.type === 'BlockStatement' && !isFunctionType(parent!)) {
         pushScope()
@@ -293,7 +303,11 @@ export function transformDestructuredProps(
       parent && parentStack.pop()
       if (
         (node.type === 'BlockStatement' && !isFunctionType(parent!)) ||
-        isFunctionType(node)
+        isFunctionType(node) ||
+        node.type === 'CatchClause' ||
+        node.type === 'ForOfStatement' ||
+        node.type === 'ForInStatement' ||
+        node.type === 'ForStatement'
       ) {
         popScope()
       }

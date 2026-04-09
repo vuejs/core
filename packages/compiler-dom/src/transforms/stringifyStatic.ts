@@ -17,6 +17,7 @@ import {
   type TextCallNode,
   type TransformContext,
   createCallExpression,
+  findDir,
   isStaticArgOf,
 } from '@vue/compiler-core'
 import {
@@ -184,7 +185,7 @@ const getCachedNode = (
   }
 }
 
-const dataAriaRE = /^(data|aria)-/
+const dataAriaRE = /^(?:data|aria)-/
 const isStringifiableAttr = (name: string, ns: Namespaces) => {
   return (
     (ns === Namespaces.HTML
@@ -210,6 +211,11 @@ const isNonStringifiable = /*@__PURE__*/ makeMap(
  */
 function analyzeNode(node: StringifiableNode): [number, number] | false {
   if (node.type === NodeTypes.ELEMENT && isNonStringifiable(node.tag)) {
+    return false
+  }
+
+  // v-once nodes should not be stringified
+  if (node.type === NodeTypes.ELEMENT && findDir(node, 'once', true)) {
     return false
   }
 
@@ -261,8 +267,7 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
           isOptionTag &&
           isStaticArgOf(p.arg, 'value') &&
           p.exp &&
-          p.exp.ast &&
-          p.exp.ast.type !== 'StringLiteral'
+          !p.exp.isStatic
         ) {
           return bail()
         }

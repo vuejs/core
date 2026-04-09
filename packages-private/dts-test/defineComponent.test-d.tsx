@@ -20,6 +20,9 @@ import { type IsAny, type IsUnion, describe, expectType } from './utils'
 describe('with object props', () => {
   interface ExpectedProps {
     a?: number | undefined
+    aa: number
+    aaa: number | null
+    aaaa: number | undefined
     b: string
     e?: Function
     h: boolean
@@ -53,6 +56,19 @@ describe('with object props', () => {
 
   const props = {
     a: Number,
+    aa: {
+      type: Number as PropType<number | undefined>,
+      default: 1,
+    },
+    aaa: {
+      type: Number as PropType<number | null>,
+      default: 1,
+    },
+    aaaa: {
+      type: Number as PropType<number | undefined>,
+      // `as const` prevents widening to `boolean` (keeps literal `true` type)
+      required: true as const,
+    },
     // required should make property non-void
     b: {
       type: String,
@@ -146,6 +162,13 @@ describe('with object props', () => {
     setup(props) {
       // type assertion. See https://github.com/SamVerschueren/tsd
       expectType<ExpectedProps['a']>(props.a)
+      expectType<ExpectedProps['aa']>(props.aa)
+      expectType<ExpectedProps['aaa']>(props.aaa)
+
+      // @ts-expect-error should included `undefined`
+      expectType<number>(props.aaaa)
+      expectType<ExpectedProps['aaaa']>(props.aaaa)
+
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
       expectType<ExpectedProps['h']>(props.h)
@@ -198,6 +221,8 @@ describe('with object props', () => {
     render() {
       const props = this.$props
       expectType<ExpectedProps['a']>(props.a)
+      expectType<ExpectedProps['aa']>(props.aa)
+      expectType<ExpectedProps['aaa']>(props.aaa)
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
       expectType<ExpectedProps['h']>(props.h)
@@ -225,6 +250,8 @@ describe('with object props', () => {
 
       // should also expose declared props on `this`
       expectType<ExpectedProps['a']>(this.a)
+      expectType<ExpectedProps['aa']>(this.aa)
+      expectType<ExpectedProps['aaa']>(this.aaa)
       expectType<ExpectedProps['b']>(this.b)
       expectType<ExpectedProps['e']>(this.e)
       expectType<ExpectedProps['h']>(this.h)
@@ -269,6 +296,7 @@ describe('with object props', () => {
   expectType<JSX.Element>(
     <MyComponent
       a={1}
+      aaaa={1}
       b="b"
       bb="bb"
       e={() => {}}
@@ -295,6 +323,7 @@ describe('with object props', () => {
 
   expectType<Component>(
     <MyComponent
+      aaaa={1}
       b="b"
       dd={{ n: 1 }}
       ddd={['ddd']}
@@ -1373,7 +1402,7 @@ describe('function syntax w/ emits', () => {
 describe('function syntax w/ runtime props', () => {
   // with runtime props, the runtime props must match
   // manual type declaration
-  defineComponent(
+  const Comp1 = defineComponent(
     (_props: { msg: string }) => {
       return () => {}
     },
@@ -1382,7 +1411,34 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
+  // @ts-expect-error bar isn't specified in props definition
   defineComponent(
+    (_props: { msg: string }) => {
+      return () => {}
+    },
+    {
+      props: ['msg', 'bar'],
+    },
+  )
+
+  defineComponent(
+    (_props: { msg: string; bar: string }) => {
+      return () => {}
+    },
+    {
+      props: ['msg'],
+    },
+  )
+
+  expectType<JSX.Element>(<Comp1 msg="1" />)
+  // @ts-expect-error msg type is incorrect
+  expectType<JSX.Element>(<Comp1 msg={1} />)
+  // @ts-expect-error msg is missing
+  expectType<JSX.Element>(<Comp1 />)
+  // @ts-expect-error bar doesn't exist
+  expectType<JSX.Element>(<Comp1 msg="1" bar="2" />)
+
+  const Comp2 = defineComponent(
     <T extends string>(_props: { msg: T }) => {
       return () => {}
     },
@@ -1391,7 +1447,36 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
+  // @ts-expect-error bar isn't specified in props definition
   defineComponent(
+    <T extends string>(_props: { msg: T }) => {
+      return () => {}
+    },
+    {
+      props: ['msg', 'bar'],
+    },
+  )
+
+  defineComponent(
+    <T extends string>(_props: { msg: T; bar: T }) => {
+      return () => {}
+    },
+    {
+      props: ['msg'],
+    },
+  )
+
+  expectType<JSX.Element>(<Comp2 msg="1" />)
+  expectType<JSX.Element>(<Comp2<string> msg="1" />)
+  // @ts-expect-error msg type is incorrect
+  expectType<JSX.Element>(<Comp2 msg={1} />)
+  // @ts-expect-error msg is missing
+  expectType<JSX.Element>(<Comp2 />)
+  // @ts-expect-error bar doesn't exist
+  expectType<JSX.Element>(<Comp2 msg="1" bar="2" />)
+
+  // Note: generics aren't supported with object runtime props
+  const Comp3 = defineComponent(
     <T extends string>(_props: { msg: T }) => {
       return () => {}
     },
@@ -1401,6 +1486,40 @@ describe('function syntax w/ runtime props', () => {
       },
     },
   )
+
+  defineComponent(
+    // @ts-expect-error bar isn't specified in props definition
+    <T extends string>(_props: { msg: T }) => {
+      return () => {}
+    },
+    {
+      props: {
+        bar: String,
+      },
+    },
+  )
+
+  defineComponent(
+    // @ts-expect-error generics aren't supported with object runtime props
+    <T extends string>(_props: { msg: T; bar: T }) => {
+      return () => {}
+    },
+    {
+      props: {
+        msg: String,
+      },
+    },
+  )
+
+  expectType<JSX.Element>(<Comp3 msg="1" />)
+  // @ts-expect-error generics aren't supported with object runtime props
+  expectType<JSX.Element>(<Comp3<string> msg="1" />)
+  // @ts-expect-error msg type is incorrect
+  expectType<JSX.Element>(<Comp3 msg={1} />)
+  // @ts-expect-error msg is missing
+  expectType<JSX.Element>(<Comp3 />)
+  // @ts-expect-error bar doesn't exist
+  expectType<JSX.Element>(<Comp3 msg="1" bar="2" />)
 
   // @ts-expect-error string prop names don't match
   defineComponent(
@@ -1420,19 +1539,6 @@ describe('function syntax w/ runtime props', () => {
       props: {
         // @ts-expect-error prop type mismatch
         msg: Number,
-      },
-    },
-  )
-
-  // @ts-expect-error prop keys don't match
-  defineComponent(
-    (_props: { msg: string }, ctx) => {
-      return () => {}
-    },
-    {
-      props: {
-        msg: String,
-        bar: String,
       },
     },
   )
@@ -2068,3 +2174,48 @@ expectString(instance.actionText)
 // public prop on $props should be optional
 // @ts-expect-error
 expectString(instance.$props.actionText)
+
+// #12122
+defineComponent({
+  props: { foo: String },
+  render() {
+    expectType<{ readonly foo?: string }>(this.$props)
+    // @ts-expect-error
+    expectType<string>(this.$props)
+  },
+})
+
+// #14117
+defineComponent({
+  setup() {
+    const setup1 = ref('setup1')
+    const setup2 = ref('setup2')
+    return { setup1, setup2 }
+  },
+  data() {
+    return {
+      data1: 1,
+    }
+  },
+  props: {
+    props1: {
+      type: String,
+    },
+  },
+  methods: {
+    methods1() {
+      return `methods1`
+    },
+  },
+  computed: {
+    computed1() {
+      this.setup1
+      this.setup2
+      this.data1
+      this.props1
+      this.methods1()
+      return `computed1`
+    },
+  },
+  expose: ['setup1'],
+})

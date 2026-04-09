@@ -143,7 +143,9 @@ type InferPropType<T, NullAsAny = true> = [T] extends [null]
 export type ExtractPropTypes<O> = {
   // use `keyof Pick<O, RequiredKeys<O>>` instead of `RequiredKeys<O>` to
   // support IDE features
-  [K in keyof Pick<O, RequiredKeys<O>>]: InferPropType<O[K]>
+  [K in keyof Pick<O, RequiredKeys<O>>]: O[K] extends { default: any }
+    ? Exclude<InferPropType<O[K]>, undefined>
+    : InferPropType<O[K]>
 } & {
   // use `keyof Pick<O, OptionalKeys<O>>` instead of `OptionalKeys<O>` to
   // support IDE features
@@ -654,6 +656,7 @@ function validateProps(
 ) {
   const resolvedValues = toRaw(props)
   const options = instance.propsOptions[0]
+  const camelizePropsKey = Object.keys(rawProps).map(key => camelize(key))
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue
@@ -662,7 +665,7 @@ function validateProps(
       resolvedValues[key],
       opt,
       __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
-      !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key)),
+      !camelizePropsKey.includes(key),
     )
   }
 }

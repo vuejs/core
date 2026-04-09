@@ -68,6 +68,46 @@ describe('sfc reactive props destructure', () => {
     })
   })
 
+  test('for-of loop variable shadowing', () => {
+    const { content } = compile(`
+      <script setup lang="ts">
+      interface Props {
+        msg: string;
+        input: string[];
+      }
+      const { msg, input } = defineProps<Props>();
+      for (const msg of input) {
+        console.log('MESSAGE', msg);
+      }
+      console.log('NOT FAIL', { msg });
+      </script>
+    `)
+    // inside loop: should use local variable
+    expect(content).toMatch(`for (const msg of __props.input)`)
+    expect(content).toMatch(`console.log('MESSAGE', msg)`)
+    // after loop: should restore to prop reference
+    expect(content).toMatch(`console.log('NOT FAIL', { msg: __props.msg })`)
+    assertCode(content)
+  })
+
+  test('regular for loop variable shadowing', () => {
+    const { content } = compile(`
+      <script setup lang="ts">
+      const { i, len } = defineProps<{ i: number; len: number }>();
+      for (let i = 0; i < len; i++) {
+        console.log('INDEX', i);
+      }
+      console.log('AFTER', { i });
+      </script>
+    `)
+    // inside loop: should use local variable
+    expect(content).toMatch(`for (let i = 0; i < __props.len; i++)`)
+    expect(content).toMatch(`console.log('INDEX', i)`)
+    // after loop: should restore to prop reference
+    expect(content).toMatch(`console.log('AFTER', { i: __props.i })`)
+    assertCode(content)
+  })
+
   test('default values w/ array runtime declaration', () => {
     const { content } = compile(`
       <script setup>
@@ -196,6 +236,21 @@ describe('sfc reactive props destructure', () => {
     boolb: { type: [Boolean, Number] },
     func: { type: Function, default: () => {} }
   }`)
+  })
+
+  test('with TSInstantiationExpression', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      type Foo = <T extends string | number>(data: T) => void
+      const { value } = defineProps<{ value: Foo }>()
+      const foo = value<123>
+      </script>
+    `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`const foo = __props.value<123>`)
   })
 
   test('aliasing', () => {
@@ -341,6 +396,22 @@ describe('sfc reactive props destructure', () => {
     expect(content).toMatch(`const a = 0,`)
     expect(content).toMatch(`b = 0;`)
     expect(content).toMatch(`props: ['item'],`)
+  })
+
+  test('handle function parameters with same name as destructured props', () => {
+    const { content } = compile(`
+    <script setup>
+    const { value } = defineProps()
+    function test(value) {
+      try {
+      } catch {
+      }
+    }
+    console.log(value)
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`console.log(__props.value)`)
   })
 
   test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {

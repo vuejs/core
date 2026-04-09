@@ -60,9 +60,13 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   } else if (
     // #11081 force set props for possible async custom element
     (el as VueElement)._isVueCE &&
-    (/[A-Z]/.test(key) || !isString(nextValue))
+    // #12408 check if it's declared prop or it's async custom element
+    (shouldSetAsPropForVueCE(el as VueElement, key) ||
+      // @ts-expect-error _def is private
+      ((el as VueElement)._def.__asyncLoader &&
+        (/[A-Z]/.test(key) || !isString(nextValue))))
   ) {
-    patchDOMProp(el, camelize(key), nextValue, parentComponent)
+    patchDOMProp(el, camelize(key), nextValue, parentComponent, key)
   } else {
     // special case for <input v-model type="checkbox"> with
     // :true-value & :false-value
@@ -102,7 +106,19 @@ function shouldSetAsProp(
   // them as attributes.
   // Note that `contentEditable` doesn't have this problem: its DOM
   // property is also enumerated string values.
-  if (key === 'spellcheck' || key === 'draggable' || key === 'translate') {
+  if (
+    key === 'spellcheck' ||
+    key === 'draggable' ||
+    key === 'translate' ||
+    key === 'autocorrect'
+  ) {
+    return false
+  }
+
+  // #13946 iframe.sandbox should always be set as attribute since setting
+  // the property to null results in 'null' string, and setting to empty string
+  // enables the most restrictive sandbox mode instead of no sandboxing.
+  if (key === 'sandbox' && el.tagName === 'IFRAME') {
     return false
   }
 
@@ -141,4 +157,17 @@ function shouldSetAsProp(
   }
 
   return key in el
+}
+
+function shouldSetAsPropForVueCE(el: VueElement, key: string) {
+  const props = // @ts-expect-error _def is private
+    el._def.props as Record<string, unknown> | string[] | undefined
+  if (!props) {
+    return false
+  }
+
+  const camelKey = camelize(key)
+  return Array.isArray(props)
+    ? props.some(prop => camelize(prop) === camelKey)
+    : Object.keys(props).some(prop => camelize(prop) === camelKey)
 }

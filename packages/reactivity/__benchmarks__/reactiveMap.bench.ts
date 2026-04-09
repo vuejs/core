@@ -1,5 +1,6 @@
 import { bench } from 'vitest'
-import { type ComputedRef, computed, reactive } from '../src'
+import type { ComputedRef } from '../src'
+import { computed, reactive } from '../dist/reactivity.esm-browser.prod'
 
 function createMap(obj: Record<string, any>) {
   const map = new Map()
