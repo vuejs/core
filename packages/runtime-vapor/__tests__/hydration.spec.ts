@@ -9826,6 +9826,68 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate multi-root Vapor component should cleanup extra SSR text within allow-mismatch wrapper', async () => {
+    const data = ref({
+      msg: 'Hello',
+      extra: 'Tail',
+      after: 'After',
+    })
+
+    const childCode = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <span>{{ data.msg }}</span>{{ data.extra }}
+      </template>`
+
+    const appCode = `<script setup>
+        const components = _components
+        const data = _data
+      </script>
+      <template>
+        <div data-allow-mismatch="text">
+          <components.Child />
+          <span>{{ data.after }}</span>
+        </div>
+      </template>`
+
+    const SSRChild = compileVaporComponent(childCode, data, undefined, true)
+    const SSRApp = compileVaporComponent(
+      appCode,
+      data,
+      { Child: SSRChild },
+      true,
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRApp),
+    )
+
+    data.value.extra = ''
+
+    const ClientChild = compileVaporComponent(childCode, data)
+    const ClientApp = compileVaporComponent(appCode, data, {
+      Child: ClientChild,
+    })
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    createVaporSSRApp(ClientApp).mount(container)
+
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="text"><!--[--><span>Hello</span><!--]--><span>After</span></div>',
+    )
+
+    data.value.extra = 'Updated'
+    data.value.after = 'After updated'
+    await nextTick()
+
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="text"><!--[--><span>Hello</span>Updated<!--]--><span>After updated</span></div>',
+    )
+  })
+
   test('hydrate multi-root VDOM via mountVNode as non-first child', async () => {
     const MultiRootVDOM = {
       setup() {
