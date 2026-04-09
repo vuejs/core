@@ -2570,6 +2570,44 @@ describe('Suspense', () => {
     expect(serializeInner(target)).toBe(``)
   })
 
+  // #14701
+  test('should not crash when moving disabled teleport with component children inside suspense', async () => {
+    const target = nodeOps.createElement('div')
+
+    const Comp = {
+      render() {
+        return h('div', 'comp')
+      },
+    }
+
+    const Async = defineAsyncComponent({
+      render() {
+        // Multi-root fragment: element + disabled teleport with component child
+        return [
+          h('div', 'content'),
+          h(Teleport, { to: target, disabled: true }, h(Comp)),
+        ]
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(Suspense, null, {
+        default: h(Async),
+        fallback: h('div', 'fallback'),
+      }),
+      root,
+    )
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div>content</div><!--teleport start--><div>comp</div><!--teleport end-->`,
+    )
+  })
+
   //#11617
   test('update async component before resolve then update again', async () => {
     const arr: boolean[] = []
