@@ -393,7 +393,8 @@ function moveTeleport(
   // if this is a re-order and teleport is enabled (content is in target)
   // do not move children. So the opposite is: only move children if this
   // is not a reorder, or the teleport is disabled
-  if (!isReorder || isTeleportDisabled(props)) {
+  // #14701 don't move children if in pending mount
+  if (!pendingMounts.has(vnode) && (!isReorder || isTeleportDisabled(props))) {
     // Teleport has either Array children or no children.
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       for (let i = 0; i < (children as VNode[]).length; i++) {

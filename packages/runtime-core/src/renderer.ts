@@ -2047,12 +2047,7 @@ function baseCreateRenderer(
   ) => {
     const { el, type, transition, children, shapeFlag } = vnode
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      // vnode.component may be null if the component is inside a Teleport
-      // whose mount was deferred by Suspense (pendingMounts). Skip the move
-      // — the deferred mount job will handle placement after effects flush.
-      if (vnode.component) {
-        move(vnode.component.subTree, container, anchor, moveType)
-      }
+      move(vnode.component!.subTree, container, anchor, moveType)
       return
     }
 
