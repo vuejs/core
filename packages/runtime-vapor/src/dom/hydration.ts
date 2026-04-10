@@ -112,16 +112,19 @@ export function enterHydration(node: Node): () => void {
 export let adoptTemplate: (node: Node, template: string) => Node | null
 export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
 
-type Anchor = Comment & {
-  // reused hydration anchors must stay in place during mismatch recovery
+type Anchor = Node & {
+  // Runtime-created or reused hydration anchor that mismatch recovery and
+  // boundary cleanup must keep in place.
   $vha?: 1
 
-  // cached matching fragment end to avoid repeated traversal
-  // on nested fragments
+  // cached matching fragment end to avoid repeated traversal on nested
+  // comment fragments.
   $fe?: Anchor
 }
 
-export const isComment = (node: Node, data: string): node is Anchor =>
+type CommentAnchor = Comment & Anchor
+
+export const isComment = (node: Node, data: string): node is CommentAnchor =>
   node.nodeType === 8 && (node as Comment).data === data
 
 export function setCurrentHydrationNode(node: Node | null): void {
@@ -211,7 +214,7 @@ function locateHydrationNodeImpl(consumeFragmentStart = false) {
 }
 
 export function locateEndAnchor(
-  node: Anchor,
+  node: CommentAnchor,
   open = '[',
   close = ']',
 ): Node | null {
@@ -220,8 +223,8 @@ export function locateEndAnchor(
     return node.$fe
   }
 
-  const stack: Anchor[] = [node]
-  while ((node = _next(node) as Anchor) && stack.length > 0) {
+  const stack: CommentAnchor[] = [node]
+  while ((node = _next(node) as CommentAnchor) && stack.length > 0) {
     if (node.nodeType === 8) {
       if (node.data === open) {
         stack.push(node)
@@ -283,8 +286,11 @@ function handleMismatch(node: Node, template: string): Node {
     removeFragmentNodes(node)
   }
 
-  const container = parentNode(node)!
+  // Reused hydration anchors are structural boundaries, not replaceable
+  // content. Mismatch recovery inserts the new node before the anchor and
+  // keeps the anchor in place.
   const shouldPreserveAnchor = isHydrationAnchor(node)
+  const container = parentNode(node)!
   const next = shouldPreserveAnchor ? node : _next(node)
   if (!shouldPreserveAnchor) {
     remove(node, container)
@@ -299,6 +305,8 @@ function handleMismatch(node: Node, template: string): Node {
   const t = createElement('template') as HTMLTemplateElement
   t.innerHTML = template
   const newNode = _child(t.content).cloneNode(true) as Element
+  // only carry over existing children/attrs when the original node is itself
+  // an element (the legacy element-vs-element mismatch case).
   if (node.nodeType === 1) {
     newNode.innerHTML = (node as Element).innerHTML
     Array.from((node as Element).attributes).forEach(attr => {
@@ -324,7 +332,7 @@ export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
   if (!parent) {
     return
   }
-  const end = endAnchor || locateEndAnchor(node as Anchor)
+  const end = endAnchor || locateEndAnchor(node as CommentAnchor)
   while (true) {
     const next = _next(node)
     if (next && next !== end) {
@@ -369,7 +377,7 @@ export function cleanupHydrationTail(node: Node): void {
 }
 
 export function markHydrationAnchor<T extends Node>(node: T): T {
-  ;(node as any).$vha = 1
+  ;(node as Anchor).$vha = 1
   return node
 }
 
