@@ -43,7 +43,7 @@ import {
   queuePostRenderEffect,
   setKeepAliveBranchActive,
 } from '../renderer'
-import { type SchedulerJob, queueJob, queuePostFlushCb } from '../scheduler'
+import { queueJob, queuePostFlushCb } from '../scheduler'
 import { setTransitionHooks } from './BaseTransition'
 import type { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
@@ -153,16 +153,13 @@ const KeepAliveImpl: ComponentOptions = {
         optimized,
       )
       if (updates) {
-        // Replay deferred child updates through the scheduler after the branch
-        // is active again so parent jobs can still flip the branch back to
-        // inactive before child updates run.
+        // Replay deferred child updates in a later scheduler turn so parent
+        // jobs can deactivate the branch again first. The replay job also
+        // bails if a normal update for the same instance is already queued.
         queuePostFlushCb(() => {
           for (const pending of updates) {
-            if (!pending.isUnmounted) {
-              const job = (() => pending.update()) as SchedulerJob
-              job.id = pending.uid
-              job.i = pending
-              queueJob(job)
+            if (pending.keepAliveReplayJob) {
+              queueJob(pending.keepAliveReplayJob)
             }
           }
           updates.clear()

@@ -500,6 +500,53 @@ describe('KeepAlive', () => {
     expect(mountedB).toHaveBeenCalledTimes(1)
   })
 
+  test('should not replay a deferred update when a newer child job is already queued', async () => {
+    let renders = 0
+    const visible = ref(true)
+    const value = ref('A')
+
+    const Home = defineComponent({
+      name: 'Home',
+      setup() {
+        return () => {
+          renders++
+          return h('main', value.value)
+        }
+      },
+    })
+
+    const App = defineComponent({
+      setup() {
+        return () => h(KeepAlive, null, [visible.value ? h(Home) : null])
+      },
+    })
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<main>A</main>`)
+    expect(renders).toBe(1)
+
+    visible.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    value.value = 'B'
+    await nextTick()
+    expect(renders).toBe(1)
+
+    const queueNewerUpdate = vi.fn(() => {
+      value.value = 'C'
+    }) as any
+    queueNewerUpdate.id = -1
+
+    visible.value = true
+    queuePostFlushCb(queueNewerUpdate)
+    await nextTick()
+
+    expect(queueNewerUpdate).toHaveBeenCalledTimes(1)
+    expect(serializeInner(root)).toBe(`<main>C</main>`)
+    expect(renders).toBe(2)
+  })
+
   async function assertNameMatch(props: KeepAliveProps) {
     const outerRef = ref(true)
     const viewRef = ref('one')

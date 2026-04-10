@@ -1474,6 +1474,7 @@ function baseCreateRenderer(
         if (deferKeepAliveBranchUpdate(instance)) {
           return
         }
+        instance.keepAliveReplayJob = null
 
         if (__FEATURE_SUSPENSE__) {
           const nonHydratedAsyncRoot = locateNonHydratedAsyncRoot(instance)
@@ -2614,6 +2615,7 @@ export function deferKeepAliveBranchUpdate(
     const updates = deferredKeepAliveBranchUpdates.get(current)
     if (updates) {
       updates.add(instance)
+      instance.keepAliveReplayJob ||= createKeepAliveReplayJob(instance)
       return true
     }
     // Nested KeepAlive roots manage their own inactive branches.
@@ -2623,6 +2625,26 @@ export function deferKeepAliveBranchUpdate(
     current = current.parent
   }
   return false
+}
+
+function createKeepAliveReplayJob(
+  instance: ComponentInternalInstance,
+): SchedulerJob {
+  const job = (() => {
+    if (instance.isUnmounted || instance.keepAliveReplayJob !== job) {
+      return
+    }
+    if (instance.job.flags! & SchedulerJobFlags.QUEUED) {
+      return
+    }
+    if (!deferKeepAliveBranchUpdate(instance)) {
+      instance.keepAliveReplayJob = null
+      instance.update()
+    }
+  }) as SchedulerJob
+  job.id = instance.uid
+  job.i = instance
+  return job
 }
 
 export function setKeepAliveBranchActive(
