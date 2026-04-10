@@ -341,6 +341,96 @@ describe('KeepAlive', () => {
     assertHookCalls(two, [1, 1, 4, 4, 0]) // should remain inactive
   })
 
+  test('should not mount nested dynamic component twice when parent key changes', async () => {
+    const mountedA = vi.fn()
+    const mountedB = vi.fn()
+
+    const A = defineComponent({
+      name: 'A',
+      setup() {
+        onMounted(mountedA)
+        return () => h('span', 'Comp A')
+      },
+    })
+
+    const B = defineComponent({
+      name: 'B',
+      setup() {
+        onMounted(mountedB)
+        return () => h('span', 'Comp B')
+      },
+    })
+
+    const switchRoute = () => {
+      comp.value = B
+    }
+    const comp = shallowRef(A)
+    const HomeView = defineComponent({
+      name: 'HomeView',
+      setup() {
+        return () => h('main', [h(KeepAlive, null, [h(comp.value)])])
+      },
+    })
+
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(KeepAlive, null, [
+            h(HomeView, {
+              key: (comp.value as ComponentOptions).name,
+            }),
+          ])
+      },
+    })
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<main><span>Comp A</span></main>`)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(0)
+
+    switchRoute()
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(`<main><span>Comp B</span></main>`)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(1)
+  })
+
+  test('should apply the latest deferred update when re-activating a branch', async () => {
+    const visible = ref(true)
+    const value = ref('A')
+
+    const Home = defineComponent({
+      name: 'Home',
+      setup() {
+        return () => h('main', value.value)
+      },
+    })
+
+    const App = defineComponent({
+      setup() {
+        return () => h(KeepAlive, null, [visible.value ? h(Home) : null])
+      },
+    })
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<main>A</main>`)
+
+    visible.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    value.value = 'B'
+    await nextTick()
+    value.value = 'C'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    visible.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<main>C</main>`)
+  })
+
   async function assertNameMatch(props: KeepAliveProps) {
     const outerRef = ref(true)
     const viewRef = ref('one')

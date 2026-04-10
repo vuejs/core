@@ -110,6 +110,12 @@ export type RootRenderFunction<HostElement = RendererElement> = (
   namespace?: ElementNamespace,
 ) => void
 
+// Tracks component updates that are deferred while a KeepAlive branch is inactive.
+const deferredKeepAliveBranchUpdates = new WeakMap<
+  ComponentInternalInstance,
+  Set<ComponentInternalInstance>
+>()
+
 export interface RendererOptions<
   HostNode = RendererNode,
   HostElement = RendererElement,
@@ -1465,6 +1471,10 @@ function baseCreateRenderer(
       } else {
         let { next, bu, u, parent, vnode } = instance
 
+        if (deferKeepAliveBranchUpdate(instance)) {
+          return
+        }
+
         if (__FEATURE_SUSPENSE__) {
           const nonHydratedAsyncRoot = locateNonHydratedAsyncRoot(instance)
           // we are trying to update some async comp before hydration
@@ -2593,6 +2603,41 @@ function locateNonHydratedAsyncRoot(
     } else {
       return locateNonHydratedAsyncRoot(subComponent)
     }
+  }
+}
+
+export function deferKeepAliveBranchUpdate(
+  instance: ComponentInternalInstance,
+): boolean {
+  let current: ComponentInternalInstance | null = instance
+  while (current) {
+    const updates = deferredKeepAliveBranchUpdates.get(current)
+    if (updates) {
+      updates.add(instance)
+      return true
+    }
+    // Nested KeepAlive roots manage their own inactive branches.
+    if (isKeepAlive(current.vnode)) {
+      break
+    }
+    current = current.parent
+  }
+  return false
+}
+
+export function setKeepAliveBranchActive(
+  instance: ComponentInternalInstance,
+  active: boolean,
+): Set<ComponentInternalInstance> | undefined {
+  if (active) {
+    const updates = deferredKeepAliveBranchUpdates.get(instance)
+    deferredKeepAliveBranchUpdates.delete(instance)
+    return updates
+  }
+
+  // Child updates will be collected under this inactive KeepAlive root.
+  if (!deferredKeepAliveBranchUpdates.has(instance)) {
+    deferredKeepAliveBranchUpdates.set(instance, new Set())
   }
 }
 

@@ -41,7 +41,9 @@ import {
   type RendererNode,
   invalidateMount,
   queuePostRenderEffect,
+  setKeepAliveBranchActive,
 } from '../renderer'
+import { queuePostFlushCb } from '../scheduler'
 import { setTransitionHooks } from './BaseTransition'
 import type { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
@@ -136,6 +138,7 @@ const KeepAliveImpl: ComponentOptions = {
       optimized,
     ) => {
       const instance = vnode.component!
+      const updates = setKeepAliveBranchActive(instance, true)
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
       patch(
@@ -149,6 +152,17 @@ const KeepAliveImpl: ComponentOptions = {
         vnode.slotScopeIds,
         optimized,
       )
+      if (updates) {
+        // Replay deferred child updates after the branch is active again.
+        queuePostFlushCb(() => {
+          for (const pending of updates) {
+            if (!pending.isUnmounted) {
+              pending.update()
+            }
+          }
+          updates.clear()
+        })
+      }
       queuePostRenderEffect(() => {
         instance.isDeactivated = false
         if (instance.a) {
@@ -168,6 +182,7 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+      setKeepAliveBranchActive(instance, false)
       invalidateMount(instance.m)
       invalidateMount(instance.a)
 
