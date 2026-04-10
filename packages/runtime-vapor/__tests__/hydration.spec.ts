@@ -4398,6 +4398,63 @@ describe('Vapor Mode hydration', () => {
       expect(teleport.targetAnchor).toBeNull()
     })
 
+    test('enabled teleport hydration should preserve existing target end anchor when target is empty', async () => {
+      const data = ref({ msg: 'foo' })
+
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport-empty-anchors'
+      teleportContainer.innerHTML =
+        `<!--teleport start anchor-->` + `<!--teleport anchor-->`
+      document.body.appendChild(teleportContainer)
+
+      const { container } = await mountWithHydration(
+        '<!--teleport start--><!--teleport end-->',
+        `<teleport to="#teleport-empty-anchors">
+          <span>{{data.msg}}</span>
+        </teleport>`,
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><!--teleport end-->`,
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(teleportContainer.innerHTML).toBe(
+        `<!--teleport start anchor--><span>foo</span><!--teleport anchor-->`,
+      )
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(teleportContainer.innerHTML).toBe(
+        `<!--teleport start anchor--><span>bar</span><!--teleport anchor-->`,
+      )
+    })
+
+    test('disabled teleport hydration over empty main-view range should preserve teleport end anchor', async () => {
+      const data = ref({ msg: 'foo' })
+
+      const { container } = await mountWithHydration(
+        '<!--teleport start--><!--teleport end-->',
+        `<teleport :to="undefined" :disabled="true">
+          <span>{{data.msg}}</span>
+        </teleport>`,
+        data,
+      )
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><span>foo</span><!--teleport end-->`,
+      )
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><span>bar</span><!--teleport end-->`,
+      )
+    })
+
     test('enabled teleport with null target', async () => {
       const { container } = await mountWithHydration(
         '<!--teleport start--><!--teleport end-->',
