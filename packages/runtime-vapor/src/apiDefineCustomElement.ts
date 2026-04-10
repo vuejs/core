@@ -35,6 +35,16 @@ export type VaporElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VaporElement & P
 }
 
+type VaporCustomElementHydrate = (
+  container: ParentNode,
+  createComponent: () => void,
+) => void
+
+const vaporCustomElementHydrates = new WeakMap<
+  Function,
+  VaporCustomElementHydrate
+>()
+
 // overload 1: direct setup function
 export function defineVaporCustomElement<Props, RawBindings = object>(
   setup: (
@@ -146,14 +156,23 @@ export function defineVaporCustomElement(
    * @internal
    */
   _createApp?: CreateAppFunction<ParentNode, VaporComponent>,
+  /**
+   * @internal
+   */
+  _hydrate?: VaporCustomElementHydrate,
 ): VaporElementConstructor {
   let Comp = defineVaporComponent(options, extraOptions)
   if (isPlainObject(Comp)) Comp = extend({}, Comp, extraOptions)
   class VaporCustomElement extends VaporElement {
     static def = Comp
+
     constructor(initialProps?: Record<string, any>) {
       super(Comp, initialProps, _createApp)
     }
+  }
+
+  if (_hydrate) {
+    vaporCustomElementHydrates.set(VaporCustomElement, _hydrate)
   }
 
   return VaporCustomElement
@@ -164,8 +183,13 @@ export const defineVaporSSRCustomElement = ((
   options: any,
   extraOptions?: Omit<VaporComponentOptions, 'setup'>,
 ) => {
-  // @ts-expect-error
-  return defineVaporCustomElement(options, extraOptions, createVaporSSRApp)
+  return defineVaporCustomElement(
+    options,
+    extraOptions,
+    // @ts-expect-error
+    createVaporSSRApp,
+    withHydration,
+  )
 }) as typeof defineVaporCustomElement
 
 type VaporInnerComponentDef = VaporComponent & CustomElementOptions
@@ -184,7 +208,8 @@ export class VaporElement extends VueElementBase<
   }
 
   protected _needsHydration(): boolean {
-    if (this.shadowRoot && this._createApp !== createVaporApp) {
+    const hydrate = vaporCustomElementHydrates.get(this.constructor)
+    if (this.shadowRoot && hydrate) {
       return true
     } else {
       if (__DEV__ && this.shadowRoot) {
@@ -208,8 +233,9 @@ export class VaporElement extends VueElementBase<
     }
 
     // create component in hydration context
-    if (this.shadowRoot && this._createApp === createVaporSSRApp) {
-      withHydration(this._root, this._createComponent.bind(this))
+    const hydrate = vaporCustomElementHydrates.get(this.constructor)
+    if (this.shadowRoot && hydrate) {
+      hydrate(this._root, this._createComponent.bind(this))
     } else {
       this._createComponent()
     }
