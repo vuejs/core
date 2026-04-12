@@ -195,7 +195,7 @@ export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 /**
  * Defines which prop name is used for children (slots) type checking.
  *
- * This is not enabled by default. To opt in, add the following
+ * This is not set by default. To enable it, add the following
  * declaration in your vue-jsx project:
  *
  * ```ts
