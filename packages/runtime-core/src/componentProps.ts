@@ -193,7 +193,7 @@ export type NormalizedProps = Record<string, NormalizedProp>
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 
 /**
- * Defines which prop name is used for children (slots) type checking.
+ * Defines which prop name is used for JSX children (slots) type checking.
  *
  * This is not set by default. To enable it, add the following
  * declaration in your vue-jsx project:
