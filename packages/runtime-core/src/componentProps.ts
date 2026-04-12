@@ -32,15 +32,19 @@ import {
   type Data,
   setCurrentInstance,
 } from './component'
-import { type EmitsOptions, isEmitListener } from './componentEmits'
+import {
+  type EmitsOptions,
+  type EmitsToProps,
+  isEmitListener,
+} from './componentEmits'
 import type { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
 import { createInternalObject } from './internalObject'
-import type { EmitsToProps, SlotsType, VNodeChild } from '@vue/runtime-core'
-import type { UnwrapSlotsType } from './componentSlots'
+import type { SlotsType, UnwrapSlotsType } from './componentSlots'
+import type { VNodeChild } from './vnode'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
