@@ -141,7 +141,9 @@ export interface ComponentOptionsBase<
           >
         >
     >,
-    ctx: SetupContext<E, S, RawBindings>,
+    ctx: SetupContext<E, S> & {
+      expose: (exposed?: Record<string, any> | RawBindings) => void
+    },
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
   template?: string | object // can be a direct DOM node

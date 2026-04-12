@@ -1195,6 +1195,18 @@ describe('infer expose from `SetupContext`', () => {
   expectType<IsAny<typeof foo.bar>>(false)
   expectType<number>(foo.bar)
 
+  const Foo1 = defineComponent({
+    setup(props: { foo: number }, _ctx: SetupContext<EmitsOptions, {}>) {
+      return { bar: ref(props.foo) }
+    },
+    render() {
+      expectType<number>(this.bar)
+    },
+  })
+  const foo1 = {} as InstanceType<typeof Foo1>
+  expectType<IsAny<typeof foo1.bar>>(false)
+  expectType<number>(foo1.bar)
+
   const Bar = defineComponent({
     setup(
       props: { foo: number },

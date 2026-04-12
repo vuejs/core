@@ -173,7 +173,7 @@ export function defineComponent<
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>,
+    ctx: SetupContext<E, S, B>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: ComponentObjectPropsOptions<Props>
