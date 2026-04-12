@@ -1178,53 +1178,6 @@ describe('componentOptions setup should be `SetupContext`', () => {
 })
 
 describe('infer expose from `SetupContext`', () => {
-  // options
-  const Foo = defineComponent({
-    setup(
-      props: { foo: number },
-      ctx: SetupContext<EmitsOptions, {}, { bar: Ref<number> }>,
-    ) {
-      ctx.expose({ bar: ref(props.foo) })
-      return () => <></>
-    },
-    render() {
-      expectType<number>(this.bar)
-    },
-  })
-  const foo = {} as InstanceType<typeof Foo>
-  expectType<IsAny<typeof foo.bar>>(false)
-  expectType<number>(foo.bar)
-
-  const Foo1 = defineComponent({
-    setup(props: { foo: number }, _ctx: SetupContext<EmitsOptions, {}>) {
-      return { bar: ref(props.foo) }
-    },
-    render() {
-      expectType<number>(this.bar)
-    },
-  })
-  const foo1 = {} as InstanceType<typeof Foo1>
-  expectType<IsAny<typeof foo1.bar>>(false)
-  expectType<number>(foo1.bar)
-
-  const Bar = defineComponent({
-    setup(
-      props: { foo: number },
-      ctx: {
-        expose: (exposed: { bar: Ref<number> }) => void
-      },
-    ) {
-      ctx.expose({ bar: ref(props.foo) })
-      return () => <></>
-    },
-    render() {
-      expectType<number>(this.bar)
-    },
-  })
-  const bar = {} as InstanceType<typeof Bar>
-  expectType<IsAny<typeof bar.bar>>(false)
-  expectType<number>(bar.bar)
-
   // functional
   const Baz = defineComponent(
     <T,>(
