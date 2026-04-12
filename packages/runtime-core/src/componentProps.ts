@@ -218,13 +218,15 @@ export type ResolveComponentProps<
   Slots = RawSlots extends SlotsType ? UnwrapSlotsType<RawSlots> : RawSlots,
 > = Readonly<Props> &
   Readonly<EmitsToProps<Emits>> &
-  (keyof JSXElementChildrenAttribute extends infer Key extends string
-    ? {
-        [K in Key]?:
-          | ('default' extends keyof Slots ? Slots['default'] | Slots : Slots)
-          | NoInfer<Element>
-      }
-    : {})
+  (string extends keyof Slots
+    ? {}
+    : keyof JSXElementChildrenAttribute extends infer Key extends string
+      ? {
+          [K in Key]?:
+            | ('default' extends keyof Slots ? Slots['default'] | Slots : Slots)
+            | NoInfer<Element>
+        }
+      : {})
 
 export function initProps(
   instance: ComponentInternalInstance,

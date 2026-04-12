@@ -1636,14 +1636,15 @@ describe('slots', () => {
     }}
   </Comp1>
 
-  const comp2 = defineComponent({
+  const Comp2 = defineComponent({
     setup(props, { slots }) {
       // unknown slots
       expectType<Slots>(slots)
       expectType<((...args: any[]) => VNode[]) | undefined>(slots.default)
     },
   })
-  expectType<Slots | undefined>(new comp2().$slots)
+  expectType<Slots | undefined>(new Comp2().$slots)
+  expectType<{}>(new Comp2().$props)
 })
 
 // #5885
