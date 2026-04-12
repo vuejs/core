@@ -32,13 +32,15 @@ import {
   type Data,
   setCurrentInstance,
 } from './component'
-import { isEmitListener } from './componentEmits'
+import { type EmitsOptions, isEmitListener } from './componentEmits'
 import type { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
 import { createInternalObject } from './internalObject'
+import type { EmitsToProps, SlotsType, VNodeChild } from '@vue/runtime-core'
+import type { UnwrapSlotsType } from './componentSlots'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -189,6 +191,40 @@ type NormalizedProp = PropOptions & {
 // and an array of prop keys that need value casting (booleans and defaults)
 export type NormalizedProps = Record<string, NormalizedProp>
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
+
+/**
+ * Defines which prop name is used for children (slots) type checking.
+ *
+ * This is not enabled by default. To opt in, add the following
+ * declaration in your vue-jsx project:
+ *
+ * ```ts
+ * declare module 'vue' {
+ *   interface JSXElementChildrenAttribute {
+ *     'v-slots': {}
+ *   }
+ * }
+ * ```
+ *
+ * @see {@link https://www.typescriptlang.org/docs/handbook/jsx.html#children-type-checking}
+ */
+export interface JSXElementChildrenAttribute {}
+
+export type ResolveComponentProps<
+  Props,
+  Emits extends EmitsOptions,
+  RawSlots extends SlotsType | Record<string, any> = Record<string, any>,
+  Element = VNodeChild,
+  Slots = RawSlots extends SlotsType ? UnwrapSlotsType<RawSlots> : RawSlots,
+> = Readonly<Props> &
+  Readonly<EmitsToProps<Emits>> &
+  (keyof JSXElementChildrenAttribute extends infer Key extends string
+    ? {
+        [K in Key]?:
+          | ('default' extends keyof Slots ? Slots['default'] | Slots : Slots)
+          | NoInfer<Element>
+      }
+    : {})
 
 export function initProps(
   instance: ComponentInternalInstance,
