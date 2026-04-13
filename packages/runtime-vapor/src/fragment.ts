@@ -499,8 +499,11 @@ export class DynamicFragment extends VaporFragment {
       let parentNode: Node | null
       let nextNode: Node | null
       if (forwardedSlot) {
-        parentNode = slotAnchor!.parentNode
-        nextNode = slotAnchor!.nextSibling
+        // Keep the forwarded slot close marker structural for parent cleanup,
+        // even though this fragment uses a runtime anchor after it.
+        const anchor = markHydrationAnchor(slotAnchor!)
+        parentNode = anchor.parentNode
+        nextNode = anchor.nextSibling
       } else {
         const node = findBlockNode(this.nodes)
         parentNode = node.parentNode
@@ -511,11 +514,13 @@ export class DynamicFragment extends VaporFragment {
       // Otherwise detached anchors could be observed too early by traversal
       // logic such as `findLastChild()`.
       queuePostFlushCb(() => {
+        const anchor =
+          nextNode && nextNode.parentNode === parentNode ? nextNode : null
         parentNode!.insertBefore(
           (this.anchor = markHydrationAnchor(
             __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
           )),
-          nextNode,
+          anchor,
         )
       })
     } finally {
@@ -566,6 +571,7 @@ export let currentEmptyFragment: DynamicFragment | null | undefined
 
 export class SlotFragment extends DynamicFragment {
   forwarded = false
+  deferredHydrationBoundary?: () => void
 
   constructor() {
     super(isHydrating || __DEV__ ? 'slot' : undefined, false, false)
@@ -579,6 +585,7 @@ export class SlotFragment extends DynamicFragment {
     let prevEndAnchor: Node | null = null
     let pushedEndAnchor = false
     let exitHydrationBoundary: (() => void) | undefined
+    let deferHydrationBoundary = false
     if (isHydrating) {
       locateHydrationNode()
       if (isComment(currentHydrationNode!, '[')) {
@@ -624,12 +631,24 @@ export class SlotFragment extends DynamicFragment {
       // once against the final block.
       if (isHydrating) {
         this.hydrate(render == null, true)
+        // Empty slots rendered while resolving an outer slot fallback can be
+        // filled by that fallback immediately after render() returns.
+        deferHydrationBoundary =
+          !!exitHydrationBoundary &&
+          currentEmptyFragment !== undefined &&
+          !isValidBlock(this.nodes)
       }
     } finally {
-      if (isHydrating && pushedEndAnchor) {
-        setCurrentSlotEndAnchor(prevEndAnchor)
+      if (isHydrating) {
+        if (pushedEndAnchor) {
+          setCurrentSlotEndAnchor(prevEndAnchor)
+        }
+        if (deferHydrationBoundary) {
+          this.deferredHydrationBoundary = exitHydrationBoundary
+        } else {
+          exitHydrationBoundary && exitHydrationBoundary()
+        }
       }
-      exitHydrationBoundary && exitHydrationBoundary()
     }
   }
 }
@@ -657,6 +676,15 @@ export function renderSlotFallback(
       frag.nodes[0] = [fallback() || []] as Block[]
     } else if (frag instanceof DynamicFragment) {
       frag.update(fallback)
+      if (isHydrating && frag instanceof SlotFragment) {
+        const deferredHydrationBoundary = frag.deferredHydrationBoundary
+        if (deferredHydrationBoundary) {
+          frag.deferredHydrationBoundary = undefined
+          // The fallback has now had a chance to hydrate the SSR nodes that
+          // originally belonged to the empty forwarded slot.
+          deferredHydrationBoundary()
+        }
+      }
     }
     return block
   }
