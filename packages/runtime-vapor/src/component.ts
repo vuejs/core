@@ -38,7 +38,7 @@ import {
   warn,
   warnExtraneousAttributes,
 } from '@vue/runtime-dom'
-import { type Block, insert, isBlock, remove } from './block'
+import { type Block, findBlockNode, insert, isBlock, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -250,6 +250,13 @@ export function createComponent(
   const _isLastInsertion = isLastInsertion
   let hydrationClose: Node | null = null
   let exitHydrationBoundary: (() => void) | undefined
+  let deferHydrationBoundary = false
+  const finalizeHydrationBoundary = () => {
+    exitHydrationBoundary && exitHydrationBoundary()
+    if (hydrationClose && currentHydrationNode === hydrationClose) {
+      advanceHydrationNode(hydrationClose)
+    }
+  }
   if (isHydrating) {
     locateHydrationNode()
     if (component.__multiRoot && isComment(currentHydrationNode!, '[')) {
@@ -407,13 +414,31 @@ export function createComponent(
       advanceHydrationNode(_insertionParent!)
     }
 
+    if (
+      isHydrating &&
+      hydrationClose &&
+      instance.suspense &&
+      instance.asyncDep &&
+      !instance.asyncResolved &&
+      instance.restoreAsyncContext
+    ) {
+      deferHydrationBoundary = true
+      instance.deferredHydrationBoundary = () => {
+        if (
+          instance.block &&
+          hydrationClose &&
+          findBlockNode(instance.block).nextNode === hydrationClose.nextSibling
+        ) {
+          setCurrentHydrationNode(hydrationClose)
+        }
+        finalizeHydrationBoundary()
+      }
+    }
+
     return instance
   } finally {
-    if (isHydrating) {
-      exitHydrationBoundary && exitHydrationBoundary()
-      if (hydrationClose && currentHydrationNode === hydrationClose) {
-        advanceHydrationNode(hydrationClose)
-      }
+    if (isHydrating && !deferHydrationBoundary) {
+      finalizeHydrationBoundary()
     }
   }
 }
@@ -602,6 +627,7 @@ export class VaporComponentInstance<
   asyncDep: Promise<any> | null
   asyncResolved: boolean
   restoreAsyncContext?: () => void | (() => void)
+  deferredHydrationBoundary?: () => void
 
   // for vapor custom element
   renderEffects?: RenderEffect[]
@@ -923,7 +949,14 @@ export function mountComponent(
       try {
         handleSetupResult(setupResult, component, instance)
         mountComponent(instance, parent, anchor)
+        if (isHydrating) {
+          instance.deferredHydrationBoundary &&
+            instance.deferredHydrationBoundary()
+        }
       } finally {
+        if (isHydrating) {
+          instance.deferredHydrationBoundary = undefined
+        }
         instance.restoreAsyncContext = undefined
         if (reset) reset()
       }

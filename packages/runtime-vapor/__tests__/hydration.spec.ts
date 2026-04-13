@@ -5333,6 +5333,101 @@ describe('Vapor Mode hydration', () => {
           expect(beforeMount).toHaveBeenCalledTimes(1)
         })
 
+        test('hydrate VDOM Suspense vapor async multi-root setup should preserve SSR range before resolve', async () => {
+          let resolveClient!: () => void
+          const serverData = ref({
+            wait: Promise.resolve(),
+            msg: 'one',
+          })
+          const clientData = ref({
+            wait: new Promise<void>(r => {
+              resolveClient = r
+            }),
+            msg: 'one',
+          })
+          const vaporChildCode = `
+            <script vapor>
+              const data = _data
+              await data.value.wait
+            </script>
+            <template>
+              <span>{{ data.msg }}</span>
+              <span>two</span>
+            </template>
+          `
+          const appCode = `
+            <script setup>
+              import { Suspense } from 'vue'
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <div>
+                  <components.VaporChild />
+                  <i>after</i>
+                </div>
+              </Suspense>
+            </template>
+          `
+
+          const serverComponents: any = {}
+          const clientComponents: any = {}
+          serverComponents.VaporChild = compile(
+            vaporChildCode,
+            serverData,
+            serverComponents,
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+          clientComponents.VaporChild = compile(
+            vaporChildCode,
+            clientData,
+            clientComponents,
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+          const serverApp = compile(appCode, serverData, serverComponents, {
+            vapor: false,
+            ssr: true,
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(serverApp),
+          )
+
+          const clientApp = compile(appCode, clientData, clientComponents, {
+            vapor: false,
+            ssr: false,
+          })
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+
+          const app = runtimeDom.createSSRApp(clientApp)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+
+          expect(container.querySelectorAll('span')).toHaveLength(2)
+          expect(container.textContent).toBe('onetwoafter')
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+          resolveClient()
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+            "<div>
+            <!--[--><span>one</span><span>two</span><!--]-->
+            <i>after</i></div>"
+          `)
+        })
+
         test('hydrate safely when property used by async setup changed before render', async () => {
           const data = ref({ toggle: true })
           const vaporChildCode = `
