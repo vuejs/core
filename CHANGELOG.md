@@ -1,3 +1,53 @@
+# [3.6.0-beta.10](https://github.com/vuejs/core/compare/v3.5.32...v3.6.0-beta.10) (2026-04-13)
+
+
+### Bug Fixes
+
+* **hydration:** avoid component double mount during hydration ([#14690](https://github.com/vuejs/core/issues/14690)) ([340af2c](https://github.com/vuejs/core/commit/340af2c2a6dba348412c32343f79d0442f2ba043))
+* **hydration:** cleanup detached null branches at the end of owner ranges ([b0db001](https://github.com/vuejs/core/commit/b0db001f70bb1533657ff5ceef4f8ca3c3637cd3))
+* **hydration:** clear inline teleport children when missing targets stop owning the main view ([1e828e4](https://github.com/vuejs/core/commit/1e828e489062d7fd35ab655eef65ad106c77c1eb))
+* **hydration:** defer async multi-root hydration boundary cleanup ([55cfb3d](https://github.com/vuejs/core/commit/55cfb3d58de573634d365b3fd4c4d2d78b30bec8))
+* **hydration:** defer forwarded slot fallback hydration cleanup ([1cc4870](https://github.com/vuejs/core/commit/1cc487077e1bcc564047c948bc00e425411a1a33))
+* **hydration:** handle non-empty v-for over empty SSR ranges before trailing siblings ([108809a](https://github.com/vuejs/core/commit/108809a34dbf8b1ff23245b5076fe26e4d332316))
+* **hydration:** keep late fragment inserts before their own hydration anchor ([59a27ef](https://github.com/vuejs/core/commit/59a27ef1f6ec4f6fec8c897c5659427d9309c371))
+* **hydration:** keep lazy hydration on the async wrapper path ([d5cd4c8](https://github.com/vuejs/core/commit/d5cd4c8a587b7e41b9393f5fd1c33c696cba90f7))
+* **hydration:** keep multi-root hydration cleanup inside component-owned close markers ([10325c0](https://github.com/vuejs/core/commit/10325c0ef42880be72d5433da1ca6807d18720fc))
+* **hydration:** preserve teleport hydration anchors across empty ranges ([42ee3eb](https://github.com/vuejs/core/commit/42ee3ebc651d1eb549c707c0fd355e232c651200))
+* **hydration:** respect text allow-mismatch during multi-root hydration cleanup ([b928e8a](https://github.com/vuejs/core/commit/b928e8ae19401c15f336a22a17fc24553013cbf2))
+* **hydration:** reuse attached SSR anchors for empty dynamic fragments ([8ecf6e0](https://github.com/vuejs/core/commit/8ecf6e01b70ef11a8f1c2c5bd5ad0bc412911352))
+* **hydration:** reuse next null-branch anchor during dynamic-component hydration ([df532ed](https://github.com/vuejs/core/commit/df532ed4478fb664a66f5ff9993e3e72004f68a4))
+* **hydration:** scope slot boundary restoration to slot-owned close markers ([9579911](https://github.com/vuejs/core/commit/95799117d20645d2828bf10e5b7d0e233f02d15b))
+* **runtime-vapor:** add a non-null check for parentComponent ([#14666](https://github.com/vuejs/core/issues/14666)) ([789b7f2](https://github.com/vuejs/core/commit/789b7f23297d4fd5b17b6ed0a86ba378794a5f32))
+* **runtime-vapor:** align interop hydration mount hooks with vdom ([f260346](https://github.com/vuejs/core/commit/f26034686bcae263143de6c95782b7ba5137e9a0))
+* **runtime-vapor:** align interop mount hook order with vdom ([b578a24](https://github.com/vuejs/core/commit/b578a248853e4d2028fd4d24bee1632c0b11a13a))
+* **runtime-vapor:** align interop unmount hook order with vdom ([13147d9](https://github.com/vuejs/core/commit/13147d905dc3de122cf7721839d2ea2de1c64fca))
+* **runtime-vapor:** align interop update hook order with vdom ([6c47c4d](https://github.com/vuejs/core/commit/6c47c4d7e383dc0d67034a1e4987fd54bbbd5718))
+* **runtime-vapor:** align keepalive async behavior with vdom ([316c1fc](https://github.com/vuejs/core/commit/316c1fc2981e9cf828ed246cb2dc017c6fdb9ae7))
+* **runtime-vapor:** avoid refreshing keep-alive recency on late async resolve ([fc1dd74](https://github.com/vuejs/core/commit/fc1dd74e06657c93829c3f0b7a9124a92462352d))
+* **runtime-vapor:** avoid slot fallthrough in async Suspense error path ([22a0e1a](https://github.com/vuejs/core/commit/22a0e1af362eb0fbaedc18f56e4ecac9b1fc3209))
+* **runtime-vapor:** cache interop slot wrappers by source slot ([80c551c](https://github.com/vuejs/core/commit/80c551c027ca9e456c2c32469d08a0b34094db5f))
+* **runtime-vapor:** hydrate interop slot fallbacks with correct slot context ([62001b8](https://github.com/vuejs/core/commit/62001b8117c900411a7fb29aed934fb82c2a32e7))
+* **runtime-vapor:** initialize hydrated vdom slot mount targets ([2f7d9dd](https://github.com/vuejs/core/commit/2f7d9dd2fa9fab15b551eca466e0c3d430eda057))
+* **runtime-vapor:** invoke updated before activated on reactivation ([5086bdc](https://github.com/vuejs/core/commit/5086bdc131921e84e8a4960fb34b638d0724d95c))
+* **runtime-vapor:** re-mount vapor slot when slot changes in vdom interop ([#14651](https://github.com/vuejs/core/issues/14651)) ([3552ec9](https://github.com/vuejs/core/commit/3552ec980746b8d073d116f887768f7b8974bfc6)), closes [#14650](https://github.com/vuejs/core/issues/14650)
+* **runtime-vapor:** stop stale effects when remounting interop vapor slots ([3a1cfe4](https://github.com/vuejs/core/commit/3a1cfe4bb7585d881d74db6fecd692ccde90a342))
+* **runtime-vapor:** stop stale slot outlet effects on unmount ([cb05b9a](https://github.com/vuejs/core/commit/cb05b9a154165b46e2f97ffbe59e0d0f20a3a8e7))
+* **runtime-vapor:** support render vapor async wrapper in vdom suspense ([3b2167d](https://github.com/vuejs/core/commit/3b2167d1c2c4a5233e245eba5c3f5686a058cfe4))
+* **runtime-vapor:** sync interop vnode el after root changes ([798f842](https://github.com/vuejs/core/commit/798f842dcf689b9f16f5d5f9a9edddae793ae9a6))
+* **runtime-vapor:** sync vnode hooks and el on interop self-update ([820b470](https://github.com/vuejs/core/commit/820b4700c7a474b2fadc532aa05376a93f279b8e))
+* **runtime-vapor:** tree-shake ssr runtime from defineVaporCustomElement ([#14705](https://github.com/vuejs/core/issues/14705)) ([d85bed2](https://github.com/vuejs/core/commit/d85bed21636fb8c9d8b1704b87f661719bc24e92))
+* **runtime-vapor:** unmount hydrated interop slot content before first insert ([adee943](https://github.com/vuejs/core/commit/adee943aa5a272ae1988629fa70b552c69b02775))
+* **runtime-vapor:** update interop slot patch target after moves ([ba9cd6e](https://github.com/vuejs/core/commit/ba9cd6ee7793d7a0cf57afd27f6c3a82986d2b5b))
+* **runtime-vapor:** use last-wins semantics for duplicate dynamic slot names ([#14649](https://github.com/vuejs/core/issues/14649)) ([9304551](https://github.com/vuejs/core/commit/9304551e3c7367e29aaae029a0d4e7d684bc768f)), closes [#14648](https://github.com/vuejs/core/issues/14648)
+* **transition:** handle dynamic slot update ([#14634](https://github.com/vuejs/core/issues/14634)) ([74acb7d](https://github.com/vuejs/core/commit/74acb7dd0a93ae911b911e14794503bd110ae87b))
+* **transition:** handle transition appear with slotted v-show at runtime ([#14632](https://github.com/vuejs/core/issues/14632)) ([4f5ad60](https://github.com/vuejs/core/commit/4f5ad60edcd76846f2e7aa9b8e6e924074fa24c2))
+
+
+### Features
+
+* **runtime-vapor:** hydrate async setup component under VDOM Suspense ([#14691](https://github.com/vuejs/core/issues/14691)) ([3be149e](https://github.com/vuejs/core/commit/3be149e26586d7c5437155b8fbc93c176c0df036))
+
+
 # [3.6.0-beta.9](https://github.com/vuejs/core/compare/v3.6.0-beta.8...v3.6.0-beta.9) (2026-03-26)
 
 
