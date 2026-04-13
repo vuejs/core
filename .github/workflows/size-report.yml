@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v5.0.0
+        uses: pnpm/action-setup@v6.0.0
 
       - name: Install Node.js
         uses: actions/setup-node@v6
