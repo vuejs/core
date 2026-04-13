@@ -9201,6 +9201,60 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate forwarded slot fallback with nested component before parent close marker', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <template #foo><slot name="foo" /></template>
+        </components.Child>
+      </template>`,
+      {
+        Child: {
+          code: `<script setup>
+              const components = _components
+              const data = _data
+            </script>
+            <template>
+              <div>
+                <slot name="foo">
+                  <components.GrandChild
+                    v-if="data"
+                    :text="data"
+                  />
+                </slot>
+              </div>
+            </template>`,
+          vapor: true,
+        },
+        GrandChild: {
+          code: `<script setup>
+              defineProps(['text'])
+            </script>
+            <template>
+              <template v-if="text">
+                <span v-if="text">{{ text }}</span>
+              </template>
+            </template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[-->
+      <!--[--><span>foo</span><!--if--><!--if--><!--if--><!--]-->
+      <!--slot--><!--]-->
+      </div>"
+    `)
+  })
+
   test('hydrate VDOM component returning Fragment', async () => {
     const data = ref('foo')
     const { container } = await testWithVaporApp(
