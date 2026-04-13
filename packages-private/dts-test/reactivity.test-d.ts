@@ -140,3 +140,9 @@ describe('shallowReactive marker should not leak into value unions', () => {
   const value = {} as (typeof state)[keyof typeof state]
   expectType<string>(value.title)
 })
+
+describe('shallowReactive type should accept plain object assignment', () => {
+  const shallow = shallowReactive({ a: 1, b: 2 })
+  let values: typeof shallow
+  values = { a: 1, b: 2 }
+})

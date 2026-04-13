@@ -751,7 +751,7 @@ function createVDOMComponent(
     setCurrentKeepAliveCtx(null)
   }
 
-  const wrapper = new VaporComponentInstance(
+  const wrapper = new VaporComponentInstance<Record<string, unknown>>(
     useBridge ? (comp as any) : { props: component.props },
     rawProps as RawProps,
     rawSlots as RawSlots,

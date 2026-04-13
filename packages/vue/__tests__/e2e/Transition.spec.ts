@@ -2116,6 +2116,112 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT,
     )
 
+    // #14640
+    test(
+      'switch suspense branches after teleport updates before pending mount finishes',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, defineComponent, nextTick, ref } = (window as any)
+            .Vue
+
+          const Comp = defineComponent({
+            props: {
+              mode: {
+                type: String,
+                required: true,
+              },
+              count: Number,
+            },
+            emits: ['go', 'back'],
+            async setup() {
+              await new Promise(resolve => setTimeout(resolve, 0))
+            },
+            template: `
+              <div v-if="mode === 'a'">
+                <button @click="$emit('go')">Go</button>
+                <div>{{ count }}</div>
+                <teleport to="body">
+                  <Transition name="fade">
+                    <div>
+                      A Teleport
+                    </div>
+                  </Transition>
+                </teleport>
+              </div>
+
+              <div v-else>
+                <button @click="$emit('back')">Back</button>
+                <teleport to="body">
+                  <div>
+                    B Teleport
+                  </div>
+                </teleport>
+              </div>
+            `,
+          })
+
+          createApp({
+            components: {
+              Comp,
+            },
+            setup() {
+              const count = ref(0)
+              const page = ref('a')
+
+              const switchTo = (key: string) => {
+                page.value = key
+              }
+
+              const handleResolve = async () => {
+                await nextTick()
+                count.value++
+              }
+
+              return {
+                count,
+                page,
+                switchTo,
+                handleResolve,
+              }
+            },
+            template: `
+              <div id="container">
+                <Transition mode="out-in">
+                  <Suspense @resolve="handleResolve">
+                    <Comp
+                      :key="page"
+                      :mode="page"
+                      :count="count"
+                      @go="switchTo('b')"
+                      @back="switchTo('a')"
+                    />
+                  </Suspense>
+                </Transition>
+              </div>
+            `,
+          }).mount('#app')
+        })
+
+        await transitionFinish(60)
+        expect(await html('#container')).toBe(
+          '<div class=""><button>Go</button><div>1</div><!--teleport start--><!--teleport end--></div>',
+        )
+
+        await click('button')
+        await transitionFinish(60)
+        expect(await html('#container')).toBe(
+          '<div class=""><button>Back</button><!--teleport start--><!--teleport end--></div>',
+        )
+
+        await click('button')
+        await transitionFinish(60)
+        expect(await html('#container')).toBe(
+          '<div class=""><button>Go</button><div>3</div><!--teleport start--><!--teleport end--></div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
+
     // #3963
     test(
       'Suspense fallback should work with transition',

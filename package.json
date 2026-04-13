@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.6.0-beta.9",
-  "packageManager": "pnpm@10.28.2",
+  "packageManager": "pnpm@10.33.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -53,17 +53,18 @@
     "@babel/types": "catalog:",
     "@rolldown/plugin-node-polyfills": "^1.0.3",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^24.12.0",
+    "@types/node": "^24.12.2",
     "@types/semver": "^7.7.1",
     "@types/serve-handler": "^6.1.4",
-    "@vitest/coverage-v8": "^4.1.1",
-    "@vitest/ui": "^4.1.1",
+    "@vitest/coverage-v8": "^4.1.3",
+    "@vitest/ui": "^4.1.3",
     "@vue/consolidate": "1.0.0",
-    "conventional-changelog-cli": "^5.0.0",
+    "conventional-changelog": "^7.2.0",
+    "conventional-changelog-angular": "^8.3.1",
     "enquirer": "^2.4.1",
     "estree-walker": "catalog:",
     "fast-glob": "^3.3.2",
-    "jsdom": "^29.0.1",
+    "jsdom": "^29.0.2",
     "lodash": "^4.17.23",
     "magic-string": "^0.30.21",
     "markdown-table": "^3.0.4",
@@ -88,6 +89,6 @@
     "typescript": "~5.6.2",
     "vite": "catalog:",
     "vitest": "npm:@voidzero-dev/vite-plus-test@latest",
-    "vite-plus": "^0.1.9"
+    "vite-plus": "^0.1.16"
   }
 }

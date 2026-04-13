@@ -246,7 +246,6 @@ export default defineConfig({
           'no-restricted-globals': 'off',
           'no-unused-vars': 'off',
           'oxc/no-optional-chaining': 'off',
-          'no-restricted-syntax': 'off',
         },
         globals: {
           suite: 'writable',
