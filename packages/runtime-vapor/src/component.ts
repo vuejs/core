@@ -331,6 +331,7 @@ export function createComponent(
     // teleport
     if (isVaporTeleport(component)) {
       const frag = component.process(rawProps!, rawSlots!)
+      onScopeDispose(() => remove(frag), true)
       if (!isHydrating) {
         if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
       } else {

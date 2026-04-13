@@ -1313,6 +1313,47 @@ function runSharedTests(deferMode: boolean): void {
     expect(root.innerHTML).toBe('<div>foo</div><!--if-->')
   })
 
+  test('should remove teleport with insertion parent when toggled off', async () => {
+    const root = document.createElement('div')
+    const target = document.createElement('div')
+    const show = ref(true)
+
+    const { mount } = define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => {
+            const n0 = template('<div></div>')()
+            setInsertionState(n0 as any, null, 0, true)
+            createComponent(
+              VaporTeleport,
+              {
+                to: () => target,
+              },
+              {
+                default: () => template('<input>')(),
+              },
+            )
+            return n0
+          },
+        )
+      },
+    }).create()
+
+    mount(root)
+
+    expect(root.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--></div><!--if-->',
+    )
+    expect(target.innerHTML).toBe('<input>')
+
+    show.value = false
+    await nextTick()
+
+    expect(root.innerHTML).toBe('<!--if-->')
+    expect(target.innerHTML).toBe('')
+  })
+
   test('unmount previous sibling node inside target node', async () => {
     const root = document.createElement('div')
     const parentShow = ref(false)
