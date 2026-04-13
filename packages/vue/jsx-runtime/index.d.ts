@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/prefer-ts-expect-error */
 import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
 
 /**
@@ -6,7 +5,7 @@ import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
  * when ts compilerOptions.jsx is 'react-jsx' or 'react-jsxdev'
  * https://www.typescriptlang.org/tsconfig#jsxImportSource
  */
-export { h as jsx, h as jsxDEV, Fragment } from '@vue/runtime-dom'
+export { h as jsx, h as jsxDEV, Fragment, h as jsxs } from '@vue/runtime-dom'
 
 export namespace JSX {
   export interface Element extends VNode {}
@@ -18,6 +17,7 @@ export namespace JSX {
   }
   export interface IntrinsicElements extends NativeElements {
     // allow arbitrary elements
+    // oxlint-disable-next-line typescript/prefer-ts-expect-error
     // @ts-ignore suppress ts:2374 = Duplicate string index signature.
     [name: string]: any
   }

@@ -17,21 +17,27 @@ export {
   createTransformContext,
   traverseNode,
   createStructuralDirectiveTransform,
+  getSelfName,
   type NodeTransform,
   type StructuralDirectiveTransform,
   type DirectiveTransform,
+  type ImportItem,
 } from './transform'
 export {
   generate,
+  NewlineType,
   type CodegenContext,
   type CodegenResult,
   type CodegenSourceMapGenerator,
   type RawSourceMap,
+  type BaseCodegenResult,
 } from './codegen'
 export {
   ErrorCodes,
   errorMessages,
   createCompilerError,
+  defaultOnError,
+  defaultOnWarn,
   type CoreCompilerError,
   type CompilerError,
 } from './errors'
@@ -52,6 +58,7 @@ export {
   transformExpression,
   processExpression,
   stringifyExpression,
+  isLiteralWhitelisted,
 } from './transforms/transformExpression'
 export {
   buildSlots,
@@ -66,6 +73,7 @@ export {
   buildDirectiveArgs,
   type PropsExpression,
 } from './transforms/transformElement'
+export { transformVBindShorthand } from './transforms/transformVBindShorthand'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 export { getConstantType } from './transforms/cacheStatic'
 export { generateCodeFrame } from '@vue/shared'
@@ -75,4 +83,5 @@ export {
   checkCompatEnabled,
   warnDeprecation,
   CompilerDeprecationTypes,
+  type CompilerCompatOptions,
 } from './compat/compatConfig'

@@ -28,8 +28,12 @@ import { createObjectMatcher } from '../testUtils'
 import { PatchFlags } from '@vue/shared'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
+import { transformText } from '../../src/transforms/transformText'
 
-function parseWithSlots(template: string, options: CompilerOptions = {}) {
+function parseWithSlots(
+  template: string,
+  options: CompilerOptions & { transformText?: boolean } = {},
+) {
   const ast = parse(template, {
     whitespace: options.whitespace,
   })
@@ -43,6 +47,7 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
       transformSlotOutlet,
       transformElement,
       trackSlotScopes,
+      ...(options.transformText ? [transformText] : []),
     ],
     directiveTransforms: {
       on: transformOn,
@@ -307,6 +312,40 @@ describe('compiler: transform component slots', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  test('named slots w/ implicit default slot containing non-breaking space', () => {
+    const { root, slots } = parseWithSlots(
+      `<Comp>
+        \u00a0
+        <template #one>foo</template>
+      </Comp>`,
+    )
+    expect(slots).toMatchObject(
+      createSlotMatcher({
+        one: {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: undefined,
+          returns: [
+            {
+              type: NodeTypes.TEXT,
+              content: `foo`,
+            },
+          ],
+        },
+        default: {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: undefined,
+          returns: [
+            {
+              type: NodeTypes.TEXT,
+              content: ` \u00a0 `,
+            },
+          ],
+        },
+      }),
+    )
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
   test('dynamically named slots', () => {
     const { root, slots } = parseWithSlots(
       `<Comp>
@@ -478,7 +517,10 @@ describe('compiler: transform component slots', () => {
   })
 
   test('should only force dynamic slots when actually using scope vars w/ prefixIdentifiers: true', () => {
-    function assertDynamicSlots(template: string, shouldForce: boolean) {
+    function assertDynamicSlots(
+      template: string,
+      expectedPatchFlag?: PatchFlags,
+    ) {
       const { root } = parseWithSlots(template, { prefixIdentifiers: true })
       let flag: any
       if (root.children[0].type === NodeTypes.FOR) {
@@ -491,8 +533,8 @@ describe('compiler: transform component slots', () => {
           .children[0] as ComponentNode
         flag = (innerComp.codegenNode as VNodeCall).patchFlag
       }
-      if (shouldForce) {
-        expect(flag).toBe(PatchFlags.DYNAMIC_SLOTS)
+      if (expectedPatchFlag) {
+        expect(flag).toBe(expectedPatchFlag)
       } else {
         expect(flag).toBeUndefined()
       }
@@ -502,14 +544,13 @@ describe('compiler: transform component slots', () => {
       `<div v-for="i in list">
         <Comp v-slot="bar">foo</Comp>
       </div>`,
-      false,
     )
 
     assertDynamicSlots(
       `<div v-for="i in list">
         <Comp v-slot="bar">{{ i }}</Comp>
       </div>`,
-      true,
+      PatchFlags.DYNAMIC_SLOTS,
     )
 
     // reference the component's own slot variable should not force dynamic slots
@@ -517,14 +558,13 @@ describe('compiler: transform component slots', () => {
       `<Comp v-slot="foo">
         <Comp v-slot="bar">{{ bar }}</Comp>
       </Comp>`,
-      false,
     )
 
     assertDynamicSlots(
       `<Comp v-slot="foo">
         <Comp v-slot="bar">{{ foo }}</Comp>
       </Comp>`,
-      true,
+      PatchFlags.DYNAMIC_SLOTS,
     )
 
     // #2564
@@ -532,14 +572,35 @@ describe('compiler: transform component slots', () => {
       `<div v-for="i in list">
         <Comp v-slot="bar"><button @click="fn(i)" /></Comp>
       </div>`,
-      true,
+      PatchFlags.DYNAMIC_SLOTS,
     )
 
     assertDynamicSlots(
       `<div v-for="i in list">
         <Comp v-slot="bar"><button @click="fn()" /></Comp>
       </div>`,
-      false,
+    )
+
+    // #9380
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp :i="i">foo</Comp>
+      </div>`,
+      PatchFlags.PROPS,
+    )
+
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot="{ value = i }"><button @click="fn()" /></Comp>
+      </div>`,
+      PatchFlags.DYNAMIC_SLOTS,
+    )
+
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot:[i]><button @click="fn()" /></Comp>
+      </div>`,
+      PatchFlags.DYNAMIC_SLOTS,
     )
   })
 
@@ -985,6 +1046,59 @@ describe('compiler: transform component slots', () => {
       expect(
         slots.some(p => (p.key as SimpleExpressionNode).content === 'default'),
       ).toBe(false)
+
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('implicit default slot with non-breaking space', () => {
+      const source = `
+      <Comp>
+        &nbsp;
+        <template #header> Header </template>
+      </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      const slots = (root as any).children[0].codegenNode.children
+        .properties as ObjectExpression['properties']
+
+      expect(
+        slots.some(p => (p.key as SimpleExpressionNode).content === 'default'),
+      ).toBe(true)
+
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('named slot with v-if + v-else', () => {
+      const source = `
+        <Comp>
+          <template #one v-if="ok">foo</template>
+          <template #two v-else>baz</template>
+        </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        whitespace: 'preserve',
+      })
+
+      expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+    })
+
+    test('named slot with v-if + v-else and comments', () => {
+      const source = `
+        <Comp>
+          <template #one v-if="ok">foo</template>
+          <!-- start -->
+
+          <!-- end -->
+          <template #two v-else>baz</template>
+        </Comp>
+      `
+      const { root } = parseWithSlots(source, {
+        transformText: true,
+        whitespace: 'preserve',
+      })
 
       expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })

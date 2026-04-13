@@ -4,6 +4,7 @@ import {
   NodeTypes,
   type SimpleExpressionNode,
   type TemplateChildNode,
+  isSimpleIdentifier,
   parserOptions,
   walkIdentifiers,
 } from '@vue/compiler-dom'
@@ -11,24 +12,50 @@ import { createCache } from '../cache'
 import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
 
 /**
- * Check if an import is used in the SFC's template. This is used to determine
- * the properties that should be included in the object returned from setup()
- * when not using inline mode.
+ * Check if an identifier is used in the SFC's template.
+ * - 1.used to determine the properties that should be included in the object returned from setup()
+ *   when not using inline mode.
+ * - 2.check whether the built-in properties such as $attrs, $slots, $emit are used in the template
  */
-export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
-  return resolveTemplateUsedIdentifiers(sfc).has(local)
+export function isUsedInTemplate(
+  identifier: string,
+  sfc: SFCDescriptor,
+): boolean {
+  return resolveTemplateUsedIdentifiers(sfc).has(identifier)
 }
 
-const templateUsageCheckCache = createCache<Set<string>>()
+const templateAnalysisCache = createCache<{
+  usedIds?: Set<string>
+  vModelIds: Set<string>
+}>()
+
+export function resolveTemplateVModelIdentifiers(
+  sfc: SFCDescriptor,
+): Set<string> {
+  return resolveTemplateAnalysisResult(sfc, false).vModelIds
+}
 
 function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
+  return resolveTemplateAnalysisResult(sfc).usedIds!
+}
+
+function resolveTemplateAnalysisResult(
+  sfc: SFCDescriptor,
+  collectUsedIds = true,
+): {
+  usedIds?: Set<string>
+  vModelIds: Set<string>
+} {
   const { content, ast } = sfc.template!
-  const cached = templateUsageCheckCache.get(content)
-  if (cached) {
+  const cached = templateAnalysisCache.get(content)
+  if (cached && (!collectUsedIds || cached.usedIds)) {
     return cached
   }
 
-  const ids = new Set<string>()
+  // When `collectUsedIds` is false we skip the expensive identifier extraction
+  // and only collect `vModelIds`.
+  const ids = collectUsedIds ? new Set<string>() : undefined
+  const vModelIds = new Set<string>()
 
   ast!.children.forEach(walk)
 
@@ -41,31 +68,56 @@ function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
           !parserOptions.isNativeTag!(tag) &&
           !parserOptions.isBuiltInComponent!(tag)
         ) {
-          ids.add(camelize(tag))
-          ids.add(capitalize(camelize(tag)))
+          if (ids) {
+            ids.add(camelize(tag))
+            ids.add(capitalize(camelize(tag)))
+          }
         }
         for (let i = 0; i < node.props.length; i++) {
           const prop = node.props[i]
           if (prop.type === NodeTypes.DIRECTIVE) {
-            if (!isBuiltInDirective(prop.name)) {
-              ids.add(`v${capitalize(camelize(prop.name))}`)
+            if (ids) {
+              if (!isBuiltInDirective(prop.name)) {
+                ids.add(`v${capitalize(camelize(prop.name))}`)
+              }
+            }
+
+            // collect v-model target identifiers (simple identifiers only)
+            if (prop.name === 'model') {
+              const exp = prop.exp
+              if (exp && exp.type === NodeTypes.SIMPLE_EXPRESSION) {
+                const expString = exp.content.trim()
+                if (
+                  isSimpleIdentifier(expString) &&
+                  expString !== 'undefined'
+                ) {
+                  vModelIds.add(expString)
+                }
+              }
             }
 
             // process dynamic directive arguments
-            if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
+            if (
+              ids &&
+              prop.arg &&
+              !(prop.arg as SimpleExpressionNode).isStatic
+            ) {
               extractIdentifiers(ids, prop.arg)
             }
 
-            if (prop.name === 'for') {
-              extractIdentifiers(ids, prop.forParseResult!.source)
-            } else if (prop.exp) {
-              extractIdentifiers(ids, prop.exp)
-            } else if (prop.name === 'bind' && !prop.exp) {
-              // v-bind shorthand name as identifier
-              ids.add(camelize((prop.arg as SimpleExpressionNode).content))
+            if (ids) {
+              if (prop.name === 'for') {
+                extractIdentifiers(ids, prop.forParseResult!.source)
+              } else if (prop.exp) {
+                extractIdentifiers(ids, prop.exp)
+              } else if (prop.name === 'bind' && !prop.exp) {
+                // v-bind shorthand name as identifier
+                ids.add(camelize((prop.arg as SimpleExpressionNode).content))
+              }
             }
           }
           if (
+            ids &&
             prop.type === NodeTypes.ATTRIBUTE &&
             prop.name === 'ref' &&
             prop.value?.content
@@ -76,13 +128,14 @@ function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
         node.children.forEach(walk)
         break
       case NodeTypes.INTERPOLATION:
-        extractIdentifiers(ids, node.content)
+        if (ids) extractIdentifiers(ids, node.content)
         break
     }
   }
 
-  templateUsageCheckCache.set(content, ids)
-  return ids
+  const result = { usedIds: ids, vModelIds }
+  templateAnalysisCache.set(content, result)
+  return result
 }
 
 function extractIdentifiers(ids: Set<string>, node: ExpressionNode) {

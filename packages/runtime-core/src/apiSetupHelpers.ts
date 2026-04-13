@@ -9,11 +9,13 @@ import {
   isPromise,
 } from '@vue/shared'
 import {
+  type ComponentInternalInstance,
   type SetupContext,
   createSetupContext,
-  getCurrentInstance,
+  getCurrentGenericInstance,
+  isInSSRComponentSetup,
   setCurrentInstance,
-  unsetCurrentInstance,
+  setInSSRSetupState,
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
@@ -98,8 +100,10 @@ export type DefineProps<T, BKeys extends keyof T> = Readonly<T> & {
 }
 
 type BooleanKey<T, K extends keyof T = keyof T> = K extends any
-  ? [T[K]] extends [boolean | undefined]
-    ? K
+  ? T[K] extends boolean | undefined
+    ? T[K] extends never | undefined
+      ? never
+      : K
     : never
   : never
 
@@ -229,6 +233,22 @@ export function defineOptions<
   }
 }
 
+/**
+ * Vue `<script setup>` compiler macro for providing type hints to IDEs for
+ * slot name and slot props type checking.
+ *
+ * Example usage:
+ * ```ts
+ * const slots = defineSlots<{
+ *   default(props: { msg: string }): any
+ * }>()
+ * ```
+ *
+ * This is only usable inside `<script setup>`, is compiled away in the
+ * output and should **not** be actually called at runtime.
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineslots}
+ */
 export function defineSlots<
   S extends Record<string, any> = Record<string, any>,
 >(): StrictUnwrapSlotsType<SlotsType<S>> {
@@ -319,7 +339,14 @@ type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, T[K]>
 }
 
-type NativeType = null | number | string | boolean | symbol | Function
+type NativeType =
+  | null
+  | undefined
+  | number
+  | string
+  | boolean
+  | symbol
+  | Function
 
 type InferDefault<P, T> =
   | ((props: P) => T & {})
@@ -381,20 +408,26 @@ export function withDefaults<
   return null as any
 }
 
+// TODO return type for Vapor components
 export function useSlots(): SetupContext['slots'] {
-  return getContext().slots
+  return getContext('useSlots').slots
 }
 
 export function useAttrs(): SetupContext['attrs'] {
-  return getContext().attrs
+  return getContext('useAttrs').attrs
 }
 
-function getContext(): SetupContext {
-  const i = getCurrentInstance()!
+function getContext(calledFunctionName: string): SetupContext {
+  const i = getCurrentGenericInstance()!
   if (__DEV__ && !i) {
-    warn(`useContext() called without active instance.`)
+    warn(`${calledFunctionName}() called without active instance.`)
   }
-  return i.setupContext || (i.setupContext = createSetupContext(i))
+  if (i.vapor) {
+    return i as any // vapor instance act as its own setup context
+  } else {
+    const ii = i as ComponentInternalInstance
+    return ii.setupContext || (ii.setupContext = createSetupContext(ii))
+  }
 }
 
 /**
@@ -496,7 +529,12 @@ export function createPropsRestProxy(
  * @internal
  */
 export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
-  const ctx = getCurrentInstance()!
+  const ctx = getCurrentGenericInstance()!
+  const inSSRSetup = isInSSRComponentSetup
+  const restoreAsyncContext =
+    ctx && ctx.restoreAsyncContext
+      ? ctx.restoreAsyncContext.bind(ctx)
+      : undefined
   if (__DEV__ && !ctx) {
     warn(
       `withAsyncContext called without active current instance. ` +
@@ -504,12 +542,52 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
     )
   }
   let awaitable = getAwaitable()
-  unsetCurrentInstance()
+  setCurrentInstance(null, undefined)
+  if (inSSRSetup) {
+    setInSSRSetupState(false)
+  }
+
+  const restore = () => {
+    setCurrentInstance(ctx)
+    if (inSSRSetup) {
+      setInSSRSetupState(true)
+    }
+    return restoreAsyncContext && restoreAsyncContext()
+  }
+
+  // Never restore a captured "prev" instance here: in concurrent async setup
+  // continuations it may belong to a sibling component and cause leaks.
+  // clear global currentInstance for user microtasks.
+  const cleanup = () => {
+    setCurrentInstance(null, undefined)
+    if (inSSRSetup) {
+      setInSSRSetupState(false)
+    }
+  }
+
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
-      setCurrentInstance(ctx)
+      const reset = restore()
+      // Defer cleanup so the async function's catch continuation
+      // still runs with the restored instance.
+      Promise.resolve().then(() =>
+        Promise.resolve().then(() => {
+          if (reset) reset()
+          cleanup()
+        }),
+      )
       throw e
     })
   }
-  return [awaitable, () => setCurrentInstance(ctx)]
+  return [
+    awaitable,
+    () => {
+      const reset = restore()
+      // Keep instance for the current continuation, then cleanup.
+      Promise.resolve().then(() => {
+        if (reset) reset()
+        cleanup()
+      })
+    },
+  ]
 }

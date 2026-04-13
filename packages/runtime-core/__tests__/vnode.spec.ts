@@ -12,8 +12,8 @@ import {
   openBlock,
   transformVNodeArgs,
 } from '../src/vnode'
-import type { Data } from '../src/component'
 import { PatchFlags, ShapeFlags } from '@vue/shared'
+import type { Data } from '../src/component'
 import { h, isReactive, reactive, ref, setBlockTracking, withCtx } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'
@@ -472,6 +472,17 @@ describe('vnode', () => {
       expect(mergeProps(props1, props3)).toMatchObject({
         onClick: clickHandler1,
       })
+      const props4: Data = { onClick: undefined }
+      expect(mergeProps(props4)).toHaveProperty('onClick', undefined)
+      expect(mergeProps({ onClick: null })).toMatchObject({
+        onClick: null,
+      })
+      expect(
+        mergeProps({ 'onUpdate:modelValue': undefined }),
+      ).not.toHaveProperty('onUpdate:modelValue')
+      expect(mergeProps({ 'onUpdate:modelValue': null })).not.toHaveProperty(
+        'onUpdate:modelValue',
+      )
     })
 
     test('default', () => {
@@ -542,18 +553,6 @@ describe('vnode', () => {
     })
 
     test('with functional component', () => {
-      const hoist = createVNode('div')
-      let vnode1
-      const vnode =
-        (openBlock(),
-        createBlock('div', null, [
-          hoist,
-          (vnode1 = createVNode(() => {}, null, 'text')),
-        ]))
-      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
-    })
-
-    test('with suspense', () => {
       const hoist = createVNode('div')
       let vnode1
       const vnode =

@@ -105,22 +105,33 @@ const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
 
 type CodegenNode = TemplateChildNode | JSChildNode | SSRCodegenNode
 
-export interface CodegenResult {
+export interface BaseCodegenResult {
   code: string
   preamble: string
-  ast: RootNode
+  ast: unknown
   map?: RawSourceMap
+  helpers?: Set<string> | Set<symbol>
 }
 
-enum NewlineType {
+export interface CodegenResult extends BaseCodegenResult {
+  ast: RootNode
+}
+
+export enum NewlineType {
+  /** Start with `\n` */
   Start = 0,
+  /** Ends with `\n` */
   End = -1,
+  /** No `\n` included */
   None = -2,
+  /** Don't know, calc it */
   Unknown = -3,
 }
 
-export interface CodegenContext
-  extends Omit<Required<CodegenOptions>, 'bindingMetadata' | 'inline'> {
+export interface CodegenContext extends Omit<
+  Required<CodegenOptions>,
+  'bindingMetadata' | 'inline' | 'vaporRuntimeModuleName' | 'expressionPlugins'
+> {
   source: string
   code: string
   line: number
@@ -188,7 +199,9 @@ function createCodegenContext(
               name = content
             }
           }
-          addMapping(node.loc.start, name)
+          if (node.loc.source) {
+            addMapping(node.loc.start, name)
+          }
         }
         if (newlineIndex === NewlineType.Unknown) {
           // multiple newlines, full iteration
@@ -225,7 +238,7 @@ function createCodegenContext(
             context.column = code.length - newlineIndex
           }
         }
-        if (node && node.loc !== locStub) {
+        if (node && node.loc !== locStub && node.loc.source) {
           addMapping(node.loc.end)
         }
       }
@@ -398,6 +411,7 @@ export function generate(
     code: context.code,
     preamble: isSetupInlined ? preambleContext.code : ``,
     map: context.map ? context.map.toJSON() : undefined,
+    helpers: ast.helpers,
   }
 }
 

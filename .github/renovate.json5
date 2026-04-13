@@ -11,7 +11,13 @@
     },
     {
       groupName: 'test',
-      matchPackageNames: ['vitest', 'jsdom', 'puppeteer', '@vitest{/,}**'],
+      matchPackageNames: [
+        'vitest',
+        'jsdom',
+        'playwright',
+        'puppeteer',
+        '@vitest{/,}**',
+      ],
     },
     {
       groupName: 'playground',
@@ -28,21 +34,11 @@
       groupName: 'build',
       matchPackageNames: [
         'vite',
-        '@swc/core',
-        'rollup{/,}**',
-        'esbuild{/,}**',
-        '@rollup{/,}**',
+        'vite-plus',
+        'rolldown-plugin-dts',
+        '@rolldown{/,}**',
+        'oxc-*',
         '@vitejs{/,}**',
-      ],
-    },
-    {
-      groupName: 'lint',
-      matchPackageNames: [
-        'simple-git-hooks',
-        'lint-staged',
-        'typescript-eslint{/,}**',
-        'eslint{/,}**',
-        'prettier{/,}**',
       ],
     },
   ],
@@ -56,20 +52,15 @@
     // ESM only
     'estree-walker',
 
+    // v8 is ESM-only and breaks compiler-core's CJS path
+    'entities',
+
     // pinned
     // https://github.com/vuejs/core/issues/10300#issuecomment-1940855364
     'lru-cache',
 
     // pinned
-    // https://github.com/vuejs/core/commit/a012e39b373f1b6918e5c89856e8f902e1bfa14d
-    '@rollup/plugin-replace',
-
-    // pinned
     // only used in example for e2e tests
     'marked',
-
-    // pinned, 5.0+ has exports issues
-    // https://github.com/vuejs/core/issues/11603
-    'entities',
   ],
 }

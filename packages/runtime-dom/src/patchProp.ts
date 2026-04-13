@@ -7,18 +7,13 @@ import {
   camelize,
   isFunction,
   isModelListener,
+  isNativeOn,
   isOn,
   isString,
+  shouldSetAsAttr,
 } from '@vue/shared'
 import type { RendererOptions } from '@vue/runtime-core'
 import type { VueElement } from './apiCustomElement'
-
-const isNativeOn = (key: string) =>
-  key.charCodeAt(0) === 111 /* o */ &&
-  key.charCodeAt(1) === 110 /* n */ &&
-  // lowercase letter
-  key.charCodeAt(2) > 96 &&
-  key.charCodeAt(2) < 123
 
 type DOMRendererOptions = RendererOptions<Node, Element>
 
@@ -60,7 +55,11 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   } else if (
     // #11081 force set props for possible async custom element
     (el as VueElement)._isVueCE &&
-    (/[A-Z]/.test(key) || !isString(nextValue))
+    // #12408 check if it's declared prop or it's async custom element
+    (shouldSetAsPropForVueCE(el as VueElement, key) ||
+      // @ts-expect-error _def is private
+      ((el as VueElement)._def.__asyncLoader &&
+        (/[A-Z]/.test(key) || !isString(nextValue))))
   ) {
     patchDOMProp(el, camelize(key), nextValue, parentComponent, key)
   } else {
@@ -77,12 +76,12 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   }
 }
 
-function shouldSetAsProp(
+export function shouldSetAsProp(
   el: Element,
   key: string,
   value: unknown,
   isSVG: boolean,
-) {
+): boolean {
   if (isSVG) {
     // most keys must be set as attribute on svg elements to work
     // ...except innerHTML & textContent
@@ -96,48 +95,8 @@ function shouldSetAsProp(
     return false
   }
 
-  // these are enumerated attrs, however their corresponding DOM properties
-  // are actually booleans - this leads to setting it with a string "false"
-  // value leading it to be coerced to `true`, so we need to always treat
-  // them as attributes.
-  // Note that `contentEditable` doesn't have this problem: its DOM
-  // property is also enumerated string values.
-  if (
-    key === 'spellcheck' ||
-    key === 'draggable' ||
-    key === 'translate' ||
-    key === 'autocorrect'
-  ) {
+  if (shouldSetAsAttr(el.tagName, key)) {
     return false
-  }
-
-  // #1787, #2840 form property on form elements is readonly and must be set as
-  // attribute.
-  if (key === 'form') {
-    return false
-  }
-
-  // #1526 <input list> must be set as attribute
-  if (key === 'list' && el.tagName === 'INPUT') {
-    return false
-  }
-
-  // #2766 <textarea type> must be set as attribute
-  if (key === 'type' && el.tagName === 'TEXTAREA') {
-    return false
-  }
-
-  // #8780 the width or height of embedded tags must be set as attribute
-  if (key === 'width' || key === 'height') {
-    const tag = el.tagName
-    if (
-      tag === 'IMG' ||
-      tag === 'VIDEO' ||
-      tag === 'CANVAS' ||
-      tag === 'SOURCE'
-    ) {
-      return false
-    }
   }
 
   // native onclick with string value, must be set as attribute
@@ -146,4 +105,16 @@ function shouldSetAsProp(
   }
 
   return key in el
+}
+
+export function shouldSetAsPropForVueCE(el: any, key: string): boolean {
+  const props = el._def.props as Record<string, unknown> | string[] | undefined
+  if (!props) {
+    return false
+  }
+
+  const camelKey = camelize(key)
+  return Array.isArray(props)
+    ? props.some(prop => camelize(prop) === camelKey)
+    : Object.keys(props).some(prop => camelize(prop) === camelKey)
 }

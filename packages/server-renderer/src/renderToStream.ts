@@ -7,7 +7,12 @@ import {
   ssrUtils,
 } from 'vue'
 import { isPromise, isString } from '@vue/shared'
-import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
+import {
+  type SSRBuffer,
+  type SSRContext,
+  cleanupContext,
+  renderComponentVNode,
+} from './render'
 import type { Readable, Writable } from 'node:stream'
 import { resolveTeleports } from './renderToString'
 
@@ -43,7 +48,7 @@ async function unrollBuffer(
 
 function unrollBufferSync(buffer: SSRBuffer, stream: SimpleReadable) {
   for (let i = 0; i < buffer.length; i++) {
-    let item = buffer[i]
+    const item = buffer[i]
     if (isString(item)) {
       stream.push(item)
     } else {
@@ -73,18 +78,27 @@ export function renderToSimpleStream<T extends SimpleReadable>(
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
 
-  Promise.resolve(renderComponentVNode(vnode))
+  let cleaned = false
+  const finalize = () => {
+    if (cleaned) return
+    cleaned = true
+    cleanupContext(context)
+  }
+
+  Promise.resolve()
+    .then(() => renderComponentVNode(vnode))
     .then(buffer => unrollBuffer(buffer, stream))
     .then(() => resolveTeleports(context))
     .then(() => {
-      if (context.__watcherHandles) {
-        for (const unwatch of context.__watcherHandles) {
-          unwatch()
-        }
-      }
+      finalize()
+      return stream.push(null)
     })
-    .then(() => stream.push(null))
     .catch(error => {
+      try {
+        finalize()
+      } catch {
+        // preserve original render error as the stream failure reason
+      }
       stream.destroy(error)
     })
 
@@ -206,7 +220,7 @@ export function pipeToWebWritable(
     },
     destroy(err) {
       // TODO better error handling?
-      // eslint-disable-next-line no-console
+      // oxlint-disable-next-line no-console
       console.log(err)
       writer.close()
     },

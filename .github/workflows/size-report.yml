@@ -22,22 +22,16 @@ jobs:
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.1.0
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
           node-version-file: '.node-version'
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
+          cache: true
 
       - name: Download Size Data
-        uses: dawidd6/action-download-artifact@v9
+        uses: dawidd6/action-download-artifact@v19
         with:
           name: size-data
           run_id: ${{ github.event.workflow_run.id }}
@@ -56,7 +50,7 @@ jobs:
           path: temp/size/base.txt
 
       - name: Download Previous Size Data
-        uses: dawidd6/action-download-artifact@v9
+        uses: dawidd6/action-download-artifact@v19
         with:
           branch: ${{ steps.pr-base.outputs.content }}
           workflow: size-data.yml

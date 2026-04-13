@@ -573,7 +573,7 @@ describe('attribute fallthrough', () => {
     const Child = {
       props: [],
       render() {
-        return openBlock(), createBlock('div')
+        return (openBlock(), createBlock('div'))
       },
     }
 
@@ -745,7 +745,7 @@ describe('attribute fallthrough', () => {
     toggle.value = true
     await nextTick()
     expect(root.innerHTML).toBe(
-      `<!-- comment A --><span class=\"red\">Foo</span>`,
+      `<!-- comment A --><span class="red">Foo</span>`,
     )
   })
 

@@ -11,3 +11,5 @@ TODOs.md
 dts-build/packages
 *.tsbuildinfo
 *.tgz
+packages-private/benchmark/reference
+**/__tests__/**/__screenshots__/**/*

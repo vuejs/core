@@ -39,6 +39,24 @@ describe('SFC scoped CSS', () => {
     expect(compileScoped(`h1 .foo { color: red; }`)).toMatch(
       `h1 .foo[data-v-test] { color: red;`,
     )
+
+    // #13387
+    expect(
+      compileScoped(`main {
+  width: 100%;
+  > * {
+    max-width: 200px;
+  }
+}`),
+    ).toMatchInlineSnapshot(`
+      "main {
+&[data-v-test] {
+  width: 100%;
+}
+> *[data-v-test] {
+    max-width: 200px;
+}
+}"`)
   })
 
   test('nesting selector', () => {

@@ -1,0 +1,661 @@
+import {
+  type AttributeNode,
+  type ComponentNode,
+  type ElementNode,
+  ElementTypes,
+  ErrorCodes,
+  NodeTypes,
+  type PlainElementNode,
+  type RootNode,
+  type SimpleExpressionNode,
+  type TemplateChildNode,
+  createCompilerError,
+  createSimpleExpression,
+  hasSingleChild,
+  isSingleIfBlock,
+  isStaticArgOf,
+  isValidHTMLNesting,
+} from '@vue/compiler-dom'
+import {
+  camelize,
+  capitalize,
+  extend,
+  isAlwaysCloseTag,
+  isBlockTag,
+  isBuiltInDirective,
+  isFormattingTag,
+  isVoidTag,
+  makeMap,
+} from '@vue/shared'
+import type {
+  DirectiveTransformResult,
+  NodeTransform,
+  TransformContext,
+} from '../transform'
+import {
+  DynamicFlag,
+  IRDynamicPropsKind,
+  IRNodeTypes,
+  type IRProp,
+  type IRProps,
+  type IRPropsDynamicAttribute,
+  type IRPropsStatic,
+  type IRSlots,
+  type SetBlockKeyIRNode,
+  type VaporDirectiveNode,
+} from '../ir'
+import { EMPTY_EXPRESSION } from './utils'
+import {
+  findProp,
+  isBuiltInComponent,
+  isStaticExpression,
+  resolveExpression,
+} from '../utils'
+import { IMPORT_EXP_END, IMPORT_EXP_START } from '../generators/utils'
+import { normalizeBindShorthand } from './vBind'
+
+export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
+  // the leading comma is intentional so empty string "" is also included
+  ',key,ref,ref_for,ref_key,',
+)
+
+export const transformElement: NodeTransform = (node, context) => {
+  let effectIndex = context.block.effect.length
+  const getEffectIndex = () => effectIndex++
+
+  // If the element is a component, we need to isolate its slots context.
+  // This ensures that slots defined for this component are not accidentally
+  // inherited by its children components.
+  let parentSlots: IRSlots[] | undefined
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    (node.tagType === ElementTypes.COMPONENT ||
+      context.options.isCustomElement(node.tag))
+  ) {
+    parentSlots = context.slots
+    context.slots = []
+  }
+
+  return function postTransformElement() {
+    ;({ node } = context)
+    if (
+      !(
+        node.type === NodeTypes.ELEMENT &&
+        (node.tagType === ElementTypes.ELEMENT ||
+          node.tagType === ElementTypes.COMPONENT)
+      )
+    )
+      return
+
+    // treat custom elements as components because the template helper cannot
+    // resolve them properly; they require creation via createElement
+    const isCustomElement = !!context.options.isCustomElement(node.tag)
+    const isComponent =
+      node.tagType === ElementTypes.COMPONENT || isCustomElement
+
+    const isDynamicComponent = isComponentTag(node.tag)
+    const staticKey = resolveStaticKey(
+      node,
+      context as TransformContext<ElementNode>,
+      isComponent,
+    )
+
+    const propsResult = buildProps(
+      node,
+      context as TransformContext<ElementNode>,
+      isComponent,
+      isDynamicComponent,
+      getEffectIndex,
+    )
+
+    const singleRoot = isSingleRoot(context)
+
+    if (isComponent) {
+      transformComponentElement(
+        node as ComponentNode,
+        propsResult,
+        staticKey,
+        singleRoot,
+        context,
+        isDynamicComponent,
+        isCustomElement,
+      )
+    } else {
+      transformNativeElement(
+        node as PlainElementNode,
+        propsResult,
+        staticKey,
+        singleRoot,
+        context,
+        getEffectIndex,
+        // Root-level elements generate dedicated templates
+        // so closing tags can be omitted
+        context.root === context.effectiveParent ||
+          canOmitEndTag(node as PlainElementNode, context),
+      )
+    }
+
+    if (parentSlots) {
+      context.slots = parentSlots
+    }
+  }
+}
+
+function canOmitEndTag(
+  node: PlainElementNode,
+  context: TransformContext,
+): boolean {
+  const { block, parent } = context
+
+  if (!parent) return false
+
+  // If in a different block than parent, this is a block root element
+  // and can omit the closing tag
+  if (block !== parent.block) {
+    return true
+  }
+
+  // Elements in the alwaysClose list cannot have their end tags omitted
+  // unless they are on the rightmost path.
+  if (isAlwaysCloseTag(node.tag) && !context.isOnRightmostPath) {
+    return false
+  }
+
+  // Formatting tags and same-name nested tags require explicit closing
+  // unless on the rightmost path of the tree:
+  // - Formatting tags: https://html.spec.whatwg.org/multipage/parsing.html#reconstruct-the-active-formatting-elements
+  // - Same-name tags: parent's close tag would incorrectly close the child
+  if (
+    isFormattingTag(node.tag) ||
+    (parent.node.type === NodeTypes.ELEMENT && node.tag === parent.node.tag)
+  ) {
+    return context.isOnRightmostPath
+  }
+
+  // For inline element containing block element, if the inline ancestor
+  // is not on rightmost path, the block must close to avoid parsing issues
+  if (isBlockTag(node.tag) && context.hasInlineAncestorNeedingClose) {
+    return false
+  }
+
+  return context.isLastEffectiveChild
+}
+
+function isSingleRoot(
+  context: TransformContext<RootNode | TemplateChildNode>,
+): boolean {
+  if (context.inVFor) {
+    return false
+  }
+
+  let { parent } = context
+  if (
+    parent &&
+    !(hasSingleChild(parent.node) || isSingleIfBlock(parent.node))
+  ) {
+    return false
+  }
+  while (
+    parent &&
+    parent.parent &&
+    parent.node.type === NodeTypes.ELEMENT &&
+    parent.node.tagType === ElementTypes.TEMPLATE
+  ) {
+    parent = parent.parent
+    if (!(hasSingleChild(parent.node) || isSingleIfBlock(parent.node))) {
+      return false
+    }
+  }
+
+  return context.root === parent
+}
+
+function transformComponentElement(
+  node: ComponentNode,
+  propsResult: PropsResult,
+  staticKey: SimpleExpressionNode | undefined,
+  singleRoot: boolean,
+  context: TransformContext,
+  isDynamicComponent: boolean,
+  isCustomElement: boolean,
+) {
+  const dynamicComponent = isDynamicComponent
+    ? resolveDynamicComponent(node)
+    : undefined
+
+  let { tag } = node
+  let asset = true
+
+  if (!dynamicComponent && !isCustomElement) {
+    const fromSetup = resolveSetupReference(tag, context)
+    if (fromSetup) {
+      tag = fromSetup
+      asset = false
+    }
+
+    const builtInTag = isBuiltInComponent(tag)
+    if (builtInTag) {
+      tag = builtInTag
+      asset = false
+    }
+
+    const dotIndex = tag.indexOf('.')
+    if (dotIndex > 0) {
+      const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
+      if (ns) {
+        tag = ns + tag.slice(dotIndex)
+        asset = false
+      }
+    }
+
+    if (asset) {
+      // self referencing component (inferred from filename)
+      if (context.selfName && capitalize(camelize(tag)) === context.selfName) {
+        // generators/block.ts has special check for __self postfix when generating
+        // component imports, which will pass additional `maybeSelfReference` flag
+        // to `resolveComponent`.
+        tag += `__self`
+      }
+      context.component.add(tag)
+    }
+  }
+
+  context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
+  const id = context.reference()
+  context.dynamic.operation = {
+    type: IRNodeTypes.CREATE_COMPONENT_NODE,
+    id,
+    tag,
+    props: propsResult[0] ? propsResult[1] : [propsResult[1]],
+    asset,
+    root: singleRoot,
+    slots: [...context.slots],
+    once: context.inVOnce,
+    dynamic: dynamicComponent,
+    isCustomElement,
+  }
+  if (staticKey) {
+    context.registerOperation(createSetBlockKey(id, staticKey))
+  }
+  context.slots = []
+}
+
+function resolveDynamicComponent(node: ComponentNode) {
+  const isProp = findProp(node, 'is', false, true /* allow empty */)
+  if (!isProp) return
+
+  if (isProp.type === NodeTypes.ATTRIBUTE) {
+    return isProp.value && createSimpleExpression(isProp.value.content, true)
+  } else {
+    return (
+      isProp.exp ||
+      // #10469 handle :is shorthand
+      extend(createSimpleExpression(`is`, false, isProp.arg!.loc), {
+        ast: null,
+      })
+    )
+  }
+}
+
+function resolveSetupReference(name: string, context: TransformContext) {
+  const bindings = context.options.bindingMetadata
+  if (!bindings || bindings.__isScriptSetup === false) {
+    return
+  }
+
+  const camelName = camelize(name)
+  const PascalName = capitalize(camelName)
+  return bindings[name]
+    ? name
+    : bindings[camelName]
+      ? camelName
+      : bindings[PascalName]
+        ? PascalName
+        : undefined
+}
+
+// keys cannot be a part of the template and need to be set dynamically
+const dynamicKeys = ['indeterminate']
+
+// The attribute value can remain unquoted if it doesn't contain ASCII whitespace
+// or any of " ' ` = < or >.
+// https://html.spec.whatwg.org/multipage/introduction.html#intro-early-example
+const NEEDS_QUOTES_RE = /[\s"'`=<>]/
+
+function transformNativeElement(
+  node: PlainElementNode,
+  propsResult: PropsResult,
+  staticKey: SimpleExpressionNode | undefined,
+  singleRoot: boolean,
+  context: TransformContext,
+  getEffectIndex: () => number,
+  omitEndTag: boolean,
+) {
+  const { tag } = node
+  const { scopeId } = context.options
+
+  let template = ''
+
+  template += `<${tag}`
+  if (scopeId) template += ` ${scopeId}`
+
+  const dynamicProps: string[] = []
+  if (propsResult[0] /* dynamic props */) {
+    const [, dynamicArgs, expressions] = propsResult
+    context.registerEffect(
+      expressions,
+      {
+        type: IRNodeTypes.SET_DYNAMIC_PROPS,
+        element: context.reference(),
+        props: dynamicArgs,
+        tag,
+      },
+      getEffectIndex,
+    )
+  } else {
+    // tracks if previous attribute was quoted, allowing space omission
+    // e.g. `class="foo"id="bar"` is valid, `class=foo id=bar` needs space
+    let prevWasQuoted = false
+    for (const prop of propsResult[1]) {
+      const { key, values } = prop
+      // handling asset imports
+      if (
+        context.imports.some(imported =>
+          values[0].content.includes(imported.exp.content),
+        )
+      ) {
+        if (!prevWasQuoted) template += ` `
+        // add start and end markers to the import expression, so it can be replaced
+        // with string concatenation in the generator, see genTemplates
+        template += `${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
+        prevWasQuoted = true
+      } else if (
+        key.isStatic &&
+        values.length === 1 &&
+        (values[0].isStatic || values[0].content === "''") &&
+        !dynamicKeys.includes(key.content)
+      ) {
+        if (!prevWasQuoted) template += ` `
+        const value = values[0].content === "''" ? '' : values[0].content
+        template += key.content
+
+        if (value) {
+          template += (prevWasQuoted = NEEDS_QUOTES_RE.test(value))
+            ? `="${value.replace(/"/g, '&quot;')}"`
+            : `=${value}`
+        } else {
+          prevWasQuoted = false
+        }
+      } else {
+        dynamicProps.push(key.content)
+        context.registerEffect(
+          values,
+          {
+            type: IRNodeTypes.SET_PROP,
+            element: context.reference(),
+            prop,
+            tag,
+          },
+          getEffectIndex,
+        )
+      }
+    }
+  }
+
+  template += `>` + context.childrenTemplate.join('')
+  if (!isVoidTag(tag) && !omitEndTag) {
+    template += `</${tag}>`
+  }
+
+  if (singleRoot) {
+    context.ir.rootTemplateIndexes.add(context.ir.template.size)
+  }
+
+  if (
+    context.parent &&
+    context.parent.node.type === NodeTypes.ELEMENT &&
+    !isValidHTMLNesting(context.parent.node.tag, tag)
+  ) {
+    context.reference()
+    context.dynamic.template = context.pushTemplate(template)
+    context.dynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
+  } else {
+    context.template += template
+  }
+
+  if (staticKey) {
+    context.registerOperation(createSetBlockKey(context.reference(), staticKey))
+  }
+}
+
+function resolveStaticKey(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+  isComponent: boolean,
+): SimpleExpressionNode | undefined {
+  const keyProp = findProp(node, 'key', false, true)
+  if (!keyProp) return
+
+  if (keyProp.type === NodeTypes.ATTRIBUTE) {
+    return keyProp.value
+      ? createSimpleExpression(keyProp.value.content, true, keyProp.value.loc)
+      : EMPTY_EXPRESSION
+  }
+
+  const value = keyProp.exp || normalizeBindShorthand(keyProp.arg!, context)
+  if (isStaticExpression(value, context.options.bindingMetadata)) {
+    return resolveExpression(value, isComponent)
+  }
+}
+
+function createSetBlockKey(
+  element: number,
+  value: SimpleExpressionNode,
+): SetBlockKeyIRNode {
+  return {
+    type: IRNodeTypes.SET_BLOCK_KEY,
+    element,
+    value,
+  }
+}
+
+export type PropsResult =
+  | [dynamic: true, props: IRProps[], expressions: SimpleExpressionNode[]]
+  | [dynamic: false, props: IRPropsStatic]
+
+export function buildProps(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+  isComponent: boolean,
+  isDynamicComponent?: boolean,
+  getEffectIndex?: () => number,
+): PropsResult {
+  const props = node.props as (VaporDirectiveNode | AttributeNode)[]
+  if (props.length === 0) return [false, []]
+
+  const dynamicArgs: IRProps[] = []
+  const dynamicExpr: SimpleExpressionNode[] = []
+  let results: DirectiveTransformResult[] = []
+
+  function pushMergeArg() {
+    if (results.length) {
+      dynamicArgs.push(dedupeProperties(results))
+      results = []
+    }
+  }
+
+  for (const prop of props) {
+    if (prop.type === NodeTypes.DIRECTIVE && !prop.arg) {
+      if (prop.name === 'bind') {
+        // v-bind="obj"
+        if (prop.exp) {
+          dynamicExpr.push(prop.exp)
+          pushMergeArg()
+          dynamicArgs.push({
+            kind: IRDynamicPropsKind.EXPRESSION,
+            value: prop.exp,
+          })
+        } else {
+          context.options.onError(
+            createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, prop.loc),
+          )
+        }
+        continue
+      } else if (prop.name === 'on') {
+        // v-on="obj"
+        if (prop.exp) {
+          if (isComponent) {
+            dynamicExpr.push(prop.exp)
+            pushMergeArg()
+            dynamicArgs.push({
+              kind: IRDynamicPropsKind.EXPRESSION,
+              value: prop.exp,
+              handler: true,
+            })
+          } else {
+            context.registerEffect(
+              [prop.exp],
+              {
+                type: IRNodeTypes.SET_DYNAMIC_EVENTS,
+                element: context.reference(),
+                event: prop.exp,
+              },
+              getEffectIndex,
+            )
+          }
+        } else {
+          context.options.onError(
+            createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, prop.loc),
+          )
+        }
+        continue
+      }
+    }
+
+    // exclude `is` prop only for <component>
+    if (
+      isDynamicComponent &&
+      ((prop.type === NodeTypes.ATTRIBUTE && prop.name === 'is') ||
+        (prop.type === NodeTypes.DIRECTIVE &&
+          prop.name === 'bind' &&
+          isStaticArgOf(prop.arg, 'is')))
+    ) {
+      continue
+    }
+
+    const result = transformProp(prop, node, context)
+    if (result) {
+      dynamicExpr.push(result.key, result.value)
+      if (isComponent && !result.key.isStatic) {
+        // v-bind:[name]="value" or v-on:[name]="value"
+        pushMergeArg()
+        dynamicArgs.push(
+          extend(resolveDirectiveResult(result), {
+            kind: IRDynamicPropsKind.ATTRIBUTE,
+          }) as IRPropsDynamicAttribute,
+        )
+      } else {
+        // other static props
+        results.push(result)
+      }
+    }
+  }
+
+  // has dynamic key or v-bind="{}"
+  if (dynamicArgs.length || results.some(({ key }) => !key.isStatic)) {
+    // take rest of props as dynamic props
+    pushMergeArg()
+    return [true, dynamicArgs, dynamicExpr]
+  }
+
+  const irProps = dedupeProperties(results)
+  return [false, irProps]
+}
+
+function transformProp(
+  prop: VaporDirectiveNode | AttributeNode,
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): DirectiveTransformResult | void {
+  let { name } = prop
+
+  if (prop.type === NodeTypes.ATTRIBUTE) {
+    if (isReservedProp(name)) return
+    return {
+      key: createSimpleExpression(prop.name, true, prop.nameLoc),
+      value: prop.value
+        ? createSimpleExpression(prop.value.content, true, prop.value.loc)
+        : EMPTY_EXPRESSION,
+    }
+  }
+
+  const directiveTransform = context.options.directiveTransforms[name]
+  if (directiveTransform) {
+    return directiveTransform(prop, node, context)
+  }
+
+  if (!isBuiltInDirective(name)) {
+    const fromSetup = resolveSetupReference(`v-${name}`, context)
+    if (fromSetup) {
+      name = fromSetup
+    } else {
+      context.directive.add(name)
+    }
+
+    context.registerOperation({
+      type: IRNodeTypes.DIRECTIVE,
+      element: context.reference(),
+      dir: prop,
+      name,
+      asset: !fromSetup,
+    })
+  }
+}
+
+// Dedupe props in an object literal.
+// Literal duplicated attributes would have been warned during the parse phase,
+// however, it's possible to encounter duplicated `onXXX` handlers with different
+// modifiers. We also need to merge static and dynamic class / style attributes.
+function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
+  const knownProps: Map<string, IRProp> = new Map()
+  const deduped: IRProp[] = []
+
+  for (const result of results) {
+    const prop = resolveDirectiveResult(result)
+    // dynamic keys are always allowed
+    if (!prop.key.isStatic) {
+      deduped.push(prop)
+      continue
+    }
+    const name = prop.key.content
+    const existing = knownProps.get(name)
+    // prop names and event handler names can be the same but serve different purposes
+    // e.g. `:appear="true"` is a prop while `@appear="handler"` is an event handler
+    if (existing && existing.handler === prop.handler) {
+      if (name === 'style' || name === 'class' || prop.handler) {
+        mergePropValues(existing, prop)
+      }
+      // unexpected duplicate, should have emitted error during parse
+    } else {
+      knownProps.set(name, prop)
+      deduped.push(prop)
+    }
+  }
+  return deduped
+}
+
+function resolveDirectiveResult(prop: DirectiveTransformResult): IRProp {
+  return extend({}, prop, {
+    value: undefined,
+    values: [prop.value],
+  })
+}
+
+function mergePropValues(existing: IRProp, incoming: IRProp) {
+  const newValues = incoming.values
+  existing.values.push(...newValues)
+}
+
+function isComponentTag(tag: string) {
+  return tag === 'component' || tag === 'Component'
+}

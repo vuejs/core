@@ -12,6 +12,27 @@ export function render(_ctx, _cache) {
 }"
 `;
 
+exports[`prefixing props edge case in inline mode 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { unref as _unref, openBlock as _openBlock, createBlock as _createBlock } from "vue"
+
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    Foo: { type: Object, required: true }
+  },
+  setup(__props: any) {
+
+    
+  
+return (_ctx: any,_cache: any) => {
+  return (_openBlock(), _createBlock(_unref(__props["Foo"]).Bar))
+}
+}
+
+})"
+`;
+
 exports[`should not hoist srcset URLs in SSR mode 1`] = `
 "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createVNode as _createVNode } from "vue"
 import { ssrRenderAttr as _ssrRenderAttr, ssrRenderComponent as _ssrRenderComponent } from "vue/server-renderer"
@@ -44,9 +65,7 @@ export function ssrRender(_ctx, _push, _parent, _attrs) {
       } else {
         return [
           _createVNode("picture", null, [
-            _createVNode("source", {
-              srcset: _imports_1
-            }),
+            _createVNode("source", { srcset: _imports_1 }),
             _createVNode("img", { src: _imports_1 })
           ])
         ]

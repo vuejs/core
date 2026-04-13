@@ -1,4 +1,3 @@
-import type { Data } from '../component'
 import type { RawSlots, Slots } from '../componentSlots'
 import {
   type ContextualRenderFn,
@@ -9,6 +8,7 @@ import {
   Fragment,
   type VNode,
   type VNodeArrayChildren,
+  VaporSlot,
   createBlock,
   createVNode,
   isVNode,
@@ -17,6 +17,7 @@ import {
 import { PatchFlags, SlotFlags, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
+import type { Data } from '../component'
 
 /**
  * Compiler runtime helper for rendering `<slot/>`
@@ -31,12 +32,27 @@ export function renderSlot(
   fallback?: () => VNodeArrayChildren,
   noSlotted?: boolean,
 ): VNode {
+  let slot = slots[name]
+
+  // vapor slots rendered in vdom
+  // __vs: original vapor slot stored on a wrapper from vaporSlotsProxyHandler
+  // __vapor: marker indicating the slot itself is an original vapor slot
+  const vaporSlot =
+    slot && ((slot as any).__vs || ((slot as any).__vapor ? slot : null))
+  if (vaporSlot) {
+    const ret = (openBlock(), createBlock(VaporSlot, props))
+    ret.vs = { slot: vaporSlot, fallback }
+    return ret
+  }
+
   if (
-    currentRenderingInstance!.ce ||
-    (currentRenderingInstance!.parent &&
-      isAsyncWrapper(currentRenderingInstance!.parent) &&
-      currentRenderingInstance!.parent.ce)
+    currentRenderingInstance &&
+    (currentRenderingInstance.ce ||
+      (currentRenderingInstance.parent &&
+        isAsyncWrapper(currentRenderingInstance.parent) &&
+        currentRenderingInstance.parent.ce))
   ) {
+    const hasProps = Object.keys(props).length > 0
     // in custom element mode, render <slot/> as actual slot outlets
     // wrap it with a fragment because in shadowRoot: false mode the slot
     // element gets replaced by injected content
@@ -47,12 +63,10 @@ export function renderSlot(
         Fragment,
         null,
         [createVNode('slot', props, fallback && fallback())],
-        PatchFlags.STABLE_FRAGMENT,
+        hasProps ? PatchFlags.BAIL : PatchFlags.STABLE_FRAGMENT,
       )
     )
   }
-
-  let slot = slots[name]
 
   if (__DEV__ && slot && slot.length > 1) {
     warn(
@@ -72,6 +86,10 @@ export function renderSlot(
   }
   openBlock()
   const validSlotContent = slot && ensureValidVNode(slot(props))
+
+  // handle forwarded vapor slot fallback
+  ensureVaporSlotFallback(validSlotContent, fallback)
+
   const slotKey =
     props.key ||
     // slot content array of a dynamic conditional slot may have a branch
@@ -114,4 +132,21 @@ export function ensureValidVNode(
   })
     ? vnodes
     : null
+}
+
+export function ensureVaporSlotFallback(
+  vnodes: VNodeArrayChildren | null | undefined,
+  fallback?: () => VNodeArrayChildren,
+): void {
+  let vaporSlot: any
+  if (
+    vnodes &&
+    vnodes.length === 1 &&
+    isVNode(vnodes[0]) &&
+    (vaporSlot = vnodes[0].vs)
+  ) {
+    if (!vaporSlot.fallback && fallback) {
+      vaporSlot.fallback = fallback
+    }
+  }
 }

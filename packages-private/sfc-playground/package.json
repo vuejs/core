@@ -4,16 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "serve": "vite preview"
+    "dev": "vp dev",
+    "build": "vp build",
+    "serve": "vp preview"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "catalog:",
     "vite": "catalog:"
   },
   "dependencies": {
-    "@vue/repl": "^4.5.1",
+    "@vue/repl": "^4.7.2",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
     "vue": "workspace:*"

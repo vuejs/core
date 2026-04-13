@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import Header from './Header.vue'
-import { Repl, useStore, SFCOptions, useVueImportMap } from '@vue/repl'
+import {
+  Repl,
+  type SFCOptions,
+  useStore,
+  useVueImportMap,
+  StoreState,
+} from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
-import { ref, watchEffect, onMounted, computed } from 'vue'
+import { ref, watchEffect, onMounted, computed, watch } from 'vue'
 
 const replRef = ref<InstanceType<typeof Repl>>()
 
@@ -20,13 +26,17 @@ const initAutoSave: boolean = JSON.parse(
 )
 const autoSave = ref(initAutoSave)
 
-const { productionMode, vueVersion, importMap } = useVueImportMap({
-  runtimeDev: import.meta.env.PROD
-    ? `${location.origin}/vue.runtime.esm-browser.js`
-    : `${location.origin}/src/vue-dev-proxy`,
-  runtimeProd: import.meta.env.PROD
-    ? `${location.origin}/vue.runtime.esm-browser.prod.js`
-    : `${location.origin}/src/vue-dev-proxy-prod`,
+const { vueVersion, productionMode, importMap } = useVueImportMap({
+  runtimeDev: () => {
+    return import.meta.env.PROD
+      ? `${location.origin}/vue.runtime-with-vapor.esm-browser.js`
+      : `${location.origin}/src/vue-dev-proxy`
+  },
+  runtimeProd: () => {
+    return import.meta.env.PROD
+      ? `${location.origin}/vue.runtime-with-vapor.esm-browser.prod.js`
+      : `${location.origin}/src/vue-dev-proxy-prod`
+  },
   serverRenderer: import.meta.env.PROD
     ? `${location.origin}/server-renderer.esm-browser.js`
     : `${location.origin}/src/vue-server-renderer-dev-proxy`,
@@ -46,6 +56,8 @@ if (hash.startsWith('__SSR__')) {
   useSSRMode.value = true
 }
 
+const files: StoreState['files'] = ref(Object.create(null))
+
 // enable experimental features
 const sfcOptions = computed(
   (): SFCOptions => ({
@@ -53,11 +65,13 @@ const sfcOptions = computed(
       inlineTemplate: productionMode.value,
       isProd: productionMode.value,
       propsDestructure: true,
+      // vapor: useVaporMode.value,
     },
     style: {
       isProd: productionMode.value,
     },
     template: {
+      // vapor: useVaporMode.value,
       isProd: productionMode.value,
       compilerOptions: {
         isCustomElement: (tag: string) =>
@@ -69,8 +83,9 @@ const sfcOptions = computed(
 
 const store = useStore(
   {
-    builtinImportMap: importMap,
+    files,
     vueVersion,
+    builtinImportMap: importMap,
     sfcOptions,
   },
   hash,
@@ -115,6 +130,34 @@ onMounted(() => {
   // @ts-expect-error process shim for old versions of @vue/compiler-sfc dependency
   window.process = { env: {} }
 })
+
+const isVaporSupported = ref(false)
+watch(
+  () => store.vueVersion,
+  (version, oldVersion) => {
+    const [major, minor] = (version || store.compiler.version)
+      .split('.')
+      .map((v: string) => parseInt(v, 10))
+    isVaporSupported.value = major > 3 || (major === 3 && minor >= 6)
+    if (oldVersion) reloadPage()
+  },
+  { immediate: true, flush: 'pre' },
+)
+
+const previewOptions = computed(() => ({
+  customCode: {
+    importCode: `import { initCustomFormatter${isVaporSupported.value ? ', vaporInteropPlugin' : ''} } from 'vue'`,
+    useCode: `
+      ${isVaporSupported.value ? 'app.use(vaporInteropPlugin)' : ''}
+      if (window.devtoolsFormatters) {
+        const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
+        window.devtoolsFormatters.splice(index, 1)
+        initCustomFormatter()
+      } else {
+        initCustomFormatter()
+      }`,
+  },
+}))
 </script>
 
 <template>
@@ -141,20 +184,11 @@ onMounted(() => {
     :editorOptions="{ autoSaveText: false }"
     :store="store"
     :showCompileOutput="true"
+    :showSsrOutput="useSSRMode"
+    :showOpenSourceMap="true"
     :autoResize="true"
     :clearConsole="false"
-    :preview-options="{
-      customCode: {
-        importCode: `import { initCustomFormatter } from 'vue'`,
-        useCode: `if (window.devtoolsFormatters) {
-    const index = window.devtoolsFormatters.findIndex((v) => v.__vue_custom_formatter)
-    window.devtoolsFormatters.splice(index, 1)
-    initCustomFormatter()
-  } else {
-    initCustomFormatter()
-  }`,
-      },
-    }"
+    :preview-options="previewOptions"
   />
 </template>
 

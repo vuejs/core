@@ -1,15 +1,18 @@
 import type { ObjectDirective } from '@vue/runtime-core'
 
 export const vShowOriginalDisplay: unique symbol = Symbol('_vod')
+
 export const vShowHidden: unique symbol = Symbol('_vsh')
 
 export interface VShowElement extends HTMLElement {
   // _vod = vue original display
-  [vShowOriginalDisplay]: string
-  [vShowHidden]: boolean
+  [vShowOriginalDisplay]?: string
+  [vShowHidden]?: boolean
 }
 
-export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
+export const vShow: ObjectDirective<VShowElement> & { name: 'show' } = {
+  // used for prop mismatch check during hydration
+  name: 'show',
   beforeMount(el, { value }, { transition }) {
     el[vShowOriginalDisplay] =
       el.style.display === 'none' ? '' : el.style.display
@@ -45,12 +48,8 @@ export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
   },
 }
 
-if (__DEV__) {
-  vShow.name = 'show'
-}
-
 function setDisplay(el: VShowElement, value: unknown): void {
-  el.style.display = value ? el[vShowOriginalDisplay] : 'none'
+  el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
   el[vShowHidden] = !value
 }
 

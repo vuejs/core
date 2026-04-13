@@ -1,10 +1,5 @@
-import type {
-  ElementNode,
-  Namespace,
-  Namespaces,
-  ParentNode,
-  TemplateChildNode,
-} from './ast'
+import type { ElementNode, ParentNode, TemplateChildNode } from './ast'
+import type { Namespace, Namespaces } from '@vue/shared'
 import type { CompilerError } from './errors'
 import type {
   DirectiveTransform,
@@ -20,8 +15,7 @@ export interface ErrorHandlingOptions {
 }
 
 export interface ParserOptions
-  extends ErrorHandlingOptions,
-    CompilerCompatOptions {
+  extends ErrorHandlingOptions, CompilerCompatOptions {
   /**
    * Base mode is platform agnostic and only parses HTML-like template syntax,
    * treating all tags the same way. Specific tag parsing behavior can be
@@ -175,6 +169,12 @@ interface SharedTransformCodegenOptions {
    */
   prefixIdentifiers?: boolean
   /**
+   * A list of parser plugins to enable for `@babel/parser`, which is used to
+   * parse expressions in bindings and interpolations.
+   * https://babeljs.io/docs/en/next/babel-parser#plugins
+   */
+  expressionPlugins?: ParserPlugin[]
+  /**
    * Control whether generate SSR-optimized render functions instead.
    * The resulting function must be attached to the component via the
    * `ssrRender` option instead of `render`.
@@ -217,7 +217,8 @@ interface SharedTransformCodegenOptions {
 }
 
 export interface TransformOptions
-  extends SharedTransformCodegenOptions,
+  extends
+    SharedTransformCodegenOptions,
     ErrorHandlingOptions,
     CompilerCompatOptions {
   /**
@@ -272,12 +273,6 @@ export interface TransformOptions
    * @default false
    */
   cacheHandlers?: boolean
-  /**
-   * A list of parser plugins to enable for `@babel/parser`, which is used to
-   * parse expressions in bindings and interpolations.
-   * https://babeljs.io/docs/en/next/babel-parser#plugins
-   */
-  expressionPlugins?: ParserPlugin[]
   /**
    * SFC scoped styles ID
    */

@@ -381,6 +381,17 @@ h1 { color: red }
     })
   })
 
+  describe('vapor mode', () => {
+    test('on empty script', () => {
+      const { descriptor } = parse(`<script vapor></script>`)
+      expect(descriptor.vapor).toBe(true)
+    })
+    test('on template', () => {
+      const { descriptor } = parse(`<template vapor><div/></template>`)
+      expect(descriptor.vapor).toBe(true)
+    })
+  })
+
   describe('warnings', () => {
     function assertWarning(errors: Error[], msg: string) {
       expect(errors.some(e => e.message.match(msg))).toBe(true)

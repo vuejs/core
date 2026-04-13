@@ -1,17 +1,15 @@
 import path from 'path'
 import {
   ConstantTypes,
-  type ExpressionNode,
   type NodeTransform,
   NodeTypes,
-  type SimpleExpressionNode,
-  createCompoundExpression,
   createSimpleExpression,
 } from '@vue/compiler-core'
 import {
   isDataUrl,
   isExternalUrl,
   isRelativeUrl,
+  normalizeDecodedImportPath,
   parseUrl,
 } from './templateUtils'
 import {
@@ -71,6 +69,7 @@ export const transformSrcset: NodeTransform = (
 
           const shouldProcessUrl = (url: string) => {
             return (
+              url &&
               !isExternalUrl(url) &&
               !isDataUrl(url) &&
               (options.includeAbsolute || isRelativeUrl(url))
@@ -105,55 +104,57 @@ export const transformSrcset: NodeTransform = (
             }
           }
 
-          const compoundExpression = createCompoundExpression([], attr.loc)
+          let content = ''
           imageCandidates.forEach(({ url, descriptor }, index) => {
             if (shouldProcessUrl(url)) {
-              const { path } = parseUrl(url)
-              let exp: SimpleExpressionNode
-              if (path) {
+              const { path, hash } = parseUrl(url)
+              const source = path ? path : hash
+              if (source) {
+                let exp = ''
+                const normalizedSource = normalizeDecodedImportPath(source)
                 const existingImportsIndex = context.imports.findIndex(
-                  i => i.path === path,
+                  i => i.path === normalizedSource,
                 )
                 if (existingImportsIndex > -1) {
-                  exp = createSimpleExpression(
-                    `_imports_${existingImportsIndex}`,
-                    false,
-                    attr.loc,
-                    ConstantTypes.CAN_STRINGIFY,
-                  )
+                  exp = `_imports_${existingImportsIndex}`
                 } else {
-                  exp = createSimpleExpression(
-                    `_imports_${context.imports.length}`,
-                    false,
-                    attr.loc,
-                    ConstantTypes.CAN_STRINGIFY,
-                  )
-                  context.imports.push({ exp, path })
+                  exp = `_imports_${context.imports.length}`
+                  context.imports.push({
+                    exp: createSimpleExpression(
+                      exp,
+                      false,
+                      attr.loc,
+                      ConstantTypes.CAN_STRINGIFY,
+                    ),
+                    path: normalizedSource,
+                  })
                 }
-                compoundExpression.children.push(exp)
+                if (path && hash) {
+                  exp = `${exp} + '${hash}'`
+                }
+                content += exp
               }
             } else {
-              const exp = createSimpleExpression(
-                `"${url}"`,
-                false,
-                attr.loc,
-                ConstantTypes.CAN_STRINGIFY,
-              )
-              compoundExpression.children.push(exp)
+              content += `"${url}"`
             }
             const isNotLast = imageCandidates.length - 1 > index
-            if (descriptor && isNotLast) {
-              compoundExpression.children.push(` + ' ${descriptor}, ' + `)
-            } else if (descriptor) {
-              compoundExpression.children.push(` + ' ${descriptor}'`)
+            if (descriptor) {
+              content += ` + ' ${descriptor}${isNotLast ? ', ' : ''}'${
+                isNotLast ? ' + ' : ''
+              }`
             } else if (isNotLast) {
-              compoundExpression.children.push(` + ', ' + `)
+              content += ` + ', ' + `
             }
           })
 
-          let exp: ExpressionNode = compoundExpression
+          let exp = createSimpleExpression(
+            content,
+            false,
+            attr.loc,
+            ConstantTypes.CAN_STRINGIFY,
+          )
           if (context.hoistStatic) {
-            exp = context.hoist(compoundExpression)
+            exp = context.hoist(exp)
             exp.constType = ConstantTypes.CAN_STRINGIFY
           }
 

@@ -10,6 +10,7 @@ import {
   vtcKey,
 } from './Transition'
 import {
+  type ComponentInternalInstance,
   type ComponentOptions,
   DeprecationTypes,
   Fragment,
@@ -29,9 +30,14 @@ import {
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
-const positionMap = new WeakMap<VNode, DOMRect>()
-const newPositionMap = new WeakMap<VNode, DOMRect>()
-const moveCbKey = Symbol('_moveCb')
+interface Position {
+  top: number
+  left: number
+}
+
+const positionMap = new WeakMap<VNode, Position>()
+const newPositionMap = new WeakMap<VNode, Position>()
+const moveCbKey: unique symbol = Symbol('_moveCb')
 const enterCbKey = Symbol('_enterCb')
 
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
@@ -81,35 +87,24 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
           moveClass,
         )
       ) {
+        prevChildren = []
         return
       }
 
       // we divide the work into three loops to avoid mixing DOM reads and writes
       // in each iteration - which helps prevent layout thrashing.
-      prevChildren.forEach(callPendingCbs)
+      prevChildren.forEach(vnode => callPendingCbs(vnode.el))
       prevChildren.forEach(recordPosition)
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
-      forceReflow()
+      forceReflow(instance.vnode.el as Node)
 
       movedChildren.forEach(c => {
         const el = c.el as ElementWithTransition
-        const style = el.style
-        addTransitionClass(el, moveClass)
-        style.transform = style.webkitTransform = style.transitionDuration = ''
-        const cb = ((el as any)[moveCbKey] = (e: TransitionEvent) => {
-          if (e && e.target !== el) {
-            return
-          }
-          if (!e || /transform$/.test(e.propertyName)) {
-            el.removeEventListener('transitionend', cb)
-            ;(el as any)[moveCbKey] = null
-            removeTransitionClass(el, moveClass)
-          }
-        })
-        el.addEventListener('transitionend', cb)
+        handleMovedChildren(el, moveClass)
       })
+      prevChildren = []
     })
 
     return () => {
@@ -122,7 +117,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
         !rawProps.tag &&
         compatUtils.checkCompatEnabled(
           DeprecationTypes.TRANSITION_GROUP_ROOT,
-          instance.parent,
+          instance.parent as ComponentInternalInstance,
         )
       ) {
         tag = 'span'
@@ -143,10 +138,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
                 instance,
               ),
             )
-            positionMap.set(
-              child,
-              (child.el as Element).getBoundingClientRect(),
-            )
+            positionMap.set(child, getPosition(child.el as HTMLElement))
           }
         }
       }
@@ -176,8 +168,7 @@ export const TransitionGroup = TransitionGroupImpl as unknown as {
   }
 }
 
-function callPendingCbs(c: VNode) {
-  const el = c.el as any
+export function callPendingCbs(el: any): void {
   if (el[moveCbKey]) {
     el[moveCbKey]()
   }
@@ -187,23 +178,60 @@ function callPendingCbs(c: VNode) {
 }
 
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, (c.el as Element).getBoundingClientRect())
+  newPositionMap.set(c, getPosition(c.el as HTMLElement))
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
-  const oldPos = positionMap.get(c)!
-  const newPos = newPositionMap.get(c)!
-  const dx = oldPos.left - newPos.left
-  const dy = oldPos.top - newPos.top
-  if (dx || dy) {
-    const s = (c.el as HTMLElement).style
-    s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
-    s.transitionDuration = '0s'
+  if (
+    baseApplyTranslation(
+      positionMap.get(c)!,
+      newPositionMap.get(c)!,
+      c.el as ElementWithTransition,
+    )
+  ) {
     return c
   }
 }
 
-function hasCSSTransform(
+// shared between vdom and vapor
+export function baseApplyTranslation(
+  oldPos: Position,
+  newPos: Position,
+  el: ElementWithTransition,
+): boolean {
+  const dx = oldPos.left - newPos.left
+  const dy = oldPos.top - newPos.top
+  if (dx || dy) {
+    const s = el.style
+    const rect = el.getBoundingClientRect()
+    let scaleX = 1
+    let scaleY = 1
+    if (el.offsetWidth) scaleX = rect.width / el.offsetWidth
+    if (el.offsetHeight) scaleY = rect.height / el.offsetHeight
+    if (!Number.isFinite(scaleX) || scaleX === 0) scaleX = 1
+    if (!Number.isFinite(scaleY) || scaleY === 0) scaleY = 1
+    // Avoid division noise when scale is effectively 1.
+    if (Math.abs(scaleX - 1) < 0.01) scaleX = 1
+    if (Math.abs(scaleY - 1) < 0.01) scaleY = 1
+    s.transform = s.webkitTransform = `translate(${dx / scaleX}px,${
+      dy / scaleY
+    }px)`
+    s.transitionDuration = '0s'
+    return true
+  }
+  return false
+}
+
+function getPosition(el: HTMLElement): Position {
+  const rect = el.getBoundingClientRect()
+  return {
+    left: rect.left,
+    top: rect.top,
+  }
+}
+
+// shared between vdom and vapor
+export function hasCSSTransform(
   el: ElementWithTransition,
   root: Node,
   moveClass: string,
@@ -229,4 +257,25 @@ function hasCSSTransform(
   const { hasTransform } = getTransitionInfo(clone)
   container.removeChild(clone)
   return hasTransform
+}
+
+// shared between vdom and vapor
+export const handleMovedChildren = (
+  el: ElementWithTransition,
+  moveClass: string,
+): void => {
+  const style = el.style
+  addTransitionClass(el, moveClass)
+  style.transform = style.webkitTransform = style.transitionDuration = ''
+  const cb = ((el as any)[moveCbKey] = (e: TransitionEvent) => {
+    if (e && e.target !== el) {
+      return
+    }
+    if (!e || e.propertyName.endsWith('transform')) {
+      el.removeEventListener('transitionend', cb)
+      ;(el as any)[moveCbKey] = null
+      removeTransitionClass(el, moveClass)
+    }
+  })
+  el.addEventListener('transitionend', cb)
 }

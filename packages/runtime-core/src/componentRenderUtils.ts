@@ -15,7 +15,14 @@ import {
   normalizeVNode,
 } from './vnode'
 import { ErrorCodes, handleError } from './errorHandling'
-import { PatchFlags, ShapeFlags, isModelListener, isOn } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isModelListener,
+  isObject,
+  isOn,
+  looseEqual,
+} from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import type { NormalizedProps } from './componentProps'
@@ -169,40 +176,7 @@ export function renderComponentRoot(
         }
         root = cloneVNode(root, fallthroughAttrs, false, true)
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
-        const allAttrs = Object.keys(attrs)
-        const eventAttrs: string[] = []
-        const extraAttrs: string[] = []
-        for (let i = 0, l = allAttrs.length; i < l; i++) {
-          const key = allAttrs[i]
-          if (isOn(key)) {
-            // ignore v-model handlers when they fail to fallthrough
-            if (!isModelListener(key)) {
-              // remove `on`, lowercase first letter to reflect event casing
-              // accurately
-              eventAttrs.push(key[2].toLowerCase() + key.slice(3))
-            }
-          } else {
-            extraAttrs.push(key)
-          }
-        }
-        if (extraAttrs.length) {
-          warn(
-            `Extraneous non-props attributes (` +
-              `${extraAttrs.join(', ')}) ` +
-              `were passed to component but could not be automatically inherited ` +
-              `because component renders fragment or text or teleport root nodes.`,
-          )
-        }
-        if (eventAttrs.length) {
-          warn(
-            `Extraneous non-emits event listeners (` +
-              `${eventAttrs.join(', ')}) ` +
-              `were passed to component but could not be automatically inherited ` +
-              `because component renders fragment or text root nodes. ` +
-              `If the listener is intended to be a component custom event listener only, ` +
-              `declare it using the "emits" option.`,
-          )
-        }
+        warnExtraneousAttributes(attrs)
       }
     }
   }
@@ -302,6 +276,46 @@ const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
   return [normalizeVNode(childRoot), setRoot]
 }
 
+/**
+ * Dev only
+ */
+export function warnExtraneousAttributes(attrs: Record<string, any>): void {
+  const allAttrs = Object.keys(attrs)
+  const eventAttrs: string[] = []
+  const extraAttrs: string[] = []
+  for (let i = 0, l = allAttrs.length; i < l; i++) {
+    const key = allAttrs[i]
+    if (isOn(key)) {
+      // ignore v-model handlers when they fail to fallthrough
+      if (!isModelListener(key)) {
+        // remove `on`, lowercase first letter to reflect event casing
+        // accurately
+        eventAttrs.push(key[2].toLowerCase() + key.slice(3))
+      }
+    } else {
+      extraAttrs.push(key)
+    }
+  }
+  if (extraAttrs.length) {
+    warn(
+      `Extraneous non-props attributes (` +
+        `${extraAttrs.join(', ')}) ` +
+        `were passed to component but could not be automatically inherited ` +
+        `because component renders fragment or text or teleport root nodes.`,
+    )
+  }
+  if (eventAttrs.length) {
+    warn(
+      `Extraneous non-emits event listeners (` +
+        `${eventAttrs.join(', ')}) ` +
+        `were passed to component but could not be automatically inherited ` +
+        `because component renders fragment or text root nodes. ` +
+        `If the listener is intended to be a component custom event listener only, ` +
+        `declare it using the "emits" option.`,
+    )
+  }
+}
+
 export function filterSingleRoot(
   children: VNodeArrayChildren,
   recurse = true,
@@ -334,7 +348,7 @@ export function filterSingleRoot(
   return singleRoot
 }
 
-const getFunctionalFallthrough = (attrs: Data): Data | undefined => {
+export const getFunctionalFallthrough = (attrs: Data): Data | undefined => {
   let res: Data | undefined
   for (const key in attrs) {
     if (key === 'class' || key === 'style' || isOn(key)) {
@@ -399,7 +413,7 @@ export function shouldUpdateComponent(
       for (let i = 0; i < dynamicProps.length; i++) {
         const key = dynamicProps[i]
         if (
-          nextProps![key] !== prevProps![key] &&
+          hasPropValueChanged(nextProps!, prevProps!, key) &&
           !isEmitListener(emits, key)
         ) {
           return true
@@ -441,7 +455,7 @@ function hasPropsChanged(
   for (let i = 0; i < nextKeys.length; i++) {
     const key = nextKeys[i]
     if (
-      nextProps[key] !== prevProps[key] &&
+      hasPropValueChanged(nextProps, prevProps, key) &&
       !isEmitListener(emitsOptions, key)
     ) {
       return true
@@ -450,20 +464,40 @@ function hasPropsChanged(
   return false
 }
 
+function hasPropValueChanged(
+  nextProps: Data,
+  prevProps: Data,
+  key: string,
+): boolean {
+  const nextProp = nextProps[key]
+  const prevProp = prevProps[key]
+  if (key === 'style' && isObject(nextProp) && isObject(prevProp)) {
+    return !looseEqual(nextProp, prevProp)
+  }
+  return nextProp !== prevProp
+}
+
 export function updateHOCHostEl(
-  { vnode, parent }: ComponentInternalInstance,
+  { vnode, parent, suspense }: ComponentInternalInstance,
   el: typeof vnode.el, // HostNode
 ): void {
-  while (parent) {
-    const root = parent.subTree
+  while (parent && !parent.vapor) {
+    const root = parent.subTree!
     if (root.suspense && root.suspense.activeBranch === vnode) {
-      root.el = vnode.el
+      // Suspense proxies its active branch host node, so keep propagating from
+      // the boundary vnode to any wrapper components above it.
+      root.suspense.vnode.el = root.el = el
+      vnode = root
     }
     if (root === vnode) {
-      ;(vnode = parent.vnode).el = el
+      ;(vnode = parent.vnode!).el = el
       parent = parent.parent
     } else {
       break
     }
+  }
+  // also update suspense vnode el
+  if (suspense && suspense.activeBranch === vnode) {
+    suspense.vnode.el = el
   }
 }

@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { type Plugin, defineConfig } from 'vite'
+import { type Plugin, defineConfig } from 'vite-plus'
 import vue from '@vitejs/plugin-vue'
 import { spawnSync } from 'node:child_process'
 
@@ -53,6 +53,8 @@ function copyVuePlugin(): Plugin {
       copyFile(`vue/dist/vue.esm-browser.prod.js`)
       copyFile(`vue/dist/vue.runtime.esm-browser.js`)
       copyFile(`vue/dist/vue.runtime.esm-browser.prod.js`)
+      copyFile(`vue/dist/vue.runtime-with-vapor.esm-browser.js`)
+      copyFile(`vue/dist/vue.runtime-with-vapor.esm-browser.prod.js`)
       copyFile(`server-renderer/dist/server-renderer.esm-browser.js`)
     },
   }

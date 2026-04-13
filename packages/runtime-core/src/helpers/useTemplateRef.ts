@@ -1,5 +1,5 @@
 import { type ShallowRef, readonly, shallowRef } from '@vue/reactivity'
-import { getCurrentInstance } from '../component'
+import { type Data, getCurrentGenericInstance } from '../component'
 import { warn } from '../warning'
 import { EMPTY_OBJ } from '@vue/shared'
 
@@ -9,17 +9,12 @@ export type TemplateRef<T = unknown> = Readonly<ShallowRef<T | null>>
 
 export function useTemplateRef<T = unknown, Keys extends string = string>(
   key: Keys,
-): TemplateRef<T> {
-  const i = getCurrentInstance()
+): Readonly<ShallowRef<T | null>> {
+  const i = getCurrentGenericInstance()
   const r = shallowRef(null)
   if (i) {
     const refs = i.refs === EMPTY_OBJ ? (i.refs = {}) : i.refs
-    let desc: PropertyDescriptor | undefined
-    if (
-      __DEV__ &&
-      (desc = Object.getOwnPropertyDescriptor(refs, key)) &&
-      !desc.configurable
-    ) {
+    if (__DEV__ && isTemplateRefKey(refs, key)) {
       warn(`useTemplateRef('${key}') already exists.`)
     } else {
       Object.defineProperty(refs, key, {
@@ -39,4 +34,11 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
     knownTemplateRefs.add(ret)
   }
   return ret
+}
+
+export function isTemplateRefKey(refs: Data, key: string): boolean {
+  let desc: PropertyDescriptor | undefined
+  return !!(
+    (desc = Object.getOwnPropertyDescriptor(refs, key)) && !desc.configurable
+  )
 }

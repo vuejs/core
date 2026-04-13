@@ -1,7 +1,6 @@
 import {
   type ElementNode,
   ElementTypes,
-  Namespaces,
   NodeTypes,
   type Property,
   type SimpleExpressionNode,
@@ -9,6 +8,7 @@ import {
   locStub,
 } from '../src'
 import {
+  Namespaces,
   PatchFlagNames,
   type PatchFlags,
   type ShapeFlags,

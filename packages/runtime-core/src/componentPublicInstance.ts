@@ -1,7 +1,9 @@
 import {
+  type Attrs,
   type Component,
   type ComponentInternalInstance,
   type Data,
+  type GenericComponentInstance,
   getComponentPublicInstance,
   isStatefulComponent,
 } from './component'
@@ -132,13 +134,8 @@ export type UnwrapMixinsType<
 type EnsureNonVoid<T> = T extends void ? {} : T
 
 export type ComponentPublicInstanceConstructor<
-  T extends ComponentPublicInstance<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M
-  > = ComponentPublicInstance<any>,
+  T extends ComponentPublicInstance<Props, RawBindings, D, C, M> =
+    ComponentPublicInstance<any>,
   Props = any,
   RawBindings = any,
   D = any,
@@ -311,7 +308,7 @@ export type ComponentPublicInstance<
   $props: MakeDefaultsOptional extends true
     ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
     : Prettify<P> & PublicProps
-  $attrs: Data
+  $attrs: Attrs
   $refs: Data & TypeRefs
   $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null
@@ -355,40 +352,52 @@ export type PublicPropertiesMap = Record<
  * public $parent chains, skip functional ones and go to the parent instead.
  */
 const getPublicInstance = (
-  i: ComponentInternalInstance | null,
+  i: GenericComponentInstance | null,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null => {
-  if (!i) return null
-  if (isStatefulComponent(i)) return getComponentPublicInstance(i)
+  if (!i || i.vapor) return null
+  if (isStatefulComponent(i as ComponentInternalInstance))
+    return getComponentPublicInstance(i)
   return getPublicInstance(i.parent)
 }
 
-export const publicPropertiesMap: PublicPropertiesMap =
-  // Move PURE marker to new line to workaround compiler discarding it
-  // due to type annotation
-  /*@__PURE__*/ extend(Object.create(null), {
-    $: i => i,
-    $el: i => i.vnode.el,
-    $data: i => i.data,
-    $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
-    $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
-    $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
-    $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
-    $parent: i => getPublicInstance(i.parent),
-    $root: i => getPublicInstance(i.root),
-    $host: i => i.ce,
-    $emit: i => i.emit,
-    $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
-    $forceUpdate: i =>
-      i.f ||
-      (i.f = () => {
-        queueJob(i.update)
-      }),
-    $nextTick: i => i.n || (i.n = nextTick.bind(i.proxy!)),
-    $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP),
-  } as PublicPropertiesMap)
+// https://github.com/rolldown/rolldown/issues/7666
+// Lazy init to break circular dependency for rolldown tree-shaking
+// Circular:
+//    publicPropertiesMap
+//    -> getPublicInstance
+//    -> getComponentPublicInstance
+//    -> publicPropertiesMap
+let publicPropertiesMap: PublicPropertiesMap
+export const getPublicPropertiesMap = (): PublicPropertiesMap => {
+  if (!publicPropertiesMap) {
+    publicPropertiesMap = extend(Object.create(null), {
+      $: i => i,
+      $el: i => i.vnode.el,
+      $data: i => i.data,
+      $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
+      $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
+      $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
+      $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
+      $parent: i => getPublicInstance(i.parent),
+      $root: i => getPublicInstance(i.root),
+      $host: i => i.ce,
+      $emit: i => i.emit,
+      $options: i =>
+        __FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type,
+      $forceUpdate: i =>
+        i.f ||
+        (i.f = () => {
+          queueJob(i.update)
+        }),
+      $nextTick: i => i.n || (i.n = nextTick.bind(i.proxy!)),
+      $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP),
+    } as PublicPropertiesMap)
+  }
+  return publicPropertiesMap
+}
 
 if (__COMPAT__) {
-  installCompatInstanceProperties(publicPropertiesMap)
+  installCompatInstanceProperties(getPublicPropertiesMap())
 }
 
 enum AccessTypes {
@@ -430,7 +439,6 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // is the multiple hasOwn() calls. It's much faster to do a simple property
     // access on a plain object, so we use an accessCache object (with null
     // prototype) to memoize what access type a key corresponds to.
-    let normalizedProps
     if (key[0] !== '$') {
       const n = accessCache![key]
       if (n !== undefined) {
@@ -448,15 +456,14 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (hasSetupBinding(setupState, key)) {
         accessCache![key] = AccessTypes.SETUP
         return setupState[key]
-      } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+      } else if (
+        __FEATURE_OPTIONS_API__ &&
+        data !== EMPTY_OBJ &&
+        hasOwn(data, key)
+      ) {
         accessCache![key] = AccessTypes.DATA
         return data[key]
-      } else if (
-        // only cache other properties when instance has declared (thus stable)
-        // props
-        (normalizedProps = instance.propsOptions[0]) &&
-        hasOwn(normalizedProps, key)
-      ) {
+      } else if (hasOwn(props, key)) {
         accessCache![key] = AccessTypes.PROPS
         return props![key]
       } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
@@ -467,7 +474,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
     }
 
-    const publicGetter = publicPropertiesMap[key]
+    const publicGetter = getPublicPropertiesMap()[key]
     let cssModule, globalProperties
     // public $xxx properties
     if (publicGetter) {
@@ -545,7 +552,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     ) {
       warn(`Cannot mutate <script setup> binding "${key}" from Options API.`)
       return false
-    } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+    } else if (
+      __FEATURE_OPTIONS_API__ &&
+      data !== EMPTY_OBJ &&
+      hasOwn(data, key)
+    ) {
       data[key] = value
       return true
     } else if (hasOwn(instance.props, key)) {
@@ -575,19 +586,23 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, setupState, accessCache, ctx, appContext, propsOptions },
+      _: { data, setupState, accessCache, ctx, appContext, props, type },
     }: ComponentRenderContext,
     key: string,
   ) {
-    let normalizedProps
-    return (
-      !!accessCache![key] ||
-      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
+    let cssModules
+    return !!(
+      accessCache![key] ||
+      (__FEATURE_OPTIONS_API__ &&
+        data !== EMPTY_OBJ &&
+        key[0] !== '$' &&
+        hasOwn(data, key)) ||
       hasSetupBinding(setupState, key) ||
-      ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
+      hasOwn(props, key) ||
       hasOwn(ctx, key) ||
-      hasOwn(publicPropertiesMap, key) ||
-      hasOwn(appContext.config.globalProperties, key)
+      hasOwn(getPublicPropertiesMap(), key) ||
+      hasOwn(appContext.config.globalProperties, key) ||
+      ((cssModules = type.__cssModules) && cssModules[key])
     )
   },
 
@@ -653,11 +668,11 @@ export function createDevRenderContext(instance: ComponentInternalInstance) {
   })
 
   // expose public properties
-  Object.keys(publicPropertiesMap).forEach(key => {
+  Object.keys(getPublicPropertiesMap()).forEach(key => {
     Object.defineProperty(target, key, {
       configurable: true,
       enumerable: false,
-      get: () => publicPropertiesMap[key](instance),
+      get: () => getPublicPropertiesMap()[key](instance),
       // intercepted by the proxy so no need for implementation,
       // but needed to prevent set errors
       set: NOOP,
