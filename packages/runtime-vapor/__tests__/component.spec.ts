@@ -507,25 +507,28 @@ describe('component', () => {
     }
   })
 
-  test('should pass slot args to template-only component render', () => {
-    const { component: Child } = define({
-      render: compileToVaporRender(
-        `<span v-if="$slots.default"><slot /></span>`,
-        { bindingMetadata: {} },
-      ),
-    })
+  test('should pass slot args to template-only component render in production mode', () => {
+    __DEV__ = false
+    try {
+      const { component: Child } = define({
+        render: compileToVaporRender(
+          `<span v-if="$slots.default"><slot /></span>`,
+          { bindingMetadata: {} },
+        ),
+      })
 
-    const { host } = define({
-      setup() {
-        return createComponent(Child, null, {
-          default: () => template('<button>slot</button>')(),
-        })
-      },
-    }).render()
+      const { host } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => template('<button>slot</button>')(),
+          })
+        },
+      }).render()
 
-    expect(host.innerHTML).toBe(
-      '<span><button>slot</button><!--slot--></span><!--if-->',
-    )
+      expect(host.innerHTML).toBe('<span><button>slot</button></span>')
+    } finally {
+      __DEV__ = true
+    }
   })
 
   it('warn if functional vapor component not return a block', () => {
