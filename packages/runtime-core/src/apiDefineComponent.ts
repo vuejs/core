@@ -21,7 +21,7 @@ import type {
   ComponentPropsOptions,
   ExtractDefaultPropTypes,
   ExtractPropTypes,
-  ResolveComponentProps,
+  SlotsToProps,
 } from './componentProps'
 import type {
   EmitsOptions,
@@ -72,7 +72,7 @@ export type DefineComponent<
   TypeEl extends Element = any,
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstanceWithMixins<
-    Props,
+    Props & SlotsToProps<S>,
     RawBindings,
     D,
     C,
@@ -117,7 +117,7 @@ export type DefineSetupFnComponent<
   P extends Record<string, any>,
   E extends EmitsOptions = {},
   S extends SlotsType = SlotsType,
-  Props = ResolveComponentProps<P, E, S>,
+  Props = P & EmitsToProps<E> & SlotsToProps<S>,
   PP = PublicProps,
 > = new (
   props: Props & PP,
@@ -136,6 +136,9 @@ export type DefineSetupFnComponent<
   {},
   S
 >
+
+type ToResolvedProps<Props, Emits extends EmitsOptions> = Readonly<Props> &
+  Readonly<EmitsToProps<Emits>>
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -235,7 +238,7 @@ export function defineComponent<
      */
     __typeEl?: TypeEl
   } & ComponentOptionsBase<
-    ResolveComponentProps<InferredProps, ResolvedEmits, Slots>,
+    ToResolvedProps<InferredProps, ResolvedEmits>,
     SetupBindings,
     Data,
     Computed,
@@ -255,7 +258,7 @@ export function defineComponent<
   > &
     ThisType<
       CreateComponentPublicInstanceWithMixins<
-        ResolveComponentProps<InferredProps, ResolvedEmits, Slots>,
+        ToResolvedProps<InferredProps, ResolvedEmits>,
         SetupBindings,
         Data,
         Computed,
@@ -284,7 +287,7 @@ export function defineComponent<
   ResolvedEmits,
   RuntimeEmitsKeys,
   PublicProps,
-  ResolveComponentProps<InferredProps, ResolvedEmits, Slots>,
+  ToResolvedProps<InferredProps, ResolvedEmits>,
   ExtractDefaultPropTypes<RuntimePropsOptions>,
   Slots,
   LocalComponents,

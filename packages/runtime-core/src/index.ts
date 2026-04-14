@@ -323,7 +323,7 @@ export type {
   ExtractPublicPropTypes,
   ExtractDefaultPropTypes,
   JSXElementChildrenAttribute,
-  ResolveComponentProps,
+  SlotsToProps,
 } from './componentProps'
 export type {
   Directive,

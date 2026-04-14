@@ -32,11 +32,7 @@ import {
   type Data,
   setCurrentInstance,
 } from './component'
-import {
-  type EmitsOptions,
-  type EmitsToProps,
-  isEmitListener,
-} from './componentEmits'
+import { isEmitListener } from './componentEmits'
 import type { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
@@ -214,23 +210,19 @@ export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
  */
 export interface JSXElementChildrenAttribute {}
 
-export type ResolveComponentProps<
-  Props,
-  Emits extends EmitsOptions,
+export type SlotsToProps<
   RawSlots extends SlotsType | Record<string, any> = Record<string, any>,
   Element = VNodeChild,
   Slots = RawSlots extends SlotsType ? UnwrapSlotsType<RawSlots> : RawSlots,
-> = Readonly<Props> &
-  Readonly<EmitsToProps<Emits>> &
-  (string extends keyof Slots
-    ? {}
-    : keyof JSXElementChildrenAttribute extends infer Key extends string
-      ? {
-          [K in Key]?:
-            | ('default' extends keyof Slots ? Slots['default'] | Slots : Slots)
-            | NoInfer<Element>
-        }
-      : {})
+> = string extends keyof Slots
+  ? {}
+  : keyof JSXElementChildrenAttribute extends infer Key extends string
+    ? {
+        [K in Key]?:
+          | ('default' extends keyof Slots ? Slots['default'] | Slots : Slots)
+          | NoInfer<Element>
+      }
+    : {}
 
 export function initProps(
   instance: ComponentInternalInstance,
