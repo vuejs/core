@@ -4,7 +4,7 @@ exports[`compiler sfc: transform asset url > should allow for full base URLs, wi
 "import { template as _template } from 'vue';
 const t0 = _template("<img src=http://localhost:3000/src/logo.png>", true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   return n0
 }"
@@ -14,7 +14,7 @@ exports[`compiler sfc: transform asset url > should allow for full base URLs, wi
 "import { template as _template } from 'vue';
 const t0 = _template("<img src=http://localhost:3000/logo.png>", true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   return n0
 }"
@@ -24,7 +24,7 @@ exports[`compiler sfc: transform asset url > should allow for full base URLs, wi
 "import { template as _template } from 'vue';
 const t0 = _template("<img src=http://localhost/logo.png>", true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   return n0
 }"
@@ -34,7 +34,7 @@ exports[`compiler sfc: transform asset url > should allow for full base URLs, wi
 "import { template as _template } from 'vue';
 const t0 = _template("<img src=//localhost/logo.png>", true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   return n0
 }"
@@ -45,7 +45,7 @@ exports[`compiler sfc: transform asset url > support uri fragment 1`] = `
 import _imports_0 from '@svg/file.svg';
 const t0 = _template("<use href=\\"" + _imports_0 + '#fragment' + "\\">", false, 1)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   const n1 = t0()
   return [n0, n1]
@@ -56,7 +56,7 @@ exports[`compiler sfc: transform asset url > support uri is empty 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<use href>", true, 1)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   return n0
 }"
@@ -74,7 +74,7 @@ const t3 = _template("<img src=//example.com/fixtures/logo.png>")
 const t4 = _template("<img src=\\"" + _imports_2 + "\\">")
 const t5 = _template("<img src=data:image/png;base64,i>")
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   const n1 = t1()
   const n2 = t1()
@@ -92,7 +92,7 @@ import _imports_0 from './bar.png';
 import _imports_1 from '/bar.png';
 const t0 = _template("<div><img src=\\"" + _imports_0 + "\\"><img src=\\"" + _imports_1 + "\\"><img src=https://foo.bar/baz.png><img src=//foo.bar/baz.png><img src=\\"" + _imports_0 + "\\">", true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   return n0
 }"
@@ -106,7 +106,7 @@ const t0 = _template("<img src=/foo/bar.png>")
 const t1 = _template("<img src=\\"" + _imports_0 + "\\">")
 const t2 = _template("<img src=\\"" + _imports_1 + "\\">")
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   const n1 = t1()
   const n2 = t1()
@@ -124,7 +124,7 @@ const t1 = _template("<img src=\\"" + _imports_1 + "\\">")
 const t2 = _template("<img src=https://foo.bar/baz.png>")
 const t3 = _template("<img src=//foo.bar/baz.png>")
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   const n1 = t1()
   const n2 = t2()
