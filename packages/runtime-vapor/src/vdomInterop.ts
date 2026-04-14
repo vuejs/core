@@ -278,7 +278,16 @@ const vaporInteropImpl: Omit<
       remove(vnode.vb, container)
       stopVaporSlotScope(vnode)
     }
-    remove(vnode.anchor as Node, container)
+    if (doRemove) {
+      const anchor = vnode.anchor as Node
+      // `container` is captured before unmount starts, but the unmount above
+      // may already remove or move this anchor. Only remove it if it is still
+      // attached, using its current parent instead of the stale snapshot.
+      const parent = anchor.parentNode
+      if (parent) {
+        remove(anchor, parent)
+      }
+    }
   },
 
   /**

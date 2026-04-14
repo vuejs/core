@@ -331,7 +331,11 @@ export function createComponent(
     // teleport
     if (isVaporTeleport(component)) {
       const frag = component.process(rawProps!, rawSlots!)
-      onScopeDispose(() => remove(frag), true)
+      if (_insertionParent) {
+        // Teleports mounted via insertion state are not part of the returned
+        // block tree, so scope disposal must tear down their target-side state.
+        onScopeDispose(() => frag.dispose(), true)
+      }
       if (!isHydrating) {
         if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
       } else {
