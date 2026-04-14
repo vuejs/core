@@ -569,6 +569,27 @@ function setCurrentSlotEndAnchor(end: Node | null): Node | null {
 //   must create its own anchor instead of reusing the slot end anchor.
 export let currentEmptyFragment: DynamicFragment | null | undefined
 
+// VDOM interop slot fragments hydrate eagerly in createSlot(). When they are
+// created while resolving a vapor slot fallback, defer that hydration until
+// the outer slot has attached the final fallback chain.
+let currentDeferredSlotHydrations: VaporFragment[] | null = null
+
+export function deferSlotHydration(fragment: VaporFragment): boolean {
+  if (!currentDeferredSlotHydrations) return false
+  currentDeferredSlotHydrations.push(fragment)
+  return true
+}
+
+function setCurrentDeferredSlotHydrations(
+  queue: VaporFragment[] | null,
+): VaporFragment[] | null {
+  try {
+    return currentDeferredSlotHydrations
+  } finally {
+    currentDeferredSlotHydrations = queue
+  }
+}
+
 export class SlotFragment extends DynamicFragment {
   forwarded = false
   deferredHydrationBoundary?: () => void
@@ -603,10 +624,21 @@ export class SlotFragment extends DynamicFragment {
       } else {
         const wrapped = () => {
           const prev = currentEmptyFragment
+          let deferredHydrations: VaporFragment[] | null = null
           if (isHydrating) currentEmptyFragment = null
+          if (isHydrating) deferredHydrations = []
+          const prevDeferredHydrations = isHydrating
+            ? setCurrentDeferredSlotHydrations(deferredHydrations)
+            : null
           try {
             let block = render()
             const emptyFrag = attachSlotFallback(block, fallback)
+            if (deferredHydrations && deferredHydrations.length) {
+              setCurrentDeferredSlotHydrations(null)
+              for (const fragment of deferredHydrations) {
+                fragment.hydrate && fragment.hydrate()
+              }
+            }
             if (!isValidBlock(block)) {
               if (isHydrating && emptyFrag instanceof DynamicFragment) {
                 currentEmptyFragment = emptyFrag
@@ -615,6 +647,9 @@ export class SlotFragment extends DynamicFragment {
             }
             return block
           } finally {
+            if (isHydrating) {
+              setCurrentDeferredSlotHydrations(prevDeferredHydrations)
+            }
             if (isHydrating) currentEmptyFragment = prev
           }
         }

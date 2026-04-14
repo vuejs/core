@@ -24,6 +24,7 @@ import {
   type DynamicFragment,
   SlotFragment,
   type VaporFragment,
+  deferSlotHydration,
 } from './fragment'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
@@ -295,7 +296,10 @@ export function createSlot(
     if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
   } else {
     if (fragment.insert) {
-      ;(fragment as VaporFragment).hydrate!()
+      const vaporFragment = fragment as VaporFragment
+      if (!deferSlotHydration(vaporFragment)) {
+        vaporFragment.hydrate!()
+      }
     }
     if (_isLastInsertion) {
       advanceHydrationNode(_insertionParent!)
