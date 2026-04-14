@@ -20,6 +20,7 @@ import {
   provide,
   ref,
   renderSlot,
+  resolveComponent,
   resolveDynamicComponent,
   shallowRef,
   toDisplayString,
@@ -3022,6 +3023,53 @@ describe('vdomInterop', () => {
       await nextTick()
 
       expect(html()).toContain('<div><button>click</button></div>')
+    })
+
+    test('preserves render context for setup-returned helpers after async setup resumes', async () => {
+      const duration = 5
+
+      const Resolved = defineVaporComponent({
+        setup() {
+          return template('<div>resolved</div>')()
+        },
+      })
+
+      const VaporAsyncChild = defineVaporComponent({
+        components: {
+          Page: Resolved,
+        },
+        async setup() {
+          await new Promise(resolve => setTimeout(resolve, duration))
+          function resolveLayout(name: string) {
+            const component = resolveComponent(name)
+            return typeof component === 'string' ? null : component
+          }
+          return { resolveLayout }
+        },
+        render(_ctx: any) {
+          const Page = _ctx.resolveLayout('page')
+          return Page ? createComponent(Page, null, null, true) : []
+        },
+      })
+
+      const { html } = define({
+        render() {
+          return h(Suspense as any, null, {
+            default: () => h(VaporAsyncChild as any),
+            fallback: () => h('span', 'loading'),
+          })
+        },
+      }).render()
+
+      expect(html()).toContain('<span>loading</span>')
+
+      await new Promise(resolve => setTimeout(resolve, duration + 1))
+      await nextTick()
+
+      expect(html()).toContain('<div>resolved</div>')
+      expect(
+        'resolveComponent can only be used in render() or setup()',
+      ).not.toHaveBeenWarned()
     })
 
     test('renders async VDOM child inside VDOM Suspense', async () => {

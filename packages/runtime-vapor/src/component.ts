@@ -1,5 +1,6 @@
 import {
   type AsyncComponentInternalOptions,
+  type ComponentInternalInstance,
   type ComponentInternalOptions,
   type ComponentObjectPropsOptions,
   type ComponentPropsOptions,
@@ -33,6 +34,7 @@ import {
   queuePostFlushCb,
   registerHMR,
   setCurrentInstance,
+  setCurrentRenderingInstance,
   startMeasure,
   unregisterHMR,
   warn,
@@ -556,23 +558,30 @@ function callRender(
  * dev only
  */
 export function devRender(instance: VaporComponentInstance): void {
-  instance.block =
-    (instance.type.render
-      ? callRender(instance.type.render, instance, instance.setupState!)
-      : callWithErrorHandling(
-          isFunction(instance.type) ? instance.type : instance.type.setup!,
-          instance,
-          ErrorCodes.SETUP_FUNCTION,
-          [
-            instance.props,
-            {
-              slots: instance.slots,
-              attrs: instance.attrs,
-              emit: instance.emit,
-              expose: instance.expose,
-            },
-          ],
-        )) || []
+  const prev = setCurrentRenderingInstance(
+    instance as unknown as ComponentInternalInstance,
+  )
+  try {
+    instance.block =
+      (instance.type.render
+        ? callRender(instance.type.render, instance, instance.setupState!)
+        : callWithErrorHandling(
+            isFunction(instance.type) ? instance.type : instance.type.setup!,
+            instance,
+            ErrorCodes.SETUP_FUNCTION,
+            [
+              instance.props,
+              {
+                slots: instance.slots,
+                attrs: instance.attrs,
+                emit: instance.emit,
+                expose: instance.expose,
+              },
+            ],
+          )) || []
+  } finally {
+    setCurrentRenderingInstance(prev)
+  }
 }
 
 export const emptyContext: GenericAppContext = {
