@@ -24,7 +24,7 @@ import {
   template,
   txt,
 } from '../src'
-import { makeRender } from './_utils'
+import { compileToVaporRender, makeRender } from './_utils'
 import type { VaporComponentInstance } from '../src/component'
 import { setElementText, setText } from '../src/dom/prop'
 
@@ -488,20 +488,44 @@ describe('component', () => {
 
   test('should mount component only with template in production mode', () => {
     __DEV__ = false
+    try {
+      const { component: Child } = define({
+        render() {
+          return template('<div> HI </div>', true)()
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, null, null, true)
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div> HI </div>')
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  test('should pass slot args to template-only component render', () => {
     const { component: Child } = define({
-      render() {
-        return template('<div> HI </div>', true)()
-      },
+      render: compileToVaporRender(
+        `<span v-if="$slots.default"><slot /></span>`,
+        { bindingMetadata: {} },
+      ),
     })
 
     const { host } = define({
       setup() {
-        return createComponent(Child, null, null, true)
+        return createComponent(Child, null, {
+          default: () => template('<button>slot</button>')(),
+        })
       },
     }).render()
 
-    expect(host.innerHTML).toBe('<div> HI </div>')
-    __DEV__ = true
+    expect(host.innerHTML).toBe(
+      '<span><button>slot</button><!--slot--></span><!--if-->',
+    )
   })
 
   it('warn if functional vapor component not return a block', () => {

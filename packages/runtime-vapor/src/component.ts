@@ -1147,6 +1147,13 @@ function handleSetupResult(
         component.render,
         instance,
         ErrorCodes.RENDER_FUNCTION,
+        [
+          setupResult,
+          instance.props,
+          instance.emit,
+          instance.attrs,
+          instance.slots,
+        ],
       )
     } else {
       // in prod result can only be block
