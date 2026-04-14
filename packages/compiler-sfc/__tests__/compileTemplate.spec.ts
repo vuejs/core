@@ -542,6 +542,19 @@ test('returns multiRoot metadata for a multi-root template when vapor is enabled
   expect(result.multiRoot).toBe(true)
 })
 
+test('template-only vapor compile keeps built-in render args for $slots', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<span v-if="$slots.default"><slot /></span>`,
+    vapor: true,
+  })
+
+  expect(result.code).toContain(
+    `export function render(_ctx, $props, $emit, $attrs, $slots)`,
+  )
+  expect(result.code).toContain(`_createIf(() => ($slots.default)`)
+})
+
 test('returns single-root metadata for root control flow when vapor is enabled', () => {
   const result = compile({
     filename: 'example.vue',

@@ -255,6 +255,12 @@ function doCompileTemplate({
       slotted,
       sourceMap: true,
       ...compilerOptions,
+      // Template-only vapor SFCs have no script analysis, but compiler-vapor
+      // still needs bindingMetadata to keep built-in render args like $slots.
+      bindingMetadata:
+        vapor && !ssr && compilerOptions.bindingMetadata == null
+          ? {}
+          : compilerOptions.bindingMetadata,
       hmr: !isProd,
       nodeTransforms: nodeTransforms.concat(
         compilerOptions.nodeTransforms || [],
