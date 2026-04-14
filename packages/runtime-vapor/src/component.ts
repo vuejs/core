@@ -333,7 +333,11 @@ export function createComponent(
     // teleport
     if (isVaporTeleport(component)) {
       const frag = component.process(rawProps!, rawSlots!)
-      onScopeDispose(() => remove(frag), true)
+      if (_insertionParent) {
+        // Teleports mounted via insertion state are not part of the returned
+        // block tree, so scope disposal must tear down their target-side state.
+        onScopeDispose(() => frag.dispose(), true)
+      }
       if (!isHydrating) {
         if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
       } else {
@@ -536,6 +540,20 @@ function createDevSetupStateProxy(
   })
 }
 
+function callRender(
+  render: NonNullable<VaporComponentOptions['render']>,
+  instance: VaporComponentInstance,
+  setupState: Record<string, any>,
+) {
+  return callWithErrorHandling(render, instance, ErrorCodes.RENDER_FUNCTION, [
+    setupState,
+    instance.props,
+    instance.emit,
+    instance.attrs,
+    instance.slots,
+  ])
+}
+
 /**
  * dev only
  */
@@ -546,18 +564,7 @@ export function devRender(instance: VaporComponentInstance): void {
   try {
     instance.block =
       (instance.type.render
-        ? callWithErrorHandling(
-            instance.type.render,
-            instance,
-            ErrorCodes.RENDER_FUNCTION,
-            [
-              instance.setupState,
-              instance.props,
-              instance.emit,
-              instance.attrs,
-              instance.slots,
-            ],
-          )
+        ? callRender(instance.type.render, instance, instance.setupState!)
         : callWithErrorHandling(
             isFunction(instance.type) ? instance.type : instance.type.setup!,
             instance,
@@ -1148,11 +1155,7 @@ function handleSetupResult(
     // component has a render function but no setup function
     // (typically components with only a template and no state)
     if (setupResult === EMPTY_OBJ && component.render) {
-      instance.block = callWithErrorHandling(
-        component.render,
-        instance,
-        ErrorCodes.RENDER_FUNCTION,
-      )
+      instance.block = callRender(component.render, instance, setupResult)
     } else {
       // in prod result can only be block
       instance.block = setupResult as Block
