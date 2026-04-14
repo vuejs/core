@@ -538,24 +538,27 @@ function createDevSetupStateProxy(
   })
 }
 
+function callRender(
+  render: NonNullable<VaporComponentOptions['render']>,
+  instance: VaporComponentInstance,
+  setupState: Record<string, any>,
+) {
+  return callWithErrorHandling(render, instance, ErrorCodes.RENDER_FUNCTION, [
+    setupState,
+    instance.props,
+    instance.emit,
+    instance.attrs,
+    instance.slots,
+  ])
+}
+
 /**
  * dev only
  */
 export function devRender(instance: VaporComponentInstance): void {
   instance.block =
     (instance.type.render
-      ? callWithErrorHandling(
-          instance.type.render,
-          instance,
-          ErrorCodes.RENDER_FUNCTION,
-          [
-            instance.setupState,
-            instance.props,
-            instance.emit,
-            instance.attrs,
-            instance.slots,
-          ],
-        )
+      ? callRender(instance.type.render, instance, instance.setupState!)
       : callWithErrorHandling(
           isFunction(instance.type) ? instance.type : instance.type.setup!,
           instance,
@@ -1143,11 +1146,7 @@ function handleSetupResult(
     // component has a render function but no setup function
     // (typically components with only a template and no state)
     if (setupResult === EMPTY_OBJ && component.render) {
-      instance.block = callWithErrorHandling(
-        component.render,
-        instance,
-        ErrorCodes.RENDER_FUNCTION,
-      )
+      instance.block = callRender(component.render, instance, setupResult)
     } else {
       // in prod result can only be block
       instance.block = setupResult as Block
