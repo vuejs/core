@@ -21,10 +21,12 @@ import {
   template,
   useVaporCssVars,
   vaporInteropPlugin,
+  withVaporCtx,
   withVaporDirectives,
 } from '@vue/runtime-vapor'
 import { makeRender } from '../_utils'
 import {
+  defineComponent,
   h,
   nextTick,
   onActivated,
@@ -34,6 +36,7 @@ import {
   onUnmounted,
   reactive,
   ref,
+  renderSlot,
   shallowRef,
 } from 'vue'
 
@@ -1352,6 +1355,77 @@ function runSharedTests(deferMode: boolean): void {
 
     expect(root.innerHTML).toBe('<!--if-->')
     expect(target.innerHTML).toBe('')
+  })
+
+  test('should unmount teleport nested under vdom components when toggled off', async () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const show = ref(true)
+
+    const Comp1 = defineComponent({
+      setup(_, { slots }) {
+        return () => renderSlot(slots, 'default')
+      },
+    })
+
+    const Comp2 = defineComponent({
+      setup(_, { slots }) {
+        return () => renderSlot(slots, 'default')
+      },
+    })
+
+    const App = defineVaporComponent({
+      setup() {
+        const n0 = template('<button></button>')()
+        const n1 = createIf(
+          () => show.value,
+          () =>
+            createComponent(Comp1 as any, null, {
+              default: withVaporCtx(() =>
+                createComponent(Comp2 as any, null, {
+                  default: withVaporCtx(() =>
+                    createComponent(
+                      VaporTeleport,
+                      {
+                        to: () => 'body',
+                      },
+                      {
+                        default: () => template('<input>')(),
+                      },
+                    ),
+                  ),
+                }),
+              ),
+            }),
+        )
+        return [n0, n1]
+      },
+    })
+
+    const app = createVaporApp(App)
+    app.use(vaporInteropPlugin)
+    try {
+      app.mount(root)
+
+      expect(document.body.querySelectorAll('input')).toHaveLength(1)
+
+      show.value = false
+      await nextTick()
+
+      expect(root.innerHTML).toBe('<button></button><!--if-->')
+      expect(document.body.querySelectorAll('input')).toHaveLength(0)
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe(
+        '<button></button><!--teleport start--><!--teleport end--><!--if-->',
+      )
+      expect(document.body.querySelectorAll('input')).toHaveLength(1)
+    } finally {
+      app.unmount()
+      root.remove()
+    }
   })
 
   test('unmount previous sibling node inside target node', async () => {

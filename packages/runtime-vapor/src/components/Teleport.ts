@@ -339,7 +339,7 @@ export class TeleportFragment extends VaporFragment {
     this.handlePropsUpdate()
   }
 
-  remove = (parent: ParentNode | undefined = this.parent!): void => {
+  dispose = (): void => {
     if (this.mountToTargetJob) {
       this.mountToTargetJob.flags! |= SchedulerJobFlags.DISPOSED
       this.mountToTargetJob = undefined
@@ -363,18 +363,23 @@ export class TeleportFragment extends VaporFragment {
       this.targetAnchor = undefined
     }
 
+    this.target = undefined
+    this.mountContainer = undefined
+    this.mountAnchor = undefined
+  }
+
+  remove = (_parent?: ParentNode): void => {
+    this.dispose()
+
     if (this.anchor) {
       remove(this.anchor, parentNode(this.anchor)!)
       this.anchor = undefined
     }
 
     if (this.placeholder) {
-      remove(this.placeholder!, parent)
+      remove(this.placeholder!, parentNode(this.placeholder) as ParentNode)
       this.placeholder = undefined
     }
-
-    this.mountContainer = undefined
-    this.mountAnchor = undefined
   }
 
   private hydrateTargetAnchors(
