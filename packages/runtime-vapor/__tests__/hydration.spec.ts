@@ -10264,4 +10264,102 @@ describe('VDOM interop', () => {
     `,
     )
   })
+
+  test('hydrate interop vapor forwarded empty named slot with multi-root fallback', async () => {
+    const data = reactive({
+      banner: 'banner',
+      title: 'Vue.js',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Layout>
+          <template #banner>
+            <div>{{ data.banner }}</div>
+          </template>
+        </components.Layout>
+      </template>`,
+      {
+        Layout: {
+          code: `<script setup>
+            const components = _components
+          </script>
+          <template>
+            <div>
+              <slot name="banner" />
+              <components.Nav>
+                <template #navbar-title>
+                  <slot name="navbar-title" />
+                </template>
+              </components.Nav>
+            </div>
+          </template>`,
+          vapor: true,
+        },
+        Nav: {
+          code: `<script setup>
+            const components = _components
+          </script>
+          <template>
+            <header>
+              <components.NavBar>
+                <template #navbar-title>
+                  <slot name="navbar-title" />
+                </template>
+              </components.NavBar>
+            </header>
+          </template>`,
+          vapor: true,
+        },
+        NavBar: {
+          code: `<script setup>
+            const components = _components
+          </script>
+          <template>
+            <div>
+              <components.NavBarTitle>
+                <template #navbar-title>
+                  <slot name="navbar-title" />
+                </template>
+              </components.NavBarTitle>
+            </div>
+          </template>`,
+          vapor: true,
+        },
+        NavBarTitle: {
+          code: `<script setup>
+            const data = _data
+          </script>
+          <template>
+            <a>
+              <slot name="navbar-title">
+                <svg><path /></svg>
+                <span>{{ data.title }}</span>
+              </slot>
+            </a>
+          </template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toContain(
+      '<!--[--><div>banner</div><!--]-->',
+    )
+    expect(formatHtml(container.innerHTML)).toContain(
+      '<!--[--><svg><path></path></svg><span>Vue.js</span><!--]-->',
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.title = 'Vapor'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toContain(
+      '<!--[--><svg><path></path></svg><span>Vapor</span><!--]-->',
+    )
+  })
 })
