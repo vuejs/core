@@ -10362,4 +10362,39 @@ describe('VDOM interop', () => {
       '<!--[--><svg><path></path></svg><span>Vapor</span><!--]-->',
     )
   })
+
+  test('hydrate prepended multi-root component with trailing empty if should restore outer cursor', async () => {
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <div>
+          <components.Child />
+          <span>inside</span>
+        </div>
+        <p>after</p>
+      </template>`,
+      {
+        Child: {
+          code: `<template>
+            <span>child</span>
+            <template v-if="false"></template>
+          </template>`,
+          vapor: true,
+        },
+      },
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>
+      <!--[--><span>child</span><!----><!--]-->
+      <span>inside</span></div><p>after</p><!--]-->
+      "
+      `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
 })
