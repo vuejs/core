@@ -99,6 +99,13 @@ import type { RendererElement } from './renderer'
 export type Data = Record<string, unknown>
 
 /**
+ * For extending allowed non-declared attrs on components in TSX
+ */
+export interface AllowedAttrs {}
+
+export type Attrs = Data & AllowedAttrs
+
+/**
  * Public utility type for extracting the instance type of a component.
  * Works with all valid component definition types. This is intended to replace
  * the usage of `InstanceType<typeof Comp>` which only works for
@@ -283,7 +290,7 @@ export type SetupContext<
   S extends SlotsType = {},
 > = E extends any
   ? {
-      attrs: Data
+      attrs: Attrs
       slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
       expose: <Exposed extends Record<string, any> = Record<string, any>>(
@@ -716,7 +723,7 @@ export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
 let internalSetCurrentInstance: (
   instance: ComponentInternalInstance | null,
 ) => void
-let setInSSRSetupState: (state: boolean) => void
+export let setInSSRSetupState: (state: boolean) => void
 
 /**
  * The following makes getCurrentInstance() usage across multiple copies of Vue
@@ -1162,13 +1169,13 @@ export function createSetupContext(
   if (__DEV__) {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
-    let attrsProxy: Data
+    let attrsProxy: Attrs
     let slotsProxy: Slots
     return Object.freeze({
       get attrs() {
         return (
           attrsProxy ||
-          (attrsProxy = new Proxy(instance.attrs, attrsProxyHandlers))
+          (attrsProxy = new Proxy(instance.attrs, attrsProxyHandlers) as Attrs)
         )
       },
       get slots() {
@@ -1181,7 +1188,7 @@ export function createSetupContext(
     })
   } else {
     return {
-      attrs: new Proxy(instance.attrs, attrsProxyHandlers),
+      attrs: new Proxy(instance.attrs, attrsProxyHandlers) as Attrs,
       slots: instance.slots,
       emit: instance.emit,
       expose,
@@ -1270,7 +1277,11 @@ export interface ComponentCustomElementInterface {
   /**
    * @internal
    */
-  _injectChildStyle(type: ConcreteComponent): void
+  _isVueCE: boolean
+  /**
+   * @internal
+   */
+  _injectChildStyle(type: ConcreteComponent, parent?: ConcreteComponent): void
   /**
    * @internal
    */
@@ -1296,4 +1307,8 @@ export interface ComponentCustomElementInterface {
    * @internal attached by the nested Teleport when shadowRoot is false.
    */
   _teleportTargets?: Set<RendererElement>
+  /**
+   * @internal check if shadow root is enabled
+   */
+  _hasShadowRoot(): boolean
 }

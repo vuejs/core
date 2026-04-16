@@ -23,17 +23,17 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 - New feature that addresses a clearly explained and widely applicable use case. **"Widely applicable"** means the new feature should provide non-trivial improvements to the majority of the user base. Vue already has a large API surface so we are quite cautious about adding new features - if the use case is niche and can be addressed via userland implementations, it likely isn't suitable to go into core.
 
-  The feature implementation should also consider the trade-off between the added complexity vs. the benefits gained. For example, if a small feature requires significant changes that spreads across the codebase, it is likely not worth it, or the approach should be reconsidered.
+  The feature implementation should also consider the trade-off between the added complexity vs. the benefits gained. For example, if a small feature requires significant changes that spread across the codebase, it is likely not worth it, or the approach should be reconsidered.
 
   If the feature has a non-trivial API surface addition, or significantly affects the way a common use case is approached by the users, it should go through a discussion first in the [RFC repo](https://github.com/vuejs/rfcs/discussions). PRs of such features without prior discussion make it really difficult to steer / adjust the API design due to coupling with concrete implementations, and can lead to wasted work.
 
 - Chore: typos, comment improvements, build config, CI config, etc. For typos and comment changes, try to combine multiple of them into a single PR.
 
-- **It should be noted that we discourage contributors from submitting code refactors that are largely stylistic.** Code refactors are only accepted if it improves performance, or comes with sufficient explanations on why it objectively improves the code quality (e.g. makes a related feature implementation easier).
+- **It should be noted that we discourage contributors from submitting code refactors that are largely stylistic.** Code refactors are only accepted if they improve performance, or come with sufficient explanations on why they objectively improve the code quality (e.g. makes a related feature implementation easier).
 
   The reason is that code readability is subjective. The maintainers of this project have chosen to write the code in its current style based on our preferences, and we do not want to spend time explaining our stylistic preferences. Contributors should just respect the established conventions when contributing code.
 
-  Another aspect of it is that large scale stylistic changes result in massive diffs that touch multiple files, adding noise to the git history and makes tracing behavior changes across commits more cumbersome.
+  Another aspect of it is that large scale stylistic changes result in massive diffs that touch multiple files, adding noise to the git history and make tracing behavior changes across commits more cumbersome.
 
 ### Pull Request Checklist
 
@@ -65,7 +65,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 - The PR should fix the intended bug **only** and not introduce unrelated changes. This includes unnecessary refactors - a PR should focus on the fix and not code style, this makes it easier to trace changes in the future.
 
-- Consider the performance / size impact of the changes, and whether the bug being fixes justifies the cost. If the bug being fixed is a very niche edge case, we should try to minimize the size / perf cost to make it worthwhile.
+- Consider the performance / size impact of the changes, and whether the bug being fixed justifies the cost. If the bug being fixed is a very niche edge case, we should try to minimize the size / perf cost to make it worthwhile.
   - Is the code perf-sensitive (e.g. in "hot paths" like component updates or the vdom patch function?)
     - If the branch is dev-only, performance is less of a concern.
 
@@ -78,7 +78,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 You will need [Node.js](https://nodejs.org) with minimum version as specified in the [`.node-version`](https://github.com/vuejs/core/blob/main/.node-version) file, and [PNPM](https://pnpm.io) with minimum version as specified in the [`"packageManager"` field in `package.json`](https://github.com/vuejs/core/blob/main/package.json#L4).
 
-We also recommend installing [@antfu/ni](https://github.com/antfu/ni) to help switching between repos using different package managers. `ni` also provides the handy `nr` command which running npm scripts easier.
+We also recommend installing [@antfu/ni](https://github.com/antfu/ni) to help switching between repos using different package managers. `ni` also provides the handy `nr` command which makes running npm scripts easier.
 
 After cloning the repo, run:
 
@@ -192,7 +192,7 @@ $ nr dev
 
 - The `dev` script also supports the `-s` flag for generating source maps, but it will make rebuilds slower.
 
-- The `dev` script supports the `-i` flag for inlining all deps. This is useful when debugging `esm-bundler` builds which externalizes deps by default.
+- The `dev` script supports the `-i` flag for inlining all deps. This is useful when debugging `esm-bundler` builds which externalize deps by default.
 
 ### `nr dev-sfc`
 
@@ -325,7 +325,7 @@ Unit tests are collocated with the code being tested in each package, inside dir
 
 - Only use platform-specific runtimes if the test is asserting platform-specific behavior.
 
-Test coverage is continuously deployed at https://coverage.vuejs.org. PRs that improve test coverage are welcome, but in general the test coverage should be used as a guidance for finding API use cases that are not covered by tests. We don't recommend adding tests that only improve coverage but not actually test a meaning use case.
+Test coverage is continuously deployed at https://coverage.vuejs.org. PRs that improve test coverage are welcome, but in general the test coverage should be used as a guidance for finding API use cases that are not covered by tests. We don't recommend adding tests that only improve coverage but not actually test a meaningful use case.
 
 ### Testing Type Definition Correctness
 

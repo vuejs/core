@@ -11,7 +11,11 @@ import {
   openBlock,
 } from '../vnode'
 import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
-import { type ComponentInternalInstance, handleSetupResult } from '../component'
+import {
+  type ComponentInternalInstance,
+  handleSetupResult,
+  unsetCurrentInstance,
+} from '../component'
 import type { Slots } from '../componentSlots'
 import {
   type ElementNamespace,
@@ -37,6 +41,10 @@ export interface SuspenseProps {
   onResolve?: () => void
   onPending?: () => void
   onFallback?: () => void
+  /**
+   * Switch to fallback content if it takes longer than `timeout` milliseconds to render the new default content.
+   * A `timeout` value of `0` will cause the fallback content to be displayed immediately when default content is replaced.
+   */
   timeout?: string | number
   /**
    * Allow suspense to be captured by parent suspense
@@ -419,6 +427,7 @@ export interface SuspenseBoundary {
   container: RendererElement
   hiddenContainer: RendererElement
   activeBranch: VNode | null
+  isFallbackMountPending: boolean
   pendingBranch: VNode | null
   deps: number
   pendingId: number
@@ -504,6 +513,7 @@ function createSuspenseBoundary(
     pendingId: suspenseId++,
     timeout: typeof timeout === 'number' ? timeout : -1,
     activeBranch: null,
+    isFallbackMountPending: false,
     pendingBranch: null,
     isInFallback: !isHydrating,
     isHydrating,
@@ -561,7 +571,10 @@ function createSuspenseBoundary(
           }
         }
         // unmount current active tree
-        if (activeBranch) {
+        // #7966 when Suspense is wrapped in Transition, fallback may wait for
+        // afterLeave before mounting. In that window, activeBranch is still the
+        // leaving content, so avoid unmounting it again during resolve.
+        if (activeBranch && !suspense.isFallbackMountPending) {
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
           // #8105 if `delayEnter` is true, it means that the mounting of
@@ -587,6 +600,7 @@ function createSuspenseBoundary(
         }
       }
 
+      suspense.isFallbackMountPending = false
       setActiveBranch(suspense, pendingBranch!)
       suspense.pendingBranch = null
       suspense.isInFallback = false
@@ -642,6 +656,7 @@ function createSuspenseBoundary(
 
       const anchor = next(activeBranch!)
       const mountFallback = () => {
+        suspense.isFallbackMountPending = false
         if (!suspense.isInFallback) {
           return
         }
@@ -663,6 +678,7 @@ function createSuspenseBoundary(
       const delayEnter =
         fallbackVNode.transition && fallbackVNode.transition.mode === 'out-in'
       if (delayEnter) {
+        suspense.isFallbackMountPending = true
         activeBranch!.transition!.afterLeave = mountFallback
       }
       suspense.isInFallback = true
@@ -710,6 +726,10 @@ function createSuspenseBoundary(
           ) {
             return
           }
+          // withAsyncContext defers cleanup to a later microtask, so currentInstance may
+          // still be set when Suspense re-enters another component's render path.
+          // Clear it first.
+          unsetCurrentInstance()
           // retry from this component
           instance.asyncResolved = true
           const { vnode } = instance

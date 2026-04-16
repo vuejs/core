@@ -362,4 +362,58 @@ describe('reactivity/effect/scope', () => {
     expect(scope.effects.length).toBe(0)
     expect(scope.cleanups.length).toBe(0)
   })
+
+  it('should still trigger updates after stopping scope stored in reactive object', () => {
+    const rs = ref({
+      stage: 0,
+      scope: null as any,
+    })
+
+    let renderCount = 0
+    effect(() => {
+      renderCount++
+      return rs.value.stage
+    })
+
+    const handleBegin = () => {
+      const status = rs.value
+      status.stage = 1
+      status.scope = effectScope()
+      status.scope.run(() => {
+        watch([() => status.stage], () => {})
+      })
+    }
+
+    const handleExit = () => {
+      const status = rs.value
+      status.stage = 0
+      const watchScope = status.scope
+      status.scope = null
+      if (watchScope) {
+        watchScope.stop()
+      }
+    }
+
+    expect(rs.value.stage).toBe(0)
+    expect(renderCount).toBe(1)
+
+    // 1. Click begin
+    handleBegin()
+    expect(rs.value.stage).toBe(1)
+    expect(renderCount).toBe(2)
+
+    // 2. Click add
+    rs.value.stage++
+    expect(rs.value.stage).toBe(2)
+    expect(renderCount).toBe(3)
+
+    // 3. Click end
+    handleExit()
+    expect(rs.value.stage).toBe(0)
+    expect(renderCount).toBe(4)
+
+    handleBegin()
+    expect(rs.value.stage).toBe(1)
+    expect(renderCount).toBe(5)
+  })
 })

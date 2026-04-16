@@ -15,7 +15,14 @@ import {
   normalizeVNode,
 } from './vnode'
 import { ErrorCodes, handleError } from './errorHandling'
-import { PatchFlags, ShapeFlags, isModelListener, isOn } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isModelListener,
+  isObject,
+  isOn,
+  looseEqual,
+} from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import type { NormalizedProps } from './componentProps'
@@ -399,7 +406,7 @@ export function shouldUpdateComponent(
       for (let i = 0; i < dynamicProps.length; i++) {
         const key = dynamicProps[i]
         if (
-          nextProps![key] !== prevProps![key] &&
+          hasPropValueChanged(nextProps!, prevProps!, key) &&
           !isEmitListener(emits, key)
         ) {
           return true
@@ -441,7 +448,7 @@ function hasPropsChanged(
   for (let i = 0; i < nextKeys.length; i++) {
     const key = nextKeys[i]
     if (
-      nextProps[key] !== prevProps[key] &&
+      hasPropValueChanged(nextProps, prevProps, key) &&
       !isEmitListener(emitsOptions, key)
     ) {
       return true
@@ -450,14 +457,30 @@ function hasPropsChanged(
   return false
 }
 
+function hasPropValueChanged(
+  nextProps: Data,
+  prevProps: Data,
+  key: string,
+): boolean {
+  const nextProp = nextProps[key]
+  const prevProp = prevProps[key]
+  if (key === 'style' && isObject(nextProp) && isObject(prevProp)) {
+    return !looseEqual(nextProp, prevProp)
+  }
+  return nextProp !== prevProp
+}
+
 export function updateHOCHostEl(
-  { vnode, parent }: ComponentInternalInstance,
+  { vnode, parent, suspense }: ComponentInternalInstance,
   el: typeof vnode.el, // HostNode
 ): void {
   while (parent) {
     const root = parent.subTree
     if (root.suspense && root.suspense.activeBranch === vnode) {
-      root.el = vnode.el
+      // Suspense proxies its active branch host node, so keep propagating from
+      // the boundary vnode to any wrapper components above it.
+      root.suspense.vnode.el = root.el = el
+      vnode = root
     }
     if (root === vnode) {
       ;(vnode = parent.vnode).el = el
@@ -465,5 +488,9 @@ export function updateHOCHostEl(
     } else {
       break
     }
+  }
+  // also update suspense vnode el
+  if (suspense && suspense.activeBranch === vnode) {
+    suspense.vnode.el = el
   }
 }
