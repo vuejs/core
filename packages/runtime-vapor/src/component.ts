@@ -417,7 +417,7 @@ export function createComponent(
       mountComponent(instance, _insertionParent!, _insertionAnchor)
     }
 
-    if (isHydrating && _insertionAnchor !== undefined) {
+    if (isHydrating && _isLastInsertion) {
       advanceHydrationNode(_insertionParent!)
     }
 
