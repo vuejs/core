@@ -41,7 +41,10 @@ async function unrollBuffer(
   }
 }
 
-function unrollBufferSync(buffer: SSRBuffer, stream: SimpleReadable): void | Promise<void> {
+function unrollBufferSync(
+  buffer: SSRBuffer,
+  stream: SimpleReadable,
+): void | Promise<void> {
   for (let i = 0; i < buffer.length; i++) {
     let item = buffer[i]
     if (isString(item)) {
