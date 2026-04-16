@@ -3493,6 +3493,51 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('forwarded empty named slot with trailing sibling nodes', async () => {
+      const { container } = await testHydration(
+        `<template>
+          <components.Layout>
+            <template #banner>
+              <div>banner</div>
+            </template>
+            <template #footer-before>
+              <slot name="footer-before" />
+            </template>
+          </components.Layout>
+        </template>`,
+        {
+          Layout: `<template>
+            <div>
+              <slot name="banner" />
+              <components.Page>
+                <template #footer-before>
+                  <slot name="footer-before" />
+                </template>
+              </components.Page>
+            </div>
+          </template>`,
+          Page: `<template>
+            <div>
+              <main><span>content</span></main>
+              <slot name="footer-before" />
+              <p>footer</p>
+            </div>
+          </template>`,
+        },
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+      	"<div>
+      	<!--[--><div>banner</div><!--]-->
+      	<div><main><span>content</span></main>
+      	<!--[--><!--]-->
+      	<!--slot--><!--slot--><p>footer</p></div></div>"
+      `,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
     test('forwarded named slot can appear after hydrating as empty', async () => {
       const data = reactive({
         show: false,
@@ -10393,6 +10438,63 @@ describe('VDOM interop', () => {
       <!--[--><span>child</span><!----><!--]-->
       <span>inside</span></div><p>after</p><!--]-->
       "
+      `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('hydrate forwarded empty named VDOM slot with trailing sibling nodes', async () => {
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.Layout>
+          <template #banner>
+            <div>banner</div>
+          </template>
+          <template #footer-before>
+            <slot name="footer-before" />
+          </template>
+        </components.Layout>
+      </template>`,
+      {
+        Layout: {
+          code: `<script setup>
+            const components = _components
+          </script>
+          <template>
+            <div>
+              <slot name="banner" />
+              <components.Page>
+                <template #footer-before>
+                  <slot name="footer-before" />
+                </template>
+              </components.Page>
+            </div>
+          </template>`,
+          vapor: false,
+        },
+        Page: {
+          code: `<template>
+            <div>
+              <main><span>content</span></main>
+              <slot name="footer-before" />
+              <p>footer</p>
+            </div>
+          </template>`,
+          vapor: false,
+        },
+      },
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "<div>
+      <!--[--><div>banner</div><!--]-->
+      <div><main><span>content</span></main>
+      <!--[--><!--]-->
+      <!--slot--><p>footer</p></div></div>"
       `,
     )
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
