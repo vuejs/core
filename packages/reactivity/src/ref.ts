@@ -5,11 +5,12 @@ import {
   isFunction,
   isIntegerKey,
   isObject,
+  isSymbol,
 } from '@vue/shared'
 import { Dep, getDepFromReactive } from './dep'
 import {
   type Builtin,
-  type ShallowReactiveMarker,
+  type ShallowReactiveBrand,
   type Target,
   isProxy,
   isReactive,
@@ -284,36 +285,36 @@ export function proxyRefs<T extends object>(
     : new Proxy(objectWithRefs, shallowUnwrapHandlers)
 }
 
-export type CustomRefFactory<T> = (
+export type CustomRefFactory<T, S = T> = (
   track: () => void,
   trigger: () => void,
 ) => {
   get: () => T
-  set: (value: T) => void
+  set: (value: S) => void
 }
 
-class CustomRefImpl<T> {
+class CustomRefImpl<T, S = T> {
   public dep: Dep
 
-  private readonly _get: ReturnType<CustomRefFactory<T>>['get']
-  private readonly _set: ReturnType<CustomRefFactory<T>>['set']
+  private readonly _get: ReturnType<CustomRefFactory<T, S>>['get']
+  private readonly _set: ReturnType<CustomRefFactory<T, S>>['set']
 
   public readonly [ReactiveFlags.IS_REF] = true
 
   public _value: T = undefined!
 
-  constructor(factory: CustomRefFactory<T>) {
+  constructor(factory: CustomRefFactory<T, S>) {
     const dep = (this.dep = new Dep())
     const { get, set } = factory(dep.track.bind(dep), dep.trigger.bind(dep))
     this._get = get
     this._set = set
   }
 
-  get value() {
+  get value(): T {
     return (this._value = this._get())
   }
 
-  set value(newVal) {
+  set value(newVal: S) {
     this._set(newVal)
   }
 }
@@ -325,13 +326,31 @@ class CustomRefImpl<T> {
  * @param factory - The function that receives the `track` and `trigger` callbacks.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#customref}
  */
-export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
+export function customRef<T, S = T>(
+  factory: CustomRefFactory<T, S>,
+): Ref<T, S> {
   return new CustomRefImpl(factory) as any
 }
 
 export type ToRefs<T = any> = {
   [K in keyof T]: ToRef<T[K]>
 }
+
+type ArrayStringKey<T> = T extends readonly any[]
+  ? number extends T['length']
+    ? `${number}`
+    : never
+  : never
+
+type ToRefKey<T> = keyof T | ArrayStringKey<T>
+
+type ToRefValue<T extends object, K extends ToRefKey<T>> = K extends keyof T
+  ? T[K]
+  : T extends readonly (infer V)[]
+    ? K extends ArrayStringKey<T>
+      ? V
+      : never
+    : never
 
 /**
  * Converts a reactive object to a plain object where each property of the
@@ -358,20 +377,22 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   public _value: T[K] = undefined!
 
   private readonly _raw: T
+  private readonly _key: K
   private readonly _shallow: boolean
 
   constructor(
     private readonly _object: T,
-    private readonly _key: K,
+    key: K,
     private readonly _defaultValue?: T[K],
   ) {
+    this._key = (isSymbol(key) ? key : String(key)) as K
     this._raw = toRaw(_object)
 
     let shallow = true
     let obj = _object
 
     // For an array with integer key, refs are not unwrapped
-    if (!isArray(_object) || !isIntegerKey(String(_key))) {
+    if (!isArray(_object) || isSymbol(this._key) || !isIntegerKey(this._key)) {
       // Otherwise, check each proxy layer for unwrapping
       do {
         shallow = !isProxy(obj) || isShallow(obj)
@@ -469,19 +490,19 @@ export function toRef<T>(
   : T extends Ref
     ? T
     : Ref<UnwrapRef<T>>
-export function toRef<T extends object, K extends keyof T>(
+export function toRef<T extends object, K extends ToRefKey<T>>(
   object: T,
   key: K,
-): ToRef<T[K]>
-export function toRef<T extends object, K extends keyof T>(
+): ToRef<ToRefValue<T, K>>
+export function toRef<T extends object, K extends ToRefKey<T>>(
   object: T,
   key: K,
-  defaultValue: T[K],
-): ToRef<Exclude<T[K], undefined>>
+  defaultValue: ToRefValue<T, K>,
+): ToRef<Exclude<ToRefValue<T, K>, undefined>>
 /*@__NO_SIDE_EFFECTS__*/
 export function toRef(
-  source: Record<string, any> | MaybeRef,
-  key?: string,
+  source: Record<PropertyKey, any> | MaybeRef,
+  key?: string | number | symbol,
   defaultValue?: unknown,
 ): Ref {
   if (isRef(source)) {
@@ -496,8 +517,8 @@ export function toRef(
 }
 
 function propertyToRef(
-  source: Record<string, any>,
-  key: string,
+  source: Record<PropertyKey, any>,
+  key: string | number | symbol,
   defaultValue?: unknown,
 ) {
   return new ObjectRefImpl(source, key, defaultValue) as any
@@ -518,9 +539,11 @@ function propertyToRef(
  */
 export interface RefUnwrapBailTypes {}
 
-export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: DistributeRef<T[K]>
-}
+export type ShallowUnwrapRef<T> = T extends ShallowReactiveBrand
+  ? T
+  : {
+      [K in keyof T]: DistributeRef<T[K]>
+    }
 
 type DistributeRef<T> = T extends Ref<infer V, unknown> ? V : T
 
@@ -537,19 +560,22 @@ export type UnwrapRefSimple<T> = T extends
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }
   ? T
-  : T extends Map<infer K, infer V>
-    ? Map<K, UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof Map<any, any>>>
-    : T extends WeakMap<infer K, infer V>
-      ? WeakMap<K, UnwrapRefSimple<V>> &
-          UnwrapRef<Omit<T, keyof WeakMap<any, any>>>
-      : T extends Set<infer V>
-        ? Set<UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof Set<any>>>
-        : T extends WeakSet<infer V>
-          ? WeakSet<UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof WeakSet<any>>>
-          : T extends ReadonlyArray<any>
-            ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-            : T extends object & { [ShallowReactiveMarker]?: never }
-              ? {
-                  [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
-                }
-              : T
+  : T extends ShallowReactiveBrand
+    ? T
+    : T extends Map<infer K, infer V>
+      ? Map<K, UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof Map<any, any>>>
+      : T extends WeakMap<infer K, infer V>
+        ? WeakMap<K, UnwrapRefSimple<V>> &
+            UnwrapRef<Omit<T, keyof WeakMap<any, any>>>
+        : T extends Set<infer V>
+          ? Set<UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof Set<any>>>
+          : T extends WeakSet<infer V>
+            ? WeakSet<UnwrapRefSimple<V>> &
+                UnwrapRef<Omit<T, keyof WeakSet<any>>>
+            : T extends ReadonlyArray<any>
+              ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+              : T extends object
+                ? {
+                    [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
+                  }
+                : T

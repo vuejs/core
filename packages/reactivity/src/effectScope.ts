@@ -40,6 +40,9 @@ export class EffectScope {
    */
   private index: number | undefined
 
+  readonly __v_skip = true
+  // TODO isolatedDeclarations ReactiveFlags.SKIP
+
   constructor(public detached = false) {
     this.parent = activeEffectScope
     if (!detached && activeEffectScope) {

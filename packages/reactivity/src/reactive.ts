@@ -104,9 +104,16 @@ export function reactive(target: object) {
   )
 }
 
-export declare const ShallowReactiveMarker: unique symbol
+// Use a private class brand instead of a marker property so shallow-reactive
+// types remain distinguishable in `UnwrapRef` without leaking the brand into
+// `keyof`/indexed access types or requiring the property for plain assignment.
+declare class ShallowReactiveBrandClass {
+  private __shallowReactiveBrand?: never
+}
 
-export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
+export type ShallowReactiveBrand = ShallowReactiveBrandClass
+
+export type ShallowReactive<T> = T & ShallowReactiveBrand
 
 /**
  * Shallow version of {@link reactive}.

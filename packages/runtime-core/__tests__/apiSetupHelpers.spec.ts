@@ -250,6 +250,150 @@ describe('SFC <script setup> helpers', () => {
       expect(serializeInner(root)).toBe('hello')
     })
 
+    test('should not leak instance to user microtasks after restore', async () => {
+      let leakedToUserMicrotask = false
+
+      const Comp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(() => Promise.resolve())
+          __temp = await __temp
+          __restore()
+
+          Promise.resolve().then(() => {
+            leakedToUserMicrotask = getCurrentInstance() !== null
+          })
+
+          return () => ''
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      render(
+        h(() => h(Suspense, () => h(Comp))),
+        root,
+      )
+
+      await new Promise(r => setTimeout(r))
+      expect(leakedToUserMicrotask).toBe(false)
+    })
+
+    test('should not leak sibling instance in concurrent restores', async () => {
+      let resolveOne: () => void
+      let resolveTwo: () => void
+      let done!: () => void
+      let pending = 2
+      const ready = new Promise<void>(r => {
+        done = r
+      })
+      const seenUid: Record<'one' | 'two', number | null> = {
+        one: null,
+        two: null,
+      }
+
+      const makeComp = (name: 'one' | 'two', wait: Promise<void>) =>
+        defineComponent({
+          async setup() {
+            let __temp: any, __restore: any
+            ;[__temp, __restore] = withAsyncContext(() => wait)
+            __temp = await __temp
+            __restore()
+
+            Promise.resolve().then(() => {
+              seenUid[name] = getCurrentInstance()?.uid ?? null
+              if (--pending === 0) done()
+            })
+
+            return () => ''
+          },
+        })
+
+      const oneReady = new Promise<void>(r => {
+        resolveOne = r
+      })
+      const twoReady = new Promise<void>(r => {
+        resolveTwo = r
+      })
+      const CompOne = makeComp('one', oneReady)
+      const CompTwo = makeComp('two', twoReady)
+
+      const root = nodeOps.createElement('div')
+      render(
+        h(() => h(Suspense, () => h('div', [h(CompOne), h(CompTwo)]))),
+        root,
+      )
+
+      resolveOne!()
+      resolveTwo!()
+      await ready
+      expect(seenUid.one).toBeNull()
+      expect(seenUid.two).toBeNull()
+    })
+
+    test('should not leak currentInstance to sibling slot render', async () => {
+      let done!: () => void
+      const ready = new Promise<void>(r => {
+        done = r
+      })
+      let innerUid: number | null = null
+      let innerRenderUid: number | null = null
+
+      const Inner = defineComponent({
+        setup(_, { slots }) {
+          innerUid = getCurrentInstance()!.uid
+          return () => {
+            innerRenderUid = getCurrentInstance()!.uid
+            done()
+            return h('div', slots.default?.())
+          }
+        },
+      })
+
+      const Outer = defineComponent({
+        setup(_, { slots }) {
+          return () => h(Inner, null, () => [slots.default?.()])
+        },
+      })
+
+      const AsyncA = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(() =>
+            Promise.resolve()
+              .then(() => {})
+              .then(() => {}),
+          )
+          __temp = await __temp
+          __restore()
+          return () => h('div', 'A')
+        },
+      })
+
+      const AsyncB = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(() => Promise.resolve())
+          __temp = await __temp
+          __restore()
+          return () => h(Outer, null, () => 'B')
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      render(
+        h(() => h(Suspense, () => h('div', [h(AsyncA), h(AsyncB)]))),
+        root,
+      )
+
+      await ready
+      expect(
+        'Slot "default" invoked outside of the render function',
+      ).not.toHaveBeenWarned()
+      expect(innerRenderUid).toBe(innerUid)
+      await Promise.resolve()
+      expect(serializeInner(root)).toBe(`<div><div>A</div><div>B</div></div>`)
+    })
+
     test('error handling', async () => {
       const spy = vi.fn()
 
@@ -295,6 +439,8 @@ describe('SFC <script setup> helpers', () => {
       expect(spy).toHaveBeenCalled()
       // should retain same instance before/after the await call
       expect(beforeInstance).toBe(afterInstance)
+      // instance scope should be fully restored/cleaned after async ticks
+      expect((beforeInstance!.scope as any)._on).toBe(0)
     })
 
     test('should not leak instance on multiple awaits', async () => {

@@ -3,7 +3,12 @@ import { isString } from '@vue/shared'
 
 export function isRelativeUrl(url: string): boolean {
   const firstChar = url.charAt(0)
-  return firstChar === '.' || firstChar === '~' || firstChar === '@'
+  return (
+    firstChar === '.' ||
+    firstChar === '~' ||
+    firstChar === '@' ||
+    firstChar === '#'
+  )
 }
 
 const externalRE = /^(?:https?:)?\/\//
@@ -14,6 +19,14 @@ export function isExternalUrl(url: string): boolean {
 const dataUrlRE = /^\s*data:/i
 export function isDataUrl(url: string): boolean {
   return dataUrlRE.test(url)
+}
+
+export function normalizeDecodedImportPath(source: string): string {
+  try {
+    return decodeURIComponent(source)
+  } catch {
+    return source
+  }
 }
 
 /**

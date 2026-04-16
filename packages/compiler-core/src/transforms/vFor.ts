@@ -221,7 +221,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           loop.body = createBlockStatement([
             createCompoundExpression([`const _memo = (`, memo.exp!, `)`]),
             createCompoundExpression([
-              `if (_cached`,
+              `if (_cached && _cached.el`,
               ...(keyExp ? [` && _cached.key === `, keyExp] : []),
               ` && ${context.helperString(
                 IS_MEMO_SAME,
