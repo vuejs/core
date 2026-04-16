@@ -64,3 +64,26 @@ test('pipeToWebWritable', async () => {
 
   expect(res).toBe(`<!--[--><div>parent</div><div>async</div><!--]-->`)
 })
+
+test('pipeToWebWritable error handling', async () => {
+  const App = {
+    ssrRender() {
+      throw new Error('ssr render error')
+    },
+  }
+
+  let abortedReason: any
+  const writable = new WritableStream({
+    abort(reason) {
+      abortedReason = reason
+    },
+  })
+
+  pipeToWebWritable(createApp(App), {}, writable)
+
+  // Wait for the error to propagate
+  await new Promise(resolve => setTimeout(resolve, 10))
+
+  expect(abortedReason).toBeInstanceOf(Error)
+  expect(abortedReason.message).toBe('ssr render error')
+})
