@@ -95,4 +95,40 @@ describe('renderSlot', () => {
       expect(vnode.patchFlag).toBe(PatchFlags.BAIL)
     })
   })
+
+  it('should preserve local fallback while updating outlet fallback on forwarded vapor slot', () => {
+    const localFallback = () => [createCommentVNode('local empty')]
+    const firstOuterFallback = () => ['first outer fallback']
+    const nextOuterFallback = () => ['next outer fallback']
+    const forwarded = createVNode('div')
+
+    forwarded.vs = {
+      slot: () => [],
+      fallback: localFallback,
+    } as any
+
+    renderSlot(
+      {
+        default: () => [forwarded],
+      },
+      'default',
+      undefined,
+      firstOuterFallback,
+    )
+
+    expect(forwarded.vs!.fallback).toBe(localFallback)
+    expect(forwarded.vs!.outletFallback).toBe(firstOuterFallback)
+
+    renderSlot(
+      {
+        default: () => [forwarded],
+      },
+      'default',
+      undefined,
+      nextOuterFallback,
+    )
+
+    expect(forwarded.vs!.fallback).toBe(localFallback)
+    expect(forwarded.vs!.outletFallback).toBe(nextOuterFallback)
+  })
 })

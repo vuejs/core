@@ -24,6 +24,7 @@ import {
   type DynamicFragment,
   SlotFragment,
   type VaporFragment,
+  withOwnedSlotBoundary,
 } from './fragment'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
@@ -196,7 +197,7 @@ export function createSlot(
     ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
 
-  let fragment: SlotFragment
+  let fragment: VaporFragment
   if (isRef(rawSlots._) && isInteropEnabled) {
     if (isHydrating) locateHydrationNode()
     fragment = instance.appContext.vapor!.vdomSlot(
@@ -207,9 +208,9 @@ export function createSlot(
       fallback,
     )
   } else {
-    fragment = new SlotFragment()
+    const slotFragment = (fragment = new SlotFragment())
     // mark the slot as forwarded
-    fragment.forwarded =
+    slotFragment.forwarded =
       currentSlotOwner != null && currentSlotOwner !== currentInstance
     const isDynamicName = isFunction(name)
 
@@ -241,7 +242,11 @@ export function createSlot(
             slotName !== 'default' ? { name: slotName } : {},
           ])
         })
-        if (fallback) insert(fallback(), el)
+        if (fallback) {
+          withOwnedSlotBoundary(slotFragment.parentSlotBoundary, () => {
+            insert(fallback(), el)
+          })
+        }
         fragment.nodes = el
         return
       }
@@ -253,7 +258,7 @@ export function createSlot(
         // (v-for creates multiple fragments) so each fragment keeps its own
         // slotProps without cross-talk.
         const boundMap = slot._boundMap || (slot._boundMap = new WeakMap())
-        let bound = boundMap.get(fragment)
+        let bound = boundMap.get(slotFragment)
         if (!bound) {
           bound = () => {
             const prevSlotScopeIds = setCurrentSlotScopeIds(
@@ -268,11 +273,11 @@ export function createSlot(
               setCurrentSlotScopeIds(prevSlotScopeIds)
             }
           }
-          boundMap.set(fragment, bound)
+          boundMap.set(slotFragment, bound)
         }
-        fragment.updateSlot(bound, fallback)
+        slotFragment.updateSlot(bound, fallback)
       } else {
-        fragment.updateSlot(undefined, fallback)
+        slotFragment.updateSlot(undefined, fallback)
       }
     }
 

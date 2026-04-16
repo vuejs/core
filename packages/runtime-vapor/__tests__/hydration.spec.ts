@@ -9136,7 +9136,7 @@ describe('VDOM interop', () => {
       `
         "
         <!--[-->
-        <!--[--><div>foo</div><!--if--><p>bar</p><!--]-->
+        <!--[--><div>foo</div><p>bar</p><!--if--><!--]-->
         <i>tail</i><!--]-->
         "
       `,

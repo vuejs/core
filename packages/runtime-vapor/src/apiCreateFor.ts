@@ -38,8 +38,8 @@ import {
 import {
   ForBlock,
   ForFragment,
-  currentEmptyFragment,
-  currentSlotEndAnchor,
+  getCurrentSlotEndAnchor,
+  isHydratingSlotFallbackActive,
 } from './fragment'
 import {
   type ChildItem,
@@ -115,7 +115,6 @@ export const createFor = (
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
-    let isFallback = false
 
     const prevSub = setActiveSub()
 
@@ -128,8 +127,9 @@ export const createFor = (
         const emptyLocalRange =
           isComment(hydrationStart, ']') &&
           isComment(hydrationStart.previousSibling!, '[')
+        const slotEndAnchor = getCurrentSlotEndAnchor()
         const slotFallbackRange =
-          currentEmptyFragment !== undefined && currentSlotEndAnchor
+          isHydratingSlotFallbackActive() && slotEndAnchor
 
         try {
           if (emptyLocalRange && newLength) {
@@ -163,16 +163,16 @@ export const createFor = (
                 currentHydrationNode !== hydrationStart
                   ? currentHydrationNode!
                   : // Empty source with trailing slot siblings.
-                    hydrationStart !== currentSlotEndAnchor
+                    hydrationStart !== slotEndAnchor
                     ? hydrationStart.nextSibling!
-                    : currentSlotEndAnchor!
+                    : slotEndAnchor!
               parentAnchor = markHydrationAnchor(
                 __DEV__ ? createComment('for') : createTextNode(),
               )
               pendingHydrationAnchor = true
               if (
                 currentHydrationNode === hydrationStart ||
-                currentHydrationNode === currentSlotEndAnchor
+                currentHydrationNode === slotEndAnchor
               ) {
                 setCurrentHydrationNode(hydrationStart)
               }
@@ -208,11 +208,6 @@ export const createFor = (
     } else {
       parent = parent || parentAnchor!.parentNode
       if (!oldLength) {
-        // remove fallback nodes
-        if (frag.fallback && (frag.nodes[0] as Block[]).length > 0) {
-          remove(frag.nodes[0], parent!)
-        }
-
         // fast path for all new
         for (let i = 0; i < newLength; i++) {
           mount(source, i)
@@ -229,12 +224,6 @@ export const createFor = (
         if (canUseFastRemove) {
           parent!.textContent = ''
           parent!.appendChild(parentAnchor)
-        }
-
-        // render fallback nodes
-        if (frag.fallback) {
-          insert((frag.nodes[0] = frag.fallback()), parent!, parentAnchor)
-          isFallback = true
         }
       } else if (!getKey) {
         // unkeyed fast path
@@ -435,12 +424,8 @@ export const createFor = (
       }
     }
 
-    if (!isFallback) {
-      frag.nodes = [(oldBlocks = newBlocks)]
-      if (parentAnchor) frag.nodes.push(parentAnchor)
-    } else {
-      oldBlocks = []
-    }
+    frag.nodes = [(oldBlocks = newBlocks)]
+    if (parentAnchor) frag.nodes.push(parentAnchor)
 
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
     setActiveSub(prevSub)

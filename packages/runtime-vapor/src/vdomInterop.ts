@@ -21,12 +21,14 @@ import {
   type VNodeArrayChildren,
   type VNodeNormalizedRef,
   type VaporInteropInterface,
+  VaporSlot as VaporSlotVNode,
   callWithAsyncErrorHandling,
   createInternalObject,
   createVNode,
   currentInstance,
   ensureHydrationRenderer,
   ensureRenderer,
+  ensureValidVNode,
   ensureVaporSlotFallback,
   invokeDirectiveHook,
   isEmitListener,
@@ -56,6 +58,7 @@ import {
   createComponent,
   getCurrentScopeId,
   getRootElement,
+  isVaporComponent,
   mountComponent,
   unmountComponent,
 } from './component'
@@ -79,11 +82,7 @@ import {
 } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
-import {
-  currentSlotOwner,
-  currentSlotScopeIds,
-  setCurrentSlotOwner,
-} from './componentSlots'
+import { currentSlotScopeIds, setCurrentSlotOwner } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { _next, createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -92,15 +91,25 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
+  isHydrationAnchor,
+  locateEndAnchor,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
 import {
+  SlotFallbackController,
   SlotFragment,
   VaporFragment,
-  attachSlotFallback,
+  findFirstSlotFallbackCarrierNode,
+  getCurrentSlotEndAnchor,
+  insertSlotFallbackCarrier,
   isFragment,
-  renderSlotFallback,
+  removeSlotFallbackCarrier,
+  resolveSlotFallbackCarrierOwner,
+  trackSlotBoundaryDirtying,
+  withHydratingSlotBoundary,
+  withHydratingSlotFallbackActive,
+  withOwnedSlotBoundary,
 } from './fragment'
 import type { NodeRef } from './apiTemplateRef'
 import {
@@ -273,6 +282,12 @@ const vaporInteropImpl: Omit<
       // the async component may not be resolved yet, block is null
       if (instance.block) {
         unmountComponent(instance, container)
+        if (!doRemove) {
+          // When the surrounding VDOM fragment owns DOM removal, we still need
+          // to dispose the vapor-returned block tree so nested interop state
+          // (for example forwarded VDOM slots) does not stay subscribed.
+          remove(instance.block, undefined)
+        }
       }
     } else if (vnode.vb) {
       remove(vnode.vb, container)
@@ -343,6 +358,7 @@ const vaporInteropImpl: Omit<
         n2.vb = n1.vb
         ;(n2.vs!.ref = n1.vs!.ref)!.value = n2.props
         n2.vs!.scope = n1.vs!.scope
+        syncInteropVaporSlotState(n1, n2)
       }
     }
   },
@@ -587,6 +603,15 @@ function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
 }
 
 function resolveVNodeNodes(vnode: VNode): Block {
+  // Vapor component VNodes expose only their first root on `vnode.el`.
+  // Use the mounted block so multi-root output keeps slot carriers and other
+  // trailing anchors in the resolved block shape.
+  if (!isHydrating && vnode.component && isVaporComponent(vnode.component)) {
+    const block = (vnode.component as any).block as Block | undefined
+    if (block) {
+      return block
+    }
+  }
   const vnodeRange = resolveVNodeRange(vnode)
   if (vnodeRange) {
     const nodeRange: Node[] = []
@@ -948,13 +973,125 @@ function ensureRendererBridge(
 }
 
 function trackSlotVNodeUpdates(frag: VaporFragment, vnode: VNode): void {
-  const refresh = () => {
+  trackSlotVNodeUpdatesWithRefresh(vnode, () => {
     frag.nodes = resolveVNodeNodes(vnode)
     if (frag.onUpdated) frag.onUpdated.forEach(m => m())
+  })
+}
+
+function hasValidVNodeContent(vnode: VNode): boolean {
+  return !!ensureValidVNode(
+    vnode.type === Fragment && isArray(vnode.children)
+      ? (vnode.children as VNodeArrayChildren)
+      : [vnode],
+  )
+}
+
+function isSlotOutletOnlyVNode(vnode: VNode): boolean {
+  if (vnode.type === VaporSlotVNode) {
+    return true
   }
 
+  return (
+    vnode.type === Fragment &&
+    isArray(vnode.children) &&
+    (vnode.children as VNodeArrayChildren).every(
+      child => isVNode(child) && isSlotOutletOnlyVNode(child),
+    )
+  )
+}
+
+// Forwarded VDOM slot fragments can hydrate against an already-empty SSR slot
+// range in three shapes:
+// 1. the parent slot boundary has already consumed `<!--[-->`, so hydration
+//    resumes directly on the shared `<!--]-->`;
+// 2. the fragment still owns `<!--[--><!--]-->`, and its own rendered content
+//    stays empty, so the forwarded fragment should just reuse that empty range;
+// 3. the fragment still owns `<!--[--><!--]-->`, but its children are only
+//    nested Vapor slot outlets that must hydrate inside that empty range.
+function hydrateForwardedEmptySlotFragment(
+  vnode: VNode,
+  parentComponent: VaporComponentInstance | null,
+): boolean {
+  if (vnode.type !== Fragment || !isArray(vnode.children)) {
+    return false
+  }
+
+  const children = vnode.children as VNodeArrayChildren
+  // Case 1: an outer slot boundary has already consumed the fragment start
+  // marker, so the forwarded fragment only sees the shared closing `<!--]-->`.
+  const inheritedEmptySlotEndAnchor =
+    isComment(currentHydrationNode!, ']') &&
+    isComment(currentHydrationNode.previousSibling!, '[')
+      ? currentHydrationNode
+      : null
+  const slotEndAnchor = getCurrentSlotEndAnchor() || inheritedEmptySlotEndAnchor
+  const slotStartAnchor = slotEndAnchor && slotEndAnchor.previousSibling
+  const contentValid = hasValidVNodeContent(vnode)
+  // Case 2: this forwarded fragment still owns an empty `<!--[--><!--]-->`
+  // range, but the resolved content remains empty. Reuse that range as-is so
+  // later updates patch inside the existing SSR anchors.
+  if (
+    !contentValid &&
+    currentHydrationNode === slotEndAnchor &&
+    slotStartAnchor &&
+    isComment(slotStartAnchor, '[')
+  ) {
+    vnode.el = slotStartAnchor
+    vnode.anchor = slotEndAnchor
+    advanceHydrationNode(slotEndAnchor)
+    return true
+  }
+
+  const isEmptyFragmentStart = isComment(currentHydrationNode!, '[')
+  const hasSlotOutletChildren = children.length > 0
+  const slotOutletOnlyChildren = children.every(
+    child => isVNode(child) && isSlotOutletOnlyVNode(child),
+  )
+  if (
+    !isEmptyFragmentStart ||
+    !contentValid ||
+    !hasSlotOutletChildren ||
+    !slotOutletOnlyChildren
+  ) {
+    return false
+  }
+
+  const fragmentStartAnchor = currentHydrationNode as Comment
+  const fragmentEndAnchor = locateEndAnchor(fragmentStartAnchor)
+  if (
+    !fragmentEndAnchor ||
+    fragmentStartAnchor.nextSibling !== fragmentEndAnchor
+  ) {
+    return false
+  }
+
+  vnode.el = fragmentStartAnchor
+  // Case 3: the forwarded fragment is structurally empty, but it still owns
+  // nested Vapor slot outlets. Hydrate those outlets inside the fragment's SSR
+  // range so they see the shared `<!--]-->` as their active slot boundary
+  // instead of re-entering the same empty range through the generic Fragment
+  // hydrator.
+  withHydratingSlotBoundary(() => {
+    children.forEach(child => {
+      hydrateVNode(child as VNode, parentComponent as any)
+    })
+  })
+  vnode.anchor = fragmentEndAnchor
+  if (currentHydrationNode === fragmentEndAnchor) {
+    advanceHydrationNode(fragmentEndAnchor)
+  }
+  return true
+}
+
+function trackSlotVNodeUpdatesWithRefresh(
+  vnode: VNode,
+  refresh: () => void,
+): void {
+  const onUpdated = () => refresh()
+
   const track = (node: VNode) => {
-    appendVnodeUpdatedHook(node, refresh)
+    appendVnodeUpdatedHook(node, onUpdated)
     if (node.type === Fragment && isArray(node.children)) {
       node.children.forEach(child => {
         if (isVNode(child)) track(child)
@@ -978,52 +1115,124 @@ function renderVDOMSlot(
 ): VaporFragment {
   const suspense = currentParentSuspense || parentComponent.suspense
   const frag = new VaporFragment<Block>([])
+  trackSlotBoundaryDirtying(frag)
+  frag.validityPending = !isHydrating
   const instance = currentInstance
-  const slotOwner = currentSlotOwner
-
-  if (fallback && !frag.fallback) frag.fallback = fallback
 
   let isMounted = false
-  let currentBlock: Block | null = null
-  let currentVNode: VNode | null = null
+  const contentState = {
+    nodes: [] as Block,
+    valid: false,
+    rendered: null as VNode | Block | null,
+  }
   let currentParentNode: ParentNode | undefined
   let currentAnchor: Node | null | undefined
-  let scope = effectScope()
+  let disposed = false
+  const scope = effectScope()
+  const inheritedBoundary = frag.inheritedSlotBoundary
+  const controller: SlotFallbackController = new SlotFallbackController({
+    getParentBoundary: () => inheritedBoundary,
+    getLocalFallback: (): BlockFn | undefined => wrappedLocalFallback,
+    getContent: () => contentState.nodes,
+    getParentNode: () => {
+      if (currentParentNode) {
+        return currentParentNode
+      }
+      const carrierAnchor = findFirstSlotFallbackCarrierNode(contentState.nodes)
+      return carrierAnchor
+        ? (carrierAnchor.parentNode as ParentNode | null)
+        : null
+    },
+    getAnchor: () => currentAnchor || null,
+    isContentValid: () => contentState.valid,
+    runWithRenderCtx: fn => runWithFragmentRenderCtx(frag, fn),
+    isDisposed: () => disposed,
+    onValidityChange: () => {
+      if (frag.inheritedSlotBoundary) {
+        frag.inheritedSlotBoundary.markDirty()
+      }
+    },
+  })
+  const wrappedLocalFallback: BlockFn | undefined = fallback
+    ? controller.wrapFallback(() => fallback(internals, parentComponent))
+    : undefined
+
+  const updateNodes = (): void => {
+    frag.nodes = controller.getEffectiveOutput()
+  }
+
+  const setRenderedContent = (rendered: VNode | Block | null): void => {
+    contentState.rendered = rendered
+    if (isVNode(rendered)) {
+      contentState.nodes = resolveVNodeNodes(rendered)
+      contentState.valid = hasValidVNodeContent(rendered)
+    } else if (rendered) {
+      contentState.nodes = rendered
+      contentState.valid = isValidBlock(rendered)
+    } else {
+      contentState.nodes = []
+      contentState.valid = false
+    }
+    frag.validityPending = false
+  }
+
+  const notifyUpdated = (): void => {
+    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+  }
+
+  const finishContentUpdate = (forceFallbackRecheck = false): void => {
+    controller.recheck(forceFallbackRecheck)
+    updateNodes()
+    notifyUpdated()
+  }
 
   frag.insert = (parentNode, anchor) => {
     if (isHydrating) return
-    currentParentNode = parentNode
+    currentParentNode = parentNode || undefined
     currentAnchor = anchor
 
     if (!isMounted) {
       scope.run(render)
       isMounted = true
     } else {
-      if (currentVNode) {
+      if (isVNode(contentState.rendered)) {
         // move vdom content
         internals.m(
-          currentVNode,
+          contentState.rendered,
           parentNode,
           anchor,
           MoveType.REORDER,
           parentComponent as any,
         )
-      } else if (currentBlock) {
+      } else if (contentState.rendered) {
         // move vapor content
-        insert(currentBlock, parentNode, anchor)
+        insert(contentState.rendered, parentNode, anchor)
       }
+
+      controller.relocate()
     }
 
-    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+    notifyUpdated()
   }
 
   frag.remove = parentNode => {
+    currentParentNode = parentNode || currentParentNode || undefined
+    currentAnchor = currentAnchor || null
     scope.stop()
-    if (currentBlock) {
-      remove(currentBlock, parentNode)
-    } else if (currentVNode) {
-      internals.um(currentVNode, parentComponent as any, null, true)
+    disposed = true
+    if (isVNode(contentState.rendered)) {
+      // When the surrounding VDOM range already owns DOM removal, unmount the
+      // vnode state only and avoid tearing down the same hydrated range twice.
+      internals.um(
+        contentState.rendered,
+        parentComponent as any,
+        null,
+        !!parentNode,
+      )
+    } else if (contentState.rendered) {
+      remove(contentState.rendered, parentNode)
     }
+    controller.dispose()
   }
 
   const render = () => {
@@ -1031,130 +1240,141 @@ function renderVDOMSlot(
     simpleSetCurrentInstance(instance)
     try {
       renderEffect(() => {
-        const prevSlotOwner = setCurrentSlotOwner(slotOwner)
-        try {
-          const effectiveFallback = frag.fallback || fallback
-          let slotContent: VNode | Block | undefined
-          let isEmpty = true
-          let emptyFrag: VaporFragment | null = null
+        runWithFragmentRenderCtx(frag, () =>
+          withOwnedSlotBoundary(controller.boundary, () => {
+            let slotContent: VNode | Block | undefined
+            let slotContentValid = false
 
-          if (slotsRef.value) {
-            slotContent = renderSlot(
-              slotsRef.value,
-              isFunction(name) ? name() : name,
-              props,
-            )
-
-            if (isVNode(slotContent)) {
-              const children = slotContent.children as VNode[]
-              // handle forwarded vapor slot without its own fallback
-              // use the fallback provided by the slot outlet
-              ensureVaporSlotFallback(
-                children,
-                effectiveFallback as () => VNodeArrayChildren,
+            if (slotsRef.value) {
+              slotContent = renderSlot(
+                slotsRef.value,
+                isFunction(name) ? name() : name,
+                props,
               )
-              isEmpty = children.length === 0
-            } else {
-              if (effectiveFallback && slotContent) {
-                emptyFrag = attachSlotFallback(slotContent, () =>
-                  effectiveFallback(internals, parentComponent),
-                )
+
+              if (isVNode(slotContent)) {
+                if (slotContent.type === Fragment) {
+                  const children = slotContent.children as VNode[]
+                  // Forwarded vapor slots need the slot outlet fallback chain
+                  // even when the surrounding VDOM fragment stays otherwise
+                  // valid, so preserve it on the forwarded branch itself.
+                  ensureVaporSlotFallback(
+                    children,
+                    wrappedLocalFallback as () => VNodeArrayChildren,
+                  )
+                  slotContentValid = hasValidVNodeContent(slotContent)
+                } else {
+                  slotContentValid = true
+                }
+              } else if (slotContent) {
+                slotContentValid = isValidBlock(slotContent)
               }
-              isEmpty = !isValidBlock(slotContent)
             }
-          }
 
-          let resolved = slotContent
-          if (isEmpty && effectiveFallback) {
+            if (isHydrating) {
+              // An empty VDOM slot fragment is still the hydration owner of the
+              // SSR fragment markers when no fallback takes over. Keep hydrating
+              // that content so later updates can patch inside the existing
+              // range instead of mounting before it.
+              const hydratedContent =
+                slotContent && (slotContentValid || !controller.hasFallback())
+                  ? slotContent
+                  : undefined
+              if (isVNode(hydratedContent)) {
+                frag.vnode = hydratedContent
+                frag.$key = getVNodeKey(hydratedContent)
+                trackSlotVNodeUpdates(frag, hydratedContent)
+                // Forwarded slot fragments that resolve to an empty SSR range
+                // should stay on that range instead of re-entering it through
+                // generic Fragment hydration.
+                if (
+                  !hydrateForwardedEmptySlotFragment(
+                    hydratedContent,
+                    parentComponent,
+                  )
+                ) {
+                  hydrateVNode(hydratedContent, parentComponent as any)
+                }
+                setRenderedContent(hydratedContent)
+              } else if (hydratedContent) {
+                frag.vnode = null
+                frag.$key = undefined
+                setRenderedContent(hydratedContent as Block)
+              } else {
+                frag.vnode = null
+                frag.$key = undefined
+                setRenderedContent(null)
+              }
+              finishContentUpdate(true)
+              return
+            }
+
             if (isVNode(slotContent)) {
-              resolved = effectiveFallback(internals, parentComponent)
-            } else if (slotContent) {
-              resolved = renderSlotFallback(
+              frag.vnode = slotContent
+              frag.$key = getVNodeKey(slotContent)
+              trackSlotVNodeUpdatesWithRefresh(slotContent, () => {
+                const prevValid = contentState.valid
+                const prevOutput = frag.nodes
+                setRenderedContent(slotContent)
+                controller.recheck()
+                updateNodes()
+                if (
+                  contentState.valid !== prevValid ||
+                  !isSameResolvedOutput(prevOutput, frag.nodes)
+                ) {
+                  notifyUpdated()
+                }
+              })
+              const prevRendered = contentState.rendered
+              if (prevRendered && !isVNode(prevRendered)) {
+                remove(prevRendered, currentParentNode)
+              }
+              internals.p(
+                isVNode(prevRendered) ? prevRendered : null,
                 slotContent,
-                () => effectiveFallback(internals, parentComponent),
-                emptyFrag,
+                currentParentNode!,
+                currentAnchor,
+                parentComponent as any,
+                suspense,
+                undefined, // namespace
+                slotContent.slotScopeIds, // pass slotScopeIds for :slotted styles
               )
-            } else {
-              resolved = effectiveFallback(internals, parentComponent)
+              setRenderedContent(slotContent)
+              finishContentUpdate()
+              return
             }
-          }
 
-          if (isHydrating) {
-            if (isVNode(resolved)) {
-              frag.vnode = resolved
-              frag.$key = getVNodeKey(resolved)
-              trackSlotVNodeUpdates(frag, resolved)
-              hydrateVNode(resolved, parentComponent as any)
-              currentVNode = resolved
-              currentBlock = null
-              frag.nodes = resolveVNodeNodes(resolved)
-            } else if (resolved) {
-              currentBlock = resolved as Block
-              currentVNode = null
-              frag.nodes = resolved as any
-            } else {
-              currentBlock = null
-              currentVNode = null
-              frag.nodes = []
+            if (slotContent) {
+              frag.vnode = null
+              frag.$key = undefined
+              const prevRendered = contentState.rendered
+              if (isVNode(prevRendered)) {
+                internals.um(prevRendered, parentComponent as any, null, true)
+              } else if (prevRendered) {
+                remove(prevRendered, currentParentNode)
+              }
+              insert(slotContent, currentParentNode!, currentAnchor)
+              setRenderedContent(slotContent)
+              finishContentUpdate()
+              return
             }
-            return
-          }
 
-          if (isVNode(resolved)) {
-            frag.vnode = resolved
-            frag.$key = getVNodeKey(resolved)
-            trackSlotVNodeUpdates(frag, resolved)
-            if (currentBlock) {
-              remove(currentBlock, currentParentNode)
-              currentBlock = null
+            if (isVNode(contentState.rendered)) {
+              internals.um(
+                contentState.rendered,
+                parentComponent as any,
+                null,
+                true,
+              )
+            } else if (contentState.rendered) {
+              remove(contentState.rendered, currentParentNode)
             }
-            internals.p(
-              currentVNode,
-              resolved,
-              currentParentNode!,
-              currentAnchor,
-              parentComponent as any,
-              suspense,
-              undefined, // namespace
-              resolved.slotScopeIds, // pass slotScopeIds for :slotted styles
-            )
-            currentVNode = resolved
-            frag.nodes = resolveVNodeNodes(resolved)
-            return
-          }
-
-          if (resolved) {
             frag.vnode = null
             frag.$key = undefined
-            if (currentVNode) {
-              internals.um(currentVNode, parentComponent as any, null, true)
-              currentVNode = null
-            }
-            if (currentBlock) {
-              remove(currentBlock, currentParentNode)
-            }
-            insert(resolved, currentParentNode!, currentAnchor)
-            currentBlock = resolved
-            frag.nodes = resolved as any
-            return
-          }
-
-          if (currentBlock) {
-            remove(currentBlock, currentParentNode)
-            currentBlock = null
-          }
-          if (currentVNode) {
-            internals.um(currentVNode, parentComponent as any, null, true)
-            currentVNode = null
-          }
-
-          // mark as empty
-          frag.vnode = null
-          frag.$key = undefined
-          frag.nodes = []
-        } finally {
-          setCurrentSlotOwner(prevSlotOwner)
-        }
+            setRenderedContent(null)
+            finishContentUpdate()
+          }),
+        )
       })
     } finally {
       simpleSetCurrentInstance(prev)
@@ -1211,12 +1431,23 @@ function createVaporFallback(
   parentComponent: ComponentInternalInstance | null,
 ): BlockFn {
   const internals = ensureRenderer().internals
-  return () => {
-    const block = createFallback(fallback)(internals, parentComponent)
-    if (isHydrating && isFragment(block) && block.hydrate) {
-      block.hydrate()
-    }
-    return block
+  return () => createFallback(fallback)(internals, parentComponent)
+}
+
+const renderEmptyVNodes = (): VNodeArrayChildren => []
+
+// Interop slot rendering only needs to restore slot-owner / keep-alive /
+// boundary context here. Reusing VaporFragment.runWithRenderCtx() also
+// changes component-instance and effect ownership, which makes forwarded
+// VDOM fallback cleanup follow a different lifecycle.
+function runWithFragmentRenderCtx<R>(fragment: VaporFragment, fn: () => R): R {
+  const prevSlotOwner = setCurrentSlotOwner(fragment.slotOwner)
+  const prevKeepAliveCtx = setCurrentKeepAliveCtx(fragment.keepAliveCtx)
+  try {
+    return withOwnedSlotBoundary(fragment.inheritedSlotBoundary, fn)
+  } finally {
+    setCurrentKeepAliveCtx(prevKeepAliveCtx)
+    setCurrentSlotOwner(prevSlotOwner)
   }
 }
 
@@ -1230,16 +1461,98 @@ const createFallback =
 
     // vnode content, wrap it as a VaporFragment
     if (isArray(fallbackNodes) && fallbackNodes.every(isVNode)) {
-      return createVNodeChildrenFragment(
+      const frag = createVNodeChildrenFragment(
         internals,
         () => fallback() as VNode[],
         parentComponent,
       )
+      if (isHydrating && frag.hydrate) {
+        frag.hydrate()
+      }
+      return frag
     }
 
     // vapor block
     return fallbackNodes as Block
   }
+
+type InteropSlotFallback = () => any
+
+interface InteropVaporSlotState {
+  localFallback: ShallowRef<InteropSlotFallback | undefined>
+  outletFallback: ShallowRef<InteropSlotFallback | undefined>
+}
+
+function composeInteropLocalFallback(
+  localFallback?: BlockFn,
+  outletFallback?: BlockFn,
+): BlockFn | undefined {
+  if (!localFallback) return outletFallback
+  if (!outletFallback) return localFallback
+  return (...args: any[]) => {
+    const local = localFallback(...args)
+    if (isValidBlock(local)) {
+      return local
+    }
+    const outlet = outletFallback(...args)
+    return resolveSlotFallbackCarrierOwner(local) ? [outlet, local] : outlet
+  }
+}
+
+function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
+  const slot = vnode.vs!
+  let state = slot.state as InteropVaporSlotState | undefined
+  if (!state) {
+    state = {
+      localFallback: shallowRef(slot.fallback),
+      outletFallback: shallowRef(slot.outletFallback),
+    }
+    slot.state = state
+  }
+  return state
+}
+
+function syncInteropVaporSlotState(n1: VNode, n2: VNode): void {
+  const prevState = n1.vs!.state as InteropVaporSlotState | undefined
+  if (!prevState) {
+    return
+  }
+  n2.vs!.state = prevState
+  prevState.localFallback.value = n2.vs!.fallback
+  prevState.outletFallback.value = n2.vs!.outletFallback
+}
+
+function trackInteropFallbackChanges(
+  scope: ReturnType<typeof effectScope> | undefined,
+  state: InteropVaporSlotState,
+  onChange: () => void,
+): void {
+  if (!scope) return
+  let trackedLocalFallback: InteropSlotFallback | undefined
+  let trackedOutletFallback: InteropSlotFallback | undefined
+  let initialized = false
+  scope.run(() => {
+    renderEffect(() => {
+      const nextLocalFallback = state.localFallback.value
+      const nextOutletFallback = state.outletFallback.value
+      if (!initialized) {
+        trackedLocalFallback = nextLocalFallback
+        trackedOutletFallback = nextOutletFallback
+        initialized = true
+        return
+      }
+      if (
+        trackedLocalFallback === nextLocalFallback &&
+        trackedOutletFallback === nextOutletFallback
+      ) {
+        return
+      }
+      trackedLocalFallback = nextLocalFallback
+      trackedOutletFallback = nextOutletFallback
+      onChange()
+    }, true)
+  })
+}
 
 function renderVaporSlot(
   vnode: VNode,
@@ -1253,30 +1566,159 @@ function renderVaporSlot(
     prevSuspense = setParentSuspense(parentSuspense)
   }
   try {
-    const { fallback } = vnode.vs!
-    if (isHydrating && fallback) {
-      const frag = new SlotFragment()
-      frag.updateSlot(
-        () => invokeVaporSlot(vnode),
-        createVaporFallback(fallback, parentComponent),
+    const slotState = resolveInteropVaporSlotState(vnode)
+    // Most of the interop setup is shared, but slots that start with a local
+    // VDOM fallback still need to let an inner SlotFragment own the active
+    // fallback lifecycle. Forcing the interop wrapper to own that branch breaks
+    // fallback blocks that can later resolve to an empty vnode list.
+    const frag = new VaporFragment<Block>([])
+    const inheritedBoundary = frag.inheritedSlotBoundary
+    let isResolvingContent = false
+    let wrappedLocalFallback!: BlockFn
+    let wrappedOutletFallback!: BlockFn
+    let currentParentNode: ParentNode | null = null
+    let currentAnchor: Node | null = null
+    let slotScope: ReturnType<typeof effectScope> | undefined
+    let disposed = false
+    const controller = new SlotFallbackController({
+      getParentBoundary: () => inheritedBoundary,
+      getLocalFallback: () =>
+        composeInteropLocalFallback(
+          slotState.localFallback.value ? wrappedLocalFallback : undefined,
+          slotState.outletFallback.value ? wrappedOutletFallback : undefined,
+        ),
+      getContent: () => frag.nodes,
+      getParentNode: () => {
+        if (currentParentNode) return currentParentNode
+        const carrierAnchor = findFirstSlotFallbackCarrierNode(frag.nodes)
+        return carrierAnchor
+          ? (carrierAnchor.parentNode as ParentNode | null)
+          : null
+      },
+      getAnchor: () => currentAnchor,
+      runWithRenderCtx: fn => runWithFragmentRenderCtx(frag, fn),
+      isBusy: () => isResolvingContent,
+      isDisposed: () => disposed,
+      onValidityChange: () => {
+        if (inheritedBoundary) {
+          inheritedBoundary.markDirty()
+        }
+      },
+    })
+
+    const dispose = (parentNode?: ParentNode): void => {
+      if (disposed) return
+      currentParentNode = parentNode || currentParentNode
+      disposed = true
+      controller.dispose()
+      slotScope = undefined
+      currentParentNode = null
+      currentAnchor = null
+    }
+
+    try {
+      wrappedLocalFallback = controller.wrapFallback(
+        createVaporFallback(
+          () => (slotState.localFallback.value || renderEmptyVNodes)(),
+          parentComponent,
+        ),
       )
+      wrappedOutletFallback = controller.wrapFallback(
+        createVaporFallback(
+          () => (slotState.outletFallback.value || renderEmptyVNodes)(),
+          parentComponent,
+        ),
+      )
+      const preferSlotFragmentOwnership =
+        !!slotState.localFallback.value || !!slotState.outletFallback.value
+      controller.clearPendingRecheck()
+      const finalizeResolvedContent = (
+        resolvedContent: Block | undefined,
+      ): Block | undefined => {
+        if (
+          preferSlotFragmentOwnership &&
+          resolvedContent instanceof SlotFragment
+        ) {
+          return resolvedContent
+        }
+        frag.nodes = resolvedContent || []
+        controller.recheck(controller.takePendingRecheck())
+        return resolvedContent
+      }
+      let resolvedContent: Block | undefined
+      isResolvingContent = true
+      try {
+        if (isHydrating) {
+          resolvedContent = withHydratingSlotBoundary(() =>
+            finalizeResolvedContent(
+              runWithFragmentRenderCtx(frag, () => {
+                const renderSlot = () =>
+                  withOwnedSlotBoundary(controller.boundary, () =>
+                    invokeVaporSlot(vnode),
+                  )
+                return controller.hasFallback()
+                  ? withHydratingSlotFallbackActive(renderSlot)
+                  : renderSlot()
+              }),
+            ),
+          )
+        } else {
+          resolvedContent = finalizeResolvedContent(
+            runWithFragmentRenderCtx(frag, () =>
+              withOwnedSlotBoundary(controller.boundary, () =>
+                invokeVaporSlot(vnode),
+              ),
+            ),
+          )
+        }
+      } finally {
+        isResolvingContent = false
+      }
+      const nextScope = vnode.vs!.scope
+      if (nextScope && slotScope !== nextScope && !disposed) {
+        slotScope = nextScope
+        nextScope.run(() => {
+          onScopeDispose(() => dispose(), true)
+        })
+      }
+      if (
+        preferSlotFragmentOwnership &&
+        resolvedContent instanceof SlotFragment
+      ) {
+        dispose()
+        return resolvedContent
+      }
+
+      controller.clearPendingRecheck()
+      frag.insert = (parentNode, anchor) => {
+        currentParentNode = parentNode
+        currentAnchor = anchor
+        if (controller.getActiveFallback()) {
+          controller.relocate()
+          insertSlotFallbackCarrier(frag.nodes, parentNode, anchor)
+        } else {
+          insert(frag.nodes, parentNode, anchor)
+        }
+      }
+      frag.remove = parentNode => {
+        if (controller.getActiveFallback()) {
+          removeSlotFallbackCarrier(frag.nodes, parentNode)
+        } else {
+          remove(frag.nodes, parentNode)
+        }
+        dispose(parentNode)
+      }
+      trackInteropFallbackChanges(vnode.vs!.scope, slotState, () => {
+        controller.recheck(true)
+        controller.syncActiveFallback()
+      })
+
       return frag
+    } catch (e) {
+      dispose()
+      stopVaporSlotScope(vnode)
+      throw e
     }
-
-    if (!fallback) {
-      return invokeVaporSlot(vnode)
-    }
-
-    let slotBlock = invokeVaporSlot(vnode)
-    const vaporFallback = createVaporFallback(fallback, parentComponent)
-    if (!slotBlock) {
-      return vaporFallback()
-    }
-    const emptyFrag = attachSlotFallback(slotBlock, vaporFallback)
-    if (!isValidBlock(slotBlock)) {
-      slotBlock = renderSlotFallback(slotBlock, vaporFallback, emptyFrag)
-    }
-    return slotBlock
   } finally {
     if (__FEATURE_SUSPENSE__ && parentSuspense) {
       setParentSuspense(prevSuspense)
@@ -1388,6 +1830,7 @@ function createVNodeChildrenFragment(
   const suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
   const frag = new VaporFragment<Block>([])
+  frag.validityPending = !isHydrating
   let currentVNode: VNode | null = null
   let currentChildren: VNode[] = []
   let currentParentNode: ParentNode | null = null
@@ -1395,24 +1838,81 @@ function createVNodeChildrenFragment(
   let isMounted = false
   const scope = effectScope()
 
+  const syncResolvedNodes = (children: VNode[] = currentChildren): boolean => {
+    const prevValid = frag.validityPending ? true : isValidBlock(frag.nodes)
+    if (children.length === 0) {
+      frag.nodes = []
+    } else if (children.length === 1) {
+      frag.nodes = resolveVNodeNodes(children[0])
+    } else {
+      frag.nodes = children.map(resolveVNodeNodes) as Block[]
+    }
+    frag.validityPending = false
+    return prevValid !== isValidBlock(frag.nodes)
+  }
+
+  const notifyUpdated = (validityChanged = false): void => {
+    if (validityChanged && frag.inheritedSlotBoundary) {
+      frag.inheritedSlotBoundary.markDirty()
+    }
+    if (isMounted && frag.onUpdated) {
+      frag.onUpdated.forEach(hook => hook())
+    }
+  }
+
   const renderContent = () => {
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
     try {
       renderEffect(() => {
-        const nextChildren = render()
-        if (isHydrating) {
-          nextChildren.forEach(vnode => hydrateVNode(vnode, parentComponent))
-          currentChildren = nextChildren
-          currentVNode = createVNode(Fragment, null, nextChildren)
-          currentParentNode = currentHydrationNode!.parentNode as ParentNode
-          currentAnchor = currentHydrationNode
-        } else if (!currentVNode) {
-          currentChildren = nextChildren
-          currentVNode = createVNode(Fragment, null, nextChildren)
-          if (nextChildren.length) {
-            internals.mc(
-              nextChildren,
+        runWithFragmentRenderCtx(frag, () => {
+          const nextChildren = render()
+          if (isHydrating) {
+            nextChildren.forEach(vnode => hydrateVNode(vnode, parentComponent))
+            currentChildren = nextChildren
+            currentVNode = createVNode(Fragment, null, nextChildren)
+            currentParentNode = currentHydrationNode!.parentNode as ParentNode
+            currentAnchor = currentHydrationNode
+            // Slot fallback hydration can preserve a local carrier anchor from an
+            // inner empty branch (for example `v-if` / `v-for`) immediately before
+            // the enclosing slot end anchor. Fragment patching needs the boundary
+            // insertion point after that local anchor; otherwise later fallback
+            // siblings patch in front of the carrier instead of after it.
+            if (
+              frag.inheritedSlotBoundary &&
+              currentAnchor &&
+              isHydrationAnchor(currentAnchor) &&
+              currentAnchor !== getCurrentSlotEndAnchor() &&
+              currentAnchor.nextSibling
+            ) {
+              currentAnchor = currentAnchor.nextSibling
+            }
+          } else if (!currentVNode) {
+            currentChildren = nextChildren
+            currentVNode = createVNode(Fragment, null, nextChildren)
+            trackSlotVNodeUpdatesWithRefresh(currentVNode, () => {
+              notifyUpdated(syncResolvedNodes(nextChildren))
+            })
+            if (nextChildren.length) {
+              internals.mc(
+                nextChildren,
+                currentParentNode!,
+                currentAnchor,
+                parentComponent,
+                suspense,
+                undefined,
+                null,
+                false,
+              )
+            }
+          } else {
+            const nextVNode = createVNode(Fragment, null, nextChildren)
+            trackSlotVNodeUpdatesWithRefresh(nextVNode, () => {
+              notifyUpdated(syncResolvedNodes(nextChildren))
+            })
+            internals.pc(
+              currentVNode,
+              nextVNode,
               currentParentNode!,
               currentAnchor,
               parentComponent,
@@ -1421,35 +1921,19 @@ function createVNodeChildrenFragment(
               null,
               false,
             )
+            currentChildren = nextChildren
+            currentVNode = nextVNode
           }
-        } else {
-          const nextVNode = createVNode(Fragment, null, nextChildren)
-          internals.pc(
-            currentVNode,
-            nextVNode,
-            currentParentNode!,
-            currentAnchor,
-            parentComponent,
-            suspense,
-            undefined,
-            null,
-            false,
-          )
-          currentChildren = nextChildren
-          currentVNode = nextVNode
-        }
 
-        if (currentChildren.length === 0) {
-          frag.nodes = []
-        } else if (currentChildren.length === 1) {
-          frag.nodes = resolveVNodeNodes(currentChildren[0])
-        } else {
-          frag.nodes = currentChildren.map(resolveVNodeNodes) as Block[]
-        }
-
-        if (isMounted && frag.onUpdated) {
-          frag.onUpdated.forEach(hook => hook())
-        }
+          const validityChanged = syncResolvedNodes()
+          if (isHydrating) {
+            if (isMounted && frag.onUpdated) {
+              frag.onUpdated.forEach(hook => hook())
+            }
+          } else {
+            notifyUpdated(validityChanged)
+          }
+        })
       })
     } finally {
       simpleSetCurrentInstance(prev)
@@ -1490,4 +1974,14 @@ function createVNodeChildrenFragment(
   }
 
   return frag
+}
+
+function isSameResolvedOutput(prev: Block, next: Block): boolean {
+  return (
+    prev === next ||
+    (isArray(prev) &&
+      isArray(next) &&
+      prev.length === next.length &&
+      prev.every((node, index) => node === next[index]))
+  )
 }

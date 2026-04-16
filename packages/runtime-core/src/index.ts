@@ -613,7 +613,7 @@ export { type VNodeNormalizedRef, normalizeRef } from './vnode'
 /**
  * @internal
  */
-export { ensureVaporSlotFallback } from './helpers/renderSlot'
+export { ensureValidVNode, ensureVaporSlotFallback } from './helpers/renderSlot'
 /**
  * @internal
  */

@@ -145,8 +145,9 @@ export function ensureVaporSlotFallback(
     isVNode(vnodes[0]) &&
     (vaporSlot = vnodes[0].vs)
   ) {
-    if (!vaporSlot.fallback && fallback) {
-      vaporSlot.fallback = fallback
-    }
+    // Preserve the enclosing VDOM slot outlet's own fallback on the forwarded
+    // vapor slot vnode. Interop treats this as an additional local fallback
+    // source for that outlet boundary instead of propagated ancestor state.
+    vaporSlot.outletFallback = fallback
   }
 }
