@@ -270,6 +270,8 @@ export interface VNode<
   vs?: {
     slot: (props: any) => any
     fallback: (() => VNodeArrayChildren) | undefined
+    outletFallback?: (() => VNodeArrayChildren) | undefined
+    state?: unknown
     ref?: ShallowRef<any>
     scope?: EffectScope
   }
@@ -740,6 +742,9 @@ export function cloneVNode<T, U>(
     anchor: vnode.anchor,
     ctx: vnode.ctx,
     ce: vnode.ce,
+    vi: vnode.vi,
+    vs: cloneVaporSlotMeta(vnode as VNode),
+    vb: vnode.vb,
   }
 
   // if the vnode will be replaced by the cloned one, it is necessary
@@ -754,6 +759,27 @@ export function cloneVNode<T, U>(
 
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
+  }
+
+  return cloned
+}
+
+function cloneVaporSlotMeta(vnode: VNode): VNode['vs'] {
+  const vaporSlot = vnode.vs
+  if (!vaporSlot) {
+    return vaporSlot
+  }
+
+  const cloned: NonNullable<VNode['vs']> = {
+    slot: vaporSlot.slot,
+    fallback: vaporSlot.fallback,
+    outletFallback: vaporSlot.outletFallback,
+  }
+
+  if (vnode.el) {
+    cloned.state = vaporSlot.state
+    cloned.ref = vaporSlot.ref
+    cloned.scope = vaporSlot.scope
   }
 
   return cloned

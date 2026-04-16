@@ -17,6 +17,7 @@ import {
 } from '@vue/runtime-dom'
 import {
   type DynamicFragment,
+  SlotFragment,
   type VaporFragment,
   isFragment,
 } from './fragment'
@@ -67,13 +68,19 @@ export function isBlock(val: NonNullable<unknown>): val is Block {
   )
 }
 
-export function isValidBlock(block: Block): boolean {
-  if (block instanceof Node) {
+export function isValidBlock(block: Block | null | undefined): boolean {
+  if (!block) {
+    return false
+  } else if (block instanceof Node) {
     return !(block instanceof Comment)
   } else if (isVaporComponent(block)) {
     return isValidBlock(block.block)
   } else if (isArray(block)) {
     return block.length > 0 && block.some(isValidBlock)
+  } else if (block instanceof SlotFragment) {
+    return isValidBlock(block.getEffectiveOutput())
+  } else if (block.validityPending) {
+    return true
   } else {
     // fragment
     return isValidBlock(block.nodes)

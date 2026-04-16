@@ -12,6 +12,7 @@ import type { Mock } from 'vitest'
 import { makeRender } from './_utils'
 import { unmountComponent } from '../src/component'
 import { setElementText } from '../src/dom/prop'
+import type { DynamicFragment } from '../src/fragment'
 
 const define = makeRender()
 
@@ -154,6 +155,34 @@ describe('createIf', () => {
     await nextTick()
     // should not change
     expect(html()).toBe('<p>bar</p>')
+  })
+
+  test('should trigger fragment onUpdated when branch becomes empty', async () => {
+    const show = ref(true)
+    const onUpdated = vi.fn()
+    let frag!: DynamicFragment
+
+    const { host } = define(() => {
+      frag = createIf(
+        () => show.value,
+        () => template('<div>foo</div>')(),
+      ) as DynamicFragment
+      frag.onUpdated = [onUpdated]
+      return frag
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
+
+    show.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--if-->')
+    expect(onUpdated).toHaveBeenCalledTimes(1)
+    expect(onUpdated).toHaveBeenLastCalledWith([])
+
+    show.value = true
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
+    expect(onUpdated).toHaveBeenCalledTimes(2)
   })
 
   // vapor custom directives have no lifecycle hooks.

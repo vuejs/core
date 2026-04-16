@@ -3,6 +3,7 @@ import {
   type ShallowRef,
   Suspense,
   Teleport,
+  cloneVNode,
   createApp,
   createCommentVNode,
   createVNode,
@@ -875,6 +876,62 @@ describe('vdomInterop', () => {
       }).render()
 
       expect(html()).toBe('default slot')
+    })
+
+    test('cloneVNode keeps vapor slot instances isolated across prop updates', async () => {
+      const left = ref('left')
+      const right = ref('right')
+
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => {
+            const slotVNode = renderSlot(slots, 'default', { msg: left.value })
+            return h('div', [
+              cloneVNode(slotVNode, { key: 'left', msg: left.value }),
+              cloneVNode(slotVNode, { key: 'right', msg: right.value }),
+            ])
+          }
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: withVaporCtx((props: any) => {
+                const span = document.createElement('span')
+                renderEffect(() => {
+                  span.textContent = props.msg
+                })
+                return span
+              }),
+            },
+            true,
+          )
+        },
+      })
+
+      const root = document.createElement('div')
+      createApp(VaporChild as any)
+        .use(vaporInteropPlugin)
+        .mount(root)
+      expect(root.innerHTML).toBe(
+        '<div><span>left</span><span>right</span></div>',
+      )
+
+      left.value = 'left-2'
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        '<div><span>left-2</span><span>right</span></div>',
+      )
+
+      right.value = 'right-2'
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        '<div><span>left-2</span><span>right-2</span></div>',
+      )
     })
 
     test('functional slot', () => {
@@ -2763,6 +2820,77 @@ describe('vdomInterop', () => {
 
         expect(targetA.innerHTML).toBe('')
         expect(targetB.innerHTML).toBe('<p>moved</p>')
+      } finally {
+        targetA.remove()
+        targetB.remove()
+      }
+    })
+
+    test('keeps slot fallback before carrier anchor after teleport move and fallback update', async () => {
+      const targetA = document.createElement('div')
+      targetA.id = 'interop-slot-fallback-target-a'
+      const targetB = document.createElement('div')
+      targetB.id = 'interop-slot-fallback-target-b'
+      document.body.append(targetA, targetB)
+
+      const to = ref('#interop-slot-fallback-target-a')
+      const fallbackText = ref('fallback A')
+
+      try {
+        const VDomSlotOutlet = defineComponent({
+          setup(_, { slots }) {
+            return () =>
+              renderSlot(slots, 'default', {}, () => [
+                h('div', fallbackText.value),
+              ])
+          },
+        })
+
+        const VaporChild = defineVaporComponent({
+          setup() {
+            return createComponent(
+              VaporTeleport,
+              {
+                to: () => to.value,
+              },
+              {
+                default: withVaporCtx(() =>
+                  createComponent(
+                    VDomSlotOutlet as any,
+                    null,
+                    {
+                      default: withVaporCtx(() => createSlot('default')),
+                    },
+                    true,
+                  ),
+                ),
+              },
+            )
+          },
+        })
+
+        const host = document.createElement('div')
+        const app = createApp({
+          render: () => h(VaporChild as any),
+        })
+        app.use(vaporInteropPlugin)
+        app.mount(host)
+        await nextTick()
+
+        expect(targetA.innerHTML).toBe('<div>fallback A</div>')
+        expect(targetB.innerHTML).toBe('')
+
+        to.value = '#interop-slot-fallback-target-b'
+        await nextTick()
+
+        expect(targetA.innerHTML).toBe('')
+        expect(targetB.innerHTML).toBe('<div>fallback A</div>')
+
+        fallbackText.value = 'fallback B'
+        await nextTick()
+
+        expect(targetA.innerHTML).toBe('')
+        expect(targetB.innerHTML).toBe('<div>fallback B</div>')
       } finally {
         targetA.remove()
         targetB.remove()
