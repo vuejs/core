@@ -1,6 +1,7 @@
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
+  ssrUtils,
   warn,
 } from 'vue'
 import { compile } from '@vue/compiler-ssr'
@@ -32,21 +33,7 @@ export function ssrCompile(
     )
   }
 
-  // TODO: This is copied from runtime-core/src/component.ts and should probably be refactored
-  const Component = instance.type as ComponentOptions
-  const { isCustomElement, compilerOptions } = instance.appContext.config
-  const { delimiters, compilerOptions: componentCompilerOptions } = Component
-
-  const finalCompilerOptions: CompilerOptions = extend(
-    extend(
-      {
-        isCustomElement,
-        delimiters,
-      },
-      compilerOptions,
-    ),
-    componentCompilerOptions,
-  )
+  const finalCompilerOptions = ssrUtils.getResolvedCompilerOptions(instance)
 
   finalCompilerOptions.isCustomElement =
     finalCompilerOptions.isCustomElement || NO
