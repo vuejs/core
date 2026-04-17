@@ -1,5 +1,5 @@
 import { createApp, defineAsyncComponent, h } from 'vue'
-import { renderToNodeStream, pipeToNodeWritable } from '../src'
+import { pipeToNodeWritable, renderToNodeStream } from '../src'
 import { Writable } from 'node:stream'
 import { describe, expect, test } from 'vitest'
 
@@ -29,7 +29,7 @@ describe('Node.js Streams backpressure', () => {
       if (firstCall) {
         firstCall = false
         originalWrite(chunk, encoding, cb)
-        return false 
+        return false
       }
       return originalWrite(chunk, encoding, cb)
     }
@@ -57,7 +57,7 @@ describe('Node.js Streams backpressure', () => {
     }
 
     const stream = renderToNodeStream(createApp(App))
-    
+
     // In Node.js Readable, push() returns false when the buffer is full.
     // For our test, we'll just verify that it streams correctly first.
     let res = ''
