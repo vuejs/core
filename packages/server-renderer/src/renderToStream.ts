@@ -13,6 +13,12 @@ import { resolveTeleports } from './renderToString'
 
 const { isVNode } = ssrUtils
 
+function waitDrain(stream: Writable): Promise<void> {
+  return new Promise(resolve => {
+    stream.once('drain', resolve)
+  })
+}
+
 export interface SimpleReadable {
   push(chunk: string | null): void | Promise<void>
   destroy(err: any): void
@@ -120,8 +126,16 @@ export function renderToNodeStream(
   input: App | VNode,
   context: SSRContext = {},
 ): Readable {
+  let resolveRead: (() => void) | null = null
   const stream: Readable = __CJS__
-    ? new (require('node:stream').Readable)({ read() {} })
+    ? new (require('node:stream').Readable)({
+        read() {
+          if (resolveRead) {
+            resolveRead()
+            resolveRead = null
+          }
+        },
+      })
     : null
 
   if (!stream) {
@@ -132,7 +146,24 @@ export function renderToNodeStream(
     )
   }
 
-  return renderToSimpleStream(input, context, stream)
+  renderToSimpleStream(input, context, {
+    push(content) {
+      if (content != null) {
+        if (!stream.push(content)) {
+          return new Promise<void>(resolve => {
+            resolveRead = resolve
+          })
+        }
+      } else {
+        stream.push(null)
+      }
+    },
+    destroy(err) {
+      stream.destroy(err)
+    },
+  } as any)
+
+  return stream
 }
 
 export function pipeToNodeWritable(
@@ -141,9 +172,11 @@ export function pipeToNodeWritable(
   writable: Writable,
 ): void {
   renderToSimpleStream(input, context, {
-    push(content) {
+    async push(content) {
       if (content != null) {
-        writable.write(content)
+        if (!writable.write(content)) {
+          await waitDrain(writable)
+        }
       } else {
         writable.end()
       }
@@ -168,14 +201,20 @@ export function renderToWebStream(
 
   const encoder = new TextEncoder()
   let cancelled = false
+  let resolvePull: (() => void) | null = null
 
   return new ReadableStream({
     start(controller) {
       renderToSimpleStream(input, context, {
-        push(content) {
+        async push(content) {
           if (cancelled) return
           if (content != null) {
             controller.enqueue(encoder.encode(content))
+            if (controller.desiredSize! <= 0) {
+              return new Promise(resolve => {
+                resolvePull = resolve
+              })
+            }
           } else {
             controller.close()
           }
@@ -185,8 +224,18 @@ export function renderToWebStream(
         },
       })
     },
+    pull() {
+      if (resolvePull) {
+        resolvePull()
+        resolvePull = null
+      }
+    },
     cancel() {
       cancelled = true
+      if (resolvePull) {
+        resolvePull()
+        resolvePull = null
+      }
     },
   })
 }

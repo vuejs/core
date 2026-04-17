@@ -87,3 +87,62 @@ test('pipeToWebWritable error handling', async () => {
   expect(abortedReason).toBeInstanceOf(Error)
   expect(abortedReason.message).toBe('ssr render error')
 })
+
+test('pipeToWebWritable backpressure', async () => {
+  const Async = defineAsyncComponent(() =>
+    Promise.resolve({
+      render: () => h('div', 'b'),
+    }),
+  )
+  const App = {
+    render: () => [h('div', 'a'), h(Async)],
+  }
+
+  let writeCount = 0
+  let resolveWrite: any
+  const writable = new WritableStream({
+    write() {
+      writeCount++
+      return new Promise(resolve => {
+        resolveWrite = resolve
+      })
+    },
+  })
+
+  pipeToWebWritable(createApp(App), {}, writable)
+
+  await new Promise(resolve => setTimeout(resolve, 20))
+  // Should have only 1 write because the first one is pending
+  expect(writeCount).toBe(1)
+
+  resolveWrite()
+  await new Promise(resolve => setTimeout(resolve, 20))
+  // Second write should have happened after the async component resolved
+  expect(writeCount).toBeGreaterThan(1)
+})
+
+test('renderToWebStream backpressure', async () => {
+  const Async = defineAsyncComponent(() =>
+    Promise.resolve({
+      render: () => h('div', 'b'),
+    }),
+  )
+  const App = {
+    render: () => [h('div', 'a'), h(Async)],
+  }
+
+  const stream = renderToWebStream(createApp(App), {})
+  const reader = stream.getReader()
+
+  const { value: v1 } = await reader.read()
+  expect(new TextDecoder().decode(v1)).toBe('<!--[--><div>a</div>')
+
+  const { value: v2 } = await reader.read()
+  expect(new TextDecoder().decode(v2)).toBe('<div>b</div>')
+
+  const { value: v3 } = await reader.read()
+  expect(new TextDecoder().decode(v3)).toBe('<!--]-->')
+
+  const { done } = await reader.read()
+  expect(done).toBe(true)
+})
