@@ -2047,7 +2047,11 @@ function baseCreateRenderer(
   ) => {
     const { el, type, transition, children, shapeFlag } = vnode
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      move(vnode.component!.subTree, container, anchor, moveType)
+      // If component hasn't been mounted yet (e.g. deferred mount from
+      // disabled Teleport inside Suspense), skip moving
+      if (vnode.component) {
+        move(vnode.component.subTree, container, anchor, moveType)
+      }
       return
     }
 

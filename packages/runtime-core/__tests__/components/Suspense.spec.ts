@@ -2570,6 +2570,55 @@ describe('Suspense', () => {
     expect(serializeInner(target)).toBe(``)
   })
 
+  //#14701 - disabled Teleport with component child inside Suspense should not crash
+  test('should not throw when disabled Teleport with component child is inside Suspense', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+
+    const Comp = {
+      render() {
+        return [
+          h('div', 'content'),
+          h(Teleport, { to: target, disabled: true }, h(Child, { msg: 'hello' })),
+        ]
+      },
+    }
+
+    let resolve!: () => void
+    const Child = {
+      props: ['msg'],
+      async setup(props: any) {
+        await new Promise(r => (resolve = r))
+        return () => h('span', props.msg)
+      },
+    }
+
+    const toggle = ref(true)
+    const Parent = {
+      render() {
+        return toggle.value
+          ? h(Suspense, null, {
+              default: () => h(Comp),
+              fallback: h('div', 'fallback'),
+            })
+          : null
+      },
+    }
+
+    const root = document.createElement('div')
+    render(h(Parent), root)
+
+    // Trigger move by toggling
+    toggle.value = false
+    await nextTick()
+
+    // Should not throw "Cannot read properties of null (reading 'subTree')"
+    expect(root.innerHTML).toBe('')
+
+    // Clean up
+    document.body.removeChild(target)
+  })
+
   //#11617
   test('update async component before resolve then update again', async () => {
     const arr: boolean[] = []
