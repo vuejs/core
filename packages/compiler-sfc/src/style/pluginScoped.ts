@@ -246,6 +246,26 @@ function rewriteSelector(
       ;(node as selectorParser.Pseudo).nodes.forEach(value =>
         rewriteSelector(id, rule, value, selectorRoot, deep, slotted),
       )
+      // If __deep was set inside :is/:where, we need to inject [id] at the start
+      // of the inner selector (before the first node), not after.
+      // :is(:deep(.foo)) should become :is([data-v-xxx] .foo)
+      if ((rule as any).__deep && (node as selectorParser.Pseudo).nodes.length) {
+        selector.insertBefore(
+          (node as selectorParser.Pseudo).nodes[0],
+          selectorParser.attribute({
+            attribute: slotted ? id + '-s' : id,
+            value: slotted ? id + '-s' : id,
+            raws: {},
+            quoteMark: `"`,
+          }),
+        )
+        selector.insertBefore(
+          (node as selectorParser.Pseudo).nodes[0],
+          selectorParser.combinator({
+            value: ' ',
+          }),
+        )
+      }
       shouldInject = false
     }
   }

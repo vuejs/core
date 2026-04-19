@@ -151,6 +151,22 @@ color: red
       ":where(.foo[data-v-test] .bar) { color: red;
       }"
     `)
+    // #14724 - :deep at the start of :is/:where
+    expect(compileScoped(`:is(:deep(.foo)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":is([data-v-test] .foo) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:where(:deep(.foo)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":where([data-v-test] .foo) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:is(:deep(.foo)) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":is([data-v-test] .foo) .bar { color: red;
+      }"
+    `)
     expect(compileScoped(`:deep(.foo) { color: red; .bar { color: red; } }`))
       .toMatchInlineSnapshot(`
       "[data-v-test] .foo { color: red;
