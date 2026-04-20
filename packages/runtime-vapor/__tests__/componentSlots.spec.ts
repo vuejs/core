@@ -2344,6 +2344,63 @@ describe('component: slots', () => {
         expect(root.innerHTML).toBe('<div>local fallback</div><!--if-->')
       })
 
+      test('nested interop vapor slot fallback should satisfy enclosing vapor slot validity after content becomes invalid', async () => {
+        const showContent = ref(true)
+        const OuterVaporSlot = createVaporSlot('outer fallback')
+
+        const VdomSlotWithLocalFallback = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'bar', {}, () => [
+              h('div', 'local fallback'),
+            ])
+          },
+        }
+
+        const NestedInteropContainer = defineVaporComponent({
+          setup() {
+            return createComponent(
+              VdomSlotWithLocalFallback,
+              null,
+              {
+                bar: withVaporCtx(() =>
+                  createIf(
+                    () => showContent.value,
+                    () => template('<span>content</span>')(),
+                  ),
+                ),
+              },
+              true,
+            )
+          },
+        })
+
+        const App = defineVaporComponent({
+          setup() {
+            return createComponent(
+              OuterVaporSlot,
+              null,
+              {
+                foo: withVaporCtx(() =>
+                  createComponent(NestedInteropContainer, null, null),
+                ),
+              },
+              true,
+            )
+          },
+        })
+
+        const root = document.createElement('div')
+        createVaporApp(App).use(vaporInteropPlugin).mount(root)
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>content</span><!--if--><!--slot-->')
+
+        showContent.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe(
+          '<div>local fallback</div><!--if--><!--slot-->',
+        )
+      })
+
       test('vdom fallback addition activates inherited vapor fallback', async () => {
         const useFallback = ref(false)
 
