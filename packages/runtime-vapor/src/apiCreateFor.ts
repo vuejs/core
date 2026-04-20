@@ -176,9 +176,10 @@ export const createFor = (
               ) {
                 setCurrentHydrationNode(hydrationStart)
               }
-              queuePostFlushCb(() =>
-                anchor.parentNode!.insertBefore(parentAnchor, anchor),
-              )
+              queuePostFlushCb(() => {
+                const parentNode = anchor.parentNode
+                if (parentNode) parentNode.insertBefore(parentAnchor, anchor)
+              })
             } else {
               const close = locateHydrationBoundaryClose(currentHydrationNode!)
               parentAnchor = markHydrationAnchor(close)
