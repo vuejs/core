@@ -305,6 +305,69 @@ describe('VaporKeepAlive', () => {
     expect(html()).toBe(`<div>A</div><!--if--><!--slot-->`)
   })
 
+  test('should preserve active slot fallback across KeepAlive reactivation', async () => {
+    const current = ref<'slot' | 'other'>('slot')
+    const fallbackText = ref('fallback')
+    const fallbackCalls = vi.fn()
+
+    const SlotConsumer = defineVaporComponent({
+      name: 'slot-consumer',
+      setup() {
+        return createSlot('default', null, () => {
+          fallbackCalls()
+          const n0 = template(`<div> </div>`)() as any
+          const x0 = child(n0) as any
+          renderEffect(() => setText(x0, fallbackText.value))
+          return n0
+        })
+      },
+    })
+
+    const Other = defineVaporComponent({
+      name: 'other-view',
+      setup() {
+        return template(`<p>other</p>`)() as any
+      },
+    })
+
+    const { html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createDynamicComponent(() =>
+              current.value === 'slot' ? SlotConsumer : Other,
+            ),
+        })
+      },
+    }).render()
+
+    expect(html()).toBe(
+      `<div>fallback</div><!--slot--><!--dynamic-component-->`,
+    )
+    expect(fallbackCalls).toHaveBeenCalledTimes(1)
+
+    fallbackText.value = 'updated'
+    await nextTick()
+    expect(html()).toBe(`<div>updated</div><!--slot--><!--dynamic-component-->`)
+    expect(fallbackCalls).toHaveBeenCalledTimes(1)
+
+    current.value = 'other'
+    await nextTick()
+    expect(html()).toBe(`<p>other</p><!--dynamic-component-->`)
+    expect(fallbackCalls).toHaveBeenCalledTimes(1)
+
+    fallbackText.value = 'reactivated'
+    await nextTick()
+    expect(html()).toBe(`<p>other</p><!--dynamic-component-->`)
+
+    current.value = 'slot'
+    await nextTick()
+    expect(html()).toBe(
+      `<div>reactivated</div><!--slot--><!--dynamic-component-->`,
+    )
+    expect(fallbackCalls).toHaveBeenCalledTimes(1)
+  })
+
   test('should call correct lifecycle hooks', async () => {
     const toggle = ref(true)
     const viewRef = ref('one')
