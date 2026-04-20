@@ -394,6 +394,39 @@ describe('component: slots', () => {
       expect(controller.takePendingRecheck()).toBe(false)
     })
 
+    test('slot fallback controller stops fallback scope when fallback body throws', async () => {
+      const source = ref(0)
+      const effectRuns = vi.fn()
+      const cleanup = vi.fn()
+      const err = new Error('fallback boom')
+
+      const controller = new SlotFallbackController({
+        getParentBoundary: () => null,
+        getLocalFallback: () => () => {
+          onScopeDispose(cleanup)
+          renderEffect(() => {
+            effectRuns(source.value)
+          })
+          throw err
+        },
+        getContent: () => [],
+        getParentNode: () => null,
+        getAnchor: () => null,
+        runWithRenderCtx: fn => fn(),
+        onValidityChange: vi.fn(),
+      })
+
+      expect(() => controller.recheck()).toThrow(err)
+      expect(controller.getActiveFallback()).toBe(null)
+      expect(cleanup).toHaveBeenCalledTimes(1)
+      expect(effectRuns).toHaveBeenCalledTimes(1)
+
+      source.value++
+      await nextTick()
+
+      expect(effectRuns).toHaveBeenCalledTimes(1)
+    })
+
     test('slot fallback controller does not accumulate order-sync hooks', async () => {
       const fallback = new VaporFragment([
         document.createTextNode('a'),
