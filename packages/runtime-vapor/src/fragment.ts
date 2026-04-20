@@ -700,39 +700,6 @@ function collectBlockNodes(
   return nodes
 }
 
-function collectSlotFallbackCarrierNodes(
-  block: Block,
-  nodes: Node[] = [],
-  includeComments: boolean = false,
-): Node[] {
-  if (block instanceof Node) {
-    if (includeComments || !(block instanceof Comment)) {
-      nodes.push(block)
-    }
-    return nodes
-  }
-
-  if (isVaporComponent(block)) {
-    if (block.block) {
-      collectSlotFallbackCarrierNodes(block.block, nodes, includeComments)
-    }
-    return nodes
-  }
-
-  if (isArray(block)) {
-    for (const child of block) {
-      collectSlotFallbackCarrierNodes(child, nodes, includeComments)
-    }
-    return nodes
-  }
-
-  collectSlotFallbackCarrierNodes(block.nodes, nodes, true)
-  if (block.anchor) {
-    nodes.push(block.anchor)
-  }
-  return nodes
-}
-
 export function insertSlotFallbackCarrier(
   block: Block,
   parent: ParentNode,
