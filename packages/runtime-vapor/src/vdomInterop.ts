@@ -639,6 +639,7 @@ function appendVnodeUpdatedHook(vnode: VNode, hook: () => void): void {
 function trackFragmentVNodeUpdates(frag: VaporFragment, vnode: VNode): void {
   const refresh = () => {
     frag.nodes = resolveVNodeNodes(vnode)
+    frag.validityPending = false
     if (frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
   appendVnodeUpdatedHook(vnode, refresh)
@@ -655,6 +656,7 @@ function mountVNode(
   const suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
   const frag = new VaporFragment<Block>([])
+  frag.validityPending = !isHydrating
   frag.vnode = vnode
   frag.$key = vnode.key
   trackFragmentVNodeUpdates(frag, vnode)
@@ -688,6 +690,7 @@ function mountVNode(
     onScopeDispose(unmount, true)
     isMounted = true
     frag.nodes = resolveVNodeNodes(vnode)
+    frag.validityPending = false
   }
 
   frag.insert = (parentNode, anchor, transition) => {
@@ -738,6 +741,7 @@ function mountVNode(
       simpleSetCurrentInstance(prev)
     }
     frag.nodes = resolveVNodeNodes(vnode)
+    frag.validityPending = false
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
 
@@ -760,6 +764,7 @@ function createVDOMComponent(
   const useBridge = shouldUseRendererBridge(component)
   const comp = useBridge ? ensureRendererBridge(component) : component
   const frag = new VaporFragment<Block>([])
+  frag.validityPending = !isHydrating
   const vnode = (frag.vnode = createVNode(
     comp,
     rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
@@ -855,6 +860,7 @@ function createVDOMComponent(
     onScopeDispose(unmount, true)
     isMounted = true
     frag.nodes = resolveVNodeNodes(vnode)
+    frag.validityPending = false
   }
 
   vnode.scopeId = getCurrentScopeId() || null
@@ -905,6 +911,7 @@ function createVDOMComponent(
     }
 
     frag.nodes = resolveVNodeNodes(vnode)
+    frag.validityPending = false
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
 
@@ -1572,7 +1579,9 @@ function renderVaporSlot(
     // fallback lifecycle. Forcing the interop wrapper to own that branch breaks
     // fallback blocks that can later resolve to an empty vnode list.
     const frag = new VaporFragment<Block>([])
+    frag.validityPending = !isHydrating
     const inheritedBoundary = frag.inheritedSlotBoundary
+    let contentNodes: Block = []
     let isResolvingContent = false
     let wrappedLocalFallback!: BlockFn
     let wrappedOutletFallback!: BlockFn
@@ -1587,10 +1596,10 @@ function renderVaporSlot(
           slotState.localFallback.value ? wrappedLocalFallback : undefined,
           slotState.outletFallback.value ? wrappedOutletFallback : undefined,
         ),
-      getContent: () => frag.nodes,
+      getContent: () => contentNodes,
       getParentNode: () => {
         if (currentParentNode) return currentParentNode
-        const carrierAnchor = findFirstSlotFallbackCarrierNode(frag.nodes)
+        const carrierAnchor = findFirstSlotFallbackCarrierNode(contentNodes)
         return carrierAnchor
           ? (carrierAnchor.parentNode as ParentNode | null)
           : null
@@ -1599,6 +1608,10 @@ function renderVaporSlot(
       runWithRenderCtx: fn => runWithFragmentRenderCtx(frag, fn),
       isBusy: () => isResolvingContent,
       isDisposed: () => disposed,
+      syncEffectiveOutput: () => {
+        frag.nodes = controller.getEffectiveOutput()
+        frag.validityPending = false
+      },
       onValidityChange: () => {
         if (inheritedBoundary) {
           inheritedBoundary.markDirty()
@@ -1641,7 +1654,7 @@ function renderVaporSlot(
         ) {
           return resolvedContent
         }
-        frag.nodes = resolvedContent || []
+        contentNodes = resolvedContent || []
         controller.recheck(controller.takePendingRecheck())
         return resolvedContent
       }
@@ -1695,14 +1708,14 @@ function renderVaporSlot(
         currentAnchor = anchor
         if (controller.getActiveFallback()) {
           controller.relocate()
-          insertSlotFallbackCarrier(frag.nodes, parentNode, anchor)
+          insertSlotFallbackCarrier(contentNodes, parentNode, anchor)
         } else {
           insert(frag.nodes, parentNode, anchor)
         }
       }
       frag.remove = parentNode => {
         if (controller.getActiveFallback()) {
-          removeSlotFallbackCarrier(frag.nodes, parentNode)
+          removeSlotFallbackCarrier(contentNodes, parentNode)
         } else {
           remove(frag.nodes, parentNode)
         }

@@ -814,6 +814,7 @@ export interface SlotFallbackControllerHost {
   //   opts out of the controller's post-fallback same-stack rerun
   isContentValid?: () => boolean
   rerunRecheckAfterFallbackRender?: boolean
+  syncEffectiveOutput?: () => void
 }
 
 export class SlotFallbackController {
@@ -933,6 +934,9 @@ export class SlotFallbackController {
     const nextValid = this.activeFallback
       ? isValidBlock(this.activeFallback)
       : this.isContentValid()
+    if (this.host.syncEffectiveOutput) {
+      this.host.syncEffectiveOutput()
+    }
     if (prevValid !== nextValid) {
       this.host.onValidityChange()
     }
