@@ -77,10 +77,10 @@ export function isValidBlock(block: Block | null | undefined): boolean {
     return isValidBlock(block.block)
   } else if (isArray(block)) {
     return block.length > 0 && block.some(isValidBlock)
-  } else if (block instanceof SlotFragment) {
-    return isValidBlock(block.getEffectiveOutput())
   } else if (block.validityPending) {
     return true
+  } else if (block instanceof SlotFragment) {
+    return isValidBlock(block.getEffectiveOutput())
   } else {
     // fragment
     return isValidBlock(block.nodes)
