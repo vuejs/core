@@ -175,6 +175,14 @@ describe('component: slots', () => {
       expect(isValidBlock(frag)).toBe(true)
     })
 
+    test('slot fragment validityPending takes precedence over effective output', () => {
+      const frag = new SlotFragment()
+
+      frag.validityPending = true
+
+      expect(isValidBlock(frag)).toBe(true)
+    })
+
     test('slot fragment remove cleans active fallback and fallback scope', () => {
       const container = document.createElement('div')
       const stop = vi.fn()
