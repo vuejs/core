@@ -1,5 +1,5 @@
 import { template } from '../../src/dom/template'
-import { child, next, nthChild } from '../../src/dom/node'
+import { child, next, nthChild, txt } from '../../src/dom/node'
 
 describe('api: template', () => {
   test('create element', () => {
@@ -39,6 +39,21 @@ describe('api: template', () => {
     expect(b).toBe(root.childNodes[1])
     expect(nthChild(root, 2)).toBe(root.childNodes[2])
     expect(next(b)).toBe(root.childNodes[2])
+  })
+
+  test('retrieve child nodes from the template tag', () => {
+    const t = template('<template><span>')
+    const root = t() as ParentNode
+    const span = child(root)
+    expect(span.nodeName).toBe('SPAN')
+  })
+
+  test('retrieve the text node from the template tag', () => {
+    const t = template('<template> ')
+    const root = t() as ParentNode
+    const text = txt(root)
+    expect(text.nodeType).toBe(3)
+    expect(text.textContent).toBe(' ')
   })
 
   test('attribute quote omission', () => {

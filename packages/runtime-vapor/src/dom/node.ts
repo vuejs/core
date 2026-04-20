@@ -1,6 +1,10 @@
 import type { ChildItem, InsertionParent } from '../insertionState'
 import { isComment, isHydrating, locateEndAnchor } from './hydration'
 
+function unwrapTemplate<T extends Node>(node: T): T {
+  return (node instanceof HTMLTemplateElement ? node.content : node) as T
+}
+
 /*@__NO_SIDE_EFFECTS__*/
 export function createElement(tagName: string): HTMLElement {
   return document.createElement(tagName)
@@ -28,6 +32,7 @@ export function parentNode(node: Node): ParentNode | null {
 
 /*@__NO_SIDE_EFFECTS__*/
 export function txt(node: ParentNode): Node {
+  node = unwrapTemplate(node)
   if (isHydrating) {
     // since SSR doesn't generate blank text nodes,
     // manually insert a text node as the first child
@@ -42,6 +47,7 @@ export function txt(node: ParentNode): Node {
 
 /*@__NO_SIDE_EFFECTS__*/
 export function child(node: InsertionParent, logicalIndex?: number): Node {
+  node = unwrapTemplate(node)
   if (isHydrating) {
     return locateChildByLogicalIndex(node, logicalIndex ?? 0)!
   }
