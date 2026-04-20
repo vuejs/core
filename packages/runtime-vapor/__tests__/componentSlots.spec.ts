@@ -2482,6 +2482,49 @@ describe('component: slots', () => {
         expect(mountSpy).toHaveBeenCalledTimes(1)
       })
 
+      test('vdom fallback added over forwarded vapor slot fragments should activate when slot content later becomes invalid', async () => {
+        const useFallback = ref(false)
+        const foo = ref('content')
+        const showContent = ref(true)
+
+        const VdomSlotWithOptionalFallback = {
+          render(this: any) {
+            return renderSlot(
+              this.$slots,
+              'foo',
+              {},
+              useFallback.value ? () => [h('div', 'fallback')] : undefined,
+            )
+          },
+        }
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            return createComponent(
+              VdomSlotWithOptionalFallback,
+              null,
+              {
+                foo: withVaporCtx(() => createSlot('foo', null)),
+              },
+              true,
+            )
+          },
+        })
+
+        const App = createTestApp(VaporForwardedSlot, foo, showContent)
+        const root = document.createElement('div')
+        createApp(App).use(vaporInteropPlugin).mount(root)
+        expect(root.innerHTML).toBe('<span>content</span>')
+
+        useFallback.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>content</span>')
+
+        showContent.value = false
+        await nextTick()
+        expect(root.innerHTML).toBe('<div>fallback</div>')
+      })
+
       test('vdom fallback added later should propagate to nested slot boundaries inside still-valid content', async () => {
         const useFallback = ref(false)
         const showInner = ref(true)
