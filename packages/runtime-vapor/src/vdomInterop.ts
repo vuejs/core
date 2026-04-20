@@ -101,9 +101,8 @@ import {
   VaporFragment,
   findFirstSlotFallbackCarrierNode,
   getCurrentSlotEndAnchor,
-  insertSlotFallbackCarrier,
   isFragment,
-  removeSlotFallbackCarrier,
+  mutateSlotFallbackCarrier,
   resolveSlotFallbackCarrierOwner,
   trackSlotBoundaryDirtying,
   withHydratingSlotBoundary,
@@ -1705,14 +1704,18 @@ function renderVaporSlot(
         currentAnchor = anchor
         if (controller.getActiveFallback()) {
           controller.relocate()
-          insertSlotFallbackCarrier(contentNodes, parentNode, anchor)
+          mutateSlotFallbackCarrier(contentNodes, block =>
+            insert(block, parentNode, anchor),
+          )
         } else {
           insert(frag.nodes, parentNode, anchor)
         }
       }
       frag.remove = parentNode => {
         if (controller.getActiveFallback()) {
-          removeSlotFallbackCarrier(contentNodes, parentNode)
+          mutateSlotFallbackCarrier(contentNodes, block =>
+            remove(block, parentNode),
+          )
         } else {
           remove(frag.nodes, parentNode)
         }

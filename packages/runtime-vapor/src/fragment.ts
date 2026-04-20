@@ -623,48 +623,68 @@ export function trackSlotBoundaryDirtying(fragment: VaporFragment): void {
   )
 }
 
+function walkSlotFallbackBlock(
+  block: Block,
+  node: (node: Node) => boolean,
+  fragment: (block: VaporFragment, walk: (block: Block) => boolean) => boolean,
+): boolean {
+  if (block instanceof Node) {
+    return node(block)
+  }
+
+  if (isVaporComponent(block)) {
+    return walkSlotFallbackBlock(block.block, node, fragment)
+  }
+
+  if (isArray(block)) {
+    for (const child of block) {
+      if (walkSlotFallbackBlock(child, node, fragment)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  return fragment(block, block => walkSlotFallbackBlock(block, node, fragment))
+}
+
 // Slot fallback preservation is keyed off the fragment owner, even though
 // carrier relocation / ordering still operates on the full Block wrapper.
 export function resolveSlotFallbackCarrierOwner(
   block: Block,
 ): VaporFragment | null {
-  if (block instanceof Node) {
-    return null
-  }
-
-  if (isVaporComponent(block)) {
-    return block.block ? resolveSlotFallbackCarrierOwner(block.block) : null
-  }
-
-  if (isArray(block)) {
-    for (const child of block) {
-      const owner = resolveSlotFallbackCarrierOwner(child)
-      if (owner) return owner
-    }
-    return null
-  }
-
-  return block
+  let owner: VaporFragment | null = null
+  walkSlotFallbackBlock(
+    block,
+    () => false,
+    block => {
+      owner = block
+      return true
+    },
+  )
+  return owner
 }
 
 export function findFirstSlotFallbackCarrierNode(block: Block): Node | null {
-  if (block instanceof Node) {
-    return block
-  }
-
-  if (isVaporComponent(block)) {
-    return block.block ? findFirstSlotFallbackCarrierNode(block.block) : null
-  }
-
-  if (isArray(block)) {
-    for (const child of block) {
-      const anchor = findFirstSlotFallbackCarrierNode(child)
-      if (anchor) return anchor
-    }
-    return null
-  }
-
-  return findFirstSlotFallbackCarrierNode(block.nodes) || block.anchor || null
+  let node: Node | null = null
+  walkSlotFallbackBlock(
+    block,
+    value => {
+      node = value
+      return true
+    },
+    (block, walk) => {
+      if (walk(block.nodes)) {
+        return true
+      }
+      if (block.anchor) {
+        node = block.anchor
+        return true
+      }
+      return false
+    },
+  )
+  return node
 }
 
 function collectBlockNodes(
@@ -672,85 +692,42 @@ function collectBlockNodes(
   nodes: Node[] = [],
   includeComments: boolean = false,
 ): Node[] {
-  if (block instanceof Node) {
-    if (includeComments || !(block instanceof Comment)) {
-      nodes.push(block)
-    }
-    return nodes
-  }
-
-  if (isVaporComponent(block)) {
-    if (block.block) {
-      collectBlockNodes(block.block, nodes, includeComments)
-    }
-    return nodes
-  }
-
-  if (isArray(block)) {
-    for (const child of block) {
-      collectBlockNodes(child, nodes, includeComments)
-    }
-    return nodes
-  }
-
-  collectBlockNodes(block.nodes, nodes, true)
-  if (block.anchor) {
-    nodes.push(block.anchor)
-  }
+  walkSlotFallbackBlock(
+    block,
+    block => {
+      if (includeComments || !(block instanceof Comment)) {
+        nodes.push(block)
+      }
+      return false
+    },
+    block => {
+      collectBlockNodes(block.nodes, nodes, true)
+      if (block.anchor) {
+        nodes.push(block.anchor)
+      }
+      return false
+    },
+  )
   return nodes
 }
 
-export function insertSlotFallbackCarrier(
+export function mutateSlotFallbackCarrier(
   block: Block,
-  parent: ParentNode,
-  anchor: Node | null,
+  apply: (block: Node | VaporFragment) => void,
 ): void {
-  if (block instanceof Node) {
-    if (!(block instanceof Comment)) {
-      insert(block, parent, anchor)
-    }
-    return
-  }
-
-  if (isVaporComponent(block)) {
-    insertSlotFallbackCarrier(block.block, parent, anchor)
-    return
-  }
-
-  if (isArray(block)) {
-    for (const child of block) {
-      insertSlotFallbackCarrier(child, parent, anchor)
-    }
-    return
-  }
-
-  insert(block, parent, anchor)
-}
-
-export function removeSlotFallbackCarrier(
-  block: Block,
-  parent?: ParentNode,
-): void {
-  if (block instanceof Node) {
-    if (!(block instanceof Comment)) {
-      remove(block, parent)
-    }
-    return
-  }
-
-  if (isVaporComponent(block)) {
-    removeSlotFallbackCarrier(block.block, parent)
-    return
-  }
-
-  if (isArray(block)) {
-    for (const child of block) {
-      removeSlotFallbackCarrier(child, parent)
-    }
-    return
-  }
-
-  remove(block, parent)
+  walkSlotFallbackBlock(
+    block,
+    block => {
+      if (!(block instanceof Comment)) {
+        apply(block)
+      }
+      return false
+    },
+    block => {
+      apply(block)
+      return false
+    },
+  )
 }
 
 function hasSlotFallback(
@@ -1203,7 +1180,9 @@ export class SlotFragment extends DynamicFragment {
   private insertSlot(parent: ParentNode, anchor: Node | null): void {
     if (this.fallbackBlock) {
       insert(this.fallbackBlock, parent, anchor)
-      insertSlotFallbackCarrier(this.nodes, parent, anchor)
+      mutateSlotFallbackCarrier(this.nodes, block =>
+        insert(block, parent, anchor),
+      )
       return
     }
     insert(this.nodes, parent, anchor)
@@ -1211,7 +1190,7 @@ export class SlotFragment extends DynamicFragment {
 
   private removeSlot(parent?: ParentNode): void {
     if (this.fallbackBlock) {
-      removeSlotFallbackCarrier(this.nodes, parent)
+      mutateSlotFallbackCarrier(this.nodes, block => remove(block, parent))
     } else {
       remove(this.nodes, parent)
     }
