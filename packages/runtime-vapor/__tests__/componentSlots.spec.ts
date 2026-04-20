@@ -37,6 +37,7 @@ import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
 import { isValidBlock } from '../src/block'
+import { hydrateNode, setCurrentHydrationNode } from '../src/dom/hydration'
 import {
   DynamicFragment,
   ForFragment,
@@ -45,7 +46,11 @@ import {
   SlotFragment,
   VaporFragment,
   getCurrentSlotBoundary,
+  getCurrentSlotEndAnchor,
+  isHydratingSlotFallbackActive,
   trackSlotBoundaryDirtying,
+  withHydratingSlotBoundary,
+  withHydratingSlotFallbackActive,
   withOwnedSlotBoundary,
   withSlotFallbackBoundary,
 } from '../src/fragment'
@@ -392,6 +397,43 @@ describe('component: slots', () => {
       controller.boundary.markDirty()
 
       expect(controller.takePendingRecheck()).toBe(false)
+    })
+
+    test('withHydratingSlotBoundary isolates fallback-active state between boundaries without local markers', () => {
+      const start = document.createComment('[')
+      const end = document.createComment(']')
+      const host = document.createElement('div')
+      host.append(start, end)
+
+      hydrateNode(start, () => {
+        withHydratingSlotBoundary(() => {
+          const outerEnd = getCurrentSlotEndAnchor()
+          expect(outerEnd).toBe(end)
+
+          setCurrentHydrationNode(end)
+
+          withHydratingSlotBoundary(() => {
+            expect(getCurrentSlotEndAnchor()).toBe(end)
+            expect(isHydratingSlotFallbackActive()).toBe(false)
+
+            withHydratingSlotFallbackActive(() => {
+              expect(isHydratingSlotFallbackActive()).toBe(true)
+
+              setCurrentHydrationNode(end)
+              withHydratingSlotBoundary(() => {
+                expect(getCurrentSlotEndAnchor()).toBe(end)
+                expect(isHydratingSlotFallbackActive()).toBe(false)
+              })
+            })
+
+            expect(getCurrentSlotEndAnchor()).toBe(end)
+            expect(isHydratingSlotFallbackActive()).toBe(false)
+          })
+
+          expect(getCurrentSlotEndAnchor()).toBe(end)
+          expect(isHydratingSlotFallbackActive()).toBe(false)
+        })
+      })
     })
 
     test('slot fallback controller stops fallback scope when fallback body throws', async () => {
