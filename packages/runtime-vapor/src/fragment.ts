@@ -976,6 +976,9 @@ export class SlotFallbackController {
         this.host.runWithRenderCtx(
           () => scope.run(() => renderSlotFallback(this.boundary)) || undefined,
         ) || undefined
+    } catch (err) {
+      scope.stop()
+      throw err
     } finally {
       this.isRenderingFallback = false
     }
