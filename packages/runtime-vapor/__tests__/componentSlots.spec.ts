@@ -418,6 +418,38 @@ describe('component: slots', () => {
       expect(fallback.onUpdated).toHaveLength(1)
     })
 
+    test('slot fallback controller re-syncs the whole carrier block order', async () => {
+      const container = document.createElement('div')
+      const carrierA = document.createTextNode('x')
+      const carrierB = document.createTextNode('y')
+      const marker = document.createTextNode('!')
+      const slotAnchor = document.createComment('slot')
+      const fallback = new VaporFragment([
+        document.createTextNode('a'),
+        document.createTextNode('b'),
+      ])
+      const controller = new SlotFallbackController({
+        getParentBoundary: () => null,
+        getLocalFallback: () => () => fallback,
+        getContent: () => [carrierA, carrierB],
+        getParentNode: () => container,
+        getAnchor: () => slotAnchor,
+        runWithRenderCtx: fn => fn(),
+        isContentValid: () => false,
+        onValidityChange: vi.fn(),
+      })
+
+      container.append(carrierA, marker, carrierB, slotAnchor)
+      controller.recheck()
+
+      expect(container.innerHTML).toBe('abx!y<!--slot-->')
+
+      controller.syncActiveFallback()
+      await nextTick()
+
+      expect(container.innerHTML).toBe('abxy!<!--slot-->')
+    })
+
     test('slot fallback controller defaults to idle when isBusy is omitted', () => {
       const fallback = document.createTextNode('fallback')
       const controller = new SlotFallbackController({
