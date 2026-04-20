@@ -1087,28 +1087,24 @@ export function getCurrentSlotEndAnchor(): Node | null {
 }
 
 export function withHydratingSlotBoundary<R>(fn: () => R): R {
-  let prevState: HydratingSlotBoundaryState | null = null
-  let pushedBoundaryState = false
+  let endAnchor = getCurrentSlotEndAnchor()
   let exitHydrationBoundary: (() => void) | undefined
 
   locateHydrationNode()
   if (isComment(currentHydrationNode!, '[')) {
-    const endAnchor = locateEndAnchor(currentHydrationNode)
+    endAnchor = locateEndAnchor(currentHydrationNode)
     setCurrentHydrationNode(currentHydrationNode.nextSibling)
-    prevState = setCurrentHydratingSlotBoundaryState({
-      endAnchor,
-      fallbackActive: false,
-    })
-    pushedBoundaryState = true
     exitHydrationBoundary = enterHydrationBoundary(endAnchor)
   }
+  const prevState = setCurrentHydratingSlotBoundaryState({
+    endAnchor,
+    fallbackActive: false,
+  })
 
   try {
     return fn()
   } finally {
-    if (pushedBoundaryState) {
-      setCurrentHydratingSlotBoundaryState(prevState)
-    }
+    setCurrentHydratingSlotBoundaryState(prevState)
     exitHydrationBoundary && exitHydrationBoundary()
   }
 }
