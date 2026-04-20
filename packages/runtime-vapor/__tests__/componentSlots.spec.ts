@@ -2108,6 +2108,78 @@ describe('component: slots', () => {
         expect(root.innerHTML).toBe('<p>alt fallback</p><!--slot-->')
       })
 
+      test('vdom fallback for renderVaporSlot is evaluated once on initial mount', async () => {
+        const fallbackText = ref('fallback')
+        const fallbackSpy = vi.fn(() => [h('div', fallbackText.value)])
+
+        const VdomSlotWithCountingFallback = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, fallbackSpy)
+          },
+        }
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            return createComponent(
+              VdomSlotWithCountingFallback,
+              null,
+              {
+                foo: withVaporCtx(() => createSlot('foo', null)),
+              },
+              true,
+            )
+          },
+        })
+
+        const root = document.createElement('div')
+        createVaporApp(VaporForwardedSlot).use(vaporInteropPlugin).mount(root)
+
+        expect(root.innerHTML).toBe('<div>fallback</div><!--slot-->')
+        expect(fallbackSpy).toHaveBeenCalledTimes(1)
+
+        fallbackText.value = 'updated fallback'
+        await nextTick()
+
+        expect(root.innerHTML).toBe('<div>updated fallback</div><!--slot-->')
+        expect(fallbackSpy).toHaveBeenCalledTimes(2)
+      })
+
+      test('vdom fallback for renderVaporSlot supports text children', async () => {
+        const fallbackText = ref('fallback')
+        const fallbackSpy = vi.fn(() => [fallbackText.value])
+
+        const VdomSlotWithTextFallback = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, fallbackSpy)
+          },
+        }
+
+        const VaporForwardedSlot = defineVaporComponent({
+          setup() {
+            return createComponent(
+              VdomSlotWithTextFallback,
+              null,
+              {
+                foo: withVaporCtx(() => createSlot('foo', null)),
+              },
+              true,
+            )
+          },
+        })
+
+        const root = document.createElement('div')
+        createVaporApp(VaporForwardedSlot).use(vaporInteropPlugin).mount(root)
+
+        expect(root.innerHTML).toBe('fallback<!--slot-->')
+        expect(fallbackSpy).toHaveBeenCalledTimes(1)
+
+        fallbackText.value = 'updated fallback'
+        await nextTick()
+
+        expect(root.innerHTML).toBe('updated fallback<!--slot-->')
+        expect(fallbackSpy).toHaveBeenCalledTimes(2)
+      })
+
       test('moving active vdom fallback keeps slot carrier order after teleport move', async () => {
         const targetA = document.createElement('div')
         targetA.id = 'component-slots-fallback-target-a'

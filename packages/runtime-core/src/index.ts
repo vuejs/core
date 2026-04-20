@@ -609,7 +609,12 @@ export { setRef } from './rendererTemplateRef'
 /**
  * @internal
  */
-export { VaporSlot, type VNodeNormalizedRef, normalizeRef } from './vnode'
+export {
+  VaporSlot,
+  normalizeVNode,
+  type VNodeNormalizedRef,
+  normalizeRef,
+} from './vnode'
 /**
  * @internal
  */

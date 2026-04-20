@@ -9,9 +9,7 @@ import {
   type KeepAliveContext,
   MoveType,
   type Plugin,
-  type RendererElement,
   type RendererInternals,
-  type RendererNode,
   type ShallowRef,
   type Slots,
   Static,
@@ -36,6 +34,7 @@ import {
   isVNode,
   isHydrating as isVdomHydrating,
   normalizeRef,
+  normalizeVNode,
   onScopeDispose,
   queuePostFlushCb,
   renderSlot,
@@ -1433,12 +1432,26 @@ function hydrateVNode(
   else advanceHydrationNode(node)
 }
 
-function createVaporFallback(
-  fallback: () => any,
+function createFallback(
+  fallback: InteropSlotFallback,
   parentComponent: ComponentInternalInstance | null,
+  isVNodeFallback: () => boolean,
 ): BlockFn {
   const internals = ensureRenderer().internals
-  return () => createFallback(fallback)(internals, parentComponent)
+  return () => {
+    if (isVNodeFallback()) {
+      const frag = createVNodeChildrenFragment(
+        internals,
+        () => (fallback() as VNodeArrayChildren).map(normalizeVNode),
+        parentComponent,
+      )
+      if (isHydrating && frag.hydrate) {
+        frag.hydrate()
+      }
+      return frag
+    }
+    return fallback() as Block
+  }
 }
 
 const renderEmptyVNodes = (): VNodeArrayChildren => []
@@ -1458,32 +1471,10 @@ function runWithFragmentRenderCtx<R>(fragment: VaporFragment, fn: () => R): R {
   }
 }
 
-const createFallback =
-  (fallback: () => any) =>
-  (
-    internals: RendererInternals<RendererNode, RendererElement>,
-    parentComponent: ComponentInternalInstance | null,
-  ) => {
-    const fallbackNodes = fallback()
-
-    // vnode content, wrap it as a VaporFragment
-    if (isArray(fallbackNodes) && fallbackNodes.every(isVNode)) {
-      const frag = createVNodeChildrenFragment(
-        internals,
-        () => fallback() as VNode[],
-        parentComponent,
-      )
-      if (isHydrating && frag.hydrate) {
-        frag.hydrate()
-      }
-      return frag
-    }
-
-    // vapor block
-    return fallbackNodes as Block
-  }
-
-type InteropSlotFallback = () => any
+type InteropSlotFallback = {
+  (): any
+  __vdom?: boolean
+}
 
 interface InteropVaporSlotState {
   localFallback: ShallowRef<InteropSlotFallback | undefined>
@@ -1631,15 +1622,21 @@ function renderVaporSlot(
 
     try {
       wrappedLocalFallback = controller.wrapFallback(
-        createVaporFallback(
+        createFallback(
           () => (slotState.localFallback.value || renderEmptyVNodes)(),
           parentComponent,
+          () =>
+            !!slotState.localFallback.value &&
+            !!slotState.localFallback.value.__vdom,
         ),
       )
       wrappedOutletFallback = controller.wrapFallback(
-        createVaporFallback(
+        createFallback(
           () => (slotState.outletFallback.value || renderEmptyVNodes)(),
           parentComponent,
+          () =>
+            !!slotState.outletFallback.value &&
+            !!slotState.outletFallback.value.__vdom,
         ),
       )
       const preferSlotFragmentOwnership =
