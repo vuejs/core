@@ -368,6 +368,93 @@ describe('VaporKeepAlive', () => {
     expect(fallbackCalls).toHaveBeenCalledTimes(1)
   })
 
+  test('should keep cached slot v-for branches isolated across reusable KeepAlive branches', async () => {
+    const toggle = ref(true)
+    const itemsA = ref([1, 2])
+    const itemsB = ref([10])
+
+    const SlotConsumer = defineVaporComponent({
+      setup() {
+        return createSlot('default', null, () =>
+          template('<div>fallback</div>')(),
+        )
+      },
+    })
+
+    const ReusableKeepAlive = defineVaporComponent({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: withVaporCtx(() => createSlot('default', null)),
+        })
+      },
+    })
+
+    const renderItems = (items: typeof itemsA) =>
+      createComponent(SlotConsumer, null, {
+        default: () =>
+          createFor(
+            () => items.value,
+            item => {
+              const n0 = template('<span> </span>')() as any
+              const x0 = child(n0) as any
+              renderEffect(() => setText(x0, String(item.value)))
+              return n0
+            },
+            item => item,
+          ),
+      })
+
+    const { html } = define({
+      setup() {
+        return createComponent(ReusableKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => renderItems(itemsA),
+              () => renderItems(itemsB),
+              undefined,
+              undefined,
+              0,
+            ),
+        })
+      },
+    }).render()
+
+    expect(html()).toBe(
+      '<span>1</span><span>2</span><!--for--><!--slot--><!--if--><!--slot-->',
+    )
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe(
+      '<span>10</span><!--for--><!--slot--><!--if--><!--slot-->',
+    )
+
+    itemsA.value = []
+    await nextTick()
+    expect(html()).toBe(
+      '<span>10</span><!--for--><!--slot--><!--if--><!--slot-->',
+    )
+
+    itemsB.value = [20, 30]
+    await nextTick()
+    expect(html()).toBe(
+      '<span>20</span><span>30</span><!--for--><!--slot--><!--if--><!--slot-->',
+    )
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe(
+      '<div>fallback</div><!--for--><!--slot--><!--if--><!--slot-->',
+    )
+
+    itemsA.value = [3]
+    await nextTick()
+    expect(html()).toBe(
+      '<span>3</span><!--for--><!--slot--><!--if--><!--slot-->',
+    )
+  })
+
   test('should call correct lifecycle hooks', async () => {
     const toggle = ref(true)
     const viewRef = ref('one')

@@ -207,7 +207,7 @@ export const createFor = (
         }
       }
     } else {
-      parent = parent || parentAnchor!.parentNode
+      parent = parentAnchor!.parentNode
       if (!oldLength) {
         // fast path for all new
         for (let i = 0; i < newLength; i++) {
