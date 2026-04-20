@@ -10408,6 +10408,72 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('ssr output for forwarded empty named VDOM slot with trailing sibling nodes', async () => {
+    const data = ref({})
+    const ssrComponents: Record<string, any> = {}
+
+    ssrComponents.Page = compile(
+      `<template>
+        <div>
+          <main><span>content</span></main>
+          <slot name="footer-before" />
+          <p>footer</p>
+        </div>
+      </template>`,
+      data,
+      ssrComponents,
+      { vapor: false, ssr: true },
+    )
+    ssrComponents.Layout = compile(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <div>
+          <slot name="banner" />
+          <components.Page>
+            <template #footer-before>
+              <slot name="footer-before" />
+            </template>
+          </components.Page>
+        </div>
+      </template>`,
+      data,
+      ssrComponents,
+      { vapor: false, ssr: true },
+    )
+
+    const ServerApp = compile(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.Layout>
+          <template #banner>
+            <div>banner</div>
+          </template>
+          <template #footer-before>
+            <slot name="footer-before" />
+          </template>
+        </components.Layout>
+      </template>`,
+      data,
+      ssrComponents,
+      { vapor: true, ssr: true },
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(ServerApp),
+    )
+
+    expect(formatHtml(html)).toMatchInlineSnapshot(`
+    	"<div>
+    	<!--[--><div>banner</div><!--]-->
+    	<div><main><span>content</span></main>
+    	<!--[--><!--]-->
+    	<p>footer</p></div></div>"
+    `)
+  })
+
   test('hydrate prepended multi-root component with trailing empty if should restore outer cursor', async () => {
     const { container } = await testWithVaporApp(
       `<script setup>

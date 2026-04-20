@@ -6,9 +6,10 @@ import {
 } from '../../src'
 import { resolveTransitionBlock } from '../../src/components/Transition'
 import { nextTick, ref } from 'vue'
-import { compile, makeRender } from '../_utils'
+import { compile, makeInteropRender, makeRender } from '../_utils'
 
 const define = makeRender()
+const defineInterop = makeInteropRender()
 
 function createAppearTestState(
   show: boolean,
@@ -364,6 +365,48 @@ describe('Transition', () => {
 
     expect(host.textContent).toContain('bar')
     expect(getTransitionOwner()?.$transition?.persisted).toBe(true)
+  })
+
+  test('interop slot fallback should participate in out-in transition swaps', async () => {
+    const data = ref({
+      show: false,
+      fallback: 'fallback',
+      msg: 'slot',
+    })
+    const Child = compile(
+      `<template>
+        <Transition mode="out-in">
+          <slot>
+            <div>{{ data.fallback }}</div>
+          </slot>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Child>
+          <template #default v-if="data.show">
+            <span>{{ data.msg }}</span>
+          </template>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+
+    expect(host.innerHTML).toContain('<div>fallback</div>')
+
+    data.value.show = true
+    await nextTick()
+    await nextTick()
+
+    expect(host.innerHTML).toContain(
+      '<span class="v-enter-from v-enter-active">slot</span>',
+    )
+    expect(host.innerHTML).not.toContain('<div>fallback</div>')
   })
 
   test('dynamic default slot source should trigger enter hooks when toggled on', async () => {
