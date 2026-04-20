@@ -469,14 +469,16 @@ export class DynamicFragment extends VaporFragment {
         !isValidBlock(this.nodes)
       ) {
         const endAnchor = currentSlotEndAnchor
-        queuePostFlushCb(() =>
-          endAnchor.parentNode!.insertBefore(
+        queuePostFlushCb(() => {
+          const parentNode = endAnchor.parentNode
+          if (!parentNode) return
+          parentNode.insertBefore(
             (this.anchor = markHydrationAnchor(
               __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
             )),
             endAnchor,
-          ),
-        )
+          )
+        })
         return
       }
 
