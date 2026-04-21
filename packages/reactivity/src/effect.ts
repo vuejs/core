@@ -1,9 +1,47 @@
 import { extend, hasChanged } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
-import { type Link, globalVersion } from './dep'
+import { type Link, globalVersion, type Dep } from './dep'
 import { activeEffectScope } from './effectScope'
 import { warn } from './warning'
+
+if (__DEV__) {
+  var activeTriggerSource: DebugLineageNode | undefined
+}
+
+export interface DebugLineageNode {
+  type: 'reactive' | 'computed' | 'effect'
+  target?: object
+  key?: unknown
+  effect?: Subscriber
+  computed?: ComputedRefImpl
+  dep?: Dep
+}
+
+export function getActiveTriggerSource(): DebugLineageNode | undefined {
+  if (__DEV__) {
+    return activeTriggerSource
+  }
+  return undefined
+}
+
+export function setActiveTriggerSource(source: DebugLineageNode | undefined): DebugLineageNode | undefined {
+  if (__DEV__) {
+    const prev = activeTriggerSource
+    activeTriggerSource = source
+    return prev
+  }
+  return undefined
+}
+
+export function pushLineageToSubscriber(sub: Subscriber, source: DebugLineageNode): void {
+  if (__DEV__) {
+    if (!sub.debugLineage) {
+      sub.debugLineage = []
+    }
+    sub.debugLineage.push(source)
+  }
+}
 
 export type EffectScheduler = (...args: any[]) => any
 
@@ -80,6 +118,12 @@ export interface Subscriber extends DebuggerOptions {
    * @internal
    */
   notify(): true | void
+  /**
+   * __DEV__ only - dependency lineage tracking
+   * Records the trigger chain when this subscriber is notified
+   * @internal
+   */
+  debugLineage?: DebugLineageNode[]
 }
 
 const pausedQueueEffects = new WeakSet<ReactiveEffect>()
@@ -112,6 +156,12 @@ export class ReactiveEffect<T = any>
   onStop?: () => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
+  /**
+   * __DEV__ only - dependency lineage tracking
+   * Records the trigger chain when this effect is notified
+   * @internal
+   */
+  debugLineage?: DebugLineageNode[]
 
   constructor(public fn: () => T) {
     if (activeEffectScope && activeEffectScope.active) {
@@ -163,6 +213,14 @@ export class ReactiveEffect<T = any>
     const prevShouldTrack = shouldTrack
     activeSub = this
     shouldTrack = true
+    let prevTriggerSource: DebugLineageNode | undefined
+    if (__DEV__) {
+      prevTriggerSource = activeTriggerSource
+      activeTriggerSource = {
+        type: 'effect',
+        effect: this,
+      }
+    }
 
     try {
       return this.fn()
@@ -172,6 +230,9 @@ export class ReactiveEffect<T = any>
           'Active effect was not restored correctly - ' +
             'this is likely a Vue internal bug.',
         )
+      }
+      if (__DEV__) {
+        activeTriggerSource = prevTriggerSource
       }
       cleanupDeps(this)
       activeSub = prevEffect
@@ -398,6 +459,14 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   const prevShouldTrack = shouldTrack
   activeSub = computed
   shouldTrack = true
+  let prevTriggerSource: DebugLineageNode | undefined
+  if (__DEV__) {
+    prevTriggerSource = activeTriggerSource
+    activeTriggerSource = {
+      type: 'computed',
+      computed: computed,
+    }
+  }
 
   try {
     prepareDeps(computed)
@@ -411,6 +480,9 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
     dep.version++
     throw err
   } finally {
+    if (__DEV__) {
+      activeTriggerSource = prevTriggerSource
+    }
     activeSub = prevSub
     shouldTrack = prevShouldTrack
     cleanupDeps(computed)

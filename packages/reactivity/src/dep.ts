@@ -3,10 +3,14 @@ import type { ComputedRefImpl } from './computed'
 import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import {
   type DebuggerEventExtraInfo,
+  type DebugLineageNode,
   EffectFlags,
   type Subscriber,
   activeSub,
   endBatch,
+  getActiveTriggerSource,
+  pushLineageToSubscriber,
+  setActiveTriggerSource,
   shouldTrack,
   startBatch,
 } from './effect'
@@ -189,13 +193,55 @@ export class Dep {
             )
           }
         }
-      }
-      for (let link = this.subs; link; link = link.prevSub) {
-        if (link.sub.notify()) {
-          // if notify() returns `true`, this is a computed. Also call notify
-          // on its dep - it's called here instead of inside computed's notify
-          // in order to reduce call stack depth.
-          ;(link.sub as ComputedRefImpl).dep.notify()
+
+        let currentNode: DebugLineageNode | undefined
+        if (this.computed) {
+          currentNode = {
+            type: 'computed',
+            computed: this.computed,
+            dep: this,
+          }
+        } else if (this.key !== undefined) {
+          currentNode = {
+            type: 'reactive',
+            key: this.key,
+            dep: this,
+          }
+          if (debugInfo) {
+            currentNode.target = debugInfo.target
+          }
+        }
+
+        for (let link = this.subs; link; link = link.prevSub) {
+          let prevTriggerSource: DebugLineageNode | undefined
+          if (currentNode) {
+            prevTriggerSource = getActiveTriggerSource()
+            if (prevTriggerSource) {
+              pushLineageToSubscriber(link.sub, prevTriggerSource)
+            }
+            pushLineageToSubscriber(link.sub, currentNode)
+            setActiveTriggerSource(currentNode)
+          }
+
+          try {
+            if (link.sub.notify()) {
+              // if notify() returns `true`, this is a computed. Also call notify
+              // on its dep - it's called here instead of inside computed's notify
+              // in order to reduce call stack depth.
+              ;(link.sub as ComputedRefImpl).dep.notify()
+            }
+          } finally {
+            setActiveTriggerSource(prevTriggerSource)
+          }
+        }
+      } else {
+        for (let link = this.subs; link; link = link.prevSub) {
+          if (link.sub.notify()) {
+            // if notify() returns `true`, this is a computed. Also call notify
+            // on its dep - it's called here instead of inside computed's notify
+            // in order to reduce call stack depth.
+            ;(link.sub as ComputedRefImpl).dep.notify()
+          }
         }
       }
     } finally {

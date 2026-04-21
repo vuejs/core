@@ -97,6 +97,13 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   onTrigger?: (event: DebuggerEvent) => void
 
   /**
+   * __DEV__ only - dependency lineage tracking
+   * Records the trigger chain when this computed is notified
+   * @internal
+   */
+  debugLineage?: import('./effect').DebugLineageNode[]
+
+  /**
    * Dev only
    * @internal
    */
