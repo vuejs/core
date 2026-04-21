@@ -1721,6 +1721,52 @@ describe('defineVaporCustomElement', () => {
       )
     })
 
+    test('should unmount nested slot fallback rendered from outer fallback after updates', async () => {
+      const showNamedFallback = ref(true)
+      const NestedFallback = defineVaporCustomElement(
+        {
+          setup() {
+            return createSlot('default', null, () =>
+              createSlot('named', null, () =>
+                createIf(
+                  () => showNamedFallback.value,
+                  () => template('<span>named fallback</span>')(),
+                ),
+              ),
+            )
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define(
+        'my-el-shadowroot-false-nested-fallback-unmount',
+        NestedFallback,
+      )
+
+      container.innerHTML =
+        `<my-el-shadowroot-false-nested-fallback-unmount>` +
+        `</my-el-shadowroot-false-nested-fallback-unmount>`
+      const e = container.childNodes[0] as VaporElement
+
+      expect(e.innerHTML).toBe(
+        `<span>named fallback</span><!--if--><!--slot--><!--slot-->`,
+      )
+
+      showNamedFallback.value = false
+      await nextTick()
+      expect(e.innerHTML).toBe(`<!--if--><!--slot--><!--slot-->`)
+      showNamedFallback.value = true
+      await nextTick()
+      expect(e.innerHTML).toBe(
+        `<span>named fallback</span><!--if--><!--slot--><!--slot-->`,
+      )
+
+      container.removeChild(e)
+      await nextTick()
+      expect(e.innerHTML).toBe(``)
+      expect(e._instance).toBe(null)
+    })
+
     test('render nested customElement w/ shadowRoot false', async () => {
       const calls: string[] = []
 

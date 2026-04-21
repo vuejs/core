@@ -1133,6 +1133,10 @@ function isReusableDynamicFragmentAnchor(
 export class SlotFragment extends DynamicFragment {
   forwarded = false
   parentSlotBoundary: SlotBoundaryContext | null = getCurrentSlotBoundary()
+  // Custom elements with `shadowRoot: false` replace their native slot outlet
+  // after mount. Keep the live fallback owner on the fragment so CE slot sync
+  // can preserve block ownership after the outlet node is gone.
+  customElementFallback?: Block
   private localFallback?: BlockFn
   private isUpdatingSlot = false
   private readonly controller: SlotFallbackController

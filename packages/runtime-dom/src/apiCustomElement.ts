@@ -265,7 +265,12 @@ export abstract class VueElementBase<
   protected abstract _mount(def: Def): void
   protected abstract _update(): void
   protected abstract _unmount(): void
-  protected abstract _updateSlotNodes(slot: Map<Node, Node[]>): void
+  // `usedFallback` preserves whether the outlet rendered native slotted
+  // content or its own fallback DOM so implementations can keep the right
+  // ownership model when syncing their block trees.
+  protected abstract _updateSlotNodes(
+    slot: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
+  ): void
 
   constructor(
     /**
@@ -693,7 +698,13 @@ export abstract class VueElementBase<
   protected _renderSlots(): void {
     const outlets = this._getSlots()
     const scopeId = this._instance!.type.__scopeId
-    const slotReplacements: Map<Node, Node[]> = new Map()
+    // Record both the final DOM nodes and whether they came from fallback.
+    // The nodes alone are not enough for runtimes that need to distinguish a
+    // plain DOM replacement from a live fallback owner.
+    const slotReplacements: Map<
+      Node,
+      { nodes: Node[]; usedFallback: boolean }
+    > = new Map()
 
     for (let i = 0; i < outlets.length; i++) {
       const o = outlets[i] as HTMLSlotElement
@@ -725,7 +736,10 @@ export abstract class VueElementBase<
         }
       }
       parent.removeChild(o)
-      slotReplacements.set(o, replacementNodes)
+      slotReplacements.set(o, {
+        nodes: replacementNodes,
+        usedFallback: !content,
+      })
     }
 
     this._updateSlotNodes(slotReplacements)
@@ -866,7 +880,9 @@ export class VueElement extends VueElementBase<
   /**
    * Only called when shadowRoot is false
    */
-  protected _updateSlotNodes(replacements: Map<Node, Node[]>): void {
+  protected _updateSlotNodes(
+    replacements: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
+  ): void {
     // do nothing
   }
 
