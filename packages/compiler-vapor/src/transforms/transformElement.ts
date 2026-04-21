@@ -88,10 +88,15 @@ export const transformElement: NodeTransform = (node, context) => {
       return
 
     // treat custom elements as components because the template helper cannot
-    // resolve them properly; they require creation via createElement
-    const isCustomElement = !!context.options.isCustomElement(node.tag)
+    // resolve them properly; they require creation via createElement.
+    // Native <template> has the same constraint: when created from an HTML
+    // string, its parsed children live in .content instead of childNodes.
+    const useCreateElement = shouldUseCreateElement(
+      node,
+      context as TransformContext<ElementNode>,
+    )
     const isComponent =
-      node.tagType === ElementTypes.COMPONENT || isCustomElement
+      node.tagType === ElementTypes.COMPONENT || useCreateElement
 
     const isDynamicComponent = isComponentTag(node.tag)
     const staticKey = resolveStaticKey(
@@ -118,7 +123,7 @@ export const transformElement: NodeTransform = (node, context) => {
         singleRoot,
         context,
         isDynamicComponent,
-        isCustomElement,
+        useCreateElement,
       )
     } else {
       transformNativeElement(
@@ -217,7 +222,7 @@ function transformComponentElement(
   singleRoot: boolean,
   context: TransformContext,
   isDynamicComponent: boolean,
-  isCustomElement: boolean,
+  useCreateElement: boolean,
 ) {
   const dynamicComponent = isDynamicComponent
     ? resolveDynamicComponent(node)
@@ -226,7 +231,7 @@ function transformComponentElement(
   let { tag } = node
   let asset = true
 
-  if (!dynamicComponent && !isCustomElement) {
+  if (!dynamicComponent && !useCreateElement) {
     const fromSetup = resolveSetupReference(tag, context)
     if (fromSetup) {
       tag = fromSetup
@@ -272,7 +277,7 @@ function transformComponentElement(
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,
-    isCustomElement,
+    useCreateElement,
   }
   if (staticKey) {
     context.registerOperation(createSetBlockKey(id, staticKey))
@@ -658,4 +663,58 @@ function mergePropValues(existing: IRProp, incoming: IRProp) {
 
 function isComponentTag(tag: string) {
   return tag === 'component' || tag === 'Component'
+}
+
+function hasTemplateContentDirective(node: ElementNode): boolean {
+  return node.props.some(
+    prop =>
+      prop.type === NodeTypes.DIRECTIVE &&
+      (prop.name === 'text' || prop.name === 'html'),
+  )
+}
+
+function hasDynamicTemplateContent(
+  node: RootNode | TemplateChildNode,
+  context: TransformContext,
+): boolean {
+  switch (node.type) {
+    case NodeTypes.INTERPOLATION:
+      return true
+    case NodeTypes.ELEMENT:
+      if (
+        node.tagType === ElementTypes.COMPONENT ||
+        context.options.isCustomElement(node.tag)
+      ) {
+        return true
+      }
+
+      if (node.props.some(prop => prop.type === NodeTypes.DIRECTIVE)) {
+        return true
+      }
+
+      return node.children.some(child =>
+        hasDynamicTemplateContent(child, context),
+      )
+    default:
+      return false
+  }
+}
+
+export function shouldUseCreateElement(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): boolean {
+  if (context.options.isCustomElement(node.tag)) {
+    return true
+  }
+
+  if (node.tagType !== ElementTypes.ELEMENT || node.tag !== 'template') {
+    return false
+  }
+
+  if (hasTemplateContentDirective(node)) {
+    return true
+  }
+
+  return node.children.some(child => hasDynamicTemplateContent(child, context))
 }

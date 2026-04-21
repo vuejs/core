@@ -11,6 +11,7 @@ import {
   type InsertionStateTypes,
   isBlockOperation,
 } from '../ir'
+import { shouldUseCreateElement } from './transformElement'
 
 export const transformChildren: NodeTransform = (node, context) => {
   const isFragment =
@@ -20,6 +21,10 @@ export const transformChildren: NodeTransform = (node, context) => {
         node.tagType === ElementTypes.COMPONENT))
 
   if (!isFragment && node.type !== NodeTypes.ELEMENT) return
+
+  const useCreateElement =
+    node.type === NodeTypes.ELEMENT &&
+    shouldUseCreateElement(node, context as TransformContext<ElementNode>)
 
   for (const [i, child] of node.children.entries()) {
     const childContext = context.create(child, i)
@@ -36,6 +41,21 @@ export const transformChildren: NodeTransform = (node, context) => {
         childDynamic.flags & DynamicFlag.INSERT
       ) {
         context.block.returns.push(childContext.dynamic.id!)
+      }
+    } else if (useCreateElement) {
+      const createsNode =
+        childContext.template !== '' ||
+        childDynamic.template != null ||
+        childDynamic.id !== undefined ||
+        childDynamic.operation !== undefined ||
+        childDynamic.hasDynamicChild === true
+
+      if (createsNode) {
+        // createElement-backed parents don't materialize childNodes from a
+        // static HTML string, so every real child node must be inserted.
+        childContext.reference()
+        childContext.registerTemplate()
+        childDynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
       }
     } else {
       context.childrenTemplate.push(childContext.template)

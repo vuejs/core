@@ -13,6 +13,7 @@ import type { NodeTransform, TransformContext } from '../transform'
 import { DynamicFlag, IRNodeTypes } from '../ir'
 import { getLiteralExpressionValue } from '../utils'
 import { escapeHtml } from '@vue/shared'
+import { shouldUseCreateElement } from './transformElement'
 
 type TextLike = TextNode | InterpolationNode
 const seen = new WeakMap<
@@ -24,7 +25,12 @@ export function markNonTemplate(
   node: TemplateChildNode,
   context: TransformContext,
 ): void {
-  seen.get(context.root)!.add(node)
+  let seenNodes = seen.get(context.root)
+  if (!seenNodes) {
+    seenNodes = new WeakSet()
+    seen.set(context.root, seenNodes)
+  }
+  seenNodes.add(node)
 }
 
 export const transformText: NodeTransform = (node, context) => {
@@ -57,10 +63,15 @@ export const transformText: NodeTransform = (node, context) => {
     }
     // all text like with interpolation
     if (!isFragment && isAllTextLike && hasInterp) {
-      processTextContainer(
-        node.children as TextLike[],
-        context as TransformContext<ElementNode>,
-      )
+      const elementContext = context as TransformContext<ElementNode>
+      if (shouldUseCreateElement(node, elementContext)) {
+        processCreateElementTextContainer(
+          node.children as TextLike[],
+          elementContext,
+        )
+      } else {
+        processTextContainer(node.children as TextLike[], elementContext)
+      }
     } else if (hasInterp) {
       // check if there's any text before interpolation, it needs to be merged
       for (let i = 0; i < node.children.length; i++) {
@@ -88,7 +99,11 @@ export const transformText: NodeTransform = (node, context) => {
       parent.type === NodeTypes.ROOT ||
       (parent.type === NodeTypes.ELEMENT &&
         (parent.tagType === ElementTypes.TEMPLATE ||
-          parent.tagType === ElementTypes.COMPONENT))
+          parent.tagType === ElementTypes.COMPONENT ||
+          shouldUseCreateElement(
+            parent,
+            context.parent as TransformContext<ElementNode>,
+          )))
 
     context.template += isRootText ? node.content : escapeHtml(node.content)
   }
@@ -118,7 +133,11 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
     const text = literalValues.join('')
     const isElementChild =
       parentNode.type === NodeTypes.ELEMENT &&
-      parentNode.tagType === ElementTypes.ELEMENT
+      parentNode.tagType === ElementTypes.ELEMENT &&
+      !shouldUseCreateElement(
+        parentNode,
+        context.parent as TransformContext<ElementNode>,
+      )
     context.template += isElementChild ? escapeHtml(text) : text
     return
   }
@@ -161,6 +180,41 @@ function processTextContainer(
       generated: true,
     })
   }
+}
+
+export function registerSyntheticTextChild(
+  context: TransformContext<ElementNode>,
+  template: string,
+  values?: SimpleExpressionNode[],
+): number {
+  const id = context.increaseId()
+  context.dynamic.children[context.node.children.length] = {
+    id,
+    flags: DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE,
+    children: [],
+    template: context.pushTemplate(template),
+  }
+  context.dynamic.hasDynamicChild = true
+
+  if (values && values.length) {
+    context.registerEffect(values, {
+      type: IRNodeTypes.SET_TEXT,
+      element: id,
+      values,
+    })
+  }
+
+  return id
+}
+
+function processCreateElementTextContainer(
+  children: TextLike[],
+  context: TransformContext<ElementNode>,
+) {
+  const values = processTextLikeChildren(children, context)
+  // createElement-backed parents must materialize text nodes imperatively so
+  // text that starts with "<" remains text instead of being parsed as HTML.
+  registerSyntheticTextChild(context, '', values)
 }
 
 function processTextLikeChildren(nodes: TextLike[], context: TransformContext) {

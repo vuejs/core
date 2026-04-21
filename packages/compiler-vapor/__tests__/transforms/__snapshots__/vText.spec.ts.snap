@@ -54,3 +54,16 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`v-text > work with plain template createElement path 1`] = `
+"import { createPlainElement as _createPlainElement, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  _insert(n0, n1)
+  _renderEffect(() => _setText(n0, _toDisplayString(_ctx.foo)))
+  return n1
+}"
+`;

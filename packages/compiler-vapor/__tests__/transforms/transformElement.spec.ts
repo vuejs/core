@@ -1151,6 +1151,37 @@ describe('compiler: element transform', () => {
     expect(code).toContain('createPlainElement')
   })
 
+  test('custom element with dynamic child', () => {
+    const { code } = compileWithElementTransform(
+      '<my-custom-element><div>{{ msg }}</div></my-custom-element>',
+      {
+        isCustomElement: tag => tag === 'my-custom-element',
+      },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).toContain('_insert(')
+  })
+
+  test('plain template element', () => {
+    const { code } = compileWithElementTransform(
+      '<template><div>{{ msg }}</div></template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).not.toContain('_template("<template>')
+  })
+
+  test('plain template element with dynamic text child', () => {
+    const { code } = compileWithElementTransform(
+      '<template>{{ msg }}</template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).toContain('_insert(')
+    expect(code).not.toContain('_txt(n0)')
+  })
+
   test('svg', () => {
     const t = `<svg><circle r="40"></circle></svg>`
     const { code, ir } = compileWithElementTransform(t)
