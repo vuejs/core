@@ -36,7 +36,7 @@ import {
 import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
-import { isValidBlock } from '../src/block'
+import { type Block, isValidBlock } from '../src/block'
 import { hydrateNode, setCurrentHydrationNode } from '../src/dom/hydration'
 import {
   DynamicFragment,
@@ -531,6 +531,40 @@ describe('component: slots', () => {
       await nextTick()
 
       expect(container.innerHTML).toBe('abxy!<!--slot-->')
+    })
+
+    test('slot fallback controller re-syncs carrier order when fallback ends with a fragment anchor', async () => {
+      const container = document.createElement('div')
+      const carrierA = document.createTextNode('x')
+      const carrierB = document.createTextNode('y')
+      const marker = document.createTextNode('!')
+      const slotAnchor = document.createComment('slot')
+      const trailingFragment = new DynamicFragment('if', false, false)
+      trailingFragment.update(() => document.createTextNode('b'))
+      const fallback = new VaporFragment<Block>([
+        document.createTextNode('a'),
+        trailingFragment,
+      ])
+      const controller = new SlotFallbackController({
+        getParentBoundary: () => null,
+        getLocalFallback: () => () => fallback,
+        getContent: () => [carrierA, carrierB],
+        getParentNode: () => container,
+        getAnchor: () => slotAnchor,
+        runWithRenderCtx: fn => fn(),
+        isContentValid: () => false,
+        onValidityChange: vi.fn(),
+      })
+
+      container.append(carrierA, marker, carrierB, slotAnchor)
+      controller.recheck()
+
+      expect(container.innerHTML).toBe('ab<!--if-->x!y<!--slot-->')
+
+      controller.syncActiveFallback()
+      await nextTick()
+
+      expect(container.innerHTML).toBe('ab<!--if-->xy!<!--slot-->')
     })
 
     test('slot fallback controller defaults to idle when isBusy is omitted', () => {

@@ -982,12 +982,9 @@ export class SlotFallbackController {
     }
 
     const carrierNodes = collectBlockNodes(this.host.getContent(), [], true)
-    const lastNode = block.nodes[block.nodes.length - 1]
-    if (
-      !carrierNodes.length ||
-      !(lastNode instanceof Node) ||
-      lastNode instanceof Comment
-    ) {
+    const fallbackNodes = collectBlockNodes(block, [], true)
+    const lastNode = fallbackNodes[fallbackNodes.length - 1]
+    if (!carrierNodes.length || !lastNode) {
       return
     }
 
