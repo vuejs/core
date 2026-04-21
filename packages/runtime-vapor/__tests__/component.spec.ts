@@ -670,6 +670,47 @@ describe('component', () => {
     expect(templateEl.textContent).toBe('<b>foo</b>')
   })
 
+  it('mounts plain template elements with slot content', () => {
+    const data = ref('unused')
+    const Child = compile(
+      `<template>
+        <template><slot /></template>
+      </template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Child><div>slot child</div></components.Child></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild).toBeInstanceOf(HTMLDivElement)
+    expect(templateEl.firstChild!.textContent).toBe('slot child')
+  })
+
+  it('mounts plain template elements with v-html', () => {
+    const msg = ref('<b>foo</b>')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template v-html="msg"></template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.innerHTML.toLowerCase()).toBe('<b>foo</b>')
+    expect(templateEl.content.firstChild).toBeInstanceOf(HTMLElement)
+    expect((templateEl.content.firstChild as HTMLElement).tagName).toBe('B')
+  })
+
   it('mounts plain template elements with v-text', async () => {
     const msg = ref('12')
     const Comp = compile(

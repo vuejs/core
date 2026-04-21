@@ -560,6 +560,30 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > plain template element with static child 1`] = `
+"import { createPlainElement as _createPlainElement, insert as _insert, template as _template } from 'vue';
+const t0 = _template("<div>hi")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  _insert(n0, n1)
+  return n1
+}"
+`;
+
+exports[`compiler: element transform > plain template element with static text child 1`] = `
+"import { createPlainElement as _createPlainElement, insert as _insert, template as _template } from 'vue';
+const t0 = _template("hello")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  _insert(n0, n1)
+  return n1
+}"
+`;
+
 exports[`compiler: element transform > props + child 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div id=foo><span>", true)

@@ -1172,6 +1172,22 @@ describe('compiler: element transform', () => {
     expect(code).not.toContain('_template("<template>')
   })
 
+  test('plain template element with static child', () => {
+    const { code } = compileWithElementTransform(
+      '<template><div>hi</div></template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).not.toContain('_template("<template>')
+  })
+
+  test('plain template element with static text child', () => {
+    const { code } = compileWithElementTransform('<template>hello</template>')
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).not.toContain('_template("<template>')
+  })
+
   test('plain template element with dynamic text child', () => {
     const { code } = compileWithElementTransform(
       '<template>{{ msg }}</template>',

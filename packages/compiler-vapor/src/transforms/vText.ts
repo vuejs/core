@@ -49,8 +49,9 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
     }
   } else {
     const isComponent = node.tagType === ElementTypes.COMPONENT
+    let id: number | undefined
     if (useCreateElement) {
-      const id = registerSyntheticTextChild(context, '')
+      id = registerSyntheticTextChild(context, '')
       context.registerOperation({
         type: IRNodeTypes.INSERT_NODE,
         elements: [id],
@@ -65,9 +66,7 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
     }
     context.registerEffect([exp], {
       type: IRNodeTypes.SET_TEXT,
-      element: useCreateElement
-        ? context.dynamic.children[node.children.length]!.id!
-        : context.reference(),
+      element: useCreateElement ? id! : context.reference(),
       values: [exp],
       generated: !useCreateElement,
       isComponent,

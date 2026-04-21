@@ -665,56 +665,12 @@ function isComponentTag(tag: string) {
   return tag === 'component' || tag === 'Component'
 }
 
-function hasTemplateContentDirective(node: ElementNode): boolean {
-  return node.props.some(
-    prop =>
-      prop.type === NodeTypes.DIRECTIVE &&
-      (prop.name === 'text' || prop.name === 'html'),
-  )
-}
-
-function hasDynamicTemplateContent(
-  node: RootNode | TemplateChildNode,
-  context: TransformContext,
-): boolean {
-  switch (node.type) {
-    case NodeTypes.INTERPOLATION:
-      return true
-    case NodeTypes.ELEMENT:
-      if (
-        node.tagType === ElementTypes.COMPONENT ||
-        context.options.isCustomElement(node.tag)
-      ) {
-        return true
-      }
-
-      if (node.props.some(prop => prop.type === NodeTypes.DIRECTIVE)) {
-        return true
-      }
-
-      return node.children.some(child =>
-        hasDynamicTemplateContent(child, context),
-      )
-    default:
-      return false
-  }
-}
-
 export function shouldUseCreateElement(
   node: ElementNode,
   context: TransformContext<ElementNode>,
 ): boolean {
-  if (context.options.isCustomElement(node.tag)) {
-    return true
-  }
-
-  if (node.tagType !== ElementTypes.ELEMENT || node.tag !== 'template') {
-    return false
-  }
-
-  if (hasTemplateContentDirective(node)) {
-    return true
-  }
-
-  return node.children.some(child => hasDynamicTemplateContent(child, context))
+  return (
+    context.options.isCustomElement(node.tag) ||
+    (node.tagType === ElementTypes.ELEMENT && node.tag === 'template')
+  )
 }
