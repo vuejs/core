@@ -2611,6 +2611,63 @@ describe('vdomInterop', () => {
       }
     })
 
+    test('should remove teleported content when unmounting comment-wrapped vdom vapor child inside VaporKeepAlive', async () => {
+      const show = ref(true)
+      const target = document.createElement('div')
+      target.id = 'comment-wrapped-vdom-vapor-child-teleport-target'
+      document.body.appendChild(target)
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(VaporKeepAlive, null, {
+            default: withVaporCtx(() =>
+              createComponent(
+                VaporTeleport,
+                {
+                  to: () => '#comment-wrapped-vdom-vapor-child-teleport-target',
+                },
+                {
+                  default: () => template('<input>')(),
+                },
+              ),
+            ),
+          })
+        },
+      })
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h('div', null, [
+              show.value
+                ? h(VDomCommentWrapper as any, null, {
+                    default: () => h(VaporChild as any),
+                  })
+                : null,
+            ])
+        },
+      })
+
+      const host = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(host)
+
+      try {
+        await nextTick()
+        expect(target.innerHTML).toBe('<input>')
+
+        show.value = false
+        await nextTick()
+
+        expect(target.innerHTML).toBe('')
+      } finally {
+        app.unmount()
+        host.remove()
+        target.remove()
+      }
+    })
+
     test('should update props on reactivation of vapor child in vdom KeepAlive', async () => {
       const VaporChild = defineVaporComponent({
         props: { msg: String },
