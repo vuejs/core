@@ -279,12 +279,17 @@ const vaporInteropImpl: Omit<
     if (instance) {
       // the async component may not be resolved yet, block is null
       if (instance.block) {
+        const anchor = vnode.anchor as Node | null
         unmountComponent(instance, container)
         if (!doRemove) {
           // When the surrounding VDOM fragment owns DOM removal, we still need
           // to dispose the vapor-returned block tree so nested interop state
-          // (for example forwarded VDOM slots) does not stay subscribed.
-          remove(instance.block, undefined)
+          // (for example forwarded VDOM slots or nested KeepAlive cleanup)
+          // does not stay subscribed.
+          const blockContainer = shouldUseCurrentParent(instance.block)
+            ? ((anchor && anchor.parentNode) as ParentNode)
+            : undefined
+          remove(instance.block, blockContainer)
         }
       }
     } else if (vnode.vb) {
@@ -295,7 +300,7 @@ const vaporInteropImpl: Omit<
       // to remove its current block and reach nested Teleport cleanup.
       const blockContainer =
         container ||
-        (needsSlotBlockUnmountContainer(vnode.vb)
+        (shouldUseCurrentParent(vnode.vb)
           ? ((anchor && anchor.parentNode) as ParentNode)
           : undefined)
       remove(vnode.vb, blockContainer)
@@ -1404,15 +1409,15 @@ function renderVDOMSlot(
   return frag
 }
 
-function needsSlotBlockUnmountContainer(block: Block): boolean {
+function shouldUseCurrentParent(block: Block): boolean {
   if (isVaporComponent(block)) {
-    return isKeepAlive(block) || needsSlotBlockUnmountContainer(block.block)
+    return isKeepAlive(block) || shouldUseCurrentParent(block.block)
   }
   if (isArray(block)) {
-    return block.some(needsSlotBlockUnmountContainer)
+    return block.some(shouldUseCurrentParent)
   }
   if (isFragment(block)) {
-    return needsSlotBlockUnmountContainer(block.nodes)
+    return shouldUseCurrentParent(block.nodes)
   }
   return false
 }
