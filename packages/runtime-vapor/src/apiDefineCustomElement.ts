@@ -300,6 +300,21 @@ export class VaporElement extends VueElementBase<
     block: Block,
     replacements: Map<Node, Node[]>,
   ): void {
+    const appendReplacementNodes = (
+      slot: HTMLSlotElement,
+      target: Block[],
+    ): void => {
+      const replacement = replacements.get(slot)
+      if (!replacement) return
+      for (const node of replacement) {
+        if (node instanceof HTMLSlotElement) {
+          appendReplacementNodes(node, target)
+        } else {
+          target.push(node)
+        }
+      }
+    }
+
     if (Array.isArray(block)) {
       block.forEach(item => this._updateFragmentNodes(item, replacements))
       return
@@ -311,7 +326,7 @@ export class VaporElement extends VueElementBase<
       const newNodes: Block[] = []
       for (const node of nodes) {
         if (node instanceof HTMLSlotElement) {
-          newNodes.push(...replacements.get(node)!)
+          appendReplacementNodes(node, newNodes)
         } else {
           this._updateFragmentNodes(node, replacements)
           newNodes.push(node)
@@ -319,7 +334,9 @@ export class VaporElement extends VueElementBase<
       }
       block.nodes = newNodes
     } else if (nodes instanceof HTMLSlotElement) {
-      block.nodes = replacements.get(nodes)!
+      const newNodes: Block[] = []
+      appendReplacementNodes(nodes, newNodes)
+      block.nodes = newNodes
     } else {
       this._updateFragmentNodes(nodes, replacements)
     }

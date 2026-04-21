@@ -1654,6 +1654,73 @@ describe('defineVaporCustomElement', () => {
       )
     })
 
+    test('should update nested slot fallback rendered from outer fallback', async () => {
+      const showNamedFallback = ref(true)
+      const NestedFallback = defineVaporCustomElement(
+        {
+          setup() {
+            return createSlot('default', null, () =>
+              createSlot('named', null, () =>
+                createIf(
+                  () => showNamedFallback.value,
+                  () => template('<span>named fallback</span>')(),
+                ),
+              ),
+            )
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define(
+        'my-el-shadowroot-false-nested-fallback',
+        NestedFallback,
+      )
+
+      container.innerHTML =
+        `<my-el-shadowroot-false-nested-fallback>` +
+        `</my-el-shadowroot-false-nested-fallback>`
+      const e = container.childNodes[0] as VaporElement
+
+      expect(e.innerHTML).toBe(
+        `<span>named fallback</span><!--if--><!--slot--><!--slot-->`,
+      )
+
+      showNamedFallback.value = false
+      await nextTick()
+      expect(e.innerHTML).toBe(`<!--if--><!--slot--><!--slot-->`)
+
+      showNamedFallback.value = true
+      await nextTick()
+      expect(e.innerHTML).toBe(
+        `<span>named fallback</span><!--if--><!--slot--><!--slot-->`,
+      )
+    })
+
+    test('should render nested slot content from outer fallback', async () => {
+      const NestedContent = defineVaporCustomElement(
+        {
+          setup() {
+            return createSlot('default', null, () => createSlot('named'))
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define(
+        'my-el-shadowroot-false-nested-content',
+        NestedContent,
+      )
+
+      container.innerHTML =
+        `<my-el-shadowroot-false-nested-content>` +
+        `<div slot="named">named</div>` +
+        `</my-el-shadowroot-false-nested-content>`
+      const e = container.childNodes[0] as VaporElement
+
+      expect(e.innerHTML).toBe(
+        `<div slot="named">named</div><!--slot--><!--slot-->`,
+      )
+    })
+
     test('render nested customElement w/ shadowRoot false', async () => {
       const calls: string[] = []
 
