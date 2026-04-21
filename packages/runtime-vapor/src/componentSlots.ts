@@ -244,7 +244,12 @@ export function createSlot(
         })
         if (fallback) {
           withOwnedSlotBoundary(slotFragment.parentSlotBoundary, () => {
-            insert(fallback(), el)
+            const fallbackBlock = fallback()
+            // Keep the live fallback owner on the SlotFragment itself. The
+            // native slot outlet is temporary and gets removed by CE slot
+            // replacement, but the fragment remains Vapor's long-lived owner.
+            slotFragment.customElementFallback = fallbackBlock
+            insert(fallbackBlock, el)
           })
         }
         fragment.nodes = el

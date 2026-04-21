@@ -29,7 +29,7 @@ import type {
   VaporRenderResult,
 } from './apiDefineComponent'
 import type { StaticSlots } from './componentSlots'
-import { isFragment } from './fragment'
+import { SlotFragment, isFragment } from './fragment'
 
 export type VaporElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VaporElement & P
@@ -285,7 +285,9 @@ export class VaporElement extends VueElementBase<
   /**
    * Only called when shadowRoot is false
    */
-  protected _updateSlotNodes(replacements: Map<Node, Node[]>): void {
+  protected _updateSlotNodes(
+    replacements: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
+  ): void {
     this._updateFragmentNodes(
       (this._instance! as VaporComponentInstance).block,
       replacements,
@@ -298,23 +300,8 @@ export class VaporElement extends VueElementBase<
    */
   private _updateFragmentNodes(
     block: Block,
-    replacements: Map<Node, Node[]>,
+    replacements: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
   ): void {
-    const appendReplacementNodes = (
-      slot: HTMLSlotElement,
-      target: Block[],
-    ): void => {
-      const replacement = replacements.get(slot)
-      if (!replacement) return
-      for (const node of replacement) {
-        if (node instanceof HTMLSlotElement) {
-          appendReplacementNodes(node, target)
-        } else {
-          target.push(node)
-        }
-      }
-    }
-
     if (Array.isArray(block)) {
       block.forEach(item => this._updateFragmentNodes(item, replacements))
       return
@@ -322,21 +309,25 @@ export class VaporElement extends VueElementBase<
 
     if (!isFragment(block)) return
     const { nodes } = block
-    if (Array.isArray(nodes)) {
-      const newNodes: Block[] = []
-      for (const node of nodes) {
-        if (node instanceof HTMLSlotElement) {
-          appendReplacementNodes(node, newNodes)
-        } else {
-          this._updateFragmentNodes(node, replacements)
-          newNodes.push(node)
-        }
+    if (nodes instanceof HTMLSlotElement) {
+      const replacement = replacements.get(nodes)
+      if (!replacement) return
+
+      // Slotted content can be represented as plain nodes, but fallback must
+      // stay as its live block so nested updates and unmounting keep using the
+      // current owner rather than a stale DOM snapshot.
+      if (
+        replacement.usedFallback &&
+        block instanceof SlotFragment &&
+        block.customElementFallback
+      ) {
+        this._updateFragmentNodes(block.customElementFallback, replacements)
+        block.nodes = block.customElementFallback
+      } else {
+        block.nodes = replacement.nodes
       }
-      block.nodes = newNodes
-    } else if (nodes instanceof HTMLSlotElement) {
-      const newNodes: Block[] = []
-      appendReplacementNodes(nodes, newNodes)
-      block.nodes = newNodes
+    } else if (Array.isArray(nodes)) {
+      nodes.forEach(item => this._updateFragmentNodes(item, replacements))
     } else {
       this._updateFragmentNodes(nodes, replacements)
     }
