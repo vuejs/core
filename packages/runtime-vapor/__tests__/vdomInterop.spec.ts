@@ -43,6 +43,7 @@ import {
   createIf,
   createSlot,
   createTemplateRefSetter,
+  createVaporApp,
   defineVaporAsyncComponent,
   defineVaporComponent,
   insert,
@@ -2142,6 +2143,16 @@ describe('vdomInterop', () => {
   })
 
   describe('KeepAlive', () => {
+    const VDomCommentWrapper = defineComponent({
+      setup(_, { slots }) {
+        return () => [
+          createCommentVNode('before'),
+          renderSlot(slots, 'default'),
+          createCommentVNode('after'),
+        ]
+      },
+    })
+
     function assertHookCalls(
       hooks: {
         beforeMount: any
@@ -2373,6 +2384,231 @@ describe('vdomInterop', () => {
       show.value = false
       await nextTick()
       expect(html()).toBe('<div><!----></div>')
+    })
+
+    test('should remove teleported slot content when unmounting comment-wrapped vdom slot inside VaporKeepAlive', async () => {
+      const show = ref(true)
+      const target = document.createElement('div')
+      target.id = 'keepalive-teleport-target'
+      document.body.appendChild(target)
+
+      const App = defineVaporComponent({
+        setup() {
+          return createIf(
+            () => show.value,
+            () =>
+              createComponent(VDomCommentWrapper as any, null, {
+                default: withVaporCtx(() =>
+                  createComponent(VaporKeepAlive, null, {
+                    default: withVaporCtx(() =>
+                      createComponent(
+                        VaporTeleport,
+                        { to: () => '#keepalive-teleport-target' },
+                        {
+                          default: () => template('<input>')(),
+                        },
+                      ),
+                    ),
+                  }),
+                ),
+              }),
+          )
+        },
+      })
+
+      const host = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(host)
+
+      try {
+        await nextTick()
+        expect(target.innerHTML).toBe('<input>')
+
+        show.value = false
+        await nextTick()
+
+        expect(target.innerHTML).toBe('')
+      } finally {
+        app.unmount()
+        host.remove()
+        target.remove()
+      }
+    })
+
+    test('should remove inline teleported slot content when disabled inside comment-wrapped vdom slot under VaporKeepAlive', async () => {
+      const show = ref(true)
+      const target = document.createElement('div')
+      target.id = 'keepalive-disabled-teleport-target'
+      document.body.appendChild(target)
+
+      const App = defineVaporComponent({
+        setup() {
+          return createIf(
+            () => show.value,
+            () =>
+              createComponent(VDomCommentWrapper as any, null, {
+                default: withVaporCtx(() =>
+                  createComponent(VaporKeepAlive, null, {
+                    default: withVaporCtx(() =>
+                      createComponent(
+                        VaporTeleport,
+                        {
+                          to: () => '#keepalive-disabled-teleport-target',
+                          disabled: () => true,
+                        },
+                        {
+                          default: () => template('<input>')(),
+                        },
+                      ),
+                    ),
+                  }),
+                ),
+              }),
+          )
+        },
+      })
+
+      const host = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(host)
+
+      try {
+        await nextTick()
+        expect(host.querySelector('input')).not.toBeNull()
+        expect(target.innerHTML).toBe('')
+
+        show.value = false
+        await nextTick()
+
+        expect(host.querySelector('input')).toBeNull()
+        expect(target.innerHTML).toBe('')
+      } finally {
+        app.unmount()
+        host.remove()
+        target.remove()
+      }
+    })
+
+    test('should remove moved teleported slot content when comment-wrapped vdom slot under VaporKeepAlive unmounts', async () => {
+      const show = ref(true)
+      const to = ref('#keepalive-teleport-target-a')
+      const targetA = document.createElement('div')
+      targetA.id = 'keepalive-teleport-target-a'
+      const targetB = document.createElement('div')
+      targetB.id = 'keepalive-teleport-target-b'
+      document.body.append(targetA, targetB)
+
+      const App = defineVaporComponent({
+        setup() {
+          return createIf(
+            () => show.value,
+            () =>
+              createComponent(VDomCommentWrapper as any, null, {
+                default: withVaporCtx(() =>
+                  createComponent(VaporKeepAlive, null, {
+                    default: withVaporCtx(() =>
+                      createComponent(
+                        VaporTeleport,
+                        { to: () => to.value },
+                        {
+                          default: () => template('<input>')(),
+                        },
+                      ),
+                    ),
+                  }),
+                ),
+              }),
+          )
+        },
+      })
+
+      const host = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(host)
+
+      try {
+        await nextTick()
+        expect(targetA.innerHTML).toBe('<input>')
+        expect(targetB.innerHTML).toBe('')
+
+        to.value = '#keepalive-teleport-target-b'
+        await nextTick()
+
+        expect(targetA.innerHTML).toBe('')
+        expect(targetB.innerHTML).toBe('<input>')
+
+        show.value = false
+        await nextTick()
+
+        expect(targetA.innerHTML).toBe('')
+        expect(targetB.innerHTML).toBe('')
+      } finally {
+        app.unmount()
+        host.remove()
+        targetA.remove()
+        targetB.remove()
+      }
+    })
+
+    test('should remove teleported slot content when KeepAlive is nested inside a vapor wrapper in comment-wrapped vdom slot', async () => {
+      const show = ref(true)
+      const target = document.createElement('div')
+      target.id = 'nested-keepalive-teleport-target'
+      document.body.appendChild(target)
+
+      const NestedKeepAlive = defineVaporComponent({
+        setup() {
+          return createComponent(VaporKeepAlive, null, {
+            default: withVaporCtx(() => createSlot('default')),
+          })
+        },
+      })
+
+      const App = defineVaporComponent({
+        setup() {
+          return createIf(
+            () => show.value,
+            () =>
+              createComponent(VDomCommentWrapper as any, null, {
+                default: withVaporCtx(() =>
+                  createComponent(NestedKeepAlive, null, {
+                    default: withVaporCtx(() =>
+                      createComponent(
+                        VaporTeleport,
+                        { to: () => '#nested-keepalive-teleport-target' },
+                        {
+                          default: () => template('<input>')(),
+                        },
+                      ),
+                    ),
+                  }),
+                ),
+              }),
+          )
+        },
+      })
+
+      const host = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(host)
+
+      try {
+        await nextTick()
+        expect(target.innerHTML).toBe('<input>')
+
+        show.value = false
+        await nextTick()
+
+        expect(target.innerHTML).toBe('')
+      } finally {
+        app.unmount()
+        host.remove()
+        target.remove()
+      }
     })
 
     test('should update props on reactivation of vapor child in vdom KeepAlive', async () => {

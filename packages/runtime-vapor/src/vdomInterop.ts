@@ -288,7 +288,17 @@ const vaporInteropImpl: Omit<
         }
       }
     } else if (vnode.vb) {
-      remove(vnode.vb, container)
+      const anchor = vnode.anchor as Node | null
+      // Fragment child unmounts invoke VaporSlot with doRemove = false, so the
+      // renderer does not pass us a container. Most slot blocks can still
+      // clean themselves up without it, but KeepAlive needs the host container
+      // to remove its current block and reach nested Teleport cleanup.
+      const blockContainer =
+        container ||
+        (needsSlotBlockUnmountContainer(vnode.vb)
+          ? ((anchor && anchor.parentNode) as ParentNode)
+          : undefined)
+      remove(vnode.vb, blockContainer)
       stopVaporSlotScope(vnode)
     }
     if (doRemove) {
@@ -1392,6 +1402,19 @@ function renderVDOMSlot(
   }
 
   return frag
+}
+
+function needsSlotBlockUnmountContainer(block: Block): boolean {
+  if (isVaporComponent(block)) {
+    return isKeepAlive(block) || needsSlotBlockUnmountContainer(block.block)
+  }
+  if (isArray(block)) {
+    return block.some(needsSlotBlockUnmountContainer)
+  }
+  if (isFragment(block)) {
+    return needsSlotBlockUnmountContainer(block.nodes)
+  }
+  return false
 }
 
 export const vaporInteropPlugin: Plugin = app => {
