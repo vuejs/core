@@ -579,6 +579,37 @@ describe('component: slots', () => {
       expect(boundary.markDirty).toHaveBeenCalledTimes(1)
     })
 
+    test('vdom slot dirties parent boundary once when switching from valid content to local fallback', async () => {
+      const show = ref(true)
+      const boundary = {
+        parent: null,
+        getLocalFallback: () => undefined,
+        markDirty: vi.fn(),
+      }
+      const instance = renderWithSlots({})
+      const app = createApp({ render: () => null })
+      app.use(vaporInteropPlugin)
+      const vapor = (app._context as any).vapor
+      const slotsRef = shallowRef({
+        default: () => (show.value ? [h('div', 'content')] : []),
+      })
+      const frag = withOwnedSlotBoundary(boundary, () =>
+        vapor.vdomSlot(slotsRef, 'default', {}, instance, () =>
+          template('fallback')(),
+        ),
+      )
+      const host = document.createElement('div')
+
+      insert(frag, host)
+      boundary.markDirty.mockClear()
+
+      show.value = false
+      await nextTick()
+
+      expect(host.innerHTML).toBe('fallback')
+      expect(boundary.markDirty).toHaveBeenCalledTimes(1)
+    })
+
     test('vdom slot still renders vapor fallback when slot content resolves empty', () => {
       const Child = defineVaporComponent({
         setup() {

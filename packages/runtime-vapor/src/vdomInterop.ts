@@ -1152,11 +1152,8 @@ function renderVDOMSlot(
     isContentValid: () => contentState.valid,
     runWithRenderCtx: fn => runWithFragmentRenderCtx(frag, fn),
     isDisposed: () => disposed,
-    onValidityChange: () => {
-      if (frag.inheritedSlotBoundary) {
-        frag.inheritedSlotBoundary.markDirty()
-      }
-    },
+    // `frag.onUpdated` already notifies the parent boundary.
+    onValidityChange: () => {},
   })
   const wrappedLocalFallback: BlockFn | undefined = fallback
     ? controller.wrapFallback(() => fallback(internals, parentComponent))
