@@ -139,8 +139,9 @@ function autoPrefix(style: CSSStyleDeclaration, rawName: string): string {
 }
 
 /**
- * #14741 Browsers update textarea width/height directly during native resize.
- * Skip rewriting unchanged values so Vue doesn't clobber those dimensions.
+ * Browsers update textarea width/height directly during native resize.
+ * Only special-case this common textarea path for now; other resize scenarios
+ * still follow normal vnode style patching.
  */
 function shouldPreserveTextareaResizeStyle(
   el: Element,
