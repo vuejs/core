@@ -166,6 +166,14 @@ describe('reactivity/computed', () => {
     expect(n.value).toBe(-1)
   })
 
+  it('should support passing object with only one get property', () => {
+    const a = computed(() => 1)
+    // @ts-expect-error
+    const b = computed({ get: () => 1 })
+    expect(isReadonly(a)).toBe(true)
+    expect(isReadonly(b)).toBe(true)
+  })
+
   it('should trigger effect w/ setter', () => {
     const n = ref(1)
     const plusOne = computed({
