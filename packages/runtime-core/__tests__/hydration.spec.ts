@@ -1622,6 +1622,121 @@ describe('SSR hydration', () => {
     expect((container.firstChild as any)._trueValue).toBe(true)
   })
 
+  test('preserves pre-hydration user input value for text v-model', async () => {
+    const App = {
+      data() {
+        return {
+          text: 'test value',
+        }
+      },
+      template: `<div><input v-model="text"><span class="text">{{ text }}</span></div>`,
+    }
+
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+
+    const input = container.querySelector('input') as HTMLInputElement
+    input.value = 'edited before hydration'
+
+    createSSRApp(App).mount(container)
+
+    expect((container.querySelector('input') as HTMLInputElement).value).toBe(
+      'edited before hydration',
+    )
+    await nextTick()
+    expect(container.querySelector('.text')!.textContent).toBe(
+      'edited before hydration',
+    )
+  })
+
+  test('preserves pre-hydration checkbox v-model state', async () => {
+    const App = {
+      data() {
+        return {
+          checked: false,
+        }
+      },
+      template: `<div><input type="checkbox" v-model="checked"><span class="checked">{{ checked }}</span></div>`,
+    }
+
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+
+    const input = container.querySelector('input') as HTMLInputElement
+    input.checked = true
+
+    createSSRApp(App).mount(container)
+
+    expect((container.querySelector('input') as HTMLInputElement).checked).toBe(
+      true,
+    )
+    await nextTick()
+    expect(container.querySelector('.checked')!.textContent).toBe('true')
+  })
+
+  test('preserves pre-hydration radio v-model state', async () => {
+    const App = {
+      data() {
+        return {
+          picked: 'a',
+        }
+      },
+      template: `<div>
+        <input type="radio" value="a" v-model="picked">
+        <input type="radio" value="b" v-model="picked">
+        <span class="picked">{{ picked }}</span>
+      </div>`,
+    }
+
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+
+    const radios = container.querySelectorAll<HTMLInputElement>('input')
+    const a = radios[0]!
+    const b = radios[1]!
+    a.checked = false
+    b.checked = true
+
+    createSSRApp(App).mount(container)
+
+    expect(
+      container.querySelectorAll<HTMLInputElement>('input')[1].checked,
+    ).toBe(true)
+    await nextTick()
+    expect(container.querySelector('.picked')!.textContent).toBe('b')
+  })
+
+  test('preserves pre-hydration select v-model value', async () => {
+    const App = {
+      data() {
+        return {
+          selected: 'a',
+        }
+      },
+      template: `<div>
+        <select v-model="selected">
+          <option value="a">A</option>
+          <option value="b">B</option>
+        </select>
+        <span class="selected">{{ selected }}</span>
+      </div>`,
+    }
+
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+
+    const select = container.querySelector('select') as HTMLSelectElement
+    select.selectedIndex = 1
+
+    createSSRApp(App).mount(container)
+
+    expect((container.querySelector('select') as HTMLSelectElement).value).toBe(
+      'b',
+    )
+    await nextTick()
+    expect(container.querySelector('.selected')!.textContent).toBe('b')
+  })
+
   test('force hydrate checkbox with indeterminate', () => {
     const { container } = mountWithHydration(
       '<input type="checkbox" indeterminate>',

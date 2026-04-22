@@ -383,7 +383,7 @@ export function createHydrationFunctions(
     // #5405 in dev, always hydrate children for HMR
     if (__DEV__ || forcePatch || patchFlag !== PatchFlags.CACHED) {
       if (dirs) {
-        invokeDirectiveHook(vnode, null, parentComponent, 'created')
+        invokeDirectiveHook(vnode, null, parentComponent, 'created', true)
       }
 
       // handle appear transition
@@ -537,7 +537,7 @@ export function createHydrationFunctions(
         invokeVNodeHook(vnodeHooks, parentComponent, vnode)
       }
       if (dirs) {
-        invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
+        invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount', true)
       }
       if (
         (vnodeHooks = props && props.onVnodeMounted) ||
@@ -547,7 +547,8 @@ export function createHydrationFunctions(
         queueEffectWithSuspense(() => {
           vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
           needCallTransitionHooks && transition!.enter(el)
-          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+          dirs &&
+            invokeDirectiveHook(vnode, null, parentComponent, 'mounted', true)
         }, parentSuspense)
       }
     }
