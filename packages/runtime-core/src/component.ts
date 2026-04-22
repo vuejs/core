@@ -990,6 +990,28 @@ export function registerRuntimeCompiler(_compile: any): void {
 // dev only
 export const isRuntimeOnly = (): boolean => !compile
 
+/**
+ * @internal
+ */
+export function getResolvedCompilerOptions(
+  instance: ComponentInternalInstance,
+): CompilerOptions {
+  const Component = instance.type as ComponentOptions
+  const { isCustomElement, compilerOptions } = instance.appContext.config
+  const { delimiters, compilerOptions: componentCompilerOptions } = Component
+
+  return extend(
+    extend(
+      {
+        isCustomElement,
+        delimiters,
+      },
+      compilerOptions,
+    ),
+    componentCompilerOptions,
+  )
+}
+
 export function finishComponentSetup(
   instance: ComponentInternalInstance,
   isSSR: boolean,
@@ -1021,19 +1043,7 @@ export function finishComponentSetup(
         if (__DEV__) {
           startMeasure(instance, `compile`)
         }
-        const { isCustomElement, compilerOptions } = instance.appContext.config
-        const { delimiters, compilerOptions: componentCompilerOptions } =
-          Component
-        const finalCompilerOptions: CompilerOptions = extend(
-          extend(
-            {
-              isCustomElement,
-              delimiters,
-            },
-            compilerOptions,
-          ),
-          componentCompilerOptions,
-        )
+        const finalCompilerOptions = getResolvedCompilerOptions(instance)
         if (__COMPAT__) {
           // pass runtime compat config into the compiler
           finalCompilerOptions.compatConfig = Object.create(globalCompatConfig)
