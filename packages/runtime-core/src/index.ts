@@ -397,6 +397,7 @@ export { transformVNodeArgs } from './vnode'
 import {
   createComponentInstance,
   getComponentPublicInstance,
+  getResolvedCompilerOptions,
   setupComponent,
 } from './component'
 import { renderComponentRoot } from './componentRenderUtils'
@@ -416,6 +417,7 @@ const _ssrUtils: {
   ensureValidVNode: typeof ensureValidVNode
   pushWarningContext: typeof pushWarningContext
   popWarningContext: typeof popWarningContext
+  getResolvedCompilerOptions: typeof getResolvedCompilerOptions
 } = {
   createComponentInstance,
   setupComponent,
@@ -427,6 +429,7 @@ const _ssrUtils: {
   ensureValidVNode,
   pushWarningContext,
   popWarningContext,
+  getResolvedCompilerOptions,
 }
 
 /**
