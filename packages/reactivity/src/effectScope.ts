@@ -124,7 +124,26 @@ export class EffectScope {
    */
   off(): void {
     if (this._on > 0 && --this._on === 0) {
-      activeEffectScope = this.prevScope
+      // Fast path: in the common LIFO case this scope is still at the top
+      // of the active chain, so we can restore the previous scope directly.
+      if (activeEffectScope === this) {
+        activeEffectScope = this.prevScope
+      } else {
+        // withAsyncContext() restores the current component scope for the
+        // current async continuation, then defers its cleanup to a microtask.
+        // If sibling continuations interleave (A restore -> B restore ->
+        // A cleanup), activeEffectScope is already B instead of this scope A
+        // when A's cleanup calls off(). Unlink A from the middle of the
+        // active chain so a stale scope doesn't remain globally reachable.
+        let current = activeEffectScope
+        while (current) {
+          if (current.prevScope === this) {
+            current.prevScope = this.prevScope
+            break
+          }
+          current = current.prevScope
+        }
+      }
       this.prevScope = undefined
     }
   }

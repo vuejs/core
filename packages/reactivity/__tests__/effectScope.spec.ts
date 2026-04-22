@@ -296,6 +296,25 @@ describe('reactivity/effect/scope', () => {
     })
   })
 
+  it('calling .off() out of order should unlink the scope from the active chain', () => {
+    const parentScope = effectScope(true)
+    const firstScope = effectScope(true)
+    const secondScope = effectScope(true)
+
+    parentScope.on()
+    firstScope.on()
+    secondScope.on()
+
+    firstScope.off()
+    expect(getCurrentScope()).toBe(secondScope)
+
+    secondScope.off()
+    expect(getCurrentScope()).toBe(parentScope)
+
+    parentScope.off()
+    expect(getCurrentScope()).toBeUndefined()
+  })
+
   it('should pause/resume EffectScope', async () => {
     const counter = reactive({ num: 0 })
     const fnSpy = vi.fn(() => counter.num)
