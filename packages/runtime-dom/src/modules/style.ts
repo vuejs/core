@@ -7,17 +7,28 @@ import {
 } from '../directives/vShow'
 import { CSS_VAR_TEXT } from '../helpers/useCssVars'
 
-type Style = string | Record<string, string | string[]> | null
+type ObjectStyle = Record<string, string | string[]>
+type Style = string | ObjectStyle | null
 
 const displayRE = /(?:^|;)\s*display\s*:/
+const cacheKey: unique symbol = Symbol('_vsc')
 
-export function patchStyle(el: Element, prev: Style, next: Style): void {
+export function patchStyle(
+  el: Element & { [cacheKey]?: ObjectStyle },
+  prev: Style,
+  next: Style,
+): void {
   const style = (el as HTMLElement).style
   const isCssString = isString(next)
   let hasControlledDisplay = false
   if (next && !isCssString) {
+    const cachedStyle = el[cacheKey]
+    const nextCache: ObjectStyle = {}
     if (prev) {
       if (!isString(prev)) {
+        // Compare removals against the last applied snapshot so prev === next
+        // still clears keys deleted by in-place mutations.
+        if (cachedStyle) prev = cachedStyle
         for (const key in prev) {
           if (next[key] == null) {
             setStyle(style, key, '')
@@ -36,9 +47,23 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
       if (key === 'display') {
         hasControlledDisplay = true
       }
-      setStyle(style, key, next[key])
+      const value = next[key]
+      if (value != null) {
+        // Nullish values are cleared by the removal pass above, or are a
+        // no-op on the first object patch when nothing has been applied yet.
+        nextCache[key] = isArray(value) ? value.slice() : value
+        if (
+          !cachedStyle ||
+          !styleValueEqual(cachedStyle[key], value) ||
+          (key === 'display' && vShowOriginalDisplay in el)
+        ) {
+          setStyle(style, key, value)
+        }
+      }
     }
+    el[cacheKey] = nextCache
   } else {
+    el[cacheKey] = undefined
     if (isCssString) {
       if (prev !== next) {
         // #9821
@@ -122,4 +147,22 @@ function autoPrefix(style: CSSStyleDeclaration, rawName: string): string {
     }
   }
   return rawName
+}
+
+function styleValueEqual(
+  prev: string | string[] | undefined,
+  next: string | string[],
+): boolean {
+  if (isArray(prev) && isArray(next)) {
+    if (prev.length !== next.length) {
+      return false
+    }
+    for (let i = 0; i < prev.length; i++) {
+      if (prev[i] !== next[i]) {
+        return false
+      }
+    }
+    return true
+  }
+  return prev === next
 }
