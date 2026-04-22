@@ -4,6 +4,7 @@ import {
   getCurrentInstance,
 } from '../component'
 import { resolveInjections } from '../componentOptions'
+import type { ContextualRenderFn } from '../componentRenderContext'
 import type { InternalSlots } from '../componentSlots'
 import { getCompatListeners } from './instanceListeners'
 import { compatH } from './renderFn'
@@ -15,7 +16,10 @@ const normalizedFunctionalComponentMap = new WeakMap<
 export const legacySlotProxyHandlers: ProxyHandler<InternalSlots> = {
   get(target, key: string) {
     const slot = target[key]
-    return slot && slot()
+    return (
+      slot &&
+      ((slot as ContextualRenderFn)._ns /* non-scoped slot */ ? slot() : slot)
+    )
   },
 }
 
