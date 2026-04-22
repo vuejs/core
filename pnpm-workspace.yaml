@@ -9,8 +9,8 @@ catalog:
   'estree-walker': ^2.0.2
   'magic-string': ^0.30.21
   'source-map-js': ^1.2.1
-  'vite': ^7.3.1
-  '@vitejs/plugin-vue': ^6.0.5
+  'vite': ^8.0.9
+  '@vitejs/plugin-vue': ^6.0.6
 
 allowBuilds:
   '@swc/core': true
