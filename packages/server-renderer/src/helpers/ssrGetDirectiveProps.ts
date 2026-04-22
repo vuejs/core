@@ -7,7 +7,7 @@ export function ssrGetDirectiveProps(
   arg?: string,
   modifiers: Record<string, boolean> = {},
 ): Record<string, any> {
-  if (typeof dir !== 'function' && dir.getSSRProps) {
+  if (dir && typeof dir !== 'function' && dir.getSSRProps) {
     return (
       dir.getSSRProps(
         {
