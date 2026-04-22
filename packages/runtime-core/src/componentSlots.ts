@@ -219,6 +219,12 @@ export const updateSlots = (
       if (__DEV__ && isHmrUpdating) {
         // Parent was HMR updated so slot content may have changed.
         // force update slots and mark instance for hmr as well
+        // #14425 clear keys first to preserve insertion order
+        for (const key in slots) {
+          if (!isInternalKey(key)) {
+            delete slots[key]
+          }
+        }
         assignSlots(slots, children as Slots, optimized)
         trigger(instance, TriggerOpTypes.SET, '$slots')
       } else if (optimized && type === SlotFlags.STABLE) {
@@ -228,7 +234,17 @@ export const updateSlots = (
       } else {
         // compiled but dynamic (v-if/v-for on slots) - update slots, but skip
         // normalization.
+        // #14425 clear all non-internal keys first and re-assign so that
+        // the key insertion order matches children (the new slots).
+        // Without this, a slot removed by v-if and later re-added ends up
+        // at the end of the object.
+        for (const key in slots) {
+          if (!isInternalKey(key)) {
+            delete slots[key]
+          }
+        }
         assignSlots(slots, children as Slots, optimized)
+        needDeletionCheck = false
       }
     } else {
       needDeletionCheck = !(children as RawSlots).$stable

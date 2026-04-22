@@ -21,6 +21,7 @@ export function createSlots(
     | CompiledSlotDescriptor[]
     | undefined
   )[],
+  order?: string[],
 ): Record<string, SSRSlot> {
   for (let i = 0; i < dynamicSlots.length; i++) {
     const slot = dynamicSlots[i]
@@ -42,5 +43,16 @@ export function createSlots(
         : slot.fn
     }
   }
+
+  if (order) {
+    order.forEach(slotName => {
+      if (slotName in slots) {
+        const reorderedSlot = slots[slotName]
+        delete slots[slotName]
+        slots[slotName] = reorderedSlot
+      }
+    })
+  }
+
   return slots
 }
