@@ -158,6 +158,24 @@ color: red
       }
       }"
     `)
+    expect(compileScoped(`:deep(.foo) { .bar { .baz { color: red; } } }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo {
+      .bar {
+      .baz { color: red;
+      }
+      }
+      }"
+    `)
+    expect(compileScoped(`.outer { :deep(.foo) { * .bar { color: red; } } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      [data-v-test] .foo {
+      * .bar { color: red;
+      }
+      }
+      }"
+    `)
   })
 
   test('::v-slotted', () => {
@@ -396,6 +414,116 @@ color: red
         `the >>> and /deep/ combinators have been deprecated.`,
       ).toHaveBeenWarned()
     })
+  })
+
+  test('should keep leading universal selector before non-space combinator', () => {
+    expect(compileScoped(`* > .section { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "* > .section[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`* + .section { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "* + .section[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`* ~ .section { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "* ~ .section[data-v-test] { color: red;
+      }"
+    `)
+  })
+
+  test('should keep leading universal selector in nested rules', () => {
+    expect(compileScoped(`* .section { color: red; }`)).toMatchInlineSnapshot(`
+      ".section[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`.outer { * .section { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      * .section[data-v-test] { color: red;
+      }
+      }"
+    `)
+    expect(compileScoped(`.outer { * > .section { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      * > .section[data-v-test] { color: red;
+      }
+      }"
+    `)
+    expect(compileScoped(`.outer { *.foo { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      .foo[data-v-test] { color: red;
+      }
+      }"
+    `)
+    expect(compileScoped(`.outer { * { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      [data-v-test] { color: red;
+      }
+      }"
+    `)
+    expect(compileScoped(`@media screen { * .section { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      "@media screen {
+      .section[data-v-test] { color: red;
+      }
+      }"
+    `)
+    expect(
+      compileScoped(`.outer { @media screen { * .section { color: red; } } }`),
+    ).toMatchInlineSnapshot(`
+      ".outer[data-v-test] {
+      @media screen {
+      * .section[data-v-test] { color: red;
+      }
+      }
+      }"
+    `)
+  })
+
+  test('should keep leading universal selector in :is() in nested rules', () => {
+    expect(compileScoped(`.outer { :is(* .foo) { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      :is(* .foo[data-v-test]) { color: red;
+      }
+      }"
+    `)
+  })
+
+  test('should keep leading universal selector in :where() in nested rules', () => {
+    expect(compileScoped(`.outer { :where(* .foo) { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      :where(* .foo[data-v-test]) { color: red;
+      }
+      }"
+    `)
+  })
+
+  test('should keep leading universal selector before non-space combinator in :is() in nested rules', () => {
+    expect(compileScoped(`.outer { :is(* > .foo) { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      :is(* > .foo[data-v-test]) { color: red;
+      }
+      }"
+    `)
+  })
+
+  test('should keep leading universal selector in ::v-slotted() in nested rules', () => {
+    expect(compileScoped(`.outer { ::v-slotted(* .foo) { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".outer {
+      * .foo[data-v-test-s] { color: red;
+      }
+      }"
+    `)
   })
 })
 
