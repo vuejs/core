@@ -94,16 +94,26 @@ export const transformText: NodeTransform = (node, context) => {
     // Root-level text nodes go through createTextNode() which doesn't need escaping
     // Element children go through innerHTML which needs escaping
     const parent = context.parent?.node
+    const createElementParent =
+      parent &&
+      parent.type === NodeTypes.ELEMENT &&
+      shouldUseCreateElement(
+        parent,
+        context.parent as TransformContext<ElementNode>,
+      )
+    if (createElementParent && node.content[0] === '<') {
+      materializeLiteralTextNode(
+        createSimpleExpression(node.content, true, node.loc),
+        context as TransformContext<TextNode>,
+      )
+      return
+    }
     const isRootText =
       !parent ||
       parent.type === NodeTypes.ROOT ||
       (parent.type === NodeTypes.ELEMENT &&
         (parent.tagType === ElementTypes.TEMPLATE ||
-          parent.tagType === ElementTypes.COMPONENT ||
-          shouldUseCreateElement(
-            parent,
-            context.parent as TransformContext<ElementNode>,
-          )))
+          parent.tagType === ElementTypes.COMPONENT))
 
     context.template += isRootText ? node.content : escapeHtml(node.content)
   }
@@ -131,13 +141,23 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
   const allLiteral = literalValues.every(v => v != null)
   if (allLiteral && parentNode.type !== NodeTypes.ROOT) {
     const text = literalValues.join('')
-    const isElementChild =
+    if (
       parentNode.type === NodeTypes.ELEMENT &&
-      parentNode.tagType === ElementTypes.ELEMENT &&
-      !shouldUseCreateElement(
+      shouldUseCreateElement(
         parentNode,
         context.parent as TransformContext<ElementNode>,
+      ) &&
+      text[0] === '<'
+    ) {
+      materializeLiteralTextNode(
+        createSimpleExpression(text, true, context.node.loc),
+        context,
       )
+      return
+    }
+    const isElementChild =
+      parentNode.type === NodeTypes.ELEMENT &&
+      parentNode.tagType === ElementTypes.ELEMENT
     context.template += isElementChild ? escapeHtml(text) : text
     return
   }
@@ -215,6 +235,20 @@ function processCreateElementTextContainer(
   // createElement-backed parents must materialize text nodes imperatively so
   // text that starts with "<" remains text instead of being parsed as HTML.
   registerSyntheticTextChild(context, '', values)
+}
+
+function materializeLiteralTextNode(
+  value: SimpleExpressionNode,
+  context: TransformContext<TextNode | InterpolationNode>,
+) {
+  const id = context.reference()
+  context.dynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
+  context.dynamic.template = context.pushTemplate('')
+  context.registerEffect([value], {
+    type: IRNodeTypes.SET_TEXT,
+    element: id,
+    values: [value],
+  })
 }
 
 function processTextLikeChildren(nodes: TextLike[], context: TransformContext) {

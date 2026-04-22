@@ -655,6 +655,21 @@ describe('component', () => {
     expect(templateEl.textContent).toBe('<b>foo</b>')
   })
 
+  it('mounts plain template escaped static text as text', () => {
+    const Comp = compile(
+      `<template>
+        <template>&lt;b&gt;foo&lt;/b&gt;</template>
+      </template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('<b>foo</b>')
+  })
+
   it('mounts plain template literal v-text as text', () => {
     const Comp = compile(
       `<template>
