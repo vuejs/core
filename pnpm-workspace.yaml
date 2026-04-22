@@ -12,12 +12,14 @@ catalog:
   'vite': ^8.0.9
   '@vitejs/plugin-vue': ^6.0.6
 
-onlyBuiltDependencies:
-  - '@swc/core'
-  - 'esbuild'
-  - 'puppeteer'
-  - 'simple-git-hooks'
-  - 'unrs-resolver'
+allowBuilds:
+  '@swc/core': true
+  'esbuild': true
+  'puppeteer': true
+  'simple-git-hooks': true
+  'unrs-resolver': true
+
+dedupePeers: true
 
 peerDependencyRules:
   allowedVersions:
