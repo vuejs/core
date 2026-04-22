@@ -10,6 +10,7 @@ import {
   type VNode,
   type VNodeArrayChildren,
   cloneVNode,
+  createCommentVNode,
   isSameVNodeType,
 } from '../vnode'
 import { warn } from '../warning'
@@ -155,11 +156,18 @@ const BaseTransitionImpl: ComponentOptions = {
     return () => {
       const children =
         slots.default && getTransitionRawChildren(slots.default(), true)
-      if (!children || !children.length) {
+      const child =
+        children && children.length
+          ? findNonCommentChild(children)
+          : // Keep explicit default-slot conditionals on the same transition path
+            // as regular v-if branches, which render a comment placeholder.
+            instance.subTree
+            ? createCommentVNode()
+            : undefined
+      if (!child) {
         return
       }
 
-      const child: VNode = findNonCommentChild(children)
       // there's no need to track reactivity for these props so use the raw
       // props for a bit better perf
       const rawProps = toRaw(props)

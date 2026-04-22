@@ -1428,6 +1428,57 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #14727
+    test(
+      'explicit default slot template can toggle again before leave finishes',
+      async () => {
+        const spy = vi.fn()
+        const currentPage = page()
+        currentPage.on('pageerror', spy)
+
+        await page().evaluate(() => {
+          const { createApp, ref } = (window as any).Vue
+          createApp({
+            template: `
+              <div id="container">
+                <transition name="test">
+                  <template v-if="show" #>
+                    <div class="test">text</div>
+                  </template>
+                </transition>
+              </div>
+              <button id="toggleBtn" @click="show = !show">button</button>
+            `,
+            setup: () => {
+              const show = ref(true)
+              return { show }
+            },
+          }).mount('#app')
+        })
+
+        expect(await html('#container')).toBe('<div class="test">text</div>')
+
+        await click('#toggleBtn')
+        await nextTick()
+        await click('#toggleBtn')
+
+        expect(
+          await page().$$eval('#container .test', nodes =>
+            nodes.map(node => node.className),
+          ),
+        ).toStrictEqual(['test test-enter-from test-enter-active'])
+
+        await nextFrame()
+        await transitionFinish()
+        await nextFrame()
+
+        expect(spy).not.toHaveBeenCalled()
+        currentPage.off('pageerror', spy)
+        expect(await html('#container')).toBe('<div class="test">text</div>')
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with KeepAlive', () => {
