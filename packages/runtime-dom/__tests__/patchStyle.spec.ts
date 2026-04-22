@@ -23,19 +23,6 @@ describe(`runtime-dom: style patching`, () => {
     expect(fn).not.toBeCalled()
   })
 
-  it('should not overwrite external DOM mutations when string style is unchanged', () => {
-    const el = document.createElement('textarea')
-    const value = 'width: 200px; height: 100px;'
-
-    patchProp(el, 'style', {}, value)
-    el.style.width = '320px'
-    el.style.height = '160px'
-
-    patchProp(el, 'style', value, value)
-    expect(el.style.width).toBe('320px')
-    expect(el.style.height).toBe('160px')
-  })
-
   it('plain object', () => {
     const el = document.createElement('div')
     patchProp(el, 'style', {}, { color: 'red' })
@@ -59,40 +46,6 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.width).toBe('320px')
     expect(el.style.height).toBe('160px')
     expect(el.style.display).toBe('none')
-  })
-
-  it('should patch in-place mutations on the same object style', () => {
-    const el = document.createElement('textarea')
-    const value = {
-      width: '200px',
-      height: '100px',
-    }
-
-    patchProp(el, 'style', null, value)
-
-    value.width = '320px'
-    value.height = '160px'
-    patchProp(el, 'style', value, value)
-
-    expect(el.style.width).toBe('320px')
-    expect(el.style.height).toBe('160px')
-  })
-
-  it('should clear removed keys from in-place mutations on the same object style', () => {
-    const el = document.createElement('textarea')
-    const value = {
-      width: '200px',
-      height: '100px',
-    }
-
-    patchProp(el, 'style', null, value)
-
-    // @ts-expect-error
-    delete value.width
-    patchProp(el, 'style', value, value)
-
-    expect(el.style.width).toBe('')
-    expect(el.style.height).toBe('100px')
   })
 
   it('camelCase', () => {
@@ -222,19 +175,6 @@ describe(`runtime-dom: style patching`, () => {
       {},
       { display: ['-webkit-box', '-ms-flexbox', 'flex'] },
     )
-    expect(el.style.display).toBe('flex')
-  })
-
-  it('should reapply unchanged array style values after DOM mutation', () => {
-    const el = document.createElement('textarea')
-    const value = {
-      display: ['-webkit-box', '-ms-flexbox', 'flex'],
-    }
-
-    patchProp(el, 'style', null, value)
-    el.style.display = 'grid'
-
-    patchProp(el, 'style', value, value)
     expect(el.style.display).toBe('flex')
   })
 

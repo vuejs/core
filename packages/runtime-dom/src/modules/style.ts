@@ -7,28 +7,17 @@ import {
 } from '../directives/vShow'
 import { CSS_VAR_TEXT } from '../helpers/useCssVars'
 
-type ObjectStyle = Record<string, string | string[]>
-type Style = string | ObjectStyle | null
+type Style = string | Record<string, string | string[]> | null
 
 const displayRE = /(?:^|;)\s*display\s*:/
-const cacheKey: unique symbol = Symbol('_vsc')
 
-export function patchStyle(
-  el: Element & { [cacheKey]?: ObjectStyle },
-  prev: Style,
-  next: Style,
-): void {
+export function patchStyle(el: Element, prev: Style, next: Style): void {
   const style = (el as HTMLElement).style
   const isCssString = isString(next)
   let hasControlledDisplay = false
   if (next && !isCssString) {
-    const cachedStyle = el[cacheKey]
-    const nextCache: ObjectStyle = {}
     if (prev) {
       if (!isString(prev)) {
-        // Compare removals against the last applied snapshot so prev === next
-        // still clears keys deleted by in-place mutations.
-        if (cachedStyle) prev = cachedStyle
         for (const key in prev) {
           if (next[key] == null) {
             setStyle(style, key, '')
@@ -49,24 +38,21 @@ export function patchStyle(
       }
       const value = next[key]
       if (value != null) {
-        // Nullish values are cleared by the removal pass above, or are a
-        // no-op on the first object patch when nothing has been applied yet.
-        nextCache[key] = isArray(value) ? value.slice() : value
         if (
           !shouldPreserveTextareaResizeStyle(
             el,
             key,
-            cachedStyle && cachedStyle[key],
+            !isString(prev) && prev ? prev[key] : undefined,
             value,
           )
         ) {
           setStyle(style, key, value)
         }
+      } else {
+        setStyle(style, key, '')
       }
     }
-    el[cacheKey] = nextCache
   } else {
-    el[cacheKey] = undefined
     if (isCssString) {
       if (prev !== next) {
         // #9821
@@ -152,28 +138,9 @@ function autoPrefix(style: CSSStyleDeclaration, rawName: string): string {
   return rawName
 }
 
-function styleValueEqual(
-  prev: string | string[] | undefined,
-  next: string | string[],
-): boolean {
-  if (isArray(prev) && isArray(next)) {
-    if (prev.length !== next.length) {
-      return false
-    }
-    for (let i = 0; i < prev.length; i++) {
-      if (prev[i] !== next[i]) {
-        return false
-      }
-    }
-    return true
-  }
-  return prev === next
-}
-
 /**
- * Keep vnode style authoritative except for unchanged textarea width/height.
- * This avoids resize flicker and also preserves manual DOM mutations for those
- * two keys; other unchanged keys still reapply vnode state.
+ * #14741 Browsers update textarea width/height directly during native resize.
+ * Skip rewriting unchanged values so Vue doesn't clobber those dimensions.
  */
 function shouldPreserveTextareaResizeStyle(
   el: Element,
@@ -184,6 +151,7 @@ function shouldPreserveTextareaResizeStyle(
   return (
     el.tagName === 'TEXTAREA' &&
     (key === 'width' || key === 'height') &&
-    styleValueEqual(prev, next)
+    isString(next) &&
+    prev === next
   )
 }
