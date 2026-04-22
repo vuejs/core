@@ -94,7 +94,7 @@ export const TeleportImpl = {
       mc: mountChildren,
       pc: patchChildren,
       pbc: patchBlockChildren,
-      o: { insert, querySelector, createText, createComment },
+      o: { insert, querySelector, createText, createComment, parentNode },
     } = internals
 
     const disabled = isTeleportDisabled(n2.props)
@@ -162,7 +162,11 @@ export const TeleportImpl = {
         if (pendingMounts.get(vnode) !== mountJob) return
         pendingMounts.delete(vnode)
         if (isTeleportDisabled(vnode.props)) {
-          mount(vnode, container, vnode.anchor!)
+          // Use the current parent of the placeholder instead of the
+          // captured `container`, which may be stale if Suspense has moved
+          // the branch to a different container during resolve.
+          const mountContainer = parentNode(vnode.el!) || container
+          mount(vnode, mountContainer, vnode.anchor!)
           updateCssVars(vnode, true)
         }
         mountToTarget(vnode)
@@ -389,7 +393,8 @@ function moveTeleport(
   // if this is a re-order and teleport is enabled (content is in target)
   // do not move children. So the opposite is: only move children if this
   // is not a reorder, or the teleport is disabled
-  if (!isReorder || isTeleportDisabled(props)) {
+  // #14701 don't move children if in pending mount
+  if (!pendingMounts.has(vnode) && (!isReorder || isTeleportDisabled(props))) {
     // Teleport has either Array children or no children.
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       for (let i = 0; i < (children as VNode[]).length; i++) {
