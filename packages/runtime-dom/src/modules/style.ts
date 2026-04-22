@@ -53,9 +53,12 @@ export function patchStyle(
         // no-op on the first object patch when nothing has been applied yet.
         nextCache[key] = isArray(value) ? value.slice() : value
         if (
-          !cachedStyle ||
-          !styleValueEqual(cachedStyle[key], value) ||
-          (key === 'display' && vShowOriginalDisplay in el)
+          !shouldPreserveTextareaResizeStyle(
+            el,
+            key,
+            cachedStyle && cachedStyle[key],
+            value,
+          )
         ) {
           setStyle(style, key, value)
         }
@@ -165,4 +168,22 @@ function styleValueEqual(
     return true
   }
   return prev === next
+}
+
+/**
+ * Keep vnode style authoritative except for unchanged textarea width/height.
+ * This avoids resize flicker and also preserves manual DOM mutations for those
+ * two keys; other unchanged keys still reapply vnode state.
+ */
+function shouldPreserveTextareaResizeStyle(
+  el: Element,
+  key: string,
+  prev: string | string[] | undefined,
+  next: string | string[],
+): boolean {
+  return (
+    el.tagName === 'TEXTAREA' &&
+    (key === 'width' || key === 'height') &&
+    styleValueEqual(prev, next)
+  )
 }

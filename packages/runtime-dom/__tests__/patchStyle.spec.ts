@@ -42,20 +42,23 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
   })
 
-  it('should not overwrite external DOM mutations when object style is unchanged', () => {
+  it('should preserve textarea resize dimensions while reapplying unrelated unchanged object styles', () => {
     const el = document.createElement('textarea')
     const value = {
       width: '200px',
       height: '100px',
+      display: 'none',
     }
 
     patchProp(el, 'style', null, value)
     el.style.width = '320px'
     el.style.height = '160px'
+    el.style.display = 'block'
 
     patchProp(el, 'style', value, value)
     expect(el.style.width).toBe('320px')
     expect(el.style.height).toBe('160px')
+    expect(el.style.display).toBe('none')
   })
 
   it('should patch in-place mutations on the same object style', () => {
@@ -222,7 +225,7 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.display).toBe('flex')
   })
 
-  it('should not overwrite external DOM mutations when array style values are unchanged', () => {
+  it('should reapply unchanged array style values after DOM mutation', () => {
     const el = document.createElement('textarea')
     const value = {
       display: ['-webkit-box', '-ms-flexbox', 'flex'],
@@ -232,7 +235,7 @@ describe(`runtime-dom: style patching`, () => {
     el.style.display = 'grid'
 
     patchProp(el, 'style', value, value)
-    expect(el.style.display).toBe('grid')
+    expect(el.style.display).toBe('flex')
   })
 
   it('should clear previous css string value', () => {
