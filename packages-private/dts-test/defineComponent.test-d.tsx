@@ -1565,7 +1565,7 @@ export default {
 }
 
 describe('slots', () => {
-  const comp1 = defineComponent({
+  const Comp1 = defineComponent({
     slots: Object as SlotsType<{
       default: { foo: string; bar: number }
       optional?: { data: string }
@@ -1613,18 +1613,38 @@ describe('slots', () => {
       // @ts-expect-error
       slots.optionalUndefinedScope?.('foo')
 
-      expectType<typeof slots | undefined>(new comp1().$slots)
+      expectType<typeof slots | undefined>(new Comp1().$slots)
     },
   })
+  ;<Comp1>
+    {({ bar, foo }) => [
+      <>
+        {bar}
+        {foo}
+      </>,
+    ]}
+  </Comp1>
+  ;<Comp1>
+    {{
+      default: ({ bar, foo }) => [
+        <>
+          {bar}
+          {foo}
+        </>,
+      ],
+      undefinedScope: () => [],
+    }}
+  </Comp1>
 
-  const comp2 = defineComponent({
+  const Comp2 = defineComponent({
     setup(props, { slots }) {
       // unknown slots
       expectType<Slots>(slots)
       expectType<((...args: any[]) => VNode[]) | undefined>(slots.default)
     },
   })
-  expectType<Slots | undefined>(new comp2().$slots)
+  expectType<Slots | undefined>(new Comp2().$slots)
+  expectType<{}>(new Comp2().$props)
 })
 
 // #5885

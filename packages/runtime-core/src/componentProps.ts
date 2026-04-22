@@ -39,6 +39,8 @@ import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
 import { createInternalObject } from './internalObject'
+import type { SlotsType, UnwrapSlotsType } from './componentSlots'
+import type { VNodeChild } from './vnode'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -189,6 +191,38 @@ type NormalizedProp = PropOptions & {
 // and an array of prop keys that need value casting (booleans and defaults)
 export type NormalizedProps = Record<string, NormalizedProp>
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
+
+/**
+ * Defines which prop name is used for JSX children (slots) type checking.
+ *
+ * This is not set by default. To enable it, add the following
+ * declaration in your vue-jsx project:
+ *
+ * ```ts
+ * declare module 'vue' {
+ *   interface JSXElementChildrenAttribute {
+ *     'v-slots': {}
+ *   }
+ * }
+ * ```
+ *
+ * @see {@link https://www.typescriptlang.org/docs/handbook/jsx.html#children-type-checking}
+ */
+export interface JSXElementChildrenAttribute {}
+
+export type SlotsToProps<
+  RawSlots extends SlotsType | Record<string, any> = Record<string, any>,
+  Element = VNodeChild,
+  Slots = RawSlots extends SlotsType ? UnwrapSlotsType<RawSlots> : RawSlots,
+> = string extends keyof Slots
+  ? {}
+  : keyof JSXElementChildrenAttribute extends infer Key extends string
+    ? {
+        [K in Key]?:
+          | ('default' extends keyof Slots ? Slots['default'] | Slots : Slots)
+          | NoInfer<Element>
+      }
+    : {}
 
 export function initProps(
   instance: ComponentInternalInstance,

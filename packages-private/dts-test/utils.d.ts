@@ -4,6 +4,12 @@
 // register global JSX
 import 'vue/jsx'
 
+declare module 'vue' {
+  interface JSXElementChildrenAttribute {
+    'v-slots': {}
+  }
+}
+
 export function describe(_name: string, _fn: () => void): void
 export function test(_name: string, _fn: () => any): void
 

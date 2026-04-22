@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
+import type {
+  JSXElementChildrenAttribute,
+  NativeElements,
+  ReservedProps,
+  VNode,
+} from '@vue/runtime-dom'
 
 /**
  * JSX namespace for usage with @jsxImportsSource directive
@@ -16,6 +21,7 @@ export namespace JSX {
   export interface ElementAttributesProperty {
     $props: {}
   }
+  export interface ElementChildrenAttribute extends JSXElementChildrenAttribute {}
   export interface IntrinsicElements extends NativeElements {
     // allow arbitrary elements
     // @ts-ignore suppress ts:2374 = Duplicate string index signature.
