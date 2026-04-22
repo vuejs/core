@@ -1473,7 +1473,7 @@ describe('e2e: Transition', () => {
         await transitionFinish()
         await nextFrame()
 
-        expect(spy).toBeCalledTimes(0)
+        expect(spy).not.toHaveBeenCalled()
         currentPage.off('pageerror', spy)
         expect(await html('#container')).toBe('<div class="test">text</div>')
       },
