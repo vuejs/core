@@ -2,6 +2,7 @@ import {
   type Component,
   type ComponentOptions,
   type ComponentPublicInstance,
+  type EmitsOptions,
   type PropType,
   type SetupContext,
   type Slots,
@@ -1175,6 +1176,73 @@ describe('componentOptions setup should be `SetupContext`', () => {
   )
 })
 
+describe('infer slots from `SetupContext`', () => {
+  // options
+  const Foo = defineComponent({
+    setup(
+      _props,
+      _ctx: SetupContext<EmitsOptions, { default: { foo: number } }>,
+    ) {},
+    render() {
+      this.$slots.default({ foo: 1 })
+    },
+  })
+  const foo = {} as InstanceType<typeof Foo>
+  expectType<IsAny<typeof foo.$slots.default>>(false)
+  foo.$slots.default({ foo: 1 })
+
+  const Bar = defineComponent({
+    setup(
+      _props,
+      _ctx: {
+        slots: {
+          default: (props: { foo: number }) => VNode
+        }
+      },
+    ) {},
+    render() {
+      this.$slots.default({ foo: 1 })
+    },
+  })
+  const bar = {} as InstanceType<typeof Bar>
+  expectType<IsAny<typeof bar.$slots.default>>(false)
+  bar.$slots.default({ foo: 1 })
+
+  // functional
+  const Baz = defineComponent(
+    <T,>(
+      props: { foo: T },
+      ctx: SetupContext<
+        EmitsOptions,
+        SlotsType<{
+          default: (props: { foo: T }) => VNode
+        }>
+      >,
+    ) =>
+      () =>
+        ctx.slots.default(props),
+  )
+  const baz = new Baz({ foo: 1 })
+  expectType<IsAny<typeof baz.$slots.default>>(false)
+  baz.$slots.default({ foo: 1 })
+
+  const Qux = defineComponent(
+    <T,>(
+      props: { foo: T },
+      ctx: {
+        slots: {
+          default: (props: { foo: T }) => VNode
+        }
+      },
+    ) =>
+      () =>
+        ctx.slots.default(props),
+  )
+  const qux = new Qux({ foo: 1 })
+  expectType<IsAny<typeof qux.$slots.default>>(false)
+  qux.$slots.default({ foo: 1 })
+})
+
 describe('extract instance type', () => {
   const Base = defineComponent({
     props: {
@@ -1750,7 +1818,6 @@ import type {
   ComponentOptionsMixin,
   DefineComponent,
   Directive,
-  EmitsOptions,
   ExtractPropTypes,
   KeepAliveProps,
   TransitionProps,
