@@ -62,6 +62,39 @@ describe('compiler: text transform', () => {
     expect([...ir.template.keys()]).not.toContain('<code><script>')
   })
 
+  it('escapes raw static text for plain template createElement path', () => {
+    const { code } = compileWithTextTransform(
+      '<template>&lt;b&gt;foo&lt;/b&gt;</template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('const t0 = _template("")')
+    expect(code).toContain('_setText(n0, "<b>foo</b>")')
+    expect(code).not.toContain('_template("<b>foo</b>")')
+  })
+
+  it('escapes raw static text for custom element createElement path', () => {
+    const { code } = compileWithTextTransform(
+      '<my-el>&lt;b&gt;foo&lt;/b&gt;</my-el>',
+      {
+        isCustomElement: tag => tag === 'my-el',
+      },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('const t0 = _template("")')
+    expect(code).toContain('_setText(n0, "<b>foo</b>")')
+    expect(code).not.toContain('_template("<b>foo</b>")')
+  })
+
+  it('materializes literal interpolation text for mixed plain template children', () => {
+    const { code } = compileWithTextTransform(
+      '<template><span></span>{{ "<b>foo</b>" }}</template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('const t1 = _template("")')
+    expect(code).toContain('_setText(n1, "<b>foo</b>")')
+    expect(code).not.toContain('_template("<b>foo</b>")')
+  })
+
   it('should not escape quotes in root-level text nodes', () => {
     // Root-level text goes through createTextNode() which doesn't need escaping
     const { ir } = compileWithTextTransform(`Howdy y'all`)

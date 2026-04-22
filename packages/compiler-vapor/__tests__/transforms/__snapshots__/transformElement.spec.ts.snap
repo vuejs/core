@@ -400,6 +400,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > custom element with dynamic child 1`] = `
+"import { createPlainElement as _createPlainElement, txt as _txt, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("my-custom-element", null, null, true)
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _insert(n0, n1)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
+  return n1
+}"
+`;
+
 exports[`compiler: element transform > dynamic component > capitalized version w/ static binding 1`] = `
 "import { resolveDynamicComponent as _resolveDynamicComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
@@ -516,6 +530,57 @@ export function render(_ctx) {
   const n0 = t0()
   const n1 = t0()
   return [n0, n1]
+}"
+`;
+
+exports[`compiler: element transform > plain template element 1`] = `
+"import { createPlainElement as _createPlainElement, txt as _txt, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _insert(n0, n1)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
+  return n1
+}"
+`;
+
+exports[`compiler: element transform > plain template element with dynamic text child 1`] = `
+"import { createPlainElement as _createPlainElement, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  _insert(n0, n1)
+  _renderEffect(() => _setText(n0, _toDisplayString(_ctx.msg)))
+  return n1
+}"
+`;
+
+exports[`compiler: element transform > plain template element with static child 1`] = `
+"import { createPlainElement as _createPlainElement, insert as _insert, template as _template } from 'vue';
+const t0 = _template("<div>hi")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  _insert(n0, n1)
+  return n1
+}"
+`;
+
+exports[`compiler: element transform > plain template element with static text child 1`] = `
+"import { createPlainElement as _createPlainElement, insert as _insert, template as _template } from 'vue';
+const t0 = _template("hello")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  _insert(n0, n1)
+  return n1
 }"
 `;
 

@@ -24,7 +24,7 @@ import {
   template,
   txt,
 } from '../src'
-import { compileToVaporRender, makeRender } from './_utils'
+import { compile, compileToVaporRender, makeRender } from './_utils'
 import type { VaporComponentInstance } from '../src/component'
 import { setElementText, setText } from '../src/dom/prop'
 
@@ -586,6 +586,166 @@ describe('component', () => {
     expect(
       'Unhandled error during execution of setup function',
     ).not.toHaveBeenWarned()
+  })
+
+  it('mounts plain template elements with dynamic descendants', async () => {
+    const msg = ref('12')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template>
+          <div>{{ msg }}</div>
+        </template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+
+    const div = templateEl.firstChild as HTMLDivElement
+    expect(div.tagName).toBe('DIV')
+    expect(div.textContent).toBe('12')
+
+    msg.value = '34'
+    await nextTick()
+    expect(div.textContent).toBe('34')
+  })
+
+  it('mounts plain template elements with dynamic text children', async () => {
+    const msg = ref('12')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template>
+          {{ msg }}
+        </template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('12')
+
+    msg.value = '34'
+    await nextTick()
+    expect(templateEl.textContent).toBe('34')
+  })
+
+  it('mounts plain template literal interpolation as text', () => {
+    const Comp = compile(
+      `<template>
+        <template>{{ "<b>foo</b>" }}</template>
+      </template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('<b>foo</b>')
+  })
+
+  it('mounts plain template escaped static text as text', () => {
+    const Comp = compile(
+      `<template>
+        <template>&lt;b&gt;foo&lt;/b&gt;</template>
+      </template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('<b>foo</b>')
+  })
+
+  it('mounts plain template literal v-text as text', () => {
+    const Comp = compile(
+      `<template>
+        <template v-text="'<b>foo</b>'"></template>
+      </template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('<b>foo</b>')
+  })
+
+  it('mounts plain template elements with slot content', () => {
+    const data = ref('unused')
+    const Child = compile(
+      `<template>
+        <template><slot /></template>
+      </template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Child><div>slot child</div></components.Child></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild).toBeInstanceOf(HTMLDivElement)
+    expect(templateEl.firstChild!.textContent).toBe('slot child')
+  })
+
+  it('mounts plain template elements with v-html', () => {
+    const msg = ref('<b>foo</b>')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template v-html="msg"></template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.innerHTML.toLowerCase()).toBe('<b>foo</b>')
+    expect(templateEl.content.firstChild).toBeInstanceOf(HTMLElement)
+    expect((templateEl.content.firstChild as HTMLElement).tagName).toBe('B')
+  })
+
+  it('mounts plain template elements with v-text', async () => {
+    const msg = ref('12')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template v-text="msg"></template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.textContent).toBe('12')
+
+    msg.value = '34'
+    await nextTick()
+    expect(templateEl.textContent).toBe('34')
   })
 
   it('should invalidate pending mounted hooks when unmounted before flush', async () => {

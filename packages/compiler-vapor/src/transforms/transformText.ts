@@ -13,6 +13,7 @@ import type { NodeTransform, TransformContext } from '../transform'
 import { DynamicFlag, IRNodeTypes } from '../ir'
 import { getLiteralExpressionValue } from '../utils'
 import { escapeHtml } from '@vue/shared'
+import { shouldUseCreateElement } from './transformElement'
 
 type TextLike = TextNode | InterpolationNode
 const seen = new WeakMap<
@@ -24,7 +25,12 @@ export function markNonTemplate(
   node: TemplateChildNode,
   context: TransformContext,
 ): void {
-  seen.get(context.root)!.add(node)
+  let seenNodes = seen.get(context.root)
+  if (!seenNodes) {
+    seenNodes = new WeakSet()
+    seen.set(context.root, seenNodes)
+  }
+  seenNodes.add(node)
 }
 
 export const transformText: NodeTransform = (node, context) => {
@@ -57,10 +63,15 @@ export const transformText: NodeTransform = (node, context) => {
     }
     // all text like with interpolation
     if (!isFragment && isAllTextLike && hasInterp) {
-      processTextContainer(
-        node.children as TextLike[],
-        context as TransformContext<ElementNode>,
-      )
+      const elementContext = context as TransformContext<ElementNode>
+      if (shouldUseCreateElement(node, elementContext)) {
+        processCreateElementTextContainer(
+          node.children as TextLike[],
+          elementContext,
+        )
+      } else {
+        processTextContainer(node.children as TextLike[], elementContext)
+      }
     } else if (hasInterp) {
       // check if there's any text before interpolation, it needs to be merged
       for (let i = 0; i < node.children.length; i++) {
@@ -83,6 +94,20 @@ export const transformText: NodeTransform = (node, context) => {
     // Root-level text nodes go through createTextNode() which doesn't need escaping
     // Element children go through innerHTML which needs escaping
     const parent = context.parent?.node
+    const createElementParent =
+      parent &&
+      parent.type === NodeTypes.ELEMENT &&
+      shouldUseCreateElement(
+        parent,
+        context.parent as TransformContext<ElementNode>,
+      )
+    if (createElementParent && node.content[0] === '<') {
+      materializeLiteralTextNode(
+        createSimpleExpression(node.content, true, node.loc),
+        context as TransformContext<TextNode>,
+      )
+      return
+    }
     const isRootText =
       !parent ||
       parent.type === NodeTypes.ROOT ||
@@ -116,6 +141,20 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
   const allLiteral = literalValues.every(v => v != null)
   if (allLiteral && parentNode.type !== NodeTypes.ROOT) {
     const text = literalValues.join('')
+    if (
+      parentNode.type === NodeTypes.ELEMENT &&
+      shouldUseCreateElement(
+        parentNode,
+        context.parent as TransformContext<ElementNode>,
+      ) &&
+      text[0] === '<'
+    ) {
+      materializeLiteralTextNode(
+        createSimpleExpression(text, true, context.node.loc),
+        context,
+      )
+      return
+    }
     const isElementChild =
       parentNode.type === NodeTypes.ELEMENT &&
       parentNode.tagType === ElementTypes.ELEMENT
@@ -161,6 +200,55 @@ function processTextContainer(
       generated: true,
     })
   }
+}
+
+export function registerSyntheticTextChild(
+  context: TransformContext<ElementNode>,
+  template: string,
+  values?: SimpleExpressionNode[],
+): number {
+  const id = context.increaseId()
+  context.dynamic.children[context.node.children.length] = {
+    id,
+    flags: DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE,
+    children: [],
+    template: context.pushTemplate(template),
+  }
+  context.dynamic.hasDynamicChild = true
+
+  if (values && values.length) {
+    context.registerEffect(values, {
+      type: IRNodeTypes.SET_TEXT,
+      element: id,
+      values,
+    })
+  }
+
+  return id
+}
+
+function processCreateElementTextContainer(
+  children: TextLike[],
+  context: TransformContext<ElementNode>,
+) {
+  const values = processTextLikeChildren(children, context)
+  // createElement-backed parents must materialize text nodes imperatively so
+  // text that starts with "<" remains text instead of being parsed as HTML.
+  registerSyntheticTextChild(context, '', values)
+}
+
+function materializeLiteralTextNode(
+  value: SimpleExpressionNode,
+  context: TransformContext<TextNode | InterpolationNode>,
+) {
+  const id = context.reference()
+  context.dynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
+  context.dynamic.template = context.pushTemplate('')
+  context.registerEffect([value], {
+    type: IRNodeTypes.SET_TEXT,
+    element: id,
+    values: [value],
+  })
 }
 
 function processTextLikeChildren(nodes: TextLike[], context: TransformContext) {

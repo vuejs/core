@@ -21,6 +21,48 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: text transform > escapes raw static text for custom element createElement path 1`] = `
+"import { createPlainElement as _createPlainElement, setText as _setText, insert as _insert, template as _template } from 'vue';
+const t0 = _template("")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("my-el", null, null, true)
+  const n0 = t0()
+  _setText(n0, "<b>foo</b>")
+  _insert(n0, n1)
+  return n1
+}"
+`;
+
+exports[`compiler: text transform > escapes raw static text for plain template createElement path 1`] = `
+"import { createPlainElement as _createPlainElement, setText as _setText, insert as _insert, template as _template } from 'vue';
+const t0 = _template("")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  _setText(n0, "<b>foo</b>")
+  _insert(n0, n1)
+  return n1
+}"
+`;
+
+exports[`compiler: text transform > materializes literal interpolation text for mixed plain template children 1`] = `
+"import { createPlainElement as _createPlainElement, setText as _setText, insert as _insert, template as _template } from 'vue';
+const t0 = _template("<span></span>")
+const t1 = _template("")
+
+export function render(_ctx) {
+  const n2 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  const n1 = t1()
+  _setText(n1, "<b>foo</b>")
+  _insert([n0, n1], n2)
+  _insert([n0, n1], n2)
+  return n2
+}"
+`;
+
 exports[`compiler: text transform > no consecutive text 1`] = `
 "import { setText as _setText, template as _template } from 'vue';
 const t0 = _template(" ")
