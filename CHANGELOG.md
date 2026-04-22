@@ -1,3 +1,16 @@
+## [3.5.33](https://github.com/vuejs/core/compare/v3.5.32...v3.5.33) (2026-04-22)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** handle nested :deep in selector pseudos ([#14725](https://github.com/vuejs/core/issues/14725)) ([bb9d265](https://github.com/vuejs/core/commit/bb9d265d8dcdde2af824fc01b24f9a7b3169f5fa)), closes [#14724](https://github.com/vuejs/core/issues/14724)
+* **reactivity:** unlink effect scopes on out-of-order off ([#14734](https://github.com/vuejs/core/issues/14734)) ([e7659be](https://github.com/vuejs/core/commit/e7659beafc5407e892fa70f3f4ade80263b0905d)), closes [#14733](https://github.com/vuejs/core/issues/14733)
+* **runtime-dom:** preserve textarea resize dimensions ([#14747](https://github.com/vuejs/core/issues/14747)) ([11fb2fd](https://github.com/vuejs/core/commit/11fb2fd4a246e40f6f350701dfea73ec525b4f59)), closes [#14741](https://github.com/vuejs/core/issues/14741)
+* **teleport:** don't move teleport children if not mounted ([#14702](https://github.com/vuejs/core/issues/14702)) ([6a61f44](https://github.com/vuejs/core/commit/6a61f4452ba1a31fc929cadf8abe3337ac4d3a46)), closes [#14701](https://github.com/vuejs/core/issues/14701)
+* **transition:** preserve placeholder for conditional explicit default slots ([#14748](https://github.com/vuejs/core/issues/14748)) ([45990ce](https://github.com/vuejs/core/commit/45990cecf4604b2f39c571ab6aefa49d362af36a)), closes [#14727](https://github.com/vuejs/core/issues/14727)
+
+
+
 ## [3.5.32](https://github.com/vuejs/core/compare/v3.5.31...v3.5.32) (2026-04-03)
 
 
