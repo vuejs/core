@@ -44,6 +44,13 @@ import {
   defineVaporComponent,
 } from '../apiDefineComponent'
 import { isInteropEnabled } from '../vdomInteropState'
+import {
+  adoptTemplate,
+  currentHydrationNode,
+  isHydrating,
+  locateNextNode,
+  setCurrentHydrationNode,
+} from '../dom/hydration'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -154,17 +161,36 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       // if the tag and slot are the same as previous render, no need to update.
       if (isMounted && tag === currentTag && slot === currentSlot) return
 
-      const container = tag ? createElement(tag) : undefined
+      const container = tag
+        ? isHydrating
+          ? (adoptTemplate(currentHydrationNode!, `<${tag}/>`) as HTMLElement)
+          : createElement(tag)
+        : undefined
+      let nextNode: Node | null = null
+      if (isHydrating && container) {
+        // `transition-group + v-for` SSR output does not include `<!--]-->`.
+        // Mark the container so `v-for` hydration can create its own anchor.
+        ;(container as any).$tgt = 1
+        nextNode = locateNextNode(container)
+        setCurrentHydrationNode(container.firstChild || container)
+      }
       let block: Block = slottedBlock
-      frag.update(() => {
-        block = (slot && slot()) || []
-        applyGroupTransitionHooks(block, propsProxy, state, instance)
-        if (container) {
-          insert(block, container)
-          return container
+      try {
+        frag.update(() => {
+          block = (slot && slot()) || []
+          applyGroupTransitionHooks(block, propsProxy, state, instance)
+          if (container) {
+            if (!isHydrating) insert(block, container)
+            return container
+          }
+          return block
+        })
+      } finally {
+        if (isHydrating && container) {
+          delete (container as any).$tgt
+          setCurrentHydrationNode(nextNode)
         }
-        return block
-      })
+      }
       slottedBlock = block
 
       currentTag = tag

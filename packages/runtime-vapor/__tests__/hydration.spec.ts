@@ -3892,6 +3892,256 @@ describe('Vapor Mode hydration', () => {
         `"<button style="" class="v-enter-from v-enter-active">1</button>"`,
       )
     })
+
+    test('transition should hydrate empty v-if placeholder without fragment markers', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <Transition :css="false">
+            <div v-if="data">foo</div>
+          </Transition>
+        </template>`,
+        undefined,
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
+      expect(`mismatch`).not.toHaveBeenWarned()
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!---->"`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
+    })
+  })
+
+  describe('transition-group', () => {
+    test('with tag should hydrate existing container for flattened v-for children', async () => {
+      const data = ref({
+        items: [1],
+      })
+      const code = `
+        <TransitionGroup name="list" tag="ul" style="margin-top:20px;">
+          <li v-for="item in data.items" :key="item">
+            {{ item }}
+          </li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+
+      const { container } = await mountWithHydration(html, code, data)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<ul name="list" style="margin-top:20px;"><li>1</li><!--for--></ul><!--transition-group-->"`,
+      )
+      data.value.items.push(2)
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<ul name="list" style="margin-top:20px;"><li>1</li><li class="list-enter-from list-enter-active">2</li><!--for--></ul><!--transition-group-->"`,
+      )
+
+      data.value.items.shift()
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<ul name="list" style="margin-top:20px;"><li class="list-leave-from list-leave-active">1</li><li class="list-enter-from list-enter-active">2</li><!--for--></ul><!--transition-group-->"`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should place v-for anchor before trailing sibling without SSR close marker', async () => {
+      const data = ref({
+        items: [1, 2],
+        tail: 'tail',
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="ul">
+          <li v-for="item in data.items" :key="item">{{ item }}</li>
+          <li key="tail">{{ data.tail }}</li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
+      data.value.items.push(3)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><li>2</li><li>3</li><!--for--><li>tail updated</li>"`,
+      )
+
+      data.value.items.shift()
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>2</li><li>3</li><!--for--><li>tail updated</li>"`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should hydrate empty claimed container for flattened v-for children', async () => {
+      const data = ref({
+        items: [] as number[],
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="ul">
+          <li v-for="item in data.items" :key="item">{{ item }}</li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
+
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(`"<!--for-->"`)
+
+      data.value.items.push(1, 2)
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><li>2</li><!--for-->"`,
+      )
+
+      data.value.items.shift()
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>2</li><!--for-->"`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should place empty v-for anchor before trailing sibling', async () => {
+      const data = ref({
+        items: [] as number[],
+        tail: 'tail',
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="ul">
+          <li v-for="item in data.items" :key="item">{{ item }}</li>
+          <li key="tail">{{ data.tail }}</li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
+
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<!--for--><li>tail</li>"`,
+      )
+
+      data.value.items.push(1)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><!--for--><li>tail updated</li>"`,
+      )
+
+      data.value.items.shift()
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<!--for--><li>tail updated</li>"`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should keep empty v-for anchor inside container when wrapped by parent fragment boundary', async () => {
+      const data = ref({
+        items: [] as number[],
+        after: 'after',
+      })
+      const code = `
+        <div>
+          <template v-if="true">
+            <TransitionGroup :css="false" tag="ul">
+              <li v-for="item in data.items" :key="item">{{ item }}</li>
+            </TransitionGroup>
+            <span>{{ data.after }}</span>
+          </template>
+        </div>
+      `
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
+
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(`"<!--for-->"`)
+      expect(formatHtml(container.innerHTML)).toContain('<span>after</span>')
+
+      data.value.items.push(1)
+      data.value.after = 'after updated'
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><!--for-->"`,
+      )
+      expect(formatHtml(container.innerHTML)).toContain(
+        '<span>after updated</span>',
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should prefer local anchor over slot fallback boundary', async () => {
+      const data = reactive({
+        items: [] as number[],
+        tail: 'tail',
+        after: 'after',
+      })
+      const { container } = await testHydration(
+        `<template><components.Child /></template>`,
+        {
+          Child: `<template>
+            <slot>
+              <TransitionGroup :css="false" tag="ul">
+                <li v-for="item in data.items" :key="item">{{ item }}</li>
+                <li key="tail">{{ data.tail }}</li>
+              </TransitionGroup>
+              <i>{{ data.after }}</i>
+            </slot>
+          </template>`,
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<!--for--><li>tail</li>"`,
+      )
+      expect(formatHtml(container.innerHTML)).toContain('<i>after</i>')
+
+      data.items.push(1)
+      data.after = 'after updated'
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><!--for--><li>tail</li>"`,
+      )
+      expect(formatHtml(container.innerHTML)).toContain('<i>after updated</i>')
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
   })
 
   describe('teleport', () => {

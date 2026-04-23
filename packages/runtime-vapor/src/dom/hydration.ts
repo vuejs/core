@@ -62,6 +62,8 @@ function performHydration<T>(
     ;(Node.prototype as any).$idx = undefined
     ;(Node.prototype as any).$llc = undefined
     ;(Node.prototype as any).$vha = undefined
+    // transition-group tag
+    ;(Node.prototype as any).$tgt = undefined
 
     isOptimized = true
   }
