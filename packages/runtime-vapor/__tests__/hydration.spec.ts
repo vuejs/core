@@ -27,7 +27,7 @@ import { isString } from '@vue/shared'
 import type { VaporComponentInstance } from '../src/component'
 import type { TeleportFragment } from '../src/components/Teleport'
 import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from './_utils'
-import { setIsHydratingEnabled } from '../src/dom/hydration'
+import { hydrateNode, setIsHydratingEnabled } from '../src/dom/hydration'
 
 const formatHtml = (raw: string) => {
   return raw
@@ -6669,6 +6669,133 @@ describe('mismatch handling', () => {
     })
     app.mount(container)
     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+  })
+
+  describe('static template', () => {
+    beforeEach(() => {
+      setIsHydratingEnabled(true)
+    })
+
+    afterEach(() => {
+      setIsHydratingEnabled(false)
+    })
+
+    test('static element', async () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div><span>foo</span></div><span>after</span>`
+      const msg = ref('after')
+
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template('<div><span>foo', false, true)() as HTMLElement
+        const n1 = template('<span> </span>')() as HTMLElement
+        const x1 = child(n1) as Text
+
+        expect(n0).toBe(container.firstChild)
+        expect(n1).toBe(container.lastChild)
+        renderEffect(() => setText(x1, msg.value))
+      })
+
+      expect(container.innerHTML).toBe(
+        `<div><span>foo</span></div><span>after</span>`,
+      )
+      msg.value = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><span>foo</span></div><span>updated</span>`,
+      )
+    })
+
+    test('static text', async () => {
+      const container = document.createElement('div')
+      container.innerHTML = `hello<span>after</span>`
+      const msg = ref('after')
+
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template('hello', false, true)() as Text
+        const n1 = template('<span> </span>')() as HTMLElement
+        const x1 = child(n1) as Text
+
+        expect(n0).toBe(container.firstChild)
+        expect(n0.data).toBe('hello')
+        expect(n1).toBe(container.lastChild)
+        renderEffect(() => setText(x1, msg.value))
+      })
+
+      expect(container.innerHTML).toBe(`hello<span>after</span>`)
+      msg.value = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(`hello<span>updated</span>`)
+    })
+
+    test('static comment', async () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<!--foo--><span>after</span>`
+      const msg = ref('after')
+
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template('<!--foo-->', false, true)() as Comment
+        const n1 = template('<span> </span>')() as HTMLElement
+        const x1 = child(n1) as Text
+
+        expect(n0).toBe(container.firstChild)
+        expect(n0.data).toBe('foo')
+        expect(n1).toBe(container.lastChild)
+        renderEffect(() => setText(x1, msg.value))
+      })
+
+      expect(container.innerHTML).toBe(`<!--foo--><span>after</span>`)
+      msg.value = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(`<!--foo--><span>updated</span>`)
+    })
+
+    test('multi-root static nodes', async () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<!--[--><div>one</div><p>two</p><!--]--><span>after</span>`
+      const msg = ref('after')
+
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template('<div>one', false, true)() as HTMLElement
+        const n1 = template('<p>two', false, true)() as HTMLElement
+        const n2 = template('<span> </span>')() as HTMLElement
+        const x2 = child(n2) as Text
+
+        expect(n0).toBe(container.childNodes[1])
+        expect(n1).toBe(container.childNodes[2])
+        expect(n2).toBe(container.lastChild)
+        renderEffect(() => setText(x2, msg.value))
+      })
+
+      expect(container.innerHTML).toBe(
+        `<!--[--><div>one</div><p>two</p><!--]--><span>after</span>`,
+      )
+      msg.value = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--[--><div>one</div><p>two</p><!--]--><span>updated</span>`,
+      )
+    })
+
+    test('stripped static template', async () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div>claimed</div><span>after</span>`
+      const msg = ref('after')
+
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template('', false, true)() as HTMLElement
+        const n1 = template('<span> </span>')() as HTMLElement
+        const x1 = child(n1) as Text
+
+        expect(n0).toBe(container.firstChild)
+        expect(n1).toBe(container.lastChild)
+        renderEffect(() => setText(x1, msg.value))
+      })
+
+      expect(container.innerHTML).toBe(`<div>claimed</div><span>after</span>`)
+      msg.value = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div>claimed</div><span>updated</span>`)
+    })
   })
 })
 

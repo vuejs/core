@@ -1,17 +1,38 @@
-import { adoptTemplate, currentHydrationNode, isHydrating } from './hydration'
+import {
+  adoptTemplate,
+  advanceHydrationNode,
+  currentHydrationNode,
+  isHydrating,
+  resolveHydrationTarget,
+} from './hydration'
 import { type Namespace, Namespaces } from '@vue/shared'
 import { _child, createTextNode } from './node'
 
 let t: HTMLTemplateElement
 
 /*@__NO_SIDE_EFFECTS__*/
-export function template(html: string, root?: boolean, ns?: Namespace) {
+export function template(
+  html: string,
+  root?: boolean,
+  isStatic?: boolean,
+  ns?: Namespace,
+) {
   let node: Node
   return (): Node & { $root?: true } => {
     if (isHydrating) {
-      // do not cache the adopted node in node because it contains child nodes
-      // this avoids duplicate rendering of children
-      const adopted = adoptTemplate(currentHydrationNode!, html)!
+      let adopted: Node | null = null
+      // static templates only need to skip fragment markers, teleport
+      // markers, and hydration anchors before advancing the hydration
+      // cursor, so they don't need to go through adoptTemplate. Vapor
+      // never mutates their DOM afterwards.
+      if (isStatic) {
+        adopted = resolveHydrationTarget(currentHydrationNode!)
+        advanceHydrationNode(adopted)
+      } else {
+        // do not cache the adopted node in node because it contains child nodes
+        // this avoids duplicate rendering of children
+        adopted = adoptTemplate(currentHydrationNode!, html)!
+      }
       if (root) (adopted as any).$root = true
       return adopted
     }

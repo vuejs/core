@@ -1,0 +1,244 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`static template marker > does not dedupe static and dynamic templates with identical html 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<span>", false, true)
+const t1 = _template("<span>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t1()
+  _renderEffect(() => _setProp(n1, "foo", _ctx.foo))
+  return [n0, n1]
+}"
+`;
+
+exports[`static template marker > does not mark custom element createElement path as static 1`] = `
+"import { createPlainElement as _createPlainElement } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createPlainElement("my-el", null, null, true)
+  return n0
+}"
+`;
+
+exports[`static template marker > does not mark root interpolation as static 1`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setText(n0, _toDisplayString(_ctx.foo)))
+  return n0
+}"
+`;
+
+exports[`static template marker > does not mark root mixed text and interpolation as static 1`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n1 = t0()
+  _renderEffect(() => _setText(n1, "hi " + _toDisplayString(_ctx.foo)))
+  return n1
+}"
+`;
+
+exports[`static template marker > does not mark single-root element with custom directive 1`] = `
+"import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  _withVaporDirectives(n0, [[_ctx.vExample]])
+  return n0
+}"
+`;
+
+exports[`static template marker > does not mark single-root element with dynamic event handler 1`] = `
+"import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
+const t0 = _template("<button>", true)
+_delegateEvents("click")
+
+export function render(_ctx) {
+  const n0 = t0()
+  n0.$evtclick = _createInvoker(e => _ctx.foo(e))
+  return n0
+}"
+`;
+
+exports[`static template marker > does not mark single-root element with dynamic props 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<span>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setProp(n0, "foo", _ctx.foo))
+  return n0
+}"
+`;
+
+exports[`static template marker > does not mark single-root element with dynamic text content 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<span> ", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _renderEffect(() => _setText(x0, "hi " + _toDisplayString(_ctx.foo)))
+  return n0
+}"
+`;
+
+exports[`static template marker > does not mark single-root element with ref 1`] = `
+"import { createTemplateRefSetter as _createTemplateRefSetter, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const _setTemplateRef = _createTemplateRefSetter()
+  const n0 = t0()
+  _setTemplateRef(n0, "el")
+  return n0
+}"
+`;
+
+exports[`static template marker > does not mark single-root element with v-html 1`] = `
+"import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setHtml(n0, _ctx.foo))
+  return n0
+}"
+`;
+
+exports[`static template marker > does not mark single-root element with v-text 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> ", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.foo)))
+  return n0
+}"
+`;
+
+exports[`static template marker > does not mark v-for block template as static 1`] = `
+"import { createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>foo")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = t0()
+    return n2
+  }, (item) => (item))
+  return n0
+}"
+`;
+
+exports[`static template marker > keeps materialized createElement text path non-static 1`] = `
+"import { createPlainElement as _createPlainElement, setText as _setText, insert as _insert, template as _template } from 'vue';
+const t0 = _template("<span></span>", false, true)
+const t1 = _template("")
+
+export function render(_ctx) {
+  const n2 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  const n1 = t1()
+  _setText(n1, "<b>foo</b>")
+  _insert([n0, n1], n2)
+  _insert([n0, n1], n2)
+  return n2
+}"
+`;
+
+exports[`static template marker > keeps multi-root split behavior 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<p>", false, true)
+const t1 = _template("<span>", false, true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t1()
+  return [n0, n1]
+}"
+`;
+
+exports[`static template marker > keeps template empty-string semantics unchanged 1`] = `
+"import { createPlainElement as _createPlainElement, setText as _setText, insert as _insert, template as _template } from 'vue';
+const t0 = _template("")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  _setText(n0, "<b>foo</b>")
+  _insert(n0, n1)
+  return n1
+}"
+`;
+
+exports[`static template marker > marks single-root static MathML root 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<math><mrow><mi>x", true, true, 2)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`static template marker > marks single-root static comment 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<!--foo-->", false, true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`static template marker > marks single-root static element 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div><span>foo", true, true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`static template marker > marks single-root static svg root 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<svg><circle r=40>", true, true, 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`static template marker > marks single-root static text 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("hello", false, true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`static template marker > splits mixed-root into static single-root templates 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("A ", false, true)
+const t1 = _template("<span>foo", false, true)
+const t2 = _template(" B", false, true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t1()
+  const n2 = t2()
+  return [n0, n1, n2]
+}"
+`;

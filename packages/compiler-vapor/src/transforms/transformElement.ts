@@ -412,9 +412,7 @@ function transformNativeElement(
     template += `</${tag}>`
   }
 
-  if (singleRoot) {
-    context.ir.rootTemplateIndexes.add(context.ir.template.size)
-  }
+  context.templateRoot = singleRoot
 
   if (
     context.parent &&

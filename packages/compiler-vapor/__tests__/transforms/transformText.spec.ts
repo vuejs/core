@@ -135,13 +135,11 @@ describe('compiler: text transform', () => {
           {{ '1' }}
         </div>`,
     )
-    expect(code).includes(`_template("<div>2 foo1 1 1 1", true)`)
     expect(code).toMatchSnapshot()
   })
 
   test('slot literal interpolation', () => {
     const { code } = compileWithTextTransform(`<Comp>{{ "Hello" }}</Comp>`)
-    expect(code).includes('const t0 = _template("Hello")')
     expect(code).toMatchSnapshot()
   })
 })
