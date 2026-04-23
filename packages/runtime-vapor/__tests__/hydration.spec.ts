@@ -2324,6 +2324,136 @@ describe('Vapor Mode hydration', () => {
       `)
     })
 
+    test('named slot with initially empty v-if and trailing sibling', async () => {
+      const data = reactive({
+        show: false,
+        msg: 'foo',
+        tail: 'tail',
+      })
+
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #foo>
+              <template v-if="data.show">
+                <span>{{ data.msg }}</span>
+              </template>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><div><slot name="foo"/></div><span>{{ data.tail }}</span></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><!--if--><!--]-->
+        </div><span>tail</span><!--]-->
+        "
+      `,
+      )
+
+      data.show = true
+      data.msg = 'bar'
+      data.tail = 'tail updated'
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><span>bar</span><!--if--><!--]-->
+        </div><span>tail updated</span><!--]-->
+        "
+      `,
+      )
+
+      data.show = false
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><!--if--><!--]-->
+        </div><span>tail updated</span><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('named slot with initially empty v-if and sibling inside slot content', async () => {
+      const data = reactive({
+        show: false,
+        msgA: 'foo',
+        msgB: 'bar',
+        after: 'after',
+        tail: 'tail',
+      })
+
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #foo>
+              <template v-if="data.show">
+                <span>{{ data.msgA }}</span>
+                <b>{{ data.msgB }}</b>
+              </template>
+              <i>{{ data.after }}</i>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><div><slot name="foo"/></div><span>{{ data.tail }}</span></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><!----><i>after</i><!--]-->
+        </div><span>tail</span><!--]-->
+        "
+      `,
+      )
+
+      data.show = true
+      data.msgA = 'baz'
+      data.msgB = 'qux'
+      data.after = 'after updated'
+      data.tail = 'tail updated'
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><span>baz</span><b>qux</b><!----><i>after updated</i><!--]-->
+        </div><span>tail updated</span><!--]-->
+        "
+      `,
+      )
+
+      data.show = false
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><!----><i>after updated</i><!--]-->
+        </div><span>tail updated</span><!--]-->
+        "
+      `,
+      )
+    })
+
     test('named slot with v-if and v-for', async () => {
       const data = reactive({
         show: true,
