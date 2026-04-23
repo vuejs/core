@@ -150,6 +150,30 @@ describe('compiler sfc: transform asset url', () => {
     expect(code).toContain(`import _imports_0 from './foo%.png'`)
   })
 
+  // #14753
+  test('should not transform hash fragments on <image>', () => {
+    // `<image href="#...">` is an in-document fragment reference to another
+    // SVG element (like `<use>`), not a Node.js subpath import specifier.
+    const { code } = compileWithAssetUrls(
+      `<svg><image href="#" /><image href="#myClip" /></svg>`,
+      { includeAbsolute: true },
+    )
+    expect(code).toContain(`href: "#"`)
+    expect(code).toContain(`href: "#myClip"`)
+    expect(code).not.toContain(`from '#'`)
+    expect(code).not.toContain(`from '#myClip'`)
+  })
+
+  test('should not transform bare `#` value into an import', () => {
+    // A bare `#` is never a valid module specifier and should always be left
+    // untouched, even on tags that otherwise support subpath imports.
+    const { code } = compileWithAssetUrls(`<img src="#" />`, {
+      includeAbsolute: true,
+    })
+    expect(code).toContain(`src: "#"`)
+    expect(code).not.toContain(`from '#'`)
+  })
+
   test('should allow for full base URLs, with paths', () => {
     const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
       base: 'http://localhost:3000/src/',

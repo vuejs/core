@@ -35,13 +35,14 @@ export interface AssetURLOptions {
   tags?: AssetURLTagConfig
 }
 
-// Built-in attrs that always represent resource URLs. `use` is intentionally
-// omitted because its hash-only values may still be fragment references.
+// Built-in attrs that always represent resource URLs. `use` and `image` are
+// intentionally omitted because their hash-only values are fragment references
+// to in-document elements (e.g. `<image href="#myClip" />`), not module
+// specifiers.
 const resourceUrlTagConfig: AssetURLTagConfig = {
   video: ['src', 'poster'],
   source: ['src'],
   img: ['src'],
-  image: ['xlink:href', 'href'],
 }
 
 export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
@@ -49,6 +50,7 @@ export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
   includeAbsolute: false,
   tags: {
     ...resourceUrlTagConfig,
+    image: ['xlink:href', 'href'],
     use: ['xlink:href', 'href'],
   },
 }
@@ -125,6 +127,8 @@ export const transformAssetUrl: NodeTransform = (
       if (
         isExternalUrl(urlValue) ||
         isDataUrl(urlValue) ||
+        // a bare `#` is never a valid import specifier
+        urlValue === '#' ||
         (isHashOnlyValue && !canTransformHashImport(node.tag, attr.name)) ||
         (!options.includeAbsolute && !isRelativeUrl(urlValue))
       ) {
