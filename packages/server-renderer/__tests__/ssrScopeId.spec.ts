@@ -1,6 +1,7 @@
-import { createApp, h, mergeProps, withCtx } from 'vue'
+import { createApp, createVNode, h, mergeProps, withCtx } from 'vue'
 import { renderToString } from '../src/renderToString'
 import { ssrRenderAttrs, ssrRenderComponent, ssrRenderSlot } from '../src'
+import { renderVNode } from '../src/render'
 
 describe('ssr: scopedId runtime behavior', () => {
   test('id on component root', async () => {
@@ -268,5 +269,24 @@ describe('ssr: scopedId runtime behavior', () => {
         `<!--[--><!--[--><div root slotted-s wrapper-s></div><!--]--><!--]-->` +
         `</div>`,
     )
+  })
+
+  // #12159
+  test('avoid scopeId inheritance when recursing components', async () => {
+    let count = 2
+
+    const Comp = {
+      __scopeId: 'comp',
+      ssrRender: (ctx: any, push: any, parent: any, attrs: any) => {
+        if (--count) {
+          push(ssrRenderComponent(h(Comp), attrs, null, parent))
+        } else {
+          renderVNode(push, createVNode('div', attrs, 'vuejs'), parent)
+        }
+      },
+    }
+
+    const result = await renderToString(createApp(Comp)) // output: `<div></div>`
+    expect(result).toBe(`<div comp>vuejs</div>`)
   })
 })
