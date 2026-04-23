@@ -626,12 +626,7 @@ function validatePropName(key: string) {
 // dev only
 // use function string name to check type constructors
 // so that it works across vms / iframes.
-function getType(ctor: Prop<any> | null): string {
-  // Early return for null to avoid unnecessary computations
-  if (ctor === null) {
-    return 'null'
-  }
-
+function getType(ctor: Prop<any>): string {
   // Avoid using regex for common cases by checking the type directly
   if (typeof ctor === 'function') {
     // Using name property to avoid converting function to string
@@ -697,9 +692,22 @@ function validateProp(
     const expectedTypes = []
     // value is valid as long as one of the specified types match
     for (let i = 0; i < types.length && !isValid; i++) {
-      const { valid, expectedType } = assertType(value, types[i])
-      expectedTypes.push(expectedType || '')
-      isValid = valid
+      // Handle null type directly without calling assertType
+      if (types[i] === null) {
+        if (value === null) {
+          expectedTypes.push('null')
+          isValid = true
+        } else {
+          expectedTypes.push('null')
+        }
+      } else if (types[i] !== undefined) {
+        // TypeScript doesn't narrow the type after the checks above,
+        // so we use a const to help it understand types[i] is not null/undefined here
+        const type = types[i] as PropConstructor
+        const { valid, expectedType } = assertType(value, type)
+        expectedTypes.push(expectedType || '')
+        isValid = valid
+      }
     }
     if (!isValid) {
       warn(getInvalidTypeMessage(name, value, expectedTypes))
@@ -724,27 +732,27 @@ type AssertionResult = {
 /**
  * dev only
  */
-function assertType(
-  value: unknown,
-  type: PropConstructor | null,
-): AssertionResult {
+function assertType(value: unknown, type: PropConstructor): AssertionResult {
   let valid
   const expectedType = getType(type)
-  if (expectedType === 'null') {
-    valid = value === null
-  } else if (isSimpleType(expectedType)) {
+  if (isSimpleType(expectedType)) {
     const t = typeof value
     valid = t === expectedType.toLowerCase()
     // for primitive wrapper objects
     if (!valid && t === 'object') {
-      valid = value instanceof (type as PropConstructor)
+      // Guard against invalid prop type definitions (e.g. 'object', {}, etc.)
+      // Only attempt instanceof when the provided type is a function/constructor.
+      valid = isFunction(type) && value instanceof (type as PropConstructor)
     }
   } else if (expectedType === 'Object') {
     valid = isObject(value)
   } else if (expectedType === 'Array') {
     valid = isArray(value)
   } else {
-    valid = value instanceof (type as PropConstructor)
+    // Fallback to constructor check only when type is a function.
+    // This avoids errors like "Right-hand side of 'instanceof' is not an object"
+    // when users mistakenly pass invalid values (e.g. strings) in prop type.
+    valid = isFunction(type) && value instanceof (type as PropConstructor)
   }
   return {
     valid,
