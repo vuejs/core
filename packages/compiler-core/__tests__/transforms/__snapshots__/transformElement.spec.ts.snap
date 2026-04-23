@@ -1,5 +1,17 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: element transform > <KeepAlive> multiple children > should ignore comments 1`] = `
+"const { createCommentVNode: _createCommentVNode, resolveDynamicComponent: _resolveDynamicComponent, openBlock: _openBlock, createBlock: _createBlock, KeepAlive: _KeepAlive } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createBlock(_KeepAlive, null, [
+    _createCommentVNode("this should be ignored "),
+    (_openBlock(), _createBlock(_resolveDynamicComponent(_ctx.activeComponent))),
+    _createCommentVNode("this should be ignored ")
+  ], 1024 /* DYNAMIC_SLOTS */))
+}"
+`;
+
 exports[`compiler: v-for > codegen > basic v-for 1`] = `
 "const _Vue = Vue
 
