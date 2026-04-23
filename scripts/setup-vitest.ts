@@ -6,6 +6,7 @@ declare module 'vitest' {
 }
 
 interface CustomMatchers<R = unknown> {
+  toHaveBeenErrored(): R
   toHaveBeenWarned(): R
   toHaveBeenWarnedLast(): R
   toHaveBeenWarnedTimes(n: number): R
@@ -14,6 +15,27 @@ interface CustomMatchers<R = unknown> {
 vi.stubGlobal('MathMLElement', class MathMLElement {})
 
 expect.extend({
+  toHaveBeenErrored(received: string) {
+    const passed = error.mock.calls.some(args => args[0].includes(received))
+    if (passed) {
+      asserted.add(received)
+      return {
+        pass: true,
+        message: () => `expected "${received}" not to have been errored.`,
+      }
+    } else {
+      const msgs = error.mock.calls.map(args => args[0]).join('\n - ')
+      return {
+        pass: false,
+        message: () =>
+          `expected "${received}" to have been errored` +
+          (msgs.length
+            ? `.\n\nActual messages:\n\n - ${msgs}`
+            : ` but no error was recorded.`),
+      }
+    }
+  },
+
   toHaveBeenWarned(received: string) {
     const passed = warn.mock.calls.some(args => args[0].includes(received))
     if (passed) {
@@ -79,16 +101,21 @@ expect.extend({
 })
 
 let warn: MockInstance
+let error: MockInstance
 const asserted: Set<string> = new Set()
 
 beforeEach(() => {
   asserted.clear()
   warn = vi.spyOn(console, 'warn')
   warn.mockImplementation(() => {})
+
+  error = vi.spyOn(console, 'error')
+  error.mockImplementation(() => {})
 })
 
 afterEach(() => {
   const assertedArray = Array.from(asserted)
+
   const nonAssertedWarnings = warn.mock.calls
     .map(args => args[0])
     .filter(received => {
@@ -100,6 +127,22 @@ afterEach(() => {
   if (nonAssertedWarnings.length) {
     throw new Error(
       `test case threw unexpected warnings:\n - ${nonAssertedWarnings.join(
+        '\n - ',
+      )}`,
+    )
+  }
+
+  const nonAssertedErrors = error.mock.calls
+    .map(args => args[0])
+    .filter(received => {
+      return !assertedArray.some(assertedMsg => {
+        return received.includes(assertedMsg)
+      })
+    })
+  error.mockRestore()
+  if (nonAssertedErrors.length) {
+    throw new Error(
+      `test case threw unexpected errors:\n - ${nonAssertedErrors.join(
         '\n - ',
       )}`,
     )
