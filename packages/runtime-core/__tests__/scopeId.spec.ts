@@ -19,6 +19,7 @@ import {
 } from '@vue/runtime-test'
 import { withCtx } from '../src/componentRenderContext'
 import { PatchFlags } from '@vue/shared'
+import { TransitionGroup } from '@vue/runtime-dom'
 
 describe('scopeId runtime support', () => {
   test('should attach scopeId', () => {
@@ -211,6 +212,41 @@ describe('scopeId runtime support', () => {
         `<div root>dynamic</div>` +
         `</div>` +
         `</div>`,
+    )
+  })
+
+  test(':slotted should work on transitionGroup', async () => {
+    const Child = {
+      __scopeId: 'child',
+      render(this: any) {
+        return h('div', renderSlot(this.$slots, 'default'))
+      },
+    }
+
+    const App = {
+      __scopeId: 'parent',
+      render: () => {
+        return h(
+          Child,
+          withCtx(() => {
+            return [
+              h(TransitionGroup, null, {
+                default: withCtx(() => [
+                  h('div', { key: 'foo' }, ' I have a TransitionGroup '),
+                ]),
+              }),
+            ]
+          }),
+        )
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    // slot content should have:
+    // - scopeId from parent
+    // - slotted scopeId (with `-s` postfix) from child (the tree owner)
+    expect(serializeInner(root)).toBe(
+      `<div child parent><div parent child-s> I have a TransitionGroup </div></div>`,
     )
   })
 
