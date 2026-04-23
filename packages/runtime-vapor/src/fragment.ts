@@ -521,6 +521,16 @@ export class DynamicFragment extends VaporFragment {
         const anchor = markHydrationAnchor(slotAnchor!)
         parentNode = anchor.parentNode
         nextNode = anchor.nextSibling
+      } else if (
+        this.anchorLabel === 'if' &&
+        !isValidBlock(this.nodes) &&
+        currentSlotEndAnchor &&
+        currentHydrationNode === currentSlotEndAnchor
+      ) {
+        // Only reuse the slot end anchor when this empty inner `v-if`
+        // has already consumed the whole local slot range.
+        parentNode = currentSlotEndAnchor.parentNode
+        nextNode = currentSlotEndAnchor
       } else {
         const node = findBlockNode(this.nodes)
         parentNode = node.parentNode
