@@ -130,7 +130,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > directives > v-cloak > basic 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div>test", true)
+const t0 = _template("<div>test", true, true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -140,7 +140,7 @@ export function render(_ctx) {
 
 exports[`compile > directives > v-pre > basic 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}", true)
+const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}", true, true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -150,7 +150,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}")
+const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}", false, true)
 const t1 = _template("<div> ")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
@@ -214,7 +214,7 @@ export function render(_ctx) {
 
 exports[`compile > execution order > setInsertionState > next, child and nthChild should be above the setInsertionState 1`] = `
 "import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, nthChild as _nthChild, createIf as _createIf, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>")
+const t0 = _template("<div>", false, true)
 const t1 = _template("<div><div></div><!><div></div><!><div><button>", true)
 
 export function render(_ctx) {
@@ -334,9 +334,9 @@ export function render(_ctx) {
 
 exports[`compile > fragment 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<p>")
-const t1 = _template("<span>")
-const t2 = _template("<div>")
+const t0 = _template("<p>", false, true)
+const t1 = _template("<span>", false, true)
+const t2 = _template("<div>", false, true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -411,9 +411,9 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compile > gen unique node variables > should bump template var (t*) on conflict 1`] = `
 "import { template as _template } from 'vue';
-const t1 = _template("<div>")
-const t3 = _template("<span>")
-const t4 = _template("<p>")
+const t1 = _template("<div>", false, true)
+const t3 = _template("<span>", false, true)
+const t4 = _template("<p>", false, true)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t1()
@@ -436,7 +436,7 @@ export function render(_ctx) {
 
 exports[`compile > static template 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div><p>hello</p><input><span>", true)
+const t0 = _template("<div><p>hello</p><input><span>", true, true)
 
 export function render(_ctx) {
   const n0 = t0()

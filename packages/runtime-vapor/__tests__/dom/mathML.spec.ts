@@ -33,6 +33,7 @@ describe('MathML support', () => {
             </semantics>
           </math>`,
           true,
+          true,
           2,
         )
         const n0 = t0()
