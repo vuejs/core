@@ -96,13 +96,14 @@ export function getPropsProxyHandlers(
           isString(key) && hasOwn(propsOptions, camelize(key))
       : NO
   ) as (key: string | symbol) => key is string
-  const isAttr = propsOptions
-    ? (key: string | symbol) =>
-        isString(key) &&
-        key !== '$' &&
-        !isProp(key) &&
-        !isEmitListener(emitsOptions, key)
-    : (key: string | symbol) => isString(key)
+  const isAttr =
+    propsOptions || emitsOptions
+      ? (key: string | symbol) =>
+          isString(key) &&
+          key !== '$' &&
+          !isProp(key) &&
+          !isEmitListener(emitsOptions, key)
+      : (key: string | symbol) => isString(key)
 
   const getProp = (instance: VaporComponentInstance, key: string | symbol) => {
     // this enables direct watching of props and prevents `Invalid watch source` DEV warnings.
