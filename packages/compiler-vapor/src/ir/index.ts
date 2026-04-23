@@ -60,13 +60,26 @@ export interface RootIRNode {
   type: IRNodeTypes.ROOT
   node: RootNode
   source: string
-  template: Map<string, Namespace>
-  templateIndexMap: Map<string, number>
-  rootTemplateIndexes: Set<number>
+  template: TemplateRegistry
   component: Set<string>
   directive: Set<string>
   block: BlockIRNode
   hasTemplateRef: boolean
+}
+
+export interface IRTemplate {
+  content: string
+  ns: Namespace
+  root: boolean
+  static: boolean
+}
+
+export class TemplateRegistry {
+  entries: IRTemplate[] = []
+
+  keys(): string[] {
+    return this.entries.map(({ content }) => content)
+  }
 }
 
 export interface IfIRNode extends BaseIRNode {

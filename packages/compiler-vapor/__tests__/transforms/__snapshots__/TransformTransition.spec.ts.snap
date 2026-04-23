@@ -34,8 +34,8 @@ export function render(_ctx) {
 
 exports[`compiler: transition > the v-if/else-if/else branches in Transition should ignore comments 1`] = `
 "import { VaporTransition as _VaporTransition, setInsertionState as _setInsertionState, createIf as _createIf, createComponent as _createComponent, template as _template } from 'vue';
-const t0 = _template("<div>hey")
-const t1 = _template("<p>")
+const t0 = _template("<div>hey", false, true)
+const t1 = _template("<p>", false, true)
 const t2 = _template("<div>")
 
 export function render(_ctx) {
@@ -87,7 +87,7 @@ export function render(_ctx) {
 
 exports[`compiler: transition > work with dynamic keyed children 1`] = `
 "import { VaporTransition as _VaporTransition, createKeyedFragment as _createKeyedFragment, createComponent as _createComponent, template as _template } from 'vue';
-const t0 = _template("<h1>foo")
+const t0 = _template("<h1>foo", false, true)
 
 export function render(_ctx) {
   const n2 = _createComponent(_VaporTransition, null, {
@@ -105,7 +105,7 @@ export function render(_ctx) {
 
 exports[`compiler: transition > work with v-if 1`] = `
 "import { VaporTransition as _VaporTransition, createIf as _createIf, createComponent as _createComponent, template as _template } from 'vue';
-const t0 = _template("<h1>foo")
+const t0 = _template("<h1>foo", false, true)
 
 export function render(_ctx) {
   const n3 = _createComponent(_VaporTransition, null, {

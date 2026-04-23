@@ -2,7 +2,7 @@
 
 exports[`compiler: children transform > anchor insertion in middle 1`] = `
 "import { child as _child, next as _next, setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>")
+const t0 = _template("<div>", false, true)
 const t1 = _template("<div><div></div><!><div>", true)
 
 export function render(_ctx) {

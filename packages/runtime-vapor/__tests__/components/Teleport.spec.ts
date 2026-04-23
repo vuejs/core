@@ -770,7 +770,7 @@ function runSharedTests(deferMode: boolean): void {
     const { host } = define({
       setup() {
         const _setTemplateRef = createTemplateRefSetter()
-        const n0 = template('<svg></svg>', false, 1)() as any
+        const n0 = template('<svg></svg>', false, false, 1)() as any
         const n1 = createIf(
           () => svg.value,
           () => {
@@ -779,7 +779,12 @@ function runSharedTests(deferMode: boolean): void {
               { to: () => svg.value },
               {
                 default: () => {
-                  const n3 = template('<circle></circle>', false, 1)() as any
+                  const n3 = template(
+                    '<circle></circle>',
+                    false,
+                    false,
+                    1,
+                  )() as any
                   _setTemplateRef(n3, circle, undefined, 'circle')
                   return n3
                 },

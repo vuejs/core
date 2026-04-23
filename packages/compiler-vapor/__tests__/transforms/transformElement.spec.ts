@@ -1203,18 +1203,18 @@ describe('compiler: element transform', () => {
     const { code, ir } = compileWithElementTransform(t)
     expect(code).toMatchSnapshot()
     const expectedTemplate = '<svg><circle r=40>'
-    expect(code).contains(`_template("${expectedTemplate}", true, 1)`)
+    expect(code).contains(`_template("${expectedTemplate}", true, true, 1)`)
     expect([...ir.template.keys()]).toMatchObject([expectedTemplate])
-    expect(ir.template.get(expectedTemplate)).toBe(1)
+    expect(ir.template.entries[0].ns).toBe(1)
   })
 
   test('MathML', () => {
     const t = `<math><mrow><mi>x</mi></mrow></math>`
     const { code, ir } = compileWithElementTransform(t)
     expect(code).toMatchSnapshot()
-    expect(code).contains('_template("<math><mrow><mi>x", true, 2)')
+    expect(code).contains('_template("<math><mrow><mi>x", true, true, 2)')
     expect([...ir.template.keys()]).toMatchObject(['<math><mrow><mi>x'])
-    expect(ir.template.get('<math><mrow><mi>x')).toBe(2)
+    expect(ir.template.entries[0].ns).toBe(2)
   })
 
   describe('static props quoting', () => {

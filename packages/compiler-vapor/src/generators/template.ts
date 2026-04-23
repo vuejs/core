@@ -1,5 +1,5 @@
 import type { CodegenContext } from '../generate'
-import { DynamicFlag, type IRDynamicInfo } from '../ir'
+import { DynamicFlag, type IRDynamicInfo, type IRTemplate } from '../ir'
 import { genDirectivesForElement } from './directive'
 import { genOperationWithInsertionState } from './operation'
 import {
@@ -11,23 +11,34 @@ import {
 } from './utils'
 
 export function genTemplates(
-  templates: Map<string, number>,
-  rootIndexes: Set<number>,
+  templates: IRTemplate[],
   context: CodegenContext,
 ): string {
   const result: string[] = []
-  let i = 0
-  templates.forEach((ns, template) => {
-    result.push(
-      `const ${context.tName(i)} = ${context.helper('template')}(${JSON.stringify(
-        template,
-      ).replace(
-        // replace import expressions with string concatenation
-        IMPORT_EXPR_RE,
-        `" + $1 + "`,
-      )}${rootIndexes.has(i) ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`,
+  templates.forEach(({ content, ns, root, static: isStatic }, i) => {
+    let args = JSON.stringify(content).replace(
+      // replace import expressions with string concatenation
+      IMPORT_EXPR_RE,
+      `" + $1 + "`,
     )
-    i++
+
+    if (root) {
+      args += ', true'
+    } else if (isStatic || ns) {
+      args += ', false'
+    }
+
+    if (isStatic || ns) {
+      args += `, ${isStatic ? 'true' : 'false'}`
+    }
+
+    if (ns) {
+      args += `, ${ns}`
+    }
+
+    result.push(
+      `const ${context.tName(i)} = ${context.helper('template')}(${args})\n`,
+    )
   })
   return result.join('')
 }

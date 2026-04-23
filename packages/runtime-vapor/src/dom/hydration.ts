@@ -387,7 +387,7 @@ export function isHydrationAnchor(node: Node | null | undefined): boolean {
   return !!node && (node as Anchor).$vha === 1
 }
 
-function resolveHydrationTarget(node: Node): Node {
+export function resolveHydrationTarget(node: Node): Node {
   while (true) {
     if (isHydrationAnchor(node)) {
       return node
