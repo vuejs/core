@@ -151,13 +151,38 @@ export const createFor = (
               if (nextNode) setCurrentHydrationNode(nextNode)
             }
 
-            // Slot fallback can fall through an empty/invalid `v-for`. In that
-            // case SSR only rendered the parent slot range, so this `v-for` has no
-            // own `<!--]-->` to reuse. If `hydrationStart` is not the parent slot
-            // end anchor, use `hydrationStart.nextSibling` as the insertion point
-            // so the runtime `<!--for-->` lands immediately after that local SSR
-            // range. Otherwise insert it before the parent slot end anchor.
-            if (slotFallbackRange && !isValidBlock(newBlocks)) {
+            // transition-group + v-for, without <!--]--> marker
+            const container =
+              // empty list: hydrationStart is container
+              hydrationStart.nodeType === 1 && !!(hydrationStart as any).$tgt
+                ? (hydrationStart as ParentNode)
+                : // non-empty list: parent node is container
+                  currentHydrationNode!.parentNode &&
+                    !!(currentHydrationNode!.parentNode as any).$tgt
+                  ? (currentHydrationNode!.parentNode as ParentNode)
+                  : null
+            if (container) {
+              const anchorNode = newLength ? nextNode : currentHydrationNode
+              const anchor =
+                anchorNode &&
+                anchorNode !== container &&
+                anchorNode.parentNode === container
+                  ? anchorNode
+                  : null
+              parentAnchor = markHydrationAnchor(
+                __DEV__ ? createComment('for') : createTextNode(),
+              )
+              pendingHydrationAnchor = true
+              queuePostFlushCb(() =>
+                container.insertBefore(parentAnchor, anchor),
+              )
+            } else if (slotFallbackRange && !isValidBlock(newBlocks)) {
+              // Slot fallback can fall through an empty/invalid `v-for`. In that
+              // case SSR only rendered the parent slot range, so this `v-for` has no
+              // own `<!--]-->` to reuse. If `hydrationStart` is not the parent slot
+              // end anchor, use `hydrationStart.nextSibling` as the insertion point
+              // so the runtime `<!--for-->` lands immediately after that local SSR
+              // range. Otherwise insert it before the parent slot end anchor.
               const anchor =
                 // The invalid list still consumed local SSR item ranges.
                 currentHydrationNode !== hydrationStart
