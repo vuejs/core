@@ -150,7 +150,6 @@ describe('compiler sfc: transform asset url', () => {
     expect(code).toContain(`import _imports_0 from './foo%.png'`)
   })
 
-  // #14753
   test('should not transform hash fragments on <image>', () => {
     // `<image href="#...">` is an in-document fragment reference to another
     // SVG element (like `<use>`), not a Node.js subpath import specifier.
