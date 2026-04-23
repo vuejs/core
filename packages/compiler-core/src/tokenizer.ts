@@ -690,6 +690,18 @@ export default class Tokenizer {
       this.state = State.InDirArg
       this.sectionStart = this.index + 1
     } else {
+      // We need to consume and validate the current character right now.
+      if (
+        (__DEV__ || !__BROWSER__) &&
+        (c === CharCodes.DoubleQuote ||
+          c === CharCodes.SingleQuote ||
+          c === CharCodes.Lt)
+      ) {
+        this.cbs.onerr(
+          ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
+          this.index,
+        )
+      }
       this.state = State.InAttrName
       this.sectionStart = this.index
     }
