@@ -7107,6 +7107,26 @@ describe('mismatch handling', () => {
       await nextTick()
       expect(container.innerHTML).toBe(`<div>claimed</div><span>updated</span>`)
     })
+
+    test('stripped static template can be cloned after hydration', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div>claimed</div>`
+      const t1 = template('', true, true)
+      let hydrated: HTMLElement
+
+      hydrateNode(container.firstChild!, () => {
+        hydrated = t1() as HTMLElement
+        expect(hydrated).toBe(container.firstChild)
+        expect((hydrated as any).$root).toBe(true)
+      })
+
+      hydrated!.textContent = 'mutated'
+
+      const cloned = t1() as HTMLElement
+      expect(cloned).not.toBe(hydrated!)
+      expect((cloned as any).$root).toBe(true)
+      expect(cloned.outerHTML).toBe(`<div>claimed</div>`)
+    })
   })
 })
 
