@@ -27,6 +27,7 @@ export function template(
       // never mutates their DOM afterwards.
       if (isStatic) {
         adopted = resolveHydrationTarget(currentHydrationNode!)
+        node = adopted.cloneNode(true)
         advanceHydrationNode(adopted)
       } else {
         // do not cache the adopted node in node because it contains child nodes
@@ -37,20 +38,24 @@ export function template(
       return adopted
     }
 
+    if (node) {
+      const ret = node.cloneNode(true)
+      if (root) (ret as any).$root = true
+      return ret
+    }
+
     // fast path for text nodes
     if (html[0] !== '<') {
       return createTextNode(html)
     }
-    if (!node) {
-      t = t || document.createElement('template')
-      if (ns) {
-        const tag = ns === Namespaces.SVG ? 'svg' : 'math'
-        t.innerHTML = `<${tag}>${html}</${tag}>`
-        node = _child(_child(t.content) as ParentNode)
-      } else {
-        t.innerHTML = html
-        node = _child(t.content)
-      }
+    t = t || document.createElement('template')
+    if (ns) {
+      const tag = ns === Namespaces.SVG ? 'svg' : 'math'
+      t.innerHTML = `<${tag}>${html}</${tag}>`
+      node = _child(_child(t.content) as ParentNode)
+    } else {
+      t.innerHTML = html
+      node = _child(t.content)
     }
     const ret = node.cloneNode(true)
     if (root) (ret as any).$root = true
