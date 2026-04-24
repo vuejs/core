@@ -45,6 +45,16 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component > component vue vnode hooks 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { onVnodeMounted: () => _ctx.handleMounted }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > do not resolve component from non-script-setup bindings 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 

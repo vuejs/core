@@ -5592,6 +5592,67 @@ describe('Vapor Mode hydration', () => {
       `)
     })
 
+    test('trigger @vue:mounted for VDOM async component mounted after hydration', async () => {
+      const data = ref({
+        started: false,
+        loaded: false,
+      })
+      const ResolvedComp = defineComponent({
+        setup() {
+          return () =>
+            h('div', { id: 'docsearch' }, [
+              h('button', { type: 'button' }, 'loaded'),
+            ])
+        },
+      })
+      const appCode = `
+        <components.AsyncComp v-if="data.started" @vue:mounted="data.loaded = true" />
+        <div v-if="!data.loaded" id="docsearch">placeholder</div>
+      `
+      const SSRApp = compileVaporComponent(
+        appCode,
+        data,
+        { AsyncComp: ResolvedComp },
+        true,
+      )
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+
+      let clientResolve: any
+      const AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      )
+
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const app = createVaporSSRApp(App)
+      app.use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+
+      expect(container.querySelectorAll('#docsearch')).toHaveLength(1)
+
+      data.value.started = true
+      await nextTick()
+      clientResolve(ResolvedComp)
+      await new Promise(r => setTimeout(r))
+      await nextTick()
+
+      expect(data.value.loaded).toBe(true)
+      expect(container.querySelectorAll('#docsearch')).toHaveLength(1)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><div id="docsearch"><button type="button">loaded</button></div><!----><!--if--><!--]-->
+        "
+      `)
+    })
+
     describe('suspense', () => {
       describe('VDOM suspense', () => {
         test('hydrate VDOM Suspense vapor async setup updates empty v-for before trailing sibling', async () => {

@@ -409,6 +409,32 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('component vue vnode hooks', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<Foo @vue:mounted="handleMounted" />`,
+        {
+          bindingMetadata: {
+            handleMounted: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`onVnodeMounted`)
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          [
+            {
+              key: { content: 'vnode-mounted' },
+              handler: true,
+              values: [{ content: 'handleMounted' }],
+            },
+          ],
+        ],
+      })
+    })
+
     test('v-on expression is a function call', () => {
       const { code, ir } = compileWithElementTransform(
         `<Foo v-on:bar="handleBar($event)" />`,
