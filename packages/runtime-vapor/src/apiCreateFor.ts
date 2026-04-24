@@ -156,10 +156,10 @@ export const createFor = (
               // empty list: hydrationStart is container
               hydrationStart.nodeType === 1 && !!(hydrationStart as any).$tgt
                 ? (hydrationStart as ParentNode)
-                : // non-empty list: parent node is container
-                  currentHydrationNode!.parentNode &&
-                    !!(currentHydrationNode!.parentNode as any).$tgt
-                  ? (currentHydrationNode!.parentNode as ParentNode)
+                : // non-empty list: hydrationStart parent is container
+                  hydrationStart.parentNode &&
+                    !!(hydrationStart.parentNode as any).$tgt
+                  ? (hydrationStart.parentNode as ParentNode)
                   : null
             if (container) {
               const anchorNode = newLength ? nextNode : currentHydrationNode
