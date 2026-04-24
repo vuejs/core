@@ -1021,6 +1021,72 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('v-if KeepAlive with dynamic component should preserve cached branches', async () => {
+      const data = ref({
+        current: 'CompA',
+        useKeepAlive: true,
+      })
+      const { container } = await testHydration(
+        `<script setup>
+          import { KeepAlive, computed } from 'vue'
+          const data = _data
+          const components = _components
+          const current = computed(() => components[data.value.current])
+        </script>
+        <template>
+          <KeepAlive v-if="data.useKeepAlive">
+            <component :is="current" />
+          </KeepAlive>
+          <component v-else :is="current" />
+        </template>`,
+        {
+          CompA: `<script setup>
+            import { ref } from 'vue'
+            const count = ref(0)
+          </script>
+          <template>
+            <button @click="count++">A {{ count }}</button>
+          </template>`,
+          CompB: `<script setup>
+            import { ref } from 'vue'
+            const msg = ref('')
+          </script>
+          <template>
+            <input v-model="msg">
+            <p>B {{ msg }}</p>
+          </template>`,
+        },
+        data,
+      )
+
+      const getButton = () =>
+        container.querySelector('button') as HTMLButtonElement
+      const getInput = () =>
+        container.querySelector('input') as HTMLInputElement
+      const getText = () => container.querySelector('p')!.textContent
+
+      expect(getButton().textContent).toBe('A 0')
+      triggerEvent('click', getButton())
+      await nextTick()
+      expect(getButton().textContent).toBe('A 1')
+
+      data.value.current = 'CompB'
+      await nextTick()
+      getInput().value = 'hello'
+      triggerEvent('input', getInput())
+      await nextTick()
+      expect(getText()).toBe('B hello')
+
+      data.value.current = 'CompA'
+      await nextTick()
+      expect(getButton().textContent).toBe('A 1')
+
+      data.value.current = 'CompB'
+      await nextTick()
+      expect(getInput().value).toBe('hello')
+      expect(getText()).toBe('B hello')
+    })
+
     test('consecutive dynamic components with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
