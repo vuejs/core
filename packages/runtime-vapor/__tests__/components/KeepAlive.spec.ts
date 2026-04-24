@@ -194,6 +194,38 @@ describe('VaporKeepAlive', () => {
     expect(root.innerHTML).toBe(`<div>changed</div><!--dynamic-component-->`)
   })
 
+  test('should not use wrapper key as child cache key', async () => {
+    const viewRef = ref('one')
+    let cache!: Map<any, any>
+
+    const { mount } = define({
+      setup() {
+        const n0 = createComponent(VaporKeepAlive, null, {
+          default: () => createDynamicComponent(() => views[viewRef.value]),
+        })
+        setBlockKey(n0, 'wrapper')
+        cache = (n0 as any).__v_cache
+        return n0
+      },
+    }).create()
+
+    mount(root)
+    await nextTick()
+    expect(cache.has(one)).toBe(true)
+    expect(cache.has('wrapper')).toBe(false)
+    expect(oneHooks.beforeMount).toHaveBeenCalledTimes(1)
+
+    viewRef.value = 'two'
+    await nextTick()
+    expect(cache.has(one)).toBe(true)
+    expect(cache.has(two)).toBe(true)
+    expect(cache.has('wrapper')).toBe(false)
+
+    viewRef.value = 'one'
+    await nextTick()
+    expect(oneHooks.beforeMount).toHaveBeenCalledTimes(1)
+  })
+
   test('should cache same component across branches', async () => {
     const toggle = ref(true)
     const instanceA = ref<any>(null)
