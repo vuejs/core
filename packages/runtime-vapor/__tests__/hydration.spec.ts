@@ -2,6 +2,7 @@ import {
   VaporTeleport,
   child,
   createComponent,
+  createFor,
   createPlainElement,
   createVaporSSRApp,
   defineVaporAsyncComponent,
@@ -11,6 +12,7 @@ import {
   setStyle,
   setText,
   template,
+  txt,
   useVaporCssVars,
 } from '../src'
 import {
@@ -3955,6 +3957,82 @@ describe('Vapor Mode hydration', () => {
       expect(
         `Hydration completed but contains mismatches.`,
       ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should keep nested v-for anchor inside container', async () => {
+      const data = reactive({
+        items: [1, 2, 3, 4, 5],
+      })
+      const { container } = await testWithVDOMApp(
+        `<template><components.Child /></template>`,
+        {
+          Child: {
+            code: `
+              <template>
+                <div class="demo">
+                  <TransitionGroup name="list" tag="ul" style="margin-top:20px;">
+                    <li v-for="item in data.items" :key="item">{{ item }}</li>
+                  </TransitionGroup>
+                </div>
+              </template>
+            `,
+            vapor: true,
+          },
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+
+      data.items.splice(2, 0, 6)
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><li>2</li><li class="list-enter-from list-enter-active">6</li><li>3</li><li>4</li><li>5</li><!--for-->"`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('v-for should use transition-group container marker after cursor leaves container', async () => {
+      const host = document.createElement('div')
+      host.innerHTML = `<ul><li>1</li><li>2</li></ul><span>after</span>`
+      const ul = host.querySelector('ul')!
+      ;(ul as any).$tgt = 1
+      const items = ref([1, 2])
+      const itemTemplate = template(`<li> `)
+      const Child = defineVaporComponent({
+        setup() {
+          return createFor(
+            () => items.value,
+            item => {
+              const li = itemTemplate() as HTMLElement
+              const text = txt(li) as Text
+              renderEffect(() => setText(text, String(item.value)))
+              return li
+            },
+            item => item,
+          )
+        },
+      })
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(ul.firstChild!, () => {
+          createComponent(Child, null, null, false, false, undefined, true)
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><li>2</li><!--for-->"`,
+      )
+
+      items.value.splice(1, 0, 3)
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><li>3</li><li>2</li><!--for-->"`,
+      )
     })
 
     test('with tag should place v-for anchor before trailing sibling without SSR close marker', async () => {
