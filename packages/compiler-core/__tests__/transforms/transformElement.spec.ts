@@ -5,6 +5,8 @@ import {
   type NodeTransform,
   baseCompile,
   baseParse as parse,
+  trackSlotScopes,
+  trackVForSlotScopes,
   transform,
   transformExpression,
 } from '../../src'
@@ -71,6 +73,19 @@ function parseWithBind(template: string, options?: CompilerOptions) {
       ...options?.directiveTransforms,
       bind: transformBind,
     },
+  })
+}
+
+function parseWithSlot(template: string, options?: CompilerOptions) {
+  return parseWithElementTransform(template, {
+    nodeTransforms: [
+      ...(options?.prefixIdentifiers
+        ? [trackVForSlotScopes, transformExpression]
+        : []),
+      transformElement,
+      trackSlotScopes,
+    ],
+    ...options,
   })
 }
 
@@ -1380,5 +1395,45 @@ describe('compiler: element transform', () => {
         },
       ],
     })
+  })
+
+  test('v-for scope var name conflict with component name', () => {
+    const onError = vi.fn()
+    parseWithForTransform(`<Comp v-for="Comp of list" />`, {
+      onError,
+      prefixIdentifiers: true,
+      bindingMetadata: {
+        Comp: BindingTypes.SETUP_CONST,
+      },
+    })
+    expect(onError.mock.calls[0]).toMatchObject([
+      {
+        code: ErrorCodes.X_VAR_NAME_CONFLICT_WITH_COMPONENT_NAME,
+      },
+    ])
+  })
+
+  test('slot scope var name conflict with component name', () => {
+    const onError = vi.fn()
+    parseWithSlot(
+      `<CompB>
+    <template #default="{ Comp }">
+      <Comp>{{Comp}}</Comp>
+    </template>
+  </CompB>`,
+      {
+        onError,
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Comp: BindingTypes.SETUP_CONST,
+          CompB: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+    expect(onError.mock.calls[0]).toMatchObject([
+      {
+        code: ErrorCodes.X_VAR_NAME_CONFLICT_WITH_COMPONENT_NAME,
+      },
+    ])
   })
 })
