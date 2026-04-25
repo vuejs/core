@@ -2,7 +2,6 @@ import {
   VaporTeleport,
   child,
   createComponent,
-  createFor,
   createPlainElement,
   createVaporSSRApp,
   defineVaporAsyncComponent,
@@ -12,7 +11,6 @@ import {
   setStyle,
   setText,
   template,
-  txt,
   useVaporCssVars,
 } from '../src'
 import {
@@ -4059,45 +4057,107 @@ describe('Vapor Mode hydration', () => {
       ).not.toHaveBeenWarned()
     })
 
-    test('v-for should use transition-group container marker after cursor leaves container', async () => {
-      const host = document.createElement('div')
-      host.innerHTML = `<ul><li>1</li><li>2</li></ul><span>after</span>`
-      const ul = host.querySelector('ul')!
-      ;(ul as any).$tgt = 1
-      const items = ref([1, 2])
-      const itemTemplate = template(`<li> `)
-      const Child = defineVaporComponent({
-        setup() {
-          return createFor(
-            () => items.value,
-            item => {
-              const li = itemTemplate() as HTMLElement
-              const text = txt(li) as Text
-              renderEffect(() => setText(text, String(item.value)))
-              return li
-            },
-            item => item,
-          )
-        },
+    test('with tag should remove stale SSR v-for children when client list is shorter', async () => {
+      const ssrData = ref({
+        items: [1, 2, 3],
       })
-
-      setIsHydratingEnabled(true)
-      try {
-        hydrateNode(ul.firstChild!, () => {
-          createComponent(Child, null, null, false, false, undefined, true)
-        })
-      } finally {
-        setIsHydratingEnabled(false)
-      }
-      await nextTick()
-      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>1</li><li>2</li><!--for-->"`,
+      const data = ref({
+        items: [1],
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="ul">
+          <li v-for="item in data.items" :key="item">{{ item }}</li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, ssrData, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
       )
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
 
-      items.value.splice(1, 0, 3)
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><!--for-->"`,
+      )
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+      data.value.items.push(4)
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>1</li><li>3</li><li>2</li><!--for-->"`,
+        `"<li>1</li><li>4</li><!--for-->"`,
+      )
+    })
+
+    test('with tag should preserve trailing sibling when removing stale SSR v-for children', async () => {
+      const ssrData = ref({
+        items: [1, 2, 3],
+        tail: 'tail',
+      })
+      const data = ref({
+        items: [1],
+        tail: 'tail',
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="ul">
+          <li v-for="item in data.items" :key="item" class="item">{{ item }}</li>
+          <li key="tail" class="tail">{{ data.tail }}</li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, ssrData, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
+
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li class="item">1</li><!--for--><li class="item">tail</li>"`,
+      )
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+      data.value.items.push(4)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li class="item">1</li><li class="item">4</li><!--for--><li class="item">tail updated</li>"`,
+      )
+    })
+
+    test('with tag should keep v-for anchor before replaced trailing sibling', async () => {
+      const ssrData = ref({
+        items: [1, 2, 3],
+        tail: 'tail',
+      })
+      const data = ref({
+        items: [1],
+        tail: 'tail',
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="div">
+          <span v-for="item in data.items" :key="item">{{ item }}</span>
+          <p key="tail">{{ data.tail }}</p>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, ssrData, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const div = container.querySelector('div')!
+
+      expect(formatHtml(div.innerHTML)).toMatchInlineSnapshot(
+        `"<span>1</span><!--for--><p>tail</p>"`,
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+      data.value.items.push(4)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(formatHtml(div.innerHTML)).toMatchInlineSnapshot(
+        `"<span>1</span><span>4</span><!--for--><p>tail updated</p>"`,
       )
     })
 

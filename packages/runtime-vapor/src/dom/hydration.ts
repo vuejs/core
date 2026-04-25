@@ -62,8 +62,6 @@ function performHydration<T>(
     ;(Node.prototype as any).$idx = undefined
     ;(Node.prototype as any).$llc = undefined
     ;(Node.prototype as any).$vha = undefined
-    // transition-group tag
-    ;(Node.prototype as any).$tgt = undefined
 
     isOptimized = true
   }
@@ -370,12 +368,22 @@ function removeHydrationNode(node: Node, close: Node | null = null): void {
   remove(node, parent)
 }
 
-export function cleanupHydrationTail(node: Node): void {
-  const container = node.parentElement
-  if (container) {
-    warnHydrationChildrenMismatch(container)
+export function cleanupHydrationTail(node: Node, container?: ParentNode): void {
+  const mismatchContainer = container || node.parentElement
+  if (mismatchContainer instanceof Element) {
+    warnHydrationChildrenMismatch(mismatchContainer)
   }
-  removeHydrationNode(node)
+  if (!container) {
+    removeHydrationNode(node)
+    return
+  }
+
+  let current: Node | null = node
+  while (current && current.parentNode === container) {
+    const next = locateNextNode(current)
+    removeHydrationNode(current)
+    current = next
+  }
 }
 
 export function markHydrationAnchor<T extends Node>(node: T): T {

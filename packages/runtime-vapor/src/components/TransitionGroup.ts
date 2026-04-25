@@ -36,8 +36,8 @@ import {
   type VaporComponentOptions,
   isVaporComponent,
 } from '../component'
-import { isForBlock } from '../apiCreateFor'
-import { createElement } from '../dom/node'
+import { isForBlock, setForHydrationAnchorResolver } from '../apiCreateFor'
+import { createComment, createElement, createTextNode } from '../dom/node'
 import { DynamicFragment, type VaporFragment, isFragment } from '../fragment'
 import {
   type DefineVaporComponent,
@@ -46,14 +46,46 @@ import {
 import { isInteropEnabled } from '../vdomInteropState'
 import {
   adoptTemplate,
+  cleanupHydrationTail,
   currentHydrationNode,
   isHydrating,
   locateNextNode,
+  markHydrationAnchor,
   setCurrentHydrationNode,
 } from '../dom/hydration'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
+
+let isForHydrationAnchorResolverRegistered = false
+let currentForHydrationContainer: ParentNode | undefined
+
+function ensureForHydrationAnchorResolver(): void {
+  if (isForHydrationAnchorResolverRegistered) return
+  isForHydrationAnchorResolverRegistered = true
+  setForHydrationAnchorResolver((hydrationStart, anchorNode) => {
+    const container = currentForHydrationContainer
+    if (!container) return
+    if (
+      hydrationStart !== container &&
+      hydrationStart.parentNode !== container
+    ) {
+      return
+    }
+
+    const anchor =
+      anchorNode &&
+      anchorNode !== container &&
+      anchorNode.parentNode === container
+        ? anchorNode
+        : null
+    const parentAnchor = markHydrationAnchor(
+      __DEV__ ? createComment('for') : createTextNode(),
+    )
+    container.insertBefore(parentAnchor, anchor)
+    return parentAnchor
+  })
+}
 
 const decorate = <T extends VaporComponentOptions>(t: T): T => {
   delete (t.props! as any).mode
@@ -167,27 +199,47 @@ const VaporTransitionGroupImpl = defineVaporComponent({
           : createElement(tag)
         : undefined
       let nextNode: Node | null = null
+      let prevForHydrationContainer: ParentNode | undefined
       if (isHydrating && container) {
         // `transition-group + v-for` SSR output does not include `<!--]-->`.
-        // Mark the container so `v-for` hydration can create its own anchor.
-        ;(container as any).$tgt = 1
+        // Expose the container so `v-for` hydration can create its own anchor.
+        ensureForHydrationAnchorResolver()
+        prevForHydrationContainer = currentForHydrationContainer
+        currentForHydrationContainer = container
         nextNode = locateNextNode(container)
         setCurrentHydrationNode(container.firstChild || container)
       }
       let block: Block = slottedBlock
+      let transitionBlocks: ResolvedTransitionBlock[] = []
       try {
         frag.update(() => {
           block = (slot && slot()) || []
-          applyGroupTransitionHooks(block, propsProxy, state, instance)
+          transitionBlocks = applyGroupTransitionHooks(
+            block,
+            propsProxy,
+            state,
+            instance,
+          )
           if (container) {
             if (!isHydrating) insert(block, container)
             return container
           }
           return block
         })
+        if (
+          isHydrating &&
+          container &&
+          currentHydrationNode &&
+          currentHydrationNode.parentNode === container &&
+          !transitionBlocks.some(child => child === currentHydrationNode)
+        ) {
+          // Remove extra SSR nodes left after hydrating the current children,
+          // but keep a node that was claimed as a transition child.
+          cleanupHydrationTail(currentHydrationNode, container)
+        }
       } finally {
         if (isHydrating && container) {
-          delete (container as any).$tgt
+          currentForHydrationContainer = prevForHydrationContainer
           setCurrentHydrationNode(nextNode)
         }
       }
@@ -212,7 +264,7 @@ function applyGroupTransitionHooks(
   props: TransitionProps,
   state: TransitionState,
   instance: VaporComponentInstance,
-): void {
+): ResolvedTransitionBlock[] {
   const fragments: VaporFragment[] = []
   const children = getTransitionBlocks(block, frag => fragments.push(frag))
   for (let i = 0; i < children.length; i++) {
@@ -235,6 +287,7 @@ function applyGroupTransitionHooks(
     hooks.applyGroup = applyGroupTransitionHooks
     frag.$transition = hooks
   })
+  return children
 }
 
 function inheritKey(children: TransitionBlock[], key: any): void {

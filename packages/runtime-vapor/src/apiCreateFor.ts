@@ -60,6 +60,19 @@ type ResolvedSource = {
   keys?: string[]
 }
 
+type ForHydrationAnchorResolver = (
+  hydrationStart: Node,
+  anchorNode: Node | null | undefined,
+) => Node | undefined
+
+let resolveForHydrationAnchor: ForHydrationAnchorResolver | undefined
+
+export function setForHydrationAnchorResolver(
+  resolver: ForHydrationAnchorResolver,
+): void {
+  resolveForHydrationAnchor = resolver
+}
+
 export const createFor = (
   src: () => Source,
   renderItem: (
@@ -151,31 +164,16 @@ export const createFor = (
               if (nextNode) setCurrentHydrationNode(nextNode)
             }
 
-            // transition-group + v-for, without <!--]--> marker
-            const container =
-              // empty list: hydrationStart is container
-              hydrationStart.nodeType === 1 && !!(hydrationStart as any).$tgt
-                ? (hydrationStart as ParentNode)
-                : // non-empty list: hydrationStart parent is container
-                  hydrationStart.parentNode &&
-                    !!(hydrationStart.parentNode as any).$tgt
-                  ? (hydrationStart.parentNode as ParentNode)
-                  : null
-            if (container) {
-              const anchorNode = newLength ? nextNode : currentHydrationNode
-              const anchor =
-                anchorNode &&
-                anchorNode !== container &&
-                anchorNode.parentNode === container
-                  ? anchorNode
-                  : null
-              parentAnchor = markHydrationAnchor(
-                __DEV__ ? createComment('for') : createTextNode(),
+            // special handling transition-group + v-for, without <!--]--> marker
+            const resolvedAnchor =
+              resolveForHydrationAnchor &&
+              resolveForHydrationAnchor(
+                hydrationStart,
+                newLength ? nextNode : currentHydrationNode,
               )
+            if (resolvedAnchor) {
+              parentAnchor = resolvedAnchor
               pendingHydrationAnchor = true
-              queuePostFlushCb(() =>
-                container.insertBefore(parentAnchor, anchor),
-              )
             } else if (slotFallbackRange && !isValidBlock(newBlocks)) {
               // Slot fallback can fall through an empty/invalid `v-for`. In that
               // case SSR only rendered the parent slot range, so this `v-for` has no
