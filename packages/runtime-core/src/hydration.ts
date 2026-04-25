@@ -20,6 +20,7 @@ import {
   def,
   getEscapedCssVarName,
   includeBooleanAttr,
+  isAssetUrlAttr,
   isBooleanAttr,
   isKnownHtmlAttr,
   isKnownSvgAttr,
@@ -866,7 +867,23 @@ function propHasMismatch(
         ? String(clientValue)
         : false
     }
-    if (actual !== expected) {
+
+    // #14370, when mismatch details are enabled, tolerate asset URL differences
+    // caused by Vite's `new URL(..., import.meta.url)` behavior in SSR vs client:
+    // SSR can't know the browser origin, so it may render "/a.png" while the
+    // client renders "http://host/a.png". This tends to show up in PROD builds
+    // where assets are resolved as URLs. This is a dev/check-only relaxation to
+    // avoid noisy warnings for asset URLs.
+    if (
+      actual !== expected &&
+      !(
+        __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ &&
+        isString(actual) &&
+        isString(expected) &&
+        isAssetUrlAttr(key) &&
+        isSameAssetUrl(actual, expected, key)
+      )
+    ) {
       mismatchType = MismatchTypes.ATTRIBUTE
       mismatchKey = key
     }
@@ -933,6 +950,68 @@ function isMapEqual(a: Map<string, string>, b: Map<string, string>): boolean {
     }
   }
   return true
+}
+
+function isSameAssetUrl(
+  actual: string,
+  expected: string,
+  key: string,
+): boolean {
+  if (key === 'srcset') {
+    return isSameSrcSet(actual, expected)
+  }
+  return matchUrl(actual, expected)
+}
+
+function isSameSrcSet(actual: string, expected: string): boolean {
+  const actualSet = parseSrcSet(actual)
+  const expectedSet = parseSrcSet(expected)
+  if (!actualSet || !expectedSet || actualSet.length !== expectedSet.length) {
+    return false
+  }
+  for (let i = 0; i < actualSet.length; i++) {
+    const a = actualSet[i]
+    const e = expectedSet[i]
+    if (a.descriptor !== e.descriptor) {
+      return false
+    }
+    if (a.url == null || e.url == null || !matchUrl(a.url, e.url)) {
+      return false
+    }
+  }
+  return true
+}
+
+function parseSrcSet(
+  srcset: string,
+): Array<{ url: string | null; descriptor: string }> | null {
+  const parts = srcset
+    .split(',')
+    .map(p => p.trim())
+    .filter(Boolean)
+  if (!parts.length) {
+    return null
+  }
+  const result: Array<{ url: string | null; descriptor: string }> = []
+  for (const part of parts) {
+    const match = part.match(/^(\S+)(?:\s+(.+))?$/)
+    if (!match) {
+      return null
+    }
+    const rawUrl = match[1]
+    const descriptor = (match[2] || '').trim()
+    result.push({ url: rawUrl, descriptor })
+  }
+  return result
+}
+
+function matchUrl(serverValue: string, clientValue: string): boolean {
+  const server = serverValue.trim()
+  const client = clientValue.trim()
+  if (!server || !client) {
+    return false
+  }
+  return client.endsWith(server)
 }
 
 function resolveCssVars(
