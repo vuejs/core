@@ -117,24 +117,19 @@ export function renderComponentRoot(
         markAttrsAccessed()
       }
       result = normalizeVNode(
-        render.length > 1
-          ? render(
-              __DEV__ ? shallowReadonly(props) : props,
-              __DEV__
-                ? {
-                    get attrs() {
-                      markAttrsAccessed()
-                      return shallowReadonly(attrs)
-                    },
-                    slots,
-                    emit,
-                  }
-                : { attrs, slots, emit },
-            )
-          : render(
-              __DEV__ ? shallowReadonly(props) : props,
-              null as any /* we know it doesn't need it */,
-            ),
+        render(
+          __DEV__ ? shallowReadonly(props) : props,
+          __DEV__
+            ? {
+                get attrs() {
+                  markAttrsAccessed()
+                  return shallowReadonly(attrs)
+                },
+                slots,
+                emit,
+              }
+            : { attrs, slots, emit },
+        ),
       )
       fallthroughAttrs = Component.props
         ? attrs
