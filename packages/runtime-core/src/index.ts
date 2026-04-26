@@ -125,6 +125,8 @@ export { withDirectives } from './directives'
 // SSR context
 export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
+export { unwrapFragment } from './unwrapFragment'
+
 // Custom Renderer API ---------------------------------------------------------
 
 export { createRenderer, createHydrationRenderer } from './renderer'
