@@ -262,6 +262,7 @@ export {
   defineSSRCustomElement,
   useShadowRoot,
   useHost,
+  useHostInternals,
   VueElement,
   type VueElementConstructor,
   type CustomElementOptions,
