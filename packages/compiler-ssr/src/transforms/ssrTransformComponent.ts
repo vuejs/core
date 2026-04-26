@@ -30,6 +30,7 @@ import {
   createCallExpression,
   createFunctionExpression,
   createIfStatement,
+  createObjectExpression,
   createReturnStatement,
   createRoot,
   createSimpleExpression,
@@ -134,6 +135,17 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       })
     }
 
+    let vShowExp
+    const vShowDir = node.props.find(
+      p => p.type === NodeTypes.DIRECTIVE && p.name === 'show',
+    ) as DirectiveNode | undefined
+    if (vShowDir) {
+      node.props = node.props.filter(p => p !== vShowDir)
+      const directiveTransform = context.directiveTransforms['show']
+      const { props } = directiveTransform!(vShowDir, node, context)
+      vShowExp = createObjectExpression(props)
+    }
+
     let propsExp: string | JSChildNode = `null`
     if (node.props.length) {
       // note we are not passing ssr: true here because for components, v-on
@@ -180,22 +192,31 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       // dynamic component that resolved to a `resolveDynamicComponent` call
       // expression - since the resolved result may be a plain element (string)
       // or a VNode, handle it with `renderVNode`.
+      const args: (string | JSChildNode)[] = [
+        `_push`,
+        createCallExpression(context.helper(CREATE_VNODE), [
+          component,
+          propsExp,
+          slots,
+        ]),
+        `_parent`,
+      ]
+      if (vShowExp) args.push(`undefined`, vShowExp)
       node.ssrCodegenNode = createCallExpression(
         context.helper(SSR_RENDER_VNODE),
-        [
-          `_push`,
-          createCallExpression(context.helper(CREATE_VNODE), [
-            component,
-            propsExp,
-            slots,
-          ]),
-          `_parent`,
-        ],
+        args,
       )
     } else {
+      const args: (string | JSChildNode)[] = [
+        component,
+        propsExp,
+        slots,
+        `_parent`,
+      ]
+      if (vShowExp) args.push(`undefined`, vShowExp)
       node.ssrCodegenNode = createCallExpression(
         context.helper(SSR_RENDER_COMPONENT),
-        [component, propsExp, slots, `_parent`],
+        args,
       )
     }
   }
