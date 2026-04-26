@@ -1,4 +1,4 @@
-import { isArray, isDate, isObject, isSymbol } from './general'
+import { isArray, isDate, isObject, isSet, isSymbol } from './general'
 
 function looseCompareArrays(a: any[], b: any[]) {
   if (a.length !== b.length) return false
@@ -6,6 +6,17 @@ function looseCompareArrays(a: any[], b: any[]) {
   for (let i = 0; equal && i < a.length; i++) {
     equal = looseEqual(a[i], b[i])
   }
+  return equal
+}
+
+function looseCompareSets(a: Set<any>, b: Set<any>) {
+  if (a.size !== b.size) return false
+  let equal = true
+  a.forEach((v: any) => {
+    if (!b.has(v)) {
+      equal = false
+    }
+  })
   return equal
 }
 
@@ -26,6 +37,13 @@ export function looseEqual(a: any, b: any): boolean {
   if (aValidType || bValidType) {
     return aValidType && bValidType ? looseCompareArrays(a, b) : false
   }
+
+  aValidType = isSet(a)
+  bValidType = isSet(b)
+  if (aValidType || bValidType) {
+    return aValidType && bValidType ? looseCompareSets(a, b) : false
+  }
+
   aValidType = isObject(a)
   bValidType = isObject(b)
   if (aValidType || bValidType) {

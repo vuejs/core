@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { setupPuppeteer } from './e2eUtils'
 
-const { page, click, isChecked } = setupPuppeteer()
+const { page, click, isChecked, html, value } = setupPuppeteer()
 import { nextTick } from 'vue'
 
 beforeEach(async () => {
@@ -54,4 +54,95 @@ test('checkbox click with v-model', async () => {
   await nextTick()
   expect(await isChecked('#first')).toBe(false)
   expect(await isChecked('#second')).toBe(true)
+})
+
+// #8638
+test('checkbox click with v-model array value', async () => {
+  await page().evaluate(() => {
+    const { createApp, ref } = (window as any).Vue
+    createApp({
+      template: `
+      {{cls}}
+      <input
+        id="checkEl"
+        type="checkbox"
+        @click="change"
+        v-model="inputModel"
+        value="a"
+      >
+        `,
+      setup() {
+        const inputModel = ref([])
+        const count = ref(0)
+        const change = () => {
+          count.value++
+        }
+        return {
+          inputModel,
+          change,
+          cls: count,
+        }
+      },
+    }).mount('#app')
+  })
+
+  expect(await isChecked('#checkEl')).toBe(false)
+  expect(await html('#app')).toMatchInlineSnapshot(
+    `"0 <input id="checkEl" type="checkbox" value="a">"`,
+  )
+
+  await click('#checkEl')
+  await nextTick()
+  expect(await isChecked('#checkEl')).toBe(true)
+  expect(await html('#app')).toMatchInlineSnapshot(
+    `"1 <input id="checkEl" type="checkbox" value="a">"`,
+  )
+
+  await click('#checkEl')
+  await nextTick()
+  expect(await isChecked('#checkEl')).toBe(false)
+  expect(await html('#app')).toMatchInlineSnapshot(
+    `"2 <input id="checkEl" type="checkbox" value="a">"`,
+  )
+})
+
+// #8579
+test('select click with v-model', async () => {
+  await page().evaluate(() => {
+    const { createApp } = (window as any).Vue
+    createApp({
+      template: `
+        <p>
+          Changed: {{changed}}
+        </p>
+        <p>
+          Chosen: {{chosen}}
+        </p>
+        <form @input="changed = true">
+          <select id="selectEl" v-model="chosen">
+            <option v-for="choice of choices" :key="choice" :value="choice">{{ choice }}</option>
+          </select>
+        </form>
+        `,
+      data() {
+        return {
+          choices: ['A', 'B'],
+          chosen: 'A',
+          changed: false,
+        }
+      },
+    }).mount('#app')
+  })
+
+  expect(await value('#selectEl')).toBe('A')
+  expect(await html('#app')).toMatchInlineSnapshot(
+    `"<p> Changed: false</p><p> Chosen: A</p><form><select id="selectEl"><option value="A">A</option><option value="B">B</option></select></form>"`,
+  )
+
+  await page().select('#selectEl', 'B')
+  await nextTick()
+  expect(await value('#selectEl')).toBe('B')
+  expect(await html('#app')).toMatchInlineSnapshot(
+    `"<p> Changed: true</p><p> Chosen: B</p><form><select id="selectEl"><option value="A">A</option><option value="B">B</option></select></form>"`,
+  )
 })
