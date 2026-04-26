@@ -803,6 +803,61 @@ describe('resolveType', () => {
         foo: ['Boolean', 'Symbol', 'Number'],
       })
     })
+
+    // #14729 — original user repro shape
+    test('MaybeRef wrapped array type in interface inheritance chain', () => {
+      expect(
+        resolve(`
+        import type { MaybeRef } from 'unresolvable-pkg-xyz'
+        type OptionItem = { label: string; value: string | number }
+        type FormItemOptions<T = any, C = any> =
+          | MaybeRef<OptionItem[]>
+          | Promise<OptionItem[]>
+          | ((row: T, context: C) => OptionItem[] | Promise<OptionItem[]>)
+        interface ISelectable<T = any, C = any> {
+          options?: FormItemOptions<T, C>
+        }
+        interface XSelectProps<T = any, C = any> extends ISelectable<T, C> {
+          modelValue?: unknown
+        }
+        defineProps<XSelectProps>()
+      `).props,
+      ).toMatchObject({
+        // 'Array' must be present so that array values pass runtime type check
+        options: expect.arrayContaining(['Array', 'Promise', 'Function']),
+      })
+    })
+
+    // #14729
+    test('Vue ref wrapper types in union are inferred when source is unresolvable', () => {
+      expect(
+        resolve(`
+        import type {
+          MaybeRef,
+          Ref,
+          ShallowRef,
+          ComputedRef,
+          WritableComputedRef,
+          MaybeRefOrGetter,
+        } from 'unresolvable-pkg-xyz'
+        defineProps<{
+          a?: MaybeRef<string[]> | Promise<string[]> | (() => string[])
+          b?: Ref<number>
+          c?: ShallowRef<number>
+          d?: ComputedRef<number>
+          e?: WritableComputedRef<number>
+          f?: MaybeRefOrGetter<boolean>
+        }>()
+      `).props,
+      ).toStrictEqual({
+        a: ['Object', 'Array', 'Promise', 'Function'],
+        b: ['Object'],
+        c: ['Object'],
+        d: ['Object'],
+        e: ['Object'],
+        f: ['Object', 'Function', 'Boolean'],
+      })
+    })
   })
 
   describe('generics', () => {
