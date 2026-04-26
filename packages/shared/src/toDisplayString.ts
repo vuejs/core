@@ -61,7 +61,7 @@ const replacer = (_key: string, val: unknown): any => {
   return val
 }
 
-const stringifySymbol = (v: unknown, i: number | string = ''): any =>
+export const stringifySymbol = (v: unknown, i: number | string = ''): any =>
   // Symbol.description in es2019+ so we need to cast here to pass
   // the lib: es2016 check
   isSymbol(v) ? `Symbol(${(v as any).description ?? i})` : v
