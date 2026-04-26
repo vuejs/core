@@ -2,27 +2,23 @@ import {
   DOMErrorCodes,
   type DirectiveTransform,
   ElementTypes,
-  type ExpressionNode,
   NodeTypes,
-  type PlainElementNode,
-  type TemplateChildNode,
   createCallExpression,
   createConditionalExpression,
   createDOMCompilerError,
   createInterpolation,
   createObjectProperty,
-  createSimpleExpression,
   findProp,
   hasDynamicKeyVBind,
   transformModel,
 } from '@vue/compiler-dom'
 import {
-  SSR_INCLUDE_BOOLEAN_ATTR,
   SSR_LOOSE_CONTAIN,
   SSR_LOOSE_EQUAL,
   SSR_RENDER_DYNAMIC_MODEL,
 } from '../runtimeHelpers'
 import type { DirectiveTransformResult } from 'packages/compiler-core/src/transform'
+import { findValueBinding, processSelectChildren } from '../utils'
 
 export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
   const model = dir.exp!
@@ -36,48 +32,6 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
           value.loc,
         ),
       )
-    }
-  }
-
-  const processSelectChildren = (children: TemplateChildNode[]) => {
-    children.forEach(child => {
-      if (child.type === NodeTypes.ELEMENT) {
-        processOption(child as PlainElementNode)
-      } else if (child.type === NodeTypes.FOR) {
-        processSelectChildren(child.children)
-      } else if (child.type === NodeTypes.IF) {
-        child.branches.forEach(b => processSelectChildren(b.children))
-      }
-    })
-  }
-
-  function processOption(plainNode: PlainElementNode) {
-    if (plainNode.tag === 'option') {
-      if (plainNode.props.findIndex(p => p.name === 'selected') === -1) {
-        const value = findValueBinding(plainNode)
-        plainNode.ssrCodegenNode!.elements.push(
-          createConditionalExpression(
-            createCallExpression(context.helper(SSR_INCLUDE_BOOLEAN_ATTR), [
-              createConditionalExpression(
-                createCallExpression(`Array.isArray`, [model]),
-                createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
-                  model,
-                  value,
-                ]),
-                createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
-                  model,
-                  value,
-                ]),
-              ),
-            ]),
-            createSimpleExpression(' selected', true),
-            createSimpleExpression('', true),
-            false /* no newline */,
-          ),
-        )
-      }
-    } else if (plainNode.tag === 'optgroup') {
-      processSelectChildren(plainNode.children)
     }
   }
 
@@ -173,7 +127,10 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       checkDuplicatedValue()
       node.children = [createInterpolation(model, model.loc)]
     } else if (node.tag === 'select') {
-      processSelectChildren(node.children)
+      processSelectChildren(context, node.children, {
+        type: 'dynamicValue',
+        value: model,
+      })
     } else {
       context.onError(
         createDOMCompilerError(
@@ -188,13 +145,4 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
     // component v-model
     return transformModel(dir, node, context)
   }
-}
-
-function findValueBinding(node: PlainElementNode): ExpressionNode {
-  const valueBinding = findProp(node, 'value')
-  return valueBinding
-    ? valueBinding.type === NodeTypes.DIRECTIVE
-      ? valueBinding.exp!
-      : createSimpleExpression(valueBinding.value!.content, true)
-    : createSimpleExpression(`null`, false)
 }

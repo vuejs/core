@@ -1,5 +1,7 @@
 import { getCompiledString } from './utils'
 import { compile } from '../src'
+import { renderToString } from '@vue/server-renderer'
+import { createApp } from '@vue/runtime-dom'
 
 describe('ssr: element', () => {
   test('basic elements', () => {
@@ -69,6 +71,160 @@ describe('ssr: element', () => {
             }</textarea>\`)
           }"
         `)
+    })
+
+    test('<select> with dynamic value assigns `selected` option attribute', async () => {
+      expect(
+        getCompiledString(
+          `<select :value="selectValue"><option value="1"></option></select>`,
+        ),
+      ).toMatchInlineSnapshot(`
+        "\`<select><option value="1"\${
+            (_ssrIncludeBooleanAttr((Array.isArray(_ctx.selectValue))
+              ? _ssrLooseContain(_ctx.selectValue, "1")
+              : _ssrLooseEqual(_ctx.selectValue, "1"))) ? " selected" : ""
+          }></option></select>\`"
+      `)
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ selected: 2 }),
+            template: `<div><select :value="selected"><option value="1">1</option><option value="2">2</option></select></div>`,
+          }),
+        ),
+      ).toMatchInlineSnapshot(
+        `"<div><select><option value="1">1</option><option value="2" selected>2</option></select></div>"`,
+      )
+    })
+
+    test('<select> with static value assigns `selected` option attribute', async () => {
+      expect(
+        getCompiledString(
+          `<select value="selectValue"><option value="1"></option></select>`,
+        ),
+      ).toMatchInlineSnapshot(`
+        "\`<select><option value="1"\${
+            (_ssrIncludeBooleanAttr(_ssrLooseEqual("selectValue", "1"))) ? " selected" : ""
+          }></option></select>\`"
+      `)
+
+      expect(
+        await renderToString(
+          createApp({
+            template: `<div><select value="2"><option value="1">1</option><option value="2">2</option></select></div>`,
+          }),
+        ),
+      ).toMatchInlineSnapshot(
+        `"<div><select><option value="1">1</option><option value="2" selected>2</option></select></div>"`,
+      )
+    })
+
+    test('<select> with dynamic v-bind assigns `selected` option attribute', async () => {
+      expect(
+        compile(`<select v-bind="obj"><option value="1"></option></select>`)
+          .code,
+      ).toMatchInlineSnapshot(`
+        "const { mergeProps: _mergeProps } = require("vue")
+        const { ssrRenderAttrs: _ssrRenderAttrs, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          let _temp0
+
+          _push(\`<select\${
+            _ssrRenderAttrs(_temp0 = _mergeProps(_ctx.obj, _attrs))
+          }><option value="1"\${
+            (_ssrIncludeBooleanAttr(("value" in _temp0)
+              ? (Array.isArray(_temp0.value))
+                  ? _ssrLooseContain(_temp0.value, "1")
+                  : _ssrLooseEqual(_temp0.value, "1")
+              : false)) ? " selected" : ""
+          }></option></select>\`)
+        }"
+      `)
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ obj: { value: 2 } }),
+            template: `<div><select v-bind="obj"><option value="1">1</option><option value="2">2</option></select></div>`,
+          }),
+        ),
+      ).toMatchInlineSnapshot(
+        `"<div><select value="2"><option value="1">1</option><option value="2" selected>2</option></select></div>"`,
+      )
+    })
+
+    test('<select> with dynamic v-bind and dynamic value bind assigns `selected` option attribute', async () => {
+      expect(
+        compile(
+          `<select v-bind="obj" :value="selectValue"><option value="1"></option></select>`,
+        ).code,
+      ).toMatchInlineSnapshot(`
+        "const { mergeProps: _mergeProps } = require("vue")
+        const { ssrRenderAttrs: _ssrRenderAttrs, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          let _temp0
+
+          _push(\`<select\${
+            _ssrRenderAttrs(_temp0 = _mergeProps(_ctx.obj, { value: _ctx.selectValue }, _attrs))
+          }><option value="1"\${
+            (_ssrIncludeBooleanAttr(("value" in _temp0)
+              ? (Array.isArray(_temp0.value))
+                  ? _ssrLooseContain(_temp0.value, "1")
+                  : _ssrLooseEqual(_temp0.value, "1")
+              : false)) ? " selected" : ""
+          }></option></select>\`)
+        }"
+      `)
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ obj: { value: 1 } }),
+            template: `<div><select v-bind="obj" :value="2"><option value="1">1</option><option value="2">2</option></select></div>`,
+          }),
+        ),
+      ).toMatchInlineSnapshot(
+        `"<div><select value="2"><option value="1">1</option><option value="2" selected>2</option></select></div>"`,
+      )
+    })
+
+    test('<select> with dynamic v-bind and static value bind assigns `selected` option attribute', async () => {
+      expect(
+        compile(
+          `<select v-bind="obj" value="selectValue"><option value="1"></option></select>`,
+        ).code,
+      ).toMatchInlineSnapshot(`
+        "const { mergeProps: _mergeProps } = require("vue")
+        const { ssrRenderAttrs: _ssrRenderAttrs, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          let _temp0
+
+          _push(\`<select\${
+            _ssrRenderAttrs(_temp0 = _mergeProps(_ctx.obj, { value: "selectValue" }, _attrs))
+          }><option value="1"\${
+            (_ssrIncludeBooleanAttr(("value" in _temp0)
+              ? (Array.isArray(_temp0.value))
+                  ? _ssrLooseContain(_temp0.value, "1")
+                  : _ssrLooseEqual(_temp0.value, "1")
+              : false)) ? " selected" : ""
+          }></option></select>\`)
+        }"
+      `)
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ obj: { value: 1 } }),
+            template: `<div><select v-bind="obj" value="2"><option value="1">1</option><option value="2">2</option></select></div>`,
+          }),
+        ),
+      ).toMatchInlineSnapshot(
+        `"<div><select value="2"><option value="1">1</option><option value="2" selected>2</option></select></div>"`,
+      )
     })
 
     test('multiple _ssrInterpolate at parent and child import dependency once', () => {

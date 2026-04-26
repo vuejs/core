@@ -57,6 +57,7 @@ import {
   type SSRTransformContext,
   processChildren,
 } from '../ssrCodegenTransform'
+import { processSelectChildren } from '../utils'
 
 // for directives with children overwrite (e.g. v-html & v-text), we need to
 // store the raw children so that they can be added in the 2nd pass.
@@ -80,6 +81,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     // some tags need to be passed to runtime for special checks
     const needTagForRuntime =
       node.tag === 'textarea' || node.tag.indexOf('-') > 0
+
+    const hasVModel = node.props.some(
+      p => p.type === NodeTypes.DIRECTIVE && p.name === 'model',
+    )
 
     // v-bind="obj", v-bind:[key] and custom directives can potentially
     // overwrite other static attrs and can affect final rendering result,
@@ -154,6 +159,25 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                 ),
               ]),
             )
+          }
+        } else if (node.tag === 'select') {
+          // v-model takes priority over value
+          if (!hasVModel) {
+            // <select> with dynamic v-bind. We don't know if the final props
+            // will contain .value, so we will have to do something special:
+            // assign the merged props to a temp variable, and check whether
+            // it contains value (if yes, mark options selected).
+            const tempId = `_temp${context.temps++}`
+            propsExp.arguments = [
+              createAssignmentExpression(
+                createSimpleExpression(tempId, false),
+                mergedProps,
+              ),
+            ]
+            processSelectChildren(context, node.children, {
+              type: 'dynamicVBind',
+              tempId,
+            })
           }
         } else if (node.tag === 'input') {
           // <input v-bind="obj" v-model>
@@ -238,9 +262,16 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           context.onError(
             createCompilerError(ErrorCodes.X_V_SLOT_MISPLACED, prop.loc),
           )
-        } else if (isTextareaWithValue(node, prop) && prop.exp) {
+        } else if (isTagWithValueBind(node, 'textarea', prop) && prop.exp) {
           if (!needMergeProps) {
             node.children = [createInterpolation(prop.exp, prop.loc)]
+          }
+        } else if (isTagWithValueBind(node, 'select', prop) && prop.exp) {
+          if (!needMergeProps && !hasVModel) {
+            processSelectChildren(context, node.children, {
+              type: 'dynamicValue',
+              value: prop.exp,
+            })
           }
         } else if (!needMergeProps && prop.name !== 'on') {
           // Directive transforms.
@@ -341,6 +372,13 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         const name = prop.name
         if (node.tag === 'textarea' && name === 'value' && prop.value) {
           rawChildrenMap.set(node, escapeHtml(prop.value.content))
+        } else if (node.tag === 'select' && name === 'value' && prop.value) {
+          if (!needMergeProps && !hasVModel) {
+            processSelectChildren(context, node.children, {
+              type: 'staticValue',
+              value: prop.value.content,
+            })
+          }
         } else if (!needMergeProps) {
           if (name === 'key' || name === 'ref') {
             continue
@@ -414,12 +452,13 @@ function isTrueFalseValue(prop: DirectiveNode | AttributeNode) {
   }
 }
 
-function isTextareaWithValue(
+function isTagWithValueBind(
   node: PlainElementNode,
+  targetTag: string,
   prop: DirectiveNode,
 ): boolean {
   return !!(
-    node.tag === 'textarea' &&
+    node.tag === targetTag &&
     prop.name === 'bind' &&
     isStaticArgOf(prop.arg, 'value')
   )
