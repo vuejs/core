@@ -1656,7 +1656,13 @@ export function inferRuntimeType(
         }
 
       case 'TSTypeReference': {
-        const resolved = resolveTypeReference(ctx, node, scope)
+        // #14729 — if resolution fails (e.g. an unresolvable import), still
+        // fall through to the built-in name handling below so that well-known
+        // types like Ref/MaybeRef/Promise can be inferred from the name alone.
+        let resolved: ScopeTypeNode | undefined
+        try {
+          resolved = resolveTypeReference(ctx, node, scope)
+        } catch {}
         if (resolved) {
           if (resolved.type === 'TSTypeAliasDeclaration') {
             // #13240
@@ -1787,6 +1793,34 @@ export function inferRuntimeType(
                 return ['Map']
               case 'ReadonlySet':
                 return ['Set']
+
+              // Vue ref wrapper types — handled here so that runtime type
+              // inference still works when `vue` types cannot be resolved
+              // (e.g. consumed as built artifacts in another package). #14729
+              case 'Ref':
+              case 'ShallowRef':
+              case 'ComputedRef':
+              case 'WritableComputedRef':
+                return ['Object']
+              case 'MaybeRef':
+              case 'MaybeRefOrGetter': {
+                const types = new Set<string>(['Object'])
+                if (node.typeName.name === 'MaybeRefOrGetter') {
+                  types.add('Function')
+                }
+                if (node.typeParameters && node.typeParameters.params[0]) {
+                  for (const t of inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[0],
+                    scope,
+                    false,
+                    typeParameters,
+                  )) {
+                    types.add(t)
+                  }
+                }
+                return Array.from(types)
+              }
 
               case 'NonNullable':
                 if (node.typeParameters && node.typeParameters.params[0]) {
