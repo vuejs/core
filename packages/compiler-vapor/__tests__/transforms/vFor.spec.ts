@@ -141,6 +141,18 @@ describe('compiler: v-for', () => {
     expect(code).matchSnapshot()
   })
 
+  test('multi class toggle with repeated v-for value', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="todo of todos" :key="todo.id" :class="{ completed: todo.completed, editing: todo === editedTodo }" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).contains(`const _todo = _for_item0.value`)
+    expect(code).contains(`_toggleClass(n2, "completed", _todo.completed)`)
+    expect(code).contains(
+      `_toggleClass(n2, "editing", _todo === _ctx.editedTodo)`,
+    )
+  })
+
   test('w/o value', () => {
     const { code } = compileWithVFor(`<div v-for=" of items">item</div>`)
     expect(code).matchSnapshot()

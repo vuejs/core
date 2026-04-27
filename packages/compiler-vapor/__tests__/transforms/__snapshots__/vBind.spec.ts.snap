@@ -416,7 +416,11 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => (_toggleClass(n0, "active", _ctx.ok), _toggleClass(n0, "foo", _ctx.bar)))
+  _renderEffect(() => {
+    
+    _toggleClass(n0, "active", _ctx.ok)
+    _toggleClass(n0, "foo", _ctx.bar)
+  })
   return n0
 }"
 `;
@@ -459,7 +463,11 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => (_toggleClass(n0, "foo", _ctx.isActive), _toggleClass(n0, "bar", _ctx.isActive)))
+  _renderEffect(() => {
+    
+    _toggleClass(n0, "foo", _ctx.isActive)
+    _toggleClass(n0, "bar", _ctx.isActive)
+  })
   return n0
 }"
 `;

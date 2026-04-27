@@ -62,6 +62,25 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-for > multi class toggle with repeated v-for value 1`] = `
+"import { toggleClass as _toggleClass, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.todos), (_for_item0) => {
+    const n2 = t0()
+    _renderEffect(() => {
+      const _todo = _for_item0.value
+      
+      _toggleClass(n2, "completed", _todo.completed)
+      _toggleClass(n2, "editing", _todo === _ctx.editedTodo)
+    })
+    return n2
+  }, (todo) => (todo.id))
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > multi effect 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div>")

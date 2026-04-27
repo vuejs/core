@@ -74,20 +74,15 @@ export function genSetProp(
       ? genToggleClassValues(values, context)
       : undefined
   if (toggleClassValues) {
-    const calls = toggleClassValues.map(toggleClassValue =>
-      genCall(
+    return toggleClassValues.flatMap(toggleClassValue => [
+      NEWLINE,
+      ...genCall(
         [helper(helpers.toggleClass.name), null],
         `n${oper.element}`,
         JSON.stringify(toggleClassValue.className),
         toggleClassValue.value,
       ),
-    )
-    return [
-      NEWLINE,
-      toggleClassValues.length > 1 && '(',
-      ...calls.flatMap((call, i) => (i > 0 ? [', ', ...call] : call)),
-      toggleClassValues.length > 1 && ')',
-    ]
+    ])
   }
   const propValue = genPropValue(values, context)
   return [
