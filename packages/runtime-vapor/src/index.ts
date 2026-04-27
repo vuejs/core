@@ -39,6 +39,7 @@ export {
   setHtml,
   setBlockHtml,
   setClass,
+  toggleClass,
   setStyle,
   setAttr,
   setValue,

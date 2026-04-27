@@ -202,6 +202,19 @@ export function setClass(
   }
 }
 
+export function toggleClass(el: TargetElement, name: string, value: any): void {
+  value = !!value
+  if (
+    (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+    isHydrating &&
+    !toggleClassHasMismatch(el, name, value)
+  ) {
+    return
+  }
+
+  el.classList.toggle(name, value)
+}
+
 function setClassIncremental(el: any, value: any): void {
   const cacheKey = `$clsi${isApplyingFallthroughProps ? '$' : ''}`
   const normalizedValue = normalizeClass(value)
@@ -586,6 +599,28 @@ function classHasMismatch(
   }
 
   return false
+}
+
+function toggleClassHasMismatch(
+  el: TargetElement,
+  name: string,
+  value: boolean,
+): boolean {
+  const actual = el.getAttribute('class')
+  const actualClassSet = toClassSet(actual || '')
+  if (actualClassSet.has(name) === value) {
+    return false
+  }
+
+  if (value) {
+    actualClassSet.add(name)
+  } else {
+    actualClassSet.delete(name)
+  }
+  const expected = Array.from(actualClassSet).join(' ')
+  warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)
+  logMismatchError()
+  return true
 }
 
 function styleHasMismatch(

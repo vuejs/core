@@ -202,7 +202,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > selector pattern 4`] = `
-"import { setClass as _setClass, createFor as _createFor, template as _template } from 'vue';
+"import { toggleClass as _toggleClass, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<tr>")
 
 export function render(_ctx) {
@@ -210,7 +210,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
     _selector0_0(() => {
-      _setClass(n2, { danger: _for_item0.value.id === _ctx.selected })
+      _toggleClass(n2, "danger", _for_item0.value.id === _ctx.selected)
     })
     return n2
   }, (row) => (row.id), undefined, ({ createSelector }) => {

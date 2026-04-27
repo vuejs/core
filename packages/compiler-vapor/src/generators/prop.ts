@@ -1,8 +1,16 @@
 import {
   NewlineType,
   type SimpleExpressionNode,
+  createSimpleExpression,
   isSimpleIdentifier,
 } from '@vue/compiler-dom'
+import type {
+  Expression,
+  Identifier,
+  ObjectProperty,
+  StringLiteral,
+} from '@babel/types'
+import { type ParserOptions, parseExpression } from '@babel/parser'
 import type { CodegenContext } from '../generate'
 import {
   IRDynamicPropsKind,
@@ -42,6 +50,7 @@ const helpers = {
   setText: { name: 'setText' },
   setHtml: { name: 'setHtml' },
   setClass: { name: 'setClass' },
+  toggleClass: { name: 'toggleClass' },
   setStyle: { name: 'setStyle' },
   setValue: { name: 'setValue' },
   setAttr: { name: 'setAttr', needKey: true },
@@ -60,6 +69,26 @@ export function genSetProp(
     tag,
   } = oper
   const resolvedHelper = getRuntimeHelper(tag, key.content, modifier)
+  const toggleClassValues =
+    resolvedHelper.name === 'setClass' && !resolvedHelper.isSVG
+      ? genToggleClassValues(values, context)
+      : undefined
+  if (toggleClassValues) {
+    const calls = toggleClassValues.map(toggleClassValue =>
+      genCall(
+        [helper(helpers.toggleClass.name), null],
+        `n${oper.element}`,
+        JSON.stringify(toggleClassValue.className),
+        toggleClassValue.value,
+      ),
+    )
+    return [
+      NEWLINE,
+      toggleClassValues.length > 1 && '(',
+      ...calls.flatMap((call, i) => (i > 0 ? [', ', ...call] : call)),
+      toggleClassValues.length > 1 && ')',
+    ]
+  }
   const propValue = genPropValue(values, context)
   return [
     NEWLINE,
@@ -167,6 +196,84 @@ export function genPropValue(
     DELIMITERS_ARRAY,
     ...values.map(expr => genExpression(expr, context)),
   )
+}
+
+function genToggleClassValues(
+  values: SimpleExpressionNode[],
+  context: CodegenContext,
+): { className: string; value: CodeFragment[] }[] | undefined {
+  if (values.length !== 1) {
+    return
+  }
+  const simpleObjectClasses = getSimpleObjectClasses(values[0])
+  if (!simpleObjectClasses) {
+    return
+  }
+  return simpleObjectClasses.flatMap(({ classNames, value }) => {
+    const exp = createSimpleExpression(
+      values[0].content.slice(value.start! - 1, value.end! - 1),
+      false,
+      values[0].loc,
+    )
+    exp.ast = parseExpression(`(${exp.content})`, getParserOptions(context))
+    const valueCode = genExpression(exp, context)
+    return classNames.map(className => ({ className, value: valueCode }))
+  })
+}
+
+function getParserOptions(context: CodegenContext): ParserOptions {
+  return {
+    plugins: context.options.expressionPlugins
+      ? [...context.options.expressionPlugins, 'typescript']
+      : ['typescript'],
+  }
+}
+
+function getSimpleObjectClasses(
+  value: SimpleExpressionNode | undefined,
+): { classNames: string[]; value: Expression }[] | undefined {
+  const ast = value && value.ast
+  if (ast == null || ast === false || ast.type !== 'ObjectExpression') {
+    return
+  }
+  if (!ast.properties.length) {
+    return
+  }
+  const classes: { classNames: string[]; value: Expression }[] = []
+  for (const prop of ast.properties) {
+    if (prop.type !== 'ObjectProperty' || prop.computed || prop.shorthand) {
+      return
+    }
+    const classNames = getStaticClassNames(prop)
+    if (
+      !classNames ||
+      prop.value.start == null ||
+      prop.value.end == null ||
+      !isExpression(prop.value)
+    ) {
+      return
+    }
+    classes.push({ classNames, value: prop.value })
+  }
+  return classes
+}
+
+function getStaticClassNames(prop: ObjectProperty): string[] | undefined {
+  const key = prop.key as Identifier | StringLiteral
+  const value =
+    key.type === 'Identifier'
+      ? key.name
+      : key.type === 'StringLiteral'
+        ? key.value
+        : undefined
+  const classNames = value && value.trim().split(/\s+/)
+  if (classNames && classNames[0]) {
+    return classNames
+  }
+}
+
+function isExpression(value: ObjectProperty['value']): value is Expression {
+  return !value.type.endsWith('Pattern')
 }
 
 function getRuntimeHelper(

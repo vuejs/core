@@ -952,11 +952,6 @@ describe('compiler: element transform', () => {
               values: [
                 {
                   type: NodeTypes.SIMPLE_EXPRESSION,
-                  content: `foo`,
-                  isStatic: true,
-                },
-                {
-                  type: NodeTypes.SIMPLE_EXPRESSION,
                   content: `{ bar: isBar }`,
                   isStatic: false,
                 },

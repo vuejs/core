@@ -615,12 +615,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: class 1`] = `
-"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+"import { toggleClass as _toggleClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div class=foo>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClass(n0, ["foo", { bar: _ctx.isBar }]))
+  _renderEffect(() => _toggleClass(n0, "bar", _ctx.isBar))
   return n0
 }"
 `;

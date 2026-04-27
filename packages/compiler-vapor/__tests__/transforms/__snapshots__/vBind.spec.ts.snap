@@ -410,6 +410,17 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > multiple simple object class fast path 1`] = `
+"import { toggleClass as _toggleClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => (_toggleClass(n0, "active", _ctx.ok), _toggleClass(n0, "foo", _ctx.bar)))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > no expression (shorthand) 1`] = `
 "import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", true)
@@ -442,12 +453,78 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > object class with multi-token key 1`] = `
+"import { toggleClass as _toggleClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => (_toggleClass(n0, "foo", _ctx.isActive), _toggleClass(n0, "bar", _ctx.isActive)))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > should error if empty expression 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div arg>", true, true)
 
 export function render(_ctx) {
   const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > simple object class fast path 1`] = `
+"import { toggleClass as _toggleClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _toggleClass(n0, "active", _ctx.isActive))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > static class with overlapping multi-token object class 1`] = `
+"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClass(n0, ["foo", { 'foo bar': _ctx.isActive }]))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > static class with overlapping object class 1`] = `
+"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClass(n0, ["bar", { bar: _ctx.isBar }]))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > static class with simple object class fast path 1`] = `
+"import { toggleClass as _toggleClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div class=foo>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _toggleClass(n0, "bar", _ctx.isBar))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > static class with simple object class fast path in reverse order 1`] = `
+"import { toggleClass as _toggleClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div class=foo>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _toggleClass(n0, "bar", _ctx.isBar))
   return n0
 }"
 `;

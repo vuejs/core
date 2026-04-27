@@ -721,6 +721,75 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setClass(n0, _ctx.cls, true))')
   })
 
+  test('simple object class fast path', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ active: isActive }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_toggleClass(n0, "active", _ctx.isActive)')
+    expect(code).not.contains('{ active:')
+  })
+
+  test('static class with simple object class fast path', () => {
+    const { code } = compileWithVBind(`
+      <div class="foo" :class="{ bar: isBar }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const t0 = _template("<div class=foo>", true)')
+    expect(code).contains('_toggleClass(n0, "bar", _ctx.isBar)')
+    expect(code).not.contains('{ bar:')
+  })
+
+  test('static class with simple object class fast path in reverse order', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ bar: isBar }" class="foo"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('const t0 = _template("<div class=foo>", true)')
+    expect(code).contains('_toggleClass(n0, "bar", _ctx.isBar)')
+    expect(code).not.contains('{ bar:')
+  })
+
+  test('multiple simple object class fast path', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ active: ok, foo: bar }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_toggleClass(n0, "active", _ctx.ok)')
+    expect(code).contains('_toggleClass(n0, "foo", _ctx.bar)')
+    expect(code).not.contains('{ active:')
+  })
+
+  test('static class with overlapping object class', () => {
+    const { code } = compileWithVBind(`
+      <div class="bar" :class="{ bar: isBar }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClass(n0, ["bar", { bar: _ctx.isBar }])')
+    expect(code).not.contains('_toggleClass')
+  })
+
+  test('object class with multi-token key', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ 'foo bar': isActive }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_toggleClass(n0, "foo", _ctx.isActive)')
+    expect(code).contains('_toggleClass(n0, "bar", _ctx.isActive)')
+    expect(code).not.contains("'foo bar':")
+  })
+
+  test('static class with overlapping multi-token object class', () => {
+    const { code } = compileWithVBind(`
+      <div class="foo" :class="{ 'foo bar': isActive }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClass(n0, ["foo", { \'foo bar\': _ctx.isActive }])',
+    )
+    expect(code).not.contains('_toggleClass')
+  })
+
   test(':style w/ svg elements', () => {
     const { code } = compileWithVBind(`
       <svg :style="style"/>

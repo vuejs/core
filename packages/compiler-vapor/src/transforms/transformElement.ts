@@ -363,6 +363,7 @@ function transformNativeElement(
     let prevWasQuoted = false
     for (const prop of propsResult[1]) {
       const { key, values } = prop
+      const staticClass = getStaticClassForToggleClassFastPath(prop)
       // handling asset imports
       if (
         context.imports.some(imported =>
@@ -391,6 +392,24 @@ function transformNativeElement(
         } else {
           prevWasQuoted = false
         }
+      } else if (staticClass) {
+        if (!prevWasQuoted) template += ` `
+        template += key.content
+        template += (prevWasQuoted = NEEDS_QUOTES_RE.test(staticClass.content))
+          ? `="${staticClass.content.replace(/"/g, '&quot;')}"`
+          : `=${staticClass.content}`
+        context.registerEffect(
+          [staticClass.dynamic],
+          {
+            type: IRNodeTypes.SET_PROP,
+            element: context.reference(),
+            prop: extend({}, prop, {
+              values: [staticClass.dynamic],
+            }),
+            tag,
+          },
+          getEffectIndex,
+        )
       } else {
         dynamicProps.push(key.content)
         context.registerEffect(
@@ -645,6 +664,89 @@ function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
     }
   }
   return deduped
+}
+
+function getStaticClassForToggleClassFastPath(
+  prop: IRProp,
+): { content: string; dynamic: SimpleExpressionNode } | undefined {
+  if (
+    !prop.key.isStatic ||
+    prop.key.content !== 'class' ||
+    prop.values.length !== 2
+  ) {
+    return
+  }
+  const staticIndex = prop.values.findIndex(value => value.isStatic)
+  const dynamicIndex = staticIndex === 0 ? 1 : 0
+  if (staticIndex < 0) {
+    return
+  }
+  const staticClass = prop.values[staticIndex]
+  const dynamicClass = prop.values[dynamicIndex]
+  const dynamicClassKeys =
+    dynamicClass && !dynamicClass.isStatic
+      ? getSimpleObjectClassKeys(dynamicClass)
+      : undefined
+  if (
+    !dynamicClass ||
+    dynamicClass.isStatic ||
+    !dynamicClassKeys ||
+    hasOverlappingClass(staticClass.content, dynamicClassKeys)
+  ) {
+    return
+  }
+  return { content: staticClass.content, dynamic: dynamicClass }
+}
+
+function getSimpleObjectClassKeys(
+  value: SimpleExpressionNode,
+): string[] | undefined {
+  const ast = value.ast
+  if (ast == null || ast === false || ast.type !== 'ObjectExpression') {
+    return
+  }
+  if (!ast.properties.length) {
+    return
+  }
+  const keys: string[] = []
+  for (const prop of ast.properties) {
+    const rawKey =
+      prop.type === 'ObjectProperty' && !prop.computed
+        ? prop.key.type === 'Identifier'
+          ? prop.key.name
+          : prop.key.type === 'StringLiteral'
+            ? prop.key.value
+            : undefined
+        : undefined
+    const classNames = rawKey && rawKey.trim().split(/\s+/)
+    if (
+      prop.type !== 'ObjectProperty' ||
+      prop.computed ||
+      prop.shorthand ||
+      !classNames ||
+      !classNames[0] ||
+      prop.value.start == null ||
+      prop.value.end == null ||
+      prop.value.type.endsWith('Pattern')
+    ) {
+      return
+    }
+    keys.push(...classNames)
+  }
+  return keys
+}
+
+function hasOverlappingClass(
+  staticClass: string,
+  dynamicKeys: string[],
+): boolean {
+  const staticClassSet = new Set(staticClass.trim().split(/\s+/))
+  for (const key of dynamicKeys) {
+    if (staticClassSet.has(key)) {
+      return true
+    }
+  }
+  return false
 }
 
 function resolveDirectiveResult(prop: DirectiveTransformResult): IRProp {
