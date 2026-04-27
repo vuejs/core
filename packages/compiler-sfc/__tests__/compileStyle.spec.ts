@@ -240,6 +240,16 @@ color: red
       ".foo .bar { color: red;
       }"
     `)
+    expect(compileScoped(`:global(body) h1 { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "body h1[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`:global(html.dark) .foo { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "html.dark .foo[data-v-test] { color: red;
+      }"
+    `)
   })
 
   test(':is() and :where() with multiple selectors', () => {

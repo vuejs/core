@@ -103,6 +103,9 @@ function rewriteSelector(
   let shouldInject = !deep
   let hasNestedDeep = false
   let splitForNestedDeep = false
+  if (rewriteGlobalSelector(selector)) {
+    return
+  }
   // find the last child node to insert attribute selector
   selector.each(n => {
     // DEPRECATED ">>>" and "/deep/" combinator
@@ -338,6 +341,34 @@ function rewriteSelector(
       }),
     )
   }
+}
+
+function rewriteGlobalSelector(selector: selectorParser.Selector): boolean {
+  const globalIndex = selector.nodes.findIndex(
+    node =>
+      node.type === 'pseudo' &&
+      (node.value === ':global' || node.value === '::v-global'),
+  )
+  if (globalIndex === -1) {
+    return false
+  }
+
+  const global = selector.at(globalIndex) as selectorParser.Pseudo
+  const hasTrailingNodes = globalIndex < selector.length - 1
+  for (const node of selector.nodes.slice(0, globalIndex)) {
+    selector.removeChild(node)
+  }
+  let last: selectorParser.Selector['nodes'][0] = global
+  global.nodes[0].each(node => {
+    selector.insertAfter(last, node)
+    last = node
+  })
+  selector.removeChild(global)
+  if (selector.first) {
+    selector.first.spaces.before = ''
+  }
+
+  return !hasTrailingNodes
 }
 
 function isSpaceCombinator(node: selectorParser.Node) {
