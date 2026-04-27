@@ -50,6 +50,7 @@ type TargetElement = Element & {
   $root?: true
   $html?: string
   $cls?: string
+  $tcls?: Record<string, boolean>
   $sty?: NormalizedStyle | string | undefined
   value?: string
   _value?: any
@@ -204,15 +205,22 @@ export function setClass(
 
 export function toggleClass(el: TargetElement, name: string, value: any): void {
   value = !!value
+  const cache = el.$tcls || (el.$tcls = Object.create(null))
+  if (cache[name] === value) {
+    return
+  }
+
   if (
     (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
     isHydrating &&
     !toggleClassHasMismatch(el, name, value)
   ) {
+    cache[name] = value
     return
   }
 
   el.classList.toggle(name, value)
+  cache[name] = value
 }
 
 function setClassIncremental(el: any, value: any): void {
@@ -565,6 +573,7 @@ export function optimizePropertyLookup(): void {
   proto.$fc = proto.$evtclick = undefined
   proto.$root = false
   proto.$html = proto.$cls = proto.$sty = ''
+  proto.$tcls = undefined
   // Initialize $txt to undefined instead of empty string to ensure setText()
   // properly updates the text node even when the value is empty string.
   // This prevents issues where setText(node, '') would be skipped because

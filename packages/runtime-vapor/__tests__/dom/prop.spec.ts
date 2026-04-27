@@ -11,6 +11,7 @@ import {
   setProp,
   setText,
   setValue,
+  toggleClass,
 } from '../../src/dom/prop'
 import { setStyle } from '../../src/dom/prop'
 import { VaporComponentInstance, createComponent } from '../../src/component'
@@ -45,6 +46,23 @@ describe('patchProp', () => {
       expect(el.className).toBe('bar baz')
       setClass(el, { a: true, b: false })
       expect(el.className).toBe('a')
+    })
+  })
+
+  describe('toggleClass', () => {
+    test('should skip unchanged values', () => {
+      const el = document.createElement('div')
+      const toggle = vi.spyOn(el.classList, 'toggle')
+
+      toggleClass(el, 'active', true)
+      toggleClass(el, 'active', true)
+      expect(toggle).toHaveBeenCalledTimes(1)
+      expect(el.classList.contains('active')).toBe(true)
+
+      toggleClass(el, 'active', false)
+      toggleClass(el, 'active', false)
+      expect(toggle).toHaveBeenCalledTimes(2)
+      expect(el.classList.contains('active')).toBe(false)
     })
   })
 
