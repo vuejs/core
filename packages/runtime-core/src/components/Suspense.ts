@@ -553,13 +553,16 @@ function createSuspenseBoundary(
           activeBranch &&
           pendingBranch!.transition &&
           pendingBranch!.transition.mode === 'out-in'
+        let hasUpdatedAnchor = false
         if (delayEnter) {
           activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
               move(
                 pendingBranch!,
                 container,
-                anchor === initialAnchor ? next(activeBranch!) : anchor,
+                anchor === initialAnchor && !hasUpdatedAnchor
+                  ? next(activeBranch!)
+                  : anchor,
                 MoveType.ENTER,
               )
               queuePostFlushCb(effects)
@@ -587,6 +590,7 @@ function createSuspenseBoundary(
           // it is necessary to get the latest anchor.
           if (parentNode(activeBranch.el!) === container) {
             anchor = next(activeBranch)
+            hasUpdatedAnchor = true
           }
           unmount(activeBranch, parentComponent, suspense, true)
           // clear el reference from fallback vnode to allow GC
