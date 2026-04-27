@@ -69,7 +69,7 @@
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-replace": "5.0.4",
-    "@swc/core": "^1.15.30",
+    "@swc/core": "^1.15.32",
     "@types/hash-sum": "^1.0.2",
     "@types/node": "^24.12.2",
     "@types/semver": "^7.7.1",
