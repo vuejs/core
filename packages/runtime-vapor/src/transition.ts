@@ -13,29 +13,16 @@ type ApplyTransitionLeaveHooksFn = (
   afterLeaveCb: () => void,
 ) => void
 
-let _applyTransitionHooks: ApplyTransitionHooksFn | undefined
-let _applyTransitionLeaveHooks: ApplyTransitionLeaveHooksFn | undefined
+export let applyTransitionHooks: ApplyTransitionHooksFn
+export let applyTransitionLeaveHooks: ApplyTransitionLeaveHooksFn
+
+export let isTransitionEnabled = false
 
 export function registerTransitionHooks(
   applyHooks: ApplyTransitionHooksFn,
   applyLeaveHooks: ApplyTransitionLeaveHooksFn,
 ): void {
-  _applyTransitionHooks = applyHooks
-  _applyTransitionLeaveHooks = applyLeaveHooks
-}
-
-export function applyTransitionHooks(
-  block: Block,
-  hooks: VaporTransitionHooks,
-): VaporTransitionHooks {
-  return _applyTransitionHooks ? _applyTransitionHooks(block, hooks) : hooks
-}
-
-export function applyTransitionLeaveHooks(
-  block: Block,
-  enterHooks: VaporTransitionHooks,
-  afterLeaveCb: () => void,
-): void {
-  _applyTransitionLeaveHooks &&
-    _applyTransitionLeaveHooks(block, enterHooks, afterLeaveCb)
+  isTransitionEnabled = true
+  applyTransitionHooks = applyHooks
+  applyTransitionLeaveHooks = applyLeaveHooks
 }

@@ -21,6 +21,7 @@ import {
   isFragment,
 } from './fragment'
 import { isTeleportFragment } from './components/Teleport'
+import { isTransitionEnabled } from './transition'
 
 export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
@@ -101,6 +102,7 @@ export function insert(
     if (!isHydrating) {
       // only apply transition on Element nodes
       if (
+        isTransitionEnabled &&
         block instanceof Element &&
         (block as TransitionBlock).$transition &&
         !(block as TransitionBlock).$transition!.disabled
@@ -151,6 +153,7 @@ export function move(
   if (block instanceof Node) {
     // only apply transition on Element nodes
     if (
+      isTransitionEnabled &&
       block instanceof Element &&
       (block as TransitionBlock).$transition &&
       !(block as TransitionBlock).$transition!.disabled &&
@@ -240,7 +243,11 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
 
 export function remove(block: Block, parent?: ParentNode): void {
   if (block instanceof Node) {
-    if ((block as TransitionBlock).$transition && block instanceof Element) {
+    if (
+      isTransitionEnabled &&
+      (block as TransitionBlock).$transition &&
+      block instanceof Element
+    ) {
       performTransitionLeave(
         block,
         (block as TransitionBlock).$transition as TransitionHooks,

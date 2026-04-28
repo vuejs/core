@@ -53,7 +53,11 @@ import {
   setCurrentKeepAliveCtx,
   withCurrentCacheKey,
 } from './components/KeepAlive'
-import { applyTransitionHooks, applyTransitionLeaveHooks } from './transition'
+import {
+  applyTransitionHooks,
+  applyTransitionLeaveHooks,
+  isTransitionEnabled,
+} from './transition'
 
 export class VaporFragment<
   T extends Block = Block,
@@ -192,7 +196,7 @@ export class DynamicFragment extends VaporFragment {
       return
     }
 
-    const transition = this.$transition
+    const transition = isTransitionEnabled ? this.$transition : undefined
     // currently leaving: defer mounting the next branch until
     // the leave finishes.
     if (transition && transition.state.isLeaving) {
@@ -324,7 +328,7 @@ export class DynamicFragment extends VaporFragment {
           const key = this.keyed ? this.current : this.$key
           if (key !== undefined) setBlockKey(this.nodes, key)
 
-          if (transition) {
+          if (isTransitionEnabled && transition) {
             this.$transition = applyTransitionHooks(this.nodes, transition)
           }
 

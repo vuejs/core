@@ -111,6 +111,7 @@ import {
 } from './fragment'
 import type { NodeRef } from './apiTemplateRef'
 import {
+  ensureTransitionHooksRegistered,
   getVNodeKey,
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
@@ -201,6 +202,7 @@ const vaporInteropImpl: Omit<
       instance.shapeFlag = vnode.shapeFlag
 
     if (vnode.transition) {
+      ensureTransitionHooksRegistered()
       setVaporTransitionHooks(
         instance,
         vnode.transition as VaporTransitionHooks,
@@ -434,6 +436,7 @@ const vaporInteropImpl: Omit<
   },
 
   setTransitionHooks(component, hooks) {
+    ensureTransitionHooksRegistered()
     setVaporTransitionHooks(component as any, hooks as VaporTransitionHooks)
   },
 

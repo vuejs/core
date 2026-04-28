@@ -124,6 +124,7 @@ import type { VaporElement } from './apiDefineCustomElement'
 import { parentSuspense, setParentSuspense } from './components/Suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import { setComponentScopeId, setScopeId } from './scopeId'
+import { isTransitionEnabled } from './transition'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -281,7 +282,9 @@ export function createComponent(
     if (
       (isSingleRoot ||
         // transition has attrs fallthrough
-        (currentInstance && isVaporTransition(currentInstance!.type))) &&
+        (isTransitionEnabled
+          ? currentInstance && isVaporTransition(currentInstance!.type)
+          : false)) &&
       component.inheritAttrs !== false &&
       isVaporComponent(currentInstance) &&
       currentInstance.hasFallthrough
@@ -1177,7 +1180,8 @@ function handleSetupResult(
     if (root) {
       renderEffect(() => {
         const attrs =
-          isFunction(component) && !isVaporTransition(component)
+          isFunction(component) &&
+          !(isTransitionEnabled ? isVaporTransition(component) : false)
             ? getFunctionalFallthrough(instance.attrs)
             : instance.attrs
         if (attrs) applyFallthroughProps(root, attrs)
