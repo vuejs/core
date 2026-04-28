@@ -50,9 +50,10 @@ import { setBlockKey } from './helpers/setKey'
 import {
   type VaporKeepAliveContext,
   currentKeepAliveCtx,
+  isKeepAliveEnabled,
   setCurrentKeepAliveCtx,
   withCurrentCacheKey,
-} from './components/KeepAlive'
+} from './keepAlive'
 import {
   applyTransitionHooks,
   applyTransitionLeaveHooks,
@@ -94,24 +95,32 @@ export class VaporFragment<
   // render context
   readonly renderInstance: GenericComponentInstance | null = currentInstance
   readonly slotOwner: VaporComponentInstance | null = currentSlotOwner
-  readonly keepAliveCtx: VaporKeepAliveContext | null = currentKeepAliveCtx
+  readonly keepAliveCtx?: VaporKeepAliveContext | null
   readonly inheritedSlotBoundary: SlotBoundaryContext | null =
     currentSlotBoundary
 
   constructor(nodes: T) {
     this.nodes = nodes
+    if (isKeepAliveEnabled) {
+      this.keepAliveCtx = currentKeepAliveCtx
+    }
   }
 
   protected runWithRenderCtx<R>(fn: () => R): R {
     const prevInstance = setCurrentInstance(this.renderInstance)
     const prevSlotOwner = setCurrentSlotOwner(this.slotOwner)
-    const prevKeepAliveCtx = setCurrentKeepAliveCtx(this.keepAliveCtx)
+    let prevKeepAliveCtx: VaporKeepAliveContext | null = null
+    if (isKeepAliveEnabled) {
+      prevKeepAliveCtx = setCurrentKeepAliveCtx(this.keepAliveCtx || null)
+    }
     const prevBoundary = setCurrentSlotBoundary(this.inheritedSlotBoundary)
     try {
       return fn()
     } finally {
       setCurrentSlotBoundary(prevBoundary)
-      setCurrentKeepAliveCtx(prevKeepAliveCtx)
+      if (isKeepAliveEnabled) {
+        setCurrentKeepAliveCtx(prevKeepAliveCtx)
+      }
       setCurrentSlotOwner(prevSlotOwner)
       setCurrentInstance(...prevInstance)
     }
@@ -213,24 +222,28 @@ export class DynamicFragment extends VaporFragment {
     const parent = isHydrating ? null : this.anchor.parentNode
     // teardown previous branch
     if (this.scope) {
-      let retainScope = false
-      const keepAliveCtx = this.keepAliveCtx
+      if (isKeepAliveEnabled) {
+        let retainScope = false
+        const keepAliveCtx = this.keepAliveCtx
 
-      // if keepAliveCtx exists and processShapeFlag returns a cache key,
-      // cache the scope and retain it.
-      const cacheKey = keepAliveCtx
-        ? this.keyed
-          ? withCurrentCacheKey(this.current, () =>
-              keepAliveCtx.processShapeFlag(this.nodes),
-            )
-          : keepAliveCtx.processShapeFlag(this.nodes)
-        : false
-      if (cacheKey !== false) {
-        keepAliveCtx!.cacheScope(cacheKey, this.current, this.scope)
-        retainScope = true
-      }
+        // if keepAliveCtx exists and processShapeFlag returns a cache key,
+        // cache the scope and retain it.
+        if (keepAliveCtx) {
+          const cacheKey = this.keyed
+            ? withCurrentCacheKey(this.current, () =>
+                keepAliveCtx.processShapeFlag(this.nodes),
+              )
+            : keepAliveCtx.processShapeFlag(this.nodes)
+          if (cacheKey !== false) {
+            keepAliveCtx.cacheScope(cacheKey, this.current, this.scope)
+            retainScope = true
+          }
+        }
 
-      if (!retainScope) {
+        if (!retainScope) {
+          this.scope.stop()
+        }
+      } else {
         this.scope.stop()
       }
       const mode = transition && transition.mode
@@ -309,7 +322,7 @@ export class DynamicFragment extends VaporFragment {
   ): void {
     this.current = key
     if (render) {
-      const keepAliveCtx = this.keepAliveCtx
+      const keepAliveCtx = isKeepAliveEnabled ? this.keepAliveCtx : null
       // try to reuse the kept-alive scope
       const scope = keepAliveCtx && keepAliveCtx.getScope(this.current)
       if (scope) {

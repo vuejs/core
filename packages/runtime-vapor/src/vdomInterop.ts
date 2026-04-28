@@ -119,10 +119,14 @@ import { setInteropEnabled } from './vdomInteropState'
 import {
   type KeepAliveInstance,
   activate,
-  currentKeepAliveCtx,
   deactivate,
-  setCurrentKeepAliveCtx,
 } from './components/KeepAlive'
+import {
+  currentKeepAliveCtx,
+  enableKeepAlive,
+  isKeepAliveEnabled,
+  setCurrentKeepAliveCtx,
+} from './keepAlive'
 import {
   parentSuspense as currentParentSuspense,
   enableSuspense,
@@ -200,8 +204,10 @@ const vaporInteropImpl: Omit<
     ensureVNodeHookState(instance, vnode)
 
     // copy the shape flag from the vdom component if inside a keep-alive
-    if (parentComponent && isKeepAlive(parentComponent))
+    if (parentComponent && isKeepAlive(parentComponent)) {
+      enableKeepAlive()
       instance.shapeFlag = vnode.shapeFlag
+    }
 
     if (vnode.transition) {
       ensureTransitionHooksRegistered()
@@ -790,7 +796,7 @@ function createVDOMComponent(
   frag.$key = vnode.key
   trackFragmentVNodeUpdates(frag, vnode)
 
-  if (currentKeepAliveCtx) {
+  if (isKeepAliveEnabled && currentKeepAliveCtx) {
     currentKeepAliveCtx.processShapeFlag(frag)
     // for VDOM async components, trigger cacheBlock after resolution
     if ((component as any).__asyncLoader) {
@@ -1494,11 +1500,16 @@ const renderEmptyVNodes = (): VNodeArrayChildren => []
 // VDOM fallback cleanup follow a different lifecycle.
 function runWithFragmentRenderCtx<R>(fragment: VaporFragment, fn: () => R): R {
   const prevSlotOwner = setCurrentSlotOwner(fragment.slotOwner)
-  const prevKeepAliveCtx = setCurrentKeepAliveCtx(fragment.keepAliveCtx)
+  let prevKeepAliveCtx = null
+  if (isKeepAliveEnabled) {
+    prevKeepAliveCtx = setCurrentKeepAliveCtx(fragment.keepAliveCtx || null)
+  }
   try {
     return withOwnedSlotBoundary(fragment.inheritedSlotBoundary, fn)
   } finally {
-    setCurrentKeepAliveCtx(prevKeepAliveCtx)
+    if (isKeepAliveEnabled) {
+      setCurrentKeepAliveCtx(prevKeepAliveCtx)
+    }
     setCurrentSlotOwner(prevSlotOwner)
   }
 }

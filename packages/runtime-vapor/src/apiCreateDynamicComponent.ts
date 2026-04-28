@@ -32,6 +32,7 @@ import {
 import { DynamicFragment, type VaporFragment } from './fragment'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import { isInteropEnabled } from './vdomInteropState'
+import { enableKeepAlive } from './keepAlive'
 
 export function createDynamicComponent(
   getter: () => any,
@@ -62,6 +63,7 @@ export function createDynamicComponent(
       // Handles VNodes passed from VDOM components (e.g., `h(VaporComp)` from slots)
       if (isInteropEnabled && appContext.vapor && isVNode(value)) {
         if (isKeepAlive(currentInstance)) {
+          enableKeepAlive()
           const frag = (
             currentInstance as KeepAliveInstance
           ).ctx.getCachedComponent(value.type, value.key) as VaporFragment
