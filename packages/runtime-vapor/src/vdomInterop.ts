@@ -125,8 +125,10 @@ import {
 } from './components/KeepAlive'
 import {
   parentSuspense as currentParentSuspense,
+  enableSuspense,
+  isSuspenseEnabled,
   setParentSuspense,
-} from './components/Suspense'
+} from './suspense'
 
 export const interopKey: unique symbol = Symbol(`interop`)
 
@@ -169,7 +171,7 @@ const vaporInteropImpl: Omit<
     const slotsRef = shallowRef(vnode.children)
 
     let prevSuspense: SuspenseBoundary | null = null
-    if (__FEATURE_SUSPENSE__ && parentSuspense) {
+    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
       prevSuspense = setParentSuspense(parentSuspense)
     }
 
@@ -209,7 +211,7 @@ const vaporInteropImpl: Omit<
       )
     }
 
-    if (__FEATURE_SUSPENSE__ && parentSuspense) {
+    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
       setParentSuspense(prevSuspense)
     }
 
@@ -1426,6 +1428,9 @@ function shouldUseCurrentParent(block: Block): boolean {
 }
 
 export const vaporInteropPlugin: Plugin = app => {
+  if (__FEATURE_SUSPENSE__) {
+    enableSuspense()
+  }
   setInteropEnabled()
   const internals = ensureRenderer().internals
   app._context.vapor = extend(vaporInteropImpl, {
@@ -1587,7 +1592,7 @@ function renderVaporSlot(
   const prev = currentInstance
   let prevSuspense: SuspenseBoundary | null = null
   simpleSetCurrentInstance(parentComponent)
-  if (__FEATURE_SUSPENSE__ && parentSuspense) {
+  if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
     prevSuspense = setParentSuspense(parentSuspense)
   }
   try {
@@ -1761,7 +1766,7 @@ function renderVaporSlot(
       throw e
     }
   } finally {
-    if (__FEATURE_SUSPENSE__ && parentSuspense) {
+    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
       setParentSuspense(prevSuspense)
     }
     simpleSetCurrentInstance(prev)
