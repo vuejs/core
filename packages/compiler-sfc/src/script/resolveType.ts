@@ -1337,9 +1337,43 @@ function recordTypes(
         }
       } else if (stmt.type === 'TSModuleDeclaration' && stmt.global) {
         for (const s of (stmt.body as TSModuleBlock).body) {
-          if (s.type === 'ExportNamedDeclaration' && s.declaration) {
-            // Handle export declarations inside declare global
-            recordType(s.declaration, types, declares)
+          if (s.type === 'ExportNamedDeclaration') {
+            if (s.declaration) {
+              // Handle export declarations inside declare global
+              recordType(s.declaration, types, declares)
+            } else if (s.source) {
+              // Handle re-exports inside declare global, e.g.
+              // `export type { Foo } from './foo'`. Global lookup only checks
+              // `types`/`declares`, so resolve the source eagerly.
+              const sourceScope = importSourceToScope(
+                ctx,
+                s.source,
+                scope,
+                s.source.value,
+              )
+              for (const spec of s.specifiers) {
+                if (spec.type === 'ExportSpecifier') {
+                  const exported = getId(spec.exported)
+                  const local = spec.local.name
+                  if (sourceScope.exportedTypes[local]) {
+                    types[exported] = sourceScope.exportedTypes[local]
+                  }
+                  if (sourceScope.exportedDeclares[local]) {
+                    declares[exported] = sourceScope.exportedDeclares[local]
+                  }
+                }
+              }
+            }
+          } else if (s.type === 'ExportAllDeclaration' && s.source) {
+            // Handle `export * from './foo'` inside declare global
+            const sourceScope = importSourceToScope(
+              ctx,
+              s.source,
+              scope,
+              s.source.value,
+            )
+            Object.assign(types, sourceScope.exportedTypes)
+            Object.assign(declares, sourceScope.exportedDeclares)
           } else {
             recordType(s, types, declares)
           }
