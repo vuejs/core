@@ -49,7 +49,7 @@ import {
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-import { applyTransitionHooks } from './transition'
+import { applyTransitionHooks, isTransitionEnabled } from './transition'
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 
@@ -493,7 +493,7 @@ export const createFor = (
     ))
 
     // apply transition for new nodes
-    if (frag.$transition) {
+    if (isTransitionEnabled && frag.$transition) {
       applyTransitionHooks(block.nodes, frag.$transition)
     }
 

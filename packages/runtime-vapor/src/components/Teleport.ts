@@ -45,7 +45,7 @@ import {
 } from '../dom/hydration'
 import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
 import { getScopeOwner } from '../componentSlots'
-import { applyTransitionHooks } from '../transition'
+import { applyTransitionHooks, isTransitionEnabled } from '../transition'
 
 const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -196,7 +196,7 @@ export class TeleportFragment extends VaporFragment {
   private mount(parent: ParentNode, anchor: Node | null) {
     // don't apply transitions during move teleports
     // algin with Vue DOM teleport behavior
-    if (this.$transition && !this.isMounted) {
+    if (isTransitionEnabled && this.$transition && !this.isMounted) {
       applyTransitionHooks(this.nodes, this.$transition)
     }
     if (this.isMounted) {
