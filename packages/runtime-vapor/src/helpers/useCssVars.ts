@@ -7,7 +7,7 @@ import {
 import { type VaporComponentInstance, isVaporComponent } from '../component'
 import { isArray } from '@vue/shared'
 import type { Block } from '../block'
-import { isTeleportFragment } from '../components/Teleport'
+import { isTeleportEnabled, isTeleportFragment } from '../teleport'
 
 export function useVaporCssVars(getter: () => Record<string, string>): void {
   if (!__BROWSER__ && !__TEST__) return
@@ -51,7 +51,7 @@ function setVarsOnBlock(block: Block, vars: Record<string, string>): void {
     block.forEach(child => setVarsOnBlock(child, vars))
   } else if (isVaporComponent(block)) {
     setVarsOnBlock(block.block!, vars)
-  } else if (isTeleportFragment(block)) {
+  } else if (isTeleportEnabled && isTeleportFragment(block)) {
     // Teleport children are handled via data-v-owner + ut() to preserve
     // lexical owner semantics for slot content.
     return

@@ -46,6 +46,7 @@ import {
 import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
 import { getScopeOwner } from '../componentSlots'
 import { applyTransitionHooks, isTransitionEnabled } from '../transition'
+import { enableTeleport } from '../teleport'
 
 const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -500,26 +501,10 @@ export class TeleportFragment extends VaporFragment {
   }
 }
 
-export const VaporTeleport =
-  VaporTeleportImpl as unknown as DefineVaporSetupFnComponent<TeleportProps>
-
-/**
- * Use duck typing to check for VaporTeleport instead of direct reference
- * to VaporTeleportImpl, allowing tree-shaking when Teleport is not used.
- */
-export function isVaporTeleport(
-  value: unknown,
-): value is typeof VaporTeleportImpl {
-  return !!(value && (value as any).__isTeleport && (value as any).__vapor)
-}
-
-/**
- * Use duck typing to check for TeleportFragment instead of instanceof,
- * allowing tree-shaking when Teleport is not used.
- */
-export function isTeleportFragment(value: unknown): value is TeleportFragment {
-  return !!(value && (value as any).__isTeleportFragment)
-}
+export const VaporTeleport: DefineVaporSetupFnComponent<TeleportProps> =
+  /*@__PURE__*/ enableTeleport(
+    VaporTeleportImpl as unknown as DefineVaporSetupFnComponent<TeleportProps>,
+  )
 
 function locateTeleportEndAnchor(
   node: Node = currentHydrationNode!,
