@@ -1497,6 +1497,66 @@ describe('resolveType', () => {
       })
     })
 
+    test('global types with re-exports', () => {
+      const files = {
+        '/foo.ts': `export interface Foo { foo: number }`,
+        '/bar.ts': `export interface Bar { bar: boolean }`,
+        '/baz.ts': `export interface Baz { baz: string }`,
+        '/global.d.ts': `
+          declare global {
+            export type { Foo } from './foo'
+            export { Bar } from './bar'
+            export * from './baz'
+          }
+          export {}
+        `,
+      }
+
+      const globalTypeFiles = { globalTypeFiles: ['/global.d.ts'] }
+
+      expect(
+        resolve(`defineProps<Foo>()`, files, globalTypeFiles).props,
+      ).toStrictEqual({
+        foo: ['Number'],
+      })
+
+      expect(
+        resolve(`defineProps<Bar>()`, files, globalTypeFiles).props,
+      ).toStrictEqual({
+        bar: ['Boolean'],
+      })
+
+      expect(
+        resolve(`defineProps<Baz>()`, files, globalTypeFiles).props,
+      ).toStrictEqual({
+        baz: ['String'],
+      })
+    })
+
+    test('global types with re-exports preserve source-module scope', () => {
+      const files = {
+        '/types.ts': `export type Name = string`,
+        '/foo.ts': `
+          import type { Name } from './types'
+          export interface Foo { name: Name }
+        `,
+        '/global.d.ts': `
+          declare global {
+            export type { Foo } from './foo'
+          }
+          export {}
+        `,
+      }
+
+      expect(
+        resolve(`defineProps<Foo>()`, files, {
+          globalTypeFiles: ['/global.d.ts'],
+        }).props,
+      ).toStrictEqual({
+        name: ['String'],
+      })
+    })
+
     test('global types with ambient references', () => {
       const files = {
         // with references
