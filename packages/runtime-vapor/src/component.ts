@@ -99,11 +99,12 @@ import {
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { createComment, createElement, createTextNode } from './dom/node'
+import type { TeleportFragment } from './components/Teleport'
 import {
-  type TeleportFragment,
+  isTeleportEnabled,
   isTeleportFragment,
   isVaporTeleport,
-} from './components/Teleport'
+} from './teleport'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import {
   currentKeepAliveCtx,
@@ -334,7 +335,7 @@ export function createComponent(
     }
 
     // teleport
-    if (isVaporTeleport(component)) {
+    if (isTeleportEnabled && isVaporTeleport(component)) {
       const frag = component.process(rawProps!, rawSlots!)
       if (_insertionParent) {
         // Teleports mounted via insertion state are not part of the returned
@@ -1089,7 +1090,7 @@ export function getRootElement(
     return getRootElement(block.block, onDynamicFragment, recurse)
   }
 
-  if (isFragment(block) && !isTeleportFragment(block)) {
+  if (isFragment(block) && !(isTeleportEnabled && isTeleportFragment(block))) {
     if (block instanceof DynamicFragment && onDynamicFragment) {
       onDynamicFragment(block)
     }
@@ -1193,7 +1194,7 @@ function handleSetupResult(
         instance.block.length) ||
         // preventing attrs fallthrough on Teleport
         // consistent with VDOM Teleport behavior
-        isTeleportFragment(instance.block))
+        (isTeleportEnabled && isTeleportFragment(instance.block)))
     ) {
       warnExtraneousAttributes(instance.attrs)
     }
