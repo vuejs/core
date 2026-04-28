@@ -108,8 +108,9 @@ import {
 import type { KeepAliveInstance } from './components/KeepAlive'
 import {
   currentKeepAliveCtx,
+  isKeepAliveEnabled,
   setCurrentKeepAliveCtx,
-} from './components/KeepAlive'
+} from './keepAlive'
 import {
   insertionAnchor,
   insertionParent,
@@ -313,6 +314,7 @@ export function createComponent(
 
     // keep-alive
     if (
+      isKeepAliveEnabled &&
       currentInstance &&
       currentInstance.vapor &&
       isKeepAlive(currentInstance)
@@ -374,7 +376,11 @@ export function createComponent(
     // handle currentKeepAliveCtx for component boundary isolation
     // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
     // DynamicFragment can capture it
-    if (currentKeepAliveCtx && !isAsyncWrapper(instance)) {
+    if (
+      isKeepAliveEnabled &&
+      currentKeepAliveCtx &&
+      !isAsyncWrapper(instance)
+    ) {
       currentKeepAliveCtx.processShapeFlag(instance)
       // clear currentKeepAliveCtx so child components don't associate
       // with parent's KeepAlive
@@ -1006,7 +1012,10 @@ export function mountComponent(
     return
   }
 
-  if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+  if (
+    isKeepAliveEnabled &&
+    instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE
+  ) {
     ;(instance.parent as KeepAliveInstance)!.ctx.activate(
       instance,
       parent,
@@ -1034,6 +1043,7 @@ export function mountComponent(
   }
   if (instance.m) queuePostFlushCb(instance.m!)
   if (
+    isKeepAliveEnabled &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.a
   ) {
@@ -1051,6 +1061,7 @@ export function unmountComponent(
 ): void {
   // Skip unmount for kept-alive components - deactivate if called from remove()
   if (
+    isKeepAliveEnabled &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.parent &&
     instance.parent.vapor &&

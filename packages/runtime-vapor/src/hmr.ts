@@ -16,6 +16,7 @@ import {
 } from './component'
 import { isArray } from '@vue/shared'
 import { isFragment } from './fragment'
+import { isKeepAliveEnabled } from './keepAlive'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
   const normalized = normalizeBlock(instance.block)
@@ -38,7 +39,7 @@ export function hmrReload(
 ): void {
   // If parent is KeepAlive, rerender it so new component goes through
   // KeepAlive's slot rendering flow to receive activated hooks properly
-  if (instance.parent && isKeepAlive(instance.parent)) {
+  if (isKeepAliveEnabled && instance.parent && isKeepAlive(instance.parent)) {
     instance.parent.hmrRerender!()
     return
   }
