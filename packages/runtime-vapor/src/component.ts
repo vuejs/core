@@ -122,7 +122,11 @@ import type {
 } from './apiDefineComponent'
 import { DynamicFragment, isFragment } from './fragment'
 import type { VaporElement } from './apiDefineCustomElement'
-import { parentSuspense, setParentSuspense } from './components/Suspense'
+import {
+  isSuspenseEnabled,
+  parentSuspense,
+  setParentSuspense,
+} from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import { setComponentScopeId, setScopeId } from './scopeId'
 import { isTransitionEnabled } from './transition'
@@ -276,7 +280,12 @@ export function createComponent(
 
   try {
     let prevSuspense: SuspenseBoundary | null = null
-    if (__FEATURE_SUSPENSE__ && currentInstance && currentInstance.suspense) {
+    if (
+      __FEATURE_SUSPENSE__ &&
+      isSuspenseEnabled &&
+      currentInstance &&
+      currentInstance.suspense
+    ) {
       prevSuspense = setParentSuspense(currentInstance.suspense)
     }
 
@@ -409,7 +418,12 @@ export function createComponent(
       endMeasure(instance, 'init')
     }
 
-    if (__FEATURE_SUSPENSE__ && currentInstance && currentInstance.suspense) {
+    if (
+      __FEATURE_SUSPENSE__ &&
+      isSuspenseEnabled &&
+      currentInstance &&
+      currentInstance.suspense
+    ) {
       setParentSuspense(prevSuspense)
     }
 
@@ -426,6 +440,8 @@ export function createComponent(
     }
 
     if (
+      __FEATURE_SUSPENSE__ &&
+      isSuspenseEnabled &&
       isHydrating &&
       hydrationClose &&
       instance.suspense &&
@@ -741,8 +757,12 @@ export class VaporComponentInstance<
     this.emitted = this.exposed = this.exposeProxy = this.propsDefaults = null
 
     // suspense related
-    this.suspense = parentSuspense
-    this.suspenseId = parentSuspense ? parentSuspense.pendingId : 0
+    this.suspense = null
+    this.suspenseId = 0
+    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled) {
+      this.suspense = parentSuspense
+      this.suspenseId = parentSuspense ? parentSuspense.pendingId : 0
+    }
     this.asyncDep = null
     this.asyncResolved = false
 
@@ -957,6 +977,7 @@ export function mountComponent(
 ): void {
   if (
     __FEATURE_SUSPENSE__ &&
+    isSuspenseEnabled &&
     instance.suspense &&
     instance.asyncDep &&
     !instance.asyncResolved
