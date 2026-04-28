@@ -1440,11 +1440,11 @@ function recordTypes(
   }
   for (const key of Object.keys(types)) {
     const node = types[key]
-    node._ownerScope = scope
-    if (node._ns) node._ns._ownerScope = scope
+    if (!node._ownerScope) node._ownerScope = scope
+    if (node._ns && !node._ns._ownerScope) node._ns._ownerScope = scope
   }
   for (const key of Object.keys(declares)) {
-    declares[key]._ownerScope = scope
+    if (!declares[key]._ownerScope) declares[key]._ownerScope = scope
   }
 }
 

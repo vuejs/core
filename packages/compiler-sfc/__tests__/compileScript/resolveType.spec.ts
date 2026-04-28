@@ -1533,6 +1533,30 @@ describe('resolveType', () => {
       })
     })
 
+    test('global types with re-exports preserve source-module scope', () => {
+      const files = {
+        '/types.ts': `export type Name = string`,
+        '/foo.ts': `
+          import type { Name } from './types'
+          export interface Foo { name: Name }
+        `,
+        '/global.d.ts': `
+          declare global {
+            export type { Foo } from './foo'
+          }
+          export {}
+        `,
+      }
+
+      expect(
+        resolve(`defineProps<Foo>()`, files, {
+          globalTypeFiles: ['/global.d.ts'],
+        }).props,
+      ).toStrictEqual({
+        name: ['String'],
+      })
+    })
+
     test('global types with ambient references', () => {
       const files = {
         // with references
