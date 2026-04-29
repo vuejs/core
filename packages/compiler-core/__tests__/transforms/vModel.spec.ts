@@ -618,4 +618,39 @@ describe('compiler: transform v-model', () => {
       )
     })
   })
+
+  describe('SETUP_COMPUTED in inline mode', () => {
+    test('does not generate compile error', () => {
+      const onError = vi.fn()
+      parseWithVModel('<input v-model="title" />', {
+        onError,
+        inline: true,
+        prefixIdentifiers: true,
+        bindingMetadata: { title: BindingTypes.SETUP_COMPUTED },
+      })
+      expect(onError).not.toHaveBeenCalled()
+    })
+
+    test('generates .value assignment in event handler', () => {
+      const root = parseWithVModel('<input v-model="title" />', {
+        inline: true,
+        prefixIdentifiers: true,
+        bindingMetadata: { title: BindingTypes.SETUP_COMPUTED },
+      })
+      const node = root.children[0] as ElementNode
+      const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
+        .properties
+
+      // event handler should assign to .value, just like SETUP_REF
+      expect(props[1]).toMatchObject({
+        key: { content: 'onUpdate:modelValue', isStatic: true },
+        value: {
+          children: expect.arrayContaining([
+            expect.stringContaining('=> (('),
+            expect.stringContaining(').value = $event)'),
+          ]),
+        },
+      })
+    })
+  })
 })

@@ -142,6 +142,10 @@ export enum BindingTypes {
    */
   SETUP_REF = 'setup-ref',
   /**
+   * a const binding that is a computed ref (guaranteed to be a ref)
+   */
+  SETUP_COMPUTED = 'setup-computed',
+  /**
    * declared by other options, e.g. computed, inject
    */
   OPTIONS = 'options',

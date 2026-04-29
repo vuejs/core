@@ -353,6 +353,7 @@ function resolveSetupReference(name: string, context: TransformContext) {
   const fromMaybeRef =
     checkType(BindingTypes.SETUP_LET) ||
     checkType(BindingTypes.SETUP_REF) ||
+    checkType(BindingTypes.SETUP_COMPUTED) ||
     checkType(BindingTypes.SETUP_MAYBE_REF)
   if (fromMaybeRef) {
     return context.inline
@@ -502,6 +503,7 @@ export function buildProps(
           if (
             binding === BindingTypes.SETUP_LET ||
             binding === BindingTypes.SETUP_REF ||
+            binding === BindingTypes.SETUP_COMPUTED ||
             binding === BindingTypes.SETUP_MAYBE_REF
           ) {
             isStatic = false

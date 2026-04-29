@@ -618,6 +618,7 @@ describe('compiler: expression transform', () => {
       reactive: BindingTypes.SETUP_REACTIVE_CONST,
       literal: BindingTypes.LITERAL_CONST,
       isNaN: BindingTypes.SETUP_REF,
+      setupComputed: BindingTypes.SETUP_COMPUTED,
     }
 
     function compileWithBindingMetadata(
@@ -633,11 +634,12 @@ describe('compiler: expression transform', () => {
 
     test('non-inline mode', () => {
       const { code } = compileWithBindingMetadata(
-        `<div>{{ props }} {{ setup }} {{ data }} {{ options }} {{ isNaN }}</div>`,
+        `<div>{{ props }} {{ setup }} {{ data }} {{ options }} {{ isNaN }} {{ setupComputed }}</div>`,
       )
       expect(code).toMatch(`$props.props`)
       expect(code).toMatch(`$setup.setup`)
       expect(code).toMatch(`$setup.isNaN`)
+      expect(code).toMatch(`$setup.setupComputed`)
       expect(code).toMatch(`$data.data`)
       expect(code).toMatch(`$options.options`)
       expect(code).toMatch(`_ctx, _cache, $props, $setup, $data, $options`)
@@ -646,7 +648,7 @@ describe('compiler: expression transform', () => {
 
     test('inline mode', () => {
       const { code } = compileWithBindingMetadata(
-        `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }} {{ isNaN }}</div>`,
+        `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }} {{ isNaN }} {{ setupComputed }}</div>`,
         { inline: true },
       )
       expect(code).toMatch(`__props.props`)
@@ -655,6 +657,7 @@ describe('compiler: expression transform', () => {
       expect(code).toMatch(`_ctx.data`)
       expect(code).toMatch(`_ctx.options`)
       expect(code).toMatch(`isNaN.value`)
+      expect(code).toMatch(`setupComputed.value`)
       expect(code).toMatchSnapshot()
     })
 

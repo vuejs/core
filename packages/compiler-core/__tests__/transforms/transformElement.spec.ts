@@ -110,6 +110,27 @@ describe('compiler: element transform', () => {
     expect(node.tag).toBe(`_unref(Example)`)
   })
 
+  test('resolve component from setup bindings (SETUP_COMPUTED)', () => {
+    const { root, node } = parseWithElementTransform(`<Example/>`, {
+      bindingMetadata: {
+        Example: BindingTypes.SETUP_COMPUTED,
+      },
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`$setup["Example"]`)
+  })
+
+  test('resolve component from setup bindings (SETUP_COMPUTED inline)', () => {
+    const { root, node } = parseWithElementTransform(`<Example/>`, {
+      inline: true,
+      bindingMetadata: {
+        Example: BindingTypes.SETUP_COMPUTED,
+      },
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`_unref(Example)`)
+  })
+
   test('resolve component from setup bindings (inline const)', () => {
     const { root, node } = parseWithElementTransform(`<Example/>`, {
       inline: true,
@@ -1026,6 +1047,30 @@ describe('compiler: element transform', () => {
       }).ast
       const node = (root as any).children[0].codegenNode
       expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
+    })
+
+    test('script setup inline mode template ref (SETUP_COMPUTED binding)', () => {
+      const { node } = parseWithElementTransform(`<input ref="input"/>`, {
+        inline: true,
+        bindingMetadata: {
+          input: BindingTypes.SETUP_COMPUTED,
+        },
+      })
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: { content: 'ref_key', isStatic: true },
+            value: { content: 'input', isStatic: true },
+          },
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: { content: 'ref', isStatic: true },
+            value: { content: 'input', isStatic: false },
+          },
+        ],
+      })
     })
 
     test('script setup inline mode template ref (binding exists)', () => {

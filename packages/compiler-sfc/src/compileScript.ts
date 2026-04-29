@@ -1278,7 +1278,6 @@ function walkDeclaration(
               init,
               m =>
                 m === userImportAliases['ref'] ||
-                m === userImportAliases['computed'] ||
                 m === userImportAliases['shallowRef'] ||
                 m === userImportAliases['customRef'] ||
                 m === userImportAliases['toRef'] ||
@@ -1287,6 +1286,8 @@ function walkDeclaration(
             )
           ) {
             bindingType = BindingTypes.SETUP_REF
+          } else if (isCallOf(init, m => m === userImportAliases['computed'])) {
+            bindingType = BindingTypes.SETUP_COMPUTED
           } else {
             bindingType = BindingTypes.SETUP_MAYBE_REF
           }

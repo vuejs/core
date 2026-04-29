@@ -62,6 +62,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     context.inline &&
     (bindingType === BindingTypes.SETUP_LET ||
       bindingType === BindingTypes.SETUP_REF ||
+      bindingType === BindingTypes.SETUP_COMPUTED ||
       bindingType === BindingTypes.SETUP_MAYBE_REF)
 
   if (!expString.trim() || (!isMemberExpression(exp, context) && !maybeRef)) {
@@ -93,7 +94,10 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   let assignmentExp: ExpressionNode
   const eventArg = context.isTS ? `($event: any)` : `$event`
   if (maybeRef) {
-    if (bindingType === BindingTypes.SETUP_REF) {
+    if (
+      bindingType === BindingTypes.SETUP_REF ||
+      bindingType === BindingTypes.SETUP_COMPUTED
+    ) {
       // v-model used on known ref.
       assignmentExp = createCompoundExpression([
         `${eventArg} => ((`,
