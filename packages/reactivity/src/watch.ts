@@ -39,6 +39,7 @@ export type WatchCallback<V = any, OV = any> = (
 export type OnCleanup = (cleanupFn: () => void) => void
 
 export interface WatchOptions<Immediate = boolean> extends DebuggerOptions {
+  signal?: AbortSignal
   immediate?: Immediate
   deep?: boolean | number
   once?: boolean
@@ -117,7 +118,7 @@ export class WatcherEffect extends ReactiveEffect {
     public cb?: WatchCallback<any, any> | null | undefined,
     public options: WatchOptions = EMPTY_OBJ,
   ) {
-    const { deep, once, call, onWarn } = options
+    const { deep, once, signal, call, onWarn } = options
 
     let getter: () => any
     let forceTrigger = false
@@ -198,6 +199,10 @@ export class WatcherEffect extends ReactiveEffect {
     }
 
     this.cb = cb
+
+    if (signal) {
+      signal.addEventListener('abort', this.stop.bind(this), { once: true })
+    }
 
     this.oldValue = isMultiSource
       ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
