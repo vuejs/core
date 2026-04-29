@@ -279,6 +279,16 @@ export function cleanup(
   }
 }
 
+export function untrack<T>(fn: () => T): T {
+  if (!activeSub) return fn()
+  const prevSub = setActiveSub()
+  try {
+    return fn()
+  } finally {
+    setActiveSub(prevSub)
+  }
+}
+
 /**
  * Registers a cleanup function for the current active effect.
  * The cleanup function is called right before the next effect run, or when the
