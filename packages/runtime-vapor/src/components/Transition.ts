@@ -29,7 +29,7 @@ import type {
   TransitionOptions,
   VaporTransitionHooks,
 } from '../block'
-import { registerTransitionHooks } from '../transition'
+import { displayName, registerTransitionHooks } from '../transition'
 import {
   type FunctionalVaporComponent,
   type VaporComponentInstance,
@@ -51,7 +51,6 @@ import {
 import { type PendingVShow, setCurrentPendingVShows } from '../directives/vShow'
 import { isInteropEnabled } from '../vdomInteropState'
 
-const displayName = 'VaporTransition'
 export type ResolvedTransitionBlock = (
   | Element
   | VaporFragment
