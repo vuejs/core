@@ -50,6 +50,11 @@ export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
   tags: {
     ...resourceUrlTagConfig,
     use: ['xlink:href', 'href'],
+    audio: ['src'],
+    object: ['data'],
+    embed: ['src'],
+    track: ['src'],
+    link: ['href'],
   },
 }
 
