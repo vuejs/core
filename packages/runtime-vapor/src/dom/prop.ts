@@ -474,19 +474,35 @@ function setHtmlToBlock(block: Block, value: any): void {
 export function setDynamicProps(el: any, args: any[], isSVG?: boolean): void {
   const props = args.length > 1 ? mergeProps(...args) : args[0]
   const cacheKey = `$dprops${isApplyingFallthroughProps ? '$' : ''}`
-  const prevKeys = el[cacheKey] as string[]
+  const prevProps = el[cacheKey] as Record<string, any> | undefined
+  const nextProps: Record<string, any> = Object.create(null)
 
-  if (prevKeys) {
-    for (const key of prevKeys) {
+  if (prevProps) {
+    for (const key in prevProps) {
       if (!(key in props)) {
         setDynamicProp(el, key, null, isSVG)
       }
     }
   }
 
-  for (const key of (el[cacheKey] = Object.keys(props))) {
-    setDynamicProp(el, key, props[key], isSVG)
+  for (const key of Object.keys(props)) {
+    const value = props[key]
+    nextProps[key] = value
+    // Events and objects can have stable identity with mutable internals, so
+    // only skip unchanged primitive values.
+    if (
+      prevProps &&
+      key in prevProps &&
+      !isOn(key) &&
+      (value == null || typeof value !== 'object') &&
+      Object.is(prevProps[key], value)
+    ) {
+      continue
+    }
+    setDynamicProp(el, key, value, isSVG)
   }
+
+  el[cacheKey] = nextProps
 }
 
 /**
